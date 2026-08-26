@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens. Components reference these, never literal colours — that is what
+ * makes dark mode a one-file change instead of a repo-wide search.
+ *
+ * Palette is fixed for the backoffice and desktop web (docs/../CLAUDE.md):
+ *   primary       rgb(103, 166, 182)
+ *   complementary rgb(179, 212, 157)
+ * The mobile apps run a different, sportier palette and are allowed to move.
+ */
+
+@layer base {
+  :root {
+    --primary: 103 166 182;
+    --primary-foreground: 255 255 255;
+    --complementary: 179 212 157;
+
+    --background: 250 251 252;
+    --surface: 255 255 255;
+    --surface-muted: 240 243 245;
+    --foreground: 17 24 28;
+    --foreground-muted: 90 103 112;
+    --border: 217 224 229;
+
+    --success: 74 155 106;
+    --warning: 197 143 46;
+    --danger: 190 71 62;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --primary: 126 186 201;
+    --primary-foreground: 12 18 21;
+    --complementary: 154 191 131;
+
+    --background: 13 18 21;
+    --surface: 20 27 31;
+    --surface-muted: 28 36 42;
+    --foreground: 230 236 239;
+    --foreground-muted: 148 162 172;
+    --border: 44 55 63;
+
+    --success: 106 187 138;
+    --warning: 222 174 84;
+    --danger: 224 110 100;
+  }
+
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name": "Poolse",
+    "tagline": "Gestão de piscinas"
+  },
+  "health": {
+    "title": "Estado do sistema",
+    "api": "API",
+    "database": "Base de dados",
+    "ok": "Operacional",
+    "unreachable": "Inacessível",
+    "checking": "A verificar…"
+  },
+  "theme": {
+    "toggle": "Alternar tema",
+    "light": "Claro",
+    "dark": "Escuro"
+  }
+}

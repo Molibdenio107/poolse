@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name": "Poolse",
+    "tagline": "Pool management"
+  },
+  "health": {
+    "title": "System status",
+    "api": "API",
+    "database": "Database",
+    "ok": "Operational",
+    "unreachable": "Unreachable",
+    "checking": "Checking…"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}
