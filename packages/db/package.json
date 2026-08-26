@@ -14,9 +14,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "migrate": "tsx src/migrate.ts up",
-    "migrate:down": "tsx src/migrate.ts down",
-    "test": "tsx src/run-sql-test.ts test/tenant-isolation.sql"
+    "migrate": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts up",
+    "migrate:deployed": "node dist/migrate.js up",
+    "bootstrap": "node --env-file-if-exists=../../.env --import tsx src/bootstrap-role.ts",
+    "bootstrap:deployed": "node dist/bootstrap-role.js",
+    "migrate:down": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts down",
+    "test": "node --env-file-if-exists=../../.env --import tsx src/run-sql-test.ts test/tenant-isolation.sql test/clerk-provisioning.sql test/invitations.sql test/preferences.sql test/audit-log.sql test/facilities.sql test/students.sql test/consent.sql test/ownership.sql test/progression.sql test/classes.sql test/sessions.sql"
   },
   "dependencies": {
     "pg": "^8.13.1"

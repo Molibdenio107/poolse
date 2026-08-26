@@ -11,13 +11,12 @@ import { resolve } from 'node:path';
 import pg from 'pg';
 
 async function main(): Promise<void> {
-  const file = process.argv[2];
-  if (!file) throw new Error('Usage: run-sql-test <file.sql>');
+  const files = process.argv.slice(2);
+  if (files.length === 0) throw new Error('Usage: run-sql-test <file.sql> [more.sql …]');
 
   const connectionString = process.env['DATABASE_URL'];
   if (!connectionString) throw new Error('DATABASE_URL is not set');
 
-  const sql = await readFile(resolve(file), 'utf8');
   const client = new pg.Client({ connectionString });
 
   let failed = false;
@@ -29,8 +28,12 @@ async function main(): Promise<void> {
 
   await client.connect();
   try {
-    // The file manages its own BEGIN/ROLLBACK so it leaves no seed data behind.
-    await client.query(sql.replace(/^\\.*$/gm, ''));
+    for (const file of files) {
+      console.log(`\n${file}`);
+      const sql = await readFile(resolve(file), 'utf8');
+      // Each file manages its own BEGIN/ROLLBACK so it leaves no seed data behind.
+      await client.query(sql.replace(/^\\.*$/gm, ''));
+    }
     console.log(failed ? '\nFAILED' : '\nAll assertions passed.');
     if (failed) process.exit(1);
   } finally {

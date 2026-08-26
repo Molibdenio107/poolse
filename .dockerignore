@@ -1,0 +1,21 @@
+# Everything the build stage installs or generates itself.
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/*.tsbuildinfo
+
+# Never ship secrets into an image layer.
+.env
+.env.*
+!.env.example
+
+.git
+.github
+.claude
+docs
+README.md
+CLAUDE.md
+docker-compose.yml
+docker/
+**/*.log

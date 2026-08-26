@@ -38,6 +38,21 @@ So two mechanisms, both established in phase 0 before any tenant data exists:
 Retrofitting either of these after there is customer data means rewriting every table's
 constraints plus an audit of what already leaked. They are close to free now.
 
+**The one escape hatch, added in slice 0.4.** Some questions have to be answered before a
+tenant is known — "which organizations does this Clerk user belong to?" is asked by the
+middleware that sets the GUC, so it cannot already have it set. Under RLS that query
+correctly returns nothing, which means the honest answer is not "connect without the GUC"
+but "this read is a deliberate exception". The exceptions are `SECURITY DEFINER` functions
+owned by the migration role: `resolve_memberships`, `find_app_user`, `provision_app_user`,
+`deactivate_app_user`. They bypass RLS because their bodies are fixed and reviewed and
+their only input is a Clerk user id.
+
+The alternative — granting the app role `BYPASSRLS`, or adding permissive policies — would
+re-open exactly the hole this decision closes, since a forgotten `where` clause would see
+everything again. If a new cross-tenant read is needed, it gets its own function. There is
+no general escape hatch, and `withoutTenantScope` in the db package is not one: it skips
+the GUC, it does not lift RLS.
+
 ### 3. Identity lives in Clerk; profile lives here
 
 Clerk owns credentials, sessions and the user identifier. The database holds an
@@ -48,6 +63,22 @@ Clerk remains the **source of truth** for name and email, but `app_user` keeps a
 instructor picker and "recorded by" column becomes an API fan-out per row, and staff
 cannot be searched or sorted in SQL at all. The cache is explicitly a cache: never written
 by the app, only by the webhook, and `synced_at` records how stale it may be.
+
+"Never written by the app" is enforced, not just documented: RLS gives the app role no
+insert path into `app_user`, so the only writer is `provision_app_user`. `synced_at` doubles
+as the ordering guard — webhooks retry and arrive out of order, and an event older than
+what is already stored is discarded rather than reverting the cache.
+
+`GET /me` will provision from the Clerk API if the webhook has not landed yet. Both paths
+call the same function, so they cannot disagree. It exists because the redirect after
+sign-up can outrun the webhook, and because local development has no public URL for Clerk
+to call — requiring a tunnel before anything works at all is a poor trade on an evening
+schedule.
+
+Clerk's `user.deleted` marks `app_user.deleted_at` and clears the cached personal fields
+rather than deleting the row: memberships reference it, and attendance, invoices and audit
+entries will. The tombstone keeps referential integrity; clearing the cache is also the
+right answer to an erasure request.
 
 ### 4. A student is not necessarily a user
 
@@ -84,9 +115,12 @@ committed future feature.
 
 ```
 organization
-  id, kind ('business'|'personal'), name, locale ('pt-PT'|'en'), country,
+  id, kind ('business'|'personal'), name, slug, locale ('pt-PT'|'en'), country,
   vat_number, invoice_series_prefix,
-  stripe_customer_id, subscription_status, archived_at
+  stripe_customer_id,
+  subscription_status ('trialing'|'active'|'past_due'|'canceled'),
+  trial_ends_at, archived_at
+  unique (slug) where archived_at is null
 
 app_user
   id, clerk_user_id (unique),
@@ -104,16 +138,58 @@ membership_role                 -- a membership can hold several roles at once
   unique (membership_id, role) where archived_at is null
 
 invitation
-  id, organization_id, email, roles text[], token (unique), expires_at,
-  accepted_at, accepted_membership_id, invited_by_membership_id
+  id, organization_id, email, roles member_role[], token_hash (unique), expires_at,
+  membership_id, accepted_at, accepted_membership_id, revoked_at,
+  invited_by_membership_id
+  unique (organization_id, email) where accepted_at is null and revoked_at is null
 
 facility                        -- a site; a personal org has exactly one
   id, organization_id, name, address, timezone, archived_at
+  unique (organization_id, lower(name)) where archived_at is null
 
 pool
   id, organization_id, facility_id, name, kind ('indoor'|'outdoor'),
   volume_litres, lane_count, archived_at
+  unique (organization_id, facility_id, lower(name)) where archived_at is null
+  check lane_count > 0, check volume_litres > 0
 ```
+
+**Signup is the one write that row-level security cannot allow.** The policy on
+`organization` is `WITH CHECK (id = current_organization_id())`, and a brand-new
+organization has no current organization — `current_organization_id()` is NULL, the check
+fails, the INSERT is refused. That is correct behaviour, not a bug, and the two obvious
+ways to "fix" it are both disasters: weakening the policy re-opens cross-tenant writes for
+every table, and connecting as the owner role disables RLS everywhere at once.
+
+So `provision_organization` is a `SECURITY DEFINER` function with `SET search_path = public,
+pg_temp`, revoked from `PUBLIC` and granted to `poolse_app` alone. In one transaction it
+creates the organization (trialing, 14-day trial, unique slug), the membership, the owner
+role, a first facility, and the audit entries. A narrow, reviewable door instead of an open
+gate — the same pattern as the other cross-tenant functions, which are listed in the
+README.
+
+**`subscription_status` is an enum, and `trial_ends_at` sits beside it.** As free text it
+accepted 'trialing', 'Trialing' and 'trialling' equally, and that bug would have surfaced in
+phase 2 as a paywall letting the wrong people through. Nothing enforces either column yet;
+the dashboard reads them to say how long is left.
+
+**The slug is derived at signup and made unique by suffix.** `slugify()` strips Portuguese
+accents with `translate()` rather than the `unaccent` extension, so it stays IMMUTABLE with
+nothing to enable on whichever managed Postgres this lands on.
+
+**Facility and pool names are unique per site, case-insensitively, and only per site.**
+All of module 1 hangs off picking a facility from a list, and a list with two identical
+entries is one somebody picks wrong from. Scoped to the facility rather than the
+organization for pools, because a club with two sites may well have a "Piscina Grande" at
+each and that is not a mistake. `lower(name)` rather than `citext`: the column is display
+text that should keep the capitalisation it was typed with, and only the comparison should
+ignore it.
+
+**`facility.timezone` is the field with the longest-lived consequence.** Class times are
+stored UTC and displayed in the facility's timezone, so a site in Ponta Delgada left on
+`Europe/Lisbon` shows every lesson an hour wrong, silently, forever. The column takes any
+IANA zone; the form offers the three that cover Portugal, which is a one-line change rather
+than a migration when a fourth is needed.
 
 **Roles are a child table, not a column on `membership`.** In a small club the owner also
 teaches, and a parent is sometimes the instructor. A scalar `role` forces that person to
@@ -121,8 +197,24 @@ choose between the admin view and the instructor view, and unpicking it from eve
 authorisation check later costs a weekend. Authorisation reads `membership_role`, always.
 
 `membership.app_user_id` is nullable because an invited person has a membership before
-they have an account — that is what `status = 'invited'` means. The Clerk webhook binds
-the two on acceptance.
+they have an account — that is what `status = 'invited'` means. Acceptance binds the two.
+
+**The invitation stores a hash, not the token.** The column holds a SHA-256 of a
+256-bit random value; the value itself lives only in the link. A database dump or a
+restored backup is then a list of useless hashes rather than a set of working keys into
+customer organizations. Unsalted is correct here and would be wrong for a password — the
+input is entropy we generated, so there is no dictionary to defeat.
+
+**`membership_id` and `accepted_membership_id` are different columns on purpose.** The
+first is the placeholder created *with* the invitation, the second is what acceptance
+actually bound to. They are the same row in the normal case. They differ in exactly one:
+the invitee already had a live membership, so the offered roles merge into it and the
+placeholder is retired — binding it instead would collide with
+`membership_org_user_uq`, which is that constraint doing its job.
+
+**`revoked_at` exists so a typo is recoverable.** The one-live-invite-per-address rule is
+a partial unique index; without a revoked state, a mistyped address is blocked until the
+invitation expires.
 
 ## Module 1 — students and classes
 
@@ -180,7 +272,13 @@ attendance
 
 ### Why sessions are materialised
 
-`class_session` rows are generated ahead (a rolling 90-day window) rather than computed on
+`class_session` rows are generated ahead — **a full year**, not the 90-day window this
+document originally specified. The operator asked for a calendar that works by seasons, and
+a season is a year: a 90-day horizon cannot answer "when does the autumn term end" in June.
+The cost is arithmetic — a turma twice a week is about 104 rows a year, so twenty turmas is
+two thousand — and that is nothing.
+
+They are generated rather than computed on
 the fly from `class_schedule`. Attendance, cancellations and substitutions all need
 something to attach to, and a computed-on-read schedule makes "the 14th was cancelled"
 impossible to express.
@@ -193,6 +291,40 @@ one with attendance recorded against it.
 
 The exclusion constraint is what stops two turmas being booked into lane 3 at 18:00. This
 is a week-one operator complaint if the database does not prevent it.
+
+### Which day a session is on
+
+Every one of the generator's three passes — create, cancel, restore — has to answer the
+same question the same way: which calendar day is this session on? The answer is always the
+**facility's** day, via `session_local_date`, never UTC's.
+
+They are the same day almost always, which is what made getting it wrong easy. They are not
+the same day for a class at 23:30 in the Azores in winter: the islands run at UTC−1, so that
+Tuesday class is 00:30 UTC on the Wednesday. A cancel pass asking UTC would step over a
+closure on the Tuesday and cancel a class on a Wednesday nobody closed — silently, with
+nothing on screen to suggest anything had gone wrong.
+
+The function exists so there is one call site to get right rather than three, which is
+exactly how the passes came apart the first time. `packages/db/test/sessions.sql` test 10
+pins it, and asserts up front that the two dates genuinely differ so the test cannot pass
+by coincidence.
+
+### National holidays are rows, not rules
+
+The thirteen Portuguese national holidays are computed in TypeScript (`apps/api/src/classes/
+holidays.ts`, Easter by the anonymous Gregorian computus) and **seeded as ordinary closures**
+when a season is generated. Four of them move with Easter, which is why they cannot be
+`repeats_annually` rows matching on month and day.
+
+Seeding them as visible, deletable rows rather than applying them as an invisible rule is
+the whole design. The operator asked for holidays to close the pool automatically — but
+plenty of municipal pools open on the 5th of October, and when a class vanishes from the
+calendar someone has to be able to find what removed it and delete that. A rule buried in
+the generator cannot be found or deleted.
+
+Carnaval is deliberately absent: it is a *tolerância de ponto* granted year by year, not a
+national holiday, and deciding it for an operator would be inventing policy. Municipal
+holidays are absent for a simpler reason — Poolse does not know which town a pool is in.
 
 ### Minors and consent
 
@@ -208,12 +340,31 @@ timestamp**, not a boolean; and reads and writes of `student_sensitive` append t
 
 ```
 audit_log
-  id, organization_id, actor_membership_id, action, entity_type, entity_id,
-  before jsonb, after jsonb, at timestamptz
+  id, organization_id, actor_membership_id, actor_app_user_id,
+  action, entity_type, entity_id, data jsonb, created_at
+  no updated_at, no archived_at
 ```
 
 Retention rules per entity are an open question, but the audit trail has to exist from the
 start — it is the part that cannot be reconstructed.
+
+**Built with one `data` column rather than `before`/`after`.** Most entries are not edits:
+"invitation created with these roles" has no before, and two mostly-null columns is a poor
+trade for the one case that does. The convention for a field change is
+`data = {"before": {...}, "after": {...}}`, which keeps that case expressible without
+imposing its shape on everything else. `created_at` rather than `at`, because every other
+table in the schema says `created_at` and one exception is one thing to remember.
+
+**`actor_membership_id` is nullable and `actor_app_user_id` sits beside it.** Null actor is
+the honest record of something the system did on nobody's behalf — a Clerk webhook, a
+scheduled job — and inventing a membership to satisfy a NOT NULL would be a lie kept
+permanently. The `app_user` reference is there because memberships get archived and the
+question "who did this" outlives them.
+
+**The application may append and read, never update or delete.** `ALTER DEFAULT
+PRIVILEGES` from decision 2 grants all four verbs on every new table, so `audit_log` gives
+two back. An audit log the application can rewrite is not an audit log, and "nobody has
+written that UPDATE yet" is not a guarantee.
 
 ### Billing
 
@@ -352,9 +503,14 @@ policies like anything else.
 
 1. **Stripe Connect or direct SEPA/MB WAY** for student→operator payments. Blocks 2.4,
    and decides where invoicing obligations land. Not needed before module 1.
-2. **Does a student belong to one facility or to the organization?** Modelled as
-   organization-wide, which is right for a single-site school and slightly wrong for a
-   multi-site operator. Cheap to add `facility_id` later; noted rather than guessed.
+2. ~~**Does a student belong to one facility or to the organization?**~~ **Settled:
+   organization-wide.** Backlog story 4 proposed narrowing Poolse to one facility per
+   tenant, which would have dissolved the question. It was rejected: a municipality with
+   pools in two buildings would then need two Poolse organizations, with separate staff
+   lists and separate billing, and that is a worse product than a slightly loose model.
+   Multi-facility stays. A student therefore belongs to the organization, and a class
+   group is what ties them to a pool at a site. Adding `facility_id` to `student` remains
+   cheap if a customer ever needs it.
 3. **Waiting-list ordering** — `waiting_position` supports manual reordering, defaulting
    to enrollment order. Confirm operators actually want to reorder before building UI for it.
 4. **Retention periods** per entity for GDPR, especially `student_sensitive` and

@@ -11,8 +11,15 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
+    "i18n:check": "pnpm --filter @poolse/web i18n:check",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d --wait && pnpm db:migrate",
+    "db:psql": "docker compose exec postgres psql -U postgres -d poolse_dev",
+    "db:bootstrap": "pnpm --filter @poolse/db bootstrap",
     "db:migrate": "pnpm --filter @poolse/db migrate",
-    "db:test": "pnpm --filter @poolse/db test"
+    "db:test": "pnpm --filter @poolse/db test",
+    "api:test": "pnpm --filter @poolse/api test"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

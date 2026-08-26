@@ -51,7 +51,20 @@ export async function withOrg<T>(
 
 /**
  * For the few operations that legitimately span tenants — the Clerk webhook
- * creating an app_user, invitation lookup by token before an org is known.
+ * creating an app_user, resolving which organizations a person belongs to,
+ * invitation lookup by token before an org is known.
+ *
+ * Read this carefully, because the name promises more than it delivers: leaving
+ * the GUC unset does NOT lift row-level security. The connection is still
+ * poolse_app, so every policy sees `current_organization_id() = NULL`, evaluates
+ * false, and returns nothing. A plain SELECT in here reads zero rows.
+ *
+ * What it is actually for is calling the SECURITY DEFINER functions that own the
+ * cross-tenant reads (`resolve_memberships`, `find_app_user`, `provision_app_user`,
+ * `deactivate_app_user`). Those run as the table owner, so they see everything —
+ * inside a fixed, reviewed function body with the Clerk user id as their only
+ * input. That is the whole escape hatch; there is no general one.
+ *
  * Deliberately named so it stands out in review. Anything using this should be
  * able to explain why in one sentence.
  */

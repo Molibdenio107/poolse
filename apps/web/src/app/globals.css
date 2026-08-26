@@ -12,6 +12,20 @@
  * The mobile apps run a different, sportier palette and are allowed to move.
  */
 
+/*
+ * shadcn/ui compatibility layer.
+ *
+ * shadcn components are copied into this repo verbatim and reference a fixed set
+ * of token names — popover, muted, destructive, ring, input — that this palette
+ * never had. Rather than rename thirteen screens' worth of existing tokens, or
+ * hand-edit every component we copy in, the shadcn names are added as aliases
+ * pointing at the colours we already have.
+ *
+ * Additive on purpose: `bg-surface` and `bg-card` are the same colour, both
+ * work, and `npx shadcn add <component>` keeps working without a patch step.
+ * The palette in CLAUDE.md remains the single source of truth.
+ */
+
 @layer base {
   :root {
     --primary: 103 166 182;
@@ -30,6 +44,22 @@
     --danger: 190 71 62;
 
     --radius: 0.5rem;
+
+    /* --- shadcn aliases (see the note above) --- */
+    --card: 255 255 255;
+    --card-foreground: 17 24 28;
+    --popover: 255 255 255;
+    --popover-foreground: 17 24 28;
+    --secondary: 240 243 245;
+    --secondary-foreground: 17 24 28;
+    --muted: 240 243 245;
+    --muted-foreground: 90 103 112;
+    --accent: 240 243 245;
+    --accent-foreground: 17 24 28;
+    --destructive: 190 71 62;
+    --destructive-foreground: 255 255 255;
+    --input: 217 224 229;
+    --ring: 103 166 182;
   }
 
   .dark {
@@ -47,6 +77,22 @@
     --success: 106 187 138;
     --warning: 222 174 84;
     --danger: 224 110 100;
+
+    /* --- shadcn aliases --- */
+    --card: 20 27 31;
+    --card-foreground: 230 236 239;
+    --popover: 20 27 31;
+    --popover-foreground: 230 236 239;
+    --secondary: 28 36 42;
+    --secondary-foreground: 230 236 239;
+    --muted: 28 36 42;
+    --muted-foreground: 148 162 172;
+    --accent: 28 36 42;
+    --accent-foreground: 230 236 239;
+    --destructive: 224 110 100;
+    --destructive-foreground: 12 18 21;
+    --input: 44 55 63;
+    --ring: 126 186 201;
   }
 
   html {

@@ -1,0 +1,35 @@
+# Local development database.
+#
+# Production is managed Postgres (Railway or Fly — see docs/roadmap.md, phase 0.9).
+# This file exists so a fresh clone gets a correctly-roled Postgres in one command
+# instead of a page of createdb/createrole instructions that drift.
+#
+# Phase 5 needs TimescaleDB. When that lands, swapping the image for
+# timescale/timescaledb:latest-pg16 is the whole local change — but confirm the
+# hosting provider supports it first, because that is the half that cannot be
+# swapped.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: poolse-postgres
+    restart: unless-stopped
+    environment:
+      # The owner role. Migrations connect as this and bypass RLS by design.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: poolse_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - poolse-pgdata:/var/lib/postgresql/data
+      # Runs once, on first initialisation of the volume.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d poolse_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  poolse-pgdata:

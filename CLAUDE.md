@@ -48,6 +48,19 @@ layer as it is written. Default locale `pt-PT`, with `en` maintained alongside. 
 i18n is the kind of task that eats an entire weekend, so it is never deferred "just for
 this component".
 
+**European Portuguese, not Brazilian.** `pt-PT` is the source language and `en` is the
+translation, not the other way round. Reviewers check for Brazilian forms — *usuário*
+(utilizador), *seção* (secção), *arquivo* (ficheiro), *salvar* (guardar), *tela* (ecrã),
+*cadastro* (registo), *senha* (palavra-passe) — and for the Brazilian present continuous
+(*está processando* rather than *está a processar*). They also check for English left
+untranslated in the interface. `pnpm i18n:check` proves every key exists in both files; it
+cannot tell you the Portuguese is the right Portuguese, so that part is read by a person.
+
+**Tooltips explain, they never inform.** A tooltip may clarify what a control does. It may
+never be the only place a piece of information appears — anything the operator needs is
+visible text. Tooltips open on keyboard focus as well as hover, because a control whose
+meaning is only available to a mouse is a control half the users cannot understand.
+
 **Multi-tenancy is enforced by the database, not by the repository layer.** Every table
 holding tenant data carries `organization_id` — but that is only the raw material.
 Isolation is two structural mechanisms, both in place before any tenant data exists:
