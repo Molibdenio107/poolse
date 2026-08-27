@@ -24,6 +24,9 @@ function failure(error: unknown, errorKey: string): FormState {
     if (error.code === 'attendance_recorded') {
       return { ok: false, errorKey: 'attendance.attendanceRecorded' };
     }
+    if (error.code === 'not_your_class') {
+      return { ok: false, errorKey: 'calendar.notYourClass' };
+    }
     if (error.status < 500) return { ok: false, errorKey, detail: error.message };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
   }
@@ -177,7 +180,12 @@ export async function cancelSessionAction(
   try {
     await apiPost(
       `/sessions/${sessionId}/cancel`,
-      { reason: String(formData.get('reason') ?? '').trim() },
+      {
+        reason: String(formData.get('reason') ?? '').trim(),
+        // "occurrence" or "future" — POOLSE-14. Anything else is treated as this
+        // occurrence, so a stale page can never remove a term by accident.
+        scope: formData.get('scope') === 'future' ? 'future' : 'occurrence',
+      },
       { organizationId },
     );
   } catch (error) {

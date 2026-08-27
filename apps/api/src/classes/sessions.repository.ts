@@ -377,6 +377,147 @@ export async function sessionsForStudent(
  * own when the closure is removed — that happens inside `generate_sessions`, in
  * SQL, and is untouched by any of this.
  */
+export interface RemovalOutcome {
+  /** How many occurrences were called off. */
+  removed: number;
+  /**
+   * How many were left alone because somebody had already taken a register.
+   *
+   * Reported rather than swallowed: an operator who asked to remove a term and
+   * got fourteen of sixteen needs to know which two are still standing and why.
+   */
+  keptMarked: number;
+  /** The last day the turma now runs, when the removal ended it. */
+  endsOn: string | null;
+}
+
+/**
+ * Removes this occurrence and every later one — POOLSE-14.
+ *
+ * Three things happen, and the third is the one that is easy to miss.
+ *
+ * **Marked occurrences are skipped, not failed.** A class somebody has taken a
+ * register for cannot be cancelled — slice 1.8 enforces that with a trigger — and
+ * without the `NOT EXISTS` here the trigger would abort the whole statement, so
+ * one marked session this afternoon would refuse to remove a term. They are
+ * counted and reported instead.
+ *
+ * **Past occurrences are never touched** (criterion 4). The window starts at this
+ * session and runs forward; last March keeps whatever happened.
+ *
+ * **The turma stops running.** Cancelling rows alone would be undone by the next
+ * "Gerar a época" the moment the window extended past them, so `ends_on` is set
+ * to the day before. That is what makes "and all future" mean the future rather
+ * than "until somebody presses generate".
+ */
+export async function removeFutureSessions(
+  organizationId: string,
+  sessionId: string,
+  reason: string | null,
+): Promise<RemovalOutcome | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: anchors } = await tx.query<{
+      class_group_id: string;
+      starts_at: Date;
+      local_date: string;
+    }>(
+      `SELECT cs.class_group_id,
+              cs.starts_at,
+              to_char(session_local_date($1, cs.pool_id, cs.starts_at), 'YYYY-MM-DD')
+                AS local_date
+         FROM class_session cs
+        WHERE cs.id = $2`,
+      [organizationId, sessionId],
+    );
+
+    const anchor = anchors[0];
+    if (!anchor) return null;
+
+    const { rows: removed } = await tx.query<{ id: string }>(
+      `UPDATE class_session cs
+          SET status = 'cancelled', cancellation_reason = $3
+        WHERE cs.class_group_id = $1
+          AND cs.starts_at >= $2
+          AND cs.status <> 'cancelled'
+          AND NOT EXISTS (
+                SELECT 1 FROM attendance a
+                 WHERE a.class_session_id = cs.id
+                   AND a.organization_id = cs.organization_id
+              )
+      RETURNING cs.id`,
+      [anchor.class_group_id, anchor.starts_at, reason],
+    );
+
+    const { rows: kept } = await tx.query<{ n: string }>(
+      `SELECT count(*) AS n
+         FROM class_session cs
+        WHERE cs.class_group_id = $1
+          AND cs.starts_at >= $2
+          AND cs.status <> 'cancelled'`,
+      [anchor.class_group_id, anchor.starts_at],
+    );
+
+    /*
+     * The turma ends the day before, so the generator stops there.
+     *
+     * `least` rather than a plain assignment: a turma that already ended earlier
+     * keeps its earlier date. Removing from a date after it stopped should not
+     * quietly extend it.
+     */
+    const { rows: ended } = await tx.query<{ ends_on: string }>(
+      `UPDATE class_group
+          SET ends_on = least(coalesce(ends_on, DATE '9999-12-31'), $2::date - 1)
+        WHERE id = $1 AND archived_at IS NULL
+      RETURNING to_char(ends_on, 'YYYY-MM-DD') AS ends_on`,
+      [anchor.class_group_id, anchor.local_date],
+    );
+
+    await recordAudit(tx, {
+      action: 'class_session.removed_future',
+      entityType: 'class_group',
+      entityId: anchor.class_group_id,
+      data: {
+        fromSessionId: sessionId,
+        from: anchor.local_date,
+        removed: removed.length,
+        keptMarked: Number(kept[0]?.n ?? 0),
+        reason,
+      },
+    });
+
+    return {
+      removed: removed.length,
+      keptMarked: Number(kept[0]?.n ?? 0),
+      endsOn: ended[0]?.ends_on ?? null,
+    };
+  });
+}
+
+/**
+ * Who is allowed to remove this class — POOLSE-14, criterion 7.
+ *
+ * Owner and admin always. The assigned instructor may remove their *own*
+ * classes, which includes one they are covering as a substitute — if they are
+ * the person standing at the poolside, they are the person who knows it is off.
+ * Never somebody else's.
+ */
+export async function isOwnClass(
+  organizationId: string,
+  sessionId: string,
+  membershipId: string,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ mine: boolean }>(
+      `SELECT coalesce(cs.substitute_instructor_membership_id, cs.instructor_membership_id)
+                = $2 AS mine
+         FROM class_session cs
+        WHERE cs.id = $1`,
+      [sessionId, membershipId],
+    );
+    return rows[0]?.mine === true;
+  });
+}
+
 export async function cancelSession(
   organizationId: string,
   sessionId: string,

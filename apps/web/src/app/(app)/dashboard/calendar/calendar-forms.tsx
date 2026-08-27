@@ -291,14 +291,40 @@ export function CancelSession({
       <input type="hidden" name="sessionId" value={sessionId} />
 
       {/*
-        Named, because the story asks and because it is the difference between a
-        confirmation and a speed bump. Seven columns of small cards are easy to
-        mis-click, and "are you sure?" cannot tell you that you are about to call
-        off Thursday's class instead of Tuesday's.
+        Named, because it is the difference between a confirmation and a speed
+        bump. Seven columns of small cards are easy to mis-click, and "are you
+        sure?" cannot tell you that you are about to call off Thursday's class
+        instead of Tuesday's.
       */}
       <p className="text-sm font-medium">
         {t('calendar.confirmQuestion', { name: className, when })}
       </p>
+
+      {/*
+        The scope — POOLSE-14.
+        
+        Radios rather than two buttons, and "this occurrence" selected: the
+        narrow, recoverable choice is the default, and removing a whole term is
+        something somebody has to reach for. The past is never affected either
+        way, which the hint says out loud because it is the question an operator
+        would otherwise have to guess at.
+      */}
+      <fieldset className="flex flex-col gap-1">
+        <legend className="sr-only">{t('calendar.removeScope')}</legend>
+        {(['occurrence', 'future'] as const).map((option) => (
+          <label key={option} className="flex items-start gap-2 text-sm">
+            <input
+              type="radio"
+              name="scope"
+              value={option}
+              defaultChecked={option === 'occurrence'}
+              className="mt-0.5 size-4 accent-primary"
+            />
+            <span>{t(`calendar.removalScope.${option}`)}</span>
+          </label>
+        ))}
+        <p className="mt-1 text-sm text-foreground-muted">{t('calendar.scopeHint')}</p>
+      </fieldset>
 
       <input
         name="reason"

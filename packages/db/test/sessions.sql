@@ -490,4 +490,124 @@ END $$;
 
 RESET ROLE;
 
+-- ---------------------------------------------------------------------------
+-- Test 11 — removing this and all future occurrences — POOLSE-14
+--
+-- Three properties, and the middle one is the trap.
+--
+--   a. The past is untouched. "And all future" starts here and runs forward.
+--   b. A class somebody has already marked is *skipped*, not failed. Slice 1.8
+--      refuses to cancel a marked session with a trigger, so without the
+--      NOT EXISTS the whole statement would abort and one register taken this
+--      afternoon would refuse to remove a term.
+--   c. The turma stops running. Cancelling rows alone is undone by the next
+--      "Gerar a época" the moment the window extends past them, so ends_on moves
+--      to the day before. That is what makes "future" mean the future rather
+--      than "until somebody presses generate".
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid; v_facility uuid; v_pool uuid; v_member uuid; v_group uuid;
+  v_student uuid; v_past uuid; v_anchor uuid; v_marked uuid; v_later uuid;
+  n int; v_ends date;
+BEGIN
+  INSERT INTO organization (name, slug) VALUES ('Clube Remoção', 'clube-remocao')
+  RETURNING id INTO v_org;
+
+  INSERT INTO facility (organization_id, name) VALUES (v_org, 'Sede')
+  RETURNING id INTO v_facility;
+  INSERT INTO pool (organization_id, facility_id, name, kind)
+  VALUES (v_org, v_facility, 'Tanque', 'indoor') RETURNING id INTO v_pool;
+
+  SELECT provision_app_user('user_rem', 'r@rem.pt', 'Rita', 'Lopes', NULL, now()) INTO v_member;
+  INSERT INTO membership (organization_id, app_user_id, status)
+  VALUES (v_org, v_member, 'active') RETURNING id INTO v_member;
+
+  INSERT INTO class_group (organization_id, name, pool_id, instructor_membership_id, ends_on)
+  VALUES (v_org, 'Iniciação', v_pool, v_member, DATE '2027-06-30')
+  RETURNING id INTO v_group;
+
+  INSERT INTO student (organization_id, first_name, last_name)
+  VALUES (v_org, 'Ana', 'Costa') RETURNING id INTO v_student;
+
+  -- One in the past, the anchor, one marked just after it, and one later.
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, starts_at,
+                             duration_minutes, instructor_membership_id)
+  VALUES (v_org, v_group, v_pool, TIMESTAMPTZ '2026-09-01 18:00:00+01', 45, v_member)
+  RETURNING id INTO v_past;
+
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, starts_at,
+                             duration_minutes, instructor_membership_id)
+  VALUES (v_org, v_group, v_pool, TIMESTAMPTZ '2026-10-06 18:00:00+01', 45, v_member)
+  RETURNING id INTO v_anchor;
+
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, starts_at,
+                             duration_minutes, instructor_membership_id)
+  VALUES (v_org, v_group, v_pool, TIMESTAMPTZ '2026-10-13 18:00:00+01', 45, v_member)
+  RETURNING id INTO v_marked;
+
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, starts_at,
+                             duration_minutes, instructor_membership_id)
+  VALUES (v_org, v_group, v_pool, TIMESTAMPTZ '2026-10-20 18:00:00+01', 45, v_member)
+  RETURNING id INTO v_later;
+
+  INSERT INTO attendance (organization_id, class_session_id, student_id, status,
+                          recorded_by_membership_id)
+  VALUES (v_org, v_marked, v_student, 'present', v_member);
+
+  -- The removal: everything from the anchor forward that nobody has marked.
+  UPDATE class_session cs
+     SET status = 'cancelled', cancellation_reason = 'Turma encerrada'
+   WHERE cs.class_group_id = v_group
+     AND cs.starts_at >= (SELECT starts_at FROM class_session WHERE id = v_anchor)
+     AND cs.status <> 'cancelled'
+     AND NOT EXISTS (
+           SELECT 1 FROM attendance a
+            WHERE a.class_session_id = cs.id AND a.organization_id = cs.organization_id
+         );
+
+  -- a. The past is untouched.
+  SELECT count(*) INTO n
+    FROM class_session WHERE id = v_past AND status = 'scheduled';
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 11a: a past occurrence was removed';
+  END IF;
+
+  -- b. The marked one survived, and the ones around it did not.
+  SELECT count(*) INTO n
+    FROM class_session WHERE id = v_marked AND status = 'scheduled';
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 11b: a class with attendance recorded was removed';
+  END IF;
+
+  SELECT count(*) INTO n
+    FROM class_session WHERE id IN (v_anchor, v_later) AND status = 'cancelled';
+  IF n <> 2 THEN
+    RAISE EXCEPTION 'FAIL test 11c: expected two removals, got %', n;
+  END IF;
+
+  -- c. The turma stops, and an earlier end date would not be pushed outwards.
+  UPDATE class_group
+     SET ends_on = least(coalesce(ends_on, DATE '9999-12-31'), DATE '2026-10-06' - 1)
+   WHERE id = v_group;
+
+  SELECT ends_on INTO v_ends FROM class_group WHERE id = v_group;
+  IF v_ends <> DATE '2026-10-05' THEN
+    RAISE EXCEPTION 'FAIL test 11d: the turma ends on % rather than the day before', v_ends;
+  END IF;
+
+  -- Removing again from a later date must not extend it back out.
+  UPDATE class_group
+     SET ends_on = least(coalesce(ends_on, DATE '9999-12-31'), DATE '2027-01-01' - 1)
+   WHERE id = v_group;
+
+  SELECT ends_on INTO v_ends FROM class_group WHERE id = v_group;
+  IF v_ends <> DATE '2026-10-05' THEN
+    RAISE EXCEPTION 'FAIL test 11e: a later removal pushed the end date out to %', v_ends;
+  END IF;
+
+  RAISE NOTICE 'PASS test 11: future removal spares the past and the marked, and stops the turma';
+END $$;
+
 ROLLBACK;

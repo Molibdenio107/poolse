@@ -10,6 +10,7 @@ import {
 } from '../../../../../lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import { addDays, isDate, longDate, mondayOf, shortDate, today } from '@/lib/dates';
+import { DocumentUpload } from '@/components/document-upload';
 import { PersonAvatar } from '@/components/person-avatar';
 import { PhotoUpload } from '@/components/photo-upload';
 import { photoUrlFor } from '@/lib/photo';
@@ -274,6 +275,24 @@ export default async function StudentPage({
             reason={
               student.photoConsent ? t('students.photoNoStorage') : t('students.photoNoConsent')
             }
+          />
+        </section>
+      )}
+
+      {student !== null && register?.canManage === true && (
+        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('students.document')}
+          </h2>
+          {/*
+            Its own slot beside the photograph, never mixed with it — POOLSE-11.
+            A Cartão de Cidadão rendered as an avatar would put a government
+            identity document on every list that shows a face.
+          */}
+          <DocumentUpload
+            label={t('students.documentUpload')}
+            reason={t('students.documentNoStorage')}
+            purpose={t('students.documentPurpose')}
           />
         </section>
       )}

@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -21,8 +22,10 @@ import {
   generateSeason,
   isExclusionViolation,
   isMarkedSessionViolation,
+  isOwnClass,
   listClosures,
   listSessions,
+  removeFutureSessions,
   sessionsForStudent,
   cancelSession,
   setSubstitute,
@@ -227,17 +230,59 @@ async function asClash(organizationId: string, sessionId: string): Promise<Confl
 
 @Controller('sessions')
 export class SessionsCalendarController {
+  /**
+   * Removes a class — POOLSE-14.
+   *
+   * Two scopes: this occurrence, or this and every later one. Never the past —
+   * "and all future" starts here and runs forward, and last March keeps whatever
+   * happened.
+   *
+   * Nothing is deleted either way. `status = 'cancelled'` is what attendance
+   * history, invoicing and any later "was there a class that Tuesday?" all rest
+   * on; the row survives and the calendar simply stops offering it.
+   */
   @Post(':id/cancel')
   async cancel(
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ cancelled: true }> {
-    requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
+  ): Promise<{ cancelled: true; removed?: number; keptMarked?: number }> {
+    const { organizationId, membershipId } = currentTenant();
+
+    /*
+     * Owner, admin, or the instructor teaching this class — criterion 7.
+     *
+     * The instructor case is scoped to their own classes and includes one they
+     * are covering as a substitute: if they are the person standing at the
+     * poolside, they are the person who knows it is off.
+     */
+    if (!hasRole('owner', 'admin') && !(await isOwnClass(organizationId, id, membershipId))) {
+      throw new ForbiddenException({
+        code: 'not_your_class',
+        message: 'You can only remove classes you teach',
+      });
+    }
 
     const reason = typeof body['reason'] === 'string' ? body['reason'].trim() : '';
     if (reason.length > MAX_REASON) {
       throw new BadRequestException(`reason may be at most ${MAX_REASON} characters`);
+    }
+
+    if (body['scope'] === 'future') {
+      let outcome;
+      try {
+        outcome = await removeFutureSessions(organizationId, id, reason || null);
+      } catch (error) {
+        if (isMarkedSessionViolation(error)) {
+          throw new ConflictException({
+            code: 'attendance_recorded',
+            message: 'Attendance has been recorded for this class',
+          });
+        }
+        throw error;
+      }
+
+      if (outcome === null) throw new NotFoundException('No such class');
+      return { cancelled: true, removed: outcome.removed, keptMarked: outcome.keptMarked };
     }
 
     try {
