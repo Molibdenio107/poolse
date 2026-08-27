@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type OrganizationMember, type People } from '../../../../lib/api';
+import { ApiError, apiFetch, type OrganizationMember, type People } from '../../../../../lib/api';
 import { DeliveryBadge } from '@/components/delivery-badge';
 import { PersonAvatar } from '@/components/person-avatar';
 import { RoleBadge, RoleBadges } from '@/components/role-badge';
@@ -86,11 +86,11 @@ export default async function PeoplePage({
 
   return (
     <PageShell
-      title={t('people.title')}
-      subtitle={t('people.subtitle')}
+      title={t('staff.title')}
+      subtitle={t('staff.subtitle')}
       back={{ href: "/dashboard", label: t('common.backToDashboard') }}
       actions={<Link
-          href="/dashboard/people/duplicates"
+          href="/dashboard/facilities/staff/duplicates"
           className="shrink-0 rounded border border-border px-4 py-2 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('people.duplicates')}
@@ -143,7 +143,7 @@ export default async function PeoplePage({
             {role !== null && (
               <p className="mb-4 flex flex-wrap items-center gap-3 text-sm">
                 <RoleBadge role={role} />
-                <Link href="/dashboard/people" className="text-primary hover:underline">
+                <Link href="/dashboard/facilities/staff" className="text-primary hover:underline">
                   {t('people.showAll')}
                 </Link>
               </p>

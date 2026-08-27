@@ -31,35 +31,79 @@ import { cn } from '@/lib/utils';
  * the thing that actually protects it. A menu that is merely absent is a URL
  * somebody can still type.
  */
-interface Section {
+/**
+ * One navigation item, at any depth — POOLSE-38 AC7.
+ *
+ * Structure, label and permission predicate live together, because a nested item
+ * inheriting its parent's audience by accident is the failure the ticket names:
+ * Instalações and Staff have different audiences, and Staff must disappear for
+ * somebody who may see the facility but not its people.
+ */
+interface Item {
   href: string;
   key: string;
-  icon: EntityKind;
-  children?: { href: string; key: string }[];
+  /** Only the top level carries an icon; children are indented text. */
+  icon?: EntityKind;
+  children?: Item[];
   /** Absent means everybody. Present means only these roles. */
   roles?: readonly string[];
 }
 
+/** Whether this person may see an item — never inherited from a parent. */
+function visible(item: Item, roles: readonly string[]): boolean {
+  return item.roles === undefined || item.roles.some((role) => roles.includes(role));
+}
+
+/** The item and its permitted descendants, or null if the item itself is hidden. */
+function prune(item: Item, roles: readonly string[]): Item | null {
+  if (!visible(item, roles)) return null;
+
+  const children = (item.children ?? [])
+    .map((child) => prune(child, roles))
+    .filter((child): child is Item => child !== null);
+
+  return children.length > 0 ? { ...item, children } : { ...item, children: [] };
+}
+
 /**
- * The main navigation, in order — POOLSE-36.
+ * The main navigation — POOLSE-38.
  *
  * Defined once, here, rather than per layout: the mobile and collapsed views
- * read the same array, so the order cannot drift between them.
+ * read the same array, so structure, labels and permissions cannot drift between
+ * them. POOLSE-36 is superseded — Staff is no longer a main-menu item, so there
+ * is nothing left to reorder.
  */
-const SECTIONS: Section[] = [
+const SECTIONS: Item[] = [
   { href: '/dashboard', key: 'nav.dashboard', icon: 'dashboard' },
-  { href: '/dashboard/facilities', key: 'facilities.title', icon: 'facility' },
-  // Pessoas sits directly below Instalações — POOLSE-36. Staff only now
-  // (POOLSE-35); students and encarregados live under Alunos.
   {
-    href: '/dashboard/people',
-    key: 'people.title',
-    icon: 'people',
-    roles: ['owner', 'admin'],
-    // Férias moved here from Calendário — POOLSE-34. It is staff leave, and
-    // Pessoas is the staff section; under Calendário it sat beside closures,
-    // which are about the building rather than about people.
-    children: [{ href: '/dashboard/people/vacations', key: 'vacations.title' }],
+    href: '/dashboard/facilities',
+    key: 'facilities.title',
+    icon: 'facility',
+    /*
+     * Staff nests here — POOLSE-38. Staff are an attribute of a facility, not a
+     * peer of it, and "People" was never the right word once the section became
+     * staff-only.
+     *
+     * Instalações stays a real page with its own content, not a bare section
+     * header: POOLSE-37 makes it where an Owner or Admin lands, so it has to
+     * render something.
+     *
+     * The `roles` here is Staff's own, not inherited. Somebody who may see the
+     * facility but not its people sees Instalações without this child, and the
+     * API refuses the route besides.
+     */
+    children: [
+      {
+        href: '/dashboard/facilities/staff',
+        key: 'staff.title',
+        roles: ['owner', 'admin'],
+        // Férias is staff leave, so it belongs to Staff — POOLSE-34 as amended.
+        // The chain is Instalações → Staff → Férias.
+        children: [
+          { href: '/dashboard/facilities/staff/vacations', key: 'vacations.title' },
+        ],
+      },
+    ],
   },
   {
     href: '/dashboard/classes',
@@ -109,8 +153,14 @@ export function AppSidebar({ roles }: { roles: readonly string[] }): React.React
   const t = useTranslations();
   const pathname = usePathname();
 
-  const sections = SECTIONS.filter(
-    (section) => section.roles === undefined || section.roles.some((role) => roles.includes(role)),
+  /*
+   * Pruned by role, at every depth — POOLSE-38 AC5.
+   *
+   * A hidden parent takes its children with it; a hidden child leaves its parent
+   * standing. Never inherited: Instalações and Staff have different audiences.
+   */
+  const sections = SECTIONS.map((section) => prune(section, roles)).filter(
+    (section): section is Item => section !== null,
   );
 
   return (
@@ -127,41 +177,64 @@ export function AppSidebar({ roles }: { roles: readonly string[] }): React.React
           aria-label={t('nav.label')}
           className="flex flex-1 flex-row gap-1 overflow-x-auto md:flex-col md:overflow-x-visible"
         >
-          {sections.map((section) => {
-            const active = isInSection(pathname, section.href);
-
-            return (
-              <Fragment key={section.href}>
-                <Link
-                  href={section.href}
-                  aria-current={pathname === section.href ? 'page' : undefined}
-                  className={cn(LINK, active ? ACTIVE : IDLE)}
-                >
-                  <EntityIcon kind={section.icon} />
-                  {t(section.key)}
-                </Link>
-
-                {active &&
-                  section.children?.map((child) => (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      aria-current={pathname === child.href ? 'page' : undefined}
-                      className={cn(
-                        LINK,
-                        'md:ml-6 md:py-1.5',
-                        pathname === child.href ? ACTIVE : IDLE,
-                      )}
-                    >
-                      {t(child.key)}
-                    </Link>
-                  ))}
-              </Fragment>
-            );
-          })}
+          {sections.map((section) => (
+            <NavItem key={section.href} item={section} pathname={pathname} depth={0} />
+          ))}
         </nav>
 
       </div>
     </aside>
+  );
+}
+
+/**
+ * One navigation item and its children, at any depth — POOLSE-38.
+ *
+ * Recursive rather than two hardcoded levels, because the chain is now three
+ * deep (Instalações → Staff → Férias) and a third hardcoded level would be the
+ * moment somebody adds a fourth.
+ *
+ * **A parent is active when any descendant is** (AC6). `isInSection` matches the
+ * whole subtree, so Instalações highlights while you are on Férias — which is
+ * what tells you where you are once the item you clicked is two levels down.
+ *
+ * Children render only while their branch is active, which keeps a sidebar of
+ * three top-level sections from becoming a list of twelve.
+ */
+function NavItem({
+  item,
+  pathname,
+  depth,
+}: {
+  item: Item;
+  pathname: string;
+  depth: number;
+}): React.ReactElement {
+  const t = useTranslations();
+  const active = isInSection(pathname, item.href);
+
+  return (
+    <Fragment key={item.href}>
+      <Link
+        href={item.href}
+        aria-current={pathname === item.href ? 'page' : undefined}
+        className={cn(
+          LINK,
+          // Each level steps in a little further. Only the top level has an icon,
+          // so the indent is what carries the hierarchy below it.
+          depth === 1 && 'md:ml-4 md:py-1.5',
+          depth >= 2 && 'md:ml-8 md:py-1.5',
+          active ? ACTIVE : IDLE,
+        )}
+      >
+        {item.icon !== undefined && <EntityIcon kind={item.icon} />}
+        {t(item.key)}
+      </Link>
+
+      {active &&
+        item.children?.map((child) => (
+          <NavItem key={child.href} item={child} pathname={pathname} depth={depth + 1} />
+        ))}
+    </Fragment>
   );
 }

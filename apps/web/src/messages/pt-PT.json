@@ -139,6 +139,11 @@
       "birth_date": "Data de nascimento"
     }
   },
+  "staff": {
+    "title": "Staff",
+    "subtitle": "Quem trabalha no clube, e quem foi convidado.",
+    "backToStaff": "Voltar ao Staff"
+  },
   "transfer": {
     "title": "Transferir propriedade",
     "explain": "A organização tem um único proprietário. Pode passá-la a um administrador — por exemplo, se sair do clube.",

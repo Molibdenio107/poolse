@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { FormState } from '../../actions';
+import type { FormState } from '../../../actions';
 import { mergeAction } from './duplicates.actions';
 
 const INITIAL: FormState = { ok: false };

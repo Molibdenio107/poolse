@@ -403,7 +403,7 @@ export async function grantRoleAction(
   try {
     await apiPost(`/people/${membershipId}/roles`, { role }, { organizationId });
     revalidatePath('/dashboard/students/guardians');
-    revalidatePath('/dashboard/people');
+    revalidatePath('/dashboard/facilities/staff');
     return true;
   } catch {
     return false;

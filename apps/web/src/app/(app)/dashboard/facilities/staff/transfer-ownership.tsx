@@ -3,8 +3,8 @@
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { OrganizationMember } from '@/lib/api';
-import type { FormState } from '../actions';
-import { transferOwnershipAction } from '../actions';
+import type { FormState } from '../../actions';
+import { transferOwnershipAction } from '../../actions';
 
 const INITIAL: FormState = { ok: false };
 

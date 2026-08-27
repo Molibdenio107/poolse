@@ -4,7 +4,7 @@ import { useActionState, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { PendingVacations } from '@/lib/api';
 import { decideVacationAction } from './vacations.actions';
-import type { FormState } from '../../actions';
+import type { FormState } from '../../../actions';
 
 const INITIAL: FormState = { ok: false };
 

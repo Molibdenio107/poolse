@@ -21,7 +21,7 @@ nesting it under Instalações says what it is and puts it where people look for
 - Visibility: the Staff submenu appears only to roles that may see staff records; Instalações remains visible per its own rules. A user who can see Instalações but not Staff sees Instalações without that child.
 - Old routes (`/people`, `/people/ferias` or equivalent) redirect permanently to the new paths, so bookmarks and any links already sent by email keep working.
 - The word "Pessoas" is retired from the UI; POOLSE-35's rules stand unchanged under the new name.
-- **Open:** does Instalações become a landing page with its own content *and* a parent menu item, or is it purely a section header once it has children?
+- **Answered (27 Aug):** Instalações stays a **real page with its own content** and gains children. POOLSE-37 makes it where an Owner or Admin lands, so a bare section header that navigates nowhere would break that ticket.
 
 ### Dev — implementation notes
 - Navigation is defined in a single config (structure, labels, icons, permission predicate per item) — this ticket is the reason that config must exist rather than being hardcoded per layout.

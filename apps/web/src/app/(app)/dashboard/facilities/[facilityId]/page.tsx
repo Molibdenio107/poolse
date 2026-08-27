@@ -31,11 +31,11 @@ import { PageShell } from '@/components/page-shell';
  */
 const GROUPS: { key: keyof PeopleCounts; label: string; href: string }[] = [
   { key: 'student', label: 'roles.student', href: '/dashboard/students' },
-  { key: 'instructor', label: 'roles.instructor', href: '/dashboard/people?role=instructor' },
-  { key: 'admin', label: 'roles.admin', href: '/dashboard/people?role=admin' },
-  { key: 'maintenance', label: 'roles.maintenance', href: '/dashboard/people?role=maintenance' },
-  { key: 'guardian', label: 'roles.guardian', href: '/dashboard/people?role=guardian' },
-  { key: 'owner', label: 'roles.owner', href: '/dashboard/people?role=owner' },
+  { key: 'instructor', label: 'roles.instructor', href: '/dashboard/facilities/staff?role=instructor' },
+  { key: 'admin', label: 'roles.admin', href: '/dashboard/facilities/staff?role=admin' },
+  { key: 'maintenance', label: 'roles.maintenance', href: '/dashboard/facilities/staff?role=maintenance' },
+  { key: 'guardian', label: 'roles.guardian', href: '/dashboard/facilities/staff?role=guardian' },
+  { key: 'owner', label: 'roles.owner', href: '/dashboard/facilities/staff?role=owner' },
 ];
 
 export default async function FacilityPage({

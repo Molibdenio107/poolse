@@ -115,7 +115,7 @@ export async function inviteAction(
     return { ...failure(error, 'invite.failed'), attempt };
   }
 
-  revalidatePath('/dashboard/people');
+  revalidatePath('/dashboard/facilities/staff');
   return { ok: true, attempt, invitation };
 }
 
@@ -137,7 +137,7 @@ export async function reissueAction(
     return failure(error, 'invite.reissueFailed');
   }
 
-  revalidatePath('/dashboard/people');
+  revalidatePath('/dashboard/facilities/staff');
   return { ok: true, invitation };
 }
 
@@ -154,7 +154,7 @@ export async function revokeAction(
     return failure(error, 'invite.revokeFailed');
   }
 
-  revalidatePath('/dashboard/people');
+  revalidatePath('/dashboard/facilities/staff');
   return { ok: true };
 }
 
@@ -174,7 +174,7 @@ export async function acceptAction(
 
   // Memberships changed, so both screens that list them are stale.
   revalidatePath('/dashboard');
-  revalidatePath('/dashboard/people');
+  revalidatePath('/dashboard/facilities/staff');
   return { ok: result.status === 'accepted', result };
 }
 

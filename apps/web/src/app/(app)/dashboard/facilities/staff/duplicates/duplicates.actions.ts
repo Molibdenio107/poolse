@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { apiPost } from '../../../../../lib/api';
-import type { FormState } from '../../actions';
+import { apiPost } from '../../../../../../lib/api';
+import type { FormState } from '../../../actions';
 
 /**
  * Phase 2 of the merge — POOLSE-17 AC10.
@@ -23,8 +23,8 @@ export async function mergeAction(_previous: FormState, formData: FormData): Pro
   }
 
   // A merge repoints half the graph; anything showing a person is now stale.
-  revalidatePath('/dashboard/people/duplicates');
-  revalidatePath('/dashboard/people');
+  revalidatePath('/dashboard/facilities/staff/duplicates');
+  revalidatePath('/dashboard/facilities/staff');
   revalidatePath('/dashboard/students/guardians');
   revalidatePath('/dashboard/classes');
 

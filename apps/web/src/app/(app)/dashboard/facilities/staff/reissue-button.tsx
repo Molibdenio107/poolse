@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
-import { reissueAction, type InviteState } from '../actions';
+import { reissueAction, type InviteState } from '../../actions';
 import { InvitationLink } from './invitation-link';
 
 const INITIAL: InviteState = { ok: false };

@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiPost } from '../../../../../lib/api';
-import type { FormState } from '../../actions';
+import { ApiError, apiPost } from '../../../../../../lib/api';
+import type { FormState } from '../../../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
   if (error instanceof ApiError) {
@@ -19,7 +19,7 @@ function failure(error: unknown, errorKey: string): FormState {
 
 /** Every screen the decision touches: my year, the queue, and the team map. */
 function revalidateVacations(): void {
-  revalidatePath('/dashboard/people/vacations');
+  revalidatePath('/dashboard/facilities/staff/vacations');
 }
 
 export async function requestVacationAction(

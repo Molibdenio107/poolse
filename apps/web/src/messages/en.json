@@ -139,6 +139,11 @@
       "birth_date": "Date of birth"
     }
   },
+  "staff": {
+    "title": "Staff",
+    "subtitle": "Who works at the club, and who has been invited.",
+    "backToStaff": "Back to Staff"
+  },
   "transfer": {
     "title": "Transfer ownership",
     "explain": "An organization has exactly one owner. You can pass it to an administrator — if you leave the club, for instance.",

@@ -79,7 +79,7 @@ export default async function VacationsPage({
     <PageShell
       title={t('vacations.title')}
       subtitle={t('vacations.subtitle')}
-      back={{ href: "/dashboard/people", label: t('vacations.backToPeople') }}
+      back={{ href: "/dashboard/facilities/staff", label: t('staff.backToStaff') }}
     >
 
 
@@ -127,7 +127,7 @@ export default async function VacationsPage({
                 {years.map((option) => (
                   <Link
                     key={option}
-                    href={`/dashboard/people/vacations?tab=${tab}&year=${option}`}
+                    href={`/dashboard/facilities/staff/vacations?tab=${tab}&year=${option}`}
                     aria-current={option === chosenYear ? 'page' : undefined}
                     className={cn(
                       'rounded border px-3 py-1.5 text-sm transition-colors',
@@ -177,7 +177,7 @@ function TabLink({
 
   return (
     <Link
-      href={`/dashboard/people/vacations?tab=${tab}&year=${year}`}
+      href={`/dashboard/facilities/staff/vacations?tab=${tab}&year=${year}`}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'rounded px-3 py-2 text-sm transition-colors',

@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
-import { revokeAction, type FormState } from '../actions';
+import { revokeAction, type FormState } from '../../actions';
 
 const INITIAL: FormState = { ok: false };
 

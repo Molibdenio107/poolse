@@ -41,7 +41,7 @@ export default async function DuplicatesPage(): Promise<React.ReactElement> {
     <PageShell
       title={t('people.duplicates')}
       subtitle={t('people.duplicatesSubtitle')}
-      back={{ href: "/dashboard/people", label: t('people.backToPeople') }}
+      back={{ href: "/dashboard/facilities/staff", label: t('staff.backToStaff') }}
     >
 
 

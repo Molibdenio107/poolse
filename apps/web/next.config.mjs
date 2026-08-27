@@ -25,26 +25,41 @@ const nextConfig = {
   reactStrictMode: true,
 
   /**
-   * Routes that have moved — POOLSE-34.
+   * Routes that have moved — POOLSE-34 and POOLSE-38.
    *
-   * Férias went from Calendário to Pessoas when Pessoas became the staff section
-   * (POOLSE-35). Somebody's bookmark should not become a 404 because we changed
-   * our minds about where a page belongs.
+   * Férias went from Calendário to Pessoas, and then the whole section became
+   * Staff under Instalações. Somebody's bookmark should not become a 404 because
+   * we changed our minds twice about where a page belongs.
    *
-   * `permanent: false` on purpose: a 308 is cached by the browser essentially
-   * forever, and a wrong permanent redirect is very hard to take back. These can
-   * become permanent once the new paths have settled.
+   * **Each old path points at the final destination, not at the previous one.**
+   * Chaining `/calendar/vacations → /people/vacations → /facilities/staff/vacations`
+   * would be two round trips and would break the day the middle hop is removed.
+   *
+   * `permanent: true` for the Staff move, per POOLSE-38 AC4. The Férias hops stay
+   * temporary: that section has now moved twice, and a 308 is cached by the
+   * browser essentially forever — worth committing to only once the path has
+   * held still for a while.
    */
   async redirects() {
     return [
       {
+        source: '/dashboard/people',
+        destination: '/dashboard/facilities/staff',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/people/:path*',
+        destination: '/dashboard/facilities/staff/:path*',
+        permanent: true,
+      },
+      {
         source: '/dashboard/calendar/vacations',
-        destination: '/dashboard/people/vacations',
+        destination: '/dashboard/facilities/staff/vacations',
         permanent: false,
       },
       {
         source: '/dashboard/calendar/vacations/:path*',
-        destination: '/dashboard/people/vacations/:path*',
+        destination: '/dashboard/facilities/staff/vacations/:path*',
         permanent: false,
       },
     ];

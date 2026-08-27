@@ -3,7 +3,7 @@
 import { useActionState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { TextField, useFocusFirstError } from '@/components/ui/field';
-import { inviteAction, type InviteState } from '../actions';
+import { inviteAction, type InviteState } from '../../actions';
 import { InvitationLink } from './invitation-link';
 import { RoleBadge } from '@/components/role-badge';
 

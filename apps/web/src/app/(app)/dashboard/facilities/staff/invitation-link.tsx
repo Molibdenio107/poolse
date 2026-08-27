@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { CreatedInvitation } from '../../../../lib/api';
+import type { CreatedInvitation } from '../../../../../lib/api';
 
 /**
  * The one place an invitation link is ever visible.

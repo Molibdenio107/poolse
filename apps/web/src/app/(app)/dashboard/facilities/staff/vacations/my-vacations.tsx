@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import type { MyVacations, VacationRequest } from '@/lib/api';
 import { YearGrid, type DayState } from '@/components/year-grid';
 import { requestVacationAction, withdrawVacationAction } from './vacations.actions';
-import type { FormState } from '../../actions';
+import type { FormState } from '../../../actions';
 
 const INITIAL: FormState = { ok: false };
 
