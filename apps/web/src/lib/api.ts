@@ -515,6 +515,13 @@ export interface Students {
   students: Student[];
   levels: StudentLevel[];
   canManage: boolean;
+  /**
+   * The club's maioridade — POOLSE-22.
+   *
+   * Sent by the API so the guardian block and every "under N" message read the
+   * tenant's line rather than a number compiled into this bundle.
+   */
+  ageOfMajority: number;
 }
 
 export type ConsentKind = 'photo' | 'medical_data' | 'parent_sharing';

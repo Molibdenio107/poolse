@@ -32,6 +32,7 @@ import {
   createStudent,
   DuplicateNameError,
   findStudent,
+  ageOfMajority,
   listGuardians,
   listLevels,
   listStudents,
@@ -64,6 +65,13 @@ interface StudentsResponse {
   students: Student[];
   levels: StudentLevel[];
   canManage: boolean;
+  /**
+   * The club's maioridade — POOLSE-22.
+   *
+   * Sent to the client so the guardian block and every "under N" message read
+   * the tenant's line rather than a number compiled into the bundle.
+   */
+  ageOfMajority: number;
 }
 
 /**
@@ -136,15 +144,24 @@ export class StudentsController {
   ): Promise<StudentsResponse> {
     const { organizationId } = currentTenant();
 
-    const [students, levels] = await Promise.all([
+    // All three are tenant-scoped reads on the same organization; together they
+    // cost one round trip instead of three.
+    const [students, levels, majority] = await Promise.all([
       listStudents(organizationId, {
         search: search?.trim() ? search.trim() : null,
         levelId: levelId?.trim() ? levelId.trim() : null,
       }),
       listLevels(organizationId),
+      ageOfMajority(organizationId),
     ]);
 
-    return { organizationId, students, levels, canManage: hasRole('owner', 'admin') };
+    return {
+      organizationId,
+      students,
+      levels,
+      canManage: hasRole('owner', 'admin'),
+      ageOfMajority: majority,
+    };
   }
 
   @Get(':id')
@@ -171,7 +188,10 @@ export class StudentsController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    const id = await createStudent(organizationId, parseStudent(body));
+    // Read before parsing: the guardian requirement depends on the club's
+    // maioridade, not on a number compiled into this file — POOLSE-22.
+    const majority = await ageOfMajority(organizationId);
+    const id = await createStudent(organizationId, parseStudent(body, majority));
     if (id === null) throw new BadRequestException('No such level');
     return { id };
   }
@@ -184,7 +204,8 @@ export class StudentsController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    const outcome = await updateStudent(organizationId, id, parseStudent(body));
+    const majority = await ageOfMajority(organizationId);
+    const outcome = await updateStudent(organizationId, id, parseStudent(body, majority));
     if (outcome === 'bad_level') throw new BadRequestException('No such level');
     if (outcome === 'not_found') throw new NotFoundException('No such student');
     return { updated: true };
@@ -355,7 +376,7 @@ function asHttp(error: unknown): unknown {
   return error;
 }
 
-function parseStudent(body: Record<string, unknown>): StudentInput {
+function parseStudent(body: Record<string, unknown>, majority: number): StudentInput {
   const birthDate = parseBirthDate(body['birthDate']);
 
   const guardians = readGuardians(body);
@@ -371,7 +392,7 @@ function parseStudent(body: Record<string, unknown>): StudentInput {
    * A student with no birth date is never blocked. Missing dates are the normal
    * case after an import, and refusing to save them would fail most rows.
    */
-  if (birthDate !== null && isMinor(birthDate)) {
+  if (birthDate !== null && isMinor(birthDate, majority)) {
     const first = guardians[0];
 
     if (first === undefined) {
@@ -497,7 +518,7 @@ function readGuardian(
  * instant — read in a local timezone west of Greenwich it would make somebody a
  * day younger and flip this answer on their eighteenth birthday.
  */
-function isMinor(birthDate: string): boolean {
+function isMinor(birthDate: string, majority: number): boolean {
   const born = new Date(`${birthDate}T00:00:00Z`);
   const now = new Date();
 
@@ -505,7 +526,8 @@ function isMinor(birthDate: string): boolean {
   const month = now.getUTCMonth() - born.getUTCMonth();
   if (month < 0 || (month === 0 && now.getUTCDate() < born.getUTCDate())) age -= 1;
 
-  return age < 18;
+  // The club's line, not ours — POOLSE-22.
+  return age < majority;
 }
 
 function requiredText(value: unknown, field: string): string {

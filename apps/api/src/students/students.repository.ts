@@ -1132,3 +1132,24 @@ export async function listGuardians(organizationId: string): Promise<GuardianRow
     }));
   });
 }
+
+/**
+ * The club's maioridade, in whole years — POOLSE-22.
+ *
+ * Read rather than assumed. Eighteen is Portuguese law, not a fact about
+ * swimming, and the whole point of the setting is that no code path gets to
+ * hardcode it.
+ *
+ * Falls back to 18 only if the row somehow has no value, which the NOT NULL
+ * default makes impossible — the coalesce is there so a caller never receives
+ * `null` and quietly compares against it.
+ */
+export async function ageOfMajority(organizationId: string): Promise<number> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ age_of_majority: number }>(
+      `SELECT age_of_majority FROM organization WHERE id = $1`,
+      [organizationId],
+    );
+    return rows[0]?.age_of_majority ?? 18;
+  });
+}

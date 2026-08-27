@@ -330,4 +330,43 @@ END $$;
 
 RESET ROLE;
 
+-- ---------------------------------------------------------------------------
+-- Test 11: maioridade is the club's, and stays a possible number — POOLSE-22
+--
+-- Eighteen is Portuguese law, not a fact about swimming. The check exists so a
+-- stray digit in a settings field cannot silently redefine who the club is
+-- allowed to contact about a person.
+-- ---------------------------------------------------------------------------
+
+RESET ROLE;
+
+DO $$
+DECLARE
+  v_org uuid; v_default int;
+BEGIN
+  SELECT id INTO v_org FROM organization WHERE slug = 'clube-pessoa';
+
+  SELECT age_of_majority INTO v_default FROM organization WHERE id = v_org;
+  IF v_default <> 18 THEN
+    RAISE EXCEPTION 'FAIL test 11: default maioridade is % rather than 18', v_default;
+  END IF;
+
+  -- A club that sets it elsewhere is fine.
+  UPDATE organization SET age_of_majority = 21 WHERE id = v_org;
+
+  BEGIN
+    UPDATE organization SET age_of_majority = 1 WHERE id = v_org;
+    RAISE EXCEPTION 'FAIL test 11: a maioridade of 1 was accepted';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE organization SET age_of_majority = 99 WHERE id = v_org;
+    RAISE EXCEPTION 'FAIL test 11: a maioridade of 99 was accepted';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 11: maioridade defaults to 18, is settable, and stays sane';
+END $$;
+
 ROLLBACK;

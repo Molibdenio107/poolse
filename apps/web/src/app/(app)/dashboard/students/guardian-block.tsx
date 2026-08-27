@@ -84,11 +84,14 @@ const BLANK: Draft = {
 export function GuardianBlock({
   guardians,
   birthDateInputId,
+  ageOfMajority,
   errors,
 }: {
   guardians: Guardian[] | undefined;
   /** The date field elsewhere in the same form, watched for changes. */
   birthDateInputId: string;
+  /** The club's maioridade — POOLSE-22. Never a hardcoded 18. */
+  ageOfMajority: number;
   errors: Record<string, string> | undefined;
 }): React.ReactElement {
   const t = useTranslations();
@@ -117,7 +120,7 @@ export function GuardianBlock({
   }, [birthDateInputId]);
 
   const age = birthDate === '' ? null : ageInYears(birthDate);
-  const minor = age !== null && age < 18;
+  const minor = age !== null && age < ageOfMajority;
   const hasData = drafts.length > 0;
   const open = minor || reopened || (age === null && hasData);
 
@@ -165,8 +168,15 @@ export function GuardianBlock({
         )}
       </div>
 
+      {/*
+        The age comes from the setting, not from the sentence — POOLSE-22,
+        criterion 5. "menor de idade" reads the same at 16 or 21, and the number
+        appears where it is actually needed.
+      */}
       <p className="text-sm text-foreground-muted">
-        {minor ? t('students.guardianRequiredHint') : t('students.guardianAdultHint')}
+        {minor
+          ? t('students.guardianRequiredHint', { age: ageOfMajority })
+          : t('students.guardianAdultHint', { age: ageOfMajority })}
       </p>
 
       {/*

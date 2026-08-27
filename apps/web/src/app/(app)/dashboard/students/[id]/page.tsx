@@ -305,6 +305,7 @@ export default async function StudentPage({
               levels={register.levels}
               student={student}
               mode="edit"
+              ageOfMajority={register.ageOfMajority}
             />
           ) : (
             <>

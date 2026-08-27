@@ -49,7 +49,12 @@ export default async function NewStudentPage(): Promise<React.ReactElement> {
 
       {data !== null && data.canManage && (
         <section className="rounded border border-border bg-surface p-5">
-          <StudentForm organizationId={data.organizationId} levels={data.levels} mode="create" />
+          <StudentForm
+            organizationId={data.organizationId}
+            levels={data.levels}
+            mode="create"
+            ageOfMajority={data.ageOfMajority}
+          />
         </section>
       )}
     </main>

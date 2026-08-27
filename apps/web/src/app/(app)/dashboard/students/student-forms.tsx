@@ -53,11 +53,14 @@ export function StudentForm({
   levels,
   student,
   mode,
+  ageOfMajority,
 }: {
   organizationId: string;
   levels: StudentLevel[];
   student?: StudentFormValues;
   mode: 'create' | 'edit';
+  /** The club's maioridade — POOLSE-22. Comes from the API, never a literal. */
+  ageOfMajority: number;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useActionState(
@@ -160,6 +163,7 @@ export function StudentForm({
         birth without ever throwing away what has been typed into it.
       */}
       <GuardianBlock
+        ageOfMajority={ageOfMajority}
         guardians={student?.guardians}
         birthDateInputId="student-birth"
         errors={state.fields}
