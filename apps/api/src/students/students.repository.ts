@@ -249,47 +249,51 @@ export async function renameLevel(
  * two levels claiming the same position, and the list order becomes whatever the
  * tie-break says.
  */
-export async function moveLevel(
+/**
+ * The whole progression, reordered in one statement — POOLSE-05.
+ *
+ * Drag and drop moves a row past several others at once, so the swap-with-your-
+ * neighbour shape the arrows used cannot express it: dragging the fifth level to
+ * the top is four swaps, four round trips, and four chances to end up half
+ * applied. The client sends the order it wants and this writes it.
+ *
+ * Positions come from the array index rather than from arithmetic on the old
+ * values, so the sequence is always 0..n-1 with no gaps to drift. Any level the
+ * caller left out keeps its place after the ones named — a list that raced with
+ * somebody else's insert is reordered as far as it can be rather than refused.
+ */
+export async function reorderLevels(
   organizationId: string,
-  levelId: string,
-  direction: 'up' | 'down',
+  ids: string[],
 ): Promise<boolean> {
+  if (ids.length === 0) return true;
+
   return withOrg(organizationId, async (tx) => {
-    const current = await tx.query<{ id: string; sort_order: number }>(
-      `SELECT id, sort_order FROM student_level
-        WHERE id = $1 AND archived_at IS NULL`,
-      [levelId],
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE student_level AS l
+          SET sort_order = ordered.position
+         FROM unnest($1::uuid[]) WITH ORDINALITY AS ordered(id, position)
+        WHERE l.id = ordered.id
+          AND l.archived_at IS NULL
+      RETURNING l.id`,
+      [ids],
     );
-    const level = current.rows[0];
-    if (!level) return false;
 
-    const neighbour = await tx.query<{ id: string; sort_order: number }>(
-      direction === 'up'
-        ? `SELECT id, sort_order FROM student_level
-            WHERE archived_at IS NULL AND sort_order < $1
-            ORDER BY sort_order DESC LIMIT 1`
-        : `SELECT id, sort_order FROM student_level
-            WHERE archived_at IS NULL AND sort_order > $1
-            ORDER BY sort_order ASC LIMIT 1`,
-      [level.sort_order],
-    );
-    const other = neighbour.rows[0];
-    // Already at the end of the progression. Not an error — the button simply
-    // had nothing to do.
-    if (!other) return true;
+    // Nothing matched: every id was archived, or belonged to another tenant and
+    // RLS hid it. Either way the caller is working from a stale list.
+    if (rows.length === 0) return false;
 
-    await tx.query('UPDATE student_level SET sort_order = $2 WHERE id = $1', [
-      level.id,
-      other.sort_order,
-    ]);
-    await tx.query('UPDATE student_level SET sort_order = $2 WHERE id = $1', [
-      other.id,
-      level.sort_order,
-    ]);
+    await recordAudit(tx, {
+      action: 'student_level.reordered',
+      entityType: 'student_level',
+      entityId: null,
+      data: { order: ids },
+    });
 
     return true;
   });
 }
+
 
 /**
  * Archiving a level leaves the students who were in it without one.

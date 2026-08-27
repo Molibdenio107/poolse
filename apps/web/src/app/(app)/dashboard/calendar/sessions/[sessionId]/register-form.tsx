@@ -3,19 +3,27 @@
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Register } from '@/lib/api';
+import {
+  ATTENDANCE_STATES,
+  AttendanceIcon,
+  AttendanceLegend,
+  selectedTone,
+} from '@/components/attendance-state';
+import { cn } from '@/lib/utils';
 import type { FormState } from '../../../actions';
 import { recordAttendanceAction } from './attendance.actions';
 
 const INITIAL: FormState = { ok: false };
 
-/**
- * Four statuses, in the order an instructor uses them.
+/*
+ * The three states, their order and their colours all come from
+ * `attendance-state.tsx` — POOLSE-13 asks for the colours to be tokens reused
+ * everywhere rather than re-declared per component, and this is the component
+ * that would otherwise have re-declared them.
  *
  * `present` first because it is nine marks in ten, and the whole slice is
- * measured in how fast a class can be marked. Alphabetical order would have put
- * "absent" under the thumb.
+ * measured in how fast a class can be marked.
  */
-const STATUSES = ['present', 'late', 'excused', 'absent'] as const;
 
 /**
  * The register — slice 1.8.
@@ -84,6 +92,9 @@ export function RegisterForm({ register }: { register: Register & { organization
           {t('attendance.markedOf', { marked, total: register.entries.length })}
         </span>
 
+        {/* Several states on one screen, so the ticket asks for a legend. */}
+        <AttendanceLegend className="w-full sm:w-auto" />
+
         <button
           type="submit"
           disabled={pending}
@@ -120,14 +131,17 @@ export function RegisterForm({ register }: { register: Register & { organization
                 <legend className="sr-only">
                   {t('attendance.statusFor', { name: `${entry.firstName} ${entry.lastName}` })}
                 </legend>
-                {STATUSES.map((status) => (
+                {ATTENDANCE_STATES.map((status) => (
                   <label
                     key={status}
-                    className={`cursor-pointer rounded border px-3 py-1.5 text-sm transition-colors ${
+                    className={cn(
+                      'flex cursor-pointer items-center gap-1.5 rounded border px-3 py-1.5 text-sm transition-colors',
+                      // The label and the glyph render whether or not the state
+                      // is chosen, so colour is never the only thing carrying it.
                       marks[entry.studentId] === status
-                        ? 'border-primary bg-primary/15 font-medium text-primary'
-                        : 'border-border hover:border-primary/50'
-                    }`}
+                        ? selectedTone(status)
+                        : 'border-border hover:border-primary/50',
+                    )}
                   >
                     <input
                       type="radio"
@@ -139,6 +153,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                       }
                       className="sr-only"
                     />
+                    <AttendanceIcon status={status} />
                     {t(`attendance.${status}`)}
                   </label>
                 ))}

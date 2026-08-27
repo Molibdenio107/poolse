@@ -34,7 +34,7 @@ import {
   findStudent,
   listLevels,
   listStudents,
-  moveLevel,
+  reorderLevels,
   renameLevel,
   updateStudent,
   type Student,
@@ -235,24 +235,39 @@ export class LevelsController {
     return { renamed: true };
   }
 
-  @Post(':id/move')
-  async move(
-    @Param('id') id: string,
-    @Body() body: Record<string, unknown>,
-  ): Promise<{ moved: true }> {
+  /**
+   * The whole order at once — POOLSE-05.
+   *
+   * One call rather than one per hop, because dragging a level from fifth to
+   * first is four moves and four chances to be left half applied. The optimistic
+   * list on the client is what makes it feel instant; this is what makes it true.
+   */
+  @Post('reorder')
+  async reorder(@Body() body: Record<string, unknown>): Promise<{ reordered: true }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    const direction = body['direction'];
-    if (direction !== 'up' && direction !== 'down') {
-      throw new BadRequestException('direction must be "up" or "down"');
+    const raw = body['ids'];
+    if (!Array.isArray(raw)) throw new BadRequestException('ids must be a list of level ids');
+
+    const ids = raw.filter((id): id is string => typeof id === 'string' && id.trim() !== '');
+    if (ids.length !== raw.length) throw new BadRequestException('ids must all be strings');
+    if (new Set(ids).size !== ids.length) {
+      throw new BadRequestException('ids must not repeat');
     }
 
-    if (!(await moveLevel(organizationId, id, direction))) {
-      throw new NotFoundException('No such level');
+    if (!(await reorderLevels(organizationId, ids))) {
+      throw new NotFoundException('No such levels');
     }
-    return { moved: true };
+    return { reordered: true };
   }
+
+  /*
+   * There is no `POST :id/move`. POOLSE-05 replaced the up/down arrows with
+   * dragging, and the endpoint went with them rather than staying as a second
+   * way to order the same list — two orderings disagree the first time somebody
+   * uses both. `POST /levels/reorder` takes the whole sequence at once.
+   */
 
   @Post(':id/archive')
   async archive(@Param('id') id: string): Promise<{ archived: true; unlevelled: number }> {

@@ -3,7 +3,16 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Calendar } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
-import { addDays, isDate, longDate, mondayOf, seasonOf, shortDate, today } from '@/lib/dates';
+import {
+  addDays,
+  isDate,
+  longDate,
+  mediumDate,
+  mondayOf,
+  seasonOf,
+  shortDate,
+  today,
+} from '@/lib/dates';
 import { CancelSession, GenerateSeason } from './calendar-forms';
 
 /**
@@ -142,34 +151,58 @@ export default async function CalendarPage({
               it is a way out of one, and someone eleven weeks into next term
               should not have to find it among the arrows.
             */}
+            {/*
+              Three columns rather than `justify-between` — POOLSE-02.
+              
+              The middle column is centred in the block itself, so the range sits
+              in the middle of the header regardless of how wide "Hoje" is in the
+              current language. With `justify-between` the label was centred only
+              between the arrows, which put it left of centre on the page.
+            */}
             <nav
               aria-label={t('calendar.weekNav')}
-              className="flex flex-wrap items-center justify-between gap-3"
+              className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"
             >
-              <div className="flex items-center gap-2">
+              <span />
+
+              <div className="flex items-center justify-center gap-2">
                 <WeekArrow
                   week={addDays(monday, -7)}
                   label={t('calendar.previousWeek')}
                   direction="previous"
                 />
+
                 {/*
-                  Always dated. "Esta semana" alone cannot tell you which week
-                  you are looking at once you have moved off it, which is the
-                  moment the label matters most.
+                  Always dated, and never wrapped. "Esta semana" alone cannot say
+                  which week once you have moved off it, which is the moment the
+                  label matters most — so the narrow form shortens the month
+                  rather than breaking across two lines.
                 */}
-                <p className="min-w-56 text-center text-sm font-medium sm:min-w-72">
-                  {t('calendar.range', {
-                    from: longDate(monday, locale),
-                    to: longDate(sunday, locale),
-                  })}
+                <p className="text-center text-sm font-medium">
+                  <span className="hidden sm:inline">
+                    {t('calendar.range', {
+                      from: longDate(monday, locale),
+                      to: longDate(sunday, locale),
+                    })}
+                  </span>
+                  <span className="whitespace-nowrap sm:hidden">
+                    {t('calendar.range', {
+                      from: mediumDate(monday, locale),
+                      to: mediumDate(sunday, locale),
+                    })}
+                  </span>
                 </p>
+
                 <WeekArrow
                   week={addDays(monday, 7)}
                   label={t('calendar.nextWeek')}
                   direction="next"
                 />
               </div>
-              <WeekLink week={today()} label={t('calendar.today')} />
+
+              <span className="justify-self-end">
+                <WeekLink week={today()} label={t('calendar.today')} />
+              </span>
             </nav>
 
             <WeekGrid

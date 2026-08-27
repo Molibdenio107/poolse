@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type WeatherResponse } from '@/lib/api';
 import { shortDate } from '@/lib/dates';
+import { WeatherIcon, WindIcon, WINDY_KMH, weatherKind } from '@/components/weather-icon';
 
 /**
  * Current conditions and a short forecast — backlog round 3, story 3.
@@ -17,25 +18,14 @@ import { shortDate } from '@/lib/dates';
  */
 
 /**
- * WMO weather codes, grouped.
+ * The condition's translated name.
  *
- * The full table is 28 codes distinguishing "light drizzle" from "moderate
- * drizzle", which is more precision than anybody deciding whether to move a
- * class indoors can use. These nine buckets are what an operator actually acts
- * on, and each one is a translated string like everything else in the product.
+ * The bucketing itself lives in `weather-icon.tsx`, so the word and the picture
+ * can never disagree — one function decides what the weather *is*, and this only
+ * decides what to call it.
  */
 function weatherKey(code: number | null): string {
-  if (code === null) return 'weather.unknown';
-  if (code === 0) return 'weather.clear';
-  if (code <= 2) return 'weather.partlyCloudy';
-  if (code === 3) return 'weather.overcast';
-  if (code <= 48) return 'weather.fog';
-  if (code <= 57) return 'weather.drizzle';
-  if (code <= 67) return 'weather.rain';
-  if (code <= 77) return 'weather.snow';
-  if (code <= 82) return 'weather.showers';
-  if (code <= 86) return 'weather.snowShowers';
-  return 'weather.thunderstorm';
+  return `weather.${weatherKind(code)}`;
 }
 
 function degrees(value: number | null): string {
@@ -102,7 +92,18 @@ export async function WeatherPanel({
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <span className="text-3xl font-semibold">{degrees(weather.temperatureC)}</span>
+            <span className="flex items-center gap-3">
+              {/*
+                POOLSE-12. The icon is decorative and the condition is spelled out
+                beside it — colour is never the only thing carrying the meaning.
+              */}
+              <WeatherIcon
+                code={weather.weatherCode}
+                isDay={weather.isDay}
+                className="size-9"
+              />
+              <span className="text-3xl font-semibold">{degrees(weather.temperatureC)}</span>
+            </span>
             <span className="text-foreground-muted">{t(weatherKey(weather.weatherCode))}</span>
             {weather.apparentTemperatureC !== null && (
               <span className="text-sm text-foreground-muted">
@@ -110,7 +111,9 @@ export async function WeatherPanel({
               </span>
             )}
             {weather.windSpeedKmh !== null && (
-              <span className="text-sm text-foreground-muted">
+              <span className="flex items-center gap-1.5 text-sm text-foreground-muted">
+                {/* Flagged only when there is enough wind to change a decision. */}
+                {weather.windSpeedKmh >= WINDY_KMH && <WindIcon />}
                 {t('weather.wind', { value: Math.round(weather.windSpeedKmh) })}
               </span>
             )}
@@ -124,7 +127,9 @@ export async function WeatherPanel({
                   className="flex flex-col gap-0.5 rounded border border-border p-3"
                 >
                   <span className="text-sm font-medium">{shortDate(day.date, locale)}</span>
-                  <span className="text-sm text-foreground-muted">
+                  <span className="flex items-center gap-1.5 text-sm text-foreground-muted">
+                    {/* Daily rows have no day/night: a forecast day is a day. */}
+                    <WeatherIcon code={day.weatherCode} />
                     {t(weatherKey(day.weatherCode))}
                   </span>
                   <span className="text-sm">

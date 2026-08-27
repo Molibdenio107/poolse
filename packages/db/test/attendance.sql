@@ -103,22 +103,32 @@ BEGIN
   BEGIN
     INSERT INTO attendance (organization_id, class_session_id, student_id, status,
                             recorded_by_membership_id)
-    VALUES (v_org, v_session, v_ana, 'late', v_instructor);
+    VALUES (v_org, v_session, v_ana, 'excused', v_instructor);
     RAISE EXCEPTION 'FAIL test 2a: the same student was marked twice for one class';
   EXCEPTION
     WHEN unique_violation THEN NULL;
   END;
 
-  UPDATE attendance SET status = 'late'
+  UPDATE attendance SET status = 'excused'
    WHERE class_session_id = v_session AND student_id = v_ana;
 
   SELECT status INTO v_status FROM attendance
    WHERE class_session_id = v_session AND student_id = v_ana;
-  IF v_status <> 'late' THEN
+  IF v_status <> 'excused' THEN
     RAISE EXCEPTION 'FAIL test 2b: the correction did not stick, status is %', v_status;
   END IF;
 
-  RAISE NOTICE 'PASS test 2: one mark per student per class, corrected in place';
+  -- POOLSE-13: late arrival is not a state any more, and the enum is the thing
+  -- that makes that true rather than a convention somebody can forget.
+  BEGIN
+    UPDATE attendance SET status = 'late'
+     WHERE class_session_id = v_session AND student_id = v_ana;
+    RAISE EXCEPTION 'FAIL test 2c: a student was marked late';
+  EXCEPTION
+    WHEN invalid_text_representation THEN NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 2: one mark per student per class, corrected in place, never late';
 END $$;
 
 -- ---------------------------------------------------------------------------

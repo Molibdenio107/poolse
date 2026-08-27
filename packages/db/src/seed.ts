@@ -420,8 +420,8 @@ async function main(): Promise<void> {
 
         for (const entry of roll) {
           const draw = stableUnit(`${session.id}:${entry.student_id}`);
-          const status =
-            draw < 0.82 ? 'present' : draw < 0.9 ? 'absent' : draw < 0.96 ? 'late' : 'excused';
+          // Three states — POOLSE-13 removed late arrival entirely.
+          const status = draw < 0.88 ? 'present' : draw < 0.96 ? 'absent' : 'excused';
 
           const inserted = await client.query(
             `INSERT INTO attendance (organization_id, class_session_id, student_id,

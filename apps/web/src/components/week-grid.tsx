@@ -11,8 +11,15 @@ export interface WeekEntry {
   title: string;
   /** Pool, lane, instructor — whatever identifies the slot at a glance. */
   subtitle?: string | null;
-  /** Who is in it. Shown small, because the point of the grid is who and when. */
+  /**
+   * Who is in it — POOLSE-08. Shown small, because the point of the grid is who
+   * and when.
+   */
   people?: string[];
+  /** Shown in place of the list when nobody is enrolled. Absent renders nothing. */
+  peopleEmpty?: string | undefined;
+  /** "+3 mais", already translated and pluralised. Shown when the list is cut. */
+  peopleMore?: string | undefined;
   href?: string;
   muted?: boolean;
   /** Why this one is off — "Natal", "Férias de agosto". Shown under the title. */
@@ -48,6 +55,14 @@ export interface WeekEntry {
  * sideways to reach Friday.
  */
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
+
+/**
+ * How many names a slot shows before it collapses — POOLSE-08 suggests eight.
+ *
+ * Eight is about the height of the other things in a slot, so a full turma does
+ * not make its column twice as tall as its neighbours.
+ */
+const MAX_NAMES = 8;
 
 export function WeekGrid({
   entries,
@@ -149,14 +164,32 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
       {entry.note != null && entry.note !== '' && (
         <span className="mt-1 text-sm font-medium text-warning">{entry.note}</span>
       )}
+      {/*
+        POOLSE-08. A real bulleted list, one step smaller than the card's title
+        and in the muted tone — still a token, so it stays contrast-compliant in
+        both themes rather than being a hand-picked grey.
+      */}
       {entry.people !== undefined && entry.people.length > 0 && (
-        <ul className="mt-1 flex flex-col gap-0.5 text-sm text-foreground-muted">
-          {entry.people.map((person) => (
+        <ul className="mt-1 flex list-inside list-disc flex-col gap-0.5 text-sm text-foreground-muted">
+          {entry.people.slice(0, MAX_NAMES).map((person) => (
             <li key={person} className="truncate">
               {person}
             </li>
           ))}
+          {/*
+            Cut rather than stretched. A turma of thirty would make its column
+            taller than the six beside it and push the whole week off the screen;
+            the count says how many are not shown, and the card links to the
+            turma where they all are.
+          */}
+          {entry.peopleMore !== undefined && entry.people.length > MAX_NAMES && (
+            <li className="list-none text-foreground-muted/80">{entry.peopleMore}</li>
+          )}
         </ul>
+      )}
+
+      {entry.people?.length === 0 && entry.peopleEmpty !== undefined && (
+        <span className="mt-1 text-sm text-foreground-muted">{entry.peopleEmpty}</span>
       )}
     </>
   );

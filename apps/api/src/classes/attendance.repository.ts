@@ -11,7 +11,14 @@ import { recordAudit } from '../audit/audit.js';
  * half-marked and nobody able to tell whether the rest were absent.
  */
 
-export type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
+/**
+ * Three states, and `late` is deliberately not one of them — POOLSE-13.
+ *
+ * Late arrival is not recorded anywhere: somebody who arrives late is present.
+ * The enum value was dropped rather than merely hidden, so there is no way for a
+ * later caller to set it and no column quietly holding the old distinction.
+ */
+export type AttendanceStatus = 'present' | 'absent' | 'excused';
 
 export interface RegisterEntry {
   studentId: string;
@@ -270,7 +277,6 @@ export interface AttendanceSummary {
   present: number;
   absent: number;
   excused: number;
-  late: number;
   /** Sessions in the window that nobody has marked yet. */
   unmarked: number;
 }
@@ -295,7 +301,6 @@ export async function summaryForStudent(
       present: string;
       absent: string;
       excused: string;
-      late: string;
       unmarked: string;
     }>(
       `
@@ -316,7 +321,6 @@ export async function summaryForStudent(
       SELECT count(*) FILTER (WHERE status = 'present') AS present,
              count(*) FILTER (WHERE status = 'absent')  AS absent,
              count(*) FILTER (WHERE status = 'excused') AS excused,
-             count(*) FILTER (WHERE status = 'late')    AS late,
              count(*) FILTER (WHERE status IS NULL)     AS unmarked
         FROM theirs
       `,
@@ -328,7 +332,6 @@ export async function summaryForStudent(
       present: Number(row?.present ?? 0),
       absent: Number(row?.absent ?? 0),
       excused: Number(row?.excused ?? 0),
-      late: Number(row?.late ?? 0),
       unmarked: Number(row?.unmarked ?? 0),
     };
   });

@@ -8,7 +8,6 @@ import {
   archiveLevelAction,
   countOutsideRangeAction,
   createLevelAction,
-  moveLevelAction,
   renameLevelAction,
 } from '../students.actions';
 
@@ -219,42 +218,17 @@ export function EditLevelForm({
 }
 
 
-/**
- * Moves one level a single place, by swapping it with its neighbour.
+/*
+ * `MoveLevelButton` used to be here — POOLSE-05 replaced it with drag and drop.
  *
- * Disabled at the ends rather than hidden, so the row does not change width as
- * you reorder and send the next button out from under the pointer.
+ * It went rather than staying behind unused, along with its action and its
+ * endpoint. A one-hop swap cannot express dragging a level from fifth to first,
+ * and a control that still can would be a second way to order the same list —
+ * the two would disagree the first time somebody used both.
+ *
+ * The reordering it did is not lost: `Reorderable` moves rows by pointer, by
+ * finger and by keyboard, which is more ways than the arrows offered.
  */
-export function MoveLevelButton({
-  organizationId,
-  levelId,
-  direction,
-  disabled,
-}: {
-  organizationId: string;
-  levelId: string;
-  direction: 'up' | 'down';
-  disabled: boolean;
-}): React.ReactElement {
-  const t = useTranslations();
-  const [, action, pending] = useActionState(moveLevelAction, INITIAL);
-
-  return (
-    <form action={action}>
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="levelId" value={levelId} />
-      <input type="hidden" name="direction" value={direction} />
-      <button
-        type="submit"
-        disabled={disabled || pending}
-        aria-label={direction === 'up' ? t('students.moveUp') : t('students.moveDown')}
-        className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:bg-surface-muted hover:text-foreground disabled:opacity-30"
-      >
-        {direction === 'up' ? '↑' : '↓'}
-      </button>
-    </form>
-  );
-}
 
 /**
  * Archiving a level does not archive the students in it — it leaves them without

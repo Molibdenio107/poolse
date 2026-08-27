@@ -20,7 +20,7 @@ import {
   type Register,
 } from './attendance.repository.js';
 
-const STATUSES: AttendanceStatus[] = ['present', 'absent', 'excused', 'late'];
+const STATUSES: AttendanceStatus[] = ['present', 'absent', 'excused'];
 const MAX_NOTE = 200;
 
 /** A class of 500 is not a class. Anything larger is a mistake or an attack. */

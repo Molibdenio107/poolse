@@ -77,17 +77,50 @@ export function seasonOf(date: string): { from: string; to: string } {
   return { from: `${startYear}-09-01`, to: `${startYear + 1}-08-31` };
 }
 
+/**
+ * `en` means British English here, not American.
+ *
+ * Intl resolves a bare `en` to `en-US`, which renders "August 24, 2026" — month
+ * first, and a comma. Poolse is a Portuguese product whose English is for
+ * European readers, and POOLSE-02 spells the expected form out: "24 August 2026".
+ * Every date in the English interface was in the wrong order until this existed.
+ *
+ * Done here rather than by renaming the locale, because `en` is the message
+ * catalogue's name and the URL's, and those are not worth churning for a date
+ * format. `pt-PT` is already explicit and passes through untouched.
+ */
+function forFormatting(locale: string): string {
+  return locale === 'en' ? 'en-GB' : locale;
+}
+
 /** Formatted in the reader's locale — "12 dez" in pt-PT, "12 Dec" in en. */
 export function shortDate(date: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(forFormatting(locale), {
     day: 'numeric',
     month: 'short',
     timeZone: 'UTC',
   }).format(new Date(toDate(date)));
 }
 
+/**
+ * "24 ago 2026" — the narrow-screen form, keeping the year.
+ *
+ * POOLSE-02 asks the week header to shorten rather than wrap on a phone. It
+ * keeps the year because the header's whole job is saying *which* week, and a
+ * range with no year is ambiguous the moment somebody is looking at January from
+ * December.
+ */
+export function mediumDate(date: string, locale: string): string {
+  return new Intl.DateTimeFormat(forFormatting(locale), {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(toDate(date)));
+}
+
 export function longDate(date: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(forFormatting(locale), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

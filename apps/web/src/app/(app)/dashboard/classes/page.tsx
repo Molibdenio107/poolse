@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Classes } from '@/lib/api';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { ApiError, apiFetch, type Classes, type EnrolledStudent } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 
 /**
@@ -14,6 +14,7 @@ import { WeekGrid, type WeekEntry } from '@/components/week-grid';
  */
 export default async function ClassesPage(): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const locale = await getLocale();
 
   let data: Classes | null = null;
   let failure: string | null = null;
@@ -30,6 +31,20 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
     [1, 2, 3, 4, 5, 6, 7].map((day) => [day, t(`week.${day}`)]),
   );
 
+  /**
+   * The active roll, alphabetical — POOLSE-08.
+   *
+   * `localeCompare` with the reader's locale rather than a raw string sort, so
+   * "Ângela" sorts where a Portuguese speaker looks for it instead of after "Zé".
+   * Waiting-list students are excluded: they are not in the class yet, and a
+   * register that listed them would be wrong on the day.
+   */
+  const namesOf = (group: { students: EnrolledStudent[] }): string[] =>
+    group.students
+      .filter((student) => student.status === 'active')
+      .map((student) => `${student.firstName} ${student.lastName}`)
+      .sort((a, b) => a.localeCompare(b, locale));
+
   // One entry per slot per turma: a turma running Tuesday and Thursday appears
   // in both columns, which is what a week looks like.
   const entries: WeekEntry[] = (data?.groups ?? []).flatMap((group) =>
@@ -42,9 +57,14 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
       subtitle: [group.poolName, group.lane === null ? null : t('classes.laneN', { lane: group.lane })]
         .filter(Boolean)
         .join(' · '),
-      people: group.students
-        .filter((student) => student.status === 'active')
-        .map((student) => `${student.firstName} ${student.lastName}`),
+      people: namesOf(group),
+      // Sorted with the reader's own collation, so "Ângela" lands where a
+      // Portuguese speaker looks for it rather than after "Zé".
+      peopleEmpty: t('classes.noStudents'),
+      peopleMore:
+        namesOf(group).length > 8
+          ? t('classes.andMore', { count: namesOf(group).length - 8 })
+          : undefined,
       href: `/dashboard/classes/${group.id}`,
     })),
   );

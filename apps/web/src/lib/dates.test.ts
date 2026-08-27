@@ -1,6 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, isDate, isoWeekday, mondayOf, seasonOf, weekOf } from './dates.ts';
+import {
+  addDays,
+  isDate,
+  isoWeekday,
+  longDate,
+  mediumDate,
+  mondayOf,
+  seasonOf,
+  shortDate,
+  weekOf,
+} from './dates.ts';
 
 /**
  * Calendar arithmetic, tested where it actually goes wrong.
@@ -89,6 +99,31 @@ test('weekOf returns seven consecutive days, Monday first', () => {
     '2026-09-12',
     '2026-09-13',
   ]);
+});
+
+test('English dates are British, not American — POOLSE-02', () => {
+  // Intl resolves a bare `en` to en-US, which renders "August 24, 2026". Poolse
+  // is a Portuguese product whose English is for European readers, and the
+  // ticket spells the expected form out.
+  assert.equal(longDate('2026-08-24', 'en'), '24 August 2026');
+  assert.equal(longDate('2026-08-24', 'pt-PT'), '24 de agosto de 2026');
+
+  // The narrow-screen form keeps the year, because a range with no year is
+  // ambiguous the moment somebody looks at January from December.
+  assert.equal(mediumDate('2026-08-24', 'en'), '24 Aug 2026');
+  assert.match(mediumDate('2026-08-24', 'pt-PT'), /2026/);
+
+  assert.equal(shortDate('2026-08-24', 'en'), '24 Aug');
+});
+
+test('the week header reads correctly across a month and a year boundary', () => {
+  // POOLSE-02 criterion 3, formatted rather than concatenated — each end of the
+  // range carries its own month and year, so a week that straddles either says so.
+  assert.equal(longDate('2026-08-31', 'pt-PT'), '31 de agosto de 2026');
+  assert.equal(longDate('2026-09-06', 'pt-PT'), '6 de setembro de 2026');
+
+  assert.equal(longDate('2026-12-28', 'en'), '28 December 2026');
+  assert.equal(longDate('2027-01-03', 'en'), '3 January 2027');
 });
 
 test('isDate rejects what a query string can carry', () => {

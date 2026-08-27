@@ -634,7 +634,8 @@ export interface CalendarSession {
   enrolled: number;
 }
 
-export type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
+/** Late arrival is deliberately not recorded — POOLSE-13. */
+export type AttendanceStatus = 'present' | 'absent' | 'excused';
 
 export interface RegisterEntry {
   studentId: string;

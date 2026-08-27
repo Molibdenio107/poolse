@@ -144,6 +144,23 @@ export async function createLevelAction(
  * count of students who would fall outside is shown before saving, and what
  * happens to them afterwards is the club's decision.
  */
+/**
+ * The whole order, in one call — POOLSE-05.
+ *
+ * Throws rather than returning a `FormState`, because the caller is an
+ * optimistic list rather than a form: a rejected promise is what tells it to put
+ * the previous order back.
+ */
+export async function reorderLevelsAction(
+  organizationId: string,
+  ids: string[],
+): Promise<void> {
+  await apiPost('/levels/reorder', { ids }, { organizationId });
+
+  revalidatePath('/dashboard/students/levels');
+  revalidatePath('/dashboard/students');
+}
+
 export async function renameLevelAction(
   _previous: FormState,
   formData: FormData,
@@ -186,25 +203,6 @@ export async function countOutsideRangeAction(
     { organizationId },
   );
   return outside;
-}
-
-export async function moveLevelAction(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const organizationId = String(formData.get('organizationId') ?? '');
-  const levelId = String(formData.get('levelId') ?? '');
-  const direction = String(formData.get('direction') ?? '');
-
-  try {
-    await apiPost(`/levels/${levelId}/move`, { direction }, { organizationId });
-  } catch (error) {
-    return failure(error, 'students.levelFailed');
-  }
-
-  revalidatePath('/dashboard/students/levels');
-  revalidatePath('/dashboard/students');
-  return { ok: true };
 }
 
 export async function archiveLevelAction(
