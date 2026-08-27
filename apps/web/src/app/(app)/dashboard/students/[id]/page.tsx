@@ -15,8 +15,8 @@ import { PersonAvatar } from '@/components/person-avatar';
 import { PhotoUpload } from '@/components/photo-upload';
 import { photoUrlFor } from '@/lib/photo';
 import { StudentForm } from '../student-forms';
-import { BackLink } from '@/components/back-link';
 import { ActionButton } from '@/components/action-button';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * One student's record.
@@ -76,10 +76,15 @@ export default async function StudentPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          {student !== null && (
+    <PageShell
+      title={student === null
+              ? t('students.title')
+              : `${student.firstName} ${student.lastName}`}
+      subtitle={student?.age === null || student === null
+              ? t('students.subtitle')
+              : t('students.years', { count: student.age })}
+      back={{ href: "/dashboard/students", label: t('students.backToRegister') }}
+      actions={student !== null && (
             <PersonAvatar
               id={student.id}
               name={`${student.firstName} ${student.lastName}`}
@@ -87,22 +92,8 @@ export default async function StudentPage({
               size="lg"
             />
           )}
-          <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {student === null
-              ? t('students.title')
-              : `${student.firstName} ${student.lastName}`}
-          </h1>
-          <p className="text-foreground-muted">
-            {student?.age === null || student === null
-              ? t('students.subtitle')
-              : t('students.years', { count: student.age })}
-          </p>
-          </div>
-        </div>
-      </header>
+    >
 
-      <BackLink href="/dashboard/students" label={t('students.backToRegister')} />
 
       {/*
         The record's action area — backlog round 3, story 9.
@@ -321,7 +312,7 @@ export default async function StudentPage({
           )}
         </section>
       )}
-    </main>
+    </PageShell>
   );
 }
 

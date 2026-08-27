@@ -11,6 +11,7 @@ import { formatTime, ProgressChart } from '@/components/progress-chart';
 import { Hint } from '@/components/ui/tooltip';
 import { AddRecordForm, ArchiveRecordButton, FavouriteStrokeForm } from './progress-forms';
 import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * Backlog story 6 — a student's performances over time.
@@ -69,15 +70,10 @@ export default async function ProgressPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {student === null ? t('progress.title') : `${student.firstName} ${student.lastName}`}
-          </h1>
-          <p className="text-foreground-muted">{t('progress.title')}</p>
-        </div>
-      </header>
+    <PageShell
+      title={student === null ? t('progress.title') : `${student.firstName} ${student.lastName}`}
+      subtitle={t('progress.title')}
+    >
 
       <BackLink href={`/dashboard/students/${id}`} label={t('sensitive.backToStudent')} />
 
@@ -247,6 +243,6 @@ export default async function ProgressPage({
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

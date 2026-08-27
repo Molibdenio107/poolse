@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Classes } from '@/lib/api';
 import { ClassForm } from '../class-forms';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * A new turma.
@@ -25,15 +25,12 @@ export default async function NewClassPage(): Promise<React.ReactElement> {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('classes.create')}</h1>
-          <p className="text-foreground-muted">{t('classes.createHint')}</p>
-        </div>
-      </header>
+    <PageShell
+      title={t('classes.create')}
+      subtitle={t('classes.createHint')}
+      back={{ href: "/dashboard/classes", label: t('classes.backToClasses') }}
+    >
 
-      <BackLink href="/dashboard/classes" label={t('classes.backToClasses')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -51,6 +48,6 @@ export default async function NewClassPage(): Promise<React.ReactElement> {
           <ClassForm organizationId={data.organizationId} options={data.options} mode="create" />
         </section>
       )}
-    </main>
+    </PageShell>
   );
 }

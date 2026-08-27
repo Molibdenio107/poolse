@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Closures } from '@/lib/api';
-import { BackLink } from '@/components/back-link';
 import { cn } from '@/lib/utils';
 import { ClosureCalendar } from './closure-calendar';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * When the pool is shut — slice 1.5, rebuilt as a year for POOLSE-31.
@@ -58,13 +58,12 @@ export default async function ClosuresPage({
   const years = yearsAround(thisYear);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-16">
-      <BackLink href="/dashboard/calendar" label={t('calendar.backToCalendar')} />
+    <PageShell
+      title={t('calendar.closures')}
+      subtitle={t('calendar.closuresSubtitle')}
+      back={{ href: "/dashboard/calendar", label: t('calendar.backToCalendar') }}
+    >
 
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('calendar.closures')}</h1>
-        <p className="text-foreground-muted">{t('calendar.closuresSubtitle')}</p>
-      </header>
 
       {noOrganization && (
         <section className="rounded border border-border bg-surface p-5">
@@ -120,6 +119,6 @@ export default async function ClosuresPage({
           />
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

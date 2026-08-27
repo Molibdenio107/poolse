@@ -24,20 +24,34 @@ POOLSE-17, 21, 22 and 28. Nothing in Wave 1 can be built correctly without C1, C
 | 3 | **POOLSE-06 + POOLSE-16** · Age in months, ceiling 100 | One migration, per C1. Never separately. |
 | 4 | **POOLSE-20** · Four-state skill progress | Changes what a skill is. POOLSE-19 is unbuildable without it. |
 
+### Wave 1b — the shell, before more pages exist
+
+**POOLSE-41** (one page shell). Every page built after this one inherits consistent layout for free;
+every page built before it has to be migrated. It is not urgent by value, but it is the cheapest it
+will ever be, and the migration list only grows.
+
 ### Wave 2 — the people surfaces
 
-POOLSE-35 (Pessoas / Alunos split) → POOLSE-04 (guardian block) → POOLSE-18 (role badges) →
-POOLSE-32 (name display) → POOLSE-01 (invite matrix) → POOLSE-03 (archive permissions).
+**POOLSE-35 + POOLSE-38 together** (the staff/students split, and Staff renamed and nested under
+Instalações) → POOLSE-39 (editable staff record) → POOLSE-04 (guardian block) → POOLSE-18 (role
+badges) → POOLSE-32 (name display) → POOLSE-01 (invite matrix) → POOLSE-03 (archive permissions).
 
-POOLSE-35 first: once the two views exist, 04, 18 and 32 land inside a settled structure rather than
-being rebuilt when it changes.
+35 and 38 are one evening: 38 renames and moves what 35 defines, and shipping them apart means
+touching the same navigation config, routes and i18n keys twice. POOLSE-36 is **superseded** by 38 —
+do not build it.
+
+39 comes straight after, because a staff section you cannot edit is the complaint that produced it.
 
 ### Wave 3 — the cheap wins
 
 POOLSE-09, 10 (two bugs — do them any evening you have forty minutes), then 29, 30 (pagination and
-live search, both global and both mechanical), then 02, 05, 08, 12, 34, 36.
+live search, both global and both mechanical), then 02, 05, 08, 12, 34, 37, 40.
 
 These are the tickets to reach for when the evening is short. None of them blocks anything.
+
+POOLSE-37 (landing page per role) is best done *after* Wave 2, so the roles it routes on are settled.
+POOLSE-40 (levels and skills expanded view) wants POOLSE-05 and POOLSE-41 in place first, or you will
+lay it out twice.
 
 ### Wave 4 — classes and the calendar
 

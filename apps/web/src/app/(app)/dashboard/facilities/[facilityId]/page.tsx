@@ -2,11 +2,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type FacilityDetail, type PeopleCounts } from '@/lib/api';
-import { BackLink } from '@/components/back-link';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { CityPicker } from './city-picker';
 import { WeatherPanel } from './weather-panel';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * One site, in detail — backlog round 3, stories 2 and 3.
@@ -57,8 +57,16 @@ export default async function FacilityPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-16">
-      <BackLink href="/dashboard/facilities" label={t('facilities.backToSites')} />
+    <PageShell
+      title={site?.name ?? t('facilities.title')}
+      subtitle={
+        site === null
+          ? undefined
+          : [site.address, site.city, site.timezone].filter(Boolean).join(' · ')
+      }
+      back={{ href: "/dashboard/facilities", label: t('facilities.backToSites') }}
+      actions={<EntityIcon kind="facility" className="mt-1.5 size-6 text-primary" />}
+    >
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -69,15 +77,6 @@ export default async function FacilityPage({
 
       {site !== null && (
         <>
-          <header className="flex items-start gap-3">
-            <EntityIcon kind="facility" className="mt-1.5 size-6 text-primary" />
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight">{site.name}</h1>
-              <p className="text-foreground-muted">
-                {[site.address, site.city, site.timezone].filter(Boolean).join(' · ')}
-              </p>
-            </div>
-          </header>
 
           {/*
             Counts first, because "how big is this" is the question story 2 says
@@ -192,6 +191,6 @@ export default async function FacilityPage({
           </section>
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

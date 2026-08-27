@@ -5,6 +5,10 @@
 **Type:** Feature · **Area:** Navigation / People · **Priority:** High
 **Depends on:** POOLSE-17 (one Person, many roles), POOLSE-18 (role badges, amended for two sections)
 
+> **Amended 27 Aug — see POOLSE-38.** The section is renamed **Staff** and moves under Instalações.
+> Every rule below holds unchanged; only the label and its position in the menu change. Read
+> "Pessoas" as "Staff" throughout.
+
 ### PO — why this exists
 
 Pessoas today mixes staff, students and encarregados de educação into one list, so an Admin looking for an instructor wades through three hundred alunos. Splitting the two views matches how the school actually thinks — staff are one population, families are another — while keeping one underlying record so nobody's phone number lives in two places. High priority because POOLSE-18 and POOLSE-34 are both already written against this split.

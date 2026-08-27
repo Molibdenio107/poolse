@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type MergeCandidate, type People } from '@/lib/api';
-import { BackLink } from '@/components/back-link';
 import { MergeButton } from './merge-button';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * Duplicates, and what merging them would do — POOLSE-17 AC10.
@@ -38,13 +38,12 @@ export default async function DuplicatesPage(): Promise<React.ReactElement> {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <BackLink href="/dashboard/people" label={t('people.backToPeople')} />
+    <PageShell
+      title={t('people.duplicates')}
+      subtitle={t('people.duplicatesSubtitle')}
+      back={{ href: "/dashboard/people", label: t('people.backToPeople') }}
+    >
 
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('people.duplicates')}</h1>
-        <p className="text-foreground-muted">{t('people.duplicatesSubtitle')}</p>
-      </header>
 
       {notPermitted && (
         <section className="rounded border border-border bg-surface p-5">
@@ -118,6 +117,6 @@ export default async function DuplicatesPage(): Promise<React.ReactElement> {
           </ul>
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

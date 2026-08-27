@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '../../../../../lib/api';
 import { CreateLevelForm } from './level-forms';
 import { LevelList } from './level-list';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * The progression an operator puts their students through.
@@ -26,15 +26,12 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
   const levels = data?.levels ?? [];
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('students.levels')}</h1>
-          <p className="text-foreground-muted">{t('students.levelsSubtitle')}</p>
-        </div>
-      </header>
+    <PageShell
+      title={t('students.levels')}
+      subtitle={t('students.levelsSubtitle')}
+      back={{ href: "/dashboard/students", label: t('students.backToRegister') }}
+    >
 
-      <BackLink href="/dashboard/students" label={t('students.backToRegister')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -74,6 +71,6 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

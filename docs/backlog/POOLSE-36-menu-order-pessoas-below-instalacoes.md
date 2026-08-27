@@ -3,6 +3,8 @@
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
 **Type:** Improvement · **Area:** Navigation · **Priority:** Low
+**Status:** **Superseded by POOLSE-38** — Pessoas is no longer a main menu item at all; it becomes
+**Staff**, nested under Instalações. There is nothing left to reorder. Kept for the record; do not build.
 
 ### PO — why this exists
 

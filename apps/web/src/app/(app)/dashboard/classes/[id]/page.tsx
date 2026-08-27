@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type ClassGroup, type Classes } from '@/lib/api';
 import { PersonAvatar } from '@/components/person-avatar';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 import {
   AddSlotForm,
   ArchiveClassButton,
@@ -57,28 +57,18 @@ export default async function ClassPage({
   );
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {group?.name ?? t('classes.title')}
-          </h1>
-          <p className="text-foreground-muted">
-            {[group?.levelName, group?.instructorName, group?.poolName].filter(Boolean).join(' · ')}
-          </p>
-        </div>
-
-        {/* POOLSE-20. The screen an instructor opens during a lesson, so it is
-            reachable from the turma in one press rather than through a menu. */}
-        <Link
+    <PageShell
+      title={group?.name ?? t('classes.title')}
+      subtitle={[group?.levelName, group?.instructorName, group?.poolName].filter(Boolean).join(' · ')}
+      back={{ href: "/dashboard/classes", label: t('classes.backToClasses') }}
+      actions={<Link
           href={`/dashboard/classes/${id}/skills`}
           className="shrink-0 rounded border border-border px-4 py-2 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('skills.title')}
-        </Link>
-      </header>
+        </Link>}
+    >
 
-      <BackLink href="/dashboard/classes" label={t('classes.backToClasses')} />
 
       {missing && (
         <section className="rounded border border-border bg-surface p-5">
@@ -250,6 +240,6 @@ export default async function ClassPage({
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

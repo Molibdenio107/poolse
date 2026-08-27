@@ -10,7 +10,7 @@ import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
 import { RevokeButton } from './revoke-button';
 import { TransferOwnership } from './transfer-ownership';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * Slice 0.5 made visible: who is in this organization, who has been asked, and
@@ -85,22 +85,17 @@ export default async function PeoplePage({
   const members = role === null ? staff : staff.filter((member) => member.roles.includes(role));
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('people.title')}</h1>
-          <p className="text-foreground-muted">{t('people.subtitle')}</p>
-        </div>
-
-        {/* POOLSE-17 AC10. Reachable rather than a route somebody has to know
-            about — the report is only useful if it is read. */}
-        <Link
+    <PageShell
+      title={t('people.title')}
+      subtitle={t('people.subtitle')}
+      back={{ href: "/dashboard", label: t('common.backToDashboard') }}
+      actions={<Link
           href="/dashboard/people/duplicates"
           className="shrink-0 rounded border border-border px-4 py-2 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('people.duplicates')}
-        </Link>
-      </header>
+        </Link>}
+    >
 
       {noOrganization && (
         <section className="rounded border border-border bg-surface p-5">
@@ -118,7 +113,6 @@ export default async function PeoplePage({
         <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
           <p className="font-medium">{t('people.restricted')}</p>
           <p className="text-sm text-foreground-muted">{t('people.restrictedHint')}</p>
-          <BackLink href="/dashboard" label={t('common.backToDashboard')} />
         </section>
       )}
 
@@ -267,7 +261,7 @@ export default async function PeoplePage({
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }
 

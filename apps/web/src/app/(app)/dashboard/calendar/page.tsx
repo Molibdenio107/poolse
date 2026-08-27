@@ -14,6 +14,7 @@ import {
   today,
 } from '@/lib/dates';
 import { CancelSession, GenerateSeason } from './calendar-forms';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * The dated calendar — slices 1.5 and 1.6.
@@ -157,13 +158,10 @@ export default async function CalendarPage({
   });
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('calendar.title')}</h1>
-          <p className="text-foreground-muted">{t('calendar.subtitle')}</p>
-        </div>
-      </header>
+    <PageShell
+      title={t('calendar.title')}
+      subtitle={t('calendar.subtitle')}
+    >
 
       {noOrganization && (
         <section className="rounded border border-border bg-surface p-5">
@@ -293,7 +291,7 @@ export default async function CalendarPage({
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }
 

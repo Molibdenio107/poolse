@@ -5,6 +5,7 @@ import { ActionButton } from '@/components/action-button';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from './facility-forms';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * Slice 1.1 — an operator sets up their site.
@@ -33,13 +34,10 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('facilities.title')}</h1>
-          <p className="text-foreground-muted">{t('facilities.subtitle')}</p>
-        </div>
-      </header>
+    <PageShell
+      title={t('facilities.title')}
+      subtitle={t('facilities.subtitle')}
+    >
 
       {noOrganization && (
         <section className="rounded border border-border bg-surface p-5">
@@ -199,6 +197,6 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

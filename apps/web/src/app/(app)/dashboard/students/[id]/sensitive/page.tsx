@@ -6,6 +6,7 @@ import {
   type Student,
 } from '../../../../../../lib/api';
 import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 import {
   MedicalNotesForm,
   RecordConsentForm,
@@ -52,15 +53,10 @@ export default async function SensitivePage({
   const past = record?.consent.filter((entry) => entry.withdrawnAt !== null) ?? [];
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {student === null ? t('sensitive.title') : `${student.firstName} ${student.lastName}`}
-          </h1>
-          <p className="text-foreground-muted">{t('sensitive.title')}</p>
-        </div>
-      </header>
+    <PageShell
+      title={student === null ? t('sensitive.title') : `${student.firstName} ${student.lastName}`}
+      subtitle={t('sensitive.title')}
+    >
 
       <BackLink href={`/dashboard/students/${id}`} label={t('sensitive.backToStudent')} />
 
@@ -208,6 +204,6 @@ export default async function SensitivePage({
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

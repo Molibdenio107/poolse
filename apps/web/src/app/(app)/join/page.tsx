@@ -3,7 +3,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type InvitationPreview, type Me } from '../../../lib/api';
 import { PreferenceControls } from '../preference-controls';
 import { AcceptForm } from './accept-form';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * The invitee's side of slice 0.5.
@@ -51,17 +51,17 @@ export default async function JoinPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('join.title')}</h1>
-          <p className="text-foreground-muted">{t('app.tagline')}</p>
-        </div>
-        <div className="flex items-center gap-3">
+    <PageShell
+      title={t('join.title')}
+      subtitle={t('app.tagline')}
+      back={{ href: "/dashboard", label: t('common.backToDashboard') }}
+      actions={
+        <>
           <PreferenceControls />
           <UserButton />
-        </div>
-      </header>
+        </>
+      }
+    >
 
       {!token && (
         <section className="rounded border border-border bg-surface p-5">
@@ -132,7 +132,6 @@ export default async function JoinPage({
         </section>
       )}
 
-      <BackLink href="/dashboard" label={t('common.backToDashboard')} />
-    </main>
+    </PageShell>
   );
 }

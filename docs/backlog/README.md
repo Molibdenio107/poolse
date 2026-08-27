@@ -1,25 +1,25 @@
 # Poolse backlog
 
-36 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it exists,
-what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got wrong)
-and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance criteria,
-which are the contract.
+41 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
+exists, what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got
+wrong) and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance
+criteria, which are the contract.
 
 Read these first, once:
 
 - **[CONVENTIONS.md](./CONVENTIONS.md)** — standing rules that apply to every ticket, and the definition of done.
-- **[CONFLICTS.md](./CONFLICTS.md)** — 8 contradictions between tickets, each with a recommended resolution. Settle these before writing code they touch.
+- **[CONFLICTS.md](./CONFLICTS.md)** — contradictions between tickets, each with a recommended resolution. Settle these before writing code they touch.
 - **[BUILD-ORDER.md](./BUILD-ORDER.md)** — what to build in what order, and how one evening's session runs.
 
 ## How to use this in a build session
 
 Load **one ticket file** plus `CONVENTIONS.md`. Never load the whole folder — that is the point of
-splitting it. The ticket file is self-contained: the Dev section tells you where the logic goes, and
-the QA section is your test list, already written.
+splitting it. The ticket file is self-contained: the Dev section says where the logic goes, and the
+QA section is your test list, already written.
 
 ## Index
 
-36 tickets · 12 at High priority · 52 open questions still to answer
+41 tickets · 13 at High priority · 58 open questions still to answer
 
 | Ticket | Title | Area | Priority | Depends on | Open |
 |---|---|---|---|---|---|
@@ -58,4 +58,9 @@ the QA section is your test list, already written.
 | [POOLSE-33](./POOLSE-33-age-bracket-icon-on-the-avatar.md) | Age-bracket icon on the avatar | Students | Low | POOLSE-06 and POOLSE-16 (shared age boundary logic),… | 2 |
 | [POOLSE-34](./POOLSE-34-move-ferias-under-the-people-menu.md) | Move Férias under the People menu | Navigation | Low | POOLSE-35 (Pessoas becomes the staff section, which … | 2 |
 | [POOLSE-35](./POOLSE-35-pessoas-is-staff-only-alunos-holds-the-rest.md) | Pessoas is staff only; Alunos holds the rest | Navigation / People | High | POOLSE-17 (one Person, many roles), POOLSE-18 (role … | 2 |
-| [POOLSE-36](./POOLSE-36-menu-order-pessoas-below-instalacoes.md) | Menu order — Pessoas below Instalações | Navigation | Low | — | 1 |
+| [POOLSE-36](./POOLSE-36-menu-order-pessoas-below-instalacoes.md) | Menu order — Pessoas below Instalações *(superseded)* | Navigation | Low | — | 1 |
+| [POOLSE-37](./POOLSE-37-instalacoes-as-the-landing-page.md) | Instalações as the landing page | Navigation / Auth | Medium | POOLSE-17 (roles are assignments on a Person) | 1 |
+| [POOLSE-38](./POOLSE-38-staff-menu-nested-under-instalacoes.md) | Staff menu, nested under Instalações | Navigation | Medium | POOLSE-35 (the staff/students split) | 1 |
+| [POOLSE-39](./POOLSE-39-editable-staff-record-immutable-email.md) | Editable staff record, immutable email | Staff | High | POOLSE-17 (one Person, many roles), POOLSE-01 (invit… | 2 |
+| [POOLSE-40](./POOLSE-40-levels-and-skills-expanded-view.md) | Levels and skills — the expanded view | Levels / Skills | Medium | POOLSE-05 (drag-and-drop ordering), POOLSE-20 (four-… | 1 |
+| [POOLSE-41](./POOLSE-41-shared-page-shell.md) | One page shell for every page | Global / Layout | Medium | — | 1 |

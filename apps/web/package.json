@@ -8,7 +8,8 @@
     "start": "next start -p 3000",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "i18n:check": "node scripts/check-messages.mjs",
-    "test": "node --test \"src/**/*.test.ts\""
+    "test": "node --test \"src/**/*.test.ts\"",
+    "layout:check": "node scripts/check-layout.mjs"
   },
   "dependencies": {
     "@clerk/localizations": "^4.15.7",

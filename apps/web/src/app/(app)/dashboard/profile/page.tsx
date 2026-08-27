@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Me } from '@/lib/api';
 import { ProfileForm } from './profile-form';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * "O meu perfil" — backlog round 3, story 1.
@@ -26,13 +26,12 @@ export default async function ProfilePage(): Promise<React.ReactElement> {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <BackLink href="/dashboard" label={t('common.backToDashboard')} />
+    <PageShell
+      title={t('profile.title')}
+      subtitle={t('profile.subtitle')}
+      back={{ href: "/dashboard", label: t('common.backToDashboard') }}
+    >
 
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('profile.title')}</h1>
-        <p className="text-foreground-muted">{t('profile.subtitle')}</p>
-      </header>
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -46,6 +45,6 @@ export default async function ProfilePage(): Promise<React.ReactElement> {
           <ProfileForm me={me} />
         </section>
       )}
-    </main>
+    </PageShell>
   );
 }

@@ -5,6 +5,7 @@ import { AgedOutFlag } from '@/components/aged-out-flag';
 import { PersonAvatar } from '@/components/person-avatar';
 import { photoUrlFor } from '@/lib/photo';
 import { ArchiveStudentButton } from './student-forms';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * Slice 1.2 — the student register.
@@ -44,13 +45,10 @@ export default async function StudentsPage({
   const filtering = search.trim().length > 0 || levelId.trim().length > 0;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('students.title')}</h1>
-          <p className="text-foreground-muted">{t('students.subtitle')}</p>
-        </div>
-      </header>
+    <PageShell
+      title={t('students.title')}
+      subtitle={t('students.subtitle')}
+    >
 
       {noOrganization && (
         <section className="rounded border border-border bg-surface p-5">
@@ -210,6 +208,6 @@ export default async function StudentsPage({
 
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

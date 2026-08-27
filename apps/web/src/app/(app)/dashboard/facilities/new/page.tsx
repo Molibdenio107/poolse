@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Facilities } from '@/lib/api';
 import { CreateFacilityForm } from '../facility-forms';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * A new site.
@@ -24,13 +24,12 @@ export default async function NewFacilityPage(): Promise<React.ReactElement> {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('facilities.addSite')}</h1>
-        <p className="text-foreground-muted">{t('facilities.addSiteHint')}</p>
-      </header>
+    <PageShell
+      title={t('facilities.addSite')}
+      subtitle={t('facilities.addSiteHint')}
+      back={{ href: "/dashboard/facilities", label: t('facilities.backToSites') }}
+    >
 
-      <BackLink href="/dashboard/facilities" label={t('facilities.backToSites')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -48,6 +47,6 @@ export default async function NewFacilityPage(): Promise<React.ReactElement> {
           <CreateFacilityForm organizationId={data.organizationId} timezones={data.timezones} />
         </section>
       )}
-    </main>
+    </PageShell>
   );
 }

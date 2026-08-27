@@ -1,8 +1,8 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Seasons } from '../../../../../lib/api';
-import { BackLink } from '@/components/back-link';
 import { mediumDate } from '@/lib/dates';
 import { SeasonReset } from './season-reset';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * Seasons — POOLSE-07.
@@ -30,13 +30,12 @@ export default async function SeasonsPage(): Promise<React.ReactElement> {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-16">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('seasons.title')}</h1>
-        <p className="text-foreground-muted">{t('seasons.subtitle')}</p>
-      </header>
+    <PageShell
+      title={t('seasons.title')}
+      subtitle={t('seasons.subtitle')}
+      back={{ href: "/dashboard/classes", label: t('seasons.backToClasses') }}
+    >
 
-      <BackLink href="/dashboard/classes" label={t('seasons.backToClasses')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -102,6 +101,6 @@ export default async function SeasonsPage(): Promise<React.ReactElement> {
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

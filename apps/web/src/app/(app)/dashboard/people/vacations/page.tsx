@@ -7,11 +7,11 @@ import {
   type PendingVacations,
   type TeamVacations,
 } from '@/lib/api';
-import { BackLink } from '@/components/back-link';
 import { cn } from '@/lib/utils';
 import { ApprovalQueue } from './approval-queue';
 import { MyVacations } from './my-vacations';
 import { TeamMap } from './team-map';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * Férias — backlog round 3, stories 6, 7 and 8.
@@ -76,13 +76,12 @@ export default async function VacationsPage({
   const years = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2];
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-16">
-      <BackLink href="/dashboard/people" label={t('vacations.backToPeople')} />
+    <PageShell
+      title={t('vacations.title')}
+      subtitle={t('vacations.subtitle')}
+      back={{ href: "/dashboard/people", label: t('vacations.backToPeople') }}
+    >
 
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('vacations.title')}</h1>
-        <p className="text-foreground-muted">{t('vacations.subtitle')}</p>
-      </header>
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -159,7 +158,7 @@ export default async function VacationsPage({
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }
 

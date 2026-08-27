@@ -71,6 +71,25 @@ export default {
           student: rgb('--role-student'),
         },
       },
+      /*
+       * The page shell's measurements — POOLSE-41.
+       *
+       * Tokens rather than literals in a component, so changing the rhythm of
+       * every page is one edit here. AC4 asks for exactly this, and it is also
+       * what makes the grep check in `scripts/check-layout.mjs` meaningful: a
+       * page using `px-6` instead of `px-page` is a page that has drifted.
+       */
+      spacing: {
+        page: '1.5rem',
+        'page-y': '2.5rem',
+        'page-gap': '2rem',
+      },
+      minHeight: {
+        // Sized for a two-line title plus a subtitle, so a page with header
+        // actions and one without are the same height — 41.7.
+        'page-header': '4.5rem',
+      },
+
       borderRadius: {
         DEFAULT: 'var(--radius)',
         lg: 'var(--radius)',

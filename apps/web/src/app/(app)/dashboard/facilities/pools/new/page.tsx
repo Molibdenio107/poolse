@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Facilities } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
 import { PoolForm } from '../../pool-form';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * Adding a pool, on its own page.
@@ -37,20 +37,13 @@ export default async function NewPoolPage({
   const facility = data?.facilities.find((candidate) => candidate.id === facilityId) ?? null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <EntityIcon kind="pool" className="size-6 text-primary" />
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">{t('facilities.newPool')}</h1>
-            <p className="text-foreground-muted">
-              {facility === null ? '' : t('facilities.newPoolAt', { facility: facility.name })}
-            </p>
-          </div>
-        </div>
-      </header>
+    <PageShell
+      title={t('facilities.newPool')}
+      subtitle={facility === null ? '' : t('facilities.newPoolAt', { facility: facility.name })}
+      back={{ href: "/dashboard/facilities", label: t('facilities.backToFacilities') }}
+      actions={<EntityIcon kind="pool" className="size-6 text-primary" />}
+    >
 
-      <BackLink href="/dashboard/facilities" label={t('facilities.backToFacilities')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -90,6 +83,6 @@ export default async function NewPoolPage({
           />
         </section>
       )}
-    </main>
+    </PageShell>
   );
 }

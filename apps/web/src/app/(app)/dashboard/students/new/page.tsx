@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '@/lib/api';
 import { StudentForm } from '../student-forms';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * A new student.
@@ -28,13 +28,12 @@ export default async function NewStudentPage(): Promise<React.ReactElement> {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('students.add')}</h1>
-        <p className="text-foreground-muted">{t('students.addHint')}</p>
-      </header>
+    <PageShell
+      title={t('students.add')}
+      subtitle={t('students.addHint')}
+      back={{ href: "/dashboard/students", label: t('students.backToRegister') }}
+    >
 
-      <BackLink href="/dashboard/students" label={t('students.backToRegister')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -57,6 +56,6 @@ export default async function NewStudentPage(): Promise<React.ReactElement> {
           />
         </section>
       )}
-    </main>
+    </PageShell>
   );
 }

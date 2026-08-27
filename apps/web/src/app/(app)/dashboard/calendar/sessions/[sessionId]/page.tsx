@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Register } from '@/lib/api';
-import { BackLink } from '@/components/back-link';
 import { longDate } from '@/lib/dates';
 import { RegisterForm } from './register-form';
+import { PageShell } from '@/components/page-shell';
 
 type RegisterResponse = Register & { organizationId: string; canRecord: boolean };
 
@@ -45,8 +45,23 @@ export default async function AttendancePage({
   const back = week === undefined ? '/dashboard/calendar' : `/dashboard/calendar?week=${week}`;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <BackLink href={back} label={t('calendar.backToCalendar')} />
+    <PageShell
+      title={register?.className ?? t('calendar.title')}
+      subtitle={
+        register === null
+          ? undefined
+          : [
+              longDate(register.localDate, locale),
+              register.localTime,
+              register.poolName,
+              register.lane === null ? null : t('classes.laneN', { lane: register.lane }),
+              register.instructorName,
+            ]
+              .filter(Boolean)
+              .join(' · ')
+      }
+      back={{ href: back, label: t('calendar.backToCalendar') }}
+    >
 
       {notPermitted && (
         <section className="rounded border border-border bg-surface p-5">
@@ -63,20 +78,6 @@ export default async function AttendancePage({
 
       {register !== null && (
         <>
-          <header>
-            <h1 className="text-3xl font-semibold tracking-tight">{register.className}</h1>
-            <p className="text-foreground-muted">
-              {[
-                longDate(register.localDate, locale),
-                register.localTime,
-                register.poolName,
-                register.lane === null ? null : t('classes.laneN', { lane: register.lane }),
-                register.instructorName,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </p>
-          </header>
 
           {/*
             A cancelled class is not marked. Saying so beats rendering a register
@@ -96,6 +97,6 @@ export default async function AttendancePage({
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

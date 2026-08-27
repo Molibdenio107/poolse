@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Classes, type EnrolledStudent } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * The whole week, and who is in it.
@@ -107,21 +108,16 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
   const unscheduled = (data?.groups ?? []).filter((group) => group.schedules.length === 0);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('classes.title')}</h1>
-          <p className="text-foreground-muted">{t('classes.subtitle')}</p>
-        </div>
-        {/* This list is the current season's turmas — POOLSE-07. The link is how
-            somebody finds out which season that is. */}
-        <Link
+    <PageShell
+      title={t('classes.title')}
+      subtitle={t('classes.subtitle')}
+      actions={<Link
           href="/dashboard/classes/seasons"
           className="text-sm text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('seasons.title')}
-        </Link>
-      </header>
+        </Link>}
+    >
 
       {noOrganization && (
         <section className="rounded border border-border bg-surface p-5">
@@ -189,6 +185,6 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

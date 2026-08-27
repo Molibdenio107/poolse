@@ -11,6 +11,7 @@ import { readTheme } from '../../../lib/preferences';
 import { PreferenceSync } from './preference-sync';
 import { Sessions } from './sessions';
 import { CreateOrganizationForm } from './create-organization-form';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * The screen people land on after signing in, and until now the weakest one in
@@ -75,15 +76,10 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
   const needsFirstSite = sites !== null && sites.facilities.length === 0;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {membership?.organizationName ?? t('nav.dashboard')}
-          </h1>
-          <p className="text-foreground-muted">{t('app.tagline')}</p>
-        </div>
-      </header>
+    <PageShell
+      title={membership?.organizationName ?? t('nav.dashboard')}
+      subtitle={t('app.tagline')}
+    >
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -240,6 +236,6 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
           </p>
         </>
       )}
-    </main>
+    </PageShell>
   );
 }

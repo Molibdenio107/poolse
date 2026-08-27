@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type TurmaSkills } from '@/lib/api';
 import { BackLink } from '@/components/back-link';
 import { SkillsGrid } from './skills-grid';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * Competências — POOLSE-20.
@@ -28,17 +29,14 @@ export default async function SkillsPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-16">
-      <BackLink href={`/dashboard/classes/${id}`} label={t('skills.backToClass')} />
-
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight">{t('skills.title')}</h1>
-        <p className="text-foreground-muted">
-          {data === null
+    <PageShell
+      title={t('skills.title')}
+      subtitle={data === null
             ? t('skills.subtitle')
             : [data.className, data.levelName].filter(Boolean).join(' · ')}
-        </p>
-      </header>
+    >
+      <BackLink href={`/dashboard/classes/${id}`} label={t('skills.backToClass')} />
+
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -48,6 +46,6 @@ export default async function SkillsPage({
       )}
 
       {data !== null && <SkillsGrid data={data} />}
-    </main>
+    </PageShell>
   );
 }

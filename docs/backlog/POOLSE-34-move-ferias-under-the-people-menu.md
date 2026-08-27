@@ -5,6 +5,10 @@
 **Type:** Improvement · **Area:** Navigation · **Priority:** Low
 **Depends on:** POOLSE-35 (Pessoas becomes the staff section, which is what makes Férias belong there)
 
+> **Amended 27 Aug — see POOLSE-38.** The section is now called **Staff** and is itself a submenu of
+> Instalações, so the chain is Instalações → Staff → Férias. Everything below still applies; read
+> "People"/"Pessoas" as "Staff" throughout.
+
 ### PO — why this exists
 
 Férias is staff leave, and once Pessoas is the staff section (POOLSE-35) the page has an obvious home it does not currently sit in. Owners and Admins planning cover are the ones who go looking for it. Low priority: it is a relocation, and nobody is blocked by the current placement — but doing it alongside POOLSE-35 costs almost nothing and doing it later means a second round of bookmarks breaking.

@@ -4,7 +4,7 @@ import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from '../../facility-forms';
 import { PoolForm } from '../../pool-form';
-import { BackLink } from '@/components/back-link';
+import { PageShell } from '@/components/page-shell';
 
 /**
  * One pool: its details, editable, and its gallery.
@@ -41,20 +41,13 @@ export default async function PoolPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <EntityIcon kind="pool" className="size-6 text-primary" />
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              {pool?.name ?? t('facilities.editPool')}
-            </h1>
-            <p className="text-foreground-muted">{pool?.facilityName ?? ''}</p>
-          </div>
-        </div>
-      </header>
+    <PageShell
+      title={pool?.name ?? t('facilities.editPool')}
+      subtitle={pool?.facilityName ?? ''}
+      back={{ href: "/dashboard/facilities", label: t('facilities.backToFacilities') }}
+      actions={<EntityIcon kind="pool" className="size-6 text-primary" />}
+    >
 
-      <BackLink href="/dashboard/facilities" label={t('facilities.backToFacilities')} />
 
       {missing && (
         <section className="rounded border border-border bg-surface p-5">
@@ -140,7 +133,7 @@ export default async function PoolPage({
           )}
         </>
       )}
-    </main>
+    </PageShell>
   );
 }
 
