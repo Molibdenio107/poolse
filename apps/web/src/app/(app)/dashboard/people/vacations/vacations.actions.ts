@@ -19,7 +19,7 @@ function failure(error: unknown, errorKey: string): FormState {
 
 /** Every screen the decision touches: my year, the queue, and the team map. */
 function revalidateVacations(): void {
-  revalidatePath('/dashboard/calendar/vacations');
+  revalidatePath('/dashboard/people/vacations');
 }
 
 export async function requestVacationAction(

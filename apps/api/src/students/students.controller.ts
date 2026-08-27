@@ -32,6 +32,7 @@ import {
   createStudent,
   DuplicateNameError,
   findStudent,
+  listGuardians,
   listLevels,
   listStudents,
   reorderLevels,
@@ -40,6 +41,7 @@ import {
   studentsOf,
   updateStudent,
   type GuardianInput,
+  type GuardianRow,
   type PersonSummary,
   type Student,
   type StudentInput,
@@ -84,6 +86,22 @@ interface StudentsResponse {
  * both, and filing the lookup under one of their roles would be the mistake this
  * models its way out of.
  */
+/**
+ * Encarregados de educação — POOLSE-35.
+ *
+ * Under Alunos rather than Pessoas, and readable by anyone who can see students:
+ * an instructor needs to know who to hand a child back to. Pessoas stays staff
+ * and stays owner/admin.
+ */
+@Controller('guardians')
+export class GuardiansController {
+  @Get()
+  async list(): Promise<{ organizationId: string; guardians: GuardianRow[] }> {
+    const { organizationId } = currentTenant();
+    return { organizationId, guardians: await listGuardians(organizationId) };
+  }
+}
+
 @Controller('people-search')
 export class PeopleSearchController {
   @Get()

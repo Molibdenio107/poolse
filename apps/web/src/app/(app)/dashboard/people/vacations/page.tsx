@@ -128,7 +128,7 @@ export default async function VacationsPage({
                 {years.map((option) => (
                   <Link
                     key={option}
-                    href={`/dashboard/calendar/vacations?tab=${tab}&year=${option}`}
+                    href={`/dashboard/people/vacations?tab=${tab}&year=${option}`}
                     aria-current={option === chosenYear ? 'page' : undefined}
                     className={cn(
                       'rounded border px-3 py-1.5 text-sm transition-colors',
@@ -178,7 +178,7 @@ function TabLink({
 
   return (
     <Link
-      href={`/dashboard/calendar/vacations?tab=${tab}&year=${year}`}
+      href={`/dashboard/people/vacations?tab=${tab}&year=${year}`}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'rounded px-3 py-2 text-sm transition-colors',

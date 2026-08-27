@@ -23,6 +23,32 @@ const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  /**
+   * Routes that have moved — POOLSE-34.
+   *
+   * Férias went from Calendário to Pessoas when Pessoas became the staff section
+   * (POOLSE-35). Somebody's bookmark should not become a 404 because we changed
+   * our minds about where a page belongs.
+   *
+   * `permanent: false` on purpose: a 308 is cached by the browser essentially
+   * forever, and a wrong permanent redirect is very hard to take back. These can
+   * become permanent once the new paths have settled.
+   */
+  async redirects() {
+    return [
+      {
+        source: '/dashboard/calendar/vacations',
+        destination: '/dashboard/people/vacations',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/calendar/vacations/:path*',
+        destination: '/dashboard/people/vacations/:path*',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

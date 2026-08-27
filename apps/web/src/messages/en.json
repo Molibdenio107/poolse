@@ -413,7 +413,12 @@
     "guardianFindPlaceholder": "Name, email or tax number",
     "guardianAlreadyOf": "{count, plural, one {Already guardian to # student} other {Already guardian to # students}}",
     "guardianNoMatches": "Nobody found. Add a new person.",
-    "guardianAddNew": "Add a new person"
+    "guardianAddNew": "Add a new person",
+    "guardiansTitle": "Guardians",
+    "guardiansSubtitle": "Who is responsible for each student. One guardian can have several students.",
+    "noGuardians": "No guardians recorded yet.",
+    "noGuardiansHint": "They are created from the record of a student under the age of majority.",
+    "guardianOfNobody": "No students linked."
   },
   "progress": {
     "title": "Progression",

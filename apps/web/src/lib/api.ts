@@ -759,3 +759,24 @@ export interface Seasons {
   preview?: ResetPreview;
   suggested: { name: string; startsOn: string; endsOn: string };
 }
+
+/**
+ * An encarregado de educação with the students they look after — POOLSE-35.
+ *
+ * One guardian to many students, which is the shape a free-text guardian column
+ * could never express: the mother of three is one row with three children under
+ * her, not three copies of the same woman.
+ */
+export interface GuardianRow {
+  membershipId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  hasLogin: boolean;
+  students: { id: string; name: string; relationship: string | null }[];
+}
+
+export interface Guardians {
+  organizationId: string;
+  guardians: GuardianRow[];
+}

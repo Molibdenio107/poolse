@@ -1055,3 +1055,80 @@ export async function studentsOf(
     return rows;
   });
 }
+
+/**
+ * Every encarregado de educação, with the students they are responsible for —
+ * POOLSE-35, criterion 5, and POOLSE-04, criterion 9.
+ *
+ * Lives under Alunos rather than under Pessoas: a guardian is part of the
+ * families a club teaches, not part of its staff. Somebody who is both appears
+ * in both sections as the same person — the filter is on roles, and roles are a
+ * set.
+ *
+ * One guardian to many students is the shape that matters here. The list is
+ * grouped by person so a mother of three is one row with three children under
+ * her, which is the fact a free-text guardian column could never express.
+ */
+export interface GuardianRow {
+  membershipId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  hasLogin: boolean;
+  students: { id: string; name: string; relationship: string | null }[];
+}
+
+export async function listGuardians(organizationId: string): Promise<GuardianRow[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      membership_id: string;
+      name: string;
+      email: string | null;
+      phone: string | null;
+      has_login: boolean;
+      students: GuardianRow['students'];
+    }>(`
+      SELECT m.id AS membership_id,
+             person_name(m.id) AS name,
+             person_email(m.id)::text AS email,
+             m.phone,
+             m.app_user_id IS NOT NULL AS has_login,
+             coalesce((
+               SELECT jsonb_agg(
+                        jsonb_build_object(
+                          'id', s.id,
+                          'name', s.first_name || ' ' || s.last_name,
+                          'relationship', gl.relationship
+                        )
+                        ORDER BY s.first_name, s.last_name
+                      )
+                 FROM guardian_link gl
+                 JOIN student s
+                   ON s.id = gl.student_id
+                  AND s.organization_id = gl.organization_id
+                WHERE gl.guardian_membership_id = m.id
+                  AND gl.organization_id = m.organization_id
+                  AND gl.archived_at IS NULL
+                  AND s.archived_at IS NULL
+             ), '[]'::jsonb) AS students
+        FROM membership m
+       WHERE m.archived_at IS NULL
+         AND EXISTS (
+           SELECT 1 FROM membership_role mr
+            WHERE mr.membership_id = m.id
+              AND mr.role = 'guardian'
+              AND mr.archived_at IS NULL
+         )
+       ORDER BY person_name(m.id)
+    `);
+
+    return rows.map((row) => ({
+      membershipId: row.membership_id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      hasLogin: row.has_login,
+      students: row.students,
+    }));
+  });
+}

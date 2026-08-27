@@ -4,6 +4,7 @@ import { ApiError, apiFetch, type OrganizationMember, type People } from '../../
 import { DeliveryBadge } from '@/components/delivery-badge';
 import { PersonAvatar } from '@/components/person-avatar';
 import { RoleBadge, RoleBadges } from '@/components/role-badge';
+import { STAFF_ROLES, inScope } from '@/lib/roles';
 import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
@@ -19,8 +20,17 @@ import { BackLink } from '@/components/back-link';
  * and hands it back in the response — a client that can name its own tenant has
  * no tenant isolation at all, whatever the RLS policies say.
  */
-/** The `member_role` enum, for validating what arrives in the query string. */
-const ROLES = ['owner', 'admin', 'instructor', 'maintenance', 'student', 'guardian'];
+/**
+ * Pessoas is staff — POOLSE-35.
+ *
+ * Students and encarregados de educação live under Alunos. Two filtered views
+ * over one Person, never two record types: somebody holding roles on both sides
+ * appears in both, as the same record, edited in either place.
+ *
+ * The filter chips offer only staff roles for the same reason. A "Alunos" chip
+ * here that returned nothing would read as a bug rather than as a boundary.
+ */
+const ROLES: readonly string[] = STAFF_ROLES;
 
 export default async function PeoplePage({
   searchParams,
@@ -62,14 +72,17 @@ export default async function PeoplePage({
     }
   }
 
-  // A person holding two roles appears under both, which is how the schema
-  // stores them and how R2-2 specifies the sub-sections should show them.
-  const members =
-    people === null
-      ? []
-      : role === null
-        ? people.members
-        : people.members.filter((member) => member.roles.includes(role));
+  /*
+   * Staff only — POOLSE-35, criterion 7. This view searches its own scope and
+   * never returns students or guardians.
+   *
+   * A person holding two staff roles appears once with both badges, which is how
+   * the schema stores them and how R2-2 specifies the sub-sections should show
+   * them.
+   */
+  const staff = (people?.members ?? []).filter((member) => inScope(member.roles, 'staff'));
+
+  const members = role === null ? staff : staff.filter((member) => member.roles.includes(role));
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">

@@ -413,7 +413,12 @@
     "guardianFindPlaceholder": "Nome, e-mail ou NIF",
     "guardianAlreadyOf": "{count, plural, one {Já é encarregado de # aluno} other {Já é encarregado de # alunos}}",
     "guardianNoMatches": "Ninguém encontrado. Adicione uma pessoa nova.",
-    "guardianAddNew": "Adicionar pessoa nova"
+    "guardianAddNew": "Adicionar pessoa nova",
+    "guardiansTitle": "Encarregados de educação",
+    "guardiansSubtitle": "Quem é responsável por cada aluno. Um encarregado pode ter vários alunos.",
+    "noGuardians": "Ainda não há encarregados de educação registados.",
+    "noGuardiansHint": "São criados a partir da ficha de um aluno menor de idade.",
+    "guardianOfNobody": "Sem alunos associados."
   },
   "progress": {
     "title": "Progressão",

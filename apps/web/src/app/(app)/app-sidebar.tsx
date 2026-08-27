@@ -40,9 +40,27 @@ interface Section {
   roles?: readonly string[];
 }
 
+/**
+ * The main navigation, in order — POOLSE-36.
+ *
+ * Defined once, here, rather than per layout: the mobile and collapsed views
+ * read the same array, so the order cannot drift between them.
+ */
 const SECTIONS: Section[] = [
   { href: '/dashboard', key: 'nav.dashboard', icon: 'dashboard' },
   { href: '/dashboard/facilities', key: 'facilities.title', icon: 'facility' },
+  // Pessoas sits directly below Instalações — POOLSE-36. Staff only now
+  // (POOLSE-35); students and encarregados live under Alunos.
+  {
+    href: '/dashboard/people',
+    key: 'people.title',
+    icon: 'people',
+    roles: ['owner', 'admin'],
+    // Férias moved here from Calendário — POOLSE-34. It is staff leave, and
+    // Pessoas is the staff section; under Calendário it sat beside closures,
+    // which are about the building rather than about people.
+    children: [{ href: '/dashboard/people/vacations', key: 'vacations.title' }],
+  },
   {
     href: '/dashboard/classes',
     key: 'classes.title',
@@ -57,25 +75,19 @@ const SECTIONS: Section[] = [
     href: '/dashboard/calendar',
     key: 'calendar.title',
     icon: 'calendar',
-    children: [
-      { href: '/dashboard/calendar/closures', key: 'calendar.closures' },
-      // Backlog round 3, story 6 puts Férias under Calendário. It belongs here:
-      // both answer "who is where, and when", and leave is the thing that makes
-      // a turma need a substitute.
-      { href: '/dashboard/calendar/vacations', key: 'vacations.title' },
-    ],
+    children: [{ href: '/dashboard/calendar/closures', key: 'calendar.closures' }],
   },
   {
     href: '/dashboard/students',
     key: 'students.title',
     icon: 'student',
-    children: [{ href: '/dashboard/students/levels', key: 'students.levels' }],
+    children: [
+      { href: '/dashboard/students/levels', key: 'students.levels' },
+      // Encarregados de educação belong with the families, not with the staff —
+      // POOLSE-35.
+      { href: '/dashboard/students/guardians', key: 'students.guardiansTitle' },
+    ],
   },
-  // Staff administration — emails, roles, pending invitations. Backlog round 2,
-  // story 8. `manager` is not in this list because it is not in the schema:
-  // `member_role` is owner, admin, instructor, maintenance, student, guardian,
-  // and the story's manager is this product's admin.
-  { href: '/dashboard/people', key: 'people.title', icon: 'people', roles: ['owner', 'admin'] },
 ];
 
 /**

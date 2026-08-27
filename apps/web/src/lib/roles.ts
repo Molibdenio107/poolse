@@ -47,3 +47,33 @@ export function bySeniority(roles: readonly string[]): string[] {
     (a, b) => (SENIORITY[a] ?? MEMBER_ROLES.length) - (SENIORITY[b] ?? MEMBER_ROLES.length),
   );
 }
+
+/**
+ * Who belongs in Pessoas, and who belongs in Alunos — POOLSE-35.
+ *
+ * Two filtered views over one Person, never two record types. The split is by
+ * role rather than by table precisely so that somebody holding roles on both
+ * sides — the instructor who also brings her son, the senior student on the
+ * committee — appears in both places as the same record, edited in either.
+ *
+ * A membership with no roles at all counts as staff. In practice that is an
+ * invitation not yet accepted, and Pessoas is where an admin goes looking for
+ * one; showing it under Alunos would put a pending colleague among the children.
+ */
+export const STAFF_ROLES = ['owner', 'admin', 'instructor', 'maintenance'] as const;
+
+export const LEARNER_ROLES = ['student', 'guardian'] as const;
+
+export type Scope = 'staff' | 'learners';
+
+/** Whether a person with these roles belongs in the given section. */
+export function inScope(roles: readonly string[], scope: Scope): boolean {
+  if (scope === 'learners') return roles.some((role) => LEARNER_ROLES.includes(role as never));
+  // Staff by holding a staff role, or by holding none yet — see above.
+  return roles.length === 0 || roles.some((role) => STAFF_ROLES.includes(role as never));
+}
+
+/** The roles a section's filter chips may offer. */
+export function rolesOf(scope: Scope): readonly string[] {
+  return scope === 'learners' ? LEARNER_ROLES : STAFF_ROLES;
+}
