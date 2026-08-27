@@ -2,7 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { ApiError, apiFetch, apiPatch, apiPost, type PersonSummary } from '../../../../lib/api';
+import {
+  ApiError,
+  apiFetch,
+  apiPatch,
+  apiPost,
+  type PersonSummary,
+  type Skill,
+} from '../../../../lib/api';
 import type { FormState } from '../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
@@ -290,4 +297,73 @@ export async function searchPeopleAction(query: string): Promise<PersonSummary[]
   } catch {
     return [];
   }
+}
+
+/**
+ * The skills of one level — POOLSE-20.
+ *
+ * Fetched from the level list rather than sent with it, because most visits to
+ * that page are about levels and not about skills: loading every skill of every
+ * level to render a page that usually shows none of them is work nobody asked
+ * for.
+ */
+export async function skillsOfAction(levelId: string): Promise<Skill[]> {
+  try {
+    const result = await apiFetch<{ skills: Skill[] }>(
+      `/skills?levelId=${encodeURIComponent(levelId)}`,
+    );
+    return result.skills;
+  } catch {
+    return [];
+  }
+}
+
+export async function createSkillAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const text = (field: string): string => String(formData.get(field) ?? '').trim();
+
+  const name = text('name');
+  if (name === '') return { ok: false, fields: { name: 'skills.nameRequired' } };
+
+  try {
+    await apiPost(
+      '/skills',
+      {
+        levelId: text('levelId'),
+        name,
+        minDays: text('minDays'),
+        minLessons: text('minLessons'),
+        videoUrl: text('videoUrl'),
+      },
+      { organizationId },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      return { ok: false, fields: { name: 'skills.duplicate' } };
+    }
+    return { ok: false, errorKey: 'skills.createFailed' };
+  }
+
+  revalidatePath('/dashboard/students/levels');
+  return { ok: true };
+}
+
+export async function archiveSkillAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const skillId = String(formData.get('skillId') ?? '');
+
+  try {
+    await apiPost(`/skills/${skillId}/archive`, {}, { organizationId });
+  } catch {
+    return { ok: false, errorKey: 'skills.createFailed' };
+  }
+
+  revalidatePath('/dashboard/students/levels');
+  return { ok: true };
 }

@@ -3,6 +3,7 @@ import { ClerkAuthMiddleware } from './auth/clerk-auth.middleware.js';
 import { AttendanceController } from './classes/attendance.controller.js';
 import { SeasonsController } from './classes/seasons.controller.js';
 import { GuardiansController, PeopleSearchController } from './students/students.controller.js';
+import { SkillsController } from './classes/skills.controller.js';
 import { ClassesController, TimetableController } from './classes/classes.controller.js';
 import {
   CalendarController,
@@ -63,6 +64,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     SeasonsController,
     PeopleSearchController,
     GuardiansController,
+    SkillsController,
     StudentCalendarController,
     StudentsController,
     LevelsController,

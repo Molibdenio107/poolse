@@ -1,4 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
+import type { SkillState } from './skills';
 
 /**
  * Server-side client for the Poolse API.
@@ -786,4 +787,51 @@ export interface GuardianRow {
 export interface Guardians {
   organizationId: string;
   guardians: GuardianRow[];
+}
+
+/**
+ * Skills, in four states — POOLSE-20.
+ *
+ * Não iniciado, Iniciado, Avaliado, Adquirido. Assessment poolside is not
+ * binary: an instructor introduces a skill, watches it, tests it, and only then
+ * signs it off.
+ */
+// Re-exported so server code can keep importing types from one place; the value
+// side lives in `./skills` because this module is server-only. See that file.
+export type { SkillState } from './skills';
+
+export interface Skill {
+  id: string;
+  levelId: string;
+  name: string;
+  sortOrder: number;
+  /** Dias mínimos before this can be signed off. Null means no threshold. */
+  minDays: number | null;
+  /** Aulas mínimas — attended, not merely scheduled. */
+  minLessons: number | null;
+  videoUrl: string | null;
+}
+
+export interface SkillMark {
+  studentId: string;
+  skillId: string;
+  state: SkillState;
+  /** Whether signing off would need an override. Known before the tap, not after. */
+  ready: boolean;
+  overridden: boolean;
+}
+
+export interface TurmaSkills {
+  classGroupId: string;
+  className: string;
+  levelId: string | null;
+  levelName: string | null;
+  students: { id: string; name: string }[];
+  skills: Skill[];
+  marks: SkillMark[];
+}
+
+export interface MarkOutcome {
+  saved: number;
+  needsOverride: { studentId: string; skillId: string }[];
 }

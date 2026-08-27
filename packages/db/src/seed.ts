@@ -188,6 +188,7 @@ async function main(): Promise<void> {
       attendance: 0,
       vacations: 0,
       guardians: 0,
+      skills: 0,
     };
 
     // ---------------------------------------------------------------------
@@ -361,6 +362,70 @@ async function main(): Promise<void> {
         ],
       );
       counts.students += 1;
+    }
+
+    /*
+     * Competências, so the instructor grid has something to show — POOLSE-20.
+     *
+     * Real ones, in the order a Portuguese swimming school teaches them, with
+     * thresholds on the two that genuinely need time in the water. A demo whose
+     * skills are "Competência 1" through "Competência 5" shows the grid working
+     * and nothing about what it is for.
+     */
+    const SKILLS: Record<string, [string, number | null, number | null][]> = {
+      'natação para bebés': [
+        ['Entrada na água ao colo', null, null],
+        ['Flutuação com apoio', null, 4],
+        ['Imersão da face', 3, 6],
+        ['Deslize com apoio', null, null],
+      ],
+      'nível a adaptação': [
+        ['Entrada autónoma', null, null],
+        ['Imersão completa', null, 4],
+        ['Flutuação ventral', 7, 6],
+        ['Flutuação dorsal', 7, 6],
+        ['Deslize ventral', null, null],
+      ],
+      'nível b autonomia': [
+        ['Deslize dorsal', null, null],
+        ['Pernada de crol', null, 8],
+        ['Respiração lateral', 14, 10],
+        ['Coordenação crol', 14, 12],
+      ],
+      'nível c1 iniciação': [
+        ['Crol completo 25 m', 21, 12],
+        ['Costas completo 25 m', 21, 12],
+        ['Salto de partida', null, 4],
+      ],
+      'nível c2 aperfeiçoamento': [
+        ['Bruços completo 25 m', 21, 12],
+        ['Viragem de crol', null, 8],
+        ['Mariposa — pernada', null, 8],
+      ],
+      'hidroginástica sénior': [
+        ['Marcha aquática', null, null],
+        ['Exercícios de mobilidade', null, null],
+        ['Flutuação assistida', null, null],
+      ],
+    };
+
+    for (const level of levels) {
+      const wanted = SKILLS[level.name.toLowerCase()];
+      if (wanted === undefined) continue;
+
+      for (const [index, [name, minDays, minLessons]] of wanted.entries()) {
+        const inserted = await client.query(
+          `INSERT INTO skill (organization_id, level_id, name, sort_order,
+                              min_days, min_lessons)
+           SELECT $1, $2, $3, $4, $5, $6
+            WHERE NOT EXISTS (
+              SELECT 1 FROM skill
+               WHERE level_id = $2 AND lower(name) = lower($3) AND archived_at IS NULL
+            )`,
+          [org.id, level.id, name, index, minDays, minLessons],
+        );
+        counts.skills += inserted.rowCount ?? 0;
+      }
     }
 
     /*
@@ -692,6 +757,7 @@ async function main(): Promise<void> {
     console.log(`  students added     ${counts.students}`);
     console.log(`  enrollments        ${counts.enrollments}`);
     console.log(`  attendance marks   ${counts.attendance}`);
+    console.log(`  skills added       ${counts.skills}`);
     console.log(`  guardians linked   ${counts.guardians}`);
     console.log(`  leave requests     ${counts.vacations}`);
     console.log('');

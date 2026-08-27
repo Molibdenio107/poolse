@@ -6,6 +6,7 @@ import { AgeRangeBadge } from '@/components/age-range';
 import { Reorderable } from '@/components/reorderable';
 import { reorderLevelsAction } from '../students.actions';
 import { ArchiveLevelButton, EditLevelForm } from './level-forms';
+import { LevelSkills } from './level-skills';
 
 /**
  * The progression, reorderable — POOLSE-05.
@@ -68,7 +69,16 @@ export function LevelList({
     >
       {(level) => (
         <>
-          {details(level)}
+          <div className="min-w-0 flex-1">
+            {details(level)}
+            {/* What the level consists of — POOLSE-20. Folded away, because a
+                club sets these up once a season and then leaves them alone. */}
+            <LevelSkills
+              organizationId={organizationId}
+              levelId={level.id}
+              canManage={canManage}
+            />
+          </div>
           <div className="flex flex-wrap items-center gap-1">
             <EditLevelForm organizationId={organizationId} level={level} />
             <ArchiveLevelButton

@@ -287,7 +287,19 @@ guardian_link                   -- the relation between two people
   unique (student_id) where archived_at is null and is_primary
 
 student_level                   -- lookup; operators define their own progression
-  id, organization_id, name, sort_order, archived_at
+  id, organization_id, name, sort_order, min_age_months, max_age_months, archived_at
+
+skill                           -- what a level consists of; see "skills"
+  id, organization_id, level_id, name, sort_order,
+  min_days, min_lessons, video_url, archived_at
+  unique (organization_id, level_id, lower(name)) where archived_at is null
+
+skill_progress                  -- where one student stands on one skill
+  id, organization_id, student_id, skill_id,
+  state ('not_started'|'started'|'tested'|'attained'),
+  started_on, attained_at, recorded_by_membership_id, recorded_at,
+  override_by_membership_id, override_reason
+  unique (student_id, skill_id)
 
 season                          -- the year the club runs; see "seasons"
   id, organization_id, name, starts_on, ends_on, archived_at
@@ -579,6 +591,43 @@ one statement, so one double-booked instructor would abort the whole run and
 leave the operator holding a constraint name. `findScheduleClashes` asks the
 question of `class_schedule` before anything is written, and the answer names the
 two turmas.
+
+### Skills
+
+**Four states, not a checkbox.** Assessment poolside is not binary: an instructor
+introduces a skill, watches it a few times, tests it, and only then signs it off.
+A boolean collapses those into "done or not", losing the two states an instructor
+spends the term in.
+
+**Absence means `not_started`.** Six levels × ten skills × three hundred students
+is eighteen thousand rows to say nothing has happened yet. A row appears the
+first time somebody marks the skill. The enum still names all four, because
+putting somebody *back* to Não iniciado is a real correction and should be a
+value rather than a delete that loses who did it.
+
+**Skills hang off the class level, and there is only one kind of level.** This is
+what makes automatic advancement possible: "finished this level" and "ready for
+the next turma" become the same question. Every competitor keeps skill levels and
+class levels as separate systems and asks staff to map them by hand.
+
+`started_on` and `attained_at` are stamped by a trigger rather than by the
+repository, because every write path — the grid, a single correction, an import —
+must produce the same ones. Re-saving an attained skill must not move the date it
+was signed off, and moving it back must clear it; a level's completion date
+quietly becoming "the day somebody edited a note" is the kind of wrong nobody
+notices until a certificate is printed.
+
+`skill_thresholds_met` answers whether *dias mínimos* and *aulas mínimas* are
+satisfied. It counts attendance marked `present`, not sessions that existed — a
+child absent for six weeks has not had six lessons, and counting sessions would
+pass the threshold for exactly the students it exists to protect. A skill with
+neither threshold is always ready, so a club that does not work this way never
+configures anything.
+
+The override is what makes thresholds safe to have, and it records who used it —
+which is what stops it becoming the normal path. Thresholds bite only on the way
+to Adquirido: Iniciado and Avaliado are observations about what is happening in
+the water, and nothing should slow those down.
 
 ### Level age ranges
 

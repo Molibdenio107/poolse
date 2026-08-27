@@ -67,6 +67,15 @@ export default async function ClassPage({
             {[group?.levelName, group?.instructorName, group?.poolName].filter(Boolean).join(' · ')}
           </p>
         </div>
+
+        {/* POOLSE-20. The screen an instructor opens during a lesson, so it is
+            reachable from the turma in one press rather than through a menu. */}
+        <Link
+          href={`/dashboard/classes/${id}/skills`}
+          className="shrink-0 rounded border border-border px-4 py-2 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {t('skills.title')}
+        </Link>
       </header>
 
       <BackLink href="/dashboard/classes" label={t('classes.backToClasses')} />
