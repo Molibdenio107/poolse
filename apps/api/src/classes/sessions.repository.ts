@@ -37,6 +37,18 @@ export interface Session {
   /** True when a closure cancelled it, rather than a person. */
   byClosure: boolean;
   enrolled: number;
+  /**
+   * The active roll, alphabetical — POOLSE-15.
+   *
+   * Sent with the session rather than fetched on hover: the calendar already
+   * runs one query for the week, and a request per turma per hover is exactly
+   * what the ticket asks not to do. A week of thirty classes carries a few
+   * hundred short strings, which is smaller than the closure list beside it.
+   *
+   * Waiting-list students are excluded. They are not in the class, and a roll
+   * that listed them would be wrong on the day.
+   */
+  students: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -251,7 +263,18 @@ const SESSION_COLUMNS = `
      WHERE e.organization_id = cs.organization_id
        AND e.class_group_id = cs.class_group_id
        AND e.status = 'active'
-  )::int AS enrolled
+  )::int AS enrolled,
+  -- The names behind that count — POOLSE-15. Wrapped in coalesce because a
+  -- turma with nobody in it aggregates to NULL rather than to an empty array,
+  -- and the mapper should not have to know that.
+  coalesce((
+    SELECT array_agg(s.first_name || ' ' || s.last_name ORDER BY s.first_name, s.last_name)
+      FROM enrollment e
+      JOIN student s ON s.id = e.student_id AND s.organization_id = e.organization_id
+     WHERE e.organization_id = cs.organization_id
+       AND e.class_group_id = cs.class_group_id
+       AND e.status = 'active'
+  ), '{}') AS students
 `;
 
 const SESSION_JOINS = `
@@ -286,6 +309,7 @@ interface SessionRow {
   cancellation_reason: string | null;
   by_closure: boolean;
   enrolled: number;
+  students: string[];
 }
 
 function toSession(row: SessionRow): Session {
@@ -307,6 +331,7 @@ function toSession(row: SessionRow): Session {
     cancellationReason: row.cancellation_reason,
     byClosure: row.by_closure,
     enrolled: row.enrolled,
+    students: row.students,
   };
 }
 

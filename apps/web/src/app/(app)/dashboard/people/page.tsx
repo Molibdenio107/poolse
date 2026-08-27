@@ -3,6 +3,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type OrganizationMember, type People } from '../../../../lib/api';
 import { DeliveryBadge } from '@/components/delivery-badge';
 import { PersonAvatar } from '@/components/person-avatar';
+import { RoleBadge, RoleBadges } from '@/components/role-badge';
 import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
@@ -125,9 +126,7 @@ export default async function PeoplePage({
             </h2>
             {role !== null && (
               <p className="mb-4 flex flex-wrap items-center gap-3 text-sm">
-                <span className="rounded bg-primary/15 px-2 py-0.5 text-primary">
-                  {t(`roles.${role}`)}
-                </span>
+                <RoleBadge role={role} />
                 <Link href="/dashboard/people" className="text-primary hover:underline">
                   {t('people.showAll')}
                 </Link>
@@ -166,14 +165,7 @@ export default async function PeoplePage({
                         </span>
                       </Hint>
                     )}
-                    {member.roles.map((role) => (
-                      <span
-                        key={role}
-                        className="rounded bg-primary/15 px-2 py-0.5 text-sm text-primary"
-                      >
-                        {t(`roles.${role}`)}
-                      </span>
-                    ))}
+                    <RoleBadges roles={member.roles} />
                   </div>
                 </li>
               ))}
@@ -215,14 +207,7 @@ export default async function PeoplePage({
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
-                      {invitation.roles.map((role) => (
-                        <span
-                          key={role}
-                          className="rounded bg-primary/15 px-2 py-0.5 text-sm text-primary"
-                        >
-                          {t(`roles.${role}`)}
-                        </span>
-                      ))}
+                      <RoleBadges roles={invitation.roles} />
                       {people.canInvite && (
                         <>
                           <ReissueButton

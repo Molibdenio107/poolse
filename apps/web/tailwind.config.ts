@@ -60,6 +60,16 @@ export default {
         success: rgb('--success'),
         warning: rgb('--warning'),
         danger: rgb('--danger'),
+        // POOLSE-18. Tokens rather than per-component literals, so a role reads
+        // the same in the People list, a filter chip and the invite dialog.
+        role: {
+          owner: rgb('--role-owner'),
+          admin: rgb('--role-admin'),
+          instructor: rgb('--role-instructor'),
+          maintenance: rgb('--role-maintenance'),
+          guardian: rgb('--role-guardian'),
+          student: rgb('--role-student'),
+        },
       },
       borderRadius: {
         DEFAULT: 'var(--radius)',

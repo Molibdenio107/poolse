@@ -263,7 +263,10 @@
     "archiveHint": "Archiving ends the enrolments in it. It stays on the record.",
     "confirmArchive": "{count, plural, one {Archive? # enrolment ends.} other {Archive? # enrolments end.}}",
     "confirmArchiveEmpty": "Archive this class group?",
-    "archiveFailed": "Could not archive the class group."
+    "archiveFailed": "Could not archive the class group.",
+    "when": "When",
+    "occupancy": "{occupancy} places taken",
+    "enrolled": "Enrolled students"
   },
   "seasons": {
     "title": "Seasons",

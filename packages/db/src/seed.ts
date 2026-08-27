@@ -98,28 +98,44 @@ function stableUnit(key: string): number {
 }
 
 /**
- * A birth date for somebody who is exactly `years` old today.
+ * A birth date for somebody who is exactly `months` old today.
  *
- * Counted backwards from today and then further back by up to 364 days, so the
- * birthday has always already happened this year. Jittering the month and day
- * around a fixed year — the obvious version — makes roughly half of them a year
- * younger than asked for, because a birthday in November has not happened yet in
- * August. That is invisible in a seed until the age warnings start firing on
- * students who were meant to fit their level.
+ * **Months, not years.** Level bounds have been months since POOLSE-06, and this
+ * took years while its only caller passed `level.min` and `level.max` straight
+ * in. A baby class bounded at 6 to 35 months therefore seeded six- to
+ * thirty-five-*year*-olds, and the seed's whole purpose — students who fit their
+ * level, so the aged-out flag means something when it fires — was inverted:
+ * almost every student came out flagged.
+ *
+ * Counted backwards from today and then further back by up to 27 days, so the
+ * monthly anniversary has always already passed. Jittering the day around a
+ * fixed month — the obvious version — makes roughly half of them a month younger
+ * than asked for, which at the bottom of a baby class is the difference between
+ * eligible and not.
  */
-function birthDateAged(years: number): string {
+function birthDateAged(months: number): string {
   const today = new Date();
   const anniversary = Date.UTC(
-    today.getUTCFullYear() - years,
-    today.getUTCMonth(),
+    today.getUTCFullYear(),
+    today.getUTCMonth() - months,
     today.getUTCDate(),
   );
 
   // Earlier than the anniversary means older, never younger — up to one day
-  // short of the next birthday.
-  const born = new Date(anniversary - Math.floor(random() * 365) * 86_400_000);
+  // short of the next monthly anniversary.
+  const born = new Date(anniversary - Math.floor(random() * 28) * 86_400_000);
   return born.toISOString().slice(0, 10);
 }
+
+/**
+ * The senior level's bounds, in months — POOLSE-16.
+ *
+ * 60 to 100 years. The upper end is the ceiling the ticket raised the picker to;
+ * the database has allowed 120 years since the months migration, so nothing here
+ * is near a limit.
+ */
+const SENIOR_MIN_MONTHS = 60 * 12;
+const SENIOR_MAX_MONTHS = 100 * 12;
 
 interface Level {
   id: string;
@@ -244,7 +260,35 @@ async function main(): Promise<void> {
       'nível b autonomia': [60, 107],
       'nível c1 iniciação': [84, 155],
       'nível c2 aperfeiçoamento': [120, null],
+      // 60 to 100 years — POOLSE-16. Present so the top of the range is
+      // exercised by something rather than asserted in a test and never seen: a
+      // level capped at 30 was the bug, and a demo tenant whose oldest student
+      // is twelve would not have shown it.
+      'hidroginástica sénior': [SENIOR_MIN_MONTHS, SENIOR_MAX_MONTHS],
     };
+
+    /*
+     * The senior level itself, if the club has not made one.
+     *
+     * Created rather than merely given a range, because unlike the others it is
+     * not already in the operator's own list — and the students seeded below
+     * need somewhere to be.
+     */
+    await client.query(
+      `INSERT INTO student_level (organization_id, name, sort_order,
+                                  min_age_months, max_age_months)
+       SELECT $1, 'Hidroginástica Sénior',
+              coalesce((SELECT max(sort_order) + 1 FROM student_level
+                         WHERE organization_id = $1), 0),
+              $2, $3
+        WHERE NOT EXISTS (
+          SELECT 1 FROM student_level
+           WHERE organization_id = $1
+             AND lower(name) = 'hidroginástica sénior'
+             AND archived_at IS NULL
+        )`,
+      [org.id, SENIOR_MIN_MONTHS, SENIOR_MAX_MONTHS],
+    );
 
     const levels = await many<Level>(
       client,
@@ -316,6 +360,58 @@ async function main(): Promise<void> {
         ],
       );
       counts.students += 1;
+    }
+
+    /*
+     * A handful of seniors — POOLSE-16, criterion 4.
+     *
+     * Separate from the loop above because that one spreads students evenly
+     * across every level, and evenly is exactly wrong here: a club running one
+     * senior class has a dozen people in it, not two. Aged 60 to 85, inside the
+     * level's bounds, so they read as an ordinary class rather than as a test
+     * fixture.
+     */
+    const seniorLevel = await one<{ id: string }>(
+      client,
+      `SELECT id FROM student_level
+        WHERE organization_id = $1
+          AND lower(name) = 'hidroginástica sénior'
+          AND archived_at IS NULL`,
+      [org.id],
+    );
+
+    if (seniorLevel !== null) {
+      const seniorsAlready = await one<{ n: string }>(
+        client,
+        `SELECT count(*) AS n FROM student
+          WHERE organization_id = $1 AND level_id = $2 AND archived_at IS NULL`,
+        [org.id, seniorLevel.id],
+      );
+
+      const seniorsToCreate = Math.max(0, 8 - Number(seniorsAlready?.n ?? 0));
+
+      for (let index = 0; index < seniorsToCreate; index += 1) {
+        const years = 60 + Math.floor(random() * 26);
+
+        await client.query(
+          `INSERT INTO student (organization_id, first_name, last_name, birth_date,
+                                level_id, contact_email, contact_phone)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            org.id,
+            pick(FIRST_NAMES),
+            `${pick(LAST_NAMES)} ${pick(LAST_NAMES)}`,
+            birthDateAged(years * 12),
+            seniorLevel.id,
+            // Their own address and their own phone. A seventy-year-old is not
+            // somebody's child, and seeding an `encarregado@` address for them
+            // would put the wrong idea in the demo.
+            random() < 0.8 ? `socio${index}@exemplo.pt` : null,
+            random() < 0.8 ? `9${Math.floor(10_000_000 + random() * 89_999_999)}` : null,
+          ],
+        );
+        counts.students += 1;
+      }
     }
 
     // ---------------------------------------------------------------------

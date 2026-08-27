@@ -56,6 +56,25 @@
     --warning: 197 143 46;
     --danger: 190 71 62;
 
+    /*
+     * Role colours — POOLSE-18.
+     *
+     * Six hues, deliberately clear of the amber and red that carry the
+     * attendance states: a red chip beside a register must never read as
+     * "faltou". They also differ in lightness, not only hue, so the badges stay
+     * distinguishable to a colour-blind reader — and every badge carries its
+     * role as text regardless, which is what actually conveys the meaning.
+     *
+     * Read as text on a 15% tint of themselves, which is how the badge is built,
+     * so each is dark enough here and light enough in the dark theme.
+     */
+    --role-owner: 124 58 173;
+    --role-admin: 59 90 190;
+    --role-instructor: 22 132 130;
+    --role-maintenance: 100 116 133;
+    --role-guardian: 58 138 86;
+    --role-student: 37 110 176;
+
     --radius: 0.5rem;
 
     /* --- shadcn aliases (see the note above) --- */
@@ -92,6 +111,14 @@
     --success: 106 187 138;
     --warning: 222 174 84;
     --danger: 224 110 100;
+
+    /* Lighter counterparts — same hues, readable on a dark surface. */
+    --role-owner: 186 148 235;
+    --role-admin: 137 165 240;
+    --role-instructor: 90 190 186;
+    --role-maintenance: 158 173 189;
+    --role-guardian: 124 194 146;
+    --role-student: 116 175 230;
 
     /* --- shadcn aliases --- */
     --card: 20 27 31;

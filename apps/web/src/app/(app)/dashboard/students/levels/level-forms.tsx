@@ -81,7 +81,12 @@ function AgeInputs({
 
   const options = [
     { value: '', label: t('students.ageNoBound') },
-    ...ageOptions(30).map((months) => ({ value: String(months), label: words(months) })),
+    // 100, not 30 — POOLSE-16. The database has allowed 120 years since the
+    // months migration and the API validates against the same ceiling; this
+    // picker was the only thing capping it, which meant a *Hidroginástica
+    // Sénior* level could not be given its real upper bound and every student
+    // over 30 quietly failed the eligibility check for it.
+    ...ageOptions(100).map((months) => ({ value: String(months), label: words(months) })),
   ];
 
   return (

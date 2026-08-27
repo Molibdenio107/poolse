@@ -263,7 +263,10 @@
     "archiveHint": "Arquivar a turma termina as inscrições. Fica no registo.",
     "confirmArchive": "{count, plural, one {Arquivar? # inscrição termina.} other {Arquivar? # inscrições terminam.}}",
     "confirmArchiveEmpty": "Arquivar esta turma?",
-    "archiveFailed": "Não foi possível arquivar a turma."
+    "archiveFailed": "Não foi possível arquivar a turma.",
+    "when": "Quando",
+    "occupancy": "{occupancy} lugares ocupados",
+    "enrolled": "Alunos inscritos"
   },
   "seasons": {
     "title": "Épocas",

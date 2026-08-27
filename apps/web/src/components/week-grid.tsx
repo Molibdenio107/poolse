@@ -1,4 +1,5 @@
 import { Hint } from '@/components/ui/tooltip';
+import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
 import { cn } from '@/lib/utils';
 
 export interface WeekEntry {
@@ -36,6 +37,15 @@ export interface WeekEntry {
    * the type says the key must be absent entirely.
    */
   mark?: { href: string; label: string } | undefined;
+  /**
+   * The full turma, for the hover panel — POOLSE-15.
+   *
+   * Absent means the slot keeps the plain tooltip. The calendar's cancelled and
+   * closed days pass nothing: there is no roll to show for a class that is not
+   * happening, and a panel that opened to say so would be noise on the one
+   * screen that already explains itself.
+   */
+  detail?: TurmaDetail | undefined;
 }
 
 /**
@@ -227,7 +237,21 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
    * full name is plain text, so nothing lives only in here.
    */
   const full = [entry.title, entry.subtitle, entry.note].filter(Boolean).join(' · ');
-  const card = <Hint text={full}>{plain}</Hint>;
+
+  /*
+   * The hover panel replaces the tooltip rather than sitting beside it —
+   * POOLSE-15. Two things opening from one hover, at two delays, is the flicker
+   * the ticket asks to avoid; and the panel already shows the full name, which
+   * is all the tooltip was for.
+   */
+  const card =
+    entry.detail === undefined ? (
+      <Hint text={full}>{plain}</Hint>
+    ) : (
+      <TurmaHoverCard title={entry.title} detail={entry.detail}>
+        {plain}
+      </TurmaHoverCard>
+    );
 
   if (entry.action === undefined && entry.mark === undefined) return card;
 

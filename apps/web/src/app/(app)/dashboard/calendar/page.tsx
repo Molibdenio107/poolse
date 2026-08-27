@@ -93,6 +93,47 @@ export default async function CalendarPage({
       // on the slot itself rather than two clicks away behind the turma. The
       // week travels with it so "back" returns to the week being worked
       // through, not to today's.
+      /*
+        The full roll on hover — POOLSE-15.
+        
+        Only for a class that is actually happening. A cancelled slot already
+        says why in its note, and a panel listing the students who are not
+        coming would be noise on the one screen that explains itself.
+      */
+      detail: cancelled
+        ? undefined
+        : {
+            facts: [
+              session.levelName === null
+                ? null
+                : { label: t('classes.level'), value: session.levelName },
+              session.substituteName ?? session.instructorName
+                ? {
+                    label: t('classes.instructor'),
+                    value: (session.substituteName ?? session.instructorName) as string,
+                  }
+                : null,
+              {
+                label: t('classes.when'),
+                value: `${session.localDate} · ${session.localTime} · ${session.durationMinutes}′`,
+              },
+              session.poolName === null
+                ? null
+                : {
+                    label: t('classes.pool'),
+                    value: [
+                      session.poolName,
+                      session.lane === null
+                        ? null
+                        : t('classes.laneN', { lane: session.lane }),
+                    ]
+                      .filter(Boolean)
+                      .join(' · '),
+                  },
+            ].filter((fact): fact is { label: string; value: string } => fact !== null),
+            people: session.students,
+            peopleEmpty: t('classes.noStudents'),
+          },
       mark: cancelled
         ? undefined
         : {

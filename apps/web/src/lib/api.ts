@@ -655,6 +655,8 @@ export interface CalendarSession {
   /** True when a closure cancelled it rather than a person. */
   byClosure: boolean;
   enrolled: number;
+  /** The active roll, alphabetical — POOLSE-15, for the hover panel. */
+  students: string[];
 }
 
 /** Late arrival is deliberately not recorded — POOLSE-13. */

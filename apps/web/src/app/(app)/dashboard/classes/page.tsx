@@ -66,6 +66,41 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
           ? t('classes.andMore', { count: namesOf(group).length - 8 })
           : undefined,
       href: `/dashboard/classes/${group.id}`,
+      // POOLSE-15. The full roll and the detail the column has no room for. The
+      // names are the same array the slot already holds, so this costs nothing
+      // and needs no request of its own.
+      detail: {
+        facts: [
+          group.levelName === null
+            ? null
+            : { label: t('classes.level'), value: group.levelName },
+          group.instructorName === null
+            ? null
+            : { label: t('classes.instructor'), value: group.instructorName },
+          {
+            label: t('classes.when'),
+            value: `${dayNames[slot.weekday]} · ${slot.startTime} · ${slot.durationMinutes}′`,
+          },
+          group.poolName === null
+            ? null
+            : {
+                label: t('classes.pool'),
+                value: [
+                  group.poolName,
+                  group.lane === null ? null : t('classes.laneN', { lane: group.lane }),
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
+              },
+        ].filter((fact): fact is { label: string; value: string } => fact !== null),
+        // Only where a capacity is set. "9/null" would be worse than silence.
+        occupancy:
+          group.capacity === null
+            ? undefined
+            : `${namesOf(group).length}/${group.capacity}`,
+        people: namesOf(group),
+        peopleEmpty: t('classes.noStudents'),
+      },
     })),
   );
 

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { TextField, useFocusFirstError } from '@/components/ui/field';
 import { inviteAction, type InviteState } from '../actions';
 import { InvitationLink } from './invitation-link';
+import { RoleBadge } from '@/components/role-badge';
 
 const INITIAL: InviteState = { ok: false };
 
@@ -73,7 +74,10 @@ export function InviteForm({
                   aria-invalid={state.fields?.['roles'] === undefined ? undefined : true}
                   className="size-4 accent-primary"
                 />
-                <span>{t(`roles.${role}`)}</span>
+                {/* The same chip as the People list — POOLSE-18, criterion 6.
+                    Somebody choosing a role here sees the colour they will then
+                    be looking for in the list. */}
+                <RoleBadge role={role} />
               </label>
             ))}
           </div>
