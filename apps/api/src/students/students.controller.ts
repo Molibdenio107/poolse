@@ -11,7 +11,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
+import {
+  hasRole,
+  isMemberRole,
+  requireCanArchive,
+  requireGrantable,
+  requireRole,
+} from '../tenant/roles.js';
 
 interface StudentDetail extends Student {
   /**
@@ -33,7 +39,12 @@ import {
   DuplicateNameError,
   findStudent,
   ageOfMajority,
+  findDuplicate,
+  grantRole,
   listGuardians,
+  mergeCandidates,
+  mergePeople,
+  revokeRole,
   listLevels,
   listStudents,
   reorderLevels,
@@ -41,8 +52,10 @@ import {
   searchPeople,
   studentsOf,
   updateStudent,
+  type DuplicateMatch,
   type GuardianInput,
   type GuardianRow,
+  type MergeCandidate,
   type PersonSummary,
   type Student,
   type StudentInput,
@@ -107,6 +120,103 @@ export class GuardiansController {
   async list(): Promise<{ organizationId: string; guardians: GuardianRow[] }> {
     const { organizationId } = currentTenant();
     return { organizationId, guardians: await listGuardians(organizationId) };
+  }
+}
+
+/**
+ * Duplicates and merges — POOLSE-17 AC8, AC9, AC10.
+ *
+ * The dedup check is readable by anybody who may create a person, because it is
+ * called *while they are typing* — refusing it would mean the warning only
+ * appears for admins, and an instructor enrolling a family would create the
+ * duplicate the ticket exists to prevent.
+ *
+ * Merging is owner and admin, and refused server-side. It is irreversible from
+ * the interface, touches live tenant data, and is exactly what the conventions
+ * mean by permission-sensitive.
+ */
+@Controller('people')
+export class PeopleDedupController {
+  @Get('duplicate')
+  async duplicate(
+    @Query('taxNumber') taxNumber?: string,
+    @Query('email') email?: string,
+  ): Promise<{ match: DuplicateMatch | null }> {
+    const { organizationId } = currentTenant();
+    return {
+      match: await findDuplicate(organizationId, taxNumber ?? null, email ?? null),
+    };
+  }
+
+  /** AC9's "add the role to the existing Person instead". */
+  @Post(':membershipId/roles')
+  async grant(
+    @Param('membershipId') membershipId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ granted: true }> {
+    const { organizationId, membershipId: actor } = currentTenant();
+
+    const role = typeof body['role'] === 'string' ? body['role'].trim() : '';
+    if (!isMemberRole(role)) throw new BadRequestException('role is not a member role');
+
+    /*
+     * The invite matrix governs granting a role, not only inviting somebody to
+     * it — POOLSE-01 AC4 says the rule applies to role *changes* too. Without
+     * this, an admin could not invite an owner but could promote one, which is
+     * the same escalation by a different door.
+     */
+    requireGrantable([role]);
+
+    if (!(await grantRole(organizationId, membershipId, role, actor))) {
+      throw new NotFoundException('No such person');
+    }
+    return { granted: true };
+  }
+
+  @Post(':membershipId/roles/:role/revoke')
+  async revoke(
+    @Param('membershipId') membershipId: string,
+    @Param('role') role: string,
+  ): Promise<{ revoked: true }> {
+    const { organizationId } = currentTenant();
+
+    if (!isMemberRole(role)) throw new BadRequestException('role is not a member role');
+    requireGrantable([role]);
+
+    if (!(await revokeRole(organizationId, membershipId, role))) {
+      throw new NotFoundException('No such role on that person');
+    }
+    return { revoked: true };
+  }
+
+  /** Phase 1: what a merge would do. Read-only, and reviewed before phase 2. */
+  @Get('merge-report')
+  async report(): Promise<{ candidates: MergeCandidate[] }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    return { candidates: await mergeCandidates(organizationId) };
+  }
+
+  /** Phase 2: absorb one record into another. */
+  @Post('merge')
+  async merge(@Body() body: Record<string, unknown>): Promise<{ merged: true; rows: number }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const keepId = typeof body['keepId'] === 'string' ? body['keepId'].trim() : '';
+    const absorbId = typeof body['absorbId'] === 'string' ? body['absorbId'].trim() : '';
+    if (keepId === '' || absorbId === '') {
+      throw new BadRequestException('keepId and absorbId are required');
+    }
+    if (keepId === absorbId) {
+      throw new BadRequestException('A person cannot be merged into themselves');
+    }
+
+    // Zero means one of them was not live in this tenant — which is also the
+    // answer for another tenant's id, because RLS hid it. The caller learns
+    // nothing either way.
+    const rows = await mergePeople(organizationId, keepId, absorbId);
+    return { merged: true, rows };
   }
 }
 

@@ -91,6 +91,15 @@ export default async function PeoplePage({
           <h1 className="text-3xl font-semibold tracking-tight">{t('people.title')}</h1>
           <p className="text-foreground-muted">{t('people.subtitle')}</p>
         </div>
+
+        {/* POOLSE-17 AC10. Reachable rather than a route somebody has to know
+            about — the report is only useful if it is read. */}
+        <Link
+          href="/dashboard/people/duplicates"
+          className="shrink-0 rounded border border-border px-4 py-2 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {t('people.duplicates')}
+        </Link>
       </header>
 
       {noOrganization && (

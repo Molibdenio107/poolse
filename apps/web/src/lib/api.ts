@@ -835,3 +835,30 @@ export interface MarkOutcome {
   saved: number;
   needsOverride: { studentId: string; skillId: string }[];
 }
+
+/**
+ * Somebody the club already knows, matched by the stable key — POOLSE-17 AC9.
+ *
+ * NIF first, then email. Returned while an operator is still typing, so the
+ * warning can offer to add the role to this person rather than making a second
+ * them.
+ */
+export interface DuplicateMatch {
+  membershipId: string;
+  name: string;
+  matchedOn: 'nif' | 'email';
+  roles: string[];
+  email: string | null;
+  phone: string | null;
+  guardianOf: number;
+}
+
+/** One pair the merge would join, and every field the two disagree about. */
+export interface MergeCandidate {
+  keepId: string;
+  absorbId: string;
+  matchedOn: string;
+  keepName: string;
+  absorbName: string;
+  conflicts: Record<string, { keep: string; absorb: string }>;
+}

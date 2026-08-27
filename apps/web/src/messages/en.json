@@ -112,7 +112,32 @@
     "showAll": "Show everyone",
     "ownerOnly": "Only the owner can invite people. You can see who belongs to the organization.",
     "restricted": "This section is for owners and administrators.",
-    "restrictedHint": "Staff administration — contact details, roles and invitations — belongs to whoever runs the organization. You still have access to the students in your own class groups."
+    "restrictedHint": "Staff administration — contact details, roles and invitations — belongs to whoever runs the organization. You still have access to the students in your own class groups.",
+    "backToPeople": "Back to People",
+    "duplicates": "Duplicate records",
+    "duplicatesSubtitle": "The same person recorded twice. Review before merging.",
+    "duplicatesRestricted": "Only the owner and administrators can merge records.",
+    "noDuplicates": "There are no duplicate records.",
+    "noDuplicatesHint": "New duplicates are prevented by NIF and email, so this list should stay empty.",
+    "mergeWarning": "Merging deletes nothing: the absorbed record is archived and keeps a pointer to where it went. Undoing it still needs database access.",
+    "mergeExplains": "{keep} takes everything belonging to {absorb} — classes, attendance, enrolments and guardianships.",
+    "matchedNif": "Same tax number",
+    "matchedEmail": "Same email",
+    "conflictKeeps": "keeps “{keep}”, discards “{absorb}”",
+    "noConflicts": "The two records contradict each other in nothing.",
+    "mergeInto": "Merge into {keep}",
+    "mergeConfirm": "Merge these two records?",
+    "mergeYes": "Yes, merge",
+    "mergeFailed": "Could not merge the records.",
+    "field": {
+      "phone": "Phone",
+      "address": "Address",
+      "email": "Email",
+      "tax_number": "Tax number",
+      "first_name": "First name",
+      "last_name": "Surname",
+      "birth_date": "Date of birth"
+    }
   },
   "transfer": {
     "title": "Transfer ownership",
@@ -455,7 +480,10 @@
     "guardiansSubtitle": "Who is responsible for each student. One guardian can have several students.",
     "noGuardians": "No guardians recorded yet.",
     "noGuardiansHint": "They are created from the record of a student under the age of majority.",
-    "guardianOfNobody": "No students linked."
+    "guardianOfNobody": "No students linked.",
+    "duplicateByNif": "{name} is already recorded with this tax number.",
+    "duplicateByEmail": "{name} is already recorded with this email.",
+    "duplicateUseExisting": "Use this person"
   },
   "progress": {
     "title": "Progression",

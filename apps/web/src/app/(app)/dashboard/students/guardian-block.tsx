@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search, UserPlus, X } from 'lucide-react';
-import type { Guardian, PersonSummary } from '@/lib/api';
+import type { DuplicateMatch, Guardian, PersonSummary } from '@/lib/api';
 import { ageInYears } from '@/lib/ages';
 import { TextField } from '@/components/ui/field';
 import { RoleBadges } from '@/components/role-badge';
-import { searchPeopleAction } from './students.actions';
+import { findDuplicateAction, searchPeopleAction } from './students.actions';
 
 /**
  * The encarregado de educação — POOLSE-04, rewritten on POOLSE-17.
@@ -347,6 +347,25 @@ function GuardianRow({
               maxLength={20}
               onValueChange={(value) => onChange({ taxNumber: value })}
             />
+
+            {/*
+              POOLSE-17 AC9. The warning appears while the NIF or the email is
+              being typed, which is the only moment it can prevent a duplicate
+              rather than report one.
+            */}
+            <DuplicateWarning
+              taxNumber={draft.taxNumber}
+              email={draft.email}
+              onUse={(match) =>
+                onChange({
+                  membershipId: match.membershipId,
+                  name: match.name,
+                  email: match.email ?? '',
+                  phone: match.phone ?? '',
+                  existing: true,
+                })
+              }
+            />
             <TextField
               name={`guardianAddress-${index}`}
               label={t('students.guardianAddress')}
@@ -505,6 +524,83 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
       >
         <UserPlus className="size-4" aria-hidden />
         {t('students.guardianAddNew')}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * "This person is already here" — POOLSE-17 AC9.
+ *
+ * Checked as the stable key is typed, because a duplicate warning that arrives
+ * on submit arrives after the operator has filled in six fields and is not in
+ * the mood to be told they were unnecessary.
+ *
+ * Offers the existing person rather than merely refusing. AC9's wording is
+ * "warns and offers to add the role to the existing Person", and taking the
+ * offer here means selecting them — the guardian link then grants the role, so
+ * one path does both.
+ *
+ * Debounced, with a stale-response guard: typing a nine-digit NIF fires several
+ * checks and the shortest can answer last, which without this would leave the
+ * warning showing a match for a prefix.
+ */
+function DuplicateWarning({
+  taxNumber,
+  email,
+  onUse,
+}: {
+  taxNumber: string;
+  email: string;
+  onUse: (match: DuplicateMatch) => void;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [match, setMatch] = useState<DuplicateMatch | null>(null);
+  const latest = useRef(0);
+
+  useEffect(() => {
+    const nif = taxNumber.trim();
+    const address = email.trim();
+
+    // A NIF is nine digits in Portugal; anything shorter is somebody mid-type,
+    // and an email without an @ is not yet an address.
+    const worthChecking = nif.length >= 9 || address.includes('@');
+    if (!worthChecking) {
+      setMatch(null);
+      return;
+    }
+
+    const attempt = ++latest.current;
+    const timer = setTimeout(() => {
+      void findDuplicateAction(nif, address).then((found) => {
+        if (attempt === latest.current) setMatch(found);
+      });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [taxNumber, email]);
+
+  if (match === null) return <></>;
+
+  return (
+    <div className="sm:col-span-2 flex flex-col gap-2 rounded border border-warning/40 bg-warning/10 p-3">
+      <p className="text-sm">
+        {t(match.matchedOn === 'nif' ? 'students.duplicateByNif' : 'students.duplicateByEmail', {
+          name: match.name,
+        })}
+      </p>
+
+      <p className="flex flex-wrap items-center gap-2 text-sm text-foreground-muted">
+        <RoleBadges roles={match.roles} />
+        {match.guardianOf > 0 && t('students.guardianAlreadyOf', { count: match.guardianOf })}
+      </p>
+
+      <button
+        type="button"
+        onClick={() => onUse(match)}
+        className="self-start rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+      >
+        {t('students.duplicateUseExisting')}
       </button>
     </div>
   );

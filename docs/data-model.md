@@ -160,10 +160,12 @@ membership                      -- a person's presence in an organization; see "
   unique (organization_id, tax_number) where archived_at is null
   unique (organization_id, email) where archived_at is null
   check (app_user_id is null or (first_name, last_name, email are all null))
+  merged_into                   -- set by merge_memberships; see "duplicates"
+  check (merged_into is null or archived_at is not null)
 
 membership_role                 -- a membership can hold several roles at once
-  id, organization_id, membership_id, role
-  role: 'owner'|'admin'|'instructor'|'maintenance'|'student'|'guardian'
+  id, organization_id, membership_id, role, granted_at, granted_by_membership_id
+  role: 'owner'|'admin'|'instructor'|'maintenance'|'guardian'|'student'
   unique (membership_id, role) where archived_at is null
 
 invitation
@@ -341,6 +343,45 @@ attendance
   status ('present'|'absent'|'excused'|'late'), recorded_by_membership_id, recorded_at
   unique (class_session_id, student_id)
 ```
+
+### Duplicates and merging
+
+The dedup key is **NIF, else email**. Two records sharing an email but holding
+different NIFs are *not* the same person — a household address is not an
+identity — so the email arm only answers for records with no NIF to contradict
+it.
+
+**A guardian must carry one of the two; a student need not.** Most seven-year-olds
+have neither, and requiring one would block ordinary enrolment. A guardian is an
+adult who has one, and guardians are where duplicates actually come from.
+Enforced by `guardian_needs_a_key`, a deferred constraint trigger rather than a
+CHECK: the key is on `membership`, the role is on `membership_role`, so the rule
+spans two tables and has to be checked from both directions. Deferred because
+creating a guardian is two statements and they arrive in either order.
+
+Merging is **phased**, because it is the one operation here that rewrites live
+tenant data:
+
+1. `merge_candidates(organization)` is read-only and reports every pair it would
+   join, with every field the two disagree about and both values. Nothing is
+   merged without that being read — no discarded contact detail vanishes
+   unreported.
+2. `merge_memberships(organization, keep, absorb)` performs one pair. It
+   **discovers the foreign keys to repoint from `pg_constraint`** rather than
+   from a list: twenty-one columns reference a membership today, and a hardcoded
+   list would repoint everything except the next table somebody adds, which is
+   the worst of the three outcomes. `membership_role` and `guardian_link` are
+   handled first and by hand, because repointing a role the survivor already
+   holds would violate its unique index instead of merging anything.
+3. The indexes that prevent new duplicates already exist.
+
+Field rules: non-null wins over null; on a genuine conflict the more recently
+updated record wins. The oldest record survives, ordered by `(created_at, id)` so
+two rows made in the same millisecond still order the same way twice.
+
+Nothing is deleted. The absorbed row is archived with `merged_into` pointing at
+the survivor, which is what makes an incorrect merge recoverable and keeps old
+audit rows resolvable to a human. Running a merge again is a no-op.
 
 ### One person, many roles
 

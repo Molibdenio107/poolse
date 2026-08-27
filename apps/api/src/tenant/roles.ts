@@ -2,21 +2,31 @@ import { ForbiddenException } from '@nestjs/common';
 import { currentTenant } from './tenant.context.js';
 
 /**
- * The `member_role` enum, mirrored in TypeScript.
+ * The `member_role` enum, mirrored in TypeScript — **in seniority order**.
  *
  * Duplicating an enum across the schema/code boundary is a small cost paid
  * knowingly: the alternative is generating types from the database, which is a
  * toolchain to maintain for one list that changes about once a year. The SQL
  * side is the source of truth — an unknown role coming back from a query is a
  * signal this list is stale, not that the query is wrong.
+ *
+ * **The order is the seniority order and is load-bearing.** POOLSE-17 AC5 says
+ * permissions resolve to the union of a person's roles while the invite matrix
+ * uses "the strongest role held"; POOLSE-18 AC3 orders badges by seniority. The
+ * ticket asks for those to be one written rule rather than two implementations,
+ * so this array is it, and `strongestRole` reads it. `lib/roles.ts` in the web
+ * app carries the same order for the badges.
+ *
+ * Encarregado de educação outranks Student: a parent acting for a child is
+ * further from the pool than the child is.
  */
 export const MEMBER_ROLES = [
   'owner',
   'admin',
   'instructor',
   'maintenance',
-  'student',
   'guardian',
+  'student',
 ] as const;
 
 export type MemberRole = (typeof MEMBER_ROLES)[number];
@@ -156,4 +166,45 @@ export function requireGrantable(roles: readonly string[]): void {
       refused,
     });
   }
+}
+
+/**
+ * The most senior role in a set — POOLSE-17 AC5.
+ *
+ * Read from `MEMBER_ROLES`, which is the seniority order, so this and the badge
+ * ordering can never disagree. The ticket is explicit that the union rule and
+ * the "strongest role" rule must be reconciled in one place rather than
+ * implemented twice; that place is here and the array above.
+ *
+ * For invitations the two give the same answer today, because the matrix is a
+ * strict hierarchy — an owner may grant everything an admin may, and so on. This
+ * exists so that if the matrix ever stops being a hierarchy, the divergence is a
+ * decision somebody makes rather than a bug that appears.
+ *
+ * Null for somebody holding no roles at all: an unaccepted invitation, which is
+ * a person the club knows about and who may do nothing yet.
+ */
+export function strongestRole(roles: readonly string[]): MemberRole | null {
+  for (const role of MEMBER_ROLES) {
+    if (roles.includes(role)) return role;
+  }
+  return null;
+}
+
+/** The acting person's strongest role. */
+export function strongestRoleOf(): MemberRole | null {
+  return strongestRole(currentTenant().roles);
+}
+
+/**
+ * Every role the acting person holds, in seniority order.
+ *
+ * The union, which is what authorisation resolves to. Exported so that no call
+ * site has to reach into the tenant context and re-derive it — the ticket's
+ * "most likely to get wrong" is a single-role assumption left somewhere, and the
+ * way to stop that is to make the union the only thing on offer.
+ */
+export function rolesHeld(): MemberRole[] {
+  const { roles } = currentTenant();
+  return MEMBER_ROLES.filter((role) => roles.includes(role));
 }

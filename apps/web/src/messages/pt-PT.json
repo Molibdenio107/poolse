@@ -112,7 +112,32 @@
     "showAll": "Mostrar todos",
     "ownerOnly": "Só o proprietário pode convidar pessoas. Pode ver quem faz parte da organização.",
     "restricted": "Esta secção é reservada a proprietários e administradores.",
-    "restrictedHint": "A gestão de pessoal — contactos, funções e convites — pertence a quem administra a organização. Continua a ter acesso aos alunos das suas turmas."
+    "restrictedHint": "A gestão de pessoal — contactos, funções e convites — pertence a quem administra a organização. Continua a ter acesso aos alunos das suas turmas.",
+    "backToPeople": "Voltar a Pessoas",
+    "duplicates": "Registos duplicados",
+    "duplicatesSubtitle": "A mesma pessoa registada duas vezes. Reveja antes de juntar.",
+    "duplicatesRestricted": "Só o proprietário e os administradores podem juntar registos.",
+    "noDuplicates": "Não há registos duplicados.",
+    "noDuplicatesHint": "Novos duplicados são impedidos pelo NIF e pelo e-mail, por isso esta lista deve manter-se vazia.",
+    "mergeWarning": "Juntar não apaga nada: o registo absorvido fica arquivado e guarda para onde foi. Ainda assim, desfazer exige acesso à base de dados.",
+    "mergeExplains": "{keep} fica com tudo o que pertence a {absorb} — turmas, presenças, inscrições e responsabilidades.",
+    "matchedNif": "Mesmo NIF",
+    "matchedEmail": "Mesmo e-mail",
+    "conflictKeeps": "fica «{keep}», descartado «{absorb}»",
+    "noConflicts": "Os dois registos não se contradizem em nada.",
+    "mergeInto": "Juntar em {keep}",
+    "mergeConfirm": "Juntar estes dois registos?",
+    "mergeYes": "Sim, juntar",
+    "mergeFailed": "Não foi possível juntar os registos.",
+    "field": {
+      "phone": "Telefone",
+      "address": "Morada",
+      "email": "E-mail",
+      "tax_number": "NIF",
+      "first_name": "Nome",
+      "last_name": "Apelido",
+      "birth_date": "Data de nascimento"
+    }
   },
   "transfer": {
     "title": "Transferir propriedade",
@@ -455,7 +480,10 @@
     "guardiansSubtitle": "Quem é responsável por cada aluno. Um encarregado pode ter vários alunos.",
     "noGuardians": "Ainda não há encarregados de educação registados.",
     "noGuardiansHint": "São criados a partir da ficha de um aluno menor de idade.",
-    "guardianOfNobody": "Sem alunos associados."
+    "guardianOfNobody": "Sem alunos associados.",
+    "duplicateByNif": "{name} já está registado com este NIF.",
+    "duplicateByEmail": "{name} já está registado com este e-mail.",
+    "duplicateUseExisting": "Usar esta pessoa"
   },
   "progress": {
     "title": "Progressão",

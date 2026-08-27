@@ -1153,3 +1153,221 @@ export async function ageOfMajority(organizationId: string): Promise<number> {
     return rows[0]?.age_of_majority ?? 18;
   });
 }
+
+// ---------------------------------------------------------------------------
+// Duplicates — POOLSE-17 AC8, AC9
+// ---------------------------------------------------------------------------
+
+/**
+ * Somebody the club already knows, by the stable key.
+ *
+ * **One implementation, called by the create form and by the Excel importer.**
+ * The ticket is explicit about this and it is the right worry: two dedup
+ * helpers diverge, and the importer is always the one that ends up creating the
+ * duplicates because nobody watches it as closely as a form.
+ *
+ * NIF first, then email. A shared email with different NIFs is two people — a
+ * household address is not an identity — so the email arm only answers for
+ * somebody with no NIF to disagree about.
+ */
+export interface DuplicateMatch {
+  membershipId: string;
+  name: string;
+  matchedOn: 'nif' | 'email';
+  roles: string[];
+  /** So the caller can offer "add the role to this person" with something to show. */
+  email: string | null;
+  phone: string | null;
+  guardianOf: number;
+}
+
+export async function findDuplicate(
+  organizationId: string,
+  taxNumber: string | null,
+  email: string | null,
+): Promise<DuplicateMatch | null> {
+  const nif = taxNumber?.trim() ?? '';
+  const address = email?.trim() ?? '';
+  if (nif === '' && address === '') return null;
+
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      membership_id: string;
+      name: string;
+      matched_on: 'nif' | 'email';
+      roles: string[];
+      email: string | null;
+      phone: string | null;
+      guardian_of: number;
+    }>(
+      `SELECT m.id AS membership_id,
+              person_name(m.id) AS name,
+              CASE WHEN $1::text <> '' AND m.tax_number = $1::text THEN 'nif'
+                   ELSE 'email' END AS matched_on,
+              coalesce((
+                SELECT array_agg(mr.role::text ORDER BY mr.role)
+                  FROM membership_role mr
+                 WHERE mr.membership_id = m.id AND mr.archived_at IS NULL
+              ), '{}') AS roles,
+              person_email(m.id)::text AS email,
+              m.phone,
+              (
+                SELECT count(*) FROM guardian_link gl
+                 WHERE gl.guardian_membership_id = m.id AND gl.archived_at IS NULL
+              )::int AS guardian_of
+         FROM membership m
+         LEFT JOIN app_user u ON u.id = m.app_user_id
+        WHERE m.archived_at IS NULL
+          AND (
+            ($1::text <> '' AND m.tax_number = $1::text)
+            OR (
+              $2::text <> ''
+              AND coalesce(u.cached_email, m.email) = $2::citext
+              -- Only where neither side has a NIF to contradict the match.
+              AND m.tax_number IS NULL
+              AND $1::text = ''
+            )
+          )
+        ORDER BY (m.tax_number = $1::text) DESC NULLS LAST
+        LIMIT 1`,
+      [nif, address],
+    );
+
+    const row = rows[0];
+    if (row === undefined) return null;
+
+    return {
+      membershipId: row.membership_id,
+      name: row.name,
+      matchedOn: row.matched_on,
+      roles: row.roles,
+      email: row.email,
+      phone: row.phone,
+      guardianOf: row.guardian_of,
+    };
+  });
+}
+
+/**
+ * Grants a role to somebody who already exists — AC9's "add the role instead".
+ *
+ * The path taken when the duplicate warning is accepted. Idempotent: granting a
+ * role somebody already holds changes nothing rather than failing, because the
+ * operator's intent ("this person should be a guardian") is already true.
+ */
+export async function grantRole(
+  organizationId: string,
+  membershipId: string,
+  role: string,
+  grantedBy: string | null,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `INSERT INTO membership_role (organization_id, membership_id, role,
+                                    granted_by_membership_id)
+       SELECT $1, $2, $3::member_role, $4
+        WHERE EXISTS (
+          SELECT 1 FROM membership
+           WHERE id = $2 AND organization_id = $1 AND archived_at IS NULL
+        )
+          AND NOT EXISTS (
+          SELECT 1 FROM membership_role
+           WHERE membership_id = $2 AND role = $3::member_role AND archived_at IS NULL
+        )
+       RETURNING id`,
+      [organizationId, membershipId, role, grantedBy],
+    );
+
+    // No row means either "already held" or "no such person". Told apart by
+    // asking, because the first is success and the second is a 404.
+    if (rows[0] === undefined) {
+      const { rows: exists } = await tx.query<{ id: string }>(
+        `SELECT id FROM membership
+          WHERE id = $1 AND organization_id = $2 AND archived_at IS NULL`,
+        [membershipId, organizationId],
+      );
+      return exists[0] !== undefined;
+    }
+
+    await recordAudit(tx, {
+      action: 'person.role_granted',
+      entityType: 'membership',
+      entityId: membershipId,
+      data: { role },
+    });
+
+    return true;
+  });
+}
+
+/** Revoking one role leaves the person and their other roles — AC7. */
+export async function revokeRole(
+  organizationId: string,
+  membershipId: string,
+  role: string,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE membership_role SET archived_at = now()
+        WHERE membership_id = $1 AND role = $2::member_role AND archived_at IS NULL
+      RETURNING id`,
+      [membershipId, role],
+    );
+    if (rows[0] === undefined) return false;
+
+    await recordAudit(tx, {
+      action: 'person.role_revoked',
+      entityType: 'membership',
+      entityId: membershipId,
+      data: { role },
+    });
+    return true;
+  });
+}
+
+/** Phase 1 of the merge — what it would do, changing nothing. AC10. */
+export interface MergeCandidate {
+  keepId: string;
+  absorbId: string;
+  matchedOn: string;
+  keepName: string;
+  absorbName: string;
+  conflicts: Record<string, { keep: string; absorb: string }>;
+}
+
+export async function mergeCandidates(organizationId: string): Promise<MergeCandidate[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      o_keep_id: string;
+      o_absorb_id: string;
+      o_matched_on: string;
+      o_keep_name: string;
+      o_absorb_name: string;
+      o_conflicts: MergeCandidate['conflicts'];
+    }>(`SELECT * FROM merge_candidates($1)`, [organizationId]);
+
+    return rows.map((row) => ({
+      keepId: row.o_keep_id,
+      absorbId: row.o_absorb_id,
+      matchedOn: row.o_matched_on,
+      keepName: row.o_keep_name,
+      absorbName: row.o_absorb_name,
+      conflicts: row.o_conflicts,
+    }));
+  });
+}
+
+/** Phase 2 — absorb one record into another. Returns rows repointed. */
+export async function mergePeople(
+  organizationId: string,
+  keepId: string,
+  absorbId: string,
+): Promise<number> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ merge_memberships: number }>(
+      `SELECT merge_memberships($1, $2, $3)`,
+      [organizationId, keepId, absorbId],
+    );
+    return rows[0]?.merge_memberships ?? 0;
+  });
+}

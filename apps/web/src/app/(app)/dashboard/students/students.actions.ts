@@ -7,6 +7,7 @@ import {
   apiFetch,
   apiPatch,
   apiPost,
+  type DuplicateMatch,
   type PersonSummary,
   type Skill,
 } from '../../../../lib/api';
@@ -366,4 +367,45 @@ export async function archiveSkillAction(
 
   revalidatePath('/dashboard/students/levels');
   return { ok: true };
+}
+
+/**
+ * Is this person already here? — POOLSE-17 AC9.
+ *
+ * Called as the guardian block is filled in, so the warning appears before a
+ * second record exists rather than after. Returns null on failure: a dedup check
+ * that cannot reach the API must not stop somebody enrolling a child.
+ */
+export async function findDuplicateAction(
+  taxNumber: string,
+  email: string,
+): Promise<DuplicateMatch | null> {
+  const nif = taxNumber.trim();
+  const address = email.trim();
+  if (nif === '' && address === '') return null;
+
+  try {
+    const result = await apiFetch<{ match: DuplicateMatch | null }>(
+      `/people/duplicate?taxNumber=${encodeURIComponent(nif)}&email=${encodeURIComponent(address)}`,
+    );
+    return result.match;
+  } catch {
+    return null;
+  }
+}
+
+/** AC9's other half: add the role to the person who is already there. */
+export async function grantRoleAction(
+  organizationId: string,
+  membershipId: string,
+  role: string,
+): Promise<boolean> {
+  try {
+    await apiPost(`/people/${membershipId}/roles`, { role }, { organizationId });
+    revalidatePath('/dashboard/students/guardians');
+    revalidatePath('/dashboard/people');
+    return true;
+  } catch {
+    return false;
+  }
 }
