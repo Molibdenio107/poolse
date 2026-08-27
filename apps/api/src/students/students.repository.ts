@@ -5,6 +5,14 @@ export interface StudentLevel {
   id: string;
   name: string;
   sortOrder: number;
+  /**
+   * Both optional and independent — backlog round 4, ticket 2.
+   *
+   * "Adultos" has a minimum and no maximum; "Livre" has neither and behaves
+   * exactly as every level did before they existed.
+   */
+  minAgeYears: number | null;
+  maxAgeYears: number | null;
   /** So the UI can warn before archiving a level people are in. */
   studentCount: number;
 }
@@ -75,11 +83,15 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       id: string;
       name: string;
       sort_order: number;
+      min_age_years: number | null;
+      max_age_years: number | null;
       student_count: string;
     }>(`
       SELECT l.id,
              l.name,
              l.sort_order,
+             l.min_age_years,
+             l.max_age_years,
              (
                SELECT count(*)
                  FROM student s
@@ -96,6 +108,8 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       id: row.id,
       name: row.name,
       sortOrder: row.sort_order,
+      minAgeYears: row.min_age_years,
+      maxAgeYears: row.max_age_years,
       // count() comes back as a string from node-pg; bigint does not fit a JS
       // number in general, and the driver refuses to guess.
       studentCount: Number(row.student_count),
@@ -103,20 +117,70 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
   });
 }
 
-export async function createLevel(organizationId: string, name: string): Promise<string> {
+export interface AgeRange {
+  minAgeYears: number | null;
+  maxAgeYears: number | null;
+}
+
+/**
+ * How many students in a level would fall outside a proposed age range —
+ * backlog round 4, ticket 4.
+ *
+ * Shown before saving, and saving removes nobody. Age drifts: a child correctly
+ * enrolled in "3–5 anos" turns six mid-season, and a system that quietly moved
+ * them would be making a decision that belongs to the club.
+ *
+ * Students with no birth date are never counted. Missing dates are the normal
+ * case, not the exception — the spreadsheets waiting to be imported have a
+ * half-empty column, and counting them as "outside" would report a scary number
+ * that means nothing.
+ */
+export async function countOutsideRange(
+  organizationId: string,
+  levelId: string,
+  range: AgeRange,
+): Promise<number> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ outside: string }>(
+      `
+      SELECT count(*) AS outside
+        FROM student s
+       WHERE s.level_id = $1
+         AND s.archived_at IS NULL
+         AND s.birth_date IS NOT NULL
+         AND (
+              ($2::smallint IS NOT NULL
+                 AND extract(year FROM age(s.birth_date))::int < $2)
+           OR ($3::smallint IS NOT NULL
+                 AND extract(year FROM age(s.birth_date))::int > $3)
+         )
+      `,
+      [levelId, range.minAgeYears, range.maxAgeYears],
+    );
+    return Number(rows[0]?.outside ?? 0);
+  });
+}
+
+export async function createLevel(
+  organizationId: string,
+  name: string,
+  range: AgeRange = { minAgeYears: null, maxAgeYears: null },
+): Promise<string> {
   try {
     return await withOrg(organizationId, async (tx) => {
       // Appended to the end of the progression. Reordering is a separate,
       // deliberate action — a new level silently landing in the middle of
       // somebody's Adaptação → Iniciação → Aperfeiçoamento would be worse.
       const { rows } = await tx.query<{ id: string }>(
-        `INSERT INTO student_level (organization_id, name, sort_order)
+        `INSERT INTO student_level (organization_id, name, sort_order,
+                                    min_age_years, max_age_years)
          VALUES (
            $1, $2,
-           coalesce((SELECT max(sort_order) + 1 FROM student_level WHERE archived_at IS NULL), 0)
+           coalesce((SELECT max(sort_order) + 1 FROM student_level WHERE archived_at IS NULL), 0),
+           $3, $4
          )
          RETURNING id`,
-        [organizationId, name],
+        [organizationId, name, range.minAgeYears, range.maxAgeYears],
       );
 
       const id = rows[0]?.id;
@@ -126,7 +190,7 @@ export async function createLevel(organizationId: string, name: string): Promise
         action: 'student_level.created',
         entityType: 'student_level',
         entityId: id,
-        data: { name },
+        data: { name, ...range },
       });
 
       return id;
@@ -136,18 +200,32 @@ export async function createLevel(organizationId: string, name: string): Promise
   }
 }
 
+/**
+ * Renames a level and sets its age range.
+ *
+ * One call rather than two, because the level form submits both together and a
+ * half-applied edit is the kind of state nobody can explain. The range is always
+ * written, so clearing a bound is a real action — the opposite of a PATCH that
+ * would leave "Adultos, 18+" stuck at 18 forever.
+ *
+ * Narrowing removes nobody. `countOutsideRange` tells the interface how many
+ * students would fall outside so it can say so before saving; what happens to
+ * them afterwards is the club's decision, not the calendar's.
+ */
 export async function renameLevel(
   organizationId: string,
   levelId: string,
   name: string,
+  range: AgeRange = { minAgeYears: null, maxAgeYears: null },
 ): Promise<boolean> {
   try {
     return await withOrg(organizationId, async (tx) => {
       const { rows } = await tx.query<{ id: string }>(
-        `UPDATE student_level SET name = $2
+        `UPDATE student_level
+            SET name = $2, min_age_years = $3, max_age_years = $4
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
-        [levelId, name],
+        [levelId, name, range.minAgeYears, range.maxAgeYears],
       );
       if (!rows[0]) return false;
 
@@ -155,7 +233,7 @@ export async function renameLevel(
         action: 'student_level.renamed',
         entityType: 'student_level',
         entityId: levelId,
-        data: { name },
+        data: { name, ...range },
       });
       return true;
     });

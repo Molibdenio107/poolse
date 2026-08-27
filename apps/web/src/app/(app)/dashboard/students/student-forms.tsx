@@ -1,8 +1,9 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '../../../../lib/api';
+import { fitsLevel } from '@/lib/ages';
 import type { FormState } from '../actions';
 import { archiveStudentAction, createStudentAction, updateStudentAction } from './students.actions';
 
@@ -109,24 +110,7 @@ export function StudentForm({
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="student-level" className="text-sm text-foreground-muted">
-            {t('students.level')}
-          </label>
-          <select
-            id="student-level"
-            name="levelId"
-            defaultValue={student?.levelId ?? ''}
-            className={field}
-          >
-            <option value="">{t('students.noLevel')}</option>
-            {levels.map((level) => (
-              <option key={level.id} value={level.id}>
-                {level.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <LevelPicker levels={levels} student={student} />
 
         <div className="flex flex-col gap-2">
           <label htmlFor="student-email" className="text-sm text-foreground-muted">
@@ -248,5 +232,114 @@ export function ArchiveStudentButton({
         <span className="text-sm text-danger">{t(state.errorKey)}</span>
       )}
     </form>
+  );
+}
+
+
+/**
+ * The level picker, with an age warning — backlog round 4, ticket 3.
+ *
+ * **A warning, not a block.** Real clubs have the four-year-old who swims with
+ * the six-year-olds because that is where their sibling is, and the adult
+ * beginner in a teenagers' class. A rule that cannot be overridden gets worked
+ * around by typing a fake birth date, and then the data is worse than if the
+ * check had never existed. So the mismatched level stays selectable, and
+ * choosing it asks for confirmation once.
+ *
+ * **A missing birth date is never in anybody's way.** Most students will have
+ * none — the spreadsheets waiting to be imported have a half-empty column — and
+ * that is silence, not a warning.
+ *
+ * The birth date is read from the live form rather than from the saved student,
+ * so typing a date and then picking a level warns on what was just typed.
+ */
+function LevelPicker({
+  levels,
+  student,
+}: {
+  levels: StudentLevel[];
+  student: StudentFormValues | undefined;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [levelId, setLevelId] = useState(student?.levelId ?? '');
+  const [birthDate, setBirthDate] = useState(student?.birthDate ?? '');
+
+  // The date input is elsewhere in the same form, so its changes are heard here
+  // rather than lifted into shared state — one listener beats threading a value
+  // through every field between them.
+  useEffect(() => {
+    const input = document.getElementById('student-birth');
+    if (!(input instanceof HTMLInputElement)) return;
+
+    const read = (): void => setBirthDate(input.value);
+    read();
+    input.addEventListener('change', read);
+    input.addEventListener('input', read);
+    return () => {
+      input.removeEventListener('change', read);
+      input.removeEventListener('input', read);
+    };
+  }, []);
+
+  const dob = birthDate === '' ? null : birthDate;
+  const chosen = levels.find((level) => level.id === levelId) ?? null;
+  const fit = chosen === null ? 'fits' : fitsLevel(chosen, dob);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor="student-level" className="text-sm text-foreground-muted">
+        {t('students.level')}
+      </label>
+      <select
+        id="student-level"
+        name="levelId"
+        value={levelId}
+        onChange={(event) => setLevelId(event.target.value)}
+        aria-describedby={fit === 'tooYoung' || fit === 'tooOld' ? 'student-level-warning' : undefined}
+        className={field}
+      >
+        <option value="">{t('students.noLevel')}</option>
+        {levels.map((level) => {
+          const levelFit = fitsLevel(level, dob);
+          // Marked in the option text itself, because a `disabled` option would
+          // be the hard block this story argues against, and colour alone does
+          // not survive a native select on any platform.
+          const mark =
+            levelFit === 'tooYoung'
+              ? ` — ${t('students.tooYoungFor')}`
+              : levelFit === 'tooOld'
+                ? ` — ${t('students.tooOldFor')}`
+                : '';
+          return (
+            <option key={level.id} value={level.id}>
+              {level.name}
+              {mark}
+            </option>
+          );
+        })}
+      </select>
+
+      {(fit === 'tooYoung' || fit === 'tooOld') && chosen !== null && (
+        <div
+          id="student-level-warning"
+          className="flex flex-col gap-2 rounded bg-warning/10 px-3 py-2 text-sm text-warning"
+        >
+          <p>
+            {t(fit === 'tooYoung' ? 'students.ageWarnYoung' : 'students.ageWarnOld', {
+              level: chosen.name,
+            })}
+          </p>
+          {/*
+            Required, so the form cannot be submitted with the mismatch
+            unacknowledged — but it is a tick, not a wall. One deliberate click,
+            and the club's judgement wins.
+          */}
+          <label className="flex items-center gap-2">
+            <input type="checkbox" required className="size-4 accent-primary" />
+            {t('students.ageConfirm')}
+          </label>
+        </div>
+      )}
+    </div>
   );
 }

@@ -317,4 +317,223 @@ END $$;
 
 RESET ROLE;
 
+-- ---------------------------------------------------------------------------
+-- Test 11 — one instructor cannot teach two classes at once
+--
+-- Backlog round 4, ticket 1. The lane constraint has guarded pool-and-lane
+-- overlap since 1.6; this is the half that was missing, and it was missing
+-- because the instructor was not on the session — only the substitute was, and
+-- an exclusion constraint cannot join.
+--
+-- The three cases the ticket names, plus the two it implies:
+--
+--   a. Same lane, overlapping by real duration. 10:00–10:45 blocks 10:30.
+--   b. Same instructor, *different pool*. Nothing about lanes saves you here.
+--   c. Back-to-back. 10:45 starting exactly when 10:45 ends is not an overlap,
+--      because tstzrange is half-open. No special case, and this asserts that
+--      nobody later "fixes" it into a closed range.
+--   d. A substitute counts. Somebody covering a class cannot also be teaching
+--      their own at the same moment.
+--   e. A cancelled class frees the instructor, exactly as it frees a lane.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid; v_facility uuid; v_pool_a uuid; v_pool_b uuid;
+  v_rita uuid; v_tiago uuid;
+  v_group_a uuid; v_group_b uuid; v_group_c uuid;
+  v_session uuid;
+BEGIN
+  INSERT INTO organization (name, slug) VALUES ('Clube Horário', 'clube-horario')
+  RETURNING id INTO v_org;
+
+  INSERT INTO facility (organization_id, name) VALUES (v_org, 'Complexo')
+  RETURNING id INTO v_facility;
+  INSERT INTO pool (organization_id, facility_id, name, kind)
+  VALUES (v_org, v_facility, 'Tanque A', 'indoor') RETURNING id INTO v_pool_a;
+  INSERT INTO pool (organization_id, facility_id, name, kind)
+  VALUES (v_org, v_facility, 'Tanque B', 'indoor') RETURNING id INTO v_pool_b;
+
+  SELECT provision_app_user('user_h_r', 'rita@h.pt',  'Rita',  'Lopes',   NULL, now()) INTO v_rita;
+  SELECT provision_app_user('user_h_t', 'tiago@h.pt', 'Tiago', 'Freitas', NULL, now()) INTO v_tiago;
+
+  INSERT INTO membership (organization_id, app_user_id, status)
+  VALUES (v_org, v_rita, 'active') RETURNING id INTO v_rita;
+  INSERT INTO membership (organization_id, app_user_id, status)
+  VALUES (v_org, v_tiago, 'active') RETURNING id INTO v_tiago;
+
+  INSERT INTO class_group (organization_id, name, pool_id, lane, instructor_membership_id)
+  VALUES (v_org, 'Iniciação A', v_pool_a, 1, v_rita) RETURNING id INTO v_group_a;
+  INSERT INTO class_group (organization_id, name, pool_id, lane, instructor_membership_id)
+  VALUES (v_org, 'Iniciação B', v_pool_a, 1, v_tiago) RETURNING id INTO v_group_b;
+  INSERT INTO class_group (organization_id, name, pool_id, lane, instructor_membership_id)
+  VALUES (v_org, 'Iniciação C', v_pool_b, 1, v_rita) RETURNING id INTO v_group_c;
+
+  -- The anchor: Rita, Tanque A lane 1, 10:00 for 45 minutes.
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+                             starts_at, duration_minutes, instructor_membership_id)
+  VALUES (v_org, v_group_a, v_pool_a, 1, TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita)
+  RETURNING id INTO v_session;
+
+  -- a. 10:30 in the same lane. An hourly grid would have allowed this; the real
+  --    duration is what refuses it.
+  BEGIN
+    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+                               starts_at, duration_minutes, instructor_membership_id)
+    VALUES (v_org, v_group_b, v_pool_a, 1, TIMESTAMPTZ '2026-09-07 10:30:00+01', 45, v_tiago);
+    RAISE EXCEPTION 'FAIL test 11a: a 10:30 class was booked over a 10:00-10:45 one';
+  EXCEPTION
+    WHEN exclusion_violation THEN NULL;
+  END;
+
+  -- b. Rita again, in a different pool entirely. Lanes cannot help here.
+  BEGIN
+    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+                               starts_at, duration_minutes, instructor_membership_id)
+    VALUES (v_org, v_group_c, v_pool_b, 1, TIMESTAMPTZ '2026-09-07 10:30:00+01', 45, v_rita);
+    RAISE EXCEPTION 'FAIL test 11b: one instructor was booked in two pools at once';
+  EXCEPTION
+    WHEN exclusion_violation THEN NULL;
+  END;
+
+  -- c. Back-to-back, same lane and same instructor. Must be allowed.
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+                             starts_at, duration_minutes, instructor_membership_id)
+  VALUES (v_org, v_group_c, v_pool_a, 1, TIMESTAMPTZ '2026-09-07 10:45:00+01', 45, v_rita);
+
+  -- d. A substitute is the person actually teaching, so they clash too. Tiago is
+  --    free at 11:30, but not if he is covering something else then.
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+                             starts_at, duration_minutes, instructor_membership_id,
+                             substitute_instructor_membership_id)
+  VALUES (v_org, v_group_b, v_pool_b, 2, TIMESTAMPTZ '2026-09-07 11:30:00+01', 45,
+          v_rita, v_tiago);
+
+  BEGIN
+    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+                               starts_at, duration_minutes, instructor_membership_id)
+    VALUES (v_org, v_group_b, v_pool_a, 3, TIMESTAMPTZ '2026-09-07 11:45:00+01', 45, v_tiago);
+    RAISE EXCEPTION 'FAIL test 11d: a substitute was double-booked against their own class';
+  EXCEPTION
+    WHEN exclusion_violation THEN NULL;
+  END;
+
+  -- e. Calling the anchor off frees Rita, exactly as it frees her lane.
+  UPDATE class_session SET status = 'cancelled' WHERE id = v_session;
+
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+                             starts_at, duration_minutes, instructor_membership_id)
+  VALUES (v_org, v_group_c, v_pool_b, 1, TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita);
+
+  RAISE NOTICE 'PASS test 11: an instructor cannot be in two places, and back-to-back is fine';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 12 — a session cannot end before it starts
+--
+-- The BEFORE trigger already computes ends_at from duration_minutes, so this is
+-- unreachable through the ordinary path. It is asserted anyway because the
+-- trigger is a function somebody can change, and this is a fact about the row
+-- rather than about the code that wrote it.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_org uuid; v_group uuid; n int;
+BEGIN
+  v_org := (SELECT id FROM organization WHERE slug = 'clube-horario');
+  v_group := (SELECT id FROM class_group WHERE organization_id = v_org LIMIT 1);
+
+  BEGIN
+    INSERT INTO class_session (organization_id, class_group_id, starts_at,
+                               duration_minutes, ends_at)
+    VALUES (v_org, v_group, TIMESTAMPTZ '2026-09-08 10:00:00+01', 45,
+            TIMESTAMPTZ '2026-09-08 09:00:00+01');
+    -- The trigger overwrites ends_at, so this insert succeeds with a corrected
+    -- value rather than failing. Assert the correction happened.
+    SELECT count(*) INTO n
+      FROM class_session
+     WHERE class_group_id = v_group
+       AND starts_at = TIMESTAMPTZ '2026-09-08 10:00:00+01'
+       AND ends_at = TIMESTAMPTZ '2026-09-08 10:45:00+01';
+    IF n <> 1 THEN
+      RAISE EXCEPTION 'FAIL test 12a: ends_at was not recomputed from the duration';
+    END IF;
+  END;
+
+  -- Reaching past the trigger, the constraint still holds the line.
+  BEGIN
+    ALTER TABLE class_session DISABLE TRIGGER class_session_set_ends_at;
+    BEGIN
+      INSERT INTO class_session (organization_id, class_group_id, starts_at,
+                                 duration_minutes, ends_at)
+      VALUES (v_org, v_group, TIMESTAMPTZ '2026-09-09 10:00:00+01', 45,
+              TIMESTAMPTZ '2026-09-09 09:00:00+01');
+      ALTER TABLE class_session ENABLE TRIGGER class_session_set_ends_at;
+      RAISE EXCEPTION 'FAIL test 12b: a session ending before it starts was stored';
+    EXCEPTION
+      WHEN check_violation THEN
+        ALTER TABLE class_session ENABLE TRIGGER class_session_set_ends_at;
+    END;
+  END;
+
+  RAISE NOTICE 'PASS test 12: ends_at is recomputed, and cannot precede starts_at';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 13 — level age ranges are optional, ordered, and never block a student
+--
+-- Backlog round 4, tickets 2 and 3. The last half is the important half: the
+-- database stores the range and enforces nothing about who is in the level.
+-- A hard block gets worked around with fake birth dates, and then the data is
+-- worse than if the check had never existed.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_org uuid; v_bebes uuid; v_adultos uuid; v_student uuid;
+BEGIN
+  v_org := (SELECT id FROM organization WHERE slug = 'clube-horario');
+
+  -- Both bounds.
+  INSERT INTO student_level (organization_id, name, min_age_years, max_age_years)
+  VALUES (v_org, 'Bebés', 0, 3) RETURNING id INTO v_bebes;
+
+  -- A minimum and no maximum — the "Adultos" case the ticket names.
+  INSERT INTO student_level (organization_id, name, min_age_years)
+  VALUES (v_org, 'Adultos', 18) RETURNING id INTO v_adultos;
+
+  -- Neither: behaves exactly as before this migration.
+  INSERT INTO student_level (organization_id, name) VALUES (v_org, 'Livre');
+
+  -- A range nobody can be in is a typo.
+  BEGIN
+    INSERT INTO student_level (organization_id, name, min_age_years, max_age_years)
+    VALUES (v_org, 'Impossível', 10, 4);
+    RAISE EXCEPTION 'FAIL test 13a: a level whose maximum is below its minimum was stored';
+  EXCEPTION
+    WHEN check_violation THEN NULL;
+  END;
+
+  BEGIN
+    INSERT INTO student_level (organization_id, name, min_age_years)
+    VALUES (v_org, 'Matusalém', 200);
+    RAISE EXCEPTION 'FAIL test 13b: an implausible age was stored';
+  EXCEPTION
+    WHEN check_violation THEN NULL;
+  END;
+
+  -- And now the part that must NOT be enforced: a 67-year-old in Bebés. The
+  -- interface warns and asks for confirmation; the database stores what the club
+  -- decided. Ticket 3 is explicit that this is a warning, not a block.
+  INSERT INTO student (organization_id, first_name, last_name, birth_date, level_id)
+  VALUES (v_org, 'Armando', 'Seabra', DATE '1959-03-02', v_bebes)
+  RETURNING id INTO v_student;
+
+  -- A student with no birth date at all is the normal case for an import, and is
+  -- never in anybody's way.
+  INSERT INTO student (organization_id, first_name, last_name, level_id)
+  VALUES (v_org, 'Sem', 'Data', v_adultos);
+
+  RAISE NOTICE 'PASS test 13: age ranges are stored and ordered, and never block a student';
+END $$;
+
 ROLLBACK;

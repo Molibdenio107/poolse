@@ -1,6 +1,12 @@
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '../../../../../lib/api';
-import { ArchiveLevelButton, CreateLevelForm, MoveLevelButton } from './level-forms';
+import { AgeRangeBadge } from '@/components/age-range';
+import {
+  ArchiveLevelButton,
+  CreateLevelForm,
+  EditLevelForm,
+  MoveLevelButton,
+} from './level-forms';
 import { BackLink } from '@/components/back-link';
 
 /**
@@ -64,6 +70,7 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
                     <div className="flex min-w-0 items-baseline gap-3">
                       <span className="text-sm text-foreground-muted">{index + 1}.</span>
                       <span className="truncate">{level.name}</span>
+                      <AgeRangeBadge level={level} />
                       <span className="whitespace-nowrap text-sm text-foreground-muted">
                         {t('students.count', { count: level.studentCount })}
                       </span>
@@ -71,6 +78,7 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
 
                     {data.canManage && (
                       <div className="flex flex-wrap items-center gap-1">
+                        <EditLevelForm organizationId={data.organizationId} level={level} />
                         <MoveLevelButton
                           organizationId={data.organizationId}
                           levelId={level.id}

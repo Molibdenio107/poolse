@@ -229,6 +229,32 @@ export async function updateClassGroup(
       );
       if (!rows[0]) return false;
 
+      /*
+       * Future sessions follow the turma; past ones do not — backlog round 4,
+       * ticket 1.
+       *
+       * `class_session.instructor_membership_id` is a copy, and a copy has to be
+       * told when the original changes or the exclusion constraint is guarding a
+       * name nobody is teaching under any more.
+       *
+       * From today forward only. A session last March keeps whoever actually
+       * stood on the poolside, because that is the record attendance and payroll
+       * will read — rewriting it would retroactively put somebody at a class
+       * they never taught.
+       *
+       * Cancelled sessions are skipped: they are history too, and the constraint
+       * ignores them anyway.
+       */
+      await tx.query(
+        `UPDATE class_session
+            SET instructor_membership_id = $2
+          WHERE class_group_id = $1
+            AND starts_at >= now()
+            AND status <> 'cancelled'
+            AND instructor_membership_id IS DISTINCT FROM $2`,
+        [groupId, input.instructorMembershipId],
+      );
+
       await recordAudit(tx, {
         action: 'class_group.updated',
         entityType: 'class_group',

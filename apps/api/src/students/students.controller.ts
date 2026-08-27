@@ -27,6 +27,7 @@ interface StudentDetail extends Student {
 import {
   archiveLevel,
   archiveStudent,
+  countOutsideRange,
   createLevel,
   createStudent,
   DuplicateNameError,
@@ -145,6 +146,37 @@ export class StudentsController {
  * one wins depends on declaration order — a footgun that only fires the day
  * somebody reorders the methods.
  */
+/**
+ * An optional age bound.
+ *
+ * Absent, empty and null all mean "no bound", because "Adultos" genuinely has no
+ * maximum and an operator should not have to invent 120 to say so.
+ */
+function age(value: unknown, field: string): number | null {
+  if (value === undefined || value === null || value === '') return null;
+
+  const parsed = typeof value === 'number' ? value : Number(String(value).trim());
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 120) {
+    throw new BadRequestException(`${field} must be a whole number of years between 0 and 120`);
+  }
+  return parsed;
+}
+
+function ageRange(body: Record<string, unknown>): {
+  minAgeYears: number | null;
+  maxAgeYears: number | null;
+} {
+  const minAgeYears = age(body['minAgeYears'], 'minAgeYears');
+  const maxAgeYears = age(body['maxAgeYears'], 'maxAgeYears');
+
+  // Checked here as well as by the constraint, so an operator who types 10–4
+  // gets a sentence rather than a constraint name.
+  if (minAgeYears !== null && maxAgeYears !== null && maxAgeYears < minAgeYears) {
+    throw new BadRequestException('maxAgeYears cannot be below minAgeYears');
+  }
+  return { minAgeYears, maxAgeYears };
+}
+
 @Controller('levels')
 export class LevelsController {
   @Post()
@@ -154,10 +186,34 @@ export class LevelsController {
 
     const name = requiredText(body['name'], 'name');
     try {
-      return { id: await createLevel(organizationId, name) };
+      return { id: await createLevel(organizationId, name, ageRange(body)) };
     } catch (error) {
       throw asHttp(error);
     }
+  }
+
+  /**
+   * How many students would fall outside a proposed range — round 4, ticket 4.
+   *
+   * A GET with the candidate bounds in the query string, asked before saving.
+   * Deliberately not part of the save: the count is a thing to be *told*, and a
+   * save that refused on it would be the hard block ticket 3 argues against.
+   */
+  @Get(':id/outside')
+  async outside(
+    @Param('id') id: string,
+    @Query('minAgeYears') min?: string,
+    @Query('maxAgeYears') max?: string,
+  ): Promise<{ outside: number }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    return {
+      outside: await countOutsideRange(organizationId, id, {
+        minAgeYears: age(min, 'minAgeYears'),
+        maxAgeYears: age(max, 'maxAgeYears'),
+      }),
+    };
   }
 
   @Patch(':id')
@@ -171,7 +227,7 @@ export class LevelsController {
     const name = requiredText(body['name'], 'name');
     let renamed: boolean;
     try {
-      renamed = await renameLevel(organizationId, id, name);
+      renamed = await renameLevel(organizationId, id, name, ageRange(body));
     } catch (error) {
       throw asHttp(error);
     }

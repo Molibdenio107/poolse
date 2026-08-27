@@ -276,6 +276,59 @@ and comes back through the cache, never straight into `cached_first_name`. Clerk
 reach localhost, so the API re-reads from Clerk immediately after writing rather than
 waiting for a webhook that will not arrive on a laptop.
 
+### Backlog, round 4
+
+Four scheduling and level items on the core path, one blocker, one for phase 5.
+
+| # | Item | State |
+|---|---|---|
+| R4-1 | Classes must not overlap, by real duration | ✅ Instructor exclusion added; lane exclusion already existed. Clashes named, not raised as constraint errors |
+| R4-2 | Age limits on student levels | ✅ `min_age_years` / `max_age_years`, both optional |
+| R4-3 | Age checked when assigning a level | ✅ Warning with one confirmation — never a block, never on a missing birth date |
+| R4-4 | Levels are editable | ✅ Rename and age range added to the create/reorder/archive that already existed, with the narrowing count |
+| R4-5 | Invitations send no email | ⚠️ **Not a code gap.** See below |
+| R4-6 | Energy bill import | Phase 5, deliberately. Storage decision first |
+
+**R4-1 was half-built, and the ticket's own SQL was already in the schema.**
+`class_session_lane_free` has guarded pool-and-lane overlap since slice 1.6,
+`ends_at` is a stored column maintained by a trigger, and `btree_gist` was already
+installed. What was missing was the instructor — and it was missing because the
+instructor lives on `class_group` while only the substitute lives on the session,
+so there was nothing for a constraint to compare. See `docs/data-model.md`,
+"Nobody is in two places at once".
+
+**R4-5 is a configuration gap, not a missing subsystem.** The email path is
+complete: `InvitationsController` composes the message, calls `sendEmail`, and
+returns `emailed` to the client, which already renders "convite enviado" or the
+copyable link. Nothing arrives because `.env` has `EMAIL_PROVIDER=console`.
+Setting it to `resend` with a key from resend.com is the whole fix, and no code
+changes.
+
+What *was* missing is the acceptance criterion "a failed send is visible in the
+interface": `emailed` lived only in the response that created the invitation, so
+the pending list could not tell you afterwards. `invitation.delivery` now records
+`pending | sent | failed | not_configured` and the list shows it —
+`not_configured` deliberately not as a failure, because it means "copy the link"
+rather than "something went wrong".
+
+**Clerk's own invitation emails were considered and rejected.** They would mean
+carrying roles in Clerk's public metadata and a second acceptance path beside the
+one that exists and is covered by `invitations.sql` test 3 — real work to replace
+something already working, and it would not help the cancellations and overdue
+invoices that need a channel later.
+
+**R4-6 stays in phase 5**, and the note in the ticket is worth keeping: once
+storage exists, let managers upload bills *without* parsing them. A year of real
+documents accumulates from day one, and a parser built later has a corpus to test
+against instead of guesswork. Its output belongs in the same `energy_reading` and
+`tariff` tables as manual entry, with `source = 'bill'` beside `'manual'` and
+`'sensor'`.
+
+**The scheduling grid (R2-4) is still not built**, and R4-1 answered its open
+question: no fixed slots. Render each class at its real duration over 15-minute
+guide lines, and let the database's exclusion constraints supply the conflicts
+rather than reimplementing them.
+
 ## Phase 2 — money
 
 Split deliberately, because the two flows are different problems and merging them is the

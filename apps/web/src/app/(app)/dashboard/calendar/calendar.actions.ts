@@ -7,6 +7,13 @@ import type { FormState } from '../actions';
 export interface GenerateState extends FormState {
   /** What the run actually did, so the button can say more than "done". */
   result?: { holidaysAdded: number; created: number; cancelled: number; restored: number };
+  /**
+   * Turmas sharing an instructor at the same time — backlog round 4, ticket 1.
+   *
+   * Checked before generating rather than caught afterwards, so the answer names
+   * the two turmas to fix instead of reporting that a year of rows failed.
+   */
+  clashes?: { firstClass: string; secondClass: string; weekday: number; firstTime: string; secondTime: string }[];
 }
 
 function failure(error: unknown, errorKey: string): FormState {
@@ -24,6 +31,35 @@ function failure(error: unknown, errorKey: string): FormState {
  * student's own week too — and a screen that still shows a class that was called
  * off an hour ago is the exact failure this slice exists to prevent.
  */
+/**
+ * The clash list the API attached to its 409.
+ *
+ * Narrowed field by field rather than cast, because `details` is somebody else's
+ * JSON: a proxy, a platform error page or a future API change can put anything
+ * there. A malformed entry is dropped and the operator still gets the headline
+ * message, which is the half that matters.
+ */
+function clashesFrom(error: ApiError): NonNullable<GenerateState['clashes']> {
+  const raw = (error.details as { clashes?: unknown } | null)?.clashes;
+  if (!Array.isArray(raw)) return [];
+
+  return raw.flatMap((entry): NonNullable<GenerateState['clashes']> => {
+    if (entry === null || typeof entry !== 'object') return [];
+    const row = entry as Record<string, unknown>;
+
+    const firstClass = typeof row['firstClass'] === 'string' ? row['firstClass'] : null;
+    const secondClass = typeof row['secondClass'] === 'string' ? row['secondClass'] : null;
+    const weekday = typeof row['weekday'] === 'number' ? row['weekday'] : null;
+    const firstTime = typeof row['firstTime'] === 'string' ? row['firstTime'] : null;
+    const secondTime = typeof row['secondTime'] === 'string' ? row['secondTime'] : null;
+
+    if (firstClass === null || secondClass === null || weekday === null) return [];
+    return [
+      { firstClass, secondClass, weekday, firstTime: firstTime ?? '', secondTime: secondTime ?? '' },
+    ];
+  });
+}
+
 function revalidateCalendar(): void {
   revalidatePath('/dashboard/calendar');
   revalidatePath('/dashboard/calendar/closures');
@@ -47,6 +83,13 @@ export async function generateSeasonAction(
       { organizationId },
     );
   } catch (error) {
+    if (error instanceof ApiError && error.code === 'schedule_clash') {
+      return {
+        ok: false,
+        errorKey: 'calendar.clashFailed',
+        clashes: clashesFrom(error),
+      };
+    }
     return failure(error, 'calendar.generateFailed');
   }
 

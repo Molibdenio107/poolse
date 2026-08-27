@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { ApiError, apiPatch, apiPost } from '../../../../lib/api';
+import { ApiError, apiFetch, apiPatch, apiPost } from '../../../../lib/api';
 import type { FormState } from '../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
@@ -97,16 +97,36 @@ export async function archiveStudentAction(
 // Levels
 // ---------------------------------------------------------------------------
 
+/** Empty means "no bound" — "Adultos" genuinely has no maximum. */
+function ageBound(formData: FormData, field: string): number | null {
+  const raw = String(formData.get(field) ?? '').trim();
+  if (raw === '') return null;
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function levelBody(formData: FormData): {
+  name: string;
+  minAgeYears: number | null;
+  maxAgeYears: number | null;
+} {
+  return {
+    name: String(formData.get('name') ?? '').trim(),
+    minAgeYears: ageBound(formData, 'minAgeYears'),
+    maxAgeYears: ageBound(formData, 'maxAgeYears'),
+  };
+}
+
 export async function createLevelAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const organizationId = String(formData.get('organizationId') ?? '');
-  const name = String(formData.get('name') ?? '').trim();
-  if (!name) return { ok: false, errorKey: 'students.levelNameRequired' };
+  const body = levelBody(formData);
+  if (!body.name) return { ok: false, errorKey: 'students.levelNameRequired' };
 
   try {
-    await apiPost('/levels', { name }, { organizationId });
+    await apiPost('/levels', body, { organizationId });
   } catch (error) {
     return failure(error, 'students.levelFailed');
   }
@@ -114,6 +134,58 @@ export async function createLevelAction(
   revalidatePath('/dashboard/students/levels');
   revalidatePath('/dashboard/students');
   return { ok: true };
+}
+
+/**
+ * Renames a level and sets its age range — backlog round 4, ticket 4.
+ *
+ * Name and range travel together because the form submits both, and a
+ * half-applied edit is a state nobody can explain. Narrowing removes nobody: the
+ * count of students who would fall outside is shown before saving, and what
+ * happens to them afterwards is the club's decision.
+ */
+export async function renameLevelAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const levelId = String(formData.get('levelId') ?? '');
+  const body = levelBody(formData);
+  if (!body.name) return { ok: false, errorKey: 'students.levelNameRequired' };
+
+  try {
+    await apiPatch(`/levels/${levelId}`, body, { organizationId });
+  } catch (error) {
+    return failure(error, 'students.levelFailed');
+  }
+
+  revalidatePath('/dashboard/students/levels');
+  revalidatePath('/dashboard/students');
+  return { ok: true };
+}
+
+/**
+ * How many students would fall outside a proposed range.
+ *
+ * Asked as the operator types, before saving. Students with no birth date are
+ * never counted — missing dates are the normal case, and reporting them as
+ * "outside" would produce a frightening number that means nothing.
+ */
+export async function countOutsideRangeAction(
+  organizationId: string,
+  levelId: string,
+  minAgeYears: number | null,
+  maxAgeYears: number | null,
+): Promise<number> {
+  const params = new URLSearchParams();
+  if (minAgeYears !== null) params.set('minAgeYears', String(minAgeYears));
+  if (maxAgeYears !== null) params.set('maxAgeYears', String(maxAgeYears));
+
+  const { outside } = await apiFetch<{ outside: number }>(
+    `/levels/${levelId}/outside?${params.toString()}`,
+    { organizationId },
+  );
+  return outside;
 }
 
 export async function moveLevelAction(

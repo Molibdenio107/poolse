@@ -19,6 +19,8 @@ export interface OrganizationMember {
   avatarUrl: string | null;
 }
 
+export type InvitationDelivery = 'pending' | 'sent' | 'failed' | 'not_configured';
+
 export interface PendingInvitation {
   id: string;
   email: string;
@@ -27,6 +29,39 @@ export interface PendingInvitation {
   createdAt: string;
   invitedByFirstName: string | null;
   invitedByLastName: string | null;
+  /**
+   * Whether the email actually went — backlog round 4, ticket 5.
+   *
+   * `not_configured` is not a failure. It means no provider is set up, the link
+   * is meant to be copied by hand, and nobody should be waiting for an email
+   * that was never going to arrive.
+   */
+  delivery: InvitationDelivery;
+  deliveredAt: string | null;
+}
+
+/**
+ * Records what happened to the message.
+ *
+ * Separate from creating the invitation, and after it: an invitation that exists
+ * but was not delivered is recoverable in one click, while an invitation rolled
+ * back because a mail server had a bad minute is just confusing. The send can
+ * never undo the record it is announcing.
+ */
+export async function recordDelivery(
+  organizationId: string,
+  invitationId: string,
+  delivery: InvitationDelivery,
+): Promise<void> {
+  await withOrg(organizationId, async (tx) => {
+    await tx.query(
+      `UPDATE invitation
+          SET delivery = $2::invitation_delivery,
+              delivered_at = CASE WHEN $2 = 'sent' THEN now() ELSE NULL END
+        WHERE id = $1`,
+      [invitationId, delivery],
+    );
+  });
 }
 
 /**
@@ -104,6 +139,8 @@ export async function listPendingInvitations(
       roles: string[];
       expires_at: Date;
       created_at: Date;
+      delivery: InvitationDelivery;
+      delivered_at: Date | null;
       invited_by_first_name: string | null;
       invited_by_last_name: string | null;
     }>(`
@@ -112,6 +149,8 @@ export async function listPendingInvitations(
              (SELECT array_agg(r::text ORDER BY r::text) FROM unnest(i.roles) AS r) AS roles,
              i.expires_at,
              i.created_at,
+             i.delivery,
+             i.delivered_at,
              inviter.cached_first_name AS invited_by_first_name,
              inviter.cached_last_name  AS invited_by_last_name
         FROM invitation i
@@ -131,6 +170,8 @@ export async function listPendingInvitations(
       roles: row.roles,
       expiresAt: row.expires_at.toISOString(),
       createdAt: row.created_at.toISOString(),
+      delivery: row.delivery,
+      deliveredAt: row.delivered_at?.toISOString() ?? null,
       invitedByFirstName: row.invited_by_first_name,
       invitedByLastName: row.invited_by_last_name,
     }));

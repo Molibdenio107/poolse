@@ -402,6 +402,240 @@ export async function cancelSession(
   });
 }
 
+export interface Clash {
+  /** The class already in that slot. */
+  className: string;
+  /** Local wall-clock at the facility, "2026-09-07 10:00". */
+  when: string;
+  poolName: string | null;
+  lane: number | null;
+  /** Which rule was broken, so the message can say the right thing. */
+  kind: 'lane' | 'instructor';
+}
+
+/**
+ * What a session would collide with — backlog round 4, ticket 1.
+ *
+ * "The refusal names the clashing class, its time and its lane — never a bare
+ * constraint error." Postgres raises `23P01` with the offending key in its
+ * detail string, but parsing that string is exactly the kind of thing that
+ * breaks on a minor version bump. Asking the same question in SQL is both
+ * stabler and better: it can return the class's *name*.
+ *
+ * Half-open on purpose, matching `tstzrange(starts_at, ends_at)`: a class
+ * starting the moment another ends is not a clash, and this must agree with the
+ * constraint or the message would name a collision the database allowed.
+ */
+export async function findClash(
+  organizationId: string,
+  candidate: {
+    sessionId?: string | null;
+    poolId: string | null;
+    lane: number | null;
+    instructorMembershipId: string | null;
+    startsAt: Date;
+    endsAt: Date;
+  },
+): Promise<Clash | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      class_name: string;
+      when: string;
+      pool_name: string | null;
+      lane: number | null;
+      kind: 'lane' | 'instructor';
+    }>(
+      `
+      SELECT cg.name AS class_name,
+             to_char(
+               cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'),
+               'YYYY-MM-DD HH24:MI'
+             ) AS when,
+             p.name AS pool_name,
+             cs.lane,
+             CASE
+               WHEN $4::uuid IS NOT NULL
+                AND coalesce(cs.substitute_instructor_membership_id,
+                             cs.instructor_membership_id) = $4::uuid
+                 THEN 'instructor'
+               ELSE 'lane'
+             END AS kind
+        FROM class_session cs
+        JOIN class_group cg
+          ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
+        LEFT JOIN pool p     ON p.id = cs.pool_id     AND p.organization_id = cs.organization_id
+        LEFT JOIN facility f ON f.id = p.facility_id  AND f.organization_id = cs.organization_id
+       WHERE cs.status <> 'cancelled'
+         AND ($1::uuid IS NULL OR cs.id <> $1::uuid)
+         AND tstzrange(cs.starts_at, cs.ends_at) && tstzrange($5::timestamptz, $6::timestamptz)
+         AND (
+              -- Same pool and lane.
+              ($2::uuid IS NOT NULL AND $3::smallint IS NOT NULL
+                 AND cs.pool_id = $2::uuid AND cs.lane = $3::smallint)
+              -- Or the same person teaching, wherever they are.
+           OR ($4::uuid IS NOT NULL
+                 AND coalesce(cs.substitute_instructor_membership_id,
+                              cs.instructor_membership_id) = $4::uuid)
+         )
+       -- An instructor clash is the more surprising of the two and the harder to
+       -- spot on a calendar, so it is named first when both apply.
+       ORDER BY kind DESC, cs.starts_at
+       LIMIT 1
+      `,
+      [
+        candidate.sessionId ?? null,
+        candidate.poolId,
+        candidate.lane,
+        candidate.instructorMembershipId,
+        candidate.startsAt,
+        candidate.endsAt,
+      ],
+    );
+
+    const row = rows[0];
+    if (!row) return null;
+
+    return {
+      className: row.class_name,
+      when: row.when,
+      poolName: row.pool_name,
+      lane: row.lane,
+      kind: row.kind,
+    };
+  });
+}
+
+/** The shape `findClash` needs, read back from a session that already exists. */
+export async function findSessionSlot(
+  organizationId: string,
+  sessionId: string,
+): Promise<{
+  sessionId: string;
+  poolId: string | null;
+  lane: number | null;
+  instructorMembershipId: string | null;
+  startsAt: Date;
+  endsAt: Date;
+} | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      pool_id: string | null;
+      lane: number | null;
+      instructor: string | null;
+      starts_at: Date;
+      ends_at: Date;
+    }>(
+      `SELECT pool_id,
+              lane,
+              coalesce(substitute_instructor_membership_id, instructor_membership_id)
+                AS instructor,
+              starts_at,
+              ends_at
+         FROM class_session
+        WHERE id = $1`,
+      [sessionId],
+    );
+
+    const row = rows[0];
+    if (!row) return null;
+
+    return {
+      sessionId,
+      poolId: row.pool_id,
+      lane: row.lane,
+      instructorMembershipId: row.instructor,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+    };
+  });
+}
+
+/** Raised in place of a bare `23P01` so a controller can answer in words. */
+export class SessionClashError extends Error {
+  constructor(readonly clash: Clash | null) {
+    super('That slot is already taken');
+    this.name = 'SessionClashError';
+  }
+}
+
+export function isExclusionViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && (error as { code?: string }).code === '23P01'
+  );
+}
+
+/**
+ * The clashes a season generation would hit, found before it runs.
+ *
+ * Generation writes a year of rows in one statement, so one instructor booked
+ * twice would abort the whole run — and the operator would be told a constraint
+ * name for a problem in a turma they set up weeks ago.
+ *
+ * Asked as a question about the weekly *patterns* instead: two turmas sharing an
+ * instructor, on the same weekday, whose times overlap. Answered before anything
+ * is written, so the operator is told which two turmas to fix rather than that
+ * something went wrong.
+ */
+export interface ScheduleClash {
+  firstClass: string;
+  secondClass: string;
+  weekday: number;
+  firstTime: string;
+  secondTime: string;
+}
+
+export async function findScheduleClashes(organizationId: string): Promise<ScheduleClash[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      first_class: string;
+      second_class: string;
+      weekday: number;
+      first_time: string;
+      second_time: string;
+    }>(`
+      WITH slot AS (
+        SELECT cg.id AS group_id,
+               cg.name,
+               cg.instructor_membership_id,
+               s.weekday,
+               s.start_time,
+               s.start_time + make_interval(mins => s.duration_minutes) AS end_time
+          FROM class_group cg
+          JOIN class_schedule s
+            ON s.class_group_id = cg.id
+           AND s.organization_id = cg.organization_id
+           AND s.archived_at IS NULL
+         WHERE cg.archived_at IS NULL
+           AND cg.instructor_membership_id IS NOT NULL
+      )
+      SELECT a.name              AS first_class,
+             b.name              AS second_class,
+             a.weekday,
+             to_char(a.start_time, 'HH24:MI') AS first_time,
+             to_char(b.start_time, 'HH24:MI') AS second_time
+        FROM slot a
+        JOIN slot b
+          ON b.instructor_membership_id = a.instructor_membership_id
+         AND b.weekday = a.weekday
+         -- Each pair once. Without this every clash is reported twice, once
+         -- from each side, and the operator counts double.
+         AND b.group_id > a.group_id
+         -- Half-open, agreeing with the constraint: back-to-back is not a clash.
+         AND a.start_time < b.end_time
+         AND b.start_time < a.end_time
+       ORDER BY a.weekday, a.start_time
+    `);
+
+    return rows.map((row) => ({
+      firstClass: row.first_class,
+      secondClass: row.second_class,
+      weekday: row.weekday,
+      firstTime: row.first_time,
+      secondTime: row.second_time,
+    }));
+  });
+}
+
 export async function setSubstitute(
   organizationId: string,
   sessionId: string,

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type OrganizationMember, type People } from '../../../../lib/api';
+import { DeliveryBadge } from '@/components/delivery-badge';
 import { PersonAvatar } from '@/components/person-avatar';
 import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
@@ -194,7 +195,17 @@ export default async function PeoplePage({
                     className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0"
                   >
                     <div className="flex min-w-0 flex-col">
-                      <span className="truncate">{invitation.email}</span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="truncate">{invitation.email}</span>
+                        {/*
+                          Whether the message actually went — backlog round 4,
+                          ticket 5. Without it, an invitation that failed to send
+                          looks exactly like one that succeeded the moment you
+                          navigate away, and the operator waits for somebody who
+                          was never written to.
+                        */}
+                        <DeliveryBadge delivery={invitation.delivery} />
+                      </span>
                       <span className="text-sm text-foreground-muted">
                         {t('invite.expiresOn', {
                           date: format.dateTime(new Date(invitation.expiresAt), {

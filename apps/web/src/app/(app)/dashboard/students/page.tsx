@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '../../../../lib/api';
+import { AgedOutFlag } from '@/components/aged-out-flag';
 import { PersonAvatar } from '@/components/person-avatar';
 import { photoUrlFor } from '@/lib/photo';
 import { ArchiveStudentButton } from './student-forms';
@@ -186,6 +187,13 @@ export default async function StudentsPage({
                           {student.levelName}
                         </span>
                       )}
+                      {/*
+                        A gentle flag, never a removal — backlog round 4,
+                        ticket 3. A child correctly enrolled in "3–5 anos" turns
+                        six mid-season, and when they move up is the club's
+                        decision, not the calendar's.
+                      */}
+                      <AgedOutFlag student={student} levels={data.levels} />
                       {data.canManage && (
                         <ArchiveStudentButton
                           organizationId={data.organizationId}

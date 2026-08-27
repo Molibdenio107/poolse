@@ -10,6 +10,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
+import { isExclusionViolation } from './sessions.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import {
@@ -108,6 +109,21 @@ export class ClassesController {
     try {
       updated = await updateClassGroup(organizationId, id, parseGroup(body));
     } catch (error) {
+      /*
+       * Changing a turma's instructor rewrites its future sessions, and that
+       * rewrite can walk into somebody already teaching then — backlog round 4,
+       * ticket 1.
+       *
+       * Refused as a 409 rather than a 500, because nothing is broken: the
+       * person is busy. The whole update is rolled back, so the turma is not
+       * left with a new instructor and old sessions.
+       */
+      if (isExclusionViolation(error)) {
+        throw new ConflictException({
+          code: 'instructor_busy',
+          message: 'That instructor already has a class at one of these times',
+        });
+      }
       throw asHttp(error);
     }
     if (!updated) throw new NotFoundException('No such class group');

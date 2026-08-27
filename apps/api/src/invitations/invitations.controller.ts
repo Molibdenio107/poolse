@@ -14,6 +14,7 @@ import {
   createInvitation,
   DuplicateInvitationError,
   organizationVoice,
+  recordDelivery,
   reissueInvitation,
   revokeInvitation,
 } from './invitations.repository.js';
@@ -64,16 +65,38 @@ function joinLink(token: string): string {
  */
 async function deliver(
   organizationId: string,
+  invitationId: string,
   email: string,
   roles: string[],
   token: string,
   expiresAt: Date,
 ): Promise<boolean> {
-  if (!emailIsConfigured()) return false;
+  /*
+   * The outcome is written to the invitation as well as returned — backlog
+   * round 4, ticket 5.
+   *
+   * The return value tells the request that created it; the column tells
+   * everybody who looks at the pending list afterwards. Without the column, an
+   * invitation that failed to send looks exactly like one that succeeded the
+   * moment you navigate away, and the operator waits for an instructor who was
+   * never written to.
+   *
+   * `not_configured` is deliberately not `failed`. No provider is set up, the
+   * link is meant to be copied by hand, and calling that a failure would have
+   * every invitation in local development shouting about a problem that is a
+   * setting.
+   */
+  const record = async (outcome: 'sent' | 'failed' | 'not_configured'): Promise<boolean> => {
+    // Never allowed to break the invitation it is describing.
+    await recordDelivery(organizationId, invitationId, outcome).catch(() => undefined);
+    return outcome === 'sent';
+  };
+
+  if (!emailIsConfigured()) return record('not_configured');
 
   try {
     const voice = await organizationVoice(organizationId);
-    return await sendEmail(
+    const sent = await sendEmail(
       invitationEmail({
         to: email,
         organizationName: voice.name,
@@ -83,8 +106,9 @@ async function deliver(
         locale: voice.locale,
       }),
     );
+    return record(sent ? 'sent' : 'failed');
   } catch {
-    return false;
+    return record('failed');
   }
 }
 
@@ -139,7 +163,7 @@ export class InvitationsController {
       throw error;
     }
 
-    const emailed = await deliver(organizationId, email, roles, token, expiresAt);
+    const emailed = await deliver(organizationId, id, email, roles, token, expiresAt);
 
     return { id, email, roles, expiresAt: expiresAt.toISOString(), token, emailed };
   }
@@ -170,6 +194,7 @@ export class InvitationsController {
 
     const emailed = await deliver(
       organizationId,
+      id,
       replacement.email,
       replacement.roles,
       token,

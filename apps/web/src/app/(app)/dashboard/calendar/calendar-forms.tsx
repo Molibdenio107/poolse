@@ -76,6 +76,29 @@ export function GenerateSeason({
           })}
         </p>
       )}
+
+      {/*
+        The clashes, named — backlog round 4, ticket 1. Nothing was generated,
+        and the operator is told which two turmas to fix rather than that a year
+        of rows failed against a constraint.
+      */}
+      {state.clashes !== undefined && state.clashes.length > 0 && (
+        <div className="flex flex-col gap-2 rounded border border-danger/40 bg-danger/10 p-4">
+          <p className="font-medium text-danger">{t('calendar.clashTitle')}</p>
+          <ul className="flex flex-col gap-1 text-sm">
+            {state.clashes.map((clash) => (
+              <li key={`${clash.firstClass}-${clash.secondClass}-${clash.firstTime}`}>
+                {t('calendar.clashRow', {
+                  first: clash.firstClass,
+                  second: clash.secondClass,
+                  time: `${t(`week.${clash.weekday}`)} ${clash.firstTime}–${clash.secondTime}`,
+                })}
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-foreground-muted">{t('calendar.clashHint')}</p>
+        </div>
+      )}
     </form>
   );
 }

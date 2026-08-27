@@ -31,6 +31,14 @@ export class ApiError extends Error {
      * the web app owns every user-facing string, in both locales.
      */
     readonly fields: Record<string, string> = {},
+    /**
+     * The whole parsed error body, for the few errors that carry structure
+     * beyond a code — the schedule-clash list, for instance.
+     *
+     * Deliberately `unknown`: it is somebody else's JSON, and every reader has
+     * to narrow it before believing it.
+     */
+    readonly details: unknown = null,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -55,7 +63,7 @@ function readError(status: number, body: string, statusText: string): ApiError {
           if (typeof key === 'string') fields[field] = key;
         }
       }
-      return new ApiError(status, message, code, fields);
+      return new ApiError(status, message, code, fields, record);
     }
   } catch {
     // Not JSON. The raw body is still the most useful thing to show.
@@ -179,12 +187,17 @@ export interface OrganizationMember {
   avatarUrl: string | null;
 }
 
+/** `not_configured` is not a failure — no provider is set up, so copy the link. */
+export type InvitationDelivery = 'pending' | 'sent' | 'failed' | 'not_configured';
+
 export interface PendingInvitation {
   id: string;
   email: string;
   roles: string[];
   expiresAt: string;
   createdAt: string;
+  delivery: InvitationDelivery;
+  deliveredAt: string | null;
   invitedByFirstName: string | null;
   invitedByLastName: string | null;
 }
@@ -411,6 +424,9 @@ export interface StudentLevel {
   id: string;
   name: string;
   sortOrder: number;
+  /** Both optional and independent: "Adultos" has a minimum and no maximum. */
+  minAgeYears: number | null;
+  maxAgeYears: number | null;
   studentCount: number;
 }
 

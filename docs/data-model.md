@@ -377,6 +377,71 @@ holiday and must not hand every member of staff a free day — so everything rea
 filters on `source IN ('national_holiday', 'municipal_holiday')`, never on "is there a
 closure". `packages/db/test/vacations.sql` test 8 is what keeps that true.
 
+### Nobody is in two places at once
+
+`class_session` carries two exclusion constraints, and the second one needed a
+column before it could exist.
+
+```
+class_session_lane_free       EXCLUDE USING gist (pool_id =, lane =, tstzrange(starts_at, ends_at) &&)
+                              WHERE status <> 'cancelled' AND lane IS NOT NULL AND pool_id IS NOT NULL
+
+class_session_instructor_free EXCLUDE USING gist (
+                                coalesce(substitute_instructor_membership_id,
+                                         instructor_membership_id) =,
+                                tstzrange(starts_at, ends_at) &&)
+                              WHERE status <> 'cancelled' AND that coalesce IS NOT NULL
+```
+
+**Overlap is judged on real duration, not on a grid.** A 45-minute class at 10:00
+blocks 10:30. `ends_at` is a stored column maintained by a BEFORE trigger from
+`duration_minutes` — a `GENERATED ALWAYS` column is impossible because
+`timestamptz + interval` is STABLE rather than IMMUTABLE, and a trigger is
+stricter than writing it by hand because it recomputes on UPDATE too.
+
+**`tstzrange` is half-open, so back-to-back is free.** 10:00–10:45 and
+10:45–11:30 do not overlap, with no special case. Every query that reports a
+clash uses the same half-open comparison, so the message can never name a
+collision the database allowed.
+
+**The instructor is denormalised onto the session**, because the turma holds it
+and a constraint cannot join. Kept honest by a composite foreign key. Changing a
+turma's instructor rewrites its sessions from now forward; a past session keeps
+whoever actually taught it, which is the record attendance and payroll will read.
+
+**Generation checks the weekly patterns first.** A year of sessions is written in
+one statement, so one double-booked instructor would abort the whole run and
+leave the operator holding a constraint name. `findScheduleClashes` asks the
+question of `class_schedule` before anything is written, and the answer names the
+two turmas.
+
+### Level age ranges
+
+```
+student_level
+  + min_age_years smallint, max_age_years smallint
+  check max_age_years >= min_age_years when both are present
+  check both between 0 and 120
+```
+
+Both bounds optional and independent: "Adultos" has a minimum and no maximum, and
+a level with neither behaves exactly as every level did before they existed.
+
+**Nothing in the schema stops a student joining a level they are outside.** That
+is the whole design. Real clubs have the four-year-old who swims with the
+six-year-olds because that is where their sibling is; a rule that cannot be
+overridden gets worked around by typing a fake birth date, and then the data is
+worse than if the check had never existed. The interface warns and asks for one
+confirmation.
+
+**A missing birth date is never a warning**, because it is the normal case — the
+spreadsheets waiting to be imported have a half-empty column, and treating absent
+as "does not fit" would flag most of a register.
+
+**Age drifts and nothing moves anybody.** A child correctly enrolled in "3–5 anos"
+turns six mid-season and gets a flag on the register. When they move up is the
+club's decision.
+
 ### Staff leave
 
 ```

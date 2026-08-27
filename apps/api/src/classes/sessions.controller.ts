@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   Get,
   NotFoundException,
@@ -14,7 +15,11 @@ import { hasRole, requireRole } from '../tenant/roles.js';
 import {
   archiveClosure,
   createClosure,
+  findClash,
+  findScheduleClashes,
+  findSessionSlot,
   generateSeason,
+  isExclusionViolation,
   listClosures,
   listSessions,
   sessionsForStudent,
@@ -161,8 +166,45 @@ export class CalendarController {
       typeof body['to'] === 'string' ? body['to'] : undefined,
     );
 
+    /*
+     * Checked before generating, not caught afterwards — backlog round 4,
+     * ticket 1.
+     *
+     * Generation writes a year of sessions in one statement, so a single
+     * instructor booked twice would abort the whole run and leave the operator
+     * holding a constraint name for a turma they set up weeks ago. Asking the
+     * question of the weekly patterns first means the answer names the two
+     * turmas to fix.
+     */
+    const clashes = await findScheduleClashes(organizationId);
+    if (clashes.length > 0) {
+      throw new ConflictException({
+        code: 'schedule_clash',
+        message: 'Two turmas share an instructor at the same time',
+        clashes,
+      });
+    }
+
     return generateSeason(organizationId, window.from, window.to);
   }
+}
+
+/**
+ * Turns an exclusion violation into a sentence naming the clash.
+ *
+ * The session is read back so the clash can be described in the operator's own
+ * terms — the turma's name, the time on the pool's clock, the lane. A 409 rather
+ * than a 500: nothing is broken, the slot is taken.
+ */
+async function asClash(organizationId: string, sessionId: string): Promise<ConflictException> {
+  const session = await findSessionSlot(organizationId, sessionId);
+  const clash = session === null ? null : await findClash(organizationId, session);
+
+  return new ConflictException({
+    code: 'session_clash',
+    message: 'That slot is already taken',
+    clash,
+  });
 }
 
 @Controller('sessions')
@@ -218,8 +260,15 @@ export class SessionsCalendarController {
         ? body['membershipId'].trim()
         : null;
 
-    if (!(await setSubstitute(organizationId, id, membershipId))) {
-      throw new NotFoundException('No such class');
+    try {
+      if (!(await setSubstitute(organizationId, id, membershipId))) {
+        throw new NotFoundException('No such class');
+      }
+    } catch (error) {
+      // Somebody covering a class cannot also be teaching their own at that
+      // moment. The constraint says so; this says which class.
+      if (isExclusionViolation(error)) throw await asClash(organizationId, id);
+      throw error;
     }
     return { updated: true };
   }
