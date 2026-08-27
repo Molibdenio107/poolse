@@ -14,7 +14,8 @@
     "copied": "Copiado",
     "backToDashboard": "Voltar ao painel",
     "cancel": "Cancelar",
-    "save": "Guardar"
+    "save": "Guardar",
+    "actions": "Ações"
   },
   "health": {
     "title": "Estado do sistema",
@@ -368,7 +369,12 @@
     "videoUrlHint": "Opcional. Mostrado ao aluno e ao encarregado de educação na aplicação.",
     "nameRequired": "Indique o nome da competência.",
     "duplicate": "Já existe uma competência com este nome neste nível.",
-    "createFailed": "Não foi possível guardar a competência."
+    "createFailed": "Não foi possível guardar a competência.",
+    "noneYetHint": "Adicione a primeira competência deste nível abaixo.",
+    "reorder": "Reordenar",
+    "video": "Vídeo",
+    "hasVideo": "Ver",
+    "noVideo": "—"
   },
   "seasons": {
     "title": "Épocas",

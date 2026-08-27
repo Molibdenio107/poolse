@@ -34,6 +34,9 @@ const EXEMPT = [
   'sign-up',
   '(marketing)',
   '(marketing-en)',
+  // POOLSE-37's landing resolver. It renders nothing at all — it decides where
+  // somebody goes and redirects — so there is no layout for it to share.
+  'dashboard/start',
 ];
 
 /** Outer-layout classes on a page root — the thing the shell now owns. */

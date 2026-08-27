@@ -18,7 +18,7 @@ two applications. One shell fixes it everywhere and stops it happening again.
 - Breakpoints and padding values are defined once as tokens, not per page.
 - Loading and empty states use the shell too, so a page does not shift when data arrives.
 - Existing pages are migrated onto the shell as part of this ticket; a page left on its own layout is the failure mode, so the ticket includes an audit listing every page and its status.
-- **Open:** does the calendar year grid (POOLSE-31) need a wider content variant, or does full width plus internal scrolling cover it?
+- **Answered (27 Aug):** **full width plus internal scrolling**, no wide variant. The year grid and the skills table already own an `overflow-x-auto` wrapper, which AC5 requires regardless, so a second layout would be a thing to keep in step for no gain.
 
 ### Dev — implementation notes
 - One `PageShell` component with named slots. Pages compose into it; they never set their own outer margin or padding.

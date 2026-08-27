@@ -14,7 +14,8 @@
     "copied": "Copied",
     "backToDashboard": "Back to dashboard",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "actions": "Actions"
   },
   "health": {
     "title": "System status",
@@ -368,7 +369,12 @@
     "videoUrlHint": "Optional. Shown to the student and their guardian in the app.",
     "nameRequired": "Give the skill a name.",
     "duplicate": "A skill with this name already exists in this level.",
-    "createFailed": "Could not save the skill."
+    "createFailed": "Could not save the skill.",
+    "noneYetHint": "Add this level’s first skill below.",
+    "reorder": "Reorder",
+    "video": "Video",
+    "hasVideo": "Watch",
+    "noVideo": "—"
   },
   "seasons": {
     "title": "Seasons",

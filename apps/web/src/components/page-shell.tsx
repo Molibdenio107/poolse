@@ -123,7 +123,7 @@ export function ScrollX({
   className,
 }: {
   children: React.ReactNode;
-  className?: string;
+  className?: string | undefined;
 }): React.ReactElement {
   return <div className={cn('overflow-x-auto', className)}>{children}</div>;
 }

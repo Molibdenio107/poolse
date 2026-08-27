@@ -35,12 +35,25 @@ export function Reorderable<T extends ReorderableItem>({
   items,
   onReorder,
   children,
+  as = 'list',
+  columns,
   className,
 }: {
   items: T[];
   /** Given the new order. Rejecting rolls the list back. */
   onReorder: (ids: string[]) => Promise<void>;
   children: (item: T, index: number) => React.ReactNode;
+  /**
+   * Render as table rows instead of list items — POOLSE-40.
+   *
+   * A skills table needs `<tr>`, and the alternative was a second drag
+   * implementation for it. One state machine, two shapes: `children` then
+   * supplies `<td>`s rather than free-form content, and the grip and the
+   * position number get cells of their own.
+   */
+  as?: 'list' | 'rows';
+  /** Column count, so the "no rows" case can span the table properly. */
+  columns?: number;
   className?: string;
 }): React.ReactElement {
   const t = useTranslations();
@@ -52,7 +65,9 @@ export function Reorderable<T extends ReorderableItem>({
 
   // Where a keyboard grab started, so Escape can put the row back exactly.
   const before = useRef<T[] | null>(null);
-  const rows = useRef(new Map<string, HTMLLIElement>());
+  // `HTMLElement`, because a row is an `<li>` in one shape and a `<tr>` in the
+  // other — POOLSE-40. Only `querySelector` and `focus` are used on it.
+  const rows = useRef(new Map<string, HTMLElement>());
 
   /*
    * Re-seeded when the server's list actually changes — a rename, an archive, a
@@ -192,6 +207,76 @@ export function Reorderable<T extends ReorderableItem>({
     }
   }
 
+  /*
+   * The grip, identical in both shapes.
+   *
+   * Every drag handler lives on this button and nowhere else, which is what
+   * makes nesting one of these inside another safe: an inner grip is not an
+   * ancestor of an outer grip, so its events cannot reach it. A skill row can
+   * never pick up the level card it sits in — POOLSE-40 AC7 and AC8.
+   */
+  const grip = (item: T): React.ReactElement => (
+    <button
+      type="button"
+      // `touch-none` stops the page scrolling under a finger that is dragging a
+      // row, which otherwise makes touch reordering unusable.
+      className="cursor-grab touch-none rounded p-1 text-foreground-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:cursor-grabbing"
+      aria-label={t('common.reorderGrip', { name: item.label })}
+      aria-pressed={grabbed === item.id}
+      aria-describedby="reorder-help"
+      onPointerDown={(event) => onGripPointerDown(event, item.id)}
+      onPointerMove={(event) => onGripPointerMove(event, item.id)}
+      onPointerUp={(event) => onGripPointerUp(event, item.id)}
+      onKeyDown={(event) => onGripKeyDown(event, item.id)}
+    >
+      <GripVertical className="size-4" aria-hidden />
+    </button>
+  );
+
+  const moving = (item: T): boolean => dragging === item.id || grabbed === item.id;
+
+  if (as === 'rows') {
+    return (
+      <>
+        <tbody>
+          {order.map((item, index) => (
+            <tr
+              key={item.id}
+              ref={(element) => {
+                if (element) rows.current.set(item.id as string, element as never);
+                else rows.current.delete(item.id);
+              }}
+              className={cn(
+                'border-b border-border transition-colors last:border-0',
+                moving(item) ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-surface-muted',
+              )}
+            >
+              <td className="w-10 px-2 py-2 align-middle">{grip(item)}</td>
+              <td className="w-8 px-1 py-2 text-right align-middle text-foreground-muted tabular-nums">
+                {index + 1}
+              </td>
+              {children(item, index)}
+            </tr>
+          ))}
+        </tbody>
+
+        {/* Outside the table: a <p> is not valid inside one. */}
+        <tfoot>
+          <tr>
+            <td colSpan={columns ?? 6} className="px-2 pt-2">
+              <span id="reorder-help" className="text-sm text-foreground-muted">
+                {t('common.reorderHelp')}
+              </span>
+              {failed && (
+                <span className="ml-3 text-sm text-danger">{t('common.reorderFailed')}</span>
+              )}
+            </td>
+          </tr>
+        </tfoot>
+      </>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <ul className={cn('flex flex-col divide-y divide-border', className)}>
@@ -206,25 +291,10 @@ export function Reorderable<T extends ReorderableItem>({
               'flex flex-wrap items-center gap-x-3 gap-y-2 py-3 first:pt-0 last:pb-0 transition-colors',
               // The drop indicator: the row being moved lifts off the surface, so
               // there is never any doubt about which one is travelling.
-              (dragging === item.id || grabbed === item.id) &&
-                'rounded bg-primary/10 ring-1 ring-primary',
+              moving(item) && 'rounded bg-primary/10 ring-1 ring-primary',
             )}
           >
-            <button
-              type="button"
-              // `touch-none` stops the page scrolling under a finger that is
-              // dragging a row, which otherwise makes touch reordering unusable.
-              className="cursor-grab touch-none rounded p-1 text-foreground-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:cursor-grabbing"
-              aria-label={t('common.reorderGrip', { name: item.label })}
-              aria-pressed={grabbed === item.id}
-              aria-describedby="reorder-help"
-              onPointerDown={(event) => onGripPointerDown(event, item.id)}
-              onPointerMove={(event) => onGripPointerMove(event, item.id)}
-              onPointerUp={(event) => onGripPointerUp(event, item.id)}
-              onKeyDown={(event) => onGripKeyDown(event, item.id)}
-            >
-              <GripVertical className="size-4" aria-hidden />
-            </button>
+            {grip(item)}
 
             <span className="text-sm text-foreground-muted">{index + 1}.</span>
 

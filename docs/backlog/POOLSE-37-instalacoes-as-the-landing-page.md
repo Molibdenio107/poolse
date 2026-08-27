@@ -19,7 +19,7 @@ landing page is chosen by role.
 - If the landing destination for a role is not built yet, fall back to the next destination the user can actually open, and never to a permission error.
 - The landing route is not a redirect the user can get stuck in: hitting the app root when already signed in resolves once, without a loop.
 - Signing out and back in returns to the landing page, not to the last visited page.
-- **Open:** should the landing page be a per-user preference later ("open on…"), or stay derived from role only?
+- **Deferred (27 Aug), explicitly:** derived from role only for now. The question asks about "later" in its own words, and a preference is worth having once somebody has said the role default is wrong for them — which nobody has yet. `resolveLandingRoute` takes the roles and nothing else, so a stored preference would be one argument added in one place.
 
 ### Dev — implementation notes
 - One `resolveLandingRoute(person)` helper, consulted by the post-sign-in redirect and by the authenticated root route. Do not scatter the rule across middleware and page components.

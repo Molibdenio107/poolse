@@ -409,3 +409,18 @@ export async function grantRoleAction(
     return false;
   }
 }
+
+/**
+ * The order skills are taught in — POOLSE-40 AC7.
+ *
+ * Meaningful rather than cosmetic: POOLSE-19 will read it to decide when a level
+ * is finished. Returns nothing — `Reorderable` rolls its own list back when the
+ * promise rejects, which is what makes the optimistic move safe.
+ */
+export async function reorderSkillsAction(
+  organizationId: string,
+  levelId: string,
+  ids: string[],
+): Promise<void> {
+  await apiPost('/skills/reorder', { levelId, ids }, { organizationId });
+}

@@ -2,11 +2,18 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronDown, ChevronRight, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Video, X } from 'lucide-react';
 import type { Skill } from '@/lib/api';
 import { TextField } from '@/components/ui/field';
+import { Reorderable } from '@/components/reorderable';
+import { ScrollX } from '@/components/page-shell';
 import type { FormState } from '../../actions';
-import { archiveSkillAction, createSkillAction, skillsOfAction } from '../students.actions';
+import {
+  archiveSkillAction,
+  createSkillAction,
+  reorderSkillsAction,
+  skillsOfAction,
+} from '../students.actions';
 
 /**
  * What a level consists of — POOLSE-20.
@@ -72,37 +79,100 @@ export function LevelSkills({
           {skills === null ? (
             <p className="text-sm text-foreground-muted">{t('common.working')}</p>
           ) : skills.length === 0 ? (
-            <p className="text-sm text-foreground-muted">{t('skills.noneYet')}</p>
+            /* A purposeful empty state, not a blank table — AC6. */
+            <div className="flex flex-col items-start gap-2 rounded border border-dashed border-border p-4">
+              <p className="text-sm">{t('skills.noneYet')}</p>
+              <p className="text-sm text-foreground-muted">{t('skills.noneYetHint')}</p>
+            </div>
           ) : (
-            <ul className="flex flex-col divide-y divide-border">
-              {skills.map((skill) => (
-                <li
-                  key={skill.id}
-                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0"
+            /*
+             * A table with aligned columns — AC1.
+             *
+             * The content was already right; stacked text was what made a level
+             * hard to scan exactly when somebody was comparing skills. Headers
+             * stay visible while it is open, and the two numeric columns are
+             * right-aligned with tabular figures so they compare downwards.
+             *
+             * `Reorderable` renders the rows, so dragging a skill uses the same
+             * interaction as dragging a level — one pattern at two depths, per
+             * AC7. Its drag handlers live only on the grip, so a row drag can
+             * never pick up the card it sits in.
+             */
+            <ScrollX>
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th scope="col" className="w-10 px-2 py-2">
+                      <span className="sr-only">{t('skills.reorder')}</span>
+                    </th>
+                    <th scope="col" className="w-8 px-1 py-2 text-right font-medium text-foreground-muted">
+                      #
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left font-medium text-foreground-muted">
+                      {t('skills.skillName')}
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-right font-medium text-foreground-muted">
+                      {t('skills.minLessonsLabel')}
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-right font-medium text-foreground-muted">
+                      {t('skills.minDaysLabel')}
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left font-medium text-foreground-muted">
+                      {t('skills.video')}
+                    </th>
+                    <th scope="col" className="w-10 px-2 py-2">
+                      <span className="sr-only">{t('common.actions')}</span>
+                    </th>
+                  </tr>
+                </thead>
+
+                <Reorderable
+                  as="rows"
+                  columns={7}
+                  items={skills.map((skill) => ({ id: skill.id, label: skill.name, skill }))}
+                  onReorder={async (ids) => {
+                    await reorderSkillsAction(organizationId, levelId, ids);
+                  }}
                 >
-                  <span className="text-sm">{skill.name}</span>
-                  <span className="flex items-center gap-3 text-sm text-foreground-muted">
-                    {/*
-                      Shown where set, silent where not — a level with no
-                      thresholds should not carry an empty column explaining that.
-                    */}
-                    {skill.minLessons !== null && (
-                      <span>{t('skills.minLessons', { count: skill.minLessons })}</span>
-                    )}
-                    {skill.minDays !== null && (
-                      <span>{t('skills.minDays', { count: skill.minDays })}</span>
-                    )}
-                    {canManage && (
-                      <RemoveSkill
-                        organizationId={organizationId}
-                        skillId={skill.id}
-                        name={skill.name}
-                      />
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                  {(row) => (
+                    <>
+                      <td className="px-3 py-2">{row.skill.name}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {row.skill.minLessons ?? '—'}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {row.skill.minDays ?? '—'}
+                      </td>
+                      <td className="px-3 py-2">
+                        {/* Icon and label, never colour alone — 40.12. */}
+                        {row.skill.videoUrl === null ? (
+                          <span className="text-foreground-muted">{t('skills.noVideo')}</span>
+                        ) : (
+                          <a
+                            href={row.skill.videoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                          >
+                            <Video className="size-4" aria-hidden />
+                            {t('skills.hasVideo')}
+                          </a>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        {canManage && (
+                          <RemoveSkill
+                            organizationId={organizationId}
+                            skillId={row.skill.id}
+                            name={row.skill.name}
+                          />
+                        )}
+                      </td>
+                    </>
+                  )}
+                </Reorderable>
+              </table>
+            </ScrollX>
           )}
 
           {canManage && (

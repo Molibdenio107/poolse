@@ -20,7 +20,7 @@ content is right; the presentation is not.
 - Skill order inside a level is meaningful (it drives level completion in POOLSE-19) and is reorderable by the same drag-and-drop interaction as POOLSE-05 — one interaction pattern, two levels of the hierarchy.
 - Numeric columns are right-aligned with tabular figures so values compare down the column.
 - The expanded card must not change the width of the page or push siblings around — it grows downward only.
-- **Open:** should expansion state persist between visits, or reset on each page load?
+- **Answered (27 Aug):** it **resets on each load**. The ticket already says expansion is layout state and never a server write; resetting keeps it that way, and the page opens the same every time. Persisting it per browser was the alternative and buys little for a screen a club touches once a season.
 
 ### Dev — implementation notes
 - One shared table primitive for this and the other data tables in the app; the inconsistency is the actual complaint, so do not hand-roll a second table here.

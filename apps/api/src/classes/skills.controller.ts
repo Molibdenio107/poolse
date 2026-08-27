@@ -15,6 +15,7 @@ import {
   createSkill,
   listSkills,
   markSkills,
+  reorderSkills,
   SKILL_STATES,
   turmaSkills,
   type MarkInput,
@@ -153,6 +154,26 @@ export class SkillsController {
 
     if (id === null) throw new NotFoundException('No such level');
     return { id };
+  }
+
+  /** Reordering the skills of one level — POOLSE-40 AC7. */
+  @Post('reorder')
+  async reorder(@Body() body: Record<string, unknown>): Promise<{ reordered: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const levelId = typeof body['levelId'] === 'string' ? body['levelId'].trim() : '';
+    if (levelId === '') throw new BadRequestException('levelId is required');
+
+    const raw = body['ids'];
+    if (!Array.isArray(raw) || raw.some((id) => typeof id !== 'string')) {
+      throw new BadRequestException('ids must be an array of skill ids');
+    }
+
+    if (!(await reorderSkills(organizationId, levelId, raw as string[]))) {
+      throw new NotFoundException('No such level, or none of those skills');
+    }
+    return { reordered: true };
   }
 
   @Post(':id/archive')

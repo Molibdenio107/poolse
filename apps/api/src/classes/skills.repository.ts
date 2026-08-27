@@ -382,3 +382,46 @@ export async function archiveSkill(organizationId: string, skillId: string): Pro
     return true;
   });
 }
+
+/**
+ * The order skills are taught in — POOLSE-40 AC7.
+ *
+ * Meaningful, not cosmetic: it is what POOLSE-19 will read to decide when a
+ * level is finished, so a drag here changes what "ready to advance" means.
+ *
+ * Mirrors `reorderLevels` deliberately — one interaction pattern at two levels
+ * of the hierarchy, and one query shape to understand rather than two.
+ */
+export async function reorderSkills(
+  organizationId: string,
+  levelId: string,
+  ids: string[],
+): Promise<boolean> {
+  if (ids.length === 0) return true;
+
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE skill AS s
+          SET sort_order = ordered.position
+         FROM unnest($1::uuid[]) WITH ORDINALITY AS ordered(id, position)
+        WHERE s.id = ordered.id
+          AND s.level_id = $2
+          AND s.archived_at IS NULL
+      RETURNING s.id`,
+      [ids, levelId],
+    );
+
+    // Nothing matched: archived, another level's, or another tenant's and RLS
+    // hid it. Either way the caller is working from a stale list.
+    if (rows.length === 0) return false;
+
+    await recordAudit(tx, {
+      action: 'skill.reordered',
+      entityType: 'student_level',
+      entityId: levelId,
+      data: { count: rows.length },
+    });
+
+    return true;
+  });
+}
