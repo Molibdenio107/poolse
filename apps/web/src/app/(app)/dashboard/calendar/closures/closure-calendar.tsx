@@ -177,10 +177,19 @@ export function ClosureCalendar({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-foreground-muted">
-          {anchor === null ? t('calendar.rangeStartHint') : t('calendar.rangeEndHint')}
-        </p>
+      {/*
+        The same strip Férias puts above its grid: a bordered surface panel
+        holding the state of the selection and the way out of it. Same shell,
+        different verbs — that page counts chosen days and submits a request,
+        this one is drawing a range.
+      */}
+      <div className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface p-4">
+        <span className="text-sm">
+          {anchor === null
+            ? t('calendar.rangeStartHint')
+            : t('calendar.rangeAnchored', { day: anchor })}
+        </span>
+
         {anchor !== null && (
           <button
             type="button"
@@ -188,14 +197,18 @@ export function ClosureCalendar({
               setAnchor(null);
               setHovered(null);
             }}
-            className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="rounded text-sm text-foreground-muted hover:text-foreground"
           >
-            {t('common.cancel')}
+            {t('calendar.clearRange')}
           </button>
         )}
+
+        <Legend />
       </div>
 
-      <Legend />
+      <p className="text-sm text-foreground-muted">
+        {anchor === null ? t('calendar.gridHint') : t('calendar.rangeEndHint')}
+      </p>
 
       <YearGrid
         year={year}
@@ -238,7 +251,7 @@ function Legend(): React.ReactElement {
   ];
 
   return (
-    <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground-muted">
+    <ul className="ml-auto flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground-muted">
       {items.map((item) => (
         <li key={item.label} className="flex items-center gap-2">
           <span aria-hidden className={`size-3 shrink-0 rounded ${item.className}`} />

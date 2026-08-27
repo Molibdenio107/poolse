@@ -600,7 +600,8 @@
     "requestFailed": "Could not send the request.",
     "withdrawFailed": "Could not withdraw the request.",
     "approveFailed": "Could not approve the request.",
-    "rejectFailed": "Could not refuse the request."
+    "rejectFailed": "Could not refuse the request.",
+    "backToPeople": "Back to People"
   },
   "weather": {
     "title": "Weather",
@@ -852,6 +853,9 @@
     "impactSessions": "{count, plural, one {Cancels # class.} other {Cancels # classes.}}",
     "impactMarked": "Careful: {marked, plural, one {# of these classes already has attendance marked} other {# of these classes already have attendance marked}}, out of {sessions}.",
     "removeClosure": "Remove {reason}",
-    "closureOverlap": "A closure already covers these days: {existing}."
+    "closureOverlap": "A closure already covers these days: {existing}.",
+    "rangeAnchored": "Starting {day}. Click the last day.",
+    "clearRange": "Clear selection",
+    "gridHint": "Click a day to start a closure. Holidays are shown in grey."
   }
 }

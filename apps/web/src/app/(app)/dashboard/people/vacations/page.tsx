@@ -77,7 +77,7 @@ export default async function VacationsPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-16">
-      <BackLink href="/dashboard/calendar" label={t('calendar.backToCalendar')} />
+      <BackLink href="/dashboard/people" label={t('vacations.backToPeople')} />
 
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">{t('vacations.title')}</h1>

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Closures } from '@/lib/api';
 import { BackLink } from '@/components/back-link';
+import { cn } from '@/lib/utils';
 import { ClosureCalendar } from './closure-calendar';
 
 /**
@@ -19,8 +20,16 @@ import { ClosureCalendar } from './closure-calendar';
  * find the thing that took its classes away and delete it.
  */
 
-/** A year either side is enough to plan with, and keeps the switcher small. */
-const SPAN = 1;
+/**
+ * The same four years Férias offers, in the same order.
+ *
+ * Next year first: closures are planned ahead far more often than they are
+ * looked up afterwards, and a calendar that opens on the year you are least
+ * likely to want is a click nobody needed.
+ */
+function yearsAround(current: number): number[] {
+  return [current + 1, current, current - 1, current - 2];
+}
 
 export default async function ClosuresPage({
   searchParams,
@@ -46,18 +55,16 @@ export default async function ClosuresPage({
     else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
   }
 
-  const years = Array.from({ length: SPAN * 2 + 1 }, (_, index) => thisYear - SPAN + index);
+  const years = yearsAround(thisYear);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-16">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('calendar.closures')}</h1>
-          <p className="text-foreground-muted">{t('calendar.closuresSubtitle')}</p>
-        </div>
-      </header>
-
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-16">
       <BackLink href="/dashboard/calendar" label={t('calendar.backToCalendar')} />
+
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight">{t('calendar.closures')}</h1>
+        <p className="text-foreground-muted">{t('calendar.closuresSubtitle')}</p>
+      </header>
 
       {noOrganization && (
         <section className="rounded border border-border bg-surface p-5">
@@ -78,22 +85,27 @@ export default async function ClosuresPage({
             Links rather than a select, so a year is a real address: an operator
             can bookmark 2027 and send it to somebody.
           */}
-          <nav className="flex flex-wrap items-center gap-2" aria-label={t('calendar.year')}>
-            {years.map((option) => (
-              <Link
-                key={option}
-                href={`/dashboard/calendar/closures?year=${option}`}
-                aria-current={option === year ? 'page' : undefined}
-                className={
-                  option === year
-                    ? 'rounded bg-primary/15 px-3 py-1 text-sm font-medium text-primary'
-                    : 'rounded px-3 py-1 text-sm text-foreground-muted hover:bg-surface-muted'
-                }
-              >
-                {option}
-              </Link>
-            ))}
-          </nav>
+          {/* The same switcher as Férias, to the class — one calendar, one look. */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <nav aria-label={t('calendar.year')} className="flex flex-wrap gap-1">
+              {years.map((option) => (
+                <Link
+                  key={option}
+                  href={`/dashboard/calendar/closures?year=${option}`}
+                  aria-current={option === year ? 'page' : undefined}
+                  className={cn(
+                    'rounded border px-3 py-1.5 text-sm transition-colors',
+                    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                    option === year
+                      ? 'border-primary bg-primary/15 font-medium text-primary'
+                      : 'border-border hover:border-primary/50 hover:text-primary',
+                  )}
+                >
+                  {option}
+                </Link>
+              ))}
+            </nav>
+          </div>
 
           {!data.canManage && (
             <p className="text-sm text-foreground-muted">{t('calendar.closuresReadOnly')}</p>

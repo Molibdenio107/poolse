@@ -600,7 +600,8 @@
     "requestFailed": "Não foi possível enviar o pedido.",
     "withdrawFailed": "Não foi possível retirar o pedido.",
     "approveFailed": "Não foi possível aprovar o pedido.",
-    "rejectFailed": "Não foi possível recusar o pedido."
+    "rejectFailed": "Não foi possível recusar o pedido.",
+    "backToPeople": "Voltar a Pessoas"
   },
   "weather": {
     "title": "Meteorologia",
@@ -852,6 +853,9 @@
     "impactSessions": "{count, plural, one {Cancela # aula.} other {Cancela # aulas.}}",
     "impactMarked": "Atenção: {marked, plural, one {# destas aulas já tem presenças marcadas} other {# destas aulas já têm presenças marcadas}}, de um total de {sessions}.",
     "removeClosure": "Remover {reason}",
-    "closureOverlap": "Já existe um encerramento nestes dias: {existing}."
+    "closureOverlap": "Já existe um encerramento nestes dias: {existing}.",
+    "rangeAnchored": "Início a {day}. Clique no último dia.",
+    "clearRange": "Limpar seleção",
+    "gridHint": "Clique num dia para começar um encerramento. Os feriados aparecem a cinzento."
   }
 }
