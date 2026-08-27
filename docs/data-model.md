@@ -280,9 +280,13 @@ guardian_link                   -- table exists now; parent-facing features are 
 student_level                   -- lookup; operators define their own progression
   id, organization_id, name, sort_order, archived_at
 
+season                          -- the year the club runs; see "seasons"
+  id, organization_id, name, starts_on, ends_on, archived_at
+  unique (organization_id) where archived_at is null
+
 class_group                     -- a turma
-  id, organization_id, pool_id, name, level_id, instructor_membership_id,
-  capacity, lane, starts_on, ends_on, archived_at
+  id, organization_id, season_id, pool_id, name, level_id,
+  instructor_membership_id, capacity, lane, starts_on, ends_on, archived_at
 
 class_schedule                  -- the recurring weekly pattern
   id, organization_id, class_group_id, weekday smallint, start_time time,
@@ -311,6 +315,41 @@ attendance
   status ('present'|'absent'|'excused'|'late'), recorded_by_membership_id, recorded_at
   unique (class_session_id, student_id)
 ```
+
+### Seasons
+
+A swimming school's year runs September to August: it starts when school does and
+stops for the August holidays. The turmas of one year are not the turmas of the
+next, and before `season` existed there was no way to say so — every turma ever
+created sat in one list, so a club's second September showed it beside the first
+September's classes with nothing to tell them apart.
+
+**`season_id` is on `class_group` and nowhere else.** `class_session` and
+`enrollment` hang off a turma, so a turma belonging to a season takes them with
+it. Putting `season_id` on all three would be three chances for them to disagree
+about which season a class is in, and no way to settle it.
+
+That is also what makes the reset cheap. Archiving a season and opening the next
+is two rows: nothing is deleted, nothing cascades. The old turmas keep pointing
+at the old season with every session, enrolment and register intact, and simply
+stop appearing in the lists that filter on the current one. The new season is
+empty because no turma points at it yet — not because anything was emptied.
+
+**One current season per organization**, enforced by a partial unique index
+rather than by the code that resets. That is what forces the reset's ordering —
+archive, then insert, inside one transaction — and what stops a half-finished one
+leaving a club with two current seasons.
+
+Students, levels, pools and staff are not seasonal. They belong to the club
+rather than to a year of it, and a reset does not touch them.
+
+`generate_sessions` joins `season` and bounds its window by it, so a retired
+season's turmas can never gain new occurrences. Without that join the next press
+of "Gerar a época" would refill last year and undo the reset.
+
+`provision_organization` opens the first season, for the same reason it creates
+the first facility and a stronger one: `class_group.season_id` is NOT NULL, so
+without it the very first turma of every new customer would fail.
 
 ### Why sessions are materialised
 

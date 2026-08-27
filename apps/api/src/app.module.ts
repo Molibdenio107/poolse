@@ -1,6 +1,7 @@
 import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
 import { ClerkAuthMiddleware } from './auth/clerk-auth.middleware.js';
 import { AttendanceController } from './classes/attendance.controller.js';
+import { SeasonsController } from './classes/seasons.controller.js';
 import { ClassesController, TimetableController } from './classes/classes.controller.js';
 import {
   CalendarController,
@@ -58,6 +59,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     CalendarController,
     SessionsCalendarController,
     AttendanceController,
+    SeasonsController,
     StudentCalendarController,
     StudentsController,
     LevelsController,

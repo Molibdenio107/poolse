@@ -78,6 +78,14 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
           <h1 className="text-3xl font-semibold tracking-tight">{t('classes.title')}</h1>
           <p className="text-foreground-muted">{t('classes.subtitle')}</p>
         </div>
+        {/* This list is the current season's turmas — POOLSE-07. The link is how
+            somebody finds out which season that is. */}
+        <Link
+          href="/dashboard/classes/seasons"
+          className="text-sm text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {t('seasons.title')}
+        </Link>
       </header>
 
       {noOrganization && (

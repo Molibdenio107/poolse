@@ -16,6 +16,13 @@ BEGIN;
 
 INSERT INTO organization (name, slug) VALUES ('Clube A', 'clube-a'), ('Clube B', 'clube-b');
 
+INSERT INTO season (organization_id, name, starts_on, ends_on)
+SELECT id, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31'
+  FROM organization WHERE slug IN ('clube-a', 'clube-b');
+-- Deliberately wide. `generate_sessions` bounds its window by the season, and a
+-- realistic September-to-August range would move the assertions below without
+-- them being about seasons at all. That behaviour is asserted in seasons.sql.
+
 DO $$
 DECLARE v_org uuid; v_facility uuid; v_pool uuid; v_group uuid;
 BEGIN
@@ -27,8 +34,10 @@ BEGIN
   VALUES (v_org, v_facility, 'Tanque Grande', 6) RETURNING id INTO v_pool;
 
   -- A season running a full year, so the generator has somewhere to run.
-  INSERT INTO class_group (organization_id, name, pool_id, lane, capacity, starts_on, ends_on)
-  VALUES (v_org, 'Iniciação', v_pool, 3, 8, DATE '2027-01-01', DATE '2027-12-31')
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane, capacity,
+                           starts_on, ends_on)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL),
+          'Iniciação', v_pool, 3, 8, DATE '2027-01-01', DATE '2027-12-31')
   RETURNING id INTO v_group;
 
   -- Tuesdays at 18:00, and Saturdays at 10:00 — a swimming school runs half its
@@ -247,8 +256,8 @@ BEGIN
   SELECT starts_at INTO v_when FROM class_session
    WHERE organization_id = v_org AND status = 'scheduled' LIMIT 1;
 
-  INSERT INTO class_group (organization_id, name, pool_id, lane)
-  VALUES (v_org, 'Outra Turma', v_pool, 3) RETURNING id INTO v_other;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Outra Turma', v_pool, 3) RETURNING id INTO v_other;
 
   BEGIN
     INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
@@ -285,8 +294,8 @@ BEGIN
   UPDATE class_session SET status = 'cancelled', cancellation_reason = 'Gala'
    WHERE lane = 4 AND starts_at = v_when;
 
-  INSERT INTO class_group (organization_id, name, pool_id, lane)
-  VALUES (v_org, 'Turma de Substituição', v_pool, 4) RETURNING id INTO v_third;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Turma de Substituição', v_pool, 4) RETURNING id INTO v_third;
 
   INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
                              starts_at, duration_minutes)
@@ -414,13 +423,17 @@ BEGIN
   -- and it can only prove that while Clube B owns nothing.
   INSERT INTO organization (name, slug) VALUES ('Clube C', 'clube-c') RETURNING id INTO v_org;
 
+  INSERT INTO season (organization_id, name, starts_on, ends_on)
+  VALUES (v_org, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31');
+
+
   INSERT INTO facility (organization_id, name, timezone)
   VALUES (v_org, 'Piscina dos Açores', 'Atlantic/Azores') RETURNING id INTO v_facility;
   INSERT INTO pool (organization_id, facility_id, name, lane_count)
   VALUES (v_org, v_facility, 'Tanque', 4) RETURNING id INTO v_pool;
 
-  INSERT INTO class_group (organization_id, name, pool_id, lane)
-  VALUES (v_org, 'Adultos Tarde', v_pool, 1) RETURNING id INTO v_group;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Adultos Tarde', v_pool, 1) RETURNING id INTO v_group;
 
   -- Tuesday at 23:30. Late, and real: lane hire after the last children's class.
   INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
@@ -515,6 +528,9 @@ BEGIN
   INSERT INTO organization (name, slug) VALUES ('Clube Remoção', 'clube-remocao')
   RETURNING id INTO v_org;
 
+  INSERT INTO season (organization_id, name, starts_on, ends_on)
+  VALUES (v_org, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31');
+
   INSERT INTO facility (organization_id, name) VALUES (v_org, 'Sede')
   RETURNING id INTO v_facility;
   INSERT INTO pool (organization_id, facility_id, name, kind)
@@ -524,8 +540,10 @@ BEGIN
   INSERT INTO membership (organization_id, app_user_id, status)
   VALUES (v_org, v_member, 'active') RETURNING id INTO v_member;
 
-  INSERT INTO class_group (organization_id, name, pool_id, instructor_membership_id, ends_on)
-  VALUES (v_org, 'Iniciação', v_pool, v_member, DATE '2027-06-30')
+  INSERT INTO class_group (organization_id, season_id, name, pool_id,
+                           instructor_membership_id, ends_on)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL),
+          'Iniciação', v_pool, v_member, DATE '2027-06-30')
   RETURNING id INTO v_group;
 
   INSERT INTO student (organization_id, first_name, last_name)

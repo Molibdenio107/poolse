@@ -43,7 +43,16 @@ interface Section {
 const SECTIONS: Section[] = [
   { href: '/dashboard', key: 'nav.dashboard', icon: 'dashboard' },
   { href: '/dashboard/facilities', key: 'facilities.title', icon: 'facility' },
-  { href: '/dashboard/classes', key: 'classes.title', icon: 'class' },
+  {
+    href: '/dashboard/classes',
+    key: 'classes.title',
+    icon: 'class',
+    // Épocas sits under Turmas because that is what a season contains. Visible to
+    // everyone — knowing which year is running is not privileged — while the
+    // reset itself is owner and admin only, refused by the API rather than
+    // merely hidden here.
+    children: [{ href: '/dashboard/classes/seasons', key: 'seasons.title' }],
+  },
   {
     href: '/dashboard/calendar',
     key: 'calendar.title',

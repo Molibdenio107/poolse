@@ -130,10 +130,26 @@ function toGroup(row: GroupRow): ClassGroup {
   };
 }
 
+/**
+ * The turmas of the season that is running — POOLSE-07.
+ *
+ * Scoped here rather than at every call site, because "which turmas are there"
+ * has exactly one right answer at a time and a screen that forgot the filter
+ * would show a retired season's classes beside the current ones with nothing to
+ * tell them apart.
+ *
+ * A retired season's turmas are not gone — they keep every session, enrolment
+ * and register, and reporting can still reach them by season. They are simply
+ * not what the club is running now.
+ */
 export async function listClassGroups(organizationId: string): Promise<ClassGroup[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<GroupRow>(
       `SELECT ${GROUP_COLUMNS} ${GROUP_JOINS}
+         JOIN season se
+           ON se.id = cg.season_id
+          AND se.organization_id = cg.organization_id
+          AND se.archived_at IS NULL
         WHERE cg.archived_at IS NULL
         ORDER BY cg.name`,
     );
@@ -172,9 +188,15 @@ export async function createClassGroup(
   try {
     return await withOrg(organizationId, async (tx) => {
       const { rows } = await tx.query<{ id: string }>(
+        // A new turma joins the season that is running. There is no way to
+        // create one in a retired season, which is the point of retiring it.
         `INSERT INTO class_group (
-           organization_id, name, level_id, pool_id, instructor_membership_id, capacity, lane
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+           organization_id, name, level_id, pool_id, instructor_membership_id, capacity, lane,
+           season_id
+         ) VALUES (
+           $1, $2, $3, $4, $5, $6, $7,
+           (SELECT id FROM season WHERE archived_at IS NULL)
+         )
          RETURNING id`,
         [
           organizationId,

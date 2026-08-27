@@ -693,3 +693,35 @@ export interface Calendar {
   sessions: CalendarSession[];
   canManage: boolean;
 }
+
+/**
+ * A season — POOLSE-07.
+ *
+ * September to August, the year a club actually runs. Exactly one is current at
+ * a time; the rest are history that stays readable.
+ */
+export interface Season {
+  id: string;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  active: boolean;
+  classGroups: number;
+}
+
+/** What a reset would retire, so the confirmation can name real numbers. */
+export interface ResetPreview {
+  seasonName: string;
+  classGroups: number;
+  enrollments: number;
+  sessions: number;
+  attendance: number;
+}
+
+export interface Seasons {
+  organizationId: string;
+  seasons: Season[];
+  canManage: boolean;
+  preview?: ResetPreview;
+  suggested: { name: string; startsOn: string; endsOn: string };
+}

@@ -25,6 +25,13 @@ INSERT INTO organization (name, slug) VALUES
   ('Clube Presenças', 'clube-presencas'),
   ('Clube Outro',     'clube-outro-att');
 
+INSERT INTO season (organization_id, name, starts_on, ends_on)
+SELECT id, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31'
+  FROM organization WHERE slug IN ('clube-presencas', 'clube-outro-att');
+-- Deliberately wide. `generate_sessions` bounds its window by the season, and a
+-- realistic September-to-August range would move the assertions below without
+-- them being about seasons at all. That behaviour is asserted in seasons.sql.
+
 -- ---------------------------------------------------------------------------
 -- Test 1 — a class is marked, one row per student, signed by whoever marked it
 -- ---------------------------------------------------------------------------
@@ -45,8 +52,9 @@ BEGIN
   VALUES (v_org, (SELECT id FROM app_user WHERE clerk_user_id = 'user_att_a'), 'active')
   RETURNING id INTO v_instructor;
 
-  INSERT INTO class_group (organization_id, name, pool_id, lane, instructor_membership_id)
-  VALUES (v_org, 'Iniciação 1', v_pool, 1, v_instructor) RETURNING id INTO v_group;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane,
+                           instructor_membership_id)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação 1', v_pool, 1, v_instructor) RETURNING id INTO v_group;
 
   INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
                              starts_at, duration_minutes, instructor_membership_id)

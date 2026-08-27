@@ -17,6 +17,13 @@ BEGIN;
 
 INSERT INTO organization (name, slug) VALUES ('Clube A', 'clube-a'), ('Clube B', 'clube-b');
 
+INSERT INTO season (organization_id, name, starts_on, ends_on)
+SELECT id, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31'
+  FROM organization WHERE slug IN ('clube-a', 'clube-b');
+-- Deliberately wide. `generate_sessions` bounds its window by the season, and a
+-- realistic September-to-August range would move the assertions below without
+-- them being about seasons at all. That behaviour is asserted in seasons.sql.
+
 SELECT provision_app_user('user_inst', 'inst@clube.pt', 'Ana', 'Martins', NULL, '2026-08-26 09:00:00+00');
 
 DO $$
@@ -41,9 +48,10 @@ BEGIN
   INSERT INTO membership_role (organization_id, membership_id, role)
   VALUES (v_a, v_membership, 'instructor');
 
-  INSERT INTO class_group (organization_id, name, pool_id, level_id,
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, level_id,
                            instructor_membership_id, capacity, lane)
-  VALUES (v_a, 'Iniciação Terças e Quintas', v_pool, v_level, v_membership, 2, 3);
+  VALUES (v_a, (SELECT id FROM season WHERE organization_id = v_a AND archived_at IS NULL),
+          'Iniciação Terças e Quintas', v_pool, v_level, v_membership, 2, 3);
 
   -- Four students, so capacity can be pushed past.
   INSERT INTO student (organization_id, first_name, last_name) VALUES
@@ -255,16 +263,16 @@ BEGIN
   SELECT id INTO v_student FROM student WHERE organization_id = v_b;
 
   BEGIN
-    INSERT INTO class_group (organization_id, name, pool_id)
-    VALUES (v_b, 'Turma Roubada', v_pool);
+    INSERT INTO class_group (organization_id, season_id, name, pool_id)
+    VALUES (v_b, (SELECT id FROM season WHERE organization_id = v_b AND archived_at IS NULL), 'Turma Roubada', v_pool);
     RAISE EXCEPTION 'FAIL test 5a: Clube B put a turma in a Clube A pool';
   EXCEPTION
     WHEN foreign_key_violation THEN NULL;
   END;
 
   BEGIN
-    INSERT INTO class_group (organization_id, name, level_id)
-    VALUES (v_b, 'Turma Roubada', v_level);
+    INSERT INTO class_group (organization_id, season_id, name, level_id)
+    VALUES (v_b, (SELECT id FROM season WHERE organization_id = v_b AND archived_at IS NULL), 'Turma Roubada', v_level);
     RAISE EXCEPTION 'FAIL test 5b: Clube B used a Clube A level';
   EXCEPTION
     WHEN foreign_key_violation THEN NULL;
@@ -347,6 +355,9 @@ BEGIN
   INSERT INTO organization (name, slug) VALUES ('Clube Horário', 'clube-horario')
   RETURNING id INTO v_org;
 
+  INSERT INTO season (organization_id, name, starts_on, ends_on)
+  VALUES (v_org, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31');
+
   INSERT INTO facility (organization_id, name) VALUES (v_org, 'Complexo')
   RETURNING id INTO v_facility;
   INSERT INTO pool (organization_id, facility_id, name, kind)
@@ -362,12 +373,15 @@ BEGIN
   INSERT INTO membership (organization_id, app_user_id, status)
   VALUES (v_org, v_tiago, 'active') RETURNING id INTO v_tiago;
 
-  INSERT INTO class_group (organization_id, name, pool_id, lane, instructor_membership_id)
-  VALUES (v_org, 'Iniciação A', v_pool_a, 1, v_rita) RETURNING id INTO v_group_a;
-  INSERT INTO class_group (organization_id, name, pool_id, lane, instructor_membership_id)
-  VALUES (v_org, 'Iniciação B', v_pool_a, 1, v_tiago) RETURNING id INTO v_group_b;
-  INSERT INTO class_group (organization_id, name, pool_id, lane, instructor_membership_id)
-  VALUES (v_org, 'Iniciação C', v_pool_b, 1, v_rita) RETURNING id INTO v_group_c;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane,
+                           instructor_membership_id)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação A', v_pool_a, 1, v_rita) RETURNING id INTO v_group_a;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane,
+                           instructor_membership_id)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação B', v_pool_a, 1, v_tiago) RETURNING id INTO v_group_b;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane,
+                           instructor_membership_id)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação C', v_pool_b, 1, v_rita) RETURNING id INTO v_group_c;
 
   -- The anchor: Rita, Tanque A lane 1, 10:00 for 45 minutes.
   INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
