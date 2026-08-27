@@ -20,8 +20,8 @@ so it is read-only in the record and changed only by re-inviting.
 - Removing a role never deletes the Person or their other roles (POOLSE-17 AC7).
 - A Person who is also a student is editable from either section, and edits land on the same record — name changed in Staff shows immediately in Alunos.
 - Every edit is audit-logged with actor, field, old value, new value and timestamp. Role changes especially.
-- **Open:** may an Instructor edit their own name and phone on their own record, or is all staff editing Owner/Admin only?
-- **Open:** does cancelling a pending re-invite need to notify the new address, which has received an invitation it can no longer use?
+- **Answered (27 Aug):** an Instructor may edit **their own name and phone**, and nothing else. A misspelled name needing an admin is the complaint that produced this ticket. Notes stay Owner/Admin, because they are frequently what a manager writes *about* somebody rather than what that person writes about themselves; another person’s record stays Owner/Admin too. The API enforces all three, not the form.
+- **Deferred (27 Aug), explicitly:** no notification on cancellation. `EMAIL_PROVIDER=console` means nothing is delivered anywhere yet, and a "that invitation no longer works" message to an address that may not belong to anyone at the club is worth designing rather than adding as a side effect. Revisit alongside the notifications work.
 
 ### Dev — implementation notes
 - Email lives with Clerk as the identity; the Person record should not carry an independently editable copy that can drift. Render it from the identity source, read-only.

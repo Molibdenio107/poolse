@@ -72,7 +72,7 @@ function joinLink(token: string): string {
  * click. The inverse — an email announcing an invitation that was rolled back —
  * would be worse and is impossible from here.
  */
-async function deliver(
+export async function deliver(
   organizationId: string,
   invitationId: string,
   email: string,

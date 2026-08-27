@@ -211,6 +211,8 @@ export interface People {
   /** Never contains `owner`: it moves only by transfer. */
   grantableRoles: string[];
   canTransferOwnership: boolean;
+  /** Owner or admin — POOLSE-03. The honest signal for "may manage things". */
+  canArchive: boolean;
 }
 
 export interface CreatedInvitation {
@@ -861,4 +863,28 @@ export interface MergeCandidate {
   keepName: string;
   absorbName: string;
   conflicts: Record<string, { keep: string; absorb: string }>;
+}
+
+/**
+ * A staff record — POOLSE-39.
+ *
+ * Name, phone and notes are editable. Email is not: it is the login identity and
+ * moves only by re-invitation.
+ */
+export interface StaffRecord {
+  membershipId: string;
+  appUserId: string | null;
+  clerkUserId: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  /** Read-only for everybody, including the owner. */
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  status: string;
+  roles: string[];
+  /** Set while a re-invite is outstanding; the existing login still works. */
+  pendingInvite: { id: string; email: string; expiresAt: string } | null;
+  /** The Alunos side of the same Person, where they are also a student. */
+  studentId: string | null;
 }

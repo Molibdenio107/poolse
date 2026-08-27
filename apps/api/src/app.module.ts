@@ -8,6 +8,7 @@ import {
   PeopleSearchController,
 } from './students/students.controller.js';
 import { SkillsController } from './classes/skills.controller.js';
+import { StaffController } from './staff/staff.controller.js';
 import { ClassesController, TimetableController } from './classes/classes.controller.js';
 import {
   CalendarController,
@@ -70,6 +71,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     GuardiansController,
     PeopleDedupController,
     SkillsController,
+    StaffController,
     StudentCalendarController,
     StudentsController,
     LevelsController,

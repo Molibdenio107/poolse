@@ -162,7 +162,13 @@ export default async function PeoplePage({
                       photoUrl={member.avatarUrl}
                     />
                     <div className="flex min-w-0 flex-col">
-                      <span className="truncate">{displayName(member) ?? t('account.noName')}</span>
+                      {/* The record is where a name is corrected — POOLSE-39. */}
+                      <Link
+                        href={`/dashboard/facilities/staff/${member.membershipId}`}
+                        className="truncate rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        {displayName(member) ?? t('account.noName')}
+                      </Link>
                       {member.email !== null && (
                         <span className="truncate text-sm text-foreground-muted">
                           {member.email}
