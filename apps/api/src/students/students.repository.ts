@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 
 export interface StudentLevel {
@@ -30,13 +30,51 @@ export interface StudentLevel {
  * record can be saved. Linking to a real account is its own ticket.
  */
 export interface Guardian {
+  /** The link between this guardian and this student. */
+  linkId: string;
+  /** The person. One row per human per club, however many children they bring. */
+  membershipId: string;
+  name: string;
+  email: string | null;
+  /**
+   * Their relationship *to this student* — POOLSE-04, criterion 4.
+   *
+   * On the link rather than on the person, because the same woman is "avó" to
+   * one child and "tutora legal" to another.
+   */
+  relationship: string | null;
+  phone: string | null;
+  /** NIF. Text, not a number — it can carry a leading zero and is never arithmetic. */
+  taxNumber: string | null;
+  address: string | null;
+  /** Who to ring first. At most one per student, enforced by a partial index. */
+  isPrimary: boolean;
+  /**
+   * Whether Clerk owns their name and email.
+   *
+   * The interface shows those read-only where it is true: writing them here
+   * would be reverted by the next webhook, which is the bug decision 3 exists to
+   * stop.
+   */
+  hasLogin: boolean;
+}
+
+/**
+ * A guardian as the caller asks for one — POOLSE-04, POOLSE-17.
+ *
+ * Either an existing person by id, or enough to create one. Both carry the
+ * relationship, because that belongs to the pairing rather than to either half
+ * of it.
+ */
+export interface GuardianInput {
+  membershipId: string | null;
   name: string | null;
   relationship: string | null;
   phone: string | null;
   email: string | null;
-  /** NIF. Text, not a number — it can carry a leading zero and is never arithmetic. */
   taxNumber: string | null;
   address: string | null;
+  isPrimary: boolean;
 }
 
 export interface Student {
@@ -59,13 +97,17 @@ export interface Student {
   /** So the interface can explain why there is no photograph, without implying there is one. */
   photoConsent: boolean;
   /**
-   * Kept whatever the student's age — POOLSE-04, criterion 5.
+   * Every encarregado de educação, primary first — POOLSE-04, POOLSE-17.
    *
-   * Nothing clears these when somebody turns eighteen. The block collapses in
-   * the interface and the data stays, because "who was your guardian" remains
-   * true about the years it covered.
+   * Kept whatever the student's age, per criterion 8. Nothing severs a link when
+   * somebody turns eighteen: the block collapses in the interface and the
+   * relation stays, because "who was your guardian" remains true about the years
+   * it covered.
+   *
+   * A list rather than one, because a child can have two parents and because the
+   * same guardian covers their siblings from a single record.
    */
-  guardian: Guardian;
+  guardians: Guardian[];
 }
 
 export class DuplicateNameError extends Error {}
@@ -394,12 +436,7 @@ export async function listStudents(
       contact_email: string | null;
       contact_phone: string | null;
       notes: string | null;
-      guardian_name: string | null;
-      guardian_relationship: string | null;
-      guardian_phone: string | null;
-      guardian_email: string | null;
-      guardian_tax_number: string | null;
-      guardian_address: string | null;
+      guardians: Guardian[];
       photo_storage_key: string | null;
       photo_consent: boolean;
     }>(
@@ -416,12 +453,30 @@ export async function listStudents(
              s.contact_email::text AS contact_email,
              s.contact_phone,
              s.notes,
-             s.guardian_name,
-             s.guardian_relationship,
-             s.guardian_phone,
-             s.guardian_email::text AS guardian_email,
-             s.guardian_tax_number,
-             s.guardian_address,
+             (
+               SELECT coalesce(jsonb_agg(g ORDER BY g->>'name'), '[]'::jsonb)
+                 FROM (
+                   SELECT jsonb_build_object(
+                            'linkId',       gl.id,
+                            'membershipId', gl.guardian_membership_id,
+                            'name',         person_name(gl.guardian_membership_id),
+                            'email',        person_email(gl.guardian_membership_id)::text,
+                            'relationship', gl.relationship,
+                            'phone',        m.phone,
+                            'taxNumber',    m.tax_number,
+                            'address',      m.address,
+                            'isPrimary',    gl.is_primary,
+                            'hasLogin',     m.app_user_id IS NOT NULL
+                          ) AS g
+                     FROM guardian_link gl
+                     JOIN membership m
+                       ON m.id = gl.guardian_membership_id
+                      AND m.organization_id = gl.organization_id
+                    WHERE gl.student_id = s.id
+                      AND gl.organization_id = s.organization_id
+                      AND gl.archived_at IS NULL
+                 ) links
+             ) AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
              ${PHOTO_CONSENT} AS photo_consent
         FROM student s
@@ -457,12 +512,30 @@ export async function findStudent(
              END AS age,
              s.level_id, l.name AS level_name,
              s.contact_email::text AS contact_email, s.contact_phone, s.notes,
-             s.guardian_name,
-             s.guardian_relationship,
-             s.guardian_phone,
-             s.guardian_email::text AS guardian_email,
-             s.guardian_tax_number,
-             s.guardian_address,
+             (
+               SELECT coalesce(jsonb_agg(g ORDER BY g->>'name'), '[]'::jsonb)
+                 FROM (
+                   SELECT jsonb_build_object(
+                            'linkId',       gl.id,
+                            'membershipId', gl.guardian_membership_id,
+                            'name',         person_name(gl.guardian_membership_id),
+                            'email',        person_email(gl.guardian_membership_id)::text,
+                            'relationship', gl.relationship,
+                            'phone',        m.phone,
+                            'taxNumber',    m.tax_number,
+                            'address',      m.address,
+                            'isPrimary',    gl.is_primary,
+                            'hasLogin',     m.app_user_id IS NOT NULL
+                          ) AS g
+                     FROM guardian_link gl
+                     JOIN membership m
+                       ON m.id = gl.guardian_membership_id
+                      AND m.organization_id = gl.organization_id
+                    WHERE gl.student_id = s.id
+                      AND gl.organization_id = s.organization_id
+                      AND gl.archived_at IS NULL
+                 ) links
+             ) AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
              ${PHOTO_CONSENT} AS photo_consent
         FROM student s
@@ -486,7 +559,14 @@ export interface StudentInput {
   contactEmail: string | null;
   contactPhone: string | null;
   notes: string | null;
-  guardian: Guardian;
+  /**
+   * Every guardian this student should have, as the caller wants them.
+   *
+   * The whole set, not a delta: the form posts what it is showing, and links no
+   * longer in the list are archived. A delta would need the client to track what
+   * it removed, which is state a form should not have to keep.
+   */
+  guardians: GuardianInput[];
 }
 
 /** Null when the level id does not belong to this organization — or at all. */
@@ -500,12 +580,9 @@ export async function createStudent(
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO student (
          organization_id, first_name, last_name, birth_date, level_id,
-         contact_email, contact_phone, notes,
-         guardian_name, guardian_relationship, guardian_phone,
-         guardian_email, guardian_tax_number, guardian_address
+         contact_email, contact_phone, notes
        )
-       VALUES ($1, $2, $3, $4::date, $5, $6::citext, $7, $8,
-               $9, $10, $11, $12::citext, $13, $14)
+       VALUES ($1, $2, $3, $4::date, $5, $6::citext, $7, $8)
        RETURNING id`,
       [
         organizationId,
@@ -516,17 +593,13 @@ export async function createStudent(
         input.contactEmail,
         input.contactPhone,
         input.notes,
-        input.guardian.name,
-        input.guardian.relationship,
-        input.guardian.phone,
-        input.guardian.email,
-        input.guardian.taxNumber,
-        input.guardian.address,
       ],
     );
 
     const id = rows[0]?.id;
     if (!id) throw new Error('Could not create the student');
+
+    await syncGuardians(tx, organizationId, id, input.guardians);
 
     // Deliberately records the name and nothing else. An audit entry is readable
     // by every admin, and a child's contact details do not need to be in it
@@ -553,10 +626,7 @@ export async function updateStudent(
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE student
           SET first_name = $2, last_name = $3, birth_date = $4::date, level_id = $5,
-              contact_email = $6::citext, contact_phone = $7, notes = $8,
-              guardian_name = $9, guardian_relationship = $10, guardian_phone = $11,
-              guardian_email = $12::citext, guardian_tax_number = $13,
-              guardian_address = $14
+              contact_email = $6::citext, contact_phone = $7, notes = $8
         WHERE id = $1 AND archived_at IS NULL
       RETURNING id`,
       [
@@ -568,15 +638,11 @@ export async function updateStudent(
         input.contactEmail,
         input.contactPhone,
         input.notes,
-        input.guardian.name,
-        input.guardian.relationship,
-        input.guardian.phone,
-        input.guardian.email,
-        input.guardian.taxNumber,
-        input.guardian.address,
       ],
     );
     if (!rows[0]) return 'not_found';
+
+    await syncGuardians(tx, organizationId, studentId, input.guardians);
 
     await recordAudit(tx, {
       action: 'student.updated',
@@ -645,12 +711,7 @@ function toStudent(row: {
   contact_email: string | null;
   contact_phone: string | null;
   notes: string | null;
-  guardian_name: string | null;
-  guardian_relationship: string | null;
-  guardian_phone: string | null;
-  guardian_email: string | null;
-  guardian_tax_number: string | null;
-  guardian_address: string | null;
+  guardians: Guardian[];
   photo_storage_key: string | null;
   photo_consent: boolean;
 }): Student {
@@ -665,14 +726,12 @@ function toStudent(row: {
     levelId: row.level_id,
     levelName: row.level_name,
     contactEmail: row.contact_email,
-    guardian: {
-      name: row.guardian_name,
-      relationship: row.guardian_relationship,
-      phone: row.guardian_phone,
-      email: row.guardian_email,
-      taxNumber: row.guardian_tax_number,
-      address: row.guardian_address,
-    },
+    // Primary first — it is the number somebody rings in a hurry. Aggregated by
+    // name in SQL, reordered here so the ordering rule sits beside the type it
+    // orders rather than inside a jsonb_agg nobody reads.
+    guardians: [...row.guardians].sort(
+      (a, b) => Number(b.isPrimary) - Number(a.isPrimary),
+    ),
     contactPhone: row.contact_phone,
     notes: row.notes,
     photoStorageKey: row.photo_storage_key,
@@ -685,4 +744,314 @@ function toIsoDate(value: Date): string {
   const month = `${value.getMonth() + 1}`.padStart(2, '0');
   const day = `${value.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+// ---------------------------------------------------------------------------
+// Guardians — POOLSE-04 and POOLSE-17
+// ---------------------------------------------------------------------------
+
+/**
+ * "Maria Alves Costa" → given name "Maria", surnames "Alves Costa".
+ *
+ * Crude, and right far more often than any alternative for the names this
+ * product sees: Portuguese names put the given name first and carry two or more
+ * surnames. A single word becomes both, so "Madalena" is findable rather than
+ * half-stored.
+ */
+function splitName(full: string): { first: string; last: string } {
+  const trimmed = full.trim().replace(/\s+/g, ' ');
+  const cut = trimmed.indexOf(' ');
+  if (cut === -1) return { first: trimmed, last: trimmed };
+  return { first: trimmed.slice(0, cut), last: trimmed.slice(cut + 1) };
+}
+
+/**
+ * Somebody this club already knows — POOLSE-17, criteria 8 and 9.
+ *
+ * NIF first, then email, which are the stable keys the ticket names. Importing a
+ * guardian who is already a student must not create a second them, and the
+ * commonest real case is smaller than that: a mother enrolling her second child,
+ * typed in again from the same form.
+ *
+ * Case does not distinguish an email — the column is `citext` — so a guardian
+ * found by address is found however it was typed.
+ */
+async function findPerson(
+  tx: Tx,
+  taxNumber: string | null,
+  email: string | null,
+): Promise<string | null> {
+  if (taxNumber === null && email === null) return null;
+
+  const { rows } = await tx.query<{ id: string }>(
+    `SELECT m.id
+       FROM membership m
+       LEFT JOIN app_user u ON u.id = m.app_user_id
+      WHERE m.archived_at IS NULL
+        AND (
+          ($1::text IS NOT NULL AND m.tax_number = $1::text)
+          OR ($2::citext IS NOT NULL AND coalesce(u.cached_email, m.email) = $2::citext)
+        )
+      -- A NIF match beats an email match: two people can share a household
+      -- address, and only one can have a given tax number.
+      ORDER BY (m.tax_number = $1::text) DESC NULLS LAST
+      LIMIT 1`,
+    [taxNumber, email],
+  );
+
+  return rows[0]?.id ?? null;
+}
+
+/**
+ * Makes the student's guardians match what the caller asked for.
+ *
+ * The whole set is posted, not a delta, so anything no longer in the list is
+ * archived. Archived, never deleted: a link that existed is a fact about the
+ * years it covered, and the guardian's own record is untouched either way —
+ * removing somebody from one child does not remove them from their siblings.
+ *
+ * A guardian named by `membershipId` is used as-is. One described by fields is
+ * matched against the club's people first and only created if genuinely new,
+ * which is what stops the second sibling producing a second mother.
+ */
+async function syncGuardians(
+  tx: Tx,
+  organizationId: string,
+  studentId: string,
+  guardians: GuardianInput[],
+): Promise<void> {
+  const kept: string[] = [];
+
+  for (const guardian of guardians) {
+    let membershipId = guardian.membershipId;
+
+    if (membershipId === null) {
+      membershipId = await findPerson(tx, guardian.taxNumber, guardian.email);
+    }
+
+    if (membershipId === null) {
+      if (guardian.name === null || guardian.name.trim() === '') continue;
+      const { first, last } = splitName(guardian.name);
+
+      const { rows } = await tx.query<{ id: string }>(
+        `INSERT INTO membership (organization_id, status, first_name, last_name,
+                                 email, phone, tax_number, address)
+         VALUES ($1, 'active', $2, $3, $4::citext, $5, $6, $7)
+         RETURNING id`,
+        [
+          organizationId,
+          first,
+          last,
+          guardian.email,
+          guardian.phone,
+          guardian.taxNumber,
+          guardian.address,
+        ],
+      );
+      membershipId = rows[0]!.id;
+    } else {
+      /*
+       * Known already. Their details are theirs, edited on their own page — this
+       * fills only what is still blank, so enrolling a second child can add the
+       * phone number the first enrolment did not have without overwriting one
+       * somebody has since corrected.
+       *
+       * Never the name or the email of somebody with a login: the check
+       * constraint refuses that outright, and this is the layer that should not
+       * try.
+       */
+      await tx.query(
+        `UPDATE membership
+            SET phone      = coalesce(phone, $2),
+                tax_number = coalesce(tax_number, $3),
+                address    = coalesce(address, $4),
+                email      = CASE WHEN app_user_id IS NULL
+                                  THEN coalesce(email, $5::citext)
+                                  ELSE email END
+          WHERE id = $1 AND archived_at IS NULL`,
+        [membershipId, guardian.phone, guardian.taxNumber, guardian.address, guardian.email],
+      );
+    }
+
+    // They are an encarregado de educação here, whatever else they also are.
+    await tx.query(
+      `INSERT INTO membership_role (organization_id, membership_id, role)
+       SELECT $1, $2, 'guardian'
+        WHERE NOT EXISTS (
+          SELECT 1 FROM membership_role
+           WHERE membership_id = $2 AND role = 'guardian' AND archived_at IS NULL
+        )`,
+      [organizationId, membershipId],
+    );
+
+    /*
+     * The primary flag is cleared before it is set, in that order.
+     *
+     * `guardian_link_one_primary` refuses a second primary contact, so setting
+     * the new one first would collide with the old. Clearing everything and then
+     * marking one is the same two-step the season reset uses, and for the same
+     * reason: the index is doing the work, not the code.
+     */
+    await tx.query(
+      `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id,
+                                  relationship, is_primary)
+       VALUES ($1, $2, $3, $4, false)
+       ON CONFLICT (student_id, guardian_membership_id) WHERE archived_at IS NULL
+       DO UPDATE SET relationship = EXCLUDED.relationship, archived_at = NULL`,
+      [organizationId, studentId, membershipId, guardian.relationship],
+    );
+
+    kept.push(membershipId);
+  }
+
+  // Anything no longer listed. Archived rather than deleted.
+  await tx.query(
+    `UPDATE guardian_link
+        SET archived_at = now()
+      WHERE student_id = $1
+        AND archived_at IS NULL
+        AND NOT (guardian_membership_id = ANY ($2::uuid[]))`,
+    [studentId, kept],
+  );
+
+  const primary = guardians.find((guardian) => guardian.isPrimary);
+  await tx.query(
+    `UPDATE guardian_link SET is_primary = false
+      WHERE student_id = $1 AND archived_at IS NULL AND is_primary`,
+    [studentId],
+  );
+
+  /*
+   * One primary, chosen or assumed.
+   *
+   * A student with guardians and none marked would leave nobody to ring, and the
+   * form does not force the choice — so the first listed becomes primary when
+   * nobody said otherwise. Better a defensible default than an empty answer to
+   * "who do we call".
+   */
+  const primaryIndex = primary === undefined ? 0 : guardians.indexOf(primary);
+  const primaryMembershipId = kept[primaryIndex] ?? kept[0];
+
+  if (primaryMembershipId !== undefined) {
+    await tx.query(
+      `UPDATE guardian_link SET is_primary = true
+        WHERE student_id = $1 AND guardian_membership_id = $2 AND archived_at IS NULL`,
+      [studentId, primaryMembershipId],
+    );
+  }
+}
+
+/**
+ * A person the club already knows, for the guardian picker — POOLSE-17.
+ *
+ * Everybody, not only existing guardians: the point of the ticket is that the
+ * grandmother enrolling a child may already be a student, an instructor, or on
+ * the committee, and picking her rather than typing her again is what keeps one
+ * human as one record.
+ */
+export interface PersonSummary {
+  membershipId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  taxNumber: string | null;
+  address: string | null;
+  roles: string[];
+  hasLogin: boolean;
+  /** How many students they are already responsible for. Shown so a pick is confident. */
+  guardianOf: number;
+}
+
+export async function searchPeople(
+  organizationId: string,
+  search: string,
+  limit = 10,
+): Promise<PersonSummary[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      membership_id: string;
+      name: string;
+      email: string | null;
+      phone: string | null;
+      tax_number: string | null;
+      address: string | null;
+      roles: string[];
+      has_login: boolean;
+      guardian_of: number;
+    }>(
+      `SELECT m.id AS membership_id,
+              person_name(m.id) AS name,
+              person_email(m.id)::text AS email,
+              m.phone,
+              m.tax_number,
+              m.address,
+              coalesce((
+                SELECT array_agg(mr.role::text ORDER BY mr.role)
+                  FROM membership_role mr
+                 WHERE mr.membership_id = m.id AND mr.archived_at IS NULL
+              ), '{}') AS roles,
+              m.app_user_id IS NOT NULL AS has_login,
+              (
+                SELECT count(*) FROM guardian_link gl
+                 WHERE gl.guardian_membership_id = m.id AND gl.archived_at IS NULL
+              )::int AS guardian_of
+         FROM membership m
+        WHERE m.archived_at IS NULL
+          AND m.status <> 'invited'
+          AND (
+            -- Accent- and case-insensitive on the name, exact on the keys. A NIF
+            -- typed in full is a lookup, not a search; a name is the other way
+            -- round.
+            lower(strip_accents(person_name(m.id))) LIKE '%' || lower(strip_accents($1::text)) || '%'
+            OR person_email(m.id) = $1::citext
+            OR m.tax_number = $1::text
+          )
+        ORDER BY person_name(m.id)
+        LIMIT $2`,
+      [search, limit],
+    );
+
+    return rows.map((row) => ({
+      membershipId: row.membership_id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      taxNumber: row.tax_number,
+      address: row.address,
+      roles: row.roles,
+      hasLogin: row.has_login,
+      guardianOf: row.guardian_of,
+    }));
+  });
+}
+
+/**
+ * The students one person is responsible for — POOLSE-04, criterion 9.
+ *
+ * The guardian's own page answers "which children am I here for", which is the
+ * half of the relation the student's page cannot show.
+ */
+export async function studentsOf(
+  organizationId: string,
+  membershipId: string,
+): Promise<{ id: string; name: string; relationship: string | null }[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      id: string;
+      name: string;
+      relationship: string | null;
+    }>(
+      `SELECT s.id,
+              s.first_name || ' ' || s.last_name AS name,
+              gl.relationship
+         FROM guardian_link gl
+         JOIN student s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
+        WHERE gl.guardian_membership_id = $1
+          AND gl.archived_at IS NULL
+          AND s.archived_at IS NULL
+        ORDER BY s.first_name, s.last_name`,
+      [membershipId],
+    );
+    return rows;
+  });
 }

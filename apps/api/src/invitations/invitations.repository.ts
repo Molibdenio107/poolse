@@ -89,12 +89,16 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
       SELECT m.id                AS membership_id,
              m.app_user_id       AS app_user_id,
              m.status            AS status,
-             u.cached_first_name AS first_name,
-             u.cached_last_name  AS last_name,
+             -- Clerk where there is a login, the club's own record where there
+             -- is not — POOLSE-17. An encarregado de educação created from a
+             -- student form has no account and never will, and reading only the
+             -- cache left them in this list as a nameless row.
+             coalesce(u.cached_first_name, m.first_name) AS first_name,
+             coalesce(u.cached_last_name,  m.last_name)  AS last_name,
              u.cached_avatar_url AS avatar_url,
              -- Before acceptance there is no account, so the address the invite
              -- went to is the only name this person has here.
-             coalesce(u.cached_email::text, i.email::text) AS email,
+             coalesce(u.cached_email::text, m.email::text, i.email::text) AS email,
              coalesce(
                array_agg(mr.role::text ORDER BY mr.role::text)
                  FILTER (WHERE mr.archived_at IS NULL),
@@ -111,9 +115,15 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
               AND i.organization_id = m.organization_id
        WHERE m.archived_at IS NULL
        GROUP BY m.id, m.app_user_id, m.status, m.created_at,
+                m.first_name, m.last_name, m.email,
                 u.cached_first_name, u.cached_last_name, u.cached_avatar_url,
                 u.cached_email, i.email
-       ORDER BY m.created_at
+       -- By name, not by when the row was made. A People list is something you
+       -- scan for somebody, and creation order is meaningless to the person
+       -- doing the scanning.
+       ORDER BY coalesce(u.cached_first_name, m.first_name),
+                coalesce(u.cached_last_name, m.last_name),
+                m.created_at
     `);
 
     return rows.map((row) => ({

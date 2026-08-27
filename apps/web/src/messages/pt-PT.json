@@ -401,7 +401,19 @@
     "noClasses": "Este aluno ainda não está inscrito em nenhuma turma.",
     "noClassesThisWeek": "Sem aulas nesta semana.",
     "noSessionsHint": "Este aluno tem turmas, mas as aulas ainda não foram geradas. Gere a época em",
-    "addHint": "O nome basta para começar. A fotografia, os consentimentos e os tempos ficam na ficha do aluno."
+    "addHint": "O nome basta para começar. A fotografia, os consentimentos e os tempos ficam na ficha do aluno.",
+    "guardianNew": "Novo encarregado",
+    "guardianPrimary": "Contacto principal",
+    "guardianRemove": "Remover {name}",
+    "guardianAddAnother": "Adicionar outro encarregado",
+    "guardianTaxNumberHint": "Opcional. Ajuda a reconhecer alguém que o clube já conhece.",
+    "guardianEditElsewhere": "Os dados desta pessoa são editados na página dela.",
+    "guardianNoDetails": "Sem contactos registados.",
+    "guardianFind": "Procurar uma pessoa que o clube já conhece",
+    "guardianFindPlaceholder": "Nome, e-mail ou NIF",
+    "guardianAlreadyOf": "{count, plural, one {Já é encarregado de # aluno} other {Já é encarregado de # alunos}}",
+    "guardianNoMatches": "Ninguém encontrado. Adicione uma pessoa nova.",
+    "guardianAddNew": "Adicionar pessoa nova"
   },
   "progress": {
     "title": "Progressão",

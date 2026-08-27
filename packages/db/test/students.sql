@@ -284,7 +284,7 @@ END $$;
 RESET ROLE;
 
 -- ---------------------------------------------------------------------------
--- Test 9 — the encarregado de educação lives on the student — POOLSE-04
+-- Test 9 — the encarregado de educação is a person, linked — POOLSE-04, POOLSE-17
 --
 -- The important half is what is *not* enforced. Age moves on its own: a student
 -- who was fifteen when the row was written turns eighteen without anybody
@@ -293,63 +293,84 @@ RESET ROLE;
 -- The requirement lives in the API, where it can look at today's date; the
 -- schema only refuses values that are wrong in themselves.
 --
--- And nothing clears the fields when somebody turns eighteen. "Who was your
--- guardian" stays true about the years it covered.
+-- And nothing severs the link when somebody turns eighteen. "Who was your
+-- guardian" stays true about the years it covered — criterion 8 of the rewritten
+-- POOLSE-04 asks for the link to be retained, not deleted.
+--
+-- The guardian's own details are asserted in person.sql; this is about the
+-- student's side of the relation.
 -- ---------------------------------------------------------------------------
 
 DO $$
-DECLARE v_org uuid; v_minor uuid; v_adult uuid; n int;
+DECLARE v_org uuid; v_minor uuid; v_adult uuid; v_guardian uuid;
+        v_sibling uuid; n int;
 BEGIN
   v_org := (SELECT id FROM organization WHERE name = 'Clube A');
 
-  INSERT INTO student (organization_id, first_name, last_name, birth_date,
-                       guardian_name, guardian_relationship, guardian_phone)
-  VALUES (v_org, 'Matilde', 'Sousa', current_date - interval '9 years',
-          'Rita Sousa', 'Mãe', '912345678')
+  INSERT INTO membership (organization_id, status, first_name, last_name, phone)
+  VALUES (v_org, 'active', 'Rita', 'Sousa', '912345678')
+  RETURNING id INTO v_guardian;
+
+  INSERT INTO membership_role (organization_id, membership_id, role)
+  VALUES (v_org, v_guardian, 'guardian');
+
+  INSERT INTO student (organization_id, first_name, last_name, birth_date)
+  VALUES (v_org, 'Matilde', 'Sousa', current_date - interval '9 years')
   RETURNING id INTO v_minor;
 
-  -- An adult with no guardian at all is perfectly ordinary.
+  INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id,
+                             relationship, is_primary)
+  VALUES (v_org, v_minor, v_guardian, 'Mãe', true);
+
+  -- An adult with no guardian at all is perfectly ordinary. Nothing in the
+  -- schema requires a link.
   INSERT INTO student (organization_id, first_name, last_name, birth_date)
   VALUES (v_org, 'Armando', 'Seabra', DATE '1959-03-02')
   RETURNING id INTO v_adult;
 
-  -- And an adult who still carries the details recorded while they were a minor
-  -- keeps them. There is no trigger and no job that clears this.
+  -- And an adult who still carries a link made while they were a minor keeps it.
+  -- There is no trigger and no job that clears this.
   UPDATE student SET birth_date = current_date - interval '19 years' WHERE id = v_minor;
 
   SELECT count(*) INTO n
-    FROM student WHERE id = v_minor AND guardian_name = 'Rita Sousa';
+    FROM guardian_link
+   WHERE student_id = v_minor AND guardian_membership_id = v_guardian
+     AND archived_at IS NULL;
   IF n <> 1 THEN
-    RAISE EXCEPTION 'FAIL test 9a: guardian data was lost when the student turned 18';
+    RAISE EXCEPTION 'FAIL test 9a: the guardian link was lost when the student turned 18';
+  END IF;
+
+  -- The relationship reads back from the link, not from the person: she is
+  -- "Mãe" to this child specifically.
+  IF (SELECT relationship FROM guardian_link WHERE student_id = v_minor) <> 'Mãe' THEN
+    RAISE EXCEPTION 'FAIL test 9b: the relationship did not survive on the link';
   END IF;
 
   -- Blank is not a value, and an untouched form field sends one.
   BEGIN
-    UPDATE student SET guardian_name = '   ' WHERE id = v_adult;
-    RAISE EXCEPTION 'FAIL test 9b: a blank guardian name was stored';
+    UPDATE guardian_link SET relationship = '   ' WHERE student_id = v_minor;
+    RAISE EXCEPTION 'FAIL test 9c: a blank relationship was stored';
   EXCEPTION
     WHEN check_violation THEN NULL;
   END;
 
-  -- Loose on purpose — strict validation refuses addresses that work — but not
-  -- so loose that a phone number can be filed as an email.
-  BEGIN
-    UPDATE student SET guardian_email = '912345678' WHERE id = v_adult;
-    RAISE EXCEPTION 'FAIL test 9c: a phone number was stored as an email';
-  EXCEPTION
-    WHEN check_violation THEN NULL;
-  END;
+  -- One guardian may cover a whole family — the sibling case that made a
+  -- free-text column the wrong shape, because it meant typing her in twice.
+  INSERT INTO student (organization_id, first_name, last_name, birth_date)
+  VALUES (v_org, 'Gonçalo', 'Sousa', current_date - interval '7 years')
+  RETURNING id INTO v_sibling;
 
-  -- Case is not a difference: citext means a guardian found by email is found
-  -- however the address was typed.
-  UPDATE student SET guardian_email = 'Rita.Sousa@Exemplo.PT' WHERE id = v_adult;
-  SELECT count(*) INTO n
-    FROM student WHERE organization_id = v_org AND guardian_email = 'rita.sousa@exemplo.pt';
-  IF n <> 1 THEN
-    RAISE EXCEPTION 'FAIL test 9d: the guardian email did not match case-insensitively';
+  INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id,
+                             relationship, is_primary)
+  VALUES (v_org, v_sibling, v_guardian, 'Mãe', true);
+
+  SELECT count(*) INTO n FROM guardian_link
+   WHERE guardian_membership_id = v_guardian AND archived_at IS NULL;
+  IF n <> 2 THEN
+    RAISE EXCEPTION 'FAIL test 9d: one guardian could not cover two siblings, got %', n;
   END IF;
 
-  RAISE NOTICE 'PASS test 9: guardian details are stored, sane, and never cleared by an age';
+  RAISE NOTICE 'PASS test 9: guardianship is a link, kept across a birthday, shared by siblings';
 END $$;
 
 ROLLBACK;

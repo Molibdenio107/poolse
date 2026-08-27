@@ -401,7 +401,19 @@
     "noClasses": "This student is not enrolled in any class group yet.",
     "noClassesThisWeek": "No classes this week.",
     "noSessionsHint": "This student is in a class group, but the classes have not been generated yet. Build the season in",
-    "addHint": "A name is enough to start. The photograph, the consents and the times live on the student record."
+    "addHint": "A name is enough to start. The photograph, the consents and the times live on the student record.",
+    "guardianNew": "New guardian",
+    "guardianPrimary": "Primary contact",
+    "guardianRemove": "Remove {name}",
+    "guardianAddAnother": "Add another guardian",
+    "guardianTaxNumberHint": "Optional. Helps recognise somebody the club already knows.",
+    "guardianEditElsewhere": "This person’s details are edited on their own page.",
+    "guardianNoDetails": "No contact details recorded.",
+    "guardianFind": "Search for somebody the club already knows",
+    "guardianFindPlaceholder": "Name, email or tax number",
+    "guardianAlreadyOf": "{count, plural, one {Already guardian to # student} other {Already guardian to # students}}",
+    "guardianNoMatches": "Nobody found. Add a new person.",
+    "guardianAddNew": "Add a new person"
   },
   "progress": {
     "title": "Progression",

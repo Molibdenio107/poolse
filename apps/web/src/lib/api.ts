@@ -436,13 +436,41 @@ export interface StudentLevel {
 }
 
 export interface Guardian {
-  name: string | null;
+  /** The link between this guardian and this student. */
+  linkId: string;
+  /** The person. One row per human per club, however many children they bring. */
+  membershipId: string;
+  name: string;
   relationship: string | null;
   phone: string | null;
   email: string | null;
   /** NIF, optional. */
   taxNumber: string | null;
   address: string | null;
+  /** Who to ring first. At most one per student. */
+  isPrimary: boolean;
+  /** Clerk owns their name and email — the form shows those read-only. */
+  hasLogin: boolean;
+}
+
+/**
+ * A person the club already knows — POOLSE-17.
+ *
+ * Everybody, not only guardians: the grandmother enrolling a child may already
+ * be a student or an instructor, and picking her rather than typing her again is
+ * what keeps one human as one record.
+ */
+export interface PersonSummary {
+  membershipId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  taxNumber: string | null;
+  address: string | null;
+  roles: string[];
+  hasLogin: boolean;
+  /** How many students they already look after. Shown so a pick is confident. */
+  guardianOf: number;
 }
 
 export interface Student {
@@ -461,13 +489,17 @@ export interface Student {
   photoStorageKey: string | null;
   photoConsent: boolean;
   /**
-   * The encarregado de educação, as fields — POOLSE-04.
+   * Every encarregado de educação, primary first — POOLSE-04, POOLSE-17.
    *
-   * Kept whatever the student's age: nothing clears these when somebody turns
+   * Each is a link to a person, not a copy of their details: the same
+   * grandmother covers three grandchildren from one record, and correcting her
+   * phone number once corrects it everywhere.
+   *
+   * Kept whatever the student's age. Nothing severs a link when somebody turns
    * eighteen, because "who was your guardian" stays true about the years it
    * covered.
    */
-  guardian: Guardian;
+  guardians: Guardian[];
   /**
    * Present on the single-student read, absent from the list.
    *

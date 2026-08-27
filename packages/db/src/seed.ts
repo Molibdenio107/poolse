@@ -187,6 +187,7 @@ async function main(): Promise<void> {
       enrollments: 0,
       attendance: 0,
       vacations: 0,
+      guardians: 0,
     };
 
     // ---------------------------------------------------------------------
@@ -360,6 +361,88 @@ async function main(): Promise<void> {
         ],
       );
       counts.students += 1;
+    }
+
+    /*
+     * Encarregados de educação, as people — POOLSE-17.
+     *
+     * Every minor gets one, and **siblings share theirs**, which is the case the
+     * whole ticket is about: one woman, one record, three links. A seed that gave
+     * each child its own guardian would demo the old shape perfectly and never
+     * show what changed.
+     *
+     * Siblings are recognised by surname, which is how a club recognises them
+     * too. Crude and deterministic — the same run produces the same families.
+     */
+    const minors = await many<{ id: string; last_name: string; birth_date: Date | null }>(
+      client,
+      `SELECT s.id, s.last_name, s.birth_date
+         FROM student s
+        WHERE s.organization_id = $1
+          AND s.archived_at IS NULL
+          AND s.birth_date IS NOT NULL
+          AND s.birth_date > current_date - interval '18 years'
+          AND NOT EXISTS (
+            SELECT 1 FROM guardian_link gl
+             WHERE gl.student_id = s.id AND gl.archived_at IS NULL
+          )
+        ORDER BY s.last_name, s.id`,
+      [org.id],
+    );
+
+    /** Surname → the guardian already made for that family, so siblings share one. */
+    const family = new Map<string, string>();
+
+    for (const minor of minors) {
+      const surname = minor.last_name.split(' ').slice(-1)[0] ?? minor.last_name;
+      let membershipId = family.get(surname);
+
+      if (membershipId === undefined) {
+        const given = pick(FIRST_NAMES);
+
+        const created = await one<{ id: string }>(
+          client,
+          `INSERT INTO membership (organization_id, status, first_name, last_name,
+                                   email, phone, tax_number)
+           VALUES ($1, 'active', $2, $3, $4::citext, $5, $6)
+           RETURNING id`,
+          [
+            org.id,
+            given,
+            surname,
+            `${given}.${surname}${counts.guardians}@exemplo.pt`.toLowerCase(),
+            `9${Math.floor(10_000_000 + random() * 89_999_999)}`,
+            // A NIF for some but not all: the picker's match-by-NIF path and its
+            // match-by-email path both need to be reachable in the demo.
+            random() < 0.6 ? String(100_000_000 + Math.floor(random() * 899_999_999)) : null,
+          ],
+        );
+
+        membershipId = created!.id;
+        family.set(surname, membershipId);
+
+        await client.query(
+          `INSERT INTO membership_role (organization_id, membership_id, role)
+           VALUES ($1, $2, 'guardian')`,
+          [org.id, membershipId],
+        );
+        counts.guardians += 1;
+      }
+
+      await client.query(
+        `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id,
+                                    relationship, is_primary)
+         VALUES ($1, $2, $3, $4, true)
+         ON CONFLICT DO NOTHING`,
+        [
+          org.id,
+          minor.id,
+          membershipId,
+          // Deterministic per family, so re-running does not reshuffle who is
+          // whose mother. `stableUnit` is a hash, not the run's random stream.
+          stableUnit(`rel:${surname}`) < 0.5 ? 'Mãe' : 'Pai',
+        ],
+      );
     }
 
     /*
@@ -609,6 +692,7 @@ async function main(): Promise<void> {
     console.log(`  students added     ${counts.students}`);
     console.log(`  enrollments        ${counts.enrollments}`);
     console.log(`  attendance marks   ${counts.attendance}`);
+    console.log(`  guardians linked   ${counts.guardians}`);
     console.log(`  leave requests     ${counts.vacations}`);
     console.log('');
     console.log('Done. Re-running only adds what is missing.');

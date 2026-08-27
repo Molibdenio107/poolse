@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { ApiError, apiFetch, apiPatch, apiPost } from '../../../../lib/api';
+import { ApiError, apiFetch, apiPatch, apiPost, type PersonSummary } from '../../../../lib/api';
 import type { FormState } from '../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
@@ -15,7 +15,7 @@ function failure(error: unknown, errorKey: string): FormState {
 }
 
 /** Shared by create and edit — the same fields, read out of the same form. */
-function studentBody(formData: FormData): Record<string, string> {
+function studentBody(formData: FormData): Record<string, unknown> {
   const text = (field: string): string => String(formData.get(field) ?? '').trim();
 
   return {
@@ -26,16 +26,31 @@ function studentBody(formData: FormData): Record<string, string> {
     contactEmail: text('contactEmail'),
     contactPhone: text('contactPhone'),
     notes: text('notes'),
-    // POOLSE-04. Always posted, even for an adult: the block hides rather than
-    // unmounts, and a form that stopped submitting fields it was still showing
-    // would be the worse of the two surprises.
-    guardianName: text('guardianName'),
-    guardianRelationship: text('guardianRelationship'),
-    guardianPhone: text('guardianPhone'),
-    guardianEmail: text('guardianEmail'),
-    guardianTaxNumber: text('guardianTaxNumber'),
-    guardianAddress: text('guardianAddress'),
   };
+}
+
+/**
+ * The guardians the form is showing — POOLSE-04, POOLSE-17.
+ *
+ * One JSON field rather than indexed input names. The block posts the whole set,
+ * including for an adult: it hides rather than unmounts, and a form that stopped
+ * submitting what it was still showing would be the worse of the two surprises.
+ *
+ * A malformed value becomes an empty list rather than an exception. This is a
+ * hidden field the browser wrote; if it is not what we expect, something is
+ * wrong in a way an error page cannot help with, and refusing to save the rest
+ * of the student would help less.
+ */
+function guardiansFrom(formData: FormData): unknown[] {
+  const raw = String(formData.get('guardians') ?? '');
+  if (raw.trim() === '') return [];
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -57,7 +72,10 @@ export async function createStudentAction(
   formData: FormData,
 ): Promise<FormState> {
   const organizationId = String(formData.get('organizationId') ?? '');
-  const body = studentBody(formData);
+  const body: Record<string, unknown> = {
+    ...studentBody(formData),
+    guardians: guardiansFrom(formData),
+  };
   if (!body['firstName'] || !body['lastName']) {
     return { ok: false, errorKey: 'students.nameRequired' };
   }
@@ -85,7 +103,10 @@ export async function updateStudentAction(
 ): Promise<FormState> {
   const organizationId = String(formData.get('organizationId') ?? '');
   const studentId = String(formData.get('studentId') ?? '');
-  const body = studentBody(formData);
+  const body: Record<string, unknown> = {
+    ...studentBody(formData),
+    guardians: guardiansFrom(formData),
+  };
   if (!body['firstName'] || !body['lastName']) {
     return { ok: false, errorKey: 'students.nameRequired' };
   }
@@ -247,4 +268,26 @@ export async function archiveLevelAction(
   revalidatePath('/dashboard/students/levels');
   revalidatePath('/dashboard/students');
   return { ok: true };
+}
+
+/**
+ * People matching what somebody is typing — POOLSE-17.
+ *
+ * A server action rather than a fetch from the browser, for the same reason as
+ * every other call here: the Clerk session token stays on the server and there
+ * is no CORS surface to keep in step across two environments.
+ *
+ * Returns an empty list on failure. A search box that shows nothing is a search
+ * box that found nothing; one that throws takes the whole student form down
+ * because somebody typed while the API was restarting.
+ */
+export async function searchPeopleAction(query: string): Promise<PersonSummary[]> {
+  try {
+    const result = await apiFetch<{ people: PersonSummary[] }>(
+      `/people-search?q=${encodeURIComponent(query)}`,
+    );
+    return result.people;
+  } catch {
+    return [];
+  }
 }

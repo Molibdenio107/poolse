@@ -151,10 +151,15 @@ app_user
   check birth_date >= '1900-01-01'
   check contact_phone is null or btrim(contact_phone) <> ''
 
-membership                      -- a person's presence in an organization
-  id, organization_id, app_user_id (nullable until accepted),
-  status ('invited'|'active'|'suspended'), archived_at
+membership                      -- a person's presence in an organization; see "one person, many roles"
+  id, organization_id, app_user_id (nullable — no login, or not yet),
+  status ('invited'|'active'|'suspended'), archived_at,
+  first_name, last_name, email, phone, tax_number, address, birth_date
+                                -- the club's own record, only where app_user_id is null
   unique (organization_id, app_user_id) where archived_at is null
+  unique (organization_id, tax_number) where archived_at is null
+  unique (organization_id, email) where archived_at is null
+  check (app_user_id is null or (first_name, last_name, email are all null))
 
 membership_role                 -- a membership can hold several roles at once
   id, organization_id, membership_id, role
@@ -263,7 +268,8 @@ invitation expires.
 ```
 student
   id, organization_id, first_name, last_name, birth_date, level_id,
-  app_user_id (nullable), notes, contact_email, contact_phone, archived_at
+  app_user_id (nullable), membership_id (nullable), notes,
+  contact_email, contact_phone, archived_at
 
 student_sensitive               -- separated deliberately; see "minors and consent"
   student_id (pk), organization_id, medical_notes_encrypted,
@@ -273,9 +279,12 @@ consent
   id, organization_id, student_id, kind ('photo'|'medical_data'|'parent_sharing'),
   granted boolean, granted_by_membership_id, granted_at, evidence_note, withdrawn_at
 
-guardian_link                   -- table exists now; parent-facing features are deferred
-  id, organization_id, student_id, app_user_id, relationship,
-  can_view_progress boolean default false, archived_at
+guardian_link                   -- the relation between two people
+  id, organization_id, student_id, guardian_membership_id, relationship,
+  is_primary boolean default false, can_view_progress boolean default false,
+  archived_at
+  unique (student_id, guardian_membership_id) where archived_at is null
+  unique (student_id) where archived_at is null and is_primary
 
 student_level                   -- lookup; operators define their own progression
   id, organization_id, name, sort_order, archived_at
@@ -315,6 +324,46 @@ attendance
   status ('present'|'absent'|'excused'|'late'), recorded_by_membership_id, recorded_at
   unique (class_session_id, student_id)
 ```
+
+### One person, many roles
+
+A senior student can also be the *encarregado de educação* of a grandchild. Modelled as
+two records that would be two phone numbers to keep in sync, two addresses to update, and
+a People list showing the same human twice.
+
+**`membership` is the person.** Not a separate `person` table, and not `app_user`.
+
+`app_user` is Clerk's: global, no `organization_id`, no row-level security, and every row
+in it is somebody who authenticated. Filling it with operator-typed guardians would put
+tenant-authored data in the one table the isolation rules do not cover — exactly what
+decision 2 exists to prevent.
+
+`membership` already was most of what was needed: tenant-scoped with a policy, one row per
+human per organization, `app_user_id` nullable so somebody can exist before or without ever
+having a login, and `membership_role` attached so one person holds several roles at once.
+What it lacked was a name.
+
+**Who owns which field.** Where `app_user_id` is set, Clerk owns the name and the email and
+`app_user`'s cache holds them — a check constraint refuses a membership that tries to hold
+its own, so the two can never disagree. The columns on `membership` are the club's record
+of somebody with no login. `person_name(membership_id)` and `person_email(membership_id)`
+resolve the two, so no query has to remember the rule.
+
+**Guardianship is a relation between two people**, and the relationship type lives on the
+link: the same woman is *avó* to one child and *tutora legal* to another. One primary
+contact per student, enforced by a partial unique index — "who do we ring first" has one
+answer.
+
+**`student.membership_id` is nullable and stays nullable.** Most children in a swimming
+school are a register entry and nothing else; requiring a membership for each would create
+thousands of role-less people to no purpose. The column exists for the case the ticket is
+about: the adult student who is also somebody's encarregado.
+
+**Recognising somebody already known.** Partial unique indexes on `(organization_id,
+tax_number)` and `(organization_id, email)` are what make "this person already exists, add
+the role instead" both cheap to check and safe under two operators doing it at once. NIF is
+matched before email: two people can share a household address, and only one can have a
+given tax number.
 
 ### Seasons
 

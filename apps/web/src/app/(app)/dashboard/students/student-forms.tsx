@@ -28,7 +28,7 @@ function Problem({ state }: { state: FormState }): React.ReactElement | null {
 
 export interface StudentFormValues {
   id?: string;
-  guardian?: Guardian;
+  guardians?: Guardian[];
   firstName?: string;
   lastName?: string;
   birthDate?: string | null;
@@ -160,7 +160,7 @@ export function StudentForm({
         birth without ever throwing away what has been typed into it.
       */}
       <GuardianBlock
-        guardian={student?.guardian}
+        guardians={student?.guardians}
         birthDateInputId="student-birth"
         errors={state.fields}
       />

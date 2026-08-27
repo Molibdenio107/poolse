@@ -36,7 +36,11 @@ import {
   listStudents,
   reorderLevels,
   renameLevel,
+  searchPeople,
+  studentsOf,
   updateStudent,
+  type GuardianInput,
+  type PersonSummary,
   type Student,
   type StudentInput,
   type StudentLevel,
@@ -44,6 +48,14 @@ import {
 
 const MAX_NAME = 120;
 const MAX_NOTES = 2000;
+
+/**
+ * More than four encarregados for one child is a typo, not a family.
+ *
+ * POOLSE-04 allows more than one and puts no number on it, so this is a sanity
+ * bound rather than a rule anybody will meet.
+ */
+const MAX_GUARDIANS = 4;
 
 interface StudentsResponse {
   organizationId: string;
@@ -64,6 +76,39 @@ interface StudentsResponse {
  * tables with their own access rules (slice 1.3) precisely so that this
  * controller — the ordinary, widely-readable one — cannot reach them.
  */
+/**
+ * People, for the guardian picker — POOLSE-17.
+ *
+ * Its own controller rather than a route under `students`, because a person is
+ * not a student: the whole point of the ticket is that the same human can be
+ * both, and filing the lookup under one of their roles would be the mistake this
+ * models its way out of.
+ */
+@Controller('people-search')
+export class PeopleSearchController {
+  @Get()
+  async search(@Query('q') q?: string): Promise<{ people: PersonSummary[] }> {
+    const { organizationId } = currentTenant();
+
+    // Two characters is where a search stops being a list of everybody. Below
+    // that, nothing — an empty result reads as "keep typing", a full one reads
+    // as "these are your matches", and the second is a lie.
+    const search = q?.trim() ?? '';
+    if (search.length < 2) return { people: [] };
+
+    return { people: await searchPeople(organizationId, search) };
+  }
+
+  /** The children one person is responsible for — POOLSE-04, criterion 9. */
+  @Get(':membershipId/students')
+  async students(
+    @Param('membershipId') membershipId: string,
+  ): Promise<{ students: { id: string; name: string; relationship: string | null }[] }> {
+    const { organizationId } = currentTenant();
+    return { students: await studentsOf(organizationId, membershipId) };
+  }
+}
+
 @Controller('students')
 export class StudentsController {
   @Get()
@@ -295,14 +340,7 @@ function asHttp(error: unknown): unknown {
 function parseStudent(body: Record<string, unknown>): StudentInput {
   const birthDate = parseBirthDate(body['birthDate']);
 
-  const guardian = {
-    name: optionalText(body['guardianName'], 'guardianName', MAX_NAME),
-    relationship: optionalText(body['guardianRelationship'], 'guardianRelationship', 80),
-    phone: optionalText(body['guardianPhone'], 'guardianPhone', 40),
-    email: optionalText(body['guardianEmail'], 'guardianEmail', 254),
-    taxNumber: optionalText(body['guardianTaxNumber'], 'guardianTaxNumber', 20),
-    address: optionalText(body['guardianAddress'], 'guardianAddress', 500),
-  };
+  const guardians = readGuardians(body);
 
   /*
    * A minor needs a guardian who can be reached — POOLSE-04, criterion 2.
@@ -316,25 +354,46 @@ function parseStudent(body: Record<string, unknown>): StudentInput {
    * case after an import, and refusing to save them would fail most rows.
    */
   if (birthDate !== null && isMinor(birthDate)) {
-    if (guardian.name === null) {
+    const first = guardians[0];
+
+    if (first === undefined) {
       throw new BadRequestException({
         code: 'guardian_required',
         message: 'A student under 18 needs a guardian',
         fields: { guardianName: 'students.guardianNameRequired' },
       });
     }
-    if (guardian.relationship === null) {
+
+    /*
+     * An existing person is taken as sufficient.
+     *
+     * Their name and contact details are theirs, live on their own page, and
+     * were checked when they were created — re-validating them here would refuse
+     * a perfectly good guardian because the operator picking them cannot see
+     * what is missing from a record they did not open.
+     */
+    if (first.membershipId === null) {
+      if (first.name === null) {
+        throw new BadRequestException({
+          code: 'guardian_required',
+          message: 'A student under 18 needs a guardian',
+          fields: { guardianName: 'students.guardianNameRequired' },
+        });
+      }
+      if (first.phone === null && first.email === null) {
+        throw new BadRequestException({
+          code: 'guardian_required',
+          message: 'A guardian needs a phone number or an email address',
+          fields: { guardianPhone: 'students.guardianContactRequired' },
+        });
+      }
+    }
+
+    if (first.relationship === null) {
       throw new BadRequestException({
         code: 'guardian_required',
         message: 'A guardian needs a relationship to the student',
         fields: { guardianRelationship: 'students.guardianRelationshipRequired' },
-      });
-    }
-    if (guardian.phone === null && guardian.email === null) {
-      throw new BadRequestException({
-        code: 'guardian_required',
-        message: 'A guardian needs a phone number or an email address',
-        fields: { guardianPhone: 'students.guardianContactRequired' },
       });
     }
   }
@@ -347,8 +406,70 @@ function parseStudent(body: Record<string, unknown>): StudentInput {
     contactEmail: optionalText(body['contactEmail'], 'contactEmail', 254),
     contactPhone: optionalText(body['contactPhone'], 'contactPhone', 40),
     notes: optionalText(body['notes'], 'notes', MAX_NOTES),
-    guardian,
+    guardians,
   };
+}
+
+/**
+ * The guardians a request is asking for — POOLSE-04, POOLSE-17.
+ *
+ * Accepts `guardians` as an array. The single flat `guardianName`/`guardianPhone`
+ * form is still read when no array is given, because that is what the student
+ * form posts for the ordinary one-guardian case and there is no reason to make
+ * every caller build an array to say one thing.
+ *
+ * An entry naming a `membershipId` is an existing person being attached. One
+ * without is described by its fields and will be matched against the club's
+ * people before anybody new is created.
+ */
+function readGuardians(body: Record<string, unknown>): GuardianInput[] {
+  const raw = body['guardians'];
+
+  if (Array.isArray(raw)) {
+    if (raw.length > MAX_GUARDIANS) {
+      throw new BadRequestException(`at most ${MAX_GUARDIANS} guardians`);
+    }
+    return raw
+      .map((entry, index) => readGuardian(entry as Record<string, unknown>, index))
+      .filter((guardian): guardian is GuardianInput => guardian !== null);
+  }
+
+  const flat = readGuardian(
+    {
+      membershipId: body['guardianMembershipId'],
+      name: body['guardianName'],
+      relationship: body['guardianRelationship'],
+      phone: body['guardianPhone'],
+      email: body['guardianEmail'],
+      taxNumber: body['guardianTaxNumber'],
+      address: body['guardianAddress'],
+    },
+    0,
+  );
+
+  return flat === null ? [] : [flat];
+}
+
+/** Null for an entry that names nobody — an untouched row in the form. */
+function readGuardian(
+  entry: Record<string, unknown>,
+  index: number,
+): GuardianInput | null {
+  const guardian: GuardianInput = {
+    membershipId: optionalText(entry['membershipId'], 'guardianMembershipId', 64),
+    name: optionalText(entry['name'], 'guardianName', MAX_NAME),
+    relationship: optionalText(entry['relationship'], 'guardianRelationship', 80),
+    phone: optionalText(entry['phone'], 'guardianPhone', 40),
+    email: optionalText(entry['email'], 'guardianEmail', 254),
+    taxNumber: optionalText(entry['taxNumber'], 'guardianTaxNumber', 20),
+    address: optionalText(entry['address'], 'guardianAddress', 500),
+    // The first listed is the primary contact unless one says otherwise. The
+    // repository re-checks this; here it only carries what was asked for.
+    isPrimary: entry['isPrimary'] === true || entry['isPrimary'] === 'true' || index === 0,
+  };
+
+  if (guardian.membershipId === null && guardian.name === null) return null;
+  return guardian;
 }
 
 /**

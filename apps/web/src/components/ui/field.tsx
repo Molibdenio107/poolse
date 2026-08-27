@@ -69,6 +69,7 @@ export function TextField({
   autoComplete,
   placeholder,
   maxLength,
+  onValueChange,
   className,
 }: Common & {
   initial?: string;
@@ -76,6 +77,15 @@ export function TextField({
   autoComplete?: string;
   placeholder?: string;
   maxLength?: number;
+  /**
+   * Told what was typed, for a parent that keeps its own copy.
+   *
+   * The field stays controlled by its own state either way — this is a
+   * notification, not a handover. A caller that lifted the value entirely would
+   * lose `useSeeded`, which is the part that makes a failed submission keep what
+   * somebody wrote.
+   */
+  onValueChange?: (value: string) => void;
 }): React.ReactElement {
   const id = useId();
   const [value, setValue] = useSeeded(initial);
@@ -96,7 +106,10 @@ export function TextField({
         name={name}
         type={type}
         value={value}
-        onChange={(event) => setValue(event.target.value)}
+        onChange={(event) => {
+          setValue(event.target.value);
+          onValueChange?.(event.target.value);
+        }}
         required={required}
         autoComplete={autoComplete}
         placeholder={placeholder}
