@@ -39,6 +39,39 @@ export interface PoolDetail extends Pool {
   photos: Photo[];
 }
 
+/** Where a site is, once somebody has picked it off the geocoder. */
+export interface Place {
+  city: string | null;
+  countryCode: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+/**
+ * How many people, by group — backlog round 3, story 2.
+ *
+ * Organization-wide, not per site, and that is a limit of the model rather than
+ * a choice: a student belongs to the organization and an instructor's membership
+ * does too. Neither carries a facility. Deriving "students taught at this site"
+ * through enrollment → class_group → pool → facility is possible and is a
+ * different, larger question; until somebody asks it, the honest thing is to
+ * count what the schema actually knows and label it as the organization's.
+ *
+ * `owner` is here although story 2 lists five groups. Without it the one person
+ * who runs the club is counted nowhere, and a tally that quietly omits somebody
+ * is worse than a sixth row.
+ */
+export interface PeopleCounts {
+  student: number;
+  owner: number;
+  admin: number;
+  instructor: number;
+  maintenance: number;
+  guardian: number;
+}
+
+export interface FacilityDetail extends Facility, Place {}
+
 /**
  * Ordinary tenant-scoped SQL, all of it. Nothing here needs a `SECURITY DEFINER`
  * function, and that is the point of the shape phase 0 built: once a caller has a
@@ -209,6 +242,220 @@ export async function findPool(
       maxDepthM: row.max_depth_m,
       photos: row.photos ?? [],
     };
+  });
+}
+
+/**
+ * One site, with its place and its gallery.
+ *
+ * A separate read from the listing for the same reason `findPool` is: the list
+ * is scanned and stays lean, while this is opened deliberately.
+ */
+export async function findFacility(
+  organizationId: string,
+  facilityId: string,
+): Promise<FacilityDetail | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      id: string;
+      name: string;
+      address: string | null;
+      timezone: string;
+      city: string | null;
+      country_code: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      pools: Pool[] | null;
+      photos: Photo[] | null;
+    }>(
+      `
+      SELECT f.id,
+             f.name,
+             f.address,
+             f.timezone,
+             f.city,
+             f.country_code,
+             -- numeric comes back as a string from node-pg, which refuses to
+             -- guess at precision. Cast so the JSON carries a number; six
+             -- decimal places survive float8 exactly.
+             f.latitude::float8  AS latitude,
+             f.longitude::float8 AS longitude,
+             (
+               SELECT coalesce(
+                        json_agg(
+                          json_build_object(
+                            'id', p.id,
+                            'facilityId', p.facility_id,
+                            'name', p.name,
+                            'kind', p.kind,
+                            'volumeLitres', p.volume_litres,
+                            'laneCount', p.lane_count,
+                            'lengthM', p.length_m::float8,
+                            'widthM', p.width_m::float8,
+                            'maxDepthM', p.max_depth_m::float8
+                          ) ORDER BY p.name
+                        ),
+                        '[]'::json
+                      )
+                 FROM pool p
+                WHERE p.organization_id = f.organization_id
+                  AND p.facility_id = f.id
+                  AND p.archived_at IS NULL
+             ) AS pools,
+             (
+               SELECT coalesce(
+                        json_agg(
+                          json_build_object('id', fp.id, 'storageKey', fp.storage_key,
+                                            'caption', fp.caption)
+                          ORDER BY fp.sort_order, fp.created_at
+                        ),
+                        '[]'::json
+                      )
+                 FROM facility_photo fp
+                WHERE fp.organization_id = f.organization_id
+                  AND fp.facility_id = f.id
+                  AND fp.archived_at IS NULL
+             ) AS photos
+        FROM facility f
+       WHERE f.id = $1 AND f.archived_at IS NULL
+      `,
+      [facilityId],
+    );
+
+    const row = rows[0];
+    // Also the answer for another tenant's facility id: RLS hid it, and the
+    // caller learns nothing either way.
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      address: row.address,
+      timezone: row.timezone,
+      city: row.city,
+      countryCode: row.country_code,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      pools: row.pools ?? [],
+      photos: row.photos ?? [],
+    };
+  });
+}
+
+/**
+ * Every group counted in one statement — story 2 asks for this explicitly, and
+ * it is right to.
+ *
+ * One query per role is five round trips that become eleven the day guardians
+ * get sub-groups, and each one re-reads the same two tables. A UNION of two
+ * sources grouped once stays one round trip at five students and at five
+ * hundred.
+ *
+ * A person holding two roles is counted under both, which matches how the People
+ * list is specified to show them. Archived memberships and archived roles are
+ * excluded, and so is anybody still `invited` — they have not joined yet, and a
+ * headcount that includes people who never accepted is a headcount nobody can
+ * reconcile against the room.
+ */
+export async function countPeople(organizationId: string): Promise<PeopleCounts> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ kind: string; total: number }>(`
+      SELECT kind, count(*)::int AS total
+        FROM (
+               SELECT 'student'::text AS kind
+                 FROM student
+                WHERE archived_at IS NULL
+
+               UNION ALL
+
+               SELECT mr.role::text
+                 FROM membership_role mr
+                 JOIN membership m
+                   ON m.id = mr.membership_id
+                  AND m.organization_id = mr.organization_id
+                WHERE mr.archived_at IS NULL
+                  AND m.archived_at IS NULL
+                  AND m.status = 'active'
+             ) counted
+       GROUP BY kind
+    `);
+
+    // Seeded at zero, because a group with nobody in it returns no row at all
+    // and story 2 asks for "0" rather than a gap. An absent row and a zero mean
+    // the same thing to the database and very different things to a reader.
+    const counts: PeopleCounts = {
+      student: 0,
+      owner: 0,
+      admin: 0,
+      instructor: 0,
+      maintenance: 0,
+      guardian: 0,
+    };
+
+    for (const row of rows) {
+      if (row.kind in counts) counts[row.kind as keyof PeopleCounts] = row.total;
+    }
+
+    return counts;
+  });
+}
+
+export interface UpdateFacilityInput {
+  name?: string;
+  address?: string | null;
+  city?: string | null;
+  countryCode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+/**
+ * Changes a site's details, including where it is.
+ *
+ * The coordinates arrive together or not at all — the database enforces that
+ * with `facility_coordinates_complete`, and this passes them through as a pair
+ * so a caller cannot write half a location by omitting one field.
+ */
+export async function updateFacility(
+  organizationId: string,
+  facilityId: string,
+  input: UpdateFacilityInput,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `
+      UPDATE facility
+         SET name         = coalesce($2, name),
+             address      = CASE WHEN $3::boolean THEN $4 ELSE address END,
+             city         = CASE WHEN $5::boolean THEN $6 ELSE city END,
+             country_code = CASE WHEN $5::boolean THEN $7 ELSE country_code END,
+             latitude     = CASE WHEN $5::boolean THEN $8::numeric ELSE latitude END,
+             longitude    = CASE WHEN $5::boolean THEN $9::numeric ELSE longitude END,
+             updated_at   = now()
+       WHERE id = $1 AND archived_at IS NULL
+      RETURNING id
+      `,
+      [
+        facilityId,
+        input.name ?? null,
+        input.address !== undefined,
+        input.address ?? null,
+        input.city !== undefined,
+        input.city,
+        input.countryCode,
+        input.latitude,
+        input.longitude,
+      ],
+    );
+    if (!rows[0]) return false;
+
+    await recordAudit(tx, {
+      action: 'facility.updated',
+      entityType: 'facility',
+      entityId: facilityId,
+      data: { fields: Object.keys(input) },
+    });
+    return true;
   });
 }
 

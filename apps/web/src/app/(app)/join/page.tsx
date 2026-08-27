@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type InvitationPreview, type Me } from '../../../lib/api';
 import { PreferenceControls } from '../preference-controls';
 import { AcceptForm } from './accept-form';
+import { BackLink } from '@/components/back-link';
 
 /**
  * The invitee's side of slice 0.5.
@@ -132,9 +132,7 @@ export default async function JoinPage({
         </section>
       )}
 
-      <Link href="/dashboard" className="text-sm text-primary hover:underline">
-        {t('common.backToDashboard')}
-      </Link>
+      <BackLink href="/dashboard" label={t('common.backToDashboard')} />
     </main>
   );
 }

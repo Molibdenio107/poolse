@@ -143,6 +143,139 @@ Without them, comparing a swimmer's own butterfly to their own freestyle answers
 into the real thing and is a slice of its own; inventing a formula now would
 produce a number that looks like insight and is not.
 
+### Backlog, round 2
+
+Two bugs and ten stories, arriving after 1.9. Numbered as they came.
+
+| # | Item | State |
+|---|---|---|
+| BUG-1 | Native controls render in the OS's theme, not the app's | ✅ `color-scheme` named per theme in `globals.css`. See below |
+| BUG-2 | Calendar page renders nothing | ✅ The grid is drawn whether or not the week has classes. See below |
+| R2-1 | Collapse the invite form behind a button | ✅ Inline panel, remounted per opening, Escape closes, focus returns to the trigger |
+| R2-2 | People split into sub-menus per staff role | Not started |
+| R2-3 | Guardians sub-menu under Alunos | Not started — **needs a schema slice first**, `guardian_link` does not exist |
+| R2-4 | Turmas scheduling grid | Not started. Granularity decided: **configurable per organization** |
+| R2-5 | Organization logo and tenant branding | Not started — control stays inert, as pool photos do |
+| R2-6 | Per-tenant accent colour | Deferred by the story itself, after module 1 |
+| R2-7 | Organization branding after sign-in | Not started. Header brand slot exists and is empty, waiting for it |
+| R2-8 | People restricted to owner and admin | ✅ Nav filtered, API refuses, direct URL explains itself |
+| R2-9 | Sign-in activity list | Not started — `audit_log` already has the shape; needs an `auth` action and a UI |
+| R2-10 | Sign-out control to the top right | ✅ Header added; the avatar menu carries it |
+
+**There is no `manager` role, and there will not be one for now.** Stories R2-4 and
+R2-8 are written for one, but `member_role` is `owner, admin, instructor,
+maintenance, student, guardian` — and `docs/product.md` never described a manager
+either. The story's manager is this product's `admin`, and R2-8 was built that way.
+Adding the role later is an enum value and a pass over the permission checks; adding
+it now would have meant designing permissions for a role nobody has asked for by
+name.
+
+**On BUG-1, and why the ticket's hypothesis was wrong.** The suspicion was a token
+rename — `--primary-foreground` becoming `--on-primary`, leaving components pointing
+at a variable that does not exist. That rename never happened here: every shadcn
+alias is defined, on bare `:root` and again in `.dark`. The real cause was
+`html { color-scheme: light dark }`, which tells the browser to style *native*
+controls — checkboxes, radios, selects, date pickers, scrollbars — from the
+operating system's preference. The operating system knows nothing about the `.dark`
+class this app toggles, so an OS set to dark with the app set to light rendered a
+black checkbox on a white page. Naming the scheme inside each theme block fixes
+every native control at once, which is what the ticket asked for even though the
+mechanism was a different one.
+
+**On BUG-2, and the part that is not fixed.** `class_session` held zero rows: the
+season had never been generated, so an empty calendar was the correct answer, badly
+presented. `WeekGrid` collapsed to one line of grey text, which reads as a page that
+failed to load. It now draws its days either way.
+
+What remains is worse and is the next slice: `seasonOf` returns the season
+*containing today*, so through August it offers a season that ends within days.
+An operator pressing "Gerar a época" in August generates a year that is already
+over and still sees an empty week. The calendar should offer the season the pool is
+about to run, not the one it just finished.
+
+### Backlog, round 3
+
+Ten stories, arriving after round 2. Decisions taken with them are in `CLAUDE.md`,
+under "Settled by backlog rounds".
+
+| # | Item | State |
+|---|---|---|
+| R3-1 | Edit my own profile | ✅ `birth_date` and `contact_phone` on `app_user`, `PUT /me/profile`, page under the user menu |
+| R3-2 | Installation details screen with counts | ✅ `/dashboard/facilities/<id>`, one grouped count query, each count links to a filtered list |
+| R3-3 | Weather on the installation details screen | ✅ Open-Meteo, server-side, cached 45 min by rounded coordinates. **Municipal holidays for R3-6 are now unblocked** |
+| R3-4 | Calendar readability and navigation | ✅ Taller cells, two-line names, arrows either side of a dated label, "Hoje" |
+| R3-5 | Removing classes from the calendar | ⚠️ Restore gone, confirmation names the class and date. Attendance rule **waits on 1.8** |
+| R3-6 | Vacations — my own | ✅ 4×3 year grid, drag and keyboard, balance with the carry-over caveat on screen |
+| R3-7 | Vacations — approval | ✅ Queue with who-else-is-off, rejection needs a reason, requester emailed |
+| R3-8 | Vacations — team map | ✅ Nobody shown until picked; shared days marked, never one colour hiding another |
+| R3-9 | Progression and medical as icon buttons | ✅ Icon buttons in their own action area; medical hidden for roles that may not open it |
+| R3-10 | One shared back control | ✅ `BackLink`, 13 call sites, one pass |
+
+**R3-9's access control was already right.** `SensitiveController.read` has
+`requireRole('owner', 'admin', 'instructor')` and every read is written to `audit_log` by
+`readSensitive`. Only the presentation was missing. The new `canViewSensitive` flag on the
+single-student read hides a control the caller may not use — courtesy, not access control,
+and the endpoint still refuses independently.
+
+**R3-10 uses an explicit `href`, not `history.back()`.** Every one of the thirteen call
+sites already knew its parent. History is not "the previous screen in context": after a
+redirect it returns to the form just submitted, and from an emailed link it leaves the app.
+The visible label is always "Voltar"; the old contextual phrase survives as the accessible
+name, so screen-reader users keep the information that sighted users get from the page
+around them.
+
+**Round 3 is complete except R3-5's attendance rule**, which waits on slice 1.8.
+
+**The vacation schema is in `docs/data-model.md` under "Staff leave".** Three decisions
+there are worth knowing before touching it: days are rows rather than a range, a refused
+request archives its days by trigger so the day can be asked for again, and a rejection
+cannot be stored without a reason.
+
+**Entitlement is `membership.vacation_days_per_year`, defaulting to 22** — Portugal's
+statutory minimum — set per person by an owner or admin through
+`PUT /vacations/entitlement/:membershipId`. The gap story 6 flagged before it could be
+built.
+
+**Carry-over to 30 April is not tracked, and the balance says so on screen.**
+
+**R3-5 cannot be finished until 1.8 exists.** "A class with attendance already recorded
+cannot be removed" needs attendance, and there is no attendance table. Removing the
+"Repor aula" control and adding the confirmation are buildable now; the rule goes in with
+the slice that creates the data it depends on.
+
+**R3-6's `public_holiday` table was rejected in favour of `closure`.** The closure table
+already stores per-organization holidays with `source = 'national_holiday'`, a partial
+unique on `(organization_id, starts_on)`, and the Easter computus in
+`apps/api/src/classes/holidays.ts`. A municipal holiday is another `source`, not another
+table. The vacation calendar reads holidays by `source`, so an ordinary closure for
+building works never becomes a free vacation day.
+
+**R3-3 is done, so R3-6's municipal holidays are unblocked.** `holidays.ts` excluded them
+because "Poolse does not know which town a pool is in". `facility` now carries a city, a
+country and coordinates, chosen from the geocoder by a person who could see which Aveiro
+they were picking.
+
+**Counts are organization-wide, and the screen says so.** Neither a student nor a
+membership carries a facility, so "how many instructors at this site" is a question the
+schema cannot answer — deriving it through enrollment → class_group → pool → facility is a
+larger, different question. The panel shows the organization's numbers with a line saying
+that is what they are, so a club with two buildings is not misled by seeing the same
+figures on both. The tally includes `owner`, which story 2's five groups omit: a headcount
+that loses the person who runs the club is one nobody can reconcile against the room.
+
+**Open-Meteo's free tier is non-commercial only.** Fine now, not fine on the first paying
+customer. `OPEN_METEO_FORECAST_URL`, `OPEN_METEO_GEOCODING_URL` and `OPEN_METEO_API_KEY`
+exist from this first commit precisely so that day is a config change, and they are read in
+one file. The cache is in-process — it resets on deploy and is not shared between
+instances, which at 45 minutes per city is still nothing and avoids running Redis for a
+cache whose worst failure is one extra call to a free API.
+
+**R3-1's save path is the interesting part**, and it is written into `CLAUDE.md` as a
+convention because it will recur for every field Clerk also holds: the name goes to Clerk
+and comes back through the cache, never straight into `cached_first_name`. Clerk cannot
+reach localhost, so the API re-reads from Clerk immediately after writing rather than
+waiting for a webhook that will not arrive on a laptop.
+
 ## Phase 2 — money
 
 Split deliberately, because the two flows are different problems and merging them is the

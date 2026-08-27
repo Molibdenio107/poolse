@@ -41,7 +41,14 @@ export function isMemberRole(value: string): value is MemberRole {
 export function requireRole(...allowed: readonly MemberRole[]): void {
   const { roles } = currentTenant();
   if (!allowed.some((role) => roles.includes(role))) {
-    throw new ForbiddenException(`Requires one of: ${allowed.join(', ')}`);
+    // `forbidden_role` rather than the bare message: the caller is a member in
+    // good standing who simply may not do this, which is a different thing from
+    // TenantMiddleware's `no_organization` and deserves a different screen.
+    throw new ForbiddenException({
+      code: 'forbidden_role',
+      message: `Requires one of: ${allowed.join(', ')}`,
+      required: [...allowed],
+    });
   }
 }
 

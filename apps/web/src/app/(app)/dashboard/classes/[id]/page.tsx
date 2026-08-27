@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type ClassGroup, type Classes } from '@/lib/api';
 import { PersonAvatar } from '@/components/person-avatar';
+import { BackLink } from '@/components/back-link';
 import {
   AddSlotForm,
   ArchiveClassButton,
@@ -68,9 +69,7 @@ export default async function ClassPage({
         </div>
       </header>
 
-      <Link href="/dashboard/classes" className="text-sm text-primary hover:underline">
-        {t('classes.backToClasses')}
-      </Link>
+      <BackLink href="/dashboard/classes" label={t('classes.backToClasses')} />
 
       {missing && (
         <section className="rounded border border-border bg-surface p-5">

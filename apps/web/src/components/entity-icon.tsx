@@ -4,7 +4,9 @@ import {
   CalendarRange,
   Camera,
   GraduationCap,
+  HeartPulse,
   LayoutDashboard,
+  TrendingUp,
   Users,
   Waves,
   type LucideIcon,
@@ -33,6 +35,11 @@ const ICONS = {
   calendar: CalendarRange,
   people: Users,
   photo: Camera,
+  // Backlog round 3, story 9. `HeartPulse` rather than a cross or a pill: the
+  // record holds medical notes and consents, not medication, and a red cross
+  // reads as an emergency the screen is not reporting.
+  progress: TrendingUp,
+  medical: HeartPulse,
 } satisfies Record<string, LucideIcon>;
 
 export type EntityKind = keyof typeof ICONS;

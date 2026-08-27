@@ -186,8 +186,24 @@ done — `Dockerfile`, `railway.json`, `vercel.json`, migrations as a pre-deploy
 step, and a `/health` that returns 503 when the database is unreachable so a
 broken release rolls back instead of going live.
 
+## A trap worth knowing
+
+`pnpm build` and `pnpm dev` share `apps/web/.next`. Building while the dev server is up
+replaces the chunks it is serving and every request then 500s with
+`Cannot find module './NNNN.js'` — which looks exactly like a defect in whatever you just
+edited. Stop the dev server first, and note that killing it can leave the child `node`
+processes holding 3000 and 3001.
+
+`pnpm typecheck`, `pnpm i18n:check`, `pnpm db:test` and `pnpm api:test` all touch nothing
+in `.next` and are safe to run while it is up.
+
 ## Next slice
 
-**1.4 — class groups.** A turma with a level, a weekly schedule, an instructor,
-a capacity and a pool. Everything it needs now exists: sites, pools, staff with
-roles, students and levels.
+**Season selection in August.** `seasonOf` offers the season containing today, so
+for the whole of August it offers one that ends within days — an operator presses
+"Gerar a época", gets a year that is already over, and still sees an empty week.
+Diagnosed while fixing BUG-2 and deliberately left, because it is its own slice.
+
+Then **1.8, attendance marking** — the last thing between phase 1 and an operator
+running real classes on Poolse. And backlog round 2 has ten stories waiting; see
+`docs/roadmap.md`.

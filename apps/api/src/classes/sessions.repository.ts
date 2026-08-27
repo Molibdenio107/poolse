@@ -360,35 +360,40 @@ export async function sessionsForStudent(
 }
 
 /**
- * Calls off one class, or puts it back.
+ * Calls off one class. Nothing here puts one back.
+ *
+ * It used to take a boolean and do both. Backlog round 3, story 5 removed the
+ * operator-facing restore, and the `false` branch went with it rather than
+ * staying as an unreachable half of a function — a dead branch behind a boolean
+ * parameter is the easiest kind of code to reinstate by accident.
+ *
+ * The row is not deleted. `status = 'cancelled'` is what attendance history,
+ * invoicing and any later "was there a class that Tuesday?" all rest on; only
+ * the way back is gone, not the record.
  *
  * Never touches `closure_id`, which is what keeps the two kinds of cancellation
  * apart: a class called off here has no closure behind it, so the generator will
- * never quietly reinstate it.
+ * never quietly reinstate it. A class a *closure* took down still returns on its
+ * own when the closure is removed — that happens inside `generate_sessions`, in
+ * SQL, and is untouched by any of this.
  */
-export async function setSessionCancelled(
+export async function cancelSession(
   organizationId: string,
   sessionId: string,
-  cancelled: boolean,
   reason: string | null,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
-      cancelled
-        ? `UPDATE class_session
-              SET status = 'cancelled', cancellation_reason = $2
-            WHERE id = $1 AND status <> 'cancelled'
-          RETURNING id`
-        : `UPDATE class_session
-              SET status = 'scheduled', cancellation_reason = NULL, closure_id = NULL
-            WHERE id = $1 AND status = 'cancelled'
-          RETURNING id`,
-      cancelled ? [sessionId, reason] : [sessionId],
+      `UPDATE class_session
+          SET status = 'cancelled', cancellation_reason = $2
+        WHERE id = $1 AND status <> 'cancelled'
+      RETURNING id`,
+      [sessionId, reason],
     );
     if (!rows[0]) return false;
 
     await recordAudit(tx, {
-      action: cancelled ? 'class_session.cancelled' : 'class_session.restored',
+      action: 'class_session.cancelled',
       entityType: 'class_session',
       entityId: sessionId,
       data: { reason },

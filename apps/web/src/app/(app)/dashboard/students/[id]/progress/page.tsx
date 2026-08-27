@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -11,6 +10,7 @@ import {
 import { formatTime, ProgressChart } from '@/components/progress-chart';
 import { Hint } from '@/components/ui/tooltip';
 import { AddRecordForm, ArchiveRecordButton, FavouriteStrokeForm } from './progress-forms';
+import { BackLink } from '@/components/back-link';
 
 /**
  * Backlog story 6 — a student's performances over time.
@@ -79,9 +79,7 @@ export default async function ProgressPage({
         </div>
       </header>
 
-      <Link href={`/dashboard/students/${id}`} className="text-sm text-primary hover:underline">
-        {t('sensitive.backToStudent')}
-      </Link>
+      <BackLink href={`/dashboard/students/${id}`} label={t('sensitive.backToStudent')} />
 
       {missing && (
         <section className="rounded border border-border bg-surface p-5">

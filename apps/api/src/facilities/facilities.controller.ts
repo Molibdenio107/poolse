@@ -14,16 +14,35 @@ import { hasRole, requireRole } from '../tenant/roles.js';
 import {
   archiveFacility,
   archivePool,
+  countPeople,
   createFacility,
   createPool,
   DuplicateNameError,
+  findFacility,
   findPool,
   listFacilities,
+  updateFacility,
   updatePool,
   type Facility,
+  type FacilityDetail,
+  type PeopleCounts,
   type PoolDetail,
   type PoolKind,
 } from './facilities.repository.js';
+
+interface FacilityDetailResponse extends FacilityDetail {
+  organizationId: string;
+  canManage: boolean;
+  /**
+   * Absent for anybody who is not an owner or an admin.
+   *
+   * Not squeamishness about a headcount — it is that every count links through
+   * to a filtered list, and those lists are `/dashboard/people`, which story 8
+   * restricted to exactly those two roles. Sending an instructor a row of links
+   * that all end in a refusal is worse than not showing the row.
+   */
+  counts?: PeopleCounts;
+}
 
 /**
  * Timezones offered for a facility.
@@ -89,6 +108,85 @@ export class FacilitiesController {
     // Carried in the response for the same reason the listings carry it: the
     // client never names its own tenant, it echoes back the one the API resolved.
     return { ...detail, organizationId, canManage: hasRole('owner', 'admin') };
+  }
+
+  /**
+   * One site: what it is, where it is, its pools, and the size of the operation.
+   *
+   * Declared after `pools/:poolId` on purpose. Nest matches routes in
+   * declaration order, and a `:facilityId` parameter sitting above a literal
+   * `pools` segment would swallow `/facilities/pools/<id>` and answer "no such
+   * site" for every pool in the product.
+   */
+  @Get(':facilityId')
+  async one(@Param('facilityId') facilityId: string): Promise<FacilityDetailResponse> {
+    const { organizationId } = currentTenant();
+
+    const detail = await findFacility(organizationId, facilityId);
+    if (!detail) throw new NotFoundException('No such site');
+
+    const privileged = hasRole('owner', 'admin');
+
+    return {
+      ...detail,
+      organizationId,
+      canManage: privileged,
+      ...(privileged ? { counts: await countPeople(organizationId) } : {}),
+    };
+  }
+
+  /**
+   * Renames a site, or moves it — backlog round 3, stories 2 and 3.
+   *
+   * `city`, `countryCode`, `latitude` and `longitude` travel as one unit: the
+   * city autocomplete resolves all four at the moment somebody picks from the
+   * list, and the database refuses half a coordinate. Sending `city` alone
+   * clears the rest, which is the correct reading of "this is somewhere else
+   * now".
+   */
+  @Patch(':facilityId')
+  async update(
+    @Param('facilityId') facilityId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ updated: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const input: Parameters<typeof updateFacility>[2] = {};
+
+    if (body['name'] !== undefined) {
+      input.name = text(body['name'], 'name', { required: true })!;
+    }
+    if (body['address'] !== undefined) {
+      input.address = text(body['address'], 'address', { max: 500 });
+    }
+
+    if (body['city'] !== undefined) {
+      const city = text(body['city'], 'city', { max: 120 });
+      input.city = city;
+
+      if (city === null) {
+        // Clearing the city clears the place. A coordinate with no name on it is
+        // a number nobody can check, and the weather panel would still be
+        // showing a forecast for a town the operator thought they had removed.
+        input.countryCode = null;
+        input.latitude = null;
+        input.longitude = null;
+      } else {
+        input.countryCode = countryCode(body['countryCode']);
+        input.latitude = coordinate(body['latitude'], 'latitude', 90);
+        input.longitude = coordinate(body['longitude'], 'longitude', 180);
+
+        if ((input.latitude === null) !== (input.longitude === null)) {
+          throw new BadRequestException('latitude and longitude must be sent together');
+        }
+      }
+    }
+
+    if (!(await updateFacility(organizationId, facilityId, input))) {
+      throw new NotFoundException('No such site');
+    }
+    return { updated: true };
   }
 
   @Post()
@@ -266,4 +364,32 @@ function positiveInteger(value: unknown, field: string): number | null {
     throw new BadRequestException(`${field} must be a positive whole number`);
   }
   return parsed;
+}
+
+/** ISO 3166-1 alpha-2, upper-cased here so the CHECK constraint never sees 'pt'. */
+function countryCode(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+
+  const code = String(value).trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) {
+    throw new BadRequestException('countryCode must be two letters, ISO 3166-1 alpha-2');
+  }
+  return code;
+}
+
+/**
+ * A degree value, rounded to the six decimal places the column stores.
+ *
+ * Rounded here rather than left to Postgres so the number the API returns is the
+ * number it wrote — otherwise a client that saves and re-reads sees its own
+ * input change under it, which looks like a bug and is impossible to explain.
+ */
+function coordinate(value: unknown, field: string, limit: number): number | null {
+  if (value === undefined || value === null || value === '') return null;
+
+  const parsed = typeof value === 'number' ? value : Number(String(value).trim());
+  if (!Number.isFinite(parsed) || parsed < -limit || parsed > limit) {
+    throw new BadRequestException(`${field} must be between -${limit} and ${limit} degrees`);
+  }
+  return Math.round(parsed * 1e6) / 1e6;
 }

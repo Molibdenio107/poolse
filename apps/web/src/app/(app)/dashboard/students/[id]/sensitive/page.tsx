@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -6,6 +5,7 @@ import {
   type SensitiveRecord,
   type Student,
 } from '../../../../../../lib/api';
+import { BackLink } from '@/components/back-link';
 import {
   MedicalNotesForm,
   RecordConsentForm,
@@ -62,9 +62,7 @@ export default async function SensitivePage({
         </div>
       </header>
 
-      <Link href={`/dashboard/students/${id}`} className="text-sm text-primary hover:underline">
-        {t('sensitive.backToStudent')}
-      </Link>
+      <BackLink href={`/dashboard/students/${id}`} label={t('sensitive.backToStudent')} />
 
       {notPermitted && (
         <section className="rounded border border-border bg-surface p-5">

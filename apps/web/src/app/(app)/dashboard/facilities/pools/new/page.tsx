@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Facilities } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
 import { PoolForm } from '../../pool-form';
+import { BackLink } from '@/components/back-link';
 
 /**
  * Adding a pool, on its own page.
@@ -49,9 +50,7 @@ export default async function NewPoolPage({
         </div>
       </header>
 
-      <Link href="/dashboard/facilities" className="text-sm text-primary hover:underline">
-        {t('facilities.backToFacilities')}
-      </Link>
+      <BackLink href="/dashboard/facilities" label={t('facilities.backToFacilities')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">

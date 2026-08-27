@@ -204,25 +204,39 @@ export function RemoveClosure({
 }
 
 /**
- * Calls off one class, or puts it back.
+ * Calls off one class. It does not put it back — backlog round 3, story 5.
  *
- * A class cancelled here is cancelled by a person, and stays cancelled through
- * every regeneration — unlike one a closure took down, which comes back if the
- * closure goes. The two are told apart in the database by whether a closure id
- * is attached; nothing in this form has to know that, but the labels do differ:
- * a closure's cancellation is undone by removing the closure, not from here.
+ * The restore control is gone, deliberately and on the operator's instruction.
+ * What is *not* gone is the row: a cancelled session keeps `status = 'cancelled'`
+ * rather than being deleted, because attendance history, invoicing and any later
+ * "was there a class that Tuesday?" all rest on it. Nothing here offers to bring
+ * it back; the record simply survives underneath.
+ *
+ * A class the *closure* took down is a different thing and still says so. That
+ * one is undone by removing the closure, which is a real action on a real
+ * screen, so the label points there rather than pretending nothing can be done.
+ *
+ * The label stays "Cancelar aula" rather than "Remover": a class that does not
+ * happen has been cancelled, and calling it removal would suggest the evening is
+ * erased from the record, which is exactly what does not happen.
  */
 export function CancelSession({
   organizationId,
   sessionId,
+  className,
+  when,
   cancelled,
   byClosure,
 }: {
   organizationId: string;
   sessionId: string;
+  /** The turma's name, for the confirmation. */
+  className: string;
+  /** Date and time, already formatted in the reader's locale. */
+  when: string;
   cancelled: boolean;
   byClosure: boolean;
-}): React.ReactElement {
+}): React.ReactElement | null {
   const t = useTranslations();
   const [state, action, pending] = useActionState(cancelSessionAction, INITIAL);
   const [open, setOpen] = useState(false);
@@ -231,32 +245,17 @@ export function CancelSession({
     return <span className="text-xs text-foreground-muted">{t('calendar.byClosure')}</span>;
   }
 
-  if (cancelled) {
-    return (
-      <form action={action} className="flex items-center gap-2">
-        <input type="hidden" name="organizationId" value={organizationId} />
-        <input type="hidden" name="sessionId" value={sessionId} />
-        <input type="hidden" name="restore" value="true" />
-        <button
-          type="submit"
-          disabled={pending}
-          className="text-sm text-primary hover:underline disabled:opacity-60"
-        >
-          {t('calendar.restore')}
-        </button>
-        {state.errorKey !== undefined && (
-          <span className="text-xs text-danger">{t(state.errorKey)}</span>
-        )}
-      </form>
-    );
-  }
+  // Cancelled by a person: there is nothing to offer. The slot is already struck
+  // through and carries the reason, so an empty action area says everything a
+  // control would have, minus the one it is no longer allowed to say.
+  if (cancelled) return null;
 
   if (!open) {
     return (
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-sm text-danger hover:underline"
+        className="rounded text-sm text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {t('calendar.cancel')}
       </button>
@@ -267,6 +266,17 @@ export function CancelSession({
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="sessionId" value={sessionId} />
+
+      {/*
+        Named, because the story asks and because it is the difference between a
+        confirmation and a speed bump. Seven columns of small cards are easy to
+        mis-click, and "are you sure?" cannot tell you that you are about to call
+        off Thursday's class instead of Tuesday's.
+      */}
+      <p className="text-sm font-medium">
+        {t('calendar.confirmQuestion', { name: className, when })}
+      </p>
+
       <input
         name="reason"
         maxLength={200}

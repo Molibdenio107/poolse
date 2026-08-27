@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Classes } from '@/lib/api';
 import { ClassForm } from '../class-forms';
+import { BackLink } from '@/components/back-link';
 
 /**
  * A new turma.
@@ -33,9 +33,7 @@ export default async function NewClassPage(): Promise<React.ReactElement> {
         </div>
       </header>
 
-      <Link href="/dashboard/classes" className="text-sm text-primary hover:underline">
-        {t('classes.backToClasses')}
-      </Link>
+      <BackLink href="/dashboard/classes" label={t('classes.backToClasses')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">

@@ -108,22 +108,31 @@ export async function removeClosureAction(
   return { ok: true };
 }
 
+/**
+ * Cancels one class. There is no restore path here any more — backlog round 3,
+ * story 5.
+ *
+ * `revalidateCalendar` is what makes "updates immediately, with no manual
+ * refresh" true: revalidating inside a server action re-renders the current
+ * route on the client, so the slot is struck through by the time the button
+ * stops spinning. The student pages go with it, because the same class has just
+ * disappeared from somebody's own week.
+ */
 export async function cancelSessionAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const organizationId = String(formData.get('organizationId') ?? '');
   const sessionId = String(formData.get('sessionId') ?? '');
-  const restore = formData.get('restore') === 'true';
 
   try {
     await apiPost(
-      `/sessions/${sessionId}/${restore ? 'restore' : 'cancel'}`,
-      restore ? {} : { reason: String(formData.get('reason') ?? '').trim() },
+      `/sessions/${sessionId}/cancel`,
+      { reason: String(formData.get('reason') ?? '').trim() },
       { organizationId },
     );
   } catch (error) {
-    return failure(error, restore ? 'calendar.restoreFailed' : 'calendar.cancelFailed');
+    return failure(error, 'calendar.cancelFailed');
   }
 
   revalidateCalendar();

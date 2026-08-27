@@ -340,4 +340,84 @@ BEGIN
   RAISE NOTICE 'PASS test 9: photographs cannot cross tenants, and cannot be attached twice';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 10 — a site's location is real, complete, and invisible across tenants
+--
+-- Backlog round 3, story 3. Three things at once, because they are one property:
+-- the coordinates are the input to a weather lookup, and a wrong one is not an
+-- error anybody sees — it is the right town's name over the wrong town's sky.
+--
+--   a. Half a coordinate cannot be stored. A latitude with no longitude looks
+--      placed and cannot be plotted, and every reader downstream would need a
+--      branch for a state that should never exist.
+--   b. The ranges are the ranges. -8.65 is Aveiro; -800 is a typo that would be
+--      accepted forever by a text column.
+--   c. Another tenant sees none of it. `facility` is tenant-scoped and these are
+--      new columns on it, so the policy already covers them — this asserts that
+--      rather than assuming it, which is the whole habit this file exists for.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_a uuid; v_b uuid; v_facility uuid; n int;
+BEGIN
+  v_a := (SELECT id FROM organization WHERE slug = 'clube-a');
+  v_b := (SELECT id FROM organization WHERE slug = 'clube-b');
+
+  INSERT INTO facility (organization_id, name, city, country_code, latitude, longitude)
+  VALUES (v_a, 'Piscinas Municipais de Aveiro', 'Aveiro', 'PT', 40.645750, -8.646430)
+  RETURNING id INTO v_facility;
+
+  -- a. Half a coordinate.
+  BEGIN
+    UPDATE facility SET longitude = NULL WHERE id = v_facility;
+    RAISE EXCEPTION 'FAIL test 10a: a latitude was stored with no longitude';
+  EXCEPTION
+    WHEN check_violation THEN NULL;
+  END;
+
+  -- b. Out of range, and a lower-case country code.
+  BEGIN
+    UPDATE facility SET longitude = -800 WHERE id = v_facility;
+    RAISE EXCEPTION 'FAIL test 10b: an impossible longitude was stored';
+  EXCEPTION
+    WHEN check_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE facility SET country_code = 'pt' WHERE id = v_facility;
+    RAISE EXCEPTION 'FAIL test 10c: a lower-case country code was stored';
+  EXCEPTION
+    WHEN check_violation THEN NULL;
+  END;
+
+  -- The stored value survives the round trip exactly. numeric(9,6) is not a
+  -- float, and this is the assertion that would catch somebody "simplifying" it
+  -- into one.
+  SELECT count(*) INTO n
+    FROM facility
+   WHERE id = v_facility AND latitude = 40.645750 AND longitude = -8.646430;
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 10d: the coordinates did not round-trip exactly';
+  END IF;
+
+  -- c. Across tenants.
+  SET LOCAL ROLE poolse_app;
+
+  PERFORM set_config('app.organization_id', v_a::text, true);
+  SELECT count(*) INTO n FROM facility WHERE city = 'Aveiro';
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 10e: the owning organization saw % rows', n;
+  END IF;
+
+  PERFORM set_config('app.organization_id', v_b::text, true);
+  SELECT count(*) INTO n FROM facility WHERE city = 'Aveiro';
+  IF n <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 10f: another tenant read % locations', n;
+  END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 10: a location is complete, in range, exact, and tenant-scoped';
+END $$;
+
 ROLLBACK;
+

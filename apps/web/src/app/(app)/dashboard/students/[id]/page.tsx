@@ -14,6 +14,8 @@ import { PersonAvatar } from '@/components/person-avatar';
 import { PhotoUpload } from '@/components/photo-upload';
 import { photoUrlFor } from '@/lib/photo';
 import { StudentForm } from '../student-forms';
+import { BackLink } from '@/components/back-link';
+import { ActionButton } from '@/components/action-button';
 
 /**
  * One student's record.
@@ -99,29 +101,45 @@ export default async function StudentPage({
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <Link href="/dashboard/students" className="text-sm text-primary hover:underline">
-          {t('students.backToRegister')}
-        </Link>
-        {/*
-          A link rather than a section on this page, and the hint says why:
-          opening it is recorded. Special-category data should be reached
-          deliberately, not encountered while doing something else.
-        */}
-        <Link
-          href={`/dashboard/students/${id}/progress`}
-          className="text-sm text-primary hover:underline"
-        >
-          {t('progress.open')}
-        </Link>
-        <Link
-          href={`/dashboard/students/${id}/sensitive`}
-          className="text-sm text-primary hover:underline"
-        >
-          {t('sensitive.open')}
-        </Link>
-        <span className="text-sm text-foreground-muted">{t('sensitive.openHint')}</span>
-      </div>
+      <BackLink href="/dashboard/students" label={t('students.backToRegister')} />
+
+      {/*
+        The record's action area — backlog round 3, story 9.
+        
+        Separate from the back link, which is navigation rather than an action,
+        and rendered only once the student has loaded: two buttons offering to
+        open the record of somebody who is not there would be a worse answer than
+        nothing.
+
+        Both remain their own screen rather than a section here, and the hint
+        beside them says why: opening the medical record is written to the audit
+        log. Special-category data about a child should be reached deliberately,
+        not scrolled past while doing something else — which is exactly why
+        making it easier to find raises the stakes on the logging rather than
+        lowering them.
+      */}
+      {student !== null && (student.canViewProgress !== false || student.canViewSensitive !== false) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {student.canViewProgress !== false && (
+            <ActionButton
+              href={`/dashboard/students/${id}/progress`}
+              icon="progress"
+              label={t('progress.open')}
+            />
+          )}
+          {student.canViewSensitive !== false && (
+            <>
+              <ActionButton
+                href={`/dashboard/students/${id}/sensitive`}
+                icon="medical"
+                tone="sensitive"
+                label={t('sensitive.open')}
+              />
+              <span className="text-sm text-foreground-muted">{t('sensitive.openHint')}</span>
+            </>
+          )}
+        </div>
+      )}
 
       {missing && (
         <section className="rounded border border-border bg-surface p-5">

@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Facilities } from '@/lib/api';
 import { CreateFacilityForm } from '../facility-forms';
+import { BackLink } from '@/components/back-link';
 
 /**
  * A new site.
@@ -30,12 +30,7 @@ export default async function NewFacilityPage(): Promise<React.ReactElement> {
         <p className="text-foreground-muted">{t('facilities.addSiteHint')}</p>
       </header>
 
-      <Link
-        href="/dashboard/facilities"
-        className="self-start text-sm text-primary hover:underline"
-      >
-        {t('facilities.backToSites')}
-      </Link>
+      <BackLink href="/dashboard/facilities" label={t('facilities.backToSites')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">

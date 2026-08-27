@@ -12,6 +12,18 @@ import {
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
+
+interface StudentDetail extends Student {
+  /**
+   * Whether this caller may open the medical record.
+   *
+   * Kept in step with `SensitiveController.read`, which is where the rule
+   * actually lives. Two places knowing one rule is a cost paid knowingly: the
+   * alternative is a screen that renders a button leading to a 403.
+   */
+  canViewSensitive: boolean;
+  canViewProgress: boolean;
+}
 import {
   archiveLevel,
   archiveStudent,
@@ -72,13 +84,22 @@ export class StudentsController {
   }
 
   @Get(':id')
-  async one(@Param('id') id: string): Promise<Student> {
+  async one(@Param('id') id: string): Promise<StudentDetail> {
     const { organizationId } = currentTenant();
     const student = await findStudent(organizationId, id);
     // Also the answer when the id belongs to another tenant: RLS makes the two
     // indistinguishable from here, which is the point.
     if (!student) throw new NotFoundException('No such student');
-    return student;
+
+    // So the record can hide a control its owner may not use. Not access
+    // control — SensitiveController and RecordsController each enforce their own
+    // and would refuse the request anyway. This only stops the screen offering a
+    // door that opens onto a refusal.
+    return {
+      ...student,
+      canViewSensitive: hasRole('owner', 'admin', 'instructor'),
+      canViewProgress: hasRole('owner', 'admin', 'instructor'),
+    };
   }
 
   @Post()

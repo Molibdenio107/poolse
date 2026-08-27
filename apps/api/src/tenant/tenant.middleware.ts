@@ -28,12 +28,18 @@ export class TenantMiddleware implements NestMiddleware {
       ? memberships.find((candidate) => candidate.organizationId === requestedOrgId)
       : memberships[0];
 
+    // Two different 403s live in this API and a client cannot act on either
+    // without being able to tell them apart: "you are in no organization" sends
+    // someone to create one, "your role does not allow this" does not. The HTTP
+    // status is the same for both, so the distinction is carried in a stable
+    // `code` rather than in prose a translation would break.
     if (!membership) {
-      throw new ForbiddenException(
-        requestedOrgId
+      throw new ForbiddenException({
+        code: 'no_organization',
+        message: requestedOrgId
           ? 'No active membership for this organization'
           : 'This account belongs to no organization',
-      );
+      });
     }
 
     const context: TenantContext = {

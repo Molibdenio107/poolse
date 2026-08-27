@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Closure, type Closures } from '@/lib/api';
 import { longDate, shortDate } from '@/lib/dates';
 import { ClosureForm, RemoveClosure } from '../calendar-forms';
+import { BackLink } from '@/components/back-link';
 
 /**
  * When the pool is shut — slice 1.5.
@@ -43,9 +43,7 @@ export default async function ClosuresPage(): Promise<React.ReactElement> {
         </div>
       </header>
 
-      <Link href="/dashboard/calendar" className="self-start text-sm text-primary hover:underline">
-        {t('calendar.backToCalendar')}
-      </Link>
+      <BackLink href="/dashboard/calendar" label={t('calendar.backToCalendar')} />
 
       {noOrganization && (
         <section className="rounded border border-border bg-surface p-5">

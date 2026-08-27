@@ -15,10 +15,52 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /**
+     * The API's stable machine-readable reason, where it sends one.
+     *
+     * Only `403` has two meanings worth separating today — `no_organization`
+     * (you are in none, go and create one) and `forbidden_role` (you are a
+     * member, this is not yours). Branching on the prose instead would break the
+     * first time somebody rewords an error message.
+     */
+    readonly code: string | null = null,
+    /**
+     * Field name to translation key, when the API rejected specific fields.
+     *
+     * Keys rather than sentences, because the API has no message catalogues —
+     * the web app owns every user-facing string, in both locales.
+     */
+    readonly fields: Record<string, string> = {},
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/**
+ * Nest sends its exceptions as JSON, but a proxy, a crash or a 502 from the
+ * platform will send something else entirely — so this never assumes it parsed.
+ */
+function readError(status: number, body: string, statusText: string): ApiError {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (parsed !== null && typeof parsed === 'object') {
+      const record = parsed as Record<string, unknown>;
+      const code = typeof record['code'] === 'string' ? record['code'] : null;
+      const message = typeof record['message'] === 'string' ? record['message'] : body;
+      const raw = record['fields'];
+      const fields: Record<string, string> = {};
+      if (raw !== null && typeof raw === 'object') {
+        for (const [field, key] of Object.entries(raw as Record<string, unknown>)) {
+          if (typeof key === 'string') fields[field] = key;
+        }
+      }
+      return new ApiError(status, message, code, fields);
+    }
+  } catch {
+    // Not JSON. The raw body is still the most useful thing to show.
+  }
+  return new ApiError(status, body || statusText);
 }
 
 function baseUrl(): string {
@@ -59,7 +101,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const response = await fetch(`${baseUrl()}${path}`, init);
 
   if (!response.ok) {
-    throw new ApiError(response.status, (await response.text()) || response.statusText);
+    throw readError(response.status, await response.text(), response.statusText);
   }
 
   // 204, and any other body-less success.
@@ -108,6 +150,9 @@ export interface Me {
     avatarUrl: string | null;
     locale: string;
     theme: string;
+    /** ISO date, YYYY-MM-DD. */
+    birthDate: string | null;
+    contactPhone: string | null;
   };
   memberships: {
     appUserId: string;
@@ -224,6 +269,130 @@ export interface Facility {
   photos: Photo[];
 }
 
+/** Where a site is, once somebody has chosen it from the geocoder. */
+export interface Place {
+  city: string | null;
+  countryCode: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+/** One candidate from the city autocomplete. */
+export interface PlaceSuggestion {
+  id: number;
+  city: string;
+  countryCode: string | null;
+  country: string | null;
+  /** "Distrito de Aveiro" — what tells two places of the same name apart. */
+  region: string | null;
+  latitude: number;
+  longitude: number;
+}
+
+/**
+ * Headcounts, organization-wide.
+ *
+ * Not per site: neither a student nor a membership carries a facility, so these
+ * are the organization's numbers shown on its site page. Absent entirely for
+ * anybody who is not an owner or an admin.
+ */
+export interface PeopleCounts {
+  student: number;
+  owner: number;
+  admin: number;
+  instructor: number;
+  maintenance: number;
+  guardian: number;
+}
+
+export interface FacilityDetail extends Facility, Place {
+  organizationId: string;
+  canManage: boolean;
+  counts?: PeopleCounts;
+}
+
+export type VacationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+
+export interface VacationRequest {
+  id: string;
+  membershipId: string;
+  personName: string | null;
+  status: VacationStatus;
+  requestedAt: string;
+  decidedAt: string | null;
+  decidedByName: string | null;
+  decisionNote: string | null;
+  /** ISO dates, ascending. */
+  days: string[];
+}
+
+export interface Holiday {
+  day: string;
+  name: string;
+  scope: 'national' | 'municipal';
+}
+
+export interface Balance {
+  entitlement: number;
+  taken: number;
+  /** Asked for and not yet answered. Does not reduce `remaining`. */
+  requested: number;
+  remaining: number;
+}
+
+export interface MyVacations {
+  organizationId: string;
+  year: number;
+  membershipId: string;
+  balance: Balance;
+  requests: VacationRequest[];
+  holidays: Holiday[];
+  canApprove: boolean;
+}
+
+export interface PendingVacations {
+  organizationId: string;
+  requests: (VacationRequest & { othersOff: { name: string | null; day: string }[] })[];
+}
+
+export interface TeamMember {
+  membershipId: string;
+  name: string | null;
+  /** Approved days only — a pending request is not cover anybody can plan around. */
+  days: string[];
+}
+
+export interface TeamVacations {
+  organizationId: string;
+  year: number;
+  members: TeamMember[];
+  holidays: Holiday[];
+}
+
+export interface ForecastDay {
+  date: string;
+  minC: number | null;
+  maxC: number | null;
+  weatherCode: number | null;
+  precipitationMm: number | null;
+}
+
+export interface Weather {
+  temperatureC: number | null;
+  apparentTemperatureC: number | null;
+  windSpeedKmh: number | null;
+  precipitationMm: number | null;
+  /** WMO code, translated in this app — the API holds no user-facing strings. */
+  weatherCode: number | null;
+  isDay: boolean | null;
+  days: ForecastDay[];
+}
+
+export interface WeatherResponse {
+  available: boolean;
+  weather: Weather | null;
+}
+
 export interface PoolDetail extends Pool {
   organizationId: string;
   facilityId: string;
@@ -260,6 +429,14 @@ export interface Student {
   /** Null unless a live `photo` consent exists — the API decides, not the caller. */
   photoStorageKey: string | null;
   photoConsent: boolean;
+  /**
+   * Present on the single-student read, absent from the list.
+   *
+   * The record hides controls this caller may not use; the endpoints behind them
+   * refuse independently, so these are courtesy rather than access control.
+   */
+  canViewSensitive?: boolean;
+  canViewProgress?: boolean;
 }
 
 export interface Students {

@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '../../../../../lib/api';
 import { ArchiveLevelButton, CreateLevelForm, MoveLevelButton } from './level-forms';
+import { BackLink } from '@/components/back-link';
 
 /**
  * The progression an operator puts their students through.
@@ -33,9 +33,7 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
         </div>
       </header>
 
-      <Link href="/dashboard/students" className="text-sm text-primary hover:underline">
-        {t('students.backToRegister')}
-      </Link>
+      <BackLink href="/dashboard/students" label={t('students.backToRegister')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">

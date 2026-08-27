@@ -31,15 +31,24 @@ interface PeopleResponse {
 /**
  * Who is in this organization, and who has been asked to be.
  *
- * Readable by any member: an instructor seeing their colleagues is not a
- * privilege worth gating, and the list carries nothing an instructor cannot
- * already see standing in the building. Acting on it is gated — see
- * InvitationsController.
+ * Restricted to `owner` and `admin` — backlog round 2, story 8. The earlier
+ * reasoning here was that an instructor seeing their colleagues is not a
+ * privilege worth gating, and standing in the building that is true. What is not
+ * on the pool deck is the rest of this response: email addresses, who holds which
+ * role, and every pending invitation with its expiry. That is staff
+ * administration, and `docs/product.md` puts staff administration with the people
+ * who run the organization.
+ *
+ * The check is here and not only in the navigation, because a hidden menu item is
+ * not access control — the URL is still typeable and the API is still callable.
+ * Instructors keep the students in their own turmas; this gates colleagues'
+ * accounts, not teaching.
  */
 @Controller('people')
 export class PeopleController {
   @Get()
   async list(): Promise<PeopleResponse> {
+    requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
     // Both are tenant-scoped reads on the same organization; running them

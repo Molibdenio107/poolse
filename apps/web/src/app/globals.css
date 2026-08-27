@@ -28,6 +28,19 @@
 
 @layer base {
   :root {
+    /*
+     * The theme the *browser* styles native controls from — checkboxes, radios,
+     * selects, date pickers, scrollbars. It has to be a single value, not
+     * `light dark`, and it has to sit beside the tokens rather than on `html`.
+     *
+     * `color-scheme: light dark` says "follow the operating system", and the
+     * operating system does not know about the `.dark` class this app toggles.
+     * An OS set to dark with the app set to light therefore rendered a black
+     * checkbox on a white page — reading as checked when it was not. Naming the
+     * scheme per theme is what keeps the two halves of the page agreeing.
+     */
+    color-scheme: light;
+
     --primary: 103 166 182;
     --primary-foreground: 255 255 255;
     --complementary: 179 212 157;
@@ -63,6 +76,8 @@
   }
 
   .dark {
+    color-scheme: dark;
+
     --primary: 126 186 201;
     --primary-foreground: 12 18 21;
     --complementary: 154 191 131;
@@ -93,10 +108,6 @@
     --destructive-foreground: 12 18 21;
     --input: 44 55 63;
     --ring: 126 186 201;
-  }
-
-  html {
-    color-scheme: light dark;
   }
 
   body {

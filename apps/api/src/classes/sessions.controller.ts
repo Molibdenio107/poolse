@@ -18,7 +18,7 @@ import {
   listClosures,
   listSessions,
   sessionsForStudent,
-  setSessionCancelled,
+  cancelSession,
   setSubstitute,
   type Closure,
   type GenerationResult,
@@ -180,22 +180,26 @@ export class SessionsCalendarController {
       throw new BadRequestException(`reason may be at most ${MAX_REASON} characters`);
     }
 
-    if (!(await setSessionCancelled(organizationId, id, true, reason || null))) {
+    if (!(await cancelSession(organizationId, id, reason || null))) {
       throw new NotFoundException('No such class, or it is already cancelled');
     }
     return { cancelled: true };
   }
 
-  @Post(':id/restore')
-  async restore(@Param('id') id: string): Promise<{ restored: true }> {
-    requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
-
-    if (!(await setSessionCancelled(organizationId, id, false, null))) {
-      throw new NotFoundException('No such class, or it is not cancelled');
-    }
-    return { restored: true };
-  }
+  /*
+   * There is no `POST :id/restore`. Backlog round 3, story 5 removed the
+   * operator-facing restore, and the endpoint went with the control rather than
+   * staying behind as the one caller-less route in the API — dead code that
+   * implements a withdrawn feature is how the feature comes back by accident.
+   *
+   * A class cancelled by a *closure* still returns on its own: `generate_sessions`
+   * restores those in SQL when the closure is removed, which is a different
+   * mechanism, still covered by `sessions.sql` test 5, and untouched by any of
+   * this.
+   *
+   * Reinstating the operator-facing restore is a revert of one commit if the
+   * decision changes.
+   */
 
   /**
    * Who is taking it instead. Null clears the substitution and hands the class

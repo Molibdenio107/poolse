@@ -19,6 +19,8 @@ import { SensitiveController } from './sensitive/sensitive.controller.js';
 import { RecordsController } from './students/records.controller.js';
 import { LevelsController, StudentsController } from './students/students.controller.js';
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
+import { VacationsController } from './vacations/vacations.controller.js';
+import { PlacesController, WeatherController } from './weather/weather.controller.js';
 import { ClerkWebhookController } from './webhooks/clerk-webhook.controller.js';
 
 /** Public: no session token expected. Health is for the platform, webhooks authenticate by signature. */
@@ -58,6 +60,9 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     StudentsController,
     LevelsController,
     SensitiveController,
+    WeatherController,
+    PlacesController,
+    VacationsController,
     RecordsController,
     JoinController,
   ],

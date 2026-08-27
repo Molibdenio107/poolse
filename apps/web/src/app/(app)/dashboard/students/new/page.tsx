@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '@/lib/api';
 import { StudentForm } from '../student-forms';
+import { BackLink } from '@/components/back-link';
 
 /**
  * A new student.
@@ -34,9 +34,7 @@ export default async function NewStudentPage(): Promise<React.ReactElement> {
         <p className="text-foreground-muted">{t('students.addHint')}</p>
       </header>
 
-      <Link href="/dashboard/students" className="self-start text-sm text-primary hover:underline">
-        {t('students.backToRegister')}
-      </Link>
+      <BackLink href="/dashboard/students" label={t('students.backToRegister')} />
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">

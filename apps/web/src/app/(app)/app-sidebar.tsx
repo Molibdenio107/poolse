@@ -25,12 +25,19 @@ import { cn } from '@/lib/utils';
  * Below `md` it lays out as a scrolling strip across the top. Poolse's backoffice
  * is a desktop product — the phone-shaped version of this is the mobile app in
  * phase 3, not a hamburger menu bolted onto a table.
+ *
+ * Some sections are role-restricted. Hiding one is a courtesy, not a control:
+ * every restricted section's API refuses the request as well, and that refusal is
+ * the thing that actually protects it. A menu that is merely absent is a URL
+ * somebody can still type.
  */
 interface Section {
   href: string;
   key: string;
   icon: EntityKind;
   children?: { href: string; key: string }[];
+  /** Absent means everybody. Present means only these roles. */
+  roles?: readonly string[];
 }
 
 const SECTIONS: Section[] = [
@@ -41,7 +48,13 @@ const SECTIONS: Section[] = [
     href: '/dashboard/calendar',
     key: 'calendar.title',
     icon: 'calendar',
-    children: [{ href: '/dashboard/calendar/closures', key: 'calendar.closures' }],
+    children: [
+      { href: '/dashboard/calendar/closures', key: 'calendar.closures' },
+      // Backlog round 3, story 6 puts Férias under Calendário. It belongs here:
+      // both answer "who is where, and when", and leave is the thing that makes
+      // a turma need a substitute.
+      { href: '/dashboard/calendar/vacations', key: 'vacations.title' },
+    ],
   },
   {
     href: '/dashboard/students',
@@ -49,7 +62,11 @@ const SECTIONS: Section[] = [
     icon: 'student',
     children: [{ href: '/dashboard/students/levels', key: 'students.levels' }],
   },
-  { href: '/dashboard/people', key: 'people.title', icon: 'people' },
+  // Staff administration — emails, roles, pending invitations. Backlog round 2,
+  // story 8. `manager` is not in this list because it is not in the schema:
+  // `member_role` is owner, admin, instructor, maintenance, student, guardian,
+  // and the story's manager is this product's admin.
+  { href: '/dashboard/people', key: 'people.title', icon: 'people', roles: ['owner', 'admin'] },
 ];
 
 /**
@@ -67,9 +84,13 @@ const LINK = 'flex items-center gap-2 rounded px-3 py-2 text-sm whitespace-nowra
 const ACTIVE = 'bg-primary/15 font-medium text-primary';
 const IDLE = 'text-foreground-muted hover:bg-surface-muted hover:text-foreground';
 
-export function AppSidebar({ children }: { children: React.ReactNode }): React.ReactElement {
+export function AppSidebar({ roles }: { roles: readonly string[] }): React.ReactElement {
   const t = useTranslations();
   const pathname = usePathname();
+
+  const sections = SECTIONS.filter(
+    (section) => section.roles === undefined || section.roles.some((role) => roles.includes(role)),
+  );
 
   return (
     <aside className="border-b border-border bg-surface md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
@@ -85,7 +106,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }): React.R
           aria-label={t('nav.label')}
           className="flex flex-1 flex-row gap-1 overflow-x-auto md:flex-col md:overflow-x-visible"
         >
-          {SECTIONS.map((section) => {
+          {sections.map((section) => {
             const active = isInSection(pathname, section.href);
 
             return (
@@ -119,14 +140,6 @@ export function AppSidebar({ children }: { children: React.ReactNode }): React.R
           })}
         </nav>
 
-        {/*
-          Language, theme and the account menu. Passed in from the layout rather
-          than imported: they are server components, and this one has to be a
-          client component for `usePathname`.
-        */}
-        <div className="flex shrink-0 items-center gap-3 md:border-t md:border-border md:pt-4">
-          {children}
-        </div>
       </div>
     </aside>
   );

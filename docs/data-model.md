@@ -80,6 +80,27 @@ rather than deleting the row: memberships reference it, and attendance, invoices
 entries will. The tombstone keeps referential integrity; clearing the cache is also the
 right answer to an erasure request.
 
+**The profile screen writes across both halves, and the split is the whole design.** A
+person editing "O meu perfil" changes their name, which is Clerk's, alongside their birth
+date, phone, language and theme, which are ours. The name goes to Clerk and the cache
+catches up; `set_app_user_profile` has no name parameter at all, so there is no argument
+order that writes one. `packages/db/test/profile.sql` test 6 asserts that against `pg_proc`
+rather than by trying it, because "it does not exist" is a stronger claim than "it did not
+work".
+
+Because Clerk cannot reach `localhost`, the API re-reads from the Clerk API immediately
+after writing rather than waiting for `user.updated`. Same upsert, same `synced_at`
+ordering guard, so the pull and the webhook cannot disagree — and the feature is not one
+that only works on a machine with a tunnel.
+
+`set_app_user_profile` is the ninth `SECURITY DEFINER` function and exists for the same
+reason as `set_app_user_preferences`: `app_user` carries no `organization_id`, so its policy
+scopes it *through membership*, and an account belonging to no organization cannot see its
+own row. Every parameter is the new value including NULL, which is the opposite of
+`set_app_user_preferences` — that one backs two independent switches that must not clobber
+each other, this one backs a form that submits every field at once, and somebody clearing
+their phone number means it.
+
 ### 4. A student is not necessarily a user
 
 Most students are children who will never log in. `student` is a record owned by the
@@ -125,7 +146,10 @@ organization
 app_user
   id, clerk_user_id (unique),
   cached_email, cached_first_name, cached_last_name, cached_avatar_url, synced_at,
-  locale, theme_preference
+  locale, theme_preference,
+  birth_date, contact_phone          -- ours, not Clerk's. See decision 3
+  check birth_date >= '1900-01-01'
+  check contact_phone is null or btrim(contact_phone) <> ''
 
 membership                      -- a person's presence in an organization
   id, organization_id, app_user_id (nullable until accepted),
@@ -144,8 +168,11 @@ invitation
   unique (organization_id, email) where accepted_at is null and revoked_at is null
 
 facility                        -- a site; a personal org has exactly one
-  id, organization_id, name, address, timezone, archived_at
+  id, organization_id, name, address, timezone, archived_at,
+  city, country_code, latitude numeric(9,6), longitude numeric(9,6)
   unique (organization_id, lower(name)) where archived_at is null
+  check (latitude is null) = (longitude is null)   -- half a coordinate is not a location
+  check country_code ~ '^[A-Z]{2}$'
 
 pool
   id, organization_id, facility_id, name, kind ('indoor'|'outdoor'),
@@ -167,6 +194,21 @@ creates the organization (trialing, 14-day trial, unique slug), the membership, 
 role, a first facility, and the audit entries. A narrow, reviewable door instead of an open
 gate — the same pattern as the other cross-tenant functions, which are listed in the
 README.
+
+**A facility knows where it is, in two different senses, and both are needed.** `address`
+stays free text — it is what goes on an invoice and what a parent pastes into a maps app,
+and neither wants a structured breakdown of a Portuguese street name. Beside it sits a
+*place*: a city chosen from Open-Meteo's geocoder with the coordinates it returned.
+
+Storing the coordinates at selection time rather than geocoding on read is the point.
+Geocoding per render is slow, spends quota on a question already answered, and breaks the
+screen whenever somebody else's geocoder is down. Resolved once, by a person who can see
+from the region label whether it is the right Aveiro.
+
+This also unblocks the municipal holiday that `holidays.ts` documents itself as unable to
+compute, because "Poolse does not know which town a pool is in". After this it does — and
+those holidays join `closure` as another `source`, not a second table. See "National
+holidays are rows, not rules".
 
 **`subscription_status` is an enum, and `trial_ends_at` sits beside it.** As free text it
 accepted 'trialing', 'Trialing' and 'trialling' equally, and that bug would have surfaced in
@@ -323,8 +365,69 @@ calendar someone has to be able to find what removed it and delete that. A rule 
 the generator cannot be found or deleted.
 
 Carnaval is deliberately absent: it is a *tolerância de ponto* granted year by year, not a
-national holiday, and deciding it for an operator would be inventing policy. Municipal
-holidays are absent for a simpler reason — Poolse does not know which town a pool is in.
+national holiday, and deciding it for an operator would be inventing policy.
+
+**Municipal holidays join the same table**, as `source = 'municipal_holiday'`. They were
+absent because Poolse did not know which town a pool was in; `facility.city` and its
+coordinates now answer that. A `public_holiday` table was proposed and rejected: it would
+hold the same dates a second time, seeded by a second path, and the two would drift.
+
+The distinction that has to survive is `source`. A closure for *obras* is not a public
+holiday and must not hand every member of staff a free day — so everything reading holidays
+filters on `source IN ('national_holiday', 'municipal_holiday')`, never on "is there a
+closure". `packages/db/test/vacations.sql` test 8 is what keeps that true.
+
+### Staff leave
+
+```
+vacation_request
+  id, organization_id, membership_id,
+  status ('pending'|'approved'|'rejected'|'withdrawn'),
+  requested_at, decided_at, decided_by_membership_id, decision_note, archived_at
+  unique (organization_id, id)
+  unique (organization_id, id, membership_id)   -- lets vacation_day carry a safe copy
+  check pending implies no decision, decided implies decided_at
+  check approved/rejected implies decided_by_membership_id
+  check rejected implies a non-blank decision_note
+
+vacation_day
+  id, organization_id, vacation_request_id, membership_id, day, archived_at
+  foreign key (organization_id, vacation_request_id, membership_id)
+    references vacation_request (organization_id, id, membership_id)
+  unique (organization_id, membership_id, day) where archived_at is null
+  check extract(isodow from day) <> 7          -- Sundays are not working days
+
+membership
+  + vacation_days_per_year integer not null default 22
+```
+
+**Days are rows, not a range.** Staff take odd single days. A start/end pair forces awkward
+splitting the first time somebody books the Monday and the Friday of one week, and every
+balance calculation then has to reason about ranges with holes in them.
+
+**`vacation_day.membership_id` is denormalised, and the composite foreign key is what keeps
+it honest.** It exists so "one person cannot hold one day twice" can be a plain partial
+unique index rather than a trigger that joins.
+
+**A refused or withdrawn request archives its days, by trigger.** Without it, being refused
+the 3rd of August would block that person from ever asking for the 3rd of August again — and
+the manager who refused would have created that trap without knowing. A trigger rather than
+two lines in a repository method because there are already three callers, and the one that
+forgets is the one that ships. `vacations.sql` test 4 holds it.
+
+**A rejection must carry a reason, in the schema.** "No" without one generates the
+conversation anyway. The API checks it too, so the person gets a sentence rather than a
+constraint name, but the database is the only place a second caller written later cannot
+skip it.
+
+**The balance does not fall until approval**, which is the whole reason approval exists.
+Pending days are reported separately and do not reduce `remaining`; showing a balance that
+already spends them would have people planning around days they may not get.
+
+**Carry-over to the 30th of April is not modelled.** Portuguese practice allows unused days
+to be carried into the following year until then. v1 does not track it and the balance
+summary says so on screen — deliberate and visible beats quietly wrong for two months of
+every year.
 
 ### Minors and consent
 

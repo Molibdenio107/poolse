@@ -1,3 +1,4 @@
+import { Hint } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export interface WeekEntry {
@@ -66,32 +67,40 @@ export function WeekGrid({
   // do not open, and an empty seventh column makes the six that matter narrower.
   const days = WEEKDAYS.filter((day) => day <= 6 || (byDay.get(day)?.length ?? 0) > 0);
 
-  if (entries.length === 0) {
-    return (
-      <p className={cn('text-sm text-foreground-muted', className)}>{emptyLabel}</p>
-    );
-  }
-
+  // An empty week still gets its grid.
+  //
+  // It used to collapse to a single line of grey text, and that is how the
+  // calendar came to look like a page that had failed to load: no days, no
+  // columns, nothing that reads as a calendar at all. The days are the part that
+  // says "this is a week and it is empty" rather than "this is broken" — so they
+  // are drawn either way, and the label sits above them saying which week and
+  // why there is nothing in it.
   return (
-    <div
-      className={cn('grid gap-3', className)}
-      style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
-    >
-      {days.map((day) => (
-        <div key={day} className="flex min-w-0 flex-col gap-2">
-          <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {dayNames[day]}
-          </h3>
+    <div className={cn('flex flex-col gap-3', className)}>
+      {entries.length === 0 && (
+        <p className="text-sm text-foreground-muted">{emptyLabel}</p>
+      )}
 
-          {(byDay.get(day) ?? []).length === 0 ? (
-            <span className="text-sm text-foreground-muted">—</span>
-          ) : (
-            (byDay.get(day) ?? []).map((entry) => (
-              <Slot key={entry.key} entry={entry} />
-            ))
-          )}
-        </div>
-      ))}
+      <div
+        className="grid gap-3"
+        style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
+      >
+        {days.map((day) => (
+          <div key={day} className="flex min-w-0 flex-col gap-2">
+            <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {dayNames[day]}
+            </h3>
+
+            {(byDay.get(day) ?? []).length === 0 ? (
+              <span className="text-sm text-foreground-muted">—</span>
+            ) : (
+              (byDay.get(day) ?? []).map((entry) => (
+                <Slot key={entry.key} entry={entry} />
+              ))
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -103,11 +112,26 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
         {entry.startTime}
         <span className="text-foreground-muted"> · {entry.durationMinutes}′</span>
       </span>
-      <span className={cn('truncate font-medium', entry.cancelled === true && 'line-through')}>
+      {/*
+        Backlog round 3, story 4. `line-clamp-2` rather than `truncate`: a turma
+        called "Adaptação ao Meio Aquático 4" lost everything after the first
+        word in a column one seventh of the screen wide, and every turma in the
+        level then looked identical. Two lines fit the names a swimming school
+        actually uses, and `break-words` keeps the wrap on word boundaries — the
+        story is explicit that nothing is cut mid-word.
+      */}
+      <span
+        className={cn(
+          'line-clamp-2 break-words font-medium',
+          entry.cancelled === true && 'line-through',
+        )}
+      >
         {entry.title}
       </span>
       {entry.subtitle != null && (
-        <span className="truncate text-sm text-foreground-muted">{entry.subtitle}</span>
+        <span className="line-clamp-2 break-words text-sm text-foreground-muted">
+          {entry.subtitle}
+        </span>
       )}
       {/*
         Never truncated, unlike the subtitle. "Why is there no class on the
@@ -129,8 +153,12 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
     </>
   );
 
+  // `min-h` and the roomier padding are the readable-cell half of story 4: the
+  // time, the name and the pool are three lines, and a box sized to two of them
+  // made every slot look clipped even when it was not.
   const classes = cn(
-    'flex flex-col rounded border p-2',
+    'flex min-h-24 flex-col gap-0.5 rounded border p-3',
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
     entry.muted
       ? 'border-dashed border-border bg-surface-muted'
       : 'border-border bg-surface hover:border-primary/50',
@@ -139,7 +167,7 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
   // A link when there is somewhere to go, a plain block when there is not —
   // rather than an anchor with no href, which is a control that looks clickable
   // and is not.
-  const card =
+  const plain =
     entry.href === undefined ? (
       <div className={classes}>{body}</div>
     ) : (
@@ -147,6 +175,18 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
         {body}
       </a>
     );
+
+  /*
+   * The safety net for a name still too long for two lines.
+   *
+   * Radix opens this on keyboard focus as well as hover, which is what makes it
+   * allowable at all — CLAUDE.md forbids a tooltip being the only way to reach
+   * something, and a mouse-only one would be exactly that. It repeats text that
+   * is already on screen, and the slot links to the turma's own page where the
+   * full name is plain text, so nothing lives only in here.
+   */
+  const full = [entry.title, entry.subtitle, entry.note].filter(Boolean).join(' · ');
+  const card = <Hint text={full}>{plain}</Hint>;
 
   if (entry.action === undefined) return card;
 

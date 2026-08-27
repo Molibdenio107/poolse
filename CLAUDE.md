@@ -69,6 +69,15 @@ tenant's row, and row-level security keyed on a per-request GUC so a query that 
 its `where` clause returns nothing instead of everything. Application-layer scoping alone
 fails the night one method is written tired. See `docs/data-model.md`, decision 2.
 
+**Clerk owns the name and the email; `app_user` holds a cache.** `cached_first_name`,
+`cached_last_name`, `cached_email` and `cached_avatar_url` are a copy of Clerk's data,
+refreshed by the webhook and stamped with `synced_at` so a late event cannot revert a
+newer one. **Never write those columns to save a user's input.** It appears to work and is
+silently overwritten the next time Clerk syncs — a bug that reproduces only sometimes.
+The save path is: write to Clerk, then re-read from Clerk (`refreshFromClerk`). Locale,
+theme, birth date and phone are Poolse's and are written directly. `docs/data-model.md`,
+decision 2, and `packages/db/test/profile.sql`, test 6.
+
 **Money amounts are integer minor units; unit prices are not.** `amount_cents` for
 invoices and fees. A per-kWh tariff in integer cents rounds €0.1548 to €0.15 and puts a
 3% error on the module whose entire purpose is cost accuracy — unit prices are
@@ -103,6 +112,22 @@ place this bites; get it right once in the scheduling layer.
 The role sequence matters (framing before backend before frontend before a QA pass).
 The role *personas* do not — skip the ceremony, keep the artifacts: acceptance criteria
 before code, a test or a manual check before calling something done.
+
+## Settled by backlog rounds
+
+Decisions taken in review that are not obvious from the code, so they are not re-opened:
+
+- **There is no `manager` role.** `member_role` is `owner, admin, instructor, maintenance,
+  student, guardian`. Backlog stories written for a "manager" mean `admin`.
+- **Holidays live in `closure`, not a second table.** `source` distinguishes
+  `national_holiday` from `manual`; municipal holidays join it as another `source`. The
+  vacation calendar filters on that column — a shutdown for building works is not a public
+  holiday and must not make a vacation day free.
+- **Scheduling-grid slots are configurable per organization** (15, 30 or 60 minutes).
+- **File storage stays deferred.** Logo, pool photo and student photo controls are present,
+  styled and visibly disabled until it lands. One decision unblocks all three.
+- **Vacation carry-over to 30 April is not tracked in v1**, and the balance summary says so
+  rather than being quietly wrong.
 
 ## Asking for decisions
 

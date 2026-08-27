@@ -1,6 +1,7 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Facilities } from '../../../../lib/api';
 import Link from 'next/link';
+import { ActionButton } from '@/components/action-button';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from './facility-forms';
@@ -89,13 +90,25 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                     )}
                     <span className="text-sm text-foreground-muted">{facility.timezone}</span>
                   </div>
-                  {data.canManage && (
-                    <ArchiveButton
-                      organizationId={data.organizationId}
-                      facilityId={facility.id}
-                      poolCount={facility.pools.length}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/*
+                      Story 2 asks for "a clearly labelled control", not a title
+                      that turns out to be clickable. A heading that navigates is
+                      a heading half the people reading it never try.
+                    */}
+                    <ActionButton
+                      href={`/dashboard/facilities/${facility.id}`}
+                      icon="facility"
+                      label={t('facilities.seeDetails')}
                     />
-                  )}
+                    {data.canManage && (
+                      <ArchiveButton
+                        organizationId={data.organizationId}
+                        facilityId={facility.id}
+                        poolCount={facility.pools.length}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 {facility.pools.length === 0 ? (

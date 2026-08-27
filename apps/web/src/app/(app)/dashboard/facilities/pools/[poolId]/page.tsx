@@ -1,10 +1,10 @@
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type PoolDetail } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from '../../facility-forms';
 import { PoolForm } from '../../pool-form';
+import { BackLink } from '@/components/back-link';
 
 /**
  * One pool: its details, editable, and its gallery.
@@ -54,9 +54,7 @@ export default async function PoolPage({
         </div>
       </header>
 
-      <Link href="/dashboard/facilities" className="text-sm text-primary hover:underline">
-        {t('facilities.backToFacilities')}
-      </Link>
+      <BackLink href="/dashboard/facilities" label={t('facilities.backToFacilities')} />
 
       {missing && (
         <section className="rounded border border-border bg-surface p-5">

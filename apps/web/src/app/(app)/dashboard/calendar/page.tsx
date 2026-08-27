@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Calendar } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
@@ -84,6 +85,10 @@ export default async function CalendarPage({
           <CancelSession
             organizationId={calendar.organizationId}
             sessionId={session.id}
+            className={session.className}
+            // Formatted here rather than in the form: this component has the
+            // locale, and a client component would have to be handed it anyway.
+            when={`${longDate(session.localDate, locale)}, ${session.localTime}`}
             cancelled={cancelled}
             byClosure={session.byClosure}
           />
@@ -116,21 +121,45 @@ export default async function CalendarPage({
       {calendar !== null && (
         <>
           <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            {/*
+              Backlog round 3, story 4. The arrows now sit either side of the
+              label they move, which is the arrangement everybody has learned
+              from every other calendar — the old row put three buttons on the
+              left and the dates on the right, so the control and the thing it
+              changed were at opposite ends of the screen.
+
+              "Hoje" is separate and stays put. It is not a step in a sequence,
+              it is a way out of one, and someone eleven weeks into next term
+              should not have to find it among the arrows.
+            */}
             <nav
               aria-label={t('calendar.weekNav')}
               className="flex flex-wrap items-center justify-between gap-3"
             >
               <div className="flex items-center gap-2">
-                <WeekLink week={addDays(monday, -7)} label={t('calendar.previousWeek')} />
-                <WeekLink week={today()} label={t('calendar.thisWeek')} />
-                <WeekLink week={addDays(monday, 7)} label={t('calendar.nextWeek')} />
+                <WeekArrow
+                  week={addDays(monday, -7)}
+                  label={t('calendar.previousWeek')}
+                  direction="previous"
+                />
+                {/*
+                  Always dated. "Esta semana" alone cannot tell you which week
+                  you are looking at once you have moved off it, which is the
+                  moment the label matters most.
+                */}
+                <p className="min-w-56 text-center text-sm font-medium sm:min-w-72">
+                  {t('calendar.range', {
+                    from: longDate(monday, locale),
+                    to: longDate(sunday, locale),
+                  })}
+                </p>
+                <WeekArrow
+                  week={addDays(monday, 7)}
+                  label={t('calendar.nextWeek')}
+                  direction="next"
+                />
               </div>
-              <p className="text-sm text-foreground-muted">
-                {t('calendar.range', {
-                  from: longDate(monday, locale),
-                  to: longDate(sunday, locale),
-                })}
-              </p>
+              <WeekLink week={today()} label={t('calendar.today')} />
             </nav>
 
             <WeekGrid
@@ -195,9 +224,39 @@ function WeekLink({ week, label }: { week: string; label: string }): React.React
   return (
     <Link
       href={`/dashboard/calendar?week=${week}`}
-      className="rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary"
+      className="rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {label}
+    </Link>
+  );
+}
+
+/**
+ * The same link, drawn as an arrow.
+ *
+ * The label does not disappear when the text does — it becomes the accessible
+ * name. An arrow with no name is announced as "link" and leaves somebody
+ * listening to the page guessing which direction they are about to travel, and
+ * the story asks for these by name for exactly that reason.
+ */
+function WeekArrow({
+  week,
+  label,
+  direction,
+}: {
+  week: string;
+  label: string;
+  direction: 'previous' | 'next';
+}): React.ReactElement {
+  const Arrow = direction === 'previous' ? ChevronLeft : ChevronRight;
+
+  return (
+    <Link
+      href={`/dashboard/calendar?week=${week}`}
+      aria-label={label}
+      className="rounded border border-border p-1.5 transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      <Arrow className="size-5" aria-hidden />
     </Link>
   );
 }

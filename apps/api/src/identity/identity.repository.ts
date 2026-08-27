@@ -8,6 +8,9 @@ export interface AppUserSummary {
   avatarUrl: string | null;
   locale: string;
   theme: string;
+  /** ISO date, YYYY-MM-DD. Poolse's own — Clerk has never heard of it. */
+  birthDate: string | null;
+  contactPhone: string | null;
 }
 
 export interface MembershipSummary {
@@ -41,6 +44,8 @@ export async function findAppUser(clerkUserId: string): Promise<AppUserSummary |
       o_avatar_url: string | null;
       o_locale: string;
       o_theme: string;
+      o_birth_date: Date | null;
+      o_contact_phone: string | null;
     }>('SELECT * FROM find_app_user($1)', [clerkUserId]);
 
     const row = rows[0];
@@ -54,8 +59,27 @@ export async function findAppUser(clerkUserId: string): Promise<AppUserSummary |
       avatarUrl: row.o_avatar_url,
       locale: row.o_locale,
       theme: row.o_theme,
+      birthDate: isoDate(row.o_birth_date),
+      contactPhone: row.o_contact_phone,
     };
   });
+}
+
+/**
+ * A `date` column, as the calendar day it is — not as an instant.
+ *
+ * node-postgres hands back a Date built in the server's local timezone, and
+ * `toISOString()` on it converts to UTC first. West of Greenwich that turns a
+ * birthday on the 1st into the 31st of the month before. The date parts are read
+ * back in the same local timezone they were built in, which is the only reading
+ * that round-trips.
+ */
+function isoDate(value: Date | null): string | null {
+  if (value === null) return null;
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export async function listMemberships(clerkUserId: string): Promise<MembershipSummary[]> {
@@ -158,5 +182,52 @@ export async function setPreferences(
     const row = rows[0];
     if (!row) throw new Error(`set_app_user_preferences returned nothing for ${clerkUserId}`);
     return { locale: row.o_locale, theme: row.o_theme };
+  });
+}
+
+export interface ProfileFields {
+  locale: string;
+  theme: string;
+  birthDate: string | null;
+  contactPhone: string | null;
+}
+
+/**
+ * Change the Poolse-owned half of the caller's own profile.
+ *
+ * Cross-tenant for the same reason `setPreferences` is — see the note above it.
+ *
+ * The name and the email are not here, and that is the point: they belong to
+ * Clerk, and `MeController` writes them there. Every value passed is the new
+ * value including null, so clearing a phone number works; that is the opposite of
+ * `setPreferences`, which backs two independent switches and treats null as
+ * "leave it alone".
+ */
+export async function setProfile(
+  clerkUserId: string,
+  fields: ProfileFields,
+): Promise<ProfileFields> {
+  return withoutTenantScope(async (tx) => {
+    const { rows } = await tx.query<{
+      o_locale: string;
+      o_theme: string;
+      o_birth_date: Date | null;
+      o_contact_phone: string | null;
+    }>('SELECT * FROM set_app_user_profile($1, $2, $3, $4, $5)', [
+      clerkUserId,
+      fields.locale,
+      fields.theme,
+      fields.birthDate,
+      fields.contactPhone,
+    ]);
+
+    const row = rows[0];
+    if (!row) throw new Error(`set_app_user_profile returned nothing for ${clerkUserId}`);
+    return {
+      locale: row.o_locale,
+      theme: row.o_theme,
+      birthDate: isoDate(row.o_birth_date),
+      contactPhone: row.o_contact_phone,
+    };
   });
 }
