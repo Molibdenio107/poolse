@@ -53,16 +53,27 @@ export function weekOf(date: string): string[] {
 }
 
 /**
- * The season a date falls in, September to the end of August.
+ * The season to be working on, September to the end of August.
  *
  * A swimming school's year is not a calendar year: it starts when school does
  * and stops for the August holidays. Generating "this season" from January has
  * to mean the season already under way, not the eleven months from now.
+ *
+ * **August belongs to the season ahead, not the one closing.** The pivot used to
+ * be September, and through the whole of August that offered a season with days
+ * left in it — every one of them inside the August closure. An operator pressing
+ * "Gerar a época" on the 27th of August generated a year that was already over
+ * and then looked at an empty calendar, which is the exact failure that made the
+ * calendar look broken.
+ *
+ * August is the right pivot precisely because it is the month the pool is shut:
+ * there is never anything left to generate in it, so nothing is lost by moving
+ * on, and the operator is offered the season they are about to run.
  */
 export function seasonOf(date: string): { from: string; to: string } {
   const year = Number(date.slice(0, 4));
   const month = Number(date.slice(5, 7));
-  const startYear = month >= 9 ? year : year - 1;
+  const startYear = month >= 8 ? year : year - 1;
   return { from: `${startYear}-09-01`, to: `${startYear + 1}-08-31` };
 }
 

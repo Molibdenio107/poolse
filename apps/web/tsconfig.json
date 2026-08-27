@@ -10,6 +10,7 @@
     "incremental": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "allowImportingTsExtensions": true,
     "declaration": false,
     "paths": { "@/*": ["./src/*"] },
     "plugins": [{ "name": "next" }]

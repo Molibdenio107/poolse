@@ -48,7 +48,8 @@ DO $$
 DECLARE v_org uuid; v_student uuid; v_membership uuid; r record;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
-  SELECT id INTO v_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_student FROM student
+   WHERE organization_id = v_org AND first_name = 'João';
   SELECT id INTO v_membership FROM membership WHERE organization_id = v_org;
 
   INSERT INTO consent (organization_id, student_id, kind, granted,
@@ -80,7 +81,8 @@ DO $$
 DECLARE v_org uuid; v_student uuid; v_membership uuid; v_id uuid; n int;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
-  SELECT id INTO v_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_student FROM student
+   WHERE organization_id = v_org AND first_name = 'João';
   SELECT id INTO v_membership FROM membership WHERE organization_id = v_org;
 
   BEGIN
@@ -119,7 +121,9 @@ END $$;
 DO $$
 DECLARE v_id uuid; v_student uuid;
 BEGIN
-  SELECT id INTO v_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_student FROM student
+   WHERE organization_id = (SELECT id FROM organization WHERE name = 'Clube A')
+     AND first_name = 'João';
   SELECT id INTO v_id FROM consent
    WHERE student_id = v_student AND kind = 'parent_sharing';
 
@@ -197,7 +201,8 @@ DECLARE v_a uuid; v_b uuid; v_a_student uuid;
 BEGIN
   SELECT id INTO v_a FROM organization WHERE name = 'Clube A';
   SELECT id INTO v_b FROM organization WHERE name = 'Clube B';
-  SELECT id INTO v_a_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_a_student FROM student
+   WHERE organization_id = v_a AND first_name = 'João';
 
   BEGIN
     INSERT INTO student_sensitive (student_id, organization_id, medical_notes_encrypted)
@@ -232,7 +237,8 @@ DO $$
 DECLARE v_org uuid; v_student uuid; v_stored text; n int;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
-  SELECT id INTO v_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_student FROM student
+   WHERE organization_id = v_org AND first_name = 'João';
 
   -- Exactly what the API writes: an AES-256-GCM envelope, base64url, versioned.
   INSERT INTO student_sensitive (student_id, organization_id, medical_notes_encrypted)

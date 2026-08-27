@@ -19,7 +19,19 @@ export function ageInYears(birthDate: string, on: Date = new Date()): number | n
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return null;
 
   const born = new Date(`${birthDate}T00:00:00Z`);
-  if (Number.isNaN(born.getTime())) return null;
+
+  /*
+   * Formatted back and compared, not merely checked for NaN.
+   *
+   * `new Date('2026-02-31')` does not throw — it rolls into the 3rd of March and
+   * is a perfectly valid Date. Without this, an impossible birth date became a
+   * real one three days later and quietly produced an age, which is exactly the
+   * kind of wrong answer given confidently that this whole module exists to
+   * avoid. `isDate` in `dates.ts` guards the same trap the same way.
+   */
+  if (Number.isNaN(born.getTime()) || born.toISOString().slice(0, 10) !== birthDate) {
+    return null;
+  }
 
   let age = on.getUTCFullYear() - born.getUTCFullYear();
 

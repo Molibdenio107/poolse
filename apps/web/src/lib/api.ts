@@ -634,6 +634,34 @@ export interface CalendarSession {
   enrolled: number;
 }
 
+export type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
+
+export interface RegisterEntry {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  /** Null until somebody marks them — not the same as `absent`. */
+  status: AttendanceStatus | null;
+  note: string | null;
+  recordedByName: string | null;
+  recordedAt: string | null;
+  /** False for a trial, a make-up, or a sibling brought along. */
+  enrolled: boolean;
+}
+
+export interface Register {
+  sessionId: string;
+  className: string;
+  poolName: string | null;
+  lane: number | null;
+  localDate: string;
+  localTime: string;
+  durationMinutes: number;
+  status: 'scheduled' | 'cancelled' | 'completed';
+  instructorName: string | null;
+  entries: RegisterEntry[];
+}
+
 export interface Calendar {
   organizationId: string;
   from: string;

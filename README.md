@@ -90,6 +90,19 @@ owner — run `pnpm db:bootstrap` first. It creates `poolse_app` from
 `BYPASSRLS` and owns no tables. Skipping it is the one mistake that disables
 tenant isolation with no visible symptom. See `docs/deploy.md`.
 
+`pnpm db:seed` fills the organization you already have with a club-shaped set of
+demo data: named staff, forty-odd students with realistic Portuguese names and
+ages matched to their levels, enrollments with a waiting list, six weeks of
+marked registers, and leave in each state the screens can show. It exists because
+none of those screens can be *judged* against one student and an empty register.
+
+It is additive and re-runnable — a second run adds only what is missing, and the
+choices are deterministic, so "the register that is still unmarked" is the same
+one tomorrow. It seeds into the existing organization rather than creating a
+second one, because there is no organization switcher and a second org would
+either be invisible or hide the first. It refuses to run against a database whose
+URL does not look local.
+
 Other database commands: `pnpm db:down` stops the container and keeps the data,
 `pnpm db:reset` throws the volume away and migrates a fresh one, `pnpm db:psql`
 opens a shell on it.
@@ -126,9 +139,16 @@ repository method and a customer seeing another customer's data.
 pnpm dev        # web on :3000, api on :3001
 pnpm typecheck
 pnpm i18n:check # every t('…') key resolves, in every locale
-pnpm api:test   # unit tests: the sensitive-data cipher
+pnpm api:test   # unit tests: the sensitive-data cipher, national holidays
+pnpm web:test   # unit tests: calendar arithmetic and level age ranges
 pnpm build
 ```
+
+`web:test` runs `node --test` over `src/**/*.test.ts` with Node's own type
+stripping — no test framework and no extra dependency. It exists because the two
+modules it covers are pure functions whose bugs are invisible: a season that ends
+in four days, a week that starts on Sunday, an age that is a year out on
+somebody's birthday. It found one of those the day it was written.
 
 `i18n:check` exists because TypeScript cannot help here: `t('facilities.title')`
 is just a string, so a typo compiles, builds, deploys and then renders the key
@@ -199,11 +219,9 @@ in `.next` and are safe to run while it is up.
 
 ## Next slice
 
-**Season selection in August.** `seasonOf` offers the season containing today, so
-for the whole of August it offers one that ends within days — an operator presses
-"Gerar a época", gets a year that is already over, and still sees an empty week.
-Diagnosed while fixing BUG-2 and deliberately left, because it is its own slice.
+**1.8 — attendance marking.** The last thing between phase 1 and an operator
+running real classes on Poolse, and the slice that unblocks backlog round 3's
+remaining rule: a class with attendance recorded cannot be removed.
 
-Then **1.8, attendance marking** — the last thing between phase 1 and an operator
-running real classes on Poolse. And backlog round 2 has ten stories waiting; see
-`docs/roadmap.md`.
+Backlog rounds 2 to 4 are otherwise done; see `docs/roadmap.md` for what is left
+and why.

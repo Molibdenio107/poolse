@@ -18,6 +18,12 @@ export interface GenerateState extends FormState {
 
 function failure(error: unknown, errorKey: string): FormState {
   if (error instanceof ApiError) {
+    // Slice 1.8, and backlog round 3 story 5's last rule: a class somebody has
+    // already marked cannot be called off. Said in words rather than as a 409
+    // nobody can read.
+    if (error.code === 'attendance_recorded') {
+      return { ok: false, errorKey: 'attendance.attendanceRecorded' };
+    }
     if (error.status < 500) return { ok: false, errorKey, detail: error.message };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
   }

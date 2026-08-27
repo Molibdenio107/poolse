@@ -80,6 +80,16 @@ export default async function CalendarPage({
         ? // A cancellation with no reason still has to read as a cancellation.
           session.cancellationReason ?? t('calendar.cancelledNoReason')
         : null,
+      // Marking is the thing an instructor opens the calendar to do, so it sits
+      // on the slot itself rather than two clicks away behind the turma. The
+      // week travels with it so "back" returns to the week being worked
+      // through, not to today's.
+      mark: cancelled
+        ? undefined
+        : {
+            href: `/dashboard/calendar/sessions/${session.id}?week=${monday}`,
+            label: t('attendance.mark'),
+          },
       action:
         calendar?.canManage === true ? (
           <CancelSession

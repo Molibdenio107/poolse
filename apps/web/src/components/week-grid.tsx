@@ -21,6 +21,14 @@ export interface WeekEntry {
   cancelled?: boolean;
   /** A control for this slot — cancel, restore. Rendered outside the link. */
   action?: React.ReactNode;
+  /**
+   * A second destination for the slot, drawn under the card — slice 1.8.
+   *
+   * Explicitly `| undefined` because `exactOptionalPropertyTypes` is on: a
+   * caller computing this conditionally hands over `undefined`, and without it
+   * the type says the key must be absent entirely.
+   */
+  mark?: { href: string; label: string } | undefined;
 }
 
 /**
@@ -188,7 +196,7 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
   const full = [entry.title, entry.subtitle, entry.note].filter(Boolean).join(' · ');
   const card = <Hint text={full}>{plain}</Hint>;
 
-  if (entry.action === undefined) return card;
+  if (entry.action === undefined && entry.mark === undefined) return card;
 
   // Outside the anchor, deliberately: a form nested inside a link is invalid
   // HTML, and browsers resolve it by making the button navigate instead of
@@ -196,7 +204,17 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
   return (
     <div className="flex flex-col gap-1">
       {card}
-      <div className="px-2">{entry.action}</div>
+      <div className="flex flex-col gap-1 px-2">
+        {entry.mark !== undefined && (
+          <a
+            href={entry.mark.href}
+            className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {entry.mark.label}
+          </a>
+        )}
+        {entry.action}
+      </div>
     </div>
   );
 }

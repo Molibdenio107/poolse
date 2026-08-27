@@ -73,7 +73,7 @@ spreadsheet. That is the milestone that makes everything after it worth doing.
 | 1.5 | Closure calendar (holidays, August, shutdowns) | ✅ Closures scope to organization, site or pool and may repeat annually. The 13 Portuguese national holidays are computed (Easter included) and seeded when the season is generated — each one a visible, deletable row, so a pool that opens on the 5th of October can remove it |
 | 1.6 | Session generation honouring closures; cancel; substitute instructor | ✅ **A year** of sessions, not the 90-day window; August empty; closures reversible; a cancellation made by a person is never overwritten. One button builds the season, idempotently. Substitution has its endpoint; no screen yet — 1.12 is where an instructor's own view arrives |
 | 1.7 | Enrollment + waiting list | ✅ **Pulled forward to sit beside 1.4** — it attaches students to a turma, not to a session. Capacity enforced by a locking trigger |
-| 1.8 | Attendance marking, per session | An instructor marks a class in under a minute |
+| 1.8 | Attendance marking, per session | ✅ One screen, one save. Present first, "todos presentes" for the common case. A marked class can no longer be cancelled — by any path |
 | 1.9 | Weekly / monthly schedule view | ✅ **Weekly, dated.** `/dashboard/calendar` shows real days with real cancellations and their reasons; each student's page shows their own dated week. The turma screen keeps the recurring *pattern*, which is a different question and says so. No month grid, deliberately — a pool runs five to fifteen classes a day and a month cell that fits three is unreadable |
 | 1.10 | Excel import — mapping step, validation preview, commit | A real messy spreadsheet imports cleanly |
 | 1.11 | Excel export | Data can leave; nobody trusts a system it can't |
@@ -187,11 +187,17 @@ season had never been generated, so an empty calendar was the correct answer, ba
 presented. `WeekGrid` collapsed to one line of grey text, which reads as a page that
 failed to load. It now draws its days either way.
 
-What remains is worse and is the next slice: `seasonOf` returns the season
-*containing today*, so through August it offers a season that ends within days.
-An operator pressing "Gerar a época" in August generates a year that is already
-over and still sees an empty week. The calendar should offer the season the pool is
-about to run, not the one it just finished.
+**The other half is fixed too.** `seasonOf` returned the season *containing
+today*, so through August it offered a season ending within days — every one of
+them inside the August closure. Pressing "Gerar a época" on the 27th of August
+generated a year that was already over, and the calendar still looked empty.
+
+August is now the pivot rather than September, and it is the right one precisely
+because August is the month the pool is shut: there is never anything left to
+generate in it, so nothing is lost by moving on and the operator is offered the
+season they are about to run. `apps/web/src/lib/dates.test.ts` pins every
+boundary, July included — July still means the season under way, because classes
+run in July.
 
 ### Backlog, round 3
 

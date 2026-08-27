@@ -440,6 +440,7 @@
     "revokeFailed": "Não foi possível anular o convite.",
     "duplicate": "Já existe um convite pendente para este email.",
     "failed": "Não foi possível criar o convite.",
+    "emailInvalid": "Email inválido. Verifique o endereço e tente de novo.",
     "emailRequired": "Indique um email.",
     "rolesRequired": "Escolha pelo menos uma função.",
     "reissue": "Nova ligação",
@@ -658,6 +659,31 @@
         "support": "Apoio dedicado"
       }
     }
+  },
+  "attendance": {
+    "mark": "Marcar presenças",
+    "title": "Presenças",
+    "present": "Presente",
+    "absent": "Faltou",
+    "excused": "Falta justificada",
+    "late": "Atrasado",
+    "allPresent": "Todos presentes",
+    "clearAll": "Limpar",
+    "markedOf": "{marked} de {total} marcados",
+    "save": "Guardar presenças",
+    "saved": "Presenças guardadas.",
+    "saveFailed": "Não foi possível guardar as presenças.",
+    "nobodyToMark": "Não há ninguém para marcar.",
+    "nobodyEnrolled": "Ainda não há alunos inscritos nesta turma.",
+    "notEnrolled": "Não inscrito",
+    "statusFor": "Presença de {name}",
+    "noteFor": "Nota sobre {name}",
+    "notePlaceholder": "Saiu mais cedo, chegou às 18:20…",
+    "recordedBy": "Marcado por {name}",
+    "classCancelled": "Esta aula foi cancelada, por isso não há presenças a marcar.",
+    "readOnly": "Não tem permissão para marcar presenças.",
+    "restricted": "Esta secção é reservada a instrutores, administradores e proprietários.",
+    "attendanceRecorded": "Já há presenças marcadas nesta aula, por isso não pode ser cancelada."
   },
   "calendar": {
     "addClosure": "Adicionar encerramento",

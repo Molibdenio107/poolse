@@ -18,8 +18,9 @@
     "migrate:deployed": "node dist/migrate.js up",
     "bootstrap": "node --env-file-if-exists=../../.env --import tsx src/bootstrap-role.ts",
     "bootstrap:deployed": "node dist/bootstrap-role.js",
+    "seed": "node --env-file-if-exists=../../.env --import tsx src/seed.ts",
     "migrate:down": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts down",
-    "test": "node --env-file-if-exists=../../.env --import tsx src/run-sql-test.ts test/tenant-isolation.sql test/clerk-provisioning.sql test/invitations.sql test/preferences.sql test/profile.sql test/audit-log.sql test/facilities.sql test/students.sql test/consent.sql test/ownership.sql test/progression.sql test/classes.sql test/sessions.sql test/vacations.sql"
+    "test": "node --env-file-if-exists=../../.env --import tsx src/run-sql-test.ts test/tenant-isolation.sql test/clerk-provisioning.sql test/invitations.sql test/preferences.sql test/profile.sql test/audit-log.sql test/facilities.sql test/students.sql test/consent.sql test/ownership.sql test/progression.sql test/classes.sql test/sessions.sql test/attendance.sql test/vacations.sql"
   },
   "dependencies": {
     "pg": "^8.13.1"

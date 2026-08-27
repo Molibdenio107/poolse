@@ -440,6 +440,7 @@
     "revokeFailed": "Could not revoke the invitation.",
     "duplicate": "That address already has a pending invitation.",
     "failed": "Could not create the invitation.",
+    "emailInvalid": "That is not a valid email address. Check it and try again.",
     "emailRequired": "An email address is required.",
     "rolesRequired": "Choose at least one role.",
     "reissue": "New link",
@@ -658,6 +659,31 @@
         "support": "Dedicated support"
       }
     }
+  },
+  "attendance": {
+    "mark": "Take the register",
+    "title": "Attendance",
+    "present": "Present",
+    "absent": "Absent",
+    "excused": "Excused",
+    "late": "Late",
+    "allPresent": "All present",
+    "clearAll": "Clear",
+    "markedOf": "{marked} of {total} marked",
+    "save": "Save the register",
+    "saved": "Register saved.",
+    "saveFailed": "Could not save the register.",
+    "nobodyToMark": "There is nobody to mark.",
+    "nobodyEnrolled": "No students are enrolled in this class group yet.",
+    "notEnrolled": "Not enrolled",
+    "statusFor": "Attendance for {name}",
+    "noteFor": "Note about {name}",
+    "notePlaceholder": "Left early, arrived at 18:20…",
+    "recordedBy": "Marked by {name}",
+    "classCancelled": "This class was cancelled, so there is no register to take.",
+    "readOnly": "You do not have permission to take the register.",
+    "restricted": "This section is for instructors, administrators and owners.",
+    "attendanceRecorded": "This class already has attendance recorded, so it cannot be cancelled."
   },
   "calendar": {
     "addClosure": "Add a closure",

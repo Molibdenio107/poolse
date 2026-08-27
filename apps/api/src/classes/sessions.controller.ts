@@ -20,6 +20,7 @@ import {
   findSessionSlot,
   generateSeason,
   isExclusionViolation,
+  isMarkedSessionViolation,
   listClosures,
   listSessions,
   sessionsForStudent,
@@ -185,7 +186,24 @@ export class CalendarController {
       });
     }
 
-    return generateSeason(organizationId, window.from, window.to);
+    try {
+      return await generateSeason(organizationId, window.from, window.to);
+    } catch (error) {
+      /*
+       * A closure added after a term was taught. The trigger refuses to cancel a
+       * class somebody marked, which aborts the whole generation — and that is
+       * the right outcome: the alternative is silently erasing classes people
+       * attended. The operator is told which closure to reconsider rather than
+       * shown a database error.
+       */
+      if (isMarkedSessionViolation(error)) {
+        throw new ConflictException({
+          code: 'attendance_recorded',
+          message: 'A closure covers a class that has already been marked',
+        });
+      }
+      throw error;
+    }
   }
 }
 
@@ -222,9 +240,23 @@ export class SessionsCalendarController {
       throw new BadRequestException(`reason may be at most ${MAX_REASON} characters`);
     }
 
-    if (!(await cancelSession(organizationId, id, reason || null))) {
-      throw new NotFoundException('No such class, or it is already cancelled');
+    try {
+      if (!(await cancelSession(organizationId, id, reason || null))) {
+        throw new NotFoundException('No such class, or it is already cancelled');
+      }
+    } catch (error) {
+      // Backlog round 3, story 5's last rule, now that attendance exists: a
+      // class somebody marked cannot be called off, and the interface explains
+      // why rather than showing a database error.
+      if (isMarkedSessionViolation(error)) {
+        throw new ConflictException({
+          code: 'attendance_recorded',
+          message: 'Attendance has been recorded for this class',
+        });
+      }
+      throw error;
     }
+
     return { cancelled: true };
   }
 

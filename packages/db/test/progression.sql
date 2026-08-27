@@ -36,7 +36,8 @@ DO $$
 DECLARE v_org uuid; v_student uuid; v_time int;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
-  SELECT id INTO v_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_student FROM student
+   WHERE organization_id = v_org AND first_name = 'João';
 
   -- 27.35 seconds. The number that a float would fail to hold.
   INSERT INTO student_record (organization_id, student_id, stroke, distance_m, time_ms, swum_on)
@@ -63,7 +64,8 @@ DO $$
 DECLARE v_org uuid; v_student uuid;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
-  SELECT id INTO v_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_student FROM student
+   WHERE organization_id = v_org AND first_name = 'João';
 
   BEGIN
     INSERT INTO student_record (organization_id, student_id, stroke, distance_m, time_ms, swum_on)
@@ -100,7 +102,8 @@ DO $$
 DECLARE v_org uuid; v_student uuid; r record; n int;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
-  SELECT id INTO v_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_student FROM student
+   WHERE organization_id = v_org AND first_name = 'João';
 
   -- Two identical bests, months apart.
   INSERT INTO student_record (organization_id, student_id, stroke, distance_m, time_ms, swum_on)
@@ -151,7 +154,9 @@ END $$;
 DO $$
 DECLARE v_student uuid; v_best int; n int;
 BEGIN
-  SELECT id INTO v_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_student FROM student
+   WHERE organization_id = (SELECT id FROM organization WHERE name = 'Clube A')
+     AND first_name = 'João';
 
   UPDATE student_record SET archived_at = now()
    WHERE student_id = v_student AND stroke = 'backstroke' AND time_ms = 34100
@@ -181,7 +186,9 @@ END $$;
 DO $$
 DECLARE v_student uuid; v_fav text;
 BEGIN
-  SELECT id INTO v_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_student FROM student
+   WHERE organization_id = (SELECT id FROM organization WHERE name = 'Clube A')
+     AND first_name = 'João';
 
   -- The swimmer is fastest at freestyle and loves butterfly. Both are true, and
   -- no query should ever conflate them.
@@ -210,7 +217,9 @@ DO $$
 DECLARE v_b uuid; v_a_student uuid;
 BEGIN
   SELECT id INTO v_b FROM organization WHERE name = 'Clube B';
-  SELECT id INTO v_a_student FROM student WHERE first_name = 'João';
+  SELECT id INTO v_a_student FROM student
+   WHERE organization_id = (SELECT id FROM organization WHERE name = 'Clube A')
+     AND first_name = 'João';
 
   BEGIN
     INSERT INTO student_record (organization_id, student_id, stroke, distance_m, time_ms, swum_on)

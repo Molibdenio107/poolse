@@ -558,6 +558,20 @@ export class SessionClashError extends Error {
   }
 }
 
+/**
+ * The trigger that refuses to cancel a class somebody has marked.
+ *
+ * `restrict_violation` is raised by `refuse_cancelling_marked_session`, and it
+ * reaches here from two directions: a person pressing cancel on the calendar,
+ * and `generate_sessions` when a newly-added closure covers a day that has
+ * already been taught. Both deserve the same sentence.
+ */
+export function isMarkedSessionViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && (error as { code?: string }).code === '23001'
+  );
+}
+
 export function isExclusionViolation(error: unknown): boolean {
   return (
     typeof error === 'object' && error !== null && (error as { code?: string }).code === '23P01'

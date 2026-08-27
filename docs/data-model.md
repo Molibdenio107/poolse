@@ -377,6 +377,48 @@ holiday and must not hand every member of staff a free day — so everything rea
 filters on `source IN ('national_holiday', 'municipal_holiday')`, never on "is there a
 closure". `packages/db/test/vacations.sql` test 8 is what keeps that true.
 
+### Attendance
+
+```
+attendance
+  id, organization_id, class_session_id, student_id,
+  status ('present'|'absent'|'excused'|'late'),
+  note, recorded_by_membership_id, recorded_at
+  unique (organization_id, class_session_id, student_id)
+```
+
+**Absent is a recorded fact, not a missing row.** "Nobody has marked this class"
+and "João did not come" are different answers to different questions — the first
+is work outstanding, the second is a conversation with a parent. A session with no
+rows is a session nobody has marked.
+
+**It attaches to the session, not to the enrollment.** A student can attend a
+class they are not enrolled in: a trial, a make-up for one they missed, a sibling
+brought along. An operator who cannot record what happened will record nothing,
+so enrollment supplies the list to mark and does not gate what may be marked.
+
+**`recorded_by_membership_id` is NOT NULL.** Attendance is a claim about a child
+made by a person, and it is the evidence when a parent says their daughter was
+there. A row nobody signed is worth much less than no row at all.
+
+**This is the one table with no `archived_at`.** Attendance is not withdrawn, it
+is corrected — a second row saying something different would make "was Ana here?"
+unanswerable, so the unique index is total rather than partial and a change is an
+UPDATE.
+
+**A marked class cannot be cancelled**, enforced by a trigger on `class_session`
+rather than in a repository method. There are two ways a session gets cancelled —
+a person on the calendar, and `generate_sessions` when a closure covers the day —
+and the generator is the dangerous one: adding an August closure after a term has
+been taught would otherwise silently cancel classes people attended. Only the
+transition *into* cancelled is refused, so removing a closure can still restore a
+class. `packages/db/test/attendance.sql` test 4 covers both paths.
+
+`class_session` gained `UNIQUE (organization_id, id)` in the same migration. It
+was the first table to become a parent since it was written, and that key is what
+makes a composite foreign key — and therefore cross-tenant safety — possible at
+all.
+
 ### Nobody is in two places at once
 
 `class_session` carries two exclusion constraints, and the second one needed a
