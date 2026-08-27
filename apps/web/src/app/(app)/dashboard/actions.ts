@@ -25,6 +25,16 @@ export interface FormState {
 }
 
 export interface InviteState extends FormState {
+  /**
+   * Field name to translation key. Rendered beside the field it belongs to.
+   *
+   * The email is *not* cleared when this is set — see `TextField`. React 19
+   * resets an uncontrolled form once the action returns, which is what used to
+   * wipe the address somebody had just been asked to correct.
+   */
+  fields?: Record<string, string>;
+  /** Increments on every submission, so repeated failures re-focus. */
+  attempt?: number;
   invitation?: CreatedInvitation;
 }
 
@@ -49,16 +59,40 @@ export async function createOrganizationAction(
   return { ok: true };
 }
 
+/**
+ * The shape of an email address, checked loosely on purpose.
+ *
+ * Strict RFC validation rejects addresses that work, and the only test that
+ * really matters is whether the invitation arrives. This catches the typo the
+ * ticket is about — a missing `@`, a trailing comma — and lets everything else
+ * through to be proved by delivery.
+ */
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
+
 export async function inviteAction(
-  _previous: InviteState,
+  previous: InviteState,
   formData: FormData,
 ): Promise<InviteState> {
   const organizationId = String(formData.get('organizationId') ?? '');
   const email = String(formData.get('email') ?? '').trim();
   const roles = formData.getAll('roles').map(String).filter(Boolean);
 
-  if (!email) return { ok: false, errorKey: 'invite.emailRequired' };
-  if (roles.length === 0) return { ok: false, errorKey: 'invite.rolesRequired' };
+  // Counted so the form can re-focus the first bad field on a second failed
+  // attempt with the same errors, rather than sitting still.
+  const attempt = (previous.attempt ?? 0) + 1;
+
+  /*
+   * Every problem reported at once, against its own field — POOLSE-09.
+   *
+   * One error at a time makes somebody fix a form one round trip per mistake,
+   * and a single message at the top makes them hunt for which box it meant.
+   */
+  const fields: Record<string, string> = {};
+  if (!email) fields['email'] = 'invite.emailRequired';
+  else if (!EMAIL_SHAPE.test(email)) fields['email'] = 'invite.emailInvalid';
+  if (roles.length === 0) fields['roles'] = 'invite.rolesRequired';
+
+  if (Object.keys(fields).length > 0) return { ok: false, attempt, fields };
 
   let invitation: CreatedInvitation;
   try {
@@ -69,13 +103,13 @@ export async function inviteAction(
     );
   } catch (error) {
     if (error instanceof ApiError && error.status === 409) {
-      return { ok: false, errorKey: 'invite.duplicate' };
+      return { ok: false, attempt, fields: { email: 'invite.duplicate' } };
     }
-    return failure(error, 'invite.failed');
+    return { ...failure(error, 'invite.failed'), attempt };
   }
 
   revalidatePath('/dashboard/people');
-  return { ok: true, invitation };
+  return { ok: true, attempt, invitation };
 }
 
 export async function reissueAction(

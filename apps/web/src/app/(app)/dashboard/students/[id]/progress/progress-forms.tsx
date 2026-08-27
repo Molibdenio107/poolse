@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
+import { SelectField } from '@/components/ui/field';
 import type { Stroke } from '@/lib/api';
 import type { FormState } from '../../../actions';
 import {
@@ -193,24 +194,26 @@ export function FavouriteStrokeForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="studentId" value={studentId} />
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="favourite-stroke" className="text-sm text-foreground-muted">
-          {t('progress.favourite')}
-        </label>
-        <select
-          id="favourite-stroke"
-          name="stroke"
-          defaultValue={current ?? ''}
-          className={field}
-        >
-          <option value="">{t('progress.noFavourite')}</option>
-          {strokes.map((stroke) => (
-            <option key={stroke} value={stroke}>
-              {t(`progress.strokes.${stroke}`)}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/*
+        POOLSE-10. This was an uncontrolled `<select defaultValue>`, and React 19
+        resets a form once its action returns — so a save that had worked left
+        the widget showing the value from before it, contradicting the success
+        message beside it. The stroke was always stored correctly; only the
+        control lied. `SelectField` is controlled and re-seeds when the server's
+        answer actually changes.
+      */}
+      <SelectField
+        name="stroke"
+        label={t('progress.favourite')}
+        initial={current ?? ''}
+        options={[
+          { value: '', label: t('progress.noFavourite') },
+          ...strokes.map((stroke) => ({
+            value: stroke,
+            label: t(`progress.strokes.${stroke}`),
+          })),
+        ]}
+      />
 
       <button
         type="submit"

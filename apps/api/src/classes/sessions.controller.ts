@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   archiveClosure,
   createClosure,
@@ -114,7 +114,7 @@ export class ClosuresController {
    */
   @Post(':id/archive')
   async remove(@Param('id') id: string): Promise<{ archived: true }> {
-    requireRole('owner', 'admin');
+    requireCanArchive();
     const { organizationId } = currentTenant();
 
     if (!(await archiveClosure(organizationId, id))) {

@@ -359,6 +359,29 @@ export interface ReissuedInvitation {
  * One transaction, so a failure halfway cannot leave the address with no live
  * invitation at all. Returns null when there was nothing pending to replace.
  */
+/**
+ * The roles a pending invitation is offering — POOLSE-01.
+ *
+ * Read before reissuing or revoking, so the matrix governs those too. Without
+ * it an instructor could create an invitation and then be unable to fix their
+ * own typo, and — the other way round — could withdraw an invitation to an admin
+ * that somebody senior had sent.
+ */
+export async function pendingInvitationRoles(
+  organizationId: string,
+  invitationId: string,
+): Promise<string[] | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ roles: string[] }>(
+      `SELECT (SELECT array_agg(r::text) FROM unnest(roles) AS r) AS roles
+         FROM invitation
+        WHERE id = $1 AND accepted_at IS NULL AND revoked_at IS NULL`,
+      [invitationId],
+    );
+    return rows[0]?.roles ?? null;
+  });
+}
+
 export async function reissueInvitation(
   organizationId: string,
   invitationId: string,

@@ -3,17 +3,26 @@ import {
   Body,
   ConflictException,
   Controller,
+  ForbiddenException,
   NotFoundException,
   Param,
   Post,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { grantableRoles, isMemberRole, requireRole, type MemberRole } from '../tenant/roles.js';
+import {
+  canInvite,
+  grantableRoles,
+  isMemberRole,
+  requireGrantable,
+  requireRole,
+  type MemberRole,
+} from '../tenant/roles.js';
 import { recordRefusedAttempt } from '../audit/audit.js';
 import {
   createInvitation,
   DuplicateInvitationError,
   organizationVoice,
+  pendingInvitationRoles,
   recordDelivery,
   reissueInvitation,
   revokeInvitation,
@@ -116,7 +125,10 @@ async function deliver(
 export class InvitationsController {
   @Post()
   async create(@Body() body: CreateInvitationBody): Promise<CreateInvitationResponse> {
-    requireRole('owner');
+    // POOLSE-01: who may invite is the matrix's decision, not a role check here.
+    // An instructor may invite the families they teach; maintenance may invite
+    // nobody, for now.
+    requireCanInvite();
     const { organizationId, membershipId } = currentTenant();
 
     const email = typeof body.email === 'string' ? normaliseEmail(body.email) : null;
@@ -177,8 +189,12 @@ export class InvitationsController {
    */
   @Post(':id/reissue')
   async reissue(@Param('id') id: string): Promise<CreateInvitationResponse> {
-    requireRole('owner');
+    requireCanInvite();
     const { organizationId, membershipId } = currentTenant();
+
+    // Only an invitation this caller could have sent themselves. An instructor
+    // fixes their own typo; they do not reissue an invitation to an admin.
+    await requireOwnKind(organizationId, id);
 
     const { token, tokenHash } = issueToken();
     const expiresAt = invitationExpiry();
@@ -211,8 +227,10 @@ export class InvitationsController {
    */
   @Post(':id/revoke')
   async revoke(@Param('id') id: string): Promise<{ revoked: true }> {
-    requireRole('owner');
+    requireCanInvite();
     const { organizationId } = currentTenant();
+
+    await requireOwnKind(organizationId, id);
 
     const revoked = await revokeInvitation(organizationId, id);
     // Also the answer when the id belongs to another tenant — RLS makes those
@@ -221,6 +239,34 @@ export class InvitationsController {
 
     return { revoked: true };
   }
+}
+
+/**
+ * Refuses everyone the matrix gives nothing to — POOLSE-01, criterion 3.
+ *
+ * A student, a guardian, or (for now) maintenance. The UI hides the entry point
+ * too, but that is a courtesy: this is the control, and it answers a
+ * hand-crafted request exactly as it answers a stale page.
+ */
+function requireCanInvite(): void {
+  if (!canInvite()) {
+    throw new ForbiddenException({
+      code: 'cannot_invite',
+      message: 'Your role cannot invite people',
+    });
+  }
+}
+
+/**
+ * Only an invitation this caller could have sent in the first place.
+ *
+ * A missing invitation and somebody else's are the same answer, so a person
+ * cannot discover that an admin invitation exists by trying to revoke it.
+ */
+async function requireOwnKind(organizationId: string, invitationId: string): Promise<void> {
+  const roles = await pendingInvitationRoles(organizationId, invitationId);
+  if (roles === null) throw new NotFoundException('No pending invitation with that id');
+  requireGrantable(roles);
 }
 
 function parseRoles(value: unknown): MemberRole[] {

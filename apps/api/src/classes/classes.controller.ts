@@ -12,7 +12,7 @@ import {
 import { withOrg } from '@poolse/db';
 import { isExclusionViolation } from './sessions.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   addSchedule,
   AlreadyEnrolledError,
@@ -132,7 +132,7 @@ export class ClassesController {
 
   @Post(':id/archive')
   async archive(@Param('id') id: string): Promise<{ archived: true; ended: number }> {
-    requireRole('owner', 'admin');
+    requireCanArchive();
     const { organizationId } = currentTenant();
 
     const result = await archiveClassGroup(organizationId, id);

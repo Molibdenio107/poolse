@@ -10,7 +10,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   archiveFacility,
   archivePool,
@@ -283,7 +283,7 @@ export class FacilitiesController {
 
   @Post(':facilityId/archive')
   async archive(@Param('facilityId') facilityId: string): Promise<{ archived: true }> {
-    requireRole('owner', 'admin');
+    requireCanArchive();
     const { organizationId } = currentTenant();
 
     if (!(await archiveFacility(organizationId, facilityId))) {
@@ -294,7 +294,7 @@ export class FacilitiesController {
 
   @Post('pools/:poolId/archive')
   async archivePoolById(@Param('poolId') poolId: string): Promise<{ archived: true }> {
-    requireRole('owner', 'admin');
+    requireCanArchive();
     const { organizationId } = currentTenant();
 
     if (!(await archivePool(organizationId, poolId))) {

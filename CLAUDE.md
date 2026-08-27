@@ -78,6 +78,15 @@ The save path is: write to Clerk, then re-read from Clerk (`refreshFromClerk`). 
 theme, birth date and phone are Poolse's and are written directly. `docs/data-model.md`,
 decision 2, and `packages/db/test/profile.sql`, test 6.
 
+**Form fields are controlled, never `defaultValue`.** React 19 resets a form as soon
+as a function `action` returns — *including when it returns a validation error*. An
+uncontrolled input therefore wipes what somebody just typed at the exact moment they are
+being asked to correct it, and an uncontrolled `<select>` reverts to its mount-time value
+after a save that worked. Both shipped as separate-looking bugs (POOLSE-09, POOLSE-10) from
+one cause. Use `TextField` / `SelectField` / `TextAreaField` from
+`apps/web/src/components/ui/field.tsx`; they are controlled, re-seed only when the server's
+value actually changes, and carry their own label, hint and field-level error.
+
 **Money amounts are integer minor units; unit prices are not.** `amount_cents` for
 invoices and fees. A per-kWh tariff in integer cents rounds €0.1548 to €0.15 and puts a
 3% error on the module whose entire purpose is cost accuracy — unit prices are

@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 
 interface StudentDetail extends Student {
   /**
@@ -129,7 +129,7 @@ export class StudentsController {
 
   @Post(':id/archive')
   async archive(@Param('id') id: string): Promise<{ archived: true }> {
-    requireRole('owner', 'admin');
+    requireCanArchive();
     const { organizationId } = currentTenant();
 
     if (!(await archiveStudent(organizationId, id))) {
@@ -256,7 +256,7 @@ export class LevelsController {
 
   @Post(':id/archive')
   async archive(@Param('id') id: string): Promise<{ archived: true; unlevelled: number }> {
-    requireRole('owner', 'admin');
+    requireCanArchive();
     const { organizationId } = currentTenant();
 
     const result = await archiveLevel(organizationId, id);

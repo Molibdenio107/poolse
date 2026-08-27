@@ -77,6 +77,23 @@ export class RecordsController {
     return { id };
   }
 
+  /**
+   * The one archive action instructors keep — and deliberately not
+   * `requireCanArchive`.
+   *
+   * POOLSE-03 restricts archiving to owners and admins, and every other archive
+   * endpoint now shares that check. This one is different in kind: a swim time
+   * is data the instructor recorded minutes earlier at the poolside, and
+   * withdrawing a mistyped one is part of recording them. Routing it through an
+   * admin would mean wrong times sitting on a child's progression until somebody
+   * senior had a moment.
+   *
+   * Nothing is destroyed either way — `archiveRecord` is a soft delete and the
+   * time stays in the table, out of the bests.
+   *
+   * If this should follow the others after all, it is one line. It is written
+   * out so that is a decision rather than an oversight found by a later sweep.
+   */
   @Post(':recordId/archive')
   async archive(
     @Param('studentId') studentId: string,

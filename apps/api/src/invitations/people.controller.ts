@@ -7,7 +7,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { grantableRoles, hasRole, requireRole } from '../tenant/roles.js';
+import { canArchive, grantableRoles, hasRole, requireRole } from '../tenant/roles.js';
 import {
   listMembers,
   listPendingInvitations,
@@ -26,6 +26,8 @@ interface PeopleResponse {
   grantableRoles: string[];
   /** Only the owner may hand the organization to somebody else. */
   canTransferOwnership: boolean;
+  /** POOLSE-03, echoed so no archive control is offered that the API refuses. */
+  canArchive: boolean;
 }
 
 /**
@@ -58,18 +60,26 @@ export class PeopleController {
       listPendingInvitations(organizationId),
     ]);
 
-    // Inviting is the owner's alone, per backlog story 9: control of the licence
-    // stays with the person who pays for it. Admins keep everything else,
-    // including seeing exactly who is in the organization.
-    const isOwner = hasRole('owner');
+    /*
+     * Who may invite comes from the matrix now — POOLSE-01.
+     *
+     * It used to be the owner alone. An instructor may now invite the families
+     * they teach and nobody else, which is what `grantableRoles` returns for
+     * them; the dialog lists exactly that and the API refuses anything more.
+     *
+     * Ownership is still the owner's alone and still moves only by transfer:
+     * `owner` is in nobody's grantable set, including their own.
+     */
+    const grantable = grantableRoles();
 
     return {
       organizationId,
       members,
       invitations,
-      canInvite: isOwner,
-      grantableRoles: isOwner ? grantableRoles() : [],
-      canTransferOwnership: isOwner,
+      canInvite: grantable.length > 0,
+      grantableRoles: grantable,
+      canTransferOwnership: hasRole('owner'),
+      canArchive: canArchive(),
     };
   }
 

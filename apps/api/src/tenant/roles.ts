@@ -58,19 +58,102 @@ export function hasRole(...allowed: readonly MemberRole[]): boolean {
 }
 
 /**
- * Which roles may be handed out in an invitation — and `owner` is not one of
- * them, for anybody, ever.
+ * Who may hand out which roles — POOLSE-01.
  *
- * There is exactly one owner per organization and the only way it moves is
- * `transfer_ownership`. That is enforced by a unique index in the database, so
- * this list is not the guarantee; it is the interface agreeing with the
- * guarantee, which is what stops a request getting as far as a constraint
+ * A table, not a scatter of `if` statements, because the ticket is explicit that
+ * this will change: "maintenance cannot invite" is marked *for now*, and moving
+ * it should be editing one line rather than hunting for every place the rule was
+ * expressed.
+ *
+ * **`owner` appears in nobody's row, including the owner's.** The ticket's matrix
+ * says an owner may invite an owner; the schema says otherwise, and the schema
+ * wins. `membership_role_one_owner` is a unique index enforcing exactly one owner
+ * per organization — backlog round 2, story B9 — and the way the club changes
+ * hands is `transfer_ownership`, which exists precisely so the rule is not a trap
+ * when that person leaves. Two owners at once would reopen the licence-sharing
+ * hole B9 closed, and this list is what stops a request reaching a constraint
  * violation the operator would read as a crash.
  *
- * No longer takes a parameter. It used to return `owner` for owners, and the
- * absence of that argument is the point: there is no caller and no role for whom
- * the answer differs.
+ * An instructor may invite the families they teach and nobody else. That is not
+ * a courtesy: an instructor who can invite an admin can invite themselves one.
+ */
+const INVITATION_MATRIX: Record<MemberRole, readonly MemberRole[]> = {
+  owner: ['admin', 'instructor', 'maintenance', 'student', 'guardian'],
+  admin: ['admin', 'instructor', 'maintenance', 'student', 'guardian'],
+  instructor: ['student', 'guardian'],
+  maintenance: [],
+  student: [],
+  guardian: [],
+};
+
+/**
+ * Every role this caller may grant, across all the roles they hold.
+ *
+ * The union, because somebody who is both an owner and an instructor should be
+ * able to do everything either can — and because the alternative, picking a
+ * "primary" role, is a concept this product does not have.
  */
 export function grantableRoles(): MemberRole[] {
-  return ['admin', 'instructor', 'maintenance', 'student', 'guardian'];
+  const { roles } = currentTenant();
+
+  const allowed = new Set<MemberRole>();
+  for (const held of roles) {
+    if (!isMemberRole(held)) continue;
+    for (const grantable of INVITATION_MATRIX[held]) allowed.add(grantable);
+  }
+
+  // Ordered by the enum rather than by insertion, so the invite dialog lists
+  // roles the same way every time regardless of who is looking.
+  return MEMBER_ROLES.filter((role) => allowed.has(role));
+}
+
+/**
+ * Whether this caller may archive anything — POOLSE-03.
+ *
+ * One function, used by every archive endpoint and echoed to the client so a
+ * button is never offered that the API would refuse. The ticket asks for exactly
+ * this: a single shared check rather than the same pair of role names repeated
+ * down eight controllers, where the ninth is the one somebody forgets.
+ *
+ * Archiving is destructive-looking and hard to explain after the fact — a class
+ * group vanishing from a timetable is a phone call — so it stays with the two
+ * roles that answer that phone call.
+ */
+export function canArchive(): boolean {
+  return hasRole('owner', 'admin');
+}
+
+export function requireCanArchive(): void {
+  if (!canArchive()) {
+    throw new ForbiddenException({
+      code: 'cannot_archive',
+      message: 'Only owners and administrators can archive',
+    });
+  }
+}
+
+/** Whether this caller may invite anybody at all — for hiding the entry point. */
+export function canInvite(): boolean {
+  return grantableRoles().length > 0;
+}
+
+/**
+ * Refuses a role change the caller may not make — POOLSE-01, criterion 4.
+ *
+ * The same table governs changing somebody's roles as governs inviting them.
+ * Without this an admin could invite an instructor and then promote them to
+ * owner, which is the escalation the matrix exists to prevent, arrived at in two
+ * steps instead of one.
+ */
+export function requireGrantable(roles: readonly string[]): void {
+  const allowed = new Set(grantableRoles());
+  const refused = roles.filter((role) => !allowed.has(role as MemberRole));
+
+  if (refused.length > 0) {
+    throw new ForbiddenException({
+      code: 'role_not_grantable',
+      message: `Not allowed to grant: ${refused.join(', ')}`,
+      refused,
+    });
+  }
 }
