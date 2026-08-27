@@ -303,7 +303,12 @@ class_schedule                  -- the recurring weekly pattern
 
 closure                         -- holidays, maintenance shutdowns, August
   id, organization_id, facility_id, pool_id (nullable), starts_on, ends_on,
-  reason, blocks_generation boolean default true
+  reason, blocks_generation boolean default true,
+  source ('national_holiday'|'municipal_holiday'|'manual'), repeats_annually
+  exclude using gist (organization_id with =,
+                      coalesce(pool_id, uuid_nil) with =,
+                      daterange(starts_on, ends_on, '[]') with &&)
+      where (archived_at is null and source = 'manual' and not repeats_annually)
 
 class_session                   -- a materialised occurrence
   id, organization_id, class_group_id, starts_at timestamptz,
@@ -421,6 +426,36 @@ one with attendance recorded against it.
 
 The exclusion constraint is what stops two turmas being booked into lane 3 at 18:00. This
 is a week-one operator complaint if the database does not prevent it.
+
+### Closures cover a range, and bite immediately
+
+Two closures over the same days is not a richer truth — it is a question nobody
+can answer, because a cancelled class carries one reason. `closure_no_overlap`
+refuses it in the database rather than in the controller, because two operators
+creating "Natal" at the same moment would both pass an application check and both
+insert. Annually-repeating closures are excluded from it: their range is a
+pattern rather than dates, `daterange` cannot express "every year", and the
+honest options were to leave them out or to pretend.
+
+`apply_closure(organization, closure)` performs the cancellation
+`generate_sessions` performs, for one closure and without generating anything.
+Without it a closure created today leaves this afternoon's class standing until
+somebody presses "Gerar a época", and an operator who has just said the pool is
+shut is entitled to see it shut.
+
+`closure_impact(organization, from, to, pool)` answers what a range would take
+down *before* it is saved. The number that matters is `marked`: cancelling a
+class nobody registered is routine, cancelling one whose register was already
+taken means somebody stood at the poolside and wrote it down.
+
+**A closure cancels with no charge and no reposição credit.** The pool was
+closed; nobody was absent. Compensating a long closure should be an explicit
+decision, never a side effect of one.
+
+`closure_id` on a cancelled session is what tells "the pool was shut" apart from
+a class somebody removed by hand (POOLSE-14), and it is what lets removing a
+closure give the classes back — `generate_sessions` only revives what a closure
+put down.
 
 ### Which day a session is on
 

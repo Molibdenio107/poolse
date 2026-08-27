@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { holidaysBetween } from './holidays.js';
 
@@ -107,6 +107,17 @@ export async function createClosure(
   input: ClosureInput,
 ): Promise<string> {
   return withOrg(organizationId, async (tx) => {
+    /*
+     * Checked here as well as by `closure_no_overlap` — POOLSE-31, criterion 7.
+     *
+     * Not belt and braces: the constraint is what makes the guarantee true under
+     * two operators at once, and this is what turns it into a message naming the
+     * closure already there. A raw exclusion violation would reach the operator
+     * as "conflicting key value", which tells them nothing they can act on.
+     */
+    const clash = await overlapping(tx, input.startsOn, input.endsOn, input.poolId, null);
+    if (clash !== null) throw new ClosureOverlapError(clash);
+
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO closure (
          organization_id, pool_id, starts_on, ends_on, reason,
@@ -127,14 +138,153 @@ export async function createClosure(
     const id = rows[0]?.id;
     if (!id) throw new Error('Could not create the closure');
 
+    /*
+     * Take effect now, not at the next generation — POOLSE-31, criterion 8.
+     *
+     * Without this, closing the pool for next week leaves next week's classes
+     * standing on the calendar until somebody presses "Gerar a época". An
+     * operator who has just told the system the pool is shut is entitled to see
+     * it shut.
+     */
+    const { rows: applied } = await tx.query<{ apply_closure: number }>(
+      `SELECT apply_closure($1, $2)`,
+      [organizationId, id],
+    );
+
     await recordAudit(tx, {
       action: 'closure.created',
       entityType: 'closure',
       entityId: id,
-      data: { reason: input.reason, startsOn: input.startsOn, endsOn: input.endsOn },
+      data: {
+        reason: input.reason,
+        startsOn: input.startsOn,
+        endsOn: input.endsOn,
+        // How many classes it took down, so the trail says what it cost rather
+        // than only what was asked for.
+        cancelled: applied[0]?.apply_closure ?? 0,
+      },
     });
 
     return id;
+  });
+}
+
+/**
+ * Raised when a closure would cover days another already covers — POOLSE-31,
+ * criterion 7.
+ *
+ * Carries the name of the closure already there, because "overlaps with an
+ * existing closure" sends somebody hunting through a year of calendar, and
+ * "overlaps with Encerramento de Natal" does not.
+ */
+export class ClosureOverlapError extends Error {
+  constructor(readonly existing: string) {
+    super(`Overlaps with ${existing}`);
+  }
+}
+
+/** The closure already covering any of these days, if there is one. */
+async function overlapping(
+  tx: Tx,
+  startsOn: string,
+  endsOn: string,
+  poolId: string | null,
+  excludeId: string | null,
+): Promise<string | null> {
+  const { rows } = await tx.query<{ reason: string }>(
+    `SELECT reason FROM closure
+      WHERE archived_at IS NULL
+        AND source = 'manual'
+        AND NOT repeats_annually
+        AND coalesce(pool_id, '00000000-0000-0000-0000-000000000000'::uuid)
+            = coalesce($3::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+        AND daterange(starts_on, ends_on, '[]') && daterange($1::date, $2::date, '[]')
+        AND ($4::uuid IS NULL OR id <> $4::uuid)
+      LIMIT 1`,
+    [startsOn, endsOn, poolId, excludeId],
+  );
+  return rows[0]?.reason ?? null;
+}
+
+/**
+ * What a range would take down, before anybody commits to it — criterion 10.
+ *
+ * `marked` is the number that matters. Cancelling a class nobody has registered
+ * is routine; cancelling one whose register was already taken means somebody
+ * stood at the poolside and wrote it down, and they should be told before rather
+ * than after.
+ */
+export interface ClosureImpact {
+  sessions: number;
+  marked: number;
+}
+
+export async function closureImpact(
+  organizationId: string,
+  startsOn: string,
+  endsOn: string,
+  poolId: string | null,
+): Promise<ClosureImpact> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ o_sessions: number; o_marked: number }>(
+      `SELECT o_sessions, o_marked FROM closure_impact($1, $2::date, $3::date, $4::uuid)`,
+      [organizationId, startsOn, endsOn, poolId],
+    );
+    return { sessions: rows[0]?.o_sessions ?? 0, marked: rows[0]?.o_marked ?? 0 };
+  });
+}
+
+/**
+ * Extend, shorten or rename an existing closure — criterion 6.
+ *
+ * Re-applies afterwards, so shortening a closure gives back the classes it no
+ * longer covers and extending it takes down the ones it now does. The restore
+ * half is `generate_sessions`' own step 3, which only revives what a closure put
+ * down; a class cancelled by a person is never touched.
+ */
+export async function updateClosure(
+  organizationId: string,
+  closureId: string,
+  input: ClosureInput,
+): Promise<'updated' | 'not_found'> {
+  return withOrg(organizationId, async (tx) => {
+    const clash = await overlapping(
+      tx,
+      input.startsOn,
+      input.endsOn,
+      input.poolId,
+      closureId,
+    );
+    if (clash !== null) throw new ClosureOverlapError(clash);
+
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE closure
+          SET starts_on = $2::date, ends_on = $3::date, reason = $4,
+              pool_id = $5, blocks_generation = $6, repeats_annually = $7
+        WHERE id = $1 AND archived_at IS NULL AND source = 'manual'
+      RETURNING id`,
+      [
+        closureId,
+        input.startsOn,
+        input.endsOn,
+        input.reason,
+        input.poolId,
+        input.blocksGeneration,
+        input.repeatsAnnually,
+      ],
+    );
+    if (!rows[0]) return 'not_found';
+
+    await tx.query(`SELECT apply_closure($1, $2)`, [organizationId, closureId]);
+
+    await recordAudit(tx, {
+      action: 'closure.updated',
+      entityType: 'closure',
+      entityId: closureId,
+      data: { reason: input.reason, startsOn: input.startsOn, endsOn: input.endsOn },
+    });
+
+    return 'updated';
   });
 }
 

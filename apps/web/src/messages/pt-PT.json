@@ -833,6 +833,25 @@
     "title": "Calendário",
     "weekNav": "Navegar entre semanas",
     "wholeOrganization": "Toda a organização",
-    "yourClosures": "Os seus encerramentos"
+    "yourClosures": "Os seus encerramentos",
+    "year": "Ano",
+    "closuresReadOnly": "Só o proprietário e os administradores podem criar encerramentos.",
+    "rangeStartHint": "Clique no primeiro dia do encerramento.",
+    "rangeEndHint": "Clique no último dia. Os dias pelo meio ficam marcados.",
+    "rangeEnd": "no intervalo selecionado",
+    "legendHoliday": "Feriado",
+    "legendClosure": "Encerramento",
+    "legendSelecting": "A selecionar",
+    "holiday": "Feriado",
+    "closeFrom": "Encerrar de {from} a {to}",
+    "closureReason": "Motivo",
+    "closureReasonPlaceholder": "Manutenção anual, Encerramento de Natal…",
+    "closureScope": "Abrange",
+    "wholeSite": "Toda a instalação",
+    "closureEffect": "As aulas nestes dias são canceladas, sem cobrança e sem gerar aulas de reposição. A piscina esteve fechada — ninguém faltou.",
+    "impactSessions": "{count, plural, one {Cancela # aula.} other {Cancela # aulas.}}",
+    "impactMarked": "Atenção: {marked, plural, one {# destas aulas já tem presenças marcadas} other {# destas aulas já têm presenças marcadas}}, de um total de {sessions}.",
+    "removeClosure": "Remover {reason}",
+    "closureOverlap": "Já existe um encerramento nestes dias: {existing}."
   }
 }

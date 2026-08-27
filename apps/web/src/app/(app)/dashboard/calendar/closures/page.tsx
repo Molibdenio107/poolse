@@ -1,22 +1,39 @@
-import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Closure, type Closures } from '@/lib/api';
-import { longDate, shortDate } from '@/lib/dates';
-import { ClosureForm, RemoveClosure } from '../calendar-forms';
+import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
+import { ApiError, apiFetch, type Closures } from '@/lib/api';
 import { BackLink } from '@/components/back-link';
+import { ClosureCalendar } from './closure-calendar';
 
 /**
- * When the pool is shut — slice 1.5.
+ * When the pool is shut — slice 1.5, rebuilt as a year for POOLSE-31.
  *
- * Two kinds of row, and the difference matters enough to separate them on
- * screen. The national holidays were put there by Poolse, on the operator's
- * instruction to close on them automatically; the rest were typed by a person.
- * Both are removable, and that is the point of showing the holidays at all: a
- * municipal pool that opens on the 5th of October needs to be able to find the
- * thing that took its classes away and delete it.
+ * Was two lists, one of holidays and one of everything else. A list answers
+ * "what closures exist"; the question an operator actually has is "is the pool
+ * open that week", and a year of months answers it without them holding twelve
+ * date ranges in their head.
+ *
+ * Both kinds of row survive the change and stay distinguishable. The national
+ * holidays were put there by Poolse on the operator's instruction; the rest were
+ * typed by a person. Both are removable, and that is the point of showing the
+ * holidays at all: a municipal pool that opens on the 5th of October needs to
+ * find the thing that took its classes away and delete it.
  */
-export default async function ClosuresPage(): Promise<React.ReactElement> {
+
+/** A year either side is enough to plan with, and keeps the switcher small. */
+const SPAN = 1;
+
+export default async function ClosuresPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const locale = await getLocale();
+  const { year: requested } = await searchParams;
+
+  const thisYear = new Date().getUTCFullYear();
+  const parsed = Number(requested);
+  // A hand-typed year in the query string is not trusted into a Date.
+  const year = Number.isInteger(parsed) && parsed > 2000 && parsed < 2100 ? parsed : thisYear;
 
   let data: Closures | null = null;
   let failure: string | null = null;
@@ -29,10 +46,7 @@ export default async function ClosuresPage(): Promise<React.ReactElement> {
     else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
   }
 
-  const manual = (data?.closures ?? []).filter((closure) => closure.source === 'manual');
-  const holidays = (data?.closures ?? []).filter(
-    (closure) => closure.source === 'national_holiday',
-  );
+  const years = Array.from({ length: SPAN * 2 + 1 }, (_, index) => thisYear - SPAN + index);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-16">
@@ -60,111 +74,40 @@ export default async function ClosuresPage(): Promise<React.ReactElement> {
 
       {data !== null && (
         <>
-          {data.canManage && (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-              <div>
-                <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                  {t('calendar.addClosure')}
-                </h2>
-                <p className="mt-1 text-sm text-foreground-muted">{t('calendar.addClosureHint')}</p>
-              </div>
-              <ClosureForm organizationId={data.organizationId} pools={data.pools} />
-            </section>
+          {/*
+            Links rather than a select, so a year is a real address: an operator
+            can bookmark 2027 and send it to somebody.
+          */}
+          <nav className="flex flex-wrap items-center gap-2" aria-label={t('calendar.year')}>
+            {years.map((option) => (
+              <Link
+                key={option}
+                href={`/dashboard/calendar/closures?year=${option}`}
+                aria-current={option === year ? 'page' : undefined}
+                className={
+                  option === year
+                    ? 'rounded bg-primary/15 px-3 py-1 text-sm font-medium text-primary'
+                    : 'rounded px-3 py-1 text-sm text-foreground-muted hover:bg-surface-muted'
+                }
+              >
+                {option}
+              </Link>
+            ))}
+          </nav>
+
+          {!data.canManage && (
+            <p className="text-sm text-foreground-muted">{t('calendar.closuresReadOnly')}</p>
           )}
 
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('calendar.yourClosures')}
-            </h2>
-
-            {manual.length === 0 ? (
-              <p className="text-sm text-foreground-muted">{t('calendar.noClosures')}</p>
-            ) : (
-              <ul className="flex flex-col divide-y divide-border">
-                {manual.map((closure) => (
-                  <ClosureRow
-                    key={closure.id}
-                    closure={closure}
-                    organizationId={data.organizationId}
-                    canManage={data.canManage}
-                    locale={locale}
-                    labels={{
-                      wholeOrganization: t('calendar.wholeOrganization'),
-                      repeats: t('calendar.repeatsBadge'),
-                      note: t('calendar.effectNote'),
-                    }}
-                  />
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-            <div>
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('calendar.holidays')}
-              </h2>
-              <p className="mt-1 text-sm text-foreground-muted">{t('calendar.holidaysHint')}</p>
-            </div>
-
-            {holidays.length === 0 ? (
-              <p className="text-sm text-foreground-muted">{t('calendar.noHolidays')}</p>
-            ) : (
-              <ul className="flex flex-col divide-y divide-border">
-                {holidays.map((closure) => (
-                  <ClosureRow
-                    key={closure.id}
-                    closure={closure}
-                    organizationId={data.organizationId}
-                    canManage={data.canManage}
-                    locale={locale}
-                    labels={{
-                      wholeOrganization: t('calendar.wholeOrganization'),
-                      repeats: t('calendar.repeatsBadge'),
-                      note: t('calendar.effectNote'),
-                    }}
-                  />
-                ))}
-              </ul>
-            )}
-          </section>
+          <ClosureCalendar
+            organizationId={data.organizationId}
+            year={year}
+            closures={data.closures}
+            pools={data.pools}
+            canManage={data.canManage}
+          />
         </>
       )}
     </main>
-  );
-}
-
-function ClosureRow({
-  closure,
-  organizationId,
-  canManage,
-  locale,
-  labels,
-}: {
-  closure: Closure;
-  organizationId: string;
-  canManage: boolean;
-  locale: string;
-  labels: { wholeOrganization: string; repeats: string; note: string };
-}): React.ReactElement {
-  // A single day reads as a single day. "25 December to 25 December" is the kind
-  // of phrasing that makes software feel like it is talking to itself.
-  const when =
-    closure.startsOn === closure.endsOn
-      ? longDate(closure.startsOn, locale)
-      : `${shortDate(closure.startsOn, locale)} – ${longDate(closure.endsOn, locale)}`;
-
-  return (
-    <li className="flex flex-wrap items-baseline justify-between gap-3 py-3">
-      <div className="min-w-0">
-        <p className="font-medium">{closure.reason}</p>
-        <p className="text-sm text-foreground-muted">
-          {when} · {closure.poolName ?? labels.wholeOrganization}
-          {closure.repeatsAnnually && ` · ${labels.repeats}`}
-          {!closure.blocksGeneration && ` · ${labels.note}`}
-        </p>
-      </div>
-      {canManage && <RemoveClosure organizationId={organizationId} closure={closure} />}
-    </li>
   );
 }

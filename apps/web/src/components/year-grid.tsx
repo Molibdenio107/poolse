@@ -23,8 +23,18 @@ export interface DayState {
   className?: string;
   /** Appended to the accessible name — "aprovado", "Rita Lopes e Tiago Freitas". */
   description?: string;
-  /** Sundays and public holidays. Rendered dim and not focusable. */
+  /** Sundays and public holidays. Rendered dim and not pickable. */
   disabled?: boolean;
+  /**
+   * Reachable by keyboard even though it cannot be picked — POOLSE-31.
+   *
+   * A feriado is dim because it is not selectable, but its name is information
+   * an operator wants, and a day that only a mouse can interrogate is a day half
+   * the staff cannot read. Focusing it announces its full label.
+   */
+  focusable?: boolean;
+  /** Native tooltip, for the mouse. Never the only place the name appears. */
+  title?: string;
   /** A small mark under the number, for a second cue that is not colour. */
   marker?: string;
 }
@@ -52,6 +62,7 @@ export function YearGrid({
   weekdayInitials,
   stateFor,
   onPick,
+  onHover,
   labelFor,
   className,
 }: {
@@ -62,7 +73,15 @@ export function YearGrid({
   weekdayInitials: string[];
   stateFor: (day: string) => DayState;
   /** Absent in read-only mode, which is what the team map uses. */
-  onPick?: (day: string) => void;
+  onPick?: ((day: string) => void) | undefined;
+  /**
+   * The day under the cursor, or null on leaving the grid — POOLSE-31.
+   *
+   * What makes a range preview possible: click the first day, and every day up
+   * to the one being hovered paints as it would if you clicked. Optional, so the
+   * two vacation modes carry none of it.
+   */
+  onHover?: ((day: string | null) => void) | undefined;
   /** Full accessible name for a day — "3 de Agosto de 2026". */
   labelFor: (day: string) => string;
   className?: string;
@@ -129,6 +148,9 @@ export function YearGrid({
                     // learns who is away, and it is the reason colour is never
                     // the only cue here.
                     role="img"
+                    tabIndex={state.focusable === true ? 0 : undefined}
+                    title={state.title}
+                    onMouseEnter={onHover === undefined ? undefined : () => onHover(day)}
                     aria-label={`${labelFor(day)}${state.description ? `, ${state.description}` : ''}`}
                     className={cn(
                       'flex aspect-square flex-col items-center justify-center rounded text-xs',
@@ -158,7 +180,13 @@ export function YearGrid({
                   // still down, which is what tells a drag from a hover.
                   onPointerEnter={(event) => {
                     if (event.buttons === 1) onPick(day);
+                    onHover?.(day);
                   }}
+                  // Focus previews too, so the range can be chosen without a
+                  // mouse — the second click has a keyboard equivalent already
+                  // (Enter on the day), and this is what makes it legible.
+                  onFocus={() => onHover?.(day)}
+                  title={state.title}
                   aria-label={`${labelFor(day)}${state.description ? `, ${state.description}` : ''}`}
                   aria-pressed={state.className !== undefined}
                   className={cn(

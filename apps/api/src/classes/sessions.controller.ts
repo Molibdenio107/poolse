@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
@@ -15,6 +16,8 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   archiveClosure,
+  ClosureOverlapError,
+  closureImpact,
   createClosure,
   findClash,
   findScheduleClashes,
@@ -27,9 +30,12 @@ import {
   listSessions,
   removeFutureSessions,
   sessionsForStudent,
+  updateClosure,
   cancelSession,
   setSubstitute,
   type Closure,
+  type ClosureImpact,
+  type ClosureInput,
   type GenerationResult,
   type Session,
 } from './sessions.repository.js';
@@ -77,34 +83,60 @@ export class ClosuresController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    const startsOn = parseDate(body['startsOn'], 'startsOn');
-    const endsOn = parseDate(body['endsOn'] ?? body['startsOn'], 'endsOn');
-    if (endsOn < startsOn) {
-      throw new BadRequestException('The closure ends before it starts');
+    try {
+      return { id: await createClosure(organizationId, parseClosure(body)) };
+    } catch (error) {
+      throw asOverlap(error);
+    }
+  }
+
+  /**
+   * What a range would take down — POOLSE-31, criterion 10.
+   *
+   * Asked while somebody is still choosing dates, so it takes a range rather
+   * than a closure id. Read-only, and readable by anyone who may create one.
+   */
+  @Get('impact')
+  async impact(
+    @Query('startsOn') startsOn?: string,
+    @Query('endsOn') endsOn?: string,
+    @Query('poolId') poolId?: string,
+  ): Promise<ClosureImpact> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const from = parseDate(startsOn, 'startsOn');
+    const to = parseDate(endsOn ?? startsOn, 'endsOn');
+    if (to < from) throw new BadRequestException('The closure ends before it starts');
+
+    return closureImpact(
+      organizationId,
+      from,
+      to,
+      poolId !== undefined && poolId.trim() !== '' ? poolId.trim() : null,
+    );
+  }
+
+  /** Extend, shorten or rename — criterion 6. */
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ updated: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    let outcome: 'updated' | 'not_found';
+    try {
+      outcome = await updateClosure(organizationId, id, parseClosure(body));
+    } catch (error) {
+      throw asOverlap(error);
     }
 
-    const reason = typeof body['reason'] === 'string' ? body['reason'].trim() : '';
-    if (reason.length === 0) throw new BadRequestException('reason is required');
-    if (reason.length > MAX_REASON) {
-      throw new BadRequestException(`reason may be at most ${MAX_REASON} characters`);
-    }
-
-    const poolId = typeof body['poolId'] === 'string' && body['poolId'].trim().length > 0
-      ? body['poolId'].trim()
-      : null;
-
-    return {
-      id: await createClosure(organizationId, {
-        startsOn,
-        endsOn,
-        reason,
-        poolId,
-        // Default true: somebody entering a closure almost always means "we are
-        // shut". The note-in-the-calendar case is the one that has to be asked for.
-        blocksGeneration: body['blocksGeneration'] !== false,
-        repeatsAnnually: body['repeatsAnnually'] === true,
-      }),
-    };
+    // Also the answer for a national holiday, which is not editable: its dates
+    // are computed and renaming one would be a lie that survives regeneration.
+    if (outcome === 'not_found') throw new NotFoundException('No such closure');
+    return { updated: true };
   }
 
   /**
@@ -422,4 +454,58 @@ function addDays(date: string, days: number): string {
   return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000)
     .toISOString()
     .slice(0, 10);
+}
+
+/**
+ * The fields of a closure, read once for both create and edit — POOLSE-31.
+ *
+ * Shared deliberately: two parsers drift, and the first symptom is a closure you
+ * can save but not edit because one of them trims and the other does not.
+ */
+function parseClosure(body: Record<string, unknown>): ClosureInput {
+  const startsOn = parseDate(body['startsOn'], 'startsOn');
+  const endsOn = parseDate(body['endsOn'] ?? body['startsOn'], 'endsOn');
+  if (endsOn < startsOn) {
+    throw new BadRequestException('The closure ends before it starts');
+  }
+
+  const reason = typeof body['reason'] === 'string' ? body['reason'].trim() : '';
+  if (reason.length === 0) throw new BadRequestException('reason is required');
+  if (reason.length > MAX_REASON) {
+    throw new BadRequestException(`reason may be at most ${MAX_REASON} characters`);
+  }
+
+  const poolId =
+    typeof body['poolId'] === 'string' && body['poolId'].trim().length > 0
+      ? body['poolId'].trim()
+      : null;
+
+  return {
+    startsOn,
+    endsOn,
+    reason,
+    poolId,
+    // Default true: somebody entering a closure almost always means "we are
+    // shut". The note-in-the-calendar case is the one that has to be asked for.
+    blocksGeneration: body['blocksGeneration'] !== false,
+    repeatsAnnually: body['repeatsAnnually'] === true,
+  };
+}
+
+/**
+ * Turns an overlap into a 409 that names the closure already there.
+ *
+ * A conflict, not a bad request: nothing about what was sent is malformed, and
+ * the same range would be perfectly valid tomorrow if the other closure were
+ * removed. Anything else is rethrown untouched.
+ */
+function asOverlap(error: unknown): unknown {
+  if (error instanceof ClosureOverlapError) {
+    return new ConflictException({
+      code: 'closure_overlap',
+      message: error.message,
+      existing: error.existing,
+    });
+  }
+  return error;
 }

@@ -628,4 +628,81 @@ BEGIN
   RAISE NOTICE 'PASS test 11: future removal spares the past and the marked, and stops the turma';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 13: closures do not overlap, and take effect on their own — POOLSE-31
+--
+-- Two closures over the same days is not a richer truth; it is a question
+-- nobody can answer, because a cancelled class can only carry one reason. And a
+-- closure that only bites at the next generation leaves this afternoon's class
+-- standing after somebody has said the pool is shut.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid; v_facility uuid; v_pool uuid; v_group uuid;
+  v_first uuid; v_cancelled int; v_sessions int; v_marked int;
+BEGIN
+  INSERT INTO organization (name, slug) VALUES ('Clube Encerrado', 'clube-encerrado')
+  RETURNING id INTO v_org;
+
+  INSERT INTO season (organization_id, name, starts_on, ends_on)
+  VALUES (v_org, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31');
+
+  INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina')
+  RETURNING id INTO v_facility;
+  INSERT INTO pool (organization_id, facility_id, name, lane_count)
+  VALUES (v_org, v_facility, 'Tanque', 4) RETURNING id INTO v_pool;
+
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org),
+          'Iniciação', v_pool, 1)
+  RETURNING id INTO v_group;
+
+  -- A class inside the week we are about to close.
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+                             starts_at, duration_minutes, status)
+  VALUES (v_org, v_group, v_pool, 1, TIMESTAMPTZ '2027-03-10 18:00:00+00', 45, 'scheduled');
+
+  -- What it would cost, asked before committing.
+  SELECT o_sessions, o_marked INTO v_sessions, v_marked
+    FROM closure_impact(v_org, DATE '2027-03-08', DATE '2027-03-14', NULL);
+
+  IF v_sessions <> 1 OR v_marked <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 13: impact said % sessions, % marked', v_sessions, v_marked;
+  END IF;
+
+  INSERT INTO closure (organization_id, starts_on, ends_on, reason, source)
+  VALUES (v_org, DATE '2027-03-08', DATE '2027-03-14', 'Manutenção anual', 'manual')
+  RETURNING id INTO v_first;
+
+  -- Overlapping the same days, same reach, is refused by the database.
+  BEGIN
+    INSERT INTO closure (organization_id, starts_on, ends_on, reason, source)
+    VALUES (v_org, DATE '2027-03-12', DATE '2027-03-20', 'Outra coisa', 'manual');
+    RAISE EXCEPTION 'FAIL test 13: two closures covered the same days';
+  EXCEPTION WHEN exclusion_violation THEN NULL;
+  END;
+
+  -- Touching but not overlapping is fine — the day after is a different day.
+  INSERT INTO closure (organization_id, starts_on, ends_on, reason, source)
+  VALUES (v_org, DATE '2027-03-15', DATE '2027-03-20', 'Obras', 'manual');
+
+  -- And the closure takes the class down on its own, without generating.
+  SELECT apply_closure(v_org, v_first) INTO v_cancelled;
+  IF v_cancelled <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 13: apply_closure cancelled % classes', v_cancelled;
+  END IF;
+
+  -- Stamped with the closure, which is what tells it apart from a class somebody
+  -- removed by hand and what lets removing the closure give it back.
+  IF NOT EXISTS (
+    SELECT 1 FROM class_session
+     WHERE class_group_id = v_group AND status = 'cancelled' AND closure_id = v_first
+  ) THEN
+    RAISE EXCEPTION 'FAIL test 13: the cancellation does not carry its closure';
+  END IF;
+
+  RAISE NOTICE 'PASS test 13: closures cannot overlap, and bite without a generation';
+END $$;
+
 ROLLBACK;

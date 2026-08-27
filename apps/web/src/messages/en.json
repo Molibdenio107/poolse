@@ -833,6 +833,25 @@
     "title": "Calendar",
     "weekNav": "Move between weeks",
     "wholeOrganization": "The whole organisation",
-    "yourClosures": "Your closures"
+    "yourClosures": "Your closures",
+    "year": "Year",
+    "closuresReadOnly": "Only the owner and administrators can create closures.",
+    "rangeStartHint": "Click the first day of the closure.",
+    "rangeEndHint": "Click the last day. The days between are marked.",
+    "rangeEnd": "in the selected range",
+    "legendHoliday": "Holiday",
+    "legendClosure": "Closure",
+    "legendSelecting": "Selecting",
+    "holiday": "Holiday",
+    "closeFrom": "Close from {from} to {to}",
+    "closureReason": "Reason",
+    "closureReasonPlaceholder": "Annual maintenance, Christmas closure…",
+    "closureScope": "Covers",
+    "wholeSite": "The whole site",
+    "closureEffect": "Classes on these days are cancelled, with no charge and no make-up credit. The pool was closed — nobody was absent.",
+    "impactSessions": "{count, plural, one {Cancels # class.} other {Cancels # classes.}}",
+    "impactMarked": "Careful: {marked, plural, one {# of these classes already has attendance marked} other {# of these classes already have attendance marked}}, out of {sessions}.",
+    "removeClosure": "Remove {reason}",
+    "closureOverlap": "A closure already covers these days: {existing}."
   }
 }
