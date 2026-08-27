@@ -236,17 +236,19 @@ async function main(): Promise<void> {
     //
     // Only where absent: a range somebody set by hand is theirs.
     // ---------------------------------------------------------------------
+    // Months — POOLSE-06. The baby class starts at six months, which is the
+    // distinction whole years could not express and the reason the unit changed.
     const RANGES: Record<string, [number | null, number | null]> = {
-      'natação para bebés': [0, 2],
-      'nível a adaptação': [3, 5],
-      'nível b autonomia': [5, 8],
-      'nível c1 iniciação': [7, 12],
-      'nível c2 aperfeiçoamento': [10, null],
+      'natação para bebés': [6, 35],
+      'nível a adaptação': [36, 71],
+      'nível b autonomia': [60, 107],
+      'nível c1 iniciação': [84, 155],
+      'nível c2 aperfeiçoamento': [120, null],
     };
 
     const levels = await many<Level>(
       client,
-      `SELECT id, name, min_age_years AS min, max_age_years AS max
+      `SELECT id, name, min_age_months AS min, max_age_months AS max
          FROM student_level WHERE organization_id = $1 AND archived_at IS NULL
         ORDER BY sort_order`,
       [org.id],
@@ -258,7 +260,7 @@ async function main(): Promise<void> {
       if (!range) continue;
 
       await client.query(
-        `UPDATE student_level SET min_age_years = $2, max_age_years = $3 WHERE id = $1`,
+        `UPDATE student_level SET min_age_months = $2, max_age_months = $3 WHERE id = $1`,
         [level.id, range[0], range[1]],
       );
       level.min = range[0];

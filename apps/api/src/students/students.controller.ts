@@ -146,35 +146,40 @@ export class StudentsController {
  * one wins depends on declaration order — a footgun that only fires the day
  * somebody reorders the methods.
  */
+/** 120 years. Generous: a masters club with a "90+" level is a real thing. */
+const MAX_AGE_MONTHS = 1440;
+
 /**
- * An optional age bound.
+ * An optional age bound, in months — POOLSE-06.
  *
  * Absent, empty and null all mean "no bound", because "Adultos" genuinely has no
- * maximum and an operator should not have to invent 120 to say so.
+ * maximum and an operator should not have to invent 120 years to say so.
  */
 function age(value: unknown, field: string): number | null {
   if (value === undefined || value === null || value === '') return null;
 
   const parsed = typeof value === 'number' ? value : Number(String(value).trim());
-  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 120) {
-    throw new BadRequestException(`${field} must be a whole number of years between 0 and 120`);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > MAX_AGE_MONTHS) {
+    throw new BadRequestException(
+      `${field} must be a whole number of months between 0 and ${MAX_AGE_MONTHS}`,
+    );
   }
   return parsed;
 }
 
 function ageRange(body: Record<string, unknown>): {
-  minAgeYears: number | null;
-  maxAgeYears: number | null;
+  minAgeMonths: number | null;
+  maxAgeMonths: number | null;
 } {
-  const minAgeYears = age(body['minAgeYears'], 'minAgeYears');
-  const maxAgeYears = age(body['maxAgeYears'], 'maxAgeYears');
+  const minAgeMonths = age(body['minAgeMonths'], 'minAgeMonths');
+  const maxAgeMonths = age(body['maxAgeMonths'], 'maxAgeMonths');
 
-  // Checked here as well as by the constraint, so an operator who types 10–4
-  // gets a sentence rather than a constraint name.
-  if (minAgeYears !== null && maxAgeYears !== null && maxAgeYears < minAgeYears) {
-    throw new BadRequestException('maxAgeYears cannot be below minAgeYears');
+  // Checked here as well as by the constraint, so an operator who sets 10 down
+  // to 4 gets a sentence rather than a constraint name.
+  if (minAgeMonths !== null && maxAgeMonths !== null && maxAgeMonths < minAgeMonths) {
+    throw new BadRequestException('maxAgeMonths cannot be below minAgeMonths');
   }
-  return { minAgeYears, maxAgeYears };
+  return { minAgeMonths, maxAgeMonths };
 }
 
 @Controller('levels')
@@ -202,16 +207,16 @@ export class LevelsController {
   @Get(':id/outside')
   async outside(
     @Param('id') id: string,
-    @Query('minAgeYears') min?: string,
-    @Query('maxAgeYears') max?: string,
+    @Query('minAgeMonths') min?: string,
+    @Query('maxAgeMonths') max?: string,
   ): Promise<{ outside: number }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
     return {
       outside: await countOutsideRange(organizationId, id, {
-        minAgeYears: age(min, 'minAgeYears'),
-        maxAgeYears: age(max, 'maxAgeYears'),
+        minAgeMonths: age(min, 'minAgeMonths'),
+        maxAgeMonths: age(max, 'maxAgeMonths'),
       }),
     };
   }
@@ -288,15 +293,80 @@ function asHttp(error: unknown): unknown {
 }
 
 function parseStudent(body: Record<string, unknown>): StudentInput {
+  const birthDate = parseBirthDate(body['birthDate']);
+
+  const guardian = {
+    name: optionalText(body['guardianName'], 'guardianName', MAX_NAME),
+    relationship: optionalText(body['guardianRelationship'], 'guardianRelationship', 80),
+    phone: optionalText(body['guardianPhone'], 'guardianPhone', 40),
+    email: optionalText(body['guardianEmail'], 'guardianEmail', 254),
+    taxNumber: optionalText(body['guardianTaxNumber'], 'guardianTaxNumber', 20),
+    address: optionalText(body['guardianAddress'], 'guardianAddress', 500),
+  };
+
+  /*
+   * A minor needs a guardian who can be reached — POOLSE-04, criterion 2.
+   *
+   * Checked here rather than in the schema, because age moves on its own: a
+   * student who was fifteen when the row was written turns eighteen without
+   * anybody touching it, and a constraint that quietly became false would block
+   * every later edit to a record that was perfectly valid when it was made.
+   *
+   * A student with no birth date is never blocked. Missing dates are the normal
+   * case after an import, and refusing to save them would fail most rows.
+   */
+  if (birthDate !== null && isMinor(birthDate)) {
+    if (guardian.name === null) {
+      throw new BadRequestException({
+        code: 'guardian_required',
+        message: 'A student under 18 needs a guardian',
+        fields: { guardianName: 'students.guardianNameRequired' },
+      });
+    }
+    if (guardian.relationship === null) {
+      throw new BadRequestException({
+        code: 'guardian_required',
+        message: 'A guardian needs a relationship to the student',
+        fields: { guardianRelationship: 'students.guardianRelationshipRequired' },
+      });
+    }
+    if (guardian.phone === null && guardian.email === null) {
+      throw new BadRequestException({
+        code: 'guardian_required',
+        message: 'A guardian needs a phone number or an email address',
+        fields: { guardianPhone: 'students.guardianContactRequired' },
+      });
+    }
+  }
+
   return {
     firstName: requiredText(body['firstName'], 'firstName'),
     lastName: requiredText(body['lastName'], 'lastName'),
-    birthDate: parseBirthDate(body['birthDate']),
+    birthDate,
     levelId: optionalText(body['levelId'], 'levelId', 64),
     contactEmail: optionalText(body['contactEmail'], 'contactEmail', 254),
     contactPhone: optionalText(body['contactPhone'], 'contactPhone', 40),
     notes: optionalText(body['notes'], 'notes', MAX_NOTES),
+    guardian,
   };
+}
+
+/**
+ * Under eighteen, as of today.
+ *
+ * UTC on both sides, because a birth date is a calendar day rather than an
+ * instant — read in a local timezone west of Greenwich it would make somebody a
+ * day younger and flip this answer on their eighteenth birthday.
+ */
+function isMinor(birthDate: string): boolean {
+  const born = new Date(`${birthDate}T00:00:00Z`);
+  const now = new Date();
+
+  let age = now.getUTCFullYear() - born.getUTCFullYear();
+  const month = now.getUTCMonth() - born.getUTCMonth();
+  if (month < 0 || (month === 0 && now.getUTCDate() < born.getUTCDate())) age -= 1;
+
+  return age < 18;
 }
 
 function requiredText(value: unknown, field: string): string {

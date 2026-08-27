@@ -424,10 +424,25 @@ export interface StudentLevel {
   id: string;
   name: string;
   sortOrder: number;
-  /** Both optional and independent: "Adultos" has a minimum and no maximum. */
-  minAgeYears: number | null;
-  maxAgeYears: number | null;
+  /**
+   * Months, both optional and independent — POOLSE-06.
+   *
+   * "Adultos" has a minimum and no maximum; a baby class starts at six months,
+   * which whole years could not express.
+   */
+  minAgeMonths: number | null;
+  maxAgeMonths: number | null;
   studentCount: number;
+}
+
+export interface Guardian {
+  name: string | null;
+  relationship: string | null;
+  phone: string | null;
+  email: string | null;
+  /** NIF, optional. */
+  taxNumber: string | null;
+  address: string | null;
 }
 
 export interface Student {
@@ -445,6 +460,14 @@ export interface Student {
   /** Null unless a live `photo` consent exists — the API decides, not the caller. */
   photoStorageKey: string | null;
   photoConsent: boolean;
+  /**
+   * The encarregado de educação, as fields — POOLSE-04.
+   *
+   * Kept whatever the student's age: nothing clears these when somebody turns
+   * eighteen, because "who was your guardian" stays true about the years it
+   * covered.
+   */
+  guardian: Guardian;
   /**
    * Present on the single-student read, absent from the list.
    *

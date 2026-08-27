@@ -16,15 +16,40 @@ function failure(error: unknown, errorKey: string): FormState {
 
 /** Shared by create and edit — the same fields, read out of the same form. */
 function studentBody(formData: FormData): Record<string, string> {
+  const text = (field: string): string => String(formData.get(field) ?? '').trim();
+
   return {
-    firstName: String(formData.get('firstName') ?? '').trim(),
-    lastName: String(formData.get('lastName') ?? '').trim(),
-    birthDate: String(formData.get('birthDate') ?? '').trim(),
-    levelId: String(formData.get('levelId') ?? '').trim(),
-    contactEmail: String(formData.get('contactEmail') ?? '').trim(),
-    contactPhone: String(formData.get('contactPhone') ?? '').trim(),
-    notes: String(formData.get('notes') ?? '').trim(),
+    firstName: text('firstName'),
+    lastName: text('lastName'),
+    birthDate: text('birthDate'),
+    levelId: text('levelId'),
+    contactEmail: text('contactEmail'),
+    contactPhone: text('contactPhone'),
+    notes: text('notes'),
+    // POOLSE-04. Always posted, even for an adult: the block hides rather than
+    // unmounts, and a form that stopped submitting fields it was still showing
+    // would be the worse of the two surprises.
+    guardianName: text('guardianName'),
+    guardianRelationship: text('guardianRelationship'),
+    guardianPhone: text('guardianPhone'),
+    guardianEmail: text('guardianEmail'),
+    guardianTaxNumber: text('guardianTaxNumber'),
+    guardianAddress: text('guardianAddress'),
   };
+}
+
+/**
+ * Turns the API's field errors into a `FormState` the form can place.
+ *
+ * A guardian rejection names the field it is about — POOLSE-04 asks for the
+ * requirement, and a message at the top saying "a guardian is needed" would
+ * leave somebody looking for which of six boxes was empty.
+ */
+function withFields(error: unknown, errorKey: string): FormState {
+  if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
+    return { ok: false, fields: error.fields };
+  }
+  return failure(error, errorKey);
 }
 
 export async function createStudentAction(
@@ -41,7 +66,7 @@ export async function createStudentAction(
   try {
     created = await apiPost<{ id: string }>('/students', body, { organizationId });
   } catch (error) {
-    return failure(error, 'students.createFailed');
+    return withFields(error, 'students.createFailed');
   }
 
   revalidatePath('/dashboard/students');
@@ -68,7 +93,7 @@ export async function updateStudentAction(
   try {
     await apiPatch(`/students/${studentId}`, body, { organizationId });
   } catch (error) {
-    return failure(error, 'students.saveFailed');
+    return withFields(error, 'students.saveFailed');
   }
 
   revalidatePath('/dashboard/students');
@@ -107,13 +132,13 @@ function ageBound(formData: FormData, field: string): number | null {
 
 function levelBody(formData: FormData): {
   name: string;
-  minAgeYears: number | null;
-  maxAgeYears: number | null;
+  minAgeMonths: number | null;
+  maxAgeMonths: number | null;
 } {
   return {
     name: String(formData.get('name') ?? '').trim(),
-    minAgeYears: ageBound(formData, 'minAgeYears'),
-    maxAgeYears: ageBound(formData, 'maxAgeYears'),
+    minAgeMonths: ageBound(formData, 'minAgeMonths'),
+    maxAgeMonths: ageBound(formData, 'maxAgeMonths'),
   };
 }
 
@@ -191,12 +216,12 @@ export async function renameLevelAction(
 export async function countOutsideRangeAction(
   organizationId: string,
   levelId: string,
-  minAgeYears: number | null,
-  maxAgeYears: number | null,
+  minAgeMonths: number | null,
+  maxAgeMonths: number | null,
 ): Promise<number> {
   const params = new URLSearchParams();
-  if (minAgeYears !== null) params.set('minAgeYears', String(minAgeYears));
-  if (maxAgeYears !== null) params.set('maxAgeYears', String(maxAgeYears));
+  if (minAgeMonths !== null) params.set('minAgeMonths', String(minAgeMonths));
+  if (maxAgeMonths !== null) params.set('maxAgeMonths', String(maxAgeMonths));
 
   const { outside } = await apiFetch<{ outside: number }>(
     `/levels/${levelId}/outside?${params.toString()}`,

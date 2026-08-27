@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { StudentLevel } from '../../../../lib/api';
+import type { Guardian, StudentLevel } from '../../../../lib/api';
+import { GuardianBlock } from './guardian-block';
 import { fitsLevel } from '@/lib/ages';
 import type { FormState } from '../actions';
 import { archiveStudentAction, createStudentAction, updateStudentAction } from './students.actions';
@@ -27,6 +28,7 @@ function Problem({ state }: { state: FormState }): React.ReactElement | null {
 
 export interface StudentFormValues {
   id?: string;
+  guardian?: Guardian;
   firstName?: string;
   lastName?: string;
   birthDate?: string | null;
@@ -152,6 +154,16 @@ export function StudentForm({
         />
         <p className="text-sm text-warning">{t('students.notesWarning')}</p>
       </div>
+
+      {/*
+        POOLSE-04. Its own section, appearing and disappearing with the date of
+        birth without ever throwing away what has been typed into it.
+      */}
+      <GuardianBlock
+        guardian={student?.guardian}
+        birthDateInputId="student-birth"
+        errors={state.fields}
+      />
 
       <div>
         <button

@@ -3,6 +3,9 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '@/lib/api';
+import { ageOptions } from '@/lib/ages';
+import { useMonthWords } from '@/components/age-range';
+import { SelectField } from '@/components/ui/field';
 import type { FormState } from '../../actions';
 import {
   archiveLevelAction,
@@ -54,40 +57,47 @@ export function CreateLevelForm({
   );
 }
 
-/** The two bounds, side by side. Both optional, and empty means "no bound". */
+/**
+ * The two bounds — POOLSE-06.
+ *
+ * A picker rather than a number box, because the unit changes below a year and a
+ * bare number cannot say which it is. It offers one to eleven months and then
+ * whole years, which is exactly the granularity the ticket asks for: every month
+ * matters for a baby class, and nobody sets a level boundary at "seven years and
+ * four months".
+ *
+ * Selects rather than inputs also means the value posted is always a month
+ * count, so nothing downstream has to guess at a unit.
+ */
 function AgeInputs({
-  minAgeYears,
-  maxAgeYears,
+  minAgeMonths,
+  maxAgeMonths,
 }: {
-  minAgeYears?: number | null;
-  maxAgeYears?: number | null;
+  minAgeMonths?: number | null;
+  maxAgeMonths?: number | null;
 }): React.ReactElement {
   const t = useTranslations();
+  const words = useMonthWords();
+
+  const options = [
+    { value: '', label: t('students.ageNoBound') },
+    ...ageOptions(30).map((months) => ({ value: String(months), label: words(months) })),
+  ];
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <label className="flex items-center gap-2 text-sm text-foreground-muted">
-        {t('students.ageFrom')}
-        <input
-          name="minAgeYears"
-          type="number"
-          min={0}
-          max={120}
-          defaultValue={minAgeYears ?? ''}
-          className="w-20 rounded border border-border bg-background px-2 py-1.5 text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        />
-      </label>
-      <label className="flex items-center gap-2 text-sm text-foreground-muted">
-        {t('students.ageTo')}
-        <input
-          name="maxAgeYears"
-          type="number"
-          min={0}
-          max={120}
-          defaultValue={maxAgeYears ?? ''}
-          className="w-20 rounded border border-border bg-background px-2 py-1.5 text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        />
-      </label>
+    <div className="flex flex-wrap gap-3">
+      <SelectField
+        name="minAgeMonths"
+        label={t('students.ageFrom')}
+        initial={minAgeMonths === null || minAgeMonths === undefined ? '' : String(minAgeMonths)}
+        options={options}
+      />
+      <SelectField
+        name="maxAgeMonths"
+        label={t('students.ageTo')}
+        initial={maxAgeMonths === null || maxAgeMonths === undefined ? '' : String(maxAgeMonths)}
+        options={options}
+      />
     </div>
   );
 }
@@ -133,12 +143,12 @@ export function EditLevelForm({
       return raw === '' ? null : Number(raw);
     };
 
-    const min = read('minAgeYears');
-    const max = read('maxAgeYears');
+    const min = read('minAgeMonths');
+    const max = read('maxAgeMonths');
 
     const narrower =
-      (min !== null && (level.minAgeYears === null || min > level.minAgeYears)) ||
-      (max !== null && (level.maxAgeYears === null || max < level.maxAgeYears));
+      (min !== null && (level.minAgeMonths === null || min > level.minAgeMonths)) ||
+      (max !== null && (level.maxAgeMonths === null || max < level.maxAgeMonths));
 
     if (!narrower) {
       setOutside(null);
@@ -185,7 +195,7 @@ export function EditLevelForm({
           className="rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         />
 
-        <AgeInputs minAgeYears={level.minAgeYears} maxAgeYears={level.maxAgeYears} />
+        <AgeInputs minAgeMonths={level.minAgeMonths} maxAgeMonths={level.maxAgeMonths} />
 
         {outside !== null && outside > 0 && (
           <p className="rounded bg-warning/10 px-3 py-2 text-sm text-warning">

@@ -283,4 +283,73 @@ END $$;
 
 RESET ROLE;
 
+-- ---------------------------------------------------------------------------
+-- Test 9 — the encarregado de educação lives on the student — POOLSE-04
+--
+-- The important half is what is *not* enforced. Age moves on its own: a student
+-- who was fifteen when the row was written turns eighteen without anybody
+-- touching it, so a constraint requiring a guardian would quietly become false
+-- and block every later edit to a record that was perfectly valid when made.
+-- The requirement lives in the API, where it can look at today's date; the
+-- schema only refuses values that are wrong in themselves.
+--
+-- And nothing clears the fields when somebody turns eighteen. "Who was your
+-- guardian" stays true about the years it covered.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_org uuid; v_minor uuid; v_adult uuid; n int;
+BEGIN
+  v_org := (SELECT id FROM organization WHERE name = 'Clube A');
+
+  INSERT INTO student (organization_id, first_name, last_name, birth_date,
+                       guardian_name, guardian_relationship, guardian_phone)
+  VALUES (v_org, 'Matilde', 'Sousa', current_date - interval '9 years',
+          'Rita Sousa', 'Mãe', '912345678')
+  RETURNING id INTO v_minor;
+
+  -- An adult with no guardian at all is perfectly ordinary.
+  INSERT INTO student (organization_id, first_name, last_name, birth_date)
+  VALUES (v_org, 'Armando', 'Seabra', DATE '1959-03-02')
+  RETURNING id INTO v_adult;
+
+  -- And an adult who still carries the details recorded while they were a minor
+  -- keeps them. There is no trigger and no job that clears this.
+  UPDATE student SET birth_date = current_date - interval '19 years' WHERE id = v_minor;
+
+  SELECT count(*) INTO n
+    FROM student WHERE id = v_minor AND guardian_name = 'Rita Sousa';
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 9a: guardian data was lost when the student turned 18';
+  END IF;
+
+  -- Blank is not a value, and an untouched form field sends one.
+  BEGIN
+    UPDATE student SET guardian_name = '   ' WHERE id = v_adult;
+    RAISE EXCEPTION 'FAIL test 9b: a blank guardian name was stored';
+  EXCEPTION
+    WHEN check_violation THEN NULL;
+  END;
+
+  -- Loose on purpose — strict validation refuses addresses that work — but not
+  -- so loose that a phone number can be filed as an email.
+  BEGIN
+    UPDATE student SET guardian_email = '912345678' WHERE id = v_adult;
+    RAISE EXCEPTION 'FAIL test 9c: a phone number was stored as an email';
+  EXCEPTION
+    WHEN check_violation THEN NULL;
+  END;
+
+  -- Case is not a difference: citext means a guardian found by email is found
+  -- however the address was typed.
+  UPDATE student SET guardian_email = 'Rita.Sousa@Exemplo.PT' WHERE id = v_adult;
+  SELECT count(*) INTO n
+    FROM student WHERE organization_id = v_org AND guardian_email = 'rita.sousa@exemplo.pt';
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 9d: the guardian email did not match case-insensitively';
+  END IF;
+
+  RAISE NOTICE 'PASS test 9: guardian details are stored, sane, and never cleared by an age';
+END $$;
+
 ROLLBACK;

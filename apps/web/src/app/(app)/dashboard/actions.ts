@@ -22,6 +22,13 @@ export interface FormState {
   errorKey?: string;
   /** Server detail worth showing verbatim — an API message, not a translated string. */
   detail?: string;
+  /**
+   * Field name to translation key, where the API named the fields it refused.
+   *
+   * Rendered beside the field it belongs to. A single message at the top of a
+   * form makes somebody hunt for which of a dozen boxes it meant.
+   */
+  fields?: Record<string, string>;
 }
 
 export interface InviteState extends FormState {

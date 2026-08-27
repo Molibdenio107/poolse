@@ -6,15 +6,37 @@ export interface StudentLevel {
   name: string;
   sortOrder: number;
   /**
-   * Both optional and independent — backlog round 4, ticket 2.
+   * Months, both optional and independent — backlog round 4 ticket 2, and
+   * POOLSE-06.
    *
-   * "Adultos" has a minimum and no maximum; "Livre" has neither and behaves
-   * exactly as every level did before they existed.
+   * Months rather than years because a baby class starts at six months, and one
+   * unit rather than a value-plus-unit pair because the pair means every
+   * comparison first agreeing on the unit. "Adultos" has a minimum and no
+   * maximum; "Livre" has neither and behaves exactly as every level did before
+   * ranges existed.
    */
-  minAgeYears: number | null;
-  maxAgeYears: number | null;
+  minAgeMonths: number | null;
+  maxAgeMonths: number | null;
   /** So the UI can warn before archiving a level people are in. */
   studentCount: number;
+}
+
+
+/**
+ * The encarregado de educação, as fields on the student — POOLSE-04.
+ *
+ * Not a linked account: a club enrolling a seven-year-old needs somewhere to
+ * write their mother's phone number now, not an invitation flow before the
+ * record can be saved. Linking to a real account is its own ticket.
+ */
+export interface Guardian {
+  name: string | null;
+  relationship: string | null;
+  phone: string | null;
+  email: string | null;
+  /** NIF. Text, not a number — it can carry a leading zero and is never arithmetic. */
+  taxNumber: string | null;
+  address: string | null;
 }
 
 export interface Student {
@@ -36,6 +58,14 @@ export interface Student {
   photoStorageKey: string | null;
   /** So the interface can explain why there is no photograph, without implying there is one. */
   photoConsent: boolean;
+  /**
+   * Kept whatever the student's age — POOLSE-04, criterion 5.
+   *
+   * Nothing clears these when somebody turns eighteen. The block collapses in
+   * the interface and the data stays, because "who was your guardian" remains
+   * true about the years it covered.
+   */
+  guardian: Guardian;
 }
 
 export class DuplicateNameError extends Error {}
@@ -83,15 +113,15 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       id: string;
       name: string;
       sort_order: number;
-      min_age_years: number | null;
-      max_age_years: number | null;
+      min_age_months: number | null;
+      max_age_months: number | null;
       student_count: string;
     }>(`
       SELECT l.id,
              l.name,
              l.sort_order,
-             l.min_age_years,
-             l.max_age_years,
+             l.min_age_months,
+             l.max_age_months,
              (
                SELECT count(*)
                  FROM student s
@@ -108,8 +138,8 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       id: row.id,
       name: row.name,
       sortOrder: row.sort_order,
-      minAgeYears: row.min_age_years,
-      maxAgeYears: row.max_age_years,
+      minAgeMonths: row.min_age_months,
+      maxAgeMonths: row.max_age_months,
       // count() comes back as a string from node-pg; bigint does not fit a JS
       // number in general, and the driver refuses to guess.
       studentCount: Number(row.student_count),
@@ -118,8 +148,8 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
 }
 
 export interface AgeRange {
-  minAgeYears: number | null;
-  maxAgeYears: number | null;
+  minAgeMonths: number | null;
+  maxAgeMonths: number | null;
 }
 
 /**
@@ -148,14 +178,20 @@ export async function countOutsideRange(
        WHERE s.level_id = $1
          AND s.archived_at IS NULL
          AND s.birth_date IS NOT NULL
+         -- Compared in months, matching the interface. age() returns an
+         -- interval, so the months are the years times twelve plus the months
+         -- part; extracting only the year would call a five-month-old zero and
+         -- let them into a level starting at six months.
          AND (
               ($2::smallint IS NOT NULL
-                 AND extract(year FROM age(s.birth_date))::int < $2)
+                 AND (extract(year FROM age(s.birth_date)) * 12
+                      + extract(month FROM age(s.birth_date)))::int < $2)
            OR ($3::smallint IS NOT NULL
-                 AND extract(year FROM age(s.birth_date))::int > $3)
+                 AND (extract(year FROM age(s.birth_date)) * 12
+                      + extract(month FROM age(s.birth_date)))::int > $3)
          )
       `,
-      [levelId, range.minAgeYears, range.maxAgeYears],
+      [levelId, range.minAgeMonths, range.maxAgeMonths],
     );
     return Number(rows[0]?.outside ?? 0);
   });
@@ -164,7 +200,7 @@ export async function countOutsideRange(
 export async function createLevel(
   organizationId: string,
   name: string,
-  range: AgeRange = { minAgeYears: null, maxAgeYears: null },
+  range: AgeRange = { minAgeMonths: null, maxAgeMonths: null },
 ): Promise<string> {
   try {
     return await withOrg(organizationId, async (tx) => {
@@ -173,14 +209,14 @@ export async function createLevel(
       // somebody's Adaptação → Iniciação → Aperfeiçoamento would be worse.
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO student_level (organization_id, name, sort_order,
-                                    min_age_years, max_age_years)
+                                    min_age_months, max_age_months)
          VALUES (
            $1, $2,
            coalesce((SELECT max(sort_order) + 1 FROM student_level WHERE archived_at IS NULL), 0),
            $3, $4
          )
          RETURNING id`,
-        [organizationId, name, range.minAgeYears, range.maxAgeYears],
+        [organizationId, name, range.minAgeMonths, range.maxAgeMonths],
       );
 
       const id = rows[0]?.id;
@@ -216,16 +252,16 @@ export async function renameLevel(
   organizationId: string,
   levelId: string,
   name: string,
-  range: AgeRange = { minAgeYears: null, maxAgeYears: null },
+  range: AgeRange = { minAgeMonths: null, maxAgeMonths: null },
 ): Promise<boolean> {
   try {
     return await withOrg(organizationId, async (tx) => {
       const { rows } = await tx.query<{ id: string }>(
         `UPDATE student_level
-            SET name = $2, min_age_years = $3, max_age_years = $4
+            SET name = $2, min_age_months = $3, max_age_months = $4
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
-        [levelId, name, range.minAgeYears, range.maxAgeYears],
+        [levelId, name, range.minAgeMonths, range.maxAgeMonths],
       );
       if (!rows[0]) return false;
 
@@ -358,6 +394,12 @@ export async function listStudents(
       contact_email: string | null;
       contact_phone: string | null;
       notes: string | null;
+      guardian_name: string | null;
+      guardian_relationship: string | null;
+      guardian_phone: string | null;
+      guardian_email: string | null;
+      guardian_tax_number: string | null;
+      guardian_address: string | null;
       photo_storage_key: string | null;
       photo_consent: boolean;
     }>(
@@ -374,6 +416,12 @@ export async function listStudents(
              s.contact_email::text AS contact_email,
              s.contact_phone,
              s.notes,
+             s.guardian_name,
+             s.guardian_relationship,
+             s.guardian_phone,
+             s.guardian_email::text AS guardian_email,
+             s.guardian_tax_number,
+             s.guardian_address,
              ${PHOTO_KEY} AS photo_storage_key,
              ${PHOTO_CONSENT} AS photo_consent
         FROM student s
@@ -409,6 +457,12 @@ export async function findStudent(
              END AS age,
              s.level_id, l.name AS level_name,
              s.contact_email::text AS contact_email, s.contact_phone, s.notes,
+             s.guardian_name,
+             s.guardian_relationship,
+             s.guardian_phone,
+             s.guardian_email::text AS guardian_email,
+             s.guardian_tax_number,
+             s.guardian_address,
              ${PHOTO_KEY} AS photo_storage_key,
              ${PHOTO_CONSENT} AS photo_consent
         FROM student s
@@ -432,6 +486,7 @@ export interface StudentInput {
   contactEmail: string | null;
   contactPhone: string | null;
   notes: string | null;
+  guardian: Guardian;
 }
 
 /** Null when the level id does not belong to this organization — or at all. */
@@ -445,9 +500,12 @@ export async function createStudent(
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO student (
          organization_id, first_name, last_name, birth_date, level_id,
-         contact_email, contact_phone, notes
+         contact_email, contact_phone, notes,
+         guardian_name, guardian_relationship, guardian_phone,
+         guardian_email, guardian_tax_number, guardian_address
        )
-       VALUES ($1, $2, $3, $4::date, $5, $6::citext, $7, $8)
+       VALUES ($1, $2, $3, $4::date, $5, $6::citext, $7, $8,
+               $9, $10, $11, $12::citext, $13, $14)
        RETURNING id`,
       [
         organizationId,
@@ -458,6 +516,12 @@ export async function createStudent(
         input.contactEmail,
         input.contactPhone,
         input.notes,
+        input.guardian.name,
+        input.guardian.relationship,
+        input.guardian.phone,
+        input.guardian.email,
+        input.guardian.taxNumber,
+        input.guardian.address,
       ],
     );
 
@@ -489,7 +553,10 @@ export async function updateStudent(
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE student
           SET first_name = $2, last_name = $3, birth_date = $4::date, level_id = $5,
-              contact_email = $6::citext, contact_phone = $7, notes = $8
+              contact_email = $6::citext, contact_phone = $7, notes = $8,
+              guardian_name = $9, guardian_relationship = $10, guardian_phone = $11,
+              guardian_email = $12::citext, guardian_tax_number = $13,
+              guardian_address = $14
         WHERE id = $1 AND archived_at IS NULL
       RETURNING id`,
       [
@@ -501,6 +568,12 @@ export async function updateStudent(
         input.contactEmail,
         input.contactPhone,
         input.notes,
+        input.guardian.name,
+        input.guardian.relationship,
+        input.guardian.phone,
+        input.guardian.email,
+        input.guardian.taxNumber,
+        input.guardian.address,
       ],
     );
     if (!rows[0]) return 'not_found';
@@ -572,6 +645,12 @@ function toStudent(row: {
   contact_email: string | null;
   contact_phone: string | null;
   notes: string | null;
+  guardian_name: string | null;
+  guardian_relationship: string | null;
+  guardian_phone: string | null;
+  guardian_email: string | null;
+  guardian_tax_number: string | null;
+  guardian_address: string | null;
   photo_storage_key: string | null;
   photo_consent: boolean;
 }): Student {
@@ -586,6 +665,14 @@ function toStudent(row: {
     levelId: row.level_id,
     levelName: row.level_name,
     contactEmail: row.contact_email,
+    guardian: {
+      name: row.guardian_name,
+      relationship: row.guardian_relationship,
+      phone: row.guardian_phone,
+      email: row.guardian_email,
+      taxNumber: row.guardian_tax_number,
+      address: row.guardian_address,
+    },
     contactPhone: row.contact_phone,
     notes: row.notes,
     photoStorageKey: row.photo_storage_key,

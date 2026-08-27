@@ -493,29 +493,31 @@ DECLARE v_org uuid; v_bebes uuid; v_adultos uuid; v_student uuid;
 BEGIN
   v_org := (SELECT id FROM organization WHERE slug = 'clube-horario');
 
-  -- Both bounds.
-  INSERT INTO student_level (organization_id, name, min_age_years, max_age_years)
-  VALUES (v_org, 'Bebés', 0, 3) RETURNING id INTO v_bebes;
+  -- Both bounds, in months — POOLSE-06. Six months is the case whole years
+  -- could not express, and the reason the unit changed.
+  INSERT INTO student_level (organization_id, name, min_age_months, max_age_months)
+  VALUES (v_org, 'Bebés', 6, 35) RETURNING id INTO v_bebes;
 
   -- A minimum and no maximum — the "Adultos" case the ticket names.
-  INSERT INTO student_level (organization_id, name, min_age_years)
-  VALUES (v_org, 'Adultos', 18) RETURNING id INTO v_adultos;
+  INSERT INTO student_level (organization_id, name, min_age_months)
+  VALUES (v_org, 'Adultos', 216) RETURNING id INTO v_adultos;
 
   -- Neither: behaves exactly as before this migration.
   INSERT INTO student_level (organization_id, name) VALUES (v_org, 'Livre');
 
   -- A range nobody can be in is a typo.
   BEGIN
-    INSERT INTO student_level (organization_id, name, min_age_years, max_age_years)
-    VALUES (v_org, 'Impossível', 10, 4);
+    INSERT INTO student_level (organization_id, name, min_age_months, max_age_months)
+    VALUES (v_org, 'Impossível', 120, 48);
     RAISE EXCEPTION 'FAIL test 13a: a level whose maximum is below its minimum was stored';
   EXCEPTION
     WHEN check_violation THEN NULL;
   END;
 
+  -- 1440 months is 120 years, so this is somebody over 160.
   BEGIN
-    INSERT INTO student_level (organization_id, name, min_age_years)
-    VALUES (v_org, 'Matusalém', 200);
+    INSERT INTO student_level (organization_id, name, min_age_months)
+    VALUES (v_org, 'Matusalém', 2000);
     RAISE EXCEPTION 'FAIL test 13b: an implausible age was stored';
   EXCEPTION
     WHEN check_violation THEN NULL;
