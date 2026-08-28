@@ -123,10 +123,14 @@ credit-with-its-original-expiry, and the booking UI on the credit panel.
 
 ## Still outstanding
 
-- **Criterion 8's roster half.** `guestsOf()` exists and the schema keeps guests
-  out of `enrollment` entirely, so they cannot be counted as enrolled by
-  accident. What is not built is the guest *marker* on the register screen, and
-  the separate communications audience.
+- ~~**Criterion 8's roster half.**~~ **Done 28 Aug.** A confirmed booking puts the
+  student on that occurrence's register as a guest, marked *Reposição* in words
+  rather than by colour, in a token deliberately outside the attendance palette
+  so "here on a make-up" cannot be misread as a mark. Pending requests do not
+  appear — somebody waiting for an answer has not been told to turn up. They stay
+  out of `enrollment` entirely, so no roster, seat count or POOLSE-19 proposal can
+  mistake them for enrolled. Still outstanding from criterion 8: addressing guests
+  as a separate audience in communications, which needs the notifications module.
 - Narrowing approval to the **assigned** instructor. The role check lets any
   instructor approve; per-turma assignment is slice 1.12's work and is noted in
   the controller rather than silently assumed.

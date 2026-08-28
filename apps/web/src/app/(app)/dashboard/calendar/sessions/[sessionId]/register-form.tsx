@@ -119,14 +119,27 @@ export function RegisterForm({ register }: { register: Register & { organization
               >
                 {entry.shortName}
                 {/*
-                  A trial, a make-up, a sibling brought along. Named rather than
-                  hidden: an instructor needs to know why somebody unexpected is
-                  on the list, and the alternative is them being left unmarked.
+                  Why somebody unexpected is on the list — POOLSE-21 criterion 8.
+
+                  A reposição guest says so specifically; anybody else off the
+                  roster (a trial, a sibling brought along) keeps the general
+                  label. An instructor needs to know which, because a guest is
+                  owed this class and a trial is not.
+
+                  A word, never a colour on its own — and deliberately a token
+                  that is not in the attendance palette, so "here on a make-up"
+                  cannot be misread as a mark.
                 */}
-                {!entry.enrolled && (
-                  <span className="rounded bg-surface-muted px-2 py-0.5 text-sm font-normal text-foreground-muted">
-                    {t('attendance.notEnrolled')}
+                {entry.isGuest ? (
+                  <span className="rounded border border-primary/40 bg-primary/10 px-2 py-0.5 text-sm font-normal text-primary">
+                    {t('attendance.guest')}
                   </span>
+                ) : (
+                  !entry.enrolled && (
+                    <span className="rounded bg-surface-muted px-2 py-0.5 text-sm font-normal text-foreground-muted">
+                      {t('attendance.notEnrolled')}
+                    </span>
+                  )
                 )}
               </span>
 

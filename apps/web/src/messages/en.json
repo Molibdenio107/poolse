@@ -936,7 +936,8 @@
     "classCancelled": "This class was cancelled, so there is no register to take.",
     "readOnly": "You do not have permission to take the register.",
     "restricted": "This section is for instructors, administrators and owners.",
-    "attendanceRecorded": "This class already has attendance recorded, so it cannot be cancelled."
+    "attendanceRecorded": "This class already has attendance recorded, so it cannot be cancelled.",
+    "guest": "Make-up"
   },
   "calendar": {
     "addClosure": "Add a closure",

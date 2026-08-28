@@ -936,7 +936,8 @@
     "classCancelled": "Esta aula foi cancelada, por isso não há presenças a marcar.",
     "readOnly": "Não tem permissão para marcar presenças.",
     "restricted": "Esta secção é reservada a instrutores, administradores e proprietários.",
-    "attendanceRecorded": "Já há presenças marcadas nesta aula, por isso não pode ser cancelada."
+    "attendanceRecorded": "Já há presenças marcadas nesta aula, por isso não pode ser cancelada.",
+    "guest": "Reposição"
   },
   "calendar": {
     "addClosure": "Adicionar encerramento",

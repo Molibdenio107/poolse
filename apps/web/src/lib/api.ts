@@ -773,6 +773,13 @@ export interface RegisterEntry {
    */
   displayName: string;
   shortName: string;
+  /**
+   * Here on a reposição — POOLSE-21 criterion 8.
+   *
+   * Marked like anybody else and never enrolled: a guest is not in `enrollment`
+   * at all, so no roster, seat count or proposal can mistake them for one.
+   */
+  isGuest: boolean;
   /** Null until somebody marks them — not the same as `absent`. */
   status: AttendanceStatus | null;
   note: string | null;

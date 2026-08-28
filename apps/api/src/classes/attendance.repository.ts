@@ -125,11 +125,12 @@ export async function findRegister(
       recorded_by_name: string | null;
       recorded_at: Date | null;
       enrolled: boolean;
+      is_guest: boolean;
     }>(
       `
       WITH roll AS (
         -- Everybody enrolled in the turma this class belongs to.
-        SELECT e.student_id, true AS enrolled
+        SELECT e.student_id, true AS enrolled, false AS guest
           FROM enrollment e
           JOIN class_session cs
             ON cs.class_group_id = e.class_group_id
@@ -142,9 +143,32 @@ export async function findRegister(
         -- Plus anybody already marked who is not on that list. Losing a trial
         -- student on reopening the screen would leave a mark in the table that
         -- nothing displays.
-        SELECT a.student_id, false
+        SELECT a.student_id, false, false
           FROM attendance a
          WHERE a.class_session_id = $1
+
+        UNION
+
+        /*
+         * Plus reposição guests — POOLSE-21 criterion 8.
+         *
+         * They are marked like anybody else and are **not** enrolled: they never
+         * appear in the enrollment table at all, so the POOLSE-08 roster, the
+         * seat count and POOLSE-19's proposals cannot pick them up by accident.
+         * That is the mistake the ticket names as most likely, and the schema
+         * makes it require effort rather than care.
+         *
+         * Confirmed only. A pending request is somebody waiting for an answer,
+         * not somebody coming — putting them on the register would have an
+         * instructor looking for a child who was never told to turn up.
+         */
+        SELECT c.student_id, false, true
+          FROM reposicao_booking b
+          JOIN reposicao_credit c
+            ON c.id = b.credit_id AND c.organization_id = b.organization_id
+         WHERE b.class_session_id = $1
+           AND b.status = 'confirmed'
+           AND b.archived_at IS NULL
       )
       SELECT s.id AS student_id,
              s.first_name,
@@ -160,7 +184,8 @@ export async function findRegister(
                 WHERE m.id = a.recorded_by_membership_id
              ) AS recorded_by_name,
              a.recorded_at,
-             bool_or(roll.enrolled) AS enrolled
+             bool_or(roll.enrolled) AS enrolled,
+             bool_or(roll.guest) AS is_guest
         FROM roll
         JOIN student s ON s.id = roll.student_id
         LEFT JOIN attendance a
@@ -194,6 +219,7 @@ export async function findRegister(
         recordedByName: row.recorded_by_name,
         recordedAt: row.recorded_at?.toISOString() ?? null,
         enrolled: row.enrolled,
+        isGuest: row.is_guest,
       })),
     };
   });
