@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Guardians } from '../../../../../lib/api';
 import { Pagination } from '@/components/pagination';
+import { SearchInput, SearchStatus } from '@/components/search-input';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { RoleBadge } from '@/components/role-badge';
 import { PageShell } from '@/components/page-shell';
@@ -25,17 +26,22 @@ import { PageShell } from '@/components/page-shell';
 export default async function GuardiansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; search?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, search = '' } = await searchParams;
   const page = readPage(pageParam);
+  const term = search.trim();
 
   let data: Guardians | null = null;
   let failure: string | null = null;
 
   try {
-    data = await apiFetch<Guardians>(`/guardians${page > 1 ? `?page=${page}` : ''}`);
+    const query = new URLSearchParams();
+    if (term !== '') query.set('search', term);
+    if (page > 1) query.set('page', String(page));
+
+    data = await apiFetch<Guardians>(`/guardians${query.size > 0 ? `?${query}` : ''}`);
   } catch (error) {
     failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
   }
@@ -47,7 +53,7 @@ export default async function GuardiansPage({
     redirect(
       pageHref(
         '/dashboard/students/guardians',
-        {},
+        { search: term },
         lastPage(data.guardians.total, data.guardians.limit),
       ),
     );
@@ -69,11 +75,34 @@ export default async function GuardiansPage({
       )}
 
       {data !== null && (
-        <section className="rounded border border-border bg-surface p-5">
+        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+          {/* Name, email or phone — what the row shows. POOLSE-30. */}
+          <SearchInput
+            label={t('search.label')}
+            placeholder={t('students.guardianSearchPlaceholder')}
+          />
+
+          <SearchStatus total={data.guardians.total} term={term} />
+
           {guardians.length === 0 ? (
-            <div className="flex flex-col gap-1">
-              <p>{t('students.noGuardians')}</p>
-              <p className="text-sm text-foreground-muted">{t('students.noGuardiansHint')}</p>
+            <div className="flex flex-col items-start gap-1">
+              {term !== '' ? (
+                <>
+                  <p>{t('search.noResults', { term })}</p>
+                  <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
+                  <Link
+                    href="/dashboard/students/guardians"
+                    className="mt-2 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('search.clearSearch')}
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p>{t('students.noGuardians')}</p>
+                  <p className="text-sm text-foreground-muted">{t('students.noGuardiansHint')}</p>
+                </>
+              )}
             </div>
           ) : (
             <ul className="flex flex-col divide-y divide-border">
@@ -124,7 +153,11 @@ export default async function GuardiansPage({
             </ul>
           )}
 
-          <Pagination page={data.guardians} basePath="/dashboard/students/guardians" />
+          <Pagination
+            page={data.guardians}
+            basePath="/dashboard/students/guardians"
+            query={{ search: term }}
+          />
         </section>
       )}
     </PageShell>

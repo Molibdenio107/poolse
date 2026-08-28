@@ -26,6 +26,15 @@
     "next": "Next page",
     "last": "Last page"
   },
+  "search": {
+    "label": "Search",
+    "clear": "Clear the search",
+    "results": "{total, plural, =0 {No results for “{term}”} one {1 result for “{term}”} other {# results for “{term}”}}",
+    "showingAll": "{total, plural, =0 {No records} one {1 record} other {# records}}",
+    "noResults": "No results for “{term}”",
+    "noResultsHint": "Check the spelling, or clear the search to see the whole list.",
+    "clearSearch": "Clear the search"
+  },
   "health": {
     "title": "System status",
     "api": "API",
@@ -187,7 +196,8 @@
     "emailRequired": "Give the new email.",
     "emailInvalid": "Invalid address, or it is already their address.",
     "alsoAStudent": "This person is also a student.",
-    "openStudentRecord": "Open their student record"
+    "openStudentRecord": "Open their student record",
+    "searchPlaceholder": "Name or email"
   },
   "transfer": {
     "title": "Transfer ownership",
@@ -538,7 +548,8 @@
     "guardianOfNobody": "No students linked.",
     "duplicateByNif": "{name} is already recorded with this tax number.",
     "duplicateByEmail": "{name} is already recorded with this email.",
-    "duplicateUseExisting": "Use this person"
+    "duplicateUseExisting": "Use this person",
+    "guardianSearchPlaceholder": "Name, email or phone"
   },
   "progress": {
     "title": "Progression",

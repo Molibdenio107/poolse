@@ -26,6 +26,15 @@
     "next": "Página seguinte",
     "last": "Última página"
   },
+  "search": {
+    "label": "Pesquisar",
+    "clear": "Limpar a pesquisa",
+    "results": "{total, plural, =0 {Nenhum resultado para «{term}»} one {1 resultado para «{term}»} other {# resultados para «{term}»}}",
+    "showingAll": "{total, plural, =0 {Nenhum registo} one {1 registo} other {# registos}}",
+    "noResults": "Sem resultados para «{term}»",
+    "noResultsHint": "Verifique a ortografia ou limpe a pesquisa para ver a lista completa.",
+    "clearSearch": "Limpar a pesquisa"
+  },
   "health": {
     "title": "Estado do sistema",
     "api": "API",
@@ -187,7 +196,8 @@
     "emailRequired": "Indique o novo e-mail.",
     "emailInvalid": "Endereço inválido, ou já é o endereço atual.",
     "alsoAStudent": "Esta pessoa também é aluno.",
-    "openStudentRecord": "Ver a ficha de aluno"
+    "openStudentRecord": "Ver a ficha de aluno",
+    "searchPlaceholder": "Nome ou email"
   },
   "transfer": {
     "title": "Transferir propriedade",
@@ -538,7 +548,8 @@
     "guardianOfNobody": "Sem alunos associados.",
     "duplicateByNif": "{name} já está registado com este NIF.",
     "duplicateByEmail": "{name} já está registado com este e-mail.",
-    "duplicateUseExisting": "Usar esta pessoa"
+    "duplicateUseExisting": "Usar esta pessoa",
+    "guardianSearchPlaceholder": "Nome, email ou telefone"
   },
   "progress": {
     "title": "Progressão",

@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '../../../../lib/api';
 import { Pagination } from '@/components/pagination';
+import { SearchInput, SearchStatus } from '@/components/search-input';
+import { FilterSelect } from '@/components/filter-select';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { AgedOutFlag } from '@/components/aged-out-flag';
 import { PersonAvatar } from '@/components/person-avatar';
@@ -89,64 +91,37 @@ export default async function StudentsPage({
 
       {data !== null && (
         <>
-          <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-            {/*
-              Changing a filter resets to page 1 — criterion 5, and it costs
-              nothing here.
+          {/*
+            No submit button — POOLSE-30 AC2. Both controls commit themselves
+            into the URL: the search box after a ~300 ms debounce or at once on
+            Enter, the level filter the moment it changes.
 
-              A GET form replaces the whole query string with its own fields, and
-              there is deliberately no hidden `page` input, so submitting a new
-              search term simply drops the page. That is also why the ticket's
-              "most likely to be got wrong" does not apply to this page: there is
-              no moment where the client has the new filter and the old page, so
-              there is no request for page 7 of a fresh search and no empty-state
-              flash to correct.
-            */}
-            <form method="get" className="flex flex-wrap items-end gap-3">
-              <div className="flex min-w-48 flex-1 flex-col gap-2">
-                <label htmlFor="student-search" className="text-sm text-foreground-muted">
-                  {t('students.search')}
-                </label>
-                <input
-                  id="student-search"
-                  name="search"
-                  defaultValue={search}
-                  placeholder={t('students.searchPlaceholder')}
-                  className="rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                />
-              </div>
+            The clear link stays. The × inside the box empties only the term, and
+            somebody who has narrowed by level *and* by name wants one control
+            that undoes both.
+          */}
+          <section className="flex flex-wrap items-end gap-3 rounded border border-border bg-surface p-5">
+            <SearchInput
+              label={t('students.search')}
+              placeholder={t('students.searchPlaceholder')}
+            />
 
-              <div className="flex flex-col gap-2">
-                <label htmlFor="student-filter" className="text-sm text-foreground-muted">
-                  {t('students.level')}
-                </label>
-                <select
-                  id="student-filter"
-                  name="levelId"
-                  defaultValue={levelId}
-                  className="rounded border border-border bg-background px-3 py-2"
-                >
-                  <option value="">{t('students.allLevels')}</option>
-                  {data.levels.map((level) => (
-                    <option key={level.id} value={level.id}>
-                      {level.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <FilterSelect
+              name="levelId"
+              label={t('students.level')}
+              value={levelId}
+              anyLabel={t('students.allLevels')}
+              options={data.levels.map((level) => ({ value: level.id, label: level.name }))}
+            />
 
-              <button type="submit" className="rounded bg-primary px-4 py-2 text-primary-foreground">
-                {t('students.search')}
-              </button>
-              {filtering && (
-                <Link
-                  href="/dashboard/students"
-                  className="rounded border border-border px-4 py-2 text-sm hover:bg-surface-muted"
-                >
-                  {t('students.clear')}
-                </Link>
-              )}
-            </form>
+            {filtering && (
+              <Link
+                href="/dashboard/students"
+                className="rounded border border-border px-4 py-2 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('students.clear')}
+              </Link>
+            )}
           </section>
 
           {data.canManage && (
@@ -167,16 +142,39 @@ export default async function StudentsPage({
               {t('students.count', { count: data.students.total })}
             </h2>
 
+            <SearchStatus total={data.students.total} term={search.trim()} />
+
+            {/*
+              The term, verbatim, and a way out of it — AC8. Distinct from "no
+              students yet": one means the club has nobody, the other means this
+              search found nobody, and offering "adicione o primeiro aluno" to
+              somebody who mistyped a surname is the wrong advice.
+            */}
             {data.students.total === 0 ? (
-              <div className="flex flex-col gap-1">
-                <p>{filtering ? t('students.noneMatching') : t('students.none')}</p>
-                <p className="text-sm text-foreground-muted">
-                  {filtering
-                    ? t('students.noneMatchingHint')
-                    : data.canManage
-                      ? t('students.noneHintManager')
-                      : t('students.noneHintMember')}
-                </p>
+              <div className="flex flex-col items-start gap-1">
+                {search.trim() !== '' ? (
+                  <>
+                    <p>{t('search.noResults', { term: search.trim() })}</p>
+                    <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
+                    <Link
+                      href={levelId.trim() === '' ? '/dashboard/students' : `/dashboard/students?levelId=${levelId.trim()}`}
+                      className="mt-2 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      {t('search.clearSearch')}
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <p>{filtering ? t('students.noneMatching') : t('students.none')}</p>
+                    <p className="text-sm text-foreground-muted">
+                      {filtering
+                        ? t('students.noneMatchingHint')
+                        : data.canManage
+                          ? t('students.noneHintManager')
+                          : t('students.noneHintMember')}
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               <ul className="flex flex-col divide-y divide-border">

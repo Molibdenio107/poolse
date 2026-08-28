@@ -22,13 +22,13 @@ Search today needs a button press, so staff type a name, see nothing happen, and
 - Every search change resets pagination to page 1 (POOLSE-29 AC 5) and the search term lives in the URL alongside the page, so a searched view is linkable.
 - Empty results show the term used verbatim ("Sem resultados para «josé»" / "No results for 'josé'") plus a clear affordance, distinct from the list's own "nothing here yet" empty state.
 - Edge cases with decided answers: clearing the box while a request for the old term is in flight discards that response; a term of only whitespace is treated as empty; leading/trailing whitespace is trimmed before comparison but preserved in the input.
-- **Open:** whether search is scoped per list (each list searches only its own fields) and what field set each list searches — the doc names accent- and case-insensitivity but never the searchable columns. Needs a decided per-entity field list before build.
-- **Open:** minimum term length before a request fires. One character on a large tenant is an expensive full-table scan; the doc does not set a floor.
+- **Decided 28 Aug.** Search is scoped per list, and the rule for fields is *you can search for anything the row already shows you* — so a match never returns a row whose visible text contains nothing the reader typed. Alunos: every name part, contact email, phone. Encarregados: every name part, email, phone — **not** their children's names, because somebody typing "Costa" here means the encarregado. Staff: every name part and email, no phone (the row does not print one). Search boxes were added to Encarregados and Staff, which had none: POOLSE-29 had just paged them, and a list you must page through with no way to search is the complaint this pair of tickets exists to prevent.
+- **Decided 28 Aug: two characters**, matching what the guardian picker and the city picker already used — one answer in the app rather than three. Clearing the box is *not* a one-character search: an empty term means no filter and restores the whole list at once. Below the floor nothing is sent and nothing is reset, so the list does not flash back to everything on the first letter of every search.
 
 ### Dev — implementation notes
 
 - One `useDebouncedSearch` hook plus one shared `<SearchInput>`; per-page debounce implementations are how the 300 ms drifts to 250 in one place and 500 in another.
-- Race control belongs in the request layer, not the component: tag each request with a monotonically increasing sequence number (or an `AbortController` per keystroke) and drop any response whose tag is not the latest. Aborting alone is not enough — an already-inflight response can still resolve after abort in some transports.
+- Race control belongs in the request layer, not the component: tag each request with a monotonically increasing sequence number (or an `AbortController` per keystroke) and drop any response whose tag is not the latest. Aborting alone is not enough — an already-inflight response can still resolve after abort in some transports. **Built differently, and deliberately:** the search box holds no results at all. It writes the term into the URL and the server component re-renders from it, inside a transition — React supersedes an in-flight transition when a newer one starts, so a stale render has nowhere to land rather than being caught on arrival. AC6 is satisfied structurally instead of by a guard. The same choice gives AC5 (old results stay on screen, never a flash to empty), a linkable searched view, working browser back, and POOLSE-29's page reset, none of which needed code. The two typeaheads that genuinely hold results — the guardian picker and the city picker — keep their sequence guards and now share this module's timing and floor.
 - Accent-insensitivity is a database concern, not a JS one. Use PostgreSQL `unaccent()` on both sides plus a case-insensitive comparison, backed by a functional index on `unaccent(lower(col))` — otherwise every keystroke is a sequential scan. `ILIKE '%term%'` cannot use a b-tree prefix index; consider `pg_trgm` with a GIN index for substring search at tenant scale.
 - Search predicate is applied inside the same tenant-scoped query as the list filter and the pagination window — search must never widen the tenant scope, and must be applied before `LIMIT`.
 - Permission enforcement point: the searched set is the set the caller may already see. A search on Pessoas by an Instructor returns only what the Pessoas list would return for that Instructor (POOLSE-35 AC 7) — verify at the API, not by hiding the box.
@@ -66,3 +66,25 @@ Global change — coverage is sampled. Take one search box per shape: a large li
 7. Search is case- and accent-insensitive: "jose" matches "José", "maria" matches "MARIA".
 8. Empty results show a clear message with the term used, and a way to clear it.
 9. Search resets pagination to page 1 (POOLSE-29).
+
+---
+
+## Built 28 Aug — what was and was not verified
+
+Structural, and therefore not separately tested: AC5 and AC6 (no flicker, no
+out-of-order render) fall out of holding no results in the client — see the Dev
+note above. The ticket asks for the race scenarios (30.3, 30.5, 30.11) to be run
+against an artificially staggered API; that has **not** been done, and the claim
+here is about the design rather than an observation.
+
+30.12 *was* observed, against the seeded database: the previous predicate used
+`LIKE '%' || term || '%'`, so a search for `%` or `_` returned all fifty
+students. It is `strpos` now — no pattern language, so the term is literal by
+construction — and `%`, `_`, a quote and an emoji all return zero while `joao`,
+`JOÃO` and `João` each return the same three.
+
+30.9 passes by a stronger mechanism than the ticket assumes: an Instructor cannot
+call the staff endpoint at all (owner/admin only), so there is no search scope for
+them to widen. The scope and role filters are query parameters applied inside the
+same statement as the window, so no term can reach rows the unfiltered list would
+not have shown.

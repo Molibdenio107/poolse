@@ -8,6 +8,7 @@ import { ageInYears } from '@/lib/ages';
 import { TextField } from '@/components/ui/field';
 import { RoleBadges } from '@/components/role-badge';
 import { findDuplicateAction, searchPeopleAction } from './students.actions';
+import { DEBOUNCE_MS, MIN_SEARCH_LENGTH } from '@/components/search-input';
 
 /**
  * The encarregado de educação — POOLSE-04, rewritten on POOLSE-17.
@@ -430,14 +431,22 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
 
   useEffect(() => {
     const term = query.trim();
-    if (term.length < 2) {
+    if (term.length < MIN_SEARCH_LENGTH) {
       setResults([]);
       return;
     }
 
-    // Debounced, and the stale-response guard matters more than the delay: typing
-    // "Ana" fires three searches and the shortest can answer last, which without
-    // this would leave the list showing matches for "A".
+    /*
+     * Debounced, and the stale-response guard matters more than the delay: typing
+     * "Ana" fires three searches and the shortest can answer last, which without
+     * this would leave the list showing matches for "A".
+     *
+     * The timing and the floor come from `search-input.tsx` — POOLSE-30. This is
+     * a typeahead rather than a list filter, so it cannot use the shared
+     * component (it holds results rather than writing a URL), but it has no
+     * business feeling different: it sat at 250 ms while the city picker sat at
+     * 300, which is precisely the drift the ticket predicts.
+     */
     const attempt = ++latest.current;
     setSearching(true);
 
@@ -447,7 +456,7 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
         setResults(people);
         setSearching(false);
       });
-    }, 250);
+    }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
   }, [query]);
@@ -584,7 +593,7 @@ function DuplicateWarning({
       void findDuplicateAction(nif, address).then((found) => {
         if (attempt === latest.current) setMatch(found);
       });
-    }, 300);
+    }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
   }, [taxNumber, email]);

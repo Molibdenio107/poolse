@@ -62,6 +62,7 @@ import {
   type StudentLevel,
 } from './students.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
+import { readSearch } from '../common/search.js';
 
 const MAX_NAME = 120;
 const MAX_NOTES = 2000;
@@ -127,13 +128,18 @@ interface StudentsResponse {
 export class GuardiansController {
   @Get()
   async list(
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<{ organizationId: string; guardians: Paginated<GuardianRow> }> {
     const { organizationId } = currentTenant();
     return {
       organizationId,
-      guardians: await listGuardians(organizationId, readPageQuery(page, limit)),
+      guardians: await listGuardians(
+        organizationId,
+        readSearch(search),
+        readPageQuery(page, limit),
+      ),
     };
   }
 }
@@ -280,7 +286,8 @@ export class StudentsController {
       listStudents(
         organizationId,
         {
-          search: search?.trim() ? search.trim() : null,
+          // A term under the floor is no filter at all — POOLSE-30.
+          search: readSearch(search),
           levelId: levelId?.trim() ? levelId.trim() : null,
         },
         readPageQuery(page, limit),

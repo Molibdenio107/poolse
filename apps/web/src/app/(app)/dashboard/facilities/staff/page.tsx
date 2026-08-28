@@ -7,6 +7,7 @@ import { PersonAvatar } from '@/components/person-avatar';
 import { RoleBadge, RoleBadges } from '@/components/role-badge';
 import { STAFF_ROLES } from '@/lib/roles';
 import { Pagination } from '@/components/pagination';
+import { SearchInput, SearchStatus } from '@/components/search-input';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
@@ -38,7 +39,7 @@ const ROLES: readonly string[] = STAFF_ROLES;
 export default async function PeoplePage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string; page?: string }>;
+  searchParams: Promise<{ role?: string; page?: string; search?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
@@ -53,9 +54,10 @@ export default async function PeoplePage({
    * part of the same query as the window — and the API enforces the staff
    * boundary rather than trusting this page to (POOLSE-35 criterion 7).
    */
-  const { role: requestedRole, page: pageParam } = await searchParams;
+  const { role: requestedRole, page: pageParam, search = '' } = await searchParams;
   const role = ROLES.includes(requestedRole ?? '') ? requestedRole! : null;
   const page = readPage(pageParam);
+  const term = search.trim();
 
   let people: People | null = null;
   let failure: string | null = null;
@@ -66,6 +68,7 @@ export default async function PeoplePage({
     people = await apiFetch<People>(`/people?${new URLSearchParams({
       scope: 'staff',
       ...(role === null ? {} : { role }),
+      ...(term === '' ? {} : { search: term }),
       ...(page > 1 ? { page: String(page) } : {}),
     })}`);
   } catch (error) {
@@ -96,7 +99,7 @@ export default async function PeoplePage({
     redirect(
       pageHref(
         '/dashboard/facilities/staff',
-        { role: role ?? undefined },
+        { role: role ?? undefined, search: term },
         lastPage(people.members.total, people.members.limit),
       ),
     );
@@ -158,6 +161,34 @@ export default async function PeoplePage({
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('people.members')}
             </h2>
+
+            {/*
+              Name or email — what a staff row shows. Searching alongside the
+              role chips rather than instead of them: "the instructors called
+              Silva" is a question somebody actually has. POOLSE-30.
+            */}
+            <div className="mb-4">
+              <SearchInput
+                label={t('search.label')}
+                placeholder={t('staff.searchPlaceholder')}
+              />
+            </div>
+
+            <SearchStatus total={people.members.total} term={term} />
+
+            {members.length === 0 && term !== '' && (
+              <div className="flex flex-col items-start gap-1 py-2">
+                <p>{t('search.noResults', { term })}</p>
+                <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
+                <Link
+                  href={role === null ? '/dashboard/facilities/staff' : `/dashboard/facilities/staff?role=${role}`}
+                  className="mt-2 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {t('search.clearSearch')}
+                </Link>
+              </div>
+            )}
+
             {role !== null && (
               <p className="mb-4 flex flex-wrap items-center gap-3 text-sm">
                 <RoleBadge role={role} />
@@ -219,7 +250,7 @@ export default async function PeoplePage({
             <Pagination
               page={people.members}
               basePath="/dashboard/facilities/staff"
-              query={{ role: role ?? undefined }}
+              query={{ role: role ?? undefined, search: term }}
             />
           </section>
 

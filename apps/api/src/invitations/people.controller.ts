@@ -18,6 +18,7 @@ import {
   type PendingInvitation,
 } from './invitations.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
+import { readSearch } from '../common/search.js';
 
 interface PeopleResponse {
   organizationId: string;
@@ -59,6 +60,7 @@ export class PeopleController {
   async list(
     @Query('scope') scope?: string,
     @Query('role') role?: string,
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<PeopleResponse> {
@@ -85,6 +87,7 @@ export class PeopleController {
         {
           scope: scope === 'staff' || scope === 'learners' ? scope : null,
           role: isMemberRole(role ?? '') ? (role as string) : null,
+          search: readSearch(search),
         },
         readPageQuery(page, limit),
       ),

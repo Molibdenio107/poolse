@@ -14,6 +14,7 @@ import {
   type PageQuery,
   type Paginated,
 } from '../common/pagination.js';
+import { searchPredicate } from '../common/search.js';
 
 export interface StudentLevel {
   id: string;
@@ -547,12 +548,17 @@ export async function listStudents(
           * displayed form would make people unfindable by a name they actually
           * have, and the failure looks like a missing record rather than a
           * search bug.
+          *
+          * Email and phone joined the haystack with POOLSE-30, on the rule that
+          * you can search for anything the row already shows you — the register
+          * prints both under the name, and an office ringing a family back
+          * searches by the number on the note in front of them.
           */
-         AND (
-           $1::text IS NULL
-           OR lower(strip_accents(s.first_name || ' ' || s.last_name))
-              LIKE '%' || lower(strip_accents($1::text)) || '%'
-         )
+         AND ${searchPredicate(
+           `s.first_name || ' ' || s.last_name || ' ' ||
+            coalesce(s.contact_email::text, '') || ' ' || coalesce(s.contact_phone, '')`,
+           '$1',
+         )}
          AND ($2::uuid IS NULL OR s.level_id = $2::uuid)
        /*
         * The window goes here, inside the statement that carries the tenant
@@ -1142,6 +1148,7 @@ export interface GuardianRow {
 
 export async function listGuardians(
   organizationId: string,
+  search: string | null,
   page: PageQuery,
 ): Promise<Paginated<GuardianRow>> {
   return withOrg(organizationId, async (tx) => {
@@ -1188,6 +1195,17 @@ export async function listGuardians(
               AND mr.role = 'guardian'
               AND mr.archived_at IS NULL
          )
+         /*
+          * Name, email and phone — what the row shows — POOLSE-30. Not the
+          * children's names: somebody searching "Costa" here means the
+          * encarregado, and matching on a child would return a row whose
+          * visible fields contain nothing they typed.
+          */
+         AND ${searchPredicate(
+           `coalesce(person_name(m.id), '') || ' ' ||
+            coalesce(person_email(m.id)::text, '') || ' ' || coalesce(m.phone, '')`,
+           '$1',
+         )}
        /*
         * The children stay whole inside each row — POOLSE-29 paginates the
         * guardians, not their families. A mother of three is one row with three
@@ -1195,8 +1213,8 @@ export async function listGuardians(
         * destroy the single fact this page exists to show.
         */
        ORDER BY ${personOrder('m.id')}
-       LIMIT $1 OFFSET $2
-    `, [limit, offset]);
+       LIMIT $2 OFFSET $3
+    `, [search, limit, offset]);
 
     return windowed(page, run, (row) => ({
       membershipId: row.membership_id,

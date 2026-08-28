@@ -5,10 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { MapPin } from 'lucide-react';
 import type { PlaceSuggestion } from '@/lib/api';
 import { searchPlacesAction, setPlaceAction } from './facility.actions';
-
-/** The story asks for roughly this, and it is the right number: long enough that
- *  a normal typist does not fire a request per letter, short enough to feel live. */
-const DEBOUNCE_MS = 300;
+import { DEBOUNCE_MS, MIN_SEARCH_LENGTH } from '@/components/search-input';
 
 const FIELD =
   'w-full rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
@@ -53,7 +50,7 @@ export function CityPicker({
 
   useEffect(() => {
     const term = query.trim();
-    if (term.length < 2) {
+    if (term.length < MIN_SEARCH_LENGTH) {
       setSuggestions([]);
       setSearching(false);
       return;

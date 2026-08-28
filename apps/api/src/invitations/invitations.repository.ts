@@ -2,6 +2,7 @@ import { withOrg, withoutTenantScope } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import type { MemberRole } from '../tenant/roles.js';
 import { personName, personOrder, personShortName } from '../people/names.js';
+import { searchPredicate } from '../common/search.js';
 import {
   windowed,
   TOTAL_COUNT,
@@ -178,6 +179,14 @@ export interface MemberQuery {
   scope: 'staff' | 'learners' | null;
   /** One role chip. Narrows within the scope; never widens past it. */
   role: string | null;
+  /**
+   * A search term, or null — POOLSE-30.
+   *
+   * Narrows within the scope like the role chip does, and for the same reason:
+   * an Instructor must not be able to search their way to a student's record
+   * that the unfiltered list would never have shown them (QA 30.9).
+   */
+  search: string | null;
 }
 
 export async function listMembers(
@@ -265,6 +274,16 @@ export async function listMembers(
                 AND r.role::text = $2::text
            )
          )
+         /*
+          * Name and email — what a staff row shows. No phone: the list does not
+          * print one, and searching by a field somebody cannot see returns rows
+          * that look like they do not match.
+          */
+         AND ${searchPredicate(
+           `coalesce(person_name(m.id), '') || ' ' ||
+            coalesce(u.cached_email::text, m.email::text, i.email::text, '')`,
+           '$3',
+         )}
        GROUP BY m.id, m.app_user_id, m.status, m.created_at,
                 m.first_name, m.last_name, m.email,
                 u.cached_first_name, u.cached_last_name, u.cached_avatar_url,
@@ -279,8 +298,8 @@ export async function listMembers(
         * after "Zé".
         */
        ORDER BY ${personOrder('m.id')}, m.created_at
-       LIMIT $3 OFFSET $4
-    `, [query.scope, query.role, limit, offset]);
+       LIMIT $4 OFFSET $5
+    `, [query.scope, query.role, query.search, limit, offset]);
 
     return windowed(page, run, (row) => ({
       membershipId: row.membership_id,
