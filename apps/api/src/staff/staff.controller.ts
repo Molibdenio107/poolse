@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ConflictException,
   ForbiddenException,
   Get,
   NotFoundException,
@@ -46,10 +47,26 @@ const MAX_NOTES = 2000;
  */
 @Controller('staff')
 export class StaffController {
+  /**
+   * One staff record.
+   *
+   * **`notes` is the club's private note about somebody — "not shown to them" —
+   * so an instructor may read only their own record.** This admitted any
+   * instructor to any membership id, which meant every colleague's notes, and
+   * every guardian's and student's contact details besides, since the id is just
+   * a membership. The edit path immediately below already drew that line; the
+   * read path did not.
+   *
+   * Owner and admin still read anybody: managing staff is what they do.
+   */
   @Get(':membershipId')
   async one(@Param('membershipId') membershipId: string): Promise<StaffRecord> {
     requireRole('owner', 'admin', 'instructor');
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId: actor } = currentTenant();
+
+    if (!hasRole('owner', 'admin') && membershipId !== actor) {
+      throw new ForbiddenException('That record is not yours');
+    }
 
     const staff = await findStaff(organizationId, membershipId);
     // Also the answer for another tenant's id: RLS hid it, and the caller learns
@@ -161,6 +178,15 @@ export class StaffController {
     const expiresAt = invitationExpiry();
 
     const id = await reinvite(organizationId, membershipId, email, tokenHash, expiresAt, actor);
+    /*
+     * A live invitation to that address already exists, for somebody else. The
+     * index is keyed on the address rather than the person, so revoking this
+     * membership's own invitations does not clear it — and a 409 says what
+     * happened where the raw 23505 said only "500".
+     */
+    if (id === 'address_taken') {
+      throw new ConflictException('That address already has an invitation outstanding');
+    }
     if (id === null) {
       throw new BadRequestException('That person has no login to move');
     }

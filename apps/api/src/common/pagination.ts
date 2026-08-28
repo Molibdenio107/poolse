@@ -39,6 +39,21 @@ export const PAGE_SIZE = 15;
  */
 export const MAX_PAGE_SIZE = 100;
 
+/**
+ * The furthest page anybody may ask for.
+ *
+ * `limit` was clamped from the start and `page` was not, so
+ * `?page=1000000000000000000` produced an offset outside bigint range and
+ * Postgres rejected the parameter — a 500, from the module whose stated contract
+ * is that a broken page parameter never errors.
+ *
+ * A hundred thousand pages is 1.5 million rows at the default size, which no
+ * club will reach and no honest client will ask for. Past that the request is a
+ * typo or a probe, and either way the last page is a better answer than a stack
+ * trace.
+ */
+export const MAX_PAGE = 100_000;
+
 /** A page request, already coerced into something a query can be built from. */
 export interface PageQuery {
   /** 1-based, as it appears in the URL. */
@@ -70,15 +85,20 @@ export interface Paginated<T> {
  * know which page they want", and page 1 is the honest answer. QA 29.7 asks for
  * exactly this, and a 400 here would turn a stale bookmark into an error screen.
  *
- * A page past the end is *not* coerced — it returns an empty window with the
- * true total, so the client can send the reader to the last real page rather
+ * A page past the end is *not* coerced to 1 — it returns an empty window with
+ * the true total, so the client can send the reader to the last real page rather
  * than silently showing them page 1 of something they did not ask for (29.6).
+ * It *is* capped at `MAX_PAGE`, because beyond that the offset overflows what
+ * Postgres will accept for a bind parameter and the promise above stops holding.
  */
 export function readPageQuery(page?: string, limit?: string): PageQuery {
   const requestedPage = Number.parseInt(page ?? '', 10);
   const requestedLimit = Number.parseInt(limit ?? '', 10);
 
-  const safePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const safePage =
+    Number.isFinite(requestedPage) && requestedPage > 0
+      ? Math.min(requestedPage, MAX_PAGE)
+      : 1;
   const safeLimit =
     Number.isFinite(requestedLimit) && requestedLimit > 0
       ? Math.min(requestedLimit, MAX_PAGE_SIZE)

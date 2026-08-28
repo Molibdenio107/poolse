@@ -116,8 +116,16 @@ export class SettingsController {
     const rawCap = body['capPerSeason'];
     const capPerSeason =
       rawCap === null || rawCap === undefined || rawCap === '' ? null : Number(rawCap);
-    if (capPerSeason !== null && (!Number.isInteger(capPerSeason) || capPerSeason < 1)) {
-      throw new BadRequestException('capPerSeason must be a whole number above zero, or empty');
+    /*
+     * The upper bound is the column's, not an opinion: `reposicao_cap_per_season`
+     * is a smallint, so 40000 passed this guard and failed as `22003 smallint out
+     * of range` — a 500 where the sibling `windowDays` check gives a 400.
+     */
+    if (
+      capPerSeason !== null &&
+      (!Number.isInteger(capPerSeason) || capPerSeason < 1 || capPerSeason > 32767)
+    ) {
+      throw new BadRequestException('capPerSeason must be a whole number from 1 to 32767, or empty');
     }
 
     const mode = body['mode'];
@@ -126,11 +134,29 @@ export class SettingsController {
     }
 
     return saveReposicaoSettings(organizationId, {
-      enabled: body['enabled'] === true || body['enabled'] === 'true',
+      enabled: readFlag(body['enabled'], 'enabled'),
       windowDays,
       capPerSeason,
-      backfillOnly: body['backfillOnly'] === true || body['backfillOnly'] === 'true',
+      backfillOnly: readFlag(body['backfillOnly'], 'backfillOnly'),
       mode,
     });
   }
+}
+
+/**
+ * A boolean from a request body, or a 400.
+ *
+ * The first version coerced anything that was not `true` to `false`, which made
+ * two silent failures on a PATCH: omitting `backfillOnly` cleared it — opening
+ * reposição booking into any free seat — and `enabled: 1`, or a form's
+ * `enabled=on`, turned the feature *off* while returning 200.
+ *
+ * Every other field on this endpoint rejects what it does not understand. A flag
+ * that silently means "no" is the one shape where that matters most, because
+ * nothing on the screen afterwards looks wrong.
+ */
+function readFlag(value: unknown, field: string): boolean {
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+  throw new BadRequestException(`${field} must be true or false`);
 }

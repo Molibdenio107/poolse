@@ -221,4 +221,68 @@ BEGIN
   RAISE NOTICE 'PASS test 4 (39.9): staff and student are sections of one record';
 END $$;
 
+
+-- ---------------------------------------------------------------------------
+-- Test 5: a re-invite accepted by the OLD account must not delete the person
+--
+-- Found in review, and the worst defect of the sweep. POOLSE-39 attaches a
+-- re-invite to the person's *existing* membership — that is the whole design,
+-- and it is right. `accept_invitation`'s second branch then treated
+-- `invitation.membership_id` as a placeholder to retire without asking whether
+-- it was the very membership the acceptor already holds.
+--
+-- So somebody who clicked their own re-invite link while still signed in as
+-- their old address had their roles revoked, their membership archived, and a
+-- cheerful "accepted" returned. The POOLSE-39 commit claimed this could not
+-- happen; the test it shipped with accepted as the *new* account, which is the
+-- path that works.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid; v_user uuid; v_m uuid; v_status text; v_bound uuid;
+  v_archived timestamptz; v_roles int;
+BEGIN
+  INSERT INTO organization (name, slug) VALUES ('Clube Reconvite', 'clube-reconvite')
+  RETURNING id INTO v_org;
+
+  PERFORM provision_app_user('user_reinvite', 'antiga@clube.pt', 'Sofia', 'Antunes',
+                             NULL, now());
+  SELECT id INTO v_user FROM app_user WHERE clerk_user_id = 'user_reinvite';
+
+  INSERT INTO membership (organization_id, app_user_id, status)
+  VALUES (v_org, v_user, 'active') RETURNING id INTO v_m;
+  INSERT INTO membership_role (organization_id, membership_id, role)
+  VALUES (v_org, v_m, 'instructor');
+
+  -- reinvite(): an invitation to a new address, pointing at the membership they
+  -- already have.
+  INSERT INTO invitation (organization_id, membership_id, email, token_hash, roles,
+                          expires_at, invited_by_membership_id)
+  VALUES (v_org, v_m, 'nova@clube.pt', repeat('r', 64),
+          ARRAY['instructor']::member_role[], now() + interval '7 days', v_m);
+
+  -- They click it while still signed in as the old account.
+  SELECT o_status, o_membership_id INTO v_status, v_bound
+    FROM accept_invitation(repeat('r', 64), 'user_reinvite', now());
+
+  SELECT archived_at INTO v_archived FROM membership WHERE id = v_m;
+  IF v_archived IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL test 5: accepting a re-invite archived the staff member';
+  END IF;
+
+  SELECT count(*) INTO v_roles FROM membership_role
+   WHERE membership_id = v_m AND archived_at IS NULL;
+  IF v_roles <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 5: % live roles left, expected 1', v_roles;
+  END IF;
+
+  -- And it bound to the person, not to a row it had just killed.
+  IF v_bound <> v_m THEN
+    RAISE EXCEPTION 'FAIL test 5: bound to % rather than the staff membership', v_bound;
+  END IF;
+
+  RAISE NOTICE 'PASS test 5: a re-invite accepted by its own account keeps the person whole';
+END $$;
+
 ROLLBACK;

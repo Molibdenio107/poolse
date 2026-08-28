@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   lastPage,
+  MAX_PAGE,
   MAX_PAGE_SIZE,
   PAGE_SIZE,
   paginated,
@@ -167,4 +168,22 @@ test('an empty list stays empty, and costs nothing extra', async () => {
   // And the client must render the empty state rather than redirect: page 1 is
   // already where a redirect would send it.
   assert.equal(lastPage(page.total, page.limit), 1);
+});
+
+test('an absurd page is capped rather than overflowing the offset', () => {
+  /*
+   * `limit` was clamped from the start and `page` was not. An offset built from
+   * 1e18 is outside what Postgres accepts for a bind parameter, so the query
+   * threw — a 500 from the module whose stated contract is that a broken page
+   * parameter never errors.
+   */
+  assert.equal(readPageQuery('1000000000000000000').page, MAX_PAGE);
+  assert.equal(readPageQuery('1e30').page, 1, 'exponential notation is not a page');
+
+  const far = readPageQuery(String(MAX_PAGE * 10));
+  assert.equal(far.page, MAX_PAGE);
+  assert.ok(Number.isSafeInteger(far.offset), 'the offset stays a safe integer');
+
+  // And an ordinary deep page is untouched.
+  assert.equal(readPageQuery('900').page, 900);
 });

@@ -99,6 +99,10 @@ export async function findStaff(
                AND i.organization_id = m.organization_id
                AND i.accepted_at IS NULL
                AND i.revoked_at IS NULL
+               -- An expired invitation is not outstanding. Without this the
+               -- record showed "re-invite pending" forever, against the AC4
+               -- comment on the field it feeds.
+               AND i.expires_at > now()
                AND m.app_user_id IS NOT NULL
         WHERE m.id = $1 AND m.archived_at IS NULL`,
       [membershipId],
@@ -184,10 +188,20 @@ export async function updateStaff(
      * The phone belongs to the person where they have an account, and to the
      * club where they do not. Two columns, one field on screen — resolved here
      * so no screen has to know.
+     *
+     * **`app_user.contact_phone` is global.** It has no `organization_id` and no
+     * row-level security: it is the person's own profile field, the one they set
+     * themselves, shared by every club they belong to. An admin at one club
+     * editing it overwrites what another club sees — the same class of mistake
+     * CLAUDE.md's decision 3 warns about for the Clerk-owned name columns.
+     *
+     * So the club's record is written instead. `person_phone`-style resolution
+     * still shows the account's number when the club has none, which is the
+     * behaviour this was reaching for; what it must not do is *write* there.
      */
     if (was.app_user_id !== null) {
-      await tx.query(`UPDATE app_user SET contact_phone = $2 WHERE id = $1`, [
-        was.app_user_id,
+      await tx.query(`UPDATE membership SET phone = $2 WHERE id = $1`, [
+        membershipId,
         edit.phone,
       ]);
     } else {
@@ -246,7 +260,7 @@ export async function reinvite(
   tokenHash: string,
   expiresAt: Date,
   invitedBy: string | null,
-): Promise<string | null> {
+): Promise<string | null | 'address_taken'> {
   return withOrg(organizationId, async (tx) => {
     const { rows: target } = await tx.query<{ id: string; roles: string[] }>(
       `SELECT m.id,
@@ -272,15 +286,31 @@ export async function reinvite(
       [membershipId],
     );
 
-    const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO invitation (
-         organization_id, email, roles, token_hash, expires_at,
-         membership_id, invited_by_membership_id
-       )
-       VALUES ($1, $2::citext, $3::member_role[], $4, $5, $6, $7)
-       RETURNING id`,
-      [organizationId, email, person.roles, tokenHash, expiresAt, membershipId, invitedBy],
-    );
+    /*
+     * `invitation_pending_uq` is keyed on `(organization_id, email)`, not on the
+     * membership — so the revoke above, which is by membership, does not clear a
+     * live invitation sent to this *address* for somebody else. Re-inviting a
+     * colleague to an address that already has one outstanding raised 23505 and
+     * surfaced as a 500.
+     *
+     * Reported as a conflict instead. The ordinary invite path catches the same
+     * code for the same reason; this one was written later and did not.
+     */
+    let rows: { id: string }[];
+    try {
+      ({ rows } = await tx.query<{ id: string }>(
+        `INSERT INTO invitation (
+           organization_id, email, roles, token_hash, expires_at,
+           membership_id, invited_by_membership_id
+         )
+         VALUES ($1, $2::citext, $3::member_role[], $4, $5, $6, $7)
+         RETURNING id`,
+        [organizationId, email, person.roles, tokenHash, expiresAt, membershipId, invitedBy],
+      ));
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') return 'address_taken';
+      throw error;
+    }
 
     const id = rows[0]?.id;
     if (id === undefined) return null;
