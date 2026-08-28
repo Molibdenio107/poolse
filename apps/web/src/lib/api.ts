@@ -871,6 +871,8 @@ export interface ReposicaoCredit {
   status: 'available' | 'booked' | 'used' | 'expired';
   /** The turma the absence was in, so a credit reads as a class rather than a token. */
   className: string | null;
+  /** The live booking, when there is one. Null unless the credit is `booked`. */
+  bookingId: string | null;
   /**
    * Days remaining, counted in the club's calendar, or null once spent or gone.
    *
@@ -878,6 +880,25 @@ export interface ReposicaoCredit {
    * club's date, and a browser in another timezone would answer it differently.
    */
   daysLeft: number | null;
+}
+
+/**
+ * An occurrence a reposição credit could be spent on — POOLSE-21, criteria 3 and 4.
+ *
+ * `freeSeats` counts places by the shared rule: enrolled, minus absences already
+ * recorded on that date, minus guests already booked. Null when the turma has no
+ * capacity set.
+ */
+export interface RedemptionOption {
+  sessionId: string;
+  classGroupId: string;
+  className: string;
+  levelName: string | null;
+  poolName: string | null;
+  /** The club's own date — a family reads a day, never an instant. */
+  localDate: string;
+  startTime: string;
+  freeSeats: number | null;
 }
 
 /** The club's rules for reposições — POOLSE-21, criteria 1, 4, 6 and 9. */

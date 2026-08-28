@@ -742,10 +742,42 @@ async function main(): Promise<void> {
           SET reposicao_enabled = true,
               reposicao_window_days = 60,
               reposicao_cap_per_season = 3,
-              reposicao_backfill_only = true,
+              reposicao_backfill_only = false,
               reposicao_mode = 'request'
         WHERE id = $1`,
       [org.id],
+    );
+
+    /*
+     * A known future absence, so the backfill-only rule has something to match.
+     *
+     * "She is away next week" is an ordinary thing for an office to be told, and
+     * it is the *only* thing that makes criterion 4 usable: backfill-only offers
+     * a place another student has vacated, and a place is not vacated until
+     * somebody says so. Without a future absence in the data the rule looks
+     * broken rather than strict.
+     *
+     * Seeded off by default all the same — see the settings write above. A club
+     * evaluating the product should see reposições working before it meets the
+     * rule that narrows them.
+     */
+    await client.query(
+      `INSERT INTO attendance (organization_id, class_session_id, student_id,
+                               status, recorded_by_membership_id)
+       SELECT $1, cs.id, e.student_id, 'excused', $2
+         FROM class_session cs
+         JOIN enrollment e
+           ON e.class_group_id = cs.class_group_id
+          AND e.organization_id = cs.organization_id
+          AND e.status = 'active'
+        WHERE cs.organization_id = $1
+          AND cs.status = 'scheduled'
+          AND cs.starts_at > now()
+          AND cs.starts_at < now() + interval '2 weeks'
+        ORDER BY cs.starts_at, e.student_id
+        LIMIT 2
+       ON CONFLICT DO NOTHING`,
+      [org.id, marker?.id ?? null],
     );
 
     const minted = await client.query(

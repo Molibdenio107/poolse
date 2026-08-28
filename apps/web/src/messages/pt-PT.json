@@ -385,7 +385,16 @@
       "booked": "Marcada",
       "used": "Usada",
       "expired": "Expirada"
-    }
+    },
+    "findClass": "Marcar reposição",
+    "book": "Marcar",
+    "cancelBooking": "Anular a marcação",
+    "freeSeats": "{seats, plural, =0 {Sem vagas} one {1 vaga} other {# vagas}}",
+    "noOptions": "Não há aulas disponíveis para esta reposição.",
+    "noOptionsHint": "Só entram aulas do nível do aluno, dentro da idade, com vaga e antes de a reposição expirar.",
+    "placeGone": "Essa vaga já foi ocupada. Escolha outra aula.",
+    "notYours": "Não pode marcar reposições para este aluno.",
+    "bookFailed": "Não foi possível marcar a reposição."
   },
   "skills": {
     "title": "Competências",

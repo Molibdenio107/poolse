@@ -385,7 +385,16 @@
       "booked": "Booked",
       "used": "Used",
       "expired": "Expired"
-    }
+    },
+    "findClass": "Book a make-up",
+    "book": "Book",
+    "cancelBooking": "Cancel the booking",
+    "freeSeats": "{seats, plural, =0 {No places} one {1 place} other {# places}}",
+    "noOptions": "There are no classes available for this make-up.",
+    "noOptionsHint": "Only classes at the student's level, within the age range, with a place, and before the make-up expires.",
+    "placeGone": "That place has been taken. Choose another class.",
+    "notYours": "You may not book make-up classes for this student.",
+    "bookFailed": "The make-up could not be booked."
   },
   "skills": {
     "title": "Skills",

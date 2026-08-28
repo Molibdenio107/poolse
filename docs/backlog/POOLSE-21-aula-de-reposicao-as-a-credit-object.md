@@ -89,20 +89,49 @@ nothing reliable to book against is not.
 - `GET /students/:id/credits`, oldest-expiry-first; a credits panel on the student
   record; `GET|PATCH /settings/reposicao` and a settings page under Turmas.
 
-**Not done — criteria 3, 4, 6, 8**, the whole of redemption:
+## Slice 2, built 28 Aug — criteria 3, 4, 6 and most of 8
 
-- `reposicao_booking`, the two approval modes and the pending-hold timeout.
-- The shared eligibility helper — occurrence capacity as *enrolled minus recorded
-  absences* — which the ticket calls the single most important piece of shared
-  logic, and which POOLSE-19 and the roster view both need.
-- The backfill-only filter, and the guest marker on the roster (AC 8), including
-  the thing the ticket names as most likely to be got wrong: counting a reposição
-  guest as enrolled somewhere.
-- `POST /credits/:id/book` and the booking permission rules for a Student or EE.
+**The conflict between criteria 3 and 4 is resolved as the ticket proposes**, and
+it is `session_free_seats()`: an occurrence's capacity for reposição purposes is
+*enrolled minus the absences recorded on that occurrence*, so one absence on a
+full turma frees exactly one place, for that date only, and the open-seat rule
+and the backfill-only rule both hold at once. The ticket calls this the single
+most important piece of shared logic; it is a SQL function so the roster view and
+POOLSE-19 use the number rather than recomputing it.
 
-The settings for redemption — `backfill_only` and `mode` — are already stored and
-already editable, because a club turning the feature on wants to answer the whole
-question in one sitting. Nothing reads them yet.
+`reposicao_options()` is a SQL function too, for the same reason `merge_candidates`
+is — and because the cases worth testing (a full turma with one absence, a class
+one day past the expiry) are testable against a database rather than through
+three HTTP calls. `bookCredit` re-runs that same function inside its transaction,
+after locking the credit, so the list rule and the booking rule cannot drift.
+
+Also built: both approval modes, the pending hold (48 hours, a **column** because
+the number is a guess), `release_expired_reposicao_holds()`, cancel-returns-the-
+credit-with-its-original-expiry, and the booking UI on the credit panel.
+
+**Two things learned by running it:**
+
+- A `CHECK` I wrote refused a row my own sweep produced: a lapsed hold is decided
+  by *nobody*, which is the same "the system did this" case `audit_log` already
+  models with a null actor. The constraint now guards only the half that is
+  always wrong — a named decider with no timestamp.
+- **Backfill-only is only usable if a future absence can be recorded**, because a
+  place is not vacated until somebody says so. It can be: nothing guards the
+  register against a future session. But the workflow — an office told "she is
+  away next Tuesday" marking that session ahead of time — is not obvious from the
+  interface, and is worth a look when the calendar work resumes.
+
+## Still outstanding
+
+- **Criterion 8's roster half.** `guestsOf()` exists and the schema keeps guests
+  out of `enrollment` entirely, so they cannot be counted as enrolled by
+  accident. What is not built is the guest *marker* on the register screen, and
+  the separate communications audience.
+- Narrowing approval to the **assigned** instructor. The role check lets any
+  instructor approve; per-turma assignment is slice 1.12's work and is noted in
+  the controller rather than silently assumed.
+- Marking a credit `used` once its occurrence has passed. The status exists and
+  the schema allows it; nothing sets it yet.
 
 **No scheduled-job runner exists in the product**, so criterion 7 is a function
 with a test rather than something that fires nightly. Wiring it to a scheduler is

@@ -6,6 +6,7 @@ import {
   GuardiansController,
   PeopleDedupController,
   PeopleSearchController,
+  RedemptionController,
 } from './students/students.controller.js';
 import { SkillsController } from './classes/skills.controller.js';
 import { StaffController } from './staff/staff.controller.js';
@@ -61,6 +62,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     ClerkWebhookController,
     OrganizationsController,
     SettingsController,
+    RedemptionController,
     PeopleController,
     InvitationsController,
     FacilitiesController,

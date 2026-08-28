@@ -19,6 +19,11 @@ export interface ReposicaoCredit {
   /** The turma the absence was in, so a credit reads as "a class you missed". */
   className: string | null;
   /**
+   * The live booking, when there is one — so the panel can offer to cancel it
+   * without a second round trip. Null unless the credit is `booked`.
+   */
+  bookingId: string | null;
+  /**
    * Days left, in the club's own calendar, or null once it is spent or gone.
    *
    * Computed in SQL rather than in the browser: a credit expiring "today" is a
@@ -51,6 +56,7 @@ export async function creditsFor(
       expires_on: Date;
       status: ReposicaoCredit['status'];
       class_name: string | null;
+      booking_id: string | null;
       days_left: number | null;
     }>(
       `SELECT c.id,
@@ -59,6 +65,12 @@ export async function creditsFor(
               c.expires_on,
               c.status::text AS status,
               cg.name AS class_name,
+              (
+                SELECT b.id FROM reposicao_booking b
+                 WHERE b.credit_id = c.id
+                   AND b.status IN ('pending', 'confirmed')
+                   AND b.archived_at IS NULL
+              ) AS booking_id,
               CASE WHEN c.status = 'available'
                    THEN (c.expires_on - current_date)::int
                    ELSE NULL
@@ -81,6 +93,7 @@ export async function creditsFor(
       expiresOn: row.expires_on.toISOString().slice(0, 10),
       status: row.status,
       className: row.class_name,
+      bookingId: row.booking_id,
       daysLeft: row.days_left,
     }));
   });

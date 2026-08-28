@@ -16,6 +16,7 @@ import { PersonAvatar } from '@/components/person-avatar';
 import { PhotoUpload } from '@/components/photo-upload';
 import { photoUrlFor } from '@/lib/photo';
 import { StudentForm } from '../student-forms';
+import { CreditBooking } from './credit-booking';
 import { ActionButton } from '@/components/action-button';
 import { PageShell } from '@/components/page-shell';
 
@@ -344,6 +345,21 @@ export default async function StudentPage({
                     {t(`reposicao.status.${credit.status}`)}
                   </span>
                 </span>
+
+                {/*
+                  Booking sits on the credit rather than on a screen of its own:
+                  the question "when can we make this up?" only ever gets asked
+                  about a particular missed class — POOLSE-21 criterion 3.
+                */}
+                {register !== null && (
+                  <div className="w-full">
+                    <CreditBooking
+                      organizationId={register.organizationId}
+                      studentId={student.id}
+                      credit={credit}
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

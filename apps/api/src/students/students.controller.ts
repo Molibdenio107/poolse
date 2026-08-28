@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -64,6 +65,17 @@ import {
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { readSearch } from '../common/search.js';
 import { creditsFor, type ReposicaoCredit } from './credits.repository.js';
+import {
+  bookCredit,
+  cancelBooking,
+  decideBooking,
+  mayActForStudent,
+  redemptionOptions,
+  studentOfBooking,
+  studentOfCredit,
+  type DecideOutcome,
+  type RedemptionOption,
+} from './redemption.repository.js';
 
 const MAX_NAME = 120;
 const MAX_NOTES = 2000;
@@ -733,4 +745,130 @@ function parseBirthDate(value: unknown): string | null {
     throw new BadRequestException('birthDate cannot be in the future');
   }
   return raw;
+}
+
+/**
+ * Spending a reposição credit — POOLSE-21, criteria 3, 4 and 6.
+ *
+ * **Two audiences, one endpoint set.** Staff act for anybody; a Student or an
+ * encarregado acts only for themselves or a child they are linked to. The rule
+ * is enforced here on every route rather than by giving the mobile app its own
+ * endpoints, because two endpoint sets is how the second one ends up more
+ * permissive — the same argument POOLSE-39 made about role changes.
+ */
+@Controller()
+export class RedemptionController {
+  /**
+   * Where this credit could be spent.
+   *
+   * Reading the options is as sensitive as booking one: the list names dates,
+   * turmas and how full they are, so it takes the same check.
+   */
+  @Get('credits/:creditId/options')
+  async options(@Param('creditId') creditId: string): Promise<{ options: RedemptionOption[] }> {
+    const { organizationId } = currentTenant();
+    await requireActingFor(organizationId, creditId);
+    return { options: await redemptionOptions(organizationId, creditId) };
+  }
+
+  @Post('credits/:creditId/book')
+  async book(
+    @Param('creditId') creditId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ bookingId: string; status: 'pending' | 'confirmed' }> {
+    const { organizationId, membershipId } = currentTenant();
+    await requireActingFor(organizationId, creditId);
+
+    const sessionId = typeof body['sessionId'] === 'string' ? body['sessionId'].trim() : '';
+    if (sessionId === '') throw new BadRequestException('sessionId is required');
+
+    const outcome = await bookCredit(organizationId, creditId, sessionId, membershipId);
+
+    if (!outcome.ok) {
+      if (outcome.reason === 'not_found') throw new NotFoundException('No such credit');
+      /*
+       * 409 rather than 400: the request was well formed and would have worked a
+       * moment earlier. The last place going while somebody chose is a conflict,
+       * not a mistake they made, and the interface should say so.
+       */
+      throw new ConflictException(
+        outcome.reason === 'not_available'
+          ? 'That credit has already been used or booked'
+          : 'That class is not available for this credit',
+      );
+    }
+
+    return { bookingId: outcome.bookingId, status: outcome.status };
+  }
+
+  /**
+   * Approving and rejecting are staff-only — the ticket names owner, admin and
+   * the assigned instructor. Instructors are included at the role level here;
+   * narrowing to *their own* turmas needs the per-turma assignment work that
+   * slice 1.12 is for, and is noted rather than silently assumed.
+   */
+  @Post('bookings/:bookingId/approve')
+  async approve(@Param('bookingId') bookingId: string): Promise<{ approved: true }> {
+    requireRole('owner', 'admin', 'instructor');
+    const { organizationId, membershipId } = currentTenant();
+    settle(await decideBooking(organizationId, bookingId, 'confirmed', membershipId));
+    return { approved: true };
+  }
+
+  @Post('bookings/:bookingId/reject')
+  async reject(@Param('bookingId') bookingId: string): Promise<{ rejected: true }> {
+    requireRole('owner', 'admin', 'instructor');
+    const { organizationId, membershipId } = currentTenant();
+    settle(await decideBooking(organizationId, bookingId, 'rejected', membershipId));
+    return { rejected: true };
+  }
+
+  /**
+   * Cancelling belongs to the family as well as to staff — they booked it, and a
+   * family that cannot undo its own booking rings the office instead.
+   */
+  @Post('bookings/:bookingId/cancel')
+  async cancel(@Param('bookingId') bookingId: string): Promise<{ cancelled: true }> {
+    const { organizationId, membershipId } = currentTenant();
+
+    if (!hasRole('owner', 'admin', 'instructor')) {
+      const studentId = await studentOfBooking(organizationId, bookingId);
+      if (studentId === null) throw new NotFoundException('No such booking');
+      if (!(await mayActForStudent(organizationId, membershipId, studentId))) {
+        throw new ForbiddenException('That booking is not yours');
+      }
+    }
+
+    settle(await cancelBooking(organizationId, bookingId, membershipId));
+    return { cancelled: true };
+  }
+}
+
+/**
+ * Staff may act for anybody; everybody else only for their own — QA 21.8.
+ *
+ * A 404 rather than a 403 when the credit does not exist, so a stranger cannot
+ * discover which credit ids are real by the shape of the refusal.
+ */
+async function requireActingFor(organizationId: string, creditId: string): Promise<void> {
+  if (hasRole('owner', 'admin', 'instructor')) return;
+
+  const { membershipId } = currentTenant();
+  const studentId = await studentOfCredit(organizationId, creditId);
+  if (studentId === null) throw new NotFoundException('No such credit');
+
+  if (!(await mayActForStudent(organizationId, membershipId, studentId))) {
+    throw new ForbiddenException('That credit is not yours');
+  }
+}
+
+/** Turns a repository outcome into the HTTP answer, in one place. */
+function settle(outcome: DecideOutcome): void {
+  if (outcome === 'not_found') throw new NotFoundException('No such booking');
+  if (outcome === 'not_pending') {
+    throw new ConflictException('That booking has already been answered');
+  }
+  if (outcome === 'already_started') {
+    throw new ConflictException('That class has already started');
+  }
 }
