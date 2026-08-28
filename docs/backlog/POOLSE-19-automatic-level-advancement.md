@@ -24,8 +24,8 @@ Today a student can finish every skill in their level and sit there until a huma
 - If a skill is downgraded from *Adquirido* after a proposal is generated (correction, override reversal), the pending proposal moves to **invalidated** and disappears from the queue. It is never silently re-graded to a different level.
 - Interaction with POOLSE-21: credits belong to the student, not to the turma, so unused reposição credits survive a transfer. Redemption eligibility (matching level) then resolves against the **new** level from the effective date onward.
 - Seat counting must exclude reposição guests, who are on the roster for attendance but not enrolled (POOLSE-21 AC8). Counting them consumes seats that do not exist.
-- **Open:** what happens when the completed level is the last in the order — no proposal and a "programme complete" state, or a proposal into the same level's advanced turma? The source doc does not decide.
-- **Open:** may a student or encarregado de educação *accept* a proposal from the mobile app, or only see it and wait for staff? AC 4 says surfaced as a notification; AC 7 says a human confirms, without saying which human.
+- **Open, and deliberately unbuilt (28 Aug).** Nothing happens at the end of the ladder: no proposal is generated and **no new state was invented**. What a club owes a student who has finished the whole programme is core business behaviour still to be clarified — it may turn out to be the student's own choice, or to follow from their age. A guess in the schema is expensive to unpick, so this waits. Asserted as a tested behaviour (`advancement.sql` test 6) so "nothing happens" is deliberate rather than something a later reader mistakes for a bug.
+- **Answered by the ticket's own Dev section (28 Aug): they see it and wait.** "Student and EE tokens get `403` on confirm regardless of what the mobile app renders", which settles AC 7's "a human" as staff. Built that way — `requireRole('owner', 'admin', 'instructor')` on confirm and dismiss.
 
 ### Dev — implementation notes
 
@@ -63,3 +63,45 @@ Today a student can finish every skill in their level and sit there until a huma
 6. If no eligible turma exists, the student is flagged **ready to advance — no seat**, and appears on a report; this is a demand signal for scheduling the next season.
 7. Advancement is never automatic without a human confirmation.
 8. Class levels and skill levels are **the same objects** — not two parallel systems that need manual mapping.
+
+---
+
+## Built 28 Aug — the mechanic, the queue and the transfer
+
+**Criteria 1, 2, 3, 4, 5, 6, 7 and 8.** Generation is a trigger on
+`skill_progress`, for the reason minting a reposição is: the poolside grid is not
+the only thing that will ever write a skill, and a rule living in one caller is a
+rule the second caller forgets. It proposes when a level completes and
+**invalidates** when a skill is corrected back down (19.8), and it is idempotent
+under the grid's incremental saves — a partial unique index, not a check in the
+trigger, because deduplicating in the trigger would be a race between two saves.
+
+Three decisions worth keeping:
+
+- **`skill.required`, not a `level_required_skill` join table.** The Dev section
+  proposes the join table; it would be right if a skill could belong to several
+  levels, and `skill.level_id` is already NOT NULL and singular. A join table
+  would model a many-to-many that does not exist and would let a skill be
+  required for a level it is not part of.
+- **Candidates are computed when the queue is read, never stored.** A ranking made
+  when the last skill was marked is wrong by the time anybody opens the queue,
+  because seats fill. `transfer_candidates()` answers live, and confirmation
+  re-checks the seat under a row lock regardless (19.5).
+- **`next_level()` reads `sort_order`** — the ticket's named trap. Asserted by
+  creating a ladder, dragging a level into the middle of it, and checking the
+  proposal follows (19.6).
+
+QA 19.10 is satisfied by construction rather than by care: a reposição guest has
+no `enrollment` row, so `class_group_free_seats()` cannot see them.
+
+**Not built:** narrowing confirmation to the *assigned* instructor (per-turma
+assignment is slice 1.12's work; any instructor may confirm, and the controller
+says so rather than implying a narrowing that does not exist), and the mobile
+notification in criterion 4, which needs the notifications module.
+
+`readyNoSeat` filters after its window rather than inside it — POOLSE-29 forbids
+that for good reason, and this is the stated exception: "has no candidates" is a
+per-row function call rather than a column, so it cannot be a WHERE clause
+without evaluating the ranking for every proposal anyway. Bounded at 500 pending
+proposals with a note that the fix beyond that is a materialised flag, not a
+bigger number.

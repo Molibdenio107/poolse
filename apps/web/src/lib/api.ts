@@ -908,6 +908,38 @@ export interface RedemptionOption {
   freeSeats: number | null;
 }
 
+/**
+ * A turma a level-advancement proposal could move a student into — POOLSE-19.
+ *
+ * `rankReason` is why it sits where it does, so the queue can explain the
+ * ranking rather than leaving an admin to re-derive it.
+ */
+export interface TransferCandidate {
+  classGroupId: string;
+  className: string;
+  levelName: string | null;
+  freeSeats: number | null;
+  rankReason: 'same_slot' | 'same_instructor' | 'available';
+}
+
+/**
+ * A student who has finished their level — POOLSE-19.
+ *
+ * `candidates` is computed when the queue is read, never stored: a ranking made
+ * when the last skill was marked is wrong by the time anybody opens this, because
+ * seats fill. An empty list is "ready to advance — no seat", which is a demand
+ * signal for next season rather than a task anybody clears.
+ */
+export interface TransferProposal {
+  id: string;
+  studentId: string;
+  studentName: string;
+  fromLevelName: string;
+  toLevelName: string;
+  generatedAt: string;
+  candidates: TransferCandidate[];
+}
+
 /** The club's rules for reposições — POOLSE-21, criteria 1, 4, 6 and 9. */
 export interface ReposicaoSettings {
   enabled: boolean;

@@ -594,6 +594,27 @@
     "duplicateUseExisting": "Use this person",
     "guardianSearchPlaceholder": "Name, email or phone"
   },
+  "advancement": {
+    "title": "Advancement",
+    "subtitle": "Students who have completed their level and are ready to move up.",
+    "fromTo": "{from} → {to}",
+    "effectiveOn": "Effective from",
+    "confirm": "Confirm",
+    "dismiss": "Dismiss",
+    "noSeat": "Ready to advance, no seat. They stay here until a place opens in a turma at the next level.",
+    "freeSeats": "{seats, plural, =0 {No places} one {1 place} other {# places}}",
+    "none": "No advancements pending.",
+    "noneHint": "When a student completes every required skill in their level, they appear here.",
+    "notPermitted": "No access to advancement.",
+    "notPermittedHint": "Only the owner, administrators and instructors may see and confirm advancements.",
+    "seatGone": "That turma filled up. Choose another.",
+    "confirmFailed": "The advancement could not be confirmed.",
+    "reason": {
+      "same_slot": "Same day and time",
+      "same_instructor": "Same instructor",
+      "available": "Has a place"
+    }
+  },
   "progress": {
     "title": "Progression",
     "open": "Times and progression",

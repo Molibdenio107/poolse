@@ -76,6 +76,13 @@ import {
   type DecideOutcome,
   type RedemptionOption,
 } from './redemption.repository.js';
+import {
+  confirmProposal,
+  dismissProposal,
+  listProposals,
+  readyNoSeat,
+  type TransferProposal,
+} from './advancement.repository.js';
 
 const MAX_NAME = 120;
 const MAX_NOTES = 2000;
@@ -870,5 +877,104 @@ function settle(outcome: DecideOutcome): void {
   }
   if (outcome === 'already_started') {
     throw new ConflictException('That class has already started');
+  }
+}
+
+/**
+ * The advancement queue — POOLSE-19, criteria 4, 5, 6 and 7.
+ *
+ * **Confirming is staff-only, and that is criterion 7 rather than a convention.**
+ * Advancement is never automatic without a human confirmation, and a Student or
+ * an encarregado is not that human — QA 19.4 asks for a 403 on confirm even
+ * though the proposal is visible to them in the mobile app. `requireRole` is the
+ * whole enforcement, and it is here rather than in the interface.
+ *
+ * The ticket also asks for the *assigned* instructor rather than any instructor.
+ * Per-turma assignment is slice 1.12's work; this lets any instructor confirm and
+ * says so, rather than implying a narrowing that does not exist.
+ */
+@Controller('transfer-proposals')
+export class AdvancementController {
+  @Get()
+  async list(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ proposals: Paginated<TransferProposal> }> {
+    requireRole('owner', 'admin', 'instructor');
+    const { organizationId } = currentTenant();
+    return { proposals: await listProposals(organizationId, readPageQuery(page, limit)) };
+  }
+
+  /**
+   * Ready to advance, with nowhere to go — criterion 6.
+   *
+   * Its own route rather than a filter on the queue, because it answers a
+   * different question: the queue is work to do, and this is a reason to open
+   * another turma next season.
+   */
+  @Get('no-seat')
+  async noSeat(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ proposals: Paginated<TransferProposal> }> {
+    requireRole('owner', 'admin', 'instructor');
+    const { organizationId } = currentTenant();
+    return { proposals: await readyNoSeat(organizationId, readPageQuery(page, limit)) };
+  }
+
+  @Post(':id/confirm')
+  async confirm(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ confirmed: true }> {
+    requireRole('owner', 'admin', 'instructor');
+    const { organizationId, membershipId } = currentTenant();
+
+    const classGroupId =
+      typeof body['classGroupId'] === 'string' ? body['classGroupId'].trim() : '';
+    if (classGroupId === '') throw new BadRequestException('classGroupId is required');
+
+    const effectiveOn =
+      typeof body['effectiveOn'] === 'string' ? body['effectiveOn'].trim() : '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveOn)) {
+      throw new BadRequestException('effectiveOn must be a date');
+    }
+
+    const outcome = await confirmProposal(
+      organizationId,
+      id,
+      classGroupId,
+      effectiveOn,
+      membershipId,
+    );
+
+    if (outcome === 'not_found') throw new NotFoundException('No such proposal');
+    if (outcome === 'no_such_turma') {
+      throw new BadRequestException('That turma is not at the level being advanced to');
+    }
+    /*
+     * 409, and it is the case QA 19.5 is about: two admins confirming into the
+     * last seat from two stale queues. The loser is told the seat went, not that
+     * they did something wrong.
+     */
+    if (outcome === 'not_pending') {
+      throw new ConflictException('That proposal has already been answered');
+    }
+    if (outcome === 'no_seat') throw new ConflictException('That turma is full');
+
+    return { confirmed: true };
+  }
+
+  @Post(':id/dismiss')
+  async dismiss(@Param('id') id: string): Promise<{ dismissed: true }> {
+    requireRole('owner', 'admin', 'instructor');
+    const { organizationId, membershipId } = currentTenant();
+
+    const outcome = await dismissProposal(organizationId, id, membershipId);
+    if (outcome === 'not_found') throw new NotFoundException('No such proposal');
+    if (outcome === 'not_pending') {
+      throw new ConflictException('That proposal has already been answered');
+    }
+    return { dismissed: true };
   }
 }

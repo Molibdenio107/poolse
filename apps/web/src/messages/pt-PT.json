@@ -594,6 +594,27 @@
     "duplicateUseExisting": "Usar esta pessoa",
     "guardianSearchPlaceholder": "Nome, email ou telefone"
   },
+  "advancement": {
+    "title": "Progressões",
+    "subtitle": "Alunos que concluíram o nível e estão prontos a avançar.",
+    "fromTo": "{from} → {to}",
+    "effectiveOn": "A partir de",
+    "confirm": "Confirmar",
+    "dismiss": "Dispensar",
+    "noSeat": "Pronto a avançar, sem vaga. Aparece aqui até existir lugar numa turma do nível seguinte.",
+    "freeSeats": "{seats, plural, =0 {Sem vagas} one {1 vaga} other {# vagas}}",
+    "none": "Nenhuma progressão pendente.",
+    "noneHint": "Quando um aluno concluir todas as competências obrigatórias do seu nível, aparece aqui.",
+    "notPermitted": "Sem acesso às progressões.",
+    "notPermittedHint": "Só o proprietário, os administradores e os instrutores podem ver e confirmar progressões.",
+    "seatGone": "Essa turma ficou cheia. Escolha outra.",
+    "confirmFailed": "Não foi possível confirmar a progressão.",
+    "reason": {
+      "same_slot": "Mesmo dia e hora",
+      "same_instructor": "Mesmo instrutor",
+      "available": "Com vaga"
+    }
+  },
   "progress": {
     "title": "Progressão",
     "open": "Marcas e progressão",

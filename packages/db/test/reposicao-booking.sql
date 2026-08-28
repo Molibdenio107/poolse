@@ -347,4 +347,125 @@ BEGIN
   RAISE NOTICE 'PASS test 8: bookings are invisible to another tenant';
 END $$;
 
+
+-- ---------------------------------------------------------------------------
+-- Test 9: a class that happened spends the credit; one the club cancelled does not
+--
+-- The end of the lifecycle, and the asymmetry is the point. A student who did
+-- not turn up still spends it — the club held the place. A class the club called
+-- off spends nothing, which is POOLSE-31's rule that a closure costs nobody.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  f RECORD; v_past uuid; v_credit uuid; v_status text; v_redeemed timestamptz; v_n int;
+BEGIN
+  SELECT * INTO f FROM fixture;
+
+  -- A fresh credit, booked into a class that has already finished.
+  UPDATE reposicao_booking SET status = 'cancelled', decided_at = now(),
+         decided_by_membership_id = f.staff, holds_until = NULL
+   WHERE credit_id = f.credit AND status IN ('pending', 'confirmed');
+  UPDATE reposicao_credit SET status = 'available', redeemed_at = NULL
+   WHERE id = f.credit;
+
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
+                             starts_at, duration_minutes, ends_at)
+  VALUES (f.org, f.grp, (SELECT id FROM pool WHERE organization_id = f.org LIMIT 1),
+          now() - interval '2 hours', 45, now() - interval '75 minutes')
+  RETURNING id INTO v_past;
+
+  INSERT INTO reposicao_booking (organization_id, credit_id, class_session_id,
+                                 status, requested_by_membership_id)
+  VALUES (f.org, f.credit, v_past, 'confirmed', f.staff);
+
+  v_n := settle_reposicao_bookings(f.org, now());
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 9: % credits settled, expected 1', v_n;
+  END IF;
+
+  SELECT status::text, redeemed_at INTO v_status, v_redeemed
+    FROM reposicao_credit WHERE id = f.credit;
+
+  IF v_status <> 'used' THEN
+    RAISE EXCEPTION 'FAIL test 9: a class that happened left the credit %', v_status;
+  END IF;
+
+  -- Stamped with the end of the class, not the moment of the sweep, so a second
+  -- run tomorrow would produce the same answer.
+  IF v_redeemed IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 9: used without a redemption time';
+  END IF;
+
+  IF settle_reposicao_bookings(f.org, now()) <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 9: a second sweep settled more';
+  END IF;
+
+  RAISE NOTICE 'PASS test 9: a class that happened spends the credit, once';
+END $$;
+
+DO $$
+DECLARE f RECORD; v_past uuid; v_credit uuid; v_status text; v_n int;
+BEGIN
+  SELECT * INTO f FROM fixture;
+
+  /*
+   * A second credit, minted the way every credit is minted: another justified
+   * absence, and the trigger does the rest.
+   *
+   * Hand-inserting one here failed against `reposicao_credit_absence_uq`, which
+   * is the index doing its job — one live credit per absence — and a reminder
+   * that a test which builds rows the application cannot build proves nothing
+   * about the application.
+   */
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
+                             starts_at, duration_minutes, ends_at)
+  VALUES (f.org, f.grp, (SELECT id FROM pool WHERE organization_id = f.org LIMIT 1),
+          now() - interval '21 days 3 hours', 45,
+          now() - interval '21 days 3 hours' + interval '45 minutes')
+  RETURNING id INTO v_past;
+
+  INSERT INTO attendance (organization_id, class_session_id, student_id, status,
+                          recorded_by_membership_id)
+  VALUES (f.org, v_past, f.rui, 'excused', f.staff);
+
+  SELECT id INTO v_credit FROM reposicao_credit
+   WHERE student_id = f.rui AND archived_at IS NULL AND status = 'available'
+   LIMIT 1;
+
+  IF v_credit IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 9b: the second credit was not minted';
+  END IF;
+
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
+                             starts_at, duration_minutes, ends_at, status)
+  VALUES (f.org, f.grp, (SELECT id FROM pool WHERE organization_id = f.org LIMIT 1),
+          now() - interval '5 hours', 45, now() - interval '4 hours 15 minutes', 'scheduled')
+  RETURNING id INTO v_past;
+
+  INSERT INTO reposicao_booking (organization_id, credit_id, class_session_id,
+                                 status, requested_by_membership_id)
+  VALUES (f.org, v_credit, v_past, 'confirmed', f.staff);
+
+  -- The club calls it off after the booking was made.
+  UPDATE class_session SET status = 'cancelled' WHERE id = v_past;
+
+  -- It must not settle: nobody got their class.
+  IF settle_reposicao_bookings(f.org, now()) <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 9b: a cancelled class spent a credit';
+  END IF;
+
+  v_n := release_cancelled_reposicao_bookings(f.org);
+  IF v_n < 1 THEN
+    RAISE EXCEPTION 'FAIL test 9b: the cancelled class released % bookings', v_n;
+  END IF;
+
+  SELECT status::text INTO v_status FROM reposicao_credit WHERE id = v_credit;
+  IF v_status <> 'available' THEN
+    RAISE EXCEPTION 'FAIL test 9b: the credit is % after its class was cancelled', v_status;
+  END IF;
+
+  RAISE NOTICE 'PASS test 9b: a cancelled class gives the reposição back';
+END $$;
+
 ROLLBACK;

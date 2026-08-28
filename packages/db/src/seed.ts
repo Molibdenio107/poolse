@@ -202,6 +202,7 @@ async function main(): Promise<void> {
       enrollments: 0,
       attendance: 0,
       reposicoes: 0,
+      advancements: 0,
       vacations: 0,
       guardians: 0,
       skills: 0,
@@ -794,6 +795,56 @@ async function main(): Promise<void> {
     counts.reposicoes += minted.rowCount ?? 0;
 
     // ---------------------------------------------------------------------
+    // Progressões — POOLSE-19.
+    //
+    // Two students are taken to the end of their level so the advancement queue
+    // has something in it. Any more and the queue stops looking like a queue and
+    // starts looking like a migration.
+    //
+    // **Marked through the real write path, never inserted as proposals.** The
+    // trigger on skill_progress is what generates them, and seeding proposals
+    // directly would prove nothing about the mechanic the feature is.
+    //
+    // Only students whose level has a next level, since finishing the last one
+    // deliberately proposes nothing — see the migration header.
+    // ---------------------------------------------------------------------
+    const ready = await many<{ id: string; level_id: string }>(
+      client,
+      `SELECT s.id, s.level_id
+         FROM student s
+        WHERE s.organization_id = $1
+          AND s.archived_at IS NULL
+          AND s.level_id IS NOT NULL
+          AND next_level($1, s.level_id) IS NOT NULL
+          -- A level that actually has required skills to finish.
+          AND EXISTS (
+            SELECT 1 FROM skill sk
+             WHERE sk.level_id = s.level_id AND sk.required AND sk.archived_at IS NULL
+          )
+          AND NOT level_is_complete(s.id, s.level_id)
+        ORDER BY s.id
+        LIMIT 2`,
+      [org.id],
+    );
+
+    for (const student of ready) {
+      const marked = await client.query(
+        `INSERT INTO skill_progress (organization_id, student_id, skill_id, state,
+                                     started_on, attained_at, recorded_by_membership_id)
+         SELECT $1, $2, sk.id, 'attained', current_date - 30, now(), $3
+           FROM skill sk
+          WHERE sk.organization_id = $1
+            AND sk.level_id = $4
+            AND sk.required
+            AND sk.archived_at IS NULL
+         ON CONFLICT (student_id, skill_id) DO UPDATE
+            SET state = 'attained', attained_at = now()`,
+        [org.id, student.id, marker?.id ?? null, student.level_id],
+      );
+      counts.advancements += marked.rowCount ?? 0;
+    }
+
+    // ---------------------------------------------------------------------
     // Leave, in each of the states the screens can show.
     // ---------------------------------------------------------------------
     const staff = await many<{ id: string }>(
@@ -869,6 +920,7 @@ async function main(): Promise<void> {
     console.log(`  enrollments        ${counts.enrollments}`);
     console.log(`  attendance marks   ${counts.attendance}`);
     console.log(`  reposições minted  ${counts.reposicoes}`);
+    console.log(`  skills completed   ${counts.advancements}`);
     console.log(`  skills added       ${counts.skills}`);
     console.log(`  guardians linked   ${counts.guardians}`);
     console.log(`  leave requests     ${counts.vacations}`);
