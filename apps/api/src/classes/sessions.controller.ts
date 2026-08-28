@@ -79,9 +79,21 @@ export class ClosuresController {
      * A missing or unparseable year means every year, which is what an older
      * client and any script calling this directly will send.
      */
+    /*
+     * A sane year, not merely a finite one.
+     *
+     * `?year=0` is finite and reached `make_date(0, 12, 31)`, which Postgres
+     * refuses — a 500 for a hand-typed URL. The vacations endpoint already
+     * bounds its year; this one only checked for a number. Out of range means
+     * "no filter" rather than an error: a bad year in a query string is somebody
+     * fiddling, and the whole list is a harmless answer.
+     */
     const requested = Number.parseInt(year ?? '', 10);
+    const scopedYear =
+      Number.isInteger(requested) && requested >= 2000 && requested <= 2100 ? requested : null;
+
     const [closures, pools] = await Promise.all([
-      listClosures(organizationId, Number.isFinite(requested) ? requested : null),
+      listClosures(organizationId, scopedYear),
       poolChoices(organizationId),
     ]);
 
@@ -258,10 +270,34 @@ export class CalendarController {
  * The session is read back so the clash can be described in the operator's own
  * terms — the turma's name, the time on the pool's clock, the lane. A 409 rather
  * than a 500: nothing is broken, the slot is taken.
+ *
+ * **`attempted` matters, and its absence made this function useless.** The write
+ * has already rolled back by the time we get here, so reading the session back
+ * gives the instructor it had *before* — not the substitute whose double-booking
+ * raised the constraint. `findClash` then looked for a conflict with the wrong
+ * person, found none, and every 409 shipped `clash: null`: the exact opposite of
+ * what the whole function exists to produce.
+ *
+ * So the caller passes what it tried to set, and the stored row supplies only
+ * the slot — the pool, the lane and the times, which the rollback did not touch.
  */
-async function asClash(organizationId: string, sessionId: string): Promise<ConflictException> {
+async function asClash(
+  organizationId: string,
+  sessionId: string,
+  attempted?: { instructorMembershipId?: string | null },
+): Promise<ConflictException> {
   const session = await findSessionSlot(organizationId, sessionId);
-  const clash = session === null ? null : await findClash(organizationId, session);
+
+  const clash =
+    session === null
+      ? null
+      : await findClash(organizationId, {
+          ...session,
+          instructorMembershipId:
+            attempted?.instructorMembershipId !== undefined
+              ? attempted.instructorMembershipId
+              : session.instructorMembershipId,
+        });
 
   return new ConflictException({
     code: 'session_clash',
@@ -385,8 +421,11 @@ export class SessionsCalendarController {
       }
     } catch (error) {
       // Somebody covering a class cannot also be teaching their own at that
-      // moment. The constraint says so; this says which class.
-      if (isExclusionViolation(error)) throw await asClash(organizationId, id);
+      // moment. The constraint says so; this says which class — which needs the
+      // substitute we tried to set, since the failed write left no trace of them.
+      if (isExclusionViolation(error)) {
+        throw await asClash(organizationId, id, { instructorMembershipId: membershipId });
+      }
       throw error;
     }
     return { updated: true };
@@ -517,5 +556,23 @@ function asOverlap(error: unknown): unknown {
       existing: error.existing,
     });
   }
+
+  /*
+   * A closure covering a class somebody already marked.
+   *
+   * `apply_closure` runs inside create and update, and `class_session_keep_marked`
+   * refuses to cancel a marked class — correctly: the alternative is silently
+   * erasing classes people attended. But nothing here translated the 23001, so
+   * saving such a closure returned a 500 while the *generation* path a few
+   * hundred lines up already turned the identical error into a 409 with a
+   * sentence. Same failure, two answers, depending on which screen you were on.
+   */
+  if (isMarkedSessionViolation(error)) {
+    return new ConflictException({
+      code: 'attendance_recorded',
+      message: 'That closure covers a class that has already been marked',
+    });
+  }
+
   return error;
 }

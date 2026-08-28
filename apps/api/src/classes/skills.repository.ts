@@ -269,7 +269,18 @@ export async function markSkills(
       // thing an instructor did, and twenty rows would bury the trail.
       await recordAudit(tx, {
         action: 'skill.marked',
-        entityType: 'class_group',
+        /*
+         * The entity is the skill, because that is what the id is.
+         *
+         * This said 'class_group' while carrying a skill id, so every marking
+         * wrote an audit row pointing at a turma that does not exist — an entity
+         * reference nothing could ever resolve.
+         *
+         * There is no turma to record instead: a batch is (student, skill) pairs
+         * and may span several. The first skill id stands for the batch, which is
+         * what it always did; only the label was wrong.
+         */
+        entityType: 'skill',
         entityId: marks[0]?.skillId ?? null,
         data: { saved, refused: needsOverride.length },
       });

@@ -101,7 +101,15 @@ export class ClassesController {
     const { organizationId } = currentTenant();
 
     try {
-      return { id: await createClassGroup(organizationId, parseGroup(body)) };
+      const created = await createClassGroup(organizationId, parseGroup(body));
+
+      // A club that has never opened an época has nowhere to put a turma. Said
+      // in words; before this the NOT NULL said it as a 500.
+      if (created === 'no_season') {
+        throw new BadRequestException('Open an época before creating a turma');
+      }
+
+      return { id: created.id };
     } catch (error) {
       throw asHttp(error);
     }

@@ -209,9 +209,25 @@ export interface ClassGroupInput {
 export async function createClassGroup(
   organizationId: string,
   input: ClassGroupInput,
-): Promise<string> {
+/*
+ * `{ id }` rather than a bare string, so "no season" is a case the compiler
+ * makes the caller handle. `string | 'no_season'` collapses to `string` and
+ * would have let the controller ignore it silently — the same shape of hole the
+ * bug being fixed here came through.
+ */
+): Promise<{ id: string } | 'no_season'> {
   try {
     return await withOrg(organizationId, async (tx) => {
+      /*
+       * A club that has never opened a season cannot hold a turma, and the
+       * NOT NULL below says so as a 23502 — which reached the operator as a 500.
+       * Asked first, so the answer is a sentence they can act on.
+       */
+      const { rows: seasons } = await tx.query<{ id: string }>(
+        'SELECT id FROM season WHERE archived_at IS NULL LIMIT 1',
+      );
+      if (seasons.length === 0) return 'no_season' as const;
+
       const { rows } = await tx.query<{ id: string }>(
         // A new turma joins the season that is running. There is no way to
         // create one in a retired season, which is the point of retiring it.
@@ -220,6 +236,15 @@ export async function createClassGroup(
            season_id
          ) VALUES (
            $1, $2, $3, $4, $5, $6, $7,
+           /*
+            * A club with no active season yields NULL here, and season_id is
+            * NOT NULL — so creating a turma answered 23502 as a 500 instead of
+            * saying what was missing. The one-active-season index guarantees at
+            * most one row, so only the zero-row case could arise.
+            *
+            * Checked before the insert now, so the operator is told to open a
+            * season rather than shown a database error.
+            */
            (SELECT id FROM season WHERE archived_at IS NULL)
          )
          RETURNING id`,
@@ -244,7 +269,7 @@ export async function createClassGroup(
         data: { name: input.name },
       });
 
-      return id;
+      return { id };
     });
   } catch (error) {
     throw asDuplicate(error, input.name);
@@ -292,14 +317,31 @@ export async function updateClassGroup(
        * Cancelled sessions are skipped: they are history too, and the constraint
        * ignores them anyway.
        */
+      /*
+       * The pool and the lane travel with the instructor.
+       *
+       * `class_session` copies all three from the turma at generation time —
+       * deliberately, because an exclusion constraint cannot reach into another
+       * table. This propagated only the instructor, so moving a turma to another
+       * pool left every already-generated session in the old one, and
+       * regeneration could not repair it either: it inserts `ON CONFLICT DO
+       * NOTHING`, so the stale rows simply stayed.
+       *
+       * The symptom is a calendar that shows a class in a pool the club has
+       * stopped using, which nobody would think to look for.
+       */
       await tx.query(
         `UPDATE class_session
-            SET instructor_membership_id = $2
+            SET instructor_membership_id = $2,
+                pool_id = $3,
+                lane = $4
           WHERE class_group_id = $1
             AND starts_at >= now()
             AND status <> 'cancelled'
-            AND instructor_membership_id IS DISTINCT FROM $2`,
-        [groupId, input.instructorMembershipId],
+            AND (instructor_membership_id IS DISTINCT FROM $2
+                 OR pool_id IS DISTINCT FROM $3
+                 OR lane IS DISTINCT FROM $4)`,
+        [groupId, input.instructorMembershipId, input.poolId, input.lane],
       );
 
       await recordAudit(tx, {

@@ -812,9 +812,16 @@ export async function findClash(
                  AND coalesce(cs.substitute_instructor_membership_id,
                               cs.instructor_membership_id) = $4::uuid)
          )
-       -- An instructor clash is the more surprising of the two and the harder to
-       -- spot on a calendar, so it is named first when both apply.
-       ORDER BY kind DESC, cs.starts_at
+       /*
+        * An instructor clash is the more surprising of the two and the harder to
+        * spot on a calendar, so it is named first when both apply.
+        *
+        * ASC, because the values are the literals 'instructor' and 'lane' and
+        * 'instructor' sorts first. This said DESC, which did the exact opposite
+        * of the sentence above it — the sort of disagreement that survives
+        * review precisely because the comment reads correct.
+        */
+       ORDER BY kind ASC, cs.starts_at
        LIMIT 1
       `,
       [

@@ -115,11 +115,23 @@ const REQUEST_SELECT = `
          ) AS decided_by_name,
          vr.decision_note,
          (
+           /*
+            * **Not filtered by archived_at, deliberately.**
+            *
+            * The vacation_request_days trigger archives a request's days the moment it is
+            * rejected or withdrawn — correctly, because they stop counting
+            * against the entitlement. But this list *describes* the request, and
+            * with the filter every rejected request read "0 dias" with nothing
+            * under it. "Pedido para 3–5 de agosto — rejeitado" is the record
+            * somebody needs; "0 dias — rejeitado" is not.
+            *
+            * The balance is unaffected: it counts from its own query, which
+            * keeps the filter and joins on an approved status besides.
+            */
            SELECT coalesce(json_agg(vd.day ORDER BY vd.day), '[]'::json)
              FROM vacation_day vd
             WHERE vd.vacation_request_id = vr.id
               AND vd.organization_id = vr.organization_id
-              AND vd.archived_at IS NULL
          ) AS days
     FROM vacation_request vr
     JOIN membership m ON m.id = vr.membership_id AND m.organization_id = vr.organization_id
