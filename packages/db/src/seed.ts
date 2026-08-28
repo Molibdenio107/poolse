@@ -201,6 +201,7 @@ async function main(): Promise<void> {
       students: 0,
       enrollments: 0,
       attendance: 0,
+      reposicoes: 0,
       vacations: 0,
       guardians: 0,
       skills: 0,
@@ -720,6 +721,47 @@ async function main(): Promise<void> {
     }
 
     // ---------------------------------------------------------------------
+    // Reposições — POOLSE-21.
+    //
+    // The demo club issues them, so the credit panel on a student record has
+    // something in it and the settings screen is not describing a feature
+    // nobody can see working.
+    //
+    // **The credits are minted by the trigger, not inserted here**, which is the
+    // point: seeding them directly would be a second way for a credit to come
+    // into existence and would prove nothing about the one that matters.
+    //
+    // Attendance is already seeded and `ON CONFLICT DO NOTHING`, so no new mark
+    // arrives to fire the trigger on a database that has been seeded before.
+    // Re-writing `status` to the value it already holds fires `UPDATE OF status`
+    // and mints what is missing — idempotent, because the second pass finds
+    // every excused mark already carrying a credit.
+    // ---------------------------------------------------------------------
+    await client.query(
+      `UPDATE organization
+          SET reposicao_enabled = true,
+              reposicao_window_days = 60,
+              reposicao_cap_per_season = 3,
+              reposicao_backfill_only = true,
+              reposicao_mode = 'request'
+        WHERE id = $1`,
+      [org.id],
+    );
+
+    const minted = await client.query(
+      `UPDATE attendance a
+          SET status = 'excused'
+        WHERE a.organization_id = $1
+          AND a.status = 'excused'
+          AND NOT EXISTS (
+            SELECT 1 FROM reposicao_credit c
+             WHERE c.attendance_id = a.id AND c.archived_at IS NULL
+          )`,
+      [org.id],
+    );
+    counts.reposicoes += minted.rowCount ?? 0;
+
+    // ---------------------------------------------------------------------
     // Leave, in each of the states the screens can show.
     // ---------------------------------------------------------------------
     const staff = await many<{ id: string }>(
@@ -794,6 +836,7 @@ async function main(): Promise<void> {
     console.log(`  students added     ${counts.students}`);
     console.log(`  enrollments        ${counts.enrollments}`);
     console.log(`  attendance marks   ${counts.attendance}`);
+    console.log(`  reposições minted  ${counts.reposicoes}`);
     console.log(`  skills added       ${counts.skills}`);
     console.log(`  guardians linked   ${counts.guardians}`);
     console.log(`  leave requests     ${counts.vacations}`);
