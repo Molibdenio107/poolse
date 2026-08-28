@@ -23,7 +23,10 @@ import { SessionsController } from './identity/sessions.controller.js';
 import { InvitationsController } from './invitations/invitations.controller.js';
 import { JoinController } from './invitations/join.controller.js';
 import { PeopleController } from './invitations/people.controller.js';
-import { OrganizationsController } from './organizations/organizations.controller.js';
+import {
+  OrganizationsController,
+  SettingsController,
+} from './organizations/organizations.controller.js';
 import { SensitiveController } from './sensitive/sensitive.controller.js';
 import { RecordsController } from './students/records.controller.js';
 import { LevelsController, StudentsController } from './students/students.controller.js';
@@ -57,6 +60,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     SessionsController,
     ClerkWebhookController,
     OrganizationsController,
+    SettingsController,
     PeopleController,
     InvitationsController,
     FacilitiesController,

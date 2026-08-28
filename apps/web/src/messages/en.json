@@ -351,7 +351,41 @@
     "archiveFailed": "Could not archive the class group.",
     "when": "When",
     "occupancy": "{occupancy} places taken",
-    "enrolled": "Enrolled students"
+    "enrolled": "Enrolled students",
+    "noTurma": "an unnamed turma"
+  },
+  "reposicao": {
+    "title": "Make-up classes",
+    "subtitle": "When a justified absence earns a make-up class, and how long it lasts.",
+    "credits": "Make-up classes",
+    "enabled": "Issue a make-up class for a justified absence",
+    "enabledHint": "Every justified absence earns a make-up class. Unjustified absences never do.",
+    "windowDays": "Valid for (days)",
+    "windowDaysHint": "Days from the absence. Never past the end of the season.",
+    "cap": "Limit per season",
+    "capHint": "Most make-up classes one student may hold in a season. Leave empty for no limit.",
+    "mode": "How it is booked",
+    "modeHint": "Who confirms a make-up booking.",
+    "modeRequest": "Request — staff approve",
+    "modeSelfService": "Direct — the family books",
+    "backfillOnly": "Only into a place another absence freed",
+    "backfillOnlyHint": "A make-up never pushes a turma over capacity: it only fills a place another student left.",
+    "notRetroactive": "The rules are copied onto each make-up class when it is issued. Changing them here does not change ones already given.",
+    "saved": "Rules saved.",
+    "saveFailed": "The rules could not be saved.",
+    "notPermitted": "No access to the make-up rules.",
+    "notPermittedHint": "Only the owner and administrators may see and change these rules.",
+    "windowInvalid": "Enter a number of days between 1 and 365.",
+    "capInvalid": "Enter a whole number above zero, or leave it empty.",
+    "missedOn": "Missed {turma} on {date}",
+    "expiresOn": "Valid until {date}",
+    "daysLeft": "{days, plural, =0 {Expires today} one {1 day left} other {# days left}}",
+    "status": {
+      "available": "Unused",
+      "booked": "Booked",
+      "used": "Used",
+      "expired": "Expired"
+    }
   },
   "skills": {
     "title": "Skills",

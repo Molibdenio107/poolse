@@ -1,7 +1,14 @@
-import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import { currentAuth } from '../auth/auth.context.js';
+import { currentTenant } from '../tenant/tenant.context.js';
+import { requireRole } from '../tenant/roles.js';
 import { ensureAppUser } from '../identity/identity.service.js';
-import { provisionOrganization } from './organizations.repository.js';
+import {
+  provisionOrganization,
+  reposicaoSettings,
+  saveReposicaoSettings,
+  type ReposicaoSettings,
+} from './organizations.repository.js';
 
 interface CreateOrganizationBody {
   name?: unknown;
@@ -55,5 +62,75 @@ export class OrganizationsController {
     // Blank is allowed and means "same as the organization". An operator with one
     // site should not have to type its name twice, and the function decides.
     return provisionOrganization(clerkUserId, name, locale, facilityName || null);
+  }
+}
+
+/**
+ * The club's own settings — POOLSE-21, and the first home for anything that is
+ * a decision about how this club runs rather than about its data.
+ *
+ * Separate from `OrganizationsController` above because that one is deliberately
+ * outside tenant scope (somebody creating their first organization belongs to
+ * none). These reads and writes are firmly inside a tenant and inside a role
+ * check, which is the opposite of that.
+ */
+@Controller('settings')
+export class SettingsController {
+  /**
+   * Readable by owner and admin only.
+   *
+   * Not because the values are secret — a family can infer the window from the
+   * expiry date on their own credit — but because a screen that shows settings
+   * it will refuse to save is a screen that lies about what it is for.
+   */
+  @Get('reposicao')
+  async read(): Promise<ReposicaoSettings> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    return reposicaoSettings(organizationId);
+  }
+
+  @Patch('reposicao')
+  async write(@Body() body: Record<string, unknown>): Promise<ReposicaoSettings> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    /*
+     * Parsed strictly, because these are numbers a form can send as anything.
+     *
+     * The sane *ranges* are schema constraints rather than checks here — a value
+     * typed straight into the database is refused the same way — so this only
+     * has to turn form input into the right types and reject what is not a
+     * number at all.
+     */
+    const windowDays = Number(body['windowDays']);
+    if (!Number.isInteger(windowDays) || windowDays < 1 || windowDays > 365) {
+      throw new BadRequestException('windowDays must be a whole number of days between 1 and 365');
+    }
+
+    /*
+     * An empty cap is "no cap", not zero. A form that sends "" for an untouched
+     * optional number would otherwise silently set the cap to nothing-allowed,
+     * which is the same shape as the bug POOLSE-09 and 10 came from.
+     */
+    const rawCap = body['capPerSeason'];
+    const capPerSeason =
+      rawCap === null || rawCap === undefined || rawCap === '' ? null : Number(rawCap);
+    if (capPerSeason !== null && (!Number.isInteger(capPerSeason) || capPerSeason < 1)) {
+      throw new BadRequestException('capPerSeason must be a whole number above zero, or empty');
+    }
+
+    const mode = body['mode'];
+    if (mode !== 'self_service' && mode !== 'request') {
+      throw new BadRequestException('mode must be self_service or request');
+    }
+
+    return saveReposicaoSettings(organizationId, {
+      enabled: body['enabled'] === true || body['enabled'] === 'true',
+      windowDays,
+      capPerSeason,
+      backfillOnly: body['backfillOnly'] === true || body['backfillOnly'] === 'true',
+      mode,
+    });
   }
 }

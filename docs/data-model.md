@@ -463,6 +463,39 @@ file together and both come well before `Zé`. `strip_accents` stays where it be
 *search*, which must match any part of the name, including the surnames the abbreviation
 drops.
 
+### Aulas de reposição are credits, minted by a trigger
+
+A reposição owed to a family used to be a note somebody remembered, so it was
+either forgotten or honoured twice. `reposicao_credit` makes it a row — POOLSE-21.
+
+**Only `attendance.status = 'excused'` mints.** A plain `absent` mints nothing, and
+an occurrence cancelled by a closure is not an absence at all, so nothing fires
+(POOLSE-31 decided that a closure cancels the class and mints nothing).
+
+**Minting is a trigger on `attendance`, not application code.** The requirement is
+that a mark and its credit cannot diverge, and a repository method delivers that
+only for the write paths that remember to call it — the register screen, an
+importer, a correction endpoint and a future mobile app are four chances to
+forget. `attendance_reposicao` also revokes: correcting a mark back to *faltou*
+archives an unspent credit and **refuses** when it has already been spent, because
+an office correcting a typo must not silently retract a class a family already
+attended.
+
+**The rule is snapshotted onto the credit.** `source_window_days` and
+`source_capped_at_season_end` are copied at mint time and never re-read from
+settings. A club shortening its window in March must not shorten a credit issued
+in February — a family told "you have until 11 May" has been told something.
+
+**Expiry is a window from the absence, capped at the end of the época**, and it is
+a *date in the club's calendar*, never an instant. `expire_reposicao_credits(org,
+date)` takes the day rather than reading a clock: `now()` in UTC would kill a
+credit an hour early for half the year in Lisbon. It is idempotent, so a second
+run finds nothing and notifies nobody.
+
+`class_group.reposicao_enabled` is nullable and **null means inherit, not off** —
+a two-state column could not tell "this turma is an exception" apart from "nobody
+has said".
+
 ### Seasons
 
 A swimming school's year runs September to August: it starts when school does and

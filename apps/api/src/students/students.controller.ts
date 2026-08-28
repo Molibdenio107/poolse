@@ -63,6 +63,7 @@ import {
 } from './students.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { readSearch } from '../common/search.js';
+import { creditsFor, type ReposicaoCredit } from './credits.repository.js';
 
 const MAX_NAME = 120;
 const MAX_NOTES = 2000;
@@ -322,6 +323,26 @@ export class StudentsController {
       canViewSensitive: hasRole('owner', 'admin', 'instructor'),
       canViewProgress: hasRole('owner', 'admin', 'instructor'),
     };
+  }
+
+  /**
+   * What this student is owed — POOLSE-21, criteria 2 and 5.
+   *
+   * Oldest expiry first, so the perishable credits are the ones a family is
+   * offered. Readable by any member: an instructor asked "do I owe them a class?"
+   * at the poolside needs the answer, and it reveals nothing a register does not.
+   */
+  @Get(':id/credits')
+  async credits(@Param('id') id: string): Promise<{ credits: ReposicaoCredit[] }> {
+    const { organizationId } = currentTenant();
+
+    // Through the same lookup as every other student read, so "not ours" and
+    // "not there" stay indistinguishable.
+    if ((await findStudent(organizationId, id)) === null) {
+      throw new NotFoundException('No such student');
+    }
+
+    return { credits: await creditsFor(organizationId, id) };
   }
 
   @Post()

@@ -351,7 +351,41 @@
     "archiveFailed": "Não foi possível arquivar a turma.",
     "when": "Quando",
     "occupancy": "{occupancy} lugares ocupados",
-    "enrolled": "Alunos inscritos"
+    "enrolled": "Alunos inscritos",
+    "noTurma": "turma sem nome"
+  },
+  "reposicao": {
+    "title": "Aulas de reposição",
+    "subtitle": "Quando uma falta justificada dá direito a uma aula de reposição, e por quanto tempo.",
+    "credits": "Reposições",
+    "enabled": "Emitir reposições por falta justificada",
+    "enabledHint": "Cada falta justificada passa a dar direito a uma aula de reposição. As faltas não justificadas nunca dão.",
+    "windowDays": "Validade (dias)",
+    "windowDaysHint": "Dias a contar da falta. Nunca ultrapassa o fim da época.",
+    "cap": "Limite por época",
+    "capHint": "Máximo de reposições por aluno em cada época. Deixe vazio para não haver limite.",
+    "mode": "Como é marcada",
+    "modeHint": "Quem confirma a marcação de uma reposição.",
+    "modeRequest": "Pedido — a equipa aprova",
+    "modeSelfService": "Directa — a família marca",
+    "backfillOnly": "Só em vagas deixadas por outra falta",
+    "backfillOnlyHint": "Uma reposição nunca leva a turma acima da lotação: só entra onde outro aluno faltou.",
+    "notRetroactive": "As regras são copiadas para cada reposição no momento em que é emitida. Alterá-las aqui não muda as reposições que já foram dadas.",
+    "saved": "Regras guardadas.",
+    "saveFailed": "Não foi possível guardar as regras.",
+    "notPermitted": "Sem acesso às regras de reposição.",
+    "notPermittedHint": "Só o proprietário e os administradores podem ver e alterar estas regras.",
+    "windowInvalid": "Indique um número de dias entre 1 e 365.",
+    "capInvalid": "Indique um número inteiro acima de zero, ou deixe vazio.",
+    "missedOn": "Faltou a {turma} em {date}",
+    "expiresOn": "Válida até {date}",
+    "daysLeft": "{days, plural, =0 {Expira hoje} one {Falta 1 dia} other {Faltam # dias}}",
+    "status": {
+      "available": "Por usar",
+      "booked": "Marcada",
+      "used": "Usada",
+      "expired": "Expirada"
+    }
   },
   "skills": {
     "title": "Competências",

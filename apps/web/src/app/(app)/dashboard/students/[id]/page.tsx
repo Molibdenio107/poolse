@@ -7,6 +7,7 @@ import {
   type Student,
   type Students,
   type TimetableEntry,
+  type ReposicaoCredit,
 } from '../../../../../lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import { addDays, isDate, longDate, mondayOf, shortDate, today } from '@/lib/dates';
@@ -42,6 +43,7 @@ export default async function StudentPage({
   const sunday = addDays(monday, 6);
 
   let student: Student | null = null;
+  let credits: ReposicaoCredit[] = [];
   let register: Students | null = null;
   let failure: string | null = null;
   let missing = false;
@@ -57,16 +59,21 @@ export default async function StudentPage({
     // page needs to tell two empty weeks apart: "no classes this week" and "the
     // season has not been built yet" look identical from the calendar alone, and
     // only one of them is something to act on.
-    const [studentResult, registerResult, timetableResult, calendarResult] = await Promise.all([
-      apiFetch<Student>(`/students/${id}`),
-      apiFetch<Students>('/students'),
-      apiFetch<{ entries: TimetableEntry[] }>(`/students/${id}/timetable`),
-      apiFetch<Calendar>(`/students/${id}/calendar?from=${monday}&to=${sunday}`),
-    ]);
+    const [studentResult, registerResult, timetableResult, calendarResult, creditsResult] =
+      await Promise.all([
+        apiFetch<Student>(`/students/${id}`),
+        // One row is enough: this only needs the levels, the permissions and the
+        // maioridade off the register response, not a page of other students.
+        apiFetch<Students>('/students?limit=1'),
+        apiFetch<{ entries: TimetableEntry[] }>(`/students/${id}/timetable`),
+        apiFetch<Calendar>(`/students/${id}/calendar?from=${monday}&to=${sunday}`),
+        apiFetch<{ credits: ReposicaoCredit[] }>(`/students/${id}/credits`),
+      ]);
     student = studentResult;
     register = registerResult;
     timetable = timetableResult.entries;
     calendar = calendarResult;
+    credits = creditsResult.credits;
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
       missing = true;
@@ -285,6 +292,61 @@ export default async function StudentPage({
             reason={t('students.documentNoStorage')}
             purpose={t('students.documentPurpose')}
           />
+        </section>
+      )}
+
+      {/*
+        What the club owes this family — POOLSE-21, criteria 2 and 5.
+
+        Rendered only when there is something to say. A club that has not turned
+        reposições on mints nothing, and an empty panel headed "Reposições" on
+        every student record would be a permanent question with no answer.
+
+        Oldest expiry first, as the server returns them: the perishable credits
+        are the ones somebody should spend.
+      */}
+      {student !== null && credits.length > 0 && (
+        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('reposicao.credits')}
+          </h2>
+
+          <ul className="flex flex-col divide-y divide-border">
+            {credits.map((credit) => (
+              <li
+                key={credit.id}
+                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0"
+              >
+                <span className="flex flex-col">
+                  <span>
+                    {t('reposicao.missedOn', {
+                      date: credit.issuedOn,
+                      turma: credit.className ?? t('classes.noTurma'),
+                    })}
+                  </span>
+                  <span className="text-sm text-foreground-muted">
+                    {t('reposicao.expiresOn', { date: credit.expiresOn })}
+                  </span>
+                </span>
+
+                {/*
+                  The state is a word, never a colour alone — the convention, and
+                  it matters more here because these four states have to stay
+                  visibly distinct from the attendance palette they sit near.
+                */}
+                <span className="flex items-baseline gap-2">
+                  {credit.daysLeft !== null && credit.daysLeft <= 14 && (
+                    <span className="rounded bg-warning/15 px-2 py-0.5 text-sm text-warning">
+                      {t('reposicao.daysLeft', { days: credit.daysLeft })}
+                    </span>
+                  )}
+                  <span className="rounded bg-surface-muted px-2 py-0.5 text-sm text-foreground-muted">
+                    {t(`reposicao.status.${credit.status}`)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

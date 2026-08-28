@@ -113,7 +113,14 @@ const SECTIONS: Item[] = [
     // everyone — knowing which year is running is not privileged — while the
     // reset itself is owner and admin only, refused by the API rather than
     // merely hidden here.
-    children: [{ href: '/dashboard/classes/seasons', key: 'seasons.title' }],
+    children: [
+      { href: '/dashboard/classes/seasons', key: 'seasons.title' },
+      // Reposições sit under Turmas because that is what they are about: a class
+      // missed and a class made up. There is no general settings area, and
+      // inventing one for a single feature would put the rule two clicks further
+      // from the thing it governs — POOLSE-21.
+      { href: '/dashboard/classes/reposicoes', key: 'reposicao.title' },
+    ],
   },
   {
     href: '/dashboard/calendar',

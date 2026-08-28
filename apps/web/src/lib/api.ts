@@ -855,6 +855,43 @@ export interface GuardianRow {
   students: { id: string; name: string; relationship: string | null }[];
 }
 
+/**
+ * A reposição credit — POOLSE-21.
+ *
+ * What the club owes a family for a class they justifiably missed. Minted by the
+ * database when an absence is marked *falta justificada*, so it cannot drift
+ * from the mark that earned it.
+ */
+export interface ReposicaoCredit {
+  id: string;
+  studentId: string;
+  /** The date of the class that was missed. */
+  issuedOn: string;
+  expiresOn: string;
+  status: 'available' | 'booked' | 'used' | 'expired';
+  /** The turma the absence was in, so a credit reads as a class rather than a token. */
+  className: string | null;
+  /**
+   * Days remaining, counted in the club's calendar, or null once spent or gone.
+   *
+   * Computed by the server on purpose: "expires today" is a question about the
+   * club's date, and a browser in another timezone would answer it differently.
+   */
+  daysLeft: number | null;
+}
+
+/** The club's rules for reposições — POOLSE-21, criteria 1, 4, 6 and 9. */
+export interface ReposicaoSettings {
+  enabled: boolean;
+  /** Days from the absence. Capped at the end of the época when a credit is minted. */
+  windowDays: number;
+  /** Credits per student per época, or null for no cap. */
+  capPerSeason: number | null;
+  /** Redeemable only into a slot another student has vacated. Read by redemption. */
+  backfillOnly: boolean;
+  mode: 'self_service' | 'request';
+}
+
 export interface Guardians {
   organizationId: string;
   /** One page of encarregados — POOLSE-29. A family is never split across pages. */

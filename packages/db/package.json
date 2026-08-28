@@ -20,7 +20,7 @@
     "bootstrap:deployed": "node dist/bootstrap-role.js",
     "seed": "node --env-file-if-exists=../../.env --import tsx src/seed.ts",
     "migrate:down": "node --env-file-if-exists=../../.env --import tsx src/migrate.ts down",
-    "test": "node --env-file-if-exists=../../.env --import tsx src/run-sql-test.ts test/tenant-isolation.sql test/clerk-provisioning.sql test/invitations.sql test/preferences.sql test/profile.sql test/audit-log.sql test/facilities.sql test/students.sql test/consent.sql test/ownership.sql test/progression.sql test/classes.sql test/sessions.sql test/attendance.sql test/vacations.sql test/seasons.sql test/person.sql test/skills.sql test/person-merge.sql test/staff-record.sql test/name-order.sql"
+    "test": "node --env-file-if-exists=../../.env --import tsx src/run-sql-test.ts test/tenant-isolation.sql test/clerk-provisioning.sql test/invitations.sql test/preferences.sql test/profile.sql test/audit-log.sql test/facilities.sql test/students.sql test/consent.sql test/ownership.sql test/progression.sql test/classes.sql test/sessions.sql test/attendance.sql test/vacations.sql test/seasons.sql test/person.sql test/skills.sql test/person-merge.sql test/staff-record.sql test/name-order.sql test/reposicao.sql"
   },
   "dependencies": {
     "pg": "^8.13.1"

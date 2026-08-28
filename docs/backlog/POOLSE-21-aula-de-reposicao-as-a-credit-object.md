@@ -24,7 +24,7 @@ A reposição owed to a family is currently a note someone remembers, which mean
 - Cap on credits per student per época is configurable. When the cap is reached, further justified absences mint nothing and the fact is recorded so staff can explain it.
 - A scheduled job expires unused credits, writes the expiry and stops any pending notification. Expiry must be evaluated in the tenant's timezone against the credit's expiry date, not in UTC.
 - Cancelling a booked reposição before the occurrence returns the credit to *available* with its original expiry unchanged; after the occurrence it is *used* whether or not the student turned up.
-- **Open:** the expiry basis is undecided — do reposições expire at the end of the época, or on a fixed window (e.g. 60 days) from the absence? The two produce very different behaviour for an absence in the last month of the época, and the redemption filter, the oldest-expiry-first ordering and the expiry job all key off it.
+- **Decided 28 Aug: a configurable window from the absence, capped at the end of the época.** Default 60 days. Every family gets the same window, and no credit outlives the turma, the level or the enrolment that produced it — an absence in the last week of the season gets the days that remain, not sixty. The window and the cap-flag are **snapshotted onto the credit at mint time**, so a club shortening its window in March cannot shorten a credit issued in February: a family told "you have until 11 May" has been told something, and a settings change is not permission to un-tell them.
 
 ### Dev — implementation notes
 
@@ -63,3 +63,47 @@ A reposição owed to a family is currently a note someone remembers, which mean
 7. A scheduled job expires unused credits and records the expiry.
 8. A student attending as a reposição is visibly a **guest on that roster** — counted for attendance, excluded from the turma's enrolled-student list (POOLSE-08), and addressable separately in communications.
 9. Configurable cap on credits per student per season.
+
+---
+
+## Built 28 Aug — slice 1 of 2
+
+**Split at a real boundary.** A credit that exists, expires correctly and can be
+seen is useful on its own: the office can already answer "what do we owe this
+family?", which is the question the ticket opens with. A booking table with
+nothing reliable to book against is not.
+
+**Done — criteria 1, 2, 5, 7, 9:**
+
+- `reposicao_credit`, the settings at club and turma level, and `reposicao_expiry()`.
+- Minting and revocation as a **trigger on `attendance`**, not application code.
+  The ticket asks for minting to be transactional with the mark; a repository
+  method achieves that only for the write paths that remember to call it, and the
+  register screen, an importer, a correction endpoint and a future mobile app are
+  four chances to forget. Correcting *falta justificada* → *faltou* revokes an
+  unspent credit and **refuses** when the family has already spent it.
+- The per-época cap, with the refusal recorded in the audit log so the front desk
+  can answer "why did we not get one for that?" — QA 21.11.
+- `expire_reposicao_credits(org, date)`: idempotent, and evaluated against a date
+  the caller passes, because expiry is a question about the club's calendar day.
+- `GET /students/:id/credits`, oldest-expiry-first; a credits panel on the student
+  record; `GET|PATCH /settings/reposicao` and a settings page under Turmas.
+
+**Not done — criteria 3, 4, 6, 8**, the whole of redemption:
+
+- `reposicao_booking`, the two approval modes and the pending-hold timeout.
+- The shared eligibility helper — occurrence capacity as *enrolled minus recorded
+  absences* — which the ticket calls the single most important piece of shared
+  logic, and which POOLSE-19 and the roster view both need.
+- The backfill-only filter, and the guest marker on the roster (AC 8), including
+  the thing the ticket names as most likely to be got wrong: counting a reposição
+  guest as enrolled somewhere.
+- `POST /credits/:id/book` and the booking permission rules for a Student or EE.
+
+The settings for redemption — `backfill_only` and `mode` — are already stored and
+already editable, because a club turning the feature on wants to answer the whole
+question in one sitting. Nothing reads them yet.
+
+**No scheduled-job runner exists in the product**, so criterion 7 is a function
+with a test rather than something that fires nightly. Wiring it to a scheduler is
+a deployment concern and belongs with whatever runs the first cron.
