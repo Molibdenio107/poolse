@@ -15,6 +15,54 @@ them as acceptance criteria on all work, and as the first thing to check in a QA
 - **Audit.** Anything destructive, permission-sensitive or GDPR-relevant records actor, subject and timestamp.
 - **Soft delete.** History is never destroyed. Removals hide; they do not erase.
 - **Excel import parity.** Any field added to a form is considered for the import/export mapping in the same ticket, not later.
+- **Lists are paginated at 15, and the exemptions are written down** — POOLSE-29. See below.
+
+## Which lists paginate, and which do not
+
+One rule, so a new list answers this without a meeting:
+
+> **A list is exempt only if its length is fixed by the data model or by a fixed window.
+> Anything whose length grows as the club takes on more people is paginated.**
+
+Page size is `PAGE_SIZE` — 15 — in `apps/api/src/common/pagination.ts` and
+`apps/web/src/lib/pagination.ts`. The control hides itself when everything fits, so an
+exempt list and a short list look identical to a reader; the difference is whether the
+query carries a window.
+
+**Paginated** — these grow with the club:
+
+| Surface | Endpoint |
+|---|---|
+| Alunos, the register | `GET /students` |
+| Encarregados de educação | `GET /guardians` |
+| Staff | `GET /people` |
+| Duplicados | `GET /people/merge-report` |
+| Férias, the approval queue | `GET /vacations/pending` |
+
+**Exempt, and why.** Each of these has a reason that is about the data, never about the
+work being awkward:
+
+| Surface | Bounded by |
+|---|---|
+| Encerramentos and Férias year grids | Twelve months. A year does not get longer. |
+| The turmas week grid (`GET /class-groups`) | A week. Paging it would empty Tuesday, not shorten the page — the reader would see a gap where a turma runs. |
+| A turma's roster, a class register | The turma's own capacity, which the club sets. |
+| One child's timetable, one person's leave year | One person, one year. |
+| Níveis, épocas, instalações, pools | A handful, by nature. Adding the tenth level is a decision, not growth. |
+| Roles, consent kinds, timezones, strokes | Enums. They change when a developer changes them. |
+| The weather forecast | Seven days, from the provider. |
+| Pending invitations | A queue worked down, not a register kept. Paging it would hide the invite somebody came to chase. |
+| Ownership-transfer candidates | Every admin — a picker must be complete, or it tells the owner their colleague is not an admin. |
+| A form's dropdown options | Everything the form can express. A half-filled `<select>` is a form that silently cannot say what somebody means. |
+| One student's record history | One swimmer's career, and the chart above it needs every point. |
+
+**An exemption is about the control, never about the fetch.** Encerramentos is exempt from
+paging and still takes `?year`: the grid shows one year, so the query returns one year. A
+surface that renders a fixed window must *ask* for a fixed window.
+
+**Never filter after paging.** Scope, role, search and sort belong in the same statement as
+`LIMIT`. Filtering the page instead of the set gives page 2 fewer rows than page 1 and a
+total that counts rows the reader cannot see — which reads as records going missing.
 
 ## Definition of done
 

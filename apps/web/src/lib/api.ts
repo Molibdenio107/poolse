@@ -150,6 +150,10 @@ export async function apiPatch<T>(
   return request<T>(path, { ...options, method: 'PATCH', body });
 }
 
+import type { Paginated } from './pagination';
+
+export type { Paginated };
+
 export interface Me {
   user: {
     id: string;
@@ -214,8 +218,18 @@ export interface PendingInvitation {
 
 export interface People {
   organizationId: string;
-  members: OrganizationMember[];
+  /** One page of the staff list — POOLSE-29. */
+  members: Paginated<OrganizationMember>;
+  /** Not paginated: a queue worked down, not a register that grows. */
   invitations: PendingInvitation[];
+  /**
+   * Every admin the organization could be handed to — not a page of them.
+   *
+   * Its own field rather than a filter over `members`, because a picker has to
+   * be complete: filtering the page would offer only the admins who landed on
+   * page 1 — POOLSE-29.
+   */
+  transferCandidates: OrganizationMember[];
   canInvite: boolean;
   /** Never contains `owner`: it moves only by transfer. */
   grantableRoles: string[];
@@ -377,7 +391,8 @@ export interface MyVacations {
 
 export interface PendingVacations {
   organizationId: string;
-  requests: (VacationRequest & { othersOff: { name: string | null; day: string }[] })[];
+  /** One page of the approval queue — POOLSE-29. */
+  requests: Paginated<VacationRequest & { othersOff: { name: string | null; day: string }[] }>;
 }
 
 export interface TeamMember {
@@ -538,7 +553,14 @@ export interface Student {
 
 export interface Students {
   organizationId: string;
-  students: Student[];
+  /**
+   * One page of the register — POOLSE-29.
+   *
+   * `total` counts what matched the search and the level filter, not what
+   * exists, because that is the number the range label reports.
+   */
+  students: Paginated<Student>;
+  /** Not paginated: the programme ladder is fixed, and it fills the filter. */
   levels: StudentLevel[];
   canManage: boolean;
   /**
@@ -669,8 +691,10 @@ export interface ClassOptions {
 
 export interface Classes {
   organizationId: string;
+  /** Not paginated — POOLSE-29: a week grid is a calendar, bounded by the week. */
   groups: ClassGroup[];
   canManage: boolean;
+  /** Not paginated: a half-filled dropdown is a form that cannot say what it means. */
   options: ClassOptions;
 }
 
@@ -833,7 +857,8 @@ export interface GuardianRow {
 
 export interface Guardians {
   organizationId: string;
-  guardians: GuardianRow[];
+  /** One page of encarregados — POOLSE-29. A family is never split across pages. */
+  guardians: Paginated<GuardianRow>;
 }
 
 /**

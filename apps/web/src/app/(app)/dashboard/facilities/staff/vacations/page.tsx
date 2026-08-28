@@ -9,6 +9,8 @@ import {
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { ApprovalQueue } from './approval-queue';
+import { Pagination } from '@/components/pagination';
+import { readPage } from '@/lib/pagination';
 import { MyVacations } from './my-vacations';
 import { TeamMap } from './team-map';
 import { PageShell } from '@/components/page-shell';
@@ -33,10 +35,11 @@ function isTab(value: string | undefined): value is Tab {
 export default async function VacationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; year?: string }>;
+  searchParams: Promise<{ tab?: string; year?: string; page?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { tab: rawTab, year: rawYear } = await searchParams;
+  const { tab: rawTab, year: rawYear, page: rawPage } = await searchParams;
+  const queuePage = readPage(rawPage);
 
   const tab: Tab = isTab(rawTab) ? rawTab : 'mine';
   const year = Number(rawYear);
@@ -56,7 +59,9 @@ export default async function VacationsPage({
     mine = await apiFetch<MyVacationsData>(`/vacations/mine?year=${chosenYear}`);
 
     if (tab === 'queue' && mine.canApprove) {
-      queue = await apiFetch<PendingVacations>('/vacations/pending');
+      queue = await apiFetch<PendingVacations>(
+        `/vacations/pending${queuePage > 1 ? `?page=${queuePage}` : ''}`,
+      );
     }
     if (tab === 'team' && mine.canApprove) {
       team = await apiFetch<TeamVacations>(`/vacations/team?year=${chosenYear}`);
@@ -152,7 +157,22 @@ export default async function VacationsPage({
           ) : (
             <>
               {tab === 'mine' && <MyVacations data={mine} />}
-              {tab === 'queue' && queue !== null && <ApprovalQueue data={queue} />}
+              {tab === 'queue' && queue !== null && (
+                <>
+                  <ApprovalQueue data={queue} />
+                  {/*
+                    The control is rendered here rather than inside ApprovalQueue
+                    — that is a client component, and Pagination is a server one
+                    because it is only links. The queue keeps the tab and the
+                    year, which is what `query` carries.
+                  */}
+                  <Pagination
+                    page={queue.requests}
+                    basePath="/dashboard/facilities/staff/vacations"
+                    query={{ tab: 'queue', year: String(chosenYear) }}
+                  />
+                </>
+              )}
               {tab === 'team' && team !== null && <TeamMap data={team} />}
             </>
           )}

@@ -2,6 +2,12 @@ import { withOrg, withoutTenantScope } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import type { MemberRole } from '../tenant/roles.js';
 import { personName, personOrder, personShortName } from '../people/names.js';
+import {
+  windowed,
+  TOTAL_COUNT,
+  type PageQuery,
+  type Paginated,
+} from '../common/pagination.js';
 
 export interface OrganizationMember {
   membershipId: string;
@@ -83,9 +89,105 @@ export async function recordDelivery(
  * turns a leak into a mystery rather than preventing it.
  */
 
-export async function listMembers(organizationId: string): Promise<OrganizationMember[]> {
+/**
+ * Which people a members list is asking for.
+ *
+ * **These are filters, not a post-processing step, and that is the point** —
+ * POOLSE-29. The staff page used to fetch every membership and narrow it in the
+ * browser, which was fine while the list was whole and is a bug the moment it is
+ * a page: filtering after a window gives page 2 fewer rows than page 1 and a
+ * total that counts people the reader cannot see. Scope and role are part of the
+ * same statement as LIMIT now.
+ */
+/**
+ * The admins the organization could be handed to — POOLSE-29 fallout.
+ *
+ * Its own query rather than a filter over the members page, because a picker
+ * must offer *every* candidate: the transfer dialog used to read
+ * `members.filter(isAdmin)`, which was correct while the list was whole and
+ * silently became "the admins who happen to be on page 1" the moment it was a
+ * page. Somebody would have opened the dialog, not found their colleague, and
+ * concluded the colleague was not an admin.
+ *
+ * Unpaginated on purpose and safely so: it is bounded by how many admins one
+ * club has, which is a number the club chooses and keeps small.
+ */
+export async function transferCandidates(
+  organizationId: string,
+): Promise<OrganizationMember[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
+      membership_id: string;
+      app_user_id: string | null;
+      status: OrganizationMember['status'];
+      first_name: string | null;
+      last_name: string | null;
+      display_name: string | null;
+      short_name: string | null;
+      email: string | null;
+      avatar_url: string | null;
+    }>(`
+      SELECT m.id AS membership_id,
+             m.app_user_id,
+             m.status,
+             coalesce(u.cached_first_name, m.first_name) AS first_name,
+             coalesce(u.cached_last_name,  m.last_name)  AS last_name,
+             ${personName('m.id')} AS display_name,
+             ${personShortName('m.id')} AS short_name,
+             coalesce(u.cached_email::text, m.email::text) AS email,
+             u.cached_avatar_url AS avatar_url
+        FROM membership m
+        LEFT JOIN app_user u ON u.id = m.app_user_id
+       WHERE m.archived_at IS NULL
+         AND m.status = 'active'
+         AND EXISTS (
+           SELECT 1 FROM membership_role r
+            WHERE r.membership_id = m.id AND r.archived_at IS NULL AND r.role = 'admin'
+         )
+         -- The owner is not a candidate to be handed what they already hold.
+         AND NOT EXISTS (
+           SELECT 1 FROM membership_role r
+            WHERE r.membership_id = m.id AND r.archived_at IS NULL AND r.role = 'owner'
+         )
+       ORDER BY ${personOrder('m.id')}
+    `);
+
+    return rows.map((row) => ({
+      membershipId: row.membership_id,
+      appUserId: row.app_user_id,
+      status: row.status,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      displayName: row.display_name,
+      shortName: row.short_name,
+      email: row.email,
+      roles: ['admin'],
+      avatarUrl: row.avatar_url,
+    }));
+  });
+}
+
+export interface MemberQuery {
+  /**
+   * `staff` is the staff section's own boundary — POOLSE-35 criterion 7.
+   *
+   * Somebody with no role yet counts as staff: they were invited by a colleague
+   * and have not accepted, and hiding them would hide the invitation somebody
+   * came here to chase.
+   */
+  scope: 'staff' | 'learners' | null;
+  /** One role chip. Narrows within the scope; never widens past it. */
+  role: string | null;
+}
+
+export async function listMembers(
+  organizationId: string,
+  query: MemberQuery,
+  page: PageQuery,
+): Promise<Paginated<OrganizationMember>> {
+  return withOrg(organizationId, async (tx) => {
+    const run = (limit: number, offset: number) => tx.query<{
+      total_count: number;
       membership_id: string;
       app_user_id: string | null;
       status: OrganizationMember['status'];
@@ -97,7 +199,8 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
       roles: string[];
       avatar_url: string | null;
     }>(`
-      SELECT m.id                AS membership_id,
+      SELECT ${TOTAL_COUNT},
+             m.id                AS membership_id,
              m.app_user_id       AS app_user_id,
              m.status            AS status,
              -- Clerk where there is a login, the club's own record where there
@@ -129,6 +232,39 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
                ON i.membership_id = m.id
               AND i.organization_id = m.organization_id
        WHERE m.archived_at IS NULL
+         /*
+          * Staff, learners, or everybody. Written as EXISTS rather than as a
+          * HAVING on the aggregated array so the role index can serve it, and so
+          * "holds no role at all" stays expressible — which array_agg makes
+          * awkward and which the staff scope depends on.
+          */
+         AND (
+           $1::text IS NULL
+           OR ($1 = 'staff' AND (
+                NOT EXISTS (
+                  SELECT 1 FROM membership_role r
+                   WHERE r.membership_id = m.id AND r.archived_at IS NULL
+                )
+                OR EXISTS (
+                  SELECT 1 FROM membership_role r
+                   WHERE r.membership_id = m.id AND r.archived_at IS NULL
+                     AND r.role IN ('owner', 'admin', 'instructor', 'maintenance')
+                )
+              ))
+           OR ($1 = 'learners' AND EXISTS (
+                SELECT 1 FROM membership_role r
+                 WHERE r.membership_id = m.id AND r.archived_at IS NULL
+                   AND r.role IN ('student', 'guardian')
+              ))
+         )
+         AND (
+           $2::text IS NULL
+           OR EXISTS (
+             SELECT 1 FROM membership_role r
+              WHERE r.membership_id = m.id AND r.archived_at IS NULL
+                AND r.role::text = $2::text
+           )
+         )
        GROUP BY m.id, m.app_user_id, m.status, m.created_at,
                 m.first_name, m.last_name, m.email,
                 u.cached_first_name, u.cached_last_name, u.cached_avatar_url,
@@ -143,9 +279,10 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
         * after "Zé".
         */
        ORDER BY ${personOrder('m.id')}, m.created_at
-    `);
+       LIMIT $3 OFFSET $4
+    `, [query.scope, query.role, limit, offset]);
 
-    return rows.map((row) => ({
+    return windowed(page, run, (row) => ({
       membershipId: row.membership_id,
       appUserId: row.app_user_id,
       status: row.status,

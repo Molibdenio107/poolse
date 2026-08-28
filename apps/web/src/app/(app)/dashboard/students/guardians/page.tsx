@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Guardians } from '../../../../../lib/api';
+import { Pagination } from '@/components/pagination';
+import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { RoleBadge } from '@/components/role-badge';
 import { PageShell } from '@/components/page-shell';
 
@@ -19,19 +22,36 @@ import { PageShell } from '@/components/page-shell';
  * Somebody who is both a guardian and a student appears here *and* in the
  * register, as the same record — the split is by role, and roles are a set.
  */
-export default async function GuardiansPage(): Promise<React.ReactElement> {
+export default async function GuardiansPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { page: pageParam } = await searchParams;
+  const page = readPage(pageParam);
 
   let data: Guardians | null = null;
   let failure: string | null = null;
 
   try {
-    data = await apiFetch<Guardians>('/guardians');
+    data = await apiFetch<Guardians>(`/guardians${page > 1 ? `?page=${page}` : ''}`);
   } catch (error) {
     failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
   }
 
-  const guardians = data?.guardians ?? [];
+  const guardians = data?.guardians.items ?? [];
+
+  // A link to a page past the end, or the last row on the last page archived.
+  if (data !== null && isPastEnd(page, data.guardians.total, data.guardians.limit)) {
+    redirect(
+      pageHref(
+        '/dashboard/students/guardians',
+        {},
+        lastPage(data.guardians.total, data.guardians.limit),
+      ),
+    );
+  }
 
   return (
     <PageShell
@@ -103,6 +123,8 @@ export default async function GuardiansPage(): Promise<React.ReactElement> {
               ))}
             </ul>
           )}
+
+          <Pagination page={data.guardians} basePath="/dashboard/students/guardians" />
         </section>
       )}
     </PageShell>

@@ -17,6 +17,15 @@
     "save": "Save",
     "actions": "Actions"
   },
+  "pagination": {
+    "label": "Pagination",
+    "range": "{from}–{to} of {total}",
+    "page": "Page {page} of {pages}",
+    "first": "First page",
+    "previous": "Previous page",
+    "next": "Next page",
+    "last": "Last page"
+  },
   "health": {
     "title": "System status",
     "api": "API",

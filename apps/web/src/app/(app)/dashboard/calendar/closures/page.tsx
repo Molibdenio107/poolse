@@ -49,7 +49,13 @@ export default async function ClosuresPage({
   let noOrganization = false;
 
   try {
-    data = await apiFetch<Closures>('/closures');
+    /*
+     * Year-scoped — POOLSE-29. The grid itself is exempt from paging (twelve
+     * months is a fixed window), but it used to fetch every closure the club had
+     * ever declared and discard all but this year in the browser. Repeating
+     * closures come back whatever their year, because they belong to this one.
+     */
+    data = await apiFetch<Closures>(`/closures?year=${year}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
     else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);

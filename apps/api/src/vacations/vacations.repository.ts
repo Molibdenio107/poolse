@@ -1,4 +1,10 @@
 import { withOrg } from '@poolse/db';
+import {
+  windowed,
+  TOTAL_COUNT,
+  type PageQuery,
+  type Paginated,
+} from '../common/pagination.js';
 import { recordAudit } from '../audit/audit.js';
 
 /**
@@ -151,14 +157,36 @@ export async function listMyRequests(
 }
 
 /** The approval queue — story 7. Oldest first: the longest wait is answered first. */
-export async function listPendingRequests(organizationId: string): Promise<VacationRequest[]> {
+/**
+ * The approval queue, oldest first — paginated per POOLSE-29.
+ *
+ * It grows with the club: more staff, more requests, and a queue nobody has
+ * worked through in a busy month is exactly when it is longest. Paging it also
+ * bounds the per-request "who else is off that day" lookup the controller runs,
+ * which was one query per pending request and is now one per row on screen.
+ *
+ * Wrapped rather than edited: REQUEST_SELECT is shared with the queries that
+ * must not carry a total, so the window function goes on an outer select. It is
+ * still computed over the filtered set, because window functions run before
+ * LIMIT — which is the whole reason this is one round trip and not two.
+ */
+export async function listPendingRequests(
+  organizationId: string,
+  page: PageQuery,
+): Promise<Paginated<VacationRequest>> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<RequestRow>(
-      `${REQUEST_SELECT}
-       WHERE vr.status = 'pending' AND vr.archived_at IS NULL
-       ORDER BY vr.requested_at`,
-    );
-    return rows.map(toRequest);
+    const run = (limit: number, offset: number) =>
+      tx.query<RequestRow & { total_count: number }>(
+        `SELECT ${TOTAL_COUNT}, q.*
+           FROM (
+             ${REQUEST_SELECT}
+              WHERE vr.status = 'pending' AND vr.archived_at IS NULL
+           ) q
+          ORDER BY q.requested_at
+          LIMIT $1 OFFSET $2`,
+        [limit, offset],
+      );
+    return windowed(page, run, toRequest);
   });
 }
 

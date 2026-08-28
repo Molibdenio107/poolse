@@ -1,7 +1,16 @@
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type MergeCandidate, type People } from '@/lib/api';
+import {
+  ApiError,
+  apiFetch,
+  type MergeCandidate,
+  type Paginated,
+  type People,
+} from '@/lib/api';
 import { MergeButton } from './merge-button';
 import { PageShell } from '@/components/page-shell';
+import { Pagination } from '@/components/pagination';
+import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 
 /**
  * Duplicates, and what merging them would do — POOLSE-17 AC10.
@@ -16,25 +25,45 @@ import { PageShell } from '@/components/page-shell';
  * is merged from here without somebody reading that first, so no contact detail
  * disappears without having been shown.
  */
-export default async function DuplicatesPage(): Promise<React.ReactElement> {
+export default async function DuplicatesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { page: pageParam } = await searchParams;
+  const page = readPage(pageParam);
 
-  let candidates: MergeCandidate[] | null = null;
+  let report: Paginated<MergeCandidate> | null = null;
   let organizationId = '';
   let failure: string | null = null;
   let notPermitted = false;
 
   try {
-    // Both are owner/admin reads; the report is the one that decides the page.
-    const [report, people] = await Promise.all([
-      apiFetch<{ candidates: MergeCandidate[] }>('/people/merge-report'),
-      apiFetch<People>('/people'),
+    /*
+     * Both are owner/admin reads; the report is the one that decides the page.
+     *
+     * `/people` is fetched only for the organization id, so it asks for one row
+     * rather than a default page of fifteen — POOLSE-29 made that free, and
+     * pulling a page of staff to read a single field would be waste that grows.
+     */
+    const [merges, people] = await Promise.all([
+      apiFetch<{ candidates: Paginated<MergeCandidate> }>(
+        `/people/merge-report${page > 1 ? `?page=${page}` : ''}`,
+      ),
+      apiFetch<People>('/people?limit=1'),
     ]);
-    candidates = report.candidates;
+    report = merges.candidates;
     organizationId = people.organizationId;
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) notPermitted = true;
     else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+  }
+
+  if (report !== null && isPastEnd(page, report.total, report.limit)) {
+    redirect(
+      pageHref('/dashboard/facilities/staff/duplicates', {}, lastPage(report.total, report.limit)),
+    );
   }
 
   return (
@@ -58,19 +87,19 @@ export default async function DuplicatesPage(): Promise<React.ReactElement> {
         </section>
       )}
 
-      {candidates !== null && candidates.length === 0 && (
+      {report !== null && report.total === 0 && (
         <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">
           <p>{t('people.noDuplicates')}</p>
           <p className="text-sm text-foreground-muted">{t('people.noDuplicatesHint')}</p>
         </section>
       )}
 
-      {candidates !== null && candidates.length > 0 && (
+      {report !== null && report.total > 0 && (
         <>
           <p className="text-sm text-foreground-muted">{t('people.mergeWarning')}</p>
 
           <ul className="flex flex-col gap-4">
-            {candidates.map((pair) => (
+            {report.items.map((pair) => (
               <li
                 key={`${pair.keepId}:${pair.absorbId}`}
                 className="flex flex-col gap-3 rounded border border-border bg-surface p-5"
@@ -115,6 +144,8 @@ export default async function DuplicatesPage(): Promise<React.ReactElement> {
               </li>
             ))}
           </ul>
+
+          <Pagination page={report} basePath="/dashboard/facilities/staff/duplicates" />
         </>
       )}
     </PageShell>

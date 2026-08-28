@@ -107,6 +107,11 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
     })),
   );
 
+  /*
+   * Not paginated — POOLSE-29. The week grid is a calendar bounded by the week,
+   * not a register bounded by tenant size, so it is exempt under the rule in
+   * CONVENTIONS.md. Paging it would empty Tuesday rather than shorten the page.
+   */
   const unscheduled = (data?.groups ?? []).filter((group) => group.schedules.length === 0);
 
   return (

@@ -1,10 +1,13 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type OrganizationMember, type People } from '../../../../../lib/api';
 import { DeliveryBadge } from '@/components/delivery-badge';
 import { PersonAvatar } from '@/components/person-avatar';
 import { RoleBadge, RoleBadges } from '@/components/role-badge';
-import { STAFF_ROLES, inScope } from '@/lib/roles';
+import { STAFF_ROLES } from '@/lib/roles';
+import { Pagination } from '@/components/pagination';
+import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
@@ -35,21 +38,24 @@ const ROLES: readonly string[] = STAFF_ROLES;
 export default async function PeoplePage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<{ role?: string; page?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
 
   /*
-   * Filtered in the page rather than the API — backlog round 3, story 2.
+   * Filtered by the API, not in the page — changed by POOLSE-29.
    *
-   * The list is one organization's staff: tens of rows, already fetched, already
-   * carrying every member's roles. A query parameter on the endpoint would buy
-   * nothing and would have to be kept in step with the RLS-scoped read. When
-   * story R2-2 builds the real sub-sections this is where they start.
+   * It used to fetch every membership and narrow it here, which was reasonable
+   * while the list arrived whole. It stops being reasonable the moment the list
+   * is a page: narrowing after a window gives page 2 fewer rows than page 1, and
+   * a total that counts people the reader cannot see. Scope and role are now
+   * part of the same query as the window — and the API enforces the staff
+   * boundary rather than trusting this page to (POOLSE-35 criterion 7).
    */
-  const { role: requestedRole } = await searchParams;
+  const { role: requestedRole, page: pageParam } = await searchParams;
   const role = ROLES.includes(requestedRole ?? '') ? requestedRole! : null;
+  const page = readPage(pageParam);
 
   let people: People | null = null;
   let failure: string | null = null;
@@ -57,7 +63,11 @@ export default async function PeoplePage({
   let notPermitted = false;
 
   try {
-    people = await apiFetch<People>('/people');
+    people = await apiFetch<People>(`/people?${new URLSearchParams({
+      scope: 'staff',
+      ...(role === null ? {} : { role }),
+      ...(page > 1 ? { page: String(page) } : {}),
+    })}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) {
       // Two different refusals arrive as 403 and they need two different
@@ -73,16 +83,24 @@ export default async function PeoplePage({
   }
 
   /*
-   * Staff only — POOLSE-35, criterion 7. This view searches its own scope and
-   * never returns students or guardians.
+   * Staff only — POOLSE-35, criterion 7. The API applies that scope, so this
+   * view cannot return students or guardians even if somebody edits the URL.
    *
    * A person holding two staff roles appears once with both badges, which is how
    * the schema stores them and how R2-2 specifies the sub-sections should show
    * them.
    */
-  const staff = (people?.members ?? []).filter((member) => inScope(member.roles, 'staff'));
+  const members = people?.members.items ?? [];
 
-  const members = role === null ? staff : staff.filter((member) => member.roles.includes(role));
+  if (people !== null && isPastEnd(page, people.members.total, people.members.limit)) {
+    redirect(
+      pageHref(
+        '/dashboard/facilities/staff',
+        { role: role ?? undefined },
+        lastPage(people.members.total, people.members.limit),
+      ),
+    );
+  }
 
   return (
     <PageShell
@@ -192,6 +210,17 @@ export default async function PeoplePage({
                 </li>
               ))}
             </ul>
+
+            {/*
+              `query` carries the role chip, so paging keeps the filter. The
+              chips themselves link without a page param, which resets to page 1
+              — criterion 5.
+            */}
+            <Pagination
+              page={people.members}
+              basePath="/dashboard/facilities/staff"
+              query={{ role: role ?? undefined }}
+            />
           </section>
 
           <section className="rounded border border-border bg-surface p-5">
@@ -254,14 +283,15 @@ export default async function PeoplePage({
                 {t('transfer.title')}
               </h2>
               <p className="text-sm text-foreground-muted">{t('transfer.explain')}</p>
+              {/*
+                Every admin, from its own query — not from the members page.
+                Filtering the page would have offered only the admins who
+                happened to land on page 1, and told the owner their colleague
+                was not an admin — POOLSE-29.
+              */}
               <TransferOwnership
                 organizationId={people.organizationId}
-                candidates={people.members.filter(
-                  (member) =>
-                    member.roles.includes('admin') &&
-                    !member.roles.includes('owner') &&
-                    member.status === 'active',
-                )}
+                candidates={people.transferCandidates}
               />
             </section>
           )}

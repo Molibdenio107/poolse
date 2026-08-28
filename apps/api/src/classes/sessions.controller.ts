@@ -67,11 +67,21 @@ interface ClosuresResponse {
 @Controller('closures')
 export class ClosuresController {
   @Get()
-  async list(): Promise<ClosuresResponse> {
+  async list(@Query('year') year?: string): Promise<ClosuresResponse> {
     const { organizationId } = currentTenant();
 
+    /*
+     * Year-scoped rather than paginated — POOLSE-29. The page is a twelve-month
+     * grid, which is exempt from the page control, but it was still fetching
+     * every closure the club had ever declared and discarding all but one year
+     * in the browser.
+     *
+     * A missing or unparseable year means every year, which is what an older
+     * client and any script calling this directly will send.
+     */
+    const requested = Number.parseInt(year ?? '', 10);
     const [closures, pools] = await Promise.all([
-      listClosures(organizationId),
+      listClosures(organizationId, Number.isFinite(requested) ? requested : null),
       poolChoices(organizationId),
     ]);
 

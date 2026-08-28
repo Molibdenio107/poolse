@@ -5,21 +5,28 @@ import {
   Get,
   NotFoundException,
   Post,
+  Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { canArchive, grantableRoles, hasRole, requireRole } from '../tenant/roles.js';
+import { canArchive, grantableRoles, hasRole, isMemberRole, requireRole } from '../tenant/roles.js';
 import {
   listMembers,
   listPendingInvitations,
+  transferCandidates,
   transferOwnership,
   type OrganizationMember,
   type PendingInvitation,
 } from './invitations.repository.js';
+import { readPageQuery, type Paginated } from '../common/pagination.js';
 
 interface PeopleResponse {
   organizationId: string;
-  members: OrganizationMember[];
+  /** One page of the staff list — POOLSE-29. */
+  members: Paginated<OrganizationMember>;
+  /** Not paginated: a queue that is worked down, not a register that grows. */
   invitations: PendingInvitation[];
+  /** Every admin, not a page of them — the transfer picker must be complete. */
+  transferCandidates: OrganizationMember[];
   /** So the UI can hide a form the API would refuse anyway. */
   canInvite: boolean;
   /** Roles this caller is allowed to hand out. Never includes `owner`. */
@@ -49,15 +56,40 @@ interface PeopleResponse {
 @Controller('people')
 export class PeopleController {
   @Get()
-  async list(): Promise<PeopleResponse> {
+  async list(
+    @Query('scope') scope?: string,
+    @Query('role') role?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<PeopleResponse> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    // Both are tenant-scoped reads on the same organization; running them
-    // together costs one round trip instead of two.
-    const [members, invitations] = await Promise.all([
-      listMembers(organizationId),
+    /*
+     * Three tenant-scoped reads on the same organization, run together.
+     *
+     * **Only the members are paginated** — POOLSE-29, and the other two are
+     * exempt for different reasons worth keeping straight. Pending invitations
+     * are a queue worked down rather than a register that grows, bounded by how
+     * many people are mid-onboarding; paging it would hide the invite somebody
+     * came here to chase. Transfer candidates are every admin, because a picker
+     * that offers only page 1 tells somebody their colleague is not an admin.
+     *
+     * Scope and role are query parameters rather than something the browser
+     * applies afterwards: filtering a page instead of the set is what makes
+     * page 2 shorter than page 1.
+     */
+    const [members, invitations, candidates] = await Promise.all([
+      listMembers(
+        organizationId,
+        {
+          scope: scope === 'staff' || scope === 'learners' ? scope : null,
+          role: isMemberRole(role ?? '') ? (role as string) : null,
+        },
+        readPageQuery(page, limit),
+      ),
       listPendingInvitations(organizationId),
+      transferCandidates(organizationId),
     ]);
 
     /*
@@ -76,6 +108,7 @@ export class PeopleController {
       organizationId,
       members,
       invitations,
+      transferCandidates: candidates,
       canInvite: grantable.length > 0,
       grantableRoles: grantable,
       canTransferOwnership: hasRole('owner'),

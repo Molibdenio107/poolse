@@ -8,6 +8,12 @@ import {
   personShortName,
   shortName,
 } from '../people/names.js';
+import {
+  windowed,
+  TOTAL_COUNT,
+  type PageQuery,
+  type Paginated,
+} from '../common/pagination.js';
 
 export interface StudentLevel {
   id: string;
@@ -485,9 +491,11 @@ export interface StudentQuery {
 export async function listStudents(
   organizationId: string,
   query: StudentQuery,
-): Promise<Student[]> {
+  page: PageQuery,
+): Promise<Paginated<Student>> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{
+    const run = (limit: number, offset: number) => tx.query<{
+      total_count: number;
       id: string;
       first_name: string;
       last_name: string;
@@ -505,7 +513,8 @@ export async function listStudents(
       photo_consent: boolean;
     }>(
       `
-      SELECT s.id,
+      SELECT ${TOTAL_COUNT},
+             s.id,
              s.first_name,
              s.last_name,
              ${displayName('s')} AS display_name,
@@ -545,12 +554,19 @@ export async function listStudents(
               LIKE '%' || lower(strip_accents($1::text)) || '%'
          )
          AND ($2::uuid IS NULL OR s.level_id = $2::uuid)
+       /*
+        * The window goes here, inside the statement that carries the tenant
+        * scope, the search and the sort — POOLSE-29. Never a page taken from a
+        * set that is filtered afterwards: that gives page 2 fewer rows than page
+        * 1 and reads as data going missing.
+        */
        ORDER BY ${nameOrder('s')}
+       LIMIT $3 OFFSET $4
       `,
-      [query.search, query.levelId],
+      [query.search, query.levelId, limit, offset],
     );
 
-    return rows.map(toStudent);
+    return windowed(page, run, toStudent);
   });
 }
 
@@ -1124,9 +1140,13 @@ export interface GuardianRow {
   students: { id: string; name: string; relationship: string | null }[];
 }
 
-export async function listGuardians(organizationId: string): Promise<GuardianRow[]> {
+export async function listGuardians(
+  organizationId: string,
+  page: PageQuery,
+): Promise<Paginated<GuardianRow>> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{
+    const run = (limit: number, offset: number) => tx.query<{
+      total_count: number;
       membership_id: string;
       name: string;
       short_name: string;
@@ -1135,7 +1155,8 @@ export async function listGuardians(organizationId: string): Promise<GuardianRow
       has_login: boolean;
       students: GuardianRow['students'];
     }>(`
-      SELECT m.id AS membership_id,
+      SELECT ${TOTAL_COUNT},
+             m.id AS membership_id,
              ${personName('m.id')} AS name,
              ${personShortName('m.id')} AS short_name,
              person_email(m.id)::text AS email,
@@ -1167,10 +1188,17 @@ export async function listGuardians(organizationId: string): Promise<GuardianRow
               AND mr.role = 'guardian'
               AND mr.archived_at IS NULL
          )
+       /*
+        * The children stay whole inside each row — POOLSE-29 paginates the
+        * guardians, not their families. A mother of three is one row with three
+        * names under her, and splitting a family across a page boundary would
+        * destroy the single fact this page exists to show.
+        */
        ORDER BY ${personOrder('m.id')}
-    `);
+       LIMIT $1 OFFSET $2
+    `, [limit, offset]);
 
-    return rows.map((row) => ({
+    return windowed(page, run, (row) => ({
       membershipId: row.membership_id,
       name: row.name,
       shortName: row.short_name,
@@ -1384,18 +1412,33 @@ export interface MergeCandidate {
   conflicts: Record<string, { keep: string; absorb: string }>;
 }
 
-export async function mergeCandidates(organizationId: string): Promise<MergeCandidate[]> {
+export async function mergeCandidates(
+  organizationId: string,
+  page: PageQuery,
+): Promise<Paginated<MergeCandidate>> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{
+    const run = (limit: number, offset: number) => tx.query<{
+      total_count: number;
       o_keep_id: string;
       o_absorb_id: string;
       o_matched_on: string;
       o_keep_name: string;
       o_absorb_name: string;
       o_conflicts: MergeCandidate['conflicts'];
-    }>(`SELECT * FROM merge_candidates($1)`, [organizationId]);
+    }>(
+      /*
+       * Windowed around the set-returning function rather than inside it — the
+       * function decides what a duplicate pair is, and this decides how many of
+       * them fit on a screen. Keeping those apart means the merge rules stay one
+       * thing to reason about.
+       */
+      `SELECT ${TOTAL_COUNT}, *
+         FROM merge_candidates($1)
+        LIMIT $2 OFFSET $3`,
+      [organizationId, limit, offset],
+    );
 
-    return rows.map((row) => ({
+    return windowed(page, run, (row) => ({
       keepId: row.o_keep_id,
       absorbId: row.o_absorb_id,
       matchedOn: row.o_matched_on,

@@ -56,7 +56,21 @@ export interface Session {
 // Closures
 // ---------------------------------------------------------------------------
 
-export async function listClosures(organizationId: string): Promise<Closure[]> {
+/**
+ * The closures of one year.
+ *
+ * **Year-scoped rather than paginated — POOLSE-29.** The Encerramentos page is a
+ * twelve-month grid, and a grid is bounded by its window rather than by tenant
+ * size, so it is exempt from the page control. What it was *not* exempt from is
+ * fetching sensibly: this returned every closure the club had ever declared and
+ * the browser threw away all but the year on screen, so the exemption was
+ * quietly paying for itself in bytes that grew every season.
+ *
+ * A year is the window. Annually-repeating closures are kept whatever their
+ * year, because a closure that repeats belongs to every year including this one
+ * — dropping them would empty the grid of exactly the entries that never change.
+ */
+export async function listClosures(organizationId: string, year: number | null): Promise<Closure[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
       id: string;
@@ -76,8 +90,14 @@ export async function listClosures(organizationId: string): Promise<Closure[]> {
         FROM closure c
         LEFT JOIN pool p ON p.id = c.pool_id AND p.organization_id = c.organization_id
        WHERE c.archived_at IS NULL
+         AND (
+           $1::int IS NULL
+           OR c.repeats_annually
+           OR (c.starts_on <= make_date($1::int, 12, 31)
+               AND c.ends_on   >= make_date($1::int, 1, 1))
+         )
        ORDER BY c.starts_on, c.reason
-    `);
+    `, [year]);
 
     return rows.map((row) => ({
       id: row.id,

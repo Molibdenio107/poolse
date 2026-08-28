@@ -61,6 +61,7 @@ import {
   type StudentInput,
   type StudentLevel,
 } from './students.repository.js';
+import { readPageQuery, type Paginated } from '../common/pagination.js';
 
 const MAX_NAME = 120;
 const MAX_NOTES = 2000;
@@ -75,7 +76,15 @@ const MAX_GUARDIANS = 4;
 
 interface StudentsResponse {
   organizationId: string;
-  students: Student[];
+  /**
+   * One page of the register — POOLSE-29.
+   *
+   * `total` is how many matched the search and the level filter, not how many
+   * students exist, because that is the number the range label has to say.
+   * `levels` beside it is deliberately not paginated: the programme ladder is
+   * fixed by the data model, and it populates the filter that narrows this list.
+   */
+  students: Paginated<Student>;
   levels: StudentLevel[];
   canManage: boolean;
   /**
@@ -117,9 +126,15 @@ interface StudentsResponse {
 @Controller('guardians')
 export class GuardiansController {
   @Get()
-  async list(): Promise<{ organizationId: string; guardians: GuardianRow[] }> {
+  async list(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ organizationId: string; guardians: Paginated<GuardianRow> }> {
     const { organizationId } = currentTenant();
-    return { organizationId, guardians: await listGuardians(organizationId) };
+    return {
+      organizationId,
+      guardians: await listGuardians(organizationId, readPageQuery(page, limit)),
+    };
   }
 }
 
@@ -191,10 +206,13 @@ export class PeopleDedupController {
 
   /** Phase 1: what a merge would do. Read-only, and reviewed before phase 2. */
   @Get('merge-report')
-  async report(): Promise<{ candidates: MergeCandidate[] }> {
+  async report(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ candidates: Paginated<MergeCandidate> }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
-    return { candidates: await mergeCandidates(organizationId) };
+    return { candidates: await mergeCandidates(organizationId, readPageQuery(page, limit)) };
   }
 
   /** Phase 2: absorb one record into another. */
@@ -251,16 +269,22 @@ export class StudentsController {
   async list(
     @Query('search') search?: string,
     @Query('levelId') levelId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ): Promise<StudentsResponse> {
     const { organizationId } = currentTenant();
 
     // All three are tenant-scoped reads on the same organization; together they
     // cost one round trip instead of three.
     const [students, levels, majority] = await Promise.all([
-      listStudents(organizationId, {
-        search: search?.trim() ? search.trim() : null,
-        levelId: levelId?.trim() ? levelId.trim() : null,
-      }),
+      listStudents(
+        organizationId,
+        {
+          search: search?.trim() ? search.trim() : null,
+          levelId: levelId?.trim() ? levelId.trim() : null,
+        },
+        readPageQuery(page, limit),
+      ),
       listLevels(organizationId),
       ageOfMajority(organizationId),
     ]);

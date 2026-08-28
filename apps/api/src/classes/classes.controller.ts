@@ -40,6 +40,7 @@ interface Choice {
 
 interface ClassesResponse {
   organizationId: string;
+  /** Not paginated: a week grid is a calendar — see listClassGroups. */
   groups: ClassGroup[];
   canManage: boolean;
   /** What the create and edit forms may choose from, in one payload. */
@@ -68,6 +69,14 @@ export class ClassesController {
   async list(): Promise<ClassesResponse> {
     const { organizationId } = currentTenant();
 
+    /*
+     * Neither half is paginated — POOLSE-29, and both for stated reasons.
+     *
+     * `groups` feeds a week grid, which is a calendar bounded by a fixed window;
+     * see the note on listClassGroups. `options` fills the form that creates a
+     * turma, and a half-filled dropdown is a form that silently cannot express
+     * what somebody wants.
+     */
     const [groups, options] = await Promise.all([
       listClassGroups(organizationId),
       formOptions(organizationId),

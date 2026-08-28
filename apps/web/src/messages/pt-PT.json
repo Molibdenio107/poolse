@@ -17,6 +17,15 @@
     "save": "Guardar",
     "actions": "Ações"
   },
+  "pagination": {
+    "label": "Paginação",
+    "range": "{from}–{to} de {total}",
+    "page": "Página {page} de {pages}",
+    "first": "Primeira página",
+    "previous": "Página anterior",
+    "next": "Página seguinte",
+    "last": "Última página"
+  },
   "health": {
     "title": "Estado do sistema",
     "api": "API",

@@ -19,7 +19,7 @@ const INITIAL: FormState = { ok: false };
 export function ApprovalQueue({ data }: { data: PendingVacations }): React.ReactElement {
   const t = useTranslations();
 
-  if (data.requests.length === 0) {
+  if (data.requests.total === 0) {
     return (
       <section className="rounded border border-border bg-surface p-5">
         <p className="text-sm text-foreground-muted">{t('vacations.queueEmpty')}</p>
@@ -29,7 +29,7 @@ export function ApprovalQueue({ data }: { data: PendingVacations }): React.React
 
   return (
     <ul className="flex flex-col gap-4">
-      {data.requests.map((request) => (
+      {data.requests.items.map((request) => (
         <li key={request.id}>
           <RequestCard organizationId={data.organizationId} request={request} />
         </li>
@@ -43,7 +43,9 @@ function RequestCard({
   request,
 }: {
   organizationId: string;
-  request: PendingVacations['requests'][number];
+  // Derived from the envelope's items, so the card follows the payload shape
+  // rather than restating it — POOLSE-29 changed the wrapper, not the row.
+  request: PendingVacations['requests']['items'][number];
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();

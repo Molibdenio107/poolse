@@ -1,6 +1,13 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { displayName, nameOrder, shortName } from '../people/names.js';
+import {
+  paginated,
+  totalOf,
+  TOTAL_COUNT,
+  type PageQuery,
+  type Paginated,
+} from '../common/pagination.js';
 
 export interface ScheduleSlot {
   id: string;
@@ -143,6 +150,22 @@ function toGroup(row: GroupRow): ClassGroup {
  * A retired season's turmas are not gone — they keep every session, enrolment
  * and register, and reporting can still reach them by season. They are simply
  * not what the club is running now.
+ */
+/**
+ * Every turma of the active season.
+ *
+ * **Deliberately not paginated — POOLSE-29, and it is the interesting exemption.**
+ *
+ * This feeds a week grid, and a week grid is a calendar: it is the same shape as
+ * the Encerramentos and Férias year grids, bounded by a fixed window rather than
+ * by how many rows a tenant has. Paginating it would not shorten the week, it
+ * would silently empty Tuesday — the reader would see a gap where a turma runs
+ * and conclude nobody is teaching, which is worse than a long page.
+ *
+ * The exemption rule in `docs/backlog/CONVENTIONS.md` is "bounded by the data
+ * model or by a fixed window, not by tenant growth", and this is the second half
+ * of it. If a turma *list* view is ever built separately from the calendar, that
+ * list pages; this query stays whole.
  */
 export async function listClassGroups(organizationId: string): Promise<ClassGroup[]> {
   return withOrg(organizationId, async (tx) => {

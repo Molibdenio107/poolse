@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
+import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { sendEmail } from '../notifications/notifier.js';
 import { vacationDecisionEmail } from '../notifications/vacation-email.js';
@@ -51,7 +52,8 @@ interface MyVacationsResponse {
 
 interface ApprovalQueueResponse {
   organizationId: string;
-  requests: (VacationRequest & { othersOff: { name: string | null; day: string }[] })[];
+  /** One page of the queue — POOLSE-29. */
+  requests: Paginated<VacationRequest & { othersOff: { name: string | null; day: string }[] }>;
 }
 
 interface TeamResponse {
@@ -156,22 +158,32 @@ export class VacationsController {
 
   /** The queue — story 7. */
   @Get('pending')
-  async pending(): Promise<ApprovalQueueResponse> {
+  async pending(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<ApprovalQueueResponse> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    const requests = await listPendingRequests(organizationId);
+    const requests = await listPendingRequests(organizationId, readPageQuery(page, limit));
 
-    // Who else is already off on those days, so a manager can see the gap in
-    // cover before creating it rather than after.
+    /*
+     * Who else is already off on those days, so a manager can see the gap in
+     * cover before creating it rather than after.
+     *
+     * One query per request, which was one per *pending request in the club*
+     * before POOLSE-29 and is now one per row on screen. The page size is what
+     * bounds it; that is a happy consequence of paging rather than the reason
+     * for it, but it is the reason this loop is no longer worth rewriting.
+     */
     const withCover = await Promise.all(
-      requests.map(async (request) => ({
+      requests.items.map(async (request) => ({
         ...request,
         othersOff: await othersOffOn(organizationId, request.membershipId, request.days),
       })),
     );
 
-    return { organizationId, requests: withCover };
+    return { organizationId, requests: { ...requests, items: withCover } };
   }
 
   @Post('requests/:id/approve')

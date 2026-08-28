@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '../../../../lib/api';
+import { Pagination } from '@/components/pagination';
+import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { AgedOutFlag } from '@/components/aged-out-flag';
 import { PersonAvatar } from '@/components/person-avatar';
 import { photoUrlFor } from '@/lib/photo';
@@ -19,14 +22,16 @@ import { PageShell } from '@/components/page-shell';
 export default async function StudentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; levelId?: string }>;
+  searchParams: Promise<{ search?: string; levelId?: string; page?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { search = '', levelId = '' } = await searchParams;
+  const { search = '', levelId = '', page: pageParam } = await searchParams;
+  const page = readPage(pageParam);
 
   const query = new URLSearchParams();
   if (search.trim()) query.set('search', search.trim());
   if (levelId.trim()) query.set('levelId', levelId.trim());
+  if (page > 1) query.set('page', String(page));
 
   let data: Students | null = null;
   let failure: string | null = null;
@@ -43,6 +48,25 @@ export default async function StudentsPage({
   }
 
   const filtering = search.trim().length > 0 || levelId.trim().length > 0;
+
+  /*
+   * A page that has fallen off the end — QA 29.6 and 29.12.
+   *
+   * Two ordinary things cause it: somebody follows a link to `?page=999`, and
+   * somebody archives the last row on the last page. Both would otherwise render
+   * an empty list under a control claiming page 15 of 14, which reads as the
+   * records having been lost. A redirect rather than a clamp, so the URL ends up
+   * telling the truth about which page is on screen.
+   */
+  if (data !== null && isPastEnd(page, data.students.total, data.students.limit)) {
+    redirect(
+      pageHref(
+        '/dashboard/students',
+        { search, levelId },
+        lastPage(data.students.total, data.students.limit),
+      ),
+    );
+  }
 
   return (
     <PageShell
@@ -66,6 +90,18 @@ export default async function StudentsPage({
       {data !== null && (
         <>
           <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+            {/*
+              Changing a filter resets to page 1 — criterion 5, and it costs
+              nothing here.
+
+              A GET form replaces the whole query string with its own fields, and
+              there is deliberately no hidden `page` input, so submitting a new
+              search term simply drops the page. That is also why the ticket's
+              "most likely to be got wrong" does not apply to this page: there is
+              no moment where the client has the new filter and the old page, so
+              there is no request for page 7 of a fresh search and no empty-state
+              flash to correct.
+            */}
             <form method="get" className="flex flex-wrap items-end gap-3">
               <div className="flex min-w-48 flex-1 flex-col gap-2">
                 <label htmlFor="student-search" className="text-sm text-foreground-muted">
@@ -128,10 +164,10 @@ export default async function StudentsPage({
 
           <section className="rounded border border-border bg-surface p-5">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('students.count', { count: data.students.length })}
+              {t('students.count', { count: data.students.total })}
             </h2>
 
-            {data.students.length === 0 ? (
+            {data.students.total === 0 ? (
               <div className="flex flex-col gap-1">
                 <p>{filtering ? t('students.noneMatching') : t('students.none')}</p>
                 <p className="text-sm text-foreground-muted">
@@ -144,7 +180,7 @@ export default async function StudentsPage({
               </div>
             ) : (
               <ul className="flex flex-col divide-y divide-border">
-                {data.students.map((student) => (
+                {data.students.items.map((student) => (
                   <li
                     key={student.id}
                     className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0"
@@ -215,6 +251,12 @@ export default async function StudentsPage({
                 ))}
               </ul>
             )}
+
+            <Pagination
+              page={data.students}
+              basePath="/dashboard/students"
+              query={{ search, levelId }}
+            />
           </section>
 
         </>
