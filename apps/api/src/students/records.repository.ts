@@ -69,8 +69,7 @@ export async function progressionFor(
       time_ms: number;
       swum_on: Date;
       note: string | null;
-      first_name: string | null;
-      last_name: string | null;
+      recorded_by_name: string | null;
       is_personal_best: boolean;
     }>(
       `
@@ -80,8 +79,7 @@ export async function progressionFor(
              r.time_ms,
              r.swum_on,
              r.note,
-             u.cached_first_name AS first_name,
-             u.cached_last_name  AS last_name,
+             display_name(u.cached_first_name, u.cached_last_name) AS recorded_by_name,
              -- The best over this stroke and distance, decided in the same pass
              -- rather than by comparing in JavaScript afterwards. row_number
              -- rather than a min() comparison so that two identical times do not
@@ -133,8 +131,7 @@ export async function progressionFor(
         timeMs: row.time_ms,
         swumOn: isoDate(row.swum_on),
         note: row.note,
-        recordedByName:
-          [row.first_name, row.last_name].filter(Boolean).join(' ') || null,
+        recordedByName: row.recorded_by_name,
         isPersonalBest: row.is_personal_best,
       })),
       bests: personalBests,

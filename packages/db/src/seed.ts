@@ -50,10 +50,25 @@ const FIRST_NAMES = [
   'Guilherme', 'Íris', 'Simão', 'Núria', 'Xavier', 'Helena', 'Bernardo',
 ];
 
+/**
+ * The surname pool, including the shapes that break naive name handling —
+ * POOLSE-32.
+ *
+ * The last five are here on purpose and should not be tidied away. Demo data
+ * made only of single-word surnames makes every name rule look correct: it is
+ * the particle, the compound and the hyphen that catch "the last word is the
+ * surname", and a seeded club with none of them would have hidden that bug
+ * rather than shown it. With them, `pnpm db:seed` produces a register where
+ * "Maria da Silva" reads whole and files under S.
+ *
+ * `strip_accents` and the pt_pt collation get exercised by Gonçalves and
+ * Álvares for the same reason.
+ */
 const LAST_NAMES = [
   'Silva', 'Santos', 'Ferreira', 'Pereira', 'Oliveira', 'Costa', 'Rodrigues',
   'Martins', 'Jesus', 'Sousa', 'Fernandes', 'Gonçalves', 'Gomes', 'Lopes',
-  'Marques', 'Alves', 'Almeida', 'Ribeiro', 'Pinto', 'Carvalho',
+  'Marques', 'Alves', 'Almeida', 'Ribeiro', 'Pinto', 'Carvalho', 'Álvares',
+  'da Silva', 'dos Santos', 'de Sousa e Melo', 'Costa-Ribeiro', 'de Matos',
 ];
 
 /**
@@ -439,9 +454,21 @@ async function main(): Promise<void> {
      * Siblings are recognised by surname, which is how a club recognises them
      * too. Crude and deterministic — the same run produces the same families.
      */
-    const minors = await many<{ id: string; last_name: string; birth_date: Date | null }>(
+    const minors = await many<{
+      id: string;
+      last_name: string;
+      family_key: string;
+      birth_date: Date | null;
+    }>(
       client,
-      `SELECT s.id, s.last_name, s.birth_date
+      /*
+       * `name_sort_key(NULL, …)` is the family key: passing no given name leaves
+       * the surname alone, without the given-name tiebreak that makes a full
+       * sort key unique per person. "da Silva" and "Silva" both come back
+       * "Silva", which is what makes two siblings one family.
+       */
+      `SELECT s.id, s.last_name, s.birth_date,
+              name_sort_key(NULL, s.last_name) AS family_key
          FROM student s
         WHERE s.organization_id = $1
           AND s.archived_at IS NULL
@@ -451,7 +478,7 @@ async function main(): Promise<void> {
             SELECT 1 FROM guardian_link gl
              WHERE gl.student_id = s.id AND gl.archived_at IS NULL
           )
-        ORDER BY s.last_name, s.id`,
+        ORDER BY name_sort_key(s.first_name, s.last_name) COLLATE pt_pt, s.id`,
       [org.id],
     );
 
@@ -459,7 +486,17 @@ async function main(): Promise<void> {
     const family = new Map<string, string>();
 
     for (const minor of minors) {
-      const surname = minor.last_name.split(' ').slice(-1)[0] ?? minor.last_name;
+      /*
+       * Siblings share a guardian, and "siblings" means "filed under the same
+       * surname" — POOLSE-32.
+       *
+       * This used to take the last whitespace token, which is the assumption the
+       * ticket exists to remove: it filed "Rita de Sousa e Melo" under a family
+       * called "Melo" and "Rui da Silva" under one called "Silva" only by
+       * accident of word order. The database answers instead, so the demo
+       * families group the same way the register files.
+       */
+      const surname = minor.family_key;
       let membershipId = family.get(surname);
 
       if (membershipId === undefined) {

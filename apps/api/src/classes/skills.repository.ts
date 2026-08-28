@@ -1,5 +1,6 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { nameOrder, shortName } from '../people/names.js';
 
 /**
  * Skills and where each student stands — POOLSE-20.
@@ -86,13 +87,13 @@ export async function turmaSkills(
     // Active enrolments only. A waiting-list student is not in the class, and a
     // grid that listed them would be marking somebody who was not there.
     const { rows: students } = await tx.query<{ id: string; name: string }>(
-      `SELECT s.id, s.first_name || ' ' || s.last_name AS name
+      `SELECT s.id, ${shortName('s')} AS name
          FROM enrollment e
          JOIN student s ON s.id = e.student_id AND s.organization_id = e.organization_id
         WHERE e.class_group_id = $1
           AND e.status = 'active'
           AND s.archived_at IS NULL
-        ORDER BY s.first_name, s.last_name`,
+        ORDER BY ${nameOrder('s')}`,
       [classGroupId],
     );
 

@@ -1,6 +1,7 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { holidaysBetween } from './holidays.js';
+import { nameOrder, shortName } from '../people/names.js';
 
 export interface Closure {
   id: string;
@@ -394,10 +395,8 @@ const SESSION_COLUMNS = `
   l.name  AS level_name,
   p.name  AS pool_name,
   cs.lane,
-  nullif(btrim(coalesce(iu.cached_first_name, '') || ' ' ||
-               coalesce(iu.cached_last_name, '')), '')  AS instructor_name,
-  nullif(btrim(coalesce(su.cached_first_name, '') || ' ' ||
-               coalesce(su.cached_last_name, '')), '')  AS substitute_name,
+  short_name(iu.cached_first_name, iu.cached_last_name) AS instructor_name,
+  short_name(su.cached_first_name, su.cached_last_name) AS substitute_name,
   cs.starts_at,
   -- Rendered in the facility's own zone, because that is the time somebody
   -- turns up at. A UTC instant on screen would be an hour wrong all summer.
@@ -418,7 +417,7 @@ const SESSION_COLUMNS = `
   -- turma with nobody in it aggregates to NULL rather than to an empty array,
   -- and the mapper should not have to know that.
   coalesce((
-    SELECT array_agg(s.first_name || ' ' || s.last_name ORDER BY s.first_name, s.last_name)
+    SELECT array_agg(${shortName('s')} ORDER BY ${nameOrder('s')})
       FROM enrollment e
       JOIN student s ON s.id = e.student_id AND s.organization_id = e.organization_id
      WHERE e.organization_id = cs.organization_id

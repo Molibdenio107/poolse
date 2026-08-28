@@ -41,7 +41,8 @@ export default async function StaffMemberPage({
     else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
   }
 
-  const name = [staff?.firstName, staff?.lastName].filter(Boolean).join(' ');
+  // The full legal name: this is a record, not a row — POOLSE-32 criterion 3.
+  const name = staff?.displayName ?? '';
 
   return (
     <PageShell

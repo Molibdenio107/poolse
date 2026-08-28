@@ -6,7 +6,7 @@ resolution. **None is settled until Rui decides** — update the Status column a
 | # | Conflict | Status |
 |---|---|---|
 | C1 | POOLSE-06 vs POOLSE-16 — same field, two migrations | Open |
-| C2 | POOLSE-08 vs POOLSE-32 — two sort orders | Open |
+| C2 | POOLSE-08 vs POOLSE-32 — two sort orders | **Resolved 28 Aug** |
 | C3 | POOLSE-04 vs POOLSE-22 — hardcoded 18 vs tenant setting | Open |
 | C4 | POOLSE-17 vs POOLSE-01 — union of roles vs strongest role | Open |
 | C5 | POOLSE-21 AC3 vs AC4 — mutually exclusive on a full turma | Open |
@@ -29,6 +29,13 @@ seed data, and neither merges alone.
 The same students appear in a different order depending on the screen.
 
 **Recommended:** one sort rule everywhere — surname, then first name. Amend POOLSE-08 AC5.
+
+**Resolved 28 Aug, as recommended.** There is one rule and it is `name_sort_key()` in the
+database: first surname, particles stripped, given names as the tiebreak, ordered under the
+`pt_pt` collation. POOLSE-08 AC5's "alphabetically" means that. Every list of people now
+orders by it — the register, turma rosters, the waiting list, the skills grid, the hover
+card, the staff list, encarregados and the vacation requests — so the same children come
+back in the same order whichever screen asks.
 
 ### C3 · POOLSE-04 hardcodes 18, POOLSE-22 makes it a tenant setting
 

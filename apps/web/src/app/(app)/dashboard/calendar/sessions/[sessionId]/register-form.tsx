@@ -113,8 +113,11 @@ export function RegisterForm({ register }: { register: Register & { organization
         {register.entries.map((entry) => (
           <li key={entry.studentId} className="flex flex-col gap-2 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="flex flex-wrap items-center gap-2 font-medium">
-                {entry.firstName} {entry.lastName}
+              <span
+                className="flex flex-wrap items-center gap-2 font-medium"
+                title={entry.displayName}
+              >
+                {entry.shortName}
                 {/*
                   A trial, a make-up, a sibling brought along. Named rather than
                   hidden: an instructor needs to know why somebody unexpected is
@@ -129,7 +132,7 @@ export function RegisterForm({ register }: { register: Register & { organization
 
               <fieldset className="flex flex-wrap gap-1">
                 <legend className="sr-only">
-                  {t('attendance.statusFor', { name: `${entry.firstName} ${entry.lastName}` })}
+                  {t('attendance.statusFor', { name: entry.displayName })}
                 </legend>
                 {ATTENDANCE_STATES.map((status) => (
                   <label
@@ -172,9 +175,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                 defaultValue={entry.note ?? ''}
                 maxLength={200}
                 placeholder={t('attendance.notePlaceholder')}
-                aria-label={t('attendance.noteFor', {
-                  name: `${entry.firstName} ${entry.lastName}`,
-                })}
+                aria-label={t('attendance.noteFor', { name: entry.displayName })}
                 className="rounded border border-border bg-background px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               />
             )}

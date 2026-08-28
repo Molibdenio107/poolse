@@ -61,7 +61,11 @@ export default async function GuardiansPage(): Promise<React.ReactElement> {
                 <li key={guardian.membershipId} className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <span className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{guardian.name}</span>
+                      {/* A list, so the list form — POOLSE-32 AC7 applies the
+                          same rule to encarregados as to everybody else. */}
+                      <span className="font-medium" title={guardian.name}>
+                        {guardian.shortName}
+                      </span>
                       <RoleBadge role="guardian" />
                     </span>
                     <span className="text-sm text-foreground-muted">

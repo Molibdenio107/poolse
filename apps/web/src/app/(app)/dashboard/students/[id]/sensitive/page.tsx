@@ -54,7 +54,8 @@ export default async function SensitivePage({
 
   return (
     <PageShell
-      title={student === null ? t('sensitive.title') : `${student.firstName} ${student.lastName}`}
+      // The full legal name — a detail page, not a list (POOLSE-32 criterion 3).
+      title={student === null ? t('sensitive.title') : student.displayName}
       subtitle={t('sensitive.title')}
     >
 

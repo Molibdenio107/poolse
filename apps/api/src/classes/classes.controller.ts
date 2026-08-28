@@ -13,6 +13,7 @@ import { withOrg } from '@poolse/db';
 import { isExclusionViolation } from './sessions.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
+import { nameOrder, shortName } from '../people/names.js';
 import {
   addSchedule,
   AlreadyEnrolledError,
@@ -257,8 +258,7 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
     // is the case membership_role exists for.
     const instructors = await tx.query<Choice>(
       `SELECT m.id,
-              coalesce(nullif(btrim(coalesce(u.cached_first_name, '') || ' ' ||
-                                    coalesce(u.cached_last_name, '')), ''),
+              coalesce(short_name(u.cached_first_name, u.cached_last_name),
                        u.cached_email::text, m.id::text) AS name
          FROM membership m
          JOIN membership_role mr
@@ -270,8 +270,8 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
         ORDER BY name`,
     );
     const students = await tx.query<Choice>(
-      `SELECT id, last_name || ', ' || first_name AS name
-         FROM student WHERE archived_at IS NULL ORDER BY last_name, first_name`,
+      `SELECT id, ${shortName('student')} AS name
+         FROM student WHERE archived_at IS NULL ORDER BY ${nameOrder('student')}`,
     );
 
     return {

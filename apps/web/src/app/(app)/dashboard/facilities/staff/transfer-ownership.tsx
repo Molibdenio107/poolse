@@ -67,9 +67,7 @@ export function TransferOwnership({
         >
           {candidates.map((candidate) => (
             <option key={candidate.membershipId} value={candidate.membershipId}>
-              {[candidate.firstName, candidate.lastName].filter(Boolean).join(' ') ||
-                candidate.email ||
-                candidate.membershipId}
+              {candidate.shortName || candidate.email || candidate.membershipId}
             </option>
           ))}
         </select>

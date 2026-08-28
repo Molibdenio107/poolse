@@ -71,7 +71,8 @@ export default async function ProgressPage({
 
   return (
     <PageShell
-      title={student === null ? t('progress.title') : `${student.firstName} ${student.lastName}`}
+      // The full legal name — a detail page, not a list (POOLSE-32 criterion 3).
+      title={student === null ? t('progress.title') : student.displayName}
       subtitle={t('progress.title')}
     >
 

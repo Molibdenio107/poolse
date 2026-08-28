@@ -182,6 +182,15 @@ export interface OrganizationMember {
   status: 'invited' | 'active' | 'suspended';
   firstName: string | null;
   lastName: string | null;
+  /**
+   * Composed by the server — POOLSE-32. Never assembled here.
+   *
+   * `displayName` is every part, first name first: the detail page, and any
+   * document. `shortName` is "Maria Santos": lists, cards, rosters and the
+   * calendar, where a five-part Portuguese name breaks the layout.
+   */
+  displayName: string | null;
+  shortName: string | null;
   email: string | null;
   roles: string[];
   /** Clerk's cached avatar for staff. Students are handled quite differently. */
@@ -443,7 +452,10 @@ export interface Guardian {
   linkId: string;
   /** The person. One row per human per club, however many children they bring. */
   membershipId: string;
+  /** Every part, first name first — the block reads as a record, not a list. */
   name: string;
+  /** First given name + last surname, for anywhere they appear in a list. */
+  shortName: string;
   relationship: string | null;
   phone: string | null;
   email: string | null;
@@ -474,12 +486,23 @@ export interface PersonSummary {
   hasLogin: boolean;
   /** How many students they already look after. Shown so a pick is confident. */
   guardianOf: number;
+  /** First given name + last surname, for the picker's list — POOLSE-32. */
+  shortName: string;
 }
 
 export interface Student {
   id: string;
   firstName: string;
   lastName: string;
+  /**
+   * Composed by the server — POOLSE-32. Never assembled here.
+   *
+   * `displayName` is every part, first name first: the detail page, and any
+   * document. `shortName` is "Maria Santos": lists, cards, rosters and the
+   * calendar, where a five-part Portuguese name breaks the layout.
+   */
+  displayName: string;
+  shortName: string;
   birthDate: string | null;
   /** Whole years, computed by the database so no timezone shifts a birthday. */
   age: number | null;
@@ -609,6 +632,15 @@ export interface EnrolledStudent {
   studentId: string;
   firstName: string;
   lastName: string;
+  /**
+   * Composed by the server — POOLSE-32. Never assembled here.
+   *
+   * `displayName` is every part, first name first: the detail page, and any
+   * document. `shortName` is "Maria Santos": lists, cards, rosters and the
+   * calendar, where a five-part Portuguese name breaks the layout.
+   */
+  displayName: string;
+  shortName: string;
   status: 'active' | 'waiting';
   waitingPosition: number | null;
 }
@@ -708,6 +740,15 @@ export interface RegisterEntry {
   studentId: string;
   firstName: string;
   lastName: string;
+  /**
+   * Composed by the server — POOLSE-32. Never assembled here.
+   *
+   * `displayName` is every part, first name first: the detail page, and any
+   * document. `shortName` is "Maria Santos": lists, cards, rosters and the
+   * calendar, where a five-part Portuguese name breaks the layout.
+   */
+  displayName: string;
+  shortName: string;
   /** Null until somebody marks them — not the same as `absent`. */
   status: AttendanceStatus | null;
   note: string | null;
@@ -779,10 +820,14 @@ export interface Seasons {
  */
 export interface GuardianRow {
   membershipId: string;
+  /** The full legal name, for the heading of their own row. */
   name: string;
+  /** First given name + last surname — POOLSE-32. */
+  shortName: string;
   email: string | null;
   phone: string | null;
   hasLogin: boolean;
+  /** Their children, already abbreviated and filed by surname by the server. */
   students: { id: string; name: string; relationship: string | null }[];
 }
 
@@ -877,6 +922,15 @@ export interface StaffRecord {
   clerkUserId: string | null;
   firstName: string | null;
   lastName: string | null;
+  /**
+   * Composed by the server — POOLSE-32. Never assembled here.
+   *
+   * `displayName` is every part, first name first: the detail page, and any
+   * document. `shortName` is "Maria Santos": lists, cards, rosters and the
+   * calendar, where a five-part Portuguese name breaks the layout.
+   */
+  displayName: string | null;
+  shortName: string | null;
   /** Read-only for everybody, including the owner. */
   email: string | null;
   phone: string | null;

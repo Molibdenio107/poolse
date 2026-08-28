@@ -423,6 +423,46 @@ the role instead" both cheap to check and safe under two operators doing it at o
 matched before email: two people can share a household address, and only one can have a
 given tax number.
 
+### How a name is written, shortened and filed
+
+Three questions, decided independently, and conflating any two of them is the bug —
+POOLSE-32. All three are answered by functions in the database, and by nothing else.
+
+| | Function | Answer |
+|---|---|---|
+| Display order | `display_name(given, surnames)` | First name first, every part. `Maria Joana Ferreira Silva Santos` |
+| Abbreviation | `short_name(given, surnames)` | First given name + **last** surname. `Maria Santos` |
+| Sort order | `name_sort_key(given, surnames)` | **First** surname, particles stripped. Files under `Ferreira` |
+
+`person_name`, `person_short_name` and `person_sort_key` are the same three for a
+`membership`, resolving Clerk's cache the way decision 3 requires.
+
+**Why in SQL rather than in the API.** The sort key has to be indexable, because lists
+paginate server-side and a sort in JavaScript would only order the rows already on the
+page. Once one form lives in the database, a second implementation of the other two is a
+guarantee that somebody fixes a particle bug in one copy only. So every query selects the
+composed form; nothing is composed in TypeScript, and nothing is stored — correcting a name
+corrects every form of it in the same write.
+
+**Display and filing use different surnames on purpose.** The short form keeps the last
+surname because that is what identifies somebody at a glance; filing uses the first because
+that is where a person looks. Particles follow the same split: `Maria da Silva` *displays*
+with the "da" and *files* under Silva, because filing under D would bury every da/de/dos
+name in one block at the top of every list.
+
+**A surname is not "the tokens after the first space".** `surname_units()` splits it into
+units, because a particle attaches forward (`da Silva` is one unit) and `e` joins in both
+directions (`de Sousa e Melo` is one surname, not two). Assuming the last whitespace token
+is the surname abbreviates `Maria da Silva` to `Maria da`, which is not a name and which
+fails silently on a printed roster.
+
+**Ordering uses the `pt_pt` ICU collation, not `strip_accents`.** Folding accents away
+files `Álvares` as `alvares`, which is right, but makes it indistinguishable from `Alvares`
+and leaves their order to insertion chance. ICU treats the accent as a tiebreak: the two
+file together and both come well before `Zé`. `strip_accents` stays where it belongs — in
+*search*, which must match any part of the name, including the surnames the abbreviation
+drops.
+
 ### Seasons
 
 A swimming school's year runs September to August: it starts when school does and

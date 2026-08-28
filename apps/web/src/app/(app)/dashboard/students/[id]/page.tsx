@@ -77,9 +77,9 @@ export default async function StudentPage({
 
   return (
     <PageShell
-      title={student === null
-              ? t('students.title')
-              : `${student.firstName} ${student.lastName}`}
+      // A detail page shows the full legal name, every part — POOLSE-32
+      // criterion 3. Abbreviation is for lists.
+      title={student === null ? t('students.title') : student.displayName}
       subtitle={student?.age === null || student === null
               ? t('students.subtitle')
               : t('students.years', { count: student.age })}
@@ -87,7 +87,7 @@ export default async function StudentPage({
       actions={student !== null && (
             <PersonAvatar
               id={student.id}
-              name={`${student.firstName} ${student.lastName}`}
+              name={student.displayName}
               photoUrl={photoUrlFor(student.photoStorageKey)}
               size="lg"
             />

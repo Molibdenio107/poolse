@@ -152,17 +152,28 @@ export default async function StudentsPage({
                     <div className="flex min-w-0 items-center gap-3">
                       <PersonAvatar
                         id={student.id}
-                        name={`${student.firstName} ${student.lastName}`}
+                        name={student.displayName}
                         // Already null unless consent is live: the API gates the
                         // key, this only turns a key into a URL.
                         photoUrl={photoUrlFor(student.photoStorageKey)}
                       />
                       <div className="flex min-w-0 flex-col">
+                      {/*
+                        "Maria Santos", never "Santos, Maria" — POOLSE-32.
+                        Composed by the server, so this row and the turma roster
+                        two clicks away cannot abbreviate differently.
+
+                        `title` carries the full legal name for the long
+                        compound that truncates here. It supplements the visible
+                        text rather than replacing it: every part is on the
+                        detail page this links to.
+                      */}
                       <Link
                         href={`/dashboard/students/${student.id}`}
                         className="truncate text-primary hover:underline"
+                        title={student.displayName}
                       >
-                        {student.lastName}, {student.firstName}
+                        {student.shortName}
                       </Link>
                       <span className="truncate text-sm text-foreground-muted">
                         {[
@@ -196,7 +207,7 @@ export default async function StudentsPage({
                         <ArchiveStudentButton
                           organizationId={data.organizationId}
                           studentId={student.id}
-                          name={`${student.firstName} ${student.lastName}`}
+                          name={student.displayName}
                         />
                       )}
                     </div>

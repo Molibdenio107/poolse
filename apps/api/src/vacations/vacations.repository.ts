@@ -54,9 +54,14 @@ function isoDate(value: Date | string): string {
 }
 
 /** The person's display name, assembled the same way everywhere. */
-const NAME_SQL = `
-  nullif(btrim(coalesce(u.cached_first_name, '') || ' ' || coalesce(u.cached_last_name, '')), '')
-`;
+/*
+ * The requester, as a list row reads them — POOLSE-32 criterion 2.
+ *
+ * `short_name` rather than the join this used to spell out: one implementation
+ * of what a name looks like, in the database, so this list cannot drift from the
+ * staff list it sits beside.
+ */
+const NAME_SQL = `short_name(u.cached_first_name, u.cached_last_name)`;
 
 interface RequestRow {
   id: string;

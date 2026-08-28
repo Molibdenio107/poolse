@@ -45,15 +45,13 @@ export async function readSensitive(
     const { rows } = await tx.query<{
       medical_notes_encrypted: string | null;
       recorded_at: Date;
-      first_name: string | null;
-      last_name: string | null;
+      recorded_by_name: string | null;
       student_exists: boolean;
     }>(
       `
       SELECT ss.medical_notes_encrypted,
              ss.recorded_at,
-             u.cached_first_name AS first_name,
-             u.cached_last_name  AS last_name,
+             display_name(u.cached_first_name, u.cached_last_name) AS recorded_by_name,
              true AS student_exists
         FROM student s
         LEFT JOIN student_sensitive ss
@@ -81,7 +79,7 @@ export async function readSensitive(
     return {
       medicalNotes: decryptSensitive(row.medical_notes_encrypted),
       recordedAt: row.medical_notes_encrypted === null ? null : row.recorded_at.toISOString(),
-      recordedByName: displayName(row.first_name, row.last_name),
+      recordedByName: row.recorded_by_name,
     };
   });
 }
@@ -142,17 +140,15 @@ export async function listConsent(
       kind: ConsentKind;
       granted: boolean;
       granted_at: Date;
-      granted_first: string | null;
-      granted_last: string | null;
+      granted_by_name: string | null;
       evidence_note: string | null;
       withdrawn_at: Date | null;
-      withdrawn_first: string | null;
-      withdrawn_last: string | null;
+      withdrawn_by_name: string | null;
     }>(
       `
       SELECT c.id, c.kind, c.granted, c.granted_at, c.evidence_note, c.withdrawn_at,
-             g.cached_first_name AS granted_first,   g.cached_last_name AS granted_last,
-             w.cached_first_name AS withdrawn_first, w.cached_last_name AS withdrawn_last
+             display_name(g.cached_first_name, g.cached_last_name)   AS granted_by_name,
+             display_name(w.cached_first_name, w.cached_last_name)   AS withdrawn_by_name
         FROM consent c
         LEFT JOIN membership gm
                ON gm.id = c.granted_by_membership_id AND gm.organization_id = c.organization_id
@@ -171,10 +167,10 @@ export async function listConsent(
       kind: row.kind,
       granted: row.granted,
       grantedAt: row.granted_at.toISOString(),
-      grantedByName: displayName(row.granted_first, row.granted_last),
+      grantedByName: row.granted_by_name,
       evidenceNote: row.evidence_note,
       withdrawnAt: row.withdrawn_at?.toISOString() ?? null,
-      withdrawnByName: displayName(row.withdrawn_first, row.withdrawn_last),
+      withdrawnByName: row.withdrawn_by_name,
     }));
   });
 }
@@ -264,7 +260,11 @@ export async function withdrawConsent(
   });
 }
 
-function displayName(first: string | null, last: string | null): string | null {
-  const name = [first, last].filter(Boolean).join(' ');
-  return name.length > 0 ? name : null;
-}
+/*
+ * The local displayName() that used to live here is gone — POOLSE-32.
+ *
+ * It composed a name in TypeScript while the rest of the app composed one in
+ * SQL, which is exactly the split the ticket names: two implementations, and
+ * the day somebody fixes one is the day they disagree. The queries above call
+ * `display_name()` instead.
+ */

@@ -168,14 +168,17 @@ export default async function ClassPage({
                     <span className="flex min-w-0 items-center gap-3">
                       <PersonAvatar
                         id={student.studentId}
-                        name={`${student.firstName} ${student.lastName}`}
+                        name={student.displayName}
                         size="sm"
                       />
+                      {/* A roster is the narrowest column in the app — POOLSE-32
+                          criterion 2. The full name is on the detail page. */}
                       <Link
                         href={`/dashboard/students/${student.studentId}`}
                         className="truncate text-primary hover:underline"
+                        title={student.displayName}
                       >
-                        {student.lastName}, {student.firstName}
+                        {student.shortName}
                       </Link>
                     </span>
                     {group.canManage && (
@@ -201,8 +204,8 @@ export default async function ClassPage({
                       key={student.enrollmentId}
                       className="flex items-center justify-between gap-3 py-2 first:pt-0"
                     >
-                      <span className="truncate">
-                        {student.waitingPosition ?? '—'}. {student.lastName}, {student.firstName}
+                      <span className="truncate" title={student.displayName}>
+                        {student.waitingPosition ?? '—'}. {student.shortName}
                       </span>
                       {group.canManage && (
                         <EndEnrollmentButton

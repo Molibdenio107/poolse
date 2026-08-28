@@ -1,5 +1,6 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { displayName, nameOrder, shortName } from '../people/names.js';
 
 export interface ScheduleSlot {
   id: string;
@@ -54,8 +55,7 @@ const GROUP_COLUMNS = `
   cg.pool_id,
   p.name  AS pool_name,
   cg.instructor_membership_id,
-  nullif(btrim(coalesce(u.cached_first_name, '') || ' ' ||
-               coalesce(u.cached_last_name, '')), '') AS instructor_name,
+  short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
   cg.capacity,
   cg.lane,
   (
@@ -76,8 +76,10 @@ const GROUP_COLUMNS = `
              json_agg(
                json_build_object('enrollmentId', e.id, 'studentId', s.id,
                                  'firstName', s.first_name, 'lastName', s.last_name,
+                                 'displayName', ${displayName('s')},
+                                 'shortName', ${shortName('s')},
                                  'status', e.status, 'waitingPosition', e.waiting_position)
-               ORDER BY e.status, e.waiting_position NULLS FIRST, s.last_name, s.first_name
+               ORDER BY e.status, e.waiting_position NULLS FIRST, ${nameOrder('s')}
              ), '[]'::json)
       FROM enrollment e
       JOIN student s
@@ -534,8 +536,7 @@ export async function timetableFor(
              cg.name AS class_name,
              l.name AS level_name,
              p.name AS pool_name,
-             nullif(btrim(coalesce(u.cached_first_name, '') || ' ' ||
-                          coalesce(u.cached_last_name, '')), '') AS instructor_name,
+             short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
              cg.lane,
              cs.weekday,
              to_char(cs.start_time, 'HH24:MI') AS start_time,

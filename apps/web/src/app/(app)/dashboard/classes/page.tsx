@@ -43,8 +43,10 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
   const namesOf = (group: { students: EnrolledStudent[] }): string[] =>
     group.students
       .filter((student) => student.status === 'active')
-      .map((student) => `${student.firstName} ${student.lastName}`)
-      .sort((a, b) => a.localeCompare(b, locale));
+      // Already abbreviated and already filed by surname by the server —
+      // POOLSE-32. Re-sorting here on the composed string would order by given
+      // name and disagree with every other list of the same children.
+      .map((student) => student.shortName);
 
   // One entry per slot per turma: a turma running Tuesday and Thursday appears
   // in both columns, which is what a week looks like.

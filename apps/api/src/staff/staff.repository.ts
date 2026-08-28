@@ -1,5 +1,6 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { personName, personShortName } from '../people/names.js';
 
 /**
  * The staff record — POOLSE-39.
@@ -15,6 +16,12 @@ export interface StaffRecord {
   clerkUserId: string | null;
   firstName: string | null;
   lastName: string | null;
+  /**
+   * The full legal name, and the list form — POOLSE-32. Composed by the server
+   * so the heading here and the row on the staff list can never disagree.
+   */
+  displayName: string | null;
+  shortName: string | null;
   /** Read-only everywhere. Rendered from the identity source, never editable. */
   email: string | null;
   phone: string | null;
@@ -38,6 +45,8 @@ export async function findStaff(
       clerk_user_id: string | null;
       first_name: string | null;
       last_name: string | null;
+      display_name: string | null;
+      short_name: string | null;
       email: string | null;
       phone: string | null;
       notes: string | null;
@@ -53,6 +62,10 @@ export async function findStaff(
               u.clerk_user_id,
               coalesce(u.cached_first_name, m.first_name) AS first_name,
               coalesce(u.cached_last_name,  m.last_name)  AS last_name,
+              -- A detail page shows the full legal name — POOLSE-32 criterion 3.
+              -- The short form travels with it for the heading and the crumb.
+              ${personName('m.id')} AS display_name,
+              ${personShortName('m.id')} AS short_name,
               person_email(m.id)::text AS email,
               -- Their own number where they have an account, the club's record
               -- where they do not. Same resolution rule as the name.
@@ -100,6 +113,8 @@ export async function findStaff(
       clerkUserId: row.clerk_user_id,
       firstName: row.first_name,
       lastName: row.last_name,
+      displayName: row.display_name,
+      shortName: row.short_name,
       email: row.email,
       phone: row.phone,
       notes: row.notes,

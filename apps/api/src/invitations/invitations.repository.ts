@@ -1,6 +1,7 @@
 import { withOrg, withoutTenantScope } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import type { MemberRole } from '../tenant/roles.js';
+import { personName, personOrder, personShortName } from '../people/names.js';
 
 export interface OrganizationMember {
   membershipId: string;
@@ -8,6 +9,14 @@ export interface OrganizationMember {
   status: 'invited' | 'active' | 'suspended';
   firstName: string | null;
   lastName: string | null;
+  /**
+   * The two composed forms — POOLSE-32.
+   *
+   * Null only for somebody invited who has not accepted and has no name
+   * anywhere yet; the list falls back to their email address, as it always did.
+   */
+  displayName: string | null;
+  shortName: string | null;
   /** The account email once they have one, the invited address before that. */
   email: string | null;
   roles: string[];
@@ -82,6 +91,8 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
       status: OrganizationMember['status'];
       first_name: string | null;
       last_name: string | null;
+      display_name: string | null;
+      short_name: string | null;
       email: string | null;
       roles: string[];
       avatar_url: string | null;
@@ -95,6 +106,10 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
              -- cache left them in this list as a nameless row.
              coalesce(u.cached_first_name, m.first_name) AS first_name,
              coalesce(u.cached_last_name,  m.last_name)  AS last_name,
+             -- Composed once, in SQL, so no screen assembles a name for itself
+             -- — POOLSE-32.
+             ${personName('m.id')} AS display_name,
+             ${personShortName('m.id')} AS short_name,
              u.cached_avatar_url AS avatar_url,
              -- Before acceptance there is no account, so the address the invite
              -- went to is the only name this person has here.
@@ -118,12 +133,16 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
                 m.first_name, m.last_name, m.email,
                 u.cached_first_name, u.cached_last_name, u.cached_avatar_url,
                 u.cached_email, i.email
-       -- By name, not by when the row was made. A People list is something you
-       -- scan for somebody, and creation order is meaningless to the person
-       -- doing the scanning.
-       ORDER BY coalesce(u.cached_first_name, m.first_name),
-                coalesce(u.cached_last_name, m.last_name),
-                m.created_at
+       /*
+        * By name, not by when the row was made. A staff list is something you
+        * scan for somebody, and creation order is meaningless to the person
+        * doing the scanning.
+        *
+        * By *surname*, in Portuguese — POOLSE-32 criterion 5. It used to order
+        * on the given name, which put every Ana together and filed "Álvares"
+        * after "Zé".
+        */
+       ORDER BY ${personOrder('m.id')}, m.created_at
     `);
 
     return rows.map((row) => ({
@@ -132,6 +151,8 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
       status: row.status,
       firstName: row.first_name,
       lastName: row.last_name,
+      displayName: row.display_name,
+      shortName: row.short_name,
       email: row.email,
       roles: row.roles,
       avatarUrl: row.avatar_url,

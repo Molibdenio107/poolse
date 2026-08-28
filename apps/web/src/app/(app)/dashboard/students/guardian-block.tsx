@@ -492,6 +492,15 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
                 className="flex w-full flex-col gap-1 p-3 text-left hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
               >
                 <span className="flex flex-wrap items-center gap-2">
+                  {/*
+                    The full name here, deliberately, against the list rule —
+                    POOLSE-32 AC2 names lists, cards, rosters and the calendar,
+                    and this is none of them. It is an identity confirmation:
+                    the whole job of this row is telling two people apart before
+                    somebody links a child to the wrong one, and abbreviating
+                    "Maria Ferreira Silva" and "Maria Costa Silva" to the same
+                    two words would remove exactly the evidence needed.
+                  */}
                   <span className="font-medium">{person.name}</span>
                   <RoleBadges roles={person.roles} />
                 </span>

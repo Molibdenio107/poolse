@@ -1,5 +1,13 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import {
+  displayName,
+  nameOrder,
+  personName,
+  personOrder,
+  personShortName,
+  shortName,
+} from '../people/names.js';
 
 export interface StudentLevel {
   id: string;
@@ -34,7 +42,10 @@ export interface Guardian {
   linkId: string;
   /** The person. One row per human per club, however many children they bring. */
   membershipId: string;
+  /** Every part, first name first. The guardian block and any document. */
   name: string;
+  /** First given name + last surname, for the lists that show them — POOLSE-32. */
+  shortName: string;
   email: string | null;
   /**
    * Their relationship *to this student* — POOLSE-04, criterion 4.
@@ -81,6 +92,19 @@ export interface Student {
   id: string;
   firstName: string;
   lastName: string;
+  /**
+   * The two composed forms — POOLSE-32.
+   *
+   * Sent alongside the parts rather than instead of them: the form still edits
+   * the parts, and the client still needs them. What it must never do is compose
+   * the name itself, because that is how one screen ends up saying "Silva,
+   * Maria" long after the rest stopped.
+   *
+   * `displayName` is every part, for the detail page and every document.
+   * `shortName` is "Maria Santos", for the register, cards and rosters.
+   */
+  displayName: string;
+  shortName: string;
   birthDate: string | null;
   /** Whole years, computed by the database so no timezone can shift a birthday. */
   age: number | null;
@@ -137,6 +161,44 @@ const PHOTO_CONSENT = `
   )`;
 
 const PHOTO_KEY = `CASE WHEN ${PHOTO_CONSENT} THEN s.photo_storage_key ELSE NULL END`;
+
+/**
+ * Every encarregado de educação of the student aliased `s`, primary first.
+ *
+ * One constant rather than the same twenty lines in `listStudents` and
+ * `findStudent`, which is how the two were before POOLSE-32 needed to add a name
+ * form to both. Two copies is two chances to add it to one.
+ *
+ * Ordered by the guardian's sort key rather than by the composed name: a list
+ * of people files by surname, in Portuguese, wherever it appears — POOLSE-32
+ * criterion 5. Sorting by `g->>'name'` filed "Álvares" after "Zé".
+ */
+const GUARDIANS = `(
+  SELECT coalesce(jsonb_agg(g ORDER BY sort_key), '[]'::jsonb)
+    FROM (
+      SELECT ${personOrder('gl.guardian_membership_id')} AS sort_key,
+             jsonb_build_object(
+               'linkId',       gl.id,
+               'membershipId', gl.guardian_membership_id,
+               'name',         ${personName('gl.guardian_membership_id')},
+               'shortName',    ${personShortName('gl.guardian_membership_id')},
+               'email',        person_email(gl.guardian_membership_id)::text,
+               'relationship', gl.relationship,
+               'phone',        m.phone,
+               'taxNumber',    m.tax_number,
+               'address',      m.address,
+               'isPrimary',    gl.is_primary,
+               'hasLogin',     m.app_user_id IS NOT NULL
+             ) AS g
+        FROM guardian_link gl
+        JOIN membership m
+          ON m.id = gl.guardian_membership_id
+         AND m.organization_id = gl.organization_id
+       WHERE gl.student_id = s.id
+         AND gl.organization_id = s.organization_id
+         AND gl.archived_at IS NULL
+    ) links
+)`;
 
 function asDuplicate(error: unknown, name: string): never {
   if (error instanceof Error && (error as { code?: string }).code === '23505') {
@@ -429,6 +491,8 @@ export async function listStudents(
       id: string;
       first_name: string;
       last_name: string;
+      display_name: string;
+      short_name: string;
       birth_date: Date | null;
       age: number | null;
       level_id: string | null;
@@ -444,6 +508,8 @@ export async function listStudents(
       SELECT s.id,
              s.first_name,
              s.last_name,
+             ${displayName('s')} AS display_name,
+             ${shortName('s')} AS short_name,
              s.birth_date,
              CASE WHEN s.birth_date IS NULL THEN NULL
                   ELSE extract(YEAR FROM age(s.birth_date))::int
@@ -453,30 +519,7 @@ export async function listStudents(
              s.contact_email::text AS contact_email,
              s.contact_phone,
              s.notes,
-             (
-               SELECT coalesce(jsonb_agg(g ORDER BY g->>'name'), '[]'::jsonb)
-                 FROM (
-                   SELECT jsonb_build_object(
-                            'linkId',       gl.id,
-                            'membershipId', gl.guardian_membership_id,
-                            'name',         person_name(gl.guardian_membership_id),
-                            'email',        person_email(gl.guardian_membership_id)::text,
-                            'relationship', gl.relationship,
-                            'phone',        m.phone,
-                            'taxNumber',    m.tax_number,
-                            'address',      m.address,
-                            'isPrimary',    gl.is_primary,
-                            'hasLogin',     m.app_user_id IS NOT NULL
-                          ) AS g
-                     FROM guardian_link gl
-                     JOIN membership m
-                       ON m.id = gl.guardian_membership_id
-                      AND m.organization_id = gl.organization_id
-                    WHERE gl.student_id = s.id
-                      AND gl.organization_id = s.organization_id
-                      AND gl.archived_at IS NULL
-                 ) links
-             ) AS guardians,
+             ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
              ${PHOTO_CONSENT} AS photo_consent
         FROM student s
@@ -484,13 +527,25 @@ export async function listStudents(
                ON l.id = s.level_id
               AND l.organization_id = s.organization_id
        WHERE s.archived_at IS NULL
+         /*
+          * Search runs over **every** part of the name, not the composed form —
+          * POOLSE-32 criterion 6.
+          *
+          * This is the one place that must not use short_name(). "Maria Joana
+          * Ferreira Silva Santos" displays as "Maria Santos", and somebody
+          * typing "Ferreira" is entitled to find her: the surname they know is
+          * one of the three the abbreviation drops. Narrowing this to the
+          * displayed form would make people unfindable by a name they actually
+          * have, and the failure looks like a missing record rather than a
+          * search bug.
+          */
          AND (
            $1::text IS NULL
            OR lower(strip_accents(s.first_name || ' ' || s.last_name))
               LIKE '%' || lower(strip_accents($1::text)) || '%'
          )
          AND ($2::uuid IS NULL OR s.level_id = $2::uuid)
-       ORDER BY s.last_name, s.first_name
+       ORDER BY ${nameOrder('s')}
       `,
       [query.search, query.levelId],
     );
@@ -506,36 +561,16 @@ export async function findStudent(
   const [student] = await withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query(
       `
-      SELECT s.id, s.first_name, s.last_name, s.birth_date,
+      SELECT s.id, s.first_name, s.last_name,
+             ${displayName('s')} AS display_name,
+             ${shortName('s')} AS short_name,
+             s.birth_date,
              CASE WHEN s.birth_date IS NULL THEN NULL
                   ELSE extract(YEAR FROM age(s.birth_date))::int
              END AS age,
              s.level_id, l.name AS level_name,
              s.contact_email::text AS contact_email, s.contact_phone, s.notes,
-             (
-               SELECT coalesce(jsonb_agg(g ORDER BY g->>'name'), '[]'::jsonb)
-                 FROM (
-                   SELECT jsonb_build_object(
-                            'linkId',       gl.id,
-                            'membershipId', gl.guardian_membership_id,
-                            'name',         person_name(gl.guardian_membership_id),
-                            'email',        person_email(gl.guardian_membership_id)::text,
-                            'relationship', gl.relationship,
-                            'phone',        m.phone,
-                            'taxNumber',    m.tax_number,
-                            'address',      m.address,
-                            'isPrimary',    gl.is_primary,
-                            'hasLogin',     m.app_user_id IS NOT NULL
-                          ) AS g
-                     FROM guardian_link gl
-                     JOIN membership m
-                       ON m.id = gl.guardian_membership_id
-                      AND m.organization_id = gl.organization_id
-                    WHERE gl.student_id = s.id
-                      AND gl.organization_id = s.organization_id
-                      AND gl.archived_at IS NULL
-                 ) links
-             ) AS guardians,
+             ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
              ${PHOTO_CONSENT} AS photo_consent
         FROM student s
@@ -704,6 +739,8 @@ function toStudent(row: {
   id: string;
   first_name: string;
   last_name: string;
+  display_name: string;
+  short_name: string;
   birth_date: Date | null;
   age: number | null;
   level_id: string | null;
@@ -719,6 +756,8 @@ function toStudent(row: {
     id: row.id,
     firstName: row.first_name,
     lastName: row.last_name,
+    displayName: row.display_name,
+    shortName: row.short_name,
     // A date column, not a timestamp — formatted as a plain calendar date so no
     // timezone can move somebody's birthday across midnight.
     birthDate: row.birth_date === null ? null : toIsoDate(row.birth_date),
@@ -952,6 +991,8 @@ async function syncGuardians(
 export interface PersonSummary {
   membershipId: string;
   name: string;
+  /** First given name + last surname, for the picker's list — POOLSE-32. */
+  shortName: string;
   email: string | null;
   phone: string | null;
   taxNumber: string | null;
@@ -971,6 +1012,7 @@ export async function searchPeople(
     const { rows } = await tx.query<{
       membership_id: string;
       name: string;
+      short_name: string;
       email: string | null;
       phone: string | null;
       tax_number: string | null;
@@ -980,7 +1022,8 @@ export async function searchPeople(
       guardian_of: number;
     }>(
       `SELECT m.id AS membership_id,
-              person_name(m.id) AS name,
+              ${personName('m.id')} AS name,
+              ${personShortName('m.id')} AS short_name,
               person_email(m.id)::text AS email,
               m.phone,
               m.tax_number,
@@ -1006,7 +1049,7 @@ export async function searchPeople(
             OR person_email(m.id) = $1::citext
             OR m.tax_number = $1::text
           )
-        ORDER BY person_name(m.id)
+        ORDER BY ${personOrder('m.id')}
         LIMIT $2`,
       [search, limit],
     );
@@ -1014,6 +1057,7 @@ export async function searchPeople(
     return rows.map((row) => ({
       membershipId: row.membership_id,
       name: row.name,
+      shortName: row.short_name,
       email: row.email,
       phone: row.phone,
       taxNumber: row.tax_number,
@@ -1042,14 +1086,14 @@ export async function studentsOf(
       relationship: string | null;
     }>(
       `SELECT s.id,
-              s.first_name || ' ' || s.last_name AS name,
+              ${shortName('s')} AS name,
               gl.relationship
          FROM guardian_link gl
          JOIN student s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
         WHERE gl.guardian_membership_id = $1
           AND gl.archived_at IS NULL
           AND s.archived_at IS NULL
-        ORDER BY s.first_name, s.last_name`,
+        ORDER BY ${nameOrder('s')}`,
       [membershipId],
     );
     return rows;
@@ -1072,6 +1116,8 @@ export async function studentsOf(
 export interface GuardianRow {
   membershipId: string;
   name: string;
+  /** First given name + last surname — POOLSE-32. This page is a list. */
+  shortName: string;
   email: string | null;
   phone: string | null;
   hasLogin: boolean;
@@ -1083,13 +1129,15 @@ export async function listGuardians(organizationId: string): Promise<GuardianRow
     const { rows } = await tx.query<{
       membership_id: string;
       name: string;
+      short_name: string;
       email: string | null;
       phone: string | null;
       has_login: boolean;
       students: GuardianRow['students'];
     }>(`
       SELECT m.id AS membership_id,
-             person_name(m.id) AS name,
+             ${personName('m.id')} AS name,
+             ${personShortName('m.id')} AS short_name,
              person_email(m.id)::text AS email,
              m.phone,
              m.app_user_id IS NOT NULL AS has_login,
@@ -1097,10 +1145,10 @@ export async function listGuardians(organizationId: string): Promise<GuardianRow
                SELECT jsonb_agg(
                         jsonb_build_object(
                           'id', s.id,
-                          'name', s.first_name || ' ' || s.last_name,
+                          'name', ${shortName('s')},
                           'relationship', gl.relationship
                         )
-                        ORDER BY s.first_name, s.last_name
+                        ORDER BY ${nameOrder('s')}
                       )
                  FROM guardian_link gl
                  JOIN student s
@@ -1119,12 +1167,13 @@ export async function listGuardians(organizationId: string): Promise<GuardianRow
               AND mr.role = 'guardian'
               AND mr.archived_at IS NULL
          )
-       ORDER BY person_name(m.id)
+       ORDER BY ${personOrder('m.id')}
     `);
 
     return rows.map((row) => ({
       membershipId: row.membership_id,
       name: row.name,
+      shortName: row.short_name,
       email: row.email,
       phone: row.phone,
       hasLogin: row.has_login,
@@ -1201,7 +1250,7 @@ export async function findDuplicate(
       guardian_of: number;
     }>(
       `SELECT m.id AS membership_id,
-              person_name(m.id) AS name,
+              ${personName('m.id')} AS name,
               CASE WHEN $1::text <> '' AND m.tax_number = $1::text THEN 'nif'
                    ELSE 'email' END AS matched_on,
               coalesce((

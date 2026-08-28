@@ -271,8 +271,14 @@ export default async function PeoplePage({
   );
 }
 
-/** Null rather than an empty string, so the caller picks the translated fallback. */
+/**
+ * The name a staff row shows — POOLSE-32.
+ *
+ * Composed by the server and passed straight through, rather than assembled
+ * here from the parts as it used to be. Null rather than an empty string, so
+ * the caller picks the translated fallback for somebody invited who has not yet
+ * accepted and has no name anywhere.
+ */
 function displayName(member: OrganizationMember): string | null {
-  const name = [member.firstName, member.lastName].filter(Boolean).join(' ');
-  return name.length > 0 ? name : null;
+  return member.shortName;
 }

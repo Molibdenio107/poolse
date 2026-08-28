@@ -1,5 +1,6 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { displayName, nameOrder, shortName } from '../people/names.js';
 
 /**
  * The register for one class — slice 1.8.
@@ -48,9 +49,11 @@ export interface Register {
   entries: RegisterEntry[];
 }
 
-const NAME_SQL = `
-  nullif(btrim(coalesce(u.cached_first_name, '') || ' ' || coalesce(u.cached_last_name, '')), '')
-`;
+/*
+ * Who marked the register. An audit line rather than a list row, so it carries
+ * the full legal name — POOLSE-32 criterion 3.
+ */
+const NAME_SQL = `display_name(u.cached_first_name, u.cached_last_name)`;
 
 /**
  * One class, and everybody who might be in it.
@@ -115,6 +118,8 @@ export async function findRegister(
       student_id: string;
       first_name: string;
       last_name: string;
+      display_name: string;
+      short_name: string;
       status: AttendanceStatus | null;
       note: string | null;
       recorded_by_name: string | null;
@@ -144,6 +149,8 @@ export async function findRegister(
       SELECT s.id AS student_id,
              s.first_name,
              s.last_name,
+             ${displayName('s')} AS display_name,
+             ${shortName('s')} AS short_name,
              a.status,
              a.note,
              (
@@ -161,7 +168,7 @@ export async function findRegister(
        WHERE s.archived_at IS NULL
        GROUP BY s.id, s.first_name, s.last_name, a.status, a.note,
                 a.recorded_by_membership_id, a.recorded_at
-       ORDER BY s.first_name, s.last_name
+       ORDER BY ${nameOrder('s')}
       `,
       [sessionId],
     );
@@ -180,6 +187,8 @@ export async function findRegister(
         studentId: row.student_id,
         firstName: row.first_name,
         lastName: row.last_name,
+        displayName: row.display_name,
+        shortName: row.short_name,
         status: row.status,
         note: row.note,
         recordedByName: row.recorded_by_name,
