@@ -934,10 +934,23 @@ export class AdvancementController {
       typeof body['classGroupId'] === 'string' ? body['classGroupId'].trim() : '';
     if (classGroupId === '') throw new BadRequestException('classGroupId is required');
 
+    /*
+     * Shape *and* reality — the same trap `ages.ts` documents.
+     *
+     * `2026-02-30` matches the pattern and is not a day. `new Date` does not
+     * throw on it, it rolls into the 2nd of March, so the only reliable check is
+     * to format it back and see whether it survived. Without this the `::date`
+     * cast raises 22008 and the admin gets a 500 for a typo.
+     */
     const effectiveOn =
       typeof body['effectiveOn'] === 'string' ? body['effectiveOn'].trim() : '';
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveOn)) {
-      throw new BadRequestException('effectiveOn must be a date');
+    const parsed = new Date(`${effectiveOn}T00:00:00Z`);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(effectiveOn) ||
+      Number.isNaN(parsed.getTime()) ||
+      parsed.toISOString().slice(0, 10) !== effectiveOn
+    ) {
+      throw new BadRequestException('effectiveOn must be a real date');
     }
 
     const outcome = await confirmProposal(
@@ -961,6 +974,14 @@ export class AdvancementController {
       throw new ConflictException('That proposal has already been answered');
     }
     if (outcome === 'no_seat') throw new ConflictException('That turma is full');
+    if (outcome === 'already_in_turma') {
+      throw new ConflictException('That student already has a place in that turma');
+    }
+    if (outcome === 'bad_effective_date') {
+      throw new BadRequestException(
+        'That date is before the student joined, or they are not enrolled at the level being left',
+      );
+    }
 
     return { confirmed: true };
   }

@@ -52,17 +52,27 @@ export async function creditsFor(
     const { rows } = await tx.query<{
       id: string;
       student_id: string;
-      issued_on: Date;
-      expires_on: Date;
+      issued_on: string;
+      expires_on: string;
       status: ReposicaoCredit['status'];
       class_name: string | null;
       booking_id: string | null;
       days_left: number | null;
     }>(
-      `SELECT c.id,
+      /*
+        * The two dates are formatted **in SQL**, not with toISOString().
+        *
+        * node-pg hands a `date` column back as a JS Date at *local* midnight. In
+        * Europe/Lisbon — where this product runs — summer time makes that 23:00
+        * UTC the previous day, so `toISOString().slice(0, 10)` renders a credit
+        * issued on the 28th as the 27th, for half the year. Worse, `daysLeft`
+        * below is computed in SQL and would not shift, so the two would openly
+        * contradict each other on the same row.
+        */
+       `SELECT c.id,
               c.student_id,
-              c.issued_on,
-              c.expires_on,
+              to_char(c.issued_on,  'YYYY-MM-DD') AS issued_on,
+              to_char(c.expires_on, 'YYYY-MM-DD') AS expires_on,
               c.status::text AS status,
               cg.name AS class_name,
               (
@@ -89,8 +99,8 @@ export async function creditsFor(
     return rows.map((row) => ({
       id: row.id,
       studentId: row.student_id,
-      issuedOn: row.issued_on.toISOString().slice(0, 10),
-      expiresOn: row.expires_on.toISOString().slice(0, 10),
+      issuedOn: row.issued_on,
+      expiresOn: row.expires_on,
       status: row.status,
       className: row.class_name,
       bookingId: row.booking_id,

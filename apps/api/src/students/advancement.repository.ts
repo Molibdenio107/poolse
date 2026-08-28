@@ -115,7 +115,11 @@ export type ConfirmOutcome =
   | 'not_found'
   | 'not_pending'
   | 'no_such_turma'
-  | 'no_seat';
+  | 'no_seat'
+  /** Already has a live enrolment — including a waiting one — in the target turma. */
+  | 'already_in_turma'
+  /** Nothing to leave at that level, or a date before the enrolment began. */
+  | 'bad_effective_date';
 
 /**
  * Performs the transfer — criterion 5.
@@ -142,9 +146,10 @@ export async function confirmProposal(
     const { rows: found } = await tx.query<{
       status: string;
       student_id: string;
+      from_level_id: string;
       to_level_id: string;
     }>(
-      `SELECT status::text AS status, student_id, to_level_id
+      `SELECT status::text AS status, student_id, from_level_id, to_level_id
          FROM transfer_proposal
         WHERE id = $1 AND archived_at IS NULL
           FOR UPDATE`,
@@ -179,21 +184,58 @@ export async function confirmProposal(
     const free = seats[0]?.free;
     if (free !== null && free !== undefined && free <= 0) return 'no_seat';
 
-    // The old enrolment ends on the chosen day; the new one starts on it.
-    await tx.query(
-      `UPDATE enrollment
+    /*
+     * **Only the enrolments at the level being left.**
+     *
+     * This ended every active enrolment the student had until a review caught
+     * it. A student in two turmas — which the schema allows and `enrollment_live_uq`
+     * is written for, being per-turma — would have been quietly removed from
+     * both by advancing out of one. Nothing would have looked wrong; they would
+     * simply have stopped appearing on a register.
+     */
+    const ended = await tx.query(
+      `UPDATE enrollment e
           SET status = 'ended', ended_on = $3::date
-        WHERE student_id = $1
-          AND organization_id = $2
-          AND status = 'active'`,
-      [proposal.student_id, organizationId, effectiveOn],
+         FROM class_group cg
+        WHERE cg.id = e.class_group_id
+          AND cg.organization_id = e.organization_id
+          AND e.student_id = $1
+          AND e.organization_id = $2
+          AND e.status = 'active'
+          AND cg.level_id = $4
+          -- A backdated effective date must not end an enrolment before it
+          -- began: the schema refuses it, and a 500 is a worse answer than a
+          -- message. Left alone here and reported below.
+          AND e.joined_on <= $3::date`,
+      [proposal.student_id, organizationId, effectiveOn, proposal.from_level_id],
     );
 
-    await tx.query(
-      `INSERT INTO enrollment (organization_id, class_group_id, student_id, status, joined_on)
-       VALUES ($1, $2, $3, 'active', $4::date)`,
-      [organizationId, classGroupId, proposal.student_id, effectiveOn],
-    );
+    if ((ended.rowCount ?? 0) === 0) {
+      /*
+       * Nothing to end. Either the student is not enrolled at the level they are
+       * leaving, or the date predates the enrolment. Both are the caller's
+       * mistake rather than a server fault, and both are better said than
+       * guessed at.
+       */
+      return 'bad_effective_date';
+    }
+
+    /*
+     * `enrollment_live_uq` is partial on `status <> 'ended'`, so a *waiting* row
+     * on the target turma survives the update above and collides here. That is a
+     * real case — a family already asked for this turma — and a 23505 surfacing
+     * as a 500 would be the least helpful possible way to say so.
+     */
+    try {
+      await tx.query(
+        `INSERT INTO enrollment (organization_id, class_group_id, student_id, status, joined_on)
+         VALUES ($1, $2, $3, 'active', $4::date)`,
+        [organizationId, classGroupId, proposal.student_id, effectiveOn],
+      );
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') return 'already_in_turma';
+      throw error;
+    }
 
     // The student's own level moves with them, so every screen that filters by
     // level — including POOLSE-21's redemption filter — follows from here.

@@ -26,8 +26,22 @@ export interface Season {
   classGroups: number;
 }
 
+/**
+ * A `date` column as a plain calendar day.
+ *
+ * **Not `toISOString()`** — node-pg hands a `date` back as a JS Date at *local*
+ * midnight, and in Europe/Lisbon summer time that is 23:00 UTC the day before.
+ * A season starting on 1 September would read as 31 August for half the year.
+ * `getFullYear`/`getMonth`/`getDate` read the local fields the driver actually
+ * set, which is the day Postgres sent.
+ *
+ * Strings pass through: some drivers and some queries already hand back text.
+ */
 function isoDate(value: Date | string): string {
-  return typeof value === 'string' ? value.slice(0, 10) : value.toISOString().slice(0, 10);
+  if (typeof value === 'string') return value.slice(0, 10);
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${value.getFullYear()}-${month}-${day}`;
 }
 
 /**

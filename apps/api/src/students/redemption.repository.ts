@@ -84,11 +84,12 @@ export type BookOutcome =
 /**
  * Spends a credit on an occurrence — criteria 3 and 6.
  *
- * **Eligibility is re-checked inside the transaction, after locking the credit.**
- * The list a family is looking at was true when it was drawn, and the last place
- * on Tuesday can go while they decide. Checking only at render time is how two
- * guests land on a turma with one free seat — and `session_free_seats` counts
- * pending bookings, so the second request sees the first one's hold.
+ * **Eligibility is re-checked inside the transaction, under a lock on the
+ * occurrence.** The list a family is looking at was true when it was drawn, and
+ * the last place on Tuesday can go while they decide. `session_free_seats`
+ * counts pending bookings, so the second request sees the first one's hold — but
+ * only if the two requests actually contend, which is why the *session* is
+ * locked rather than the credit.
  *
  * The club's mode decides the outcome: self-service confirms at once, request
  * leaves it pending with a hold. Both take the seat, because a hold that could be
@@ -101,6 +102,21 @@ export async function bookCredit(
   actorMembershipId: string,
 ): Promise<BookOutcome> {
   return withOrg(organizationId, async (tx) => {
+    /*
+     * **Lock the occurrence first, then the credit.**
+     *
+     * Locking only the credit — which this did until a review caught it — serialises
+     * one family against themselves and nothing else. Two different credits racing
+     * for the last place on Tuesday never contend, both re-read the same STABLE
+     * seat count under READ COMMITTED, and both insert. Unlike `enrollment`, there
+     * is no capacity trigger on `reposicao_booking` to catch it underneath.
+     *
+     * The session row is what they actually contend over, so that is what is
+     * locked. Always in this order — session, then credit — so two requests can
+     * never take the two locks the opposite way round and deadlock.
+     */
+    await tx.query('SELECT id FROM class_session WHERE id = $1 FOR UPDATE', [sessionId]);
+
     const { rows: locked } = await tx.query<{
       status: string;
       mode: string;
@@ -173,15 +189,30 @@ export async function decideBooking(
   actorMembershipId: string,
 ): Promise<DecideOutcome> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ status: string }>(
-      `SELECT status::text AS status FROM reposicao_booking
-        WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+    const { rows } = await tx.query<{ status: string; started: boolean }>(
+      `SELECT b.status::text AS status, cs.starts_at <= now() AS started
+         FROM reposicao_booking b
+         JOIN class_session cs
+           ON cs.id = b.class_session_id AND cs.organization_id = b.organization_id
+        WHERE b.id = $1 AND b.archived_at IS NULL
+          FOR UPDATE OF b`,
       [bookingId],
     );
 
     const booking = rows[0];
     if (!booking) return 'not_found';
     if (booking.status !== 'pending') return 'not_pending';
+
+    /*
+     * A request nobody answered before the class ran cannot be approved now.
+     *
+     * Without this the credit is stranded: approving stamps it `booked`, cancel
+     * refuses once the class has started, the expiry sweep only touches
+     * `available`, and `settle` only moves credits whose class is in the past
+     * *and* whose booking was confirmed in time. The family would hold a credit
+     * that no path could ever free.
+     */
+    if (booking.started) return 'already_started';
 
     await tx.query(
       `UPDATE reposicao_booking
@@ -303,58 +334,15 @@ export async function studentOfCredit(
   });
 }
 
-/**
- * The guests coming to one occurrence — criterion 8.
+/*
+ * `guestsOf()` was here and is gone.
  *
- * Its own read, deliberately kept out of the enrolled roster. The ticket names
- * the likely mistake precisely: counting a reposição guest as an enrolled
- * student somewhere — the POOLSE-08 list, a seat count, an occupancy figure or a
- * communications audience. Two separate queries make that mistake require
- * effort, where one query with a flag would make it require care.
+ * Nothing called it, and it had already drifted from the query that does the job
+ * — the register builds its own roll in `attendance.repository.ts` and counts
+ * only *confirmed* guests, while this listed pending ones too. Two answers to
+ * "who is coming as a guest" is exactly the drift these reviews exist to catch,
+ * and the unused one is the one to delete.
  */
-export interface SessionGuest {
-  bookingId: string;
-  studentId: string;
-  name: string;
-  status: 'pending' | 'confirmed';
-}
-
-export async function guestsOf(
-  organizationId: string,
-  sessionId: string,
-): Promise<SessionGuest[]> {
-  return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{
-      booking_id: string;
-      student_id: string;
-      name: string;
-      status: 'pending' | 'confirmed';
-    }>(
-      `SELECT b.id AS booking_id,
-              s.id AS student_id,
-              short_name(s.first_name, s.last_name) AS name,
-              b.status::text AS status
-         FROM reposicao_booking b
-         JOIN reposicao_credit c
-           ON c.id = b.credit_id AND c.organization_id = b.organization_id
-         JOIN student s
-           ON s.id = c.student_id AND s.organization_id = c.organization_id
-        WHERE b.class_session_id = $1
-          AND b.status IN ('pending', 'confirmed')
-          AND b.archived_at IS NULL
-          AND s.archived_at IS NULL
-        ORDER BY name_sort_key(s.first_name, s.last_name) COLLATE pt_pt`,
-      [sessionId],
-    );
-
-    return rows.map((row) => ({
-      bookingId: row.booking_id,
-      studentId: row.student_id,
-      name: row.name,
-      status: row.status,
-    }));
-  });
-}
 
 /**
  * Releases holds nobody answered — the companion to the expiry job.

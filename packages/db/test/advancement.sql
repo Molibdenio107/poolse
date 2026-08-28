@@ -298,4 +298,64 @@ BEGIN
   RAISE NOTICE 'PASS test 7: proposals are invisible to another tenant';
 END $$;
 
+
+-- ---------------------------------------------------------------------------
+-- Test 8: advancing out of one turma must not end enrolment in another
+--
+-- Found in review, and the worst of the batch because it lost data in silence:
+-- the transfer ended *every* active enrolment for the student, so a child who
+-- also swam in a second turma simply stopped appearing on its register with
+-- nothing to show why.
+--
+-- Asserted at the schema level — the repository scopes its UPDATE to turmas at
+-- the level being left, and this pins the rule that scoping expresses.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  f RECORD; v_other_level uuid; v_other uuid; v_still int; v_left int;
+BEGIN
+  SELECT * INTO f FROM fixture;
+
+  -- A second turma at a different level — Hidro, say — that Ana also attends.
+  INSERT INTO student_level (organization_id, name, sort_order)
+  VALUES (f.org, 'Hidroginástica', 10) RETURNING id INTO v_other_level;
+
+  INSERT INTO class_group (organization_id, season_id, name, capacity, level_id)
+  SELECT f.org, cg.season_id, 'Hidro A', 8, v_other_level
+    FROM class_group cg WHERE cg.id = f.g1
+  RETURNING id INTO v_other;
+
+  INSERT INTO enrollment (organization_id, class_group_id, student_id, status)
+  VALUES (f.org, v_other, f.ana, 'active');
+
+  /*
+   * The transfer, as the repository performs it: end only the enrolments whose
+   * turma sits at the level being left.
+   */
+  UPDATE enrollment e
+     SET status = 'ended', ended_on = current_date
+    FROM class_group cg
+   WHERE cg.id = e.class_group_id
+     AND cg.organization_id = e.organization_id
+     AND e.student_id = f.ana
+     AND e.organization_id = f.org
+     AND e.status = 'active'
+     AND cg.level_id = f.l1;
+
+  SELECT count(*) INTO v_left FROM enrollment
+   WHERE student_id = f.ana AND class_group_id = f.g1 AND status = 'active';
+  IF v_left <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 8: the enrolment being advanced out of survived';
+  END IF;
+
+  SELECT count(*) INTO v_still FROM enrollment
+   WHERE student_id = f.ana AND class_group_id = v_other AND status = 'active';
+  IF v_still <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 8: advancing ended an unrelated turma enrolment';
+  END IF;
+
+  RAISE NOTICE 'PASS test 8: advancing leaves the student''s other turmas alone';
+END $$;
+
 ROLLBACK;

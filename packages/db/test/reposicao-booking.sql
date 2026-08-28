@@ -468,4 +468,63 @@ BEGIN
   RAISE NOTICE 'PASS test 9b: a cancelled class gives the reposição back';
 END $$;
 
+
+-- ---------------------------------------------------------------------------
+-- Test 10: a hold that ran out stops holding the seat
+--
+-- Found in review. `release_expired_reposicao_holds()` exists to tidy these away
+-- and **nothing calls it** — the product has no scheduler — so a pending request
+-- nobody answered removed a place from the occurrence permanently. The seat
+-- count now ignores a lapsed hold, so the rule is true without the sweep.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE f RECORD; v_free_before int; v_free_after int; v_session uuid; v_credit uuid;
+BEGIN
+  SELECT * INTO f FROM fixture;
+
+  -- A roomy occurrence of its own, so this test does not depend on the others.
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
+                             starts_at, duration_minutes, ends_at)
+  VALUES (f.org, f.grp, (SELECT id FROM pool WHERE organization_id = f.org LIMIT 1),
+          now() + interval '30 days', 45, now() + interval '30 days 45 minutes')
+  RETURNING id INTO v_session;
+
+  SELECT session_free_seats(v_session) INTO v_free_before;
+
+  -- Somebody asked, and nobody ever answered: the hold lapsed an hour ago.
+  -- Scoped to this club. Unscoped, this picked a credit belonging to the other
+  -- organization the isolation test creates, and the composite foreign key
+  -- refused it — which is the key doing exactly its job.
+  SELECT id INTO v_credit FROM reposicao_credit
+   WHERE organization_id = f.org AND archived_at IS NULL AND status = 'available'
+   LIMIT 1;
+
+  IF v_credit IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 10: no available credit to book with';
+  END IF;
+
+  INSERT INTO reposicao_booking (organization_id, credit_id, class_session_id,
+                                 status, requested_by_membership_id, holds_until)
+  VALUES (f.org, v_credit, v_session, 'pending', f.staff, now() - interval '1 hour');
+
+  SELECT session_free_seats(v_session) INTO v_free_after;
+
+  IF v_free_after <> v_free_before THEN
+    RAISE EXCEPTION 'FAIL test 10: a lapsed hold still holds a seat (% then %)',
+      v_free_before, v_free_after;
+  END IF;
+
+  -- While a live hold still does, which is the half that must not regress.
+  UPDATE reposicao_booking SET holds_until = now() + interval '1 hour'
+   WHERE class_session_id = v_session AND status = 'pending';
+
+  SELECT session_free_seats(v_session) INTO v_free_after;
+  IF v_free_after <> v_free_before - 1 THEN
+    RAISE EXCEPTION 'FAIL test 10: a live hold stopped holding its seat';
+  END IF;
+
+  RAISE NOTICE 'PASS test 10: a lapsed hold frees the seat, a live one keeps it';
+END $$;
+
 ROLLBACK;
