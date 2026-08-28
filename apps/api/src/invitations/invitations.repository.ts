@@ -19,8 +19,16 @@ export interface OrganizationMember {
   /**
    * The two composed forms — POOLSE-32.
    *
-   * Null only for somebody invited who has not accepted and has no name
-   * anywhere yet; the list falls back to their email address, as it always did.
+   * **They disagree about nobody, and that is deliberate.** `person_name`
+   * composes with `coalesce(..., '')` and returns an empty string for somebody
+   * invited who has no name anywhere yet; `short_name` wraps the same thing in
+   * `nullif` and returns null. So `displayName` is `''` where `shortName` is
+   * null, and a `?? email` fallback fires on one and not the other.
+   *
+   * Documented rather than papered over: the two functions have different
+   * callers — one fills a document, the other fills a row — and making them
+   * agree would mean picking a behaviour that is wrong for one of them.
+   * Callers that need a fallback should test for emptiness, not for null.
    */
   displayName: string | null;
   shortName: string | null;
@@ -237,9 +245,27 @@ export async function listMembers(
         LEFT JOIN membership_role mr
                ON mr.membership_id = m.id
               AND mr.organization_id = m.organization_id
-        LEFT JOIN invitation i
-               ON i.membership_id = m.id
-              AND i.organization_id = m.organization_id
+        /*
+         * **One invitation row at most**, and the LATERAL is what guarantees it.
+         *
+         * A plain LEFT JOIN fans the membership out once per invitation. That is
+         * invisible while everybody has one — and POOLSE-39's re-invite inserts a
+         * second against the *same* membership, so a colleague whose address was
+         * corrected appeared on the staff list twice. With POOLSE-29 it got
+         * worse: the window count counted the duplicates, so "de N" was wrong
+         * and a page could hold fourteen people.
+         *
+         * The most recent one, because the only thing this join is for is the
+         * address an unaccepted invite went to — the one name such a person has.
+         */
+        LEFT JOIN LATERAL (
+          SELECT i2.email
+            FROM invitation i2
+           WHERE i2.membership_id = m.id
+             AND i2.organization_id = m.organization_id
+           ORDER BY i2.created_at DESC
+           LIMIT 1
+        ) i ON true
        WHERE m.archived_at IS NULL
          /*
           * Staff, learners, or everybody. Written as EXISTS rather than as a

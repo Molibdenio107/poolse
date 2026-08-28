@@ -1,6 +1,8 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AdvancementController, RedemptionController } from './students.controller.js';
+import { listMembers } from '../invitations/invitations.repository.js';
+import { readPageQuery } from '../common/pagination.js';
 import {
   actingAs,
   addMember,
@@ -269,6 +271,50 @@ test('a credit is offered no class after it expires — 21.7, through the contro
        * endpoint is the rule.
        */
       await expectStatus(() => controller.book(credit!.id, { sessionId: future!.id }), 409);
+    });
+  });
+});
+
+test('a re-invited colleague appears on the staff list once, not twice', async () => {
+  await withScratchTenant(async (tenant) => {
+    /*
+     * Found in review. POOLSE-39's re-invite inserts a second invitation against
+     * the *same* membership, and the members query joined invitations plainly —
+     * so the person fanned out to one row per address. POOLSE-29 then counted the
+     * duplicates, making the range label wrong and a page hold fourteen people.
+     *
+     * The precondition is the whole test: one membership, two invitations. My
+     * first attempt at proving this created a *first* invitation and saw nothing,
+     * which is worth remembering — the bug needs two.
+     */
+    const colleague = await addMember(tenant, 'Sofia', 'Antunes', ['instructor']);
+
+    for (const email of ['sofia.old@example.test', 'sofia.new@example.test']) {
+      await tenant.sql(
+        `INSERT INTO invitation (organization_id, membership_id, email, token_hash,
+                                 roles, expires_at, invited_by_membership_id)
+         VALUES ($1, $2, $3::citext, $4, ARRAY['instructor']::member_role[],
+                 now() + interval '7 days', $5)`,
+        [tenant.organizationId, colleague, email, `${email}-hash`.padEnd(64, 'x'), tenant.ownerMembershipId],
+      );
+    }
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const page = await listMembers(
+        tenant.organizationId,
+        { scope: 'staff', role: null, search: null },
+        readPageQuery('1'),
+      );
+
+      const appearances = page.items.filter((m) => m.membershipId === colleague);
+      assert.equal(appearances.length, 1, 'a re-invited colleague is one person');
+
+      // And the total agrees with the rows, which is what the range label reads.
+      assert.equal(
+        page.total,
+        page.items.length,
+        'the total must not count the duplicate the join used to create',
+      );
     });
   });
 });

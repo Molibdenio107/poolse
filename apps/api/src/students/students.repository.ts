@@ -51,8 +51,14 @@ export interface Guardian {
   membershipId: string;
   /** Every part, first name first. The guardian block and any document. */
   name: string;
-  /** First given name + last surname, for the lists that show them — POOLSE-32. */
-  shortName: string;
+  /**
+   * First given name + last surname — POOLSE-32.
+   *
+   * Nullable: `short_name` returns null rather than an empty string for somebody
+   * invited who has not accepted and has no name anywhere yet. Typing it
+   * `string` made every caller believe no fallback was needed.
+   */
+  shortName: string | null;
   email: string | null;
   /**
    * Their relationship *to this student* — POOLSE-04, criterion 4.
@@ -566,7 +572,16 @@ export async function listStudents(
         * set that is filtered afterwards: that gives page 2 fewer rows than page
         * 1 and reads as data going missing.
         */
-       ORDER BY ${nameOrder('s')}
+       /*
+        * The id is the tiebreak, and it is load-bearing rather than tidy.
+        *
+        * Two students called Maria Silva sort equal, and an equal pair
+        * straddling the 15-row boundary can come back on page 1 *and* page 2
+        * while a third is never shown — Postgres is free to order ties
+        * differently between two queries. A total order is what makes paging
+        * stable, which POOLSE-29 criterion 4 asks for.
+        */
+       ORDER BY ${nameOrder('s')}, s.id
        LIMIT $3 OFFSET $4
       `,
       [query.search, query.levelId, limit, offset],
@@ -1013,8 +1028,8 @@ async function syncGuardians(
 export interface PersonSummary {
   membershipId: string;
   name: string;
-  /** First given name + last surname, for the picker's list — POOLSE-32. */
-  shortName: string;
+  /** First given name + last surname — POOLSE-32. Null for a nameless invitee. */
+  shortName: string | null;
   email: string | null;
   phone: string | null;
   taxNumber: string | null;
@@ -1034,7 +1049,7 @@ export async function searchPeople(
     const { rows } = await tx.query<{
       membership_id: string;
       name: string;
-      short_name: string;
+      short_name: string | null;
       email: string | null;
       phone: string | null;
       tax_number: string | null;
@@ -1064,10 +1079,17 @@ export async function searchPeople(
         WHERE m.archived_at IS NULL
           AND m.status <> 'invited'
           AND (
-            -- Accent- and case-insensitive on the name, exact on the keys. A NIF
-            -- typed in full is a lookup, not a search; a name is the other way
-            -- round.
-            lower(strip_accents(person_name(m.id))) LIKE '%' || lower(strip_accents($1::text)) || '%'
+            /*
+             * Accent- and case-insensitive on the name, exact on the keys. A NIF
+             * typed in full is a lookup, not a search; a name is the other way
+             * round.
+             *
+             * searchPredicate, like its three siblings. This one kept LIKE when
+             * the others were converted, which left % and _ working as wildcards
+             * in the guardian picker — typing "%" returned every person in the
+             * club as a match.
+             */
+            ${searchPredicate("coalesce(person_name(m.id), '')", '$1')}
             OR person_email(m.id) = $1::citext
             OR m.tax_number = $1::text
           )
@@ -1138,8 +1160,8 @@ export async function studentsOf(
 export interface GuardianRow {
   membershipId: string;
   name: string;
-  /** First given name + last surname — POOLSE-32. This page is a list. */
-  shortName: string;
+  /** First given name + last surname — POOLSE-32. Null for a nameless invitee. */
+  shortName: string | null;
   email: string | null;
   phone: string | null;
   hasLogin: boolean;
@@ -1156,7 +1178,7 @@ export async function listGuardians(
       total_count: number;
       membership_id: string;
       name: string;
-      short_name: string;
+      short_name: string | null;
       email: string | null;
       phone: string | null;
       has_login: boolean;
@@ -1212,7 +1234,8 @@ export async function listGuardians(
         * names under her, and splitting a family across a page boundary would
         * destroy the single fact this page exists to show.
         */
-       ORDER BY ${personOrder('m.id')}
+       -- Total, for the same reason as the register: see listStudents.
+       ORDER BY ${personOrder('m.id')}, m.id
        LIMIT $2 OFFSET $3
     `, [search, limit, offset]);
 
@@ -1450,8 +1473,18 @@ export async function mergeCandidates(
        * them fit on a screen. Keeping those apart means the merge rules stay one
        * thing to reason about.
        */
+      /*
+       * The ORDER BY is here, not left to the function.
+       *
+       * merge_candidates orders internally, but a SQL function can be inlined
+       * and its ordering is not a contract the planner owes the caller. Paging an
+       * unordered set shows a duplicate pair twice or never — which, on the
+       * screen whose whole job is "these two are the same person", is the worst
+       * place for it.
+       */
       `SELECT ${TOTAL_COUNT}, *
          FROM merge_candidates($1)
+        ORDER BY o_keep_name, o_keep_id, o_absorb_id
         LIMIT $2 OFFSET $3`,
       [organizationId, limit, offset],
     );

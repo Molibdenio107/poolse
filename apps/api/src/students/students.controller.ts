@@ -348,17 +348,30 @@ export class StudentsController {
    * What this student is owed — POOLSE-21, criteria 2 and 5.
    *
    * Oldest expiry first, so the perishable credits are the ones a family is
-   * offered. Readable by any member: an instructor asked "do I owe them a class?"
-   * at the poolside needs the answer, and it reveals nothing a register does not.
+   * offered.
+   *
+   * **Staff read anybody's; a family reads only their own.** This said
+   * "readable by any member" and reasoned that it "reveals nothing a register
+   * does not" — wrong twice over. A register is not readable by a student
+   * either, and this list names another family's missed classes and the booking
+   * ids that go with them. Every other POOLSE-21 route already took this check;
+   * this one was added later and did not.
    */
   @Get(':id/credits')
   async credits(@Param('id') id: string): Promise<{ credits: ReposicaoCredit[] }> {
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId } = currentTenant();
 
     // Through the same lookup as every other student read, so "not ours" and
     // "not there" stay indistinguishable.
     if ((await findStudent(organizationId, id)) === null) {
       throw new NotFoundException('No such student');
+    }
+
+    if (
+      !hasRole('owner', 'admin', 'instructor') &&
+      !(await mayActForStudent(organizationId, membershipId, id))
+    ) {
+      throw new ForbiddenException('That student is not yours');
     }
 
     return { credits: await creditsFor(organizationId, id) };
