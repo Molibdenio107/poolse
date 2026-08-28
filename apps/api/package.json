@@ -6,7 +6,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
-    "test": "nest build && node --test \"dist/**/*.test.js\"",
+    "test": "nest build && node --env-file-if-exists=../../.env --test \"dist/**/*.test.js\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -24,6 +24,8 @@
     "@nestjs/schematics": "^10.2.3",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "pg": "^8.13.1",
     "typescript": "^5.7.2"
   }
 }
