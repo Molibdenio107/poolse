@@ -16,7 +16,7 @@ const INITIAL: FormState = { ok: false };
 const INITIAL_GENERATE: GenerateState = { ok: false };
 
 const field =
-  'rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function Problem({ state }: { state: FormState }): React.ReactElement | null {
   const t = useTranslations();

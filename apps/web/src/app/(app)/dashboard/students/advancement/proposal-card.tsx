@@ -78,7 +78,7 @@ export function ProposalCard({
               type="date"
               value={effectiveOn}
               onChange={(event) => setEffectiveOn(event.target.value)}
-              className="rounded border border-border bg-background px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="rounded border border-border-strong bg-background px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             />
           </label>
 

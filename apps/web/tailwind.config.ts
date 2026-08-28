@@ -28,6 +28,8 @@ export default {
           muted: rgb('--foreground-muted'),
         },
         border: rgb('--border'),
+        // The boundary of an interactive control — WCAG 1.4.11. See globals.css.
+        'border-strong': rgb('--border-strong'),
 
         // shadcn/ui component names, pointing at the same palette. See the note
         // at the top of globals.css.

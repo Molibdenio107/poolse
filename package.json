@@ -12,6 +12,8 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "i18n:check": "pnpm --filter @poolse/web i18n:check",
+    "contrast:check": "pnpm --filter @poolse/web contrast:check",
+    "pt:check": "pnpm --filter @poolse/web pt:check",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d --wait && pnpm db:migrate",

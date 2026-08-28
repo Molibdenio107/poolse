@@ -51,6 +51,22 @@
     --foreground: 17 24 28;
     --foreground-muted: 90 103 112;
     --border: 217 224 229;
+    /*
+     * The boundary of a control somebody has to find — an input, a select, a
+     * search box — as distinct from a decorative divider.
+     *
+     * WCAG 1.4.11 wants 3:1 for "visual information required to identify user
+     * interface components", and an input here is identified by its border and
+     * nothing else: its own background sits at 1.04:1 against the card behind
+     * it, so the fill says nothing. `--border` is 1.43:1 against a card, which
+     * looks fine on a good monitor in good light and disappears on neither.
+     *
+     * Kept as a second token rather than darkening `--border`, because a divider
+     * between two rows of a list is decoration and 1.4.11 does not ask anything
+     * of it — darkening every rule in the app to fix the inputs would be a
+     * heavier design change than the problem calls for.
+     */
+    --border-strong: 132 145 155;
 
     --success: 74 155 106;
     --warning: 197 143 46;
@@ -107,6 +123,8 @@
     --foreground: 230 236 239;
     --foreground-muted: 148 162 172;
     --border: 44 55 63;
+    /* 3.13:1 against the card, 3.39:1 against the page — see the light theme. */
+    --border-strong: 92 106 117;
 
     --success: 106 187 138;
     --warning: 222 174 84;

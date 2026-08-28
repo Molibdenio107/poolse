@@ -34,7 +34,7 @@ export function CreateLevelForm({
           maxLength={120}
           aria-label={t('students.levelName')}
           placeholder={t('students.levelPlaceholder')}
-          className="min-w-48 flex-1 rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="min-w-48 flex-1 rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         />
         <button
           type="submit"
@@ -197,7 +197,7 @@ export function EditLevelForm({
           maxLength={120}
           defaultValue={level.name}
           aria-label={t('students.levelName')}
-          className="rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         />
 
         <AgeInputs minAgeMonths={level.minAgeMonths} maxAgeMonths={level.maxAgeMonths} />

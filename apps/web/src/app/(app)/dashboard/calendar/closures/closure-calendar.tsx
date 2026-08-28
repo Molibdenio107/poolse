@@ -341,7 +341,7 @@ function ClosureForm({
             <select
               name="poolId"
               defaultValue=""
-              className="rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <option value="">{t('calendar.wholeSite')}</option>
               {pools.map((pool) => (

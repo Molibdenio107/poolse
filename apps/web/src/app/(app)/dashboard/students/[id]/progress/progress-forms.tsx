@@ -14,7 +14,7 @@ import {
 const INITIAL: FormState = { ok: false };
 
 const field =
-  'rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /** The distances a pool actually races. Free entry stays possible via the number input. */
 const COMMON_DISTANCES = [25, 50, 100, 200, 400, 800, 1500];

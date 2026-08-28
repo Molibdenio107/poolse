@@ -8,7 +8,7 @@ import { searchPlacesAction, setPlaceAction } from './facility.actions';
 import { DEBOUNCE_MS, MIN_SEARCH_LENGTH } from '@/components/search-input';
 
 const FIELD =
-  'w-full rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'w-full rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * The city autocomplete — backlog round 3, story 3.

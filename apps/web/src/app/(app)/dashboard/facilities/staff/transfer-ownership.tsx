@@ -63,7 +63,7 @@ export function TransferOwnership({
           name="membershipId"
           required
           aria-label={t('transfer.chooseLabel')}
-          className="min-w-48 flex-1 rounded border border-border bg-background px-3 py-2"
+          className="min-w-48 flex-1 rounded border border-border-strong bg-background px-3 py-2"
         >
           {candidates.map((candidate) => (
             <option key={candidate.membershipId} value={candidate.membershipId}>

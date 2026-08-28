@@ -465,7 +465,7 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
     <div className="flex flex-col gap-2">
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-foreground-muted">{t('students.guardianFind')}</span>
-        <span className="flex items-center gap-2 rounded border border-border bg-background px-3 py-2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
+        <span className="flex items-center gap-2 rounded border border-border-strong bg-background px-3 py-2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
           <Search className="size-4 shrink-0 text-foreground-muted" aria-hidden />
           <input
             value={query}

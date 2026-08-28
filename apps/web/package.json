@@ -9,7 +9,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "i18n:check": "node scripts/check-messages.mjs",
     "test": "node --test \"src/**/*.test.ts\"",
-    "layout:check": "node scripts/check-layout.mjs"
+    "layout:check": "node scripts/check-layout.mjs",
+    "contrast:check": "node scripts/check-contrast.mjs",
+    "pt:check": "node scripts/check-portuguese.mjs"
   },
   "dependencies": {
     "@clerk/localizations": "^4.15.7",

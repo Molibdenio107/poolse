@@ -30,7 +30,7 @@ export function CreateOrganizationForm(): React.ReactElement {
         required
         maxLength={120}
         placeholder={t('organization.namePlaceholder')}
-        className="rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       />
 
       {/*
@@ -47,7 +47,7 @@ export function CreateOrganizationForm(): React.ReactElement {
         name="facilityName"
         maxLength={120}
         placeholder={t('organization.facilityPlaceholder')}
-        className="rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       />
       <p className="text-sm text-foreground-muted">{t('organization.facilityHint')}</p>
 

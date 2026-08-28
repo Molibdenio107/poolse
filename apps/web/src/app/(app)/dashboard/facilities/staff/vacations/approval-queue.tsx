@@ -134,7 +134,7 @@ function RequestCard({
             required
             maxLength={500}
             placeholder={t('vacations.reasonPlaceholder')}
-            className="rounded border border-border bg-background px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="rounded border border-border-strong bg-background px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           />
           <div className="flex items-center gap-3">
             <button

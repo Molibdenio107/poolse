@@ -362,7 +362,7 @@ function OverrideDialog({
           onChange={(event) => setReason(event.target.value)}
           maxLength={300}
           placeholder={t('skills.overrideReasonPlaceholder')}
-          className="rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         />
       </label>
 

@@ -15,7 +15,7 @@ const LOCALES = ['pt-PT', 'en'] as const;
 const THEMES = ['light', 'dark', 'system'] as const;
 
 const FIELD =
-  'rounded border border-border bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 const INVALID = 'border-danger';
 
 /**

@@ -189,7 +189,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                 maxLength={200}
                 placeholder={t('attendance.notePlaceholder')}
                 aria-label={t('attendance.noteFor', { name: entry.displayName })}
-                className="rounded border border-border bg-background px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="rounded border border-border-strong bg-background px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               />
             )}
 
