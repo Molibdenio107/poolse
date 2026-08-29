@@ -60,14 +60,11 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
       subtitle: [group.poolName, group.lane === null ? null : t('classes.laneN', { lane: group.lane })]
         .filter(Boolean)
         .join(' · '),
-      people: namesOf(group),
-      // Sorted with the reader's own collation, so "Ângela" lands where a
-      // Portuguese speaker looks for it rather than after "Zé".
-      peopleEmpty: t('classes.noStudents'),
-      peopleMore:
-        namesOf(group).length > 8
-          ? t('classes.andMore', { count: namesOf(group).length - 8 })
-          : undefined,
+      // No roll inside the card — round 5. The names made every square as tall
+      // as its turma is big, so a week of twelve classes was a page of lists.
+      // They are on the hover panel below, which is where somebody asking "who
+      // is in this?" looks.
+
       href: `/dashboard/classes/${group.id}`,
       // POOLSE-15. The full roll and the detail the column has no room for. The
       // names are the same array the slot already holds, so this costs nothing
@@ -163,7 +160,9 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
               dayNames={dayNames}
               emptyLabel={t('classes.noSlots')}
               // The one screen where a class on the grid opens its turma.
-              linkTitles
+              // The whole square opens the turma here — this grid has no
+              // controls on it, so the card can mean exactly one thing.
+              linkCards
             />
           </section>
 

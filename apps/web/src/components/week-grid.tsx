@@ -87,6 +87,7 @@ export function WeekGrid({
   dayNames,
   emptyLabel,
   linkTitles,
+  linkCards,
   todayWeekday,
   className,
 }: {
@@ -105,6 +106,15 @@ export function WeekGrid({
    * card, so the controls inside keep their own clicks.
    */
   linkTitles?: boolean | undefined;
+  /**
+   * The whole card opens the turma — round 5, Turmas only.
+   *
+   * Safe there and nowhere else: that grid carries no controls, so the card has
+   * exactly one thing it can mean. The Calendar's cards hold the register and
+   * cancel buttons, and a background that navigated as well is the ambiguity
+   * round 4 removed.
+   */
+  linkCards?: boolean | undefined;
   /**
    * Today's ISO weekday, when the week on screen is the current one — round 5.
    *
@@ -168,7 +178,12 @@ export function WeekGrid({
               <span className="text-sm text-foreground-muted">—</span>
             ) : (
               (byDay.get(day) ?? []).map((entry) => (
-                <Slot key={entry.key} entry={entry} linkTitle={linkTitles === true} />
+                <Slot
+                  key={entry.key}
+                  entry={entry}
+                  linkTitle={linkTitles === true}
+                  linkCard={linkCards === true}
+                />
               ))
             )}
           </div>
@@ -181,9 +196,11 @@ export function WeekGrid({
 function Slot({
   entry,
   linkTitle,
+  linkCard,
 }: {
   entry: WeekEntry;
   linkTitle: boolean;
+  linkCard: boolean;
 }): React.ReactElement {
   const body = (
     <>
@@ -286,8 +303,20 @@ function Slot({
       : 'border-border bg-surface hover:border-primary/50',
   );
 
+  const Wrapper = linkCard && entry.href !== undefined ? 'a' : 'div';
+
   const plain = (
-    <div className={classes}>
+    <Wrapper
+      {...(linkCard && entry.href !== undefined
+        ? {
+            href: entry.href,
+            className: cn(
+              classes,
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+            ),
+          }
+        : { className: classes })}
+    >
       {body}
 
       {/*
@@ -313,7 +342,7 @@ function Slot({
           {entry.action}
         </div>
       )}
-    </div>
+    </Wrapper>
   );
 
   /*

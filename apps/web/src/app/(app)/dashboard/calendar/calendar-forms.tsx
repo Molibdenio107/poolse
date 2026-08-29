@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 import type { Closure } from '@/lib/api';
 import type { FormState } from '../actions';
 import {
@@ -248,6 +249,7 @@ export function CancelSession({
   when,
   cancelled,
   byClosure,
+  compact,
 }: {
   organizationId: string;
   sessionId: string;
@@ -257,13 +259,31 @@ export function CancelSession({
   when: string;
   cancelled: boolean;
   byClosure: boolean;
+  /**
+   * Inside a chip on the schedule grid — round 5.
+   *
+   * The trigger there sits beside "Marcar presenças", and the two have to look
+   * like one pair of controls rather than a link and a shout. Only the trigger
+   * shrinks: the confirmation it opens is a destructive question and stays at
+   * the size everything else on the page is read at.
+   */
+  compact?: boolean;
 }): React.ReactElement | null {
   const t = useTranslations();
   const [state, action, pending] = useActionState(cancelSessionAction, INITIAL);
   const [open, setOpen] = useState(false);
 
   if (byClosure) {
-    return <span className="text-xs text-foreground-muted">{t('calendar.byClosure')}</span>;
+    return (
+      <span
+        className={cn(
+          'text-foreground-muted',
+          compact === true ? 'text-[0.65rem]' : 'text-xs',
+        )}
+      >
+        {t('calendar.byClosure')}
+      </span>
+    );
   }
 
   // Cancelled by a person: there is nothing to offer. The slot is already struck
@@ -276,7 +296,11 @@ export function CancelSession({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded text-sm text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={cn(
+          'rounded text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+          // Matches the "Marcar presenças" link it sits beside on the grid.
+          compact === true ? 'text-[0.65rem] font-medium' : 'text-sm',
+        )}
       >
         {t('calendar.cancel')}
       </button>

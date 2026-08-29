@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Calendar, type Classes } from '@/lib/api';
+import { ApiError, apiFetch, type Calendar, type Classes, type Closure } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import {
   addDays,
@@ -14,7 +14,8 @@ import {
   shortDate,
   today,
 } from '@/lib/dates';
-import { ScheduleBoard } from '../classes/schedule-board';
+import { ScheduleBoard, type SessionControls } from '../classes/schedule-board';
+import { slotKey } from '@/lib/slot-key';
 import { CancelSession, GenerateSeason } from './calendar-forms';
 import { PageShell } from '@/components/page-shell';
 
@@ -81,11 +82,48 @@ export default async function CalendarPage({
     season is regenerated.
   */
   let classes: Classes | null = null;
-  if (calendar !== null && calendar.canManage) {
+  if (calendar !== null) {
     try {
       classes = await apiFetch<Classes>('/class-groups');
     } catch {
       classes = null;
+    }
+  }
+
+  /*
+    The closures covering this week — round 5.
+
+    Fetched for the year and narrowed here rather than asked for per week: the
+    endpoint is a year at a time because Encerramentos draws a year, and a club
+    has a few dozen closures, so filtering seven days out of them costs nothing.
+
+    A repeating closure is a pattern, so it is projected onto the year on screen
+    before being compared — the same thing the closures calendar does.
+  */
+  let closedDays: { weekday: number; reason: string }[] = [];
+  if (calendar !== null) {
+    try {
+      const { closures } = await apiFetch<{ closures: Closure[] }>(
+        `/closures?year=${monday.slice(0, 4)}`,
+      );
+
+      closedDays = [0, 1, 2, 3, 4, 5, 6].flatMap((offset) => {
+        const date = addDays(monday, offset);
+        const hit = closures.find((closure) => {
+          const from = closure.repeatsAnnually
+            ? `${date.slice(0, 4)}-${closure.startsOn.slice(5)}`
+            : closure.startsOn;
+          const to = closure.repeatsAnnually
+            ? `${date.slice(0, 4)}-${closure.endsOn.slice(5)}`
+            : closure.endsOn;
+          return date >= from && date <= to;
+        });
+
+        return hit === undefined ? [] : [{ weekday: offset + 1, reason: hit.reason }];
+      });
+    } catch {
+      // A closure list that will not load costs the locks, not the calendar.
+      closedDays = [];
     }
   }
 
@@ -99,95 +137,56 @@ export default async function CalendarPage({
     ]),
   );
 
-  const entries: WeekEntry[] = (calendar?.sessions ?? []).map((session): WeekEntry => {
-    const cancelled = session.status === 'cancelled';
-    return {
-      key: session.id,
-      weekday: session.weekday,
-      startTime: session.localTime,
-      durationMinutes: session.durationMinutes,
-      title: session.className,
-      subtitle: [
-        session.poolName,
-        session.lane === null ? null : t('classes.laneN', { lane: session.lane }),
-        session.substituteName ?? session.instructorName,
-        t('calendar.enrolled', { count: session.enrolled }),
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      href: `/dashboard/classes/${session.classGroupId}`,
-      cancelled,
-      muted: cancelled,
-      note: cancelled
-        ? // A cancellation with no reason still has to read as a cancellation.
-          session.cancellationReason ?? t('calendar.cancelledNoReason')
-        : null,
-      // Marking is the thing an instructor opens the calendar to do, so it sits
-      // on the slot itself rather than two clicks away behind the turma. The
-      // week travels with it so "back" returns to the week being worked
-      // through, not to today's.
-      /*
-        The full roll on hover — POOLSE-15.
-        
-        Only for a class that is actually happening. A cancelled slot already
-        says why in its note, and a panel listing the students who are not
-        coming would be noise on the one screen that explains itself.
-      */
-      detail: cancelled
-        ? undefined
-        : {
-            facts: [
-              session.levelName === null
-                ? null
-                : { label: t('classes.level'), value: session.levelName },
-              session.substituteName ?? session.instructorName
-                ? {
-                    label: t('classes.instructor'),
-                    value: (session.substituteName ?? session.instructorName) as string,
-                  }
-                : null,
-              {
-                label: t('classes.when'),
-                value: `${session.localDate} · ${session.localTime} · ${session.durationMinutes}′`,
+  /*
+    The two things you do to a session, rendered here and handed to the board.
+
+    They are server-rendered because `CancelSession` needs the formatted date and
+    the locale, and the board is a client component that has neither. Passing
+    finished nodes keeps the board ignorant of what a cancel form is, which is
+    why it can stay a grid rather than becoming the calendar's controller.
+  */
+  /*
+    The two controls, keyed by the slot they belong to.
+
+    Keyed by turma + weekday + time rather than by session id, because the grid
+    is drawn from the weekly pattern and looks its session up. A slot with no
+    session generated yet simply finds nothing here and shows no controls, which
+    is honest: there is no occurrence to mark or cancel.
+  */
+  const controls: Record<string, SessionControls> = Object.fromEntries(
+    (calendar?.sessions ?? []).map((session) => {
+      const cancelled = session.status === 'cancelled';
+
+      return [
+        slotKey(session.classGroupId, session.weekday, session.localTime),
+        {
+          // Nothing to mark on a class that is not happening.
+          mark: cancelled
+            ? undefined
+            : {
+                href: `/dashboard/calendar/sessions/${session.id}?week=${monday}`,
+                label: t('attendance.mark'),
               },
-              session.poolName === null
-                ? null
-                : {
-                    label: t('classes.pool'),
-                    value: [
-                      session.poolName,
-                      session.lane === null
-                        ? null
-                        : t('classes.laneN', { lane: session.lane }),
-                    ]
-                      .filter(Boolean)
-                      .join(' · '),
-                  },
-            ].filter((fact): fact is { label: string; value: string } => fact !== null),
-            people: session.students,
-            peopleEmpty: t('classes.noStudents'),
-          },
-      mark: cancelled
-        ? undefined
-        : {
-            href: `/dashboard/calendar/sessions/${session.id}?week=${monday}`,
-            label: t('attendance.mark'),
-          },
-      action:
-        calendar?.canManage === true ? (
-          <CancelSession
-            organizationId={calendar.organizationId}
-            sessionId={session.id}
-            className={session.className}
-            // Formatted here rather than in the form: this component has the
-            // locale, and a client component would have to be handed it anyway.
-            when={`${longDate(session.localDate, locale)}, ${session.localTime}`}
-            cancelled={cancelled}
-            byClosure={session.byClosure}
-          />
-        ) : undefined,
-    };
-  });
+          cancel:
+            calendar?.canManage === true ? (
+              <CancelSession
+                organizationId={calendar.organizationId}
+                sessionId={session.id}
+                className={session.className}
+                when={`${longDate(session.localDate, locale)}, ${session.localTime}`}
+                cancelled={cancelled}
+                byClosure={session.byClosure}
+                compact
+              />
+            ) : undefined,
+          cancelled,
+          note: cancelled
+            ? (session.cancellationReason ?? t('calendar.cancelledNoReason'))
+            : null,
+        },
+      ];
+    }),
+  );
 
   return (
     <PageShell
@@ -273,25 +272,26 @@ export default async function CalendarPage({
               <WeekLink week={today()} label={t('calendar.today')} />
             </div>
 
-            {classes !== null && (
+            {classes !== null ? (
               <ScheduleBoard
                 organizationId={classes.organizationId}
                 groups={classes.groups}
                 facilities={classes.facilities}
-                // Dated headers here, matching the grid below — round 5. The
-                // board still edits the *weekly pattern*, so the note above it
-                // says a drop changes every week, not only this one.
+                closures={closedDays}
+                controls={controls}
                 dayNames={dayNames}
-                canManage={classes.canManage}
+                canManage={calendar.canManage}
+              />
+            ) : (
+              // The turmas would not load. The week is still worth showing, and
+              // the read-only grid is what this page was before the board.
+              <WeekGrid
+                entries={[]}
+                dayNames={dayNames}
+                emptyLabel={t('calendar.emptyWeek')}
+                todayWeekday={todayWeekday}
               />
             )}
-
-            <WeekGrid
-              entries={entries}
-              dayNames={dayNames}
-              emptyLabel={t('calendar.emptyWeek')}
-              todayWeekday={todayWeekday}
-            />
 
             {/*
               The same range again, under the grid — round 5.
@@ -318,7 +318,7 @@ export default async function CalendarPage({
               problem, and only the operator can tell them apart, so the hint
               names both rather than guessing.
             */}
-            {entries.length === 0 && calendar.canManage && (
+            {calendar.sessions.length === 0 && calendar.canManage && (
               <p className="text-sm text-foreground-muted">{t('calendar.emptyWeekHint')}</p>
             )}
           </section>

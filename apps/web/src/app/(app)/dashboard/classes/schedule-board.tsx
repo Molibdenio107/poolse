@@ -14,83 +14,51 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Lock } from 'lucide-react';
 import type { ClassGroup, FacilityDay } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { slotKey } from '@/lib/slot-key';
 import { cn } from '@/lib/utils';
 import { moveSlotAction, placeSlotAction } from './classes.actions';
 
 /**
- * Building a week by dragging — round 5.
+ * The week: what is happening, and how to change it — round 5.
  *
- * **Why a time grid and not the seven stacked columns next door.** `WeekGrid`
- * answers "what happens on Tuesday" and stacks whatever it finds; you cannot
- * drop onto it, because a column has no notion of *when*. A drop target has to
- * be a day *and* a time, so this is weekday columns crossed with half-hour rows,
- * and the empty cells are the point — they are the open slots an operator is
- * looking for when they ask "where can this turma go".
+ * **One grid, not two.** This screen carried a drag board for the weekly pattern
+ * and, below it, a read-only grid of the week's real sessions with the register
+ * and cancel controls on them. The same class appeared twice, and the two
+ * answers to "what happens on Tuesday" were a screen apart. This is both: the
+ * columns are dated, the chips are the sessions that actually exist, and
+ * dragging one edits the pattern behind it.
  *
- * **Half-hour rows, for now.** CLAUDE.md settles that the grid step is a
- * per-organization setting of 15, 30 or 60 minutes; that column does not exist
- * yet, so this uses 30 and reads it from one constant. When the setting lands it
- * feeds `STEP_MINUTES` and nothing else here changes.
+ * **What a drag changes is still the pattern.** A class on screen is one
+ * Tuesday; the row you move belongs to every Tuesday. That is stated on the
+ * board rather than left to be discovered, because it is the one thing here
+ * somebody could reasonably get wrong.
  *
- * **The drop writes immediately and offers an undo.** That is the round-5
- * decision, and it is the right one for the job this screen does: setting up a
- * season is twenty drops, and a confirmation dialog on each would make dragging
- * slower than the form it replaces. The undo removes exactly the row the drop
- * created, by id, so it cannot delete a slot somebody else added meanwhile.
+ * **A closed day is locked and named.** Feriados and encerramentos are dated, so
+ * they lock the column for the week being looked at and say which closure did
+ * it. Page to another week and the day is open again — which is true, and is why
+ * the name matters more than the shading.
  *
- * **Keyboard parity is not optional here.** CLAUDE.md is explicit that a control
- * only a mouse can reach is a control half the staff cannot use, so every chip
- * is a real button: `KeyboardSensor` picks it up with Space, arrows move between
- * cells, Space drops, Escape cancels. dnd-kit announces each step. That is the
- * whole reason a library went in rather than more hand-rolled pointer maths.
+ * **Rows come from the site's own opening hours**, clamped to 06:00–24:00 and
+ * widened by any class outside them. That last rule is not tidiness: a 06:30
+ * class at a site whose grid began at 07:00 was invisible, which is how a turma
+ * with two slots showed one.
  *
- * **A drop cannot get round a constraint.** The facility-hours trigger fires on
- * both the insert and the move, so dropping onto a closed day or a time that
- * would run past closing is refused exactly as typing it would be, and the grid
- * says so rather than silently doing nothing.
+ * **Keyboard parity.** Every chip is a real button: Space picks it up, arrows
+ * move, Space drops, Escape cancels, and dnd-kit announces each step.
  */
 
-/**
- * Fifteen minutes — round 5.
- *
- * CLAUDE.md settles that the step is a per-organization setting of 15, 30 or 60;
- * that column does not exist yet, so this is the finest of the three. It is the
- * finest deliberately: at 30 minutes a class starting at 06:15 had no row to
- * live in and simply did not appear, which is how a Masters turma with two slots
- * showed only one. A row too many is a longer grid; a row too few loses data.
- */
+/** See the header — one constant until the per-organization setting exists. */
 const STEP_MINUTES = 15;
-
-/**
- * The hours the grid will draw, at most — round 5 follow-up.
- *
- * A site whose hours are the default 00:00–24:00 produced 96 rows, which is a
- * board you scroll past rather than read. Nothing in a swimming club happens
- * between midnight and six, so the grid is clamped to 06:00–24:00 and the empty
- * third of the night stops being drawn.
- *
- * **It is a clamp, not a replacement.** The window is still the site's own
- * opening hours; this only stops them running wider than the part of the day
- * anybody uses. And a class already scheduled outside it still widens the grid
- * to include itself — the 06:30 Masters class that went missing is exactly what
- * that rule exists for, and a tidier grid must not bring it back.
- */
 const GRID_EARLIEST = 6 * 60;
 const GRID_LATEST = 24 * 60;
 
-/**
- * One 15-minute row, in rem — and the reason it is a number rather than a class.
- *
- * A chip has to be as tall as its class is long: 45 minutes is three rows, not
- * one. That means computing a height, which means the row height has to exist as
- * a value here rather than only as Tailwind on the cell.
- */
+/** One row, in rem. A chip's height is computed from it, so it is a number. */
 const ROW_REM = 1.5;
 
-/** 45 minutes is what the slot form defaults to; only used for a turma with no slots. */
+/** Only used for a turma with no slot to copy a length from. */
 const FALLBACK_DURATION = 45;
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
@@ -104,30 +72,56 @@ function toTime(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 }
 
+/**
+ * What the page hands over for one slot in the week on screen.
+ *
+ * Keyed by `groupId|weekday|startTime` rather than by session id, because the
+ * grid is drawn from the *pattern* and looks the session up — see the note on
+ * `placed`.
+ */
+export interface SessionControls {
+  /** "Take the register", already pointed at the right week. */
+  mark?: { href: string; label: string } | undefined;
+  /** The cancel/restore form — a client component the page renders. */
+  cancel?: React.ReactNode;
+  /** Whether this week's occurrence is cancelled, and why. */
+  cancelled?: boolean;
+  note?: string | null;
+}
+
+
 interface Placed {
-  scheduleId: string;
+  key: string;
+  /** Null when nothing in the pattern matches — a session that cannot be dragged. */
+  scheduleId: string | null;
   groupId: string;
   name: string;
+  subtitle: string | null;
   weekday: number;
   startMinutes: number;
   durationMinutes: number;
+  cancelled: boolean;
+  note: string | null;
+  controls: SessionControls;
 }
 
 export function ScheduleBoard({
   organizationId,
   groups,
   facilities,
+  closures,
+  controls,
   dayNames,
   canManage,
 }: {
   organizationId: string;
   groups: ClassGroup[];
-  /** Every site with its weekly hours. The picker chooses one; the grid follows it. */
   facilities: { id: string; name: string; hours: FacilityDay[] }[];
-  /**
-   * Indexed by ISO weekday. Supplied translated — and, on the Calendar page,
-   * carrying the real date as well ("Ter · 25 ago").
-   */
+  /** Closed days in the week on screen, by ISO weekday, with the reason. */
+  closures: { weekday: number; reason: string }[];
+  /** Register and cancel controls, keyed by `slotKey`. */
+  controls: Record<string, SessionControls>;
+  /** Dated headers — "Ter · 25 ago". */
   dayNames: Record<number, string>;
   canManage: boolean;
 }): React.ReactElement {
@@ -137,30 +131,15 @@ export function ScheduleBoard({
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ groupId: string; scheduleId: string } | null>(null);
-
-  // Where the moved slot came from. A ref rather than state because nothing
-  // renders from it — it is only read when Undo is pressed, and putting it in
-  // state would re-render the grid on every drop for no visible reason.
   const undoTarget = useRef<{ weekday: number; startTime: string } | null>(null);
 
-  /*
-    One site at a time — round 5.
-
-    Turmas from every site used to share one grid, which meant the rows had to
-    span the widest hours of any of them and a class could be drawn against a day
-    its own building is shut. Picking a site makes the grid mean something: these
-    are that pool's hours, and these are the turmas that can go in them.
-  */
   const [facilityId, setFacilityId] = useState(facilities[0]?.id ?? '');
   const facility = facilities.find((site) => site.id === facilityId) ?? facilities[0];
 
+  // A turma with no pool has no site either, and is exactly the one somebody is
+  // about to place — so it belongs to whichever site is being looked at.
   const mine = useMemo(
-    // A turma with no pool has no site either, and belongs to whichever site is
-    // being looked at — it is exactly the turma somebody is about to place.
-    () =>
-      groups.filter(
-        (group) => group.facilityId === null || group.facilityId === facility?.id,
-      ),
+    () => groups.filter((group) => group.facilityId === null || group.facilityId === facility?.id),
     [groups, facility],
   );
 
@@ -169,60 +148,81 @@ export function ScheduleBoard({
     [mine],
   );
 
+  /*
+   * Drawn from the pattern, not from the generated sessions.
+   *
+   * This was the other way round for one commit and it was wrong. The chips were
+   * `class_session` rows, and a drag edits `class_schedule` — so moving a class
+   * updated the pattern and left the chip exactly where it was, because the
+   * session for that week had not moved. It looked like the drag did nothing.
+   *
+   * Regenerating after each drag is not the fix either: `generate_sessions`
+   * inserts what the pattern implies and does not remove a session whose slot
+   * has moved away, so the class would appear twice — once where it used to be
+   * and once where it now is.
+   *
+   * So the weekly pattern is what the grid draws, which is also the thing a drag
+   * changes, and the session for the week on screen is looked up to supply the
+   * register link, the cancel control and the cancelled state. A slot with no
+   * session yet is still a real class on a real day; it simply has nothing to
+   * mark until the season is generated.
+   */
   const placed = useMemo<Placed[]>(
     () =>
       mine.flatMap((group) =>
-        group.schedules.map((slot) => ({
-          scheduleId: slot.id,
-          groupId: group.id,
-          name: group.name,
-          weekday: slot.weekday,
-          startMinutes: toMinutes(slot.startTime),
-          durationMinutes: slot.durationMinutes,
-        })),
+        group.schedules.map((slot) => {
+          const extra = controls[slotKey(group.id, slot.weekday, slot.startTime)] ?? {};
+
+          return {
+            key: slot.id,
+            scheduleId: slot.id,
+            groupId: group.id,
+            name: group.name,
+            subtitle:
+              [
+                group.poolName,
+                group.lane === null ? null : t('classes.laneN', { lane: group.lane }),
+                group.instructorName,
+              ]
+                .filter(Boolean)
+                .join(' · ') || null,
+            weekday: slot.weekday,
+            startMinutes: toMinutes(slot.startTime),
+            durationMinutes: slot.durationMinutes,
+            cancelled: extra.cancelled === true,
+            note: extra.note ?? null,
+            controls: extra,
+          };
+        }),
       ),
-    [mine],
+    [mine, controls, t],
   );
 
-  /*
-    The days this site opens — plus any day that already holds a class.
+  const closedOn = (day: number): string | null =>
+    closures.find((closure) => closure.weekday === day)?.reason ?? null;
 
-    The second half matters: closing Sunday does not delete the classes already
-    on it (that is the round-4 decision), so a grid that showed only open days
-    would hide them. A day that is closed but occupied is drawn, and the trigger
-    still refuses anything new on it.
-  */
   const openOn = (day: number): boolean =>
     facility?.hours.find((hour) => hour.weekday === day)?.available ?? true;
 
+  // Open days, plus any day that already holds a class: closing a day does not
+  // delete what is on it, and a grid that hid those would hide real classes.
   const days = WEEKDAYS.filter(
     (day) => openOn(day) || placed.some((slot) => slot.weekday === day),
   );
 
-  /*
-    The rows, from the earliest opening to the latest closing across the days on
-    screen — round 5.
-
-    Per-day rows would be the truthful thing and produce a ragged grid no eye can
-    scan across, so the window is the union and a cell outside its own day's
-    hours is simply not a drop target. `24:00` is 1440, which is why the closing
-    time is parsed rather than assumed to be a clock face.
-  */
-  const window = useMemo(() => {
+  const bounds = useMemo(() => {
     const opens: number[] = [];
     const closes: number[] = [];
 
     for (const day of days) {
       const hour = facility?.hours.find((candidate) => candidate.weekday === day);
       if (hour === undefined) continue;
-      // Clamped, so a site "open" from midnight does not draw six empty hours.
       opens.push(Math.max(toMinutes(hour.opensAt), GRID_EARLIEST));
       closes.push(Math.min(toMinutes(hour.closesAt), GRID_LATEST));
     }
 
-    // Any class already outside those hours still has to be on the grid, or the
-    // bug this replaced comes straight back. Its whole length, not just its
-    // start, so a class that ends after the window does not have its tail cut.
+    // A class already outside those hours widens the grid to itself, or the bug
+    // this replaced comes straight back.
     for (const slot of placed) {
       opens.push(slot.startMinutes);
       closes.push(slot.startMinutes + slot.durationMinutes);
@@ -230,8 +230,6 @@ export function ScheduleBoard({
 
     if (opens.length === 0) return { from: GRID_EARLIEST, to: GRID_LATEST };
 
-    // Rounded outwards to whole steps so the first and last rows are not a
-    // fraction of the others.
     const from = Math.floor(Math.min(...opens) / STEP_MINUTES) * STEP_MINUTES;
     const to = Math.ceil(Math.max(...closes) / STEP_MINUTES) * STEP_MINUTES;
     return { from, to: Math.max(to, from + STEP_MINUTES) };
@@ -239,13 +237,12 @@ export function ScheduleBoard({
 
   const rows = useMemo(() => {
     const out: number[] = [];
-    for (let m = window.from; m < window.to; m += STEP_MINUTES) out.push(m);
+    for (let m = bounds.from; m < bounds.to; m += STEP_MINUTES) out.push(m);
     return out;
-  }, [window]);
+  }, [bounds]);
 
   const sensors = useSensors(
-    // A small distance so a click on a chip's own link is still a click and not
-    // the start of a drag.
+    // A distance, so a click on a control inside a chip is a click and not a drag.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
@@ -264,7 +261,6 @@ export function ScheduleBoard({
     const [, weekdayText, minutesText] = String(over.id).split(':');
     const weekday = Number(weekdayText);
     const startTime = toTime(Number(minutesText));
-
     const active = String(event.active.id);
 
     startPending(async () => {
@@ -273,38 +269,28 @@ export function ScheduleBoard({
         const group = mine.find((candidate) => candidate.id === groupId);
         if (group === undefined) return;
 
-        // The turma's own length, so a second day matches the first.
-        const duration = group.schedules[0]?.durationMinutes ?? FALLBACK_DURATION;
-
         const result = await placeSlotAction(
           organizationId,
           groupId,
           weekday,
           startTime,
-          duration,
+          group.schedules[0]?.durationMinutes ?? FALLBACK_DURATION,
         );
-        if (!result.ok) {
-          setError(result.errorKey);
-          return;
-        }
-        // The undo cannot name the new row's id — the action revalidates rather
-        // than returning it — so it is offered only for the move, where the id
-        // is already known. Placing is undone by removing the slot on the grid,
-        // which is one click away and unambiguous.
-        setUndo(null);
+        if (!result.ok) setError(result.errorKey);
+        else setUndo(null);
         return;
       }
 
       const scheduleId = active.slice('slot:'.length);
       const slot = placed.find((candidate) => candidate.scheduleId === scheduleId);
-      if (slot === undefined) return;
+      if (slot === undefined || slot.scheduleId === null) return;
 
       const before = { weekday: slot.weekday, startTime: toTime(slot.startMinutes) };
 
       const result = await moveSlotAction(
         organizationId,
         slot.groupId,
-        scheduleId,
+        slot.scheduleId,
         weekday,
         startTime,
       );
@@ -313,9 +299,7 @@ export function ScheduleBoard({
         return;
       }
 
-      setUndo({ groupId: slot.groupId, scheduleId });
-      // Remembered on the closure so the undo puts it back exactly, rather than
-      // guessing from a grid that has already re-rendered.
+      setUndo({ groupId: slot.groupId, scheduleId: slot.scheduleId });
       undoTarget.current = before;
     });
   }
@@ -327,18 +311,9 @@ export function ScheduleBoard({
         ? (mine.find((group) => group.id === dragging.slice('group:'.length))?.name ?? null)
         : (placed.find((slot) => slot.scheduleId === dragging.slice('slot:'.length))?.name ?? null);
 
-  if (!canManage) {
-    return <p className="text-sm text-foreground-muted">{t('students.readOnly')}</p>;
-  }
-
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className="flex flex-col gap-4">
-        {/*
-          The turmas with nowhere to be, at the top — round 5. They are the work
-          in front of somebody setting up a season, and they were below a grid
-          that is taller than the screen.
-        */}
         {facilities.length > 1 && (
           <div className={`${FIELD_COLUMN} sm:w-64`}>
             <label htmlFor="board-facility" className={FIELD_LABEL}>
@@ -359,30 +334,27 @@ export function ScheduleBoard({
           </div>
         )}
 
-        <section className="flex flex-col gap-2 rounded border border-dashed border-border bg-surface-muted p-4">
-          <h3 className="text-sm font-medium">{t('classes.unscheduled')}</h3>
+        {canManage && (
+          <section className="flex flex-col gap-2 rounded border border-dashed border-border bg-surface-muted p-4">
+            <h3 className="text-sm font-medium">{t('classes.unscheduled')}</h3>
 
-          {unscheduled.length === 0 ? (
-            <p className="text-sm text-foreground-muted">{t('classes.allScheduled')}</p>
-          ) : (
-            <>
-              <p className="text-sm text-foreground-muted">{t('classes.dragHint')}</p>
-              {/*
-                Said on both screens, and it matters most on the Calendar one,
-                where the headers carry real dates: a drop changes the weekly
-                pattern, so it changes every Tuesday and not the 25th.
-              */}
-              <p className="text-sm text-foreground-muted">{t('classes.patternNote')}</p>
-              <ul className="flex flex-wrap gap-2">
-                {unscheduled.map((group) => (
-                  <li key={group.id}>
-                    <Chip id={`group:${group.id}`} label={group.name} />
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
+            {unscheduled.length === 0 ? (
+              <p className="text-sm text-foreground-muted">{t('classes.allScheduled')}</p>
+            ) : (
+              <>
+                <p className="text-sm text-foreground-muted">{t('classes.dragHint')}</p>
+                <p className="text-sm text-foreground-muted">{t('classes.patternNote')}</p>
+                <ul className="flex flex-wrap gap-2">
+                  {unscheduled.map((group) => (
+                    <li key={group.id}>
+                      <Chip id={`group:${group.id}`} label={group.name} />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        )}
 
         {error !== null && (
           <p role="status" className="text-sm text-danger">
@@ -417,24 +389,35 @@ export function ScheduleBoard({
           </p>
         )}
 
-        {/*
-          `overflow-x-auto` on the grid, never on the page: CLAUDE.md's rule, and
-          on a laptop seven columns of half-hours genuinely does not fit.
-        */}
+        {/* The grid scrolls sideways inside itself, never the page. */}
         <div className="overflow-x-auto">
           <div
-            className="grid min-w-[48rem]"
+            className="grid min-w-[52rem]"
             style={{ gridTemplateColumns: `4rem repeat(${days.length}, minmax(0, 1fr))` }}
           >
             <div aria-hidden />
-            {days.map((day) => (
-              <div
-                key={day}
-                className="border-b border-border pb-2 text-center text-sm font-medium uppercase tracking-wider text-foreground-muted"
-              >
-                {dayNames[day]}
-              </div>
-            ))}
+            {days.map((day) => {
+              const closed = closedOn(day);
+              return (
+                <div
+                  key={day}
+                  className="border-b border-border pb-2 text-center text-sm font-medium uppercase tracking-wider text-foreground-muted"
+                >
+                  {dayNames[day]}
+                  {/*
+                    The closure's name, not just a shade. A dim column says
+                    something is different; "Natal" says what, which is the
+                    question the operator actually has.
+                  */}
+                  {closed !== null && (
+                    <span className="mt-0.5 flex items-center justify-center gap-1 text-xs font-normal normal-case text-warning">
+                      <Lock aria-hidden className="size-3" />
+                      {closed}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
 
             {rows.map((minutes) => (
               <Row
@@ -444,17 +427,14 @@ export function ScheduleBoard({
                 placed={placed}
                 dragging={dragging !== null}
                 hours={facility?.hours ?? []}
+                closedOn={closedOn}
+                canManage={canManage}
               />
             ))}
           </div>
         </div>
       </div>
 
-      {/*
-        The thing under the pointer. Without it the chip vanishes at the moment
-        it matters most — dnd-kit moves the original out of flow — and a drag
-        with nothing following the cursor reads as a page that has broken.
-      */}
       <DragOverlay>
         {draggingLabel === null ? null : (
           <span className="rounded border border-primary bg-surface px-2 py-1 text-sm font-medium shadow">
@@ -472,15 +452,17 @@ function Row({
   placed,
   dragging,
   hours,
+  closedOn,
+  canManage,
 }: {
   minutes: number;
   days: readonly number[];
   placed: Placed[];
   dragging: boolean;
   hours: FacilityDay[];
+  closedOn: (day: number) => string | null;
+  canManage: boolean;
 }): React.ReactElement {
-  // The hour label only on the hour: a label every half hour is a column of
-  // numbers you read instead of a grid you scan.
   const onTheHour = minutes % 60 === 0;
 
   return (
@@ -494,22 +476,18 @@ function Row({
         {toTime(minutes)}
       </div>
 
-      {days.map((day) => {
-        const here = placed.find(
-          (slot) => slot.weekday === day && slot.startMinutes === minutes,
-        );
-        return (
-          <Cell
-            key={`${day}-${minutes}`}
-            day={day}
-            minutes={minutes}
-            slot={here}
-            onTheHour={onTheHour}
-            dragging={dragging}
-            open={isOpen(hours, day, minutes)}
-          />
-        );
-      })}
+      {days.map((day) => (
+        <Cell
+          key={`${day}-${minutes}`}
+          day={day}
+          minutes={minutes}
+          slot={placed.find((s) => s.weekday === day && s.startMinutes === minutes)}
+          onTheHour={onTheHour}
+          dragging={dragging}
+          open={isOpen(hours, day, minutes) && closedOn(day) === null}
+          canManage={canManage}
+        />
+      ))}
     </>
   );
 }
@@ -517,8 +495,8 @@ function Row({
 /**
  * Whether the site is open on this weekday at this minute.
  *
- * A cell outside its own day's hours is drawn — the grid has to be rectangular
- * to be scannable — but it is not a drop target and it says so by being dim. The
+ * A cell outside its own day's hours is still drawn — the grid has to be
+ * rectangular to be scannable — but it never registers as a drop target. The
  * facility-hours trigger would refuse the write anyway; this is the difference
  * between a control that refuses and one that never invited you.
  */
@@ -536,6 +514,7 @@ function Cell({
   onTheHour,
   dragging,
   open,
+  canManage,
 }: {
   day: number;
   minutes: number;
@@ -543,53 +522,33 @@ function Cell({
   onTheHour: boolean;
   dragging: boolean;
   open: boolean;
+  canManage: boolean;
 }): React.ReactElement {
-  // A closed cell is still rendered, so the grid stays rectangular — it just
-  // never registers as somewhere to drop.
   const { setNodeRef, isOver } = useDroppable({
     id: `cell:${day}:${minutes}`,
-    disabled: !open,
+    disabled: !open || !canManage,
   });
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        // `relative` and a fixed height: a spanning chip is positioned against
-        // this cell, and its height is computed from the row height.
         'relative h-6 border-l border-border px-0.5',
         onTheHour ? 'border-t border-border' : 'border-t border-border/40',
-        // Open slots only light up while something is being dragged — a grid
-        // that is permanently striped with "you could drop here" is noise for
-        // the 99% of the time nobody is dragging.
         !open && 'bg-surface-muted/60',
         dragging && open && slot === undefined && 'bg-primary/5',
         isOver && 'bg-primary/25 outline outline-2 outline-primary',
       )}
     >
       {slot !== undefined && (
-        /*
-          As tall as the class is long — round 5 follow-up.
-
-          Every chip used to occupy one 15-minute row whatever its duration, so a
-          45-minute class and a 15-minute one looked identical and the grid said
-          nothing about how much of the morning was actually taken. Absolutely
-          positioned out of the cell's flow so it can cover the rows beneath it,
-          which are the rows that class genuinely occupies; `-1px` keeps a
-          hairline between one chip and the next.
-        */
+        // Out of flow, so it can cover the rows its class actually occupies.
         <div
           className="absolute inset-x-1 top-0 z-10"
           style={{
             height: `calc(${(slot.durationMinutes / STEP_MINUTES) * ROW_REM}rem - 1px)`,
           }}
         >
-          <Chip
-            id={`slot:${slot.scheduleId}`}
-            label={slot.name}
-            time={toTime(slot.startMinutes)}
-            placed
-          />
+          <SessionChip slot={slot} canManage={canManage} />
         </div>
       )}
     </div>
@@ -597,47 +556,136 @@ function Cell({
 }
 
 /**
- * A turma you can pick up — with a pointer or with a keyboard.
+ * A class on the grid: what it is, and the two things you do to it.
  *
- * A real `<button>`, so Tab reaches it and Space picks it up; the grip is a
- * second, visual cue that it moves, because "this is draggable" carried only by
- * a cursor change is information a touch user never receives.
+ * The register and cancel controls live inside the chip, and the drag must not
+ * start from them — a pointer landing on "Cancelar" has to cancel, not pick the
+ * class up. `stopPropagation` on pointer-down is what separates the two; the 6px
+ * activation distance means an ordinary click never starts a drag anyway.
+ *
+ * A cancelled class is struck through and keeps its reason: "why is there no
+ * class on the 15th" is the question this grid exists to answer.
+ */
+function SessionChip({
+  slot,
+  canManage,
+}: {
+  slot: Placed;
+  canManage: boolean;
+}): React.ReactElement {
+  const draggable = canManage && slot.scheduleId !== null && !slot.cancelled;
+
+  return (
+    <div
+      className={cn(
+        'flex h-full w-full flex-col overflow-hidden rounded border px-1.5 py-0.5 text-xs',
+        slot.cancelled
+          ? 'border-dashed border-border bg-surface-muted'
+          : 'border-primary/40 bg-primary/10',
+      )}
+    >
+      <Chip
+        id={slot.scheduleId === null ? `static:${slot.key}` : `slot:${slot.scheduleId}`}
+        label={slot.name}
+        time={toTime(slot.startMinutes)}
+        subtitle={slot.subtitle}
+        cancelled={slot.cancelled}
+        draggable={draggable}
+        bare
+      />
+
+      {slot.note !== null && (
+        <span className="truncate text-[0.65rem] font-medium text-warning">{slot.note}</span>
+      )}
+
+      {(slot.controls.mark !== undefined || slot.controls.cancel !== undefined) && (
+        <div
+          className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-0.5 pt-0.5"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          {slot.controls.mark !== undefined && (
+            <a
+              href={slot.controls.mark.href}
+              className="rounded text-[0.65rem] font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+            >
+              {slot.controls.mark.label}
+            </a>
+          )}
+          {slot.controls.cancel}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A thing you can pick up — with a pointer or a keyboard.
+ *
+ * A real `<button>`, so Tab reaches it and Space picks it up; the grip is the
+ * second cue, because "this is draggable" carried only by a cursor change is
+ * information a touch user never receives.
  */
 function Chip({
   id,
   label,
   time,
+  subtitle,
+  cancelled,
   placed,
+  bare,
+  draggable = true,
 }: {
   id: string;
   label: string;
-  /** Shown on a placed chip, so the exact start is on the grid and not only implied by the row. */
   time?: string;
+  subtitle?: string | null;
+  cancelled?: boolean;
   placed?: boolean;
+  /** Inside a session chip, which already draws the border and the background. */
+  bare?: boolean;
+  draggable?: boolean;
 }): React.ReactElement {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id,
+    disabled: !draggable,
+  });
 
   return (
     <button
       ref={setNodeRef}
       type="button"
-      {...listeners}
+      {...(draggable ? listeners : {})}
       {...attributes}
       className={cn(
-        'flex h-full w-full cursor-grab items-start gap-1 overflow-hidden rounded border px-1.5 py-0.5 text-left text-xs font-medium',
+        'flex w-full items-start gap-1 text-left text-xs font-medium',
+        draggable ? 'cursor-grab' : 'cursor-default',
+        bare === true
+          ? ''
+          : cn(
+              'rounded border px-1.5 py-0.5',
+              placed === true
+                ? 'border-primary/40 bg-primary/10'
+                : 'border-border bg-surface hover:border-primary/50',
+            ),
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
-        placed
-          ? 'border-primary/40 bg-primary/10'
-          : 'border-border bg-surface hover:border-primary/50',
         isDragging && 'opacity-40',
       )}
     >
-      <GripVertical aria-hidden className="mt-0.5 size-3 shrink-0 text-foreground-muted" />
+      {draggable && (
+        <GripVertical aria-hidden className="mt-0.5 size-3 shrink-0 text-foreground-muted" />
+      )}
       <span className="min-w-0 flex-1 leading-tight">
-        <span className="line-clamp-2 break-words">{label}</span>
+        <span className={cn('line-clamp-2 break-words', cancelled === true && 'line-through')}>
+          {label}
+        </span>
         {time !== undefined && (
           <span className="block font-mono text-[0.65rem] font-normal text-foreground-muted">
             {time}
+          </span>
+        )}
+        {subtitle !== undefined && subtitle !== null && (
+          <span className="block truncate text-[0.65rem] font-normal text-foreground-muted">
+            {subtitle}
           </span>
         )}
       </span>
