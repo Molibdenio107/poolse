@@ -287,7 +287,17 @@
     "pickAFacility": "Escolha a instalação onde fica o tanque.",
     "addSiteHint": "Um edifício, um clube ou um complexo. As piscinas entram a seguir.",
     "backToSites": "Voltar às instalações",
-    "backToSite": "Voltar à instalação"
+    "backToSite": "Voltar à instalação",
+    "hours": "Horário de funcionamento",
+    "hoursHint": "Os dias e horas em que esta instalação está aberta. Um dia desativado deixa de aceitar novas aulas; as que já lá estão mantêm-se.",
+    "opensAt": "Abre às",
+    "closesAt": "Fecha às",
+    "dayClosed": "Encerrado",
+    "dayHasClasses": "{count, plural, one {Já existe # turma neste dia. Continua a funcionar; deixa é de ser possível marcar novas.} other {Já existem # turmas neste dia. Continuam a funcionar; deixa é de ser possível marcar novas.}}",
+    "hoursSaved": "Horário guardado.",
+    "hoursInvalid": "Verifique as horas: a hora de fecho tem de ser depois da de abertura.",
+    "hoursSaveFailed": "Não foi possível guardar o horário.",
+    "manageClosures": "Gerir encerramentos"
   },
   "classes": {
     "title": "Turmas",

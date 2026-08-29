@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
@@ -18,12 +19,16 @@ import {
   createFacility,
   createPool,
   DuplicateNameError,
+  facilityHours,
   findFacility,
   findPool,
   listFacilities,
+  setFacilityHours,
   updateFacility,
   updatePool,
   type Facility,
+  type FacilityDay,
+  type FacilityDayInput,
   type FacilityDetail,
   type PeopleCounts,
   type PoolDetail,
@@ -42,6 +47,15 @@ interface FacilityDetailResponse extends FacilityDetail {
    * that all end in a refusal is worse than not showing the row.
    */
   counts?: PeopleCounts;
+  /**
+   * The site's standing weekly rules — round 4.
+   *
+   * Sent to everybody who may see the site, not only to those who may edit it:
+   * "we do not open on Sundays" is operating information an instructor needs in
+   * order to read the timetable, and hiding it would make the calendar's gaps
+   * unexplained. Writing them is owner and admin only, refused by the API.
+   */
+  hours: FacilityDay[];
 }
 
 /**
@@ -131,8 +145,41 @@ export class FacilitiesController {
       ...detail,
       organizationId,
       canManage: privileged,
+      hours: await facilityHours(organizationId, facilityId),
       ...(privileged ? { counts: await countPeople(organizationId) } : {}),
     };
+  }
+
+  /**
+   * The site's opening rules, replaced as a week — round 4.
+   *
+   * **A whole week per request, not a day.** It is the shape of the decision
+   * somebody is making, and it is what keeps a screen from ever showing a week
+   * that was never true: seven PATCHes can fail on the fourth.
+   *
+   * All seven days must be present and each exactly once. A partial body would
+   * have to mean either "leave the rest alone" or "close the rest", and there is
+   * no reading of it that is obviously right — so it is refused instead of
+   * guessed at. `PUT` rather than `PATCH` for the same reason: this replaces.
+   *
+   * What this endpoint does *not* do is enforce the rule. `class_schedule` has a
+   * trigger for that, which is what makes the rule true for the seeder, the API
+   * and psql alike rather than only for requests that came through here.
+   */
+  @Put(':facilityId/hours')
+  async replaceHours(
+    @Param('facilityId') facilityId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ updated: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const days = readWeek(body['days']);
+
+    if (!(await setFacilityHours(organizationId, facilityId, days))) {
+      throw new NotFoundException('No such site');
+    }
+    return { updated: true };
   }
 
   /**
@@ -392,4 +439,69 @@ function coordinate(value: unknown, field: string, limit: number): number | null
     throw new BadRequestException(`${field} must be between -${limit} and ${limit} degrees`);
   }
   return Math.round(parsed * 1e6) / 1e6;
+}
+
+/**
+ * `HH:MM`, and only that.
+ *
+ * `24:00` is deliberately allowed: it is a real value in Postgres's `time` and
+ * it is how "to the end of the day" is written — which is the default every
+ * facility starts with. A regex that stopped at 23:59 would refuse the row the
+ * database itself created.
+ */
+const TIME_OF_DAY = /^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/;
+
+function timeOfDay(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !TIME_OF_DAY.test(value)) {
+    throw new BadRequestException(`${field} must be HH:MM`);
+  }
+  return value;
+}
+
+/**
+ * Seven days, each once, in a shape the database will accept.
+ *
+ * Validated here rather than trusted to the CHECK constraints, for one reason
+ * worth stating: a constraint violation surfaces as a 500 and a Postgres string,
+ * and "closes_at > opens_at" is a message for whoever wrote the migration, not
+ * for somebody who typed the closing time before the opening one.
+ */
+function readWeek(value: unknown): FacilityDayInput[] {
+  if (!Array.isArray(value) || value.length !== 7) {
+    throw new BadRequestException('days must be all seven days of the week');
+  }
+
+  const seen = new Set<number>();
+  const days = value.map((entry): FacilityDayInput => {
+    if (typeof entry !== 'object' || entry === null) {
+      throw new BadRequestException('each day must be an object');
+    }
+    const day = entry as Record<string, unknown>;
+
+    const weekday = day['weekday'];
+    if (typeof weekday !== 'number' || !Number.isInteger(weekday) || weekday < 1 || weekday > 7) {
+      throw new BadRequestException('weekday must be an ISO weekday, 1 to 7');
+    }
+    if (seen.has(weekday)) {
+      throw new BadRequestException(`weekday ${weekday} was sent twice`);
+    }
+    seen.add(weekday);
+
+    if (typeof day['available'] !== 'boolean') {
+      throw new BadRequestException('available must be true or false');
+    }
+
+    const opensAt = timeOfDay(day['opensAt'], 'opensAt');
+    const closesAt = timeOfDay(day['closesAt'], 'closesAt');
+
+    // Said in the language of the form: a day that closes before it opens is a
+    // mistake somebody can see and fix, not an internal error.
+    if (closesAt <= opensAt) {
+      throw new BadRequestException(`weekday ${weekday}: closesAt must be after opensAt`);
+    }
+
+    return { weekday, available: day['available'], opensAt, closesAt };
+  });
+
+  return days.sort((a, b) => a.weekday - b.weekday);
 }

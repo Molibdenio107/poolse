@@ -287,7 +287,17 @@
     "pickAFacility": "Choose which facility the pool is at.",
     "addSiteHint": "A building, a club or a complex. The pools come next.",
     "backToSites": "Back to sites",
-    "backToSite": "Back to the site"
+    "backToSite": "Back to the site",
+    "hours": "Opening hours",
+    "hoursHint": "The days and times this site is open. A disabled day stops accepting new classes; the ones already there stay.",
+    "opensAt": "Opens at",
+    "closesAt": "Closes at",
+    "dayClosed": "Closed",
+    "dayHasClasses": "{count, plural, one {# class already uses this day. It keeps running; you just cannot schedule new ones.} other {# classes already use this day. They keep running; you just cannot schedule new ones.}}",
+    "hoursSaved": "Hours saved.",
+    "hoursInvalid": "Check the times: closing must be after opening.",
+    "hoursSaveFailed": "The hours could not be saved.",
+    "manageClosures": "Manage closures"
   },
   "classes": {
     "title": "Class groups",

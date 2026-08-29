@@ -359,10 +359,29 @@ export interface PeopleCounts {
   guardian: number;
 }
 
+/**
+ * One weekday of a site's standing opening rules — round 4.
+ *
+ * ISO weekday, Monday 1 … Sunday 7, matching `class_schedule.weekday` and
+ * `extract(ISODOW …)`. Times are `HH:MM` wall-clock at the facility; `24:00` is
+ * a real value and means the end of the day, which is what every site starts
+ * with until somebody narrows it.
+ */
+export interface FacilityDay {
+  weekday: number;
+  available: boolean;
+  opensAt: string;
+  closesAt: string;
+  /** Turma slots already on this weekday at this site. Warns before, not after. */
+  scheduledClasses: number;
+}
+
 export interface FacilityDetail extends Facility, Place {
   organizationId: string;
   canManage: boolean;
   counts?: PeopleCounts;
+  /** Always seven, ascending. Readable by anyone who may see the site. */
+  hours: FacilityDay[];
 }
 
 export type VacationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';

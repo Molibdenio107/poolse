@@ -7,6 +7,7 @@ import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { CityPicker } from './city-picker';
 import { WeatherPanel } from './weather-panel';
+import { HoursPanel } from './hours-panel';
 import { PageShell } from '@/components/page-shell';
 
 /**
@@ -149,6 +150,42 @@ export default async function FacilityPage({
               />
             </section>
           )}
+
+          {/*
+            The site's standing rules — round 4.
+
+            Below the location and above the pools because that is the order the
+            questions are asked in: where is it, when is it open, what is in it.
+            Readable by anyone who may see the site — "we do not open on Sundays"
+            is what makes the calendar's gaps explicable — and writable only by
+            an owner or admin, which the API enforces rather than this.
+          */}
+          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('facilities.hours')}
+              </h2>
+              {/*
+                Closures live in the calendar and stay there. A site's closed
+                dates are the same table the holidays and the vacation calendar
+                already read, and a second place to enter them would be a second
+                place for them to disagree — so this links rather than repeats.
+              */}
+              <Link
+                href={withFrom('/dashboard/calendar/closures', `/dashboard/facilities/${facilityId}`)}
+                className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('facilities.manageClosures')}
+              </Link>
+            </div>
+
+            <HoursPanel
+              organizationId={site.organizationId}
+              facilityId={site.id}
+              hours={site.hours}
+              canManage={site.canManage}
+            />
+          </section>
 
           <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">

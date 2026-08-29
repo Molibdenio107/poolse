@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { apiFetch, apiPatch, type PlaceSuggestion } from '../../../../../lib/api';
+import { ApiError, apiFetch, apiPatch, apiPut, type PlaceSuggestion } from '../../../../../lib/api';
 
 /**
  * City lookup, proxied through the server.
@@ -48,4 +48,42 @@ export async function setPlaceAction(input: PlaceInput): Promise<void> {
 
   revalidatePath(`/dashboard/facilities/${facilityId}`);
   revalidatePath('/dashboard/facilities');
+}
+
+export interface HoursInput {
+  organizationId: string;
+  facilityId: string;
+  days: { weekday: number; available: boolean; opensAt: string; closesAt: string }[];
+}
+
+/**
+ * Saves the site's opening rules, as a week.
+ *
+ * The whole week per request, deliberately — see the API's `PUT
+ * :facilityId/hours`. The revalidations are the two places these rules are read
+ * from: the site itself, and the calendar, whose empty Sundays are only
+ * explicable once this has changed.
+ *
+ * Returns a message key rather than throwing on a rejected week. A closing time
+ * typed before an opening time is somebody making an ordinary mistake in a form,
+ * and an error boundary is the wrong place to tell them about it.
+ */
+export async function saveHoursAction(
+  input: HoursInput,
+): Promise<{ ok: true } | { ok: false; errorKey: string }> {
+  const { organizationId, facilityId, days } = input;
+
+  try {
+    await apiPut(`/facilities/${facilityId}/hours`, { days }, { organizationId });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 400) {
+      return { ok: false, errorKey: 'facilities.hoursInvalid' };
+    }
+    return { ok: false, errorKey: 'facilities.hoursSaveFailed' };
+  }
+
+  revalidatePath(`/dashboard/facilities/${facilityId}`);
+  revalidatePath('/dashboard/calendar');
+
+  return { ok: true };
 }

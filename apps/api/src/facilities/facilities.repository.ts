@@ -689,3 +689,152 @@ export async function archivePool(organizationId: string, poolId: string): Promi
     return true;
   });
 }
+
+// ---------------------------------------------------------------------------
+// Opening hours — round 4
+//
+// A site's standing weekly rules: which days classes may be scheduled on, and
+// between what times. The database holds seven rows per facility, always, and
+// enforces the rule on `class_schedule` with a trigger — so nothing here has to
+// default a missing day, and nothing here is what actually protects the rule.
+// See `packages/db/migrations/1787929200000_facility-hours.sql`.
+// ---------------------------------------------------------------------------
+
+export interface FacilityDay {
+  /** ISO weekday: Monday 1 … Sunday 7, matching `class_schedule.weekday`. */
+  weekday: number;
+  available: boolean;
+  /** `HH:MM`. `24:00` is a real time here and means "to the end of the day". */
+  opensAt: string;
+  closesAt: string;
+  /**
+   * How many turma slots already sit on this weekday at this site.
+   *
+   * Sent so the interface can say "3 turmas already use Sunday" *before*
+   * somebody switches it off, which is the whole reason the decision was "block
+   * new, keep existing": a warning after the fact is a warning about something
+   * that already happened.
+   */
+  scheduledClasses: number;
+}
+
+/** `HH:MM` from Postgres's `HH:MM:SS`, which no interface wants to render. */
+function hhmm(value: string): string {
+  return value.slice(0, 5);
+}
+
+export async function facilityHours(
+  organizationId: string,
+  facilityId: string,
+): Promise<FacilityDay[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      weekday: number;
+      available: boolean;
+      opens_at: string;
+      closes_at: string;
+      scheduled_classes: number;
+    }>(
+      `
+      SELECT h.weekday,
+             h.available,
+             h.opens_at::text  AS opens_at,
+             h.closes_at::text AS closes_at,
+             (
+               SELECT count(*)::int
+                 FROM class_schedule cs
+                 JOIN class_group g
+                   ON g.id = cs.class_group_id
+                  AND g.organization_id = cs.organization_id
+                 JOIN pool p
+                   ON p.id = g.pool_id
+                  AND p.organization_id = g.organization_id
+                WHERE cs.organization_id = h.organization_id
+                  AND cs.weekday = h.weekday
+                  AND cs.archived_at IS NULL
+                  AND g.archived_at IS NULL
+                  AND p.archived_at IS NULL
+                  AND p.facility_id = h.facility_id
+             ) AS scheduled_classes
+        FROM facility_hours h
+       WHERE h.facility_id = $1
+       ORDER BY h.weekday
+      `,
+      [facilityId],
+    );
+
+    return rows.map((row) => ({
+      weekday: row.weekday,
+      available: row.available,
+      opensAt: hhmm(row.opens_at),
+      closesAt: hhmm(row.closes_at),
+      scheduledClasses: row.scheduled_classes,
+    }));
+  });
+}
+
+export interface FacilityDayInput {
+  weekday: number;
+  available: boolean;
+  opensAt: string;
+  closesAt: string;
+}
+
+/**
+ * Writes all seven days at once.
+ *
+ * A whole-week save rather than a per-day PATCH, because that is the shape of
+ * the decision somebody is making — "these are our hours" — and because a
+ * partial save of a weekly grid leaves a screen showing a week that was never
+ * true. It also means the audit entry is one legible before-and-after instead of
+ * up to seven.
+ *
+ * The rows already exist (the facility trigger seeds them), so this is an UPDATE
+ * per day and never an upsert: a weekday that is missing here is a bug, not a
+ * new row to invent.
+ */
+export async function setFacilityHours(
+  organizationId: string,
+  facilityId: string,
+  days: readonly FacilityDayInput[],
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const exists = await tx.query(
+      `SELECT 1 FROM facility WHERE id = $1 AND archived_at IS NULL`,
+      [facilityId],
+    );
+    if (exists.rowCount === 0) return false;
+
+    for (const day of days) {
+      await tx.query(
+        `UPDATE facility_hours
+            SET available = $3, opens_at = $4::time, closes_at = $5::time
+          WHERE facility_id = $1 AND weekday = $2`,
+        [facilityId, day.weekday, day.available, day.opensAt, day.closesAt],
+      );
+    }
+
+    /*
+     * The whole week, not the fields that changed.
+     *
+     * "Sunday was switched off" is only intelligible in a year beside the six
+     * days that were not — the interesting question about this entry will be
+     * "what were the hours then", and a diff cannot answer it.
+     */
+    await recordAudit(tx, {
+      action: 'facility.hours.updated',
+      entityType: 'facility',
+      entityId: facilityId,
+      data: {
+        days: days.map((day) => ({
+          weekday: day.weekday,
+          available: day.available,
+          opensAt: day.opensAt,
+          closesAt: day.closesAt,
+        })),
+      },
+    });
+
+    return true;
+  });
+}
