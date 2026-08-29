@@ -176,6 +176,81 @@ export async function transferCandidates(
   });
 }
 
+/**
+ * How many staff there are, in total and by role.
+ *
+ * The list already reports a total, but it is the total of whatever filter is
+ * applied — "3" under the Instrutor chip and "12" with no chip, and nothing on
+ * the screen says which of those is the size of the team. This answers the
+ * question the page was being asked to answer by arithmetic.
+ *
+ * **`total` counts people; `byRole` counts roles.** They do not add up, and that
+ * is correct rather than a rounding problem: an admin who also instructs is one
+ * member of staff and appears under both chips. Counting `byRole` into a total
+ * would report thirteen people in a room of twelve.
+ *
+ * Scoped exactly as the staff list is — active, unarchived, and staff by
+ * `STAFF_ROLES` or by holding no role yet (an invitation not accepted). A count
+ * that disagreed with the list beneath it would be worse than no count.
+ */
+export interface StaffCounts {
+  total: number;
+  byRole: Record<string, number>;
+}
+
+export async function countStaff(organizationId: string): Promise<StaffCounts> {
+  return withOrg(organizationId, async (tx) => {
+    const [totals, byRole] = await Promise.all([
+      tx.query<{ total: number }>(`
+        SELECT count(*)::int AS total
+          FROM membership m
+         WHERE m.archived_at IS NULL
+           AND m.status = 'active'
+           AND (
+             NOT EXISTS (
+               SELECT 1 FROM membership_role r
+                WHERE r.membership_id = m.id AND r.archived_at IS NULL
+             )
+             OR EXISTS (
+               SELECT 1 FROM membership_role r
+                WHERE r.membership_id = m.id
+                  AND r.archived_at IS NULL
+                  AND r.role IN ('owner', 'admin', 'instructor', 'maintenance')
+             )
+           )
+      `),
+      tx.query<{ role: string; total: number }>(`
+        SELECT r.role::text AS role, count(*)::int AS total
+          FROM membership_role r
+          JOIN membership m
+            ON m.id = r.membership_id
+           AND m.organization_id = r.organization_id
+         WHERE r.archived_at IS NULL
+           AND m.archived_at IS NULL
+           AND m.status = 'active'
+           AND r.role IN ('owner', 'admin', 'instructor', 'maintenance')
+         GROUP BY r.role
+      `),
+    ]);
+
+    /*
+     * Seeded at zero for every staff role, because a role nobody holds returns
+     * no row at all — and a chip that is simply absent reads as "this screen
+     * failed to load" rather than as "there are none".
+     */
+    const counts: Record<string, number> = {
+      owner: 0,
+      admin: 0,
+      instructor: 0,
+      maintenance: 0,
+    };
+
+    for (const row of byRole.rows) counts[row.role] = row.total;
+
+    return { total: totals.rows[0]?.total ?? 0, byRole: counts };
+  });
+}
+
 export interface MemberQuery {
   /**
    * `staff` is the staff section's own boundary — POOLSE-35 criterion 7.

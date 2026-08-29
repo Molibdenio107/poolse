@@ -6,6 +6,7 @@ import { Pagination } from '@/components/pagination';
 import { SearchInput, SearchStatus } from '@/components/search-input';
 import { FilterSelect } from '@/components/filter-select';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
+import { backLabelKey, readFrom } from '@/lib/back';
 import { AgedOutFlag } from '@/components/aged-out-flag';
 import { PersonAvatar } from '@/components/person-avatar';
 import { photoUrlFor } from '@/lib/photo';
@@ -24,10 +25,18 @@ import { PageShell } from '@/components/page-shell';
 export default async function StudentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; levelId?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; levelId?: string; page?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { search = '', levelId = '', page: pageParam } = await searchParams;
+  const { search = '', levelId = '', page: pageParam, from } = await searchParams;
+
+  /*
+   * The register is a top-level section, so it has no parent and no back link —
+   * except when somebody arrived from a screen that links into it, which a
+   * facility's student count does. Then, and only then, there is somewhere to go
+   * back to and the control appears — R4. Validated in `lib/back.ts`.
+   */
+  const origin = readFrom(from);
   const page = readPage(pageParam);
 
   const query = new URLSearchParams();
@@ -73,6 +82,7 @@ export default async function StudentsPage({
   return (
     <PageShell
       title={t('students.title')}
+      back={origin === null ? undefined : { href: origin, label: t(backLabelKey(origin)) }}
       subtitle={t('students.subtitle')}
     >
 

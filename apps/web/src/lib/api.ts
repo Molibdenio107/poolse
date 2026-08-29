@@ -216,6 +216,12 @@ export interface PendingInvitation {
   invitedByLastName: string | null;
 }
 
+export interface StaffCounts {
+  total: number;
+  /** Keyed by staff role. Every staff role is present, zero included. */
+  byRole: Record<string, number>;
+}
+
 export interface People {
   organizationId: string;
   /** One page of the staff list — POOLSE-29. */
@@ -230,6 +236,15 @@ export interface People {
    * page 1 — POOLSE-29.
    */
   transferCandidates: OrganizationMember[];
+  /**
+   * The size of the team, independent of whatever filter is applied.
+   *
+   * `members.total` is the total of the current query — under the Instrutor chip
+   * it is the number of instructors, not the number of staff. `total` counts
+   * people and `byRole` counts roles, so they deliberately do not add up: an
+   * admin who also instructs is one person and two roles.
+   */
+  counts: StaffCounts;
   canInvite: boolean;
   /** Never contains `owner`: it moves only by transfer. */
   grantableRoles: string[];

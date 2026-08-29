@@ -10,12 +10,14 @@ import {
 import { currentTenant } from '../tenant/tenant.context.js';
 import { canArchive, grantableRoles, hasRole, isMemberRole, requireRole } from '../tenant/roles.js';
 import {
+  countStaff,
   listMembers,
   listPendingInvitations,
   transferCandidates,
   transferOwnership,
   type OrganizationMember,
   type PendingInvitation,
+  type StaffCounts,
 } from './invitations.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { readSearch } from '../common/search.js';
@@ -28,6 +30,14 @@ interface PeopleResponse {
   invitations: PendingInvitation[];
   /** Every admin, not a page of them — the transfer picker must be complete. */
   transferCandidates: OrganizationMember[];
+  /**
+   * The size of the team, independent of the filter — R4.
+   *
+   * `members.total` is the total *of the current query*, so under a role chip it
+   * is the size of that chip and not of the staff. Sent alongside rather than
+   * derived in the page, because the page only ever holds one window of rows.
+   */
+  counts: StaffCounts;
   /** So the UI can hide a form the API would refuse anyway. */
   canInvite: boolean;
   /** Roles this caller is allowed to hand out. Never includes `owner`. */
@@ -81,7 +91,7 @@ export class PeopleController {
      * applies afterwards: filtering a page instead of the set is what makes
      * page 2 shorter than page 1.
      */
-    const [members, invitations, candidates] = await Promise.all([
+    const [members, invitations, candidates, counts] = await Promise.all([
       listMembers(
         organizationId,
         {
@@ -93,6 +103,7 @@ export class PeopleController {
       ),
       listPendingInvitations(organizationId),
       transferCandidates(organizationId),
+      countStaff(organizationId),
     ]);
 
     /*
@@ -112,6 +123,7 @@ export class PeopleController {
       members,
       invitations,
       transferCandidates: candidates,
+      counts,
       canInvite: grantable.length > 0,
       grantableRoles: grantable,
       canTransferOwnership: hasRole('owner'),

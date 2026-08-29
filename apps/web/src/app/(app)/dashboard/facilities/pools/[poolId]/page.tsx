@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type PoolDetail } from '@/lib/api';
+import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from '../../facility-forms';
@@ -20,11 +21,20 @@ import { PageShell } from '@/components/page-shell';
  */
 export default async function PoolPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ poolId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { poolId } = await params;
+  const { from } = await searchParams;
+
+  /*
+   * A pool is reached from the site list and from the site itself, and those are
+   * different places to be returned to — R4. `lib/back.ts`.
+   */
+  const back = backTarget(from, '/dashboard/facilities');
 
   let pool: (PoolDetail & { canManage: boolean }) | null = null;
   let failure: string | null = null;
@@ -44,7 +54,7 @@ export default async function PoolPage({
     <PageShell
       title={pool?.name ?? t('facilities.editPool')}
       subtitle={pool?.facilityName ?? ''}
-      back={{ href: "/dashboard/facilities", label: t('facilities.backToFacilities') }}
+      back={{ href: back.href, label: t(back.labelKey) }}
       actions={<EntityIcon kind="pool" className="size-6 text-primary" />}
     >
 

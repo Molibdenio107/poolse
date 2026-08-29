@@ -156,7 +156,9 @@
       "first_name": "Nome",
       "last_name": "Apelido",
       "birth_date": "Data de nascimento"
-    }
+    },
+    "staffTotal": "{count, plural, =0 {Sem staff} one {# pessoa no staff} other {# pessoas no staff}}",
+    "staffCountHint": "Quem tem mais do que uma função é contado uma vez no total e em cada função, por isso as funções somam mais do que o total."
   },
   "staff": {
     "title": "Staff",
@@ -284,7 +286,8 @@
     "archivePoolHint": "Arquivar este tanque. Fica no registo, e o nome volta a ficar livre.",
     "pickAFacility": "Escolha a instalação onde fica o tanque.",
     "addSiteHint": "Um edifício, um clube ou um complexo. As piscinas entram a seguir.",
-    "backToSites": "Voltar às instalações"
+    "backToSites": "Voltar às instalações",
+    "backToSite": "Voltar à instalação"
   },
   "classes": {
     "title": "Turmas",
@@ -592,7 +595,8 @@
     "duplicateByNif": "{name} já está registado com este NIF.",
     "duplicateByEmail": "{name} já está registado com este e-mail.",
     "duplicateUseExisting": "Usar esta pessoa",
-    "guardianSearchPlaceholder": "Nome, email ou telefone"
+    "guardianSearchPlaceholder": "Nome, email ou telefone",
+    "backToGuardians": "Voltar aos encarregados de educação"
   },
   "advancement": {
     "title": "Progressões",
@@ -796,7 +800,8 @@
     "withdrawFailed": "Não foi possível retirar o pedido.",
     "approveFailed": "Não foi possível aprovar o pedido.",
     "rejectFailed": "Não foi possível recusar o pedido.",
-    "backToPeople": "Voltar a Pessoas"
+    "backToPeople": "Voltar a Pessoas",
+    "backToVacations": "Voltar às férias"
   },
   "weather": {
     "title": "Meteorologia",

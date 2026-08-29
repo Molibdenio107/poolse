@@ -160,12 +160,6 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                           </span>
                           </div>
                         </div>
-                        <Link
-                          href={`/dashboard/facilities/pools/${pool.id}`}
-                          className="text-sm text-primary hover:underline"
-                        >
-                          {t('facilities.seeDetails')}
-                        </Link>
                       </li>
                     ))}
                   </ul>

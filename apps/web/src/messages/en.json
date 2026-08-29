@@ -156,7 +156,9 @@
       "first_name": "First name",
       "last_name": "Surname",
       "birth_date": "Date of birth"
-    }
+    },
+    "staffTotal": "{count, plural, =0 {No staff} one {# staff member} other {# staff members}}",
+    "staffCountHint": "Anyone holding more than one role is counted once in the total and under each role, so the roles add up to more than the total."
   },
   "staff": {
     "title": "Staff",
@@ -284,7 +286,8 @@
     "archivePoolHint": "Archive this pool. It stays on the record, and the name becomes free again.",
     "pickAFacility": "Choose which facility the pool is at.",
     "addSiteHint": "A building, a club or a complex. The pools come next.",
-    "backToSites": "Back to sites"
+    "backToSites": "Back to sites",
+    "backToSite": "Back to the site"
   },
   "classes": {
     "title": "Class groups",
@@ -592,7 +595,8 @@
     "duplicateByNif": "{name} is already recorded with this tax number.",
     "duplicateByEmail": "{name} is already recorded with this email.",
     "duplicateUseExisting": "Use this person",
-    "guardianSearchPlaceholder": "Name, email or phone"
+    "guardianSearchPlaceholder": "Name, email or phone",
+    "backToGuardians": "Back to guardians"
   },
   "advancement": {
     "title": "Advancement",
@@ -796,7 +800,8 @@
     "withdrawFailed": "Could not withdraw the request.",
     "approveFailed": "Could not approve the request.",
     "rejectFailed": "Could not refuse the request.",
-    "backToPeople": "Back to People"
+    "backToPeople": "Back to People",
+    "backToVacations": "Back to leave"
   },
   "weather": {
     "title": "Weather",

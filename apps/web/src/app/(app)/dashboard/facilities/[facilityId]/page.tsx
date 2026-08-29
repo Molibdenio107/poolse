@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type FacilityDetail, type PeopleCounts } from '@/lib/api';
+import { withFrom } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { CityPicker } from './city-picker';
@@ -28,6 +29,11 @@ import { PageShell } from '@/components/page-shell';
  * also reach; the role groups go to People, which story 8 restricted to owners
  * and admins — and the whole block only renders for those two, so no link here
  * ends in a refusal.
+ *
+ * Each link is stamped with this site's path — R4. Both destinations are real
+ * sections with their own back targets, so without it "Voltar" from the staff
+ * list lands on the dashboard rather than on the site somebody was reading, and
+ * the only way back to it is the browser's own button. See `lib/back.ts`.
  */
 const GROUPS: { key: keyof PeopleCounts; label: string; href: string }[] = [
   { key: 'student', label: 'roles.student', href: '/dashboard/students' },
@@ -105,7 +111,7 @@ export default async function FacilityPage({
                 {GROUPS.map((group) => (
                   <li key={group.key}>
                     <Link
-                      href={group.href}
+                      href={withFrom(group.href, `/dashboard/facilities/${facilityId}`)}
                       className="flex flex-col gap-0.5 rounded border border-border p-3 transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       {/*
@@ -156,7 +162,10 @@ export default async function FacilityPage({
                 {site.pools.map((pool) => (
                   <li key={pool.id} className="py-3 first:pt-0 last:pb-0">
                     <Link
-                      href={`/dashboard/facilities/pools/${pool.id}`}
+                      href={withFrom(
+                        `/dashboard/facilities/pools/${pool.id}`,
+                        `/dashboard/facilities/${facilityId}`,
+                      )}
                       className="flex items-center gap-3 rounded hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       <EntityIcon kind="pool" />

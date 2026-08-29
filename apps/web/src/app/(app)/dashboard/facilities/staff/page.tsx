@@ -6,6 +6,7 @@ import { DeliveryBadge } from '@/components/delivery-badge';
 import { PersonAvatar } from '@/components/person-avatar';
 import { RoleBadge, RoleBadges } from '@/components/role-badge';
 import { STAFF_ROLES } from '@/lib/roles';
+import { backTarget } from '@/lib/back';
 import { Pagination } from '@/components/pagination';
 import { SearchInput, SearchStatus } from '@/components/search-input';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
@@ -39,7 +40,7 @@ const ROLES: readonly string[] = STAFF_ROLES;
 export default async function PeoplePage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string; page?: string; search?: string }>;
+  searchParams: Promise<{ role?: string; page?: string; search?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
@@ -54,10 +55,21 @@ export default async function PeoplePage({
    * part of the same query as the window — and the API enforces the staff
    * boundary rather than trusting this page to (POOLSE-35 criterion 7).
    */
-  const { role: requestedRole, page: pageParam, search = '' } = await searchParams;
+  const { role: requestedRole, page: pageParam, search = '', from } = await searchParams;
   const role = ROLES.includes(requestedRole ?? '') ? requestedRole! : null;
   const page = readPage(pageParam);
   const term = search.trim();
+
+  /*
+   * Back goes where you came from — R4.
+   *
+   * A facility's people counts link straight into this list, and the fixed
+   * "Voltar ao painel" then dropped somebody two screens from the site they were
+   * reading. Arrive here any other way and there is no `from`, so this is
+   * `/dashboard` exactly as before. Validated in `lib/back.ts`: an unchecked
+   * back target is an open redirect.
+   */
+  const back = backTarget(from, '/dashboard');
 
   let people: People | null = null;
   let failure: string | null = null;
@@ -109,7 +121,7 @@ export default async function PeoplePage({
     <PageShell
       title={t('staff.title')}
       subtitle={t('staff.subtitle')}
-      back={{ href: "/dashboard", label: t('common.backToDashboard') }}
+      back={{ href: back.href, label: t(back.labelKey) }}
       actions={<Link
           href="/dashboard/facilities/staff/duplicates"
           className="shrink-0 rounded border border-border px-4 py-2 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -158,9 +170,56 @@ export default async function PeoplePage({
           )}
 
           <section className="rounded border border-border bg-surface p-5">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('people.members')}
-            </h2>
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('people.members')}
+              </h2>
+
+              {/*
+                How big the team is, beside the word "Membros" — R4.
+                
+                The list already showed a total, but it was the total of the
+                current filter: "3" under the Instrutor chip, with nothing on
+                screen saying that was three instructors rather than three staff.
+                So the headline is the headcount, and the roles are broken out
+                beside it.
+                
+                **The role numbers do not sum to the total, on purpose.** An
+                admin who also instructs is one member of staff and appears under
+                both roles; adding them up would report a team larger than the
+                room. `people.staffCountHint` says so rather than leaving it to
+                be discovered by arithmetic.
+                
+                Each chip is the filter it describes — the count and the way to
+                see who is in it are the same control, because a number somebody
+                cannot click is a number they then go looking for.
+              */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Hint text={t('people.staffCountHint')}>
+                  <span className="cursor-help text-sm">
+                    {t('people.staffTotal', { count: people.counts.total })}
+                  </span>
+                </Hint>
+
+                {ROLES.map((staffRole) => {
+                  const active = role === staffRole;
+                  return (
+                    <Link
+                      key={staffRole}
+                      href={active ? '/dashboard/facilities/staff' : `/dashboard/facilities/staff?role=${staffRole}`}
+                      aria-pressed={active}
+                      className={`rounded border px-2 py-0.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                        active
+                          ? 'border-primary bg-primary/15 text-primary'
+                          : 'border-border text-foreground-muted hover:border-primary/50 hover:text-foreground'
+                      }`}
+                    >
+                      {t(`roles.${staffRole}`)} {people.counts.byRole[staffRole] ?? 0}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
 
             {/*
               Name or email — what a staff row shows. Searching alongside the
