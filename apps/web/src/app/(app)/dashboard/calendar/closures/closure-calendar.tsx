@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, X } from 'lucide-react';
 import type { Closure } from '@/lib/api';
 import { YearGrid, type DayState } from '@/components/year-grid';
-import { TextField } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_LABEL, TextField } from '@/components/ui/field';
 import type { FormState } from '../../actions';
 import { createClosureAction, impactAction, removeClosureAction } from './closures.actions';
 
@@ -337,11 +337,11 @@ function ClosureForm({
 
         {pools.length > 0 && (
           <label className="flex flex-col gap-2">
-            <span className="text-sm text-foreground-muted">{t('calendar.closureScope')}</span>
+            <span className={FIELD_LABEL}>{t('calendar.closureScope')}</span>
             <select
               name="poolId"
               defaultValue=""
-              className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className={CONTROL_LINE}
             >
               <option value="">{t('calendar.wholeSite')}</option>
               {pools.map((pool) => (

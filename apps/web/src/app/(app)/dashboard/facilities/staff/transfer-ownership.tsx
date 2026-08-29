@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CONTROL_LINE } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 import type { OrganizationMember } from '@/lib/api';
 import type { FormState } from '../../actions';
 import { transferOwnershipAction } from '../../actions';
@@ -63,7 +65,7 @@ export function TransferOwnership({
           name="membershipId"
           required
           aria-label={t('transfer.chooseLabel')}
-          className="min-w-48 flex-1 rounded border border-border-strong bg-background px-3 py-2"
+          className={cn(CONTROL_LINE, 'min-w-48 flex-1')}
         >
           {candidates.map((candidate) => (
             <option key={candidate.membershipId} value={candidate.membershipId}>

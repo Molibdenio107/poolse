@@ -4,11 +4,9 @@ import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { MapPin } from 'lucide-react';
 import type { PlaceSuggestion } from '@/lib/api';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { searchPlacesAction, setPlaceAction } from './facility.actions';
 import { DEBOUNCE_MS, MIN_SEARCH_LENGTH } from '@/components/search-input';
-
-const FIELD =
-  'w-full rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * The city autocomplete — backlog round 3, story 3.
@@ -111,8 +109,8 @@ export function CityPicker({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2">
-        <label htmlFor={`${listId}-input`} className="text-sm text-foreground-muted">
+      <div className={FIELD_COLUMN}>
+        <label htmlFor={`${listId}-input`} className={FIELD_LABEL}>
           {t('facilities.city')}
         </label>
 
@@ -144,7 +142,7 @@ export function CityPicker({
           placeholder={t('facilities.cityPlaceholder')}
           autoComplete="off"
           aria-describedby={`${listId}-hint`}
-          className={FIELD}
+          className={CONTROL_LINE}
         />
         <p id={`${listId}-hint`} className="text-sm text-foreground-muted">
           {t('facilities.cityHint')}

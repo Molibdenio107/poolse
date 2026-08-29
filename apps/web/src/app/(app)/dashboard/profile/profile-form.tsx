@@ -4,6 +4,8 @@ import { useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { useTranslations } from 'next-intl';
+// Aliased: every control in this file is single-line, so one name serves both.
+import { CONTROL_INVALID as INVALID, CONTROL_LINE as FIELD, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { Me } from '@/lib/api';
 import { applyTheme } from '@/lib/apply-theme';
 import { isTheme } from '@/lib/theme';
@@ -13,10 +15,6 @@ const INITIAL: ProfileState = { ok: false };
 
 const LOCALES = ['pt-PT', 'en'] as const;
 const THEMES = ['light', 'dark', 'system'] as const;
-
-const FIELD =
-  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
-const INVALID = 'border-danger';
 
 /**
  * "O meu perfil" — backlog round 3, story 1.
@@ -101,8 +99,8 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
         here would either not work or would work without verification, and the
         second is worse.
       */}
-      <div className="flex flex-col gap-2">
-        <span className="text-sm text-foreground-muted">{t('profile.email')}</span>
+      <div className={FIELD_COLUMN}>
+        <span className={FIELD_LABEL}>{t('profile.email')}</span>
         <div className="flex flex-wrap items-center gap-3">
           <span className="font-medium">{me.user.email ?? t('account.noEmail')}</span>
           <button
@@ -188,8 +186,8 @@ function Field({
     .join(' ');
 
   return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm text-foreground-muted">
+    <div className={FIELD_COLUMN}>
+      <label htmlFor={id} className={FIELD_LABEL}>
         {label}
       </label>
       <input
@@ -233,8 +231,8 @@ function Choice({
   const id = `profile-${name}`;
 
   return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm text-foreground-muted">
+    <div className={FIELD_COLUMN}>
+      <label htmlFor={id} className={FIELD_LABEL}>
         {label}
       </label>
       <select

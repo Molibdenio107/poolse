@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CONTROL_LINE, FIELD_LABEL } from '@/components/ui/field';
 import { createOrganizationAction, type FormState } from './actions';
 
 const INITIAL: FormState = { ok: false };
@@ -21,7 +22,7 @@ export function CreateOrganizationForm(): React.ReactElement {
 
   return (
     <form action={action} className="flex flex-col gap-3">
-      <label htmlFor="organization-name" className="text-sm text-foreground-muted">
+      <label htmlFor="organization-name" className={FIELD_LABEL}>
         {t('organization.nameLabel')}
       </label>
       <input
@@ -30,7 +31,7 @@ export function CreateOrganizationForm(): React.ReactElement {
         required
         maxLength={120}
         placeholder={t('organization.namePlaceholder')}
-        className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={CONTROL_LINE}
       />
 
       {/*
@@ -39,7 +40,7 @@ export function CreateOrganizationForm(): React.ReactElement {
         landing in a product and landing in a form: everything in module 1 hangs
         off a site, so an organization without one cannot do anything yet.
       */}
-      <label htmlFor="organization-facility" className="text-sm text-foreground-muted">
+      <label htmlFor="organization-facility" className={FIELD_LABEL}>
         {t('organization.facilityLabel')}
       </label>
       <input
@@ -47,7 +48,7 @@ export function CreateOrganizationForm(): React.ReactElement {
         name="facilityName"
         maxLength={120}
         placeholder={t('organization.facilityPlaceholder')}
-        className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={CONTROL_LINE}
       />
       <p className="text-sm text-foreground-muted">{t('organization.facilityHint')}</p>
 

@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { Closure } from '@/lib/api';
 import type { FormState } from '../actions';
 import {
@@ -14,9 +15,6 @@ import {
 
 const INITIAL: FormState = { ok: false };
 const INITIAL_GENERATE: GenerateState = { ok: false };
-
-const field =
-  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function Problem({ state }: { state: FormState }): React.ReactElement | null {
   const t = useTranslations();
@@ -118,23 +116,23 @@ export function ClosureForm({
       <input type="hidden" name="organizationId" value={organizationId} />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="closure-start" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="closure-start" className={FIELD_LABEL}>
             {t('calendar.startsOn')}
           </label>
-          <input id="closure-start" name="startsOn" type="date" required className={field} />
+          <input id="closure-start" name="startsOn" type="date" required className={CONTROL_LINE} />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="closure-end" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="closure-end" className={FIELD_LABEL}>
             {t('calendar.endsOn')}
           </label>
-          <input id="closure-end" name="endsOn" type="date" className={field} />
+          <input id="closure-end" name="endsOn" type="date" className={CONTROL_LINE} />
           <span className="text-xs text-foreground-muted">{t('calendar.endsOnHint')}</span>
         </div>
 
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <label htmlFor="closure-reason" className="text-sm text-foreground-muted">
+        <div className={`${FIELD_COLUMN} sm:col-span-2`}>
+          <label htmlFor="closure-reason" className={FIELD_LABEL}>
             {t('calendar.reason')}
           </label>
           <input
@@ -143,15 +141,15 @@ export function ClosureForm({
             required
             maxLength={200}
             placeholder={t('calendar.reasonPlaceholder')}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="closure-pool" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="closure-pool" className={FIELD_LABEL}>
             {t('calendar.scope')}
           </label>
-          <select id="closure-pool" name="poolId" defaultValue="" className={field}>
+          <select id="closure-pool" name="poolId" defaultValue="" className={CONTROL_LINE}>
             <option value="">{t('calendar.wholeOrganization')}</option>
             {pools.map((pool) => (
               <option key={pool.id} value={pool.id}>
@@ -161,15 +159,15 @@ export function ClosureForm({
           </select>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="closure-effect" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="closure-effect" className={FIELD_LABEL}>
             {t('calendar.effect')}
           </label>
           <select
             id="closure-effect"
             name="blocksGeneration"
             defaultValue="closed"
-            className={field}
+            className={CONTROL_LINE}
           >
             <option value="closed">{t('calendar.effectClosed')}</option>
             <option value="note">{t('calendar.effectNote')}</option>
@@ -330,7 +328,7 @@ export function CancelSession({
         name="reason"
         maxLength={200}
         placeholder={t('calendar.cancelReason')}
-        className={`${field} text-sm`}
+        className={CONTROL_LINE}
       />
       <div className="flex items-center gap-3">
         <button

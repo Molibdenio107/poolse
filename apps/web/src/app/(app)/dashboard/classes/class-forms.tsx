@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 import type { ClassGroup, ClassOptions } from '@/lib/api';
 import type { FormState } from '../actions';
 import {
@@ -15,9 +17,6 @@ import {
 } from './classes.actions';
 
 const INITIAL: FormState = { ok: false };
-
-const field =
-  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function Problem({ state }: { state: FormState }): React.ReactElement | null {
   const t = useTranslations();
@@ -56,8 +55,8 @@ export function ClassForm({
       {group !== undefined && <input type="hidden" name="groupId" value={group.id} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <label htmlFor="class-name" className="text-sm text-foreground-muted">
+        <div className={`${FIELD_COLUMN} sm:col-span-2`}>
+          <label htmlFor="class-name" className={FIELD_LABEL}>
             {t('classes.nameLabel')}
           </label>
           <input
@@ -67,7 +66,7 @@ export function ClassForm({
             maxLength={120}
             defaultValue={group?.name ?? ''}
             placeholder={t('classes.namePlaceholder')}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
@@ -96,8 +95,8 @@ export function ClassForm({
           value={group?.poolId ?? ''}
         />
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="class-lane" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="class-lane" className={FIELD_LABEL}>
             {t('classes.lane')}
           </label>
           <input
@@ -106,12 +105,12 @@ export function ClassForm({
             type="number"
             min={1}
             defaultValue={group?.lane ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="class-capacity" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="class-capacity" className={FIELD_LABEL}>
             {t('classes.capacity')}
           </label>
           <input
@@ -120,7 +119,7 @@ export function ClassForm({
             type="number"
             min={1}
             defaultValue={group?.capacity ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
           <p className="text-sm text-foreground-muted">{t('classes.capacityHint')}</p>
         </div>
@@ -158,11 +157,11 @@ function Choose({
   value: string;
 }): React.ReactElement {
   return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm text-foreground-muted">
+    <div className={FIELD_COLUMN}>
+      <label htmlFor={id} className={FIELD_LABEL}>
         {label}
       </label>
-      <select id={id} name={name} defaultValue={value} className={field}>
+      <select id={id} name={name} defaultValue={value} className={CONTROL_LINE}>
         <option value="">{none}</option>
         {choices.map((choice) => (
           <option key={choice.id} value={choice.id}>
@@ -199,10 +198,10 @@ export function AddSlotForm({
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label htmlFor="slot-day" className="text-sm text-foreground-muted">
+          <label htmlFor="slot-day" className={FIELD_LABEL}>
             {t('classes.day')}
           </label>
-          <select id="slot-day" name="weekday" defaultValue="2" className={field}>
+          <select id="slot-day" name="weekday" defaultValue="2" className={CONTROL_LINE}>
             {[1, 2, 3, 4, 5, 6, 7].map((day) => (
               <option key={day} value={day}>
                 {dayNames[day]}
@@ -212,7 +211,7 @@ export function AddSlotForm({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="slot-time" className="text-sm text-foreground-muted">
+          <label htmlFor="slot-time" className={FIELD_LABEL}>
             {t('classes.startTime')}
           </label>
           <input
@@ -221,12 +220,12 @@ export function AddSlotForm({
             type="time"
             required
             defaultValue="18:00"
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="slot-duration" className="text-sm text-foreground-muted">
+          <label htmlFor="slot-duration" className={FIELD_LABEL}>
             {t('classes.duration')}
           </label>
           <input
@@ -236,7 +235,7 @@ export function AddSlotForm({
             min={5}
             max={480}
             defaultValue={45}
-            className={`${field} w-28`}
+            className={cn(CONTROL_LINE, 'w-28')}
           />
         </div>
 
@@ -315,7 +314,7 @@ export function EnrolForm({
           name="studentId"
           required
           aria-label={t('classes.student')}
-          className={`${field} min-w-56 flex-1`}
+          className={cn(CONTROL_LINE, 'min-w-56 flex-1')}
         >
           {students.map((student) => (
             <option key={student.id} value={student.id}>

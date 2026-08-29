@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { FormState } from '../actions';
 import {
   archiveFacilityAction,
@@ -11,9 +12,6 @@ import {
 } from './facilities.actions';
 
 const INITIAL: FormState = { ok: false };
-
-const field =
-  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function Error({ state }: { state: FormState }): React.ReactElement | null {
   const t = useTranslations();
@@ -51,8 +49,8 @@ export function CreateFacilityForm({
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="facility-name" className="text-sm text-foreground-muted">
+      <div className={FIELD_COLUMN}>
+        <label htmlFor="facility-name" className={FIELD_LABEL}>
           {t('facilities.nameLabel')}
         </label>
         <input
@@ -61,22 +59,22 @@ export function CreateFacilityForm({
           required
           maxLength={120}
           placeholder={t('facilities.namePlaceholder')}
-          className={field}
+          className={CONTROL_LINE}
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="facility-address" className="text-sm text-foreground-muted">
+      <div className={FIELD_COLUMN}>
+        <label htmlFor="facility-address" className={FIELD_LABEL}>
           {t('facilities.addressLabel')}
         </label>
-        <input id="facility-address" name="address" maxLength={500} className={field} />
+        <input id="facility-address" name="address" maxLength={500} className={CONTROL_LINE} />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="facility-timezone" className="text-sm text-foreground-muted">
+      <div className={FIELD_COLUMN}>
+        <label htmlFor="facility-timezone" className={FIELD_LABEL}>
           {t('facilities.timezoneLabel')}
         </label>
-        <select id="facility-timezone" name="timezone" defaultValue={timezones[0]} className={field}>
+        <select id="facility-timezone" name="timezone" defaultValue={timezones[0]} className={CONTROL_LINE}>
           {timezones.map((zone) => (
             <option key={zone} value={zone}>
               {zone}

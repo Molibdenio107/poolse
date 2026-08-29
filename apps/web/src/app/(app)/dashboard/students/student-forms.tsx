@@ -3,15 +3,13 @@
 import { useActionState, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Guardian, StudentLevel } from '../../../../lib/api';
+import { CONTROL_BLOCK, CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { GuardianBlock } from './guardian-block';
 import { fitsLevel } from '@/lib/ages';
 import type { FormState } from '../actions';
 import { archiveStudentAction, createStudentAction, updateStudentAction } from './students.actions';
 
 const INITIAL: FormState = { ok: false };
-
-const field =
-  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function Problem({ state }: { state: FormState }): React.ReactElement | null {
   const t = useTranslations();
@@ -74,8 +72,8 @@ export function StudentForm({
       {student?.id !== undefined && <input type="hidden" name="studentId" value={student.id} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="student-first" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="student-first" className={FIELD_LABEL}>
             {t('students.firstName')}
           </label>
           <input
@@ -84,12 +82,12 @@ export function StudentForm({
             required
             maxLength={120}
             defaultValue={student?.firstName ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="student-last" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="student-last" className={FIELD_LABEL}>
             {t('students.lastName')}
           </label>
           <input
@@ -98,12 +96,12 @@ export function StudentForm({
             required
             maxLength={120}
             defaultValue={student?.lastName ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="student-birth" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="student-birth" className={FIELD_LABEL}>
             {t('students.birthDate')}
           </label>
           <input
@@ -111,14 +109,14 @@ export function StudentForm({
             name="birthDate"
             type="date"
             defaultValue={student?.birthDate ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
         <LevelPicker levels={levels} student={student} />
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="student-email" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="student-email" className={FIELD_LABEL}>
             {t('students.contactEmail')}
           </label>
           <input
@@ -126,34 +124,35 @@ export function StudentForm({
             name="contactEmail"
             type="email"
             defaultValue={student?.contactEmail ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="student-phone" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="student-phone" className={FIELD_LABEL}>
             {t('students.contactPhone')}
           </label>
           <input
             id="student-phone"
             name="contactPhone"
             defaultValue={student?.contactPhone ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="student-notes" className="text-sm text-foreground-muted">
+      <div className={FIELD_COLUMN}>
+        <label htmlFor="student-notes" className={FIELD_LABEL}>
           {t('students.notes')}
         </label>
+        {/* CONTROL_BLOCK, not CONTROL_LINE: the fixed height would fight `rows`. */}
         <textarea
           id="student-notes"
           name="notes"
           rows={3}
           maxLength={2000}
           defaultValue={student?.notes ?? ''}
-          className={field}
+          className={CONTROL_BLOCK}
         />
         <p className="text-sm text-warning">{t('students.notesWarning')}</p>
       </div>
@@ -302,8 +301,8 @@ function LevelPicker({
   const fit = chosen === null ? 'fits' : fitsLevel(chosen, dob);
 
   return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor="student-level" className="text-sm text-foreground-muted">
+    <div className={FIELD_COLUMN}>
+      <label htmlFor="student-level" className={FIELD_LABEL}>
         {t('students.level')}
       </label>
       <select
@@ -312,7 +311,7 @@ function LevelPicker({
         value={levelId}
         onChange={(event) => setLevelId(event.target.value)}
         aria-describedby={fit === 'tooYoung' || fit === 'tooOld' ? 'student-level-warning' : undefined}
-        className={field}
+        className={CONTROL_LINE}
       >
         <option value="">{t('students.noLevel')}</option>
         {levels.map((level) => {

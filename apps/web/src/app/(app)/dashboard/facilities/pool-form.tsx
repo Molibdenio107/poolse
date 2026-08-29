@@ -2,13 +2,11 @@
 
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { FormState } from '../actions';
 import { createPoolAction, updatePoolAction } from './facilities.actions';
 
 const INITIAL: FormState = { ok: false };
-
-const field =
-  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export interface PoolFormValues {
   id?: string;
@@ -62,8 +60,8 @@ export function PoolForm({
       {pool?.id !== undefined && <input type="hidden" name="poolId" value={pool.id} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <label htmlFor="pool-name" className="text-sm text-foreground-muted">
+        <div className={`${FIELD_COLUMN} sm:col-span-2`}>
+          <label htmlFor="pool-name" className={FIELD_LABEL}>
             {t('facilities.poolNameLabel')}
           </label>
           <input
@@ -73,27 +71,27 @@ export function PoolForm({
             maxLength={120}
             defaultValue={pool?.name ?? ''}
             placeholder={t('facilities.poolNamePlaceholder')}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="pool-kind" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="pool-kind" className={FIELD_LABEL}>
             {t('facilities.kindLabel')}
           </label>
           <select
             id="pool-kind"
             name="kind"
             defaultValue={pool?.kind ?? 'indoor'}
-            className={field}
+            className={CONTROL_LINE}
           >
             <option value="indoor">{t('facilities.kind.indoor')}</option>
             <option value="outdoor">{t('facilities.kind.outdoor')}</option>
           </select>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="pool-lanes" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="pool-lanes" className={FIELD_LABEL}>
             {t('facilities.lanesLabel')}
           </label>
           <input
@@ -102,7 +100,7 @@ export function PoolForm({
             type="number"
             min={1}
             defaultValue={pool?.laneCount ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
       </div>
@@ -112,8 +110,8 @@ export function PoolForm({
           {t('facilities.measurements')}
         </legend>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="pool-length" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="pool-length" className={FIELD_LABEL}>
             {t('facilities.lengthLabel')}
           </label>
           {/*
@@ -127,12 +125,12 @@ export function PoolForm({
             min={0.01}
             step={0.01}
             defaultValue={pool?.lengthM ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="pool-width" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="pool-width" className={FIELD_LABEL}>
             {t('facilities.widthLabel')}
           </label>
           <input
@@ -142,12 +140,12 @@ export function PoolForm({
             min={0.01}
             step={0.01}
             defaultValue={pool?.widthM ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="pool-depth" className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="pool-depth" className={FIELD_LABEL}>
             {t('facilities.depthLabel')}
           </label>
           <input
@@ -157,13 +155,13 @@ export function PoolForm({
             min={0.01}
             step={0.01}
             defaultValue={pool?.maxDepthM ?? ''}
-            className={field}
+            className={CONTROL_LINE}
           />
         </div>
       </fieldset>
 
-      <div className="flex flex-col gap-2 sm:max-w-64">
-        <label htmlFor="pool-volume" className="text-sm text-foreground-muted">
+      <div className={`${FIELD_COLUMN} sm:max-w-64`}>
+        <label htmlFor="pool-volume" className={FIELD_LABEL}>
           {t('facilities.volumeLabel')}
         </label>
         <input
@@ -172,7 +170,7 @@ export function PoolForm({
           type="number"
           min={1}
           defaultValue={pool?.volumeLitres ?? ''}
-          className={field}
+          className={CONTROL_LINE}
         />
         <p className="text-sm text-foreground-muted">{t('facilities.optionalHint')}</p>
       </div>

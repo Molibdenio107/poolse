@@ -69,6 +69,17 @@ function draftOf(guardian: Guardian): Draft {
   };
 }
 
+/*
+ * The typeahead shell styles the wrapper so the search icon sits inside the
+ * box, which means the focus ring must be `focus-within:` — the wrapper never
+ * takes focus itself, the input inside it does. CONTROL_LINE's `focus-visible:`
+ * ring would therefore never show, so this composes the same density tokens
+ * (`h-control px-2.5 text-sm`) with the focus-within variant instead.
+ */
+const TYPEAHEAD_SHELL =
+  'flex h-control w-full items-center gap-2 rounded border border-border-strong bg-background px-2.5 text-sm ' +
+  'focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary';
+
 const BLANK: Draft = {
   membershipId: null,
   name: '',
@@ -465,7 +476,7 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
     <div className="flex flex-col gap-2">
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-foreground-muted">{t('students.guardianFind')}</span>
-        <span className="flex items-center gap-2 rounded border border-border-strong bg-background px-3 py-2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
+        <span className={TYPEAHEAD_SHELL}>
           <Search className="size-4 shrink-0 text-foreground-muted" aria-hidden />
           <input
             value={query}

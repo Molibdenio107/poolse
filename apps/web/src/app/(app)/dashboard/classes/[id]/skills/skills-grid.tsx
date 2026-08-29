@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { TurmaSkills } from '@/lib/api';
 import { SKILL_STATES, type SkillState } from '@/lib/skills';
 import { SkillLegend, SkillStateCell, SkillStateChip } from '@/components/skill-state';
+import { CONTROL_LINE, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { markSkillsAction } from './skills.actions';
 
@@ -356,13 +357,13 @@ function OverrideDialog({
       </ul>
 
       <label className="flex flex-col gap-2">
-        <span className="text-sm text-foreground-muted">{t('skills.overrideReason')}</span>
+        <span className={FIELD_LABEL}>{t('skills.overrideReason')}</span>
         <input
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           maxLength={300}
           placeholder={t('skills.overrideReasonPlaceholder')}
-          className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className={CONTROL_LINE}
         />
       </label>
 

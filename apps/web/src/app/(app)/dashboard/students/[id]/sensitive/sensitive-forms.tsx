@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CONTROL_BLOCK, CONTROL_LINE } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 import type { ConsentKind } from '../../../../../../lib/api';
 import type { FormState } from '../../../actions';
 import {
@@ -11,9 +13,6 @@ import {
 } from './sensitive.actions';
 
 const INITIAL: FormState = { ok: false };
-
-const field =
-  'rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function Problem({ state }: { state: FormState }): React.ReactElement | null {
   const t = useTranslations();
@@ -59,7 +58,7 @@ export function MedicalNotesForm({
         maxLength={4000}
         defaultValue={notes ?? ''}
         placeholder={t('sensitive.notesPlaceholder')}
-        className={field}
+        className={CONTROL_BLOCK}
       />
       <p className="text-sm text-foreground-muted">{t('sensitive.notesHint')}</p>
 
@@ -105,7 +104,7 @@ export function RecordConsentForm({
       <input type="hidden" name="studentId" value={studentId} />
 
       <div className="flex flex-wrap gap-2">
-        <select name="kind" aria-label={t('sensitive.kind')} className={`${field} min-w-44`}>
+        <select name="kind" aria-label={t('sensitive.kind')} className={cn(CONTROL_LINE, 'min-w-44')}>
           {kinds.map((kind) => (
             <option key={kind} value={kind}>
               {t(`sensitive.kinds.${kind}`)}
@@ -117,7 +116,7 @@ export function RecordConsentForm({
           maxLength={500}
           aria-label={t('sensitive.evidence')}
           placeholder={t('sensitive.evidencePlaceholder')}
-          className={`${field} min-w-48 flex-1`}
+          className={cn(CONTROL_LINE, 'min-w-48 flex-1')}
         />
       </div>
 

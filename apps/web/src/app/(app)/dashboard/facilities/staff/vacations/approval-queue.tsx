@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { PendingVacations } from '@/lib/api';
 import { decideVacationAction } from './vacations.actions';
 import type { FormState } from '../../../actions';
@@ -124,8 +125,8 @@ function RequestCard({
         need one.
       */}
       {rejecting && (
-        <div className="flex flex-col gap-2">
-          <label htmlFor={`note-${request.id}`} className="text-sm text-foreground-muted">
+        <div className={FIELD_COLUMN}>
+          <label htmlFor={`note-${request.id}`} className={FIELD_LABEL}>
             {t('vacations.reason')}
           </label>
           <input
@@ -134,7 +135,7 @@ function RequestCard({
             required
             maxLength={500}
             placeholder={t('vacations.reasonPlaceholder')}
-            className="rounded border border-border-strong bg-background px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className={CONTROL_LINE}
           />
           <div className="flex items-center gap-3">
             <button

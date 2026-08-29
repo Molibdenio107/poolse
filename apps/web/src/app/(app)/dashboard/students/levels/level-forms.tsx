@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '@/lib/api';
 import { ageOptions } from '@/lib/ages';
 import { useMonthWords } from '@/components/age-range';
-import { SelectField } from '@/components/ui/field';
+import { CONTROL_LINE, SelectField } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import {
   archiveLevelAction,
@@ -34,7 +35,7 @@ export function CreateLevelForm({
           maxLength={120}
           aria-label={t('students.levelName')}
           placeholder={t('students.levelPlaceholder')}
-          className="min-w-48 flex-1 rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className={cn(CONTROL_LINE, 'min-w-48 flex-1')}
         />
         <button
           type="submit"
@@ -197,7 +198,7 @@ export function EditLevelForm({
           maxLength={120}
           defaultValue={level.name}
           aria-label={t('students.levelName')}
-          className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className={CONTROL_LINE}
         />
 
         <AgeInputs minAgeMonths={level.minAgeMonths} maxAgeMonths={level.maxAgeMonths} />

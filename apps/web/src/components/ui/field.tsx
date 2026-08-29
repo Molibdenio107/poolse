@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
  * is two numbers in `tailwind.config.ts` — see the note there before changing
  * one of them here.
  */
-const CONTROL =
+export const CONTROL_BASE =
   'w-full rounded border border-border-strong bg-background px-2.5 text-sm ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
@@ -43,8 +43,20 @@ const CONTROL =
  * A fixed height on a textarea would fight `rows`, and `rows` is the property
  * the caller actually reasons about.
  */
-const CONTROL_LINE = `${CONTROL} h-control`;
-const CONTROL_BLOCK = `${CONTROL} py-2`;
+export const CONTROL_LINE = `${CONTROL_BASE} h-control`;
+export const CONTROL_BLOCK = `${CONTROL_BASE} py-2`;
+
+/**
+ * The label above a control, and the column the two sit in.
+ *
+ * Exported because sixteen forms in this app predate these components and build
+ * their controls by hand. They cannot all be converted in one change — several
+ * are typeaheads and grids with their own state — but they can share the classes,
+ * which is the part that has to agree. A form styled by hand from these constants
+ * is a form that changes density when the tokens do.
+ */
+export const FIELD_LABEL = 'text-sm text-foreground-muted';
+export const FIELD_COLUMN = 'flex w-full flex-col gap-1.5';
 
 /**
  * How wide the field's column is allowed to get.
@@ -53,9 +65,10 @@ const CONTROL_BLOCK = `${CONTROL} py-2`;
  * the same place the box does. A caller that genuinely wants the full width of
  * its container passes `className="max-w-none"` — a grid cell, mostly.
  */
-const FIELD = 'flex w-full flex-col gap-1.5';
+const FIELD = FIELD_COLUMN;
 
-const INVALID = 'border-danger';
+export const CONTROL_INVALID = 'border-danger';
+const INVALID = CONTROL_INVALID;
 
 /**
  * Re-seeds from the server when — and only when — the server's value changes.
