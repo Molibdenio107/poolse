@@ -158,7 +158,13 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
               <p className="text-sm text-foreground-muted">{t('classes.weekHint')}</p>
             </div>
 
-            <WeekGrid entries={entries} dayNames={dayNames} emptyLabel={t('classes.noSlots')} />
+            <WeekGrid
+              entries={entries}
+              dayNames={dayNames}
+              emptyLabel={t('classes.noSlots')}
+              // The one screen where a class on the grid opens its turma.
+              linkTitles
+            />
           </section>
 
           {unscheduled.length > 0 && (

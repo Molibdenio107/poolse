@@ -15,6 +15,11 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import { nameOrder, shortName } from '../people/names.js';
 import {
+  facilityHours,
+  listFacilities,
+  type FacilityDay,
+} from '../facilities/facilities.repository.js';
+import {
   addSchedule,
   AlreadyEnrolledError,
   archiveClassGroup,
@@ -25,6 +30,7 @@ import {
   findClassGroup,
   FullError,
   listClassGroups,
+  moveSchedule,
   removeSchedule,
   timetableFor,
   updateClassGroup,
@@ -45,11 +51,22 @@ interface ClassesResponse {
   canManage: boolean;
   /** What the create and edit forms may choose from, in one payload. */
   options: {
-    levels: Choice[];
+    /** With their age bounds, so the enrol picker can filter by them. */
+    levels: (Choice & { minAgeMonths: number | null; maxAgeMonths: number | null })[];
     pools: Choice[];
     instructors: Choice[];
-    students: Choice[];
+    /** With birth dates, for the same reason. */
+    students: (Choice & { birthDate: string | null })[];
   };
+  /**
+   * Every site and its weekly opening hours — round 5.
+   *
+   * The schedule board picks one and draws its rows between that day's opening
+   * and closing time. Sent with the turmas rather than fetched separately
+   * because the board is useless without both, and two requests would let it
+   * render against constants for a beat before correcting itself.
+   */
+  facilities: { id: string; name: string; hours: FacilityDay[] }[];
 }
 
 const MAX_NAME = 120;
@@ -77,12 +94,33 @@ export class ClassesController {
      * turma, and a half-filled dropdown is a form that silently cannot express
      * what somebody wants.
      */
-    const [groups, options] = await Promise.all([
+    const [groups, options, facilities] = await Promise.all([
       listClassGroups(organizationId),
       formOptions(organizationId),
+      // One query per site rather than one join: a club has two or three sites,
+      // and seven rows each is a rounding error next to the turmas above.
+      listFacilities(organizationId).then((sites) =>
+        Promise.all(
+          sites.map(async (site) => ({
+            id: site.id,
+            name: site.name,
+            hours: await facilityHours(organizationId, site.id),
+          })),
+        ),
+      ),
     ]);
 
-    return { organizationId, groups, canManage: hasRole('owner', 'admin'), options };
+    return {
+      organizationId,
+      groups,
+      canManage: hasRole('owner', 'admin'),
+      options,
+      // The sites and their weekly opening hours — round 5. The schedule board
+      // draws its rows between a day's opening and closing time rather than
+      // between two constants, so a class at 06:30 at a site open from 06:00 is
+      // on the grid instead of above it.
+      facilities,
+    };
   }
 
   @Get(':id')
@@ -181,6 +219,38 @@ export class ClassesController {
     return { added: true };
   }
 
+  /**
+   * Drag a slot to a new day or time — round 5.
+   *
+   * The duration is deliberately not accepted here. A drag says "this class
+   * happens then instead"; changing how long it runs for is a different
+   * decision, made in the form, and letting a drop carry it would mean a
+   * mis-aimed pointer could quietly shorten a lesson.
+   */
+  @Post(':id/schedules/:scheduleId/move')
+  async moveSlot(
+    @Param('id') id: string,
+    @Param('scheduleId') scheduleId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ moved: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const outcome = await moveSchedule(
+      organizationId,
+      id,
+      scheduleId,
+      parseWeekday(body['weekday']),
+      parseTime(body['startTime']),
+    );
+
+    if (outcome === 'not_found') throw new NotFoundException('No such slot');
+    if (outcome === 'duplicate') {
+      throw new ConflictException('That class group already runs at that time on that day');
+    }
+    return { moved: true };
+  }
+
   @Post(':id/schedules/:scheduleId/remove')
   async unschedule(
     @Param('id') id: string,
@@ -265,8 +335,15 @@ export class TimetableController {
  */
 async function formOptions(organizationId: string): Promise<ClassesResponse['options']> {
   return withOrg(organizationId, async (tx) => {
-    const levels = await tx.query<Choice>(
-      `SELECT id, name FROM student_level WHERE archived_at IS NULL ORDER BY sort_order, name`,
+    const levels = await tx.query<
+      Choice & { minAgeMonths: number | null; maxAgeMonths: number | null }
+    >(
+      // The bounds travel with the level — round 5. The enrol picker filters
+      // by the age range of the turma's level, and a level with no ages
+      // filters nothing, which is why both columns come through as nulls
+      // rather than being defaulted here.
+      `SELECT id, name, min_age_months AS "minAgeMonths", max_age_months AS "maxAgeMonths"
+         FROM student_level WHERE archived_at IS NULL ORDER BY sort_order, name`,
     );
     const pools = await tx.query<Choice>(
       `SELECT id, name FROM pool WHERE archived_at IS NULL ORDER BY name`,
@@ -286,8 +363,11 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
         GROUP BY m.id, u.cached_first_name, u.cached_last_name, u.cached_email
         ORDER BY name`,
     );
-    const students = await tx.query<Choice>(
-      `SELECT id, ${shortName('student')} AS name
+    const students = await tx.query<Choice & { birthDate: string | null }>(
+      // `birth_date`, so the picker can tell who fits the level. Sent as the
+      // date rather than an age because `fitsLevel` works in months and the
+      // browser is the only place that knows what day it is for the reader.
+      `SELECT id, ${shortName('student')} AS name, birth_date AS "birthDate"
          FROM student WHERE archived_at IS NULL ORDER BY ${nameOrder('student')}`,
     );
 

@@ -178,3 +178,97 @@ export async function endEnrollmentAction(
   revalidatePath(`/dashboard/classes/${groupId}`);
   return { ok: true };
 }
+
+/**
+ * Place an unscheduled turma on a day and time — round 5, drag and drop.
+ *
+ * Plain arguments rather than `FormData`: a drop is not a form submission, and
+ * building a `FormData` to satisfy an action signature would be ceremony around
+ * three strings.
+ *
+ * **The duration comes from the turma, not from the drop.** A turma that already
+ * runs on Tuesday keeps that length on Thursday, which is what a club means by
+ * "same class, second day". Only a turma with no slots at all takes the 45
+ * minutes the form defaults to, and that is the one case where nothing better is
+ * known.
+ *
+ * Returns the new slot's id so the caller can offer an undo that removes exactly
+ * the row it created.
+ */
+export async function placeSlotAction(
+  organizationId: string,
+  groupId: string,
+  weekday: number,
+  startTime: string,
+  durationMinutes: number,
+): Promise<{ ok: true } | { ok: false; errorKey: string }> {
+  try {
+    await apiPost(
+      `/class-groups/${groupId}/schedules`,
+      { weekday: String(weekday), startTime, durationMinutes: String(durationMinutes) },
+      { organizationId },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      return { ok: false, errorKey: 'classes.slotDuplicate' };
+    }
+    // The facility-hours trigger, most often: a closed day, or a class that
+    // would run past closing. The API returns its sentence; this maps it to the
+    // one string the grid can show without a banner.
+    return { ok: false, errorKey: 'classes.slotRefused' };
+  }
+
+  revalidatePath('/dashboard/classes');
+  revalidatePath('/dashboard/calendar');
+  revalidatePath(`/dashboard/classes/${groupId}`);
+  return { ok: true };
+}
+
+/** Move a slot already on the grid. Same refusals, same reasons. */
+export async function moveSlotAction(
+  organizationId: string,
+  groupId: string,
+  scheduleId: string,
+  weekday: number,
+  startTime: string,
+): Promise<{ ok: true } | { ok: false; errorKey: string }> {
+  try {
+    await apiPost(
+      `/class-groups/${groupId}/schedules/${scheduleId}/move`,
+      { weekday: String(weekday), startTime },
+      { organizationId },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      return { ok: false, errorKey: 'classes.slotDuplicate' };
+    }
+    return { ok: false, errorKey: 'classes.slotRefused' };
+  }
+
+  revalidatePath('/dashboard/classes');
+  revalidatePath('/dashboard/calendar');
+  revalidatePath(`/dashboard/classes/${groupId}`);
+  return { ok: true };
+}
+
+/** The undo behind a drop: removes the slot the drop created. */
+export async function undoSlotAction(
+  organizationId: string,
+  groupId: string,
+  scheduleId: string,
+): Promise<void> {
+  try {
+    await apiPost(
+      `/class-groups/${groupId}/schedules/${scheduleId}/remove`,
+      {},
+      { organizationId },
+    );
+  } catch {
+    // An undo that fails is not worth a banner: the slot is still on the grid,
+    // which is the state the operator can see and can remove by hand.
+  }
+
+  revalidatePath('/dashboard/classes');
+  revalidatePath('/dashboard/calendar');
+  revalidatePath(`/dashboard/classes/${groupId}`);
+}

@@ -223,6 +223,11 @@ export default async function ClassPage({
             {group.canManage && (
               <div className="border-t border-border pt-4">
                 <EnrolForm
+                  // The turma's level, so the picker can offer the right ages
+                  // first — round 5. Null when the turma has no level.
+                  level={
+                    all.options.levels.find((candidate) => candidate.id === group.levelId) ?? null
+                  }
                   organizationId={all.organizationId}
                   groupId={group.id}
                   students={available}

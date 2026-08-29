@@ -1,10 +1,12 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { fitsLevel, type AgeFit } from '@/lib/ages';
 import { cn } from '@/lib/utils';
 import type { ClassGroup, ClassOptions } from '@/lib/api';
+import { createLevelInline } from '../students/students.actions';
 import type { FormState } from '../actions';
 import {
   addSlotAction,
@@ -54,7 +56,17 @@ export function ClassForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       {group !== undefined && <input type="hidden" name="groupId" value={group.id} />}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/*
+        `items-start` and a wider row gap — round 4 follow-up.
+
+        The cells were stretching to the tallest in the row, so the level picker
+        (which carries a button and, while open, a whole panel) dragged the
+        instructor select beside it to the same height and left a band of empty
+        space under its label. Aligning to the top lets each field be as tall as
+        it is, and `gap-y-5` keeps the rows apart now that they are no longer
+        padded out by the stretch.
+      */}
+      <div className="grid items-start gap-x-4 gap-y-5 sm:grid-cols-2">
         <div className={`${FIELD_COLUMN} sm:col-span-2`}>
           <label htmlFor="class-name" className={FIELD_LABEL}>
             {t('classes.nameLabel')}
@@ -70,13 +82,11 @@ export function ClassForm({
           />
         </div>
 
-        <Choose
-          id="class-level"
-          name="levelId"
-          label={t('classes.level')}
-          none={t('classes.noLevel')}
-          choices={options.levels}
+        <LevelChoice
+          organizationId={organizationId}
+          levels={options.levels}
           value={group?.levelId ?? ''}
+          mode={mode}
         />
         <Choose
           id="class-instructor"
@@ -201,7 +211,20 @@ export function AddSlotForm({
           <label htmlFor="slot-day" className={FIELD_LABEL}>
             {t('classes.day')}
           </label>
-          <select id="slot-day" name="weekday" defaultValue="2" className={CONTROL_LINE}>
+          {/*
+            Nothing pre-selected — round 5.
+
+            The day defaulted to Tuesday and the time to 18:00, which is a
+            suggestion dressed as an answer: a turma with no timetable at all
+            showed a form that already looked filled in, and pressing Add created
+            a Tuesday evening class nobody had chosen. An empty first option
+            makes the form say what it is — a blank to fill in — and `required`
+            means it cannot be submitted half-answered.
+          */}
+          <select id="slot-day" name="weekday" required defaultValue="" className={CONTROL_LINE}>
+            <option value="" disabled>
+              {t('classes.chooseDay')}
+            </option>
             {[1, 2, 3, 4, 5, 6, 7].map((day) => (
               <option key={day} value={day}>
                 {dayNames[day]}
@@ -219,7 +242,6 @@ export function AddSlotForm({
             name="startTime"
             type="time"
             required
-            defaultValue="18:00"
             className={CONTROL_LINE}
           />
         </div>
@@ -292,13 +314,58 @@ export function EnrolForm({
   organizationId,
   groupId,
   students,
+  level,
 }: {
   organizationId: string;
   groupId: string;
-  students: { id: string; name: string }[];
+  students: { id: string; name: string; birthDate: string | null }[];
+  /**
+   * The turma's level, when it has one — round 5.
+   *
+   * Its age bounds decide who the picker offers first. Null when the turma has
+   * no level, or the level has no ages, and then nothing is filtered: a bound
+   * that does not exist cannot be a rule.
+   */
+  level: { minAgeMonths: number | null; maxAgeMonths: number | null } | null;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useActionState(enrolAction, INITIAL);
+
+  const [query, setQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+
+  /*
+   * Filtered by the level's ages — but never a block.
+   *
+   * The settled rule in this repo is that age warns and does not refuse: the
+   * student form says so, and `classes.sql` test 13 asserts a 67-year-old can be
+   * put in Bebés because a club sometimes has a reason. Round 5 asked for the
+   * enrol picker to respect the level's range, and this is the shape that does
+   * both — the sensible list by default, every student one checkbox away, and a
+   * mark on the ones outside the range so choosing one is deliberate rather than
+   * accidental.
+   *
+   * A student with no birth date is `unknown` and is always offered: an import
+   * without dates must not make a whole club unenrollable.
+   */
+  const fitFor = (student: { birthDate: string | null }): AgeFit =>
+    level === null ? 'fits' : fitsLevel(level, student.birthDate);
+
+  const matching = students.filter((student) => {
+    if (query.trim() !== '' && !matches(student.name, query)) return false;
+    if (showAll) return true;
+    const fit = fitFor(student);
+    return fit === 'fits' || fit === 'unknown';
+  });
+
+  // How many the age filter is holding back — said as a number, because "some
+  // students are hidden" is a sentence people ignore.
+  const hidden = level === null
+    ? 0
+    : students.filter((student) => {
+        const fit = fitFor(student);
+        return fit === 'tooYoung' || fit === 'tooOld';
+      }).length;
 
   if (students.length === 0) {
     return <p className="text-sm text-foreground-muted">{t('classes.everyoneEnrolled')}</p>;
@@ -309,6 +376,38 @@ export function EnrolForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="groupId" value={groupId} />
 
+      {/*
+        Type to narrow, then choose — round 5. A club with three hundred students
+        had a select three hundred long, which is the same scrolling problem the
+        age picker had on the levels page.
+      */}
+      <div className={`${FIELD_COLUMN} max-w-form`}>
+        <label htmlFor="enrol-search" className={FIELD_LABEL}>
+          {t('classes.searchStudents')}
+        </label>
+        <input
+          id="enrol-search"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t('classes.searchStudentsPlaceholder')}
+          className={CONTROL_LINE}
+          autoComplete="off"
+        />
+      </div>
+
+      {hidden > 0 && (
+        <label className="flex items-center gap-2 text-sm text-foreground-muted">
+          <input
+            type="checkbox"
+            checked={showAll}
+            onChange={(event) => setShowAll(event.target.checked)}
+            className="size-4"
+          />
+          {t('classes.showOutsideAges', { count: hidden })}
+        </label>
+      )}
+
       <div className="flex flex-wrap items-end gap-2">
         <select
           name="studentId"
@@ -316,11 +415,27 @@ export function EnrolForm({
           aria-label={t('classes.student')}
           className={cn(CONTROL_LINE, 'min-w-56 flex-1')}
         >
-          {students.map((student) => (
-            <option key={student.id} value={student.id}>
-              {student.name}
+          {matching.length === 0 && (
+            <option value="" disabled>
+              {t('classes.noStudentsMatch')}
             </option>
-          ))}
+          )}
+          {matching.map((student) => {
+            const fit = fitFor(student);
+            return (
+              <option key={student.id} value={student.id}>
+                {student.name}
+                {/*
+                  The mark is text in the option, not a colour: a `<select>`
+                  cannot carry a badge, and "outside the ages" has to be legible
+                  to somebody listening to the page as much as looking at it.
+                */}
+                {fit === 'tooYoung' || fit === 'tooOld'
+                  ? ` — ${t('classes.outsideAges')}`
+                  : ''}
+              </option>
+            );
+          })}
         </select>
 
         <button
@@ -426,4 +541,240 @@ export function ArchiveClassButton({
       <Problem state={state} />
     </form>
   );
+}
+
+/**
+ * The level picker, with a way to create one without leaving the page - round 4.
+ *
+ * Setting up a season goes turma, turma, turma, and the third one needs a level
+ * that does not exist yet. Before this, that meant abandoning a half-filled form,
+ * navigating to Niveis, creating the level, coming back and starting again - and
+ * React 19 clears a form on the way out, so "coming back" meant retyping it.
+ *
+ * **It is not a nested form, because that is not legal HTML.** A form inside a
+ * form is invalid, and browsers resolve it by ignoring the inner one, so the
+ * inner submit posts the outer form - here, that would create a half-filled
+ * turma every time somebody added a level. The panel is therefore plain inputs
+ * and a type="button", calling the server action directly through a transition.
+ * The age bounds use the same number-and-unit pair as Niveis rather than a
+ * second way of saying the same thing.
+ *
+ * **What it deliberately does not do** is offer everything the levels page does:
+ * no reordering, no skills, no archiving. This is the shortcut for "I need
+ * Iniciacao 3 to exist right now"; the page remains where a progression is
+ * designed.
+ */
+function LevelChoice({
+  organizationId,
+  levels,
+  value,
+  mode,
+}: {
+  organizationId: string;
+  levels: { id: string; name: string }[];
+  value: string;
+  /**
+   * Creating only — round 4 follow-up.
+   *
+   * Editing a turma is a correction: you are changing which level this group
+   * sits at, and the levels already exist. Offering to invent a new one there
+   * puts a schema change in front of somebody who came to fix a typo. Setting a
+   * season up is the opposite — the levels are being decided as the turmas are —
+   * which is where the shortcut earns its place.
+   */
+  mode: 'create' | 'edit';
+}): React.ReactElement {
+  const t = useTranslations();
+
+  // Seeded from the server list and appended to locally, so a level created here
+  // is selectable immediately rather than after a round trip.
+  const [choices, setChoices] = useState(levels);
+  const [selected, setSelected] = useState(value);
+  const [open, setOpen] = useState(false);
+
+  const [name, setName] = useState('');
+  const [fromValue, setFromValue] = useState('');
+  const [fromUnit, setFromUnit] = useState('years');
+  const [toValue, setToValue] = useState('');
+  const [toUnit, setToUnit] = useState('years');
+
+  const [error, setError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
+
+  const months = (raw: string, unit: string): string => {
+    const parsed = Number(raw.trim().replace(',', '.'));
+    if (raw.trim() === '' || !Number.isFinite(parsed) || parsed < 0) return '';
+    return String(unit === 'months' ? Math.round(parsed) : Math.round(parsed * 12));
+  };
+
+  const create = (): void => {
+    setError(null);
+    startSaving(async () => {
+      const result = await createLevelInline(
+        organizationId,
+        name,
+        months(fromValue, fromUnit),
+        months(toValue, toUnit),
+      );
+
+      if (!result.ok) {
+        setError(result.errorKey);
+        return;
+      }
+
+      setChoices((current) => [...current, { id: result.id, name: result.name }]);
+      // Selecting it is the reason this exists - creating a level and then
+      // having to find it in the list would be most of the interruption back.
+      setSelected(result.id);
+      setName('');
+      setFromValue('');
+      setToValue('');
+      setOpen(false);
+    });
+  };
+
+  const bounds = [
+    {
+      id: 'new-level-from',
+      label: t('students.ageFrom'),
+      value: fromValue,
+      setValue: setFromValue,
+      unit: fromUnit,
+      setUnit: setFromUnit,
+    },
+    {
+      id: 'new-level-to',
+      label: t('students.ageTo'),
+      value: toValue,
+      setValue: setToValue,
+      unit: toUnit,
+      setUnit: setToUnit,
+    },
+  ];
+
+  return (
+    <div className={FIELD_COLUMN}>
+      <label htmlFor="class-level" className={FIELD_LABEL}>
+        {t('classes.level')}
+      </label>
+      <select
+        id="class-level"
+        name="levelId"
+        value={selected}
+        onChange={(event) => setSelected(event.target.value)}
+        className={CONTROL_LINE}
+      >
+        <option value="">{t('classes.noLevel')}</option>
+        {choices.map((choice) => (
+          <option key={choice.id} value={choice.id}>
+            {choice.name}
+          </option>
+        ))}
+      </select>
+
+      {/*
+        A button, not a link — round 4 follow-up. Underlined text beneath a
+        select reads as a footnote about the field; this creates something, and a
+        control that creates something should look like a control. The `+` is the
+        second cue, so it is not the colour alone saying "this adds".
+      */}
+      {mode === 'create' && !open && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex w-fit items-center gap-1 rounded border border-border px-2 py-1 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {t('classes.newLevel')}
+          <span aria-hidden>+</span>
+        </button>
+      )}
+
+      {mode === 'create' && open && (
+        <div className="flex flex-col gap-3 rounded border border-border bg-surface-muted p-3">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="new-level-name" className={FIELD_LABEL}>
+              {t('students.levelName')}
+            </label>
+            <input
+              id="new-level-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={120}
+              className={CONTROL_LINE}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {bounds.map((bound) => (
+              <div key={bound.id} className="flex items-end gap-2">
+                <div className="flex w-20 flex-col gap-1.5">
+                  <label htmlFor={bound.id} className={FIELD_LABEL}>
+                    {bound.label}
+                  </label>
+                  <input
+                    id={bound.id}
+                    type="number"
+                    min={0}
+                    value={bound.value}
+                    onChange={(event) => bound.setValue(event.target.value)}
+                    className={CONTROL_LINE}
+                  />
+                </div>
+                <select
+                  aria-label={t('students.ageUnit')}
+                  value={bound.unit}
+                  onChange={(event) => bound.setUnit(event.target.value)}
+                  className={CONTROL_LINE + ' w-28'}
+                >
+                  <option value="years">{t('students.ageUnitYears')}</option>
+                  <option value="months">{t('students.ageUnitMonths')}</option>
+                </select>
+              </div>
+            ))}
+          </div>
+
+          {error !== null && <p className="text-sm text-danger">{t(error)}</p>}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={create}
+              disabled={saving || name.trim() === ''}
+              className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-60"
+            >
+              {saving ? t('common.working') : t('students.createLevel')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setError(null);
+              }}
+              className="rounded border border-border px-3 py-1.5 text-sm"
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/**
+ * Accent- and case-insensitive substring match.
+ *
+ * "joao" finds "João", which is what somebody typing quickly on a Portuguese
+ * keyboard expects. `NFD` splits the accent off the letter so it can be
+ * stripped; the database does the same thing with `strip_accents` on its side.
+ */
+function matches(name: string, query: string): boolean {
+  const flatten = (value: string): string =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+  return flatten(name).includes(flatten(query.trim()));
 }

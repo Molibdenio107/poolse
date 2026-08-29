@@ -34,6 +34,8 @@ export interface ClassGroup {
   levelName: string | null;
   poolId: string | null;
   poolName: string | null;
+  /** The site the pool is at — the schedule board filters and draws by it. */
+  facilityId: string | null;
   instructorMembershipId: string | null;
   instructorName: string | null;
   capacity: number | null;
@@ -61,6 +63,11 @@ const GROUP_COLUMNS = `
   l.name  AS level_name,
   cg.pool_id,
   p.name  AS pool_name,
+  -- Which site the turma is at, via its pool — round 5. The schedule board
+  -- filters by facility, because the grid's hours come from that facility's
+  -- opening hours and a turma at another site would be drawn against the wrong
+  -- day.
+  p.facility_id,
   cg.instructor_membership_id,
   short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
   cg.capacity,
@@ -114,6 +121,7 @@ interface GroupRow {
   level_name: string | null;
   pool_id: string | null;
   pool_name: string | null;
+  facility_id: string | null;
   instructor_membership_id: string | null;
   instructor_name: string | null;
   capacity: number | null;
@@ -130,6 +138,7 @@ function toGroup(row: GroupRow): ClassGroup {
     levelName: row.level_name,
     poolId: row.pool_id,
     poolName: row.pool_name,
+    facilityId: row.facility_id,
     instructorMembershipId: row.instructor_membership_id,
     instructorName: row.instructor_name,
     capacity: row.capacity,
@@ -441,6 +450,69 @@ export async function addSchedule(
     });
 
     return 'added';
+  });
+}
+
+/**
+ * Move an existing slot to another day or time — round 5, drag and drop.
+ *
+ * **An UPDATE, not a delete and an insert.** The two are equivalent in the table
+ * and are not equivalent anywhere else: the schedule row's id is what
+ * `generate_sessions` and the audit trail point at, so recreating it turns "the
+ * Tuesday class moved to Thursday" into "a Tuesday class disappeared and a
+ * Thursday one appeared", which is a worse answer to the only question anybody
+ * asks of the log.
+ *
+ * The facility-hours trigger fires on this update because `weekday` and
+ * `start_time` are both in its column list, so a drag onto a closed day or past
+ * closing time is refused by the same rule that refuses it in the form. Dragging
+ * cannot get round a constraint typing could not.
+ */
+export async function moveSchedule(
+  organizationId: string,
+  groupId: string,
+  scheduleId: string,
+  weekday: number,
+  startTime: string,
+): Promise<'moved' | 'not_found' | 'duplicate'> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ weekday: number; start_time: string }>(
+      `SELECT weekday, start_time::text AS start_time
+         FROM class_schedule
+        WHERE id = $1 AND class_group_id = $2 AND archived_at IS NULL`,
+      [scheduleId, groupId],
+    );
+
+    const before = rows[0];
+    if (!before) return 'not_found';
+
+    try {
+      await tx.query(
+        `UPDATE class_schedule
+            SET weekday = $2, start_time = $3::time
+          WHERE id = $1 AND archived_at IS NULL`,
+        [scheduleId, weekday, startTime],
+      );
+    } catch (error) {
+      if (error instanceof Error && (error as { code?: string }).code === '23505') {
+        return 'duplicate';
+      }
+      throw error;
+    }
+
+    await recordAudit(tx, {
+      action: 'class_schedule.moved',
+      entityType: 'class_group',
+      entityId: groupId,
+      // Both ends, so the log says what changed rather than only where it ended.
+      data: {
+        scheduleId,
+        from: { weekday: before.weekday, startTime: before.start_time },
+        to: { weekday, startTime },
+      },
+    });
+
+    return 'moved';
   });
 }
 
