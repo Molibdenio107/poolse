@@ -391,7 +391,9 @@
     "closureFailed": "Não foi possível criar o encerramento.",
     "cityFailed": "A pesquisa de localidades está indisponível — pode definir a localidade mais tarde.",
     "copyMonday": "Aplicar segunda-feira a todos os dias abertos",
-    "copyMondayHint": "Copia apenas os horários — os dias que encerrou continuam encerrados, e nada é guardado até premir Guardar."
+    "copyMondayHint": "Copia apenas os horários — os dias que encerrou continuam encerrados, e nada é guardado até premir Guardar.",
+    "copyMondayHere": "Igualar a segunda",
+    "recordAnalysisTitle": "Registar uma análise"
   },
   "classes": {
     "title": "Turmas",
@@ -842,7 +844,12 @@
     "leaveFailed": "Não foi possível guardar a baixa médica.",
     "leaveJustification": "Comprovativo",
     "leaveJustificationPlaceholder": "ex.: atestado 2026/114",
-    "leaveJustificationHint": "Opcional. Onde está guardado o atestado — um número ou uma localização, não o próprio documento nem um diagnóstico."
+    "leaveJustificationHint": "Opcional. Onde está guardado o atestado — um número ou uma localização, não o próprio documento nem um diagnóstico.",
+    "atestado": "Atestado",
+    "atestadoImport": "Importar",
+    "atestadoExport": "Exportar",
+    "atestadoNoStorage": "O armazenamento de ficheiros ainda não está configurado — indique acima onde está guardado o documento.",
+    "leaveToReposicoes": "Ir para as reposições"
   },
   "invite": {
     "open": "Convidar utilizador",

@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import type { PoolAnalysis, PoolMetric } from '@/lib/api';
 import { POOL_METRICS } from '@/lib/pool-metrics';
@@ -220,11 +221,30 @@ export async function ReadingsBlock({
         </>
       )}
 
+      {/*
+        The form folds; the readings and the trends do not — round 5.
+
+        Recording an analysis is a weekly job that takes thirty seconds; reading
+        the last one is what this panel is opened for every other time. So the
+        nine inputs sit behind a disclosure and the tiles, the charts and the
+        record stay where they are. `<details>` rather than a state hook: the
+        browser's own disclosure is keyboard-operable, announced as one, and
+        works before any JavaScript arrives.
+      */}
       {canManage && (
-        <>
-          <AnalysisForm organizationId={organizationId} poolId={poolId} poolName={poolName} />
-          <ImportAnalysis />
-        </>
+        <details className="group rounded border border-border">
+          <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <ChevronRight
+              aria-hidden
+              className="size-4 transition-transform group-open:rotate-90"
+            />
+            {t('facilities.recordAnalysisTitle')}
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-border p-4">
+            <AnalysisForm organizationId={organizationId} poolId={poolId} poolName={poolName} />
+            <ImportAnalysis />
+          </div>
+        </details>
       )}
     </div>
   );

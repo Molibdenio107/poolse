@@ -90,7 +90,7 @@ export function HoursPanel({
    * It only stages the change — nothing is written until Save, so a mis-click is
    * undone by leaving the page.
    */
-  function copyMonday(): void {
+  function copyMonday(onto?: number): void {
     const monday = days.find((day) => day.weekday === 1);
     if (monday === undefined) return;
 
@@ -98,11 +98,25 @@ export function HoursPanel({
     setErrorKey(null);
     setDays((current) =>
       current.map((day) =>
-        day.weekday === 1 || !day.available
+        day.weekday === 1 || !day.available || (onto !== undefined && day.weekday !== onto)
           ? day
           : { ...day, opensAt: monday.opensAt, closesAt: monday.closesAt },
       ),
     );
+  }
+
+  /**
+   * Whether this day's times differ from Monday's — round 5.
+   *
+   * The per-row button only appears where it would do something. A button beside
+   * a day that already matches Monday is a control that changes nothing, and a
+   * row of those teaches people to ignore the one that matters.
+   */
+  function differsFromMonday(day: FacilityDay): boolean {
+    const monday = days.find((candidate) => candidate.weekday === 1);
+    if (monday === undefined || monday.weekday === day.weekday) return false;
+    if (!monday.available || !day.available) return false;
+    return day.opensAt !== monday.opensAt || day.closesAt !== monday.closesAt;
   }
 
   // Only worth offering when some other open day disagrees with Monday.
@@ -143,7 +157,7 @@ export function HoursPanel({
         {canManage && canCopy && (
           <button
             type="button"
-            onClick={copyMonday}
+            onClick={() => copyMonday()}
             className="shrink-0 rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('facilities.copyMonday')}
@@ -215,6 +229,23 @@ export function HoursPanel({
                         className={cn(CONTROL_LINE, 'w-28')}
                       />
                     </div>
+
+                    {/*
+                      Beside the day it would change — round 5. One button at the
+                      top of the panel meant choosing "apply Monday everywhere"
+                      when what somebody usually wants is "make Thursday match
+                      Monday". It appears only on a day whose times actually
+                      differ, so a row of no-op buttons never forms.
+                    */}
+                    {canManage && differsFromMonday(day) && (
+                      <button
+                        type="button"
+                        onClick={() => copyMonday(day.weekday)}
+                        className="mb-1 shrink-0 self-end rounded border border-border px-2 py-1 text-xs transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        {t('facilities.copyMondayHere')}
+                      </button>
+                    )}
                   </>
                 ) : (
                   <span className="text-sm text-foreground-muted">{t('facilities.dayClosed')}</span>

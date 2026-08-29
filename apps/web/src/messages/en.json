@@ -391,7 +391,9 @@
     "closureFailed": "The closure could not be created.",
     "cityFailed": "Place lookup is unavailable — you can set the city later.",
     "copyMonday": "Apply Monday to every open day",
-    "copyMondayHint": "Copies the times only — days you have closed stay closed, and nothing is saved until you press Save."
+    "copyMondayHint": "Copies the times only — days you have closed stay closed, and nothing is saved until you press Save.",
+    "copyMondayHere": "Match Monday",
+    "recordAnalysisTitle": "Record an analysis"
   },
   "classes": {
     "title": "Class groups",
@@ -842,7 +844,12 @@
     "leaveFailed": "The medical leave could not be saved.",
     "leaveJustification": "Supporting document",
     "leaveJustificationPlaceholder": "e.g. atestado 2026/114",
-    "leaveJustificationHint": "Optional. Where the certificate is filed — a number or a location, not the document itself and not a diagnosis."
+    "leaveJustificationHint": "Optional. Where the certificate is filed — a number or a location, not the document itself and not a diagnosis.",
+    "atestado": "Medical certificate",
+    "atestadoImport": "Import",
+    "atestadoExport": "Export",
+    "atestadoNoStorage": "File storage is not configured yet — record where the document is filed in the field above.",
+    "leaveToReposicoes": "Go to make-up classes"
   },
   "invite": {
     "open": "Invite user",

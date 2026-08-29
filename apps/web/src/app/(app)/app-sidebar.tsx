@@ -125,7 +125,6 @@ const SECTIONS: Item[] = [
       // missed and a class made up. There is no general settings area, and
       // inventing one for a single feature would put the rule two clicks further
       // from the thing it governs — POOLSE-21.
-      { href: '/dashboard/classes/reposicoes', key: 'reposicao.title' },
     ],
   },
   {
@@ -139,6 +138,9 @@ const SECTIONS: Item[] = [
     key: 'students.title',
     icon: 'student',
     children: [
+      // Reposicoes moved here in round 5: a make-up class is something a
+      // student is owed, and the person looking for one is looking at a student.
+      { href: '/dashboard/classes/reposicoes', key: 'reposicao.title' },
       { href: '/dashboard/students/levels', key: 'students.levels' },
       // Encarregados de educação belong with the families, not with the staff —
       // POOLSE-35.

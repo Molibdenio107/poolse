@@ -180,7 +180,18 @@ export function LevelSkills({
               <input type="hidden" name="organizationId" value={organizationId} />
               <input type="hidden" name="levelId" value={levelId} />
 
-              <div className="flex flex-wrap items-end gap-3">
+              {/*
+                `items-start`, and the two counts share one hint — round 5.
+
+                The row was `items-end` with a hint under each number field, so
+                the three inputs sat on three different baselines and the Add
+                button floated a line above them: `items-end` aligns the bottom
+                of each column, and a column with a hint is taller than one
+                without. Aligning the tops puts every label on one line, and
+                saying "optional" once under the pair says the same thing without
+                dragging two columns down.
+              */}
+              <div className="flex flex-wrap items-start gap-3">
                 <TextField
                   name="name"
                   label={t('skills.skillName')}
@@ -190,24 +201,33 @@ export function LevelSkills({
                   error={state.fields?.['name'] === undefined ? undefined : t(state.fields['name'])}
                   className="min-w-48 flex-1"
                 />
-                <TextField
-                  name="minLessons"
-                  type="number"
-                  label={t('skills.minLessonsLabel')}
-                  hint={t('students.optionalHint')}
-                  className="w-28"
-                />
-                <TextField
-                  name="minDays"
-                  type="number"
-                  label={t('skills.minDaysLabel')}
-                  hint={t('students.optionalHint')}
-                  className="w-28"
-                />
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex gap-3">
+                    <TextField
+                      name="minLessons"
+                      type="number"
+                      label={t('skills.minLessonsLabel')}
+                      className="w-28"
+                    />
+                    <TextField
+                      name="minDays"
+                      type="number"
+                      label={t('skills.minDaysLabel')}
+                      className="w-28"
+                    />
+                  </div>
+                  <p className="text-sm text-foreground-muted">{t('students.optionalHint')}</p>
+                </div>
+
+                {/*
+                  `mt-6` clears the label row above, so the button lines up with
+                  the inputs rather than with their labels.
+                */}
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
+                  className="mt-6 rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
                 >
                   {saving ? t('common.working') : t('skills.addSkill')}
                 </button>

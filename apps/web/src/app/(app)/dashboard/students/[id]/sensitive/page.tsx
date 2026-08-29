@@ -6,6 +6,7 @@ import {
   type Student,
 } from '../../../../../../lib/api';
 import { BackLink } from '@/components/back-link';
+import { ChevronRight } from 'lucide-react';
 import { MedicalLeavePanel } from './medical-leave';
 import { PageShell } from '@/components/page-shell';
 import {
@@ -187,17 +188,34 @@ export default async function SensitivePage({
             weeks of registers, and it belongs where somebody looking for "why is
             this child not in the water" would look.
           */}
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {/*
+            Folded — round 5. Most students have no leave and never will, so an
+            open panel of date fields on every medical page is a permanent
+            question with no answer. It opens on demand and stays open while it
+            is being used.
+          */}
+          <details className="group rounded border border-border bg-surface">
+            <summary className="flex cursor-pointer list-none items-center gap-2 p-5 text-sm font-medium uppercase tracking-wider text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              <ChevronRight
+                aria-hidden
+                className="size-4 transition-transform group-open:rotate-90"
+              />
               {t('sensitive.leave')}
-            </h2>
+              {record.medicalLeave.some((period) => period.active) && (
+                <span className="rounded bg-warning/20 px-2 py-0.5 text-xs font-medium normal-case tracking-normal text-warning">
+                  {t('sensitive.leaveActive')}
+                </span>
+              )}
+            </summary>
+            <div className="border-t border-border p-5">
             <MedicalLeavePanel
               organizationId={record.organizationId}
               studentId={id}
               leave={record.medicalLeave}
               canManage={record.canManage}
             />
-          </section>
+            </div>
+          </details>
 
           {past.length > 0 && (
             <section className="rounded border border-border bg-surface p-5">

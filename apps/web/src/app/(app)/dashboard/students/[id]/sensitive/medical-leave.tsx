@@ -2,7 +2,8 @@
 
 import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FileText, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { FileText, FileUp, Trash2 } from 'lucide-react';
 import type { MedicalLeave } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
@@ -165,7 +166,37 @@ export function MedicalLeavePanel({
             <p className="text-sm text-danger">{t(state.errorKey)}</p>
           )}
 
-          <div>
+          {/*
+            The atestado itself — present, styled and switched off, the same
+            treatment the photo and the Cartao de Cidadao get and for the same
+            reason: object storage is deferred, and a button that opened a file
+            picker and then discarded a medical certificate would be far worse
+            than one that plainly says it is not ready. The reference field above
+            is what works today.
+          */}
+          <div className="flex flex-wrap items-center gap-2 rounded border border-dashed border-border bg-surface p-3">
+            <FileUp aria-hidden className="size-4 shrink-0 text-foreground-muted" />
+            <span className="text-sm font-medium">{t('sensitive.atestado')}</span>
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed rounded border border-border px-2 py-1 text-xs text-foreground-muted opacity-60"
+            >
+              {t('sensitive.atestadoImport')}
+            </button>
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed rounded border border-border px-2 py-1 text-xs text-foreground-muted opacity-60"
+            >
+              {t('sensitive.atestadoExport')}
+            </button>
+            <span className="w-full text-xs text-foreground-muted">
+              {t('sensitive.atestadoNoStorage')}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
               disabled={pending}
@@ -173,6 +204,20 @@ export function MedicalLeavePanel({
             >
               {pending ? t('common.working') : t('sensitive.saveLeave')}
             </button>
+
+            {/*
+              Where the absences go next — round 5. A leave means classes will be
+              missed, and a missed class that is marked justified mints a
+              reposicao credit; this is the screen that owes them. A link rather
+              than a redirect, because leaving the medical page the instant
+              somebody saves would lose the panel they were working in.
+            */}
+            <Link
+              href="/dashboard/classes/reposicoes"
+              className="rounded text-sm text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {t('sensitive.leaveToReposicoes')}
+            </Link>
           </div>
         </form>
       )}
