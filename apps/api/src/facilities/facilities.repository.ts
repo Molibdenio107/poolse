@@ -83,7 +83,8 @@ export interface FacilityDetail extends Facility, Place {}
 export class DuplicateNameError extends Error {}
 
 function asDuplicate<T>(error: unknown, name: string): T {
-  // 23505 is facility_name_uq or pool_name_uq — the partial unique indexes.
+  // 23505 is facility_name_uq, pool_name_uq or pool_material_name_uq — the
+  // partial unique indexes.
   if (error instanceof Error && (error as { code?: string }).code === '23505') {
     throw new DuplicateNameError(name);
   }
@@ -833,6 +834,153 @@ export async function setFacilityHours(
           closesAt: day.closesAt,
         })),
       },
+    });
+
+    return true;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Pool inventory — round 4
+//
+// One row per kind of item with a count on it, not a stock ledger. The name is
+// free text because every club calls these things something slightly different,
+// and a fixed vocabulary means the first operator who wants "arcos" writes them
+// into a notes field instead. See the migration for the rest of the reasoning.
+// ---------------------------------------------------------------------------
+
+export interface PoolMaterial {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string | null;
+  notes: string | null;
+}
+
+export async function listPoolMaterials(
+  organizationId: string,
+  poolId: string,
+): Promise<PoolMaterial[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<PoolMaterial>(
+      `
+      SELECT id, name, quantity, unit, notes
+        FROM pool_material
+       WHERE pool_id = $1
+         AND archived_at IS NULL
+       ORDER BY lower(strip_accents(name))
+      `,
+      [poolId],
+    );
+    return rows;
+  });
+}
+
+export interface PoolMaterialInput {
+  name: string;
+  quantity: number;
+  unit: string | null;
+  notes: string | null;
+}
+
+/**
+ * Adds an item to a pool's inventory.
+ *
+ * Throws `DuplicateNameError` on a second row for the same pile of things, which
+ * the unique index decides accent- and case-insensitively rather than this
+ * function — "Flutuadores" and "flutuádores" are one pile, and the database is
+ * the only place that can say so without a race.
+ */
+export async function addPoolMaterial(
+  organizationId: string,
+  poolId: string,
+  input: PoolMaterialInput,
+): Promise<string | null> {
+  return withOrg(organizationId, async (tx) => {
+    const pool = await tx.query(
+      `SELECT 1 FROM pool WHERE id = $1 AND archived_at IS NULL`,
+      [poolId],
+    );
+    if (pool.rowCount === 0) return null;
+
+    try {
+      const { rows } = await tx.query<{ id: string }>(
+        `INSERT INTO pool_material (organization_id, pool_id, name, quantity, unit, notes)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id`,
+        [organizationId, poolId, input.name, input.quantity, input.unit, input.notes],
+      );
+
+      const id = rows[0]!.id;
+
+      await recordAudit(tx, {
+        action: 'pool.material.added',
+        entityType: 'pool',
+        entityId: poolId,
+        data: { name: input.name, quantity: input.quantity },
+      });
+
+      return id;
+    } catch (error) {
+      return asDuplicate<string>(error, input.name);
+    }
+  });
+}
+
+/**
+ * Corrects an item, most often its count after a stock check.
+ *
+ * The count is the whole point of the row, and correcting it is the operation
+ * this table exists to support — which is why it is an ordinary update rather
+ * than a movement posted against a running total. A total nobody posts against
+ * drifts within a month and then lies with more precision than a count does.
+ */
+export async function updatePoolMaterial(
+  organizationId: string,
+  materialId: string,
+  input: PoolMaterialInput,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    try {
+      const { rowCount } = await tx.query(
+        `UPDATE pool_material
+            SET name = $2, quantity = $3, unit = $4, notes = $5
+          WHERE id = $1 AND archived_at IS NULL`,
+        [materialId, input.name, input.quantity, input.unit, input.notes],
+      );
+      if (rowCount === 0) return false;
+    } catch (error) {
+      return asDuplicate<boolean>(error, input.name);
+    }
+
+    await recordAudit(tx, {
+      action: 'pool.material.updated',
+      entityType: 'pool_material',
+      entityId: materialId,
+      data: { name: input.name, quantity: input.quantity },
+    });
+
+    return true;
+  });
+}
+
+/** Archived, never deleted — the club had these once, and that is history. */
+export async function archivePoolMaterial(
+  organizationId: string,
+  materialId: string,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rowCount } = await tx.query(
+      `UPDATE pool_material SET archived_at = now()
+        WHERE id = $1 AND archived_at IS NULL`,
+      [materialId],
+    );
+    if (rowCount === 0) return false;
+
+    await recordAudit(tx, {
+      action: 'pool.material.archived',
+      entityType: 'pool_material',
+      entityId: materialId,
     });
 
     return true;

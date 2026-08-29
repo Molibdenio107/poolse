@@ -1,10 +1,12 @@
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type PoolDetail } from '@/lib/api';
+import { ApiError, apiFetch, type PoolDetail, type PoolMaterial } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from '../../facility-forms';
 import { PoolForm } from '../../pool-form';
+import { MaterialsBlock } from '../../materials-block';
+import { ReadingsBlock } from '../../readings-block';
 import { PageShell } from '@/components/page-shell';
 
 /**
@@ -36,12 +38,14 @@ export default async function PoolPage({
    */
   const back = backTarget(from, '/dashboard/facilities');
 
-  let pool: (PoolDetail & { canManage: boolean }) | null = null;
+  let pool: (PoolDetail & { canManage: boolean; materials: PoolMaterial[] }) | null = null;
   let failure: string | null = null;
   let missing = false;
 
   try {
-    pool = await apiFetch<PoolDetail & { canManage: boolean }>(`/facilities/pools/${poolId}`);
+    pool = await apiFetch<PoolDetail & { canManage: boolean; materials: PoolMaterial[] }>(
+      `/facilities/pools/${poolId}`,
+    );
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
       missing = true;
@@ -114,6 +118,35 @@ export default async function PoolPage({
                 />
               </dl>
             )}
+          </section>
+
+          {/*
+            Water quality and the store: two blocks of their own, not more rows
+            on the details form — round 4.
+
+            Deliberately not on the create form either. Somebody adding a pool is
+            describing a tank; its readings and its kit are what accumulates
+            afterwards, and putting them in the creation flow would ask for
+            answers nobody has yet at the one moment they are least likely to
+            have them.
+          */}
+          <section className="rounded border border-border bg-surface p-5">
+            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {t('facilities.readings')}
+            </h2>
+            <ReadingsBlock canManage={pool.canManage} />
+          </section>
+
+          <section className="rounded border border-border bg-surface p-5">
+            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {t('facilities.materials')}
+            </h2>
+            <MaterialsBlock
+              organizationId={pool.organizationId}
+              poolId={pool.id}
+              materials={pool.materials}
+              canManage={pool.canManage}
+            />
           </section>
 
           <section className="rounded border border-border bg-surface p-5">

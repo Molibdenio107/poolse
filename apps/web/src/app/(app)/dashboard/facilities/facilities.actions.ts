@@ -146,3 +146,107 @@ export async function archivePoolAction(
   revalidatePath('/dashboard/facilities');
   return { ok: true };
 }
+
+/**
+ * Inventory — round 4.
+ *
+ * Same policy as everything else in this file: a duplicate name or a mistyped
+ * count comes back as state the form renders, because both are somebody typing
+ * rather than anything going wrong.
+ */
+export async function addMaterialAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const poolId = String(formData.get('poolId') ?? '');
+  const name = String(formData.get('name') ?? '').trim();
+  if (!name) return { ok: false, errorKey: 'facilities.materialNameRequired' };
+
+  const quantity = Number(String(formData.get('quantity') ?? '0').trim() || '0');
+  if (!Number.isInteger(quantity) || quantity < 0) {
+    return { ok: false, errorKey: 'facilities.materialQuantityInvalid' };
+  }
+
+  try {
+    await apiPost(
+      `/facilities/pools/${poolId}/materials`,
+      {
+        name,
+        quantity,
+        unit: String(formData.get('unit') ?? '').trim(),
+        notes: String(formData.get('notes') ?? '').trim(),
+      },
+      { organizationId },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      // The one duplicate message in this file that is not about a site or a
+      // pool: "you already have a row for these" is a different instruction from
+      // "that name is taken", because the fix is to correct the count on the row
+      // that exists rather than to think of another name.
+      return { ok: false, errorKey: 'facilities.materialDuplicate' };
+    }
+    return failure(error, 'facilities.materialFailed');
+  }
+
+  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
+  return { ok: true };
+}
+
+/** Corrects an item — in practice its count, after somebody has been counting. */
+export async function updateMaterialAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const poolId = String(formData.get('poolId') ?? '');
+  const materialId = String(formData.get('materialId') ?? '');
+  const name = String(formData.get('name') ?? '').trim();
+  if (!name) return { ok: false, errorKey: 'facilities.materialNameRequired' };
+
+  const quantity = Number(String(formData.get('quantity') ?? '0').trim() || '0');
+  if (!Number.isInteger(quantity) || quantity < 0) {
+    return { ok: false, errorKey: 'facilities.materialQuantityInvalid' };
+  }
+
+  try {
+    await apiPatch(
+      `/facilities/materials/${materialId}`,
+      {
+        name,
+        quantity,
+        unit: String(formData.get('unit') ?? '').trim(),
+        notes: String(formData.get('notes') ?? '').trim(),
+      },
+      { organizationId },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      return { ok: false, errorKey: 'facilities.materialDuplicate' };
+    }
+    return failure(error, 'facilities.materialFailed');
+  }
+
+  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
+  return { ok: true };
+}
+
+/** Archived, never deleted: the club had these once, and that is history. */
+export async function archiveMaterialAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const poolId = String(formData.get('poolId') ?? '');
+  const materialId = String(formData.get('materialId') ?? '');
+
+  try {
+    await apiPost(`/facilities/materials/${materialId}/archive`, {}, { organizationId });
+  } catch (error) {
+    return failure(error, 'facilities.materialFailed');
+  }
+
+  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
+  return { ok: true };
+}

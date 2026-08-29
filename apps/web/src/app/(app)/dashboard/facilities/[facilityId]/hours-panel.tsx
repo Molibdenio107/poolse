@@ -137,7 +137,7 @@ export function HoursPanel({
                         value={day.opensAt}
                         disabled={!canManage || pending}
                         onChange={(event) => edit(day.weekday, { opensAt: event.target.value })}
-                        className={cn(CONTROL_LINE, 'w-32')}
+                        className={cn(CONTROL_LINE, 'w-28')}
                       />
                     </div>
 
@@ -154,7 +154,7 @@ export function HoursPanel({
                         value={day.closesAt}
                         disabled={!canManage || pending}
                         onChange={(event) => edit(day.weekday, { closesAt: event.target.value })}
-                        className={cn(CONTROL_LINE, 'w-32')}
+                        className={cn(CONTROL_LINE, 'w-28')}
                       />
                     </div>
                   </>

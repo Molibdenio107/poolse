@@ -307,6 +307,22 @@ export interface Pool {
   maxDepthM: number | null;
 }
 
+/**
+ * One kind of item in a pool's store — round 4.
+ *
+ * A count against a free-text name, not a stock ledger. Nobody labels forty pull
+ * buoys, and a movement log nobody posts to drifts from reality within a month
+ * and then lies with more precision than a count does.
+ */
+export interface PoolMaterial {
+  id: string;
+  name: string;
+  quantity: number;
+  /** What the number counts when the name does not say — pares, caixas, metros. */
+  unit: string | null;
+  notes: string | null;
+}
+
 export interface Photo {
   id: string;
   /** Object key. Resolved to a signed URL by photoUrlFor, never stored as one. */
