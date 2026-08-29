@@ -3,9 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '@/lib/api';
-import { ageOptions } from '@/lib/ages';
-import { useMonthWords } from '@/components/age-range';
-import { CONTROL_LINE, SelectField } from '@/components/ui/field';
+import { CONTROL_LINE, SelectField, TextField } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import {
@@ -59,17 +57,96 @@ export function CreateLevelForm({
 }
 
 /**
- * The two bounds — POOLSE-06.
+ * The two bounds — POOLSE-06, rebuilt in round 4.
  *
- * A picker rather than a number box, because the unit changes below a year and a
- * bare number cannot say which it is. It offers one to eleven months and then
- * whole years, which is exactly the granularity the ticket asks for: every month
- * matters for a baby class, and nobody sets a level boundary at "seven years and
- * four months".
+ * **Why it is no longer a picker.** It offered "sem limite", then one to eleven
+ * months, then every year to a hundred: a hundred and twelve options in a native
+ * select, which on a laptop is a scrollbar you drag past eighty entries you will
+ * never pick to reach "6 anos". The list existed because the unit changes below
+ * a year — a bare number cannot say whether 6 means months or years — and the
+ * select answered that by enumerating every possibility.
  *
- * Selects rather than inputs also means the value posted is always a month
- * count, so nothing downstream has to guess at a unit.
+ * A number and a unit answer it directly, in two controls that are always the
+ * same size no matter how far the range runs. Typing 6 and leaving the unit on
+ * "anos" is two keystrokes; the old control could not be reached from the
+ * keyboard in fewer than six.
+ *
+ * **The posted value has not changed.** A hidden field carries the month count,
+ * computed here, so the action, the API and the column are all untouched and
+ * still speak in months only. Nothing downstream has to learn about units.
  */
+function AgeBound({
+  name,
+  label,
+  months,
+}: {
+  name: string;
+  label: string;
+  months?: number | null | undefined;
+}): React.ReactElement {
+  const t = useTranslations();
+
+  // Under a year is expressed in months, everything else in years — which is how
+  // the club says it out loud, and how the old picker was grouped.
+  const seedUnit = months === null || months === undefined || months >= 12 ? 'years' : 'months';
+  const seedValue =
+    months === null || months === undefined
+      ? ''
+      : String(seedUnit === 'months' ? months : Math.round(months / 12));
+
+  const [value, setValue] = useState(seedValue);
+  const [unit, setUnit] = useState(seedUnit);
+
+  // Re-seed on a save that changed the level, and only then — the same rule
+  // `useSeeded` follows, for the same reason: a re-render must not overwrite
+  // what somebody is halfway through typing.
+  const seeded = useRef<number | null | undefined>(months);
+  useEffect(() => {
+    if (seeded.current === months) return;
+    seeded.current = months;
+    setValue(seedValue);
+    setUnit(seedUnit);
+  }, [months, seedValue, seedUnit]);
+
+  const trimmed = value.trim();
+  // Empty stays empty: "no bound" is a real answer and must post as one rather
+  // than as a zero, which would mean "from birth".
+  const asMonths =
+    trimmed === '' || Number.isNaN(Number(trimmed))
+      ? ''
+      : String(unit === 'months' ? Number(trimmed) : Number(trimmed) * 12);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <input type="hidden" name={name} value={asMonths} />
+      <div className="flex items-end gap-2">
+        <TextField
+          name={`${name}Value`}
+          label={label}
+          type="number"
+          initial={seedValue}
+          onValueChange={setValue}
+          placeholder={t('students.ageNoBound')}
+          className="w-24"
+        />
+        <SelectField
+          name={`${name}Unit`}
+          label={t('students.ageUnit')}
+          initial={seedUnit}
+          onValueChange={setUnit}
+          options={[
+            { value: 'years', label: t('students.ageUnitYears') },
+            { value: 'months', label: t('students.ageUnitMonths') },
+          ]}
+          className="w-32"
+        />
+      </div>
+      {/* Visible text, not a placeholder: leaving it blank is a decision. */}
+      <p className="text-xs text-foreground-muted">{t('students.ageBoundHint')}</p>
+    </div>
+  );
+}
+
 function AgeInputs({
   minAgeMonths,
   maxAgeMonths,
@@ -78,32 +155,11 @@ function AgeInputs({
   maxAgeMonths?: number | null;
 }): React.ReactElement {
   const t = useTranslations();
-  const words = useMonthWords();
-
-  const options = [
-    { value: '', label: t('students.ageNoBound') },
-    // 100, not 30 — POOLSE-16. The database has allowed 120 years since the
-    // months migration and the API validates against the same ceiling; this
-    // picker was the only thing capping it, which meant a *Hidroginástica
-    // Sénior* level could not be given its real upper bound and every student
-    // over 30 quietly failed the eligibility check for it.
-    ...ageOptions(100).map((months) => ({ value: String(months), label: words(months) })),
-  ];
 
   return (
-    <div className="flex flex-wrap gap-3">
-      <SelectField
-        name="minAgeMonths"
-        label={t('students.ageFrom')}
-        initial={minAgeMonths === null || minAgeMonths === undefined ? '' : String(minAgeMonths)}
-        options={options}
-      />
-      <SelectField
-        name="maxAgeMonths"
-        label={t('students.ageTo')}
-        initial={maxAgeMonths === null || maxAgeMonths === undefined ? '' : String(maxAgeMonths)}
-        options={options}
-      />
+    <div className="flex flex-wrap gap-4">
+      <AgeBound name="minAgeMonths" label={t('students.ageFrom')} months={minAgeMonths} />
+      <AgeBound name="maxAgeMonths" label={t('students.ageTo')} months={maxAgeMonths} />
     </div>
   );
 }

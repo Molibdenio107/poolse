@@ -109,13 +109,40 @@ export default async function GuardiansPage({
               {guardians.map((guardian) => (
                 <li key={guardian.membershipId} className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <span className="flex flex-wrap items-center gap-2">
+                    <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                       {/* A list, so the list form — POOLSE-32 AC7 applies the
                           same rule to encarregados as to everybody else. */}
-                      <span className="font-medium" title={guardian.name}>
-                        {guardian.shortName}
-                      </span>
-                      <RoleBadge role="guardian" />
+                      {/*
+                        Linked when this person is also enrolled — round 4. Most
+                        rows are plain text, because most encarregados do not
+                        swim; a link that only sometimes exists is why this is a
+                        conditional rather than an always-anchor with no href.
+                      */}
+                      {guardian.studentId === null ? (
+                        <span className="font-medium" title={guardian.name}>
+                          {guardian.shortName}
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/dashboard/students/${guardian.studentId}`}
+                          title={guardian.name}
+                          className="rounded font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
+                          {guardian.shortName}
+                        </Link>
+                      )}
+
+                      {/*
+                        "Encarregado de" reads into the list of children below —
+                        round 4 replaced the badge with the phrase, because the
+                        badge said what they are and the phrase says what the
+                        next three lines are.
+                      */}
+                      {guardian.students.length > 0 && (
+                        <span className="text-sm text-foreground-muted">
+                          {t('students.guardianOfLabel')}
+                        </span>
+                      )}
                     </span>
                     <span className="text-sm text-foreground-muted">
                       {[guardian.email, guardian.phone].filter(Boolean).join(' · ')}
@@ -132,18 +159,22 @@ export default async function GuardiansPage({
                       {t('students.guardianOfNobody')}
                     </p>
                   ) : (
+                    /*
+                      No relationship tag — round 4. "Pai" and "Mãe" after every
+                      name added a column of noise to a list whose job is "which
+                      children is this person responsible for", and the
+                      relationship is still on the guardian's own record where it
+                      is edited.
+                    */
                     <ul className="flex flex-col gap-1 pl-4 text-sm">
                       {guardian.students.map((student) => (
-                        <li key={student.id} className="flex flex-wrap items-baseline gap-2">
+                        <li key={student.id}>
                           <Link
                             href={`/dashboard/students/${student.id}`}
-                            className="text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            className="rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                           >
                             {student.name}
                           </Link>
-                          {student.relationship !== null && (
-                            <span className="text-foreground-muted">{student.relationship}</span>
-                          )}
                         </li>
                       ))}
                     </ul>

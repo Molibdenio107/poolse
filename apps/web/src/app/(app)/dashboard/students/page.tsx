@@ -9,6 +9,7 @@ import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { backLabelKey, readFrom } from '@/lib/back';
 import { AgedOutFlag } from '@/components/aged-out-flag';
 import { PersonAvatar } from '@/components/person-avatar';
+import { BirthdayFlag } from '@/components/birthday-flag';
 import { photoUrlFor } from '@/lib/photo';
 import { ArchiveStudentButton } from './student-forms';
 import { PageShell } from '@/components/page-shell';
@@ -212,13 +213,17 @@ export default async function StudentsPage({
                         text rather than replacing it: every part is on the
                         detail page this links to.
                       */}
-                      <Link
-                        href={`/dashboard/students/${student.id}`}
-                        className="truncate text-primary hover:underline"
-                        title={student.displayName}
-                      >
-                        {student.shortName}
-                      </Link>
+                      <span className="flex min-w-0 flex-wrap items-center gap-2">
+                        <Link
+                          href={`/dashboard/students/${student.id}`}
+                          className="truncate text-primary hover:underline"
+                          title={student.displayName}
+                        >
+                          {student.shortName}
+                        </Link>
+                        {/* Beside the name, on the day — round 4. */}
+                        <BirthdayFlag birthDate={student.birthDate} />
+                      </span>
                       <span className="truncate text-sm text-foreground-muted">
                         {[
                           student.age === null ? null : t('students.years', { count: student.age }),

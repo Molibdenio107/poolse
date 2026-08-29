@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Guardian, StudentLevel } from '../../../../lib/api';
 import { CONTROL_BLOCK, CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 import { GuardianBlock } from './guardian-block';
 import { fitsLevel } from '@/lib/ages';
 import type { FormState } from '../actions';
@@ -141,7 +142,8 @@ export function StudentForm({
         </div>
       </div>
 
-      <div className={FIELD_COLUMN}>
+      {/* Prose, so it takes the wider cap rather than the single-control one. */}
+      <div className={cn(FIELD_COLUMN, 'max-w-form')}>
         <label htmlFor="student-notes" className={FIELD_LABEL}>
           {t('students.notes')}
         </label>

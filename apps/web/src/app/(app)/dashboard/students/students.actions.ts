@@ -424,3 +424,47 @@ export async function reorderSkillsAction(
 ): Promise<void> {
   await apiPost('/skills/reorder', { levelId, ids }, { organizationId });
 }
+
+/**
+ * Create a level and hand back its id — round 4.
+ *
+ * A second entry point to the same endpoint, and it exists because of one HTML
+ * rule: the turma form is a `<form>`, and a form cannot contain another form, so
+ * the "new level" panel on that page cannot submit the way `createLevelAction`
+ * is submitted. This is called directly instead, with plain arguments rather
+ * than `FormData`, and returns the new id so the picker can select what the
+ * operator just created — which is the entire point of creating it there.
+ *
+ * Server-side permission is unchanged: `POST /levels` is owner and admin only
+ * and does its own check. Nothing here is a shortcut around that.
+ */
+export async function createLevelInline(
+  organizationId: string,
+  name: string,
+  minAgeMonths: string,
+  maxAgeMonths: string,
+): Promise<{ ok: true; id: string; name: string } | { ok: false; errorKey: string }> {
+  const trimmed = name.trim();
+  if (trimmed === '') return { ok: false, errorKey: 'students.levelNameRequired' };
+
+  try {
+    const created = await apiPost<{ id: string }>(
+      '/levels',
+      {
+        name: trimmed,
+        minAgeMonths: minAgeMonths.trim() === '' ? null : Number(minAgeMonths),
+        maxAgeMonths: maxAgeMonths.trim() === '' ? null : Number(maxAgeMonths),
+      },
+      { organizationId },
+    );
+
+    // The levels list and anything that offers levels as choices.
+    revalidatePath('/dashboard/students/levels');
+    revalidatePath('/dashboard/classes');
+
+    return { ok: true, id: created.id, name: trimmed };
+  } catch (error) {
+    const failed = failure(error, 'students.levelFailed');
+    return { ok: false, errorKey: failed.errorKey ?? 'students.levelFailed' };
+  }
+}

@@ -12,6 +12,12 @@ import {
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import {
+  archiveMedicalLeave,
+  createMedicalLeave,
+  listMedicalLeave,
+  type MedicalLeave,
+} from '../students/medical-leave.repository.js';
+import {
   ConsentAlreadyRecordedError,
   CONSENT_KINDS,
   listConsent,
@@ -30,6 +36,8 @@ interface SensitiveResponse {
   consent: ConsentRecord[];
   kinds: ConsentKind[];
   canManage: boolean;
+  /** Every live leave for this student, newest first. */
+  medicalLeave: MedicalLeave[];
 }
 
 const MAX_NOTES = 4000;
@@ -71,7 +79,95 @@ export class SensitiveController {
       consent: await listConsent(organizationId, studentId),
       kinds: CONSENT_KINDS,
       canManage: hasRole('owner', 'admin'),
+      // Travels with the medical page rather than behind its own request: it is
+      // three rows, always shown, and a second round trip would put a loading
+      // state on a panel that is usually empty.
+      medicalLeave: await listMedicalLeave(organizationId, studentId),
     };
+  }
+
+  /**
+   * Record a period a student cannot swim — round 5.
+   *
+   * Owner and admin, the same as every other write on this screen. An instructor
+   * can *see* that a student is off — they have to, to take the register — but
+   * deciding that a child is medically unable to swim for six weeks is not a
+   * poolside call.
+   *
+   * The leave writes no attendance. It makes "falta justificada" the offered
+   * mark from today forward; anything already marked stays exactly as the
+   * instructor left it, and removing the leave simply stops the offer. That is
+   * the round-5 decision, and it is why no reposição credit can ever be created
+   * or destroyed by editing this.
+   */
+  @Post('medical-leave')
+  async addLeave(
+    @Param('studentId') studentId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ id: string }> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+
+    const startsOn = isoDate(body['startsOn'], 'startsOn', true);
+    const endsOn = isoDate(body['endsOn'], 'endsOn', false);
+
+    if (startsOn !== null && endsOn !== null && endsOn < startsOn) {
+      throw new BadRequestException('endsOn is before startsOn');
+    }
+
+    const raw = typeof body['reason'] === 'string' ? body['reason'].trim() : '';
+    if (raw.length > 200) {
+      throw new BadRequestException('The reason may be at most 200 characters');
+    }
+
+    const reference =
+      typeof body['justificationReference'] === 'string'
+        ? body['justificationReference'].trim()
+        : '';
+    if (reference.length > 200) {
+      throw new BadRequestException('The justification reference may be at most 200 characters');
+    }
+
+    try {
+      return {
+        id: await createMedicalLeave(organizationId, {
+          studentId,
+          startsOn: startsOn!,
+          endsOn,
+          reason: raw.length > 0 ? raw : null,
+          justificationReference: reference.length > 0 ? reference : null,
+          recordedBy: membershipId,
+        }),
+      };
+    } catch (error) {
+      /*
+       * The one error this can raise, turned into a sentence.
+       *
+       * `23P01` is the exclusion constraint refusing a second live leave over
+       * the same days. It is the only way this insert fails that an operator can
+       * do anything about, and "already has leave covering those dates" is a
+       * great deal more use than a 500 naming a constraint.
+       */
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        (error as { code?: string }).code === '23P01'
+      ) {
+        throw new ConflictException('This student already has leave covering those dates');
+      }
+      throw error;
+    }
+  }
+
+  @Post('medical-leave/:leaveId/archive')
+  async removeLeave(@Param('leaveId') leaveId: string): Promise<{ archived: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    if (!(await archiveMedicalLeave(organizationId, leaveId))) {
+      throw new NotFoundException('No such medical leave');
+    }
+    return { archived: true };
   }
 
   /**
@@ -158,4 +254,26 @@ export class SensitiveController {
     }
     return { withdrawn: true };
   }
+}
+
+
+/**
+ * A plain `YYYY-MM-DD` from a form.
+ *
+ * Deliberately not `new Date(...)`: a date input posts a calendar day with no
+ * time and no zone, and turning it into an instant here would shift it a day
+ * backwards for anybody west of Greenwich. The column is a `date`, so the string
+ * goes through as it arrived.
+ */
+function isoDate(value: unknown, field: string, required: boolean): string | null {
+  if (value === undefined || value === null || value === '') {
+    if (required) throw new BadRequestException(`${field} is required`);
+    return null;
+  }
+
+  const text = String(value).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    throw new BadRequestException(`${field} must be a date`);
+  }
+  return text;
 }

@@ -154,6 +154,137 @@ export default async function StudentPage({
         </section>
       )}
 
+      {student !== null && register !== null && (
+        /*
+          First on the page, since round 4.
+ 
+          Who this student is — the name, the level, the birth date — was at the
+          bottom, under the week, the register, the guardians and the uploads. It
+          is the reason somebody opens this screen and the thing they most often
+          came to correct, so it now leads. Everything below it is context about
+          a person you have already identified.
+ 
+          The photograph sits inside this block rather than in a section of its
+          own: an ID photo belongs beside the name it identifies, and at 7rem
+          square it is furniture next to the form instead of a panel competing
+          with it.
+        */
+        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+          {register.canManage ? (
+            <div className="flex flex-wrap items-start gap-5">
+              <PhotoUpload
+                variant="id"
+                label={t('students.photoUpload')}
+                reason={
+                  student.photoConsent
+                    ? t('students.photoNoStorage')
+                    : t('students.photoNoConsent')
+                }
+              />
+              <div className="min-w-0 flex-1">
+            <StudentForm
+              organizationId={register.organizationId}
+              levels={register.levels}
+              student={student}
+              mode="edit"
+              ageOfMajority={register.ageOfMajority}
+            />
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="mb-4 text-sm text-foreground-muted">{t('students.readOnly')}</p>
+              <dl className="flex flex-col gap-3">
+                <Row label={t('students.level')} value={student.levelName ?? t('students.noLevel')} />
+                <Row label={t('students.birthDate')} value={student.birthDate} />
+                <Row label={t('students.contactEmail')} value={student.contactEmail} />
+                <Row label={t('students.contactPhone')} value={student.contactPhone} />
+                <Row label={t('students.notes')} value={student.notes} />
+              </dl>
+            </>
+          )}
+        </section>
+      )}
+
+      {student !== null && register?.canManage === true && (
+        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('students.document')}
+          </h2>
+          {/*
+            Its own slot beside the photograph, never mixed with it — POOLSE-11.
+            A Cartão de Cidadão rendered as an avatar would put a government
+            identity document on every list that shows a face.
+          */}
+          <DocumentUpload
+            label={t('students.documentUpload')}
+            reason={t('students.documentNoStorage')}
+            purpose={t('students.documentPurpose')}
+          />
+        </section>
+      )}
+
+      {/*
+        Which turmas this student is in — round 4 follow-up.
+
+        Above the week on purpose. The week answers "when does she swim"; this
+        answers "what is she enrolled in", and the second question is the one
+        somebody opening a student record is usually holding. It is also the
+        thing that explains an empty week: a student in no turma has nothing to
+        show, and a student in two whose week is blank means the season has not
+        been generated.
+
+        Read from the recurring pattern rather than from the dated week, so it
+        does not empty out when you page to a week the club was closed.
+      */}
+      {student !== null && timetable.length > 0 && (
+        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('students.turmas')}
+          </h2>
+
+          <ul className="flex flex-col divide-y divide-border">
+            {/*
+              One row per turma, not per slot: a turma that meets on Tuesday and
+              Thursday is one enrolment, and listing it twice would read as two.
+            */}
+            {[...new Map(timetable.map((entry) => [entry.classGroupId, entry])).values()].map(
+              (entry) => (
+                <li
+                  key={entry.classGroupId}
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 first:pt-0 last:pb-0"
+                >
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <Link
+                      href={`/dashboard/classes/${entry.classGroupId}`}
+                      className="rounded font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      {entry.className}
+                    </Link>
+                    {entry.status === 'waiting' && (
+                      <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-foreground-muted">
+                        {t('students.waiting')}
+                      </span>
+                    )}
+                  </span>
+
+                  <span className="text-sm text-foreground-muted">
+                    {[
+                      entry.levelName,
+                      entry.poolName,
+                      entry.instructorName,
+                      entry.lane === null ? null : t('classes.laneN', { lane: entry.lane }),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </li>
+              ),
+            )}
+          </ul>
+        </section>
+      )}
+
       {student !== null && (
         <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -258,43 +389,6 @@ export default async function StudentPage({
         </section>
       )}
 
-      {student !== null && register !== null && register.canManage && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('students.photo')}
-          </h2>
-          {/*
-            Two different reasons the control is off, and they are not
-            interchangeable. Missing consent is something the operator can fix
-            today; missing storage is something only we can. Saying which is
-            which is the difference between a dead end and a next step.
-          */}
-          <PhotoUpload
-            label={t('students.photoUpload')}
-            reason={
-              student.photoConsent ? t('students.photoNoStorage') : t('students.photoNoConsent')
-            }
-          />
-        </section>
-      )}
-
-      {student !== null && register?.canManage === true && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('students.document')}
-          </h2>
-          {/*
-            Its own slot beside the photograph, never mixed with it — POOLSE-11.
-            A Cartão de Cidadão rendered as an avatar would put a government
-            identity document on every list that shows a face.
-          */}
-          <DocumentUpload
-            label={t('students.documentUpload')}
-            reason={t('students.documentNoStorage')}
-            purpose={t('students.documentPurpose')}
-          />
-        </section>
-      )}
 
       {/*
         What the club owes this family — POOLSE-21, criteria 2 and 5.
@@ -366,30 +460,6 @@ export default async function StudentPage({
         </section>
       )}
 
-      {student !== null && register !== null && (
-        <section className="rounded border border-border bg-surface p-5">
-          {register.canManage ? (
-            <StudentForm
-              organizationId={register.organizationId}
-              levels={register.levels}
-              student={student}
-              mode="edit"
-              ageOfMajority={register.ageOfMajority}
-            />
-          ) : (
-            <>
-              <p className="mb-4 text-sm text-foreground-muted">{t('students.readOnly')}</p>
-              <dl className="flex flex-col gap-3">
-                <Row label={t('students.level')} value={student.levelName ?? t('students.noLevel')} />
-                <Row label={t('students.birthDate')} value={student.birthDate} />
-                <Row label={t('students.contactEmail')} value={student.contactEmail} />
-                <Row label={t('students.contactPhone')} value={student.contactPhone} />
-                <Row label={t('students.notes')} value={student.notes} />
-              </dl>
-            </>
-          )}
-        </section>
-      )}
     </PageShell>
   );
 }

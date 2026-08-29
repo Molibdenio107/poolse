@@ -83,3 +83,69 @@ export async function withdrawConsentAction(
   revalidatePath(`/dashboard/students/${studentId}/sensitive`);
   return { ok: true };
 }
+
+/**
+ * Record a period a student cannot swim — round 5.
+ *
+ * The overlap is the error worth translating. The database refuses a second live
+ * leave over the same days, and the API turns that into a 409; "this student
+ * already has leave covering those dates" is something an operator fixes by
+ * editing the existing one, which "something went wrong" is not.
+ */
+export async function addMedicalLeaveAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const studentId = String(formData.get('studentId') ?? '');
+  const startsOn = String(formData.get('startsOn') ?? '').trim();
+  const endsOn = String(formData.get('endsOn') ?? '').trim();
+
+  if (startsOn === '') return { ok: false, errorKey: 'sensitive.leaveStartRequired' };
+  if (endsOn !== '' && endsOn < startsOn) {
+    return { ok: false, errorKey: 'sensitive.leaveBackwards' };
+  }
+
+  try {
+    await apiPost(
+      `/students/${studentId}/medical-leave`,
+      {
+        startsOn,
+        endsOn,
+        reason: String(formData.get('reason') ?? '').trim(),
+        justificationReference: String(formData.get('justificationReference') ?? '').trim(),
+      },
+      { organizationId },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      return { ok: false, errorKey: 'sensitive.leaveOverlaps' };
+    }
+    return { ok: false, errorKey: 'sensitive.leaveFailed' };
+  }
+
+  revalidatePath(`/dashboard/students/${studentId}/sensitive`);
+  return { ok: true };
+}
+
+export async function removeMedicalLeaveAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const studentId = String(formData.get('studentId') ?? '');
+  const leaveId = String(formData.get('leaveId') ?? '');
+
+  try {
+    await apiPost(
+      `/students/${studentId}/medical-leave/${leaveId}/archive`,
+      {},
+      { organizationId },
+    );
+  } catch {
+    return { ok: false, errorKey: 'sensitive.leaveFailed' };
+  }
+
+  revalidatePath(`/dashboard/students/${studentId}/sensitive`);
+  return { ok: true };
+}

@@ -6,6 +6,7 @@ import {
   type Student,
 } from '../../../../../../lib/api';
 import { BackLink } from '@/components/back-link';
+import { MedicalLeavePanel } from './medical-leave';
 import { PageShell } from '@/components/page-shell';
 import {
   MedicalNotesForm,
@@ -178,6 +179,24 @@ export default async function SensitivePage({
                 />
               </div>
             )}
+          </section>
+
+          {/*
+            Its own card, below consent — round 5. A leave is not a consent and
+            not a medical note: it is an operational fact about the next six
+            weeks of registers, and it belongs where somebody looking for "why is
+            this child not in the water" would look.
+          */}
+          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {t('sensitive.leave')}
+            </h2>
+            <MedicalLeavePanel
+              organizationId={record.organizationId}
+              studentId={id}
+              leave={record.medicalLeave}
+              canManage={record.canManage}
+            />
           </section>
 
           {past.length > 0 && (

@@ -1165,6 +1165,15 @@ export interface GuardianRow {
   email: string | null;
   phone: string | null;
   hasLogin: boolean;
+  /**
+   * This guardian's own student record, when they are also enrolled — round 4.
+   *
+   * Matched on name **and** birth date, and only when the guardian's birth date
+   * is recorded: a father and a son who share a name are the obvious way this
+   * goes wrong, and a missing date is exactly the case where the match would be
+   * a guess. Null is the normal answer — most encarregados do not swim.
+   */
+  studentId: string | null;
   students: { id: string; name: string; relationship: string | null }[];
 }
 
@@ -1182,6 +1191,7 @@ export async function listGuardians(
       email: string | null;
       phone: string | null;
       has_login: boolean;
+      student_id: string | null;
       students: GuardianRow['students'];
     }>(`
       SELECT ${TOTAL_COUNT},
@@ -1191,6 +1201,35 @@ export async function listGuardians(
              person_email(m.id)::text AS email,
              m.phone,
              m.app_user_id IS NOT NULL AS has_login,
+             -- The same person, enrolled - round 4.
+             --
+             -- Name and birth date together, accent- and case-insensitively.
+             -- The birth_date IS NOT NULL guard is the part that matters:
+             -- without it every guardian with an unrecorded date would match any
+             -- student sharing their name, which in a club with a Joao Silva
+             -- father and a Joao Silva son is a link to the wrong person's
+             -- medical record.
+             --
+             -- LIMIT 1 because two students matching one guardian means the data
+             -- is ambiguous, and picking the first is better than failing the
+             -- whole page - the link is a convenience, not a fact anything
+             -- depends on.
+             --
+             -- (SQL line comments, not a block comment: this is inside a JS
+             -- template literal and a backtick in a comment ends the string.)
+             (
+               SELECT s2.id
+                 FROM student s2
+                WHERE s2.organization_id = m.organization_id
+                  AND s2.archived_at IS NULL
+                  AND m.birth_date IS NOT NULL
+                  AND s2.birth_date = m.birth_date
+                  AND lower(strip_accents(s2.first_name)) =
+                      lower(strip_accents(coalesce(m.first_name, '')))
+                  AND lower(strip_accents(s2.last_name)) =
+                      lower(strip_accents(coalesce(m.last_name, '')))
+                LIMIT 1
+             ) AS student_id,
              coalesce((
                SELECT jsonb_agg(
                         jsonb_build_object(
@@ -1246,6 +1285,7 @@ export async function listGuardians(
       email: row.email,
       phone: row.phone,
       hasLogin: row.has_login,
+      studentId: row.student_id,
       students: row.students,
     }));
   });

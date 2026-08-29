@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '../../../../../lib/api';
+import { ChevronRight } from 'lucide-react';
 import { CreateLevelForm } from './level-forms';
 import { LevelList } from './level-list';
 import { PageShell } from '@/components/page-shell';
@@ -46,6 +47,32 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
             <p className="text-sm text-foreground-muted">{t('students.readOnly')}</p>
           )}
 
+          {/*
+            Folded, and above the ladder — round 5.
+
+            A club sets its progression up once a season and then reads it all
+            year, so an always-open form pushed the thing people actually came
+            for below the fold. `<details>` rather than a state hook because it
+            is the browser's own disclosure: keyboard-operable, announced as a
+            disclosure to a screen reader, and it works before any JavaScript
+            arrives. At the top rather than the bottom because "add" belongs
+            where the list starts, not after a scroll past twelve levels.
+          */}
+          {data.canManage && (
+            <details className="group rounded border border-border bg-surface">
+              <summary className="flex cursor-pointer list-none items-center gap-2 p-5 text-sm font-medium uppercase tracking-wider text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                <ChevronRight
+                  aria-hidden
+                  className="size-4 transition-transform group-open:rotate-90"
+                />
+                {t('students.addLevel')}
+              </summary>
+              <div className="border-t border-border p-5">
+                <CreateLevelForm organizationId={data.organizationId} />
+              </div>
+            </details>
+          )}
+
           <section className="rounded border border-border bg-surface p-5">
             {levels.length === 0 ? (
               <div className="flex flex-col gap-1">
@@ -61,14 +88,6 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
             )}
           </section>
 
-          {data.canManage && (
-            <section className="rounded border border-border bg-surface p-5">
-              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('students.addLevel')}
-              </h2>
-              <CreateLevelForm organizationId={data.organizationId} />
-            </section>
-          )}
         </>
       )}
     </PageShell>
