@@ -37,6 +37,12 @@ const EXEMPT = [
   // POOLSE-37's landing resolver. It renders nothing at all — it decides where
   // somebody goes and redirects — so there is no layout for it to share.
   'dashboard/start',
+  // The water-quality report - round 4. It is a document rather than a screen:
+  // it owns its own page geometry because that geometry is A4, and it is
+  // deliberately monochrome so it does not print a dark-mode surface as a black
+  // rectangle. The shell's chrome is hidden at print time rather than absent, so
+  // this stays an ordinary authenticated page.
+  'report',
 ];
 
 /** Outer-layout classes on a page root — the thing the shell now owns. */

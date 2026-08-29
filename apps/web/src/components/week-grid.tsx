@@ -21,6 +21,14 @@ export interface WeekEntry {
   peopleEmpty?: string | undefined;
   /** "+3 mais", already translated and pluralised. Shown when the list is cut. */
   peopleMore?: string | undefined;
+  /**
+   * Kept for callers that still pass it, and deliberately unused for navigation.
+   *
+   * The card stopped being clickable in round 4 (see `Slot`), so this no longer
+   * makes the square a link. It is left on the type because removing it would
+   * churn six call sites for no gain, and because a future "open the turma"
+   * control inside the card would use exactly this.
+   */
   href?: string;
   muted?: boolean;
   /** Why this one is off — "Natal", "Férias de agosto". Shown under the title. */
@@ -78,12 +86,33 @@ export function WeekGrid({
   entries,
   dayNames,
   emptyLabel,
+  linkTitles,
+  todayWeekday,
   className,
 }: {
   entries: WeekEntry[];
   /** Indexed by ISO weekday, so dayNames[1] is Monday. Supplied translated. */
   dayNames: Record<number, string>;
   emptyLabel: string;
+  /**
+   * Whether a class title opens its turma — round 5.
+   *
+   * Off everywhere by default. Round 4 made the whole card unclickable because a
+   * square carrying "Take the register" and "Cancel class" with a third
+   * destination behind it was ambiguous; round 5 puts the destination back on
+   * exactly one screen — Turmas — where the grid is a directory of turmas rather
+   * than a list of things to do to them. The title becomes the link, never the
+   * card, so the controls inside keep their own clicks.
+   */
+  linkTitles?: boolean | undefined;
+  /**
+   * Today's ISO weekday, when the week on screen is the current one — round 5.
+   *
+   * Absent on every other week, which is the point: the column is only worth
+   * pointing at when it is actually today. The caller decides, because only the
+   * caller knows which week it asked for.
+   */
+  todayWeekday?: number | undefined;
   className?: string;
 }): React.ReactElement {
   const byDay = new Map<number, WeekEntry[]>();
@@ -119,8 +148,19 @@ export function WeekGrid({
         style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
       >
         {days.map((day) => (
-          <div key={day} className="flex min-w-0 flex-col gap-2">
-            <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          <div
+            key={day}
+            className={cn(
+              'flex min-w-0 flex-col gap-2 rounded',
+              day === todayWeekday && 'animate-flash-today',
+            )}
+          >
+            <h3
+              className={cn(
+                'text-sm font-medium uppercase tracking-wider',
+                day === todayWeekday ? 'text-primary' : 'text-foreground-muted',
+              )}
+            >
               {dayNames[day]}
             </h3>
 
@@ -128,7 +168,7 @@ export function WeekGrid({
               <span className="text-sm text-foreground-muted">—</span>
             ) : (
               (byDay.get(day) ?? []).map((entry) => (
-                <Slot key={entry.key} entry={entry} />
+                <Slot key={entry.key} entry={entry} linkTitle={linkTitles === true} />
               ))
             )}
           </div>
@@ -138,7 +178,13 @@ export function WeekGrid({
   );
 }
 
-function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
+function Slot({
+  entry,
+  linkTitle,
+}: {
+  entry: WeekEntry;
+  linkTitle: boolean;
+}): React.ReactElement {
   const body = (
     <>
       <span className="font-mono text-sm">
@@ -153,14 +199,38 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
         actually uses, and `break-words` keeps the wrap on word boundaries — the
         story is explicit that nothing is cut mid-word.
       */}
-      <span
-        className={cn(
-          'line-clamp-2 break-words font-medium',
-          entry.cancelled === true && 'line-through',
-        )}
-      >
-        {entry.title}
-      </span>
+      {/*
+        The card is not a link — round 4 follow-up.
+
+        It was one, then briefly a stretched link so the actions could sit inside
+        it. Both were confusing on the calendar: a square carrying "Take the
+        register" and "Cancel class" already offers two things to do, and making
+        the background a third destination meant a mis-aimed click on a cancel
+        button navigated away instead. The card is a surface now; the controls
+        inside it are the only interactive parts, and the hover panel still gives
+        the detail a click used to.
+      */}
+      {linkTitle && entry.href !== undefined ? (
+        <a
+          href={entry.href}
+          className={cn(
+            'line-clamp-2 break-words rounded font-medium text-primary underline-offset-4 hover:underline',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+            entry.cancelled === true && 'line-through',
+          )}
+        >
+          {entry.title}
+        </a>
+      ) : (
+        <span
+          className={cn(
+            'line-clamp-2 break-words font-medium',
+            entry.cancelled === true && 'line-through',
+          )}
+        >
+          {entry.title}
+        </span>
+      )}
       {entry.subtitle != null && (
         <span className="line-clamp-2 break-words text-sm text-foreground-muted">
           {entry.subtitle}
@@ -207,25 +277,44 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
   // `min-h` and the roomier padding are the readable-cell half of story 4: the
   // time, the name and the pool are three lines, and a box sized to two of them
   // made every slot look clipped even when it was not.
+  // `relative` so the title's stretched overlay is bounded by this box and not
+  // by whatever ancestor happens to be positioned.
   const classes = cn(
-    'flex min-h-24 flex-col gap-0.5 rounded border p-3',
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+    'relative flex min-h-24 flex-col gap-0.5 rounded border p-3',
     entry.muted
       ? 'border-dashed border-border bg-surface-muted'
       : 'border-border bg-surface hover:border-primary/50',
   );
 
-  // A link when there is somewhere to go, a plain block when there is not —
-  // rather than an anchor with no href, which is a control that looks clickable
-  // and is not.
-  const plain =
-    entry.href === undefined ? (
-      <div className={classes}>{body}</div>
-    ) : (
-      <a href={entry.href} className={classes}>
-        {body}
-      </a>
-    );
+  const plain = (
+    <div className={classes}>
+      {body}
+
+      {/*
+        Inside the square, under a hairline — round 4. These were rendered as a
+        sibling below the card, which read as page furniture rather than as
+        something belonging to that class, and on a seven-column grid put the
+        control for Tuesday's 18:00 nearer to Wednesday's than to its own slot.
+ 
+        `relative z-10` lifts them above the title's overlay so they receive
+        their own clicks; `mt-auto` pins them to the bottom, so a slot with a
+        long roll and one with a short one both end in the same place.
+      */}
+      {(entry.mark !== undefined || entry.action !== undefined) && (
+        <div className="relative z-10 mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/60 pt-2">
+          {entry.mark !== undefined && (
+            <a
+              href={entry.mark.href}
+              className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {entry.mark.label}
+            </a>
+          )}
+          {entry.action}
+        </div>
+      )}
+    </div>
+  );
 
   /*
    * The safety net for a name still too long for two lines.
@@ -253,25 +342,5 @@ function Slot({ entry }: { entry: WeekEntry }): React.ReactElement {
       </TurmaHoverCard>
     );
 
-  if (entry.action === undefined && entry.mark === undefined) return card;
-
-  // Outside the anchor, deliberately: a form nested inside a link is invalid
-  // HTML, and browsers resolve it by making the button navigate instead of
-  // submit — a cancel control that opens the turma page.
-  return (
-    <div className="flex flex-col gap-1">
-      {card}
-      <div className="flex flex-col gap-1 px-2">
-        {entry.mark !== undefined && (
-          <a
-            href={entry.mark.href}
-            className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            {entry.mark.label}
-          </a>
-        )}
-        {entry.action}
-      </div>
-    </div>
-  );
+  return card;
 }

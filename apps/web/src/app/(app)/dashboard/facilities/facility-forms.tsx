@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { PlaceField } from './place-field';
 import type { FormState } from '../actions';
 import {
   archiveFacilityAction,
@@ -64,10 +65,14 @@ export function CreateFacilityForm({
       </div>
 
       <div className={FIELD_COLUMN}>
-        <label htmlFor="facility-address" className={FIELD_LABEL}>
-          {t('facilities.addressLabel')}
-        </label>
-        <input id="facility-address" name="address" maxLength={500} className={CONTROL_LINE} />
+        {/*
+          The town, not a street — round 5. Coordinates are what the weather
+          panel needs, and an optional address box could never supply them, so a
+          site created here had no weather until somebody went back and set the
+          city by hand. The free-text address is still on the detail page, where
+          it is edited for invoicing.
+        */}
+        <PlaceField />
       </div>
 
       <div className={FIELD_COLUMN}>

@@ -73,6 +73,48 @@ export function HoursPanel({
     );
   }
 
+  /**
+   * Copy Monday's times onto every other day the site opens — round 5.
+   *
+   * Most pools keep one timetable all week and were typing the same two times
+   * six times over. Monday is the source because it is the first row and the one
+   * people fill in first; there is no picker for which day to copy from, because
+   * a second control to answer a question nobody asks is worse than the typing.
+   *
+   * **It copies the times, never the switch.** A site that closes on Sunday
+   * stays closed on Sunday: `available` is a decision per day, and a button that
+   * quietly reopened a day somebody had shut would be the most destructive thing
+   * on this panel. Days that are off keep their own times too, so turning one
+   * back on does not reveal Monday's hours it never agreed to.
+   *
+   * It only stages the change — nothing is written until Save, so a mis-click is
+   * undone by leaving the page.
+   */
+  function copyMonday(): void {
+    const monday = days.find((day) => day.weekday === 1);
+    if (monday === undefined) return;
+
+    setSaved(false);
+    setErrorKey(null);
+    setDays((current) =>
+      current.map((day) =>
+        day.weekday === 1 || !day.available
+          ? day
+          : { ...day, opensAt: monday.opensAt, closesAt: monday.closesAt },
+      ),
+    );
+  }
+
+  // Only worth offering when some other open day disagrees with Monday.
+  const canCopy =
+    days.find((day) => day.weekday === 1)?.available === true &&
+    days.some(
+      (day) =>
+        day.weekday !== 1 &&
+        day.available &&
+        (day.opensAt !== days[0]?.opensAt || day.closesAt !== days[0]?.closesAt),
+    );
+
   function save(): void {
     setErrorKey(null);
 
@@ -95,7 +137,23 @@ export function HoursPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-foreground-muted">{t('facilities.hoursHint')}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-foreground-muted">{t('facilities.hoursHint')}</p>
+
+        {canManage && canCopy && (
+          <button
+            type="button"
+            onClick={copyMonday}
+            className="shrink-0 rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('facilities.copyMonday')}
+          </button>
+        )}
+      </div>
+
+      {canManage && canCopy && (
+        <p className="text-sm text-foreground-muted">{t('facilities.copyMondayHint')}</p>
+      )}
 
       <ul className="flex flex-col divide-y divide-border">
         {days.map((day) => {

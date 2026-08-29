@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type People, type StaffRecord } from '@/lib/api';
 import { PageShell, PageError } from '@/components/page-shell';
+import { PhotoUpload } from '@/components/photo-upload';
 import { RoleBadges } from '@/components/role-badge';
 import { StaffForm } from './staff-form';
 
@@ -83,6 +84,18 @@ export default async function StaffMemberPage({
             guards with. Deriving either from the grantable list would be a
             second rule that agrees today and drifts later.
           */}
+          {/*
+            The same ID square the student record has — round 5. Disabled for the
+            same reason and saying the same thing, because a photograph of a
+            member of staff waits on exactly the storage a student's does.
+          */}
+          <div className="flex flex-wrap items-start gap-5">
+            <PhotoUpload
+              variant="id"
+              label={t('students.photoUpload')}
+              reason={t('students.photoNoStorage')}
+            />
+            <div className="min-w-0 flex-1">
           <StaffForm
             organizationId={people.organizationId}
             staff={staff}
@@ -90,6 +103,8 @@ export default async function StaffMemberPage({
             isOwner={people.canTransferOwnership}
             grantable={[...people.grantableRoles]}
           />
+            </div>
+          </div>
         </>
       )}
     </PageShell>

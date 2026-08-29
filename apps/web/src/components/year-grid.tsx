@@ -64,6 +64,7 @@ export function YearGrid({
   onPick,
   onHover,
   labelFor,
+  pastBefore,
   className,
 }: {
   year: number;
@@ -84,6 +85,20 @@ export function YearGrid({
   onHover?: ((day: string | null) => void) | undefined;
   /** Full accessible name for a day — "3 de Agosto de 2026". */
   labelFor: (day: string) => string;
+  /**
+   * Everything before this ISO day is over — round 4.
+   *
+   * Closures, férias and classes are all things you plan, and none of them can
+   * be planned backwards. Leaving last February pickable meant the grid offered
+   * 365 days of which only the tail was a real choice, and an operator dragging
+   * a range upward could book a holiday into a week that has already happened.
+   * Dimmed and unpickable, but still focusable, for the same reason a feriado is:
+   * what happened in March is information, it is just not a decision any more.
+   *
+   * Optional. A grid with no notion of "now" — a historical report, say — leaves
+   * it unset and behaves exactly as before.
+   */
+  pastBefore?: string | undefined;
   className?: string;
 }): React.ReactElement {
   // Recomputed only when the year changes. Twelve months of cells is cheap, but
@@ -139,7 +154,12 @@ export function YearGrid({
               const state = stateFor(day);
               const number = Number(day.slice(8));
 
-              if (state.disabled === true || onPick === undefined) {
+              // ISO dates compare correctly as strings, which is the whole
+              // reason this grid speaks in `YYYY-MM-DD` rather than Date.
+              const past = pastBefore !== undefined && day < pastBefore;
+              const inert = state.disabled === true || past;
+
+              if (inert || onPick === undefined) {
                 return (
                   <div
                     key={day}
@@ -148,16 +168,18 @@ export function YearGrid({
                     // learns who is away, and it is the reason colour is never
                     // the only cue here.
                     role="img"
-                    tabIndex={state.focusable === true ? 0 : undefined}
+                    tabIndex={state.focusable === true || past ? 0 : undefined}
                     title={state.title}
                     onMouseEnter={onHover === undefined ? undefined : () => onHover(day)}
                     aria-label={`${labelFor(day)}${state.description ? `, ${state.description}` : ''}`}
                     className={cn(
                       'flex aspect-square flex-col items-center justify-center rounded text-xs',
-                      state.disabled === true
-                        ? 'text-foreground-muted/50'
-                        : 'text-foreground',
+                      inert ? 'text-foreground-muted/50' : 'text-foreground',
                       state.className,
+                      // Last, so it wins over whatever a closure or a vacation
+                      // painted: a day that is over reads as over first, and as
+                      // whatever happened on it second.
+                      past && 'bg-surface-muted/40 opacity-60',
                     )}
                   >
                     {number}

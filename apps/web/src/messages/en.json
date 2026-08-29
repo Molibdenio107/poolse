@@ -15,7 +15,9 @@
     "backToDashboard": "Back to dashboard",
     "cancel": "Cancel",
     "save": "Save",
-    "actions": "Actions"
+    "actions": "Actions",
+    "change": "Change",
+    "undo": "Undo"
   },
   "pagination": {
     "label": "Pagination",
@@ -158,7 +160,8 @@
       "birth_date": "Date of birth"
     },
     "staffTotal": "{count, plural, =0 {No staff} one {# staff member} other {# staff members}}",
-    "staffCountHint": "Anyone holding more than one role is counted once in the total and under each role, so the roles add up to more than the total."
+    "staffCountHint": "Anyone holding more than one role is counted once in the total and under each role, so the roles add up to more than the total.",
+    "birthdayToday": "Birthday today"
   },
   "staff": {
     "title": "Staff",
@@ -323,7 +326,72 @@
     "materialDuplicate": "There is already a row for this item. Correct the quantity on that row.",
     "materialFailed": "The item could not be saved.",
     "materialsImport": "Import from Excel",
-    "materialsImportSoon": "Not available yet — inventory import arrives with the rest of the importers."
+    "materialsImportSoon": "Not available yet — inventory import arrives with the rest of the importers.",
+    "minDepthLabel": "Shallow end (m)",
+    "volumeComputed": "About {litres} L from these dimensions, using the average depth.",
+    "volumeUseComputed": "Use the calculated figure",
+    "volumeHint": "Fill in all four measurements and this is worked out for you.",
+    "exportInventory": "Export as CSV",
+    "noAnalyses": "No water analyses recorded yet.",
+    "recordAnalysis": "Record an analysis for {pool}",
+    "analysisTakenAt": "Sample taken",
+    "analysisMeasurements": "Measurements — fill in only what was tested",
+    "analysisNotes": "Notes",
+    "analysisNotesHint": "About the visit: “sampled before backwash”, a lab report number.",
+    "saveAnalysis": "Save analysis",
+    "archiveAnalysis": "Remove this analysis",
+    "analysisReport": "Analysis report",
+    "printReport": "Print or save as PDF",
+    "reportTitle": "Water quality report",
+    "reportGenerated": "Generated {date}",
+    "reportCount": "{count, plural, one {# analysis} other {# analyses}} in this report.",
+    "analysisMomentRequired": "Say when the sample was taken.",
+    "analysisEmpty": "Fill in at least one measurement.",
+    "analysisFailed": "The analysis could not be saved.",
+    "metric": {
+      "ph": "pH",
+      "temperature": "Temperature",
+      "free_chlorine": "Free chlorine",
+      "combined_chlorine": "Combined chlorine",
+      "total_alkalinity": "Total alkalinity",
+      "calcium_hardness": "Calcium hardness",
+      "cyanuric_acid": "Cyanuric acid",
+      "turbidity": "Turbidity",
+      "salt": "Salt"
+    },
+    "unit": {
+      "ph": "pH",
+      "temperature": "°C",
+      "free_chlorine": "ppm",
+      "combined_chlorine": "ppm",
+      "total_alkalinity": "ppm",
+      "calcium_hardness": "ppm",
+      "cyanuric_acid": "ppm",
+      "turbidity": "NTU",
+      "salt": "ppm"
+    },
+    "capacity": "Capacity",
+    "emptyLatest": "The latest reading for each measurement, at a glance.",
+    "emptyTrend": "A trend for every measurement, from the first analysis onwards.",
+    "emptyReport": "A printable report and a CSV export of the whole record.",
+    "importAnalysis": "Import an analysis report",
+    "importNoStorage": "File storage is not configured yet, so there is nowhere to keep the document.",
+    "importNoParsing": "Reading values out of a laboratory PDF is not built yet.",
+    "importMeanwhile": "In the meantime, enter the values above — they give you the same trend and the same report.",
+    "exportAnalyses": "Export as CSV",
+    "waterOutOfRange": "This water is outside the recommended range",
+    "aboveRange": "above the {from}–{to} range",
+    "belowRange": "below the {from}–{to} range",
+    "closePool": "Close this pool temporarily",
+    "confirmClosePool": "Create the closure",
+    "closureDays": "Days",
+    "closureFromToday": "The closure starts today. It appears on Encerramentos and can be removed there.",
+    "closureReason": "{pool} closed — water out of range ({metric})",
+    "closureDaysInvalid": "Enter a number of days between 1 and 365.",
+    "closureFailed": "The closure could not be created.",
+    "cityFailed": "Place lookup is unavailable — you can set the city later.",
+    "copyMonday": "Apply Monday to every open day",
+    "copyMondayHint": "Copies the times only — days you have closed stay closed, and nothing is saved until you press Save."
   },
   "classes": {
     "title": "Class groups",
@@ -391,7 +459,21 @@
     "when": "When",
     "occupancy": "{occupancy} places taken",
     "enrolled": "Enrolled students",
-    "noTurma": "an unnamed turma"
+    "noTurma": "an unnamed turma",
+    "newLevel": "New level",
+    "allScheduled": "Every turma has at least one day.",
+    "dragHint": "Drag a turma onto a day and time, or focus one and press Space.",
+    "slotMoved": "Moved.",
+    "slotDuplicate": "That turma already runs at that time on that day.",
+    "slotRefused": "The site is closed then, or the class would run past closing.",
+    "boardFacility": "Site",
+    "patternNote": "Dropping here changes the weekly pattern — every week, not just this one.",
+    "searchStudents": "Find a student",
+    "searchStudentsPlaceholder": "Type a name",
+    "showOutsideAges": "Also show {count} outside this level's ages",
+    "noStudentsMatch": "No students match",
+    "outsideAges": "outside this level's ages",
+    "chooseDay": "Choose a day"
   },
   "reposicao": {
     "title": "Make-up classes",
@@ -632,7 +714,15 @@
     "duplicateByEmail": "{name} is already recorded with this email.",
     "duplicateUseExisting": "Use this person",
     "guardianSearchPlaceholder": "Name, email or phone",
-    "backToGuardians": "Back to guardians"
+    "backToGuardians": "Back to guardians",
+    "ageUnit": "Unit",
+    "ageUnitYears": "years",
+    "ageUnitMonths": "months",
+    "ageBoundHint": "Leave blank for no limit.",
+    "createLevel": "Create level",
+    "guardianOfLabel": "Guardian of",
+    "turmas": "Classes",
+    "waiting": "Waiting list"
   },
   "advancement": {
     "title": "Advancement",
@@ -732,7 +822,27 @@
     "withdrawFailed": "Could not withdraw the decision.",
     "history": "History",
     "historyHint": "Withdrawn decisions. They stay on the record because they were true while they lasted.",
-    "withdrawnOn": "withdrawn on {when} by {who}"
+    "withdrawnOn": "withdrawn on {when} by {who}",
+    "leave": "Medical leave",
+    "leaveExplain": "While a leave is running, the register offers “justified absence” for this student. Registers already taken are never changed, and removing a leave only stops the offer from then on.",
+    "noLeave": "No medical leave recorded.",
+    "leaveActive": "Off now",
+    "leaveFrom": "From {from}, open-ended",
+    "leaveRange": "{from} to {to}",
+    "leaveStart": "First day off",
+    "leaveEnd": "Expected return",
+    "leaveEndHint": "Leave blank if it is not known yet.",
+    "leaveReason": "Reason",
+    "leaveReasonHint": "Short, and not a diagnosis — medical detail belongs in the notes above.",
+    "saveLeave": "Record leave",
+    "removeLeave": "Remove this leave",
+    "leaveStartRequired": "Say which day the leave starts.",
+    "leaveBackwards": "The return date is before the first day off.",
+    "leaveOverlaps": "This student already has leave covering those dates.",
+    "leaveFailed": "The medical leave could not be saved.",
+    "leaveJustification": "Supporting document",
+    "leaveJustificationPlaceholder": "e.g. atestado 2026/114",
+    "leaveJustificationHint": "Optional. Where the certificate is filed — a number or a location, not the document itself and not a diagnosis."
   },
   "invite": {
     "open": "Invite user",
@@ -880,7 +990,9 @@
     "trial": "Trial",
     "trialDaysLeft": "{days, plural, one {# day left} other {# days left}} of your trial.",
     "trialEnded": "Your trial has ended. Nothing is blocked, for now.",
-    "trialNoCard": "No card on file. Subscriptions arrive in a later phase."
+    "trialNoCard": "No card on file. Subscriptions arrive in a later phase.",
+    "soonTitle": "Your operational dashboard is coming",
+    "soonHint": "Occupancy, water quality and the day's classes will land here. In the meantime, everything that is built is one click away."
   },
   "marketing": {
     "pricingLink": "Pricing",
@@ -1091,6 +1203,7 @@
     "closureOverlap": "A closure already covers these days: {existing}.",
     "rangeAnchored": "Starting {day}. Click the last day.",
     "clearRange": "Clear selection",
-    "gridHint": "Click a day to start a closure. Holidays are shown in grey."
+    "gridHint": "Click a day to start a closure. Holidays are shown in grey.",
+    "rangeHeldHint": "These days are selected. Fill in the reason below, or click any day to start again."
   }
 }

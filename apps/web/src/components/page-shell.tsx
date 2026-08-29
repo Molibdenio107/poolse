@@ -53,7 +53,27 @@ export function PageShell({
   return (
     <main className="flex min-h-screen w-full justify-center px-page py-page-y">
       <div className="flex w-full max-w-page flex-col gap-page-gap">
-        {back !== undefined && <BackLink href={back.href} label={back.label} />}
+        {/*
+          Sticky, since round 4 — the way out of a screen must not be something
+          you scroll back up to find.
+
+          `top-app-bar` parks it directly beneath the app bar rather than at a
+          guessed offset, and `-mx-page` lets its opaque background run to the
+          full width of the column so nothing shows through behind the word
+          "Voltar" as content passes underneath. `z-10` is below the app bar's
+          `z-20` and above the page.
+
+          Round 5: the padding used to be `pt-page-y` (2.5rem), which made this a
+          tall block whose text sat well below where it stuck — so as the page
+          scrolled, the link drifted out of the strip and the strip covered it.
+          Symmetric `py-2` and a hairline make it an actual bar, and the label
+          stays put and readable at every scroll position.
+        */}
+        {back !== undefined && (
+          <div className="sticky top-app-bar z-10 -mx-page -mt-2 border-b border-border bg-background px-page py-2">
+            <BackLink href={back.href} label={back.label} />
+          </div>
+        )}
 
         <header className="flex min-h-page-header items-start justify-between gap-4">
           <div className="min-w-0">

@@ -51,7 +51,15 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <AppSidebar roles={roles} />
+      {/*
+        Hidden on paper - round 4. The water-quality report is a real document
+        an operator sends to the camara, and a printout with the navigation and
+        the avatar menu down the side is not one. Nothing else in the app is
+        printed today; when something is, it inherits this for free.
+      */}
+      <div className="contents print:hidden">
+        <AppSidebar roles={roles} />
+      </div>
 
       {/*
         `min-w-0` is not decoration. Without it a flex child refuses to shrink
@@ -59,7 +67,7 @@ export default async function DashboardLayout({
         whole page sideways instead of scrolling inside its own container.
       */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3">
+        <header className="sticky top-0 z-20 flex h-app-bar items-center justify-between gap-3 border-b border-border bg-surface px-6 print:hidden">
           {/*
             The brand slot. Empty until stories 5 and 7 land, which put the
             organization's logo and name here — deliberately left as a slot

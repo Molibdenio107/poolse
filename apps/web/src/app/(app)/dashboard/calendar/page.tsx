@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Calendar } from '@/lib/api';
+import { ApiError, apiFetch, type Calendar, type Classes } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import {
   addDays,
   isDate,
+  isoWeekday,
   longDate,
   mediumDate,
   mondayOf,
@@ -13,6 +14,7 @@ import {
   shortDate,
   today,
 } from '@/lib/dates';
+import { ScheduleBoard } from '../classes/schedule-board';
 import { CancelSession, GenerateSeason } from './calendar-forms';
 import { PageShell } from '@/components/page-shell';
 
@@ -43,6 +45,14 @@ export default async function CalendarPage({
   // on Thursday.
   const anchor = isDate(week) ? week : today();
   const monday = mondayOf(anchor);
+
+  /*
+    Today's column, but only on the week that actually contains today — round 5.
+    `mondayOf(today())` is the cheapest way to ask "is this that week", and it
+    compares two ISO strings rather than two Dates, so no timezone gets involved.
+  */
+  const thisWeek = mondayOf(today()) === monday;
+  const todayWeekday = thisWeek ? isoWeekday(today()) : undefined;
   const sunday = addDays(monday, 6);
   const season = seasonOf(today());
 
@@ -55,6 +65,28 @@ export default async function CalendarPage({
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
     else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+  }
+
+  /*
+    The turmas, for the drag-and-drop board — round 5.
+
+    A second request rather than widening `/calendar`, which answers a question
+    about *dated sessions* and would otherwise start carrying the recurring
+    pattern too. Best-effort: the board is an extra on this screen, and losing it
+    must not cost the week.
+
+    What a drop here edits is the weekly pattern, not this particular Tuesday —
+    the same thing the Turmas screen edits, because the pattern is the only place
+    a repeating class exists. The sessions on the grid below catch up when the
+    season is regenerated.
+  */
+  let classes: Classes | null = null;
+  if (calendar !== null && calendar.canManage) {
+    try {
+      classes = await apiFetch<Classes>('/class-groups');
+    } catch {
+      classes = null;
+    }
   }
 
   // "Terça · 15 dez" — the same seven columns as the turma timetable, but
@@ -180,75 +212,105 @@ export default async function CalendarPage({
         <>
           <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
             {/*
-              Backlog round 3, story 4. The arrows now sit either side of the
-              label they move, which is the arrangement everybody has learned
-              from every other calendar — the old row put three buttons on the
-              left and the dates on the right, so the control and the thing it
-              changed were at opposite ends of the screen.
+              The arrows sit at the two ends of the block — round 5.
 
-              "Hoje" is separate and stays put. It is not a step in a sequence,
-              it is a way out of one, and someone eleven weeks into next term
-              should not have to find it among the arrows.
-            */}
-            {/*
-              Three columns rather than `justify-between` — POOLSE-02.
-              
-              The middle column is centred in the block itself, so the range sits
-              in the middle of the header regardless of how wide "Hoje" is in the
-              current language. With `justify-between` the label was centred only
-              between the arrows, which put it left of centre on the page.
+              They were beside the label in the middle, which is the arrangement
+              most calendars use and was right while the label was small. Round 4
+              made the label the largest thing in the row, and a `text-xl` date
+              with two buttons pressed against it reads as one crowded object;
+              worse, the arrows moved horizontally as the date's length changed
+              between locales, so the target was never in the same place twice.
+
+              At the ends they are fixed: previous is always hard left, next is
+              always hard right, and the date has the whole middle. `justify-self`
+              on a three-column grid rather than `justify-between`, so the label
+              is centred in the *card* and not merely between the two buttons —
+              the difference is visible the moment "Hoje" is a different width.
+
+              "Hoje" is not an arrow and does not join them. It is a way out of a
+              sequence rather than a step in one, so it sits under the row where
+              it cannot be hit by somebody paging quickly.
             */}
             <nav
               aria-label={t('calendar.weekNav')}
-              className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"
+              className="grid grid-cols-[auto_1fr_auto] items-center gap-3"
             >
-              <span />
+              <WeekArrow
+                week={addDays(monday, -7)}
+                label={t('calendar.previousWeek')}
+                direction="previous"
+              />
 
-              <div className="flex items-center justify-center gap-2">
-                <WeekArrow
-                  week={addDays(monday, -7)}
-                  label={t('calendar.previousWeek')}
-                  direction="previous"
-                />
+              {/*
+                Always dated, and never wrapped. "Esta semana" alone cannot say
+                which week once you have moved off it, which is the moment the
+                label matters most — so the narrow form shortens the month rather
+                than breaking across two lines.
+              */}
+              <p className="text-center text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+                <span className="hidden sm:inline">
+                  {t('calendar.range', {
+                    from: longDate(monday, locale),
+                    to: longDate(sunday, locale),
+                  })}
+                </span>
+                <span className="whitespace-nowrap sm:hidden">
+                  {t('calendar.range', {
+                    from: mediumDate(monday, locale),
+                    to: mediumDate(sunday, locale),
+                  })}
+                </span>
+              </p>
 
-                {/*
-                  Always dated, and never wrapped. "Esta semana" alone cannot say
-                  which week once you have moved off it, which is the moment the
-                  label matters most — so the narrow form shortens the month
-                  rather than breaking across two lines.
-                */}
-                <p className="text-center text-sm font-medium">
-                  <span className="hidden sm:inline">
-                    {t('calendar.range', {
-                      from: longDate(monday, locale),
-                      to: longDate(sunday, locale),
-                    })}
-                  </span>
-                  <span className="whitespace-nowrap sm:hidden">
-                    {t('calendar.range', {
-                      from: mediumDate(monday, locale),
-                      to: mediumDate(sunday, locale),
-                    })}
-                  </span>
-                </p>
-
-                <WeekArrow
-                  week={addDays(monday, 7)}
-                  label={t('calendar.nextWeek')}
-                  direction="next"
-                />
-              </div>
-
-              <span className="justify-self-end">
-                <WeekLink week={today()} label={t('calendar.today')} />
-              </span>
+              <WeekArrow
+                week={addDays(monday, 7)}
+                label={t('calendar.nextWeek')}
+                direction="next"
+              />
             </nav>
+
+            <div className="flex justify-center">
+              <WeekLink week={today()} label={t('calendar.today')} />
+            </div>
+
+            {classes !== null && (
+              <ScheduleBoard
+                organizationId={classes.organizationId}
+                groups={classes.groups}
+                facilities={classes.facilities}
+                // Dated headers here, matching the grid below — round 5. The
+                // board still edits the *weekly pattern*, so the note above it
+                // says a drop changes every week, not only this one.
+                dayNames={dayNames}
+                canManage={classes.canManage}
+              />
+            )}
 
             <WeekGrid
               entries={entries}
               dayNames={dayNames}
               emptyLabel={t('calendar.emptyWeek')}
+              todayWeekday={todayWeekday}
             />
+
+            {/*
+              The same range again, under the grid — round 5.
+
+              Seven columns of classes is taller than the viewport on a laptop,
+              so by the time you have read Friday the heading that says which
+              week you are in has scrolled off. Repeating it costs one line and
+              removes a scroll back up. `aria-hidden`, because it is the same
+              information twice and a screen reader should hear it once.
+            */}
+            <p
+              aria-hidden
+              className="text-center text-sm font-medium text-foreground-muted"
+            >
+              {t('calendar.range', {
+                from: longDate(monday, locale),
+                to: longDate(sunday, locale),
+              })}
+            </p>
 
             {/*
               An empty week is ambiguous on its own — the pool might be shut, or

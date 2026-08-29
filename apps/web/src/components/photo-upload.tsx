@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 export function PhotoUpload({
   label,
   reason,
+  variant = 'panel',
   className,
 }: {
   /** What the control would do. */
@@ -27,8 +28,45 @@ export function PhotoUpload({
   /** Why it cannot, right now. Always shown — a disabled control with no
    *  explanation reads as a bug. */
   reason: string;
+  /**
+   * `panel` is the full-width block this started as. `id` is the small square
+   * that sits beside a person's name — round 4.
+   *
+   * The square is the shape of the thing: a student's photograph is an ID
+   * photograph, it goes next to the name it identifies, and at that size it is
+   * furniture rather than a feature competing with the form. The panel form is
+   * still right where a photograph is the subject of its own section, which is
+   * what the pool and logo controls are.
+   */
+  variant?: 'panel' | 'id';
   className?: string;
 }): React.ReactElement {
+  if (variant === 'id') {
+    return (
+      <div className={cn('flex w-28 shrink-0 flex-col gap-1.5', className)}>
+        {/*
+          `aspect-square` and not a fixed height, so the placeholder is the same
+          shape as the photograph that will replace it and the row does not jump
+          when storage lands.
+        */}
+        <button
+          type="button"
+          disabled
+          aria-label={label}
+          className="flex aspect-square w-full cursor-not-allowed flex-col items-center justify-center gap-1 rounded border border-dashed border-border bg-surface-muted text-foreground-muted opacity-60"
+        >
+          <EntityIcon kind="photo" />
+          <span className="px-1 text-center text-[0.65rem] leading-tight">{label}</span>
+        </button>
+        {/*
+          Still visible text, at the smaller size. A disabled control whose reason
+          is only in a tooltip is exactly what this repo's tooltip rule forbids.
+        */}
+        <span className="text-xs leading-tight text-foreground-muted">{reason}</span>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(

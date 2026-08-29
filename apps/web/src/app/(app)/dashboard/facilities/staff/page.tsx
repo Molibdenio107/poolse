@@ -4,6 +4,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type OrganizationMember, type People } from '../../../../../lib/api';
 import { DeliveryBadge } from '@/components/delivery-badge';
 import { PersonAvatar } from '@/components/person-avatar';
+import { BirthdayFlag } from '@/components/birthday-flag';
 import { RoleBadge, RoleBadges } from '@/components/role-badge';
 import { STAFF_ROLES } from '@/lib/roles';
 import { backTarget } from '@/lib/back';
@@ -270,12 +271,15 @@ export default async function PeoplePage({
                     />
                     <div className="flex min-w-0 flex-col">
                       {/* The record is where a name is corrected — POOLSE-39. */}
-                      <Link
-                        href={`/dashboard/facilities/staff/${member.membershipId}`}
-                        className="truncate rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                      >
-                        {displayName(member) ?? t('account.noName')}
-                      </Link>
+                      <span className="flex min-w-0 flex-wrap items-center gap-2">
+                        <Link
+                          href={`/dashboard/facilities/staff/${member.membershipId}`}
+                          className="truncate rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
+                          {displayName(member) ?? t('account.noName')}
+                        </Link>
+                        <BirthdayFlag birthDate={member.birthDate} />
+                      </span>
                       {member.email !== null && (
                         <span className="truncate text-sm text-foreground-muted">
                           {member.email}

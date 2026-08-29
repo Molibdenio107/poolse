@@ -61,6 +61,19 @@ const SAME_ON_PURPOSE = new Map([
   ['skills.noVideo', 'an em dash'],
   ['advancement.fromTo', 'an arrow between two interpolated level names'],
   ['calendar.clashRow', 'two interpolated names and a time'],
+  // The nine water-quality units. These are symbols, not words: ppm, NTU, °C and
+  // pH are written the same in Portuguese as in English, and "translating" one
+  // would put a unit on a compliance report that no laboratory uses.
+  ['facilities.unit.ph', 'a unit symbol'],
+  ['facilities.unit.temperature', 'a unit symbol'],
+  ['facilities.unit.free_chlorine', 'a unit symbol — ppm'],
+  ['facilities.unit.combined_chlorine', 'a unit symbol — ppm'],
+  ['facilities.unit.total_alkalinity', 'a unit symbol — ppm'],
+  ['facilities.unit.calcium_hardness', 'a unit symbol — ppm'],
+  ['facilities.unit.cyanuric_acid', 'a unit symbol — ppm'],
+  ['facilities.unit.turbidity', 'a unit symbol — NTU'],
+  ['facilities.unit.salt', 'a unit symbol — ppm'],
+  ['facilities.metric.ph', 'pH is written the same in both languages'],
 ]);
 
 function flatten(object, prefix = '') {

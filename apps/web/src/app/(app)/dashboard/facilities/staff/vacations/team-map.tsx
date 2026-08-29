@@ -1,5 +1,6 @@
 'use client';
 
+import { today } from '@/lib/dates';
 import { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { TeamVacations } from '@/lib/api';
@@ -217,6 +218,9 @@ export function TeamMap({ data }: { data: TeamVacations }): React.ReactElement {
           weekdayInitials={weekdayInitials}
           stateFor={stateFor}
           labelFor={labelFor}
+          // Read-only, but the same reading: the part of the year that is
+          // still to be planned should be the part that stands out.
+          pastBefore={today()}
         />
       )}
     </div>

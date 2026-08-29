@@ -56,7 +56,22 @@ export const CONTROL_BLOCK = `${CONTROL_BASE} py-2`;
  * is a form that changes density when the tokens do.
  */
 export const FIELD_LABEL = 'text-sm text-foreground-muted';
-export const FIELD_COLUMN = 'flex w-full flex-col gap-1.5';
+
+/**
+ * The column a label and its control sit in — including the width cap.
+ *
+ * The cap lives here, and not only on `TextField` and `SelectField`, because the
+ * hand-built forms are the ones that looked wrong. They share `CONTROL_LINE` and
+ * `FIELD_LABEL` already, so they matched on height and colour and then stretched
+ * their inputs to whatever the grid cell gave them — which on a single-column
+ * form is the entire form. Density that only half the app obeys is not density.
+ *
+ * A field that genuinely wants to be wider says so: `cn(FIELD_COLUMN,
+ * 'max-w-form')` for prose, `max-w-none` for a grid cell that manages its own
+ * width. Both merge correctly — `cn` is tailwind-merge, so the later max-width
+ * wins rather than the two fighting.
+ */
+export const FIELD_COLUMN = 'flex w-full max-w-field flex-col gap-1.5';
 
 /**
  * How wide the field's column is allowed to get.
@@ -238,10 +253,20 @@ export function SelectField({
   error,
   hint,
   required,
+  onValueChange,
   className,
 }: Common & {
   initial?: string;
   options: { value: string; label: string }[];
+  /**
+   * Told what was chosen, for a parent that derives something from it.
+   *
+   * The same escape hatch `TextField` has, and controlled the same way: the
+   * select still owns its value, this only reports it. Added in round 4 for the
+   * age bounds, where the unit picker and the number together decide one posted
+   * figure and the parent is the only place that can compute it.
+   */
+  onValueChange?: ((value: string) => void) | undefined;
 }): React.ReactElement {
   const id = useId();
   const [value, setValue] = useSeeded(initial);
@@ -259,7 +284,10 @@ export function SelectField({
         id={id}
         name={name}
         value={value}
-        onChange={(event) => setValue(event.target.value)}
+        onChange={(event) => {
+          setValue(event.target.value);
+          onValueChange?.(event.target.value);
+        }}
         required={required}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}

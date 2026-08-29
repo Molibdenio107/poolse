@@ -1,7 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useActionState, useEffect, useRef, useState } from 'react';
+import { useFormatter, useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { FormState } from '../actions';
 import { createPoolAction, updatePoolAction } from './facilities.actions';
@@ -17,6 +17,200 @@ export interface PoolFormValues {
   lengthM?: number | null;
   widthM?: number | null;
   maxDepthM?: number | null;
+  minDepthM?: number | null;
+}
+
+/**
+ * The four measurements, and the volume they imply — round 4.
+ *
+ * **Why these are controlled and the rest of this form was not.** They have to
+ * be: the volume is computed from them as they are typed, and an uncontrolled
+ * input has no value to compute from until it is submitted. That happens to fix
+ * the POOLSE-09 bug these five fields still had — `defaultValue` means React 19
+ * wipes them when the action returns a validation error, which is precisely when
+ * somebody is being asked to correct one of them.
+ *
+ * **Average depth.** `length x width x (min + max) / 2`, cubic metres, times a
+ * thousand. Exact for a floor that slopes evenly; an estimate for a flat shallow
+ * end and a sudden trough. The hint says which it is rather than presenting the
+ * figure as a measurement, and the field stays editable — an L-shaped tank has a
+ * real volume that no box calculation will produce.
+ *
+ * **It fills the field, it does not own it.** The suggestion is written in only
+ * while the box is empty or still holds the previous suggestion. The moment an
+ * operator types their own number, the calculation stops touching it and becomes
+ * a line of text underneath — because the figure from the builder's drawings
+ * beats arithmetic on four rounded metres, and silently overwriting it would be
+ * the worst thing this control could do.
+ */
+function PoolDimensions({ pool }: { pool?: PoolFormValues | undefined }): React.ReactElement {
+  const t = useTranslations();
+  const format = useFormatter();
+
+  const asText = (value: number | null | undefined): string =>
+    value === null || value === undefined ? '' : String(value);
+
+  const [lengthM, setLengthM] = useState(asText(pool?.lengthM));
+  const [widthM, setWidthM] = useState(asText(pool?.widthM));
+  const [minDepthM, setMinDepthM] = useState(asText(pool?.minDepthM));
+  const [maxDepthM, setMaxDepthM] = useState(asText(pool?.maxDepthM));
+  const [volume, setVolume] = useState(asText(pool?.volumeLitres));
+  // Controlled for the same reason the four measurements are: React 19 clears an
+  // uncontrolled field when the action returns a validation error.
+  const [laneCount, setLaneCount] = useState(asText(pool?.laneCount));
+
+  // What the calculation last wrote, so an operator's own figure can be told
+  // apart from one this control put there.
+  const written = useRef<string | null>(null);
+
+  const num = (value: string): number | null => {
+    const parsed = Number(value.trim().replace(',', '.'));
+    return value.trim() === '' || !Number.isFinite(parsed) || parsed <= 0 ? null : parsed;
+  };
+
+  const l = num(lengthM);
+  const w = num(widthM);
+  const lo = num(minDepthM);
+  const hi = num(maxDepthM);
+
+  // All four, or nothing. Three of them and an assumed fourth would be a number
+  // that looks computed and is invented.
+  const suggested =
+    l !== null && w !== null && lo !== null && hi !== null && hi >= lo
+      ? Math.round(l * w * ((lo + hi) / 2) * 1000 * 100) / 100
+      : null;
+
+  useEffect(() => {
+    if (suggested === null) return;
+    const next = String(suggested);
+    setVolume((current) =>
+      current.trim() === '' || current === written.current ? next : current,
+    );
+    written.current = next;
+  }, [suggested]);
+
+  const mine = suggested !== null && volume !== String(suggested) && volume.trim() !== '';
+
+  // Whatever is in the box right now — the operator's own figure or the offered
+  // one — so the grouped reading and the m3 always describe what will be saved.
+  const entered = num(volume);
+
+  return (
+    <>
+      <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <legend className="mb-2 text-sm font-medium">{t('facilities.measurements')}</legend>
+
+        {(
+          [
+            ['pool-length', 'lengthM', t('facilities.lengthLabel'), lengthM, setLengthM],
+            ['pool-width', 'widthM', t('facilities.widthLabel'), widthM, setWidthM],
+            ['pool-min-depth', 'minDepthM', t('facilities.minDepthLabel'), minDepthM, setMinDepthM],
+            ['pool-depth', 'maxDepthM', t('facilities.depthLabel'), maxDepthM, setMaxDepthM],
+          ] as const
+        ).map(([id, name, label, value, set]) => (
+          <div key={id} className={FIELD_COLUMN}>
+            <label htmlFor={id} className={FIELD_LABEL}>
+              {label}
+            </label>
+            {/*
+              step 0.01, never 1: a 12.5 m pool is ordinary, and a control that
+              refuses the half metre produces wrong data confidently.
+            */}
+            <input
+              id={id}
+              name={name}
+              type="number"
+              min={0.01}
+              step={0.01}
+              value={value}
+              onChange={(event) => set(event.target.value)}
+              className={CONTROL_LINE}
+            />
+          </div>
+        ))}
+      </fieldset>
+
+      <fieldset className="flex flex-wrap items-start gap-4">
+        <legend className="mb-2 text-sm font-medium">{t('facilities.capacity')}</legend>
+
+        <div className={FIELD_COLUMN + ' sm:w-32'}>
+          <label htmlFor="pool-lanes" className={FIELD_LABEL}>
+            {t('facilities.lanesLabel')}
+          </label>
+          <input
+            id="pool-lanes"
+            name="laneCount"
+            type="number"
+            min={1}
+            value={laneCount}
+            onChange={(event) => setLaneCount(event.target.value)}
+            className={CONTROL_LINE}
+          />
+        </div>
+
+      <div className={`${FIELD_COLUMN} sm:max-w-64`}>
+        <label htmlFor="pool-volume" className={FIELD_LABEL}>
+          {t('facilities.volumeLabel')}
+        </label>
+        <input
+          id="pool-volume"
+          name="volumeLitres"
+          type="number"
+          min={0.01}
+          step={0.01}
+          value={volume}
+          onChange={(event) => setVolume(event.target.value)}
+          className={CONTROL_LINE}
+        />
+
+        {/*
+          Grouped digits and cubic metres, always — round 4.
+          `1 000 000 L` is readable and `1000000` is not, and a pool's size is
+          quoted in m3 as often as in litres, so both are shown rather than
+          leaving the operator to divide by a thousand. `format.number` groups
+          per locale, which in pt-PT is the space the ticket asks for; forcing a
+          space would have put one in the English build too, where it is wrong.
+        */}
+        {entered !== null && (
+          <p className="text-sm font-medium">
+            {format.number(entered, { maximumFractionDigits: 2 })} L
+            <span className="text-foreground-muted">
+              {' '}
+              &middot; {format.number(entered / 1000, { maximumFractionDigits: 2 })} m&sup3;
+            </span>
+          </p>
+        )}
+
+        {suggested === null ? (
+          <p className="text-sm text-foreground-muted">{t('facilities.volumeHint')}</p>
+        ) : (
+          <p className="text-sm text-foreground-muted">
+            {t('facilities.volumeComputed', {
+              litres: format.number(suggested, { maximumFractionDigits: 2 }),
+            })}
+          </p>
+        )}
+
+        {/*
+          Only once the two disagree. A button offering to replace a number with
+          the number already in the box is noise.
+        */}
+        {mine && (
+          <button
+            type="button"
+            onClick={() => {
+              setVolume(String(suggested));
+              written.current = String(suggested);
+            }}
+            className="self-start rounded text-sm text-primary underline underline-offset-2"
+          >
+            {t('facilities.volumeUseComputed')}
+          </button>
+        )}
+      </div>
+      </fieldset>
+    </>
+  );
 }
 
 /**
@@ -89,91 +283,9 @@ export function PoolForm({
             <option value="outdoor">{t('facilities.kind.outdoor')}</option>
           </select>
         </div>
-
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="pool-lanes" className={FIELD_LABEL}>
-            {t('facilities.lanesLabel')}
-          </label>
-          <input
-            id="pool-lanes"
-            name="laneCount"
-            type="number"
-            min={1}
-            defaultValue={pool?.laneCount ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
       </div>
 
-      <fieldset className="grid gap-4 sm:grid-cols-3">
-        <legend className="mb-2 text-sm text-foreground-muted">
-          {t('facilities.measurements')}
-        </legend>
-
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="pool-length" className={FIELD_LABEL}>
-            {t('facilities.lengthLabel')}
-          </label>
-          {/*
-            step 0.01, never 1: a 12.5 m pool is ordinary, and a control that
-            refuses the half metre produces wrong data confidently.
-          */}
-          <input
-            id="pool-length"
-            name="lengthM"
-            type="number"
-            min={0.01}
-            step={0.01}
-            defaultValue={pool?.lengthM ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
-
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="pool-width" className={FIELD_LABEL}>
-            {t('facilities.widthLabel')}
-          </label>
-          <input
-            id="pool-width"
-            name="widthM"
-            type="number"
-            min={0.01}
-            step={0.01}
-            defaultValue={pool?.widthM ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
-
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="pool-depth" className={FIELD_LABEL}>
-            {t('facilities.depthLabel')}
-          </label>
-          <input
-            id="pool-depth"
-            name="maxDepthM"
-            type="number"
-            min={0.01}
-            step={0.01}
-            defaultValue={pool?.maxDepthM ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
-      </fieldset>
-
-      <div className={`${FIELD_COLUMN} sm:max-w-64`}>
-        <label htmlFor="pool-volume" className={FIELD_LABEL}>
-          {t('facilities.volumeLabel')}
-        </label>
-        <input
-          id="pool-volume"
-          name="volumeLitres"
-          type="number"
-          min={1}
-          defaultValue={pool?.volumeLitres ?? ''}
-          className={CONTROL_LINE}
-        />
-        <p className="text-sm text-foreground-muted">{t('facilities.optionalHint')}</p>
-      </div>
+      <PoolDimensions pool={pool} />
 
       <div>
         <button

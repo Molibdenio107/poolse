@@ -1,5 +1,6 @@
 'use client';
 
+import { today } from '@/lib/dates';
 import { useActionState, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, X } from 'lucide-react';
@@ -132,6 +133,22 @@ export function ClosureCalendar({
   const preview = anchor !== null && hovered !== null ? rangeOf(anchor, hovered) : null;
 
   const stateFor = (day: string): DayState => {
+    /*
+      The chosen range stays lit while the form is open — round 4 follow-up.
+
+      Before, the second click cleared `anchor`, which cleared the preview, so
+      the days you had just picked went back to looking like every other day and
+      the form below asked for a reason for a range you could no longer see.
+      Checked before the closure and preview branches because it is the most
+      specific thing that can be true of a day: it is the one you are acting on.
+    */
+    if (pending !== null && within(day, pending[0], pending[1])) {
+      return {
+        className: 'bg-primary/40 ring-2 ring-inset ring-primary',
+        description: t('calendar.legendSelecting'),
+      };
+    }
+
     const closure = byDay.get(day);
 
     if (closure !== undefined) {
@@ -161,6 +178,24 @@ export function ClosureCalendar({
 
   const pick = (day: string): void => {
     if (!canManage) return;
+
+    /*
+      A click anywhere on the grid abandons the range — round 4 follow-up.
+
+      The way out of a half-finished closure used to be finding the "clear"
+      button in the strip above; clicking another day did nothing at all, which
+      is the first thing anybody tries. Now the grid is the escape hatch: one
+      click puts the calendar back to neutral and takes the reason card with it.
+      The second click then starts a fresh range, which is one more click than
+      strictly necessary and much easier to explain than a click that both
+      cancels and re-anchors.
+    */
+    if (pending !== null) {
+      setPending(null);
+      setAnchor(null);
+      setHovered(null);
+      return;
+    }
 
     if (anchor === null) {
       setAnchor(day);
@@ -207,7 +242,11 @@ export function ClosureCalendar({
       </div>
 
       <p className="text-sm text-foreground-muted">
-        {anchor === null ? t('calendar.gridHint') : t('calendar.rangeEndHint')}
+        {pending !== null
+          ? t('calendar.rangeHeldHint')
+          : anchor === null
+            ? t('calendar.gridHint')
+            : t('calendar.rangeEndHint')}
       </p>
 
       <YearGrid
@@ -215,9 +254,12 @@ export function ClosureCalendar({
         monthNames={monthNames}
         weekdayInitials={weekdayInitials}
         stateFor={stateFor}
+        // Still pickable while a range is held: that click is what clears it.
         onPick={canManage ? pick : undefined}
         onHover={setHovered}
         labelFor={labelFor}
+        // A closure cannot be declared for a week that has already happened.
+        pastBefore={today()}
       />
 
       {pending !== null && (
@@ -378,7 +420,23 @@ function ClosureForm({
   );
 }
 
-/** Every closure this year, so nothing on the grid is only a colour. */
+/**
+ * The closures this club decided on — not the feriados.
+ *
+ * Round 4: the national holidays were dropped from this list. They are the same
+ * thirteen days every year, Poolse put them there rather than the operator, and
+ * repeating them under the grid pushed the two or three closures somebody
+ * actually has to manage off the bottom of the screen. What is left is the list
+ * of things there is something to do about, each with its remove button.
+ *
+ * The feriados keep their own colour on the grid and their name in each day's
+ * accessible label, so nothing has vanished — but their name is no longer
+ * visible text anywhere on the page, which is a real trade against this repo's
+ * rule that a tooltip must never be the only place information appears. It is
+ * the operator's call and it is recorded here so the next reader knows it was
+ * a decision. If it turns out to bite, the fix is a compact "Feriados" summary
+ * beside the legend rather than putting all thirteen rows back.
+ */
 function ClosureList({
   closures,
   canManage,
@@ -390,30 +448,27 @@ function ClosureList({
 }): React.ReactElement {
   const t = useTranslations();
 
-  if (closures.length === 0) {
+  const managed = closures.filter((closure) => closure.source === 'manual');
+
+  if (managed.length === 0) {
     return <p className="text-sm text-foreground-muted">{t('calendar.noClosures')}</p>;
   }
 
   return (
     <ul className="flex flex-col divide-y divide-border rounded border border-border bg-surface">
-      {closures.map((closure) => (
+      {managed.map((closure) => (
         <li
           key={closure.id}
           className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-3"
         >
+          {/*
+            One swatch and no badge: every row here is a manual closure now, so
+            the branch that distinguished them from feriados would be dead code
+            pretending the list still holds both.
+          */}
           <span className="flex flex-wrap items-center gap-2">
-            <span
-              aria-hidden
-              className={`size-3 shrink-0 rounded ${
-                closure.source === 'manual' ? 'bg-warning/25' : 'bg-surface-muted border border-border'
-              }`}
-            />
+            <span aria-hidden className="size-3 shrink-0 rounded bg-warning/25" />
             <span className="font-medium">{closure.reason}</span>
-            {closure.source !== 'manual' && (
-              <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-foreground-muted">
-                {t('calendar.holiday')}
-              </span>
-            )}
           </span>
 
           <span className="flex items-center gap-3 text-sm text-foreground-muted">

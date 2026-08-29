@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ApiError, apiPatch, apiPost } from '../../../../lib/api';
+import { POOL_METRICS } from '../../../../lib/pool-metrics';
+import { addDays, today } from '../../../../lib/dates';
 import type { FormState } from '../actions';
 
 /**
@@ -35,6 +37,12 @@ export async function createFacilityAction(
       {
         name,
         address: String(formData.get('address') ?? '').trim(),
+        // From PlaceField, so the weather panel works on the first page load
+        // rather than after somebody remembers to set a city — round 5.
+        city: String(formData.get('city') ?? '').trim(),
+        countryCode: String(formData.get('countryCode') ?? '').trim(),
+        latitude: String(formData.get('latitude') ?? '').trim(),
+        longitude: String(formData.get('longitude') ?? '').trim(),
         timezone: String(formData.get('timezone') ?? ''),
       },
       { organizationId },
@@ -61,6 +69,7 @@ function poolBody(formData: FormData): Record<string, string> {
     laneCount: String(formData.get('laneCount') ?? '').trim(),
     lengthM: String(formData.get('lengthM') ?? '').trim(),
     widthM: String(formData.get('widthM') ?? '').trim(),
+    minDepthM: String(formData.get('minDepthM') ?? '').trim(),
     maxDepthM: String(formData.get('maxDepthM') ?? '').trim(),
   };
 }
@@ -248,5 +257,108 @@ export async function archiveMaterialAction(
   }
 
   revalidatePath(`/dashboard/facilities/pools/${poolId}`);
+  return { ok: true };
+}
+
+
+/**
+ * Record a water analysis — round 4.
+ *
+ * The values arrive as one form field per metric and are posted as an object,
+ * blanks included: the API drops the empty ones, which keeps "the club only
+ * tests three of these" a normal case rather than an error. Nothing here decides
+ * a unit — the server looks that up from the metric, so a pH can never be stored
+ * as ppm.
+ */
+export async function recordAnalysisAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const poolId = String(formData.get('poolId') ?? '');
+  const takenAt = String(formData.get('takenAt') ?? '').trim();
+
+  if (takenAt === '') return { ok: false, errorKey: 'facilities.analysisMomentRequired' };
+
+  const values: Record<string, string> = {};
+  for (const metric of POOL_METRICS) {
+    values[metric] = String(formData.get(metric) ?? '').trim();
+  }
+
+  // Told here rather than by a 400, because "you filled in the date and nothing
+  // else" is a form mistake and deserves a sentence beside the form.
+  if (Object.values(values).every((value) => value === '')) {
+    return { ok: false, errorKey: 'facilities.analysisEmpty' };
+  }
+
+  try {
+    await apiPost(
+      `/pools/${poolId}/analyses`,
+      { takenAt, notes: String(formData.get('notes') ?? '').trim(), values },
+      { organizationId },
+    );
+  } catch (error) {
+    return failure(error, 'facilities.analysisFailed');
+  }
+
+  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
+  return { ok: true };
+}
+
+export async function archiveAnalysisAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const poolId = String(formData.get('poolId') ?? '');
+  const analysisId = String(formData.get('analysisId') ?? '');
+
+  try {
+    await apiPost(`/analyses/${analysisId}/archive`, {}, { organizationId });
+  } catch (error) {
+    return failure(error, 'facilities.analysisFailed');
+  }
+
+  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
+  return { ok: true };
+}
+
+/**
+ * Close a pool because its water is out of range — round 4 follow-up.
+ *
+ * An ordinary closure, created through the ordinary endpoint. It is visible on
+ * Encerramentos, removable there, and indistinguishable from one drawn on the
+ * calendar by hand — deliberately, because a second kind of closure that only
+ * this panel understands is a second thing to remember.
+ *
+ * The range is computed from a day count rather than asked for as two dates: the
+ * operator dosing a pool thinks "three days", not "the 29th to the 31st". One
+ * day means today only, so `endsOn` is today plus `days - 1`.
+ */
+export async function closePoolForWaterAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const poolId = String(formData.get('poolId') ?? '');
+  const reason = String(formData.get('reason') ?? '').trim();
+
+  const days = Number(String(formData.get('days') ?? '').trim());
+  if (!Number.isInteger(days) || days < 1 || days > 365) {
+    return { ok: false, errorKey: 'facilities.closureDaysInvalid' };
+  }
+
+  const from = today();
+  const to = addDays(from, days - 1);
+
+  try {
+    await apiPost('/closures', { startsOn: from, endsOn: to, reason, poolId }, { organizationId });
+  } catch (error) {
+    return failure(error, 'facilities.closureFailed');
+  }
+
+  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
+  revalidatePath('/dashboard/calendar/closures');
+  revalidatePath('/dashboard/calendar');
   return { ok: true };
 }

@@ -135,6 +135,7 @@ export async function transferCandidates(
       short_name: string | null;
       email: string | null;
       avatar_url: string | null;
+      birth_date: string | null;
     }>(`
       SELECT m.id AS membership_id,
              m.app_user_id,
@@ -144,7 +145,8 @@ export async function transferCandidates(
              ${personName('m.id')} AS display_name,
              ${personShortName('m.id')} AS short_name,
              coalesce(u.cached_email::text, m.email::text) AS email,
-             u.cached_avatar_url AS avatar_url
+             u.cached_avatar_url AS avatar_url,
+             u.birth_date AS birth_date
         FROM membership m
         LEFT JOIN app_user u ON u.id = m.app_user_id
        WHERE m.archived_at IS NULL
@@ -172,6 +174,7 @@ export async function transferCandidates(
       email: row.email,
       roles: ['admin'],
       avatarUrl: row.avatar_url,
+      birthDate: row.birth_date,
     }));
   });
 }
@@ -290,6 +293,7 @@ export async function listMembers(
       email: string | null;
       roles: string[];
       avatar_url: string | null;
+      birth_date: string | null;
     }>(`
       SELECT ${TOTAL_COUNT},
              m.id                AS membership_id,
@@ -306,6 +310,10 @@ export async function listMembers(
              ${personName('m.id')} AS display_name,
              ${personShortName('m.id')} AS short_name,
              u.cached_avatar_url AS avatar_url,
+             -- Poolse's own column, not a Clerk cache: birth date is ours and is
+             -- written directly. Needed here so the staff list can flag a
+             -- birthday without a second round trip per row — round 4.
+             u.birth_date        AS birth_date,
              -- Before acceptance there is no account, so the address the invite
              -- went to is the only name this person has here.
              coalesce(u.cached_email::text, m.email::text, i.email::text) AS email,
@@ -388,7 +396,7 @@ export async function listMembers(
        GROUP BY m.id, m.app_user_id, m.status, m.created_at,
                 m.first_name, m.last_name, m.email,
                 u.cached_first_name, u.cached_last_name, u.cached_avatar_url,
-                u.cached_email, i.email
+                u.cached_email, u.birth_date, i.email
        /*
         * By name, not by when the row was made. A staff list is something you
         * scan for somebody, and creation order is meaningless to the person
@@ -413,6 +421,7 @@ export async function listMembers(
       email: row.email,
       roles: row.roles,
       avatarUrl: row.avatar_url,
+      birthDate: row.birth_date,
     }));
   });
 }

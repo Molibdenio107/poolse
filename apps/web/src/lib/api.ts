@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import type { SkillState } from './skills';
+import type { PoolMetric } from './pool-metrics';
 
 /**
  * Server-side client for the Poolse API.
@@ -199,6 +200,8 @@ export interface OrganizationMember {
   roles: string[];
   /** Clerk's cached avatar for staff. Students are handled quite differently. */
   avatarUrl: string | null;
+  /** ISO date, or null — Poolse's own column, used to flag a birthday. */
+  birthDate: string | null;
 }
 
 /** `not_configured` is not a failure — no provider is set up, so copy the link. */
@@ -301,10 +304,44 @@ export interface Pool {
   kind: 'indoor' | 'outdoor';
   volumeLitres: number | null;
   laneCount: number | null;
+  minDepthM: number | null;
   /** Metres. Decimal — 12.5 m is an ordinary pool length. */
   lengthM: number | null;
   widthM: number | null;
   maxDepthM: number | null;
+}
+
+/**
+ * The metric list lives in `lib/pool-metrics.ts`, not here.
+ *
+ * This module imports Clerk's server SDK, so anything exported from it as a
+ * runtime value is unreachable from a `'use client'` component — the analysis
+ * form needs the list to render its inputs. The type is re-exported so server
+ * code that already reads it from `@/lib/api` keeps working.
+ */
+export type { PoolMetric } from './pool-metrics';
+
+export interface AnalysisValue {
+  metric: PoolMetric;
+  value: number;
+  /** Travels with the value — pH, °C and ppm do not share a type. */
+  unit: string;
+}
+
+/**
+ * One water analysis of a pool — round 4.
+ *
+ * A visit: one moment, one author, one set of notes, and the values measured
+ * then. Ordered oldest first by the API, which is the order both the trend and
+ * the report read in.
+ */
+export interface PoolAnalysis {
+  id: string;
+  /** ISO instant, UTC. Displayed in the facility's timezone. */
+  takenAt: string;
+  notes: string | null;
+  recordedByName: string | null;
+  values: AnalysisValue[];
 }
 
 /**
@@ -484,6 +521,8 @@ export interface WeatherResponse {
 }
 
 export interface PoolDetail extends Pool {
+  /** Every analysis of this pool, oldest first. */
+  analyses: PoolAnalysis[];
   organizationId: string;
   facilityId: string;
   facilityName: string;
@@ -642,12 +681,37 @@ export interface SensitiveNotes {
   recordedByName: string | null;
 }
 
+/**
+ * A period a student is medically unable to swim — round 5.
+ *
+ * `active` is computed by the database against `current_date`, so two clients
+ * with two clocks cannot disagree about whether somebody is off today.
+ */
+export interface MedicalLeave {
+  id: string;
+  startsOn: string;
+  /** Null means open-ended. */
+  endsOn: string | null;
+  reason: string | null;
+  /**
+   * Where the atestado is filed — a document number or a location.
+   *
+   * Deliberately a reference and not a file: object storage is deferred, and a
+   * medical certificate is not the document to bring it forward for.
+   */
+  justificationReference: string | null;
+  recordedByName: string | null;
+  active: boolean;
+}
+
 export interface SensitiveRecord {
   organizationId: string;
   notes: SensitiveNotes;
   consent: ConsentRecord[];
   kinds: ConsentKind[];
   canManage: boolean;
+  /** Every live leave for this student, newest first. */
+  medicalLeave: MedicalLeave[];
 }
 
 export type Stroke = 'freestyle' | 'backstroke' | 'breaststroke' | 'butterfly' | 'medley';
@@ -724,6 +788,8 @@ export interface ClassGroup {
   levelName: string | null;
   poolId: string | null;
   poolName: string | null;
+  /** The site the pool is at — the schedule board filters and draws by it. */
+  facilityId: string | null;
   instructorMembershipId: string | null;
   instructorName: string | null;
   capacity: number | null;
@@ -733,10 +799,12 @@ export interface ClassGroup {
 }
 
 export interface ClassOptions {
-  levels: { id: string; name: string }[];
+  /** With their age bounds — the enrol picker filters on the turma's level. */
+  levels: { id: string; name: string; minAgeMonths: number | null; maxAgeMonths: number | null }[];
   pools: { id: string; name: string }[];
   instructors: { id: string; name: string }[];
-  students: { id: string; name: string }[];
+  /** With birth dates, so the picker can work out who fits. */
+  students: { id: string; name: string; birthDate: string | null }[];
 }
 
 export interface Classes {
@@ -746,6 +814,14 @@ export interface Classes {
   canManage: boolean;
   /** Not paginated: a half-filled dropdown is a form that cannot say what it means. */
   options: ClassOptions;
+  /**
+   * Every site with its weekly opening hours — round 5.
+   *
+   * The schedule board draws its rows between a day's opening and closing time
+   * instead of between two constants, which is what stopped a 06:30 class at a
+   * site open from 06:00 from being invisible above the grid.
+   */
+  facilities: { id: string; name: string; hours: FacilityDay[] }[];
 }
 
 export interface TimetableEntry {
@@ -908,6 +984,13 @@ export interface GuardianRow {
   email: string | null;
   phone: string | null;
   hasLogin: boolean;
+  /**
+   * Their own student record, when this guardian also swims. Usually null.
+   *
+   * Matched by the server on name and birth date, and only when both are
+   * recorded — see the query for why the birth date is not optional there.
+   */
+  studentId: string | null;
   /** Their children, already abbreviated and filed by surname by the server. */
   students: { id: string; name: string; relationship: string | null }[];
 }

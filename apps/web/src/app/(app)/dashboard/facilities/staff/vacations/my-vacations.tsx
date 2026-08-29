@@ -1,5 +1,6 @@
 'use client';
 
+import { today } from '@/lib/dates';
 import { useActionState, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { MyVacations, VacationRequest } from '@/lib/api';
@@ -191,6 +192,8 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
           stateFor={stateFor}
           onPick={toggle}
           labelFor={labelFor}
+          // Férias are requested forward. Last March is not on offer.
+          pastBefore={today()}
         />
       </form>
 

@@ -15,7 +15,9 @@
     "backToDashboard": "Voltar ao painel",
     "cancel": "Cancelar",
     "save": "Guardar",
-    "actions": "Ações"
+    "actions": "Ações",
+    "change": "Alterar",
+    "undo": "Anular"
   },
   "pagination": {
     "label": "Paginação",
@@ -158,7 +160,8 @@
       "birth_date": "Data de nascimento"
     },
     "staffTotal": "{count, plural, =0 {Sem staff} one {# pessoa no staff} other {# pessoas no staff}}",
-    "staffCountHint": "Quem tem mais do que uma função é contado uma vez no total e em cada função, por isso as funções somam mais do que o total."
+    "staffCountHint": "Quem tem mais do que uma função é contado uma vez no total e em cada função, por isso as funções somam mais do que o total.",
+    "birthdayToday": "Faz anos hoje"
   },
   "staff": {
     "title": "Staff",
@@ -323,7 +326,72 @@
     "materialDuplicate": "Já existe uma linha para este item. Corrija a quantidade nessa linha.",
     "materialFailed": "Não foi possível guardar o item.",
     "materialsImport": "Importar de Excel",
-    "materialsImportSoon": "Ainda não disponível — a importação de inventário chega com o resto das importações."
+    "materialsImportSoon": "Ainda não disponível — a importação de inventário chega com o resto das importações.",
+    "minDepthLabel": "Zona menos funda (m)",
+    "volumeComputed": "Cerca de {litres} L a partir destas dimensões, usando a profundidade média.",
+    "volumeUseComputed": "Usar o valor calculado",
+    "volumeHint": "Preencha as quatro medidas e este valor é calculado automaticamente.",
+    "exportInventory": "Exportar em CSV",
+    "noAnalyses": "Ainda não há análises à água registadas.",
+    "recordAnalysis": "Registar uma análise em {pool}",
+    "analysisTakenAt": "Amostra recolhida",
+    "analysisMeasurements": "Medições — preencha apenas o que foi analisado",
+    "analysisNotes": "Notas",
+    "analysisNotesHint": "Sobre a recolha: «recolhida antes da lavagem», o número do relatório do laboratório.",
+    "saveAnalysis": "Guardar análise",
+    "archiveAnalysis": "Remover esta análise",
+    "analysisReport": "Relatório de análises",
+    "printReport": "Imprimir ou guardar em PDF",
+    "reportTitle": "Relatório de qualidade da água",
+    "reportGenerated": "Gerado a {date}",
+    "reportCount": "{count, plural, one {# análise} other {# análises}} neste relatório.",
+    "analysisMomentRequired": "Indique quando a amostra foi recolhida.",
+    "analysisEmpty": "Preencha pelo menos uma medição.",
+    "analysisFailed": "Não foi possível guardar a análise.",
+    "metric": {
+      "ph": "pH",
+      "temperature": "Temperatura",
+      "free_chlorine": "Cloro livre",
+      "combined_chlorine": "Cloro combinado",
+      "total_alkalinity": "Alcalinidade total",
+      "calcium_hardness": "Dureza cálcica",
+      "cyanuric_acid": "Ácido cianúrico",
+      "turbidity": "Turvação",
+      "salt": "Sal"
+    },
+    "unit": {
+      "ph": "pH",
+      "temperature": "°C",
+      "free_chlorine": "ppm",
+      "combined_chlorine": "ppm",
+      "total_alkalinity": "ppm",
+      "calcium_hardness": "ppm",
+      "cyanuric_acid": "ppm",
+      "turbidity": "NTU",
+      "salt": "ppm"
+    },
+    "capacity": "Capacidade",
+    "emptyLatest": "O valor mais recente de cada medição, num relance.",
+    "emptyTrend": "Uma tendência para cada medição, a partir da primeira análise.",
+    "emptyReport": "Um relatório para imprimir e uma exportação em CSV de todo o registo.",
+    "importAnalysis": "Importar relatório de análise",
+    "importNoStorage": "O armazenamento de ficheiros ainda não está configurado, por isso não há onde guardar o documento.",
+    "importNoParsing": "A leitura de valores a partir de um PDF do laboratório ainda não está feita.",
+    "importMeanwhile": "Entretanto, introduza os valores acima — dão-lhe a mesma tendência e o mesmo relatório.",
+    "exportAnalyses": "Exportar em CSV",
+    "waterOutOfRange": "Esta água está fora do intervalo recomendado",
+    "aboveRange": "acima do intervalo {from}–{to}",
+    "belowRange": "abaixo do intervalo {from}–{to}",
+    "closePool": "Encerrar temporariamente esta piscina",
+    "confirmClosePool": "Criar o encerramento",
+    "closureDays": "Dias",
+    "closureFromToday": "O encerramento começa hoje. Fica visível em Encerramentos e pode ser removido aí.",
+    "closureReason": "{pool} encerrada — água fora do intervalo ({metric})",
+    "closureDaysInvalid": "Indique um número de dias entre 1 e 365.",
+    "closureFailed": "Não foi possível criar o encerramento.",
+    "cityFailed": "A pesquisa de localidades está indisponível — pode definir a localidade mais tarde.",
+    "copyMonday": "Aplicar segunda-feira a todos os dias abertos",
+    "copyMondayHint": "Copia apenas os horários — os dias que encerrou continuam encerrados, e nada é guardado até premir Guardar."
   },
   "classes": {
     "title": "Turmas",
@@ -391,7 +459,21 @@
     "when": "Quando",
     "occupancy": "{occupancy} lugares ocupados",
     "enrolled": "Alunos inscritos",
-    "noTurma": "turma sem nome"
+    "noTurma": "turma sem nome",
+    "newLevel": "Novo nível",
+    "allScheduled": "Todas as turmas têm pelo menos um dia.",
+    "dragHint": "Arraste uma turma para um dia e uma hora, ou selecione-a e prima Espaço.",
+    "slotMoved": "Movida.",
+    "slotDuplicate": "Essa turma já decorre a essa hora nesse dia.",
+    "slotRefused": "A instalação está encerrada nessa altura, ou a aula terminaria depois do fecho.",
+    "boardFacility": "Instalação",
+    "patternNote": "Largar aqui altera o padrão semanal — todas as semanas, não apenas esta.",
+    "searchStudents": "Procurar um aluno",
+    "searchStudentsPlaceholder": "Escreva um nome",
+    "showOutsideAges": "Mostrar também {count} fora das idades deste nível",
+    "noStudentsMatch": "Nenhum aluno corresponde",
+    "outsideAges": "fora das idades deste nível",
+    "chooseDay": "Escolha um dia"
   },
   "reposicao": {
     "title": "Aulas de reposição",
@@ -632,7 +714,15 @@
     "duplicateByEmail": "{name} já está registado com este e-mail.",
     "duplicateUseExisting": "Usar esta pessoa",
     "guardianSearchPlaceholder": "Nome, email ou telefone",
-    "backToGuardians": "Voltar aos encarregados de educação"
+    "backToGuardians": "Voltar aos encarregados de educação",
+    "ageUnit": "Unidade",
+    "ageUnitYears": "anos",
+    "ageUnitMonths": "meses",
+    "ageBoundHint": "Deixe em branco para não definir limite.",
+    "createLevel": "Criar nível",
+    "guardianOfLabel": "Encarregado de",
+    "turmas": "Turmas",
+    "waiting": "Lista de espera"
   },
   "advancement": {
     "title": "Progressões",
@@ -732,7 +822,27 @@
     "withdrawFailed": "Não foi possível anular a decisão.",
     "history": "Histórico",
     "historyHint": "Decisões anuladas. Ficam no registo porque foram verdadeiras enquanto duraram.",
-    "withdrawnOn": "anulado a {when} por {who}"
+    "withdrawnOn": "anulado a {when} por {who}",
+    "leave": "Baixa médica",
+    "leaveExplain": "Enquanto a baixa estiver a decorrer, a chamada propõe «falta justificada» para este aluno. As chamadas já feitas nunca são alteradas, e remover uma baixa apenas deixa de a propor daí em diante.",
+    "noLeave": "Sem baixa médica registada.",
+    "leaveActive": "Ausente agora",
+    "leaveFrom": "Desde {from}, sem data de regresso",
+    "leaveRange": "{from} a {to}",
+    "leaveStart": "Primeiro dia de ausência",
+    "leaveEnd": "Regresso previsto",
+    "leaveEndHint": "Deixe em branco se ainda não for conhecido.",
+    "leaveReason": "Motivo",
+    "leaveReasonHint": "Curto, e não um diagnóstico — a informação clínica pertence às notas acima.",
+    "saveLeave": "Registar baixa",
+    "removeLeave": "Remover esta baixa",
+    "leaveStartRequired": "Indique o dia em que a baixa começa.",
+    "leaveBackwards": "A data de regresso é anterior ao primeiro dia de ausência.",
+    "leaveOverlaps": "Este aluno já tem uma baixa que cobre essas datas.",
+    "leaveFailed": "Não foi possível guardar a baixa médica.",
+    "leaveJustification": "Comprovativo",
+    "leaveJustificationPlaceholder": "ex.: atestado 2026/114",
+    "leaveJustificationHint": "Opcional. Onde está guardado o atestado — um número ou uma localização, não o próprio documento nem um diagnóstico."
   },
   "invite": {
     "open": "Convidar utilizador",
@@ -880,7 +990,9 @@
     "trial": "Período experimental",
     "trialDaysLeft": "{days, plural, one {Falta # dia} other {Faltam # dias}} de experiência.",
     "trialEnded": "O período experimental terminou. Por agora nada foi bloqueado.",
-    "trialNoCard": "Sem cartão associado. A subscrição chega numa fase posterior."
+    "trialNoCard": "Sem cartão associado. A subscrição chega numa fase posterior.",
+    "soonTitle": "O seu painel operacional está a caminho",
+    "soonHint": "A ocupação, a qualidade da água e as aulas do dia vão aparecer aqui. Entretanto, tudo o que já está feito fica a um clique."
   },
   "marketing": {
     "pricingLink": "Preços",
@@ -1091,6 +1203,7 @@
     "closureOverlap": "Já existe um encerramento nestes dias: {existing}.",
     "rangeAnchored": "Início a {day}. Clique no último dia.",
     "clearRange": "Limpar seleção",
-    "gridHint": "Clique num dia para começar um encerramento. Os feriados aparecem a cinzento."
+    "gridHint": "Clique num dia para começar um encerramento. Os feriados aparecem a cinzento.",
+    "rangeHeldHint": "Estes dias estão selecionados. Preencha o motivo abaixo ou clique em qualquer dia para recomeçar."
   }
 }
