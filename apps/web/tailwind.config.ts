@@ -91,6 +91,42 @@ export default {
         // actions and one without are the same height — 41.7.
         'page-header': '4.5rem',
       },
+      maxWidth: {
+        /*
+         * How wide a page's content is allowed to get.
+         *
+         * The shell was full-bleed, which reads as designed on a laptop and as
+         * an accident on a 27-inch monitor: a table stretched to 2400px puts
+         * the name and the action forty centimetres apart, and a two-field form
+         * becomes two lines of horizon. 80rem is the width the eye can still
+         * cross — roughly the point where a data row stops needing to be
+         * traced with a finger.
+         *
+         * Below this the page is fluid and `px-page` does the rest, so the
+         * small-screen behaviour is unchanged.
+         */
+        page: '80rem',
+        /*
+         * A single form control, and a column of them.
+         *
+         * A postcode box the width of the viewport tells you the field wants a
+         * paragraph. These two caps are what stop that, and they are the knobs
+         * to turn if the forms end up feeling cramped rather than tidy.
+         */
+        field: '22rem',
+        form: '36rem',
+      },
+      height: {
+        /*
+         * One height for every single-line control — input, select, search box.
+         *
+         * Named rather than repeated as `h-9`, because the point is that they
+         * agree: an input beside a select beside a search box, all landing on
+         * the same baseline, is the difference between a filter row and three
+         * controls that happen to be adjacent.
+         */
+        control: '2.25rem',
+      },
 
       borderRadius: {
         DEFAULT: 'var(--radius)',

@@ -50,7 +50,10 @@ export function FilterSelect({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    // Same height and density as the search box beside it — `h-control` and
+    // `text-sm` are the shared tokens, so the filter row lands on one baseline
+    // instead of on two.
+    <div className="flex min-w-40 max-w-field flex-col gap-1.5">
       <label htmlFor={`filter-${name}`} className="text-sm text-foreground-muted">
         {label}
       </label>
@@ -59,7 +62,7 @@ export function FilterSelect({
         value={value}
         aria-busy={pending}
         onChange={(event) => choose(event.target.value)}
-        className="rounded border border-border-strong bg-background px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="h-control rounded border border-border-strong bg-background px-2.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <option value="">{anyLabel}</option>
         {options.map((option) => (

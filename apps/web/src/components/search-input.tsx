@@ -106,12 +106,20 @@ export function SearchInput({
   }, []);
 
   return (
-    <div className={cn('flex min-w-48 flex-1 flex-col gap-2', className)}>
+    // Sized, not stretched.
+    //
+    // This used to be `flex-1`, which on a filter row containing only a search
+    // box meant a search box the width of the page — a control whose size
+    // promised a sentence and took a surname. It is now the same height as
+    // every other control (`h-control`) and capped at the width of a form
+    // field, so a filter row reads as a row of controls rather than one bar and
+    // some leftovers. `min-w-48` stays: below that the placeholder truncates.
+    <div className={cn('flex w-full min-w-48 max-w-field flex-col gap-1.5', className)}>
       <label htmlFor={`search-${name}`} className="text-sm text-foreground-muted">
         {label}
       </label>
 
-      <div className="flex items-center gap-2 rounded border border-border-strong bg-background px-3 py-2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
+      <div className="flex h-control items-center gap-2 rounded border border-border-strong bg-background px-2.5 text-sm focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
         <Search className="size-4 shrink-0 text-foreground-muted" aria-hidden />
 
         <input

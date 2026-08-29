@@ -22,9 +22,38 @@ import { cn } from '@/lib/utils';
  * required to submit. Nothing here breaks a form post.
  */
 
+/**
+ * What every control here looks like, and how big it is.
+ *
+ * The size is deliberate and shared. Controls were full-bleed and generously
+ * padded, which is fine for a sign-up page with one box on it and wrong for a
+ * backoffice: a postcode field the width of the window tells you it wants a
+ * paragraph, and a form of eight of them becomes a page you scroll. `h-control`
+ * and `max-w-field` are tokens rather than literals so the whole app's density
+ * is two numbers in `tailwind.config.ts` — see the note there before changing
+ * one of them here.
+ */
 const CONTROL =
-  'rounded border border-border-strong bg-background px-3 py-2 ' +
+  'w-full rounded border border-border-strong bg-background px-2.5 text-sm ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+
+/**
+ * Single-line controls take the height; a textarea takes padding instead.
+ *
+ * A fixed height on a textarea would fight `rows`, and `rows` is the property
+ * the caller actually reasons about.
+ */
+const CONTROL_LINE = `${CONTROL} h-control`;
+const CONTROL_BLOCK = `${CONTROL} py-2`;
+
+/**
+ * How wide the field's column is allowed to get.
+ *
+ * On the wrapper, not the control, so the label and the error message stop at
+ * the same place the box does. A caller that genuinely wants the full width of
+ * its container passes `className="max-w-none"` — a grid cell, mostly.
+ */
+const FIELD = 'flex w-full flex-col gap-1.5';
 
 const INVALID = 'border-danger';
 
@@ -97,7 +126,7 @@ export function TextField({
     .join(' ');
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn(FIELD, 'max-w-field', className)}>
       <label htmlFor={id} className="text-sm text-foreground-muted">
         {label}
       </label>
@@ -116,7 +145,7 @@ export function TextField({
         maxLength={maxLength}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
-        className={cn(CONTROL, error !== undefined && INVALID)}
+        className={cn(CONTROL_LINE, error !== undefined && INVALID)}
       />
       {hint !== undefined && (
         <p id={`${id}-hint`} className="text-sm text-foreground-muted">
@@ -157,7 +186,7 @@ export function TextAreaField({
     .join(' ');
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn(FIELD, 'max-w-form', className)}>
       <label htmlFor={id} className="text-sm text-foreground-muted">
         {label}
       </label>
@@ -172,7 +201,7 @@ export function TextAreaField({
         maxLength={maxLength}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
-        className={cn(CONTROL, error !== undefined && INVALID)}
+        className={cn(CONTROL_BLOCK, error !== undefined && INVALID)}
       />
       {hint !== undefined && (
         <p id={`${id}-hint`} className="text-sm text-foreground-muted">
@@ -209,7 +238,7 @@ export function SelectField({
     .join(' ');
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn(FIELD, 'max-w-field', className)}>
       <label htmlFor={id} className="text-sm text-foreground-muted">
         {label}
       </label>
@@ -221,7 +250,7 @@ export function SelectField({
         required={required}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
-        className={cn(CONTROL, error !== undefined && INVALID)}
+        className={cn(CONTROL_LINE, error !== undefined && INVALID)}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

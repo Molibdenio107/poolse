@@ -158,4 +158,42 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+
+  /*
+   * Number inputs carry no spinner.
+   *
+   * The little up/down arrows are a 12px target that changes a value by one —
+   * useless for a pool's 25 metres and actively hostile on a length in
+   * centimetres, where a mis-aimed click silently edits the number somebody
+   * just typed. They also sit inside the field, so every numeric input was a
+   * few pixels narrower than the text input beside it.
+   *
+   * Done here rather than per component because `type="number"` is passed
+   * straight through `TextField`, so there is no single component to style —
+   * and a rule somebody has to remember on each new numeric field is a rule
+   * that comes back.
+   *
+   * The keyboard's arrow keys still step the value; only the mouse affordance
+   * is gone.
+   */
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /*
+   * Safari draws its own clear and decoration buttons inside `type="search"`,
+   * on top of the clear button the search box already renders. Two X's, one of
+   * which does not match the theme.
+   */
+  input[type='search']::-webkit-search-decoration,
+  input[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
 }

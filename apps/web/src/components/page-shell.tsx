@@ -13,10 +13,17 @@ import { cn } from '@/lib/utils';
  * time, always for a good local reason, and the only defence is that adding it
  * fails a check rather than looking tidy in review.
  *
- * **Full width, and wide content scrolls inside itself.** No `max-w` variants —
- * the year grid and the skills table already own an `overflow-x-auto` wrapper,
- * which AC5 requires anyway, so a second layout would be a thing to keep in step
- * for no gain.
+ * **One content width, centred, and wide content scrolls inside itself.** Still
+ * no `max-w` *variants* — the choice AC5 rejected was per-page widths, and that
+ * stands. What changed is the single width itself: full-bleed reads as designed
+ * at 1440 and as an accident at 2560, where a table row puts the name and its
+ * action a forearm apart. The cap is `max-w-page` in the Tailwind config, so it
+ * is one number for the whole app; below it the page is fluid and nothing about
+ * the small-screen behaviour changes.
+ *
+ * The cap goes on an inner column rather than on `<main>`, so the page's
+ * background still runs to the edge of the window. A `<main>` that stopped at
+ * 80rem would leave two grey margins on a wide monitor.
  *
  * **The header is a fixed height whether or not it has actions**, and the title
  * clamps rather than growing. A header that is four pixels taller on one page is
@@ -44,28 +51,34 @@ export function PageShell({
   className?: string;
 }): React.ReactElement {
   return (
-    <main className="flex min-h-screen w-full flex-col gap-page-gap px-page py-page-y">
-      {back !== undefined && <BackLink href={back.href} label={back.label} />}
+    <main className="flex min-h-screen w-full justify-center px-page py-page-y">
+      <div className="flex w-full max-w-page flex-col gap-page-gap">
+        {back !== undefined && <BackLink href={back.href} label={back.label} />}
 
-      <header className="flex min-h-page-header items-start justify-between gap-4">
-        <div className="min-w-0">
-          {/*
-            Clamped, not wrapped without limit — 41.10. A long translated title
-            has to be allowed to be long without making this page taller than the
-            one beside it.
-          */}
-          <h1 className="line-clamp-2 text-3xl font-semibold tracking-tight">{title}</h1>
-          {subtitle !== undefined && (
-            <p className="line-clamp-2 text-foreground-muted">{subtitle}</p>
+        <header className="flex min-h-page-header items-start justify-between gap-4">
+          <div className="min-w-0">
+            {/*
+              Clamped, not wrapped without limit — 41.10. A long translated title
+              has to be allowed to be long without making this page taller than the
+              one beside it.
+            */}
+            <h1 className="line-clamp-2 text-2xl font-semibold tracking-tight">{title}</h1>
+            {subtitle !== undefined && (
+              <p className="line-clamp-2 text-sm text-foreground-muted">{subtitle}</p>
+            )}
+          </div>
+
+          {actions !== undefined && (
+            <div className="flex shrink-0 items-center gap-2">{actions}</div>
           )}
-        </div>
+        </header>
 
-        {actions !== undefined && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-      </header>
+        {filters !== undefined && (
+          <div className="flex flex-wrap items-end gap-3">{filters}</div>
+        )}
 
-      {filters !== undefined && <div className="flex flex-wrap items-center gap-3">{filters}</div>}
-
-      <div className={cn('flex flex-col gap-page-gap', className)}>{children}</div>
+        <div className={cn('flex flex-col gap-page-gap', className)}>{children}</div>
+      </div>
     </main>
   );
 }

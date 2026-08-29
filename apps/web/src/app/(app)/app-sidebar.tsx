@@ -72,9 +72,14 @@ function prune(item: Item, roles: readonly string[]): Item | null {
  * read the same array, so structure, labels and permissions cannot drift between
  * them. POOLSE-36 is superseded — Staff is no longer a main-menu item, so there
  * is nothing left to reorder.
+ *
+ * **Instalações is first, and Dashboard sits below it.** The order is not
+ * decoration: the first item in a sidebar is read as the place you are meant to
+ * be, and for an Owner or Admin that is the facility — POOLSE-37 already lands
+ * them there. Dashboard stays a real destination, just not the front door,
+ * because what it shows is your own account rather than the operation.
  */
 const SECTIONS: Item[] = [
-  { href: '/dashboard', key: 'nav.dashboard', icon: 'dashboard' },
   {
     href: '/dashboard/facilities',
     key: 'facilities.title',
@@ -105,6 +110,7 @@ const SECTIONS: Item[] = [
       },
     ],
   },
+  { href: '/dashboard', key: 'nav.dashboard', icon: 'dashboard' },
   {
     href: '/dashboard/classes',
     key: 'classes.title',
