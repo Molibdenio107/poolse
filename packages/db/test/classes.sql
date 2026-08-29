@@ -552,4 +552,77 @@ BEGIN
   RAISE NOTICE 'PASS test 13: age ranges are stored and ordered, and never block a student';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 14 — one turma name per club, so a class cannot be in two pools at once
+--
+-- Round 4 asked for a rule: two pools may run classes at the same time, but the
+-- same class must not be in both. The schema already gives something stronger —
+-- `class_group_name_uq` is unique per organization, accent- and
+-- case-insensitively — so the name identifies exactly one turma, which sits in
+-- exactly one pool, and "the same class in two places" has no way to be
+-- expressed at all. This asserts that rather than leaving it to be rediscovered,
+-- because the constraint is stronger than the requirement and a future session
+-- reading only the requirement might reasonably weaken it.
+--
+-- The partial half matters just as much: a turma archived at the end of a season
+-- must not hold its name hostage the following September.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_a uuid; v_pool uuid; v_other_pool uuid; v_facility uuid; v_season uuid; n int;
+BEGIN
+  SELECT id INTO v_a FROM organization WHERE name = 'Clube A';
+  SELECT id INTO v_season FROM season WHERE organization_id = v_a AND archived_at IS NULL;
+  SELECT id INTO v_facility FROM facility WHERE organization_id = v_a LIMIT 1;
+  SELECT id INTO v_pool FROM pool WHERE organization_id = v_a LIMIT 1;
+
+  -- A second pool in the same building: two tanks, which may certainly run
+  -- classes at the same time.
+  INSERT INTO pool (organization_id, facility_id, name, kind)
+  VALUES (v_a, v_facility, 'Tanque Pequeno', 'indoor')
+  RETURNING id INTO v_other_pool;
+
+  INSERT INTO class_group (organization_id, season_id, name, pool_id)
+  VALUES (v_a, v_season, 'Hidroginástica', v_pool);
+
+  -- The same name in the other pool. Refused — this is the rule.
+  BEGIN
+    INSERT INTO class_group (organization_id, season_id, name, pool_id)
+    VALUES (v_a, v_season, 'Hidroginástica', v_other_pool);
+    RAISE EXCEPTION 'FAIL test 14a: the same class name existed in two pools at once';
+  EXCEPTION WHEN unique_violation THEN
+    NULL;
+  END;
+
+  -- Case and accents are not a way around it.
+  BEGIN
+    INSERT INTO class_group (organization_id, season_id, name, pool_id)
+    VALUES (v_a, v_season, 'hidroginastica', v_other_pool);
+    RAISE EXCEPTION 'FAIL test 14b: case and accents let the same class into a second pool';
+  EXCEPTION WHEN unique_violation THEN
+    NULL;
+  END;
+
+  -- Two *different* turmas in two pools is the ordinary case and must stay easy.
+  INSERT INTO class_group (organization_id, season_id, name, pool_id)
+  VALUES (v_a, v_season, 'Hidroginástica Avançada', v_other_pool);
+
+  SELECT count(*) INTO n
+    FROM class_group
+   WHERE organization_id = v_a AND archived_at IS NULL
+     AND name IN ('Hidroginástica', 'Hidroginástica Avançada');
+  IF n <> 2 THEN
+    RAISE EXCEPTION 'FAIL test 14c: two differently named turmas should coexist, got %', n;
+  END IF;
+
+  -- End of season: archiving frees the name for next year.
+  UPDATE class_group SET archived_at = now()
+   WHERE organization_id = v_a AND name = 'Hidroginástica';
+
+  INSERT INTO class_group (organization_id, season_id, name, pool_id)
+  VALUES (v_a, v_season, 'Hidroginástica', v_other_pool);
+
+  RAISE NOTICE 'PASS test 14: one turma per name per club, and archiving releases it';
+END $$;
+
 ROLLBACK;

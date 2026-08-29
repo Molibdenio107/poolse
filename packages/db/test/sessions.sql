@@ -436,8 +436,14 @@ BEGIN
   VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Adultos Tarde', v_pool, 1) RETURNING id INTO v_group;
 
   -- Tuesday at 23:30. Late, and real: lane hire after the last children's class.
+  --
+  -- Thirty minutes, not forty-five, since round 4: a class must now finish
+  -- before the site closes, and this facility's hours default to 24:00. What
+  -- this test is about is the *start* — 23:30 local is 00:30 UTC, and that is
+  -- what makes the two calendars disagree — so ending at midnight rather than
+  -- 00:15 costs the test nothing. The assertion at 10b still proves the premise.
   INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
-  VALUES (v_org, v_group, 2, TIME '23:30', 45);
+  VALUES (v_org, v_group, 2, TIME '23:30', 30);
 
   -- Generate first, with nothing in the way, so the row exists before the
   -- closure does. That is what puts the cancel pass — not the create pass — on

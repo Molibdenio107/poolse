@@ -929,6 +929,181 @@ notification_preference
 Provider choice (push, transactional email, and whether SMS is worth its cost) is a phase-0
 decision so it is not discovered mid-slice.
 
+### A site's opening hours
+
+```
+facility_hours
+  organization_id, facility_id, weekday smallint,       -- ISO: Monday 1 … Sunday 7
+  available boolean not null default true,
+  opens_at time not null default '00:00',
+  closes_at time not null default '24:00',
+  created_at, updated_at
+  primary key (organization_id, facility_id, weekday)
+  foreign key (organization_id, facility_id) references facility (organization_id, id)
+    on delete cascade
+  check (closes_at > opens_at)
+```
+
+**Seven rows per site, always.** A trigger on `facility` seeds them at creation and the
+migration back-filled every existing site, so every reader of this table is a plain
+`SELECT`. The alternative — create rows on first edit and treat "no row" as "open" — puts
+the same defaulting rule in the API, the interface and the scheduling check, and the day
+one of the three forgets it is the day a disabled Sunday quietly accepts a class.
+
+**The default is open, all day.** Not 08:00–22:00: a default that is a real restriction
+invalidates data that already exists, and an operator cannot tell a default from a decision
+somebody made. `24:00` is a real `time` in Postgres and is how "to the end of the day" is
+written.
+
+**Hours bound both ends of a class, since round 4.** `class_schedule_within_facility_hours()`
+fires on insert and on any update of `weekday`, `start_time`, `duration_minutes` or
+`class_group_id`, and refuses a class that starts before opening, starts at or after
+closing, or *finishes* after closing. The end check works in minutes-from-midnight, because
+`time '23:30' + interval '60 minutes'` is `00:30`, which compares as earlier than every
+closing time and would pass exactly the row it must refuse.
+
+**Nothing is enforced retroactively.** The trigger never fires when somebody edits the
+hours, so narrowing Tuesday tells the operator which classes no longer fit rather than
+deleting them.
+
+### What is in the pool room
+
+```
+pool_material
+  id, organization_id, pool_id,
+  name text not null, quantity integer not null default 0, unit text, notes text,
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  foreign key (organization_id, pool_id) references pool (organization_id, id)
+  unique (organization_id, pool_id, lower(strip_accents(name))) where archived_at is null
+  check (quantity >= 0)
+```
+
+**A count, not a stock ledger.** One row per kind of thing, corrected in place after a
+stock check. Movements, reservations and minimum levels were considered and left out: a
+ledger nobody posts to drifts from the shelf within a month, and is then wrong with more
+decimal places than the count was. This is also why the inventory exports as CSV and has no
+trend chart — there is no history to draw.
+
+**The name is free text**, because every club calls this kit something slightly different,
+so the partial unique index is the only thing standing between a club and two rows for the
+same pile of floats.
+
+### Water quality
+
+```
+pool_metric  enum ('ph','temperature','free_chlorine','combined_chlorine',
+                   'total_alkalinity','calcium_hardness','cyanuric_acid',
+                   'turbidity','salt')
+
+pool_analysis
+  id, organization_id, pool_id,
+  taken_at timestamptz not null,                        -- UTC; shown in the facility's zone
+  recorded_by uuid, notes text,
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  foreign key (organization_id, pool_id) references pool (organization_id, id)
+  foreign key (organization_id, recorded_by) references membership (organization_id, id)
+  unique (organization_id, pool_id, taken_at) where archived_at is null
+
+pool_analysis_value
+  id, organization_id, analysis_id,
+  metric pool_metric not null, value numeric(10,3) not null, unit text not null,
+  created_at, updated_at
+  unique (organization_id, id)
+  foreign key (organization_id, analysis_id) references pool_analysis (organization_id, id)
+    on delete cascade
+  unique (analysis_id, metric)
+  check (value >= 0) and (metric <> 'ph' or value <= 14)
+```
+
+**Two tables, because an analysis is a visit.** Somebody dipped a probe or a lab sent a
+sheet back: one date, one author, one set of notes, and the measurements hang off it. One
+flat row per measurement with the date repeated makes "the analysis" a group-by rather than
+a thing, and the report the product exports is per analysis. The notes would also have
+nowhere honest to live — "sample taken before backwash" describes the visit, not the pH.
+
+**Not a hypertable, deliberately.** TimescaleDB is in the stack for the energy and sensor
+time-series in phases 4 and 5, and a hypertable cannot carry a surrogate `id`. This is
+neither: a handful of operator-entered rows per pool per month, edited and archived like any
+other record. When automated probes land they get their own `reading` table with a natural
+composite key, and this stays the manual record.
+
+**The unit is stored per row, never derived.** pH, °C and ppm do not share a type, and a
+row read in five years still has to say what it meant even if the app's idea of the
+canonical unit has moved. Every row Poolse writes takes its unit from `METRIC_UNITS` in the
+API, so the application never produces two spellings of "ppm".
+
+**`pool_analysis_value` has no `archived_at` on purpose.** A half-archived analysis, three
+of whose five measurements are visible, is a worse record than none; the cascade is what
+makes that safe.
+
+### A pool's dimensions
+
+```
+pool
+  + length_m numeric(5,2), width_m numeric(5,2),
+    min_depth_m numeric(5,2), max_depth_m numeric(5,2)
+  + volume_litres numeric(12,2)                          -- was integer until round 4
+  check each dimension is null or > 0
+  check (max_depth_m is null or min_depth_m is null or max_depth_m >= min_depth_m)
+```
+
+**The volume stays stored and overridable, not generated.** A generated column would never
+disagree with the dimensions, and would be wrong: an L-shaped municipal tank, a free-form
+hotel pool or anything with a beach entry has a real volume no `length × width × depth` will
+produce, and the column would overwrite the builder's figure with a worse one. The form
+computes `length × width × (min + max) / 2 × 1000`, shows its working, fills the field in
+while it is empty or still holds the previous suggestion, and stops touching it the moment
+an operator types their own number.
+
+`numeric`, not integer: the offered figure is very rarely whole, and the old `integer`
+column would have truncated it silently.
+
+### Medical leave
+
+```
+student_medical_leave
+  id, organization_id, student_id,
+  starts_on date not null, ends_on date,                 -- null: open-ended
+  reason text, justification_reference text, recorded_by uuid,
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  foreign key (organization_id, student_id) references student (organization_id, id)
+  foreign key (organization_id, recorded_by) references membership (organization_id, id)
+  exclude using gist (student_id with =,
+                      daterange(starts_on, coalesce(ends_on + 1, 'infinity'), '[)') with &&)
+    where (archived_at is null)
+  check (ends_on is null or ends_on >= starts_on)
+```
+
+**It defaults the register; it never writes attendance.** The tempting shape is a job that
+inserts `excused` rows for every future session in the range, and it is wrong twice over:
+sessions are generated a month at a time so half the range has nothing to write to, and rows
+written by nobody for a class that had not happened are a register somebody must trust
+without an instructor having looked at the pool. A live leave makes *falta justificada* the
+mark the register offers, flagged and visible, saved by the instructor like any other.
+
+This is also what makes the round-5 decision hold: future sessions only, nothing already
+marked ever moves, and removing a leave simply stops the offer — so no reposição credit can
+be created or destroyed by editing one.
+
+**Overlaps are refused by the database.** Two live leaves over the same week is a duplicate
+somebody made by editing the wrong row, and it gives "why is this student excused" two
+answers. `[)` and `ends_on + 1` make a leave ending on the 14th and one starting on the 15th
+adjacent rather than overlapping, which is what a club means by "back on the 15th".
+
+**`ends_on` is nullable because nobody knows.** On the day a child breaks a wrist there is
+no return date, and a required field would put a guess in the record that everybody then
+treats as a fact.
+
+**Neither text column is medical detail.** `reason` is the short line an instructor needs to
+understand an empty lane; `justification_reference` says where the atestado is filed —
+"atestado 2026/114", "pasta A" — because object storage is deferred and a medical
+certificate is not the file to bring it forward for. Diagnoses belong in `student_sensitive`,
+behind its cipher and its audit-on-read. The audit log records *whether* a justification
+exists, never what it says.
+
 ### Import
 
 ```

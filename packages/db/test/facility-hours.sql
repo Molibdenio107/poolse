@@ -106,15 +106,23 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- Test 3 — opening hours bound the start, not the end
+-- Test 3 — opening hours bound the start AND the end
 --
--- A lesson that runs past closing is ordinary: the last one of the night ends
--- when it ends, and this repo's own session tests carry a 23:30 class whose end
--- crosses midnight. Checking the end would refuse data the product already has.
+-- Round 4 reversed the original decision here. Hours used to bound only the
+-- start, so a lesson could run past closing; the operator setting the hours is
+-- describing when the building is staffed, and a class scheduled to finish after
+-- the lights go off is the error the hours exist to catch. The end is inclusive
+-- — a class may finish exactly at closing, because that is the last lesson and
+-- refusing it would make every operator set closing a minute late.
+--
+-- The wrap past midnight is the case worth having a test for: `time '23:30' +
+-- interval '60 minutes'` is `00:30`, which compares as *before* every closing
+-- time. The check works in minutes-from-midnight so that a class ending at 24:30
+-- is 1470 and is plainly too late.
 -- ---------------------------------------------------------------------------
 
 DO $$
-DECLARE v_org uuid; v_facility uuid; v_group uuid;
+DECLARE v_org uuid; v_facility uuid; v_group uuid; v_schedule uuid;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube Horas';
   SELECT id INTO v_facility FROM facility WHERE organization_id = v_org AND name = 'Piscina Municipal';
@@ -139,11 +147,67 @@ BEGIN
     NULL;
   END;
 
-  -- Starts inside the window, ends after it. Allowed, on purpose.
-  INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
-  VALUES (v_org, v_group, 2, TIME '20:45', 45);
+  -- Starts inside the window, ends fifteen minutes after it. Refused now.
+  BEGIN
+    INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
+    VALUES (v_org, v_group, 2, TIME '20:45', 45);
+    RAISE EXCEPTION 'FAIL test 3c: a class was allowed to run past closing';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
 
-  RAISE NOTICE 'PASS test 3: hours bound when a class starts, not when it finishes';
+  -- Ends exactly at closing. Allowed, on purpose: this is the last lesson.
+  INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
+  VALUES (v_org, v_group, 2, TIME '20:15', 45)
+  RETURNING id INTO v_schedule;
+
+  -- Lengthening it past closing must be refused too. This is the half that is
+  -- easy to miss: without `duration_minutes` in the trigger's UPDATE OF list,
+  -- the rule would hold for new rows only and an operator could stretch an
+  -- existing class straight through the closing time.
+  BEGIN
+    UPDATE class_schedule SET duration_minutes = 60 WHERE id = v_schedule;
+    RAISE EXCEPTION 'FAIL test 3d: an existing class was lengthened past closing';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 3: hours bound both when a class starts and when it finishes';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 3b — a class that would end after midnight is refused, not wrapped
+--
+-- The specific bug the minutes-from-midnight arithmetic exists to prevent. On a
+-- site open until 24:00, a 23:30 class of 45 minutes ends at 00:15 the next day.
+-- Compared as a `time` that is 00:15, which is before every closing time in the
+-- schema, so the naive check passes exactly the row it must refuse.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_org uuid; v_facility uuid; v_group uuid;
+BEGIN
+  SELECT id INTO v_org FROM organization WHERE name = 'Clube Horas';
+  SELECT id INTO v_facility FROM facility WHERE organization_id = v_org AND name = 'Piscina Municipal';
+  SELECT id INTO v_group FROM class_group WHERE organization_id = v_org AND name = 'Iniciação';
+
+  -- Open all day, which is the default and the most permissive the hours get.
+  UPDATE facility_hours SET opens_at = TIME '00:00', closes_at = TIME '24:00'
+   WHERE facility_id = v_facility AND weekday = 3;
+
+  BEGIN
+    INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
+    VALUES (v_org, v_group, 3, TIME '23:30', 45);
+    RAISE EXCEPTION 'FAIL test 3e: a class ending after midnight wrapped and was accepted';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  -- Ending exactly at midnight on a site open until 24:00 is fine: 1440 = 1440.
+  INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
+  VALUES (v_org, v_group, 3, TIME '23:15', 45);
+
+  RAISE NOTICE 'PASS test 3b: midnight does not wrap — 00:15 is later than 24:00, not earlier';
 END $$;
 
 -- ---------------------------------------------------------------------------
