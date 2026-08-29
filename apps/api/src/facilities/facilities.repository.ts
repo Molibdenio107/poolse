@@ -14,6 +14,7 @@ export interface Pool {
   lengthM: number | null;
   widthM: number | null;
   maxDepthM: number | null;
+  minDepthM: number | null;
 }
 
 export interface Photo {
@@ -120,14 +121,15 @@ export async function listFacilities(organizationId: string): Promise<Facility[]
                             'facilityId', p.facility_id,
                             'name', p.name,
                             'kind', p.kind,
-                            'volumeLitres', p.volume_litres,
+                            'volumeLitres', p.volume_litres::float8,
                             'laneCount', p.lane_count,
                             -- numeric comes back as a string from node-pg, which
                             -- refuses to guess at precision. Cast here so the
                             -- JSON carries a number the UI can format.
                             'lengthM', p.length_m::float8,
                             'widthM', p.width_m::float8,
-                            'maxDepthM', p.max_depth_m::float8
+                            'maxDepthM', p.max_depth_m::float8,
+                            'minDepthM', p.min_depth_m::float8
                           ) ORDER BY p.name
                         ),
                         '[]'::json
@@ -190,6 +192,7 @@ export async function findPool(
       length_m: number | null;
       width_m: number | null;
       max_depth_m: number | null;
+      min_depth_m: number | null;
       photos: Photo[] | null;
     }>(
       `
@@ -198,11 +201,12 @@ export async function findPool(
              f.name AS facility_name,
              p.name,
              p.kind,
-             p.volume_litres,
+             p.volume_litres::float8 AS volume_litres,
              p.lane_count,
              p.length_m::float8    AS length_m,
              p.width_m::float8     AS width_m,
              p.max_depth_m::float8 AS max_depth_m,
+             p.min_depth_m::float8 AS min_depth_m,
              (
                SELECT coalesce(
                         json_agg(
@@ -241,6 +245,7 @@ export async function findPool(
       lengthM: row.length_m,
       widthM: row.width_m,
       maxDepthM: row.max_depth_m,
+      minDepthM: row.min_depth_m,
       photos: row.photos ?? [],
     };
   });
@@ -465,16 +470,39 @@ export interface CreateFacilityInput {
   name: string;
   address: string | null;
   timezone: string;
+  /**
+   * Where the site is — round 5, all four optional together.
+   *
+   * Supplied by `PlaceField` on the create form. A site with none of them is an
+   * ordinary state: the geocoder may be down, or the operator may not have got
+   * to it, and neither should stop a facility being recorded.
+   */
+  city?: string | null;
+  countryCode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export async function createFacility(input: CreateFacilityInput): Promise<string> {
   try {
     return await withOrg(input.organizationId, async (tx) => {
       const { rows } = await tx.query<{ id: string }>(
-        `INSERT INTO facility (organization_id, name, address, timezone)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO facility (organization_id, name, address, timezone,
+                               city, country_code, latitude, longitude)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id`,
-        [input.organizationId, input.name, input.address, input.timezone],
+        [
+          input.organizationId,
+          input.name,
+          input.address,
+          input.timezone,
+          // Set at creation since round 5, so the weather panel has coordinates
+          // on the first page load rather than after a second visit.
+          input.city ?? null,
+          input.countryCode ?? null,
+          input.latitude ?? null,
+          input.longitude ?? null,
+        ],
       );
 
       const id = rows[0]?.id;
@@ -504,6 +532,7 @@ export interface CreatePoolInput {
   lengthM: number | null;
   widthM: number | null;
   maxDepthM: number | null;
+  minDepthM: number | null;
 }
 
 /**
@@ -525,9 +554,9 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO pool (
            organization_id, facility_id, name, kind, volume_litres, lane_count,
-           length_m, width_m, max_depth_m
+           length_m, width_m, max_depth_m, min_depth_m
          )
-         VALUES ($1, $2, $3, $4::pool_kind, $5, $6, $7, $8, $9)
+         VALUES ($1, $2, $3, $4::pool_kind, $5, $6, $7, $8, $9, $10)
          RETURNING id`,
         [
           input.organizationId,
@@ -539,6 +568,7 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
           input.lengthM,
           input.widthM,
           input.maxDepthM,
+          input.minDepthM,
         ],
       );
 
@@ -572,6 +602,7 @@ export interface UpdatePoolInput {
   lengthM: number | null;
   widthM: number | null;
   maxDepthM: number | null;
+  minDepthM: number | null;
 }
 
 /**
@@ -596,7 +627,7 @@ export async function updatePool(
       const { rows } = await tx.query<{ id: string }>(
         `UPDATE pool
             SET name = $2, kind = $3::pool_kind, volume_litres = $4, lane_count = $5,
-                length_m = $6, width_m = $7, max_depth_m = $8
+                length_m = $6, width_m = $7, max_depth_m = $8, min_depth_m = $9
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -608,6 +639,7 @@ export async function updatePool(
           input.lengthM,
           input.widthM,
           input.maxDepthM,
+          input.minDepthM,
         ],
       );
       if (!rows[0]) return false;

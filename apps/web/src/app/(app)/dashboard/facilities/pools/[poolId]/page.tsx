@@ -1,4 +1,4 @@
-import { getTranslations } from 'next-intl/server';
+import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type PoolDetail, type PoolMaterial } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
@@ -29,6 +29,7 @@ export default async function PoolPage({
   searchParams: Promise<{ from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const format = await getFormatter();
   const { poolId } = await params;
   const { from } = await searchParams;
 
@@ -105,6 +106,10 @@ export default async function PoolPage({
                   value={pool.widthM === null ? null : `${pool.widthM}`}
                 />
                 <Detail
+                  label={t('facilities.minDepthLabel')}
+                  value={pool.minDepthM === null ? null : `${pool.minDepthM}`}
+                />
+                <Detail
                   label={t('facilities.depthLabel')}
                   value={pool.maxDepthM === null ? null : `${pool.maxDepthM}`}
                 />
@@ -112,9 +117,18 @@ export default async function PoolPage({
                   label={t('facilities.lanesLabel')}
                   value={pool.laneCount === null ? null : `${pool.laneCount}`}
                 />
+                {/*
+                  Grouped and in both units — round 4. A bare 106500 is a number
+                  somebody has to count the digits of, and a pool is quoted in m3
+                  as often as in litres.
+                */}
                 <Detail
                   label={t('facilities.volumeLabel')}
-                  value={pool.volumeLitres === null ? null : `${pool.volumeLitres}`}
+                  value={
+                    pool.volumeLitres === null
+                      ? null
+                      : `${format.number(pool.volumeLitres, { maximumFractionDigits: 2 })} L · ${format.number(pool.volumeLitres / 1000, { maximumFractionDigits: 2 })} m³`
+                  }
                 />
               </dl>
             )}
@@ -134,7 +148,13 @@ export default async function PoolPage({
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('facilities.readings')}
             </h2>
-            <ReadingsBlock canManage={pool.canManage} />
+            <ReadingsBlock
+              organizationId={pool.organizationId}
+              poolId={pool.id}
+              poolName={pool.name}
+              analyses={pool.analyses}
+              canManage={pool.canManage}
+            />
           </section>
 
           <section className="rounded border border-border bg-surface p-5">
@@ -144,6 +164,7 @@ export default async function PoolPage({
             <MaterialsBlock
               organizationId={pool.organizationId}
               poolId={pool.id}
+              poolName={pool.name}
               materials={pool.materials}
               canManage={pool.canManage}
             />

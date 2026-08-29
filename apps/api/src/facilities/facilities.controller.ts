@@ -11,6 +11,15 @@ import {
   Put,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
+import {
+  archiveAnalysis,
+  createAnalysis,
+  listAnalyses,
+  METRIC_UNITS,
+  POOL_METRICS,
+  type PoolAnalysis,
+  type PoolMetric,
+} from './analyses.repository.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   addPoolMaterial,
@@ -120,7 +129,12 @@ export class FacilitiesController {
   async pool(
     @Param('poolId') poolId: string,
   ): Promise<
-    PoolDetail & { organizationId: string; canManage: boolean; materials: PoolMaterial[] }
+    PoolDetail & {
+      organizationId: string;
+      canManage: boolean;
+      materials: PoolMaterial[];
+      analyses: PoolAnalysis[];
+    }
   > {
     const { organizationId } = currentTenant();
 
@@ -137,7 +151,68 @@ export class FacilitiesController {
       // is small, it is always shown, and a second round trip would put a
       // loading state on a list of six rows.
       materials: await listPoolMaterials(organizationId, poolId),
+      // As with the inventory: small, always shown, and a second request would
+      // put a spinner on a panel of four rows.
+      analyses: await listAnalyses(organizationId, poolId),
     };
+  }
+
+  /**
+   * Record a water analysis - round 4.
+   *
+   * `owner` and `admin` as everywhere else that writes to a pool. Maintenance
+   * staff are the obvious future addition here and are deliberately not added
+   * on a guess: the role exists, nothing else grants it write access yet, and
+   * widening permissions is not something to slip into a UI ticket.
+   */
+  @Post('pools/:poolId/analyses')
+  async recordAnalysis(
+    @Param('poolId') poolId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ id: string }> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+
+    const detail = await findPool(organizationId, poolId);
+    if (!detail) throw new NotFoundException('No such pool');
+
+    const takenAt = analysisMoment(body['takenAt']);
+    const values = analysisValues(body['values']);
+
+    // An analysis with no measurements is a date and nothing else. It would draw
+    // a gap in the trend that reads as a missed reading rather than as an empty
+    // form somebody submitted.
+    if (values.length === 0) {
+      throw new BadRequestException('An analysis needs at least one measurement');
+    }
+
+    const notes = typeof body['notes'] === 'string' && body['notes'].trim() !== ''
+      ? body['notes'].trim()
+      : null;
+
+    try {
+      return {
+        id: await createAnalysis(organizationId, {
+          poolId,
+          takenAt,
+          notes,
+          recordedBy: membershipId,
+          values,
+        }),
+      };
+    } catch (error) {
+      throw asHttp(error);
+    }
+  }
+
+  @Post('analyses/:id/archive')
+  async removeAnalysis(@Param('id') id: string): Promise<{ archived: true }> {
+    requireCanArchive();
+    const { organizationId } = currentTenant();
+
+    const archived = await archiveAnalysis(organizationId, id);
+    if (!archived) throw new NotFoundException('No such analysis');
+    return { archived: true };
   }
 
   /**
@@ -324,7 +399,20 @@ export class FacilitiesController {
     }
 
     try {
-      return { id: await createFacility({ organizationId, name: name!, address, timezone }) };
+      return {
+        id: await createFacility({
+          organizationId,
+          name: name!,
+          address,
+          timezone,
+          city: text(body['city'], 'city', { max: 200 }),
+          countryCode: text(body['countryCode'], 'countryCode', { max: 2 }),
+          // Reusing the same bounds the facility's own place endpoint enforces,
+          // so a coordinate cannot enter the table by a second, laxer door.
+          latitude: coordinate(body['latitude'], 'latitude', 90),
+          longitude: coordinate(body['longitude'], 'longitude', 180),
+        }),
+      };
     } catch (error) {
       throw asHttp(error);
     }
@@ -344,11 +432,12 @@ export class FacilitiesController {
       throw new BadRequestException(`Unsupported pool kind: ${kind}`);
     }
 
-    const volumeLitres = positiveInteger(body['volumeLitres'], 'volumeLitres');
+    const volumeLitres = positiveLitres(body['volumeLitres']);
     const laneCount = positiveInteger(body['laneCount'], 'laneCount');
     const lengthM = positiveMetres(body['lengthM'], 'lengthM');
     const widthM = positiveMetres(body['widthM'], 'widthM');
     const maxDepthM = positiveMetres(body['maxDepthM'], 'maxDepthM');
+    const minDepthM = positiveMetres(body['minDepthM'], 'minDepthM');
 
     let id: string | null;
     try {
@@ -362,6 +451,7 @@ export class FacilitiesController {
         lengthM,
         widthM,
         maxDepthM,
+        minDepthM,
       });
     } catch (error) {
       throw asHttp(error);
@@ -389,11 +479,12 @@ export class FacilitiesController {
       updated = await updatePool(organizationId, poolId, {
         name: text(body['name'], 'name', { required: true })!,
         kind: kind as PoolKind,
-        volumeLitres: positiveInteger(body['volumeLitres'], 'volumeLitres'),
+        volumeLitres: positiveLitres(body['volumeLitres']),
         laneCount: positiveInteger(body['laneCount'], 'laneCount'),
         lengthM: positiveMetres(body['lengthM'], 'lengthM'),
         widthM: positiveMetres(body['widthM'], 'widthM'),
         maxDepthM: positiveMetres(body['maxDepthM'], 'maxDepthM'),
+        minDepthM: positiveMetres(body['minDepthM'], 'minDepthM'),
       });
     } catch (error) {
       throw asHttp(error);
@@ -460,6 +551,33 @@ function text(
  * places matches `numeric(5,2)` on the column, so nothing is silently truncated
  * by the database after passing validation here.
  */
+/**
+ * Litres, to two decimals — round 4.
+ *
+ * Was `positiveInteger`, which is now wrong in both directions. The column is
+ * `numeric(12,2)` since the dimensions calculation landed, and the figure the
+ * form offers — length x width x average depth x 1000 — is very rarely whole:
+ * 25 x 12.5 x 1.35 m is 421 875 litres, but 8 x 4 x 1.15 is 36 800 and
+ * 10 x 5 x 1.35 is 67 500 while 12.5 x 6 x 1.42 is 106 500. Rejecting the
+ * decimal ones would have refused the number this product just computed.
+ *
+ * Rounded rather than truncated, so the value stored is the value shown.
+ */
+function positiveLitres(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return null;
+
+  const parsed = typeof value === 'number' ? value : Number(String(value).trim().replace(',', '.'));
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new BadRequestException('volumeLitres must be a positive number of litres');
+  }
+  // numeric(12,2): ten digits before the point. An Olympic pool is 2 500 000
+  // litres, so this refuses a typo rather than a real pool.
+  if (parsed >= 10_000_000_000) {
+    throw new BadRequestException('volumeLitres is larger than any pool');
+  }
+  return Math.round(parsed * 100) / 100;
+}
+
 function positiveMetres(value: unknown, field: string): number | null {
   if (value === undefined || value === null || value === '') return null;
 
@@ -603,4 +721,71 @@ function readMaterial(body: Record<string, unknown>): PoolMaterialInput {
     unit: text(body['unit'], 'unit', { max: 40 }),
     notes: text(body['notes'], 'notes', { max: 500 }),
   };
+}
+
+
+/**
+ * When the sample was taken.
+ *
+ * Accepts what `<input type="datetime-local">` posts - "2026-08-29T09:30", with
+ * no zone - and anything already carrying one. A bare local string is read in
+ * the server's zone, which is the same compromise every other "now" in this app
+ * makes until facility timezones reach the UI; the column is `timestamptz`, so
+ * whatever is resolved here is stored as a real instant rather than as text.
+ */
+function analysisMoment(value: unknown): string {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new BadRequestException('takenAt is required');
+  }
+
+  const parsed = new Date(value.trim());
+  if (Number.isNaN(parsed.getTime())) {
+    throw new BadRequestException('takenAt is not a valid date and time');
+  }
+  // A sample cannot have been taken tomorrow. A minute of slack absorbs a client
+  // clock that is slightly ahead rather than refusing a form somebody just filled.
+  if (parsed.getTime() > Date.now() + 60_000) {
+    throw new BadRequestException('takenAt is in the future');
+  }
+  return parsed.toISOString();
+}
+
+/**
+ * The measurements, filtered to the ones actually filled in.
+ *
+ * The form offers all nine metrics and a club fills three, so blanks are the
+ * normal case and are dropped rather than refused. Anything present has to be a
+ * finite non-negative number, and pH has to be a pH - the same bounds the CHECK
+ * constraints enforce, said here so the operator gets a sentence instead of a
+ * constraint violation.
+ *
+ * The unit is not read from the request at all. It is looked up from the metric,
+ * so no client can record a pH in ppm.
+ */
+function analysisValues(raw: unknown): { metric: PoolMetric; value: number }[] {
+  if (raw === undefined || raw === null) return [];
+  if (typeof raw !== 'object') {
+    throw new BadRequestException('values must be an object of metric to number');
+  }
+
+  const source = raw as Record<string, unknown>;
+  const out: { metric: PoolMetric; value: number }[] = [];
+
+  for (const metric of POOL_METRICS) {
+    const value = source[metric];
+    if (value === undefined || value === null || value === '') continue;
+
+    const parsed = typeof value === 'number' ? value : Number(String(value).trim().replace(',', '.'));
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new BadRequestException(`${metric} must be a number of ${METRIC_UNITS[metric]}`);
+    }
+    if (metric === 'ph' && parsed > 14) {
+      throw new BadRequestException('ph must be between 0 and 14');
+    }
+
+    // numeric(10,3) - rounded here so the value stored is the value sent.
+    out.push({ metric, value: Math.round(parsed * 1000) / 1000 });
+  }
+
+  return out;
 }

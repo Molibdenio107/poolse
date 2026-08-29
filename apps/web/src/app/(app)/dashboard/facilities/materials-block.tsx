@@ -38,11 +38,14 @@ export function MaterialsBlock({
   organizationId,
   poolId,
   materials,
+  poolName,
   canManage,
 }: {
   organizationId: string;
   poolId: string;
   materials: PoolMaterial[];
+  /** Only to name the downloaded file — the export is of this pool's store. */
+  poolName: string;
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
@@ -66,6 +69,10 @@ export function MaterialsBlock({
             </li>
           ))}
         </ul>
+      )}
+
+      {materials.length > 0 && (
+        <ExportMaterials materials={materials} poolName={poolName} />
       )}
 
       {canManage && (
@@ -335,5 +342,88 @@ function Fields({ material }: { material?: PoolMaterial }): React.ReactElement {
         />
       </div>
     </>
+  );
+}
+
+
+/**
+ * The inventory, as a spreadsheet - round 4.
+ *
+ * **CSV and not a chart, because stock is not a time-series.** The obvious
+ * companion to the water-quality trend would be a graph of quantity over time,
+ * and there is nothing to draw it from: `pool_material` holds one current count
+ * per kind of thing, by design - a ledger nobody posts to drifts from the shelf
+ * within a month. What an operator actually wants off this screen is the list,
+ * in something they can take to the store room or send to a supplier.
+ *
+ * **Built in the browser from data already on the page.** No endpoint, no second
+ * read of the table, and nothing to keep in step with the list above - the
+ * export is the list, by construction.
+ *
+ * The BOM is not decoration. Excel reads a UTF-8 CSV as the local ANSI codepage
+ * unless the file starts with one, which turns "Flutuadores para criancas" into
+ * mojibake on the machine most likely to open this - a Portuguese club's office
+ * PC. The delimiter is a semicolon for the same reason: in a locale where the
+ * decimal separator is a comma, Excel splits on semicolons.
+ */
+function ExportMaterials({
+  materials,
+  poolName,
+}: {
+  materials: PoolMaterial[];
+  poolName: string;
+}): React.ReactElement {
+  const t = useTranslations();
+
+  const download = (): void => {
+    // RFC 4180 quoting: double every quote, wrap every field. Wrapping
+    // unconditionally is simpler than deciding per value and cannot be wrong.
+    const cell = (value: string | number | null): string =>
+      '"' + String(value ?? '').replace(/"/g, '""') + '"';
+
+    const rows = [
+      [
+        t('facilities.materialName'),
+        t('facilities.materialQuantity'),
+        t('facilities.materialUnit'),
+        t('facilities.materialNotes'),
+      ],
+      ...materials.map((material) => [
+        material.name,
+        material.quantity,
+        material.unit ?? '',
+        material.notes ?? '',
+      ]),
+    ];
+
+    const csv = rows.map((row) => row.map(cell).join(';')).join('\r\n');
+
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    // Dated, because an inventory export is a stocktake and two of them without
+    // dates in the same folder are indistinguishable.
+    link.download =
+      poolName.replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase() +
+      '-' +
+      new Date().toISOString().slice(0, 10) +
+      '.csv';
+    link.click();
+
+    // Freed on the next tick rather than immediately: revoking synchronously
+    // races the browser's read of the blob in Safari.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={download}
+      className="self-start rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      {t('facilities.exportInventory')}
+    </button>
   );
 }
