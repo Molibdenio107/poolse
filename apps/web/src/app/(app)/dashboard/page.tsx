@@ -1,31 +1,33 @@
 import Link from 'next/link';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
-import {
-  ApiError,
-  apiFetch,
-  type ActiveSession,
-  type Facilities,
-  type Me,
-} from '../../../lib/api';
+import { ApiError, apiFetch, type ActiveSession, type Me } from '../../../lib/api';
 import { readTheme } from '../../../lib/preferences';
+import { PersonAvatar } from '@/components/person-avatar';
 import { PreferenceSync } from './preference-sync';
 import { Sessions } from './sessions';
 import { CreateOrganizationForm } from './create-organization-form';
 import { PageShell } from '@/components/page-shell';
 
 /**
- * The screen people land on after signing in, and until now the weakest one in
- * the app.
+ * The signed-in person's own screen.
  *
- * It was slice 0.4's proof that Clerk worked, and it never grew up: it led with
- * "My account", listed the signed-in person's name, email and internal UUID, and
- * offered no idea what to do next. Someone who had just accepted an invitation
- * arrived here, read their own database id, and reasonably concluded that
- * nothing had happened.
+ * It used to open with the organization's name, its licence and a count of
+ * facilities and pools, which made it a second and worse version of Instalações.
+ * Instalações is the landing page now and lists both properly, so this answers a
+ * different question: who am I signed in as, what am I allowed to do here, where
+ * else is this account open, and where do I go to change any of it. The licence
+ * and the organizations list moved to "O meu perfil", where somebody looking for
+ * their own account details will actually go looking for them.
  *
- * So it now answers the two questions a landing screen owes you — where am I,
- * and what should I do next — and the identity block is what it always should
- * have been: a small footnote confirming who you are signed in as.
+ * **The operational dashboard is deliberately not here yet.** Metrics and
+ * maintenance are a later piece of work with their own data behind them, and a
+ * half version of it — three counts in a row, standing in for the real thing —
+ * is exactly what this page just stopped being. Add it when there is something
+ * to add, not before.
+ *
+ * The "you belong to no organization yet" path stays here on purpose:
+ * `dashboard/start` sends somebody with no membership to this page precisely
+ * because `CreateOrganizationForm` lives on it.
  */
 export default async function DashboardPage(): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -42,19 +44,8 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
     failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
   }
 
-  // Only worth asking once there is an organization to ask about. A person with
-  // no membership gets a 403 here, which is the correct answer and not an error.
-  let sites: Facilities | null = null;
-  if (me !== null && me.memberships.length > 0) {
-    try {
-      sites = await apiFetch<Facilities>('/facilities');
-    } catch {
-      // The dashboard still renders without it; the facilities page will say why.
-    }
-  }
-
   // Where this account is signed in. Best-effort: a Clerk hiccup should cost the
-  // device list, not the whole dashboard.
+  // device list, not the whole page.
   let sessions: ActiveSession[] = [];
   if (me !== null) {
     try {
@@ -65,21 +56,13 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
   }
 
   const membership = me?.memberships[0] ?? null;
-
-  // Whole days remaining, rounded up, so the last day reads "1 day left" rather
-  // than "0". Information only — nothing is enforced until phase 2.
-  const trialDaysLeft =
-    membership?.trialEndsAt == null
+  const name =
+    me === null
       ? null
-      : Math.ceil((new Date(membership.trialEndsAt).getTime() - Date.now()) / 86_400_000);
-  const poolCount = sites?.facilities.reduce((total, f) => total + f.pools.length, 0) ?? 0;
-  const needsFirstSite = sites !== null && sites.facilities.length === 0;
+      : [me.user.firstName, me.user.lastName].filter(Boolean).join(' ') || me.user.email;
 
   return (
-    <PageShell
-      title={membership?.organizationName ?? t('nav.dashboard')}
-      subtitle={t('app.tagline')}
-    >
+    <PageShell title={name ?? t('nav.dashboard')} subtitle={t('dashboard.subtitle')}>
 
       {failure !== null && (
         <section className="rounded border border-danger/40 bg-danger/10 p-5">
@@ -97,105 +80,76 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
             activeTheme={activeTheme}
           />
 
-          {membership === null ? (
+          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {t('account.title')}
+            </h2>
+
+            <div className="flex items-center gap-4">
+              <PersonAvatar
+                id={me.user.id}
+                name={name ?? t('account.noName')}
+                photoUrl={me.user.avatarUrl}
+                size="lg"
+              />
+              <div className="flex min-w-0 flex-col">
+                <span className="text-lg font-medium">{name ?? t('account.noName')}</span>
+                <span className="truncate text-sm text-foreground-muted">
+                  {me.user.email ?? t('account.noEmail')}
+                </span>
+              </div>
+            </div>
+
+            {membership !== null && (
+              <dl className="flex flex-wrap gap-x-10 gap-y-4">
+                <div className="flex flex-col">
+                  <dt className="text-sm text-foreground-muted">{t('dashboard.organization')}</dt>
+                  <dd className="mt-1 font-medium">{membership.organizationName}</dd>
+                </div>
+                <div className="flex flex-col">
+                  <dt className="text-sm text-foreground-muted">{t('dashboard.yourRoles')}</dt>
+                  <dd className="mt-1 flex flex-wrap gap-1">
+                    {membership.roles.length === 0 ? (
+                      <span className="text-sm text-foreground-muted">{t('account.noRoles')}</span>
+                    ) : (
+                      membership.roles.map((role) => (
+                        <span
+                          key={role}
+                          className="rounded bg-primary/15 px-2 py-0.5 text-sm text-primary"
+                        >
+                          {t(`roles.${role}`)}
+                        </span>
+                      ))
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            )}
+
+            {/*
+              The way out of a read-only screen. Everything above is a copy of
+              something the profile page owns, so the person who came here to
+              correct their name needs one obvious control rather than a hunt
+              through the menu.
+            */}
+            <div>
+              <Link
+                href="/dashboard/profile"
+                className="inline-block rounded border border-border px-4 py-2 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('dashboard.editProfile')}
+              </Link>
+            </div>
+          </section>
+
+          {membership === null && (
             <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
               <div className="flex flex-col gap-1">
                 <h2 className="text-lg font-medium">{t('account.noOrganizations')}</h2>
-                <p className="text-sm text-foreground-muted">
-                  {t('account.noOrganizationsHint')}
-                </p>
+                <p className="text-sm text-foreground-muted">{t('account.noOrganizationsHint')}</p>
               </div>
               <CreateOrganizationForm />
             </section>
-          ) : (
-            <>
-              {membership.subscriptionStatus === 'trialing' && trialDaysLeft !== null && (
-                <section className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded border border-border bg-surface-muted px-5 py-3">
-                  <span className="text-sm font-medium">
-                    {t('dashboard.trial')} —{' '}
-                    {trialDaysLeft > 0
-                      ? t('dashboard.trialDaysLeft', { days: trialDaysLeft })
-                      : t('dashboard.trialEnded')}
-                  </span>
-                  <span className="text-sm text-foreground-muted">
-                    {t('dashboard.trialNoCard')}
-                  </span>
-                </section>
-              )}
-
-              {/*
-                The next step, stated rather than implied. An organization with no
-                site cannot hold a class group, a session or an attendance record,
-                so there is exactly one useful thing to do here and it says so.
-              */}
-              {needsFirstSite && (
-                <section className="flex flex-col gap-3 rounded border border-primary/40 bg-primary/10 p-5">
-                  <h2 className="font-medium text-primary">{t('dashboard.nextStep')}</h2>
-                  <p className="text-sm">{t('dashboard.nextStepFirstSite')}</p>
-                  <div>
-                    <Link
-                      href="/dashboard/facilities"
-                      className="inline-block rounded bg-primary px-4 py-2 text-sm text-primary-foreground"
-                    >
-                      {t('dashboard.addFirstSite')}
-                    </Link>
-                  </div>
-                </section>
-              )}
-
-              <section className="rounded border border-border bg-surface p-5">
-                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                  {t('dashboard.overview')}
-                </h2>
-                <dl className="flex flex-wrap gap-x-10 gap-y-4">
-                  <div className="flex flex-col">
-                    <dt className="text-sm text-foreground-muted">{t('facilities.title')}</dt>
-                    <dd className="text-2xl font-semibold">{sites?.facilities.length ?? '—'}</dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm text-foreground-muted">{t('dashboard.pools')}</dt>
-                    <dd className="text-2xl font-semibold">{sites === null ? '—' : poolCount}</dd>
-                  </div>
-                  <div className="flex flex-col">
-                    <dt className="text-sm text-foreground-muted">{t('dashboard.yourRoles')}</dt>
-                    <dd className="mt-1 flex flex-wrap gap-1">
-                      {membership.roles.length === 0 ? (
-                        <span className="text-sm text-foreground-muted">
-                          {t('account.noRoles')}
-                        </span>
-                      ) : (
-                        membership.roles.map((role) => (
-                          <span
-                            key={role}
-                            className="rounded bg-primary/15 px-2 py-0.5 text-sm text-primary"
-                          >
-                            {t(`roles.${role}`)}
-                          </span>
-                        ))
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </section>
-
-              {me.memberships.length > 1 && (
-                <section className="rounded border border-border bg-surface p-5">
-                  <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                    {t('account.organizations')}
-                  </h2>
-                  <ul className="flex flex-col gap-2">
-                    {me.memberships.map((other) => (
-                      <li key={other.membershipId} className="text-sm">
-                        {other.organizationName}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-3 text-sm text-foreground-muted">
-                    {t('dashboard.multipleOrganizations')}
-                  </p>
-                </section>
-              )}
-            </>
           )}
 
           {sessions.length > 0 && (
@@ -219,21 +173,6 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
               />
             </section>
           )}
-
-          {/*
-            Demoted to a footnote. It confirms who you are signed in as, which is
-            worth knowing; it is not what a dashboard should open with. The
-            internal id is gone — it was diagnostics from slice 0.4 and meant
-            nothing to the person reading it.
-          */}
-          <p className="text-sm text-foreground-muted">
-            {t('account.signedInAs', {
-              name:
-                [me.user.firstName, me.user.lastName].filter(Boolean).join(' ') ||
-                me.user.email ||
-                t('account.noName'),
-            })}
-          </p>
         </>
       )}
     </PageShell>

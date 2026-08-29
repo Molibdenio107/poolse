@@ -846,12 +846,10 @@
     "dashboard": "Painel"
   },
   "dashboard": {
-    "overview": "Resumo",
-    "pools": "Tanques",
+    "subtitle": "Quem tem sessão iniciada, com que funções e onde.",
+    "organization": "Organização",
     "yourRoles": "As suas funções",
-    "nextStep": "Passo seguinte",
-    "nextStepFirstSite": "Crie a primeira instalação. Sem ela não é possível ter turmas, horários nem presenças.",
-    "addFirstSite": "Criar instalação",
+    "editProfile": "Editar o meu perfil",
     "multipleOrganizations": "Está a ver a primeira. A troca entre organizações chega numa fatia posterior.",
     "trial": "Período experimental",
     "trialDaysLeft": "{days, plural, one {Falta # dia} other {Faltam # dias}} de experiência.",

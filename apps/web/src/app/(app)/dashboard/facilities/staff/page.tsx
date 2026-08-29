@@ -14,7 +14,6 @@ import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
 import { RevokeButton } from './revoke-button';
-import { TransferOwnership } from './transfer-ownership';
 import { PageShell } from '@/components/page-shell';
 
 /**
@@ -367,24 +366,6 @@ export default async function PeoplePage({
               </ul>
             )}
           </section>
-          {people.canTransferOwnership && (
-            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('transfer.title')}
-              </h2>
-              <p className="text-sm text-foreground-muted">{t('transfer.explain')}</p>
-              {/*
-                Every admin, from its own query — not from the members page.
-                Filtering the page would have offered only the admins who
-                happened to land on page 1, and told the owner their colleague
-                was not an admin — POOLSE-29.
-              */}
-              <TransferOwnership
-                organizationId={people.organizationId}
-                candidates={people.transferCandidates}
-              />
-            </section>
-          )}
         </>
       )}
     </PageShell>

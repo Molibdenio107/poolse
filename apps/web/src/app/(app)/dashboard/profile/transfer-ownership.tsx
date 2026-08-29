@@ -5,13 +5,18 @@ import { useTranslations } from 'next-intl';
 import { CONTROL_LINE } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { OrganizationMember } from '@/lib/api';
-import type { FormState } from '../../actions';
-import { transferOwnershipAction } from '../../actions';
+import type { FormState } from '../actions';
+import { transferOwnershipAction } from '../actions';
 
 const INITIAL: FormState = { ok: false };
 
 /**
  * Handing the organization to somebody else.
+ *
+ * It sits on "O meu perfil" rather than on Pessoas, where it started. Ownership
+ * is something one account holds, not a property of the staff list, and the
+ * owner who wants to hand it over is thinking about their own account when they
+ * go looking for the control.
  *
  * Folded shut by default, and two steps when opened. This is the one action in
  * Poolse that the person performing it cannot undo — after it, only the new

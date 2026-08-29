@@ -846,12 +846,10 @@
     "dashboard": "Dashboard"
   },
   "dashboard": {
-    "overview": "Overview",
-    "pools": "Pools",
+    "subtitle": "Who is signed in, with which roles, and where.",
+    "organization": "Organization",
     "yourRoles": "Your roles",
-    "nextStep": "Next step",
-    "nextStepFirstSite": "Create your first facility. Without one there can be no class groups, schedules or attendance.",
-    "addFirstSite": "Create facility",
+    "editProfile": "Edit my profile",
     "multipleOrganizations": "You are viewing the first. Switching between organizations arrives in a later slice.",
     "trial": "Trial",
     "trialDaysLeft": "{days, plural, one {# day left} other {# days left}} of your trial.",
