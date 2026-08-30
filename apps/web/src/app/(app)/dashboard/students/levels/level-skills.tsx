@@ -181,17 +181,24 @@ export function LevelSkills({
               <input type="hidden" name="levelId" value={levelId} />
 
               {/*
-                `items-start`, and the two counts share one hint — round 5.
+                Each count says "optional" in its own box — round 6.
 
-                The row was `items-end` with a hint under each number field, so
-                the three inputs sat on three different baselines and the Add
-                button floated a line above them: `items-end` aligns the bottom
-                of each column, and a column with a hint is taller than one
-                without. Aligning the tops puts every label on one line, and
-                saying "optional" once under the pair says the same thing without
-                dragging two columns down.
+                Round 5 put one "Optional." under the pair, which fixed the
+                baselines but left the sentence a step away from the fields it
+                described and cost the row a line of its own. Saying it inside
+                each empty box puts the word where the eye already is, and it is
+                the one kind of thing a placeholder may carry: it is true only
+                while the box is empty, so nothing is lost when it is typed over
+                — unlike a value or a format, which somebody needs to re-read
+                after typing. Set a size smaller than the value it sits in front
+                of, so it reads as a note about the box rather than as something
+                already entered.
+
+                `items-end` is safe again now that no column carries a hint
+                underneath: every column is label-over-control and one line tall,
+                so their bottoms line up and the button lines up with them.
               */}
-              <div className="flex flex-wrap items-start gap-3">
+              <div className="flex flex-wrap items-end gap-3">
                 <TextField
                   name="name"
                   label={t('skills.skillName')}
@@ -202,32 +209,27 @@ export function LevelSkills({
                   className="min-w-48 flex-1"
                 />
 
-                <div className="flex flex-col gap-1">
-                  <div className="flex gap-3">
-                    <TextField
-                      name="minLessons"
-                      type="number"
-                      label={t('skills.minLessonsLabel')}
-                      className="w-28"
-                    />
-                    <TextField
-                      name="minDays"
-                      type="number"
-                      label={t('skills.minDaysLabel')}
-                      className="w-28"
-                    />
-                  </div>
-                  <p className="text-sm text-foreground-muted">{t('students.optionalHint')}</p>
-                </div>
+                <TextField
+                  name="minLessons"
+                  type="number"
+                  label={t('skills.minLessonsLabel')}
+                  placeholder={t('skills.optional')}
+                  className="w-28"
+                  inputClassName="placeholder:text-xs"
+                />
+                <TextField
+                  name="minDays"
+                  type="number"
+                  label={t('skills.minDaysLabel')}
+                  placeholder={t('skills.optional')}
+                  className="w-28"
+                  inputClassName="placeholder:text-xs"
+                />
 
-                {/*
-                  `mt-6` clears the label row above, so the button lines up with
-                  the inputs rather than with their labels.
-                */}
                 <button
                   type="submit"
                   disabled={saving}
-                  className="mt-6 rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
+                  className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
                 >
                   {saving ? t('common.working') : t('skills.addSkill')}
                 </button>

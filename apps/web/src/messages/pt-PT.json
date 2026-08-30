@@ -390,9 +390,9 @@
     "closureDaysInvalid": "Indique um número de dias entre 1 e 365.",
     "closureFailed": "Não foi possível criar o encerramento.",
     "cityFailed": "A pesquisa de localidades está indisponível — pode definir a localidade mais tarde.",
-    "copyMonday": "Aplicar segunda-feira a todos os dias abertos",
-    "copyMondayHint": "Copia apenas os horários — os dias que encerrou continuam encerrados, e nada é guardado até premir Guardar.",
-    "copyMondayHere": "Igualar a segunda",
+    "matchWeekHint": "Igualar a semana copia os horários desse dia para todos os outros dias abertos — apenas os horários, pelo que os dias que encerrou continuam encerrados, e nada é guardado até premir Guardar.",
+    "matchWeek": "Igualar a semana",
+    "matchWeekFrom": "Aplicar os horários de {day} ao resto da semana",
     "recordAnalysisTitle": "Registar uma análise"
   },
   "classes": {
@@ -548,6 +548,7 @@
     "skillNamePlaceholder": "Flutuação ventral, Respiração lateral…",
     "minLessonsLabel": "Aulas mín.",
     "minDaysLabel": "Dias mín.",
+    "optional": "Opcional",
     "addSkill": "Adicionar",
     "removeSkill": "Remover {name}",
     "videoUrl": "Vídeo de demonstração",
@@ -693,6 +694,7 @@
     "week": "Semana do aluno",
     "noClasses": "Este aluno ainda não está inscrito em nenhuma turma.",
     "noClassesThisWeek": "Sem aulas nesta semana.",
+    "weekFailed": "Não foi possível carregar esta semana. A semana apresentada é a última que chegou.",
     "noSessionsHint": "Este aluno tem turmas, mas as aulas ainda não foram geradas. Gere a época em",
     "addHint": "O nome basta para começar. A fotografia, os consentimentos e os tempos ficam na ficha do aluno.",
     "guardianNew": "Novo encarregado",

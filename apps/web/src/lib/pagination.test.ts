@@ -79,12 +79,12 @@ test('paging keeps the search and the filters', () => {
 });
 
 test('lastPage never returns zero, so no control can read "page 1 of 0"', () => {
-  assert.equal(lastPage(214), 15);
-  assert.equal(lastPage(15), 1);
-  assert.equal(lastPage(16), 2);
+  assert.equal(lastPage(214), 22);
+  assert.equal(lastPage(10), 1, 'exactly one full page is one page');
+  assert.equal(lastPage(11), 2, 'one row over spills onto a second');
   assert.equal(lastPage(0), 1);
   assert.equal(lastPage(30, 10), 3, 'an explicit limit is honoured');
-  assert.equal(PAGE_SIZE, 15, 'the default the API also uses');
+  assert.equal(PAGE_SIZE, 10, 'the default the API also uses');
 });
 
 test('a page past the end is detected; an empty list is not — 29.6 and 29.12', () => {

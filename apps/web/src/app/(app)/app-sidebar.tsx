@@ -137,14 +137,19 @@ const SECTIONS: Item[] = [
     href: '/dashboard/students',
     key: 'students.title',
     icon: 'student',
+    // Ordered by how close each one sits to a student — round 6. Encarregados
+    // first, directly under Alunos, because a guardian is a person attached to a
+    // student and the two lists are read together; Níveis next, being what a
+    // student is in; Reposições last, because a make-up class is an exception
+    // somebody goes looking for deliberately, not a list they browse.
     children: [
-      // Reposicoes moved here in round 5: a make-up class is something a
-      // student is owed, and the person looking for one is looking at a student.
-      { href: '/dashboard/classes/reposicoes', key: 'reposicao.title' },
-      { href: '/dashboard/students/levels', key: 'students.levels' },
       // Encarregados de educação belong with the families, not with the staff —
       // POOLSE-35.
       { href: '/dashboard/students/guardians', key: 'students.guardiansTitle' },
+      { href: '/dashboard/students/levels', key: 'students.levels' },
+      // Reposicoes moved here in round 5: a make-up class is something a
+      // student is owed, and the person looking for one is looking at a student.
+      { href: '/dashboard/classes/reposicoes', key: 'reposicao.title' },
     ],
   },
 ];

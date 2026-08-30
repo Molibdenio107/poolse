@@ -380,63 +380,67 @@ export function EnrolForm({
         Type to narrow, then choose — round 5. A club with three hundred students
         had a select three hundred long, which is the same scrolling problem the
         age picker had on the levels page.
+
+        One strip of four controls, each sized to its content — round 6. Search
+        was a `max-w-form` block on its own line and the picker below it was
+        `flex-1`, so both stretched the full width of the Enrolled card: a name
+        is rarely twenty characters, and a box that wide reads as a field wanting
+        a sentence. Fixed widths put search, picker and both buttons on one line
+        and leave the card's width to the list of enrolled students, which is the
+        part that actually needs it. The picker keeps `max-w-full` so the strip
+        wraps rather than overflows on a narrow window, and a name longer than
+        the box is clipped in the closed control only — the open dropdown is the
+        browser's own and sizes itself to the names.
       */}
-      <div className={`${FIELD_COLUMN} max-w-form`}>
-        <label htmlFor="enrol-search" className={FIELD_LABEL}>
-          {t('classes.searchStudents')}
-        </label>
-        <input
-          id="enrol-search"
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t('classes.searchStudentsPlaceholder')}
-          className={CONTROL_LINE}
-          autoComplete="off"
-        />
-      </div>
-
-      {hidden > 0 && (
-        <label className="flex items-center gap-2 text-sm text-foreground-muted">
-          <input
-            type="checkbox"
-            checked={showAll}
-            onChange={(event) => setShowAll(event.target.checked)}
-            className="size-4"
-          />
-          {t('classes.showOutsideAges', { count: hidden })}
-        </label>
-      )}
-
       <div className="flex flex-wrap items-end gap-2">
-        <select
-          name="studentId"
-          required
-          aria-label={t('classes.student')}
-          className={cn(CONTROL_LINE, 'min-w-56 flex-1')}
-        >
-          {matching.length === 0 && (
-            <option value="" disabled>
-              {t('classes.noStudentsMatch')}
-            </option>
-          )}
-          {matching.map((student) => {
-            const fit = fitFor(student);
-            return (
-              <option key={student.id} value={student.id}>
-                {student.name}
-                {/*
-                  The mark is text in the option, not a colour: a `<select>`
-                  cannot carry a badge, and "outside the ages" has to be legible
-                  to somebody listening to the page as much as looking at it.
-                */}
-                {fit === 'tooYoung' || fit === 'tooOld'
-                  ? ` — ${t('classes.outsideAges')}`
-                  : ''}
+        <div className={cn(FIELD_COLUMN, 'w-48 max-w-full')}>
+          <label htmlFor="enrol-search" className={FIELD_LABEL}>
+            {t('classes.searchStudents')}
+          </label>
+          <input
+            id="enrol-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('classes.searchStudentsPlaceholder')}
+            className={CONTROL_LINE}
+            autoComplete="off"
+          />
+        </div>
+
+        <div className={cn(FIELD_COLUMN, 'w-64 max-w-full')}>
+          {/*
+            A visible label, not the `aria-label` this had: the picker now sits
+            beside a labelled search box, and an unlabelled control next to a
+            labelled one reads as part of it.
+          */}
+          <label htmlFor="enrol-student" className={FIELD_LABEL}>
+            {t('classes.student')}
+          </label>
+          <select id="enrol-student" name="studentId" required className={CONTROL_LINE}>
+            {matching.length === 0 && (
+              <option value="" disabled>
+                {t('classes.noStudentsMatch')}
               </option>
-            );
-          })}
-        </select>
+            )}
+            {matching.map((student) => {
+              const fit = fitFor(student);
+              return (
+                <option key={student.id} value={student.id}>
+                  {student.name}
+                  {/*
+                    The mark is text in the option, not a colour: a `<select>`
+                    cannot carry a badge, and "outside the ages" has to be legible
+                    to somebody listening to the page as much as looking at it.
+                  */}
+                  {fit === 'tooYoung' || fit === 'tooOld'
+                    ? ` — ${t('classes.outsideAges')}`
+                    : ''}
+                </option>
+              );
+            })}
+          </select>
+        </div>
 
         <button
           type="submit"
@@ -457,6 +461,18 @@ export function EnrolForm({
           {t('classes.addToWaiting')}
         </button>
       </div>
+
+      {hidden > 0 && (
+        <label className="flex items-center gap-2 text-sm text-foreground-muted">
+          <input
+            type="checkbox"
+            checked={showAll}
+            onChange={(event) => setShowAll(event.target.checked)}
+            className="size-4"
+          />
+          {t('classes.showOutsideAges', { count: hidden })}
+        </label>
+      )}
 
       <Problem state={state} />
     </form>

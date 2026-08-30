@@ -128,12 +128,23 @@ export function TextField({
   maxLength,
   onValueChange,
   className,
+  inputClassName,
 }: Common & {
   initial?: string;
   type?: string;
   autoComplete?: string;
   placeholder?: string;
   maxLength?: number;
+  /**
+   * Extra classes on the `<input>` itself, where `className` styles the column.
+   *
+   * There is one thing this is for: a `::placeholder` rule, which only applies
+   * on the element carrying it and so cannot be passed down through the wrapper.
+   * Sizing, colour and state belong to `CONTROL_LINE` — a caller reaching in
+   * here to change those is a caller making this field disagree with the other
+   * fifteen forms on the page.
+   */
+  inputClassName?: string;
   /**
    * Told what was typed, for a parent that keeps its own copy.
    *
@@ -173,7 +184,7 @@ export function TextField({
         maxLength={maxLength}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
-        className={cn(CONTROL_LINE, error !== undefined && INVALID)}
+        className={cn(CONTROL_LINE, error !== undefined && INVALID, inputClassName)}
       />
       {hint !== undefined && (
         <p id={`${id}-hint`} className="text-sm text-foreground-muted">

@@ -130,8 +130,8 @@ test('a full page reports its total from the rows, with one round trip', async (
   const page = await windowed(readPageQuery('2'), run, (row) => row.id);
 
   assert.equal(page.total, 50);
-  assert.equal(page.items.length, 15);
-  assert.deepEqual(page.items.slice(0, 2), [15, 16], 'page 2 starts at row 16');
+  assert.equal(page.items.length, 10);
+  assert.deepEqual(page.items.slice(0, 2), [10, 11], 'page 2 starts at row 11');
   assert.equal(calls, 1, 'the common case must not pay for the fallback');
 });
 
@@ -150,7 +150,7 @@ test('a page past the end still reports the true total — 29.6', async () => {
 
   // Which is what lets the client send the reader somewhere real instead of
   // showing a register of fifty as empty.
-  assert.equal(lastPage(page.total, page.limit), 4);
+  assert.equal(lastPage(page.total, page.limit), 5);
 });
 
 test('an empty list stays empty, and costs nothing extra', async () => {

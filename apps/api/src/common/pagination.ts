@@ -18,13 +18,15 @@
  */
 
 /**
- * Fifteen, everywhere.
+ * Ten, everywhere.
  *
- * One constant rather than a per-list choice, so that 15 turning out to be wrong
- * is a one-line change — criterion 8. There is deliberately no user setting and
- * no per-list override.
+ * One constant rather than a per-list choice, so that the number turning out to
+ * be wrong is a one-line change — criterion 8. It has already been that change
+ * once, from fifteen to ten, and both sides moved together because this comment
+ * and its twin in the web app say where the other one is. There is deliberately
+ * no user setting and no per-list override.
  */
-export const PAGE_SIZE = 15;
+export const PAGE_SIZE = 10;
 
 /**
  * The most any caller may ask for, whatever the interface offers.

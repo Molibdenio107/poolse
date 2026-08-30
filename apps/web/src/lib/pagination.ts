@@ -15,14 +15,14 @@
  */
 
 /**
- * Fifteen, matching `PAGE_SIZE` in the API.
+ * Ten, matching `PAGE_SIZE` in the API.
  *
  * Duplicated across the app boundary knowingly, the way `MEMBER_ROLES` is: the
  * alternative is a shared package for one integer. The API is the authority —
  * it clamps whatever arrives — so a drift here shows up as a short page rather
  * than as a way around the server's cap.
  */
-export const PAGE_SIZE = 15;
+export const PAGE_SIZE = 10;
 
 /** The envelope every list endpoint returns. Mirrors `Paginated<T>` in the API. */
 export interface Paginated<T> {

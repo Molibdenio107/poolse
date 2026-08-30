@@ -206,6 +206,7 @@ async function main(): Promise<void> {
       vacations: 0,
       guardians: 0,
       skills: 0,
+      medicalLeave: 0,
     };
 
     // ---------------------------------------------------------------------
@@ -911,6 +912,85 @@ async function main(): Promise<void> {
       counts.vacations = 3;
     }
 
+    // ---------------------------------------------------------------------
+    // Baixas médicas, so the medical panel is not describing itself — round 6.
+    //
+    // Three students and three different shapes, because the panel renders each
+    // one differently and a demo with only the easy case proves only the easy
+    // case:
+    //
+    //   - **open-ended and running.** The honest state on the day of an injury,
+    //     and the one the schema went out of its way to allow: `ends_on` null,
+    //     rendered "desde …" with the "currently off" badge.
+    //   - **dated and running.** A known return date, rendered as a range and
+    //     still badged, and carrying an `justification_reference` so the row
+    //     that shows where the atestado is filed has something to show.
+    //   - **finished.** Last term's leave, no badge, which is what proves the
+    //     badge means something. It is also what the register reads to decide
+    //     that today's absence is *not* covered.
+    //
+    // Chosen by name rather than at random so this comment can name them and
+    // the same three come back on a re-seed. `NOT EXISTS` per student rather
+    // than `ON CONFLICT DO NOTHING`, because the table's guard against a double
+    // leave is an exclusion constraint over a date range — which `ON CONFLICT`
+    // cannot take an arbiter for, so a second run would raise rather than skip.
+    // ---------------------------------------------------------------------
+    const leaveTakers = await many<{ id: string; name: string }>(
+      client,
+      `SELECT id, first_name || ' ' || last_name AS name
+         FROM student
+        WHERE organization_id = $1 AND archived_at IS NULL
+        ORDER BY first_name, last_name, id
+        LIMIT 3`,
+      [org.id],
+    );
+
+    const leaveShapes: { start: string; end: string | null; reason: string; ref: string | null }[] = [
+      // Open-ended, started a fortnight ago.
+      {
+        start: `(current_date - 14)`,
+        end: null,
+        reason: 'Fratura no pulso — sem data de regresso',
+        ref: null,
+      },
+      // Running, with a return date three weeks out.
+      {
+        start: `(current_date - 5)`,
+        end: `(current_date + 21)`,
+        reason: 'Otite — recomendação do pediatra',
+        ref: 'Atestado 2026/114 — pasta clínica',
+      },
+      // Over and done with, last term.
+      {
+        start: `(current_date - 120)`,
+        end: `(current_date - 95)`,
+        reason: 'Lesão no ombro',
+        ref: 'Atestado 2026/041 — pasta clínica',
+      },
+    ];
+
+    for (const [index, taker] of leaveTakers.entries()) {
+      const shape = leaveShapes[index];
+      if (shape === undefined) break;
+
+      const written = await client.query(
+        `INSERT INTO student_medical_leave
+           (organization_id, student_id, starts_on, ends_on, reason,
+            justification_reference, recorded_by)
+         SELECT $1, $2, ${shape.start}, ${shape.end ?? 'NULL'}, $3, $4, $5
+          WHERE NOT EXISTS (
+            SELECT 1 FROM student_medical_leave
+             WHERE organization_id = $1 AND student_id = $2 AND archived_at IS NULL
+          )`,
+        [org.id, taker.id, shape.reason, shape.ref, marker?.id ?? null],
+      );
+
+      if (written.rowCount) {
+        counts.medicalLeave += 1;
+        console.log(`  baixa médica: ${taker.name}`);
+      }
+    }
+
     await client.query('COMMIT');
 
     console.log('');
@@ -924,6 +1004,7 @@ async function main(): Promise<void> {
     console.log(`  skills added       ${counts.skills}`);
     console.log(`  guardians linked   ${counts.guardians}`);
     console.log(`  leave requests     ${counts.vacations}`);
+    console.log(`  baixas médicas     ${counts.medicalLeave}`);
     console.log('');
     console.log('Done. Re-running only adds what is missing.');
   } catch (error) {

@@ -6,10 +6,18 @@ import { ReposicaoSettingsForm } from './reposicoes-form';
 /**
  * Aulas de reposição — the club's rules — POOLSE-21.
  *
- * Under Turmas rather than in a settings section of its own, because that is
- * what a reposição is about: a class missed and a class made up. There is no
+ * Under Alunos rather than in a settings section of its own, because that is
+ * what a reposição is about: a class a student missed and is owed. There is no
  * general settings area yet, and inventing one for a single feature would put
  * the rule two clicks further from the thing it governs.
+ *
+ * It began under Turmas and moved in round 5; the back link did not move with
+ * it, so arriving from Alunos and pressing Voltar landed on Turmas — a screen
+ * the reader had not come from and had no reason to be on. Back points at the
+ * register now, which is both where the menu entry lives and where the only
+ * other link here comes from (a student's medical leave). The URL stays
+ * `/dashboard/classes/reposicoes`: renaming a route to match a menu is a
+ * redirect and a round of broken bookmarks for no gain the reader can see.
  *
  * Owner and admin only, and the API refuses the read as well as the write — a
  * screen that shows settings it will not save is a screen that lies about what
@@ -39,7 +47,7 @@ export default async function ReposicoesPage(): Promise<React.ReactElement> {
     <PageShell
       title={t('reposicao.title')}
       subtitle={t('reposicao.subtitle')}
-      back={{ href: '/dashboard/classes', label: t('classes.backToClasses') }}
+      back={{ href: '/dashboard/students', label: t('students.backToRegister') }}
     >
       {/*
         A refusal in words rather than a blank page — the same rule as Staff.

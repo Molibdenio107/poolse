@@ -55,6 +55,22 @@ export function HoursPanel({
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
+  /**
+   * The weekday whose times were last typed into, or `null` before any were.
+   *
+   * This is what decides where the Match week button appears — round 6. Offering
+   * it on every row that disagreed with the rest of the week put three or four
+   * identical buttons on the panel at once, and a control that appears four
+   * times is a control nobody reads. It belongs on the row somebody has just
+   * finished editing, because that is the row they might want the rest of the
+   * week to copy; on any other row it is answering a question they did not ask.
+   *
+   * Only the times set it. Closing a day is not a change you would spread —
+   * Match week never touches the switch — so toggling `available` leaves the
+   * button wherever it was.
+   */
+  const [lastEdited, setLastEdited] = useState<number | null>(null);
+
   const dirty = days.some((day, index) => {
     const original = hours[index];
     return (
@@ -68,66 +84,70 @@ export function HoursPanel({
   function edit(weekday: number, patch: Partial<FacilityDay>): void {
     setSaved(false);
     setErrorKey(null);
+    if (patch.opensAt !== undefined || patch.closesAt !== undefined) setLastEdited(weekday);
     setDays((current) =>
       current.map((day) => (day.weekday === weekday ? { ...day, ...patch } : day)),
     );
   }
 
   /**
-   * Copy Monday's times onto every other day the site opens — round 5.
+   * Spread one day's times across every other day the site opens — round 6.
    *
    * Most pools keep one timetable all week and were typing the same two times
-   * six times over. Monday is the source because it is the first row and the one
-   * people fill in first; there is no picker for which day to copy from, because
-   * a second control to answer a question nobody asks is worse than the typing.
+   * six times over. Round 5 made Monday the source, on the reasoning that it is
+   * the row people fill in first. That was half right: the day somebody has just
+   * finished typing is the source, and it is not always Monday — a club that
+   * works Saturdays often sets that row last. So every open row carries the
+   * button, Monday included, and each one means "make the rest of the week look
+   * like this day". No picker is needed, because the row you press from *is* the
+   * picker.
    *
    * **It copies the times, never the switch.** A site that closes on Sunday
    * stays closed on Sunday: `available` is a decision per day, and a button that
    * quietly reopened a day somebody had shut would be the most destructive thing
    * on this panel. Days that are off keep their own times too, so turning one
-   * back on does not reveal Monday's hours it never agreed to.
+   * back on does not reveal hours it never agreed to.
    *
    * It only stages the change — nothing is written until Save, so a mis-click is
    * undone by leaving the page.
    */
-  function copyMonday(onto?: number): void {
-    const monday = days.find((day) => day.weekday === 1);
-    if (monday === undefined) return;
+  function matchWeek(from: number): void {
+    const source = days.find((day) => day.weekday === from);
+    if (source === undefined || !source.available) return;
 
     setSaved(false);
     setErrorKey(null);
     setDays((current) =>
       current.map((day) =>
-        day.weekday === 1 || !day.available || (onto !== undefined && day.weekday !== onto)
+        day.weekday === from || !day.available
           ? day
-          : { ...day, opensAt: monday.opensAt, closesAt: monday.closesAt },
+          : { ...day, opensAt: source.opensAt, closesAt: source.closesAt },
       ),
     );
   }
 
   /**
-   * Whether this day's times differ from Monday's — round 5.
+   * Whether this row should offer Match week — round 6.
    *
-   * The per-row button only appears where it would do something. A button beside
-   * a day that already matches Monday is a control that changes nothing, and a
-   * row of those teaches people to ignore the one that matters.
+   * Two conditions, and both matter. It has to be the row last edited, so only
+   * ever one button is on screen. And spreading it has to actually change
+   * something: beside a day the rest of the week already agrees with, the button
+   * is a control that does nothing, which is worse than no button at all. That
+   * second test is also what makes it disappear once it has been pressed — the
+   * week now matches, so there is nothing left to spread.
    */
-  function differsFromMonday(day: FacilityDay): boolean {
-    const monday = days.find((candidate) => candidate.weekday === 1);
-    if (monday === undefined || monday.weekday === day.weekday) return false;
-    if (!monday.available || !day.available) return false;
-    return day.opensAt !== monday.opensAt || day.closesAt !== monday.closesAt;
+  function canMatchWeekFrom(day: FacilityDay): boolean {
+    if (day.weekday !== lastEdited || !day.available) return false;
+    return days.some(
+      (other) =>
+        other.weekday !== day.weekday &&
+        other.available &&
+        (other.opensAt !== day.opensAt || other.closesAt !== day.closesAt),
+    );
   }
 
-  // Only worth offering when some other open day disagrees with Monday.
-  const canCopy =
-    days.find((day) => day.weekday === 1)?.available === true &&
-    days.some(
-      (day) =>
-        day.weekday !== 1 &&
-        day.available &&
-        (day.opensAt !== days[0]?.opensAt || day.closesAt !== days[0]?.closesAt),
-    );
+  // Only worth explaining the rule while the one button is on screen.
+  const canMatchWeek = days.some((day) => canMatchWeekFrom(day));
 
   function save(): void {
     setErrorKey(null);
@@ -151,22 +171,10 @@ export function HoursPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-foreground-muted">{t('facilities.hoursHint')}</p>
+      <p className="text-sm text-foreground-muted">{t('facilities.hoursHint')}</p>
 
-        {canManage && canCopy && (
-          <button
-            type="button"
-            onClick={() => copyMonday()}
-            className="shrink-0 rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            {t('facilities.copyMonday')}
-          </button>
-        )}
-      </div>
-
-      {canManage && canCopy && (
-        <p className="text-sm text-foreground-muted">{t('facilities.copyMondayHint')}</p>
+      {canManage && canMatchWeek && (
+        <p className="text-sm text-foreground-muted">{t('facilities.matchWeekHint')}</p>
       )}
 
       <ul className="flex flex-col divide-y divide-border">
@@ -231,19 +239,26 @@ export function HoursPanel({
                     </div>
 
                     {/*
-                      Beside the day it would change — round 5. One button at the
-                      top of the panel meant choosing "apply Monday everywhere"
-                      when what somebody usually wants is "make Thursday match
-                      Monday". It appears only on a day whose times actually
-                      differ, so a row of no-op buttons never forms.
+                      Beside the day it copies from — round 6. The single button
+                      at the top of the panel could only ever mean "apply Monday
+                      everywhere"; sitting on the row somebody has just edited, it
+                      means "apply this day everywhere", which is the same work
+                      without the one day it could not do. See `canMatchWeekFrom`
+                      for why only one row ever has it.
+
+                      The accessible name still carries the day. It is one button
+                      now, but "Match week" alone does not say which day it
+                      copies from, and the row it sits on is a visual answer
+                      rather than one a screen reader would announce.
                     */}
-                    {canManage && differsFromMonday(day) && (
+                    {canManage && canMatchWeekFrom(day) && (
                       <button
                         type="button"
-                        onClick={() => copyMonday(day.weekday)}
+                        onClick={() => matchWeek(day.weekday)}
+                        aria-label={t('facilities.matchWeekFrom', { day: t(`week.${day.weekday}`) })}
                         className="mb-1 shrink-0 self-end rounded border border-border px-2 py-1 text-xs transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
-                        {t('facilities.copyMondayHere')}
+                        {t('facilities.matchWeek')}
                       </button>
                     )}
                   </>

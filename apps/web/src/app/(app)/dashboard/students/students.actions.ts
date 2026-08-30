@@ -7,10 +7,13 @@ import {
   apiFetch,
   apiPatch,
   apiPost,
+  type Calendar,
+  type CalendarSession,
   type DuplicateMatch,
   type PersonSummary,
   type Skill,
 } from '../../../../lib/api';
+import { addDays, mondayOf } from '@/lib/dates';
 import type { FormState } from '../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
@@ -316,6 +319,36 @@ export async function skillsOfAction(levelId: string): Promise<Skill[]> {
     return result.skills;
   } catch {
     return [];
+  }
+}
+
+/**
+ * One student's dated week, fetched on its own — round 6.
+ *
+ * The week stepper on the student page was three `<Link>`s, so stepping a week
+ * re-ran the whole page: five API calls to change one card, and the scroll
+ * position thrown back to the top every time. The card that changes is the only
+ * one that needs to, and this is what it asks for.
+ *
+ * **`null` is a failure, not an empty week.** The card tells those two apart —
+ * an empty week with a weekly pattern behind it means the season has not been
+ * built, which is something to act on, and showing that message because a fetch
+ * timed out would send somebody to build a season that already exists. Returning
+ * `[]` on error would erase the distinction the card exists to make.
+ */
+export async function studentWeekAction(
+  studentId: string,
+  week: string,
+): Promise<CalendarSession[] | null> {
+  const monday = mondayOf(week);
+
+  try {
+    const calendar = await apiFetch<Calendar>(
+      `/students/${encodeURIComponent(studentId)}/calendar?from=${monday}&to=${addDays(monday, 6)}`,
+    );
+    return calendar.sessions;
+  } catch {
+    return null;
   }
 }
 

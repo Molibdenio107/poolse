@@ -390,9 +390,9 @@
     "closureDaysInvalid": "Enter a number of days between 1 and 365.",
     "closureFailed": "The closure could not be created.",
     "cityFailed": "Place lookup is unavailable — you can set the city later.",
-    "copyMonday": "Apply Monday to every open day",
-    "copyMondayHint": "Copies the times only — days you have closed stay closed, and nothing is saved until you press Save.",
-    "copyMondayHere": "Match Monday",
+    "matchWeekHint": "Match week copies that day’s times to every other open day — the times only, so days you have closed stay closed, and nothing is saved until you press Save.",
+    "matchWeek": "Match week",
+    "matchWeekFrom": "Apply {day}’s times to the rest of the week",
     "recordAnalysisTitle": "Record an analysis"
   },
   "classes": {
@@ -548,6 +548,7 @@
     "skillNamePlaceholder": "Front float, Side breathing…",
     "minLessonsLabel": "Min. lessons",
     "minDaysLabel": "Min. days",
+    "optional": "Optional",
     "addSkill": "Add",
     "removeSkill": "Remove {name}",
     "videoUrl": "Demonstration video",
@@ -693,6 +694,7 @@
     "week": "This student's week",
     "noClasses": "This student is not enrolled in any class group yet.",
     "noClassesThisWeek": "No classes this week.",
+    "weekFailed": "This week could not be loaded. The week shown is the last one that arrived.",
     "noSessionsHint": "This student is in a class group, but the classes have not been generated yet. Build the season in",
     "addHint": "A name is enough to start. The photograph, the consents and the times live on the student record.",
     "guardianNew": "New guardian",

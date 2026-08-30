@@ -9,14 +9,14 @@ import {
   type TimetableEntry,
   type ReposicaoCredit,
 } from '../../../../../lib/api';
-import { WeekGrid, type WeekEntry } from '@/components/week-grid';
-import { addDays, isDate, longDate, mondayOf, shortDate, today } from '@/lib/dates';
+import { addDays, isDate, mondayOf, today } from '@/lib/dates';
 import { DocumentUpload } from '@/components/document-upload';
 import { PersonAvatar } from '@/components/person-avatar';
 import { PhotoUpload } from '@/components/photo-upload';
 import { photoUrlFor } from '@/lib/photo';
 import { StudentForm } from '../student-forms';
 import { CreditBooking } from './credit-booking';
+import { StudentWeek } from './student-week';
 import { ActionButton } from '@/components/action-button';
 import { PageShell } from '@/components/page-shell';
 
@@ -286,107 +286,12 @@ export default async function StudentPage({
       )}
 
       {student !== null && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('students.week')}
-            </h2>
-            <p className="text-sm text-foreground-muted">
-              {t('calendar.range', {
-                from: longDate(monday, locale),
-                to: longDate(sunday, locale),
-              })}
-            </p>
-          </div>
-
-          {/*
-            Real dates, not a recurring pattern. "When does João swim?" is
-            answered by the week he is actually in — including the Tuesday the
-            pool was shut, which a pattern has no way to express.
-          */}
-          <nav aria-label={t('calendar.weekNav')} className="flex flex-wrap items-center gap-2">
-            <StudentWeekLink id={id} week={addDays(monday, -7)} label={t('calendar.previousWeek')} />
-            <StudentWeekLink id={id} week={today()} label={t('calendar.thisWeek')} />
-            <StudentWeekLink id={id} week={addDays(monday, 7)} label={t('calendar.nextWeek')} />
-          </nav>
-
-          <WeekGrid
-            entries={(calendar?.sessions ?? []).map((session): WeekEntry => {
-              const cancelled = session.status === 'cancelled';
-              return {
-                key: session.id,
-                weekday: session.weekday,
-                startTime: session.localTime,
-                durationMinutes: session.durationMinutes,
-                title: session.className,
-                subtitle: [
-                  session.poolName,
-                  session.lane === null ? null : t('classes.laneN', { lane: session.lane }),
-                  session.substituteName ?? session.instructorName,
-                ]
-                  .filter(Boolean)
-                  .join(' · '),
-                href: `/dashboard/classes/${session.classGroupId}`,
-                cancelled,
-                muted: cancelled,
-                note: cancelled
-                  ? session.cancellationReason ?? t('calendar.cancelledNoReason')
-                  : null,
-              };
-            })}
-            dayNames={Object.fromEntries(
-              [0, 1, 2, 3, 4, 5, 6].map((offset) => [
-                offset + 1,
-                `${t(`week.${offset + 1}`)} · ${shortDate(addDays(monday, offset), locale)}`,
-              ]),
-            )}
-            emptyLabel={t('students.noClassesThisWeek')}
-          />
-
-          {/*
-            A student with a weekly pattern and no dated classes has not been
-            left out of the timetable — the season simply has not been built.
-            Saying which is which is the difference between a dead end and a
-            next step, and the pattern below is shown so the week is not blank
-            while somebody goes and presses the button.
-          */}
-          {(calendar?.sessions.length ?? 0) === 0 && timetable.length > 0 && (
-            <div className="flex flex-col gap-3 rounded border border-dashed border-border p-4">
-              <p className="text-sm text-foreground-muted">
-                {t('students.noSessionsHint')}{' '}
-                <Link href="/dashboard/calendar" className="text-primary hover:underline">
-                  {t('calendar.title')}
-                </Link>
-              </p>
-              <WeekGrid
-                entries={timetable.map(
-                  (entry, index): WeekEntry => ({
-                    key: `${entry.classGroupId}-${entry.weekday}-${entry.startTime}-${index}`,
-                    weekday: entry.weekday,
-                    startTime: entry.startTime,
-                    durationMinutes: entry.durationMinutes,
-                    title: entry.className,
-                    subtitle: [
-                      entry.poolName,
-                      entry.lane === null ? null : t('classes.laneN', { lane: entry.lane }),
-                      entry.instructorName,
-                    ]
-                      .filter(Boolean)
-                      .join(' · '),
-                    href: `/dashboard/classes/${entry.classGroupId}`,
-                    // A place on the waiting list is not a class to turn up to,
-                    // so it is drawn as the provisional thing it is.
-                    muted: entry.status === 'waiting',
-                  }),
-                )}
-                dayNames={Object.fromEntries(
-                  [1, 2, 3, 4, 5, 6, 7].map((day) => [day, t(`week.${day}`)]),
-                )}
-                emptyLabel={t('students.noClasses')}
-              />
-            </div>
-          )}
-        </section>
+        <StudentWeek
+          studentId={id}
+          initialWeek={monday}
+          initialSessions={calendar?.sessions ?? []}
+          timetable={timetable}
+        />
       )}
 
 
@@ -461,26 +366,6 @@ export default async function StudentPage({
       )}
 
     </PageShell>
-  );
-}
-
-/** Same idea as the calendar's own stepper: every week gets its own URL. */
-function StudentWeekLink({
-  id,
-  week,
-  label,
-}: {
-  id: string;
-  week: string;
-  label: string;
-}): React.ReactElement {
-  return (
-    <Link
-      href={`/dashboard/students/${id}?week=${week}`}
-      className="rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary"
-    >
-      {label}
-    </Link>
   );
 }
 

@@ -106,6 +106,52 @@ export function MedicalLeavePanel({
         </ul>
       )}
 
+      {/*
+        Where the absences go next — round 5, moved and re-shaped in round 6.
+
+        A leave means classes will be missed, and a missed class marked justified
+        mints a reposição credit; this is the screen that owes them. It used to
+        sit in the save row of the form below, as a text link, which put it in
+        two kinds of wrong place at once. It was always there — including on a
+        student with no leave at all, where it points at credits that cannot
+        exist yet — and being inside the form it read as part of saving, next to
+        the submit button, which is the one thing it must not be mistaken for.
+
+        So it appears only once there is a leave to have caused an absence, and
+        it sits with the list that is the reason for it rather than with the form
+        that creates the next one. A button, because it is now the panel's second
+        action rather than a footnote to the first — a wash of the complementary
+        green rather than the primary teal, which is what lets it be found
+        without competing with Guardar. Two teal buttons would be two primary
+        actions; the soft green reads as "also worth doing", which is what it is.
+
+        A tint at 25% with a 60% border, not a solid fill: the palette green is
+        already a light colour, so filling it solid makes a block as loud as the
+        primary button and needs its own ink to stay readable in dark mode. At a
+        quarter strength ordinary `text-foreground` sits on it at 15.9:1 in light
+        and 8.6:1 in dark, and the border is what gives the shape its edge. It is
+        the same soft-green pairing `person-avatar` and the vacation calendar
+        already use.
+
+        Still a link under the styling, and still not a redirect after saving:
+        leaving the medical page the instant somebody saves would lose the panel
+        they were working in.
+
+        `canManage` as well as a leave, because Reposições is owner and admin
+        only — the API refuses the read. Offering an instructor a button to a
+        refusal is worse than not offering it.
+      */}
+      {canManage && leave.length > 0 && (
+        <div>
+          <Link
+            href="/dashboard/classes/reposicoes"
+            className="inline-block rounded border border-complementary/60 bg-complementary/25 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-complementary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('sensitive.leaveToReposicoes')}
+          </Link>
+        </div>
+      )}
+
       {canManage && (
         <form action={action} className="flex flex-col gap-3 rounded border border-border bg-surface-muted p-4">
           <input type="hidden" name="organizationId" value={organizationId} />
@@ -205,19 +251,6 @@ export function MedicalLeavePanel({
               {pending ? t('common.working') : t('sensitive.saveLeave')}
             </button>
 
-            {/*
-              Where the absences go next — round 5. A leave means classes will be
-              missed, and a missed class that is marked justified mints a
-              reposicao credit; this is the screen that owes them. A link rather
-              than a redirect, because leaving the medical page the instant
-              somebody saves would lose the panel they were working in.
-            */}
-            <Link
-              href="/dashboard/classes/reposicoes"
-              className="rounded text-sm text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              {t('sensitive.leaveToReposicoes')}
-            </Link>
           </div>
         </form>
       )}
