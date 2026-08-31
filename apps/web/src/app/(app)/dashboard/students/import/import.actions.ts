@@ -2,15 +2,20 @@
 
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiPost, type ImportResult } from '@/lib/api';
+import { getTranslations } from 'next-intl/server';
 import {
   applyMapping,
-  guessMapping,
+  describeColumns,
+  matchColumns,
   EMPTY_MAPPING,
   IMPORT_FIELDS,
   type Mapping,
+  type MatchResult,
+  type NamedSheet,
   type Sheet,
 } from '@/lib/sheet';
 import { readSheet, type ReadFailure } from './read-sheet';
+import { agentAvailable, matchWithAgent } from './match-agent';
 
 /**
  * Slice 1.10 — the three steps, as server actions.
@@ -27,9 +32,17 @@ import { readSheet, type ReadFailure } from './read-sheet';
 
 export interface ReadState {
   ok: boolean;
-  sheet?: Sheet;
-  /** The wizard's opening guess, computed here so the client has it in one round trip. */
-  mapping?: Mapping;
+  /**
+   * Every sheet in the workbook that has data on it, hidden ones excluded.
+   *
+   * All of them, in one read, rather than re-uploading the file each time the
+   * operator tries a different tab — the file object is gone the moment the
+   * action returns, so a second read would mean a second choose-a-file dialog
+   * for what is really a change of mind.
+   */
+  sheets?: NamedSheet[];
+  /** The matcher's verdict on the first sheet, so the wizard opens already decided. */
+  match?: MatchResult;
   fileName?: string;
   errorKey?: string;
   /** Increments on every submission, so two failures in a row still re-render. */
@@ -55,11 +68,110 @@ const READ_ERRORS: Record<ReadFailure, string> = {
 };
 
 /**
- * Step one: the file becomes a grid, and the columns get a first guess.
+ * Which column is which — heuristic first, agent for whatever is left.
  *
- * The guess is made here rather than on the client so it arrives in the same
- * round trip as the sheet — the wizard renders a mapping step that is already
- * filled in, instead of one that fills itself in a moment later.
+ * The heuristic settles almost every real sheet on its own and costs nothing.
+ * Only the columns it could not place are described to the model, and only when
+ * a key is configured; with no key this is exactly the heuristic's answer.
+ *
+ * **Nothing the agent says can overwrite a heuristic match.** It is offered the
+ * unclaimed columns and the unfilled fields, and its answers are merged into the
+ * gaps — so a confident local match is never traded for a remote guess.
+ */
+export async function matchSheet(sheet: Sheet): Promise<MatchResult> {
+  const base = matchColumns(sheet);
+  if (base.unmatched.length === 0 || !agentAvailable()) return base;
+
+  const unfilled = IMPORT_FIELDS.filter((field) => base.mapping[field] === null);
+  if (unfilled.length === 0) return base;
+
+  const t = await getTranslations();
+  const shapes = describeColumns(sheet).filter((shape) => base.unmatched.includes(shape.index));
+
+  const extra = await matchWithAgent({
+    columns: shapes,
+    // The label the operator would see, so the model is reasoning about the same
+    // words the screen uses rather than about our internal field names.
+    fields: unfilled.map((field) => ({
+      field,
+      label: t(`students.import.field.${field}`),
+    })),
+  });
+
+  const mapping: Mapping = { ...base.mapping };
+  const matches = [...base.matches];
+  const claimed = new Set(base.unmatched.filter((index) => !base.unmatched.includes(index)));
+
+  for (const match of extra) {
+    if (mapping[match.field] !== null || claimed.has(match.column)) continue;
+    mapping[match.field] = match.column;
+    claimed.add(match.column);
+    matches.push(match);
+  }
+
+  /* Same rule as the heuristic: both name halves means the whole-name column is
+   * not read, so it must not be shown as though it were. */
+  if (mapping.firstName !== null && mapping.fullName !== null) {
+    const column = mapping.fullName;
+    mapping.fullName = null;
+    claimed.delete(column);
+    const at = matches.findIndex((match) => match.field === 'fullName');
+    if (at !== -1) matches.splice(at, 1);
+  }
+
+  const used = new Set(
+    IMPORT_FIELDS.map((field) => mapping[field]).filter((at): at is number => at !== null),
+  );
+
+  return {
+    mapping,
+    matches,
+    unmatched: base.unmatched.filter((index) => !used.has(index)),
+  };
+}
+
+export interface MatchState {
+  match?: MatchResult;
+  attempt: number;
+}
+
+/**
+ * The matcher, for a sheet the operator switched to.
+ *
+ * A separate action because switching tabs is the uncommon case: the first
+ * sheet's answer already came back with the file, so most imports never call
+ * this at all.
+ */
+export async function matchSheetAction(
+  previous: MatchState,
+  formData: FormData,
+): Promise<MatchState> {
+  const attempt = previous.attempt + 1;
+  const raw = String(formData.get('sheet') ?? '');
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== 'object') return { attempt };
+
+    const record = parsed as { headers?: unknown; rows?: unknown };
+    if (!Array.isArray(record.headers) || !Array.isArray(record.rows)) return { attempt };
+
+    const sheet: Sheet = {
+      headers: record.headers as string[],
+      rows: record.rows as string[][],
+    };
+    return { match: await matchSheet(sheet), attempt };
+  } catch {
+    return { attempt };
+  }
+}
+
+/**
+ * Step one: the file becomes one grid per sheet, already matched.
+ *
+ * The first sheet's columns are matched here rather than on the client so the
+ * agent — which needs a server and a key — runs in the same round trip. A sheet
+ * the operator switches to later goes through `matchSheetAction`.
  */
 export async function readSheetAction(
   previous: ReadState,
@@ -74,10 +186,12 @@ export async function readSheetAction(
     return { ok: false, errorKey: READ_ERRORS[outcome.error], attempt };
   }
 
+  const [first] = outcome.sheets;
+
   return {
     ok: true,
-    sheet: outcome.sheet,
-    mapping: guessMapping(outcome.sheet.headers),
+    sheets: outcome.sheets,
+    ...(first === undefined ? {} : { match: await matchSheet(first) }),
     fileName: file?.name ?? '',
     attempt,
   };
@@ -93,7 +207,6 @@ export async function readSheetAction(
 interface RunRequest {
   rows: string[][];
   mapping: Mapping;
-  defaultRelationship: string;
   commit: boolean;
   /** Row indexes ticked on the preview. Only read on a commit. */
   include: number[];
@@ -130,7 +243,6 @@ function readRequest(formData: FormData): RunRequest | null {
     return {
       rows,
       mapping,
-      defaultRelationship: String(record['defaultRelationship'] ?? '').trim(),
       commit: record['commit'] === true,
       include: Array.isArray(record['include'])
         ? record['include'].filter((value): value is number => typeof value === 'number')
@@ -166,7 +278,6 @@ export async function runImportAction(
       rows: request.rows.map((row) => applyMapping(row, request.mapping)),
       commit: request.commit,
       include: request.commit ? request.include : null,
-      defaultRelationship: request.defaultRelationship,
     });
 
     // The register gained rows; the list page is cached per request but the

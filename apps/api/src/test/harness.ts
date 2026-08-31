@@ -71,6 +71,18 @@ const TENANT_TABLES = [
   'skill_progress',
   'transfer_proposal',
   'student_record',
+  /*
+   * Billing, child-first — POOLSE-42.
+   *
+   * A fee line points at a plan and a period; both point at a facility. Deleting
+   * a facility before them is the foreign-key violation this list exists to
+   * prevent, and it is how these three announced themselves.
+   */
+  // A settlement points at a line, so it goes before it.
+  'student_fee_payment',
+  'student_fee',
+  'fee_plan',
+  'fee_period',
   'student_sensitive',
   'consent',
   'guardian_link',

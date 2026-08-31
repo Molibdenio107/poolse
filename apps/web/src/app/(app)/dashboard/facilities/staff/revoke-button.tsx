@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { revokeAction, type FormState } from '../../actions';
 
@@ -18,7 +18,7 @@ export function RevokeButton({
   invitationId: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(revokeAction, INITIAL);
+  const [state, action, pending] = useSavedAction(revokeAction, INITIAL);
 
   return (
     <form action={action} className="flex items-center gap-2">

@@ -32,12 +32,14 @@ const nextConfig = {
    * is a generic 500 with nothing on screen saying "too big", which is the worst
    * possible first impression on the onboarding path.
    *
-   * 8 MB is far more than a list of a few hundred swimmers needs and still small
-   * enough that a mis-picked video is refused rather than parsed. The import
-   * itself is bounded separately, by MAX_IMPORT_ROWS on the API.
+   * Sized against measurements rather than a guess: 10 000 students is a 566 KB
+   * `.xlsx`, a 2.2 MB `.csv`, and a 2.4 MB payload when the rows are posted for
+   * the preview. 20 MB clears all of that with room for a file somebody has
+   * pasted a logo into, and still refuses a mis-picked video rather than
+   * parsing it. The import itself is bounded by MAX_IMPORT_ROWS on the API.
    */
   experimental: {
-    serverActions: { bodySizeLimit: '8mb' },
+    serverActions: { bodySizeLimit: '20mb' },
   },
 
   /**

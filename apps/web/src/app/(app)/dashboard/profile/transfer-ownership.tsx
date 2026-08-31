@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
@@ -36,7 +37,7 @@ export function TransferOwnership({
 }): React.ReactElement {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(transferOwnershipAction, INITIAL);
+  const [state, action, pending] = useSavedAction(transferOwnershipAction, INITIAL);
 
   if (candidates.length === 0) {
     return (

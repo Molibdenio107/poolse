@@ -548,6 +548,14 @@ export interface StudentLevel {
    */
   minAgeMonths: number | null;
   maxAgeMonths: number | null;
+  /**
+   * Who the escalão admits — round 5. Both true is misto, and the default.
+   *
+   * This is what lets two escalões share a name: "Cadetes" for the girls and
+   * "Cadetes" for the boys are two rows an operator reads as one word.
+   */
+  admitsMale: boolean;
+  admitsFemale: boolean;
   studentCount: number;
 }
 
@@ -612,9 +620,29 @@ export interface Student {
   age: number | null;
   levelId: string | null;
   levelName: string | null;
+  /**
+   * Masculino or feminino, optional — round 5.
+   *
+   * Null is the ordinary state of an imported row. Matched against an escalão's
+   * `admitsMale`/`admitsFemale` for display only: nothing refuses an enrolment
+   * on it, exactly as nothing refuses one on the age range.
+   */
+  gender: 'male' | 'female' | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  /**
+   * The student's own NIF, for somebody invoiced in their own name.
+   *
+   * No age rule — minors have NIFs in Portugal, and a parent deducts the lessons
+   * against the child's number. Unique among the club's living students.
+   */
+  taxNumber: string | null;
   notes: string | null;
+  /** Where they stand on paying, for the register's column. Decided by the API. */
+  paymentState: 'none' | 'paid' | 'due' | 'overdue';
+  /** POOLSE-42 — membership is a fact about the person, not a derived one. */
+  isSocio: boolean;
+  socioNumber: string | null;
   /** Null unless a live `photo` consent exists — the API decides, not the caller. */
   photoStorageKey: string | null;
   photoConsent: boolean;
@@ -668,19 +696,36 @@ export interface Students {
  * catalogues, so `students.importProblem.*` in this app's catalogue is where
  * each one becomes Portuguese.
  */
+/** What refuses a row. Short on purpose — only the name is mandatory. */
 export type ImportProblemCode =
   | 'nameRequired'
   | 'tooLong'
   | 'badDate'
   | 'futureDate'
-  | 'ancientDate'
-  | 'unknownLevel'
-  | 'guardianRequired'
-  | 'guardianKeyRequired';
+  | 'ancientDate';
+
+/** What is said out loud and imported anyway. */
+export type ImportWarningCode =
+  | 'noGuardian'
+  | 'guardianNotRecorded'
+  | 'levelWillBeCreated'
+  | 'taxNumberBelongsToAnother';
+
+/** A blank on an existing student that this row would fill in. */
+export interface ImportUpdate {
+  field: 'birthDate' | 'levelId' | 'contactEmail' | 'contactPhone' | 'taxNumber' | 'notes';
+  value: string;
+}
 
 export interface ImportProblem {
   field: string;
   code: ImportProblemCode;
+  value?: string;
+}
+
+export interface ImportWarning {
+  field: string;
+  code: ImportWarningCode;
   value?: string;
 }
 
@@ -690,6 +735,8 @@ export interface ImportDuplicate {
   studentId?: string;
   name: string;
   line?: number;
+  /** Which rung matched — a NIF is an identity, a name and a birthday are a hint. */
+  matchedOn: 'taxNumber' | 'nameAndBirthDate';
 }
 
 export interface ImportRowResult {
@@ -702,26 +749,176 @@ export interface ImportRowResult {
   levelName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  taxNumber: string | null;
   notes: string | null;
   guardian: {
     name: string;
-    relationship: string;
+    relationship: string | null;
     phone: string | null;
     email: string | null;
     taxNumber: string | null;
   } | null;
   problems: ImportProblem[];
+  warnings: ImportWarning[];
   duplicate: ImportDuplicate | null;
+  /** What a commit would fill in on the matched student. Empty when nothing would change. */
+  updates: ImportUpdate[];
   /** A duplicate is still importable — the operator decides, the tick carries it. */
   importable: boolean;
 }
 
 export interface ImportResult {
   rows: ImportRowResult[];
-  summary: { total: number; importable: number; refused: number; duplicates: number };
+  summary: {
+    total: number;
+    importable: number;
+    refused: number;
+    duplicates: number;
+    toUpdate: number;
+    toCreate: number;
+    flagged: number;
+    minorsWithoutGuardian: number;
+    /** Level names this import would add to the club's programme. */
+    levelsToCreate: string[];
+  };
   /** Present only on a commit. */
   created?: number;
+  updated?: number;
   skipped?: number;
+  levelsCreated?: string[];
+}
+
+/**
+ * The price list and what a student pays — POOLSE-42.
+ *
+ * Every total here was computed by Postgres. `fee_total_cents` is the single
+ * definition (AC7) and nothing in this app recomputes it — a number arriving
+ * from the API is the number, and the screen's job is to format it for the
+ * locale, not to work it out again.
+ */
+export interface FeePeriod {
+  id: string;
+  name: string;
+  months: number;
+  discountPercent: number;
+  isDefault: boolean;
+  sortOrder: number;
+}
+
+/**
+ * Which members a quota is for — round 5.
+ *
+ * `any` is a club with one rate. A banded row beats `any` where both exist, so a
+ * child rate can be added to an existing list without editing anything else.
+ */
+export type FeeAgeBand = 'any' | 'under_18' | 'adult';
+
+/** How a late payment is charged. `none` is most clubs, and the default. */
+export type FeePenaltyKind = 'none' | 'amount' | 'percent';
+
+export interface FeePlan {
+  id: string;
+  kind: 'mensalidade' | 'quota';
+  /** A mensalidade has both; a quota has neither. There is no name. */
+  levelId: string | null;
+  levelName: string | null;
+  lessonsPerWeek: number | null;
+  amountCents: number;
+  defaultFeePeriodId: string | null;
+  /** Quotas only. A mensalidade is banded by its level, which says it better. */
+  ageBand: FeeAgeBand;
+  /** The turmas this price governs, matched by level and weekly sessions. */
+  classGroups: { id: string; name: string }[];
+}
+
+/** When a payment is due at this site, and what being late costs. */
+export interface BillingSettings {
+  paymentDueDay: number;
+  /** A late mensalidade: how it is charged, and both possible amounts. */
+  latePenaltyKind: FeePenaltyKind;
+  latePenaltyCents: number;
+  latePenaltyPercent: number;
+  /** A late quota, asked separately: a club may fine one and not the other. */
+  quotaPenaltyKind: FeePenaltyKind;
+  quotaPenaltyCents: number;
+  quotaPenaltyPercent: number;
+}
+
+export interface StudentFeeLine {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  planId: string;
+  levelName: string | null;
+  lessonsPerWeek: number | null;
+  kind: 'mensalidade' | 'quota';
+  enrollmentId: string | null;
+  classGroupName: string | null;
+  periodId: string;
+  periodName: string;
+  months: number;
+  /** The agreed amount per month — the snapshot, never the plan's price today. */
+  amountCents: number;
+  discountPercent: number;
+  manualDiscountPercent: number | null;
+  manualDiscountCents: number | null;
+  discountReason: string | null;
+  periodTotalCents: number;
+  payableCents: number;
+  startsOn: string;
+  endsOn: string | null;
+  /**
+   * The occurrence being asked for, and whether it is settled.
+   *
+   * An occurrence, not a calendar month: a trimestral line has four a year.
+   * Null on an ended line, which is not asking for anything.
+   */
+  currentPeriodStart: string | null;
+  dueOn: string | null;
+  isPaid: boolean;
+  paidOn: string | null;
+  isOverdue: boolean;
+  /** Set only when the plan has moved on — that is the marker, and the whole rule. */
+  planAmountCentsNow: number | null;
+  /**
+   * True when a quota line is on the wrong side of eighteen — round 5.
+   *
+   * The agreed amount does not move on a birthday; the record says the rate has
+   * changed and applying it is the same one click as any other price change.
+   */
+  bandChanged: boolean;
+}
+
+/**
+ * The price a student's classes imply — POOLSE-42, third pass.
+ *
+ * Nobody picks this. A child in Iniciação twice a week is on the
+ * Iniciação-twice-a-week price, and the timetable already says so.
+ */
+export interface CurrentPlan {
+  facilityId: string;
+  facilityName: string;
+  levelId: string | null;
+  levelName: string | null;
+  lessonsPerWeek: number;
+  planId: string | null;
+  amountCents: number | null;
+  defaultFeePeriodId: string | null;
+  /** Whether it is already being charged. */
+  hasLine: boolean;
+}
+
+export interface StudentFees {
+  /** What their turmas come to, before anything is charged. */
+  currentPlans: CurrentPlan[];
+  lines: StudentFeeLine[];
+  socio: { isSocio: boolean; socioNumber: string | null; socioSince: string | null };
+  /**
+   * One penalty per kind of charge — a club may fine a late mensalidade and not
+   * a late quota. Shown and added to what is owed; never written as a charge.
+   */
+  penalties: { mensalidadeCents: number; quotaCents: number };
+  penaltyCents: number;
 }
 
 export type ConsentKind = 'photo' | 'medical_data' | 'parent_sharing';
@@ -859,6 +1056,13 @@ export interface ClassGroup {
   lane: number | null;
   schedules: ScheduleSlot[];
   students: EnrolledStudent[];
+  /**
+   * A month's price for a place here — POOLSE-42.
+   *
+   * Matched by the API on this turma's level and its own weekly slot count.
+   * Null when the site prices no such combination.
+   */
+  monthlyPriceCents: number | null;
 }
 
 export interface ClassOptions {

@@ -36,7 +36,6 @@ export class StudentImportController {
       rows: readRows(body['rows']),
       commit: body['commit'] === true,
       include: readInclude(body['include']),
-      defaultRelationship: readRelationship(body['defaultRelationship']),
     });
   }
 }
@@ -87,21 +86,4 @@ function readInclude(raw: unknown): number[] | null {
     }
     return index;
   });
-}
-
-/**
- * The relationship to record where the sheet has no column for it.
- *
- * Required, and deliberately not defaulted here: the guardian link needs a
- * non-blank relationship, and the only place that owns readable Portuguese is
- * the web app's catalogue. An API that invented "Guardian" would put an English
- * word on a Portuguese child's record.
- */
-function readRelationship(raw: unknown): string {
-  const value = typeof raw === 'string' ? raw.trim() : '';
-  if (value === '') throw new BadRequestException('defaultRelationship is required');
-  if (value.length > 120) {
-    throw new BadRequestException('defaultRelationship may be at most 120 characters');
-  }
-  return value;
 }

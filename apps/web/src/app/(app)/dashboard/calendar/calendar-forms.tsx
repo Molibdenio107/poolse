@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
@@ -48,7 +49,7 @@ export function GenerateSeason({
   to: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(generateSeasonAction, INITIAL_GENERATE);
+  const [state, action, pending] = useSavedAction(generateSeasonAction, INITIAL_GENERATE);
 
   return (
     <form action={action} className="flex flex-col gap-2">
@@ -110,7 +111,7 @@ export function ClosureForm({
   pools: { id: string; name: string }[];
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(createClosureAction, INITIAL);
+  const [state, action, pending] = useSavedAction(createClosureAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -205,7 +206,7 @@ export function RemoveClosure({
   closure: Closure;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(removeClosureAction, INITIAL);
+  const [state, action, pending] = useSavedAction(removeClosureAction, INITIAL);
 
   return (
     <form action={action} className="flex items-center gap-2">
@@ -270,7 +271,7 @@ export function CancelSession({
   compact?: boolean;
 }): React.ReactElement | null {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(cancelSessionAction, INITIAL);
+  const [state, action, pending] = useSavedAction(cancelSessionAction, INITIAL);
   const [open, setOpen] = useState(false);
 
   if (byClosure) {

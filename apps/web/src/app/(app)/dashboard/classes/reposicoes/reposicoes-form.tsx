@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useRef } from 'react';
+import { useRef } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { ReposicaoSettings } from '@/lib/api';
 import { SelectField, TextField, useFocusFirstError } from '@/components/ui/field';
@@ -30,7 +31,7 @@ export function ReposicaoSettingsForm({
   settings: ReposicaoSettings;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(saveReposicaoSettingsAction, INITIAL);
+  const [state, action, pending] = useSavedAction(saveReposicaoSettingsAction, INITIAL);
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state.fields, state);
 

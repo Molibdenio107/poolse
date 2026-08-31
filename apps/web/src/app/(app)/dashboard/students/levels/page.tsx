@@ -1,6 +1,8 @@
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Students } from '../../../../../lib/api';
+import Link from 'next/link';
+import { ApiError, apiFetch, type Students, type StudentLevel } from '../../../../../lib/api';
 import { ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { CreateLevelForm } from './level-forms';
 import { LevelList } from './level-list';
 import { PageShell } from '@/components/page-shell';
@@ -12,8 +14,33 @@ import { PageShell } from '@/components/page-shell';
  * touched, and putting it on the students screen would give the daily job a
  * settings panel it does not need. Reached by a link from there.
  */
-export default async function LevelsPage(): Promise<React.ReactElement> {
+/**
+ * The ladder in age order — round 5.
+ *
+ * A *reading* of the ladder, not the ladder: the club's own order is what the
+ * grip writes, and this leaves it alone. Escalões with no range at all sort
+ * last, because "not decided" is not an age and putting them at nought would
+ * claim they were for newborns.
+ */
+function byAge(levels: StudentLevel[]): StudentLevel[] {
+  return [...levels].sort((a, b) => {
+    const unset = (level: StudentLevel): number =>
+      level.minAgeMonths === null && level.maxAgeMonths === null ? 1 : 0;
+    if (unset(a) !== unset(b)) return unset(a) - unset(b);
+
+    const from = (level: StudentLevel): number => level.minAgeMonths ?? 0;
+    const to = (level: StudentLevel): number => level.maxAgeMonths ?? 1440;
+    return from(a) - from(b) || to(a) - to(b) || a.name.localeCompare(b.name);
+  });
+}
+
+export default async function LevelsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const byAgeOrder = (await searchParams).sort === 'age';
 
   let data: Students | null = null;
   let failure: string | null = null;
@@ -24,7 +51,8 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
     failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
   }
 
-  const levels = data?.levels ?? [];
+  const all = data?.levels ?? [];
+  const levels = byAgeOrder ? byAge(all) : all;
 
   return (
     <PageShell
@@ -68,12 +96,51 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
                 {t('students.addLevel')}
               </summary>
               <div className="border-t border-border p-5">
-                <CreateLevelForm organizationId={data.organizationId} />
+                <CreateLevelForm organizationId={data.organizationId} levels={all} />
               </div>
             </details>
           )}
 
-          <section className="rounded border border-border bg-surface p-5">
+          {/*
+            Two readings of the same ladder, in the URL rather than in a hook —
+            it survives a refresh and can be sent to a colleague, like every
+            other sort in this app.
+          */}
+          {levels.length > 0 && (
+            <nav className="flex flex-wrap gap-2">
+              <Link
+                href="/dashboard/students/levels"
+                aria-current={byAgeOrder ? undefined : 'true'}
+                className={cn(
+                  'rounded border px-4 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  byAgeOrder
+                    ? 'border-border hover:bg-surface-muted'
+                    : 'border-primary bg-primary/10 text-primary',
+                )}
+              >
+                {t('students.sortByLadder')}
+              </Link>
+              <Link
+                href="/dashboard/students/levels?sort=age"
+                aria-current={byAgeOrder ? 'true' : undefined}
+                className={cn(
+                  'rounded border px-4 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  byAgeOrder
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:bg-surface-muted',
+                )}
+              >
+                {t('students.sortByAge')}
+              </Link>
+            </nav>
+          )}
+
+          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+            {/* Said in words, because the grip is missing while it is on and a
+                control that disappears without explanation reads as a bug. */}
+            {byAgeOrder && levels.length > 0 && (
+              <p className="text-sm text-foreground-muted">{t('students.sortedByAgeHint')}</p>
+            )}
             {levels.length === 0 ? (
               <div className="flex flex-col gap-1">
                 <p>{t('students.noLevels')}</p>
@@ -84,6 +151,7 @@ export default async function LevelsPage(): Promise<React.ReactElement> {
                 organizationId={data.organizationId}
                 levels={levels}
                 canManage={data.canManage}
+                sorted={byAgeOrder}
               />
             )}
           </section>

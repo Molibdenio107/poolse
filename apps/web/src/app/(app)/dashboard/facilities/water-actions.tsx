@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle } from 'lucide-react';
 import type { PoolAnalysis } from '@/lib/api';
@@ -42,7 +43,7 @@ export function UnsafeWaterNotice({
   excursions: Excursion[];
 }): React.ReactElement | null {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(closePoolForWaterAction, INITIAL);
+  const [state, action, pending] = useSavedAction(closePoolForWaterAction, INITIAL);
   const [open, setOpen] = useState(false);
 
   if (excursions.length === 0) return null;

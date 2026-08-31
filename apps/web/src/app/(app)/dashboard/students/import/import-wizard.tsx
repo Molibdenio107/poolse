@@ -1,14 +1,30 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Check, Copy, Upload } from 'lucide-react';
+import { AlertTriangle, Check, Copy, RefreshCw, Sparkles, Upload } from 'lucide-react';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
-import type { ImportRowResult, StudentLevel } from '@/lib/api';
-import { IMPORT_FIELDS, type ImportField, type Mapping, type Sheet } from '@/lib/sheet';
-import { readSheetAction, runImportAction, type ImportState, type ReadState } from './import.actions';
+import type { ImportResult, ImportRowResult, StudentLevel } from '@/lib/api';
+import {
+  EMPTY_MAPPING,
+  IMPORT_FIELDS,
+  type ColumnMatch,
+  type ImportField,
+  type Mapping,
+  type MatchResult,
+  type NamedSheet,
+  type Sheet,
+} from '@/lib/sheet';
+import {
+  matchSheetAction,
+  readSheetAction,
+  runImportAction,
+  type ImportState,
+  type MatchState,
+  type ReadState,
+} from './import.actions';
 
 /**
  * Slice 1.10 — the import, in four steps.
@@ -34,6 +50,7 @@ import { readSheetAction, runImportAction, type ImportState, type ReadState } fr
 
 const READ_INITIAL: ReadState = { ok: false, attempt: 0 };
 const RUN_INITIAL: ImportState = { ok: false, attempt: 0 };
+const MATCH_INITIAL: MatchState = { attempt: 0 };
 
 type Stage = 'upload' | 'map' | 'preview' | 'done';
 
@@ -54,12 +71,17 @@ const FIELD_ORDER: ImportField[] = [
   'levelName',
   'contactEmail',
   'contactPhone',
+  'taxNumber',
   'notes',
   'guardianName',
   'guardianRelationship',
   'guardianPhone',
   'guardianEmail',
   'guardianTaxNumber',
+  'isSocio',
+  'socioNumber',
+  'gender',
+  'isPaid',
 ];
 
 function Problem({ errorKey, detail }: { errorKey?: string; detail?: string }): React.ReactElement | null {
@@ -79,36 +101,100 @@ function Problem({ errorKey, detail }: { errorKey?: string; detail?: string }): 
   );
 }
 
-export function ImportWizard({ levels }: { levels: StudentLevel[] }): React.ReactElement {
+export function ImportWizard({
+  levels,
+  initialFile = null,
+  onClose,
+}: {
+  levels: StudentLevel[];
+  /**
+   * A file the operator dropped on the register, handed straight in.
+   *
+   * The upload step is skipped for it — they have already chosen the file,
+   * and showing them a file picker to choose it again would be the screen
+   * not believing what they just did.
+   */
+  initialFile?: File | null;
+  /** Present when the wizard is inline on the register, absent on its own page. */
+  onClose?: (() => void) | undefined;
+}): React.ReactElement {
   const t = useTranslations();
 
   const [readState, readAction, reading] = useActionState(readSheetAction, READ_INITIAL);
   const [runState, runAction, running] = useActionState(runImportAction, RUN_INITIAL);
+  const [matchState, matchAction, matching] = useActionState(matchSheetAction, MATCH_INITIAL);
 
   const [stage, setStage] = useState<Stage>('upload');
-  const [sheet, setSheet] = useState<Sheet | null>(null);
+  /*
+   * Every sheet in the workbook, and which one is being read.
+   *
+   * A club's file is very often a tab per turma, or a page of instructions in
+   * front of the register, so reading only the first one turned a perfectly good
+   * file into "no rows with data". All of them come back in one read: the file
+   * object is gone the moment the action returns, and a second read would mean a
+   * second choose-a-file dialog for what is really a change of mind.
+   */
+  const [sheets, setSheets] = useState<NamedSheet[]>([]);
+  const [sheetIndex, setSheetIndex] = useState(0);
+  /** What the matcher decided, and how sure it was — what the screen asks about. */
+  const [match, setMatch] = useState<MatchResult | null>(null);
   const [fileName, setFileName] = useState('');
   const [mapping, setMapping] = useState<Mapping | null>(null);
-  const [relationship, setRelationship] = useState(t('students.import.defaultRelationship'));
   const [rows, setRows] = useState<ImportRowResult[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [created, setCreated] = useState(0);
+  const [updated, setUpdated] = useState(0);
 
   const readAt = useRef(0);
   const runAt = useRef(0);
+  const matchAt = useRef(0);
+  const seeded = useRef<File | null>(null);
+
+  /*
+   * A dropped file goes through exactly the same action as a chosen one.
+   *
+   * Not a second read path: the drop is only a different way of naming the
+   * file, and everything after it — the sheets, the guess, the preview — has
+   * to be identical or the two ways in would drift.
+   */
+  useEffect(() => {
+    if (initialFile === null || seeded.current === initialFile) return;
+    seeded.current = initialFile;
+
+    const formData = new FormData();
+    formData.set('file', initialFile);
+    startTransition(() => readAction(formData));
+  }, [initialFile, readAction]);
 
   // A file arrived. Both effects key on `attempt` rather than on `ok`, so a
   // second upload of the same file still moves the wizard on.
   useEffect(() => {
     if (readState.attempt === readAt.current) return;
     readAt.current = readState.attempt;
-    if (!readState.ok || readState.sheet === undefined || readState.mapping === undefined) return;
+    if (!readState.ok || readState.sheets === undefined || readState.sheets.length === 0) return;
 
-    setSheet(readState.sheet);
-    setMapping(readState.mapping);
+    setSheets(readState.sheets);
+    setSheetIndex(0);
+    /*
+     * The first sheet arrives already matched — the heuristic and, where a key
+     * is configured, the agent both ran on the server in the same round trip.
+     * The screen opens decided rather than deciding.
+     */
+    setMatch(readState.match ?? null);
+    setMapping(readState.match?.mapping ?? { ...EMPTY_MAPPING });
     setFileName(readState.fileName ?? '');
     setStage('map');
   }, [readState]);
+
+  // A sheet the operator switched to, matched by its own round trip.
+  useEffect(() => {
+    if (matchState.attempt === matchAt.current) return;
+    matchAt.current = matchState.attempt;
+    if (matchState.match === undefined) return;
+
+    setMatch(matchState.match);
+    setMapping(matchState.match.mapping);
+  }, [matchState]);
 
   useEffect(() => {
     if (runState.attempt === runAt.current) return;
@@ -117,6 +203,7 @@ export function ImportWizard({ levels }: { levels: StudentLevel[] }): React.Reac
 
     if (runState.committed === true) {
       setCreated(runState.result.created ?? 0);
+      setUpdated(runState.result.updated ?? 0);
       setStage('done');
       return;
     }
@@ -137,6 +224,23 @@ export function ImportWizard({ levels }: { levels: StudentLevel[] }): React.Reac
     );
     setStage('preview');
   }, [runState]);
+
+  const sheet = sheets[sheetIndex] ?? null;
+
+  const chooseSheet = (index: number): void => {
+    const chosen = sheets[index];
+    if (chosen === undefined) return;
+
+    setSheetIndex(index);
+    // Cleared rather than carried: the previous sheet's mapping is a set of
+    // column *indexes* into a grid that no longer has those columns.
+    setMapping({ ...EMPTY_MAPPING });
+    setMatch(null);
+
+    const formData = new FormData();
+    formData.set('sheet', JSON.stringify({ headers: chosen.headers, rows: chosen.rows }));
+    startTransition(() => matchAction(formData));
+  };
 
   const levelNames = levels.map((level) => level.name).join(', ');
 
@@ -180,17 +284,21 @@ export function ImportWizard({ levels }: { levels: StudentLevel[] }): React.Reac
       {stage === 'map' && sheet !== null && mapping !== null && (
         <MappingStep
           sheet={sheet}
+          sheets={sheets}
+          sheetIndex={sheetIndex}
+          onSheet={chooseSheet}
           fileName={fileName}
           mapping={mapping}
           onMapping={setMapping}
-          relationship={relationship}
-          onRelationship={setRelationship}
+          match={match}
+          matching={matching}
           levelNames={levelNames}
           action={runAction}
           pending={running}
           state={runState}
           onRestart={() => {
-            setSheet(null);
+            setSheets([]);
+            setMatch(null);
             setMapping(null);
             setStage('upload');
           }}
@@ -204,7 +312,7 @@ export function ImportWizard({ levels }: { levels: StudentLevel[] }): React.Reac
           onSelected={setSelected}
           sheet={sheet}
           mapping={mapping}
-          relationship={relationship}
+          summary={runState.result?.summary ?? null}
           action={runAction}
           pending={running}
           state={runState}
@@ -218,10 +326,27 @@ export function ImportWizard({ levels }: { levels: StudentLevel[] }): React.Reac
             <Check aria-hidden className="size-5 text-primary" />
             {t('students.import.doneCount', { count: created })}
           </p>
+          {updated > 0 && (
+            <p className="flex items-center gap-2 text-sm">
+              <RefreshCw aria-hidden className="size-4 text-primary" />
+              {t('students.import.doneUpdated', { count: updated })}
+            </p>
+          )}
           <p className="text-sm text-foreground-muted">{t('students.import.doneHint')}</p>
-          <Link href="/dashboard/students" className={BUTTON}>
-            {t('students.import.toRegister')}
-          </Link>
+          {/*
+            Inline on the register, the register is already behind this panel and
+            has already been revalidated — so the useful control is one that gets
+            out of the way, not a link to the page you are looking at.
+          */}
+          {onClose === undefined ? (
+            <Link href="/dashboard/students" className={BUTTON}>
+              {t('students.import.toRegister')}
+            </Link>
+          ) : (
+            <button type="button" onClick={onClose} className={BUTTON}>
+              {t('students.import.done')}
+            </button>
+          )}
         </section>
       )}
     </div>
@@ -277,18 +402,8 @@ function useRows(sheet: Sheet): string {
   return useMemo(() => JSON.stringify(sheet.rows), [sheet]);
 }
 
-function settingsJson(
-  mapping: Mapping,
-  relationship: string,
-  commit: boolean,
-  include: number[],
-): string {
-  return JSON.stringify({
-    mapping,
-    defaultRelationship: relationship.trim(),
-    commit,
-    include,
-  });
+function settingsJson(mapping: Mapping, commit: boolean, include: number[]): string {
+  return JSON.stringify({ mapping, commit, include });
 }
 
 /** Both fields together, so the two steps cannot post different shapes. */
@@ -301,13 +416,41 @@ function RequestFields({ rows, settings }: { rows: string; settings: string }): 
   );
 }
 
+/**
+ * Which field a column feeds, applied to the mapping.
+ *
+ * A column may feed one field and a field may take one column, so choosing
+ * either end has to clear the other. Written once here because the questions
+ * and the full grid are two views of the same choice, and two copies of this
+ * rule would drift into letting one column be two things.
+ */
+function assign(mapping: Mapping, field: ImportField | null, column: number | null): Mapping {
+  const next: Mapping = { ...mapping };
+
+  if (column !== null) {
+    for (const other of IMPORT_FIELDS) {
+      if (next[other] === column) next[other] = null;
+    }
+  }
+  if (field !== null) next[field] = column;
+  return next;
+}
+
+/** The field a column currently feeds, or null. */
+function fieldOf(mapping: Mapping, column: number): ImportField | null {
+  return IMPORT_FIELDS.find((field) => mapping[field] === column) ?? null;
+}
+
 function MappingStep({
   sheet,
+  sheets,
+  sheetIndex,
+  onSheet,
   fileName,
   mapping,
   onMapping,
-  relationship,
-  onRelationship,
+  match,
+  matching,
   levelNames,
   action,
   pending,
@@ -315,11 +458,15 @@ function MappingStep({
   onRestart,
 }: {
   sheet: Sheet;
+  sheets: NamedSheet[];
+  sheetIndex: number;
+  onSheet: (index: number) => void;
   fileName: string;
   mapping: Mapping;
   onMapping: (mapping: Mapping) => void;
-  relationship: string;
-  onRelationship: (value: string) => void;
+  /** What the matcher decided, and how sure it was of each column. */
+  match: MatchResult | null;
+  matching: boolean;
   levelNames: string;
   action: (formData: FormData) => void;
   pending: boolean;
@@ -328,6 +475,7 @@ function MappingStep({
 }): React.ReactElement {
   const t = useTranslations();
   const rows = useRows(sheet);
+  const [showAll, setShowAll] = useState(false);
 
   const columns = sheet.headers.map((header, index) => ({
     value: String(index),
@@ -336,12 +484,36 @@ function MappingStep({
 
   const nameMapped = mapping.firstName !== null || mapping.fullName !== null;
 
+  /*
+   * The columns worth a person's attention, and only those.
+   *
+   * Two kinds, asked the same way because they are the same question: a column
+   * the matcher could not place at all, and one it placed without conviction.
+   * Everything it was sure about is folded away — a screen that asks about all
+   * twelve is a screen people click past without reading, which is worse than
+   * not asking.
+   */
+  const settled = (match?.matches ?? []).filter((entry) => entry.confidence !== 'unsure');
+  const doubtful = (match?.matches ?? []).filter((entry) => entry.confidence === 'unsure');
+  const questions = [
+    ...doubtful.map((entry) => entry.column),
+    ...(match?.unmatched ?? []),
+  ].sort((a, b) => a - b);
+
+  const fieldOptions = [
+    { value: '', label: t('students.import.notImported') },
+    ...FIELD_ORDER.map((field) => ({
+      value: field,
+      label: t(`students.import.field.${field}`),
+    })),
+  ];
+
   return (
     <form
       action={action}
       className="flex flex-col gap-5 rounded border border-border bg-surface p-5"
     >
-      <RequestFields rows={rows} settings={settingsJson(mapping, relationship, false, [])} />
+      <RequestFields rows={rows} settings={settingsJson(mapping, false, [])} />
 
       <div>
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -352,65 +524,121 @@ function MappingStep({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {FIELD_ORDER.map((field) => (
-          <div key={field} className={cn(FIELD_COLUMN, 'max-w-none')}>
-            <label htmlFor={`map-${field}`} className={FIELD_LABEL}>
-              {t(`students.import.field.${field}`)}
-            </label>
-            <select
-              id={`map-${field}`}
-              value={mapping[field] === null ? '' : String(mapping[field])}
-              onChange={(event) => {
-                const at = event.target.value === '' ? null : Number(event.target.value);
-                /*
-                 * A column can feed one field only. Choosing it here takes it
-                 * away from wherever it was, rather than letting the same
-                 * column silently become both the name and the guardian.
-                 */
-                const next: Mapping = { ...mapping };
-                if (at !== null) {
-                  for (const other of IMPORT_FIELDS) {
-                    if (next[other] === at) next[other] = null;
-                  }
-                }
-                next[field] = at;
-                onMapping(next);
-              }}
-              className={CONTROL_LINE}
-            >
-              <option value="">{t('students.import.notImported')}</option>
-              {columns.map((column) => (
-                <option key={column.value} value={column.value}>
-                  {column.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-sm text-foreground-muted">
-              {mapping[field] === null
-                ? t('students.import.sampleNone')
-                : t('students.import.sample', {
-                    value: sampleOf(sheet, mapping[field] ?? 0),
-                  })}
+      {/*
+        Only when there is a choice to make. A workbook with one sheet of data —
+        which is most of them — should not grow a control asking which of the one
+        it is.
+      */}
+      {sheets.length > 1 && (
+        <div className={cn(FIELD_COLUMN, 'max-w-form')}>
+          <label htmlFor="map-sheet" className={FIELD_LABEL}>
+            {t('students.import.sheetLabel')}
+          </label>
+          <select
+            id="map-sheet"
+            value={String(sheetIndex)}
+            onChange={(event) => onSheet(Number(event.target.value))}
+            className={CONTROL_LINE}
+          >
+            {sheets.map((candidate, index) => (
+              <option key={candidate.name} value={String(index)}>
+                {t('students.import.sheetOption', {
+                  name: candidate.name,
+                  rows: candidate.rows.length,
+                })}
+              </option>
+            ))}
+          </select>
+          <p className="text-sm text-foreground-muted">{t('students.import.sheetHint')}</p>
+        </div>
+      )}
+
+      {matching ? (
+        <p className="text-sm text-foreground-muted">{t('students.import.matching')}</p>
+      ) : (
+        <p className="flex items-center gap-2 text-sm">
+          <Check aria-hidden className="size-4 shrink-0 text-primary" />
+          <span>
+            {t('students.import.matched', {
+              matched: settled.length,
+              total: sheet.headers.filter((header) => header !== '').length,
+            })}
+          </span>
+        </p>
+      )}
+
+      {questions.length > 0 && (
+        <section className="flex flex-col gap-4 rounded border border-warning/40 bg-warning/5 p-4">
+          <div>
+            <h3 className="text-sm font-medium">
+              {t('students.import.questionsTitle', { count: questions.length })}
+            </h3>
+            <p className="mt-1 text-sm text-foreground-muted">
+              {t('students.import.questionsHint')}
             </p>
           </div>
-        ))}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {questions.map((column) => (
+              <ColumnQuestion
+                key={column}
+                sheet={sheet}
+                column={column}
+                options={fieldOptions}
+                chosen={fieldOf(mapping, column)}
+                guessed={doubtful.find((entry) => entry.column === column) ?? null}
+                onChoose={(field) => onMapping(assign(mapping, field, field === null ? null : column))}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowAll((open) => !open)}
+          aria-expanded={showAll}
+          className="text-sm underline underline-offset-4 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {showAll ? t('students.import.hideAll') : t('students.import.showAll')}
+        </button>
       </div>
 
-      <div className={cn(FIELD_COLUMN, 'max-w-form')}>
-        <label htmlFor="map-relationship" className={FIELD_LABEL}>
-          {t('students.import.relationshipLabel')}
-        </label>
-        <input
-          id="map-relationship"
-          value={relationship}
-          onChange={(event) => onRelationship(event.target.value)}
-          maxLength={120}
-          required
-          className={CONTROL_LINE}
-        />
-        <p className="text-sm text-foreground-muted">{t('students.import.relationshipHint')}</p>
-      </div>
+      {showAll && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FIELD_ORDER.map((field) => (
+            <div key={field} className={cn(FIELD_COLUMN, 'max-w-none')}>
+              <label htmlFor={`map-${field}`} className={FIELD_LABEL}>
+                {t(`students.import.field.${field}`)}
+              </label>
+              <select
+                id={`map-${field}`}
+                value={mapping[field] === null ? '' : String(mapping[field])}
+                onChange={(event) => {
+                  const at = event.target.value === '' ? null : Number(event.target.value);
+                  onMapping(assign(mapping, field, at));
+                }}
+                className={CONTROL_LINE}
+              >
+                <option value="">{t('students.import.notImported')}</option>
+                {columns.map((column) => (
+                  <option key={column.value} value={column.value}>
+                    {column.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-sm text-foreground-muted">
+                {mapping[field] === null
+                  ? t('students.import.sampleNone')
+                  : t('students.import.sample', {
+                      value: sampleOf(sheet, mapping[field] ?? 0),
+                    })}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {levelNames !== '' && (
         <p className="text-sm text-foreground-muted">
@@ -433,7 +661,7 @@ function MappingStep({
       <div className="flex flex-wrap gap-3">
         <button
           type="submit"
-          disabled={pending || !nameMapped || relationship.trim() === ''}
+          disabled={pending || matching || !nameMapped}
           className={BUTTON}
         >
           {pending ? t('students.import.checking') : t('students.import.check')}
@@ -443,6 +671,68 @@ function MappingStep({
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * One column the matcher wants a person to confirm.
+ *
+ * Asked as "what is this column?" rather than "which column is this field?",
+ * because that is the question somebody looking at a spreadsheet can answer.
+ * The sample value is the whole reason it is answerable at a glance.
+ */
+function ColumnQuestion({
+  sheet,
+  column,
+  options,
+  chosen,
+  guessed,
+  onChoose,
+}: {
+  sheet: Sheet;
+  column: number;
+  options: { value: string; label: string }[];
+  chosen: ImportField | null;
+  /** The match it was unsure about, when there was one at all. */
+  guessed: ColumnMatch | null;
+  onChoose: (field: ImportField | null) => void;
+}): React.ReactElement {
+  const t = useTranslations();
+  const header = sheet.headers[column] ?? '';
+  const sample = sampleOf(sheet, column);
+
+  return (
+    <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+      <label htmlFor={`question-${column}`} className="text-sm font-medium">
+        {header === '' ? t('students.import.columnUnnamed', { number: column + 1 }) : header}
+      </label>
+      <p className="text-sm text-foreground-muted">
+        {sample === ''
+          ? t('students.import.sampleNone')
+          : t('students.import.sample', { value: sample })}
+      </p>
+      <select
+        id={`question-${column}`}
+        value={chosen ?? ''}
+        onChange={(event) =>
+          onChoose(event.target.value === '' ? null : (event.target.value as ImportField))
+        }
+        className={CONTROL_LINE}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {guessed !== null && (
+        <p className="text-sm text-foreground-muted">
+          {guessed.reason === 'agent'
+            ? t('students.import.reasonAgent')
+            : t('students.import.reasonWeak')}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -458,7 +748,7 @@ function PreviewStep({
   onSelected,
   sheet,
   mapping,
-  relationship,
+  summary,
   action,
   pending,
   state,
@@ -469,18 +759,32 @@ function PreviewStep({
   onSelected: (next: Set<number>) => void;
   sheet: Sheet;
   mapping: Mapping;
-  relationship: string;
+  summary: ImportResult['summary'] | null;
   action: (formData: FormData) => void;
   pending: boolean;
   state: ImportState;
   onBack: () => void;
 }): React.ReactElement {
   const t = useTranslations();
+  // The same memoised payload the mapping step posts: the whole spreadsheet,
+  // stringified once per file rather than on every tick.
   const sheetRows = useRows(sheet);
 
   const refused = rows.filter((row) => !row.importable);
   const duplicates = rows.filter((row) => row.importable && row.duplicate !== null);
   const include = [...selected].sort((a, b) => a - b);
+
+  /*
+   * Counted from the ticks rather than from the file's own summary, so the
+   * numbers move as somebody changes their mind. A count describing what the
+   * *file* contains while the button does something else is the kind of small
+   * lie that stops people trusting the screen.
+   */
+  const creating = rows.filter((row) => selected.has(row.index) && row.duplicate === null).length;
+  const updating = rows.filter(
+    (row) =>
+      selected.has(row.index) && row.duplicate?.kind === 'register' && row.updates.length > 0,
+  ).length;
 
   const toggle = (index: number): void => {
     const next = new Set(selected);
@@ -491,12 +795,12 @@ function PreviewStep({
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <RequestFields rows={sheetRows} settings={settingsJson(mapping, relationship, true, include)} />
+      <RequestFields rows={sheetRows} settings={settingsJson(mapping, true, include)} />
 
       <section className="flex flex-wrap gap-x-8 gap-y-2 rounded border border-border bg-surface p-5">
         <Count label={t('students.import.countTotal')} value={rows.length} />
-        <Count label={t('students.import.countSelected')} value={selected.size} />
-        <Count label={t('students.import.countDuplicates')} value={duplicates.length} />
+        <Count label={t('students.import.countCreate')} value={creating} />
+        <Count label={t('students.import.countUpdate')} value={updating} />
         <Count label={t('students.import.countRefused')} value={refused.length} />
       </section>
 
@@ -505,6 +809,31 @@ function PreviewStep({
       )}
       {refused.length > 0 && (
         <p className="text-sm text-foreground-muted">{t('students.import.refusedHint')}</p>
+      )}
+
+      {/*
+        What the commit will do beyond adding students — said before it happens
+        rather than discovered afterwards on the Níveis screen.
+      */}
+      {summary !== null && summary.levelsToCreate.length > 0 && (
+        <p className="flex items-start gap-2 rounded border border-border bg-surface p-4 text-sm">
+          <Sparkles aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" />
+          <span>
+            {t('students.import.levelsWillBeCreated', {
+              count: summary.levelsToCreate.length,
+              levels: summary.levelsToCreate.join(', '),
+            })}
+          </span>
+        </p>
+      )}
+
+      {summary !== null && summary.minorsWithoutGuardian > 0 && (
+        <p className="flex items-start gap-2 text-sm text-foreground-muted">
+          <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+          {t('students.import.minorsWithoutGuardian', {
+            count: summary.minorsWithoutGuardian,
+          })}
+        </p>
       )}
 
       <section className="overflow-x-auto rounded border border-border bg-surface">
@@ -541,10 +870,14 @@ function PreviewStep({
       />
 
       <div className="flex flex-wrap gap-3">
-        <button type="submit" disabled={pending || selected.size === 0} className={BUTTON}>
+        <button
+          type="submit"
+          disabled={pending || creating + updating === 0}
+          className={BUTTON}
+        >
           {pending
             ? t('students.import.importing')
-            : t('students.import.importCount', { count: selected.size })}
+            : t('students.import.importCount', { count: creating + updating })}
         </button>
         <button type="button" onClick={onBack} className={BUTTON_QUIET}>
           {t('students.import.backToMapping')}
@@ -585,10 +918,12 @@ function PreviewRow({
         <input
           type="checkbox"
           checked={checked}
-          disabled={!row.importable}
+          // A row repeating an earlier row of this file is never written: the
+          // earlier one is what acts, and ticking this would be the duplicate.
+          disabled={!row.importable || row.duplicate?.kind === 'file'}
           onChange={onToggle}
           aria-label={t('students.import.includeRow', { line: row.line })}
-          className="size-4"
+          className="size-4 accent-[rgb(var(--primary))]"
         />
       </td>
       <td className="px-3 py-2 tabular-nums text-foreground-muted">{row.line}</td>
@@ -613,21 +948,49 @@ function PreviewRow({
             </span>
           ))}
 
-          {row.duplicate !== null && (
-            <span className="flex items-start gap-1.5 text-warning">
+          {row.warnings.map((warning, at) => (
+            <span key={`w-${at}`} className="flex items-start gap-1.5 text-warning">
+              <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+              {t(`students.import.warning.${warning.code}`, { value: warning.value ?? '' })}
+            </span>
+          ))}
+
+          {row.duplicate?.kind === 'file' && (
+            <span className="flex items-start gap-1.5 text-foreground-muted">
               <Copy aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-              {row.duplicate.kind === 'register'
-                ? t('students.import.duplicateRegister', { name: row.duplicate.name })
-                : t('students.import.duplicateFile', { line: row.duplicate.line ?? 0 })}
+              {t('students.import.duplicateFile', { line: row.duplicate.line ?? 0 })}
             </span>
           )}
 
-          {row.problems.length === 0 && row.duplicate === null && (
-            <span className="flex items-start gap-1.5 text-foreground-muted">
-              <Check aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-              {t('students.import.rowReady')}
+          {row.duplicate?.kind === 'register' && (
+            <span className="flex items-start gap-1.5 text-primary">
+              <RefreshCw aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+              <span>
+                {t(
+                  row.duplicate.matchedOn === 'taxNumber'
+                    ? 'students.import.matchedByNif'
+                    : 'students.import.matchedByName',
+                  { name: row.duplicate.name },
+                )}{' '}
+                {row.updates.length === 0
+                  ? t('students.import.nothingToChange')
+                  : t('students.import.willFill', {
+                      fields: row.updates
+                        .map((update) => t(`students.import.updateField.${update.field}`))
+                        .join(', '),
+                    })}
+              </span>
             </span>
           )}
+
+          {/*
+            Nothing at all for a row that is fine and new.
+
+            The column used to say "Pronto a importar" on every good row, which
+            meant a file of two hundred clean students was two hundred lines of
+            the same reassurance with the four rows that needed attention buried
+            in them. Silence is what makes the exceptions visible.
+          */}
         </div>
       </td>
     </tr>

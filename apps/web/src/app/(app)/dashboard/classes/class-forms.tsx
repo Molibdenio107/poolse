@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { fitsLevel, type AgeFit } from '@/lib/ages';
@@ -46,7 +47,7 @@ export function ClassForm({
   mode: 'create' | 'edit';
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(
+  const [state, action, pending] = useSavedAction(
     mode === 'create' ? createClassAction : updateClassAction,
     INITIAL,
   );
@@ -199,7 +200,7 @@ export function AddSlotForm({
   dayNames: Record<number, string>;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(addSlotAction, INITIAL);
+  const [state, action, pending] = useSavedAction(addSlotAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -285,7 +286,7 @@ export function RemoveSlotButton({
   scheduleId: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [, action, pending] = useActionState(removeSlotAction, INITIAL);
+  const [, action, pending] = useSavedAction(removeSlotAction, INITIAL);
 
   return (
     <form action={action}>
@@ -329,7 +330,7 @@ export function EnrolForm({
   level: { minAgeMonths: number | null; maxAgeMonths: number | null } | null;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(enrolAction, INITIAL);
+  const [state, action, pending] = useSavedAction(enrolAction, INITIAL);
 
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
@@ -489,7 +490,7 @@ export function EndEnrollmentButton({
   enrollmentId: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [, action, pending] = useActionState(endEnrollmentAction, INITIAL);
+  const [, action, pending] = useSavedAction(endEnrollmentAction, INITIAL);
 
   return (
     <form action={action}>
@@ -519,7 +520,7 @@ export function ArchiveClassButton({
 }): React.ReactElement {
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
-  const [state, action, pending] = useActionState(archiveClassAction, INITIAL);
+  const [state, action, pending] = useSavedAction(archiveClassAction, INITIAL);
 
   if (!confirming) {
     return (

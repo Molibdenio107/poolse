@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { useTranslations } from 'next-intl';
@@ -33,7 +34,7 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
   const router = useRouter();
   const { user } = useUser();
   const { openUserProfile } = useClerk();
-  const [state, action, pending] = useActionState(saveProfileAction, INITIAL);
+  const [state, action, pending] = useSavedAction(saveProfileAction, INITIAL);
 
   useEffect(() => {
     if (!state.ok) return;

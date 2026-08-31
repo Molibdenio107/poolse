@@ -70,17 +70,30 @@ export function Reorderable<T extends ReorderableItem>({
   const rows = useRef(new Map<string, HTMLElement>());
 
   /*
-   * Re-seeded when the server's list actually changes — a rename, an archive, a
-   * new level. Compared by id sequence rather than by reference, because the
-   * page re-renders on every revalidate and a plain dependency would throw away
-   * a drag in progress.
+   * Re-seeded when the server's list actually changes — round 5.
+   *
+   * It used to compare the id *sequence*, which meant a rename or a new age
+   * range re-rendered the page and changed nothing on screen: the ids were the
+   * same, so the stale copies held in this component's state were kept and the
+   * only way to see an edit was to reload. The whole item is compared now.
+   *
+   * When the ids are the same set, each row's fields are refreshed in place and
+   * the order on screen is left alone — a rename must not undo a drag that has
+   * not finished saving. A different set of ids is a genuinely different list,
+   * and the server's is the one to show.
    */
-  const signature = items.map((item) => item.id).join(',');
+  const signature = JSON.stringify(items);
   const seeded = useRef(signature);
   useEffect(() => {
     if (seeded.current === signature) return;
     seeded.current = signature;
-    setOrder(items);
+
+    setOrder((current) => {
+      const byId = new Map(items.map((item) => [item.id, item]));
+      const sameSet =
+        current.length === items.length && current.every((item) => byId.has(item.id));
+      return sameSet ? current.map((item) => byId.get(item.id) as T) : items;
+    });
   }, [signature, items]);
 
   const commit = useCallback(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_LABEL } from '@/components/ui/field';
 import { createOrganizationAction, type FormState } from './actions';
@@ -18,7 +18,7 @@ const INITIAL: FormState = { ok: false };
  */
 export function CreateOrganizationForm(): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(createOrganizationAction, INITIAL);
+  const [state, action, pending] = useSavedAction(createOrganizationAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-col gap-3">

@@ -6,6 +6,7 @@ import {
   parseImportDate,
   splitFullName,
   validateImportRows,
+  type ExistingStudent,
   type ImportContext,
   type RawImportRow,
 } from './import.js';
@@ -33,7 +34,6 @@ const CONTEXT: ImportContext = {
     { id: 'level-adultos', name: 'Adultos' },
   ],
   ageOfMajority: 18,
-  defaultRelationship: 'Encarregado de educação',
   existing: [],
   today: '2026-08-31',
 };
@@ -44,6 +44,22 @@ function withContext(overrides: Partial<ImportContext>): ImportContext {
 
 function validate(rows: RawImportRow[], overrides: Partial<ImportContext> = {}) {
   return validateImportRows(rows, withContext(overrides));
+}
+
+/** A student already in the register, with everything blank unless said. */
+function existing(overrides: Partial<ExistingStudent> & { id: string }): ExistingStudent {
+  return {
+    firstName: '',
+    lastName: '',
+    birthDate: null,
+    taxNumber: null,
+    displayName: '',
+    levelId: null,
+    contactEmail: null,
+    contactPhone: null,
+    notes: null,
+    ...overrides,
+  };
 }
 
 /** A row that passes cleanly, so a test can vary one thing about it. */
@@ -113,16 +129,30 @@ test('a level matches whatever the accents and the caps were', () => {
   assert.equal(rows[2]?.levelId, 'level-adaptacao');
 });
 
-test('an unknown level is an error naming the value, never a silent null', () => {
-  const { rows } = validate([{ ...ADULT, levelName: 'Pré-competição' }]);
-
-  assert.equal(rows[0]?.importable, false);
-  assert.equal(rows[0]?.levelId, null);
-  assert.deepEqual(rows[0]?.problems, [
-    { field: 'levelName', code: 'unknownLevel', value: 'Pré-competição' },
+test('a level the club does not have is created, not refused', () => {
+  const { rows, summary } = validate([
+    { ...ADULT, levelName: 'Pré-competição' },
+    { ...ADULT, firstName: 'Tiago', levelName: 'pre competicao' },
+    { ...ADULT, firstName: 'Marta', levelName: 'Hidroginástica' },
   ]);
-  // Kept, so the message can quote back what the cell actually said.
-  assert.equal(rows[0]?.levelName, 'Pré-competição');
+
+  assert.equal(rows[0]?.importable, true, 'a new level never fails its row');
+  assert.equal(rows[0]?.levelId, null, 'it has no id until the commit makes one');
+  assert.deepEqual(rows[0]?.warnings, [
+    { field: 'levelName', code: 'levelWillBeCreated', value: 'Pré-competição' },
+  ]);
+
+  // Two spellings of one name make one level, because the comparison ignores
+  // accents and case — the same rule that finds an existing level.
+  assert.deepEqual(summary.levelsToCreate, ['Pré-competição', 'Hidroginástica']);
+});
+
+test('an existing level is matched rather than created again', () => {
+  const { rows, summary } = validate([{ ...ADULT, levelName: 'iniciacao' }]);
+
+  assert.equal(rows[0]?.levelId, 'level-iniciacao');
+  assert.deepEqual(rows[0]?.warnings, []);
+  assert.deepEqual(summary.levelsToCreate, []);
 });
 
 test('a birth date in the future is a typo every time', () => {
@@ -131,44 +161,68 @@ test('a birth date in the future is a typo every time', () => {
   assert.equal(rows[0]?.birthDate, null, 'and the value is not carried through');
 });
 
-test('a minor needs a guardian — the same rule as the form', () => {
+test('a minor with no guardian is flagged, and imported anyway', () => {
+  // POOLSE-04 criterion 2 still governs the create form. The import does not
+  // enforce it, because a club's sheet very often has no guardian column and
+  // refusing every child in it makes the onboarding path useless.
   const child = { firstName: 'Duarte', lastName: 'Melo', birthDate: '12/05/2016' };
 
-  const none = validate([child]).rows[0];
-  assert.equal(none?.importable, false);
-  assert.deepEqual(none?.problems, [{ field: 'guardianName', code: 'guardianRequired' }]);
+  const { rows, summary } = validate([child]);
+  assert.equal(rows[0]?.importable, true);
+  assert.deepEqual(rows[0]?.problems, []);
+  assert.deepEqual(rows[0]?.warnings, [{ field: 'guardianName', code: 'noGuardian' }]);
+  assert.equal(summary.minorsWithoutGuardian, 1, 'and counted, so the count is visible');
+});
 
+test('an adult with no guardian is not flagged — there is nothing to say', () => {
+  const { rows, summary } = validate([ADULT]);
+  assert.deepEqual(rows[0]?.warnings, []);
+  assert.equal(summary.minorsWithoutGuardian, 0);
+});
+
+test('a guardian with an email is recorded, with no relationship invented', () => {
   const complete = validate([
-    { ...child, guardianName: 'Sofia Melo', guardianEmail: 'sofia@example.test' },
+    {
+      firstName: 'Duarte',
+      lastName: 'Melo',
+      birthDate: '12/05/2016',
+      guardianName: 'Sofia Melo',
+      guardianEmail: 'sofia@example.test',
+    },
   ]);
+
   assert.equal(complete.rows[0]?.importable, true);
   assert.deepEqual(complete.rows[0]?.guardian, {
     name: 'Sofia Melo',
-    // No "Parentesco" column, so the one the mapping step asked for once.
-    relationship: 'Encarregado de educação',
+    // Null, not a phrase the mapping step made somebody pick for the whole file.
+    relationship: null,
     phone: null,
     email: 'sofia@example.test',
     taxNumber: null,
   });
+  assert.deepEqual(complete.rows[0]?.warnings, []);
 });
 
 /**
- * The rule the database enforces with a trigger, checked here so it becomes a
- * line on the preview instead of a PL/pgSQL error rolling the whole import back.
+ * `guardian_needs_a_key` — POOLSE-17 — requires a guardian to carry a NIF or an
+ * email, because a guardian is where duplicates come from: without a key the
+ * same mother arrives once per child.
  *
- * A telephone number is not a dedup key — `guardian_needs_a_key`, POOLSE-17 —
- * and a guardian who cannot be deduplicated is how a club ends up with the same
- * mother four times, once per child.
+ * So a guardian with neither is not written. The student still is, and the row
+ * says what happened — refusing the child over their mother's missing email
+ * would fail most real files, and dropping her in silence would be worse.
  */
-test('a guardian needs an email or a NIF, and a telephone number is neither', () => {
+test('a guardian with only a telephone number is not recorded, and the row says so', () => {
   const child = { firstName: 'Duarte', lastName: 'Melo', birthDate: '12/05/2016' };
 
   const phoneOnly = validate([
     { ...child, guardianName: 'Sofia Melo', guardianPhone: '912345678' },
   ]);
-  assert.equal(phoneOnly.rows[0]?.importable, false);
-  assert.deepEqual(phoneOnly.rows[0]?.problems, [
-    { field: 'guardianEmail', code: 'guardianKeyRequired' },
+
+  assert.equal(phoneOnly.rows[0]?.importable, true, 'the student is not refused');
+  assert.equal(phoneOnly.rows[0]?.guardian, null, 'but the guardian is not written');
+  assert.deepEqual(phoneOnly.rows[0]?.warnings, [
+    { field: 'guardianEmail', code: 'guardianNotRecorded', value: 'Sofia Melo' },
   ]);
 
   const withNif = validate([
@@ -181,20 +235,10 @@ test('a guardian needs an email or a NIF, and a telephone number is neither', ()
   ]);
   assert.equal(withNif.rows[0]?.importable, true);
   assert.equal(withNif.rows[0]?.guardian?.taxNumber, '123456789');
+  assert.deepEqual(withNif.rows[0]?.warnings, []);
 });
 
-test('the key rule applies to an adult student, whose guardian is written too', () => {
-  // No age check runs on an adult, but the guardian is still created and the
-  // trigger still fires. Refusing it here is what keeps the commit atomic.
-  const rows = validate([
-    { firstName: 'Rita', lastName: 'Nunes', birthDate: '1988-04-12', guardianName: 'Sofia Melo' },
-  ]).rows;
-
-  assert.equal(rows[0]?.importable, false);
-  assert.equal(rows[0]?.problems[0]?.code, 'guardianKeyRequired');
-});
-
-test('a mapped relationship column beats the default', () => {
+test('a relationship column is used when the sheet actually has one', () => {
   const { rows } = validate([
     {
       firstName: 'Duarte',
@@ -208,21 +252,27 @@ test('a mapped relationship column beats the default', () => {
   assert.equal(rows[0]?.guardian?.relationship, 'Mãe');
 });
 
-test('a student with no birth date is never blocked for a guardian', () => {
-  // The commonest shape of a real import, and refusing it would fail most rows.
-  const { rows } = validate([{ firstName: 'Duarte', lastName: 'Melo' }]);
+test('only the name is required — everything else may be missing', () => {
+  // The database asks for a first and last name and nothing else. The importer
+  // now asks for exactly the same, which is the whole point of this pass.
+  const { rows } = validate([{ fullName: 'Duarte Melo' }]);
+
   assert.equal(rows[0]?.importable, true);
+  assert.deepEqual(rows[0]?.problems, []);
   assert.equal(rows[0]?.birthDate, null);
+  assert.equal(rows[0]?.contactEmail, null);
+  assert.equal(rows[0]?.contactPhone, null);
+  assert.equal(rows[0]?.levelId, null);
+  assert.equal(rows[0]?.guardian, null);
 });
 
 test('maioridade comes from the club, not from a hardcoded eighteen', () => {
-  // Sixteen years and a day old on the day this runs.
   const child = { firstName: 'Duarte', lastName: 'Melo', birthDate: '2010-01-01' };
 
-  assert.equal(validate([child]).rows[0]?.importable, false, 'a minor at 18');
+  assert.equal(validate([child]).summary.minorsWithoutGuardian, 1, 'a minor at 18');
   assert.equal(
-    validate([child], { ageOfMajority: 16 }).rows[0]?.importable,
-    true,
+    validate([child], { ageOfMajority: 16 }).summary.minorsWithoutGuardian,
+    0,
     'an adult where the club says 16',
   );
 });
@@ -241,7 +291,12 @@ test('the same child twice in one file is flagged against the earlier line', () 
 
   assert.equal(rows[0]?.duplicate, null);
   assert.equal(rows[1]?.duplicate, null);
-  assert.deepEqual(rows[2]?.duplicate, { kind: 'file', name: 'Rita Nunes', line: 2 });
+  assert.deepEqual(rows[2]?.duplicate, {
+    kind: 'file',
+    name: 'Rita Nunes',
+    line: 2,
+    matchedOn: 'nameAndBirthDate',
+  });
 
   // And it stays importable: a duplicate is a thing to be told, not a refusal.
   assert.equal(rows[2]?.importable, true);
@@ -250,13 +305,13 @@ test('the same child twice in one file is flagged against the earlier line', () 
 test('somebody already in the register is matched on name and birth date', () => {
   const { rows, summary } = validate([{ firstName: 'Rita', lastName: 'Nunes', birthDate: '1988-04-12' }], {
     existing: [
-      {
+      existing({
         id: 'student-1',
         firstName: 'Rita',
         lastName: 'Nunes',
         birthDate: '1988-04-12',
         displayName: 'Rita Nunes',
-      },
+      }),
     ],
   });
 
@@ -264,6 +319,7 @@ test('somebody already in the register is matched on name and birth date', () =>
     kind: 'register',
     studentId: 'student-1',
     name: 'Rita Nunes',
+    matchedOn: 'nameAndBirthDate',
   });
   assert.equal(summary.duplicates, 1);
   assert.equal(summary.importable, 1, 'still importable — the operator decides');
@@ -272,13 +328,13 @@ test('somebody already in the register is matched on name and birth date', () =>
 test('a different birth date is a different person, however alike the names', () => {
   const { rows } = validate([{ firstName: 'Rita', lastName: 'Nunes', birthDate: '1988-04-12' }], {
     existing: [
-      {
+      existing({
         id: 'student-1',
         firstName: 'Rita',
         lastName: 'Nunes',
         birthDate: '1995-04-12',
         displayName: 'Rita Nunes',
-      },
+      }),
     ],
   });
   assert.equal(rows[0]?.duplicate, null);
@@ -293,7 +349,18 @@ test('the summary counts what the screen shows', () => {
     { birthDate: '1990-01-01' },
   ]);
 
-  assert.deepEqual(summary, { total: 4, importable: 2, refused: 2, duplicates: 1 });
+  assert.deepEqual(summary, {
+    total: 4,
+    // The child now imports — only the nameless row is refused.
+    importable: 3,
+    refused: 1,
+    duplicates: 1,
+    toUpdate: 0,
+    toCreate: 2,
+    flagged: 1,
+    minorsWithoutGuardian: 1,
+    levelsToCreate: [],
+  });
 });
 
 test('lines are numbered as the spreadsheet numbers them, header included', () => {
@@ -305,4 +372,179 @@ test('lines are numbered as the spreadsheet numbers them, header included', () =
 test('the key that compares names ignores case, accents and punctuation', () => {
   assert.equal(normaliseKey('João  Silva-Santos'), 'joao silva santos');
   assert.equal(normaliseKey('JOAO SILVA SANTOS'), 'joao silva santos');
+});
+
+
+/**
+ * A student's own NIF — the rule the unique index would otherwise enforce
+ * mid-commit.
+ *
+ * Every other duplicate here is a judgement the operator gets to make, because
+ * two children really can share a name and a birthday. A NIF cannot be shared:
+ * `student_tax_number_uq` refuses it, and refusing it during the commit would
+ * roll back every other row in the file. So this is a refusal on the preview,
+ * for the same reason the guardian key rule is.
+ */
+/**
+ * The identity ladder — a NIF, else a name and a birth date.
+ *
+ * A NIF match used to *refuse* the row, on the reasoning that the unique index
+ * would reject it anyway. That was backwards: the strongest signal the file
+ * carries was the only thing that could stop it. Now it is what makes the row an
+ * update of the person it belongs to — even when the name in the sheet does not
+ * match the name in the register, which is exactly the case a NIF is for.
+ */
+test('a NIF matches the person it belongs to, whatever the sheet calls them', () => {
+  const { rows, summary } = validate(
+    [{ fullName: 'Rita Nunes', taxNumber: '123456789', contactPhone: '912345678' }],
+    {
+      existing: [
+        existing({
+          id: 'student-1',
+          firstName: 'Marta',
+          lastName: 'Vaz',
+          taxNumber: '123456789',
+          displayName: 'Marta Vaz',
+        }),
+      ],
+    },
+  );
+
+  assert.equal(rows[0]?.importable, true, 'no longer a refusal');
+  assert.deepEqual(rows[0]?.duplicate, {
+    kind: 'register',
+    studentId: 'student-1',
+    name: 'Marta Vaz',
+    matchedOn: 'taxNumber',
+  });
+  assert.deepEqual(rows[0]?.updates, [{ field: 'contactPhone', value: '912345678' }]);
+  assert.equal(summary.toUpdate, 1);
+  assert.equal(summary.toCreate, 0);
+});
+
+test('a NIF is the same number however it is punctuated', () => {
+  const { rows } = validate([{ fullName: 'Rita Nunes', taxNumber: '123 456 789' }], {
+    existing: [
+      existing({ id: 'student-1', taxNumber: '123456789', displayName: 'Marta Vaz' }),
+    ],
+  });
+
+  assert.equal(rows[0]?.taxNumber, '123 456 789', 'kept as it was written');
+  assert.equal(rows[0]?.duplicate?.matchedOn, 'taxNumber', 'and compared without the spaces');
+});
+
+test('the same NIF twice in one file is one person, not two records', () => {
+  const rows = validate([
+    { fullName: 'Rita Nunes', taxNumber: '123456789' },
+    { fullName: 'Rita Nunes Silva', taxNumber: '123456789' },
+  ]).rows;
+
+  assert.equal(rows[0]?.duplicate, null, 'the first occurrence is the one that acts');
+  assert.deepEqual(rows[1]?.duplicate, {
+    kind: 'file',
+    name: 'Rita Nunes',
+    line: 2,
+    matchedOn: 'taxNumber',
+  });
+});
+
+/**
+ * Filling blanks, and only blanks.
+ *
+ * This is what makes re-importing last year's file harmless: a club that
+ * exports, edits two rows and imports the lot back cannot flatten everything
+ * else with a stale copy of itself.
+ */
+test('a match fills what is empty and leaves what is not', () => {
+  const { rows } = validate(
+    [
+      {
+        fullName: 'Rita Nunes',
+        birthDate: '12/04/1988',
+        contactEmail: 'nova@example.test',
+        contactPhone: '912345678',
+        levelName: 'Adultos',
+      },
+    ],
+    {
+      existing: [
+        existing({
+          id: 'student-1',
+          firstName: 'Rita',
+          lastName: 'Nunes',
+          birthDate: '1988-04-12',
+          displayName: 'Rita Nunes',
+          // Already known, and therefore untouchable by a spreadsheet.
+          contactEmail: 'antiga@example.test',
+        }),
+      ],
+    },
+  );
+
+  assert.deepEqual(rows[0]?.updates, [
+    { field: 'contactPhone', value: '912345678' },
+    { field: 'levelId', value: 'Adultos' },
+  ]);
+});
+
+test('a match with nothing new to say updates nothing', () => {
+  // Importing the same file twice. The second time costs nothing and writes
+  // nothing, which is the property that makes the feature safe to use casually.
+  const { rows, summary } = validate([{ fullName: 'Rita Nunes', birthDate: '12/04/1988' }], {
+    existing: [
+      existing({
+        id: 'student-1',
+        firstName: 'Rita',
+        lastName: 'Nunes',
+        birthDate: '1988-04-12',
+        displayName: 'Rita Nunes',
+      }),
+    ],
+  });
+
+  assert.deepEqual(rows[0]?.updates, []);
+  assert.equal(summary.toUpdate, 0, 'a match that changes nothing is not an update');
+  assert.equal(summary.duplicates, 1, 'but it is still a match');
+});
+
+test('a NIF belonging to somebody else is not copied across', () => {
+  // Matched on the name, but the NIF in the sheet is another student's. Writing
+  // it would violate the unique index mid-commit and take the import down.
+  const { rows } = validate(
+    [{ fullName: 'Rita Nunes', birthDate: '12/04/1988', taxNumber: '123456789' }],
+    {
+      existing: [
+        existing({
+          id: 'student-1',
+          firstName: 'Rita',
+          lastName: 'Nunes',
+          birthDate: '1988-04-12',
+          displayName: 'Rita Nunes',
+        }),
+        existing({ id: 'student-2', taxNumber: '123456789', displayName: 'Marta Vaz' }),
+      ],
+    },
+  );
+
+  // The NIF match wins the identity, so this is Marta — and her NIF is already
+  // hers, so there is nothing to fill.
+  assert.equal(rows[0]?.duplicate?.studentId, 'student-2');
+  assert.deepEqual(rows[0]?.updates, [{ field: 'birthDate', value: '1988-04-12' }]);
+});
+
+test('a student NIF has no age rule — a minor may carry one', () => {
+  // Deliberate: in Portugal a parent deducts the lessons against the child's
+  // number, so a club's invoice for a seven-year-old often has one on it.
+  const { rows } = validate([
+    {
+      fullName: 'Duarte Melo',
+      birthDate: '12/05/2016',
+      taxNumber: '234567891',
+      guardianName: 'Sofia Melo',
+      guardianEmail: 'sofia@example.test',
+    },
+  ]);
+
+  assert.equal(rows[0]?.importable, true);
+  assert.equal(rows[0]?.taxNumber, '234567891');
 });

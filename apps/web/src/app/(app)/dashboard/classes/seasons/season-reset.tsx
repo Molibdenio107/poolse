@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle } from 'lucide-react';
 import type { ResetPreview } from '@/lib/api';
@@ -33,7 +34,7 @@ export function SeasonReset({
 }): React.ReactElement {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(resetSeasonAction, INITIAL);
+  const [state, action, pending] = useSavedAction(resetSeasonAction, INITIAL);
   const formRef = useRef<HTMLFormElement>(null);
   // `state` is the attempt token: the action builds a fresh object every time,
   // so mistyping the confirmation twice focuses the box twice.

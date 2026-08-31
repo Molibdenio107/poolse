@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import type { PoolMaterial } from '@/lib/api';
@@ -143,8 +144,8 @@ function MaterialRow({
 }): React.ReactElement {
   const t = useTranslations();
   const [editing, setEditing] = useState(false);
-  const [state, action, pending] = useActionState(updateMaterialAction, INITIAL);
-  const [archiveState, archive, archiving] = useActionState(archiveMaterialAction, INITIAL);
+  const [state, action, pending] = useSavedAction(updateMaterialAction, INITIAL);
+  const [archiveState, archive, archiving] = useSavedAction(archiveMaterialAction, INITIAL);
 
   if (!editing) {
     return (
@@ -250,7 +251,7 @@ function AddMaterialForm({
   poolId: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(addMaterialAction, INITIAL);
+  const [state, action, pending] = useSavedAction(addMaterialAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-wrap items-end gap-3 border-t border-border pt-4">

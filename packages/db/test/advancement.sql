@@ -39,6 +39,11 @@ BEGIN
   SELECT v_org, id, 'active' FROM app_user WHERE clerk_user_id = 'user_adv'
   RETURNING id INTO v_staff;
 
+  -- A site, because a turma belongs to one. This fixture predates the column and
+  -- had none at all; every organization in the product has had one since
+  -- provisioning existed.
+  INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina Municipal');
+
   INSERT INTO season (organization_id, name, starts_on, ends_on)
   VALUES (v_org, '2026/2027', DATE '2026-09-01', DATE '2027-07-31')
   RETURNING id INTO v_season;
@@ -50,10 +55,12 @@ BEGIN
   INSERT INTO student_level (organization_id, name, sort_order)
   VALUES (v_org, 'Aperfeiçoamento', 3) RETURNING id INTO v_l3;
 
-  INSERT INTO class_group (organization_id, season_id, name, capacity, level_id)
-  VALUES (v_org, v_season, 'Adaptação A', 8, v_l1) RETURNING id INTO v_g1;
-  INSERT INTO class_group (organization_id, season_id, name, capacity, level_id)
-  VALUES (v_org, v_season, 'Iniciação A', 8, v_l2) RETURNING id INTO v_g2;
+  -- No pool, so the site is named outright: `class_group.facility_id` is
+  -- NOT NULL and only derives itself from a pool the turma actually has.
+  INSERT INTO class_group (organization_id, facility_id, season_id, name, capacity, level_id)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), v_season, 'Adaptação A', 8, v_l1) RETURNING id INTO v_g1;
+  INSERT INTO class_group (organization_id, facility_id, season_id, name, capacity, level_id)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), v_season, 'Iniciação A', 8, v_l2) RETURNING id INTO v_g2;
 
   -- One required skill and one optional, both on level 1.
   INSERT INTO skill (organization_id, level_id, name, sort_order, required)
@@ -321,8 +328,8 @@ BEGIN
   INSERT INTO student_level (organization_id, name, sort_order)
   VALUES (f.org, 'Hidroginástica', 10) RETURNING id INTO v_other_level;
 
-  INSERT INTO class_group (organization_id, season_id, name, capacity, level_id)
-  SELECT f.org, cg.season_id, 'Hidro A', 8, v_other_level
+  INSERT INTO class_group (organization_id, facility_id, season_id, name, capacity, level_id)
+  SELECT f.org, cg.facility_id, cg.season_id, 'Hidro A', 8, v_other_level
     FROM class_group cg WHERE cg.id = f.g1
   RETURNING id INTO v_other;
 

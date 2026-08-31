@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { PlaceField } from './place-field';
@@ -44,7 +45,7 @@ export function CreateFacilityForm({
   timezones: string[];
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(createFacilityAction, INITIAL);
+  const [state, action, pending] = useSavedAction(createFacilityAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -129,7 +130,7 @@ export function ArchiveButton({
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
   const isFacility = poolId === undefined;
-  const [state, action, pending] = useActionState(
+  const [state, action, pending] = useSavedAction(
     isFacility ? archiveFacilityAction : archivePoolAction,
     INITIAL,
   );

@@ -75,3 +75,24 @@ included — they consume heat). **Occupancy uses enrolment** (guests excluded).
 
 **Recommended:** the hover card is not a list view. Keep it complete, capped by a scrollable max
 height — which POOLSE-15 AC3 already specifies.
+
+### C9 · Where prices live — POOLSE-24's `payment_plan` vs POOLSE-42's facility price list
+
+POOLSE-24 assumes a `payment_plan` hanging off season or turma pricing. POOLSE-42 makes the
+**facility** the source of prices and periodicities, on the reasoning that a club's agreement with a
+family is an agreement with the site: the same turma name at two pools can cost different money, and
+a price attached to a season has to be copied forward every September by somebody who remembers.
+
+**Resolved, and built:** **this ticket stores, POOLSE-24 renders.** There is one price model —
+`fee_plan`, `fee_period` and `student_fee`, keyed to the facility. POOLSE-24's instalment schedule is
+generated from a student's fee lines, not from a second price model beside them.
+
+Two things POOLSE-24 can rely on rather than re-deriving:
+
+- `fee_total_cents(amount_cents, months, discount_percent)` is the single definition of a period
+  total, rounded once at the period. `fee_payable_cents` wraps it for a line's manual discount.
+  Nothing outside SQL computes either.
+- A line's `amount_cents` and `discount_percent` are a **snapshot** taken when the fee was agreed.
+  A schedule must read the line, never the plan — reading the plan would re-price a family
+  retroactively the moment somebody corrected a typo in the price list.
+

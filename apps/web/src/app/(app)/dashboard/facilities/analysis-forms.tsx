@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import { POOL_METRICS } from '@/lib/pool-metrics';
@@ -36,7 +36,7 @@ export function AnalysisForm({
   poolName: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(recordAnalysisAction, INITIAL);
+  const [state, action, pending] = useSavedAction(recordAnalysisAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-col gap-4 rounded border border-border bg-surface-muted p-4">
@@ -119,7 +119,7 @@ export function ArchiveAnalysisButton({
   analysisId: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [, action, pending] = useActionState(archiveAnalysisAction, INITIAL);
+  const [, action, pending] = useSavedAction(archiveAnalysisAction, INITIAL);
 
   return (
     <form action={action} className="inline">

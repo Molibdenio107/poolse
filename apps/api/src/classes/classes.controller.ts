@@ -216,6 +216,7 @@ export class ClassesController {
     if (outcome === 'duplicate') {
       throw new ConflictException('That class group already runs at that time on that day');
     }
+    refuseIfClosed(outcome);
     return { added: true };
   }
 
@@ -248,6 +249,7 @@ export class ClassesController {
     if (outcome === 'duplicate') {
       throw new ConflictException('That class group already runs at that time on that day');
     }
+    refuseIfClosed(outcome);
     return { moved: true };
   }
 
@@ -442,4 +444,41 @@ function parseDuration(value: unknown): number {
     throw new BadRequestException('durationMinutes must be between 5 and 480');
   }
   return parsed;
+}
+
+/**
+ * The pool is shut then — round 5.
+ *
+ * A rule, not a crash. The facility-hours triggers were raising `check_violation`
+ * and nothing read it, so adding a Tuesday to a turma at a pool that does not
+ * open on Tuesdays reached the operator as "500". Each refusal names the field it
+ * is about, so the sentence lands beside the control that caused it.
+ */
+function refuseIfClosed(outcome: string): void {
+  const said: Record<string, { field: string; key: string; message: string }> = {
+    closed_that_day: {
+      field: 'weekday',
+      key: 'classes.slotClosedDay',
+      message: 'The pool does not open on that day',
+    },
+    outside_hours: {
+      field: 'startTime',
+      key: 'classes.slotOutsideHours',
+      message: 'The pool is not open at that time',
+    },
+    ends_after_closing: {
+      field: 'durationMinutes',
+      key: 'classes.slotEndsAfterClosing',
+      message: 'The class would run past closing time',
+    },
+  };
+
+  const refusal = said[outcome];
+  if (refusal === undefined) return;
+
+  throw new ConflictException({
+    code: outcome,
+    message: refusal.message,
+    fields: { [refusal.field]: refusal.key },
+  });
 }

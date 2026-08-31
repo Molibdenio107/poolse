@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { Lock, Mail } from 'lucide-react';
 import type { StaffRecord } from '@/lib/api';
@@ -49,7 +50,7 @@ export function StaffForm({
   grantable: string[];
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, saving] = useActionState(saveStaffAction, INITIAL);
+  const [state, action, saving] = useSavedAction(saveStaffAction, INITIAL);
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state.fields, state);
 
@@ -180,7 +181,7 @@ function RoleEditor({
   grantable: string[];
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(setRoleAction, INITIAL);
+  const [state, action, pending] = useSavedAction(setRoleAction, INITIAL);
 
   return (
     <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
@@ -259,8 +260,8 @@ function Reinvite({
 }): React.ReactElement {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
-  const [state, action, sending] = useActionState(reinviteAction, INITIAL);
-  const [, cancel, cancelling] = useActionState(cancelReinviteAction, INITIAL);
+  const [state, action, sending] = useSavedAction(reinviteAction, INITIAL);
+  const [, cancel, cancelling] = useSavedAction(cancelReinviteAction, INITIAL);
 
   if (staff.pendingInvite !== null) {
     return (

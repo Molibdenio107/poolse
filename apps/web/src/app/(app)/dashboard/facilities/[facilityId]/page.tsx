@@ -1,13 +1,21 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type FacilityDetail, type PeopleCounts } from '@/lib/api';
+import {
+  ApiError,
+  apiFetch,
+  type FacilityDetail,
+  type PeopleCounts,
+  type Students,
+} from '@/lib/api';
 import { withFrom } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { CityPicker } from './city-picker';
 import { WeatherPanel } from './weather-panel';
 import { HoursPanel } from './hours-panel';
+import { PricesPanel } from './prices-panel';
+import { listPrices } from './prices.actions';
 import { PageShell } from '@/components/page-shell';
 
 /**
@@ -62,6 +70,18 @@ export default async function FacilityPage({
     if (error instanceof ApiError && error.status === 404) notFound();
     failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
   }
+
+  /*
+   * The price list — POOLSE-42.
+   *
+   * `listPrices` answers null when the endpoint refuses, which is what an
+   * instructor gets: AC10 says they see no amounts at all, so the block is
+   * simply absent rather than rendered empty or rendered with a refusal in it.
+   * The levels come from the register, for the optional level a plan suggests.
+   */
+  const prices = await listPrices(facilityId);
+  const register =
+    prices === null ? null : await apiFetch<Students>('/students').catch(() => null);
 
   return (
     <PageShell
@@ -186,6 +206,17 @@ export default async function FacilityPage({
               canManage={site.canManage}
             />
           </section>
+
+          {prices !== null && (
+            <PricesPanel
+              facilityId={facilityId}
+              plans={prices.plans}
+              periods={prices.periods}
+              billing={prices.billing}
+              levels={register?.levels ?? []}
+              canManage={register?.canManage ?? false}
+            />
+          )}
 
           <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">

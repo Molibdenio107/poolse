@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { ActiveSession } from '@/lib/api';
 import { revokeSessionAction, type FormState } from './actions';
@@ -13,7 +13,7 @@ const INITIAL: FormState = { ok: false };
  */
 function EndSession({ sessionId }: { sessionId: string }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(revokeSessionAction, INITIAL);
+  const [state, action, pending] = useSavedAction(revokeSessionAction, INITIAL);
 
   return (
     <form action={action} className="flex items-center gap-2">

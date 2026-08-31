@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useRef } from 'react';
+import { useRef } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { TextField, useFocusFirstError } from '@/components/ui/field';
 import { inviteAction, type InviteState } from '../../actions';
@@ -35,7 +36,7 @@ export function InviteForm({
   grantableRoles: string[];
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(inviteAction, INITIAL);
+  const [state, action, pending] = useSavedAction(inviteAction, INITIAL);
   const form = useRef<HTMLFormElement>(null);
 
   useFocusFirstError(form, state.fields, state.attempt);

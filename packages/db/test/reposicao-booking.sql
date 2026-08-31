@@ -51,8 +51,8 @@ BEGIN
   VALUES (v_org, 'Iniciação', 1) RETURNING id INTO v_level;
 
   -- Capacity two, so "full" is reachable with two enrolments.
-  INSERT INTO class_group (organization_id, season_id, name, capacity, level_id)
-  VALUES (v_org, v_season, 'Iniciação A', 2, v_level) RETURNING id INTO v_group;
+  INSERT INTO class_group (organization_id, facility_id, season_id, name, capacity, level_id)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), v_season, 'Iniciação A', 2, v_level) RETURNING id INTO v_group;
 
   INSERT INTO student (organization_id, first_name, last_name, level_id)
   VALUES (v_org, 'Ana', 'Costa', v_level) RETURNING id INTO v_ana;

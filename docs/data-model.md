@@ -271,7 +271,105 @@ invitation expires.
 student
   id, organization_id, first_name, last_name, birth_date, level_id,
   app_user_id (nullable), membership_id (nullable), notes,
-  contact_email, contact_phone, archived_at
+  contact_email, contact_phone, tax_number, archived_at,
+  is_socio boolean not null default false, socio_number, socio_since
+  unique (organization_id, socio_number) where archived_at is null
+                                           and socio_number is not null
+  -- Sócio is a fact about the person, not "has an active quota line". A waived
+  -- quota is a real case — honorary members, staff children — and deriving the
+  -- boolean would make it unrepresentable. POOLSE-42 AC6.
+  unique (organization_id, tax_number) where archived_at is null
+                                         and tax_number is not null
+  -- tax_number is the student's own NIF, for somebody invoiced in their own
+  -- name: an adult class, or a child whose parent deducts the lessons against
+  -- the child's number. Deliberately no age rule — minors have NIFs in
+  -- Portugal, and a CHECK against the club's maioridade would both refuse a
+  -- real number and age badly, since a row valid when written must not become
+  -- invalid because time passed. Never validated as a real NIF, same as
+  -- membership.tax_number.
+
+fee_period                      -- POOLSE-42; a facility's periodicities
+  id, organization_id, facility_id, name, months smallint, discount_percent numeric(5,2),
+  is_default, sort_order, archived_at
+  unique (organization_id, facility_id, months)      where archived_at is null
+  unique (organization_id, facility_id, lower(name)) where archived_at is null
+  unique (organization_id, facility_id)              where archived_at is null and is_default
+  -- One list, shared by mensalidades and quotas alike. A quota is not inherently
+  -- annual and a mensalidade is not inherently monthly; a plan may name its own
+  -- default within this one list, which is what lets them differ without a
+  -- second table or a rule in code.
+
+fee_plan                        -- POOLSE-42; a facility's price list
+  id, organization_id, facility_id, kind fee_plan_kind, level_id, lessons_per_week,
+  amount_cents integer, default_fee_period_id (nullable), age_band fee_age_band,
+  archived_at
+  unique (organization_id, facility_id, level_id, lessons_per_week)
+    where archived_at is null and kind = 'mensalidade'
+  unique (organization_id, facility_id, age_band)
+    where archived_at is null and kind = 'quota'
+  check: a mensalidade has a level AND a frequency; a quota has neither
+  check: only a quota may be banded
+  -- age_band is 'any' | 'under_18' | 'adult'. A club with one membership rate
+  -- writes one 'any' row; one that charges children less adds a banded row, and
+  -- a banded row BEATS 'any' for the members it names — so nothing existing has
+  -- to be edited or migrated. Which band a member is in is read from their age
+  -- TODAY (quota_band_for), re-read every period. A line already agreed keeps
+  -- its price: a birthday flags the record, it does not re-bill anybody.
+  -- There is no name and no VAT rate. A price is identified by what it is for —
+  -- the ladder already names the level — and prices are IVA-included, so a rate
+  -- column would be a second number nobody maintains.
+  foreign key (organization_id, facility_id, default_fee_period_id)
+    -> fee_period (organization_id, facility_id, id)
+  -- Three columns on that key, so a plan cannot default to another site's
+  -- periodicity. level_id *suggests* the plan and never restricts it: price
+  -- varies by frequency as much as by level, and "2x/semana" is not a level.
+  -- vat_rate null is isento (art. 9.º CIVA); stored and shown, nothing computes.
+
+student_fee                     -- POOLSE-42; what one student pays
+  id, organization_id, student_id, fee_plan_id, enrollment_id (nullable), fee_period_id,
+  amount_cents, discount_percent, manual_discount_percent, manual_discount_cents,
+  discount_reason, starts_on, ends_on, archived_at
+  foreign key (organization_id, student_id, enrollment_id)
+    -> enrollment (organization_id, student_id, id)
+  check: at most one manual discount, and a reason whenever there is one
+  -- amount_cents and discount_percent are a SNAPSHOT of the plan and the period
+  -- at the moment the fee was agreed. Editing the price list never rewrites an
+  -- existing agreement — that is a bill changing retroactively. The line shows a
+  -- marker when it differs and is updated one at a time, by a person.
+  -- A trigger ends live lines when their enrolment ends; a constraint trigger
+  -- refuses an enrolment on a quota line.
+
+student_fee_payment             -- POOLSE-42; one settled occurrence
+  id, organization_id, student_fee_id, period_start date, paid_on date, recorded_by
+  unique (student_fee_id, period_start)
+  -- Absence means unpaid. Nothing writes rows in advance, so nothing has to
+  -- generate them or tidy them up when a line ends. `period_start` is an
+  -- OCCURRENCE, not a calendar month: a trimestral line has four a year.
+
+facility gains payment_due_day smallint (1-31), and a penalty per kind of charge:
+  late_penalty_kind fee_penalty_kind, late_penalty_cents, late_penalty_percent
+  quota_penalty_kind fee_penalty_kind, quota_penalty_cents, quota_penalty_percent
+  -- 29-31 mean the last day of a short month, clamped by fee_due_on. A penalty
+  -- is shown and added to what is outstanding; nothing writes it as a charge.
+  -- fee_penalty_kind is 'none' | 'amount' | 'percent', and 'none' is the default
+  -- because most clubs charge nothing. A mensalidade and a quota are asked
+  -- SEPARATELY, with their own amounts: a club that fines a late monthly payment
+  -- often forgives a late subscription. A percentage is always of the student's
+  -- MONTHLY MENSALIDADE — the figure a family recognises — so a member who pays
+  -- only a quota has a base of zero and a percentage penalty of nothing.
+
+quota_band_for(birth_date) -> fee_age_band                STABLE (reads current_date)
+  -- Adult when no birth date is recorded: the ordinary rate, never the cheaper
+  -- one, because guessing in the member's favour is what has to be explained.
+fee_penalty_cents(kind, cents, percent, monthly_base) -> integer   IMMUTABLE
+fee_due_on(period_start, due_day) -> date                 IMMUTABLE
+current_period_start(starts_on, ends_on, months) -> date  STABLE (reads current_date)
+fee_total_cents(amount_cents, months, discount_percent) -> integer
+fee_payable_cents(..., manual_discount_percent, manual_discount_cents) -> integer
+  -- The single definition of a total, IMMUTABLE, rounded ONCE at the period.
+  -- 35,00 x 3 at 5% is 99,75 — rounding each month and summing gives a different
+  -- figure and an argument with a parent. The API calls these; it does not
+  -- reimplement them.
 
 student_sensitive               -- separated deliberately; see "minors and consent"
   student_id (pk), organization_id, medical_notes_encrypted,
@@ -289,7 +387,25 @@ guardian_link                   -- the relation between two people
   unique (student_id) where archived_at is null and is_primary
 
 student_level                   -- lookup; operators define their own progression
-  id, organization_id, name, sort_order, min_age_months, max_age_months, archived_at
+  id, organization_id, name, sort_order, min_age_months, max_age_months,
+  admits_male boolean, admits_female boolean, archived_at
+  check (admits_male OR admits_female)
+  unique (organization_id, lower(strip_accents(name)), admits_male, admits_female)
+    where archived_at is null
+  unique (organization_id, coalesce(min_age_months,-1), coalesce(max_age_months,-1))
+    where archived_at is null and admits_male  and a range is declared
+  unique (organization_id, coalesce(min_age_months,-1), coalesce(max_age_months,-1))
+    where archived_at is null and admits_female and a range is declared
+  -- Both flags true is misto, the default and most clubs. Two flags rather than
+  -- an enum because "both" is a real answer and the commonest one. This is also
+  -- what lets two escalões share a NAME: "Cadetes femininos dos 8 aos 11" and
+  -- "Cadetes masculinos dos 8 aos 12" are two rows a club reads as one word.
+  -- The range rule refuses DUPLICATES, not overlaps: a ladder genuinely has
+  -- programmes running alongside it (natação adaptada from ten upwards, masters
+  -- from twenty-five), and refusing every overlap would refuse a real timetable.
+  -- The interface warns about overlaps instead. `coalesce` because a unique
+  -- index treats NULLs as distinct, and two escalões both written "dos 25 anos"
+  -- would otherwise slip through.
 
 skill                           -- what a level consists of; see "skills"
   id, organization_id, level_id, name, sort_order,
@@ -750,6 +866,14 @@ student_level
   + min_age_years smallint, max_age_years smallint
   check max_age_years >= min_age_years when both are present
   check both between 0 and 120
+
+student
+  + sex student_sex ('male'|'female'), nullable
+  -- Optional on purpose: imports arrive with the column half empty, and "nobody
+  -- has recorded it" has to be representable or the first spreadsheet will
+  -- invent an answer. Matched against an escalão's admits_male/admits_female for
+  -- display and warnings only — nothing refuses an enrolment on it, exactly as
+  -- nothing refuses one on the age range.
 ```
 
 Both bounds optional and independent: "Adultos" has a minimum and no maximum, and

@@ -12,7 +12,11 @@ import { PersonAvatar } from '@/components/person-avatar';
 import { BirthdayFlag } from '@/components/birthday-flag';
 import { photoUrlFor } from '@/lib/photo';
 import { ArchiveStudentButton } from './student-forms';
+import { StudentActions } from './import-panel';
+import { PaymentMark } from './payment-mark';
 import { PageShell } from '@/components/page-shell';
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /**
  * Slice 1.2 — the student register.
@@ -26,10 +30,30 @@ import { PageShell } from '@/components/page-shell';
 export default async function StudentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; levelId?: string; page?: string; from?: string }>;
+  searchParams: Promise<{
+    search?: string;
+    levelId?: string;
+    page?: string;
+    from?: string;
+    sort?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { search = '', levelId = '', page: pageParam, from } = await searchParams;
+  const { search = '', levelId = '', page: pageParam, from, sort } = await searchParams;
+
+  /*
+   * Only the students who owe money — round 5.
+   *
+   * A filter, not a sort. Sorting by payment put the overdue students first and
+   * left everybody else underneath, so "who do I telephone" was answered by a
+   * list that still contained the whole club — and page two of a sorted register
+   * is not the rest of the answer. Filtering makes the count in the header mean
+   * something.
+   *
+   * One recognised value, not a column name from the URL: a parameter that
+   * reaches an ORDER BY or a WHERE is a parameter somebody can inject.
+   */
+  const overdueOnly = sort === 'overdue';
 
   /*
    * The register is a top-level section, so it has no parent and no back link —
@@ -43,6 +67,7 @@ export default async function StudentsPage({
   const query = new URLSearchParams();
   if (search.trim()) query.set('search', search.trim());
   if (levelId.trim()) query.set('levelId', levelId.trim());
+  if (overdueOnly) query.set('sort', 'overdue');
   if (page > 1) query.set('page', String(page));
 
   /*
@@ -56,6 +81,9 @@ export default async function StudentsPage({
   const exportQuery = new URLSearchParams();
   if (search.trim()) exportQuery.set('search', search.trim());
   if (levelId.trim()) exportQuery.set('levelId', levelId.trim());
+  // The overdue filter travels too: an export under a filtered list must be the
+  // list, or the button lies about what it is exporting.
+  if (overdueOnly) exportQuery.set('sort', 'overdue');
 
   let data: Students | null = null;
   let failure: string | null = null;
@@ -71,7 +99,8 @@ export default async function StudentsPage({
     }
   }
 
-  const filtering = search.trim().length > 0 || levelId.trim().length > 0;
+  const filtering =
+    search.trim().length > 0 || levelId.trim().length > 0 || overdueOnly;
 
   /*
    * A page that has fallen off the end — QA 29.6 and 29.12.
@@ -137,6 +166,44 @@ export default async function StudentsPage({
               options={data.levels.map((level) => ({ value: level.id, label: level.name }))}
             />
 
+            {/*
+              Only who owes — round 5.
+
+              A checkbox, because that is what it is: the register either shows
+              everybody or shows the shortlist. Still a link underneath, so it
+              lives in the URL, survives a refresh and can be sent to a
+              colleague — and it works before any JavaScript has loaded, which a
+              real checkbox with an onChange would not.
+            */}
+            <Link
+              href={
+                overdueOnly
+                  ? pageHref('/dashboard/students', { search, levelId }, 1)
+                  : `${pageHref('/dashboard/students', { search, levelId }, 1)}${
+                      search.trim() || levelId.trim() ? '&' : '?'
+                    }sort=overdue`
+              }
+              role="checkbox"
+              aria-checked={overdueOnly}
+              className={cn(
+                'flex items-center gap-2 rounded border px-4 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                overdueOnly
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border hover:bg-surface-muted',
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  'flex size-4 shrink-0 items-center justify-center rounded-sm border',
+                  overdueOnly ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+                )}
+              >
+                {overdueOnly && <Check className="size-3" />}
+              </span>
+              {t('fees.showOverdueOnly')}
+            </Link>
+
             {filtering && (
               <Link
                 href="/dashboard/students"
@@ -148,40 +215,19 @@ export default async function StudentsPage({
           </section>
 
           {/*
-            Adding one and importing many, side by side — slice 1.10.
-            The import lives here rather than in a menu because the moment
-            somebody needs it is the moment they first see an empty register,
-            and a migration path nobody finds is a migration path nobody uses.
+            The register's three file-and-record actions, and the importer that
+            two of them open — slice 1.10 and 1.11.
+
+            One client island rather than three server links, because opening the
+            importer is client state: a spreadsheet dropped anywhere on this
+            screen opens it too, and a drop cannot change the URL.
           */}
           {data.canManage && (
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/dashboard/students/new"
-                className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground"
-              >
-                {t('students.add')}
-              </Link>
-              <Link
-                href="/dashboard/students/import"
-                className="rounded border border-border px-4 py-2 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                {t('students.import.action')}
-              </Link>
-              {/*
-                A plain anchor, not `Link` — slice 1.11. The answer is a file, so
-                there is no client navigation to make: `Link` would prefetch a
-                spreadsheet and then hand the router an attachment it cannot
-                render. It carries the current search and level, because an
-                export button under a filtered register that quietly returns all
-                four hundred students is a button that lies about what it did.
-              */}
-              <a
-                href={`/dashboard/students/export${exportQuery.size > 0 ? `?${exportQuery}` : ''}`}
-                className="rounded border border-border px-4 py-2 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                {filtering ? t('students.export.actionFiltered') : t('students.export.action')}
-              </a>
-            </div>
+            <StudentActions
+              levels={data.levels}
+              exportHref={`/dashboard/students/export${exportQuery.size > 0 ? `?${exportQuery}` : ''}`}
+              filtering={filtering}
+            />
           )}
 
           {!data.canManage && (
@@ -276,6 +322,10 @@ export default async function StudentsPage({
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* Furthest right, after the level and the flags. */}
+                      {data.canManage && (
+                        <PaymentMark state={student.paymentState} />
+                      )}
                       {student.levelName === null ? (
                         <span className="rounded bg-surface-muted px-2 py-0.5 text-sm text-foreground-muted">
                           {t('students.noLevel')}

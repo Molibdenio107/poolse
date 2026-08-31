@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_BLOCK, CONTROL_LINE } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
@@ -45,7 +46,7 @@ export function MedicalNotesForm({
   notes: string | null;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(saveNotesAction, INITIAL);
+  const [state, action, pending] = useSavedAction(saveNotesAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -96,7 +97,7 @@ export function RecordConsentForm({
   kinds: ConsentKind[];
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(recordConsentAction, INITIAL);
+  const [state, action, pending] = useSavedAction(recordConsentAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -162,7 +163,7 @@ export function WithdrawConsentButton({
 }): React.ReactElement {
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
-  const [state, action, pending] = useActionState(withdrawConsentAction, INITIAL);
+  const [state, action, pending] = useSavedAction(withdrawConsentAction, INITIAL);
 
   if (!confirming) {
     return (

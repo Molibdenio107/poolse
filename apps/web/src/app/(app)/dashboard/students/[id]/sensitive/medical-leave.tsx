@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { FileText, FileUp, Trash2 } from 'lucide-react';
@@ -41,7 +41,7 @@ export function MedicalLeavePanel({
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(addMedicalLeaveAction, INITIAL);
+  const [state, action, pending] = useSavedAction(addMedicalLeaveAction, INITIAL);
 
   return (
     <div className="flex flex-col gap-4">
@@ -268,7 +268,7 @@ function RemoveLeave({
   leaveId: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [, action, pending] = useActionState(removeMedicalLeaveAction, INITIAL);
+  const [, action, pending] = useSavedAction(removeMedicalLeaveAction, INITIAL);
 
   return (
     <form action={action} className="inline">

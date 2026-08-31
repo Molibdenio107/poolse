@@ -49,12 +49,30 @@ export function rowFor(student: Student): string[] {
     levelName: student.levelName ?? '',
     contactEmail: student.contactEmail ?? '',
     contactPhone: student.contactPhone ?? '',
+    taxNumber: student.taxNumber ?? '',
     notes: student.notes ?? '',
     guardianName: guardian?.name ?? '',
     guardianRelationship: guardian?.relationship ?? '',
     guardianPhone: guardian?.phone ?? '',
     guardianEmail: guardian?.email ?? '',
     guardianTaxNumber: guardian?.taxNumber ?? '',
+    isSocio: student.isSocio ? 'Sim' : '',
+    socioNumber: student.socioNumber ?? '',
+    /*
+     * Género and payment — round 5.
+     *
+     * Written the way a club writes them, because this file goes back into the
+     * importer: "Masculino" and "Sim" are read by the same readers that parse a
+     * club's own spreadsheet, so an export is a valid import.
+     *
+     * A student with nothing to pay exports an empty cell rather than "Não" —
+     * "not applicable" and "owes money" are different answers and a blank is the
+     * honest one.
+     */
+    gender:
+      student.gender === null ? '' : student.gender === 'male' ? 'Masculino' : 'Feminino',
+    isPaid:
+      student.paymentState === 'paid' ? 'Sim' : student.paymentState === 'none' ? '' : 'Não',
   };
 
   return EXPORT_FIELDS.map((field) => values[field]);
@@ -102,4 +120,26 @@ export async function studentsWorkbook(
   // An ArrayBuffer rather than a Node Buffer: this is handed straight to a web
   // `Response`, which takes the former and not the latter.
   return (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
+}
+
+/** One CSV field, quoted only where it has to be. */
+function csvCell(value: string): string {
+  return /[";\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+/**
+ * The same register as a CSV.
+ *
+ * **Semicolons, CRLF, and a byte-order mark** — all three because this file
+ * has to open correctly by double-click in a Portuguese Excel, which is where
+ * it is going. Commas would put the whole row in column A on a machine whose
+ * decimal separator is a comma, and without the BOM every accent in it renders
+ * as mojibake. Our own importer sniffs the delimiter and strips the mark, so
+ * the round trip survives either way; Excel is the fussy one.
+ */
+export function studentsCsv(headers: string[], students: Student[]): string {
+  const lines = [headers, ...students.map(rowFor)].map((row) =>
+    row.map(csvCell).join(';'),
+  );
+  return `\uFEFF${lines.join('\r\n')}\r\n`;
 }

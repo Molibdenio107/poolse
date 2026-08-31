@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_LABEL, SelectField } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
@@ -40,7 +40,7 @@ export function AddRecordForm({
   today: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(addRecordAction, INITIAL);
+  const [state, action, pending] = useSavedAction(addRecordAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -185,7 +185,7 @@ export function FavouriteStrokeForm({
   current: Stroke | null;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(setFavouriteStrokeAction, INITIAL);
+  const [state, action, pending] = useSavedAction(setFavouriteStrokeAction, INITIAL);
 
   return (
     <form action={action} className="flex flex-wrap items-end gap-2">
@@ -238,7 +238,7 @@ export function ArchiveRecordButton({
   recordId: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [, action, pending] = useActionState(archiveRecordAction, INITIAL);
+  const [, action, pending] = useSavedAction(archiveRecordAction, INITIAL);
 
   return (
     <form action={action}>

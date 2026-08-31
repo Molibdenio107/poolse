@@ -18,6 +18,9 @@ import type { FormState } from '../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
   if (error instanceof ApiError) {
+    // A 409 on a level is one of two rules, and the API says which by naming a
+    // field: the name is taken, or another escalão already covers these ages.
+    if (Object.keys(error.fields).length > 0) return { ok: false, fields: error.fields };
     if (error.status === 409) return { ok: false, errorKey: 'students.duplicateLevel' };
     if (error.status < 500) return { ok: false, errorKey };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
@@ -33,9 +36,12 @@ function studentBody(formData: FormData): Record<string, unknown> {
     firstName: text('firstName'),
     lastName: text('lastName'),
     birthDate: text('birthDate'),
+    // Empty posts as nothing, which the API reads as "not recorded".
+    gender: text('gender'),
     levelId: text('levelId'),
     contactEmail: text('contactEmail'),
     contactPhone: text('contactPhone'),
+    taxNumber: text('taxNumber'),
     notes: text('notes'),
   };
 }
@@ -166,11 +172,17 @@ function levelBody(formData: FormData): {
   name: string;
   minAgeMonths: number | null;
   maxAgeMonths: number | null;
+  admitsMale: boolean;
+  admitsFemale: boolean;
 } {
   return {
     name: String(formData.get('name') ?? '').trim(),
     minAgeMonths: ageBound(formData, 'minAgeMonths'),
     maxAgeMonths: ageBound(formData, 'maxAgeMonths'),
+    // Checkboxes post nothing when unticked; both unticked is refused by the
+    // API and by the table, which is where that rule belongs.
+    admitsMale: formData.get('admitsMale') === 'on',
+    admitsFemale: formData.get('admitsFemale') === 'on',
   };
 }
 
@@ -501,3 +513,32 @@ export async function createLevelInline(
     return { ok: false, errorKey: failed.errorKey ?? 'students.levelFailed' };
   }
 }
+
+/**
+ * Settling everything a student currently owes, from the register — POOLSE-42.
+ *
+ * One call rather than one per line: the office means "this family paid this
+ * month", and which occurrence each line is on is the API's problem, not a
+ * question the register should have to answer.
+ */
+export async function markStudentPaidAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const studentId = String(formData.get('studentId') ?? '');
+
+  try {
+    await apiPost(`/students/${studentId}/paid`, {
+      isPaid: formData.get('isPaid') === 'true',
+    });
+  } catch (error) {
+    return failure(error, 'fees.saveFailed');
+  }
+
+  // The register is what is on screen; the record is one click away and shows
+  // the same lines, so both are refreshed.
+  revalidatePath('/dashboard/students');
+  revalidatePath(`/dashboard/students/${studentId}`);
+  return { ok: true };
+}
+

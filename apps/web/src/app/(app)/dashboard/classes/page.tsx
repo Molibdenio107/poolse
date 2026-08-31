@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Classes, type EnrolledStudent } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import { PageShell } from '@/components/page-shell';
+import { formatCents } from '@/lib/money';
 
 /**
  * The whole week, and who is in it.
@@ -74,6 +75,21 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
           group.levelName === null
             ? null
             : { label: t('classes.level'), value: group.levelName },
+          /*
+           * What a place here costs — POOLSE-42.
+           *
+           * Matched on this turma's level and its own weekly slot count, by the
+           * API. Absent rather than zero when the site has no price for that
+           * combination: "0,00 €" would read as free.
+           */
+          group.monthlyPriceCents === null
+            ? null
+            : {
+                label: t('classes.price'),
+                value: t('classes.priceMonthly', {
+                  amount: formatCents(locale, group.monthlyPriceCents),
+                }),
+              },
           group.instructorName === null
             ? null
             : { label: t('classes.instructor'), value: group.instructorName },

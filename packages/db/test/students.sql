@@ -373,4 +373,80 @@ BEGIN
   RAISE NOTICE 'PASS test 9: guardianship is a link, kept across a birthday, shared by siblings';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 10 — who an escalão admits, and who a student is
+--
+-- Round 5. Two escalões may share a name when they admit different sexes, which
+-- is how a club writes "Cadetes femininos" and "Cadetes masculinos"; one that
+-- admits nobody is a typo; and a student's own sex is optional, because the
+-- ordinary state of an imported row is that nobody has recorded it.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid;
+  v_student uuid;
+  n int;
+BEGIN
+  SELECT id INTO v_org FROM organization WHERE slug = 'clube-a';
+
+  -- The same word, twice, meaning two escalões.
+  INSERT INTO student_level (organization_id, name, sort_order,
+                             min_age_months, max_age_months, admits_male, admits_female)
+  VALUES (v_org, 'Cadetes', 90, 96, 132, false, true),
+         (v_org, 'Cadetes', 91, 96, 144, true, false);
+
+  SELECT count(*) INTO n FROM student_level
+   WHERE organization_id = v_org AND name = 'Cadetes' AND archived_at IS NULL;
+  IF n <> 2 THEN
+    RAISE EXCEPTION 'FAIL test 10a: a club could not name its two Cadetes, got %', n;
+  END IF;
+
+  -- But not three times for the same members.
+  BEGIN
+    INSERT INTO student_level (organization_id, name, sort_order, admits_male, admits_female)
+    VALUES (v_org, 'Cadetes', 92, false, true);
+    RAISE EXCEPTION 'FAIL test 10b: two escalões admitting the same sex shared a name';
+  EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+
+  -- An escalão nobody can join is a typo, not a policy.
+  BEGIN
+    INSERT INTO student_level (organization_id, name, sort_order, admits_male, admits_female)
+    VALUES (v_org, 'Ninguém', 93, false, false);
+    RAISE EXCEPTION 'FAIL test 10c: an escalão admitting nobody was allowed';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  -- Everything written before round 5 is misto, and stays that way.
+  INSERT INTO student_level (organization_id, name, sort_order)
+  VALUES (v_org, 'Iniciação livre', 94);
+
+  SELECT count(*) INTO n FROM student_level
+   WHERE organization_id = v_org AND name = 'Iniciação livre'
+     AND admits_male AND admits_female;
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 10d: an escalão with nothing said about sex was not misto';
+  END IF;
+
+  -- A student's own sex is optional, and the two values are the only ones.
+  INSERT INTO student (organization_id, first_name, last_name)
+  VALUES (v_org, 'Sem', 'Registo') RETURNING id INTO v_student;
+
+  SELECT count(*) INTO n FROM student WHERE id = v_student AND gender IS NULL;
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 10e: a student had to declare a gender';
+  END IF;
+
+  UPDATE student SET gender = 'female' WHERE id = v_student;
+
+  BEGIN
+    UPDATE student SET gender = 'other' WHERE id = v_student;
+    RAISE EXCEPTION 'FAIL test 10f: an unknown gender was accepted';
+  EXCEPTION WHEN invalid_text_representation THEN NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 10: escalões admit one sex or both, and a student may say which they are';
+END $$;
+
 ROLLBACK;

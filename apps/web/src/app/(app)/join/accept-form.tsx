@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { acceptAction, type FormState } from '../dashboard/actions';
@@ -25,7 +25,7 @@ export function AcceptForm({
   organizationName: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(acceptAction, INITIAL);
+  const [state, action, pending] = useSavedAction(acceptAction, INITIAL);
 
   if (state.result?.status === 'accepted') {
     return (

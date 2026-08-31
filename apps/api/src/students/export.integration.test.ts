@@ -24,8 +24,6 @@ import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant } fr
 
 after(closeHarness);
 
-const RELATIONSHIP = 'Encarregado de educação';
-
 interface Tenant {
   organizationId: string;
   sql: <T extends object>(text: string, values?: unknown[]) => Promise<T[]>;
@@ -188,12 +186,8 @@ test('what the importer put in, the exporter gives back', async () => {
     const importer = new StudentImportController();
     const exporter = new ExportsController();
 
-    await tenant.sql(
-      `INSERT INTO student_level (organization_id, name, sort_order)
-       VALUES ($1, 'Iniciação', 1)`,
-      [tenant.organizationId],
-    );
-
+    // No level seeded: the import creates it from the file, which is now part
+    // of what the round trip has to survive.
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       await importer.run({
         rows: [
@@ -206,11 +200,11 @@ test('what the importer put in, the exporter gives back', async () => {
             guardianEmail: 'sofia.melo@example.test',
             guardianPhone: '912345678',
             guardianTaxNumber: '123456789',
+            guardianRelationship: 'Mãe',
           },
         ],
         commit: true,
         include: [0],
-        defaultRelationship: RELATIONSHIP,
       });
 
       const { students } = await exporter.students();
@@ -220,12 +214,12 @@ test('what the importer put in, the exporter gives back', async () => {
       assert.equal(duarte?.lastName, 'Melo');
       // Day-first on the way in, ISO on the way out, and the same day.
       assert.equal(duarte?.birthDate, '2016-05-12');
-      assert.equal(duarte?.levelName, 'Iniciação');
+      assert.equal(duarte?.levelName, 'iniciacao', 'created from the file, as written');
       assert.equal(duarte?.contactPhone, '212345678');
 
       const guardian = duarte?.guardians[0];
       assert.equal(guardian?.name, 'Sofia Melo');
-      assert.equal(guardian?.relationship, RELATIONSHIP);
+      assert.equal(guardian?.relationship, 'Mãe');
       assert.equal(guardian?.email, 'sofia.melo@example.test');
       assert.equal(guardian?.phone, '912345678');
       assert.equal(guardian?.taxNumber, '123456789');

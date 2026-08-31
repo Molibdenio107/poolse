@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { FormState } from '../../../actions';
 import { mergeAction } from './duplicates.actions';
@@ -28,7 +29,7 @@ export function MergeButton({
 }): React.ReactElement {
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
-  const [state, action, pending] = useActionState(mergeAction, INITIAL);
+  const [state, action, pending] = useSavedAction(mergeAction, INITIAL);
 
   if (!confirming) {
     return (

@@ -48,8 +48,8 @@ BEGIN
   VALUES (v_org, '2026/2027', DATE '2026-09-01', DATE '2027-07-31')
   RETURNING id INTO v_season;
 
-  INSERT INTO class_group (organization_id, season_id, name, capacity)
-  VALUES (v_org, v_season, 'Iniciação A', 8) RETURNING id INTO v_group;
+  INSERT INTO class_group (organization_id, facility_id, season_id, name, capacity)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), v_season, 'Iniciação A', 8) RETURNING id INTO v_group;
 
   INSERT INTO student (organization_id, first_name, last_name)
   VALUES (v_org, 'Ana', 'Costa') RETURNING id INTO v_ana;

@@ -17,6 +17,8 @@ import { photoUrlFor } from '@/lib/photo';
 import { StudentForm } from '../student-forms';
 import { CreditBooking } from './credit-booking';
 import { StudentWeek } from './student-week';
+import { FeesBlock } from './fees-block';
+import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageShell } from '@/components/page-shell';
 
@@ -82,6 +84,23 @@ export default async function StudentPage({
       failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
     }
   }
+
+  /*
+   * What this student pays — POOLSE-42.
+   *
+   * After the main fetch and outside its try, because it is the one block on
+   * this page whose absence is a *permission* rather than a failure: `loadFees`
+   * answers null when the endpoint refuses, which is what an instructor gets.
+   * AC10 makes that a page without the block, not a block saying no.
+   */
+  const facilities =
+    student === null
+      ? []
+      : await apiFetch<{ facilities: { id: string; name: string }[] }>('/facilities')
+          .then((response) => response.facilities.map((f) => ({ id: f.id, name: f.name })))
+          .catch(() => []);
+
+  const billing = student === null ? null : await loadFees(id, facilities.map((f) => f.id));
 
   return (
     <PageShell
@@ -197,13 +216,28 @@ export default async function StudentPage({
               <dl className="flex flex-col gap-3">
                 <Row label={t('students.level')} value={student.levelName ?? t('students.noLevel')} />
                 <Row label={t('students.birthDate')} value={student.birthDate} />
+                <Row
+                  label={t('students.gender')}
+                  value={
+                    student.gender === null
+                      ? null
+                      : student.gender === 'male'
+                        ? t('students.genderMale')
+                        : t('students.genderFemale')
+                  }
+                />
                 <Row label={t('students.contactEmail')} value={student.contactEmail} />
                 <Row label={t('students.contactPhone')} value={student.contactPhone} />
+                <Row label={t('students.taxNumber')} value={student.taxNumber} />
                 <Row label={t('students.notes')} value={student.notes} />
               </dl>
             </>
           )}
         </section>
+      )}
+
+      {student !== null && billing !== null && (
+        <FeesBlock studentId={student.id} fees={billing.fees} periods={billing.periods} />
       )}
 
       {student !== null && register?.canManage === true && (

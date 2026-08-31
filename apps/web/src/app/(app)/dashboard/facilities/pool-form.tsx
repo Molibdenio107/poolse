@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useFormatter, useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { FormState } from '../actions';
@@ -242,7 +243,7 @@ export function PoolForm({
   mode: 'create' | 'edit';
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(
+  const [state, action, pending] = useSavedAction(
     mode === 'create' ? createPoolAction : updatePoolAction,
     INITIAL,
   );

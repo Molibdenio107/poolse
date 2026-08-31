@@ -1,9 +1,16 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { Guardian, StudentLevel } from '../../../../lib/api';
-import { CONTROL_BLOCK, CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import {
+  CONTROL_BLOCK,
+  CONTROL_LINE,
+  FIELD_COLUMN,
+  FIELD_LABEL,
+  TextField,
+} from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { GuardianBlock } from './guardian-block';
 import { fitsLevel } from '@/lib/ages';
@@ -31,9 +38,11 @@ export interface StudentFormValues {
   firstName?: string;
   lastName?: string;
   birthDate?: string | null;
+  gender?: 'male' | 'female' | null;
   levelId?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  taxNumber?: string | null;
   notes?: string | null;
 }
 
@@ -62,7 +71,7 @@ export function StudentForm({
   ageOfMajority: number;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(
+  const [state, action, pending] = useSavedAction(
     mode === 'create' ? createStudentAction : updateStudentAction,
     INITIAL,
   );
@@ -114,6 +123,30 @@ export function StudentForm({
           />
         </div>
 
+        {/*
+          Masculino or feminino — round 5, and optional.
+
+          Beside the date of birth because they are the same kind of fact and
+          because both are what an escalão is chosen against. Blank stays a real
+          answer: most imported rows have nothing here, and a required field
+          would be filled in by guessing from a first name.
+        */}
+        <div className={FIELD_COLUMN}>
+          <label htmlFor="student-gender" className={FIELD_LABEL}>
+            {t('students.gender')}
+          </label>
+          <select
+            id="student-gender"
+            name="gender"
+            defaultValue={student?.gender ?? ''}
+            className={CONTROL_LINE}
+          >
+            <option value="">{t('students.genderUnknown')}</option>
+            <option value="male">{t('students.genderMale')}</option>
+            <option value="female">{t('students.genderFemale')}</option>
+          </select>
+        </div>
+
         <LevelPicker levels={levels} student={student} />
 
         <div className={FIELD_COLUMN}>
@@ -140,6 +173,29 @@ export function StudentForm({
             className={CONTROL_LINE}
           />
         </div>
+
+        {/*
+          `TextField` rather than a raw input, unlike its neighbours.
+
+          This is the one field on the form that the *server* can reject — a NIF
+          another student already has comes back as a 409 naming this field — and
+          an uncontrolled input is wiped by React 19 the moment the action
+          returns, which is exactly when somebody is being asked to correct it.
+          POOLSE-09 and POOLSE-10 were both this bug. The neighbours predate the
+          component and are a separate tidy-up; adding a seventeenth of them
+          knowingly would not be.
+        */}
+        <TextField
+          name="taxNumber"
+          label={t('students.taxNumber')}
+          initial={student?.taxNumber ?? ''}
+          maxLength={40}
+          hint={t('students.taxNumberHint')}
+          className="max-w-none"
+          {...(state.fields?.['taxNumber'] !== undefined
+            ? { error: t(state.fields['taxNumber']) }
+            : {})}
+        />
       </div>
 
       {/* Prose, so it takes the wider cap rather than the single-control one. */}
@@ -210,7 +266,7 @@ export function ArchiveStudentButton({
 }): React.ReactElement {
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
-  const [state, action, pending] = useActionState(archiveStudentAction, INITIAL);
+  const [state, action, pending] = useSavedAction(archiveStudentAction, INITIAL);
 
   if (!confirming) {
     return (

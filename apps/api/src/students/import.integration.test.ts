@@ -21,8 +21,6 @@ import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant } fr
 
 after(closeHarness);
 
-const RELATIONSHIP = 'Encarregado de educação';
-
 async function countStudents(tenant: { sql: <T extends object>(t: string, v?: unknown[]) => Promise<T[]> }): Promise<number> {
   const [row] = await tenant.sql<{ count: string }>(
     'SELECT count(*)::text AS count FROM student WHERE archived_at IS NULL',
@@ -41,7 +39,6 @@ test('a preview writes nothing at all', async () => {
           { fullName: 'Tiago Sousa', birthDate: '01/09/1990' },
         ],
         commit: false,
-        defaultRelationship: RELATIONSHIP,
       });
 
       assert.equal(result.summary.total, 2);
@@ -69,7 +66,6 @@ test('a commit writes exactly the rows that were ticked', async () => {
         commit: true,
         // The first and the third; the middle one deliberately left out.
         include: [0, 2],
-        defaultRelationship: RELATIONSHIP,
       });
 
       assert.equal(result.created, 2);
@@ -103,13 +99,69 @@ test('a level is matched by name against this club, accents and case aside', asy
           { fullName: 'Tiago Sousa', birthDate: '01/09/1990', levelName: 'Pré-competição' },
         ],
         commit: false,
-        defaultRelationship: RELATIONSHIP,
       });
 
-      assert.equal(result.rows[0]?.levelId, level?.id);
-      assert.equal(result.rows[1]?.importable, false);
-      assert.equal(result.rows[1]?.problems[0]?.code, 'unknownLevel');
+      assert.equal(result.rows[0]?.levelId, level?.id, 'the one they already have');
+      assert.equal(result.rows[1]?.importable, true, 'and a new one does not fail its row');
+      assert.deepEqual(result.summary.levelsToCreate, ['Pré-competição']);
     });
+
+    // A preview creates nothing, levels included.
+    const levels = await tenant.sql<{ name: string }>('SELECT name FROM student_level');
+    assert.equal(levels.length, 1);
+  });
+});
+
+/**
+ * A club's programme is whatever their spreadsheet says it is.
+ *
+ * Refusing rows whose level does not exist yet meant asking somebody to copy a
+ * list out of the file they were in the middle of importing. The levels are
+ * created inside the same transaction as the students, so an import brings the
+ * programme and its people together or brings neither.
+ */
+test('levels named in the file are created, once each, on the end of the ladder', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new StudentImportController();
+
+    await tenant.sql(
+      `INSERT INTO student_level (organization_id, name, sort_order)
+       VALUES ($1, 'Adaptação', 1)`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await controller.run({
+        rows: [
+          { fullName: 'Rita Nunes', levelName: 'Pré-competição' },
+          { fullName: 'Tiago Sousa', levelName: 'pre competicao' },
+          { fullName: 'Marta Lopes', levelName: 'adaptacao' },
+          { fullName: 'Ana Melo', levelName: 'Hidroginástica' },
+        ],
+        commit: true,
+        include: [0, 1, 2, 3],
+      });
+
+      assert.equal(result.created, 4);
+      assert.deepEqual(result.levelsCreated, ['Pré-competição', 'Hidroginástica']);
+    });
+
+    const levels = await tenant.sql<{ name: string; sort_order: number }>(
+      'SELECT name, sort_order FROM student_level ORDER BY sort_order',
+    );
+    assert.deepEqual(
+      levels.map((level) => level.name),
+      ['Adaptação', 'Pré-competição', 'Hidroginástica'],
+      'the existing one keeps its place and the new ones go on the end',
+    );
+
+    // Both spellings of one name landed in one level, and it kept the accents.
+    const [preCompetition] = await tenant.sql<{ count: string }>(
+      `SELECT count(*)::text AS count
+         FROM student s JOIN student_level l ON l.id = s.level_id
+        WHERE l.name = 'Pré-competição'`,
+    );
+    assert.equal(preCompetition?.count, '2');
   });
 });
 
@@ -127,7 +179,6 @@ test('somebody already in the register comes back as a duplicate, and is not wri
       const preview = await controller.run({
         rows: [{ fullName: 'Rita Nunes', birthDate: '12/04/1988' }],
         commit: false,
-        defaultRelationship: RELATIONSHIP,
       });
       assert.equal(preview.rows[0]?.duplicate?.kind, 'register');
       assert.equal(preview.rows[0]?.importable, true, 'the operator may still decide to');
@@ -139,7 +190,6 @@ test('somebody already in the register comes back as a duplicate, and is not wri
       const commit = await controller.run({
         rows: [{ fullName: 'Rita Nunes', birthDate: '12/04/1988' }],
         commit: true,
-        defaultRelationship: RELATIONSHIP,
       });
       assert.equal(commit.created, 0);
     });
@@ -165,7 +215,6 @@ test('a guardian named in the sheet becomes a person, linked to the child', asyn
         ],
         commit: true,
         include: [0],
-        defaultRelationship: RELATIONSHIP,
       });
       assert.equal(result.created, 1);
     });
@@ -181,7 +230,7 @@ test('a guardian named in the sheet becomes a person, linked to the child', asyn
         WHERE gl.archived_at IS NULL`,
     );
     assert.equal(link?.first_name, 'Sofia');
-    assert.equal(link?.relationship, RELATIONSHIP);
+    assert.equal(link?.relationship, null, 'the sheet had no relationship column, so none is invented');
     assert.equal(link?.email, 'sofia.melo@example.test');
   });
 });
@@ -192,18 +241,37 @@ test('a refused row is refused however hard the client ticks it', async () => {
 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       const result = await controller.run({
-        // A minor with nobody to telephone — the rule the create form enforces.
-        rows: [{ fullName: 'Duarte Melo', birthDate: '12/05/2016' }],
+        // A date that is not a date — one of the two things that genuinely
+        // cannot be written.
+        rows: [{ fullName: 'Duarte Melo', birthDate: '31/02/2016' }],
         commit: true,
         include: [0],
-        defaultRelationship: RELATIONSHIP,
       });
 
       assert.equal(result.created, 0, 'the tick is not permission');
-      assert.equal(result.rows[0]?.problems[0]?.code, 'guardianRequired');
+      assert.equal(result.rows[0]?.problems[0]?.code, 'badDate');
     });
 
     assert.equal(await countStudents(tenant), 0);
+  });
+});
+
+test('a minor with no guardian imports, and is counted', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new StudentImportController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await controller.run({
+        rows: [{ fullName: 'Duarte Melo', birthDate: '12/05/2016' }],
+        commit: true,
+        include: [0],
+      });
+
+      assert.equal(result.created, 1);
+      assert.equal(result.summary.minorsWithoutGuardian, 1);
+    });
+
+    assert.equal(await countStudents(tenant), 1);
   });
 });
 
@@ -225,31 +293,28 @@ test('a guardian with only a telephone number never reaches the trigger', async 
             guardianName: 'Sofia Melo',
             guardianPhone: '912345678',
           },
-          { fullName: 'Rita Nunes', birthDate: '12/04/1988' },
         ],
         commit: true,
-        include: [0, 1],
-        defaultRelationship: RELATIONSHIP,
+        include: [0],
       });
 
-      assert.equal(result.rows[0]?.problems[0]?.code, 'guardianKeyRequired');
-      // And the clean row beside it still lands: one bad row is refused, not
-      // the whole file.
+      // The student lands; the guardian does not, because the database requires
+      // a guardian be dedupable and a phone number is not a key.
       assert.equal(result.created, 1);
+      assert.equal(result.rows[0]?.warnings[0]?.code, 'guardianNotRecorded');
     });
 
     assert.equal(await countStudents(tenant), 1);
+
+    const links = await tenant.sql('SELECT 1 FROM guardian_link WHERE archived_at IS NULL');
+    assert.equal(links.length, 0, 'and no half-identified person was invented for them');
   });
 });
 
 test('the import takes the same roles as creating one student by hand', async () => {
   await withScratchTenant(async (tenant) => {
     const controller = new StudentImportController();
-    const body = {
-      rows: [{ fullName: 'Rita Nunes' }],
-      commit: false,
-      defaultRelationship: RELATIONSHIP,
-    };
+    const body = { rows: [{ fullName: 'Rita Nunes' }], commit: false };
 
     const instructor = await addMember(tenant, 'Rita', 'Instrutora', ['instructor']);
     const student = await addMember(tenant, 'Ana', 'Aluna', ['student']);
@@ -278,16 +343,134 @@ test('a body with no rows is a 400 rather than an import of nothing', async () =
     const controller = new StudentImportController();
 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
-      await expectStatus(
-        () => controller.run({ rows: [], commit: false, defaultRelationship: RELATIONSHIP }),
-        400,
-      );
-      // The relationship is required: the guardian link needs a non-blank one,
-      // and only the web app owns readable Portuguese for it.
-      await expectStatus(
-        () => controller.run({ rows: [{ fullName: 'Rita' }], commit: false }),
-        400,
-      );
+      await expectStatus(() => controller.run({ rows: [], commit: false }), 400);
+      await expectStatus(() => controller.run({ commit: false }), 400);
     });
+  });
+});
+
+
+/**
+ * A second import of the same people — the case that decides whether this is
+ * usable more than once.
+ *
+ * A NIF match is an identity: it makes the row an update of the person it
+ * belongs to, even when the sheet spells their name differently. Everything else
+ * matches on name and birth date. Either way a commit only ever *fills blanks* —
+ * `fillStudentBlanks` coalesces every column, so a value already in Poolse
+ * cannot be overwritten by a spreadsheet.
+ */
+test('a matching row fills the blanks instead of creating a second student', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new StudentImportController();
+
+    await tenant.sql(
+      `INSERT INTO student (organization_id, first_name, last_name, tax_number, contact_email)
+       VALUES ($1, 'Marta', 'Vaz', '123456789', 'antiga@example.test')`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await controller.run({
+        rows: [
+          {
+            // A different name entirely: the NIF is what says this is Marta.
+            fullName: 'Marta Vaz Correia',
+            taxNumber: '123 456 789',
+            birthDate: '15/03/1979',
+            contactEmail: 'nova@example.test',
+            contactPhone: '912345678',
+          },
+          { fullName: 'Rita Nunes', birthDate: '12/04/1988' },
+        ],
+        commit: true,
+        include: [0, 1],
+      });
+
+      assert.equal(result.created, 1, 'only the genuinely new one');
+      assert.equal(result.updated, 1);
+      assert.equal(result.rows[0]?.duplicate?.matchedOn, 'taxNumber');
+    });
+
+    assert.equal(await countStudents(tenant), 2, 'and no second Marta');
+
+    const [marta] = await tenant.sql<{
+      first_name: string;
+      birth_date: string | null;
+      contact_email: string;
+      contact_phone: string | null;
+    }>(
+      `SELECT first_name, to_char(birth_date, 'YYYY-MM-DD') AS birth_date,
+              contact_email::text AS contact_email, contact_phone
+         FROM student WHERE tax_number = '123456789'`,
+    );
+
+    assert.equal(marta?.birth_date, '1979-03-15', 'the blank was filled');
+    assert.equal(marta?.contact_phone, '912345678', 'and so was this one');
+    assert.equal(marta?.contact_email, 'antiga@example.test', 'what was there is untouched');
+    assert.equal(marta?.first_name, 'Marta', 'and the name is never rewritten by a file');
+  });
+});
+
+test('importing the same file twice changes nothing the second time', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new StudentImportController();
+    const rows = [
+      { fullName: 'Rita Nunes', birthDate: '12/04/1988', contactPhone: '912345678' },
+    ];
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const first = await controller.run({ rows, commit: true, include: [0] });
+      assert.equal(first.created, 1);
+
+      const second = await controller.run({ rows, commit: true, include: [0] });
+      assert.equal(second.created, 0, 'nobody is created twice');
+      assert.equal(second.updated, 0, 'and there was nothing left to fill');
+    });
+
+    assert.equal(await countStudents(tenant), 1);
+  });
+});
+
+test('the same child listed twice in one file becomes one student', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new StudentImportController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      // A sheet with one line per class attended. Ticking every row is what an
+      // operator does; creating four children is what must not happen.
+      const result = await controller.run({
+        rows: [
+          { fullName: 'Duarte Melo', birthDate: '12/05/2016' },
+          { fullName: 'Duarte Melo', birthDate: '12/05/2016' },
+          { fullName: 'Duarte Melo', birthDate: '12/05/2016' },
+        ],
+        commit: true,
+        include: [0, 1, 2],
+      });
+
+      assert.equal(result.created, 1);
+    });
+
+    assert.equal(await countStudents(tenant), 1);
+  });
+});
+
+test('a student NIF survives the round trip through the export', async () => {
+  await withScratchTenant(async (tenant) => {
+    const importer = new StudentImportController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await importer.run({
+        rows: [{ fullName: 'Marta Vaz Correia', birthDate: '15/03/1979', taxNumber: '123456789' }],
+        commit: true,
+        include: [0],
+      });
+    });
+
+    const [row] = await tenant.sql<{ tax_number: string }>(
+      'SELECT tax_number FROM student WHERE archived_at IS NULL',
+    );
+    assert.equal(row?.tax_number, '123456789');
   });
 });

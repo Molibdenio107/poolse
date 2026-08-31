@@ -32,6 +32,18 @@ export interface StudentLevel {
    */
   minAgeMonths: number | null;
   maxAgeMonths: number | null;
+  /**
+   * Who the escalão admits — round 5.
+   *
+   * Both true is misto, which is the default and most clubs. Two flags rather
+   * than one enum because "both" is a real answer and the commonest one; an enum
+   * would need a third value meaning the other two at once.
+   *
+   * This is also what lets two escalões share a name: "Cadetes" for the girls
+   * and "Cadetes" for the boys are two rows an operator reads as one word.
+   */
+  admitsMale: boolean;
+  admitsFemale: boolean;
   /** So the UI can warn before archiving a level people are in. */
   studentCount: number;
 }
@@ -123,8 +135,41 @@ export interface Student {
   age: number | null;
   levelId: string | null;
   levelName: string | null;
+  /**
+   * Masculino or feminino, optional — round 5.
+   *
+   * Null is the ordinary state of an imported row and never blocks anything. It
+   * is matched against an escalão's `admitsMale`/`admitsFemale` for display and
+   * warnings only: nothing here refuses an enrolment, exactly as the age range
+   * does not.
+   */
+  gender: 'male' | 'female' | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  /**
+   * The student's own NIF, where they are invoiced in their own name.
+   *
+   * No age rule: minors have NIFs in Portugal and a parent deducts the lessons
+   * against the child's number. Unique among the club's living students, so the
+   * guardian's number typed into a child's row is caught when it is typed.
+   */
+  taxNumber: string | null;
+  /**
+   * Where this student stands on paying, for the register's own column.
+   *
+   *   `none`     nothing is assigned to them
+   *   `paid`     every live line's current occurrence is settled
+   *   `due`      something is unsettled but not yet past its due date
+   *   `overdue`  something is unsettled and the due date has gone
+   *
+   * Decided in SQL, in the same statement as the page, because it is a fact
+   * about today and about rows the client cannot see — and because sorting by it
+   * has to happen before the window, not after.
+   */
+  paymentState: 'none' | 'paid' | 'due' | 'overdue';
+  /** POOLSE-42 — a fact about the person, not "has an active quota line". */
+  isSocio: boolean;
+  socioNumber: string | null;
   notes: string | null;
   /**
    * Present only when a `photo` consent is granted and not withdrawn. The query
@@ -148,6 +193,15 @@ export interface Student {
 }
 
 export class DuplicateNameError extends Error {}
+
+/**
+ * Two living students of this club given the same NIF.
+ *
+ * Raised in place of the raw unique-violation so the operator gets a sentence
+ * rather than `student_tax_number_uq`. The likeliest cause by far is the
+ * guardian's number typed into the child's row.
+ */
+export class DuplicateTaxNumberError extends Error {}
 
 /**
  * The consent gate, written once and used by every query that reads a student.
@@ -232,6 +286,8 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       sort_order: number;
       min_age_months: number | null;
       max_age_months: number | null;
+      admits_male: boolean;
+      admits_female: boolean;
       student_count: string;
     }>(`
       SELECT l.id,
@@ -239,6 +295,8 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
              l.sort_order,
              l.min_age_months,
              l.max_age_months,
+             l.admits_male,
+             l.admits_female,
              (
                SELECT count(*)
                  FROM student s
@@ -257,6 +315,8 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       sortOrder: row.sort_order,
       minAgeMonths: row.min_age_months,
       maxAgeMonths: row.max_age_months,
+      admitsMale: row.admits_male,
+      admitsFemale: row.admits_female,
       // count() comes back as a string from node-pg; bigint does not fit a JS
       // number in general, and the driver refuses to guess.
       studentCount: Number(row.student_count),
@@ -267,6 +327,36 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
 export interface AgeRange {
   minAgeMonths: number | null;
   maxAgeMonths: number | null;
+}
+
+/** An escalão's range and who it admits — written together, as one decision. */
+export interface LevelShape extends AgeRange {
+  admitsMale: boolean;
+  admitsFemale: boolean;
+}
+
+const MIXED: LevelShape = {
+  minAgeMonths: null,
+  maxAgeMonths: null,
+  admitsMale: true,
+  admitsFemale: true,
+};
+
+/** Raised when another escalão already covers exactly these ages for this sex. */
+export class DuplicateRangeError extends Error {}
+
+/*
+ * 23505 on a level write is one of two rules, and the operator needs to know
+ * which: the name is taken, or the range is. The constraint name is the only
+ * thing that distinguishes them, so it is read here rather than guessed at.
+ */
+function asLevelConflict(error: unknown, name: string): never {
+  if (error instanceof Error && (error as { code?: string }).code === '23505') {
+    const constraint = (error as { constraint?: string }).constraint ?? '';
+    if (constraint.includes('range_uq')) throw new DuplicateRangeError(name);
+    throw new DuplicateNameError(name);
+  }
+  throw error;
 }
 
 /**
@@ -317,7 +407,7 @@ export async function countOutsideRange(
 export async function createLevel(
   organizationId: string,
   name: string,
-  range: AgeRange = { minAgeMonths: null, maxAgeMonths: null },
+  range: LevelShape = MIXED,
 ): Promise<string> {
   try {
     return await withOrg(organizationId, async (tx) => {
@@ -326,14 +416,22 @@ export async function createLevel(
       // somebody's Adaptação → Iniciação → Aperfeiçoamento would be worse.
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO student_level (organization_id, name, sort_order,
-                                    min_age_months, max_age_months)
+                                    min_age_months, max_age_months,
+                                    admits_male, admits_female)
          VALUES (
            $1, $2,
            coalesce((SELECT max(sort_order) + 1 FROM student_level WHERE archived_at IS NULL), 0),
-           $3, $4
+           $3, $4, $5, $6
          )
          RETURNING id`,
-        [organizationId, name, range.minAgeMonths, range.maxAgeMonths],
+        [
+          organizationId,
+          name,
+          range.minAgeMonths,
+          range.maxAgeMonths,
+          range.admitsMale,
+          range.admitsFemale,
+        ],
       );
 
       const id = rows[0]?.id;
@@ -349,7 +447,7 @@ export async function createLevel(
       return id;
     });
   } catch (error) {
-    return asDuplicate(error, name);
+    return asLevelConflict(error, name);
   }
 }
 
@@ -369,16 +467,24 @@ export async function renameLevel(
   organizationId: string,
   levelId: string,
   name: string,
-  range: AgeRange = { minAgeMonths: null, maxAgeMonths: null },
+  range: LevelShape = MIXED,
 ): Promise<boolean> {
   try {
     return await withOrg(organizationId, async (tx) => {
       const { rows } = await tx.query<{ id: string }>(
         `UPDATE student_level
-            SET name = $2, min_age_months = $3, max_age_months = $4
+            SET name = $2, min_age_months = $3, max_age_months = $4,
+                admits_male = $5, admits_female = $6
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
-        [levelId, name, range.minAgeMonths, range.maxAgeMonths],
+        [
+          levelId,
+          name,
+          range.minAgeMonths,
+          range.maxAgeMonths,
+          range.admitsMale,
+          range.admitsFemale,
+        ],
       );
       if (!rows[0]) return false;
 
@@ -391,7 +497,7 @@ export async function renameLevel(
       return true;
     });
   } catch (error) {
-    return asDuplicate(error, name);
+    return asLevelConflict(error, name);
   }
 }
 
@@ -490,7 +596,65 @@ export async function archiveLevel(
 // Students
 // ---------------------------------------------------------------------------
 
+
+/**
+ * Where one student stands on paying — POOLSE-42.
+ *
+ * One expression rather than a join, so it can sit in the same statement as the
+ * search, the scope and the LIMIT. Filtering or sorting after the window is the
+ * thing CONVENTIONS forbids outright: it gives page 2 fewer rows than page 1.
+ *
+ * Only *live* lines with a current occurrence count. An ended line is not asking
+ * for anything, and a student whose only line ended reads as `none` rather than
+ * as permanently overdue.
+ */
+/*
+ * What a spreadsheet said, for a student with no fee line of its own.
+ *
+ * A club's own file already knows who has paid, and Poolse cannot always turn
+ * that into a settled occurrence — an imported student has no mensalidade yet,
+ * and inventing one from a level name would be inventing a price. So the fact is
+ * kept as what it is, and read only where there is nothing better: a real line
+ * and its payments always win.
+ */
+const IMPORTED_PAYMENT = `CASE
+    WHEN s.paid_through_month IS NULL THEN 'none'
+    WHEN s.paid_through_month >= date_trunc('month', current_date)::date THEN 'paid'
+    ELSE 'overdue'
+  END`;
+
+const PAYMENT_STATE = `(
+  SELECT CASE
+           WHEN count(*) = 0 THEN ${IMPORTED_PAYMENT}
+           WHEN bool_or(pay.id IS NULL
+                        AND fee_due_on(cur.period_start, f.payment_due_day) < current_date)
+             THEN 'overdue'
+           WHEN bool_or(pay.id IS NULL) THEN 'due'
+           ELSE 'paid'
+         END
+    FROM student_fee sf
+    JOIN fee_plan fpl ON fpl.id = sf.fee_plan_id
+    JOIN fee_period fp ON fp.id = sf.fee_period_id
+    JOIN facility f ON f.id = fpl.facility_id
+    CROSS JOIN LATERAL (
+      SELECT current_period_start(sf.starts_on, sf.ends_on, fp.months) AS period_start
+    ) cur
+    LEFT JOIN student_fee_payment pay
+           ON pay.student_fee_id = sf.id AND pay.period_start = cur.period_start
+   WHERE sf.student_id = s.id AND sf.archived_at IS NULL AND cur.period_start IS NOT NULL
+)`;
+
 export interface StudentQuery {
+  /**
+   * Show only the students who owe money — round 5.
+   *
+   * A filter, not a sort. Sorting put the overdue students first and left the
+   * other four hundred underneath, so the question "who do I telephone" was
+   * answered by a list that still contained everybody; and paging made it worse,
+   * because page two of a sorted register is not the rest of the answer. This
+   * says how many there are, and the count in the header means something.
+   */
+  overdueOnly?: boolean;
   search: string | null;
   levelId: string | null;
 }
@@ -512,8 +676,13 @@ export async function listStudents(
       age: number | null;
       level_id: string | null;
       level_name: string | null;
+      gender: 'male' | 'female' | null;
       contact_email: string | null;
       contact_phone: string | null;
+      tax_number: string | null;
+      payment_state: 'none' | 'paid' | 'due' | 'overdue';
+      is_socio: boolean;
+      socio_number: string | null;
       notes: string | null;
       guardians: Guardian[];
       photo_storage_key: string | null;
@@ -532,8 +701,11 @@ export async function listStudents(
              END AS age,
              s.level_id,
              l.name AS level_name,
+             s.gender,
              s.contact_email::text AS contact_email,
              s.contact_phone,
+             s.tax_number, s.is_socio, s.socio_number,
+             ${PAYMENT_STATE} AS payment_state,
              s.notes,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
@@ -566,6 +738,9 @@ export async function listStudents(
            '$1',
          )}
          AND ($2::uuid IS NULL OR s.level_id = $2::uuid)
+         -- Only who owes, when the register asks for it — round 5. A filter
+         -- rather than a sort, so the count in the header is the answer.
+         AND (NOT $5::boolean OR ${PAYMENT_STATE} = 'overdue')
        /*
         * The window goes here, inside the statement that carries the tenant
         * scope, the search and the sort — POOLSE-29. Never a page taken from a
@@ -584,7 +759,7 @@ export async function listStudents(
        ORDER BY ${nameOrder('s')}, s.id
        LIMIT $3 OFFSET $4
       `,
-      [query.search, query.levelId, limit, offset],
+      [query.search, query.levelId, limit, offset, query.overdueOnly ?? false],
     );
 
     return windowed(page, run, toStudent);
@@ -633,8 +808,10 @@ export async function exportStudents(
              CASE WHEN s.birth_date IS NULL THEN NULL
                   ELSE extract(YEAR FROM age(s.birth_date))::int
              END AS age,
-             s.level_id, l.name AS level_name,
-             s.contact_email::text AS contact_email, s.contact_phone, s.notes,
+             s.level_id, l.name AS level_name, s.gender,
+             s.contact_email::text AS contact_email, s.contact_phone, s.tax_number,
+             s.is_socio, s.socio_number, s.notes,
+             ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
              ${PHOTO_CONSENT} AS photo_consent
@@ -688,8 +865,10 @@ export async function findStudent(
              CASE WHEN s.birth_date IS NULL THEN NULL
                   ELSE extract(YEAR FROM age(s.birth_date))::int
              END AS age,
-             s.level_id, l.name AS level_name,
-             s.contact_email::text AS contact_email, s.contact_phone, s.notes,
+             s.level_id, l.name AS level_name, s.gender,
+             s.contact_email::text AS contact_email, s.contact_phone, s.tax_number,
+             s.is_socio, s.socio_number, s.notes,
+             ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
              ${PHOTO_CONSENT} AS photo_consent
@@ -713,7 +892,10 @@ export interface StudentInput {
   levelId: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  taxNumber: string | null;
   notes: string | null;
+  /** Masculino or feminino. Null is "nobody has recorded it", and is normal. */
+  gender: 'male' | 'female' | null;
   /**
    * Every guardian this student should have, as the caller wants them.
    *
@@ -724,12 +906,30 @@ export interface StudentInput {
   guardians: GuardianInput[];
 }
 
+/**
+ * Whether this is Postgres refusing a duplicate NIF.
+ *
+ * Matched on the constraint name rather than on the message, which is
+ * localised by the server's lc_messages and would stop matching the day
+ * somebody deploys to a differently configured box.
+ */
+function isDuplicateTaxNumber(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  const constraint = (error as { constraint?: string } | null)?.constraint;
+  return code === '23505' && constraint === 'student_tax_number_uq';
+}
+
 /** Null when the level id does not belong to this organization — or at all. */
 export async function createStudent(
   organizationId: string,
   input: StudentInput,
 ): Promise<string | null> {
-  return withOrg(organizationId, (tx) => insertStudent(tx, organizationId, input));
+  try {
+    return await withOrg(organizationId, (tx) => insertStudent(tx, organizationId, input));
+  } catch (error) {
+    if (isDuplicateTaxNumber(error)) throw new DuplicateTaxNumberError();
+    throw error;
+  }
 }
 
 /**
@@ -753,9 +953,9 @@ export async function insertStudent(
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO student (
          organization_id, first_name, last_name, birth_date, level_id,
-         contact_email, contact_phone, notes
+         contact_email, contact_phone, tax_number, notes, gender
        )
-       VALUES ($1, $2, $3, $4::date, $5, $6::citext, $7, $8)
+       VALUES ($1, $2, $3, $4::date, $5, $6::citext, $7, $8, $9, $10::student_gender)
        RETURNING id`,
       [
         organizationId,
@@ -765,7 +965,9 @@ export async function insertStudent(
         input.levelId,
         input.contactEmail,
         input.contactPhone,
+        input.taxNumber,
         input.notes,
+        input.gender,
       ],
     );
 
@@ -787,7 +989,105 @@ export async function insertStudent(
   return id;
 }
 
+/**
+ * Fills in blanks on a student who already exists — the import's update path.
+ *
+ * **`coalesce` in the SQL, not a branch in TypeScript.** Every column is written
+ * as "keep what is there, or take this if there is nothing" — so the promise
+ * that an import can never overwrite what somebody typed into Poolse is a
+ * property of the statement rather than of the code that built its arguments.
+ * A caller that passes a value for a field that is already filled changes
+ * nothing, whatever it believed.
+ *
+ * `nullif(btrim(...), '')` because a blank string is not a value: a spreadsheet
+ * cell containing a space must not count as "has a phone number".
+ *
+ * Names are deliberately not here. They are how the row was matched in the
+ * first place, and a file that renamed somebody has said nothing about whether
+ * it is the same person. Guardians are not here either — attaching one to a
+ * student who may already have two is a different question, and a bulk answer
+ * to it would be a guess.
+ */
+export interface StudentBlanks {
+  birthDate: string | null;
+  levelId: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  taxNumber: string | null;
+  notes: string | null;
+}
+
+export async function fillStudentBlanks(
+  tx: Tx,
+  studentId: string,
+  blanks: StudentBlanks,
+): Promise<boolean> {
+  const { rows } = await tx.query<{ id: string }>(
+    `UPDATE student
+        SET birth_date    = coalesce(birth_date, $2::date),
+            level_id      = coalesce(level_id, $3::uuid),
+            contact_email = coalesce(contact_email, nullif(btrim($4), '')::citext),
+            contact_phone = coalesce(contact_phone, nullif(btrim($5), '')),
+            tax_number    = coalesce(tax_number, nullif(btrim($6), '')),
+            notes         = coalesce(notes, nullif(btrim($7), ''))
+      WHERE id = $1 AND archived_at IS NULL
+        /*
+         * Nothing to do is not a write. Without this an import of an unchanged
+         * file would touch every row's updated_at and fill the audit log with
+         * changes that changed nothing.
+         */
+        AND (
+          (birth_date IS NULL AND $2::date IS NOT NULL)
+          OR (level_id IS NULL AND $3::uuid IS NOT NULL)
+          OR (contact_email IS NULL AND nullif(btrim($4), '') IS NOT NULL)
+          OR (contact_phone IS NULL AND nullif(btrim($5), '') IS NOT NULL)
+          OR (tax_number IS NULL AND nullif(btrim($6), '') IS NOT NULL)
+          OR (notes IS NULL AND nullif(btrim($7), '') IS NOT NULL)
+        )
+    RETURNING id`,
+    [
+      studentId,
+      blanks.birthDate,
+      blanks.levelId,
+      blanks.contactEmail,
+      blanks.contactPhone,
+      blanks.taxNumber,
+      blanks.notes,
+    ],
+  );
+
+  const filled = rows[0] !== undefined;
+  if (filled) {
+    await recordAudit(tx, {
+      action: 'student.filled',
+      entityType: 'student',
+      entityId: studentId,
+      // Which fields, not what was in them: an audit entry is readable by every
+      // admin and a child's telephone number does not belong in it twice.
+      data: {
+        fields: Object.entries(blanks)
+          .filter(([, value]) => value !== null && String(value).trim() !== '')
+          .map(([field]) => field),
+      },
+    });
+  }
+  return filled;
+}
+
 export async function updateStudent(
+  organizationId: string,
+  studentId: string,
+  input: StudentInput,
+): Promise<'updated' | 'not_found' | 'bad_level'> {
+  try {
+    return await updateStudentIn(organizationId, studentId, input);
+  } catch (error) {
+    if (isDuplicateTaxNumber(error)) throw new DuplicateTaxNumberError();
+    throw error;
+  }
+}
+
+async function updateStudentIn(
   organizationId: string,
   studentId: string,
   input: StudentInput,
@@ -798,7 +1098,8 @@ export async function updateStudent(
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE student
           SET first_name = $2, last_name = $3, birth_date = $4::date, level_id = $5,
-              contact_email = $6::citext, contact_phone = $7, notes = $8
+              contact_email = $6::citext, contact_phone = $7, tax_number = $8, notes = $9,
+              gender = $10::student_gender
         WHERE id = $1 AND archived_at IS NULL
       RETURNING id`,
       [
@@ -809,7 +1110,9 @@ export async function updateStudent(
         input.levelId,
         input.contactEmail,
         input.contactPhone,
+        input.taxNumber,
         input.notes,
+        input.gender,
       ],
     );
     if (!rows[0]) return 'not_found';
@@ -882,8 +1185,13 @@ function toStudent(row: {
   age: number | null;
   level_id: string | null;
   level_name: string | null;
+  gender: 'male' | 'female' | null;
   contact_email: string | null;
   contact_phone: string | null;
+  tax_number: string | null;
+  payment_state: 'none' | 'paid' | 'due' | 'overdue';
+  is_socio: boolean;
+  socio_number: string | null;
   notes: string | null;
   guardians: Guardian[];
   photo_storage_key: string | null;
@@ -901,6 +1209,7 @@ function toStudent(row: {
     age: row.age,
     levelId: row.level_id,
     levelName: row.level_name,
+    gender: row.gender,
     contactEmail: row.contact_email,
     // Primary first — it is the number somebody rings in a hurry. Aggregated by
     // name in SQL, reordered here so the ordering rule sits beside the type it
@@ -909,6 +1218,10 @@ function toStudent(row: {
       (a, b) => Number(b.isPrimary) - Number(a.isPrimary),
     ),
     contactPhone: row.contact_phone,
+    taxNumber: row.tax_number,
+    paymentState: row.payment_state,
+    isSocio: row.is_socio,
+    socioNumber: row.socio_number,
     notes: row.notes,
     photoStorageKey: row.photo_storage_key,
     photoConsent: row.photo_consent,

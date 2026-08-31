@@ -34,12 +34,17 @@ export const IMPORT_FIELDS = [
   'levelName',
   'contactEmail',
   'contactPhone',
+  'taxNumber',
   'notes',
   'guardianName',
   'guardianRelationship',
   'guardianPhone',
   'guardianEmail',
   'guardianTaxNumber',
+  'isSocio',
+  'socioNumber',
+  'gender',
+  'isPaid',
 ] as const;
 
 export type ImportField = (typeof IMPORT_FIELDS)[number];
@@ -48,6 +53,19 @@ export type ImportField = (typeof IMPORT_FIELDS)[number];
 export interface Sheet {
   headers: string[];
   rows: string[][];
+}
+
+/**
+ * One sheet of a workbook, with the tab's own name.
+ *
+ * A club's file is very often a tab per turma, or a page of instructions in
+ * front of the register. Reading only the first one meant a perfectly good file
+ * came back as "no rows with data", so every sheet is read and the operator
+ * says which is the register. A CSV is one sheet named after the file, so the
+ * two formats present the same shape.
+ */
+export interface NamedSheet extends Sheet {
+  name: string;
 }
 
 /** Field to column index, or null where nothing is mapped. */
@@ -61,12 +79,17 @@ export const EMPTY_MAPPING: Mapping = {
   levelName: null,
   contactEmail: null,
   contactPhone: null,
+  taxNumber: null,
   notes: null,
   guardianName: null,
   guardianRelationship: null,
   guardianPhone: null,
   guardianEmail: null,
   guardianTaxNumber: null,
+  isSocio: null,
+  socioNumber: null,
+  gender: null,
+  isPaid: null,
 };
 
 /**
@@ -200,15 +223,30 @@ const SYNONYMS: [ImportField, string[]][] = [
    */
   [
     'guardianTaxNumber',
-    [
-      'nif do encarregado',
-      'nif encarregado',
-      'contribuinte',
-      'numero de contribuinte',
-      'nif',
-      'guardian nif',
-      'tax number',
-    ],
+    ['nif do encarregado', 'nif encarregado', 'contribuinte do encarregado', 'guardian nif'],
+  ],
+  /*
+   * The student's own NIF takes the *bare* forms — "NIF", "Contribuinte".
+   *
+   * The column sits in the student's row, and every sheet that carries both
+   * names the guardian's after them. Guessing wrongly costs one dropdown on the
+   * mapping step; guessing nothing costs one dropdown too, so the more useful
+   * guess wins. It is listed after the guardian's so that "NIF do encarregado"
+   * is claimed by its exact match before this can reach for it.
+   */
+  /*
+   * Género and payment — round 5.
+   *
+   * Both before the sócio pair, because "género" is unambiguous and "pago" must
+   * not be reached for by `isSocio`'s looser forms.
+   */
+  ['gender', ['genero', 'sexo', 'm f', 'gender', 'sex']],
+  ['isPaid', ['pago', 'pagou', 'esta pago', 'mensalidade paga', 'paid', 'is paid']],
+  ['socioNumber', ['numero de socio', 'n socio', 'numero socio', 'membership number']],
+  ['isSocio', ['socio', 'e socio', 'associado', 'member', 'is member']],
+  [
+    'taxNumber',
+    ['nif do aluno', 'nif aluno', 'nif', 'contribuinte', 'numero de contribuinte', 'tax number', 'student nif'],
   ],
   [
     'guardianPhone',
@@ -264,52 +302,311 @@ const SYNONYMS: [ImportField, string[]][] = [
 ];
 
 /**
- * A first guess at which column is which.
+ * How sure the matcher is about one column.
  *
- * Two passes, both refusing to claim a column twice. An exact header match is
- * trusted everywhere; only then does a header that merely *contains* a known
- * word get considered, because "Nome do encarregado" contains "nome" and reading
- * it as the student's name would import a register of parents.
+ * The whole point of the mapping step is to stop being a wall of twelve
+ * dropdowns. Something has to decide which matches are worth a person's
+ * attention, and this is it:
  *
- * Anything it cannot place stays null. An unmapped column is a question the
- * operator answers in one click; a wrongly mapped one is a hundred bad rows.
+ *   `certain`  the header *is* a name for this field. Shown folded away.
+ *   `likely`   the header contains or abbreviates one. Shown folded away, but
+ *              counted separately so the summary can be honest about it.
+ *   `unsure`   something matched, but not enough to act on quietly. Asked.
+ *
+ * Only `unsure` and unmatched columns become questions. A screen that asks about
+ * everything is a screen people click through without reading, which is worse
+ * than not asking.
  */
-export function guessMapping(headers: string[]): Mapping {
-  const mapping: Mapping = { ...EMPTY_MAPPING };
-  const keys = headers.map(key);
-  const claimed = new Set<number>();
+export type MatchConfidence = 'certain' | 'likely' | 'unsure';
 
-  const take = (field: ImportField, matches: (header: string, word: string) => boolean): void => {
-    for (const [candidate, words] of SYNONYMS) {
-      if (candidate !== field) continue;
-      for (const word of words) {
-        const at = keys.findIndex(
-          (header, index) => !claimed.has(index) && header !== '' && matches(header, word),
-        );
-        if (at !== -1) {
-          mapping[field] = at;
-          claimed.add(at);
-          return;
-        }
-      }
+export interface ColumnMatch {
+  field: ImportField;
+  column: number;
+  confidence: MatchConfidence;
+  /** Machine key for why, so the interface can say it in either language. */
+  reason: 'exact' | 'contains' | 'abbreviation' | 'shape' | 'agent';
+}
+
+export interface MatchResult {
+  mapping: Mapping;
+  matches: ColumnMatch[];
+  /** Columns nothing claimed, by index. These are offered as questions. */
+  unmatched: number[];
+}
+
+/**
+ * What a column's values look like — never what they are.
+ *
+ * This exists so a header nobody can read ("Contacto 1", "Coluna B") can still
+ * be placed: a column of nine digits beside a column with "@" in it tells you
+ * most of what a person would work out by glancing at the sheet.
+ *
+ * **It is deliberately a description, not a sample.** These shapes are also what
+ * gets sent to the model when the heuristic gives up, and a register of
+ * children's names and telephone numbers is not something to hand to an API to
+ * save somebody a dropdown. "9 digits" carries the signal; "912345678" carries a
+ * child's mother's phone number.
+ */
+export interface ColumnShape {
+  index: number;
+  header: string;
+  /** Rough percentage of rows with anything in them. */
+  filled: number;
+  /** How repetitive the column is — a level repeats, a name does not. */
+  repeats: boolean;
+  /** The dominant shapes, most common first: 'email', 'date', '9 digits', … */
+  looks: string[];
+}
+
+function shapeOf(value: string): string | null {
+  const text = value.trim();
+  if (text === '') return null;
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(text)) return 'email';
+  if (/^\d{4}-\d{2}-\d{2}/.test(text) || /^\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}$/.test(text)) {
+    return 'date';
+  }
+
+  const digits = text.replace(/[\s.\-+()]/g, '');
+  if (/^\d+$/.test(digits)) return `${digits.length} digits`;
+
+  const words = text.split(/\s+/).length;
+  return words === 1 ? 'one word' : `${Math.min(words, 4)} words`;
+}
+
+/** The shape of every column, computed once per sheet. */
+export function describeColumns(sheet: Sheet): ColumnShape[] {
+  return sheet.headers.map((header, index) => {
+    const values = sheet.rows.map((row) => (row[index] ?? '').trim());
+    const filled = values.filter((value) => value !== '');
+
+    const counts = new Map<string, number>();
+    for (const value of filled) {
+      const shape = shapeOf(value);
+      if (shape !== null) counts.set(shape, (counts.get(shape) ?? 0) + 1);
     }
-  };
 
-  for (const [field] of SYNONYMS) take(field, (header, word) => header === word);
-  for (const [field] of SYNONYMS) {
-    if (mapping[field] === null) take(field, (header, word) => header.includes(word));
+    const looks = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([shape]) => shape);
+
+    return {
+      index,
+      header,
+      filled: sheet.rows.length === 0 ? 0 : Math.round((filled.length / sheet.rows.length) * 100),
+      // Fewer than half the filled values are distinct: a lookup, not an identity.
+      repeats: filled.length > 3 && new Set(filled).size * 2 <= filled.length,
+      looks,
+    };
+  });
+}
+
+/**
+ * The fields a shape alone may place, with no help from the header.
+ *
+ * Only the student's own email. A column of addresses under an unreadable
+ * heading is far more likely to be the family's one contact than specifically
+ * the guardian's — a sheet that separates the two always labels which is which.
+ * Guessing "guardian" here would quietly file every student's address under
+ * somebody else.
+ */
+const SHAPE_ONLY: ImportField[] = ['contactEmail'];
+
+/** What each field's values should look like, for confirming or contradicting a guess. */
+const EXPECTED_SHAPE: Partial<Record<ImportField, (looks: string[]) => boolean>> = {
+  contactEmail: (looks) => looks.includes('email'),
+  guardianEmail: (looks) => looks.includes('email'),
+  birthDate: (looks) => looks.includes('date'),
+  contactPhone: (looks) => looks.some((shape) => /^(9|10|11|12|13) digits$/.test(shape)),
+  guardianPhone: (looks) => looks.some((shape) => /^(9|10|11|12|13) digits$/.test(shape)),
+  taxNumber: (looks) => looks.includes('9 digits'),
+  guardianTaxNumber: (looks) => looks.includes('9 digits'),
+};
+
+const tokens = (value: string): string[] => key(value).split(' ').filter(Boolean);
+
+/**
+ * Whether every word of the header is at least the start of a word in the
+ * synonym — "enc educacao" against "encarregado de educacao", "dt nasc" against
+ * "data de nascimento", "tlm" against "telemovel".
+ *
+ * Abbreviation is how club spreadsheets are actually written, and it is the
+ * single biggest source of columns the old exact-then-substring matcher left for
+ * a person to place by hand.
+ */
+function abbreviates(header: string, synonym: string): boolean {
+  const headerWords = tokens(header);
+  const synonymWords = tokens(synonym);
+  if (headerWords.length === 0 || headerWords.length > synonymWords.length) return false;
+
+  let at = 0;
+  for (const word of headerWords) {
+    // Three letters before an abbreviation is believed: "a" prefixes half the
+    // dictionary, and a one-letter match is noise wearing a match's clothes.
+    const found = synonymWords.findIndex(
+      (candidate, index) =>
+        index >= at && (candidate === word || (word.length >= 3 && candidate.startsWith(word))),
+    );
+    if (found === -1) return false;
+    at = found + 1;
+  }
+  return true;
+}
+
+/** A whole-word containment test, so "nif" does not match "nifty". */
+function containsWord(header: string, synonym: string): boolean {
+  return ` ${header} `.includes(` ${synonym} `);
+}
+
+interface Candidate {
+  field: ImportField;
+  column: number;
+  score: number;
+  reason: ColumnMatch['reason'];
+}
+
+function scoreOne(
+  field: ImportField,
+  synonyms: string[],
+  shape: ColumnShape,
+): Candidate | null {
+  const header = key(shape.header);
+  if (header === '') return null;
+
+  /*
+   * Plain variables rather than a closure over a nullable.
+   *
+   * TypeScript's control flow does not follow an assignment made inside a
+   * callback, so the tidier `consider()` helper left every later read narrowed
+   * to `never`. Two locals and an explicit sentinel are duller and compile.
+   */
+  let score = 0;
+  let reason: ColumnMatch['reason'] = 'exact';
+
+  for (const synonym of synonyms) {
+    let candidate = 0;
+    let how: ColumnMatch['reason'] = 'exact';
+
+    if (header === synonym) {
+      candidate = 100;
+      how = 'exact';
+    } else if (containsWord(header, synonym)) {
+      candidate = 72;
+      how = 'contains';
+    } else if (abbreviates(header, synonym)) {
+      candidate = 58;
+      how = 'abbreviation';
+    }
+
+    if (candidate > score) {
+      score = candidate;
+      reason = how;
+    }
+  }
+
+  const expected = EXPECTED_SHAPE[field];
+  if (expected !== undefined && shape.looks.length > 0) {
+    if (expected(shape.looks)) {
+      if (score > 0) {
+        // Agreement nudges a guess up; it never invents one on its own except
+        // where the shape is genuinely distinctive.
+        score = Math.min(score + 12, 100);
+      } else if (shape.looks.includes('email') && SHAPE_ONLY.includes(field)) {
+        // An email column is an email column whatever the heading says.
+        score = 42;
+        reason = 'shape';
+      }
+    } else if (score > 0) {
+      /*
+       * The header says phone and the column holds dates. Trust the values.
+       *
+       * This applies to an *exact* header match too, and deliberately: a column
+       * headed "Telefone" full of dates means the sheet is mislabelled or its
+       * headers have shifted by one, and both are worth a question. The penalty
+       * is sized to drop even a perfect header match into `unsure`, which is the
+       * band the screen asks about.
+       */
+      score -= 45;
+    }
+  }
+
+  if (score <= 0) return null;
+  return { field, column: shape.index, score, reason };
+}
+
+function confidenceOf(score: number): MatchConfidence | null {
+  if (score >= 90) return 'certain';
+  if (score >= 65) return 'likely';
+  if (score >= 40) return 'unsure';
+  return null;
+}
+
+/**
+ * Which column is which, with how sure it is about each.
+ *
+ * Every (field, column) pair is scored and the best ones are taken first, rather
+ * than the old first-come-first-served walk down a synonym list. That ordering
+ * mattered: it is what let a weak match on an early field claim a column that a
+ * later field matched exactly.
+ *
+ * Anything it cannot place is left null and offered as a question. An unmapped
+ * column costs one dropdown; a wrongly mapped one costs a hundred bad rows.
+ */
+export function matchColumns(sheet: Sheet): MatchResult {
+  const shapes = describeColumns(sheet);
+
+  const candidates: Candidate[] = [];
+  for (const [field, synonyms] of SYNONYMS) {
+    for (const shape of shapes) {
+      const candidate = scoreOne(field, synonyms, shape);
+      if (candidate !== null) candidates.push(candidate);
+    }
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+
+  const mapping: Mapping = { ...EMPTY_MAPPING };
+  const matches: ColumnMatch[] = [];
+  const usedColumns = new Set<number>();
+
+  for (const candidate of candidates) {
+    const confidence = confidenceOf(candidate.score);
+    if (confidence === null) continue;
+    if (mapping[candidate.field] !== null || usedColumns.has(candidate.column)) continue;
+
+    mapping[candidate.field] = candidate.column;
+    usedColumns.add(candidate.column);
+    matches.push({
+      field: candidate.field,
+      column: candidate.column,
+      confidence,
+      reason: candidate.reason,
+    });
   }
 
   /*
-   * A sheet with "Nome" and "Apelido" has both halves already, and the whole-name
-   * column would then be read *instead* of nothing — the API ignores `fullName`
-   * when `firstName` is present, but showing it as mapped implies it is used.
+   * A sheet with "Nome" and "Apelido" has both halves already, and the API
+   * ignores `fullName` when `firstName` is present — so showing it as mapped
+   * would claim a column that is not read.
    */
   if (mapping.firstName !== null && mapping.fullName !== null) {
+    const column = mapping.fullName;
     mapping.fullName = null;
+    const at = matches.findIndex((match) => match.field === 'fullName');
+    if (at !== -1) matches.splice(at, 1);
+    usedColumns.delete(column);
   }
 
-  return mapping;
+  const unmatched = shapes
+    .filter((shape) => shape.header !== '' && !usedColumns.has(shape.index))
+    .map((shape) => shape.index);
+
+  return { mapping, matches, unmatched };
+}
+
+/** Just the mapping, for callers that do not care how sure it was. */
+export function guessMapping(headers: string[]): Mapping {
+  return matchColumns({ headers, rows: [] }).mapping;
 }
 
 /** One row, keyed by field name — exactly what the API's `rows` expects. */
@@ -348,12 +645,17 @@ export const EXPORT_FIELDS: ImportField[] = [
   'levelName',
   'contactEmail',
   'contactPhone',
+  'taxNumber',
   'notes',
   'guardianName',
   'guardianRelationship',
   'guardianPhone',
   'guardianEmail',
   'guardianTaxNumber',
+  'isSocio',
+  'socioNumber',
+  'gender',
+  'isPaid',
 ];
 
 /** Whether enough is mapped to mean anything: a name, in one form or the other. */

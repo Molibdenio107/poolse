@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '@/lib/api';
 import { AgeRangeBadge } from '@/components/age-range';
+import { levelSex } from '@/lib/levels';
 import { Reorderable } from '@/components/reorderable';
 import { reorderLevelsAction } from '../students.actions';
 import { ArchiveLevelButton, EditLevelForm } from './level-forms';
@@ -25,10 +26,13 @@ export function LevelList({
   organizationId,
   levels,
   canManage,
+  sorted = false,
 }: {
   organizationId: string;
   levels: StudentLevel[];
   canManage: boolean;
+  /** Shown in age order, which is a reading of the ladder rather than the ladder. */
+  sorted?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -50,6 +54,16 @@ export function LevelList({
       <span className="truncate font-medium">{level.name}</span>
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <AgeRangeBadge level={level} />
+        {/*
+          Only when it is not misto. A marker on every row would be noise on the
+          ladder of a club that has never separated its escalões — and where two
+          of them share a name, this is the only thing telling them apart.
+        */}
+        {levelSex(level) !== 'mixed' && (
+          <span className="rounded bg-surface-muted px-2 py-0.5 text-sm">
+            {t(`students.admitsOnly.${levelSex(level)}`)}
+          </span>
+        )}
         <span className="whitespace-nowrap text-sm text-foreground-muted">
           {t('students.count', { count: level.studentCount })}
         </span>
@@ -57,9 +71,15 @@ export function LevelList({
     </div>
   );
 
-  // Nothing to reorder without the right to change anything, and a grip that
-  // moved a list back on every save would be worse than no grip.
-  if (!canManage) {
+  /*
+   * Read-only when it is not in the club's own order — round 5.
+   *
+   * Dragging a row while the list is sorted by age would write an order nobody
+   * asked for: what is on screen is not the ladder, so a drop cannot mean what
+   * a drop normally means. The sort is a way of *reading* the ladder; the grip
+   * comes back with the club's own order.
+   */
+  if (!canManage || sorted) {
     return (
       <ol className="flex flex-col divide-y divide-border">
         {levels.map((level, index) => (
@@ -69,6 +89,21 @@ export function LevelList({
           >
             <span className="text-sm text-foreground-muted">{index + 1}.</span>
             {details(level)}
+            {canManage && (
+              <div className="flex shrink-0 flex-wrap items-center gap-1">
+                <EditLevelForm
+                  organizationId={organizationId}
+                  level={level}
+                  levels={levels}
+                />
+                <ArchiveLevelButton
+                  organizationId={organizationId}
+                  levelId={level.id}
+                  name={level.name}
+                  studentCount={level.studentCount}
+                />
+              </div>
+            )}
           </li>
         ))}
       </ol>
@@ -94,7 +129,11 @@ export function LevelList({
             <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
               {details(level)}
               <div className="flex shrink-0 flex-wrap items-center gap-1">
-                <EditLevelForm organizationId={organizationId} level={level} />
+                <EditLevelForm
+                  organizationId={organizationId}
+                  level={level}
+                  levels={levels}
+                />
                 <ArchiveLevelButton
                   organizationId={organizationId}
                   levelId={level.id}

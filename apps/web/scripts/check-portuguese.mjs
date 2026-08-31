@@ -51,6 +51,17 @@ const SAME_ON_PURPOSE = new Map([
   ['account.email', '"email" is the ordinary pt-PT word too'],
   ['profile.email', 'as above'],
   ['students.guardianEmail', 'as above'],
+  // The Portuguese acronym for the tax number, and the one an English-speaking
+  // operator of a Portuguese pool will also be looking at on the paperwork.
+  // "Tax number" would be a translation of a form field nobody's form says.
+  ['students.taxNumber', 'a Portuguese acronym, used as-is in both languages'],
+  // The field names the import lists when it says what it will fill in.
+  ['students.import.updateField.taxNumber', 'the same Portuguese acronym'],
+  ['students.import.updateField.contactEmail', '"email" is the ordinary pt-PT word too'],
+  // A file-format name and its extension. "CSV" is not an English word being
+  // left untranslated; it is what the format is called in every language.
+  ['students.export.formatCsv', 'a file format and its extension'],
+  ['students.export.formatXlsx', 'a product name and its extension — Excel is Excel in Portuguese'],
   ['invite.email', 'as above'],
   ['invite.emailLabel', 'as above'],
   ['progress.minutes', '"min" is the abbreviation in both languages'],

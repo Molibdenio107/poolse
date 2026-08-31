@@ -42,6 +42,15 @@ export interface ClassGroup {
   lane: number | null;
   schedules: ScheduleSlot[];
   students: EnrolledStudent[];
+  /**
+   * What a place in this turma costs a month — POOLSE-42.
+   *
+   * Matched on the turma's own level and its *own* weekly slot count, so nobody
+   * types a frequency twice and the two cannot disagree. Null when the site has
+   * no price for that combination, which is a thing to say rather than a zero to
+   * show.
+   */
+  monthlyPriceCents: number | null;
 }
 
 export class DuplicateNameError extends Error {}
@@ -68,6 +77,31 @@ const GROUP_COLUMNS = `
   -- opening hours and a turma at another site would be drawn against the wrong
   -- day.
   p.facility_id,
+  /*
+   * The price for this turma's level at this turma's frequency.
+   *
+   * The frequency is counted from the turma's own schedule rather than stored:
+   * a turma that meets on Tuesdays and Thursdays *is* two lessons a week, and a
+   * second field saying so would be a second thing to keep in step.
+   *
+   * The turma's facility, not the pool's — a turma with no lane yet still has a
+   * site and still has a price.
+   */
+  (
+    SELECT fp.amount_cents
+      FROM fee_plan fp
+     WHERE fp.organization_id = cg.organization_id
+       AND fp.facility_id = cg.facility_id
+       AND fp.kind = 'mensalidade'
+       AND fp.archived_at IS NULL
+       AND fp.level_id = cg.level_id
+       AND fp.lessons_per_week = (
+         SELECT count(*) FROM class_schedule cs2
+          WHERE cs2.organization_id = cg.organization_id
+            AND cs2.class_group_id = cg.id
+            AND cs2.archived_at IS NULL
+       )
+  ) AS monthly_price_cents,
   cg.instructor_membership_id,
   short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
   cg.capacity,
@@ -122,6 +156,7 @@ interface GroupRow {
   pool_id: string | null;
   pool_name: string | null;
   facility_id: string | null;
+  monthly_price_cents: number | null;
   instructor_membership_id: string | null;
   instructor_name: string | null;
   capacity: number | null;
@@ -139,6 +174,7 @@ function toGroup(row: GroupRow): ClassGroup {
     poolId: row.pool_id,
     poolName: row.pool_name,
     facilityId: row.facility_id,
+    monthlyPriceCents: row.monthly_price_cents,
     instructorMembershipId: row.instructor_membership_id,
     instructorName: row.instructor_name,
     capacity: row.capacity,
@@ -242,9 +278,23 @@ export async function createClassGroup(
         // create one in a retired season, which is the point of retiring it.
         `INSERT INTO class_group (
            organization_id, name, level_id, pool_id, instructor_membership_id, capacity, lane,
-           season_id
+           facility_id, season_id
          ) VALUES (
            $1, $2, $3, $4, $5, $6, $7,
+           /*
+            * The site — POOLSE-42, which needs one to find the price list.
+            *
+            * A turma with a pool has already said where it is, and the trigger
+            * fills this in from it; this covers the turma created before a lane
+            * is picked. Oldest facility, which for almost every club is their
+            * only one — and a club with two sites moves the turma by giving it
+            * a pool, which is the same gesture they already make.
+            */
+           coalesce(
+             (SELECT p.facility_id FROM pool p WHERE p.id = $4),
+             (SELECT f.id FROM facility f
+               WHERE f.archived_at IS NULL ORDER BY f.created_at, f.id LIMIT 1)
+           ),
            /*
             * A club with no active season yields NULL here, and season_id is
             * NOT NULL — so creating a turma answered 23502 as a 500 instead of
@@ -414,13 +464,38 @@ export async function archiveClassGroup(
 // The weekly pattern
 // ---------------------------------------------------------------------------
 
+/**
+ * Why the timetable triggers refused a slot — round 5.
+ *
+ * The facility-hours triggers raise `check_violation` with a machine-readable
+ * prefix. Unread, that reached the operator as "500" while adding a Tuesday to a
+ * turma at a pool that does not open on Tuesdays — a rule working exactly as
+ * designed, reported as a crash. The prefix is what turns it back into a
+ * sentence somebody can act on.
+ */
+export type ScheduleRefusal = 'closed_that_day' | 'outside_hours' | 'ends_after_closing';
+
+function scheduleRefusal(error: unknown): ScheduleRefusal | null {
+  if (!(error instanceof Error)) return null;
+  if ((error as { code?: string }).code !== '23514') return null;
+
+  const message = error.message;
+  if (message.startsWith('facility_closed_on_weekday:')) return 'closed_that_day';
+  if (message.startsWith('class_ends_after_closing:')) return 'ends_after_closing';
+  if (message.startsWith('outside_facility_hours:')) return 'outside_hours';
+
+  // Some other check constraint. Nothing here knows what to say about it, and
+  // guessing would put a confident wrong sentence in front of an operator.
+  return null;
+}
+
 export async function addSchedule(
   organizationId: string,
   groupId: string,
   weekday: number,
   startTime: string,
   durationMinutes: number,
-): Promise<'added' | 'not_found' | 'duplicate'> {
+): Promise<'added' | 'not_found' | 'duplicate' | ScheduleRefusal> {
   return withOrg(organizationId, async (tx) => {
     const group = await tx.query(
       'SELECT 1 FROM class_group WHERE id = $1 AND archived_at IS NULL',
@@ -439,6 +514,8 @@ export async function addSchedule(
       if (error instanceof Error && (error as { code?: string }).code === '23505') {
         return 'duplicate';
       }
+      const refused = scheduleRefusal(error);
+      if (refused !== null) return refused;
       throw error;
     }
 
@@ -474,7 +551,7 @@ export async function moveSchedule(
   scheduleId: string,
   weekday: number,
   startTime: string,
-): Promise<'moved' | 'not_found' | 'duplicate'> {
+): Promise<'moved' | 'not_found' | 'duplicate' | ScheduleRefusal> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ weekday: number; start_time: string }>(
       `SELECT weekday, start_time::text AS start_time
@@ -497,6 +574,10 @@ export async function moveSchedule(
       if (error instanceof Error && (error as { code?: string }).code === '23505') {
         return 'duplicate';
       }
+      // The same refusals as adding one, for the same reasons. Dragging cannot
+      // get round a rule typing could not, and it must not report it as a crash.
+      const refused = scheduleRefusal(error);
+      if (refused !== null) return refused;
       throw error;
     }
 

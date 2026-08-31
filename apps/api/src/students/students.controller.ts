@@ -38,6 +38,8 @@ import {
   createLevel,
   createStudent,
   DuplicateNameError,
+  DuplicateRangeError,
+  DuplicateTaxNumberError,
   findStudent,
   ageOfMajority,
   findDuplicate,
@@ -56,6 +58,7 @@ import {
   type DuplicateMatch,
   type GuardianInput,
   type GuardianRow,
+  type LevelShape,
   type MergeCandidate,
   type PersonSummary,
   type Student,
@@ -297,6 +300,7 @@ export class StudentsController {
     @Query('levelId') levelId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('sort') sort?: string,
   ): Promise<StudentsResponse> {
     const { organizationId } = currentTenant();
 
@@ -309,6 +313,10 @@ export class StudentsController {
           // A term under the floor is no filter at all — POOLSE-30.
           search: readSearch(search),
           levelId: levelId?.trim() ? levelId.trim() : null,
+          // One recognised value, not a free-text column name. It filters now
+          // rather than sorting: "who do I telephone" is answered by a shorter
+          // list, not by the same list in a different order — round 5.
+          overdueOnly: sort === 'overdue',
         },
         readPageQuery(page, limit),
       ),
@@ -385,7 +393,15 @@ export class StudentsController {
     // Read before parsing: the guardian requirement depends on the club's
     // maioridade, not on a number compiled into this file — POOLSE-22.
     const majority = await ageOfMajority(organizationId);
-    const id = await createStudent(organizationId, parseStudent(body, majority));
+
+    let id: string | null;
+    try {
+      id = await createStudent(organizationId, parseStudent(body, majority));
+    } catch (error) {
+      if (error instanceof DuplicateTaxNumberError) throw taxNumberConflict();
+      throw error;
+    }
+
     if (id === null) throw new BadRequestException('No such level');
     return { id };
   }
@@ -399,7 +415,15 @@ export class StudentsController {
     const { organizationId } = currentTenant();
 
     const majority = await ageOfMajority(organizationId);
-    const outcome = await updateStudent(organizationId, id, parseStudent(body, majority));
+
+    let outcome: Awaited<ReturnType<typeof updateStudent>>;
+    try {
+      outcome = await updateStudent(organizationId, id, parseStudent(body, majority));
+    } catch (error) {
+      if (error instanceof DuplicateTaxNumberError) throw taxNumberConflict();
+      throw error;
+    }
+
     if (outcome === 'bad_level') throw new BadRequestException('No such level');
     if (outcome === 'not_found') throw new NotFoundException('No such student');
     return { updated: true };
@@ -445,10 +469,7 @@ function age(value: unknown, field: string): number | null {
   return parsed;
 }
 
-function ageRange(body: Record<string, unknown>): {
-  minAgeMonths: number | null;
-  maxAgeMonths: number | null;
-} {
+function ageRange(body: Record<string, unknown>): LevelShape {
   const minAgeMonths = age(body['minAgeMonths'], 'minAgeMonths');
   const maxAgeMonths = age(body['maxAgeMonths'], 'maxAgeMonths');
 
@@ -457,7 +478,24 @@ function ageRange(body: Record<string, unknown>): {
   if (minAgeMonths !== null && maxAgeMonths !== null && maxAgeMonths < minAgeMonths) {
     throw new BadRequestException('maxAgeMonths cannot be below minAgeMonths');
   }
-  return { minAgeMonths, maxAgeMonths };
+
+  /*
+   * Absent means misto, which is the default and what every escalão written
+   * before round 5 is. An escalão that admits nobody is refused here as well as
+   * by the check constraint, so the operator gets a sentence naming the fields.
+   */
+  const admitsMale = body['admitsMale'] === undefined ? true : body['admitsMale'] === true;
+  const admitsFemale = body['admitsFemale'] === undefined ? true : body['admitsFemale'] === true;
+
+  if (!admitsMale && !admitsFemale) {
+    throw new BadRequestException({
+      code: 'admits_nobody',
+      message: 'An escalão has to admit somebody',
+      fields: { admitsMale: 'students.levelAdmitsNobody' },
+    });
+  }
+
+  return { minAgeMonths, maxAgeMonths, admitsMale, admitsFemale };
 }
 
 @Controller('levels')
@@ -567,7 +605,37 @@ function asHttp(error: unknown): unknown {
   if (error instanceof DuplicateNameError) {
     return new ConflictException(`"${error.message}" already exists`);
   }
+  /*
+   * Another escalão already covers exactly these ages for the same sex — round
+   * 5. Named against the range rather than sent as a banner: the club can have
+   * two escalões called the same thing, so "already exists" would point at the
+   * wrong box.
+   */
+  if (error instanceof DuplicateRangeError) {
+    return new ConflictException({
+      code: 'range_taken',
+      message: 'Another escalão already covers these ages',
+      fields: { minAgeMonths: 'students.levelRangeTaken' },
+    });
+  }
   return error;
+}
+
+/**
+ * A NIF this club has already given to somebody else.
+ *
+ * Named against the field rather than sent as a banner, for the reason POOLSE-09
+ * gives: a message at the top saying "already in use" leaves the operator
+ * hunting for which of eight boxes it meant. The likeliest cause is the
+ * guardian's number typed into the child's row, and the field error points at
+ * exactly the box to look at.
+ */
+function taxNumberConflict(): ConflictException {
+  return new ConflictException({
+    code: 'duplicate_tax_number',
+    message: 'Another student already has that NIF',
+    fields: { taxNumber: 'students.taxNumberTaken' },
+  });
 }
 
 function parseStudent(body: Record<string, unknown>, majority: number): StudentInput {
@@ -638,7 +706,13 @@ function parseStudent(body: Record<string, unknown>, majority: number): StudentI
     levelId: optionalText(body['levelId'], 'levelId', 64),
     contactEmail: optionalText(body['contactEmail'], 'contactEmail', 254),
     contactPhone: optionalText(body['contactPhone'], 'contactPhone', 40),
+    // Never validated as a real NIF — an operator copying a number off a form
+    // should not be stopped by a checksum. Same rule as `membership.tax_number`.
+    taxNumber: optionalText(body['taxNumber'], 'taxNumber', 40),
     notes: optionalText(body['notes'], 'notes', MAX_NOTES),
+    // Masculino or feminino, and anything else is "not recorded" — which is the
+    // ordinary state of an imported row and must stay representable.
+    gender: body['gender'] === 'male' || body['gender'] === 'female' ? body['gender'] : null,
     guardians,
   };
 }

@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { Register } from '@/lib/api';
 import {
@@ -37,7 +38,7 @@ const INITIAL: FormState = { ok: false };
  */
 export function RegisterForm({ register }: { register: Register & { organizationId: string } }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(recordAttendanceAction, INITIAL);
+  const [state, action, pending] = useSavedAction(recordAttendanceAction, INITIAL);
 
   /*
    * Seeded from what is already stored, so reopening a marked class shows what

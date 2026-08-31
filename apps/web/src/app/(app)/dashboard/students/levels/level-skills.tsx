@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { ChevronDown, ChevronRight, Video, X } from 'lucide-react';
 import type { Skill } from '@/lib/api';
@@ -47,7 +48,7 @@ export function LevelSkills({
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [skills, setSkills] = useState<Skill[] | null>(null);
-  const [state, action, saving] = useActionState(createSkillAction, INITIAL);
+  const [state, action, saving] = useSavedAction(createSkillAction, INITIAL);
 
   // Re-read when opened, and again after a save — `state` changes identity on
   // every submission, which is what makes the new skill appear.
@@ -264,7 +265,7 @@ function RemoveSkill({
   name: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [, action, pending] = useActionState(archiveSkillAction, INITIAL);
+  const [, action, pending] = useSavedAction(archiveSkillAction, INITIAL);
 
   return (
     <form action={action} className="inline">

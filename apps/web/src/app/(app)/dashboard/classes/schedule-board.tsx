@@ -105,6 +105,31 @@ interface Placed {
   controls: SessionControls;
 }
 
+/**
+ * What a drop is asking for, before anybody has agreed to it.
+ *
+ * `from` on a move is what an undo needs afterwards, kept here so the two
+ * halves — confirm, then undo — read off the same object.
+ */
+type Proposal =
+  | {
+      kind: 'place';
+      groupId: string;
+      name: string;
+      weekday: number;
+      startTime: string;
+      durationMinutes: number;
+    }
+  | {
+      kind: 'move';
+      groupId: string;
+      scheduleId: string;
+      name: string;
+      weekday: number;
+      startTime: string;
+      from: { weekday: number; startTime: string };
+    };
+
 export function ScheduleBoard({
   organizationId,
   groups,
@@ -130,6 +155,16 @@ export function ScheduleBoard({
 
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
+  /*
+   * What a drop proposed, waiting to be confirmed — round 5.
+   *
+   * A drag used to save the moment the pointer was released, which made a
+   * mis-aimed drop a real change to a real timetable that the operator then had
+   * to notice and undo. Asking first costs one click and removes a whole class
+   * of accident; the undo afterwards stays, for the drop that was deliberate and
+   * wrong.
+   */
+  const [proposal, setProposal] = useState<Proposal | null>(null);
   const [undo, setUndo] = useState<{ groupId: string; scheduleId: string } | null>(null);
   const undoTarget = useRef<{ weekday: number; startTime: string } | null>(null);
 
@@ -252,6 +287,13 @@ export function ScheduleBoard({
     setError(null);
   }
 
+  /*
+   * A drop describes what it would do, and nothing is written yet.
+   *
+   * Both kinds of drop go through the same proposal — placing an unscheduled
+   * turma and moving one already on the grid — because the question is the same
+   * question and two dialogs would eventually word it differently.
+   */
   function onDragEnd(event: DragEndEvent): void {
     setDragging(null);
 
@@ -263,44 +305,80 @@ export function ScheduleBoard({
     const startTime = toTime(Number(minutesText));
     const active = String(event.active.id);
 
-    startPending(async () => {
-      if (active.startsWith('group:')) {
-        const groupId = active.slice('group:'.length);
-        const group = mine.find((candidate) => candidate.id === groupId);
-        if (group === undefined) return;
+    if (active.startsWith('group:')) {
+      const groupId = active.slice('group:'.length);
+      const group = mine.find((candidate) => candidate.id === groupId);
+      if (group === undefined) return;
 
+      setProposal({
+        kind: 'place',
+        groupId,
+        name: group.name,
+        weekday,
+        startTime,
+        durationMinutes: group.schedules[0]?.durationMinutes ?? FALLBACK_DURATION,
+      });
+      return;
+    }
+
+    const scheduleId = active.slice('slot:'.length);
+    const slot = placed.find((candidate) => candidate.scheduleId === scheduleId);
+    if (slot === undefined || slot.scheduleId === null) return;
+
+    // A drop back where it started is not a move, and asking about it would be
+    // asking whether to do nothing.
+    if (slot.weekday === weekday && toTime(slot.startMinutes) === startTime) return;
+
+    setProposal({
+      kind: 'move',
+      groupId: slot.groupId,
+      scheduleId: slot.scheduleId,
+      name: slot.name,
+      weekday,
+      startTime,
+      from: { weekday: slot.weekday, startTime: toTime(slot.startMinutes) },
+    });
+  }
+
+  /** The proposal, carried out. Nothing before this writes anything. */
+  function confirm(): void {
+    const asked = proposal;
+    if (asked === null) return;
+
+    setProposal(null);
+    setError(null);
+
+    startPending(async () => {
+      if (asked.kind === 'place') {
         const result = await placeSlotAction(
           organizationId,
-          groupId,
-          weekday,
-          startTime,
-          group.schedules[0]?.durationMinutes ?? FALLBACK_DURATION,
+          asked.groupId,
+          asked.weekday,
+          asked.startTime,
+          asked.durationMinutes,
         );
         if (!result.ok) setError(result.errorKey);
         else setUndo(null);
         return;
       }
 
-      const scheduleId = active.slice('slot:'.length);
-      const slot = placed.find((candidate) => candidate.scheduleId === scheduleId);
-      if (slot === undefined || slot.scheduleId === null) return;
-
-      const before = { weekday: slot.weekday, startTime: toTime(slot.startMinutes) };
-
       const result = await moveSlotAction(
         organizationId,
-        slot.groupId,
-        slot.scheduleId,
-        weekday,
-        startTime,
+        asked.groupId,
+        asked.scheduleId,
+        asked.weekday,
+        asked.startTime,
       );
       if (!result.ok) {
         setError(result.errorKey);
         return;
       }
 
-      setUndo({ groupId: slot.groupId, scheduleId: slot.scheduleId });
-      undoTarget.current = before;
+      // Kept after the save, and this is the second half of what was asked for:
+      // a move that was confirmed on purpose and is still wrong goes back in one
+      // click, to the exact day and time it came from.
+      setUndo({ groupId: asked.groupId, scheduleId: asked.scheduleId });
+      undoTarget.current = asked.from;
     });
   }
 
@@ -360,6 +438,47 @@ export function ScheduleBoard({
           <p role="status" className="text-sm text-danger">
             {t(error)}
           </p>
+        )}
+
+        {/*
+          Asked in place rather than in a modal over the grid: the answer depends
+          on where the class landed, and covering the timetable to ask about the
+          timetable would hide the evidence.
+
+          Both buttons are real buttons, so the keyboard and a screen reader get
+          the same two choices as the pointer.
+        */}
+        {proposal !== null && (
+          <div
+            role="alertdialog"
+            aria-labelledby="move-question"
+            className="flex flex-wrap items-center gap-3 rounded border border-primary/40 bg-primary/5 p-4"
+          >
+            <p id="move-question" className="text-sm">
+              {t(proposal.kind === 'move' ? 'classes.confirmMove' : 'classes.confirmPlace', {
+                name: proposal.name,
+                day: dayNames[proposal.weekday] ?? '',
+                time: proposal.startTime.slice(0, 5),
+              })}
+            </p>
+            <span className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={confirm}
+                disabled={pending}
+                className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50"
+              >
+                {t(proposal.kind === 'move' ? 'classes.doMove' : 'classes.doPlace')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setProposal(null)}
+                className="rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted"
+              >
+                {t('common.undo')}
+              </button>
+            </span>
+          </div>
         )}
 
         {undo !== null && (

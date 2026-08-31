@@ -1,8 +1,10 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '@/lib/api';
+import { overlapping } from '@/lib/levels';
 import { CONTROL_LINE, SelectField, TextField } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
@@ -15,13 +17,114 @@ import {
 
 const INITIAL: FormState = { ok: false };
 
-export function CreateLevelForm({
-  organizationId,
+/**
+ * Who the escalão admits — round 5.
+ *
+ * Two checkboxes rather than a picker, because "both" is the commonest answer
+ * and a picker would make it a third option to read past. Both start ticked: an
+ * escalão is misto until somebody says otherwise, which is what every escalão
+ * written before this existed already is.
+ *
+ * Unticking both is refused — by the form, by the API and by the table. An
+ * escalão nobody can join is a typo, and saying so here saves a round trip.
+ */
+function SexBoxes({
+  admitsMale,
+  admitsFemale,
+  onChange,
+  error,
 }: {
-  organizationId: string;
+  admitsMale: boolean;
+  admitsFemale: boolean;
+  onChange: (next: { admitsMale: boolean; admitsFemale: boolean }) => void;
+  error?: string | undefined;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(createLevelAction, INITIAL);
+
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className="text-sm font-medium text-foreground-muted">
+        {t('students.admits')}
+      </legend>
+      <div className="flex flex-wrap items-center gap-4">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="admitsMale"
+            checked={admitsMale}
+            onChange={(event) => onChange({ admitsMale: event.target.checked, admitsFemale })}
+            className="size-4"
+          />
+          {t('students.genderMale')}
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="admitsFemale"
+            checked={admitsFemale}
+            onChange={(event) => onChange({ admitsMale, admitsFemale: event.target.checked })}
+            className="size-4"
+          />
+          {t('students.genderFemale')}
+        </label>
+      </div>
+      {!admitsMale && !admitsFemale && (
+        <p className="text-sm text-danger">{t('students.levelAdmitsNobody')}</p>
+      )}
+      {error !== undefined && <p className="text-sm text-danger">{error}</p>}
+    </fieldset>
+  );
+}
+
+/**
+ * Who else already covers these ages.
+ *
+ * A warning, never a refusal: a club's ladder genuinely has programmes running
+ * alongside it — natação adaptada from ten upwards, masters from twenty-five.
+ * What the database refuses is the identical range for the same sex, which is
+ * one escalão entered twice.
+ */
+function OverlapWarning({
+  levels,
+  proposed,
+  exceptId,
+}: {
+  levels: StudentLevel[];
+  proposed: {
+    minAgeMonths: number | null;
+    maxAgeMonths: number | null;
+    admitsMale: boolean;
+    admitsFemale: boolean;
+  };
+  exceptId: string | null;
+}): React.ReactElement | null {
+  const t = useTranslations();
+  const clashes = overlapping(levels, proposed, exceptId);
+  if (clashes.length === 0) return null;
+
+  return (
+    <p className="rounded bg-warning/10 px-3 py-2 text-sm text-warning">
+      {t('students.alsoCoversAges', {
+        levels: clashes.map((level) => level.name).join(', '),
+      })}
+    </p>
+  );
+}
+
+export function CreateLevelForm({
+  organizationId,
+  levels,
+}: {
+  organizationId: string;
+  levels: StudentLevel[];
+}): React.ReactElement {
+  const t = useTranslations();
+  const [state, action, pending] = useSavedAction(createLevelAction, INITIAL);
+  const [admits, setAdmits] = useState({ admitsMale: true, admitsFemale: true });
+  const [range, setRange] = useState<{
+    minAgeMonths: number | null;
+    maxAgeMonths: number | null;
+  }>({ minAgeMonths: null, maxAgeMonths: null });
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -46,12 +149,14 @@ export function CreateLevelForm({
 
       {/* Optional on creation. A club that has never thought about ages should
           not be made to decide before it can add "Iniciação". */}
-      <AgeInputs />
+      <AgeInputs onRangeChange={setRange} />
+
+      <SexBoxes {...admits} onChange={setAdmits} />
+
+      <OverlapWarning levels={levels} proposed={{ ...range, ...admits }} exceptId={null} />
 
       <p className="text-sm text-foreground-muted">{t('students.addLevelHint')}</p>
-      {state.errorKey !== undefined && (
-        <p className="text-sm text-danger">{t(state.errorKey)}</p>
-      )}
+      <Errors state={state} />
     </form>
   );
 }
@@ -79,10 +184,13 @@ function AgeBound({
   name,
   label,
   months,
+  onMonthsChange,
 }: {
   name: string;
   label: string;
   months?: number | null | undefined;
+  /** So the form above can warn about escalões that already cover these ages. */
+  onMonthsChange?: ((value: number | null) => void) | undefined;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -115,6 +223,15 @@ function AgeBound({
     trimmed === '' || Number.isNaN(Number(trimmed))
       ? ''
       : String(unit === 'months' ? Number(trimmed) : Number(trimmed) * 12);
+
+  // Reported upward as it is typed, not on save: the warning is there to be
+  // read before somebody commits to a range, not after.
+  const told = useRef<string | null>(null);
+  useEffect(() => {
+    if (told.current === asMonths) return;
+    told.current = asMonths;
+    onMonthsChange?.(asMonths === '' ? null : Number(asMonths));
+  }, [asMonths, onMonthsChange]);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -150,17 +267,61 @@ function AgeBound({
 function AgeInputs({
   minAgeMonths,
   maxAgeMonths,
+  onRangeChange,
 }: {
   minAgeMonths?: number | null;
   maxAgeMonths?: number | null;
+  onRangeChange?: ((range: { minAgeMonths: number | null; maxAgeMonths: number | null }) => void)
+    | undefined;
 }): React.ReactElement {
   const t = useTranslations();
 
+  // The pair, held here so either bound can report a change and the caller
+  // always receives both.
+  const held = useRef({
+    minAgeMonths: minAgeMonths ?? null,
+    maxAgeMonths: maxAgeMonths ?? null,
+  });
+  const report = (part: { minAgeMonths?: number | null; maxAgeMonths?: number | null }): void => {
+    held.current = { ...held.current, ...part };
+    onRangeChange?.(held.current);
+  };
+
   return (
     <div className="flex flex-wrap gap-4">
-      <AgeBound name="minAgeMonths" label={t('students.ageFrom')} months={minAgeMonths} />
-      <AgeBound name="maxAgeMonths" label={t('students.ageTo')} months={maxAgeMonths} />
+      <AgeBound
+        name="minAgeMonths"
+        label={t('students.ageFrom')}
+        months={minAgeMonths}
+        {...(onRangeChange === undefined
+          ? {}
+          : { onMonthsChange: (value: number | null) => report({ minAgeMonths: value }) })}
+      />
+      <AgeBound
+        name="maxAgeMonths"
+        label={t('students.ageTo')}
+        months={maxAgeMonths}
+        {...(onRangeChange === undefined
+          ? {}
+          : { onMonthsChange: (value: number | null) => report({ maxAgeMonths: value }) })}
+      />
     </div>
+  );
+}
+
+/** Every field error the API named, said once. */
+function Errors({ state }: { state: FormState }): React.ReactElement | null {
+  const t = useTranslations();
+  if (state.errorKey === undefined && state.fields === undefined) return null;
+
+  return (
+    <p className="text-sm text-danger">
+      {state.errorKey !== undefined
+        ? t(state.errorKey)
+        : Object.values(state.fields ?? {})
+            .map((key) => t(key))
+            .join(' ')}
+    </p>
   );
 }
 
@@ -176,15 +337,38 @@ function AgeInputs({
 export function EditLevelForm({
   organizationId,
   level,
+  levels,
 }: {
   organizationId: string;
   level: StudentLevel;
+  levels: StudentLevel[];
 }): React.ReactElement {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(renameLevelAction, INITIAL);
+  const [state, action, pending] = useSavedAction(renameLevelAction, INITIAL);
   const [outside, setOutside] = useState<number | null>(null);
   const panel = useRef<HTMLDivElement>(null);
+  const [admits, setAdmits] = useState({
+    admitsMale: level.admitsMale,
+    admitsFemale: level.admitsFemale,
+  });
+  const [range, setRange] = useState({
+    minAgeMonths: level.minAgeMonths,
+    maxAgeMonths: level.maxAgeMonths,
+  });
+
+  /*
+   * Re-seeded when the escalão itself changes — the same rule the fields follow.
+   * Without it, saving and reopening showed the boxes as they were before the
+   * save rather than as they now are.
+   */
+  const seeded = useRef(`${level.admitsMale}${level.admitsFemale}`);
+  useEffect(() => {
+    const signature = `${level.admitsMale}${level.admitsFemale}`;
+    if (seeded.current === signature) return;
+    seeded.current = signature;
+    setAdmits({ admitsMale: level.admitsMale, admitsFemale: level.admitsFemale });
+  }, [level.admitsMale, level.admitsFemale]);
 
   useEffect(() => {
     if (state.ok) setOpen(false);
@@ -257,7 +441,15 @@ export function EditLevelForm({
           className={CONTROL_LINE}
         />
 
-        <AgeInputs minAgeMonths={level.minAgeMonths} maxAgeMonths={level.maxAgeMonths} />
+        <AgeInputs
+          minAgeMonths={level.minAgeMonths}
+          maxAgeMonths={level.maxAgeMonths}
+          onRangeChange={setRange}
+        />
+
+        <SexBoxes {...admits} onChange={setAdmits} />
+
+        <OverlapWarning levels={levels} proposed={{ ...range, ...admits }} exceptId={level.id} />
 
         {outside !== null && outside > 0 && (
           <p className="rounded bg-warning/10 px-3 py-2 text-sm text-warning">
@@ -280,9 +472,7 @@ export function EditLevelForm({
           >
             {t('common.cancel')}
           </button>
-          {state.errorKey !== undefined && (
-            <span className="text-sm text-danger">{t(state.errorKey)}</span>
-          )}
+          <Errors state={state} />
         </div>
       </form>
     </div>
@@ -320,7 +510,7 @@ export function ArchiveLevelButton({
 }): React.ReactElement {
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
-  const [state, action, pending] = useActionState(archiveLevelAction, INITIAL);
+  const [state, action, pending] = useSavedAction(archiveLevelAction, INITIAL);
 
   if (!confirming) {
     return (

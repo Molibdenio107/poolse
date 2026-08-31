@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { PendingVacations } from '@/lib/api';
@@ -50,7 +51,7 @@ function RequestCard({
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
-  const [state, decide, pending] = useActionState(decideVacationAction, INITIAL);
+  const [state, decide, pending] = useSavedAction(decideVacationAction, INITIAL);
   const [rejecting, setRejecting] = useState(false);
 
   const day = (value: string): string =>

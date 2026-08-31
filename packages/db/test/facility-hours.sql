@@ -249,11 +249,16 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- Test 5 — a turma with no pool yet is not blocked
+-- Test 5 — a turma with no pool is bound by its site's hours all the same
 --
--- `class_group.pool_id` is nullable on purpose: a turma can be sketched before
--- the lane is decided. This table must not quietly become the thing that decides
--- it.
+-- This test used to assert the opposite, and it was right when it was written:
+-- the trigger reached the site through `class_group.pool_id`, so a turma with no
+-- lane decided yet had no site and no hours to break.
+--
+-- Round 4 gave `class_group` a facility of its own, which made that a hole
+-- rather than a kindness — a class could be put on a day the building is shut
+-- simply by not having chosen a lane. Round 5's trigger reads the turma's own
+-- facility, so the rule now covers every turma at the site.
 -- ---------------------------------------------------------------------------
 
 DO $$
@@ -262,14 +267,24 @@ BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube Horas';
   SELECT id INTO v_season FROM season WHERE organization_id = v_org AND archived_at IS NULL;
 
-  INSERT INTO class_group (organization_id, season_id, name)
-  VALUES (v_org, v_season, 'Ainda sem piscina') RETURNING id INTO v_group;
+  INSERT INTO class_group (organization_id, facility_id, season_id, name)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), v_season, 'Ainda sem piscina') RETURNING id INTO v_group;
 
   -- Sunday, which is closed at the only site this organization has.
-  INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
-  VALUES (v_org, v_group, 7, TIME '10:00', 45);
+  BEGIN
+    INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
+    VALUES (v_org, v_group, 7, TIME '10:00', 45);
+    RAISE EXCEPTION 'FAIL test 5a: a turma with no pool escaped its site''s closed day';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
 
-  RAISE NOTICE 'PASS test 5: a turma without a pool has no site to be closed by';
+  -- And a day the site does open still works, so the rule refuses the day
+  -- rather than the turma.
+  INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
+  VALUES (v_org, v_group, 3, TIME '10:00', 45);
+
+  RAISE NOTICE 'PASS test 5: a turma with no pool is bound by its own site''s hours';
 END $$;
 
 -- ---------------------------------------------------------------------------

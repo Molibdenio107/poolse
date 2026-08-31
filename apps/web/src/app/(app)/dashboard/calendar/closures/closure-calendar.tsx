@@ -1,7 +1,8 @@
 'use client';
 
 import { today } from '@/lib/dates';
-import { useActionState, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, X } from 'lucide-react';
 import type { Closure } from '@/lib/api';
@@ -322,7 +323,7 @@ function ClosureForm({
   onDone: () => void;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, saving] = useActionState(createClosureAction, INITIAL);
+  const [state, action, saving] = useSavedAction(createClosureAction, INITIAL);
   const [impact, setImpact] = useState<{ sessions: number; marked: number } | null>(null);
   const [asked, setAsked] = useState(false);
 
@@ -499,7 +500,7 @@ function RemoveClosure({
   reason: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [, action, pending] = useActionState(removeClosureAction, INITIAL);
+  const [, action, pending] = useSavedAction(removeClosureAction, INITIAL);
 
   return (
     <form action={action} className="inline">

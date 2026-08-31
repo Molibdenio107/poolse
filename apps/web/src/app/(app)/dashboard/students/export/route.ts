@@ -1,7 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Student } from '@/lib/api';
 import { EXPORT_FIELDS } from '@/lib/sheet';
-import { studentsWorkbook } from './write-sheet';
+import { studentsCsv, studentsWorkbook } from './write-sheet';
 
 /**
  * Slice 1.11 — the download itself.
@@ -26,20 +26,39 @@ interface ExportResponse {
   max: number;
 }
 
+/**
+ * The formats the register can leave in.
+ *
+ * Two, and only two. `.xlsx` because that is what a club works in, and `.csv`
+ * because it is the one format every other system on earth reads — a committee
+ * asking for the list, an accountant's software, a mail-merge. A PDF roster
+ * would be a *document* rather than data, which is a different feature with a
+ * different page; `docs/product.md` is where that belongs if it is ever wanted.
+ */
+type Format = 'xlsx' | 'csv';
+
+const CONTENT_TYPE: Record<Format, string> = {
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  csv: 'text/csv; charset=utf-8',
+};
+
 /** A filename a Windows, macOS and Linux machine will all accept unchanged. */
-function fileNameFor(locale: string, filtered: boolean): string {
+function fileNameFor(locale: string, filtered: boolean, format: Format): string {
   const base = locale === 'en' ? 'students' : 'alunos';
   const today = new Date().toISOString().slice(0, 10);
   // ASCII only, deliberately. A `Content-Disposition` carrying accented
   // characters needs the RFC 5987 encoding and is mangled by something in the
   // chain often enough that it is not worth the accent.
-  return `poolse-${base}${filtered ? '-filtrados' : ''}-${today}.xlsx`;
+  return `poolse-${base}${filtered ? '-filtrados' : ''}-${today}.${format}`;
 }
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const search = (url.searchParams.get('search') ?? '').trim();
   const levelId = (url.searchParams.get('levelId') ?? '').trim();
+  // Anything unrecognised falls back to the workbook rather than erroring: a
+  // mistyped query parameter should still hand somebody their register.
+  const format: Format = url.searchParams.get('format') === 'csv' ? 'csv' : 'xlsx';
 
   const query = new URLSearchParams();
   if (search !== '') query.set('search', search);
@@ -74,13 +93,16 @@ export async function GET(request: Request): Promise<Response> {
    */
   const headers = EXPORT_FIELDS.map((field) => t(`students.import.field.${field}`));
 
-  const workbook = await studentsWorkbook(headers, data.students, t('students.title'));
+  const body =
+    format === 'csv'
+      ? studentsCsv(headers, data.students)
+      : await studentsWorkbook(headers, data.students, t('students.title'));
   const filtered = search !== '' || levelId !== '';
 
-  return new Response(workbook, {
+  return new Response(body, {
     headers: {
-      'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'content-disposition': `attachment; filename="${fileNameFor(locale, filtered)}"`,
+      'content-type': CONTENT_TYPE[format],
+      'content-disposition': `attachment; filename="${fileNameFor(locale, filtered, format)}"`,
       // A register changes every day and this is a snapshot of it; a cached copy
       // handed back tomorrow would be wrong in a way nobody would think to check.
       'cache-control': 'no-store',

@@ -126,9 +126,9 @@ test('21.8 — an encarregado may act only for their own children', async () => 
       [tenant.organizationId],
     );
     const [group] = await tenant.sql<{ id: string }>(
-      `INSERT INTO class_group (organization_id, season_id, name, capacity, level_id)
-       VALUES ($1, $2, 'Turma A', 8, $3) RETURNING id`,
-      [tenant.organizationId, tenant.seasonId, level!.id],
+      `INSERT INTO class_group (organization_id, facility_id, season_id, name, capacity, level_id)
+       VALUES ($1, $2, $3, 'Turma A', 8, $4) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId, tenant.seasonId, level!.id],
     );
     const [pool] = await tenant.sql<{ id: string }>(
       `INSERT INTO pool (organization_id, facility_id, name)
@@ -202,9 +202,9 @@ test('a credit is offered no class after it expires — 21.7, through the contro
       [tenant.organizationId],
     );
     const [group] = await tenant.sql<{ id: string }>(
-      `INSERT INTO class_group (organization_id, season_id, name, capacity, level_id)
-       VALUES ($1, $2, 'Turma A', 8, $3) RETURNING id`,
-      [tenant.organizationId, tenant.seasonId, level!.id],
+      `INSERT INTO class_group (organization_id, facility_id, season_id, name, capacity, level_id)
+       VALUES ($1, $2, $3, 'Turma A', 8, $4) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId, tenant.seasonId, level!.id],
     );
     const [pool] = await tenant.sql<{ id: string }>(
       `INSERT INTO pool (organization_id, facility_id, name)

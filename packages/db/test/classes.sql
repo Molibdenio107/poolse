@@ -271,8 +271,10 @@ BEGIN
   END;
 
   BEGIN
-    INSERT INTO class_group (organization_id, season_id, name, level_id)
-    VALUES (v_b, (SELECT id FROM season WHERE organization_id = v_b AND archived_at IS NULL), 'Turma Roubada', v_level);
+    -- Clube B's own site, so the refusal under test is the level's foreign
+    -- key rather than a missing facility.
+    INSERT INTO class_group (organization_id, facility_id, season_id, name, level_id)
+    VALUES (v_b, (SELECT id FROM facility WHERE organization_id = v_b ORDER BY created_at, id LIMIT 1), (SELECT id FROM season WHERE organization_id = v_b AND archived_at IS NULL), 'Turma Roubada', v_level);
     RAISE EXCEPTION 'FAIL test 5b: Clube B used a Clube A level';
   EXCEPTION
     WHEN foreign_key_violation THEN NULL;

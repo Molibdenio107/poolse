@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { reissueAction, type InviteState } from '../../actions';
 import { InvitationLink } from './invitation-link';
@@ -24,7 +24,7 @@ export function ReissueButton({
   invitationId: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(reissueAction, INITIAL);
+  const [state, action, pending] = useSavedAction(reissueAction, INITIAL);
 
   return (
     <div className="flex flex-col gap-2">

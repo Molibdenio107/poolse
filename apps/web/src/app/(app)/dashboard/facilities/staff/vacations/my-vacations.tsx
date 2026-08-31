@@ -1,7 +1,8 @@
 'use client';
 
 import { today } from '@/lib/dates';
-import { useActionState, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import type { MyVacations, VacationRequest } from '@/lib/api';
 import { YearGrid, type DayState } from '@/components/year-grid';
@@ -22,7 +23,7 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
   const locale = useLocale();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [state, submit, pending] = useActionState(requestVacationAction, INITIAL);
+  const [state, submit, pending] = useSavedAction(requestVacationAction, INITIAL);
 
   /** Holiday name by day, so a hover can say *which* holiday. */
   const holidays = useMemo(
@@ -225,7 +226,7 @@ function Figure({
 function RequestList({ data }: { data: MyVacations }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
-  const [state, withdraw, pending] = useActionState(withdrawVacationAction, INITIAL);
+  const [state, withdraw, pending] = useSavedAction(withdrawVacationAction, INITIAL);
 
   if (data.requests.length === 0) {
     return (
