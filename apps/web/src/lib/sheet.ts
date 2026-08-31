@@ -324,6 +324,38 @@ export function applyMapping(row: string[], mapping: Mapping): Record<string, st
   return mapped;
 }
 
+/**
+ * The columns an export writes, in the order a person reads them — slice 1.11.
+ *
+ * It lives here, beside `guessMapping`, because it is one half of a contract
+ * with the other: **what the exporter writes, the importer must read back.** The
+ * header row of an exported file is `students.import.field.*` from the
+ * catalogue — the very labels the mapping step shows — so a club can export,
+ * edit in Excel and import the result without touching a single dropdown.
+ *
+ * `sheet.test.ts` asserts that round trip against the real catalogue in both
+ * locales, which is what stops somebody renaming a label and silently breaking
+ * it.
+ *
+ * `firstName` and `lastName` rather than `fullName`, so nothing is guessed on
+ * the way back: splitting "Maria Santos Silva" is a heuristic, and both parts
+ * are already known at export time.
+ */
+export const EXPORT_FIELDS: ImportField[] = [
+  'firstName',
+  'lastName',
+  'birthDate',
+  'levelName',
+  'contactEmail',
+  'contactPhone',
+  'notes',
+  'guardianName',
+  'guardianRelationship',
+  'guardianPhone',
+  'guardianEmail',
+  'guardianTaxNumber',
+];
+
 /** Whether enough is mapped to mean anything: a name, in one form or the other. */
 export function hasName(mapping: Mapping): boolean {
   return mapping.firstName !== null || mapping.fullName !== null;

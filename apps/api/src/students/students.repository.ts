@@ -591,6 +591,89 @@ export async function listStudents(
   });
 }
 
+/**
+ * How many rows one export may carry — slice 1.11.
+ *
+ * A club's register, generously. The cap exists so that "export everything"
+ * cannot become a request that holds a connection open for a minute; a tenant
+ * that outgrows it wants a streamed export, which is a different design and not
+ * one to guess at now.
+ */
+export const MAX_EXPORT_ROWS = 5000;
+
+/**
+ * The register, for a file — slice 1.11.
+ *
+ * **The same filters as the list, deliberately.** An export button under a
+ * filtered register that silently hands back all four hundred students is a
+ * button that lies about what it did, and the operator only finds out after
+ * sending the file to somebody.
+ *
+ * Unwindowed but capped. `listStudents` pages because a screen pages; a file
+ * does not, and taking the export a page at a time would mean the same ordering
+ * argument again with none of the benefit.
+ *
+ * **Every export is audited.** This is a register of children with their
+ * families' telephone numbers, leaving the product in a form nothing can take
+ * back. Who asked for it and when is the least a club can be able to answer, and
+ * the entry is written in the same transaction as the read so a file cannot
+ * exist without one.
+ */
+export async function exportStudents(
+  organizationId: string,
+  query: StudentQuery,
+): Promise<Student[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query(
+      `
+      SELECT s.id, s.first_name, s.last_name,
+             ${displayName('s')} AS display_name,
+             ${shortName('s')} AS short_name,
+             s.birth_date,
+             CASE WHEN s.birth_date IS NULL THEN NULL
+                  ELSE extract(YEAR FROM age(s.birth_date))::int
+             END AS age,
+             s.level_id, l.name AS level_name,
+             s.contact_email::text AS contact_email, s.contact_phone, s.notes,
+             ${GUARDIANS} AS guardians,
+             ${PHOTO_KEY} AS photo_storage_key,
+             ${PHOTO_CONSENT} AS photo_consent
+        FROM student s
+        LEFT JOIN student_level l
+               ON l.id = s.level_id AND l.organization_id = s.organization_id
+       WHERE s.archived_at IS NULL
+         AND ${searchPredicate(
+           `s.first_name || ' ' || s.last_name || ' ' ||
+            coalesce(s.contact_email::text, '') || ' ' || coalesce(s.contact_phone, '')`,
+           '$1',
+         )}
+         AND ($2::uuid IS NULL OR s.level_id = $2::uuid)
+       ORDER BY ${nameOrder('s')}, s.id
+       LIMIT $3
+      `,
+      [query.search, query.levelId, MAX_EXPORT_ROWS],
+    );
+
+    const students = rows.map((row) => toStudent(row as never));
+
+    await recordAudit(tx, {
+      action: 'students.exported',
+      entityType: 'organization',
+      entityId: organizationId,
+      // What left, and what it was narrowed to — so the entry answers "which
+      // students" rather than only "some students".
+      data: {
+        rows: students.length,
+        search: query.search,
+        levelId: query.levelId,
+        capped: students.length === MAX_EXPORT_ROWS,
+      },
+    });
+
+    return students;
+  });
+}
+
 export async function findStudent(
   organizationId: string,
   studentId: string,

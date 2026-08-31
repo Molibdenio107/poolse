@@ -33,6 +33,7 @@ import { SensitiveController } from './sensitive/sensitive.controller.js';
 import { RecordsController } from './students/records.controller.js';
 import { LevelsController, StudentsController } from './students/students.controller.js';
 import { StudentImportController } from './students/import.controller.js';
+import { ExportsController } from './students/export.controller.js';
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
 import { VacationsController } from './vacations/vacations.controller.js';
 import { PlacesController, WeatherController } from './weather/weather.controller.js';
@@ -80,6 +81,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     GuardiansController,
     PeopleDedupController,
     StudentImportController,
+    ExportsController,
     SkillsController,
     StaffController,
     StudentCalendarController,

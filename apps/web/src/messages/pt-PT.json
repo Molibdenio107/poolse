@@ -624,6 +624,12 @@
     "notFound": "Este aluno não existe, ou já foi arquivado.",
     "readOnly": "Só proprietários e administradores podem alterar alunos. Pode ver o registo.",
     "add": "Adicionar aluno",
+    "export": {
+      "action": "Exportar",
+      "actionFiltered": "Exportar o que está filtrado",
+      "forbidden": "Só proprietários e administradores podem exportar o registo.",
+      "failed": "Não foi possível gerar o ficheiro. Tente novamente daqui a pouco."
+    },
     "import": {
       "action": "Importar",
       "title": "Importar alunos",

@@ -45,6 +45,18 @@ export default async function StudentsPage({
   if (levelId.trim()) query.set('levelId', levelId.trim());
   if (page > 1) query.set('page', String(page));
 
+  /*
+   * The same two filters, without the page — slice 1.11.
+   *
+   * An export is the whole filtered set, not the fifteen rows being looked at.
+   * Handing `?page=3` to the exporter would produce a file whose contents depend
+   * on where somebody happened to be scrolled, which is the sort of thing nobody
+   * notices until a club emails the wrong list to a coach.
+   */
+  const exportQuery = new URLSearchParams();
+  if (search.trim()) exportQuery.set('search', search.trim());
+  if (levelId.trim()) exportQuery.set('levelId', levelId.trim());
+
   let data: Students | null = null;
   let failure: string | null = null;
   let noOrganization = false;
@@ -155,6 +167,20 @@ export default async function StudentsPage({
               >
                 {t('students.import.action')}
               </Link>
+              {/*
+                A plain anchor, not `Link` — slice 1.11. The answer is a file, so
+                there is no client navigation to make: `Link` would prefetch a
+                spreadsheet and then hand the router an attachment it cannot
+                render. It carries the current search and level, because an
+                export button under a filtered register that quietly returns all
+                four hundred students is a button that lies about what it did.
+              */}
+              <a
+                href={`/dashboard/students/export${exportQuery.size > 0 ? `?${exportQuery}` : ''}`}
+                className="rounded border border-border px-4 py-2 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {filtering ? t('students.export.actionFiltered') : t('students.export.action')}
+              </a>
             </div>
           )}
 

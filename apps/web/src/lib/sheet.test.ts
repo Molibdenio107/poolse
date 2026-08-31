@@ -1,6 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyMapping, guessMapping, hasName, parseCsv, toSheet, EMPTY_MAPPING } from './sheet.ts';
+import { readFileSync } from 'node:fs';
+import {
+  applyMapping,
+  guessMapping,
+  hasName,
+  parseCsv,
+  toSheet,
+  EMPTY_MAPPING,
+  EXPORT_FIELDS,
+} from './sheet.ts';
 
 /**
  * Slice 1.10 — reading a real spreadsheet.
@@ -143,4 +152,61 @@ test('a mapping with no name column is not enough to import anything', () => {
   assert.equal(hasName(EMPTY_MAPPING), false);
   assert.equal(hasName({ ...EMPTY_MAPPING, fullName: 0 }), true);
   assert.equal(hasName({ ...EMPTY_MAPPING, firstName: 3 }), true);
+});
+
+
+/**
+ * Slice 1.11 — what the exporter writes, the importer reads.
+ *
+ * The export's header row is not prose written for the file. It is
+ * `students.import.field.*` out of the catalogue: the same labels the mapping
+ * step puts above its dropdowns. So a club can export the register, edit it in
+ * Excel, and import the result without touching a single column — and this is
+ * the test that keeps it true.
+ *
+ * It reads the real catalogues rather than a fixture, deliberately. The failure
+ * being guarded against is somebody rewording a label months from now — "Nível"
+ * becoming "Nível do aluno", say — which breaks the round trip silently and
+ * nowhere near this file. A fixture would keep passing while the product broke.
+ */
+function catalogue(locale: string): Record<string, Record<string, Record<string, string>>> {
+  const path = new URL(`../messages/${locale}.json`, import.meta.url);
+  return JSON.parse(readFileSync(path, 'utf8')) as never;
+}
+
+for (const locale of ['pt-PT', 'en']) {
+  test(`an exported ${locale} file maps itself when it comes back`, () => {
+    const field = catalogue(locale)['students']?.['import']?.['field'] as unknown as Record<
+      string,
+      string
+    >;
+
+    const headers = EXPORT_FIELDS.map((name) => {
+      const label = field[name];
+      assert.ok(label !== undefined, `students.import.field.${name} is missing from ${locale}`);
+      return label;
+    });
+
+    const mapping = guessMapping(headers);
+
+    EXPORT_FIELDS.forEach((name, column) => {
+      assert.equal(
+        mapping[name],
+        column,
+        `"${headers[column]}" should map to ${name}, not ${String(mapping[name])}`,
+      );
+    });
+
+    // And the whole-name column stays out of it: the two halves were exported
+    // separately so that nothing has to be split on the way back in.
+    assert.equal(mapping.fullName, null);
+  });
+}
+
+test('every exported column is one the importer knows about', () => {
+  // Belt and braces on the contract: a field added to the export that the
+  // import has never heard of would be dropped by the API without a word.
+  for (const name of EXPORT_FIELDS) {
+    assert.ok(name in EMPTY_MAPPING, `${name} is not an import field`);
+  }
 });

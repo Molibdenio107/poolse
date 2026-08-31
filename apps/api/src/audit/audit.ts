@@ -41,7 +41,18 @@ export async function recordAudit(tx: Tx, entry: AuditEntry): Promise<void> {
     [
       organizationId,
       membershipId,
-      appUserId,
+      /*
+       * Null rather than an empty string when there is no app_user behind the
+       * membership.
+       *
+       * `actor_app_user_id` is nullable for precisely this — "who" being
+       * genuinely unknown — and the column is a uuid, so `''` reaches Postgres
+       * as a syntax error and turns the caller's whole mutation into a 500. A
+       * membership with no login cannot normally act, but "cannot normally" is
+       * not the same as "cannot", and losing somebody's change over the shape
+       * of an audit column is the wrong trade in every direction.
+       */
+      appUserId === '' ? null : appUserId,
       entry.action,
       entry.entityType,
       entry.entityId ?? null,

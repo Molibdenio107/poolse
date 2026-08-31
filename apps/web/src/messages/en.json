@@ -624,6 +624,12 @@
     "notFound": "That student does not exist, or has been archived.",
     "readOnly": "Only owners and administrators can change students. You can view the register.",
     "add": "Add student",
+    "export": {
+      "action": "Export",
+      "actionFiltered": "Export what is filtered",
+      "forbidden": "Only owners and administrators can export the register.",
+      "failed": "The file could not be produced. Try again shortly."
+    },
     "import": {
       "action": "Import",
       "title": "Import students",
