@@ -25,6 +25,22 @@ const nextConfig = {
   reactStrictMode: true,
 
   /**
+   * The spreadsheet an operator uploads — slice 1.10.
+   *
+   * A server action's body is capped at 1 MB by default, and a club's register
+   * with a photo of the logo pasted into the header sails past that. The failure
+   * is a generic 500 with nothing on screen saying "too big", which is the worst
+   * possible first impression on the onboarding path.
+   *
+   * 8 MB is far more than a list of a few hundred swimmers needs and still small
+   * enough that a mis-picked video is refused rather than parsed. The import
+   * itself is bounded separately, by MAX_IMPORT_ROWS on the API.
+   */
+  experimental: {
+    serverActions: { bodySizeLimit: '8mb' },
+  },
+
+  /**
    * Routes that have moved — POOLSE-34 and POOLSE-38.
    *
    * Férias went from Calendário to Pessoas, and then the whole section became

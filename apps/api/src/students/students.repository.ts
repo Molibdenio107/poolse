@@ -646,8 +646,26 @@ export async function createStudent(
   organizationId: string,
   input: StudentInput,
 ): Promise<string | null> {
-  return withOrg(organizationId, async (tx) => {
-    if (!(await levelExists(tx, input.levelId))) return null;
+  return withOrg(organizationId, (tx) => insertStudent(tx, organizationId, input));
+}
+
+/**
+ * One student, inside a transaction somebody else opened.
+ *
+ * Lifted out of `createStudent` for slice 1.10: an import writes two hundred
+ * students and they have to commit or fail together, which a function that opens
+ * its own `withOrg` per row cannot do. Half an import is worse than none — the
+ * operator cannot tell which half, and running it again doubles what landed.
+ *
+ * `createStudent` is now the one-row caller of this, so the form and the import
+ * write a student by exactly the same code, audit entry included.
+ */
+export async function insertStudent(
+  tx: Tx,
+  organizationId: string,
+  input: StudentInput,
+): Promise<string | null> {
+  if (!(await levelExists(tx, input.levelId))) return null;
 
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO student (
@@ -683,8 +701,7 @@ export async function createStudent(
       data: { name: `${input.firstName} ${input.lastName}` },
     });
 
-    return id;
-  });
+  return id;
 }
 
 export async function updateStudent(

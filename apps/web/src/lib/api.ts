@@ -661,6 +661,69 @@ export interface Students {
   ageOfMajority: number;
 }
 
+/**
+ * The import — slice 1.10. Mirrors `students/import.ts` on the API.
+ *
+ * `problems` carry machine codes, never sentences: the API has no message
+ * catalogues, so `students.importProblem.*` in this app's catalogue is where
+ * each one becomes Portuguese.
+ */
+export type ImportProblemCode =
+  | 'nameRequired'
+  | 'tooLong'
+  | 'badDate'
+  | 'futureDate'
+  | 'ancientDate'
+  | 'unknownLevel'
+  | 'guardianRequired'
+  | 'guardianKeyRequired';
+
+export interface ImportProblem {
+  field: string;
+  code: ImportProblemCode;
+  value?: string;
+}
+
+export interface ImportDuplicate {
+  /** `register` is a student Poolse already has; `file` is an earlier row of this sheet. */
+  kind: 'register' | 'file';
+  studentId?: string;
+  name: string;
+  line?: number;
+}
+
+export interface ImportRowResult {
+  index: number;
+  line: number;
+  firstName: string;
+  lastName: string;
+  birthDate: string | null;
+  levelId: string | null;
+  levelName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  notes: string | null;
+  guardian: {
+    name: string;
+    relationship: string;
+    phone: string | null;
+    email: string | null;
+    taxNumber: string | null;
+  } | null;
+  problems: ImportProblem[];
+  duplicate: ImportDuplicate | null;
+  /** A duplicate is still importable — the operator decides, the tick carries it. */
+  importable: boolean;
+}
+
+export interface ImportResult {
+  rows: ImportRowResult[];
+  summary: { total: number; importable: number; refused: number; duplicates: number };
+  /** Present only on a commit. */
+  created?: number;
+  skipped?: number;
+}
+
 export type ConsentKind = 'photo' | 'medical_data' | 'parent_sharing';
 
 export interface ConsentRecord {

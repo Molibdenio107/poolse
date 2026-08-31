@@ -135,13 +135,27 @@ export default async function StudentsPage({
             )}
           </section>
 
+          {/*
+            Adding one and importing many, side by side — slice 1.10.
+            The import lives here rather than in a menu because the moment
+            somebody needs it is the moment they first see an empty register,
+            and a migration path nobody finds is a migration path nobody uses.
+          */}
           {data.canManage && (
-            <Link
-              href="/dashboard/students/new"
-              className="self-start rounded bg-primary px-4 py-2 text-sm text-primary-foreground"
-            >
-              {t('students.add')}
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/dashboard/students/new"
+                className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground"
+              >
+                {t('students.add')}
+              </Link>
+              <Link
+                href="/dashboard/students/import"
+                className="rounded border border-border px-4 py-2 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('students.import.action')}
+              </Link>
+            </div>
           )}
 
           {!data.canManage && (
