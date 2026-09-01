@@ -1271,7 +1271,8 @@ export interface CalendarSession {
   className: string;
   levelName: string | null;
   poolName: string | null;
-  lane: number | null;
+  /** Every lane it occupies, by position — POOLSE-46. Empty when none was chosen. */
+  lanes: number[];
   instructorName: string | null;
   substituteName: string | null;
   startsAt: string;
@@ -1326,7 +1327,8 @@ export interface Register {
   sessionId: string;
   className: string;
   poolName: string | null;
-  lane: number | null;
+  /** Every lane it occupies, by position — POOLSE-46. Empty when none was chosen. */
+  lanes: number[];
   localDate: string;
   localTime: string;
   durationMinutes: number;

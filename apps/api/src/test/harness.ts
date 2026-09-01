@@ -87,7 +87,11 @@ const TENANT_TABLES = [
   'consent',
   'guardian_link',
   'enrollment',
+  // The lane rows a session and a booking own — POOLSE-46. Child-first, as
+  // everywhere in this list.
+  'class_session_lane',
   'class_session',
+  'booking_lane',
   'class_schedule',
   'class_group',
   'skill',
@@ -111,6 +115,7 @@ const TENANT_TABLES = [
   'inventory_item',
   'lane',
   'pool',
+  'booking_category',
   'facility_photo',
   'facility',
   'invitation',

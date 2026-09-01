@@ -4,6 +4,7 @@ import { ApiError, apiFetch, type Register } from '@/lib/api';
 import { longDate } from '@/lib/dates';
 import { RegisterForm } from './register-form';
 import { PageShell } from '@/components/page-shell';
+import { laneLabel } from '@/lib/lanes';
 
 type RegisterResponse = Register & { organizationId: string; canRecord: boolean };
 
@@ -54,7 +55,7 @@ export default async function AttendancePage({
               longDate(register.localDate, locale),
               register.localTime,
               register.poolName,
-              register.lane === null ? null : t('classes.laneN', { lane: register.lane }),
+              laneLabel(register.lanes, t),
               register.instructorName,
             ]
               .filter(Boolean)

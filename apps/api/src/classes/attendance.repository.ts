@@ -38,7 +38,8 @@ export interface Register {
   sessionId: string;
   className: string;
   poolName: string | null;
-  lane: number | null;
+  /** Every lane the class occupies, by position. Empty when none was chosen. */
+  lanes: number[];
   /** Local calendar date at the facility. */
   localDate: string;
   /** Local wall-clock, "HH:MM". */
@@ -75,7 +76,7 @@ export async function findRegister(
     const { rows: sessions } = await tx.query<{
       class_name: string;
       pool_name: string | null;
-      lane: number | null;
+      lanes: number[] | null;
       local_date: string;
       local_time: string;
       duration_minutes: number;
@@ -85,7 +86,17 @@ export async function findRegister(
       `
       SELECT cg.name AS class_name,
              p.name  AS pool_name,
-             ln.position AS lane,
+             /*
+              * Every lane the class is in — POOLSE-46. A register for a squad
+              * across three lanes should say so; one lane is the ordinary case
+              * and reads as a single number.
+              */
+             coalesce((
+               SELECT array_agg(ln.position ORDER BY ln.position)
+                 FROM class_session_lane csl
+                 JOIN lane ln ON ln.id = csl.lane_id
+                WHERE csl.session_id = cs.id
+             ), '{}') AS lanes,
              to_char(cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'),
                      'YYYY-MM-DD') AS local_date,
              to_char(cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'),
@@ -103,7 +114,6 @@ export async function findRegister(
         JOIN class_group cg
           ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
         LEFT JOIN pool p     ON p.id = cs.pool_id     AND p.organization_id = cs.organization_id
-        LEFT JOIN lane ln    ON ln.id = cs.lane_id    AND ln.organization_id = cs.organization_id
         LEFT JOIN facility f ON f.id = p.facility_id  AND f.organization_id = cs.organization_id
        WHERE cs.id = $1
       `,
@@ -203,7 +213,7 @@ export async function findRegister(
       sessionId,
       className: session.class_name,
       poolName: session.pool_name,
-      lane: session.lane,
+      lanes: session.lanes ?? [],
       localDate: session.local_date,
       localTime: session.local_time,
       durationMinutes: session.duration_minutes,

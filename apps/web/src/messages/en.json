@@ -458,13 +458,19 @@
     "slotRefused": "The site is closed then, or the class would run past closing.",
     "boardFacility": "Site",
     "patternNote": "Dropping here changes the weekly pattern — every week, not just this one.",
+    "moveScopeNote": "You can change only this week, or the weekly pattern from here on. Weeks already taught stay as they are.",
+    "moveThisWeek": "Only this week",
+    "moveEveryWeek": "Every week",
+    "occurrenceOccupied": "That lane is already taken at that time.",
     "searchStudents": "Find a student",
     "searchStudentsPlaceholder": "Type a name",
     "showOutsideAges": "Also show {count} outside this level's ages",
     "noStudentsMatch": "No students match",
     "outsideAges": "outside this level's ages",
     "chooseDay": "Choose a day",
-    "noSuchLane": "That pool does not have that lane."
+    "noSuchLane": "That pool does not have that lane.",
+    "laneRange": "lanes {from}–{to}",
+    "laneList": "lanes {lanes}"
   },
   "reposicao": {
     "title": "Make-up classes",
@@ -1619,6 +1625,7 @@
     "overlap": "That slot overlaps one that is already there.",
     "inUse": "It cannot be removed: there are classes on this slot.",
     "noneToAdd": "There is nothing to create.",
-    "failed": "The grid could not be saved."
+    "failed": "The grid could not be saved.",
+    "versusHours": "The hours above say when the site is open. The grid says which rows classes sit in inside those hours — it is what the calendar will draw."
   }
 }

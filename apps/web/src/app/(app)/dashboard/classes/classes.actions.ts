@@ -287,3 +287,34 @@ export async function undoSlotAction(
   revalidatePath('/dashboard/calendar');
   revalidatePath(`/dashboard/classes/${groupId}`);
 }
+
+/**
+ * One week's class moved, and no other.
+ *
+ * The sibling of `moveSlotAction`, which edits the weekly pattern and therefore
+ * changes every week from here on. This one changes Wednesday the 17th and
+ * leaves the 24th where it was — "the pool is booked that morning" rather than
+ * "the class has a new time".
+ *
+ * A date and a wall clock go over the wire, not an instant: the pool knows which
+ * timezone 18:00 is in and the browser does not.
+ */
+export async function moveOccurrenceAction(
+  organizationId: string,
+  sessionId: string,
+  date: string,
+  startTime: string,
+): Promise<{ ok: true } | { ok: false; errorKey: string }> {
+  try {
+    await apiPost(`/sessions/${sessionId}/move`, { date, startTime }, { organizationId });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      return { ok: false, errorKey: 'classes.occurrenceOccupied' };
+    }
+    return { ok: false, errorKey: 'classes.slotRefused' };
+  }
+
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/classes');
+  return { ok: true };
+}

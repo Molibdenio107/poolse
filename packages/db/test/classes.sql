@@ -402,60 +402,56 @@ BEGIN
   VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação C', v_pool_b, (SELECT id FROM lane WHERE pool_id = v_pool_b AND position = 1), v_rita) RETURNING id INTO v_group_c;
 
   -- The anchor: Rita, Tanque A lane 1, 10:00 for 45 minutes.
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
                              starts_at, duration_minutes, instructor_membership_id)
-  VALUES (v_org, v_group_a, v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 1), TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita)
+  VALUES (v_org, v_group_a, v_pool_a, TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita)
   RETURNING id INTO v_session;
 
-  -- a. 10:30 in the same lane. An hourly grid would have allowed this; the real
-  --    duration is what refuses it.
-  BEGIN
-    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
-                               starts_at, duration_minutes, instructor_membership_id)
-    VALUES (v_org, v_group_b, v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 1), TIMESTAMPTZ '2026-09-07 10:30:00+01', 45, v_tiago);
-    RAISE EXCEPTION 'FAIL test 11a: a 10:30 class was booked over a 10:00-10:45 one';
-  EXCEPTION
-    WHEN exclusion_violation THEN NULL;
-  END;
+  -- a. The lane clash moved out — POOLSE-46. A session holds its lanes in
+  --    `class_session_lane` now, because a booking may span several, and the
+  --    exclusion constraint moved with them. `bookings.sql` tests 3 to 5 are
+  --    where a lane cannot be taken twice, where a span blocks the lanes inside
+  --    it, and where cancelling releases them. What is left here is the
+  --    instructor, which is this test's subject.
 
   -- b. Rita again, in a different pool entirely. Lanes cannot help here.
   BEGIN
-    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
+    INSERT INTO class_session (organization_id, class_group_id, pool_id,
                                starts_at, duration_minutes, instructor_membership_id)
-    VALUES (v_org, v_group_c, v_pool_b, (SELECT id FROM lane WHERE pool_id = v_pool_b AND position = 1), TIMESTAMPTZ '2026-09-07 10:30:00+01', 45, v_rita);
+    VALUES (v_org, v_group_c, v_pool_b, TIMESTAMPTZ '2026-09-07 10:30:00+01', 45, v_rita);
     RAISE EXCEPTION 'FAIL test 11b: one instructor was booked in two pools at once';
   EXCEPTION
     WHEN exclusion_violation THEN NULL;
   END;
 
   -- c. Back-to-back, same lane and same instructor. Must be allowed.
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
                              starts_at, duration_minutes, instructor_membership_id)
-  VALUES (v_org, v_group_c, v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 1), TIMESTAMPTZ '2026-09-07 10:45:00+01', 45, v_rita);
+  VALUES (v_org, v_group_c, v_pool_a, TIMESTAMPTZ '2026-09-07 10:45:00+01', 45, v_rita);
 
   -- d. A substitute is the person actually teaching, so they clash too. Tiago is
   --    free at 11:30, but not if he is covering something else then.
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
                              starts_at, duration_minutes, instructor_membership_id,
                              substitute_instructor_membership_id)
-  VALUES (v_org, v_group_b, v_pool_b, (SELECT id FROM lane WHERE pool_id = v_pool_b AND position = 2), TIMESTAMPTZ '2026-09-07 11:30:00+01', 45,
+  VALUES (v_org, v_group_b, v_pool_b, TIMESTAMPTZ '2026-09-07 11:30:00+01', 45,
           v_rita, v_tiago);
 
   BEGIN
-    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
+    INSERT INTO class_session (organization_id, class_group_id, pool_id,
                                starts_at, duration_minutes, instructor_membership_id)
-    VALUES (v_org, v_group_b, v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 3), TIMESTAMPTZ '2026-09-07 11:45:00+01', 45, v_tiago);
+    VALUES (v_org, v_group_b, v_pool_a, TIMESTAMPTZ '2026-09-07 11:45:00+01', 45, v_tiago);
     RAISE EXCEPTION 'FAIL test 11d: a substitute was double-booked against their own class';
   EXCEPTION
     WHEN exclusion_violation THEN NULL;
   END;
 
-  -- e. Calling the anchor off frees Rita, exactly as it frees her lane.
+  -- e. Calling the anchor off frees Rita.
   UPDATE class_session SET status = 'cancelled' WHERE id = v_session;
 
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
                              starts_at, duration_minutes, instructor_membership_id)
-  VALUES (v_org, v_group_c, v_pool_b, (SELECT id FROM lane WHERE pool_id = v_pool_b AND position = 1), TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita);
+  VALUES (v_org, v_group_c, v_pool_b, TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita);
 
   RAISE NOTICE 'PASS test 11: an instructor cannot be in two places, and back-to-back is fine';
 END $$;

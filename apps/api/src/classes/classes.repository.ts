@@ -94,6 +94,53 @@ async function laneIdFor(
   return found;
 }
 
+/**
+ * A turma's bookings, put on the turma's lane — POOLSE-46.
+ *
+ * **Two things say where a class swims, and they are not the same thing.**
+ * `class_group.lane_id` is the turma's default, the way `capacity` is: one lane,
+ * chosen on the turma's own form. `booking_lane` is where a booking actually
+ * sits, and a booking may span several — which is what a competition squad or a
+ * hidroginástica across the whole tank needs.
+ *
+ * Until the grid can place a booking on lanes of its own (POOLSE-49 and 50), the
+ * turma's form is the only way anybody sets a lane, so this pushes that one
+ * choice down onto every booking the turma has. When the grid lands, a booking
+ * edited there stops following the default — and this is the only place that
+ * would have to learn it.
+ *
+ * Delete-then-insert rather than a diff: a turma has a handful of slots, it all
+ * happens in one transaction, and a diff would be more code for a case that
+ * never gets large.
+ */
+async function syncBookingLanes(
+  tx: Tx,
+  organizationId: string,
+  groupId: string,
+): Promise<void> {
+  await tx.query(
+    `DELETE FROM booking_lane
+      WHERE schedule_id IN (
+        SELECT id FROM class_schedule
+         WHERE class_group_id = $1 AND archived_at IS NULL
+      )`,
+    [groupId],
+  );
+
+  await tx.query(
+    `INSERT INTO booking_lane (organization_id, schedule_id, lane_id)
+     SELECT $1, sch.id, cg.lane_id
+       FROM class_schedule sch
+       JOIN class_group cg
+         ON cg.id = sch.class_group_id AND cg.organization_id = sch.organization_id
+      WHERE sch.class_group_id = $2
+        AND sch.archived_at IS NULL
+        AND cg.lane_id IS NOT NULL
+     ON CONFLICT DO NOTHING`,
+    [organizationId, groupId],
+  );
+}
+
 export class DuplicateNameError extends Error {}
 export class FullError extends Error {}
 export class AlreadyEnrolledError extends Error {}
@@ -455,6 +502,9 @@ export async function updateClassGroup(
         [groupId, input.instructorMembershipId, input.poolId, laneId],
       );
 
+      // The turma moved lane, so its bookings move with it.
+      await syncBookingLanes(tx, organizationId, groupId);
+
       await recordAudit(tx, {
         action: 'class_group.updated',
         entityType: 'class_group',
@@ -557,11 +607,26 @@ export async function addSchedule(
 
     try {
       await tx.query(
+        /*
+         * The booking carries its own site — POOLSE-46. It used to reach one
+         * through its turma, which stops working for a booking that has no
+         * turma, and it is the facility the opening-hours trigger checks.
+         */
         `INSERT INTO class_schedule (
-           organization_id, class_group_id, weekday, start_time, duration_minutes
-         ) VALUES ($1, $2, $3, $4::time, $5)`,
+           organization_id, class_group_id, facility_id, weekday, start_time, duration_minutes
+         ) VALUES (
+           $1, $2,
+           (SELECT cg.facility_id FROM class_group cg WHERE cg.id = $2),
+           $3, $4::time, $5
+         )
+         RETURNING id`,
         [organizationId, groupId, weekday, startTime, durationMinutes],
       );
+
+      // And on the lane the turma uses. `booking_lane` is where a booking
+      // actually sits; `class_group.lane_id` is the turma's default, the way
+      // `capacity` is.
+      await syncBookingLanes(tx, organizationId, groupId);
     } catch (error) {
       if (error instanceof Error && (error as { code?: string }).code === '23505') {
         return 'duplicate';
@@ -633,6 +698,13 @@ export async function moveSchedule(
       throw error;
     }
 
+    /*
+     * The weeks that have not happened yet follow the pattern — this week
+     * forward. Weeks already taught keep the time they were actually taught
+     * at, and a week somebody moved by hand is left where they put it.
+     */
+    const realigned = await realignFutureSessions(tx, organizationId, scheduleId);
+
     await recordAudit(tx, {
       action: 'class_schedule.moved',
       entityType: 'class_group',
@@ -642,6 +714,7 @@ export async function moveSchedule(
         scheduleId,
         from: { weekday: before.weekday, startTime: before.start_time },
         to: { weekday, startTime },
+        realigned,
       },
     });
 
@@ -852,4 +925,146 @@ function asDuplicate(error: unknown, name: string): unknown {
     return new DuplicateNameError(name);
   }
   return error;
+}
+
+/**
+ * Moving one week's class, without moving every week's.
+ *
+ * A drag used to edit the pattern, which changes the class for the rest of the
+ * season. That is right about half the time; the other half is "the pool is
+ * booked this Tuesday, put *this week's* class on Wednesday", and there was no
+ * way to say it.
+ *
+ * This is that half. It moves the occurrence and nothing else, stamps
+ * `moved_at`, and leaves `occurs_on` alone — which is what stops the next
+ * regeneration quietly putting a second class back on Tuesday.
+ *
+ * The lane rows follow through `class_session_lane_sync`, so the lane the class
+ * moved into is the one the exclusion constraint checks. A clash comes back as
+ * `occupied` rather than as a stack trace: the lane is genuinely busy, and that
+ * is a sentence an operator can act on.
+ */
+export async function moveOccurrence(
+  organizationId: string,
+  sessionId: string,
+  date: string,
+  startTime: string,
+): Promise<'moved' | 'not_found' | 'occupied'> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ starts_at: Date; occurs_on: string }>(
+      `SELECT starts_at, occurs_on::text AS occurs_on
+         FROM class_session
+        WHERE id = $1 AND status <> 'cancelled'`,
+      [sessionId],
+    );
+
+    const before = rows[0];
+    if (!before) return 'not_found';
+
+    try {
+      /*
+       * The caller gives a day and a wall clock, not an instant, because that
+       * is what somebody dragging a chip onto Wednesday 18:00 means. The pool
+       * knows which timezone that clock is in, so the conversion happens here
+       * rather than in a browser that would have to be told.
+       */
+      await tx.query(
+        `UPDATE class_session cs
+            SET starts_at = ($2::date + $3::time) AT TIME ZONE coalesce((
+                  SELECT f.timezone
+                    FROM pool p
+                    JOIN facility f
+                      ON f.id = p.facility_id AND f.organization_id = p.organization_id
+                   WHERE p.id = cs.pool_id AND p.organization_id = cs.organization_id
+                ), 'Europe/Lisbon'),
+                moved_at = now()
+          WHERE cs.id = $1`,
+        [sessionId, date, startTime],
+      );
+    } catch (error) {
+      // 23P01 is the lane exclusion; 23505 the one-occurrence-per-booking key.
+      const code = (error as { code?: string }).code;
+      if (code === '23P01' || code === '23505') return 'occupied';
+      throw error;
+    }
+
+    await recordAudit(tx, {
+      action: 'class_session.moved',
+      entityType: 'class_session',
+      entityId: sessionId,
+      // Both ends, and the week it belongs to — so the log says what changed
+      // rather than only where it ended up.
+      data: {
+        occursOn: before.occurs_on,
+        from: before.starts_at.toISOString(),
+        to: `${date} ${startTime}`,
+      },
+    });
+
+    return 'moved';
+  });
+}
+
+/**
+ * The future occurrences of a pattern that has just moved.
+ *
+ * "Every week" means this week forward. Weeks already taught keep the time they
+ * were actually taught at, because a register is a record of what happened and
+ * rewriting it would make the record wrong.
+ *
+ * **Sessions somebody moved by hand are skipped.** They already said what should
+ * happen that week, and a later "every week" must not silently undo it — which
+ * is the whole reason `moved_at` exists.
+ *
+ * **`occurs_on` moves with them**, and that is the part worth reading twice. It
+ * is the day the pattern implies, so when the pattern moves to Thursday the
+ * occurrence's day is Thursday. Leaving it on Tuesday would mean the next
+ * regeneration found no session for the Thursday the pattern now implies and
+ * created a second one — the class twice in one week, which is exactly the bug
+ * `occurs_on` was added to prevent.
+ *
+ * Cancelled ones are skipped: a class that is not happening has no time to move,
+ * and shifting it would collide it with whatever has since taken its lane.
+ */
+export async function realignFutureSessions(
+  tx: Tx,
+  organizationId: string,
+  scheduleId: string,
+): Promise<number> {
+  const { rowCount } = await tx.query(
+    `
+    WITH moved AS (
+      SELECT cs.id,
+             /*
+              * The same week, on the pattern's new weekday. ISO weekdays run
+              * 1..7, so the difference is a plain number of days either way.
+              */
+             cs.occurs_on
+               + (sch.weekday - extract(ISODOW FROM cs.occurs_on)::int) AS on_date,
+             sch.start_time,
+             sch.duration_minutes,
+             -- A class happens at a wall clock, not at an instant.
+             coalesce(f.timezone, 'Europe/Lisbon') AS timezone
+        FROM class_session cs
+        JOIN class_schedule sch
+          ON sch.id = cs.schedule_id AND sch.organization_id = cs.organization_id
+        LEFT JOIN facility f
+          ON f.id = sch.facility_id AND f.organization_id = sch.organization_id
+       WHERE sch.id = $1
+         AND cs.organization_id = $2
+         AND cs.occurs_on >= current_date
+         AND cs.moved_at IS NULL
+         AND cs.status <> 'cancelled'
+    )
+    UPDATE class_session cs
+       SET occurs_on = m.on_date,
+           starts_at = (m.on_date + m.start_time) AT TIME ZONE m.timezone,
+           duration_minutes = m.duration_minutes
+      FROM moved m
+     WHERE cs.id = m.id
+    `,
+    [scheduleId, organizationId],
+  );
+
+  return rowCount ?? 0;
 }

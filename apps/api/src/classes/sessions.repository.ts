@@ -22,7 +22,8 @@ export interface Session {
   className: string;
   levelName: string | null;
   poolName: string | null;
-  lane: number | null;
+  /** Every lane it occupies, by position. Empty when none was chosen. */
+  lanes: number[];
   instructorName: string | null;
   substituteName: string | null;
   /** ISO instant. The facility's local date and time are derived below. */
@@ -414,8 +415,17 @@ const SESSION_COLUMNS = `
   cg.name AS class_name,
   l.name  AS level_name,
   p.name  AS pool_name,
-  -- The lane as a number still — POOLSE-43 made the column a reference.
-  ln.position AS lane,
+  /*
+   * Every lane this session occupies — POOLSE-46. A competition squad takes
+   * two or three; hidroginastica takes the tank. Ordered by position, so
+   * "Pistas 2-4" reads the way the pool is laid out.
+   */
+  coalesce((
+    SELECT array_agg(ln.position ORDER BY ln.position)
+      FROM class_session_lane csl
+      JOIN lane ln ON ln.id = csl.lane_id
+     WHERE csl.session_id = cs.id
+  ), '{}') AS lanes,
   short_name(iu.cached_first_name, iu.cached_last_name) AS instructor_name,
   short_name(su.cached_first_name, su.cached_last_name) AS substitute_name,
   cs.starts_at,
@@ -452,7 +462,6 @@ const SESSION_JOINS = `
   JOIN class_group cg ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
   LEFT JOIN student_level l ON l.id = cg.level_id AND l.organization_id = cg.organization_id
   LEFT JOIN pool p     ON p.id = cs.pool_id AND p.organization_id = cs.organization_id
-  LEFT JOIN lane ln    ON ln.id = cs.lane_id AND ln.organization_id = cs.organization_id
   LEFT JOIN facility f ON f.id = p.facility_id AND f.organization_id = cs.organization_id
   LEFT JOIN membership im ON im.id = cg.instructor_membership_id
                          AND im.organization_id = cg.organization_id
@@ -468,7 +477,7 @@ interface SessionRow {
   class_name: string;
   level_name: string | null;
   pool_name: string | null;
-  lane: number | null;
+  lanes: number[] | null;
   instructor_name: string | null;
   substitute_name: string | null;
   starts_at: Date;
@@ -490,7 +499,7 @@ function toSession(row: SessionRow): Session {
     className: row.class_name,
     levelName: row.level_name,
     poolName: row.pool_name,
-    lane: row.lane,
+    lanes: row.lanes ?? [],
     instructorName: row.instructor_name,
     substituteName: row.substitute_name,
     startsAt: row.starts_at.toISOString(),
@@ -801,7 +810,8 @@ export async function findClash(
         JOIN class_group cg
           ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
         LEFT JOIN pool p     ON p.id = cs.pool_id     AND p.organization_id = cs.organization_id
-        LEFT JOIN lane ln    ON ln.id = cs.lane_id    AND ln.organization_id = cs.organization_id
+        LEFT JOIN class_session_lane csl ON csl.session_id = cs.id
+        LEFT JOIN lane ln    ON ln.id = csl.lane_id    AND ln.organization_id = cs.organization_id
         LEFT JOIN facility f ON f.id = p.facility_id  AND f.organization_id = cs.organization_id
        WHERE cs.status <> 'cancelled'
          AND ($1::uuid IS NULL OR cs.id <> $1::uuid)
@@ -871,14 +881,18 @@ export async function findSessionSlot(
       ends_at: Date;
     }>(
       `SELECT cs.pool_id,
-              ln.position AS lane,
+              -- The lowest lane it holds; findClash asks about one at a time.
+              min(ln.position)::int AS lane,
               coalesce(cs.substitute_instructor_membership_id, cs.instructor_membership_id)
                 AS instructor,
               cs.starts_at,
               cs.ends_at
          FROM class_session cs
-         LEFT JOIN lane ln ON ln.id = cs.lane_id AND ln.organization_id = cs.organization_id
-        WHERE cs.id = $1`,
+         LEFT JOIN class_session_lane csl ON csl.session_id = cs.id
+         LEFT JOIN lane ln ON ln.id = csl.lane_id AND ln.organization_id = cs.organization_id
+        WHERE cs.id = $1
+        GROUP BY cs.pool_id, cs.substitute_instructor_membership_id,
+                 cs.instructor_membership_id, cs.starts_at, cs.ends_at`,
       [sessionId],
     );
 

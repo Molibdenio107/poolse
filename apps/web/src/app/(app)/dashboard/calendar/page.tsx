@@ -160,6 +160,9 @@ export default async function CalendarPage({
       return [
         slotKey(session.classGroupId, session.weekday, session.localTime),
         {
+          // What "move only this week" moves. The board has the pattern and
+          // the week; this is the one occurrence where the two meet.
+          sessionId: session.id,
           // Nothing to mark on a class that is not happening.
           mark: cancelled
             ? undefined
@@ -281,6 +284,7 @@ export default async function CalendarPage({
                 controls={controls}
                 dayNames={dayNames}
                 canManage={calendar.canManage}
+                weekStart={monday}
               />
             ) : (
               // The turmas would not load. The week is still worth showing, and

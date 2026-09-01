@@ -449,9 +449,28 @@ class_group                     -- a turma
   id, organization_id, season_id, pool_id, name, level_id,
   instructor_membership_id, capacity, lane_id, starts_on, ends_on, archived_at
 
-class_schedule                  -- the recurring weekly pattern
-  id, organization_id, class_group_id, weekday smallint, start_time time,
-  duration_minutes int, archived_at
+class_schedule                  -- a booking: the recurring weekly pattern
+  id, organization_id, facility_id, class_group_id (nullable), weekday smallint,
+  start_time time, duration_minutes int, archived_at,
+  subject_type ('turma'|'parceria'|'evento'|'manutencao'),               -- POOLSE-46
+  partner_group_id (nullable, FK arrives with POOLSE-47), slot_id (nullable),
+  instructor_membership_id, instructor_status ('assigned'|'to_define'|
+                                               'external'|'uncovered'),
+  headcount_override, category_id, title, notes
+  unique (organization_id, id)
+  check (subject_type names exactly the one subject column it should)
+  unique (organization_id, coalesce(class_group_id, partner_group_id),
+          weekday, start_time) where archived_at is null
+
+booking_lane                    -- the lanes a booking occupies; POOLSE-46
+  organization_id, schedule_id, lane_id
+  primary key (schedule_id, lane_id)
+
+class_session_lane              -- the lanes one occurrence occupies
+  organization_id, session_id, lane_id, starts_at, ends_at, cancelled
+  primary key (session_id, lane_id)
+  exclude using gist (lane_id =, tstzrange(starts_at, ends_at) &&)
+      where (not cancelled)
 
 closure                         -- holidays, maintenance shutdowns, August
   id, organization_id, facility_id, pool_id (nullable), starts_on, ends_on,
@@ -468,8 +487,9 @@ class_session                   -- a materialised occurrence
   substitute_instructor_membership_id (nullable), cancellation_reason,
   closure_id (nullable)
   unique (class_group_id, starts_at)
-  exclude using gist (lane_id with =, tstzrange(starts_at, ends_at) with &&)
-      where (status <> 'cancelled' and lane_id is not null)
+  schedule_id (nullable) — which booking produced it; POOLSE-46
+  occurs_on date — the day the pattern implied; moved_at — set by a one-week move
+  unique (schedule_id, occurs_on) where schedule_id is not null
 
 enrollment
   id, organization_id, class_group_id, student_id,
@@ -688,6 +708,65 @@ at a time — and, because the window rolls forward, from being re-cancelled eve
 extends. Changing a schedule regenerates only future unmodified sessions and never touches
 one with attendance recorded against it.
 
+### A booking is not only a turma — POOLSE-46
+
+**`class_schedule` was extended, not replaced.** It is already the weekly pattern, and
+`class_session`, attendance, reposições, closures and the fees engine all hang off it. A new
+`booking` table would have meant rewriting every one of those before anything new became
+visible.
+
+**A booking carries its own `facility_id`.** It used to reach its site through its turma,
+which stops working the moment a booking has no turma — and the opening-hours trigger reads
+that site, so every parceria and evento would have sailed past the check rather than being
+tested by it. `class_schedule_default_site` fills it in from the turma when it is omitted, so
+a NOT NULL column did not become forty edited call sites and one that gets it wrong.
+
+**Trigger names are load-bearing here.** Postgres fires BEFORE triggers in alphabetical
+order, so the site default has to sort ahead of `class_schedule_hours`. Named
+`class_schedule_site` it sorted *after*, the hours check saw a null facility, found no hours
+for it, and waved through a class on a day the site is shut. `d < h` is why it is
+`class_schedule_default_site`.
+
+**The subject invariant is a CHECK.** Without it a parceria row carrying a stale
+`class_group_id` would be counted twice by occupancy and once by the register, and nothing
+would object. `class_schedule_slot_uq` had to be rebuilt on `coalesce(class_group_id,
+partner_group_id)` for the same reason: a unique index over a nullable column stops
+constraining anything the moment the column is null.
+
+**`partner_group_id` has no foreign key yet**, and that is a gap with a date on it —
+POOLSE-47 adds `partner_group` and the composite key. Nothing can write a non-null value
+before then, because the CHECK requires `subject_type = 'parceria'` and no writer sets it.
+
+### Where the lane guarantee lives now
+
+**`class_session_lane_free` moved off `class_session`.** It is the one thing standing between
+two groups and the same lane, and it worked while a session had exactly one lane. A session
+across three needs three rows, so the constraint moved to the table that holds them.
+
+**An exclusion constraint cannot reach into another table**, so those rows carry their own
+copy of the session's window and its cancelled flag — the same reason `class_session` already
+copies `pool_id`. A copy is a thing that can go stale, which is what
+`class_session_lane_sync` is for: shorten a class by ten minutes and every lane row follows,
+or the lane looks busy when it is free.
+
+**That trigger fires on every update, not on a named column list.** `AFTER UPDATE OF ends_at`
+names the columns the *statement* sets, and `ends_at` is written by a BEFORE trigger from
+`duration_minutes` — so shortening a class never listed it, the sync never ran, and the lane
+rows kept claiming the old window. `bookings.sql` test 4 exists for exactly that, and is what
+caught it.
+
+**`class_group.lane_id` is the turma's default, not a second truth.** One lane, chosen on the
+turma's own form, the way `capacity` is. `booking_lane` is where a booking actually sits.
+`syncBookingLanes` pushes the default down onto the turma's bookings, and is the one place
+that will have to learn otherwise when the grid can place a booking on lanes of its own.
+
+**The generator walks bookings, not turmas.** It joined the pattern to `class_group`, which
+cannot reach a booking that has no turma. It now walks `class_schedule` and looks the turma up
+only for what a turma supplies — the pool, the instructor, and the dates a class runs between
+— and writes the lane rows from `booking_lane`. Sessions dedupe on `(schedule_id, starts_at)`,
+partial, because the old `(class_group_id, starts_at)` key stops constraining anything once
+that column is null.
+
 ### The grid, and drafts — POOLSE-44 and 45
 
 **A slot grid is a property of the building, not a lattice.** The reference club runs 06:30,
@@ -804,6 +883,32 @@ The function exists so there is one call site to get right rather than three, wh
 exactly how the passes came apart the first time. `packages/db/test/sessions.sql` test 10
 pins it, and asserts up front that the two dates genuinely differ so the test cannot pass
 by coincidence.
+
+### Moving one week without moving every week
+
+A drag on the calendar edits the weekly pattern, so it changes the class for the rest of
+the season. That is what somebody means about half the time. The other half is "the pool
+is booked this Tuesday, put *this week's* class on Wednesday", and two columns on
+`class_session` are what make the difference expressible.
+
+**`occurs_on`** is the calendar day the *pattern* implied, stamped when the session was
+generated and never changed by a one-week move. It is what the generator dedupes on, and
+that is the whole reason it exists: dedupe on `starts_at` and the moment a session moves,
+its instant no longer matches what the pattern would produce, so the next regeneration
+produces it again — the class twice in one week, one of them on a day it is not happening.
+A trigger fills it in from `starts_at` when a caller does not pass it, so the generator is
+not the only thing allowed to insert a session.
+
+**`moved_at`** records that a human moved that one occurrence. A pattern move realigns the
+weeks that have not happened yet and **skips these**, because somebody has already said
+what should happen that week and a later "every week" must not silently undo it.
+
+"Every week" means *this week forward*. Weeks already taught keep the time they were
+actually taught at — a register is a record of what happened, and moving it would make the
+record wrong. When the pattern's weekday moves, `occurs_on` moves with it for exactly the
+sessions being realigned; leaving it behind would recreate the bug it was added to prevent.
+
+`apps/api/src/classes/move-scope.integration.test.ts` pins all four halves.
 
 ### National holidays are rows, not rules
 

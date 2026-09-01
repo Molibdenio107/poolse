@@ -77,11 +77,24 @@ async function seeded(tenant: {
     [tenant.organizationId, group?.id, student?.id],
   );
 
-  await tenant.sql(
+  const [session] = await tenant.sql<{ id: string }>(
     `INSERT INTO class_session
-       (organization_id, class_group_id, pool_id, lane_id, starts_at, duration_minutes)
-     VALUES ($1, $2, $3, $4, now() + interval '1 day', 45)`,
-    [tenant.organizationId, group?.id, pool?.id, lane?.id],
+       (organization_id, class_group_id, pool_id, starts_at, duration_minutes)
+     VALUES ($1, $2, $3, now() + interval '1 day', 45) RETURNING id`,
+    [tenant.organizationId, group?.id, pool?.id],
+  );
+
+  /*
+   * The lanes a session occupies live one table down — POOLSE-46, because a
+   * booking may hold several. The times are copied from the session, which is
+   * what the exclusion constraint compares.
+   */
+  await tenant.sql(
+    `INSERT INTO class_session_lane
+       (organization_id, session_id, lane_id, starts_at, ends_at)
+     SELECT $1, cs.id, $3, cs.starts_at, cs.ends_at
+       FROM class_session cs WHERE cs.id = $2`,
+    [tenant.organizationId, session?.id, lane?.id],
   );
 }
 
@@ -110,7 +123,7 @@ test('Calendário loads', async () => {
 
       const calendar = await new CalendarController().read(today, week);
       assert.equal(calendar.sessions.length, 1);
-      assert.equal(calendar.sessions[0]?.lane, 2);
+      assert.deepEqual(calendar.sessions[0]?.lanes, [2]);
     });
   });
 });
@@ -143,7 +156,7 @@ test('a register loads', async () => {
       );
 
       const register = await new AttendanceController().register(session!.id);
-      assert.equal(register.lane, 2);
+      assert.deepEqual(register.lanes, [2]);
       assert.equal(register.entries.length, 1);
     });
   });

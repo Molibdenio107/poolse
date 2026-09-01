@@ -136,6 +136,41 @@ all read what this defines.
 - **46.14** Given the fees engine / When it runs over a season containing parceria bookings / Then no mensalidade is produced for them.
 - **46.15** Given the existing turmas after migration / When each is read / Then it has exactly one `booking_lane` row and its old lane.
 
+### Built — decisions taken while building
+
+- **A booking gained its own `facility_id`**, which the ticket did not call for. It reached its
+  site through its turma, and that stops working the moment a booking has no turma — worse,
+  the opening-hours trigger reads that site, so a `NOT FOUND` would have read as "this site
+  has no hours" and waved every parceria and evento straight through. A trigger fills it in
+  from the turma so a NOT NULL column did not become forty edited call sites.
+- **Trigger *names* turned out to be load-bearing.** Postgres fires BEFORE triggers in
+  alphabetical order, so the site default must sort ahead of `class_schedule_hours`. Named
+  `class_schedule_site` it sorted after, and a class landed on a day the site is shut.
+  `facility-hours.sql` test 2a caught it. It is `class_schedule_default_site` now, with the
+  reason written above it.
+- **The sync trigger fires on every update, not a column list** — and this is the bug the
+  ticket predicted. `AFTER UPDATE OF ends_at` names the columns the *statement* sets, and
+  `ends_at` is written by a BEFORE trigger from `duration_minutes`. Shortening a class never
+  listed it, so the lane rows kept the old window and the lane looked busy while it was free.
+  `bookings.sql` test 4 is what caught it.
+- **I got the refusal message wrong and a test caught that too.** The rewritten hours trigger
+  said `outside_facility_hours` for the runs-past-closing branch, where the original said
+  `class_ends_after_closing` — and `scheduleRefusal` reads that prefix to tell "starts too
+  early" from "runs past closing". The two say different things to an operator.
+- **The lane guarantee is asserted in one place.** `bookings.sql` tests 3 to 5 now own it;
+  the copies in `lanes.sql`, `sessions.sql` and `classes.sql` were removed with a pointer,
+  because two files asserting one guarantee is two places to update the next time it moves.
+- **`class_group.lane_id` stayed**, as the turma's default rather than a second truth —
+  one lane, on the turma's form, the way `capacity` is. `syncBookingLanes` pushes it down onto
+  the turma's bookings and is the single place that changes when the grid can place a booking
+  on lanes of its own.
+- **`class_session.lane` on the API became `lanes: number[]`.** `laneLabel` in
+  `apps/web/src/lib/lanes.ts` renders it, and refuses to smooth `[1,4]` into "pistas 1–4" —
+  that would claim two lanes somebody else is swimming in, on a sheet pinned to a wall.
+- **Not built here:** the register and the fees engine ignore non-turma bookings by
+  construction today, because nothing can create one yet — `subject_type` only leaves 'turma'
+  reachable until POOLSE-47 adds `partner_group`. The explicit guards land with that ticket.
+
 ### Acceptance criteria
 
 1. `class_schedule` carries `subject_type`, and a database CHECK makes the turma/partner/neither invariant impossible to violate.

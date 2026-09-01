@@ -1,5 +1,4 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
-import Link from 'next/link';
 import { ApiError, apiFetch, type PoolDetail } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
@@ -133,14 +132,16 @@ export default async function PoolPage({
           </section>
 
           {/*
-            Water quality and the store: two blocks of their own, not more rows
-            on the details form — round 4.
+            Water quality, as a block of its own rather than more rows on the
+            details form — round 4.
 
             Deliberately not on the create form either. Somebody adding a pool is
-            describing a tank; its readings and its kit are what accumulates
-            afterwards, and putting them in the creation flow would ask for
-            answers nobody has yet at the one moment they are least likely to
-            have them.
+            describing a tank; its readings are what accumulates afterwards, and
+            putting them in the creation flow would ask for answers nobody has
+            yet at the one moment they are least likely to have them.
+
+            The kit is not here at all — Inventário is a screen under Instalações,
+            because an item belongs to a site and serves whichever tanks need it.
           */}
           <section className="rounded border border-border bg-surface p-5">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -153,34 +154,6 @@ export default async function PoolPage({
               analyses={pool.analyses}
               canManage={pool.canManage}
             />
-          </section>
-
-          {/*
-            The kit moved out — round 6.
-
-            It used to be a block here, one list per tank, and that was the wrong
-            shape: a club's pranchas live in a store room and are carried to
-            whichever pool needs them, so "which single pool are these in" was a
-            question with no true answer and operators picked one. Inventário is
-            now a screen of its own under Instalações, scoped to the site, and an
-            item says which tanks it serves.
-
-            A link rather than silence, because somebody who has been finding the
-            list here for two rounds will look for it here again.
-          */}
-          <section className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-5">
-            <div>
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('inventory.title')}
-              </h2>
-              <p className="mt-1 text-sm text-foreground-muted">{t('inventory.movedHint')}</p>
-            </div>
-            <Link
-              href={`/dashboard/facilities/inventory?facilityId=${pool.facilityId}`}
-              className="rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              {t('inventory.openForSite')}
-            </Link>
           </section>
 
           <section className="rounded border border-border bg-surface p-5">

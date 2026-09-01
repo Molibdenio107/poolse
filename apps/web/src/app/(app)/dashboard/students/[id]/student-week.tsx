@@ -7,6 +7,7 @@ import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import { addDays, longDate, mondayOf, shortDate, today } from '@/lib/dates';
 import type { CalendarSession, TimetableEntry } from '@/lib/api';
 import { studentWeekAction } from '../students.actions';
+import { laneLabel } from '@/lib/lanes';
 
 /**
  * "This student's week", stepping without reloading the page — round 6.
@@ -139,7 +140,7 @@ export function StudentWeek({
             title: session.className,
             subtitle: [
               session.poolName,
-              session.lane === null ? null : t('classes.laneN', { lane: session.lane }),
+              laneLabel(session.lanes, t),
               session.substituteName ?? session.instructorName,
             ]
               .filter(Boolean)

@@ -19,7 +19,8 @@ import type { ClassGroup, FacilityDay } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { slotKey } from '@/lib/slot-key';
 import { cn } from '@/lib/utils';
-import { moveSlotAction, placeSlotAction } from './classes.actions';
+import { addDays } from '@/lib/dates';
+import { moveOccurrenceAction, moveSlotAction, placeSlotAction } from './classes.actions';
 
 /**
  * The week: what is happening, and how to change it — round 5.
@@ -80,6 +81,13 @@ function toTime(minutes: number): string {
  * `placed`.
  */
 export interface SessionControls {
+  /**
+   * This week's occurrence, when one has been generated.
+   *
+   * It is what makes "only this week" answerable: the pattern has no date and
+   * a session does. Absent on the turma screen, which draws the pattern alone.
+   */
+  sessionId?: string | undefined;
   /** "Take the register", already pointed at the right week. */
   mark?: { href: string; label: string } | undefined;
   /** The cancel/restore form — a client component the page renders. */
@@ -128,6 +136,14 @@ type Proposal =
       weekday: number;
       startTime: string;
       from: { weekday: number; startTime: string };
+      /**
+       * The dated occurrence this drop landed on, when the board is showing a
+       * week rather than the bare pattern.
+       *
+       * Null means the question cannot be asked: there is no single week on
+       * screen to move, so the only thing a drop can mean is the pattern.
+       */
+      occurrence: { sessionId: string; date: string } | null;
     };
 
 /**
@@ -161,6 +177,7 @@ export function ScheduleBoard({
   controls,
   dayNames,
   canManage,
+  weekStart,
 }: {
   organizationId: string;
   groups: ClassGroup[];
@@ -172,6 +189,14 @@ export function ScheduleBoard({
   /** Dated headers — "Ter · 25 ago". */
   dayNames: Record<number, string>;
   canManage: boolean;
+  /**
+   * The Monday of the week on screen, when the board is showing one.
+   *
+   * The calendar passes it and the turma screen does not, and that difference
+   * is what decides whether a drop can mean "only this week". Without a date
+   * there is no single week to move.
+   */
+  weekStart?: string | undefined;
 }): React.ReactElement {
   const t = useTranslations();
   const [pending, startPending] = useTransition();
@@ -413,6 +438,20 @@ export function ScheduleBoard({
       weekday,
       startMinutes: Number(minutesText),
     });
+    /*
+     * The occurrence being dragged — this week's, not next week's.
+     *
+     * Both halves have to exist for the question to be worth asking: a week on
+     * screen, and a session generated for it. A slot the season has not reached
+     * yet has nothing to move on its own, and offering the choice anyway would
+     * be offering an answer that cannot be carried out.
+     */
+    const sessionId = slot.controls.sessionId;
+    const occurrence =
+      weekStart !== undefined && sessionId !== undefined && !slot.cancelled
+        ? { sessionId, date: addDays(weekStart, weekday - 1) }
+        : null;
+
     setProposal({
       kind: 'move',
       groupId: slot.groupId,
@@ -421,6 +460,7 @@ export function ScheduleBoard({
       weekday,
       startTime,
       from: { weekday: slot.weekday, startTime: toTime(slot.startMinutes) },
+      occurrence,
     });
   }
 
@@ -436,8 +476,16 @@ export function ScheduleBoard({
     setOptimistic(null);
   }
 
-  /** The proposal, carried out. Nothing before this writes anything. */
-  function confirm(): void {
+  /**
+   * The proposal, carried out. Nothing before this writes anything.
+   *
+   * `scope` is the answer to the question a drag cannot answer on its own: a
+   * class dropped on Wednesday is either "Wednesday from now on" or "Wednesday
+   * this once, the pool is booked". Both are ordinary, so the board asks rather
+   * than picking, and `'series'` stays the answer wherever there is no week on
+   * screen to move by itself.
+   */
+  function confirm(scope: 'series' | 'week'): void {
     const asked = proposal;
     if (asked === null) return;
 
@@ -458,6 +506,22 @@ export function ScheduleBoard({
         // grid would keep showing a class that was never saved.
         setOptimistic(null);
         if (!result.ok) setError(result.errorKey);
+        else setUndo(null);
+        return;
+      }
+
+      if (scope === 'week' && asked.occurrence !== null) {
+        const moved = await moveOccurrenceAction(
+          organizationId,
+          asked.occurrence.sessionId,
+          asked.occurrence.date,
+          asked.startTime,
+        );
+        setOptimistic(null);
+        if (!moved.ok) setError(moved.errorKey);
+        // No undo banner here. The undo it offers puts a *pattern* back, and
+        // this changed one week — dragging it back is the honest undo, and it
+        // is the same gesture that made the change.
         else setUndo(null);
         return;
       }
@@ -661,7 +725,7 @@ function MoveDialog({
   proposal: Proposal | null;
   dayNames: Record<number, string>;
   pending: boolean;
-  onConfirm: () => void;
+  onConfirm: (scope: 'series' | 'week') => void;
   onCancel: () => void;
 }): React.ReactElement | null {
   const t = useTranslations();
@@ -679,6 +743,17 @@ function MoveDialog({
   }, [proposal, pending, onCancel]);
 
   if (proposal === null) return null;
+
+  /*
+   * Two answers or one.
+   *
+   * A drag on a dated week is genuinely ambiguous — "the class has moved" and
+   * "the pool is booked that morning" are the same gesture — so the dialog puts
+   * both on screen and neither is the quiet default. Where there is no week to
+   * move on its own, the pattern is the only thing a drop can mean and one
+   * button says so.
+   */
+  const canScope = proposal.kind === 'move' && proposal.occurrence !== null;
 
   return (
     <div
@@ -702,19 +777,38 @@ function MoveDialog({
           Thursday. Said in the dialog rather than only on the board above,
           because this is the moment the decision is actually made.
         */}
-        <p className="text-sm text-foreground-muted">{t('classes.patternNote')}</p>
+        <p className="text-sm text-foreground-muted">
+          {t(canScope ? 'classes.moveScopeNote' : 'classes.patternNote')}
+        </p>
 
         <div className="flex flex-wrap justify-end gap-3">
+          {canScope && (
+            <button
+              ref={confirmButton}
+              type="button"
+              onClick={() => onConfirm('week')}
+              disabled={pending}
+              className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {pending ? t('common.working') : t('classes.moveThisWeek')}
+            </button>
+          )}
           <button
-            ref={confirmButton}
+            ref={canScope ? undefined : confirmButton}
             type="button"
-            onClick={onConfirm}
+            onClick={() => onConfirm('series')}
             disabled={pending}
-            className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className={
+              canScope
+                ? 'rounded border border-primary px-4 py-2 text-sm text-primary hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+                : 'rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+            }
           >
             {pending
               ? t('common.working')
-              : t(proposal.kind === 'move' ? 'classes.doMove' : 'classes.doPlace')}
+              : canScope
+                ? t('classes.moveEveryWeek')
+                : t(proposal.kind === 'move' ? 'classes.doMove' : 'classes.doPlace')}
           </button>
           <button
             type="button"

@@ -458,13 +458,19 @@
     "slotRefused": "A instalação está encerrada nessa altura, ou a aula terminaria depois do fecho.",
     "boardFacility": "Instalação",
     "patternNote": "Largar aqui altera o padrão semanal — todas as semanas, não apenas esta.",
+    "moveScopeNote": "Pode alterar apenas esta semana ou o padrão semanal a partir daqui. As semanas já dadas ficam como estão.",
+    "moveThisWeek": "Só esta semana",
+    "moveEveryWeek": "Todas as semanas",
+    "occurrenceOccupied": "Essa pista já está ocupada a essa hora.",
     "searchStudents": "Procurar um aluno",
     "searchStudentsPlaceholder": "Escreva um nome",
     "showOutsideAges": "Mostrar também {count} fora das idades deste escalão",
     "noStudentsMatch": "Nenhum aluno corresponde",
     "outsideAges": "fora das idades deste escalão",
     "chooseDay": "Escolha um dia",
-    "noSuchLane": "Essa piscina não tem essa pista."
+    "noSuchLane": "Essa piscina não tem essa pista.",
+    "laneRange": "pistas {from}–{to}",
+    "laneList": "pistas {lanes}"
   },
   "reposicao": {
     "title": "Aulas de reposição",
@@ -1619,6 +1625,7 @@
     "overlap": "Esse horário sobrepõe-se a um que já existe.",
     "inUse": "Não é possível remover: há turmas neste horário.",
     "noneToAdd": "Não há nada para criar.",
-    "failed": "Não foi possível guardar a grelha."
+    "failed": "Não foi possível guardar a grelha.",
+    "versusHours": "O horário acima diz quando a instalação está aberta. A grelha diz em que linhas as aulas assentam dentro desse horário — é o que o calendário vai desenhar."
   }
 }

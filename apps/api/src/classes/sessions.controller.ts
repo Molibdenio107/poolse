@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
 import { currentTenant } from '../tenant/tenant.context.js';
+import { moveOccurrence } from './classes.repository.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   archiveClosure,
@@ -319,6 +320,46 @@ export class SessionsCalendarController {
    * history, invoicing and any later "was there a class that Tuesday?" all rest
    * on; the row survives and the calendar simply stops offering it.
    */
+  /**
+   * Moves this one occurrence, and no other — the other half of a drag.
+   *
+   * A drag on the grid edits the weekly pattern, which changes the class for the
+   * rest of the season. That is right about half the time; the other half is
+   * "the pool is booked this Tuesday, put this week's class on Wednesday". The
+   * grid asks which, and this is the answer for one week.
+   *
+   * `owner` and `admin`, like every other change to a timetable — an instructor
+   * may take a register, not rearrange the season.
+   */
+  @Post(':id/move')
+  async move(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ moved: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const date = body['date'];
+    const startTime = body['startTime'];
+    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new BadRequestException('date must be a calendar date');
+    }
+    if (typeof startTime !== 'string' || !/^\d{2}:\d{2}$/.test(startTime)) {
+      throw new BadRequestException('startTime must be HH:MM');
+    }
+
+    const outcome = await moveOccurrence(organizationId, id, date, startTime);
+
+    if (outcome === 'not_found') throw new NotFoundException('No such class');
+    if (outcome === 'occupied') {
+      // The lane is genuinely busy, or the class is already there. Either way it
+      // is a sentence the screen can say rather than a stack trace.
+      throw new ConflictException({ message: 'occurrenceOccupied' });
+    }
+
+    return { moved: true };
+  }
+
   @Post(':id/cancel')
   async cancel(
     @Param('id') id: string,

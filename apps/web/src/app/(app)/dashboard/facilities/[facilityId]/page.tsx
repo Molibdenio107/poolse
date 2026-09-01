@@ -217,30 +217,37 @@ export default async function FacilityPage({
               hours={site.hours}
               canManage={site.canManage}
             />
+
+            {/*
+              The schedule grid, inside this card rather than beside it.
+
+              It was its own section and read as a duplicate of the hours above
+              it, which is fair: both blocks answered "when does this building
+              run" and the page asked the question twice. They are not the same
+              fact — the hours say when the site is open at all, the grid says
+              which rows a class may sit in inside those hours — but that
+              distinction only earns a heading of its own once the calendar draws
+              those rows, and it does not yet.
+
+              So: one card about when the building runs, in two parts, with the
+              second explaining itself.
+            */}
+            {slots !== null && (
+              <div className="flex flex-col gap-4 border-t border-border pt-4">
+                <div>
+                  <h3 className="text-sm font-medium">{t('slots.title')}</h3>
+                  <p className="mt-1 text-sm text-foreground-muted">{t('slots.versusHours')}</p>
+                </div>
+
+                <SlotsPanel
+                  organizationId={site.organizationId}
+                  facilityId={site.id}
+                  slots={slots.slots}
+                  canManage={site.canManage}
+                />
+              </div>
+            )}
           </section>
-
-          {/*
-            The schedule grid — POOLSE-44.
-
-            Beside the opening hours rather than in the calendar, because both
-            answer "when does this building run": the hours say when it is open
-            at all, the grid says which rows a class can sit in. A club sets them
-            in the same sitting, once a season.
-          */}
-          {slots !== null && (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('slots.title')}
-              </h2>
-
-              <SlotsPanel
-                organizationId={site.organizationId}
-                facilityId={site.id}
-                slots={slots.slots}
-                canManage={site.canManage}
-              />
-            </section>
-          )}
 
           {prices !== null && (
             <PricesPanel
