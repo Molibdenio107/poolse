@@ -80,6 +80,45 @@ module, 28 with the energy module, 33 whenever.
 
 ---
 
+## Ocupação por pista + Parcerias — POOLSE-43 … 55
+
+Thirteen tickets, added after round 6. They are one feature, and the order inside them is not
+negotiable: each wave is unbuildable until the one above it exists.
+
+Four calls were taken up front and are **not** to be re-opened while building:
+
+1. **`class_schedule` is extended, not replaced.** A new `booking` table would mean rewriting session
+   generation, attendance, reposições, closures and the fees engine before anything new became
+   visible.
+2. **`season` stays per-organization** and gains a `draft` status. Per-facility seasons would cost a
+   migration of `class_group`, the seasons screen and the reset flow to buy a case nobody has asked
+   for. Per-facility variation lives in the slot grid, which already carries `facility_id`.
+3. **Parceria bookings generate dated sessions, and take no register.** Closures must visibly cancel
+   them and occupancy must be actual rather than theoretical; attendance against them is refused by
+   the API.
+4. **Slots are the grid; the booking's own time is the truth.** A booking matching no slot renders in
+   a "fora da grelha" row rather than being migrated onto a slot or disappearing.
+
+| Wave | Tickets | Why in this order |
+|---|---|---|
+| **A — the model** | 43 lanes → 44 slots → 45 draft seasons → 46 bookings | 46 needs all three. Nothing is visible to an operator until wave C, which is the cost of getting the shape right once instead of three times. |
+| **B — parcerias** | 47 partners → 48 import | 46 references `partner_group`, so build 47 before it or alongside it and add the foreign key last. 48 is its own evening and can slip without blocking anything. |
+| **C — the grid** | 49 render → 50 drag → 51 conflicts | 49 is the big one, and it is where the model gets proved wrong if it is wrong. 51 carries a spike — see below. |
+| **D — the payoff** | 52 occupancy → 53 alerts → 54 export → 55 seed | 53 is the club's stated pain point and is small; do it before 54. 55 is the acceptance of the whole feature and is allowed to send you back to wave A. |
+
+**The risky unknowns, worth spiking before committing to the wave that needs them:**
+
+- **POOLSE-51** — whether an exclusion constraint can express "same instructor, *different* pool,
+  overlapping time". If `btree_gist` will not supply the inequality operator there, it is a trigger
+  instead. Half an hour in `psql` answers it and it changes nothing else in the ticket.
+- **POOLSE-46** — moving the lane exclusion onto `class_session_lane`, with times copied from the
+  session and kept honest by a trigger. This is the highest-risk piece of the whole feature: the
+  guarantee it replaces is the only thing standing between two groups and the same lane.
+- **POOLSE-49** — whether the weekend block fits beside the weekday grid at 1280px. Decide it from a
+  real render, not in the abstract; stacked with a heading is the fallback, not a toggle.
+
+---
+
 ## How one evening runs
 
 You have two or three hours after a full day. The scarce resource is momentum, not skill.

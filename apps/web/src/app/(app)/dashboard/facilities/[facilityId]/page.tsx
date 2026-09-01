@@ -5,6 +5,7 @@ import {
   ApiError,
   apiFetch,
   type FacilityDetail,
+  type FacilitySlots,
   type PeopleCounts,
   type Students,
 } from '@/lib/api';
@@ -14,6 +15,7 @@ import { PhotoGallery } from '@/components/photo-gallery';
 import { CityPicker } from './city-picker';
 import { WeatherPanel } from './weather-panel';
 import { HoursPanel } from './hours-panel';
+import { SlotsPanel } from './slots-panel';
 import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
 import { PageShell } from '@/components/page-shell';
@@ -79,6 +81,16 @@ export default async function FacilityPage({
    * simply absent rather than rendered empty or rendered with a refusal in it.
    * The levels come from the register, for the optional level a plan suggests.
    */
+  /*
+   * The schedule grid — POOLSE-44.
+   *
+   * Best-effort: the slot editor is one block on a long page, and a club with
+   * no season yet has no grid to show. Losing it must not cost the site.
+   */
+  const slots = await apiFetch<FacilitySlots>(`/facilities/${facilityId}/slots`).catch(
+    () => null,
+  );
+
   const prices = await listPrices(facilityId);
   const register =
     prices === null ? null : await apiFetch<Students>('/students').catch(() => null);
@@ -206,6 +218,29 @@ export default async function FacilityPage({
               canManage={site.canManage}
             />
           </section>
+
+          {/*
+            The schedule grid — POOLSE-44.
+
+            Beside the opening hours rather than in the calendar, because both
+            answer "when does this building run": the hours say when it is open
+            at all, the grid says which rows a class can sit in. A club sets them
+            in the same sitting, once a season.
+          */}
+          {slots !== null && (
+            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('slots.title')}
+              </h2>
+
+              <SlotsPanel
+                organizationId={site.organizationId}
+                facilityId={site.id}
+                slots={slots.slots}
+                canManage={site.canManage}
+              />
+            </section>
+          )}
 
           {prices !== null && (
             <PricesPanel

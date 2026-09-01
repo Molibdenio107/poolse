@@ -25,6 +25,7 @@ import {
   archiveClassGroup,
   createClassGroup,
   DuplicateNameError,
+  NoSuchLaneError,
   endEnrollment,
   enrol,
   findClassGroup,
@@ -386,6 +387,19 @@ function asHttp(error: unknown): unknown {
   if (error instanceof DuplicateNameError) {
     return new ConflictException(`"${error.message}" already exists`);
   }
+
+  /*
+   * A lane the pool does not have — POOLSE-43.
+   *
+   * The old `lane smallint` accepted 7 in a six-lane pool and nothing objected;
+   * now the number has to name a lane that exists. A 400 rather than a 409:
+   * this is a value the form sent that is not a value, not two people competing
+   * for the same thing.
+   */
+  if (error instanceof NoSuchLaneError) {
+    return new BadRequestException({ message: 'noSuchLane', lane: error.lane });
+  }
+
   return error;
 }
 

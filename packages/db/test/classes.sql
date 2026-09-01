@@ -36,8 +36,14 @@ BEGIN
 
   INSERT INTO facility (organization_id, name) VALUES (v_a, 'Piscina Municipal')
   RETURNING id INTO v_facility;
-  INSERT INTO pool (organization_id, facility_id, name, lane_count)
-  VALUES (v_a, v_facility, 'Tanque Grande', 6) RETURNING id INTO v_pool;
+  INSERT INTO pool (organization_id, facility_id, name)
+  VALUES (v_a, v_facility, 'Tanque Grande') RETURNING id INTO v_pool;
+
+  -- POOLSE-43: a pool arrives with one lane from the trigger. A competition tank
+  -- has six, so the other five are added and the first is renamed to match.
+  UPDATE lane SET name = 'Pista 1' WHERE pool_id = v_pool AND position = 1;
+  INSERT INTO lane (organization_id, pool_id, name, position)
+  SELECT v_a, v_pool, 'Pista ' || n, n FROM generate_series(2, 6) AS n;
 
   INSERT INTO student_level (organization_id, name, sort_order)
   VALUES (v_a, 'Iniciação', 0) RETURNING id INTO v_level;
@@ -49,9 +55,10 @@ BEGIN
   VALUES (v_a, v_membership, 'instructor');
 
   INSERT INTO class_group (organization_id, season_id, name, pool_id, level_id,
-                           instructor_membership_id, capacity, lane)
+                           instructor_membership_id, capacity, lane_id)
   VALUES (v_a, (SELECT id FROM season WHERE organization_id = v_a AND archived_at IS NULL),
-          'Iniciação Terças e Quintas', v_pool, v_level, v_membership, 2, 3);
+          'Iniciação Terças e Quintas', v_pool, v_level, v_membership, 2,
+          (SELECT id FROM lane WHERE pool_id = v_pool AND position = 3));
 
   -- Four students, so capacity can be pushed past.
   INSERT INTO student (organization_id, first_name, last_name) VALUES
@@ -73,12 +80,13 @@ END $$;
 DO $$
 DECLARE r record;
 BEGIN
-  SELECT cg.capacity, cg.lane, l.name AS level, p.name AS pool,
+  SELECT cg.capacity, ln.position AS lane, l.name AS level, p.name AS pool,
          u.cached_first_name AS instructor
     INTO r
     FROM class_group cg
     LEFT JOIN student_level l ON l.id = cg.level_id
     LEFT JOIN pool p ON p.id = cg.pool_id
+    LEFT JOIN lane ln ON ln.id = cg.lane_id
     LEFT JOIN membership m ON m.id = cg.instructor_membership_id
     LEFT JOIN app_user u ON u.id = m.app_user_id
    WHERE cg.name = 'Iniciação Terças e Quintas';
@@ -367,6 +375,14 @@ BEGIN
   INSERT INTO pool (organization_id, facility_id, name, kind)
   VALUES (v_org, v_facility, 'Tanque B', 'indoor') RETURNING id INTO v_pool_b;
 
+  -- Three lanes each: this block is about instructors clashing, so the classes
+  -- need somewhere to sit that is not the same lane. Position 1 already exists
+  -- from the pool trigger — POOLSE-43.
+  INSERT INTO lane (organization_id, pool_id, name, position)
+  SELECT v_org, pool_id, 'Pista ' || n, n
+    FROM (VALUES (v_pool_a), (v_pool_b)) AS pools(pool_id)
+    CROSS JOIN generate_series(2, 3) AS n;
+
   SELECT provision_app_user('user_h_r', 'rita@h.pt',  'Rita',  'Lopes',   NULL, now()) INTO v_rita;
   SELECT provision_app_user('user_h_t', 'tiago@h.pt', 'Tiago', 'Freitas', NULL, now()) INTO v_tiago;
 
@@ -375,28 +391,28 @@ BEGIN
   INSERT INTO membership (organization_id, app_user_id, status)
   VALUES (v_org, v_tiago, 'active') RETURNING id INTO v_tiago;
 
-  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane,
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane_id,
                            instructor_membership_id)
-  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação A', v_pool_a, 1, v_rita) RETURNING id INTO v_group_a;
-  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane,
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação A', v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 1), v_rita) RETURNING id INTO v_group_a;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane_id,
                            instructor_membership_id)
-  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação B', v_pool_a, 1, v_tiago) RETURNING id INTO v_group_b;
-  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane,
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação B', v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 1), v_tiago) RETURNING id INTO v_group_b;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane_id,
                            instructor_membership_id)
-  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação C', v_pool_b, 1, v_rita) RETURNING id INTO v_group_c;
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação C', v_pool_b, (SELECT id FROM lane WHERE pool_id = v_pool_b AND position = 1), v_rita) RETURNING id INTO v_group_c;
 
   -- The anchor: Rita, Tanque A lane 1, 10:00 for 45 minutes.
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                              starts_at, duration_minutes, instructor_membership_id)
-  VALUES (v_org, v_group_a, v_pool_a, 1, TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita)
+  VALUES (v_org, v_group_a, v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 1), TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita)
   RETURNING id INTO v_session;
 
   -- a. 10:30 in the same lane. An hourly grid would have allowed this; the real
   --    duration is what refuses it.
   BEGIN
-    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                                starts_at, duration_minutes, instructor_membership_id)
-    VALUES (v_org, v_group_b, v_pool_a, 1, TIMESTAMPTZ '2026-09-07 10:30:00+01', 45, v_tiago);
+    VALUES (v_org, v_group_b, v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 1), TIMESTAMPTZ '2026-09-07 10:30:00+01', 45, v_tiago);
     RAISE EXCEPTION 'FAIL test 11a: a 10:30 class was booked over a 10:00-10:45 one';
   EXCEPTION
     WHEN exclusion_violation THEN NULL;
@@ -404,31 +420,31 @@ BEGIN
 
   -- b. Rita again, in a different pool entirely. Lanes cannot help here.
   BEGIN
-    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                                starts_at, duration_minutes, instructor_membership_id)
-    VALUES (v_org, v_group_c, v_pool_b, 1, TIMESTAMPTZ '2026-09-07 10:30:00+01', 45, v_rita);
+    VALUES (v_org, v_group_c, v_pool_b, (SELECT id FROM lane WHERE pool_id = v_pool_b AND position = 1), TIMESTAMPTZ '2026-09-07 10:30:00+01', 45, v_rita);
     RAISE EXCEPTION 'FAIL test 11b: one instructor was booked in two pools at once';
   EXCEPTION
     WHEN exclusion_violation THEN NULL;
   END;
 
   -- c. Back-to-back, same lane and same instructor. Must be allowed.
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                              starts_at, duration_minutes, instructor_membership_id)
-  VALUES (v_org, v_group_c, v_pool_a, 1, TIMESTAMPTZ '2026-09-07 10:45:00+01', 45, v_rita);
+  VALUES (v_org, v_group_c, v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 1), TIMESTAMPTZ '2026-09-07 10:45:00+01', 45, v_rita);
 
   -- d. A substitute is the person actually teaching, so they clash too. Tiago is
   --    free at 11:30, but not if he is covering something else then.
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                              starts_at, duration_minutes, instructor_membership_id,
                              substitute_instructor_membership_id)
-  VALUES (v_org, v_group_b, v_pool_b, 2, TIMESTAMPTZ '2026-09-07 11:30:00+01', 45,
+  VALUES (v_org, v_group_b, v_pool_b, (SELECT id FROM lane WHERE pool_id = v_pool_b AND position = 2), TIMESTAMPTZ '2026-09-07 11:30:00+01', 45,
           v_rita, v_tiago);
 
   BEGIN
-    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                                starts_at, duration_minutes, instructor_membership_id)
-    VALUES (v_org, v_group_b, v_pool_a, 3, TIMESTAMPTZ '2026-09-07 11:45:00+01', 45, v_tiago);
+    VALUES (v_org, v_group_b, v_pool_a, (SELECT id FROM lane WHERE pool_id = v_pool_a AND position = 3), TIMESTAMPTZ '2026-09-07 11:45:00+01', 45, v_tiago);
     RAISE EXCEPTION 'FAIL test 11d: a substitute was double-booked against their own class';
   EXCEPTION
     WHEN exclusion_violation THEN NULL;
@@ -437,9 +453,9 @@ BEGIN
   -- e. Calling the anchor off frees Rita, exactly as it frees her lane.
   UPDATE class_session SET status = 'cancelled' WHERE id = v_session;
 
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                              starts_at, duration_minutes, instructor_membership_id)
-  VALUES (v_org, v_group_c, v_pool_b, 1, TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita);
+  VALUES (v_org, v_group_c, v_pool_b, (SELECT id FROM lane WHERE pool_id = v_pool_b AND position = 1), TIMESTAMPTZ '2026-09-07 10:00:00+01', 45, v_rita);
 
   RAISE NOTICE 'PASS test 11: an instructor cannot be in two places, and back-to-back is fine';
 END $$;

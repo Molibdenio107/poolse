@@ -52,6 +52,7 @@ const APP_ROOT = '/dashboard';
 const LABELS: readonly (readonly [string, string])[] = [
   ['/dashboard/facilities/staff/vacations', 'vacations.backToVacations'],
   ['/dashboard/facilities/staff', 'staff.backToStaff'],
+  ['/dashboard/facilities/inventory', 'inventory.backToInventory'],
   ['/dashboard/facilities/pools', 'facilities.backToFacilities'],
   ['/dashboard/facilities', 'facilities.backToSites'],
   ['/dashboard/students/guardians', 'students.backToGuardians'],
@@ -69,7 +70,7 @@ const LABELS: readonly (readonly [string, string])[] = [
  * alone. Anything with one more segment that is not a known sub-section is a
  * site.
  */
-const SUBSECTIONS = new Set(['staff', 'pools', 'new']);
+const SUBSECTIONS = new Set(['staff', 'pools', 'inventory', 'new']);
 
 function isFacilityDetail(path: string): boolean {
   const rest = path.slice('/dashboard/facilities/'.length).split(/[/?]/)[0] ?? '';

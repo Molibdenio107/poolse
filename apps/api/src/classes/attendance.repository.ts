@@ -85,7 +85,7 @@ export async function findRegister(
       `
       SELECT cg.name AS class_name,
              p.name  AS pool_name,
-             cs.lane,
+             ln.position AS lane,
              to_char(cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'),
                      'YYYY-MM-DD') AS local_date,
              to_char(cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'),
@@ -103,6 +103,7 @@ export async function findRegister(
         JOIN class_group cg
           ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
         LEFT JOIN pool p     ON p.id = cs.pool_id     AND p.organization_id = cs.organization_id
+        LEFT JOIN lane ln    ON ln.id = cs.lane_id    AND ln.organization_id = cs.organization_id
         LEFT JOIN facility f ON f.id = p.facility_id  AND f.organization_id = cs.organization_id
        WHERE cs.id = $1
       `,

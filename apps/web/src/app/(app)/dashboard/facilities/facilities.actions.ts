@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ApiError, apiPatch, apiPost } from '../../../../lib/api';
 import { POOL_METRICS } from '../../../../lib/pool-metrics';
-import { addDays, today } from '../../../../lib/dates';
 import type { FormState } from '../actions';
 
 /**
@@ -58,6 +57,30 @@ export async function createFacilityAction(
   redirect('/dashboard/facilities');
 }
 
+/**
+ * Shrinking a pool past lanes that classes are on — POOLSE-43.
+ *
+ * The API refuses it and names both the lanes and the turmas. Rebuilt into a
+ * sentence here rather than sent as prose from the API, because the API has no
+ * locale and this message has to read in the operator's own language.
+ */
+function lanesInUse(error: unknown): FormState | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  if (error.message !== 'lanesInUse') return null;
+
+  const details = error.details;
+  if (details === null || typeof details !== 'object') return null;
+
+  const named = (value: unknown): string =>
+    Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string').join(', ') : '';
+
+  const record = details as Record<string, unknown>;
+  return {
+    ok: false,
+    errorKey: 'facilities.lanesInUse',
+    detail: [named(record['lanes']), named(record['groups'])].join(' — '),
+  };
+}
 /** Every attribute, sent every time — see the note on updatePool in the API. */
 function poolBody(formData: FormData): Record<string, string> {
   return {
@@ -89,7 +112,7 @@ export async function createPoolAction(
       organizationId,
     });
   } catch (error) {
-    return failure(error, 'facilities.poolFailed');
+    return lanesInUse(error) ?? failure(error, 'facilities.poolFailed');
   }
 
   revalidatePath('/dashboard/facilities');
@@ -114,7 +137,7 @@ export async function updatePoolAction(
   try {
     await apiPatch(`/facilities/pools/${poolId}`, body, { organizationId });
   } catch (error) {
-    return failure(error, 'facilities.poolFailed');
+    return lanesInUse(error) ?? failure(error, 'facilities.poolFailed');
   }
 
   revalidatePath('/dashboard/facilities');
@@ -155,111 +178,6 @@ export async function archivePoolAction(
   revalidatePath('/dashboard/facilities');
   return { ok: true };
 }
-
-/**
- * Inventory — round 4.
- *
- * Same policy as everything else in this file: a duplicate name or a mistyped
- * count comes back as state the form renders, because both are somebody typing
- * rather than anything going wrong.
- */
-export async function addMaterialAction(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const organizationId = String(formData.get('organizationId') ?? '');
-  const poolId = String(formData.get('poolId') ?? '');
-  const name = String(formData.get('name') ?? '').trim();
-  if (!name) return { ok: false, errorKey: 'facilities.materialNameRequired' };
-
-  const quantity = Number(String(formData.get('quantity') ?? '0').trim() || '0');
-  if (!Number.isInteger(quantity) || quantity < 0) {
-    return { ok: false, errorKey: 'facilities.materialQuantityInvalid' };
-  }
-
-  try {
-    await apiPost(
-      `/facilities/pools/${poolId}/materials`,
-      {
-        name,
-        quantity,
-        unit: String(formData.get('unit') ?? '').trim(),
-        notes: String(formData.get('notes') ?? '').trim(),
-      },
-      { organizationId },
-    );
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 409) {
-      // The one duplicate message in this file that is not about a site or a
-      // pool: "you already have a row for these" is a different instruction from
-      // "that name is taken", because the fix is to correct the count on the row
-      // that exists rather than to think of another name.
-      return { ok: false, errorKey: 'facilities.materialDuplicate' };
-    }
-    return failure(error, 'facilities.materialFailed');
-  }
-
-  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
-  return { ok: true };
-}
-
-/** Corrects an item — in practice its count, after somebody has been counting. */
-export async function updateMaterialAction(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const organizationId = String(formData.get('organizationId') ?? '');
-  const poolId = String(formData.get('poolId') ?? '');
-  const materialId = String(formData.get('materialId') ?? '');
-  const name = String(formData.get('name') ?? '').trim();
-  if (!name) return { ok: false, errorKey: 'facilities.materialNameRequired' };
-
-  const quantity = Number(String(formData.get('quantity') ?? '0').trim() || '0');
-  if (!Number.isInteger(quantity) || quantity < 0) {
-    return { ok: false, errorKey: 'facilities.materialQuantityInvalid' };
-  }
-
-  try {
-    await apiPatch(
-      `/facilities/materials/${materialId}`,
-      {
-        name,
-        quantity,
-        unit: String(formData.get('unit') ?? '').trim(),
-        notes: String(formData.get('notes') ?? '').trim(),
-      },
-      { organizationId },
-    );
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 409) {
-      return { ok: false, errorKey: 'facilities.materialDuplicate' };
-    }
-    return failure(error, 'facilities.materialFailed');
-  }
-
-  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
-  return { ok: true };
-}
-
-/** Archived, never deleted: the club had these once, and that is history. */
-export async function archiveMaterialAction(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const organizationId = String(formData.get('organizationId') ?? '');
-  const poolId = String(formData.get('poolId') ?? '');
-  const materialId = String(formData.get('materialId') ?? '');
-
-  try {
-    await apiPost(`/facilities/materials/${materialId}/archive`, {}, { organizationId });
-  } catch (error) {
-    return failure(error, 'facilities.materialFailed');
-  }
-
-  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
-  return { ok: true };
-}
-
 
 /**
  * Record a water analysis — round 4.
@@ -323,42 +241,3 @@ export async function archiveAnalysisAction(
   return { ok: true };
 }
 
-/**
- * Close a pool because its water is out of range — round 4 follow-up.
- *
- * An ordinary closure, created through the ordinary endpoint. It is visible on
- * Encerramentos, removable there, and indistinguishable from one drawn on the
- * calendar by hand — deliberately, because a second kind of closure that only
- * this panel understands is a second thing to remember.
- *
- * The range is computed from a day count rather than asked for as two dates: the
- * operator dosing a pool thinks "three days", not "the 29th to the 31st". One
- * day means today only, so `endsOn` is today plus `days - 1`.
- */
-export async function closePoolForWaterAction(
-  _previous: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const organizationId = String(formData.get('organizationId') ?? '');
-  const poolId = String(formData.get('poolId') ?? '');
-  const reason = String(formData.get('reason') ?? '').trim();
-
-  const days = Number(String(formData.get('days') ?? '').trim());
-  if (!Number.isInteger(days) || days < 1 || days > 365) {
-    return { ok: false, errorKey: 'facilities.closureDaysInvalid' };
-  }
-
-  const from = today();
-  const to = addDays(from, days - 1);
-
-  try {
-    await apiPost('/closures', { startsOn: from, endsOn: to, reason, poolId }, { organizationId });
-  } catch (error) {
-    return failure(error, 'facilities.closureFailed');
-  }
-
-  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
-  revalidatePath('/dashboard/calendar/closures');
-  revalidatePath('/dashboard/calendar');
-  return { ok: true };
-}

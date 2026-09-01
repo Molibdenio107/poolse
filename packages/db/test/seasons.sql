@@ -67,8 +67,10 @@ BEGIN
   END;
 
   -- Archive first and the same insert is fine. That ordering *is* the reset.
-  UPDATE season SET archived_at = now()
-   WHERE organization_id = v_org AND archived_at IS NULL;
+  -- Both columns — POOLSE-45. `status` is the state and `archived_at` is when;
+  -- `season_retired_is_not_published` refuses a row that sets only one.
+  UPDATE season SET status = 'archived', archived_at = now()
+   WHERE organization_id = v_org AND status = 'published';
 
   INSERT INTO season (organization_id, name, starts_on, ends_on)
   VALUES (v_org, '2027/2028', DATE '2027-09-01', DATE '2028-08-31');
@@ -99,8 +101,8 @@ BEGIN
 
   INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina')
   RETURNING id INTO v_facility;
-  INSERT INTO pool (organization_id, facility_id, name, lane_count)
-  VALUES (v_org, v_facility, 'Tanque', 4) RETURNING id INTO v_pool;
+  INSERT INTO pool (organization_id, facility_id, name)
+  VALUES (v_org, v_facility, 'Tanque') RETURNING id INTO v_pool;
   INSERT INTO student_level (organization_id, name, sort_order)
   VALUES (v_org, 'Iniciação', 0) RETURNING id INTO v_level;
 
@@ -131,8 +133,10 @@ BEGIN
   VALUES (v_org, v_session, v_student, 'present', v_membership);
 
   -- The reset, exactly as the repository performs it.
-  UPDATE season SET archived_at = now()
-   WHERE organization_id = v_org AND archived_at IS NULL;
+  -- Both columns — POOLSE-45. `status` is the state and `archived_at` is when;
+  -- `season_retired_is_not_published` refuses a row that sets only one.
+  UPDATE season SET status = 'archived', archived_at = now()
+   WHERE organization_id = v_org AND status = 'published';
   INSERT INTO season (organization_id, name, starts_on, ends_on)
   VALUES (v_org, '2027/2028', DATE '2027-09-01', DATE '2028-08-31')
   RETURNING id INTO v_new;
@@ -177,8 +181,8 @@ BEGIN
 
   INSERT INTO facility (organization_id, name) VALUES (v_a, 'Piscina A')
   RETURNING id INTO v_facility;
-  INSERT INTO pool (organization_id, facility_id, name, lane_count)
-  VALUES (v_a, v_facility, 'Tanque A', 4) RETURNING id INTO v_pool;
+  INSERT INTO pool (organization_id, facility_id, name)
+  VALUES (v_a, v_facility, 'Tanque A') RETURNING id INTO v_pool;
   INSERT INTO student_level (organization_id, name, sort_order)
   VALUES (v_a, 'Iniciação', 0) RETURNING id INTO v_level;
 

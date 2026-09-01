@@ -1,6 +1,6 @@
 # Poolse backlog
 
-41 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
+55 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
 exists, what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got
 wrong) and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance
 criteria, which are the contract.
@@ -19,7 +19,11 @@ QA section is your test list, already written.
 
 ## Index
 
-41 tickets · 13 at High priority · 58 open questions still to answer
+55 tickets · 24 at High priority · 51 open questions marked in the ticket files
+
+POOLSE-43 … 55 are one feature — lane-level scheduling and parcerias. Read
+[BUILD-ORDER.md](./BUILD-ORDER.md) before starting any of them: four decisions were taken
+up front and the wave order inside them is not negotiable.
 
 | Ticket | Title | Area | Priority | Depends on | Open |
 |---|---|---|---|---|---|
@@ -64,3 +68,17 @@ QA section is your test list, already written.
 | [POOLSE-39](./POOLSE-39-editable-staff-record-immutable-email.md) | Editable staff record, immutable email | Staff | High | POOLSE-17 (one Person, many roles), POOLSE-01 (invit… | 2 |
 | [POOLSE-40](./POOLSE-40-levels-and-skills-expanded-view.md) | Levels and skills — the expanded view | Levels / Skills | Medium | POOLSE-05 (drag-and-drop ordering), POOLSE-20 (four-… | 1 |
 | [POOLSE-41](./POOLSE-41-shared-page-shell.md) | One page shell for every page | Global / Layout | Medium | — | 1 |
+| [POOLSE-42](./POOLSE-42-mensalidade-quota-and-billing-periods.md) | Mensalidade, quota de sócio and billing periods | Billing / Enrolment | High | — | 1 |
+| [POOLSE-43](./POOLSE-43-lanes-as-rows-on-a-pool.md) | Lanes as rows on a pool | Installations / Scheduling | High | — | — |
+| [POOLSE-44](./POOLSE-44-facility-slot-grid.md) | The facility's slot grid | Installations / Scheduling | High | POOLSE-45 (slots belong to a season) | — |
+| [POOLSE-45](./POOLSE-45-draft-seasons-and-duplication.md) | Draft seasons, and duplicar época | Seasons | High | — | 1 |
+| [POOLSE-46](./POOLSE-46-bookings-subject-types-and-lanes.md) | Bookings: subject types, lanes and instructor status | Scheduling | High | POOLSE-43, 44, 45; POOLSE-47 (partner_group) | 1 |
+| [POOLSE-47](./POOLSE-47-parcerias-partners-agreements-groups.md) | Parcerias: partners, agreements and groups | Installations / Partnerships | High | — | 2 |
+| [POOLSE-48](./POOLSE-48-partner-import.md) | Importing partners and their groups | Partnerships / Import | Medium | POOLSE-47 | 1 |
+| [POOLSE-49](./POOLSE-49-the-lane-grid.md) | The lane grid | Calendar / Scheduling | High | POOLSE-46 | — |
+| [POOLSE-50](./POOLSE-50-dragging-on-the-lane-grid.md) | Dragging on the lane grid | Calendar / Scheduling | High | POOLSE-49 | — |
+| [POOLSE-51](./POOLSE-51-conflict-rules.md) | Conflict rules on the lane grid | Scheduling / Data integrity | High | POOLSE-46, 50 | 1 |
+| [POOLSE-52](./POOLSE-52-occupancy-and-season-summary.md) | Occupancy and the season summary | Scheduling / Reporting | Medium | POOLSE-46, 47 | — |
+| [POOLSE-53](./POOLSE-53-sem-professor-alerts.md) | "Sem professor" alerts | Scheduling / Staff | High | POOLSE-46, 49 | 1 |
+| [POOLSE-54](./POOLSE-54-exporting-the-grid.md) | Exporting the grid — PDF and Excel | Scheduling / Export | Medium | POOLSE-49, 52 | — |
+| [POOLSE-55](./POOLSE-55-reference-schedule-seed.md) | The reference schedule as seed, and the verification pass | Scheduling / Seed data | High | all of 43–54 | — |

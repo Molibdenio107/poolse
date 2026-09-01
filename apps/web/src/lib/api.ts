@@ -79,7 +79,7 @@ function baseUrl(): string {
 
 interface RequestOptions {
   organizationId?: string;
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
 }
 
@@ -149,6 +149,22 @@ export async function apiPatch<T>(
   options: { organizationId?: string } = {},
 ): Promise<T> {
   return request<T>(path, { ...options, method: 'PATCH', body });
+}
+
+/**
+ * A removal with nothing to send — POOLSE-44.
+ *
+ * Everything soft-deleted so far has been a `POST .../archive`, because
+ * archiving is a state change with an audit entry behind it rather than an
+ * erasure. A slot is the first thing whose removal reads as a delete to the
+ * person doing it, so the verb matches what they think they are doing; the
+ * repository still archives, and the history still stays.
+ */
+export async function apiDelete<T>(
+  path: string,
+  options: { organizationId?: string } = {},
+): Promise<T> {
+  return request<T>(path, { ...options, method: 'DELETE' });
 }
 
 import type { Paginated } from './pagination';
@@ -345,19 +361,76 @@ export interface PoolAnalysis {
 }
 
 /**
- * One kind of item in a pool's store — round 4.
+ * Where a kind of item lives — round 6.
+ *
+ * `facility` is the building rather than any tank: a store room, an office, the
+ * AED. `pools` is a chosen set. `all_pools` is every tank at this site,
+ * including ones bought next season — which is why it is a scope and not a
+ * snapshot of pool ids.
+ */
+export type InventoryScope = 'facility' | 'pools' | 'all_pools';
+
+/**
+ * One kind of item in a site's store — round 4, rescoped in round 6.
  *
  * A count against a free-text name, not a stock ledger. Nobody labels forty pull
  * buoys, and a movement log nobody posts to drifts from reality within a month
  * and then lies with more precision than a count does.
  */
-export interface PoolMaterial {
+export interface InventoryItem {
   id: string;
+  facilityId: string;
   name: string;
   quantity: number;
   /** What the number counts when the name does not say — pares, caixas, metros. */
   unit: string | null;
   notes: string | null;
+  scope: InventoryScope;
+  /** Empty unless `scope` is `pools`. */
+  poolIds: string[];
+  poolNames: string[];
+}
+
+/**
+ * A row of a facility's schedule grid — POOLSE-44.
+ *
+ * Three day groups, because a club that opens Saturday morning and not Sunday
+ * has to be able to say so. `24:00` is a real end time and means the end of the
+ * day; `00:00` as an end is refused by the API with that instruction.
+ */
+export type DayGroup = 'weekday' | 'saturday' | 'sunday';
+
+export interface TimeSlot {
+  id: string;
+  dayGroup: DayGroup;
+  /** `HH:MM`, wall-clock at the facility. */
+  startTime: string;
+  endTime: string;
+}
+
+export interface FacilitySlots {
+  organizationId: string;
+  canManage: boolean;
+  /** Null when the club has no season yet, in which case there is no grid. */
+  seasonId: string | null;
+  slots: TimeSlot[];
+}
+
+/** What the inventory screen loads: a site's store, and the sites to choose from. */
+export interface Inventory {
+  organizationId: string;
+  canManage: boolean;
+  facilities: { id: string; name: string; pools: { id: string; name: string }[] }[];
+  /** The site being shown — the requested one, or the first. */
+  facilityId: string | null;
+  /** `total` is how many matched the search, not how many the site has. */
+  items: Paginated<InventoryItem>;
+}
+
+/** The whole filtered list, for the export route. No window. */
+export interface InventoryExport {
+  facilityId: string | null;
+  items: InventoryItem[];
 }
 
 export interface Photo {
@@ -789,6 +862,73 @@ export interface ImportResult {
 }
 
 /**
+ * The inventory import's answer — round 6.
+ *
+ * The same shape as the register's, deliberately: one preview, one commit, the
+ * same rows both times. What differs is the vocabulary — a duplicate here is a
+ * stocktake rather than a mistake, so a match carries the values it would
+ * replace instead of a list of blanks it would fill.
+ */
+export interface InventoryImportProblem {
+  field: string;
+  code: 'nameRequired' | 'tooLong' | 'badQuantity';
+  value?: string;
+}
+
+export interface InventoryImportWarning {
+  field: string;
+  code: 'poolNotFound' | 'noPoolsMatched' | 'quantityMissing';
+  value?: string;
+}
+
+export interface InventoryImportUpdate {
+  field: 'quantity' | 'unit' | 'notes' | 'scope' | 'pools';
+  /** What is recorded now, so the screen can show it beside the new value. */
+  before: string;
+  after: string;
+}
+
+export interface InventoryImportRowResult {
+  index: number;
+  line: number;
+  name: string;
+  quantity: number;
+  unit: string | null;
+  notes: string | null;
+  scope: InventoryScope;
+  poolIds: string[];
+  poolNames: string[];
+  problems: InventoryImportProblem[];
+  warnings: InventoryImportWarning[];
+  duplicate: {
+    /** `store` is already at this site; `file` is an earlier row of the same sheet. */
+    kind: 'store' | 'file';
+    itemId?: string;
+    name: string;
+    line?: number;
+  } | null;
+  updates: InventoryImportUpdate[];
+  importable: boolean;
+}
+
+export interface InventoryImportResult {
+  rows: InventoryImportRowResult[];
+  summary: {
+    total: number;
+    importable: number;
+    refused: number;
+    duplicates: number;
+    toUpdate: number;
+    toCreate: number;
+    flagged: number;
+  };
+  /** Present only on a commit. */
+  created?: number;
+  updated?: number;
+  skipped?: number;
+}
+
+/**
  * The price list and what a student pays — POOLSE-42.
  *
  * Every total here was computed by Postgres. `fee_total_cents` is the single
@@ -1214,6 +1354,13 @@ export interface Season {
   name: string;
   startsOn: string;
   endsOn: string;
+  /**
+   * POOLSE-45. One published season at a time; any number of drafts beside it,
+   * from which no dated session is ever generated; archived is a year that
+   * happened and stays fully readable.
+   */
+  status: 'draft' | 'published' | 'archived';
+  /** True for the published season — the same fact, kept for existing readers. */
   active: boolean;
   classGroups: number;
 }

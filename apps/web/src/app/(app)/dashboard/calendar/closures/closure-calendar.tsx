@@ -52,6 +52,7 @@ export function ClosureCalendar({
   closures,
   pools,
   canManage,
+  prefill = null,
 }: {
   organizationId: string;
   year: number;
@@ -59,6 +60,14 @@ export function ClosureCalendar({
   /** Just enough to name a pool in the scope picker — what /closures sends. */
   pools: { id: string; name: string }[];
   canManage: boolean;
+  /**
+   * A reason and a pool the operator has effectively already chosen — round 6.
+   *
+   * Set when they arrived from a pool whose water is out of range. It seeds the
+   * form once days are picked; it never picks the days, because which days to
+   * shut is the one part of this that only the operator knows.
+   */
+  prefill?: { poolId: string; reason: string } | null;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -268,6 +277,7 @@ export function ClosureCalendar({
           organizationId={organizationId}
           range={pending}
           pools={pools}
+          prefill={prefill}
           onDone={() => setPending(null)}
         />
       )}
@@ -315,11 +325,14 @@ function ClosureForm({
   organizationId,
   range,
   pools,
+  prefill,
   onDone,
 }: {
   organizationId: string;
   range: [string, string];
   pools: { id: string; name: string }[];
+  /** Seeded from a pool's water warning, when that is where this came from. */
+  prefill: { poolId: string; reason: string } | null;
   onDone: () => void;
 }): React.ReactElement {
   const t = useTranslations();
@@ -368,10 +381,17 @@ function ClosureForm({
       )}
 
       <div className="flex flex-wrap gap-3">
+        {/*
+          Seeded, not fixed. An operator arriving from a water warning gets the
+          sentence about the failed reading already written — it is what makes
+          the calendar still explain itself in six months — and can rewrite every
+          word of it, because they are the one who knows why the pool is shut.
+        */}
         <TextField
           name="reason"
           label={t('calendar.closureReason')}
           placeholder={t('calendar.closureReasonPlaceholder')}
+          initial={prefill?.reason ?? ''}
           required
           maxLength={200}
           error={state.fields?.['reason'] === undefined ? undefined : t(state.fields['reason'])}
@@ -383,7 +403,7 @@ function ClosureForm({
             <span className={FIELD_LABEL}>{t('calendar.closureScope')}</span>
             <select
               name="poolId"
-              defaultValue=""
+              defaultValue={prefill?.poolId ?? ''}
               className={CONTROL_LINE}
             >
               <option value="">{t('calendar.wholeSite')}</option>

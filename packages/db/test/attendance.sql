@@ -52,13 +52,13 @@ BEGIN
   VALUES (v_org, (SELECT id FROM app_user WHERE clerk_user_id = 'user_att_a'), 'active')
   RETURNING id INTO v_instructor;
 
-  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane,
+  INSERT INTO class_group (organization_id, season_id, name, pool_id,
                            instructor_membership_id)
-  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação 1', v_pool, 1, v_instructor) RETURNING id INTO v_group;
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Iniciação 1', v_pool, v_instructor) RETURNING id INTO v_group;
 
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
                              starts_at, duration_minutes, instructor_membership_id)
-  VALUES (v_org, v_group, v_pool, 1, TIMESTAMPTZ '2026-09-08 18:00:00+01', 45, v_instructor)
+  VALUES (v_org, v_group, v_pool, TIMESTAMPTZ '2026-09-08 18:00:00+01', 45, v_instructor)
   RETURNING id INTO v_session;
 
   INSERT INTO student (organization_id, first_name, last_name)
@@ -235,9 +235,9 @@ BEGIN
   v_pool := (SELECT id FROM pool WHERE organization_id = v_org LIMIT 1);
   v_instructor := (SELECT id FROM membership WHERE organization_id = v_org LIMIT 1);
 
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id,
                              starts_at, duration_minutes, instructor_membership_id)
-  VALUES (v_org, v_group, v_pool, 2, TIMESTAMPTZ '2026-09-15 18:00:00+01', 45, v_instructor)
+  VALUES (v_org, v_group, v_pool, TIMESTAMPTZ '2026-09-15 18:00:00+01', 45, v_instructor)
   RETURNING id INTO v_session;
 
   UPDATE class_session SET status = 'cancelled' WHERE id = v_session;

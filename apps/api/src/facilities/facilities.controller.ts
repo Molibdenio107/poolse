@@ -22,23 +22,20 @@ import {
 } from './analyses.repository.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
-  addPoolMaterial,
   archiveFacility,
   archivePool,
-  archivePoolMaterial,
   countPeople,
   createFacility,
   createPool,
   DuplicateNameError,
+  LanesInUseError,
   facilityHours,
   findFacility,
   findPool,
   listFacilities,
-  listPoolMaterials,
   setFacilityHours,
   updateFacility,
   updatePool,
-  updatePoolMaterial,
   type Facility,
   type FacilityDay,
   type FacilityDayInput,
@@ -46,8 +43,6 @@ import {
   type PeopleCounts,
   type PoolDetail,
   type PoolKind,
-  type PoolMaterial,
-  type PoolMaterialInput,
 } from './facilities.repository.js';
 
 interface FacilityDetailResponse extends FacilityDetail {
@@ -132,7 +127,6 @@ export class FacilitiesController {
     PoolDetail & {
       organizationId: string;
       canManage: boolean;
-      materials: PoolMaterial[];
       analyses: PoolAnalysis[];
     }
   > {
@@ -147,12 +141,9 @@ export class FacilitiesController {
       ...detail,
       organizationId,
       canManage: hasRole('owner', 'admin'),
-      // Inventory travels with the pool rather than behind its own request. It
-      // is small, it is always shown, and a second round trip would put a
-      // loading state on a list of six rows.
-      materials: await listPoolMaterials(organizationId, poolId),
-      // As with the inventory: small, always shown, and a second request would
-      // put a spinner on a panel of four rows.
+      // The analyses travel with the pool rather than behind their own
+      // request: small, always shown, and a second round trip would put a
+      // spinner on a panel of four rows.
       analyses: await listAnalyses(organizationId, poolId),
     };
   }
@@ -212,65 +203,6 @@ export class FacilitiesController {
 
     const archived = await archiveAnalysis(organizationId, id);
     if (!archived) throw new NotFoundException('No such analysis');
-    return { archived: true };
-  }
-
-  /**
-   * Adds a kind of item to a pool's inventory — round 4.
-   *
-   * The name is free text on purpose: every club calls these things something
-   * slightly different, and a fixed vocabulary means the first operator who
-   * wants "arcos" cannot record their arcos. The database decides what counts as
-   * a duplicate, accent- and case-insensitively, because it is the only place
-   * that can decide it without a race.
-   */
-  @Post('pools/:poolId/materials')
-  async addMaterial(
-    @Param('poolId') poolId: string,
-    @Body() body: Record<string, unknown>,
-  ): Promise<{ id: string }> {
-    requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
-
-    let id: string | null;
-    try {
-      id = await addPoolMaterial(organizationId, poolId, readMaterial(body));
-    } catch (error) {
-      throw asHttp(error);
-    }
-
-    if (id === null) throw new NotFoundException('No such pool');
-    return { id };
-  }
-
-  /** Corrects an item — in practice, its count after somebody has been counting. */
-  @Patch('materials/:materialId')
-  async editMaterial(
-    @Param('materialId') materialId: string,
-    @Body() body: Record<string, unknown>,
-  ): Promise<{ updated: true }> {
-    requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
-
-    let updated: boolean;
-    try {
-      updated = await updatePoolMaterial(organizationId, materialId, readMaterial(body));
-    } catch (error) {
-      throw asHttp(error);
-    }
-
-    if (!updated) throw new NotFoundException('No such item');
-    return { updated: true };
-  }
-
-  @Post('materials/:materialId/archive')
-  async removeMaterial(@Param('materialId') materialId: string): Promise<{ archived: true }> {
-    requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
-
-    if (!(await archivePoolMaterial(organizationId, materialId))) {
-      throw new NotFoundException('No such item');
-    }
     return { archived: true };
   }
 
@@ -521,6 +453,22 @@ function asHttp(error: unknown): unknown {
   if (error instanceof DuplicateNameError) {
     return new ConflictException(`"${error.message}" already exists here`);
   }
+
+  /*
+   * Shrinking a pool past lanes that classes are on — POOLSE-43.
+   *
+   * The lanes and the turmas travel with the refusal so the screen can name
+   * both. A 409 that only says no leaves the operator opening every turma to
+   * find out which one is in the way.
+   */
+  if (error instanceof LanesInUseError) {
+    return new ConflictException({
+      message: 'lanesInUse',
+      lanes: error.lanes,
+      groups: error.groups,
+    });
+  }
+
   return error;
 }
 
@@ -698,31 +646,6 @@ function readWeek(value: unknown): FacilityDayInput[] {
 
   return days.sort((a, b) => a.weekday - b.weekday);
 }
-
-/**
- * One inventory item off the wire.
- *
- * `quantity` is validated rather than left to the CHECK constraint for the usual
- * reason: "violates check constraint pool_material_quantity_check" is a message
- * for whoever wrote the migration, and −1 in a count field is somebody's typo.
- */
-function readMaterial(body: Record<string, unknown>): PoolMaterialInput {
-  const name = text(body['name'], 'name', { required: true, max: 120 })!;
-
-  const raw = body['quantity'];
-  const quantity = raw === undefined || raw === null ? 0 : Number(raw);
-  if (!Number.isInteger(quantity) || quantity < 0) {
-    throw new BadRequestException('quantity must be a whole number, zero or more');
-  }
-
-  return {
-    name,
-    quantity,
-    unit: text(body['unit'], 'unit', { max: 40 }),
-    notes: text(body['notes'], 'notes', { max: 500 }),
-  };
-}
-
 
 /**
  * When the sample was taken.

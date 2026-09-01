@@ -106,9 +106,7 @@ export async function ReadingsBlock({
             mean scrolling past the thing it is warning about.
           */}
           <UnsafeWaterNotice
-            organizationId={organizationId}
             poolId={poolId}
-            poolName={poolName}
             excursions={latest === undefined ? [] : excursions(latest.values)}
           />
 

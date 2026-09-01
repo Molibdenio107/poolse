@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Closures } from '@/lib/api';
+import { backTarget } from '@/lib/back';
+import { POOL_METRICS } from '@/lib/pool-metrics';
 import { cn } from '@/lib/utils';
 import { ClosureCalendar } from './closure-calendar';
 import { PageShell } from '@/components/page-shell';
@@ -34,10 +36,10 @@ function yearsAround(current: number): number[] {
 export default async function ClosuresPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string }>;
+  searchParams: Promise<{ year?: string; poolId?: string; water?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { year: requested } = await searchParams;
+  const { year: requested, poolId, water, from } = await searchParams;
 
   const thisYear = new Date().getUTCFullYear();
   const parsed = Number(requested);
@@ -63,11 +65,52 @@ export default async function ClosuresPage({
 
   const years = yearsAround(thisYear);
 
+  /*
+   * Arriving from a pool whose water is out of range — round 6.
+   *
+   * The pool page sends the tank and the metrics that failed, as machine keys,
+   * and the sentence is composed here in the reader's own language: a translated
+   * reason in a query string would be the wrong language the moment somebody
+   * switched locale between the two screens.
+   *
+   * Both halves are checked against what actually exists. `water` and `poolId`
+   * are untrusted query input; an unknown metric is dropped rather than
+   * interpolated into a translation key, and a pool the club does not have
+   * simply does not pre-select the scope.
+   */
+  const metrics = (water ?? '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter((name) => (POOL_METRICS as readonly string[]).includes(name));
+
+  const scopedPool =
+    poolId !== undefined && data?.pools.some((pool) => pool.id === poolId) === true
+      ? poolId
+      : null;
+
+  const prefill =
+    metrics.length === 0 || scopedPool === null
+      ? null
+      : {
+          poolId: scopedPool,
+          reason: t('facilities.closureReason', {
+            pool: data?.pools.find((pool) => pool.id === scopedPool)?.name ?? '',
+            metric: metrics.map((metric) => t(`facilities.metric.${metric}`)).join(', '),
+          }),
+        };
+
+  /*
+   * Voltar goes back where they came from — `lib/back.ts`. Somebody who reached
+   * this calendar from a pool's water panel should land on that pool again, not
+   * on the week view they never visited.
+   */
+  const back = backTarget(from, '/dashboard/calendar');
+
   return (
     <PageShell
       title={t('calendar.closures')}
       subtitle={t('calendar.closuresSubtitle')}
-      back={{ href: "/dashboard/calendar", label: t('calendar.backToCalendar') }}
+      back={{ href: back.href, label: t(back.labelKey) }}
     >
 
 
@@ -116,12 +159,24 @@ export default async function ClosuresPage({
             <p className="text-sm text-foreground-muted">{t('calendar.closuresReadOnly')}</p>
           )}
 
+          {/*
+            Said before the calendar, not inside it: somebody sent here by a
+            water warning has to be told what they are being asked to do, and
+            "pick the days" is the whole instruction.
+          */}
+          {prefill !== null && data.canManage && (
+            <p className="rounded border border-warning/40 bg-warning/10 p-4 text-sm">
+              {t('calendar.fromWaterHint', { reason: prefill.reason })}
+            </p>
+          )}
+
           <ClosureCalendar
             organizationId={data.organizationId}
             year={year}
             closures={data.closures}
             pools={data.pools}
             canManage={data.canManage}
+            prefill={prefill}
           />
         </>
       )}

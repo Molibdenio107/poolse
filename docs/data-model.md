@@ -183,9 +183,18 @@ facility                        -- a site; a personal org has exactly one
 
 pool
   id, organization_id, facility_id, name, kind ('indoor'|'outdoor'),
-  volume_litres, lane_count, archived_at
+  volume_litres, lanes_enabled boolean, archived_at
   unique (organization_id, facility_id, lower(name)) where archived_at is null
-  check lane_count > 0, check volume_litres > 0
+  check volume_litres > 0
+
+lane                            -- POOLSE-43
+  id, organization_id, pool_id, name, position smallint,
+  length_m, default_capacity, archived_at
+  unique (organization_id, id)
+  foreign key (organization_id, pool_id) references pool (organization_id, id)
+  unique (organization_id, pool_id, position) where archived_at is null
+  unique (organization_id, pool_id, lower(strip_accents(name))) where archived_at is null
+  check position > 0
 ```
 
 **Signup is the one write that row-level security cannot allow.** The policy on
@@ -420,12 +429,25 @@ skill_progress                  -- where one student stands on one skill
   unique (student_id, skill_id)
 
 season                          -- the year the club runs; see "seasons"
-  id, organization_id, name, starts_on, ends_on, archived_at
-  unique (organization_id) where archived_at is null
+  id, organization_id, name, starts_on, ends_on, archived_at,
+  status season_status ('draft'|'published'|'archived')     -- POOLSE-45
+  unique (organization_id) where status = 'published'
+  check (archived_at is null or status <> 'published')
+
+facility_time_slot              -- the rows a schedule is written on; POOLSE-44
+  id, organization_id, facility_id, season_id,
+  day_group ('weekday'|'saturday'|'sunday'),
+  start_time time, end_time time, archived_at
+  foreign key (organization_id, facility_id) references facility (organization_id, id)
+  foreign key (organization_id, season_id)   references season (organization_id, id)
+  check (end_time > start_time)
+  exclude using gist (organization_id =, facility_id =, season_id =, day_group =,
+                      int4range(minutes(start_time), minutes(end_time)) &&)
+      where (archived_at is null)
 
 class_group                     -- a turma
   id, organization_id, season_id, pool_id, name, level_id,
-  instructor_membership_id, capacity, lane, starts_on, ends_on, archived_at
+  instructor_membership_id, capacity, lane_id, starts_on, ends_on, archived_at
 
 class_schedule                  -- the recurring weekly pattern
   id, organization_id, class_group_id, weekday smallint, start_time time,
@@ -446,8 +468,8 @@ class_session                   -- a materialised occurrence
   substitute_instructor_membership_id (nullable), cancellation_reason,
   closure_id (nullable)
   unique (class_group_id, starts_at)
-  exclude using gist (pool_id with =, lane with =, tstzrange(starts_at, ends_at) with &&)
-      where (status <> 'cancelled' and lane is not null)
+  exclude using gist (lane_id with =, tstzrange(starts_at, ends_at) with &&)
+      where (status <> 'cancelled' and lane_id is not null)
 
 enrollment
   id, organization_id, class_group_id, student_id,
@@ -666,6 +688,73 @@ at a time — and, because the window rolls forward, from being re-cancelled eve
 extends. Changing a schedule regenerates only future unmodified sessions and never touches
 one with attendance recorded against it.
 
+### The grid, and drafts — POOLSE-44 and 45
+
+**A slot grid is a property of the building, not a lattice.** The reference club runs 06:30,
+08:45, 09:30 … with a hole at lunchtime and a different set at the weekend. The calendar used
+to draw a uniform 15-minute lattice, which is fine for reading one week and useless for
+planning a season: it offers 96 rows where the club has fourteen.
+
+**Gaps are the absence of a row**, not a row of type "closed". Nothing needs to know why the
+pool is quiet between 12:30 and 14:45.
+
+**Abutting is not overlapping**, and `int4range` is what makes that free. Postgres has no
+range type over `time`, so the exclusion works in minutes from midnight — the same arithmetic
+`class_schedule_within_facility_hours()` already uses, and for the same reason: `time '23:30'
++ interval '60 minutes'` wraps to `00:30` and compares as earlier than every closing time.
+`int4range` is half-open, so 09:30–10:15 and 10:15–11:00 sit side by side.
+
+**`24:00` is a real end time and `00:00` is not.** Midnight-at-the-end arithmetics to 1440;
+midnight-at-the-start arithmetics to 0, which makes an empty range that overlaps nothing —
+a slot that would conflict with nothing and sit under everything. The CHECK refuses it
+structurally, and the API refuses it first so the operator reads "write 24:00" rather than a
+constraint name.
+
+**A season is `draft`, `published` or `archived`.** One published at a time, enforced by a
+partial unique index where `season_one_active` used to be — drafts are unarchived too, so the
+old index would have refused the second one, which is precisely the feature. Slots and
+bookings hang off a season, so a club can plan next year without touching the one it is
+running, and `generate_sessions` refuses a season that is not published: without that guard, a
+turma parked in next year's plan would put two hundred phantom sessions on today's calendar.
+
+**`status` is the state and `archived_at` is when.** They are not redundant, and one
+combination means nothing — retired while still published — so a CHECK refuses it. Before this
+ticket, archiving *was* setting `archived_at`, and any writer still doing only that would leave
+a season looking current to the index and retired to a reader. Three places in the product had
+to learn the difference: the reset, its preview, and where a new turma finds its season.
+
+**Publishing is `publish_season`, in the database.** The incumbent must be archived before the
+draft takes the slot or the partial index refuses the second update, and that ordering is the
+correctness — it should not be re-derived by the next caller. Plain `SECURITY INVOKER`: the
+caller is already tenant-scoped and RLS applies, which is exactly what should happen.
+
+### A lane is a row — POOLSE-43
+
+**A pool without lanes still has exactly one lane row**, named after the pool. The
+alternative — a nullable `lane_id` meaning "the whole pool" — puts a null branch in every
+join, every conflict check and every grid cell, and the branch is the bug. The invariant is
+held by `pool_create_default_lanes`, an `AFTER INSERT` trigger, rather than by whichever
+writer remembers it: a pool created by a seed, a test, or an endpoint written next year must
+not be able to exist with no lanes.
+
+**`pool.lane_count` is gone.** It was a second answer to "how many lanes has this pool", and
+two answers drift — the count says six while five rows exist, and nothing can say which is
+right. The rows are the count. The API still exposes `laneCount`, because a form asks for a
+number and that is how somebody describes a tank; `setLaneCount` in the facilities repository
+is the translation between the two.
+
+Raising it appends lanes and renumbers nothing — a class is on Pista 3, and Pista 3 has to
+stay Pista 3. Lowering it archives from the top down and is **refused** while a turma sits on
+one of the lanes being removed, naming both the lanes and the turmas so the operator knows
+what to move. The refusal shares the transaction with the rest of the pool edit, so a rejected
+lane change cannot leave a renamed pool behind.
+
+**The lane exclusion moved from `(pool_id, lane)` to `lane_id`.** A lane belongs to exactly
+one pool, so equality on the reference already implies the pool. `btree_gist` supplies uuid
+equality inside a GiST index — worth writing down, because recreating that constraint is where
+a typo produces one that matches nothing, and it fails open. `packages/db/test/lanes.sql`
+test 5 is what would catch it.
+
 The exclusion constraint is what stops two turmas being booked into lane 3 at 18:00. This
 is a week-one operator complaint if the database does not prevent it.
 
@@ -790,8 +879,8 @@ all.
 column before it could exist.
 
 ```
-class_session_lane_free       EXCLUDE USING gist (pool_id =, lane =, tstzrange(starts_at, ends_at) &&)
-                              WHERE status <> 'cancelled' AND lane IS NOT NULL AND pool_id IS NOT NULL
+class_session_lane_free       EXCLUDE USING gist (lane_id =, tstzrange(starts_at, ends_at) &&)
+                              WHERE status <> 'cancelled' AND lane_id IS NOT NULL
 
 class_session_instructor_free EXCLUDE USING gist (
                                 coalesce(substitute_instructor_membership_id,
@@ -1090,28 +1179,56 @@ closing time and would pass exactly the row it must refuse.
 hours, so narrowing Tuesday tells the operator which classes no longer fit rather than
 deleting them.
 
-### What is in the pool room
+### What the club owns
 
 ```
-pool_material
-  id, organization_id, pool_id,
+inventory_scope  enum ('facility','pools','all_pools')
+
+inventory_item
+  id, organization_id, facility_id,
   name text not null, quantity integer not null default 0, unit text, notes text,
+  scope inventory_scope not null default 'facility',
   created_at, updated_at, archived_at
   unique (organization_id, id)
-  foreign key (organization_id, pool_id) references pool (organization_id, id)
-  unique (organization_id, pool_id, lower(strip_accents(name))) where archived_at is null
+  unique (organization_id, facility_id, id)
+  foreign key (organization_id, facility_id) references facility (organization_id, id)
+  unique (organization_id, facility_id, lower(strip_accents(name))) where archived_at is null
   check (quantity >= 0)
+
+inventory_item_pool
+  organization_id, facility_id, item_id, pool_id
+  primary key (item_id, pool_id)
+  foreign key (organization_id, facility_id, item_id)
+    references inventory_item (organization_id, facility_id, id) on delete cascade
+  foreign key (organization_id, facility_id, pool_id)
+    references pool (organization_id, facility_id, id)
 ```
 
 **A count, not a stock ledger.** One row per kind of thing, corrected in place after a
 stock check. Movements, reservations and minimum levels were considered and left out: a
 ledger nobody posts to drifts from the shelf within a month, and is then wrong with more
-decimal places than the count was. This is also why the inventory exports as CSV and has no
-trend chart — there is no history to draw.
+decimal places than the count was. This is also why the inventory has no trend chart —
+there is no history to draw.
 
 **The name is free text**, because every club calls this kit something slightly different,
 so the partial unique index is the only thing standing between a club and two rows for the
 same pile of floats.
+
+**It belongs to a facility, not to a pool** — round 6, replacing `pool_material`. Almost
+nothing a club owns belongs to one tank: the pranchas live in a store room and are carried
+to whichever pool needs them, the desfibrilhador belongs to the building, and the lane ropes
+belong to two competition tanks and not the learner pool. Forcing each into one pool meant
+duplicating a row per tank, after which no count meant anything, or picking a pool
+arbitrarily and writing the truth into `notes`.
+
+**`all_pools` is a scope, not a snapshot.** A club that buys a third tank next season should
+not discover that its "todas as piscinas" items quietly stopped covering it, which is what a
+list of pool ids frozen at save time would do.
+
+**The junction routes both keys through `facility_id`**, so an item at one site cannot name
+a tank at another. `pool` gained `unique (organization_id, facility_id, id)` for exactly
+that: `(organization_id, id)` proves the tenant, not the building. `packages/db/test/inventory.sql`,
+test 4.
 
 ### Water quality
 

@@ -79,6 +79,110 @@ const LAST_NAMES = [
  * person tomorrow. `Math.random` would also make the script's own idempotence
  * untestable.
  */
+/**
+ * What a Portuguese swimming club actually keeps in its store room.
+ *
+ * Free-text names on purpose — the column is free text precisely because no
+ * fixed vocabulary would have contained "esparguetes", "arcos submersíveis" or
+ * "manguitos", and the first club to want one of them would have written it into
+ * a notes field instead.
+ *
+ * Long enough to page (the screen shows ten) and varied enough to search: a term
+ * matching a name, a term matching only a note, and accented names that a search
+ * for the unaccented spelling has to find.
+ */
+/**
+ * A real club's schedule grid, from the reference sheet — POOLSE-44.
+ *
+ * Two things here are the point, and a generated grid has neither. The hole
+ * between 12:30 and 14:45 is where the pool is quiet and nothing models it. And
+ * 06:30 exists because the masters swim before work, which is why the editor
+ * generates *and then* lets you correct.
+ *
+ * The weekend runs its own hours, earlier and shorter, and is printed as its own
+ * block — which is why `saturday` and `sunday` are separate day groups rather
+ * than one `weekend`.
+ */
+const SLOT_GRID: Record<string, [string, string][]> = {
+  weekday: [
+    ['06:30', '07:15'],
+    ['08:45', '09:30'],
+    ['09:30', '10:15'],
+    ['10:15', '11:00'],
+    ['11:00', '11:45'],
+    ['11:45', '12:30'],
+    ['14:45', '15:30'],
+    ['15:30', '16:15'],
+    ['16:15', '17:00'],
+    ['17:00', '17:45'],
+    ['17:45', '18:30'],
+    ['18:30', '19:15'],
+    ['19:15', '20:00'],
+    ['20:00', '20:45'],
+    ['21:00', '21:45'],
+  ],
+  saturday: [
+    ['07:30', '08:00'],
+    ['08:00', '08:45'],
+    ['09:30', '10:15'],
+    ['10:15', '11:00'],
+    ['11:00', '11:45'],
+    ['11:45', '12:30'],
+  ],
+  sunday: [
+    ['09:30', '10:15'],
+    ['10:15', '11:00'],
+    ['11:00', '11:45'],
+  ],
+};
+
+const INVENTORY: {
+  name: string;
+  quantity: number;
+  unit: string | null;
+  notes: string | null;
+  scope: 'facility' | 'pools' | 'all_pools';
+  /** How many of the site's tanks a `pools` item serves — the first N, so re-runs agree. */
+  poolsServed: number;
+}[] = [
+  { name: 'Flutuadores', quantity: 48, unit: null, notes: 'Armário 2, prateleira de cima', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Pranchas', quantity: 36, unit: null, notes: 'Armário 2', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Esparguetes', quantity: 60, unit: null, notes: 'Caixote junto à entrada', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Pull buoys', quantity: 24, unit: null, notes: 'Armário 3', scope: 'pools', poolsServed: 2 },
+  { name: 'Halteres de hidroginástica', quantity: 30, unit: 'pares', notes: 'Sala de hidro', scope: 'pools', poolsServed: 1 },
+  { name: 'Arcos submersíveis', quantity: 12, unit: null, notes: 'Usados na adaptação ao meio', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Argolas de mergulho', quantity: 20, unit: null, notes: 'Caixa azul, armário 2', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Cintos de flutuação', quantity: 18, unit: null, notes: 'Armário 3', scope: 'pools', poolsServed: 2 },
+  { name: 'Manguitos', quantity: 40, unit: 'pares', notes: 'Tamanhos misturados — precisa de arrumação', scope: 'facility', poolsServed: 2 },
+  { name: 'Barbatanas', quantity: 26, unit: 'pares', notes: 'Armário 4, por tamanho', scope: 'pools', poolsServed: 2 },
+  { name: 'Palas de mão', quantity: 22, unit: 'pares', notes: 'Só para os escalões de competição', scope: 'pools', poolsServed: 1 },
+  { name: 'Cordas de raia', quantity: 8, unit: null, notes: 'Duas de reserva no armazém', scope: 'pools', poolsServed: 1 },
+  { name: 'Blocos de partida', quantity: 6, unit: null, notes: 'Fixos ao topo do tanque', scope: 'pools', poolsServed: 1 },
+  { name: 'Placas de viragem', quantity: 4, unit: null, notes: null, scope: 'pools', poolsServed: 1 },
+  { name: 'Colchões flutuantes', quantity: 3, unit: null, notes: 'Aulas de bebés, sábado de manhã', scope: 'pools', poolsServed: 1 },
+  { name: 'Tapete antiderrapante', quantity: 14, unit: 'metros', notes: 'Corredor dos balneários', scope: 'facility', poolsServed: 2 },
+  { name: 'Cadeira de transferência', quantity: 1, unit: null, notes: 'Acesso à piscina para mobilidade reduzida', scope: 'facility', poolsServed: 2 },
+  { name: 'Boia salva-vidas', quantity: 4, unit: null, notes: 'Uma por cais — verificar mensalmente', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Vara de salvamento', quantity: 2, unit: null, notes: 'Parede junto ao posto do nadador-salvador', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Desfibrilhador', quantity: 1, unit: null, notes: 'Receção — validade das pás em março', scope: 'facility', poolsServed: 2 },
+  { name: 'Mala de primeiros socorros', quantity: 2, unit: null, notes: 'Receção e sala técnica', scope: 'facility', poolsServed: 2 },
+  { name: 'Máscara de reanimação', quantity: 3, unit: null, notes: 'Dentro das malas de primeiros socorros', scope: 'facility', poolsServed: 2 },
+  { name: 'Fotómetro', quantity: 1, unit: null, notes: 'Sala técnica — análises diárias', scope: 'facility', poolsServed: 2 },
+  { name: 'Reagentes DPD', quantity: 5, unit: 'caixas', notes: 'Validade a verificar antes de encomendar', scope: 'facility', poolsServed: 2 },
+  { name: 'Kit de teste de pH', quantity: 2, unit: null, notes: 'Sala técnica', scope: 'facility', poolsServed: 2 },
+  { name: 'Aspirador de fundo', quantity: 1, unit: null, notes: 'Manutenção — passa duas vezes por semana', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Mangueira de aspiração', quantity: 25, unit: 'metros', notes: 'Enrolada na sala técnica', scope: 'facility', poolsServed: 2 },
+  { name: 'Camaroeiro', quantity: 3, unit: null, notes: 'Um por cais', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Escovas de parede', quantity: 4, unit: null, notes: null, scope: 'all_pools', poolsServed: 2 },
+  { name: 'Termómetro de piscina', quantity: 3, unit: null, notes: 'Um por tanque', scope: 'all_pools', poolsServed: 2 },
+  { name: 'Cronómetros', quantity: 8, unit: null, notes: 'Armário do gabinete — 2 avariados', scope: 'facility', poolsServed: 2 },
+  { name: 'Apito', quantity: 10, unit: null, notes: 'Gabinete dos professores', scope: 'facility', poolsServed: 2 },
+  { name: 'Coletes de identificação', quantity: 15, unit: null, notes: 'Visitas de escolas', scope: 'facility', poolsServed: 2 },
+  { name: 'Toalhas de reserva', quantity: 0, unit: null, notes: 'Caixa vazia — encomendar', scope: 'facility', poolsServed: 2 },
+  { name: 'Cadeados de cacifo', quantity: 22, unit: null, notes: 'Receção, com as chaves numeradas', scope: 'facility', poolsServed: 2 },
+  { name: 'Bandeiras de costas', quantity: 2, unit: 'jogos', notes: 'Montadas a 5 m das paredes', scope: 'pools', poolsServed: 1 },
+];
+
 function makeRandom(seed: number): () => number {
   let state = seed;
   return () => {
@@ -207,6 +311,8 @@ async function main(): Promise<void> {
       guardians: 0,
       skills: 0,
       medicalLeave: 0,
+      inventory: 0,
+      slots: 0,
     };
 
     // ---------------------------------------------------------------------
@@ -991,6 +1097,133 @@ async function main(): Promise<void> {
       }
     }
 
+    // ---------------------------------------------------------------------
+    // The store room.
+    //
+    // A real club's kit list, so Inventário can be judged rather than reasoned
+    // about — the search, the paging and the three scopes all need more than
+    // four rows to show anything. Every name here is one a Portuguese pool
+    // actually uses, which is the point of the free-text column: no fixed
+    // vocabulary would have contained "esparguetes" or "arcos submersíveis".
+    //
+    // The scopes are spread deliberately. Most of it belongs to the building —
+    // that is the honest answer for a store room and it is the default — while
+    // the lane ropes and the starting blocks belong to specific tanks, and the
+    // floats travel to whichever tank needs them.
+    // ---------------------------------------------------------------------
+    for (const site of await many<{ id: string; name: string }>(
+      client,
+      `SELECT id, name FROM facility
+        WHERE organization_id = $1 AND archived_at IS NULL
+        ORDER BY created_at`,
+      [org.id],
+    )) {
+      const pools = await many<{ id: string; name: string }>(
+        client,
+        `SELECT id, name FROM pool
+          WHERE organization_id = $1 AND facility_id = $2 AND archived_at IS NULL
+          ORDER BY created_at`,
+        [org.id, site.id],
+      );
+
+      for (const item of INVENTORY) {
+        const already = await one<{ id: string }>(
+          client,
+          `SELECT id FROM inventory_item
+            WHERE organization_id = $1 AND facility_id = $2
+              AND lower(strip_accents(name)) = lower(strip_accents($3))
+              AND archived_at IS NULL`,
+          [org.id, site.id, item.name],
+        );
+        if (already) continue;
+
+        /*
+         * A `pools` item at a site with no tanks would be a scope pointing at
+         * nothing, which the form itself refuses — so it falls back to the
+         * building rather than seeding a row the interface could not have made.
+         */
+        const scope = item.scope === 'pools' && pools.length === 0 ? 'facility' : item.scope;
+
+        const created = await one<{ id: string }>(
+          client,
+          `INSERT INTO inventory_item
+             (organization_id, facility_id, name, quantity, unit, notes, scope)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id`,
+          [org.id, site.id, item.name, item.quantity, item.unit, item.notes, scope],
+        );
+        if (!created) continue;
+
+        if (scope === 'pools') {
+          // Deterministic rather than random: re-running the seed on a fresh
+          // database must produce the same club, or two screenshots a week apart
+          // disagree for no reason.
+          const chosen = pools.slice(0, Math.max(1, Math.min(item.poolsServed, pools.length)));
+          for (const pool of chosen.length > 0 ? chosen : [pools[0]!]) {
+            await client.query(
+              `INSERT INTO inventory_item_pool
+                 (organization_id, facility_id, item_id, pool_id)
+               VALUES ($1, $2, $3, $4)
+               ON CONFLICT DO NOTHING`,
+              [org.id, site.id, created.id, pool.id],
+            );
+          }
+        }
+
+        counts.inventory += 1;
+      }
+    }
+
+    if (counts.inventory > 0) console.log(`  inventário: ${counts.inventory} artigos`);
+
+    // ---------------------------------------------------------------------
+    // The grid the timetable sits on — POOLSE-44.
+    //
+    // The reference club's own hours (Ginásio Clube de Santo Tirso, 2025/2026),
+    // including the two things a generated grid never has: the hole between the
+    // morning and the afternoon, and a 06:30 slot that exists because the
+    // masters swim before work. A uniform lattice would have looked plausible
+    // and taught the screen nothing.
+    // ---------------------------------------------------------------------
+    const season = await one<{ id: string }>(
+      client,
+      `SELECT id FROM season WHERE organization_id = $1 AND archived_at IS NULL LIMIT 1`,
+      [org.id],
+    );
+
+    if (season) {
+      for (const site of await many<{ id: string }>(
+        client,
+        `SELECT id FROM facility
+          WHERE organization_id = $1 AND archived_at IS NULL ORDER BY created_at`,
+        [org.id],
+      )) {
+        for (const [group, hours] of Object.entries(SLOT_GRID)) {
+          for (const [from, to] of hours) {
+            const already = await one<{ id: string }>(
+              client,
+              `SELECT id FROM facility_time_slot
+                WHERE organization_id = $1 AND facility_id = $2 AND season_id = $3
+                  AND day_group = $4::day_group AND start_time = $5::time
+                  AND archived_at IS NULL`,
+              [org.id, site.id, season.id, group, from],
+            );
+            if (already) continue;
+
+            await client.query(
+              `INSERT INTO facility_time_slot
+                 (organization_id, facility_id, season_id, day_group, start_time, end_time)
+               VALUES ($1, $2, $3, $4::day_group, $5::time, $6::time)`,
+              [org.id, site.id, season.id, group, from, to],
+            );
+            counts.slots += 1;
+          }
+        }
+      }
+    }
+
+    if (counts.slots > 0) console.log(`  grelha horária: ${counts.slots} horários`);
+
     await client.query('COMMIT');
 
     console.log('');
@@ -1005,6 +1238,8 @@ async function main(): Promise<void> {
     console.log(`  guardians linked   ${counts.guardians}`);
     console.log(`  leave requests     ${counts.vacations}`);
     console.log(`  baixas médicas     ${counts.medicalLeave}`);
+    console.log(`  artigos no armazém ${counts.inventory}`);
+    console.log(`  horários na grelha ${counts.slots}`);
     console.log('');
     console.log('Done. Re-running only adds what is missing.');
   } catch (error) {

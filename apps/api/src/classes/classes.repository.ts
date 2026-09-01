@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { displayName, nameOrder, shortName } from '../people/names.js';
 import {
@@ -53,6 +53,47 @@ export interface ClassGroup {
   monthlyPriceCents: number | null;
 }
 
+/**
+ * Raised when a turma is put on a lane its pool does not have — POOLSE-43.
+ *
+ * Before lanes were rows, `class_group.lane` was a bare smallint and nothing
+ * stopped somebody typing 7 into a six-lane pool. Now the number has to name a
+ * lane that exists, which is the hole that ticket was written to close.
+ */
+export class NoSuchLaneError extends Error {
+  constructor(readonly lane: number) {
+    super('no such lane');
+  }
+}
+
+/**
+ * The lane row a position refers to, in a given pool.
+ *
+ * The interface still speaks in numbers — "Pista 3" is what an operator says —
+ * while the database holds a reference. This is the translation, and it is the
+ * only place it happens.
+ *
+ * Null in, null out: a turma with no lane chosen yet is ordinary, and a turma
+ * with no pool cannot have a lane at all.
+ */
+async function laneIdFor(
+  tx: Tx,
+  poolId: string | null,
+  lane: number | null,
+): Promise<string | null> {
+  if (lane === null || poolId === null) return null;
+
+  const { rows } = await tx.query<{ id: string }>(
+    `SELECT id FROM lane
+      WHERE pool_id = $1 AND position = $2 AND archived_at IS NULL`,
+    [poolId, lane],
+  );
+
+  const found = rows[0]?.id;
+  if (found === undefined) throw new NoSuchLaneError(lane);
+  return found;
+}
+
 export class DuplicateNameError extends Error {}
 export class FullError extends Error {}
 export class AlreadyEnrolledError extends Error {}
@@ -105,7 +146,9 @@ const GROUP_COLUMNS = `
   cg.instructor_membership_id,
   short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
   cg.capacity,
-  cg.lane,
+  -- The lane, still as the number the interface shows — POOLSE-43. The column
+  -- became a reference to a lane row, whose position is what it used to hold.
+  ln.position AS lane,
   (
     SELECT coalesce(
              json_agg(
@@ -143,6 +186,7 @@ const GROUP_JOINS = `
   FROM class_group cg
   LEFT JOIN student_level l ON l.id = cg.level_id AND l.organization_id = cg.organization_id
   LEFT JOIN pool p         ON p.id = cg.pool_id  AND p.organization_id = cg.organization_id
+  LEFT JOIN lane ln        ON ln.id = cg.lane_id AND ln.organization_id = cg.organization_id
   LEFT JOIN membership m   ON m.id = cg.instructor_membership_id
                           AND m.organization_id = cg.organization_id
   LEFT JOIN app_user u     ON u.id = m.app_user_id
@@ -269,15 +313,21 @@ export async function createClassGroup(
        * Asked first, so the answer is a sentence they can act on.
        */
       const { rows: seasons } = await tx.query<{ id: string }>(
-        'SELECT id FROM season WHERE archived_at IS NULL LIMIT 1',
+        // Published, not merely unarchived — POOLSE-45. Once drafts exist,
+        // `archived_at IS NULL` matches every plan for next year too, and a new
+        // turma would land in whichever one the planner happened to return.
+        "SELECT id FROM season WHERE status = 'published' LIMIT 1",
       );
       if (seasons.length === 0) return 'no_season' as const;
+
+      // The number the form sends, resolved to the lane it names — POOLSE-43.
+      const laneId = await laneIdFor(tx, input.poolId, input.lane);
 
       const { rows } = await tx.query<{ id: string }>(
         // A new turma joins the season that is running. There is no way to
         // create one in a retired season, which is the point of retiring it.
         `INSERT INTO class_group (
-           organization_id, name, level_id, pool_id, instructor_membership_id, capacity, lane,
+           organization_id, name, level_id, pool_id, instructor_membership_id, capacity, lane_id,
            facility_id, season_id
          ) VALUES (
            $1, $2, $3, $4, $5, $6, $7,
@@ -304,7 +354,7 @@ export async function createClassGroup(
             * Checked before the insert now, so the operator is told to open a
             * season rather than shown a database error.
             */
-           (SELECT id FROM season WHERE archived_at IS NULL)
+           (SELECT id FROM season WHERE status = 'published')
          )
          RETURNING id`,
         [
@@ -314,7 +364,7 @@ export async function createClassGroup(
           input.poolId,
           input.instructorMembershipId,
           input.capacity,
-          input.lane,
+          laneId,
         ],
       );
 
@@ -342,10 +392,12 @@ export async function updateClassGroup(
 ): Promise<boolean> {
   try {
     return await withOrg(organizationId, async (tx) => {
+      const laneId = await laneIdFor(tx, input.poolId, input.lane);
+
       const { rows } = await tx.query<{ id: string }>(
         `UPDATE class_group
             SET name = $2, level_id = $3, pool_id = $4,
-                instructor_membership_id = $5, capacity = $6, lane = $7
+                instructor_membership_id = $5, capacity = $6, lane_id = $7
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -355,7 +407,7 @@ export async function updateClassGroup(
           input.poolId,
           input.instructorMembershipId,
           input.capacity,
-          input.lane,
+          laneId,
         ],
       );
       if (!rows[0]) return false;
@@ -393,14 +445,14 @@ export async function updateClassGroup(
         `UPDATE class_session
             SET instructor_membership_id = $2,
                 pool_id = $3,
-                lane = $4
+                lane_id = $4
           WHERE class_group_id = $1
             AND starts_at >= now()
             AND status <> 'cancelled'
             AND (instructor_membership_id IS DISTINCT FROM $2
                  OR pool_id IS DISTINCT FROM $3
-                 OR lane IS DISTINCT FROM $4)`,
-        [groupId, input.instructorMembershipId, input.poolId, input.lane],
+                 OR lane_id IS DISTINCT FROM $4)`,
+        [groupId, input.instructorMembershipId, input.poolId, laneId],
       );
 
       await recordAudit(tx, {
@@ -755,7 +807,7 @@ export async function timetableFor(
              l.name AS level_name,
              p.name AS pool_name,
              short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
-             cg.lane,
+             ln.position AS lane,
              cs.weekday,
              to_char(cs.start_time, 'HH24:MI') AS start_time,
              cs.duration_minutes,
@@ -769,6 +821,7 @@ export async function timetableFor(
          AND cs.archived_at IS NULL
         LEFT JOIN student_level l ON l.id = cg.level_id AND l.organization_id = cg.organization_id
         LEFT JOIN pool p         ON p.id = cg.pool_id  AND p.organization_id = cg.organization_id
+        LEFT JOIN lane ln        ON ln.id = cg.lane_id AND ln.organization_id = cg.organization_id
         LEFT JOIN membership m   ON m.id = cg.instructor_membership_id
                                 AND m.organization_id = cg.organization_id
         LEFT JOIN app_user u     ON u.id = m.app_user_id

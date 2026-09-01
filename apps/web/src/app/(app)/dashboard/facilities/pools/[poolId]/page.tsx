@@ -1,11 +1,11 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type PoolDetail, type PoolMaterial } from '@/lib/api';
+import Link from 'next/link';
+import { ApiError, apiFetch, type PoolDetail } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from '../../facility-forms';
 import { PoolForm } from '../../pool-form';
-import { MaterialsBlock } from '../../materials-block';
 import { ReadingsBlock } from '../../readings-block';
 import { PageShell } from '@/components/page-shell';
 
@@ -39,14 +39,12 @@ export default async function PoolPage({
    */
   const back = backTarget(from, '/dashboard/facilities');
 
-  let pool: (PoolDetail & { canManage: boolean; materials: PoolMaterial[] }) | null = null;
+  let pool: (PoolDetail & { canManage: boolean }) | null = null;
   let failure: string | null = null;
   let missing = false;
 
   try {
-    pool = await apiFetch<PoolDetail & { canManage: boolean; materials: PoolMaterial[] }>(
-      `/facilities/pools/${poolId}`,
-    );
+    pool = await apiFetch<PoolDetail & { canManage: boolean }>(`/facilities/pools/${poolId}`);
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
       missing = true;
@@ -157,17 +155,32 @@ export default async function PoolPage({
             />
           </section>
 
-          <section className="rounded border border-border bg-surface p-5">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('facilities.materials')}
-            </h2>
-            <MaterialsBlock
-              organizationId={pool.organizationId}
-              poolId={pool.id}
-              poolName={pool.name}
-              materials={pool.materials}
-              canManage={pool.canManage}
-            />
+          {/*
+            The kit moved out — round 6.
+
+            It used to be a block here, one list per tank, and that was the wrong
+            shape: a club's pranchas live in a store room and are carried to
+            whichever pool needs them, so "which single pool are these in" was a
+            question with no true answer and operators picked one. Inventário is
+            now a screen of its own under Instalações, scoped to the site, and an
+            item says which tanks it serves.
+
+            A link rather than silence, because somebody who has been finding the
+            list here for two rounds will look for it here again.
+          */}
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-5">
+            <div>
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('inventory.title')}
+              </h2>
+              <p className="mt-1 text-sm text-foreground-muted">{t('inventory.movedHint')}</p>
+            </div>
+            <Link
+              href={`/dashboard/facilities/inventory?facilityId=${pool.facilityId}`}
+              className="rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {t('inventory.openForSite')}
+            </Link>
           </section>
 
           <section className="rounded border border-border bg-surface p-5">

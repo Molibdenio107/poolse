@@ -30,14 +30,19 @@ BEGIN
 
   INSERT INTO facility (organization_id, name, timezone)
   VALUES (v_org, 'Piscina Municipal', 'Europe/Lisbon') RETURNING id INTO v_facility;
-  INSERT INTO pool (organization_id, facility_id, name, lane_count)
-  VALUES (v_org, v_facility, 'Tanque Grande', 6) RETURNING id INTO v_pool;
+  INSERT INTO pool (organization_id, facility_id, name)
+  VALUES (v_org, v_facility, 'Tanque Grande') RETURNING id INTO v_pool;
+
+  -- POOLSE-43: the pool trigger gives position 1; a six-lane tank needs the rest.
+  UPDATE lane SET name = 'Pista 1' WHERE pool_id = v_pool AND position = 1;
+  INSERT INTO lane (organization_id, pool_id, name, position)
+  SELECT v_org, v_pool, 'Pista ' || n, n FROM generate_series(2, 6) AS n;
 
   -- A season running a full year, so the generator has somewhere to run.
-  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane, capacity,
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane_id, capacity,
                            starts_on, ends_on)
   VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL),
-          'Iniciação', v_pool, 3, 8, DATE '2027-01-01', DATE '2027-12-31')
+          'Iniciação', v_pool, (SELECT id FROM lane WHERE pool_id = v_pool AND position = 3), 8, DATE '2027-01-01', DATE '2027-12-31')
   RETURNING id INTO v_group;
 
   -- Tuesdays at 18:00, and Saturdays at 10:00 — a swimming school runs half its
@@ -256,22 +261,22 @@ BEGIN
   SELECT starts_at INTO v_when FROM class_session
    WHERE organization_id = v_org AND status = 'scheduled' LIMIT 1;
 
-  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane)
-  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Outra Turma', v_pool, 3) RETURNING id INTO v_other;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane_id)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Outra Turma', v_pool, (SELECT id FROM lane WHERE pool_id = v_pool AND position = 3)) RETURNING id INTO v_other;
 
   BEGIN
-    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+    INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                                starts_at, duration_minutes)
-    VALUES (v_org, v_other, v_pool, 3, v_when, 45);
+    VALUES (v_org, v_other, v_pool, (SELECT id FROM lane WHERE pool_id = v_pool AND position = 3), v_when, 45);
     RAISE EXCEPTION 'FAIL test 6a: two turmas were put in lane 3 at the same time';
   EXCEPTION
     WHEN exclusion_violation THEN NULL;
   END;
 
   -- A different lane in the same pool at the same moment is fine.
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                              starts_at, duration_minutes)
-  VALUES (v_org, v_other, v_pool, 4, v_when, 45);
+  VALUES (v_org, v_other, v_pool, (SELECT id FROM lane WHERE pool_id = v_pool AND position = 4), v_when, 45);
 
   RAISE NOTICE 'PASS test 6: a lane cannot be double-booked, and its neighbour is free';
 END $$;
@@ -289,17 +294,19 @@ BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
   SELECT id INTO v_pool FROM pool WHERE organization_id = v_org;
   SELECT starts_at INTO v_when FROM class_session
-   WHERE organization_id = v_org AND lane = 4 LIMIT 1;
+   WHERE organization_id = v_org
+     AND lane_id = (SELECT id FROM lane WHERE pool_id = v_pool AND position = 4) LIMIT 1;
 
   UPDATE class_session SET status = 'cancelled', cancellation_reason = 'Gala'
-   WHERE lane = 4 AND starts_at = v_when;
+   WHERE lane_id = (SELECT id FROM lane WHERE pool_id = v_pool AND position = 4)
+     AND starts_at = v_when;
 
-  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane)
-  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Turma de Substituição', v_pool, 4) RETURNING id INTO v_third;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane_id)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Turma de Substituição', v_pool, (SELECT id FROM lane WHERE pool_id = v_pool AND position = 4)) RETURNING id INTO v_third;
 
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                              starts_at, duration_minutes)
-  VALUES (v_org, v_third, v_pool, 4, v_when, 45);
+  VALUES (v_org, v_third, v_pool, (SELECT id FROM lane WHERE pool_id = v_pool AND position = 4), v_when, 45);
 
   RAISE NOTICE 'PASS test 7: a cancelled session frees its lane for another turma';
 END $$;
@@ -429,11 +436,11 @@ BEGIN
 
   INSERT INTO facility (organization_id, name, timezone)
   VALUES (v_org, 'Piscina dos Açores', 'Atlantic/Azores') RETURNING id INTO v_facility;
-  INSERT INTO pool (organization_id, facility_id, name, lane_count)
-  VALUES (v_org, v_facility, 'Tanque', 4) RETURNING id INTO v_pool;
+  INSERT INTO pool (organization_id, facility_id, name)
+  VALUES (v_org, v_facility, 'Tanque') RETURNING id INTO v_pool;
 
-  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane)
-  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Adultos Tarde', v_pool, 1) RETURNING id INTO v_group;
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane_id)
+  VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org AND archived_at IS NULL), 'Adultos Tarde', v_pool, (SELECT id FROM lane WHERE pool_id = v_pool AND position = 1)) RETURNING id INTO v_group;
 
   -- Tuesday at 23:30. Late, and real: lane hire after the last children's class.
   --
@@ -656,18 +663,19 @@ BEGIN
 
   INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina')
   RETURNING id INTO v_facility;
-  INSERT INTO pool (organization_id, facility_id, name, lane_count)
-  VALUES (v_org, v_facility, 'Tanque', 4) RETURNING id INTO v_pool;
+  INSERT INTO pool (organization_id, facility_id, name)
+  VALUES (v_org, v_facility, 'Tanque') RETURNING id INTO v_pool;
 
-  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane)
+  INSERT INTO class_group (organization_id, season_id, name, pool_id, lane_id)
   VALUES (v_org, (SELECT id FROM season WHERE organization_id = v_org),
-          'Iniciação', v_pool, 1)
+          'Iniciação', v_pool, (SELECT id FROM lane WHERE pool_id = v_pool AND position = 1))
   RETURNING id INTO v_group;
 
   -- A class inside the week we are about to close.
-  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane,
+  INSERT INTO class_session (organization_id, class_group_id, pool_id, lane_id,
                              starts_at, duration_minutes, status)
-  VALUES (v_org, v_group, v_pool, 1, TIMESTAMPTZ '2027-03-10 18:00:00+00', 45, 'scheduled');
+  VALUES (v_org, v_group, v_pool, (SELECT id FROM lane WHERE pool_id = v_pool AND position = 1),
+          TIMESTAMPTZ '2027-03-10 18:00:00+00', 45, 'scheduled');
 
   -- What it would cost, asked before committing.
   SELECT o_sessions, o_marked INTO v_sessions, v_marked

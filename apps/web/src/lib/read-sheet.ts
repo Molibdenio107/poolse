@@ -1,9 +1,16 @@
 import 'server-only';
 import ExcelJS from 'exceljs';
-import { parseCsv, toSheet, type NamedSheet } from '@/lib/sheet';
+import { parseCsv, toSheet, type NamedSheet } from './sheet';
 
 /**
- * Slice 1.10 — reading the uploaded file, on the server only.
+ * Reading an uploaded spreadsheet, on the server only — slice 1.10, generalised
+ * in round 6.
+ *
+ * Nothing here knows what the rows are about, which is why it moved out of the
+ * register's import folder and into `lib`: the students importer and the
+ * inventory importer read the same workbooks the same way, and a second copy of
+ * the ExcelJS handling would be a second place for the BOM, the hidden sheets
+ * and the date cells to be got subtly differently right.
  *
  * `server-only` is not decoration. This pulls in a workbook reader that has no
  * business in a browser bundle, and the import barrier is what makes that a

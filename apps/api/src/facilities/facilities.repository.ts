@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 
 export type PoolKind = 'indoor' | 'outdoor';
@@ -84,8 +84,7 @@ export interface FacilityDetail extends Facility, Place {}
 export class DuplicateNameError extends Error {}
 
 function asDuplicate<T>(error: unknown, name: string): T {
-  // 23505 is facility_name_uq, pool_name_uq or pool_material_name_uq — the
-  // partial unique indexes.
+  // 23505 is facility_name_uq or pool_name_uq — the partial unique indexes.
   if (error instanceof Error && (error as { code?: string }).code === '23505') {
     throw new DuplicateNameError(name);
   }
@@ -122,7 +121,8 @@ export async function listFacilities(organizationId: string): Promise<Facility[]
                             'name', p.name,
                             'kind', p.kind,
                             'volumeLitres', p.volume_litres::float8,
-                            'laneCount', p.lane_count,
+                            'laneCount', (SELECT count(*)::int FROM lane ln
+                                WHERE ln.pool_id = p.id AND ln.archived_at IS NULL),
                             -- numeric comes back as a string from node-pg, which
                             -- refuses to guess at precision. Cast here so the
                             -- JSON carries a number the UI can format.
@@ -202,7 +202,8 @@ export async function findPool(
              p.name,
              p.kind,
              p.volume_litres::float8 AS volume_litres,
-             p.lane_count,
+             (SELECT count(*)::int FROM lane ln
+                                WHERE ln.pool_id = p.id AND ln.archived_at IS NULL) AS lane_count,
              p.length_m::float8    AS length_m,
              p.width_m::float8     AS width_m,
              p.max_depth_m::float8 AS max_depth_m,
@@ -295,7 +296,8 @@ export async function findFacility(
                             'name', p.name,
                             'kind', p.kind,
                             'volumeLitres', p.volume_litres,
-                            'laneCount', p.lane_count,
+                            'laneCount', (SELECT count(*)::int FROM lane ln
+                                WHERE ln.pool_id = p.id AND ln.archived_at IS NULL),
                             'lengthM', p.length_m::float8,
                             'widthM', p.width_m::float8,
                             'maxDepthM', p.max_depth_m::float8
@@ -522,6 +524,102 @@ export async function createFacility(input: CreateFacilityInput): Promise<string
   }
 }
 
+/**
+ * Raised when shrinking a pool would take away lanes that classes are on.
+ *
+ * Carries the lanes and the turmas so the message can name them: "Pista 5 e
+ * Pista 6 têm turmas: Infantis A, Cadetes". A refusal that only says no leaves
+ * the operator clicking through every turma to find out which.
+ */
+export class LanesInUseError extends Error {
+  constructor(
+    readonly lanes: string[],
+    readonly groups: string[],
+  ) {
+    super('lanes in use');
+  }
+}
+
+/**
+ * The pool's lanes, brought to the count the operator asked for — POOLSE-43.
+ *
+ * `lane_count` used to be a column. It is now `count(lane)`, because two answers
+ * to "how many lanes has this pool" is one answer too many — but the form still
+ * asks for a number, since that is how somebody describes a tank. This is the
+ * translation between the two.
+ *
+ * **Growing renames nothing and reuses positions.** A pool going from four lanes
+ * to six gains positions 5 and 6; it does not renumber the ones that exist,
+ * because a class is on Pista 3 and Pista 3 must stay Pista 3.
+ *
+ * **Shrinking archives from the top down, and refuses if anything is there.**
+ * Soft-deleted, so the archived lane keeps its history and its name comes free
+ * again — the partial indexes are what make that work.
+ *
+ * A null count means "no opinion", which leaves the lanes exactly as they are.
+ * That is different from asking for one lane, and the difference matters: the
+ * create form's field is optional.
+ */
+async function setLaneCount(
+  tx: Tx,
+  organizationId: string,
+  poolId: string,
+  wanted: number | null,
+): Promise<void> {
+  if (wanted === null) return;
+
+  const { rows: existing } = await tx.query<{ id: string; name: string; position: number }>(
+    `SELECT id, name, position FROM lane
+      WHERE pool_id = $1 AND archived_at IS NULL
+      ORDER BY position`,
+    [poolId],
+  );
+
+  if (existing.length === wanted) return;
+
+  if (existing.length < wanted) {
+    const highest = existing.reduce((top, lane) => Math.max(top, lane.position), 0);
+    const missing = wanted - existing.length;
+
+    await tx.query(
+      `INSERT INTO lane (organization_id, pool_id, name, position)
+       SELECT $1, $2, 'Pista ' || n, n
+         FROM generate_series($3::int + 1, $3::int + $4::int) AS n`,
+      [organizationId, poolId, highest, missing],
+    );
+    return;
+  }
+
+  const doomed = existing.slice(wanted);
+
+  /*
+   * What is actually on those lanes. Turmas rather than sessions: a session is
+   * one Tuesday and the operator is asking about the tank, so naming the turma
+   * is what lets them go and move it.
+   */
+  const { rows: inUse } = await tx.query<{ lane_name: string; group_name: string }>(
+    `SELECT l.name AS lane_name, cg.name AS group_name
+       FROM class_group cg
+       JOIN lane l ON l.id = cg.lane_id
+      WHERE cg.lane_id = ANY($1::uuid[])
+        AND cg.archived_at IS NULL
+      ORDER BY l.position, cg.name`,
+    [doomed.map((lane) => lane.id)],
+  );
+
+  if (inUse.length > 0) {
+    throw new LanesInUseError(
+      [...new Set(inUse.map((row) => row.lane_name))],
+      [...new Set(inUse.map((row) => row.group_name))],
+    );
+  }
+
+  await tx.query(
+    `UPDATE lane SET archived_at = now() WHERE id = ANY($1::uuid[]) AND archived_at IS NULL`,
+    [doomed.map((lane) => lane.id)],
+  );
+}
+
 export interface CreatePoolInput {
   organizationId: string;
   facilityId: string;
@@ -553,10 +651,10 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
 
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO pool (
-           organization_id, facility_id, name, kind, volume_litres, lane_count,
+           organization_id, facility_id, name, kind, volume_litres,
            length_m, width_m, max_depth_m, min_depth_m
          )
-         VALUES ($1, $2, $3, $4::pool_kind, $5, $6, $7, $8, $9, $10)
+         VALUES ($1, $2, $3, $4::pool_kind, $5, $6, $7, $8, $9)
          RETURNING id`,
         [
           input.organizationId,
@@ -564,7 +662,6 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
           input.name,
           input.kind,
           input.volumeLitres,
-          input.laneCount,
           input.lengthM,
           input.widthM,
           input.maxDepthM,
@@ -574,6 +671,11 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
 
       const id = rows[0]?.id;
       if (!id) throw new Error('Could not create the pool');
+
+      // The pool arrives with one lane from `pool_create_default_lanes`, which
+      // is what keeps "every pool has a lane" true for every writer. A tank the
+      // operator says has six gets the other five here — POOLSE-43.
+      await setLaneCount(tx, input.organizationId, id, input.laneCount);
 
       await recordAudit(tx, {
         action: 'pool.created',
@@ -626,8 +728,8 @@ export async function updatePool(
     return await withOrg(organizationId, async (tx) => {
       const { rows } = await tx.query<{ id: string }>(
         `UPDATE pool
-            SET name = $2, kind = $3::pool_kind, volume_litres = $4, lane_count = $5,
-                length_m = $6, width_m = $7, max_depth_m = $8, min_depth_m = $9
+            SET name = $2, kind = $3::pool_kind, volume_litres = $4,
+                length_m = $5, width_m = $6, max_depth_m = $7, min_depth_m = $8
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -635,7 +737,6 @@ export async function updatePool(
           input.name,
           input.kind,
           input.volumeLitres,
-          input.laneCount,
           input.lengthM,
           input.widthM,
           input.maxDepthM,
@@ -643,6 +744,11 @@ export async function updatePool(
         ],
       );
       if (!rows[0]) return false;
+
+      // Throws `LanesInUseError` if the operator is shrinking the tank past
+      // lanes that classes are on — POOLSE-43. Inside the same transaction, so a
+      // refused lane change also refuses the rest of the edit.
+      await setLaneCount(tx, organizationId, poolId, input.laneCount);
 
       await recordAudit(tx, {
         action: 'pool.updated',
@@ -872,149 +978,3 @@ export async function setFacilityHours(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Pool inventory — round 4
-//
-// One row per kind of item with a count on it, not a stock ledger. The name is
-// free text because every club calls these things something slightly different,
-// and a fixed vocabulary means the first operator who wants "arcos" writes them
-// into a notes field instead. See the migration for the rest of the reasoning.
-// ---------------------------------------------------------------------------
-
-export interface PoolMaterial {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string | null;
-  notes: string | null;
-}
-
-export async function listPoolMaterials(
-  organizationId: string,
-  poolId: string,
-): Promise<PoolMaterial[]> {
-  return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<PoolMaterial>(
-      `
-      SELECT id, name, quantity, unit, notes
-        FROM pool_material
-       WHERE pool_id = $1
-         AND archived_at IS NULL
-       ORDER BY lower(strip_accents(name))
-      `,
-      [poolId],
-    );
-    return rows;
-  });
-}
-
-export interface PoolMaterialInput {
-  name: string;
-  quantity: number;
-  unit: string | null;
-  notes: string | null;
-}
-
-/**
- * Adds an item to a pool's inventory.
- *
- * Throws `DuplicateNameError` on a second row for the same pile of things, which
- * the unique index decides accent- and case-insensitively rather than this
- * function — "Flutuadores" and "flutuádores" are one pile, and the database is
- * the only place that can say so without a race.
- */
-export async function addPoolMaterial(
-  organizationId: string,
-  poolId: string,
-  input: PoolMaterialInput,
-): Promise<string | null> {
-  return withOrg(organizationId, async (tx) => {
-    const pool = await tx.query(
-      `SELECT 1 FROM pool WHERE id = $1 AND archived_at IS NULL`,
-      [poolId],
-    );
-    if (pool.rowCount === 0) return null;
-
-    try {
-      const { rows } = await tx.query<{ id: string }>(
-        `INSERT INTO pool_material (organization_id, pool_id, name, quantity, unit, notes)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id`,
-        [organizationId, poolId, input.name, input.quantity, input.unit, input.notes],
-      );
-
-      const id = rows[0]!.id;
-
-      await recordAudit(tx, {
-        action: 'pool.material.added',
-        entityType: 'pool',
-        entityId: poolId,
-        data: { name: input.name, quantity: input.quantity },
-      });
-
-      return id;
-    } catch (error) {
-      return asDuplicate<string>(error, input.name);
-    }
-  });
-}
-
-/**
- * Corrects an item, most often its count after a stock check.
- *
- * The count is the whole point of the row, and correcting it is the operation
- * this table exists to support — which is why it is an ordinary update rather
- * than a movement posted against a running total. A total nobody posts against
- * drifts within a month and then lies with more precision than a count does.
- */
-export async function updatePoolMaterial(
-  organizationId: string,
-  materialId: string,
-  input: PoolMaterialInput,
-): Promise<boolean> {
-  return withOrg(organizationId, async (tx) => {
-    try {
-      const { rowCount } = await tx.query(
-        `UPDATE pool_material
-            SET name = $2, quantity = $3, unit = $4, notes = $5
-          WHERE id = $1 AND archived_at IS NULL`,
-        [materialId, input.name, input.quantity, input.unit, input.notes],
-      );
-      if (rowCount === 0) return false;
-    } catch (error) {
-      return asDuplicate<boolean>(error, input.name);
-    }
-
-    await recordAudit(tx, {
-      action: 'pool.material.updated',
-      entityType: 'pool_material',
-      entityId: materialId,
-      data: { name: input.name, quantity: input.quantity },
-    });
-
-    return true;
-  });
-}
-
-/** Archived, never deleted — the club had these once, and that is history. */
-export async function archivePoolMaterial(
-  organizationId: string,
-  materialId: string,
-): Promise<boolean> {
-  return withOrg(organizationId, async (tx) => {
-    const { rowCount } = await tx.query(
-      `UPDATE pool_material SET archived_at = now()
-        WHERE id = $1 AND archived_at IS NULL`,
-      [materialId],
-    );
-    if (rowCount === 0) return false;
-
-    await recordAudit(tx, {
-      action: 'pool.material.archived',
-      entityType: 'pool_material',
-      entityId: materialId,
-    });
-
-    return true;
-  });
-}

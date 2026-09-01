@@ -34,9 +34,9 @@ BEGIN
   VALUES (v_org, 'Piscina Municipal', 'Rua do Juncal 1', 'Europe/Lisbon')
   RETURNING id INTO v_facility;
 
-  INSERT INTO pool (organization_id, facility_id, name, kind, volume_litres, lane_count)
-  VALUES (v_org, v_facility, 'Tanque Grande', 'indoor', 1250000, 6),
-         (v_org, v_facility, 'Tanque de Aprendizagem', 'indoor', 90000, 2);
+  INSERT INTO pool (organization_id, facility_id, name, kind, volume_litres)
+  VALUES (v_org, v_facility, 'Tanque Grande', 'indoor', 1250000),
+         (v_org, v_facility, 'Tanque de Aprendizagem', 'indoor', 90000);
 
   SELECT count(*) INTO n FROM pool WHERE facility_id = v_facility AND archived_at IS NULL;
   IF n <> 2 THEN
@@ -124,13 +124,10 @@ BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
   SELECT id INTO v_facility FROM facility WHERE name = 'Piscina Municipal';
 
-  BEGIN
-    INSERT INTO pool (organization_id, facility_id, name, lane_count)
-    VALUES (v_org, v_facility, 'Tanque Impossivel', 0);
-    RAISE EXCEPTION 'FAIL test 4a: a pool with zero lanes was accepted';
-  EXCEPTION
-    WHEN check_violation THEN NULL;
-  END;
+  -- The zero-lane case moved with the column — POOLSE-43. `pool.lane_count` is
+  -- gone, because the lane rows are the count and two answers to "how many
+  -- lanes" is one answer too many. `lanes.sql` test 2c is where a lane at
+  -- position 0 is now refused.
 
   BEGIN
     INSERT INTO facility (organization_id, name) VALUES (v_org, '   ');
@@ -140,8 +137,8 @@ BEGIN
   END;
 
   -- Unknown measurements stay null rather than becoming zero.
-  INSERT INTO pool (organization_id, facility_id, name, volume_litres, lane_count)
-  VALUES (v_org, v_facility, 'Tanque sem medidas', NULL, NULL);
+  INSERT INTO pool (organization_id, facility_id, name, volume_litres)
+  VALUES (v_org, v_facility, 'Tanque sem medidas', NULL);
 
   RAISE NOTICE 'PASS test 4: impossible measurements are refused, unknown ones stay unknown';
 END $$;

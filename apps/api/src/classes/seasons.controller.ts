@@ -1,15 +1,23 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
+  Delete,
   Get,
   NotFoundException,
+  Param,
   Post,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import {
+  createDraft,
+  discardDraft,
   listSeasons,
+  NoSuchSeasonError,
+  publishSeason,
+  SeasonArchivedError,
   previewReset,
   resetSeason,
   type ResetPreview,
@@ -92,6 +100,96 @@ export class SeasonsController {
     if (outcome === null) throw new NotFoundException('There is no current season to reset');
 
     return { reset: true, seasonId: outcome.created.id };
+  }
+
+  /**
+   * Opens a draft — POOLSE-45.
+   *
+   * "Duplicar época" is this with `copyFrom` naming the season to copy; an empty
+   * draft is the same control with nothing named. A club rebuilding its
+   * timetable from scratch should not have to delete last year's grid first.
+   *
+   * Nothing about the published season changes, which is the whole point: a
+   * draft is a plan, and `generate_sessions` refuses to run one.
+   */
+  @Post('drafts')
+  async draft(@Body() body: Record<string, unknown>): Promise<{ season: Season }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const name = String(body['name'] ?? '').trim();
+    if (name === '') throw new BadRequestException('The draft needs a name');
+    if (name.length > MAX_NAME) {
+      throw new BadRequestException(`name may be at most ${MAX_NAME} characters`);
+    }
+
+    const startsOn = date(body['startsOn'], 'startsOn');
+    const endsOn = date(body['endsOn'], 'endsOn');
+    if (endsOn < startsOn) throw new BadRequestException('The season ends before it starts');
+
+    const copyFrom =
+      typeof body['copyFrom'] === 'string' && body['copyFrom'].trim() !== ''
+        ? body['copyFrom'].trim()
+        : null;
+
+    let season: Season | null;
+    try {
+      season = await createDraft(organizationId, { name, startsOn, endsOn, copyFrom });
+    } catch (error) {
+      if (error instanceof NoSuchSeasonError) {
+        throw new NotFoundException('There is no such season to copy');
+      }
+      throw error;
+    }
+
+    if (season === null) throw new BadRequestException('The draft could not be created');
+    return { season };
+  }
+
+  /**
+   * Makes a draft the season the club is running.
+   *
+   * The incumbent is archived in the same statement — see `publish_season`. A
+   * moment with two published seasons, or none, is a moment where every screen
+   * that filters by the current season is wrong.
+   */
+  @Post(':seasonId/publish')
+  async publish(@Param('seasonId') seasonId: string): Promise<{ published: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    let published: boolean;
+    try {
+      published = await publishSeason(organizationId, seasonId);
+    } catch (error) {
+      if (error instanceof SeasonArchivedError) {
+        throw new ConflictException({ message: 'seasonArchived' });
+      }
+      throw error;
+    }
+
+    if (!published) throw new NotFoundException('No such season');
+    return { published: true };
+  }
+
+  /**
+   * Throws a draft away.
+   *
+   * A real delete, and the one place in this schema where that is right: a draft
+   * is a plan nobody acted on, with no sessions, no registers and no history.
+   * "History is never destroyed" is a rule about what happened, not about what
+   * somebody considered — and a draft holding turmas is refused, because by then
+   * it is not a scrap of paper any more.
+   */
+  @Delete(':seasonId')
+  async discard(@Param('seasonId') seasonId: string): Promise<{ discarded: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    if (!(await discardDraft(organizationId, seasonId))) {
+      throw new ConflictException({ message: 'draftNotDiscardable' });
+    }
+    return { discarded: true };
   }
 }
 

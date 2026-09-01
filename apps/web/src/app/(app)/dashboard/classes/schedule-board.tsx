@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   DndContext,
@@ -130,6 +130,29 @@ type Proposal =
       from: { weekday: number; startTime: string };
     };
 
+/**
+ * The proposal, drawn on the grid before it is real — round 6.
+ *
+ * The board used to ask first and move afterwards, which meant a drop looked
+ * like nothing had happened: the chip snapped back to Tuesday while a banner
+ * asked about Thursday, and the operator had to hold the answer in their head
+ * instead of seeing it. Now the class lands where it was dropped and the
+ * question is asked about what is already on screen.
+ *
+ * It is state and not a write. Nothing is saved until the dialog is confirmed,
+ * and cancelling puts the chip back — `placed` is derived from the server's data
+ * with this laid over it, so reverting is dropping one object.
+ */
+type Optimistic =
+  | { kind: 'move'; scheduleId: string; weekday: number; startMinutes: number }
+  | {
+      kind: 'place';
+      groupId: string;
+      weekday: number;
+      startMinutes: number;
+      durationMinutes: number;
+    };
+
 export function ScheduleBoard({
   organizationId,
   groups,
@@ -165,6 +188,8 @@ export function ScheduleBoard({
    * wrong.
    */
   const [proposal, setProposal] = useState<Proposal | null>(null);
+  /** The same drop, drawn on the grid while the dialog asks about it. */
+  const [optimistic, setOptimistic] = useState<Optimistic | null>(null);
   const [undo, setUndo] = useState<{ groupId: string; scheduleId: string } | null>(null);
   const undoTarget = useRef<{ weekday: number; startTime: string } | null>(null);
 
@@ -179,8 +204,15 @@ export function ScheduleBoard({
   );
 
   const unscheduled = useMemo(
-    () => mine.filter((group) => group.schedules.length === 0),
-    [mine],
+    () =>
+      mine.filter(
+        (group) =>
+          group.schedules.length === 0 &&
+          // Already on the grid, waiting to be confirmed. Leaving it in the tray
+          // as well would show the same turma twice and invite a second drop.
+          !(optimistic?.kind === 'place' && optimistic.groupId === group.id),
+      ),
+    [mine, optimistic],
   );
 
   /*
@@ -202,36 +234,73 @@ export function ScheduleBoard({
    * session yet is still a real class on a real day; it simply has nothing to
    * mark until the season is generated.
    */
-  const placed = useMemo<Placed[]>(
-    () =>
-      mine.flatMap((group) =>
-        group.schedules.map((slot) => {
-          const extra = controls[slotKey(group.id, slot.weekday, slot.startTime)] ?? {};
+  const placed = useMemo<Placed[]>(() => {
+    const subtitleOf = (group: ClassGroup): string | null =>
+      [
+        group.poolName,
+        group.lane === null ? null : t('classes.laneN', { lane: group.lane }),
+        group.instructorName,
+      ]
+        .filter(Boolean)
+        .join(' · ') || null;
 
-          return {
-            key: slot.id,
-            scheduleId: slot.id,
-            groupId: group.id,
-            name: group.name,
-            subtitle:
-              [
-                group.poolName,
-                group.lane === null ? null : t('classes.laneN', { lane: group.lane }),
-                group.instructorName,
-              ]
-                .filter(Boolean)
-                .join(' · ') || null,
-            weekday: slot.weekday,
-            startMinutes: toMinutes(slot.startTime),
-            durationMinutes: slot.durationMinutes,
-            cancelled: extra.cancelled === true,
-            note: extra.note ?? null,
-            controls: extra,
-          };
-        }),
-      ),
-    [mine, controls, t],
-  );
+    const rows: Placed[] = mine.flatMap((group) =>
+      group.schedules.map((slot) => {
+        const extra = controls[slotKey(group.id, slot.weekday, slot.startTime)] ?? {};
+
+        /*
+         * A drop that has not been confirmed yet moves the chip and nothing
+         * else. Its register link and cancel control are looked up by the slot
+         * it *came from*, and deliberately: the session for this week is still
+         * where it was, because nothing has been written.
+         */
+        const moved =
+          optimistic?.kind === 'move' && optimistic.scheduleId === slot.id ? optimistic : null;
+
+        return {
+          key: slot.id,
+          scheduleId: slot.id,
+          groupId: group.id,
+          name: group.name,
+          subtitle: subtitleOf(group),
+          weekday: moved?.weekday ?? slot.weekday,
+          startMinutes: moved?.startMinutes ?? toMinutes(slot.startTime),
+          durationMinutes: slot.durationMinutes,
+          cancelled: extra.cancelled === true,
+          note: extra.note ?? null,
+          controls: extra,
+        };
+      }),
+    );
+
+    /*
+     * A turma dragged off the unscheduled tray has no row to move, so it is
+     * added. `scheduleId` is null, which is already the board's word for "on the
+     * grid but not draggable" — and it should not be draggable: picking it up
+     * again while the dialog is open would be answering a question with another
+     * question.
+     */
+    if (optimistic?.kind === 'place') {
+      const group = mine.find((candidate) => candidate.id === optimistic.groupId);
+      if (group !== undefined) {
+        rows.push({
+          key: `proposed:${group.id}`,
+          scheduleId: null,
+          groupId: group.id,
+          name: group.name,
+          subtitle: subtitleOf(group),
+          weekday: optimistic.weekday,
+          startMinutes: optimistic.startMinutes,
+          durationMinutes: optimistic.durationMinutes,
+          cancelled: false,
+          note: null,
+          controls: {},
+        });
+      }
+    }
+
+    return rows;
+  }, [mine, controls, t, optimistic]);
 
   const closedOn = (day: number): string | null =>
     closures.find((closure) => closure.weekday === day)?.reason ?? null;
@@ -310,13 +379,22 @@ export function ScheduleBoard({
       const group = mine.find((candidate) => candidate.id === groupId);
       if (group === undefined) return;
 
+      const durationMinutes = group.schedules[0]?.durationMinutes ?? FALLBACK_DURATION;
+
+      setOptimistic({
+        kind: 'place',
+        groupId,
+        weekday,
+        startMinutes: Number(minutesText),
+        durationMinutes,
+      });
       setProposal({
         kind: 'place',
         groupId,
         name: group.name,
         weekday,
         startTime,
-        durationMinutes: group.schedules[0]?.durationMinutes ?? FALLBACK_DURATION,
+        durationMinutes,
       });
       return;
     }
@@ -329,6 +407,12 @@ export function ScheduleBoard({
     // asking whether to do nothing.
     if (slot.weekday === weekday && toTime(slot.startMinutes) === startTime) return;
 
+    setOptimistic({
+      kind: 'move',
+      scheduleId: slot.scheduleId,
+      weekday,
+      startMinutes: Number(minutesText),
+    });
     setProposal({
       kind: 'move',
       groupId: slot.groupId,
@@ -338,6 +422,18 @@ export function ScheduleBoard({
       startTime,
       from: { weekday: slot.weekday, startTime: toTime(slot.startMinutes) },
     });
+  }
+
+  /**
+   * The question answered "no": the chip goes back where it came from.
+   *
+   * Dropping the overlay is the whole revert, because `placed` is the server's
+   * data with the overlay laid on top of it. Nothing was written, so there is
+   * nothing to undo on the other side.
+   */
+  function cancel(): void {
+    setProposal(null);
+    setOptimistic(null);
   }
 
   /** The proposal, carried out. Nothing before this writes anything. */
@@ -357,6 +453,10 @@ export function ScheduleBoard({
           asked.startTime,
           asked.durationMinutes,
         );
+        // The overlay is dropped either way. On success the server's own data
+        // now says the same thing; on failure the chip has to go back, or the
+        // grid would keep showing a class that was never saved.
+        setOptimistic(null);
         if (!result.ok) setError(result.errorKey);
         else setUndo(null);
         return;
@@ -369,6 +469,7 @@ export function ScheduleBoard({
         asked.weekday,
         asked.startTime,
       );
+      setOptimistic(null);
       if (!result.ok) {
         setError(result.errorKey);
         return;
@@ -440,46 +541,13 @@ export function ScheduleBoard({
           </p>
         )}
 
-        {/*
-          Asked in place rather than in a modal over the grid: the answer depends
-          on where the class landed, and covering the timetable to ask about the
-          timetable would hide the evidence.
-
-          Both buttons are real buttons, so the keyboard and a screen reader get
-          the same two choices as the pointer.
-        */}
-        {proposal !== null && (
-          <div
-            role="alertdialog"
-            aria-labelledby="move-question"
-            className="flex flex-wrap items-center gap-3 rounded border border-primary/40 bg-primary/5 p-4"
-          >
-            <p id="move-question" className="text-sm">
-              {t(proposal.kind === 'move' ? 'classes.confirmMove' : 'classes.confirmPlace', {
-                name: proposal.name,
-                day: dayNames[proposal.weekday] ?? '',
-                time: proposal.startTime.slice(0, 5),
-              })}
-            </p>
-            <span className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={confirm}
-                disabled={pending}
-                className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50"
-              >
-                {t(proposal.kind === 'move' ? 'classes.doMove' : 'classes.doPlace')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setProposal(null)}
-                className="rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted"
-              >
-                {t('common.undo')}
-              </button>
-            </span>
-          </div>
-        )}
+        <MoveDialog
+          proposal={proposal}
+          dayNames={dayNames}
+          pending={pending}
+          onConfirm={confirm}
+          onCancel={cancel}
+        />
 
         {undo !== null && (
           <p role="status" className="flex flex-wrap items-center gap-3 text-sm">
@@ -562,6 +630,103 @@ export function ScheduleBoard({
         )}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+/**
+ * "Move Iniciados 2 to Thursday, 18:00?" — round 6.
+ *
+ * A centred dialog with a dimmed backdrop, over the grid. The board asked this
+ * inline for one round, on the argument that covering the timetable to ask about
+ * the timetable hides the evidence; that argument is weaker now the chip has
+ * already moved, because the evidence is the new position and the operator saw
+ * it happen. What an inline banner did cost was a question somebody could scroll
+ * past and leave open on a grid that was quietly lying about where a class is.
+ *
+ * **Escape is undo, not dismiss.** The two buttons are the only two answers, and
+ * a dialog you can close without answering would leave a class drawn somewhere
+ * it is not. Every exit from here either saves the move or puts the chip back.
+ *
+ * Focus goes to the confirm button on open, because confirming is what the drop
+ * was for; both are real buttons, so the keyboard and a screen reader get the
+ * same two choices as the pointer.
+ */
+function MoveDialog({
+  proposal,
+  dayNames,
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  proposal: Proposal | null;
+  dayNames: Record<number, string>;
+  pending: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}): React.ReactElement | null {
+  const t = useTranslations();
+  const confirmButton = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (proposal === null) return;
+
+    confirmButton.current?.focus();
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape' && !pending) onCancel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [proposal, pending, onCancel]);
+
+  if (proposal === null) return null;
+
+  return (
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="move-question"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4"
+    >
+      <div className="flex w-full max-w-md flex-col gap-4 rounded border border-border bg-surface p-5 shadow-lg">
+        <h2 id="move-question" className="text-base font-medium">
+          {t(proposal.kind === 'move' ? 'classes.confirmMove' : 'classes.confirmPlace', {
+            name: proposal.name,
+            day: dayNames[proposal.weekday] ?? '',
+            time: proposal.startTime.slice(0, 5),
+          })}
+        </h2>
+
+        {/*
+          The one thing here somebody could reasonably get wrong: a class on
+          screen is one Thursday, and the row being moved belongs to every
+          Thursday. Said in the dialog rather than only on the board above,
+          because this is the moment the decision is actually made.
+        */}
+        <p className="text-sm text-foreground-muted">{t('classes.patternNote')}</p>
+
+        <div className="flex flex-wrap justify-end gap-3">
+          <button
+            ref={confirmButton}
+            type="button"
+            onClick={onConfirm}
+            disabled={pending}
+            className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {pending
+              ? t('common.working')
+              : t(proposal.kind === 'move' ? 'classes.doMove' : 'classes.doPlace')}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={pending}
+            className="rounded border border-border px-4 py-2 text-sm hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('common.undo')}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

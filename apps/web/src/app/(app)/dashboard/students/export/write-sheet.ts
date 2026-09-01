@@ -6,7 +6,7 @@ import { EXPORT_FIELDS, type ImportField } from '@/lib/sheet';
 /**
  * Slice 1.11 — the register as a workbook.
  *
- * The sibling of `../import/read-sheet.ts`, and `server-only` for the same
+ * The sibling of `@/lib/read-sheet`, and `server-only` for the same
  * reason: a workbook writer has no business in a browser bundle, and the import
  * barrier makes that a build error rather than a megabyte nobody notices.
  *

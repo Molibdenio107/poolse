@@ -414,7 +414,8 @@ const SESSION_COLUMNS = `
   cg.name AS class_name,
   l.name  AS level_name,
   p.name  AS pool_name,
-  cs.lane,
+  -- The lane as a number still — POOLSE-43 made the column a reference.
+  ln.position AS lane,
   short_name(iu.cached_first_name, iu.cached_last_name) AS instructor_name,
   short_name(su.cached_first_name, su.cached_last_name) AS substitute_name,
   cs.starts_at,
@@ -451,6 +452,7 @@ const SESSION_JOINS = `
   JOIN class_group cg ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
   LEFT JOIN student_level l ON l.id = cg.level_id AND l.organization_id = cg.organization_id
   LEFT JOIN pool p     ON p.id = cs.pool_id AND p.organization_id = cs.organization_id
+  LEFT JOIN lane ln    ON ln.id = cs.lane_id AND ln.organization_id = cs.organization_id
   LEFT JOIN facility f ON f.id = p.facility_id AND f.organization_id = cs.organization_id
   LEFT JOIN membership im ON im.id = cg.instructor_membership_id
                          AND im.organization_id = cg.organization_id
@@ -787,7 +789,7 @@ export async function findClash(
                'YYYY-MM-DD HH24:MI'
              ) AS when,
              p.name AS pool_name,
-             cs.lane,
+             ln.position AS lane,
              CASE
                WHEN $4::uuid IS NOT NULL
                 AND coalesce(cs.substitute_instructor_membership_id,
@@ -799,6 +801,7 @@ export async function findClash(
         JOIN class_group cg
           ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
         LEFT JOIN pool p     ON p.id = cs.pool_id     AND p.organization_id = cs.organization_id
+        LEFT JOIN lane ln    ON ln.id = cs.lane_id    AND ln.organization_id = cs.organization_id
         LEFT JOIN facility f ON f.id = p.facility_id  AND f.organization_id = cs.organization_id
        WHERE cs.status <> 'cancelled'
          AND ($1::uuid IS NULL OR cs.id <> $1::uuid)
@@ -806,7 +809,7 @@ export async function findClash(
          AND (
               -- Same pool and lane.
               ($2::uuid IS NOT NULL AND $3::smallint IS NOT NULL
-                 AND cs.pool_id = $2::uuid AND cs.lane = $3::smallint)
+                 AND cs.pool_id = $2::uuid AND ln.position = $3::smallint)
               -- Or the same person teaching, wherever they are.
            OR ($4::uuid IS NOT NULL
                  AND coalesce(cs.substitute_instructor_membership_id,
@@ -867,14 +870,15 @@ export async function findSessionSlot(
       starts_at: Date;
       ends_at: Date;
     }>(
-      `SELECT pool_id,
-              lane,
-              coalesce(substitute_instructor_membership_id, instructor_membership_id)
+      `SELECT cs.pool_id,
+              ln.position AS lane,
+              coalesce(cs.substitute_instructor_membership_id, cs.instructor_membership_id)
                 AS instructor,
-              starts_at,
-              ends_at
-         FROM class_session
-        WHERE id = $1`,
+              cs.starts_at,
+              cs.ends_at
+         FROM class_session cs
+         LEFT JOIN lane ln ON ln.id = cs.lane_id AND ln.organization_id = cs.organization_id
+        WHERE cs.id = $1`,
       [sessionId],
     );
 

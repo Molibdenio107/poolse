@@ -98,6 +98,17 @@ const SECTIONS: Item[] = [
      * API refuses the route besides.
      */
     children: [
+      /*
+       * Inventário nests here — round 6. An item belongs to a facility and says
+       * which tanks it serves, so the kit list is an attribute of the site, not
+       * of any one pool. It was a block on the pool page and had to be found
+       * through a tank to be read at all.
+       *
+       * Visible to everybody: knowing whether there are enough pranchas for a
+       * class is not privileged, and the write endpoints are owner/admin whether
+       * or not this link is shown.
+       */
+      { href: '/dashboard/facilities/inventory', key: 'inventory.title' },
       {
         href: '/dashboard/facilities/staff',
         key: 'staff.title',

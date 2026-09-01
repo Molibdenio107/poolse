@@ -145,8 +145,17 @@ function PoolDimensions({ pool }: { pool?: PoolFormValues | undefined }): React.
             min={1}
             value={laneCount}
             onChange={(event) => setLaneCount(event.target.value)}
+            aria-describedby="pool-lanes-hint"
             className={CONTROL_LINE}
           />
+          {/*
+            The number is now the count of real lane rows — POOLSE-43. Saying
+            what raising and lowering it actually do, because "reduce it and see"
+            is an experiment on a live timetable.
+          */}
+          <p id="pool-lanes-hint" className="text-sm text-foreground-muted">
+            {t('facilities.lanesHint')}
+          </p>
         </div>
 
       <div className={`${FIELD_COLUMN} sm:max-w-64`}>

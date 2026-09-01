@@ -96,8 +96,20 @@ const TENANT_TABLES = [
   'vacation_day',
   'vacation_request',
   'closure',
+  // Slots point at both a facility and a season — POOLSE-44.
+  'facility_time_slot',
   'season',
   'pool_photo',
+  /*
+   * Lanes before pools — POOLSE-43. A lane points at its pool and is *not*
+   * cascaded, deliberately: a pool is archived rather than deleted in ordinary
+   * use, and a cascade would be a path by which a mistyped delete quietly took
+   * a season's scheduling with it. Only a teardown genuinely removes a pool, so
+   * only a teardown has to know this order.
+   */
+  'inventory_item_pool',
+  'inventory_item',
+  'lane',
   'pool',
   'facility_photo',
   'facility',

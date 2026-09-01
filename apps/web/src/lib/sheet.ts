@@ -319,19 +319,47 @@ const SYNONYMS: [ImportField, string[]][] = [
  */
 export type MatchConfidence = 'certain' | 'likely' | 'unsure';
 
-export interface ColumnMatch {
-  field: ImportField;
+/**
+ * Generic in the field name — round 6.
+ *
+ * The matcher was written for the register and turned out to be about
+ * *spreadsheets*, not about students: the scoring, the abbreviation rule and the
+ * shape check are the same work whether the columns are children or pranchas.
+ * The inventory importer needs all of it and none of the student synonyms, so
+ * the field type became a parameter and `matchColumns` below is now one caller
+ * of `matchFields` rather than the whole of it.
+ *
+ * It defaults to `ImportField` so every existing call site reads unchanged.
+ */
+export interface ColumnMatch<F extends string = ImportField> {
+  field: F;
   column: number;
   confidence: MatchConfidence;
   /** Machine key for why, so the interface can say it in either language. */
   reason: 'exact' | 'contains' | 'abbreviation' | 'shape' | 'agent';
 }
 
-export interface MatchResult {
-  mapping: Mapping;
-  matches: ColumnMatch[];
+export interface MatchResult<F extends string = ImportField> {
+  mapping: Record<F, number | null>;
+  matches: ColumnMatch<F>[];
   /** Columns nothing claimed, by index. These are offered as questions. */
   unmatched: number[];
+}
+
+/**
+ * Everything the matcher needs to know about one kind of import.
+ *
+ * The synonym list is ordered, and the order is load-bearing where two fields
+ * can claim the same header — see the comments in the register's own list.
+ */
+export interface MatchSpec<F extends string> {
+  /** The empty mapping, which also names the fields. */
+  empty: Record<F, number | null>;
+  synonyms: [F, string[]][];
+  /** What each field's values should look like, for confirming or contradicting. */
+  expectedShape?: Partial<Record<F, (looks: string[]) => boolean>>;
+  /** Fields a distinctive shape alone may place, with no help from the header. */
+  shapeOnly?: readonly F[];
 }
 
 /**
@@ -410,7 +438,7 @@ export function describeColumns(sheet: Sheet): ColumnShape[] {
  * Guessing "guardian" here would quietly file every student's address under
  * somebody else.
  */
-const SHAPE_ONLY: ImportField[] = ['contactEmail'];
+const SHAPE_ONLY: readonly ImportField[] = ['contactEmail'];
 
 /** What each field's values should look like, for confirming or contradicting a guess. */
 const EXPECTED_SHAPE: Partial<Record<ImportField, (looks: string[]) => boolean>> = {
@@ -458,18 +486,20 @@ function containsWord(header: string, synonym: string): boolean {
   return ` ${header} `.includes(` ${synonym} `);
 }
 
-interface Candidate {
-  field: ImportField;
+interface Candidate<F extends string> {
+  field: F;
   column: number;
   score: number;
   reason: ColumnMatch['reason'];
 }
 
-function scoreOne(
-  field: ImportField,
+function scoreOne<F extends string>(
+  field: F,
   synonyms: string[],
   shape: ColumnShape,
-): Candidate | null {
+  expectedShape: Partial<Record<F, (looks: string[]) => boolean>>,
+  shapeOnly: readonly F[],
+): Candidate<F> | null {
   const header = key(shape.header);
   if (header === '') return null;
 
@@ -504,14 +534,14 @@ function scoreOne(
     }
   }
 
-  const expected = EXPECTED_SHAPE[field];
+  const expected = expectedShape[field];
   if (expected !== undefined && shape.looks.length > 0) {
     if (expected(shape.looks)) {
       if (score > 0) {
         // Agreement nudges a guess up; it never invents one on its own except
         // where the shape is genuinely distinctive.
         score = Math.min(score + 12, 100);
-      } else if (shape.looks.includes('email') && SHAPE_ONLY.includes(field)) {
+      } else if (shape.looks.includes('email') && shapeOnly.includes(field)) {
         // An email column is an email column whatever the heading says.
         score = 42;
         reason = 'shape';
@@ -552,21 +582,26 @@ function confidenceOf(score: number): MatchConfidence | null {
  * Anything it cannot place is left null and offered as a question. An unmapped
  * column costs one dropdown; a wrongly mapped one costs a hundred bad rows.
  */
-export function matchColumns(sheet: Sheet): MatchResult {
+export function matchFields<F extends string>(
+  sheet: Sheet,
+  spec: MatchSpec<F>,
+): MatchResult<F> {
   const shapes = describeColumns(sheet);
+  const expectedShape = spec.expectedShape ?? {};
+  const shapeOnly = spec.shapeOnly ?? [];
 
-  const candidates: Candidate[] = [];
-  for (const [field, synonyms] of SYNONYMS) {
+  const candidates: Candidate<F>[] = [];
+  for (const [field, synonyms] of spec.synonyms) {
     for (const shape of shapes) {
-      const candidate = scoreOne(field, synonyms, shape);
+      const candidate = scoreOne(field, synonyms, shape, expectedShape, shapeOnly);
       if (candidate !== null) candidates.push(candidate);
     }
   }
 
   candidates.sort((a, b) => b.score - a.score);
 
-  const mapping: Mapping = { ...EMPTY_MAPPING };
-  const matches: ColumnMatch[] = [];
+  const mapping: Record<F, number | null> = { ...spec.empty };
+  const matches: ColumnMatch<F>[] = [];
   const usedColumns = new Set<number>();
 
   for (const candidate of candidates) {
@@ -584,24 +619,43 @@ export function matchColumns(sheet: Sheet): MatchResult {
     });
   }
 
+  const unmatched = shapes
+    .filter((shape) => shape.header !== '' && !usedColumns.has(shape.index))
+    .map((shape) => shape.index);
+
+  return { mapping, matches, unmatched };
+}
+
+/** The register's own spec — the fields, synonyms and shapes above. */
+export const STUDENT_MATCH: MatchSpec<ImportField> = {
+  empty: EMPTY_MAPPING,
+  synonyms: SYNONYMS,
+  expectedShape: EXPECTED_SHAPE,
+  shapeOnly: SHAPE_ONLY,
+};
+
+/** The matcher, for the register. */
+export function matchColumns(sheet: Sheet): MatchResult<ImportField> {
+  const result = matchFields(sheet, STUDENT_MATCH);
+  const { mapping, matches, unmatched } = result;
+
   /*
    * A sheet with "Nome" and "Apelido" has both halves already, and the API
    * ignores `fullName` when `firstName` is present — so showing it as mapped
    * would claim a column that is not read.
+   *
+   * Here rather than inside `matchFields`: it is a rule about *these two fields*,
+   * and the generic matcher has no business knowing that one of them is a name.
    */
   if (mapping.firstName !== null && mapping.fullName !== null) {
     const column = mapping.fullName;
     mapping.fullName = null;
     const at = matches.findIndex((match) => match.field === 'fullName');
     if (at !== -1) matches.splice(at, 1);
-    usedColumns.delete(column);
+    return { mapping, matches, unmatched: [...unmatched, column].sort((a, b) => a - b) };
   }
 
-  const unmatched = shapes
-    .filter((shape) => shape.header !== '' && !usedColumns.has(shape.index))
-    .map((shape) => shape.index);
-
-  return { mapping, matches, unmatched };
+  return result;
 }
 
 /** Just the mapping, for callers that do not care how sure it was. */

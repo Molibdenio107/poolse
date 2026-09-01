@@ -227,8 +227,8 @@ BEGIN
   -- Give the absorbed record a reference of every interesting kind.
   INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina')
   RETURNING id INTO v_facility;
-  INSERT INTO pool (organization_id, facility_id, name, lane_count)
-  VALUES (v_org, v_facility, 'Tanque', 4) RETURNING id INTO v_pool;
+  INSERT INTO pool (organization_id, facility_id, name)
+  VALUES (v_org, v_facility, 'Tanque') RETURNING id INTO v_pool;
   INSERT INTO student_level (organization_id, name, sort_order)
   VALUES (v_org, 'Nível', 0) RETURNING id INTO v_level;
   INSERT INTO season (organization_id, name, starts_on, ends_on)

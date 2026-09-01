@@ -1,61 +1,64 @@
 'use client';
 
-import { useState } from 'react';
-import { useSavedAction } from '@/lib/saved';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle } from 'lucide-react';
 import type { PoolAnalysis } from '@/lib/api';
 import type { Excursion } from '@/lib/water';
-import { CONTROL_LINE, FIELD_LABEL } from '@/components/ui/field';
 import { EntityIcon } from '@/components/entity-icon';
-import type { FormState } from '../actions';
-import { closePoolForWaterAction } from './facilities.actions';
-
-const INITIAL: FormState = { ok: false };
 
 /**
  * "This water is out of range — do you want to shut the pool?"
  *
  * **It offers, it never acts.** The readings say a band was crossed; only the
  * operator knows whether that means "dose it and retest in an hour" or "nobody
- * swims today". So this is a warning with a button, and the number of days is
- * typed rather than assumed — a default of one would be a recommendation this
- * code has no business making.
+ * swims today".
  *
- * **It names the reading.** An operator about to close a pool for three days
- * needs to know it was the combined chlorine at 0.9 ppm against a ceiling of
- * 0.6, not that something was wrong. That is also what goes into the closure's
- * reason, so the calendar still explains itself in six months.
+ * **It names the reading.** An operator about to close a pool needs to know it
+ * was the combined chlorine at 0.9 ppm against a ceiling of 0.6, not that
+ * something was wrong. That is also what ends up in the closure's reason, so the
+ * calendar still explains itself in six months.
  *
- * The closure it creates is an ordinary one — the same endpoint, the same table,
- * visible on Encerramentos like any other, and removable there. Nothing here is
- * a second kind of closure.
+ * **It sends them to Encerramentos rather than asking for a number of days —
+ * round 6.** This used to be a "how many days?" box that made the closure from
+ * here. Two things were wrong with it. An operator dosing a pool does not
+ * actually think "three days" — they think "shut it Tuesday and Wednesday, we
+ * have galas at the weekend", which is a calendar question and there is a
+ * calendar for it. And the closure it made was invisible until you went and
+ * looked, on the very screen this now opens.
+ *
+ * So the link carries the pool and the failed metrics, and the closures calendar
+ * composes the same sentence and pre-fills the form once days are picked. It
+ * carries `from` as well, so Voltar there comes back to this pool rather than to
+ * the calendar's own parent.
+ *
+ * The closure that results is an ordinary one — the same endpoint, the same
+ * table, removable like any other. Nothing here is a second kind of closure.
  */
 export function UnsafeWaterNotice({
-  organizationId,
   poolId,
-  poolName,
   excursions,
 }: {
-  organizationId: string;
   poolId: string;
-  poolName: string;
   excursions: Excursion[];
 }): React.ReactElement | null {
   const t = useTranslations();
-  const [state, action, pending] = useSavedAction(closePoolForWaterAction, INITIAL);
-  const [open, setOpen] = useState(false);
 
   if (excursions.length === 0) return null;
 
-  // The reason, composed here so the calendar carries the same sentence the
-  // operator was shown before they agreed to it.
-  const reason = t('facilities.closureReason', {
-    pool: poolName,
-    metric: excursions
-      .map((excursion) => t(`facilities.metric.${excursion.metric}`))
-      .join(', '),
-  });
+  /*
+   * Machine keys in the query string, never the composed sentence.
+   *
+   * The reason is a translated string, and a translated string in a URL is wrong
+   * the moment somebody switches locale mid-journey — `back.ts` makes the same
+   * argument about back-link labels. The metrics travel as their own names and
+   * the closures page builds the sentence in the reader's language.
+   */
+  const target =
+    `/dashboard/calendar/closures` +
+    `?poolId=${encodeURIComponent(poolId)}` +
+    `&water=${encodeURIComponent(excursions.map((excursion) => excursion.metric).join(','))}` +
+    `&from=${encodeURIComponent(`/dashboard/facilities/pools/${poolId}`)}`;
 
   return (
     <section className="flex flex-col gap-3 rounded border border-warning/50 bg-warning/10 p-4">
@@ -86,63 +89,19 @@ export function UnsafeWaterNotice({
         </div>
       </div>
 
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="self-start rounded border border-warning/60 px-3 py-1.5 text-sm transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          {t('facilities.closePool')}
-        </button>
-      ) : (
-        <form action={action} className="flex flex-wrap items-end gap-3">
-          <input type="hidden" name="organizationId" value={organizationId} />
-          <input type="hidden" name="poolId" value={poolId} />
-          <input type="hidden" name="reason" value={reason} />
+      <Link
+        href={target}
+        className="self-start rounded border border-warning/60 px-3 py-1.5 text-sm transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        {t('facilities.closePool')}
+      </Link>
 
-          <div className="flex w-28 flex-col gap-1.5">
-            <label htmlFor="closure-days" className={FIELD_LABEL}>
-              {t('facilities.closureDays')}
-            </label>
-            {/*
-              No default. A number already in the box is a recommendation, and
-              nothing here knows how long this pool needs.
-            */}
-            <input
-              id="closure-days"
-              name="days"
-              type="number"
-              min={1}
-              max={365}
-              required
-              className={CONTROL_LINE}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-60"
-          >
-            {pending ? t('common.working') : t('facilities.confirmClosePool')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="rounded border border-border px-3 py-1.5 text-sm"
-          >
-            {t('common.cancel')}
-          </button>
-
-          <p className="w-full text-sm text-foreground-muted">
-            {t('facilities.closureFromToday')}
-          </p>
-
-          {state.errorKey !== undefined && (
-            <p className="w-full text-sm text-danger">{t(state.errorKey)}</p>
-          )}
-        </form>
-      )}
+      {/*
+        What the link is about to do, as visible text. "Fechar temporariamente"
+        on its own reads as a button that shuts the pool now; this says it opens
+        a calendar and that the days are still the operator's to pick.
+      */}
+      <p className="text-sm text-foreground-muted">{t('facilities.closePoolHint')}</p>
     </section>
   );
 }

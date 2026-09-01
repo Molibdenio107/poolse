@@ -154,8 +154,8 @@ BEGIN
 
   INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina')
   RETURNING id INTO v_facility;
-  INSERT INTO pool (organization_id, facility_id, name, lane_count)
-  VALUES (v_org, v_facility, 'Tanque', 4) RETURNING id INTO v_pool;
+  INSERT INTO pool (organization_id, facility_id, name)
+  VALUES (v_org, v_facility, 'Tanque') RETURNING id INTO v_pool;
 
   INSERT INTO season (organization_id, name, starts_on, ends_on)
   VALUES (v_org, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31');
