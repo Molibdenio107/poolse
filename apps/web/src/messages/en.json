@@ -1617,7 +1617,6 @@
     "from": "From",
     "to": "To",
     "duration": "Length (min)",
-    "interval": "Gap (min)",
     "edit": "Edit",
     "removeLabel": "Remove the {from} to {to} slot",
     "generate": "Generate grid",
@@ -1628,7 +1627,9 @@
     "inUse": "It cannot be removed: there are classes on this slot.",
     "noneToAdd": "There is nothing to create.",
     "failed": "The grid could not be saved.",
-    "versusHours": "The hours above say when the site is open. The grid says which rows classes sit in inside those hours — it is what the calendar will draw."
+    "versusHours": "The hours above say when the site is open. The grid says which rows classes sit in inside those hours — it is what the calendar will draw.",
+    "minutes": "{count} min",
+    "repeatsUntil": "Repeats until the site closes at {until}."
   },
   "partners": {
     "title": "Partnerships",
@@ -1800,5 +1801,16 @@
     },
     "noLane": "No lane",
     "durationHandle": "Drag to change how long the class runs"
+  },
+  "partnerClasses": {
+    "title": "Partnerships",
+    "hint": "Hours sold to schools, clubs and institutions. Change the day, the time, the lanes and the number of students here.",
+    "day": "Day",
+    "time": "Time",
+    "lanes": "Lanes",
+    "students": "Students",
+    "offGrid": "Off the grid",
+    "willUse": "Uses: {lanes}",
+    "readOnly": "{day}, {time} · {lanes} lanes · {students} students"
   }
 }

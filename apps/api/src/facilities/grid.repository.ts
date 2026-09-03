@@ -79,6 +79,19 @@ export interface GridBooking {
   /** Hex, and only for a parceria. Takes precedence over the category's colour. */
   partnerColour: string | null;
   partnerId: string | null;
+  /**
+   * The partner group behind a parceria booking, with the fields an edit needs.
+   *
+   * Carried here so the Classes screen can offer a partnership's timetable as an
+   * editable card without a second request per partner — and so saving the
+   * participant count does not silently blank the group's tag or its own
+   * instructor, which a partial update would.
+   */
+  partnerGroupId: string | null;
+  groupTag: string | null;
+  bringsOwnInstructor: boolean;
+  ownInstructorName: string | null;
+  groupNotes: string | null;
   levelId: string | null;
   /** ISO weekday, Monday 1 … Sunday 7. */
   weekday: number;
@@ -220,6 +233,11 @@ export async function readGrid(
                   bc.colour::text                                    AS category_colour,
                   p.color                                            AS partner_colour,
                   p.id                                               AS partner_id,
+                  pg.id                                              AS partner_group_id,
+                  pg.tag                                             AS group_tag,
+                  coalesce(pg.brings_own_instructor, false)           AS brings_own_instructor,
+                  pg.own_instructor_name,
+                  pg.notes                                           AS group_notes,
                   coalesce(cg.level_id, pg.level_id)                 AS level_id,
                   cs.weekday,
                   cs.start_time::text,
@@ -348,6 +366,11 @@ export async function readGrid(
         categoryColour: row.category_colour,
         partnerColour: row.partner_colour,
         partnerId: row.partner_id,
+        partnerGroupId: row.partner_group_id,
+        groupTag: row.group_tag,
+        bringsOwnInstructor: row.brings_own_instructor,
+        ownInstructorName: row.own_instructor_name,
+        groupNotes: row.group_notes,
         levelId: row.level_id,
         weekday: row.weekday,
         startTime: toClock(row.start_time),
@@ -383,6 +406,11 @@ interface GridBookingRow {
   category_colour: string | null;
   partner_colour: string | null;
   partner_id: string | null;
+  partner_group_id: string | null;
+  group_tag: string | null;
+  brings_own_instructor: boolean;
+  own_instructor_name: string | null;
+  group_notes: string | null;
   level_id: string | null;
   weekday: number;
   start_time: string;

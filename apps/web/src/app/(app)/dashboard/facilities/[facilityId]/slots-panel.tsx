@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
-import type { DayGroup, TimeSlot } from '@/lib/api';
+import type { DayGroup, FacilityDay, TimeSlot } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
@@ -63,11 +63,14 @@ export function SlotsPanel({
   organizationId,
   facilityId,
   slots,
+  hours,
   canManage,
 }: {
   organizationId: string;
   facilityId: string;
   slots: TimeSlot[];
+  /** The site's own opening hours — the generator stops at closing time. */
+  hours: FacilityDay[];
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
@@ -149,6 +152,7 @@ export function SlotsPanel({
               <Generator
                 organizationId={organizationId}
                 facilityId={facilityId}
+                hours={hours}
                 group={group}
                 existing={shown}
               />
@@ -294,28 +298,63 @@ function SlotRow({
  * sees the grid they are about to get; the alternative is a button that either
  * works or produces a conflict message about a row they never saw.
  */
+/** Which ISO weekdays a day group covers, for reading the closing time. */
+const GROUP_DAYS: Record<DayGroup, number[]> = {
+  weekday: [1, 2, 3, 4, 5],
+  saturday: [6],
+  sunday: [7],
+};
+
 function Generator({
   organizationId,
   facilityId,
+  hours,
   group,
   existing,
 }: {
   organizationId: string;
   facilityId: string;
+  hours: FacilityDay[];
   group: DayGroup;
   existing: TimeSlot[];
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(addSlotsAction, INITIAL);
 
+  /*
+   * Two fields, and they describe **one row** rather than the whole day.
+   *
+   * "From 06:30 to 07:15" is a 45-minute row, and that length then repeats
+   * until the site closes. The operator was previously asked for a span, a
+   * length *and* a gap — three numbers to describe a grid that only ever has
+   * one shape, and the gap in particular was a number nobody had a use for: a
+   * club's timetable has holes because some rows are missing, not because every
+   * row is followed by dead time.
+   *
+   * The length is therefore computed and shown rather than typed. There is no
+   * way to make it disagree with the two times it comes from.
+   */
   const [from, setFrom] = useState('09:00');
-  const [to, setTo] = useState('12:00');
-  const [duration, setDuration] = useState('45');
-  const [gap, setGap] = useState('0');
+  const [to, setTo] = useState('09:45');
 
   const valid = isClock(from) && isClock(to);
-  const length = Number(duration);
-  const interval = Number(gap);
+  const length = valid ? toMinutes(to) - toMinutes(from) : 0;
+
+  /*
+   * Rows repeat until the site shuts, not until some other number.
+   *
+   * The grid lives inside the opening hours — the card above says so — so the
+   * generator stops where the building does. A day group with no hours recorded
+   * falls back to midnight, which produces a long grid the operator can trim
+   * rather than an empty one they cannot explain.
+   */
+  const closesAt = (() => {
+    const days = GROUP_DAYS[group];
+    const closings = hours
+      .filter((hour) => days.includes(hour.weekday) && hour.available)
+      .map((hour) => toMinutes(hour.closesAt));
+    return closings.length === 0 ? 24 * 60 : Math.max(...closings);
+  })();
 
   /*
    * The rows this would produce, computed as the operator types.
@@ -327,9 +366,8 @@ function Generator({
    */
   const proposed: { startTime: string; endTime: string; clashes: boolean }[] = [];
 
-  if (valid && Number.isFinite(length) && length > 0 && Number.isFinite(interval) && interval >= 0) {
-    const end = toMinutes(to);
-    for (let at = toMinutes(from); at + length <= end; at += length + interval) {
+  if (valid && length > 0) {
+    for (let at = toMinutes(from); at + length <= closesAt; at += length) {
       const startTime = toClock(at);
       const endTime = toClock(at + length);
       proposed.push({
@@ -339,9 +377,9 @@ function Generator({
           (slot) => toMinutes(slot.startTime) < at + length && at < toMinutes(slot.endTime),
         ),
       });
-      // A zero-length step would loop forever; the guard above makes that
+      // A zero-length step would loop forever; `length > 0` above makes that
       // impossible, and this says so out loud for the next reader.
-      if (length + interval <= 0) break;
+      if (length <= 0) break;
     }
   }
 
@@ -391,36 +429,27 @@ function Generator({
           />
         </div>
 
+        {/*
+          Computed, not typed. Read-only rather than absent, because "45 min" is
+          the thing the operator is actually deciding when they set the two
+          times, and hiding it would make them do the subtraction in their head.
+        */}
         <div className={cn(FIELD_COLUMN, 'sm:w-32')}>
-          <label htmlFor="generate-duration" className={FIELD_LABEL}>
-            {t('slots.duration')}
-          </label>
-          <input
-            id="generate-duration"
-            type="number"
-            min={5}
-            max={480}
-            value={duration}
-            onChange={(event) => setDuration(event.target.value)}
-            className={CONTROL_LINE}
-          />
-        </div>
-
-        <div className={cn(FIELD_COLUMN, 'sm:w-32')}>
-          <label htmlFor="generate-gap" className={FIELD_LABEL}>
-            {t('slots.interval')}
-          </label>
-          <input
-            id="generate-gap"
-            type="number"
-            min={0}
-            max={240}
-            value={gap}
-            onChange={(event) => setGap(event.target.value)}
-            className={CONTROL_LINE}
-          />
+          <span className={FIELD_LABEL}>{t('slots.duration')}</span>
+          <output
+            className={cn(
+              CONTROL_LINE,
+              'flex items-center bg-surface-muted text-foreground-muted',
+            )}
+          >
+            {length > 0 ? t('slots.minutes', { count: length }) : '—'}
+          </output>
         </div>
       </div>
+
+      <p className="text-sm text-foreground-muted">
+        {t('slots.repeatsUntil', { until: toClock(closesAt) })}
+      </p>
 
       {/*
         What it will do, before it does it. Colour is not carrying the skipped

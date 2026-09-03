@@ -1777,6 +1777,12 @@ export interface GridBooking {
   /** Hex, and only for a parceria. Beats the category's colour. */
   partnerColour: string | null;
   partnerId: string | null;
+  /** The partner group behind a parceria booking, with what an edit needs. */
+  partnerGroupId: string | null;
+  groupTag: string | null;
+  bringsOwnInstructor: boolean;
+  ownInstructorName: string | null;
+  groupNotes: string | null;
   levelId: string | null;
   /** ISO weekday, Monday 1 … Sunday 7. */
   weekday: number;

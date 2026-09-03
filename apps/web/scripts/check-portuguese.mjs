@@ -65,6 +65,7 @@ const SAME_ON_PURPOSE = new Map([
   ['invite.email', 'as above'],
   ['invite.emailLabel', 'as above'],
   ['progress.minutes', '"min" is the abbreviation in both languages'],
+  ['slots.minutes', 'the same abbreviation, on the schedule grid'],
   ['staff.title', 'POOLSE-38 decided: "Staff" is the word Portuguese clubs use, and "Pessoal" is a translation nobody says'],
   ['facilities.volume', 'a unit — "{litres} L"'],
   ['facilities.size', 'a unit — "{size} m"'],

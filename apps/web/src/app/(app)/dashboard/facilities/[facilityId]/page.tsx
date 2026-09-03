@@ -254,6 +254,7 @@ export default async function FacilityPage({
                   organizationId={site.organizationId}
                   facilityId={site.id}
                   slots={slots.slots}
+                  hours={site.hours}
                   canManage={site.canManage}
                 />
               </div>

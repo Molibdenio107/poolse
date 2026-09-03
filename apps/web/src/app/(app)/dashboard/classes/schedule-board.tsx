@@ -662,6 +662,19 @@ export function ScheduleBoard({
   const openOn = (day: number): boolean =>
     facility?.hours.find((hour) => hour.weekday === day)?.available ?? true;
 
+  /**
+   * Every day the grid actually draws.
+   *
+   * Only the days the club opens — a club that is shut on Sunday should not be
+   * shown a Sunday column every time it opens the calendar. Anything left on a
+   * day this list omits is caught by `outOfGrid` below, so hiding a column is
+   * never a way of losing what was on it.
+   */
+  const shownDays = useMemo(
+    () => [1, 2, 3, 4, 5, 6, 7].filter((day) => openOn(day)),
+    [facility],
+  );
+
   /*
    * The pool being shown, and "todos os tanques" as an explicit choice.
    *
@@ -707,10 +720,22 @@ export function ScheduleBoard({
     return [...seen.values()];
   }, [visible, categories]);
 
-  /** Bookings whose own time matches no slot — named and timed, never dropped. */
+  /**
+   * Everything the grid cannot draw — named and timed, never dropped.
+   *
+   * Two reasons a booking ends up here, and both are honest states rather than
+   * errors: its time matches no row of the grid, or it sits on a day the club
+   * does not open. The second is new: hiding a closed column must not be a way
+   * of losing what was on it.
+   */
   const outOfGrid = useMemo(
-    () => visible.filter((row) => row.slotId === null && row.scheduleId !== null),
-    [visible],
+    () =>
+      visible.filter(
+        (row) =>
+          row.scheduleId !== null &&
+          (row.slotId === null || !shownDays.includes(row.weekday)),
+      ),
+    [visible, shownDays],
   );
 
   const weekdaySlots = useMemo(
@@ -723,9 +748,21 @@ export function ScheduleBoard({
   );
   const sundaySlots = useMemo(() => slots.filter((slot) => slot.dayGroup === 'sunday'), [slots]);
 
-  const weekdayDays = WEEKDAY_DAYS.filter(
-    (day) => openOn(day) || visible.some((row) => row.weekday === day),
-  );
+  /*
+   * Only the days the club actually opens.
+   *
+   * This used to keep a closed day whenever something was still booked on it,
+   * on the argument that hiding a column would hide real classes. That argument
+   * was right about the risk and wrong about the remedy: a club that does not
+   * open on Sunday was made to look at a Sunday column every time it opened the
+   * calendar, to protect a case that almost never happens.
+   *
+   * So the column goes, and the classes do not: anything left on a day the grid
+   * no longer draws is listed underneath with the bookings that match no slot.
+   * Nothing disappears; it just stops taking up a fifth of the screen.
+   */
+  const weekdayDays = WEEKDAY_DAYS.filter((day) => shownDays.includes(day));
+
 
   const sensors = useSensors(
     // A distance, so a click on a control inside a chip is a click and not a drag.
@@ -1005,9 +1042,22 @@ export function ScheduleBoard({
       const subject = placed.find((candidate) => candidate.scheduleId === scheduleId);
       if (subject === undefined) return;
 
-      const anchor = lanes.findIndex((lane) => lane.id === subject.laneIds[0]);
       const target = lanes.findIndex((lane) => lane.id === laneId);
-      if (anchor === -1 || target === -1) return;
+      if (target === -1) return;
+
+      /*
+       * A booking with no lane yet anchors on wherever the handle was dropped.
+       *
+       * This returned early before, which is why the corner grip did nothing on
+       * most turmas: `class_group.lane_id` has always been optional, so a club's
+       * older classes have no lane at all, `laneIds[0]` was undefined, and the
+       * anchor lookup failed. Treating the drop as both ends of the run gives
+       * that first lane, which is the only sensible reading of "make this one
+       * lane wide, here".
+       */
+      const first = subject.laneIds[0];
+      const anchor = first === undefined ? target : lanes.findIndex((lane) => lane.id === first);
+      if (anchor === -1) return;
 
       const from = Math.min(anchor, target);
       const to = Math.max(anchor, target);
@@ -1382,7 +1432,7 @@ export function ScheduleBoard({
               looked at — if adjacent does fit, this becomes two blocks in a flex
               row and nothing else changes.
             */}
-            {saturdaySlots.length > 0 && (
+            {saturdaySlots.length > 0 && openOn(6) && (
               <SlotGrid
                 heading={t('grid.saturday')}
                 slots={saturdaySlots}
@@ -1404,7 +1454,7 @@ export function ScheduleBoard({
               />
             )}
 
-            {sundaySlots.length > 0 && (
+            {sundaySlots.length > 0 && openOn(7) && (
               <SlotGrid
                 heading={t('grid.sunday')}
                 slots={sundaySlots}
@@ -2679,9 +2729,16 @@ function SpanHandle({ scheduleId }: { scheduleId: string }): React.ReactElement 
       tabIndex={-1}
       title={t('grid.spanHandle')}
       onPointerDown={(event) => event.stopPropagation()}
-      // The corner, so it does not fight the duration grip along the edge.
-      className="absolute bottom-0 right-0 size-2 cursor-ns-resize rounded-tl bg-foreground/25 hover:bg-primary"
-    />
+      /*
+        The corner, so it does not fight the duration grip along the edge — and
+        big enough to hit. Eight pixels was a target nobody found at compact
+        density; this is twelve with a visible notch, which is still small
+        against an 18px row but is at least aimable.
+      */
+      className="absolute bottom-0 right-0 flex size-3 cursor-ns-resize items-end justify-end rounded-tl border-l border-t border-foreground/30 bg-foreground/20 hover:border-primary hover:bg-primary/70"
+    >
+      <span className="mb-px mr-px block h-px w-1.5 bg-foreground/50" />
+    </span>
   );
 }
 

@@ -1617,7 +1617,6 @@
     "from": "Início",
     "to": "Fim",
     "duration": "Duração (min)",
-    "interval": "Intervalo (min)",
     "edit": "Editar",
     "removeLabel": "Remover o horário das {from} às {to}",
     "generate": "Gerar grelha",
@@ -1628,7 +1627,9 @@
     "inUse": "Não é possível remover: há turmas neste horário.",
     "noneToAdd": "Não há nada para criar.",
     "failed": "Não foi possível guardar a grelha.",
-    "versusHours": "O horário acima diz quando a instalação está aberta. A grelha diz em que linhas as aulas assentam dentro desse horário — é o que o calendário vai desenhar."
+    "versusHours": "O horário acima diz quando a instalação está aberta. A grelha diz em que linhas as aulas assentam dentro desse horário — é o que o calendário vai desenhar.",
+    "minutes": "{count} min",
+    "repeatsUntil": "Repete-se até ao fecho da instalação, às {until}."
   },
   "partners": {
     "title": "Parcerias",
@@ -1800,5 +1801,16 @@
     },
     "noLane": "Sem pista",
     "durationHandle": "Arraste para alterar a duração da aula"
+  },
+  "partnerClasses": {
+    "title": "Parcerias",
+    "hint": "As horas vendidas a escolas, clubes e instituições. Altere aqui o dia, a hora, as pistas e o número de alunos.",
+    "day": "Dia",
+    "time": "Horário",
+    "lanes": "N.º de pistas",
+    "students": "N.º de alunos",
+    "offGrid": "Fora da grelha",
+    "willUse": "Ocupa: {lanes}",
+    "readOnly": "{day}, {time} · {lanes} pistas · {students} alunos"
   }
 }

@@ -1,6 +1,13 @@
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Classes, type EnrolledStudent } from '@/lib/api';
+import {
+  ApiError,
+  apiFetch,
+  type Classes,
+  type EnrolledStudent,
+  type FacilityGrid,
+} from '@/lib/api';
+import { PartnerClasses } from './partner-classes';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import { PageShell } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
@@ -27,6 +34,35 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
     else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+  }
+
+  /*
+    The lane grid, for the parcerias block below — one request, best-effort.
+
+    Turmas have had a card each on this screen since the beginning; a parceria
+    had nothing, so the only way to move a school's hour was to find its block on
+    the calendar and drag it. Losing this must not cost the page, so a refusal
+    leaves the block absent rather than the screen broken.
+  */
+  let grid: (FacilityGrid & { facilityId: string; openWeekdays: number[] }) | null = null;
+  if (data !== null) {
+    const site = data.facilities[0];
+    if (site !== undefined) {
+      const loaded = await apiFetch<FacilityGrid>(`/facilities/${site.id}/grid`).catch(
+        () => null,
+      );
+      if (loaded !== null) {
+        grid = {
+          ...loaded,
+          facilityId: site.id,
+          // Closed days are not offered in the pickers. The API refuses them
+          // anyway; this is what stops somebody being invited to try.
+          openWeekdays: site.hours
+            .filter((hour) => hour.available)
+            .map((hour) => hour.weekday),
+        };
+      }
+    }
   }
 
   const dayNames = Object.fromEntries(
@@ -201,6 +237,18 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
                 ))}
               </ul>
             </section>
+          )}
+
+          {grid !== null && (
+            <PartnerClasses
+              organizationId={data.organizationId}
+              facilityId={grid.facilityId}
+              bookings={grid.bookings.filter((booking) => booking.subjectType === 'parceria')}
+              slots={grid.slots}
+              lanes={grid.lanes}
+              openWeekdays={grid.openWeekdays}
+              canManage={data.canManage}
+            />
           )}
 
           {data.groups.length === 0 && (
