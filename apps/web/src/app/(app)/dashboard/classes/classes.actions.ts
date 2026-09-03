@@ -335,7 +335,14 @@ export async function moveOccurrenceAction(
 export async function moveBookingAction(
   organizationId: string,
   scheduleId: string,
-  target: { weekday: number; slotId: string | null; startTime: string | null; laneIds: string[] },
+  target: {
+    weekday: number;
+    slotId: string | null;
+    startTime: string | null;
+    laneIds: string[];
+    /** An explicit length, when the block edge was dragged. Null takes the slot s. */
+    durationMinutes?: number | null;
+  },
 ): Promise<{ ok: true } | { ok: false; errorKey: string; detail?: string }> {
   try {
     await apiPost(`/bookings/${scheduleId}/move`, target, { organizationId });
@@ -359,7 +366,14 @@ export async function moveBookingAction(
 export async function duplicateBookingAction(
   organizationId: string,
   scheduleId: string,
-  target: { weekday: number; slotId: string | null; startTime: string | null; laneIds: string[] },
+  target: {
+    weekday: number;
+    slotId: string | null;
+    startTime: string | null;
+    laneIds: string[];
+    /** An explicit length, when the block edge was dragged. Null takes the slot s. */
+    durationMinutes?: number | null;
+  },
 ): Promise<{ ok: true } | { ok: false; errorKey: string; detail?: string }> {
   try {
     await apiPost(`/bookings/${scheduleId}/duplicate`, target, { organizationId });

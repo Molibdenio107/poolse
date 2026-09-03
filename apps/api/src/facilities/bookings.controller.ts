@@ -146,5 +146,22 @@ function readTarget(body: Record<string, unknown>): BookingTarget {
     throw new BadRequestException('laneIds must be distinct');
   }
 
-  return { weekday, slotId, startTime, laneIds };
+  /*
+   * An explicit length, when the block's edge was dragged.
+   *
+   * The same bounds `class_schedule` itself carries — five minutes is not a
+   * swimming lesson and neither is eight hours. Absent means "take the slot's
+   * length", which is what an ordinary move does.
+   */
+  const rawDuration = body['durationMinutes'];
+  let durationMinutes: number | null = null;
+  if (rawDuration !== null && rawDuration !== undefined && rawDuration !== '') {
+    const minutes = Number(rawDuration);
+    if (!Number.isInteger(minutes) || minutes < 5 || minutes > 480) {
+      throw new BadRequestException('durationMinutes must be between 5 and 480');
+    }
+    durationMinutes = minutes;
+  }
+
+  return { weekday, slotId, startTime, laneIds, durationMinutes };
 }

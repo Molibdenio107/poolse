@@ -151,6 +151,79 @@ test('a block takes the length of the row it lands in', async () => {
   });
 });
 
+test('an explicit duration outlives the slot it sits in', async () => {
+  await withScratchTenant(async (tenant) => {
+    const bookings = new BookingsController();
+    const grid = new GridController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await sixLanePool(tenant);
+      const first = await slot(tenant, '09:30', '10:15');
+      await slot(tenant, '10:15', '11:00');
+
+      const id = await parceria(tenant, 'EPA', 'Masters', first, 3, '09:30', [lanes[0]!]);
+
+      /*
+       * The bottom edge dragged onto the row below: 09:30 for 90 minutes, which
+       * is two rows of a 45-minute grid. Without this the class drew one row
+       * tall and the 10:15 row looked free while the pool was busy.
+       */
+      await bookings.move(id, {
+        weekday: 3,
+        slotId: first,
+        laneIds: [lanes[0]],
+        durationMinutes: 90,
+      });
+
+      const after = await grid.read(tenant.facilityId);
+      const masters = after.bookings.find((booking) => booking.id === id);
+      assert.equal(masters?.durationMinutes, 90, 'the explicit length beats the slot');
+      // Still filed under the row it starts in — the grid draws the rest from
+      // the duration rather than from a second slot reference.
+      assert.equal(masters?.slotId, first);
+      assert.equal(masters?.startTime, '09:30');
+
+      // And a plain move with no duration goes back to taking the row's length.
+      await bookings.move(id, { weekday: 3, slotId: first, laneIds: [lanes[0]] });
+      const reset = await grid.read(tenant.facilityId);
+      assert.equal(reset.bookings.find((b) => b.id === id)?.durationMinutes, 45);
+    });
+  });
+});
+
+test('a length longer than the class runs still collides on its own lane', async () => {
+  await withScratchTenant(async (tenant) => {
+    const bookings = new BookingsController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await sixLanePool(tenant);
+      const first = await slot(tenant, '09:30', '10:15');
+      const second = await slot(tenant, '10:15', '11:00');
+
+      const masters = await parceria(tenant, 'EPA', 'Masters', first, 3, '09:30', [lanes[0]!]);
+      await parceria(tenant, 'Teresianas', 'Infantis', second, 3, '10:15', [lanes[0]!]);
+
+      // Stretching Masters over 10:15 runs it into Infantis on the same lane —
+      // the case the whole time-span feature exists to make visible.
+      await assert.rejects(
+        bookings.move(masters, {
+          weekday: 3,
+          slotId: first,
+          laneIds: [lanes[0]],
+          durationMinutes: 90,
+        }),
+        (error: unknown) => {
+          assert.ok(error instanceof ConflictException);
+          const body = error.getResponse() as { message: string; holder: string };
+          assert.equal(body.message, 'laneTaken');
+          assert.equal(body.holder, 'Infantis');
+          return true;
+        },
+      );
+    });
+  });
+});
+
 test('a lane span must be one unbroken run', async () => {
   await withScratchTenant(async (tenant) => {
     const bookings = new BookingsController();

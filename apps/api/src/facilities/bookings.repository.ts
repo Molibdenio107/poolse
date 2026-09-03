@@ -57,6 +57,16 @@ export interface BookingTarget {
   /** Only when `slotId` is null — otherwise the slot's own hours are the truth. */
   startTime: string | null;
   laneIds: string[];
+  /**
+   * An explicit length, overriding the slot's — POOLSE-50, time span.
+   *
+   * Absent means "take the row's length", which is what a plain move does and
+   * what makes the grid the club's grid. Present means somebody dragged the
+   * block's bottom edge: a 90-minute masters session in a grid of 45-minute rows
+   * is a real thing, and the alternative was drawing it one row tall and letting
+   * the second half of it be invisible.
+   */
+  durationMinutes?: number | null;
 }
 
 /**
@@ -231,7 +241,9 @@ export async function moveBooking(
     await assertContiguous(tx, target.laneIds);
 
     const { startTime, durationMinutes } = await timeFor(tx, target);
-    const duration = durationMinutes ?? booking.duration_minutes;
+    // The caller's own length wins over the slot's, and the slot's over the one
+    // the booking already had.
+    const duration = target.durationMinutes ?? durationMinutes ?? booking.duration_minutes;
 
     const clash = await laneConflicts(
       tx,
@@ -310,7 +322,7 @@ export async function duplicateBooking(
     await assertContiguous(tx, target.laneIds);
 
     const { startTime, durationMinutes } = await timeFor(tx, target);
-    const duration = durationMinutes ?? source.duration_minutes;
+    const duration = target.durationMinutes ?? durationMinutes ?? source.duration_minutes;
 
     // The new row is not yet in the table, so nothing to exclude from the check.
     const clash = await laneConflicts(

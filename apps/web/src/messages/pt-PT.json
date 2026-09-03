@@ -1798,6 +1798,7 @@
       "overConcurrency": "{count} grupos em simultâneo, acima do limite de {limit}",
       "weekdayDisabled": "Este dia da semana está desativado"
     },
-    "noLane": "Sem pista"
+    "noLane": "Sem pista",
+    "durationHandle": "Arraste para alterar a duração da aula"
   }
 }

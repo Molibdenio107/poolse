@@ -106,6 +106,28 @@ function toTime(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 }
 
+/**
+ * Every slot a booking's own time runs through, in grid order.
+ *
+ * A class is not obliged to be one row long. A 90-minute masters session in a
+ * grid of 45-minute rows covers two, and drawing it one row tall made the second
+ * half invisible — the row underneath looked free while the pool was busy.
+ *
+ * Half-open, so a class ending exactly when the next row starts does not claim
+ * it: 09:30–10:15 covers the 09:30 row and not the 10:15 one.
+ */
+function slotsCovered(
+  startMinutes: number,
+  durationMinutes: number,
+  slots: readonly GridSlot[],
+): GridSlot[] {
+  return slots.filter((slot) => {
+    const from = toMinutes(slot.startTime);
+    const to = toMinutes(slot.endTime);
+    return startMinutes < to && from < startMinutes + durationMinutes;
+  });
+}
+
 /** Same lanes, same order — used to tell a real move from a drop that went home. */
 function sameLanes(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((id, index) => id === b[index]);
@@ -230,6 +252,8 @@ type Proposal =
       startTime: string;
       slotId: string | null;
       laneIds: string[];
+      /** Explicit length when the edge was dragged; null takes the slot's. */
+      durationMinutes: number | null;
       from: { weekday: number; startTime: string };
       /** This week's session, when there is a week on screen and one exists. */
       occurrence: { sessionId: string; date: string } | null;
@@ -261,6 +285,7 @@ type Optimistic =
       startMinutes: number;
       slotId: string | null;
       laneIds: string[];
+      durationMinutes: number;
     }
   /** The copy, drawn where it was dropped while the dialog asks about it. */
   | {
@@ -287,6 +312,8 @@ interface Landing {
   laneIds: string[];
   /** True when the copy modifier was held **at the drop**, not at the start. */
   duplicate: boolean;
+  /** An explicit length, when the bottom edge was dragged. Null takes the slot's. */
+  durationMinutes?: number | null;
 }
 
 /**
@@ -544,6 +571,7 @@ export function ScheduleBoard({
         target.startMinutes = optimistic.startMinutes;
         target.slotId = optimistic.slotId;
         target.laneIds = optimistic.laneIds;
+        target.durationMinutes = optimistic.durationMinutes;
       }
     }
 
@@ -750,6 +778,7 @@ export function ScheduleBoard({
 
     setError(null);
     const startMinutes = toMinutes(landing.startTime);
+    const duration = landing.durationMinutes ?? subject.durationMinutes;
 
     if (landing.duplicate) {
       if (subject.scheduleId === null) return;
@@ -790,6 +819,7 @@ export function ScheduleBoard({
       startMinutes,
       slotId: landing.slotId,
       laneIds: landing.laneIds,
+      durationMinutes: duration,
     });
 
     /*
@@ -814,6 +844,7 @@ export function ScheduleBoard({
       startTime: landing.startTime,
       slotId: landing.slotId,
       laneIds: landing.laneIds,
+      durationMinutes: landing.durationMinutes ?? null,
       from: { weekday: subject.weekday, startTime: toTime(subject.startMinutes) },
       occurrence,
     });
@@ -844,6 +875,35 @@ export function ScheduleBoard({
       startTime: toTime(subject.startMinutes),
       laneIds: next.map((lane) => lane.id),
       duplicate: false,
+    });
+  }
+
+  /**
+   * Lengthen or shorten from the keyboard — the bottom edge, without a pointer.
+   *
+   * `Ctrl` because `Shift` is already the lane span and `Alt` is already
+   * duplicate. Steps to the next slot boundary rather than by a fixed number of
+   * minutes, so the block always lands on a row the club actually runs.
+   */
+  function resizeBy(subject: Placed, delta: number): void {
+    const covered = slotsCovered(subject.startMinutes, subject.durationMinutes, slots);
+    const last = covered[covered.length - 1];
+    if (last === undefined) return;
+
+    const index = slots.findIndex((candidate) => candidate.id === last.id);
+    const next = slots[index + delta];
+    if (next === undefined) return;
+
+    const minutes = toMinutes(next.endTime) - subject.startMinutes;
+    if (minutes < 5) return;
+
+    propose(subject, {
+      weekday: subject.weekday,
+      slotId: subject.slotId,
+      startTime: toTime(subject.startMinutes),
+      laneIds: subject.laneIds,
+      duplicate: false,
+      durationMinutes: minutes,
     });
   }
 
@@ -913,6 +973,33 @@ export function ScheduleBoard({
      * edge *up* past the first lane is a shrink, which is why the run is built
      * from the two endpoints rather than by appending.
      */
+    /*
+     * The bottom edge: the class runs to the end of the row it was dropped on.
+     *
+     * Its day, its slot and its lanes are all untouched — only the length
+     * changes. Dragging it *up* onto its own row shortens it back to that row,
+     * which is how a 90-minute class becomes 45 again.
+     */
+    if (active.startsWith('dur:')) {
+      const scheduleId = active.slice('dur:'.length);
+      const subject = placed.find((candidate) => candidate.scheduleId === scheduleId);
+      if (subject === undefined) return;
+
+      const minutes = toMinutes(slot.endTime) - subject.startMinutes;
+      // Dropping above the block's own start would be a negative length.
+      if (minutes < 5) return;
+
+      propose(subject, {
+        weekday: subject.weekday,
+        slotId: subject.slotId,
+        startTime: toTime(subject.startMinutes),
+        laneIds: subject.laneIds,
+        duplicate: false,
+        durationMinutes: minutes,
+      });
+      return;
+    }
+
     if (active.startsWith('edge:')) {
       const scheduleId = active.slice('edge:'.length);
       const subject = placed.find((candidate) => candidate.scheduleId === scheduleId);
@@ -1051,6 +1138,7 @@ export function ScheduleBoard({
         slotId: asked.slotId,
         startTime: asked.slotId === null ? asked.startTime : null,
         laneIds: asked.laneIds,
+        durationMinutes: asked.durationMinutes,
       });
       setOptimistic(null);
       if (!result.ok) {
@@ -1273,6 +1361,7 @@ export function ScheduleBoard({
               density={prefs.density}
               showPoolName={poolIds.length > 1}
               onSpan={spanBy}
+              onResize={resizeBy}
               ruleContext={ruleContext}
               draggingSubject={draggingSubject}
             />
@@ -1309,6 +1398,7 @@ export function ScheduleBoard({
                 density={prefs.density}
                 showPoolName={poolIds.length > 1}
                 onSpan={spanBy}
+                onResize={resizeBy}
                 ruleContext={ruleContext}
                 draggingSubject={draggingSubject}
               />
@@ -1330,6 +1420,7 @@ export function ScheduleBoard({
                 density={prefs.density}
                 showPoolName={poolIds.length > 1}
                 onSpan={spanBy}
+                onResize={resizeBy}
                 ruleContext={ruleContext}
                 draggingSubject={draggingSubject}
               />
@@ -1733,6 +1824,7 @@ function SlotGrid({
   density,
   showPoolName,
   onSpan,
+  onResize,
   ruleContext,
   draggingSubject,
 }: {
@@ -1752,6 +1844,8 @@ function SlotGrid({
   showPoolName: boolean;
   /** `Shift`+arrow on a focused block. The keyboard's edge handle. */
   onSpan: (booking: Placed, delta: number) => void;
+  /** `Ctrl`+arrow: lengthen or shorten the class by one slot. */
+  onResize: (booking: Placed, delta: number) => void;
   ruleContext: RuleContext;
   /** The block in flight, so every cell can say what dropping it here would do. */
   draggingSubject: RuleBooking | null;
@@ -1885,12 +1979,40 @@ function SlotGrid({
                       </div>
 
                       {days.map((day, dayIndex) => {
+                        /*
+                         * A booking is drawn in this cell if its lane starts
+                         * here and its *time* reaches this slot — not only if
+                         * `slotId` names it. That is what lets a 90-minute class
+                         * appear in both the rows it actually occupies.
+                         */
                         const here = placed.find(
                           (candidate) =>
                             candidate.weekday === day &&
-                            candidate.slotId === slot.id &&
-                            candidate.laneIds[0] === lane.id,
+                            candidate.laneIds[0] === lane.id &&
+                            candidate.slotId !== null &&
+                            slotsCovered(
+                              candidate.startMinutes,
+                              candidate.durationMinutes,
+                              slots,
+                            ).some((covered) => covered.id === slot.id),
                         );
+
+                        /*
+                         * Which part of the block this is. The first slot draws
+                         * the label and the handles; the ones after it are the
+                         * same class continuing, joined across the hour line the
+                         * way a paper timetable does.
+                         *
+                         * They cannot be one element: lanes are nested inside
+                         * slots, so slot 1 lane 1 and slot 2 lane 1 are six rows
+                         * apart with other lanes between them. One block
+                         * stretched across that would cover lanes it does not
+                         * occupy.
+                         */
+                        const continues =
+                          here !== undefined &&
+                          slotsCovered(here.startMinutes, here.durationMinutes, slots)[0]?.id !==
+                            slot.id;
 
                         /*
                          * How many lane rows this booking covers, clipped to the
@@ -1916,6 +2038,7 @@ function SlotGrid({
                             column={3 + dayIndex}
                             row={row}
                             booking={here}
+                            continues={continues}
                             span={span}
                             rowRem={rowRem}
                             density={density}
@@ -1925,6 +2048,7 @@ function SlotGrid({
                             canManage={canManage}
                             dayName={dayNames[day] ?? String(day)}
                             onSpan={onSpan}
+                            onResize={onResize}
                             ruleContext={ruleContext}
                             draggingSubject={draggingSubject}
                           />
@@ -1959,6 +2083,7 @@ function SlotGrid({
                     density={density}
                     canManage={canManage}
                     onSpan={onSpan}
+                    onResize={onResize}
                   />
                 )}
               </Fragment>
@@ -1987,6 +2112,7 @@ function NoLaneRow({
   density,
   canManage,
   onSpan,
+  onResize,
 }: {
   slot: GridSlot;
   row: number;
@@ -1996,6 +2122,8 @@ function NoLaneRow({
   density: Density;
   canManage: boolean;
   onSpan: (booking: Placed, delta: number) => void;
+  /** `Ctrl`+arrow: lengthen or shorten the class by one slot. */
+  onResize: (booking: Placed, delta: number) => void;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -2041,7 +2169,9 @@ function NoLaneRow({
                   booking={here}
                   canManage={canManage}
                   density={density}
+                  continues={false}
                   onSpan={onSpan}
+                  onResize={onResize}
                   concurrency={1}
                 />
               </div>
@@ -2060,6 +2190,7 @@ function Cell({
   column,
   row,
   booking,
+  continues,
   span,
   rowRem,
   density,
@@ -2069,6 +2200,7 @@ function Cell({
   canManage,
   dayName,
   onSpan,
+  onResize,
   ruleContext,
   draggingSubject,
 }: {
@@ -2078,6 +2210,8 @@ function Cell({
   column: number;
   row: number;
   booking: Placed | undefined;
+  /** True for the second and later rows of a class that runs past one slot. */
+  continues: boolean;
   span: number;
   rowRem: number;
   density: Density;
@@ -2087,6 +2221,8 @@ function Cell({
   canManage: boolean;
   dayName: string;
   onSpan: (booking: Placed, delta: number) => void;
+  /** `Ctrl`+arrow: lengthen or shorten the class by one slot. */
+  onResize: (booking: Placed, delta: number) => void;
   ruleContext: RuleContext;
   draggingSubject: RuleBooking | null;
 }): React.ReactElement {
@@ -2205,7 +2341,9 @@ function Cell({
             booking={booking}
             canManage={canManage}
             density={density}
+            continues={continues}
             onSpan={onSpan}
+            onResize={onResize}
             /*
               Bookings, not lanes — the thing POOLSE-51 names as most likely to
               be got wrong. An instructor on one three-lane booking is running
@@ -2253,13 +2391,19 @@ function BookingChip({
   booking,
   canManage,
   density,
+  continues,
   onSpan,
+  onResize,
   concurrency,
 }: {
   booking: Placed;
   canManage: boolean;
   density: Density;
+  /** A later row of a class that runs past one slot: no label, no handles. */
+  continues: boolean;
   onSpan: (booking: Placed, delta: number) => void;
+  /** `Ctrl`+arrow: lengthen or shorten the class by one slot. */
+  onResize: (booking: Placed, delta: number) => void;
   /** How many groups this instructor is running at this moment. 1 is silent. */
   concurrency: number;
 }): React.ReactElement {
@@ -2268,8 +2412,21 @@ function BookingChip({
   // Only a turma's pattern is draggable from here — POOLSE-50 gives the others
   // their own gesture. A parceria with a grip that refused on drop would be a
   // control that lies about what it does.
-  const draggable =
-    canManage && booking.scheduleId !== null && booking.groupId !== null && !booking.cancelled;
+  /*
+   * Anything with a real booking behind it can be moved — POOLSE-50.
+   *
+   * This used to demand `groupId !== null`, which meant only a turma. That was
+   * right while the only move was `moveSlotAction`, which edits a class group's
+   * pattern; it stopped being right the moment moves went through
+   * `moveBookingAction`, which takes any subject. The stale half of the
+   * condition survived, so a parceria rendered with no grip and no edge handle
+   * while the API was perfectly willing to move it.
+   *
+   * `scheduleId === null` is the optimistic overlay — a block that does not
+   * exist yet cannot be picked up again. A cancelled class stays put because
+   * moving something that is not happening is not a thing to offer.
+   */
+  const draggable = canManage && booking.scheduleId !== null && !booking.cancelled;
 
   const compact = density === 'compacta';
 
@@ -2299,15 +2456,37 @@ function BookingChip({
        * of the same block, so it is handled before dnd-kit sees it.
        */
       onKeyDown={(event) => {
-        if (!event.shiftKey || !canManage) return;
+        if (!canManage) return;
         if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-        event.preventDefault();
-        event.stopPropagation();
-        onSpan(booking, event.key === 'ArrowDown' ? 1 : -1);
+        const step = event.key === 'ArrowDown' ? 1 : -1;
+
+        /*
+         * Shift grows the lane span, Ctrl grows the length, and plain arrows
+         * belong to dnd-kit — they move a block once it has been picked up with
+         * Space. Three gestures on one key, separated by modifier, and each one
+         * is the keyboard twin of a grip on the block.
+         */
+        if (event.shiftKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          onSpan(booking, step);
+          return;
+        }
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          onResize(booking, step);
+        }
       }}
       className={cn(
-        'relative flex h-full w-full flex-col overflow-hidden rounded-sm border pl-1 pr-1 text-[0.7rem] leading-tight',
+        'relative flex h-full w-full flex-col overflow-hidden border pl-1 pr-1 text-[0.7rem] leading-tight',
         tint,
+        /*
+          Joined across the hour line. The first part loses its bottom corners
+          and its bottom border, the continuation loses its top ones — so two
+          elements read as one block that happens to cross a row boundary.
+        */
+        continues ? 'rounded-b-sm border-t-0' : 'rounded-t-sm',
       )}
       style={
         booking.partnerColour === null
@@ -2315,6 +2494,15 @@ function BookingChip({
           : { borderLeftColor: booking.partnerColour, borderLeftWidth: '4px' }
       }
     >
+      {continues ? (
+        /*
+          The name again, dimmed. Not nothing: at compact density a reader
+          scanning the 10:15 row has to be able to see *what* is still in that
+          lane without looking up a row. Not the whole card either, or one class
+          would look like two.
+        */
+        <span className="truncate italic text-foreground-muted">{booking.name}</span>
+      ) : (
       <div className="flex items-start justify-between gap-1">
         <Chip
           id={
@@ -2364,8 +2552,9 @@ function BookingChip({
           )}
         </span>
       </div>
+      )}
 
-      {!compact && (
+      {!compact && !continues && (
         <span className="truncate text-foreground-muted">
           {/*
             "Sem professor" is a real state and says so in words. POOLSE-53 turns
@@ -2378,7 +2567,7 @@ function BookingChip({
         </span>
       )}
 
-      {booking.note !== null && (
+      {booking.note !== null && !continues && (
         <span className="truncate font-medium text-warning">{booking.note}</span>
       )}
 
@@ -2395,9 +2584,27 @@ function BookingChip({
         density; the keyboard equivalent is `Shift`+arrow on the block itself,
         so this is never the only way.
       */}
-      {draggable && <SpanHandle scheduleId={booking.scheduleId ?? ''} />}
+      {draggable && !continues && (
+        <>
+          {/*
+            Two handles, because the grid has two downward axes and one edge
+            cannot mean both.
 
-      {(booking.controls.mark !== undefined || booking.controls.cancel !== undefined) && (
+            The **bottom edge** changes the class's length, which is what a
+            bottom edge means in every calendar anybody has used. The **corner**
+            changes how many lanes it takes, which is Poolse's own idea and
+            therefore the one that has to be learned rather than assumed.
+
+            Both stop propagation on pointer-down, or the block's own draggable
+            claims the gesture and the class simply moves instead of resizing.
+          */}
+          <DurationHandle scheduleId={booking.scheduleId ?? ''} />
+          <SpanHandle scheduleId={booking.scheduleId ?? ''} />
+        </>
+      )}
+
+      {!continues &&
+        (booking.controls.mark !== undefined || booking.controls.cancel !== undefined) && (
         <div
           className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-0.5"
           onPointerDown={(event) => event.stopPropagation()}
@@ -2412,13 +2619,43 @@ function BookingChip({
           )}
           {booking.controls.cancel}
         </div>
-      )}
+        )}
     </div>
   );
 }
 
 /**
- * The grip along a block's bottom edge that sets how many lanes it takes.
+ * The grip that sets how long the class runs.
+ *
+ * The bottom edge, because that is what a bottom edge does in every calendar
+ * anybody has used — and this ticket's whole point is that a 90-minute class
+ * should look 90 minutes long. Dragging it onto a lower slot row makes the class
+ * run to the end of that row.
+ *
+ * The keyboard equivalent is `Ctrl`+arrow on the block: `Shift` is already the
+ * lane span and `Alt` is already duplicate, and a third modifier that collided
+ * with either would make one of them unreachable.
+ */
+function DurationHandle({ scheduleId }: { scheduleId: string }): React.ReactElement {
+  const t = useTranslations();
+  const { attributes, listeners, setNodeRef } = useDraggable({ id: `dur:${scheduleId}` });
+
+  return (
+    <span
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      aria-hidden
+      tabIndex={-1}
+      title={t('grid.durationHandle')}
+      onPointerDown={(event) => event.stopPropagation()}
+      className="absolute inset-x-2 bottom-0 h-1.5 cursor-ns-resize rounded-t bg-foreground/15 hover:bg-primary/70"
+    />
+  );
+}
+
+/**
+ * The grip that sets how many lanes a block takes.
  *
  * Its own draggable with its own id prefix, so the drop handler can tell "this
  * block goes to Thursday" from "this block now covers lanes 2 to 4" without a
@@ -2442,7 +2679,8 @@ function SpanHandle({ scheduleId }: { scheduleId: string }): React.ReactElement 
       tabIndex={-1}
       title={t('grid.spanHandle')}
       onPointerDown={(event) => event.stopPropagation()}
-      className="absolute inset-x-0 bottom-0 h-1 cursor-ns-resize bg-foreground/10 hover:bg-primary/60"
+      // The corner, so it does not fight the duration grip along the edge.
+      className="absolute bottom-0 right-0 size-2 cursor-ns-resize rounded-tl bg-foreground/25 hover:bg-primary"
     />
   );
 }
