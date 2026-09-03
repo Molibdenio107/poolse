@@ -45,6 +45,8 @@ export interface GridLane {
   poolName: string;
   name: string;
   position: number;
+  /** Null means the club has not said how many fit. A warning needs a number. */
+  defaultCapacity: number | null;
 }
 
 export interface GridBooking {
@@ -173,8 +175,9 @@ export async function readGrid(
       pool_name: string;
       name: string;
       position: number;
+      default_capacity: number | null;
     }>(
-      `SELECT l.id, l.pool_id, p.name AS pool_name, l.name, l.position
+      `SELECT l.id, l.pool_id, p.name AS pool_name, l.name, l.position, l.default_capacity
          FROM lane l
          JOIN pool p ON p.id = l.pool_id AND p.organization_id = l.organization_id
         WHERE p.facility_id = $1
@@ -271,6 +274,27 @@ export async function readGrid(
       [facilityId],
     );
 
+    /*
+     * Everything POOLSE-51's warnings need, in the same request as the grid.
+     *
+     * Criterion 9: the warnings for the whole visible grid are computed in one
+     * query — or rather, from one payload. A 14x5x6 grid is 420 cells, and one
+     * round trip per cell is a screen that never finishes painting.
+     */
+    const capacities = await tx.query<{ lane_id: string; level_id: string; capacity: number }>(
+      `SELECT llc.lane_id, llc.level_id, llc.capacity
+         FROM lane_level_capacity llc
+         JOIN lane l ON l.id = llc.lane_id AND l.organization_id = llc.organization_id
+         JOIN pool p ON p.id = l.pool_id AND p.organization_id = l.organization_id
+        WHERE p.facility_id = $1`,
+      [facilityId],
+    );
+
+    const limits = await tx.query<{ max_concurrent_groups_per_instructor: number | null }>(
+      `SELECT max_concurrent_groups_per_instructor FROM facility WHERE id = $1`,
+      [facilityId],
+    );
+
     const partners = await tx.query<{ id: string; name: string; colour: string }>(
       `SELECT id, name, color AS colour
          FROM partner
@@ -306,6 +330,7 @@ export async function readGrid(
         poolName: row.pool_name,
         name: row.name,
         position: row.position,
+        defaultCapacity: row.default_capacity,
       })),
       bookings: bookings.rows.map((row) => ({
         id: row.id,
@@ -334,6 +359,10 @@ export async function readGrid(
         a.name.localeCompare(b.name),
       ),
       partners: partners.rows,
+      laneLevelCapacity: Object.fromEntries(
+        capacities.rows.map((row) => [`${row.lane_id}:${row.level_id}`, row.capacity]),
+      ),
+      maxConcurrentGroups: limits.rows[0]?.max_concurrent_groups_per_instructor ?? null,
     };
   });
 }

@@ -1632,6 +1632,73 @@ different day restates something no longer true.
 A duplicate onto a slot the same turma already occupies hits `class_schedule_slot_uq` and comes
 back as `alreadyThere` — in words, never as a constraint name.
 
+### Conflict rules — POOLSE-51
+
+**This ticket loosened a constraint.** `class_session_instructor_free` had no pool term, so one
+instructor could not run two groups at the same time *anywhere* — and the reference club's
+ordinary Tuesday is Sandra running Cadetes, Infantis and Absolutos at 19:15 on lanes 2, 3 and 4
+of one tank. That was correct before POOLSE-43, when a turma had one lane and concurrency
+genuinely was a double-booking. Lanes made the old reading wrong.
+
+```
+class_session.resolved_instructor_id
+    GENERATED ALWAYS AS (coalesce(substitute_instructor_membership_id,
+                                  instructor_membership_id)) STORED
+
+class_session_instructor_free
+    EXCLUDE USING gist (organization_id =, resolved_instructor_id =,
+                        pool_id <>, tstzrange(starts_at, ends_at) &&)
+    WHERE status <> 'cancelled' AND resolved_instructor_id IS NOT NULL
+                                AND pool_id IS NOT NULL
+```
+
+**The spike's answer: `btree_gist` does supply `<>` for uuid.** BUILD-ORDER flagged this as the
+riskiest unknown in the feature — whether an exclusion constraint could express "same
+instructor, *different* pool". It can, verified against Postgres 16 before anything was designed
+around it, so the trigger fallback the ticket allowed for is not needed.
+
+**Generated, not copied.** The ticket suggested copying the resolved instructor at generation
+time; a stored generated column cannot drift, because no code path can write a session whose
+resolved instructor disagrees with the two columns behind it.
+
+**Two facilities are covered without a facility term**, because two facilities means two pools.
+
+**`organization_id WITH =` is not redundant beside RLS.** An exclusion constraint is enforced
+over the whole table by its index with no policy applied, so without it, tenant A booking
+somebody could be refused because of a row in tenant B — leaking B's existence and refusing a
+booking A is entitled to make. This is also how criterion 11 is made structural: a cross-tenant
+instructor conflict is **explicitly not detected**, and that is a decision, not a gap.
+
+```
+facility.max_concurrent_groups_per_instructor  integer?   -- null = no opinion
+lane_level_capacity (lane_id, level_id) -> capacity       -- overrides lane.default_capacity
+```
+
+Both are soft: above them is a warning that names the numbers, never a block. A default of 3
+would be the schema inventing a club's staffing policy.
+
+### One rule module, two callers — `@poolse/rules`
+
+Criterion 10 asks that client and server evaluate conflicts through the same pure module. The
+ticket said to share it "the way `lib/sheet.ts` is shared" — but `sheet.ts` lives in the web app
+and the API cannot import it. There is no sharing mechanism between the two apps except a
+workspace package, so `packages/rules` is one.
+
+`evaluate(subject, placement, context)` returns every reason, not the first, each with a
+`verdict` of `ok | warn | block` and a `detail` carrying what makes the message actionable — the
+lane, the booking in the way, the two numbers. The browser runs it per cell while the pointer is
+still moving; the API runs it at the drop. One implementation is the only way they cannot
+disagree, and *a client that thinks a drop is fine and a server that refuses it is the worst
+version of this feature*.
+
+Two rules inside it are worth naming because they are easy to get backwards:
+
+- **Concurrency counts bookings, not lanes.** An instructor on one three-lane booking is running
+  one group. Badging that `×3` would tell a club its best-staffed hour is its worst.
+- **Capacity is judged per lane, spreading the headcount across a span.** 24 swimmers on three
+  lanes is 8 a lane. Comparing the whole headcount against one lane would warn about every
+  multi-lane booking a club ever makes.
+
 ## Module 2 — maintenance (shape)
 
 ```

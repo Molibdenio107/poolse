@@ -1786,6 +1786,17 @@
     "laneTaken": "Essa pista já está ocupada nesse horário.",
     "alreadyThere": "Essa turma já corre nesse dia e a essa hora.",
     "dayClosed": "O local está encerrado nesse dia.",
-    "dropRefused": "Não foi possível colocar aqui."
+    "dropRefused": "Não foi possível colocar aqui.",
+    "concurrentGroups": "{count} grupos em simultâneo com este professor",
+    "reason": {
+      "laneTaken": "{lane} já tem {holder}",
+      "instructorElsewhere": "O professor está com {holder} noutro tanque",
+      "lanesNotContiguous": "As pistas têm de ser seguidas",
+      "dayClosed": "Encerrado: {reason}",
+      "outsideHours": "Fora do horário de funcionamento",
+      "overCapacity": "{lane}: {headcount} para {capacity} lugares",
+      "overConcurrency": "{count} grupos em simultâneo, acima do limite de {limit}",
+      "weekdayDisabled": "Este dia da semana está desativado"
+    }
   }
 }

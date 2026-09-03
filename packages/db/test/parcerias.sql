@@ -214,14 +214,25 @@ END $$;
 -- ---------------------------------------------------------------------------
 
 DO $$
-DECLARE v_org uuid; v_dinis uuid; v_mis uuid; ok boolean;
+DECLARE v_org uuid; v_dinis uuid; v_mis uuid; v_central uuid; ok boolean;
 BEGIN
   v_org := '77777777-7777-7777-7777-777777777777';
   SELECT id INTO v_dinis FROM partner
    WHERE organization_id = v_org AND name = 'ES D. Dinis';
+  SELECT id INTO v_central FROM facility
+   WHERE organization_id = v_org AND name = 'Piscina Central';
+  /*
+   * Scoped to the site, not `LIMIT 1`.
+   *
+   * Test 3 deliberately leaves three Misericórdia rows about — the original at
+   * Central, an archived one at Norte and its replacement — so an unordered
+   * `LIMIT 1` picks whichever the plan happens to return first. It picked the
+   * Central one until an unrelated migration added an index and the row order
+   * moved, and then test 10 failed instead, three tests away from the cause.
+   */
   SELECT id INTO v_mis FROM partner
    WHERE organization_id = v_org AND name = 'Misericórdia' AND archived_at IS NULL
-   LIMIT 1;
+     AND facility_id = v_central;
 
   ok := false;
   BEGIN
@@ -573,7 +584,8 @@ BEGIN
     LEFT JOIN class_schedule cs
       ON cs.partner_group_id = g.id AND cs.organization_id = g.organization_id
      AND cs.archived_at IS NULL AND cs.season_id = v_season
-   WHERE p.organization_id = v_org AND p.name = 'Misericórdia' AND p.archived_at IS NULL
+   WHERE p.organization_id = v_org AND p.name = 'Misericórdia'
+     AND p.archived_at IS NULL AND p.facility_id = v_central
    GROUP BY p.id;
 
   IF v_hours <> 0 THEN

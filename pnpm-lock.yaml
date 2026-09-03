@@ -29,6 +29,9 @@ importers:
       '@poolse/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@poolse/rules':
+        specifier: workspace:*
+        version: link:../../packages/rules
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -81,6 +84,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.8)
+      '@poolse/rules':
+        specifier: workspace:*
+        version: link:../../packages/rules
       '@radix-ui/react-avatar':
         specifier: ^1.2.6
         version: 1.2.6(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -161,6 +167,18 @@ importers:
       '@types/pg':
         specifier: ^8.11.10
         version: 8.23.1
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.12
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/rules:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
       tsx:
         specifier: ^4.19.2
         version: 4.23.12

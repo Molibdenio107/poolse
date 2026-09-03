@@ -1754,6 +1754,8 @@ export interface GridLane {
   poolName: string;
   name: string;
   position: number;
+  /** Null means the club has not said how many fit. A warning needs a number. */
+  defaultCapacity: number | null;
 }
 
 export interface GridBooking {
@@ -1795,5 +1797,9 @@ export interface FacilityGrid {
   categories: { id: string; name: string; colour: string }[];
   instructors: { id: string; name: string }[];
   partners: { id: string; name: string; colour: string }[];
+  /** Keyed `laneId:levelId` — POOLSE-51's per-level capacity overrides. */
+  laneLevelCapacity: Record<string, number>;
+  /** Null means the club has no opinion about concurrent groups per instructor. */
+  maxConcurrentGroups: number | null;
   canManage: boolean;
 }

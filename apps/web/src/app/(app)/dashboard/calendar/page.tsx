@@ -319,6 +319,8 @@ export default async function CalendarPage({
                 instructors={grid?.instructors ?? []}
                 partners={grid?.partners ?? []}
                 levels={classes.options.levels}
+                laneLevelCapacity={grid?.laneLevelCapacity ?? {}}
+                maxConcurrentGroups={grid?.maxConcurrentGroups ?? null}
               />
             ) : (
               // The turmas would not load. The week is still worth showing, and

@@ -1,4 +1,5 @@
 import { withOrg, type Tx } from '@poolse/db';
+import { isContiguous, type RuleLane } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 
 /**
@@ -115,21 +116,30 @@ async function laneConflicts(
 async function assertContiguous(tx: Tx, laneIds: string[]): Promise<void> {
   if (laneIds.length < 2) return;
 
-  const { rows } = await tx.query<{ pool_id: string; position: number }>(
-    `SELECT pool_id, position FROM lane
-      WHERE id = ANY($1::uuid[]) AND archived_at IS NULL
-      ORDER BY position`,
+  const { rows } = await tx.query<{ id: string; pool_id: string; position: number }>(
+    `SELECT id, pool_id, position FROM lane
+      WHERE id = ANY($1::uuid[]) AND archived_at IS NULL`,
     [laneIds],
   );
 
+  /*
+   * The judgement is `@poolse/rules`', not this file's — POOLSE-51, criterion 10.
+   *
+   * The browser runs the same function while the pointer is still moving, so the
+   * cell that said "fine" and the endpoint that accepts the drop cannot disagree.
+   * All this does is fetch the lanes the pure function needs; reimplementing the
+   * check here would be the exact divergence the criterion exists to prevent.
+   */
+  const lanes: RuleLane[] = rows.map((row) => ({
+    id: row.id,
+    poolId: row.pool_id,
+    name: '',
+    position: row.position,
+    defaultCapacity: null,
+  }));
+
   if (rows.length !== laneIds.length) throw new NonContiguousLanesError();
-
-  const pools = new Set(rows.map((row) => row.pool_id));
-  if (pools.size > 1) throw new NonContiguousLanesError();
-
-  for (let i = 1; i < rows.length; i += 1) {
-    if (rows[i]!.position !== rows[i - 1]!.position + 1) throw new NonContiguousLanesError();
-  }
+  if (!isContiguous(laneIds, lanes)) throw new NonContiguousLanesError();
 }
 
 /** The time a target implies: the slot's own start, or an explicit one. */

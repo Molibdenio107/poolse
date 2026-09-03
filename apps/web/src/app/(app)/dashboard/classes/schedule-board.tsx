@@ -14,7 +14,17 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { GripVertical, Lock } from 'lucide-react';
+import { AlertTriangle, Ban, GripVertical, Lock } from 'lucide-react';
+import {
+  concurrentGroups,
+  evaluate,
+  verdictOf,
+  type Reason,
+  type RuleBooking,
+  type RuleContext,
+  type RuleLane,
+  type Verdict,
+} from '@poolse/rules';
 import type {
   ClassGroup,
   FacilityDay,
@@ -339,6 +349,8 @@ export function ScheduleBoard({
   instructors,
   partners,
   levels,
+  laneLevelCapacity,
+  maxConcurrentGroups,
 }: {
   organizationId: string;
   groups: ClassGroup[];
@@ -368,6 +380,10 @@ export function ScheduleBoard({
   instructors: { id: string; name: string }[];
   partners: { id: string; name: string; colour: string }[];
   levels: { id: string; name: string }[];
+  /** `laneId:levelId` to capacity — POOLSE-51's per-level override. */
+  laneLevelCapacity: Record<string, number>;
+  /** Null means the club has no opinion about concurrent groups. */
+  maxConcurrentGroups: number | null;
 }): React.ReactElement {
   const t = useTranslations();
   const [pending, startPending] = useTransition();
@@ -1062,6 +1078,70 @@ export function ScheduleBoard({
 
   const rowRem = ROW_REM[prefs.density];
 
+  /*
+   * The rules, in the shape `@poolse/rules` wants — POOLSE-51, criterion 10.
+   *
+   * The same functions the API calls at the drop. That is the whole point: a
+   * cell that says "fine" while the pointer is over it, followed by a server
+   * that refuses the drop, is the worst version of this feature, and the only
+   * way to be sure they agree is for there to be one implementation.
+   *
+   * Memoised because it is rebuilt from every booking on the grid and is read
+   * once per cell during a drag — 420 cells on a full grid.
+   */
+  const ruleLanes = useMemo<RuleLane[]>(
+    () =>
+      lanes.map((lane) => ({
+        id: lane.id,
+        poolId: lane.poolId,
+        name: lane.name,
+        position: lane.position,
+        defaultCapacity: lane.defaultCapacity,
+      })),
+    [lanes],
+  );
+
+  const ruleBookings = useMemo<RuleBooking[]>(
+    () =>
+      placed
+        .filter((row) => row.scheduleId !== null)
+        .map((row) => ({
+          id: row.scheduleId ?? row.key,
+          weekday: row.weekday,
+          startMinutes: row.startMinutes,
+          durationMinutes: row.durationMinutes,
+          laneIds: row.laneIds,
+          poolId:
+            lanes.find((lane) => lane.id === row.laneIds[0])?.poolId ?? null,
+          instructorId: row.instructorId,
+          levelId: row.levelId,
+          headcount: row.headcount,
+          cancelled: row.cancelled,
+          name: row.name,
+        })),
+    [placed, lanes],
+  );
+
+  const ruleContext = useMemo<RuleContext>(
+    () => ({
+      lanes: ruleLanes,
+      bookings: ruleBookings,
+      laneLevelCapacity,
+      openWeekdays: WEEKDAYS.filter((day) => openOn(day)),
+      closures,
+      maxConcurrentGroupsPerInstructor: maxConcurrentGroups,
+    }),
+    // `openOn` closes over `facility`, which is why that is the dependency.
+    [ruleLanes, ruleBookings, laneLevelCapacity, facility, closures, maxConcurrentGroups],
+  );
+
+  /** The block being dragged, in rule terms — null unless a drag is in flight. */
+  const draggingSubject = useMemo<RuleBooking | null>(() => {
+    if (dragging === null || !dragging.startsWith('slot:')) return null;
+    const id = dragging.slice('slot:'.length);
+    return ruleBookings.find((booking) => booking.id === id) ?? null;
+  }, [dragging, ruleBookings]);
+
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className="flex flex-col gap-4">
@@ -1193,6 +1273,8 @@ export function ScheduleBoard({
               density={prefs.density}
               showPoolName={poolIds.length > 1}
               onSpan={spanBy}
+              ruleContext={ruleContext}
+              draggingSubject={draggingSubject}
             />
 
             {/*
@@ -1226,7 +1308,9 @@ export function ScheduleBoard({
                 rowRem={rowRem}
                 density={prefs.density}
                 showPoolName={poolIds.length > 1}
-              onSpan={spanBy}
+                onSpan={spanBy}
+                ruleContext={ruleContext}
+                draggingSubject={draggingSubject}
               />
             )}
 
@@ -1245,7 +1329,9 @@ export function ScheduleBoard({
                 rowRem={rowRem}
                 density={prefs.density}
                 showPoolName={poolIds.length > 1}
-              onSpan={spanBy}
+                onSpan={spanBy}
+                ruleContext={ruleContext}
+                draggingSubject={draggingSubject}
               />
             )}
 
@@ -1647,6 +1733,8 @@ function SlotGrid({
   density,
   showPoolName,
   onSpan,
+  ruleContext,
+  draggingSubject,
 }: {
   /** Null for the weekday block, which needs no heading of its own. */
   heading: string | null;
@@ -1664,6 +1752,9 @@ function SlotGrid({
   showPoolName: boolean;
   /** `Shift`+arrow on a focused block. The keyboard's edge handle. */
   onSpan: (booking: Placed, delta: number) => void;
+  ruleContext: RuleContext;
+  /** The block in flight, so every cell can say what dropping it here would do. */
+  draggingSubject: RuleBooking | null;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -1815,6 +1906,8 @@ function SlotGrid({
                             canManage={canManage}
                             dayName={dayNames[day] ?? String(day)}
                             onSpan={onSpan}
+                            ruleContext={ruleContext}
+                            draggingSubject={draggingSubject}
                           />
                         );
                       })}
@@ -1846,6 +1939,8 @@ function Cell({
   canManage,
   dayName,
   onSpan,
+  ruleContext,
+  draggingSubject,
 }: {
   day: number;
   slot: GridSlot;
@@ -1862,8 +1957,34 @@ function Cell({
   canManage: boolean;
   dayName: string;
   onSpan: (booking: Placed, delta: number) => void;
+  ruleContext: RuleContext;
+  draggingSubject: RuleBooking | null;
 }): React.ReactElement {
   const t = useTranslations();
+
+  /*
+   * What dropping the block in flight here would do — AC8.
+   *
+   * Computed while the pointer is still moving, so the answer arrives *before*
+   * release rather than as a refusal afterwards. Only during a drag: evaluating
+   * 420 cells on every render of a static grid would be work nobody sees.
+   */
+  const preview = useMemo<Reason[]>(() => {
+    if (draggingSubject === null) return [];
+    return evaluate(
+      draggingSubject,
+      {
+        weekday: day,
+        startMinutes: toMinutes(slot.startTime),
+        durationMinutes: draggingSubject.durationMinutes,
+        laneIds: [lane.id],
+      },
+      ruleContext,
+    );
+  }, [draggingSubject, day, slot.startTime, lane.id, ruleContext]);
+
+  const verdict: Verdict = draggingSubject === null ? 'ok' : verdictOf(preview);
+  const headline = preview[0];
 
   const { setNodeRef, isOver } = useDroppable({
     // `(day, slot, lane)` — the change this ticket is about. The lane is carried
@@ -1897,11 +2018,46 @@ function Cell({
         'relative border-l border-border px-0.5',
         firstOfSlot ? 'border-t-2 border-t-border' : 'border-t border-border/40',
         !open && 'bg-surface-muted/60',
-        dragging && open && booking === undefined && 'bg-primary/5',
-        isOver && 'bg-primary/25 outline outline-2 outline-primary',
+        dragging && open && booking === undefined && verdict === 'ok' && 'bg-primary/5',
+        /*
+          Three states, and never colour alone — AC8. A tint says "something",
+          the icon says which, and the title says why in words. The blocked
+          pattern is a diagonal hatch as well as a tint, so the two states are
+          distinguishable without relying on hue at all.
+        */
+        dragging && verdict === 'warn' && 'bg-warning/20',
+        dragging && verdict === 'block' && 'bg-danger/20',
+        isOver && verdict === 'ok' && 'bg-primary/25 outline outline-2 outline-primary',
+        isOver && verdict === 'warn' && 'outline outline-2 outline-warning',
+        isOver && verdict === 'block' && 'outline outline-2 outline-danger',
       )}
+      /*
+        The reason as text, on hover and on focus. "Pista 3 já tem Infantis" is
+        actionable; a red cell is not — and a title is what a pointer user reads
+        without having to drop first to find out.
+      */
+      title={
+        headline === undefined
+          ? undefined
+          : t(`grid.reason.${headline.code}`, headline.detail as Record<string, string>)
+      }
       style={{ gridColumn: column, gridRow: row, height: `${rowRem}rem` }}
     >
+      {/*
+        The icon, for the case where the tint is invisible — a colour-blind
+        reader, a dim screen, a printed page. It sits in the corner so it never
+        covers a block already in the cell.
+      */}
+      {dragging && verdict !== 'ok' && (
+        <span className="pointer-events-none absolute right-0 top-0 z-20">
+          {verdict === 'block' ? (
+            <Ban aria-hidden className="size-3 text-danger" />
+          ) : (
+            <AlertTriangle aria-hidden className="size-3 text-warning" />
+          )}
+        </span>
+      )}
+
       {booking !== undefined && (
         /*
          * Out of flow, covering the lane rows this booking actually occupies —
@@ -1920,6 +2076,25 @@ function Cell({
             canManage={canManage}
             density={density}
             onSpan={onSpan}
+            /*
+              Bookings, not lanes — the thing POOLSE-51 names as most likely to
+              be got wrong. An instructor on one three-lane booking is running
+              one group, and badging that ×3 would tell a club its best-staffed
+              hour is its worst.
+            */
+            concurrency={
+              booking.instructorId === null
+                ? 1
+                : concurrentGroups(
+                    booking.instructorId,
+                    {
+                      weekday: booking.weekday,
+                      startMinutes: booking.startMinutes,
+                      durationMinutes: booking.durationMinutes,
+                    },
+                    ruleContext.bookings,
+                  )
+            }
           />
         </div>
       )}
@@ -1949,11 +2124,14 @@ function BookingChip({
   canManage,
   density,
   onSpan,
+  concurrency,
 }: {
   booking: Placed;
   canManage: boolean;
   density: Density;
   onSpan: (booking: Placed, delta: number) => void;
+  /** How many groups this instructor is running at this moment. 1 is silent. */
+  concurrency: number;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -2025,16 +2203,36 @@ function BookingChip({
           Zero is a real answer — a group nobody has sized yet — so it prints as
           0 rather than vanishing.
         */}
-        {booking.headcount !== null && (
-          <span
-            className={cn(
-              'shrink-0 rounded-sm border border-border px-1 tabular-nums',
-              compact ? 'text-[0.6rem]' : 'text-[0.65rem]',
-            )}
-          >
-            {booking.headcount}
-          </span>
-        )}
+        <span className="flex shrink-0 items-center gap-0.5">
+          {/*
+            ×3 — how many groups this instructor has in the water right now.
+            Only above one, because ×1 on every block is noise that hides the
+            three that matter. Allowed and badged, never blocked: this is the
+            club's ordinary Tuesday.
+          */}
+          {concurrency > 1 && (
+            <span
+              title={t('grid.concurrentGroups', { count: concurrency })}
+              className={cn(
+                'rounded-sm border border-primary/50 px-1 tabular-nums text-primary',
+                compact ? 'text-[0.6rem]' : 'text-[0.65rem]',
+              )}
+            >
+              ×{concurrency}
+            </span>
+          )}
+
+          {booking.headcount !== null && (
+            <span
+              className={cn(
+                'rounded-sm border border-border px-1 tabular-nums',
+                compact ? 'text-[0.6rem]' : 'text-[0.65rem]',
+              )}
+            >
+              {booking.headcount}
+            </span>
+          )}
+        </span>
       </div>
 
       {!compact && (

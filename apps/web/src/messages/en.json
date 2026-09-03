@@ -1786,6 +1786,17 @@
     "laneTaken": "That lane is already taken at that time.",
     "alreadyThere": "That class already runs on that day at that time.",
     "dayClosed": "The site is closed that day.",
-    "dropRefused": "That could not be placed here."
+    "dropRefused": "That could not be placed here.",
+    "concurrentGroups": "{count} groups at once with this instructor",
+    "reason": {
+      "laneTaken": "{lane} already has {holder}",
+      "instructorElsewhere": "The instructor is with {holder} in another pool",
+      "lanesNotContiguous": "Lanes must be next to each other",
+      "dayClosed": "Closed: {reason}",
+      "outsideHours": "Outside opening hours",
+      "overCapacity": "{lane}: {headcount} for {capacity} places",
+      "overConcurrency": "{count} groups at once, above the limit of {limit}",
+      "weekdayDisabled": "This weekday is switched off"
+    }
   }
 }
