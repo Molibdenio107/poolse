@@ -1752,9 +1752,6 @@
   "grid": {
     "time": "Horário",
     "lane": "Pista",
-    "weekdays": "Grelha de dias úteis",
-    "saturday": "Sábado",
-    "sunday": "Domingo",
     "pool": "Tanque",
     "allPools": "Todos os tanques",
     "density": "Densidade",
@@ -1802,7 +1799,8 @@
     "noLane": "Sem pista",
     "durationHandle": "Arraste para alterar a duração da aula",
     "resizingLanes": "{name} — a definir pistas",
-    "resizingLength": "{name} — a definir a duração"
+    "resizingLength": "{name} — a definir a duração",
+    "wholeWeek": "Grelha semanal, por pista"
   },
   "partnerClasses": {
     "title": "Parcerias",

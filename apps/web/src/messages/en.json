@@ -1752,9 +1752,6 @@
   "grid": {
     "time": "Time",
     "lane": "Lane",
-    "weekdays": "Weekday grid",
-    "saturday": "Saturday",
-    "sunday": "Sunday",
     "pool": "Pool",
     "allPools": "All pools",
     "density": "Density",
@@ -1802,7 +1799,8 @@
     "noLane": "No lane",
     "durationHandle": "Drag to change how long the class runs",
     "resizingLanes": "{name} — setting lanes",
-    "resizingLength": "{name} — setting length"
+    "resizingLength": "{name} — setting length",
+    "wholeWeek": "Weekly grid, by lane"
   },
   "partnerClasses": {
     "title": "Partnerships",

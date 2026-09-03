@@ -30,6 +30,7 @@ import {
 } from '@poolse/rules';
 import type {
   ClassGroup,
+  DayGroup,
   FacilityDay,
   GridBooking,
   GridLane,
@@ -93,8 +94,22 @@ const FALLBACK_DURATION = 45;
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
-/** The weekday block is 2ª–6ª; Saturday and Sunday have their own slots. */
-const WEEKDAY_DAYS = [1, 2, 3, 4, 5] as const;
+/**
+ * Which set of slots a day draws from — POOLSE-44.
+ *
+ * Saturday and Sunday have their own rows because a club that opens at 07:30 on
+ * a Saturday and 06:30 on a Tuesday has to be able to say so. That is why the
+ * weekend used to be a separate grid: not width, but a different set of rows.
+ *
+ * One grid handles it by making a *row* a start time rather than a slot, and
+ * letting each day answer for itself whether it has a slot at that time. A
+ * Saturday-only 07:30 is one row where the weekdays are simply blank.
+ */
+function groupOf(weekday: number): DayGroup {
+  if (weekday === 6) return 'saturday';
+  if (weekday === 7) return 'sunday';
+  return 'weekday';
+}
 
 /** Rail widths, in rem. Shared by the sticky offsets and the column template. */
 const TIME_COL = 3.75;
@@ -776,16 +791,6 @@ export function ScheduleBoard({
     [visible, shownDays],
   );
 
-  const weekdaySlots = useMemo(
-    () => slots.filter((slot) => slot.dayGroup === 'weekday'),
-    [slots],
-  );
-  const saturdaySlots = useMemo(
-    () => slots.filter((slot) => slot.dayGroup === 'saturday'),
-    [slots],
-  );
-  const sundaySlots = useMemo(() => slots.filter((slot) => slot.dayGroup === 'sunday'), [slots]);
-
   /*
    * Only the days the club actually opens.
    *
@@ -799,7 +804,6 @@ export function ScheduleBoard({
    * no longer draws is listed underneath with the bookings that match no slot.
    * Nothing disappears; it just stops taking up a fifth of the screen.
    */
-  const weekdayDays = WEEKDAY_DAYS.filter((day) => shownDays.includes(day));
 
 
   const sensors = useSensors(
@@ -1459,8 +1463,8 @@ export function ScheduleBoard({
 
             <SlotGrid
               heading={null}
-              slots={weekdaySlots}
-              days={weekdayDays}
+              slots={slots}
+              days={shownDays}
               lanes={shownLanes}
               placed={visible}
               dayNames={dayNames}
@@ -1476,66 +1480,6 @@ export function ScheduleBoard({
               ruleContext={ruleContext}
               draggingSubject={draggingSubject}
             />
-
-            {/*
-              The weekend is its own block, stacked under the weekday one.
-
-              **Provisional, and the ticket asked for a real render.** The
-              arithmetic says stacked: at 1280px, side by side gives each grid
-              about 34rem, and once two sticky rails (8.25rem each) are paid for
-              twice, a five-day block is left with day columns under 5rem —
-              narrower than "Hidroterapia". Stacked, both keep full-width columns
-              and the rails are paid for once. The reference sheet puts them
-              alongside because paper is 42cm wide and a laptop is not.
-
-              That is a calculation, not a measurement. AC2 wants the choice made
-              from a real render at 1280px, so it stays provisional until one is
-              looked at — if adjacent does fit, this becomes two blocks in a flex
-              row and nothing else changes.
-            */}
-            {saturdaySlots.length > 0 && openOn(6) && (
-              <SlotGrid
-                heading={t('grid.saturday')}
-                slots={saturdaySlots}
-                days={[6]}
-                lanes={shownLanes}
-                placed={visible}
-                dayNames={dayNames}
-                closedOn={closedOn}
-                openOn={openOn}
-                dragging={dragging !== null}
-                canManage={canManage}
-                rowRem={rowRem}
-                density={prefs.density}
-                showPoolName={poolIds.length > 1}
-                onSpan={spanBy}
-                onResize={resizeBy}
-                ruleContext={ruleContext}
-                draggingSubject={draggingSubject}
-              />
-            )}
-
-            {sundaySlots.length > 0 && openOn(7) && (
-              <SlotGrid
-                heading={t('grid.sunday')}
-                slots={sundaySlots}
-                days={[7]}
-                lanes={shownLanes}
-                placed={visible}
-                dayNames={dayNames}
-                closedOn={closedOn}
-                openOn={openOn}
-                dragging={dragging !== null}
-                canManage={canManage}
-                rowRem={rowRem}
-                density={prefs.density}
-                showPoolName={poolIds.length > 1}
-                onSpan={spanBy}
-                onResize={resizeBy}
-                ruleContext={ruleContext}
-                draggingSubject={draggingSubject}
-              />
-            )}
 
             {legend.length > 0 && (
               <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-muted">
@@ -1974,6 +1918,29 @@ function SlotGrid({
   /** Where each lane sits in the block, so a chip can span from its first one. */
   const laneIndex = new Map(lanes.map((lane, index) => [lane.id, index]));
 
+  /*
+   * A row is a start time, not a slot — which is what lets one grid hold the
+   * whole week.
+   *
+   * The weekend was a separate grid because its slots differ, and the fix was
+   * never more width: it was to stop assuming every column draws from the same
+   * list. Rows are the union of the start times the shown days offer between
+   * them; a day with no slot at that time gets a cell that says so instead of a
+   * droppable one.
+   */
+  const groups = new Set(days.map((day) => groupOf(day)));
+  const times = [
+    ...new Set(
+      slots.filter((slot) => groups.has(slot.dayGroup)).map((slot) => slot.startTime),
+    ),
+  ].sort((a, b) => toMinutes(a) - toMinutes(b));
+
+  /** That day's own slot at this time, if it has one. */
+  const slotAt = (day: number, startTime: string): GridSlot | undefined =>
+    slots.find(
+      (slot) => slot.dayGroup === groupOf(day) && slot.startTime === startTime,
+    );
+
   const columns = `${TIME_COL}rem ${LANE_COL}rem repeat(${days.length}, minmax(6rem, 1fr))`;
 
   /*
@@ -1995,7 +1962,7 @@ function SlotGrid({
           className="grid min-w-max"
           style={{ gridTemplateColumns: columns }}
           role="grid"
-          aria-label={heading ?? t('grid.weekdays')}
+          aria-label={heading ?? t('grid.wholeWeek')}
         >
           {/* Header row: the two rail labels, then the days. */}
           <div
@@ -2035,19 +2002,41 @@ function SlotGrid({
             );
           })}
 
-          {slots.map((slot) => {
+          {times.map((startTime) => {
+            /*
+             * Every slot at this time, across the days on screen. Usually one —
+             * two when a weekday and a Saturday both start at 09:30 and are
+             * therefore the same row of the grid.
+             */
+            const rowSlots = days
+              .map((day) => slotAt(day, startTime))
+              .filter((slot): slot is GridSlot => slot !== undefined);
+
+            const rowSlotIds = new Set(rowSlots.map((slot) => slot.id));
+
             const laneless = placed.filter(
-              (row) => row.slotId === slot.id && row.laneIds.length === 0,
+              (row) => row.slotId !== null && rowSlotIds.has(row.slotId) && row.laneIds.length === 0,
             );
 
-            // Row 1 is the header. Each slot takes its lanes, plus one more row
+            // Row 1 is the header. Each time takes its lanes, plus one more row
             // when something on it has no lane — so the offset is a running
             // total rather than `index * lanes.length`.
             const firstRow = rowStart;
             rowStart += lanes.length + (laneless.length > 0 ? 1 : 0);
 
+            /*
+             * The end time, only when every day that offers this row agrees.
+             *
+             * A Saturday 07:30–08:00 beside a weekday 07:30–08:15 would be one
+             * row with two different ends, and printing one of them would be
+             * the rail quietly lying about the other. Blank is honest; each
+             * block still draws its own real length.
+             */
+            const ends = new Set(rowSlots.map((slot) => slot.endTime));
+            const endTime = ends.size === 1 ? [...ends][0] : null;
+
             return (
-              <Fragment key={slot.id}>
+              <Fragment key={startTime}>
                 {/*
                   The slot's hours, spanning its lanes. A real row span rather
                   than a repeated label: repeating it six times is six times the
@@ -2061,8 +2050,10 @@ function SlotGrid({
                   }}
                 >
                   <span>
-                    {slot.startTime}
-                    <span className="block text-foreground-muted/60">{slot.endTime}</span>
+                    {startTime}
+                    {endTime !== null && (
+                      <span className="block text-foreground-muted/60">{endTime}</span>
+                    )}
                   </span>
                 </div>
 
@@ -2071,7 +2062,7 @@ function SlotGrid({
                   const firstOfSlot = laneOffset === 0;
 
                   return (
-                    <Fragment key={`${slot.id}:${lane.id}`}>
+                    <Fragment key={`${startTime}:${lane.id}`}>
                       <div
                         className={cn(
                           'sticky z-10 flex items-center gap-1 border-l border-border bg-surface px-2 text-[0.7rem] text-foreground-muted',
@@ -2091,6 +2082,38 @@ function SlotGrid({
 
                       {days.map((day, dayIndex) => {
                         /*
+                         * This day's own slot at this row's time. Absent means
+                         * the club does not run anything at 07:30 on a Tuesday
+                         * even though it does on a Saturday — a real gap, drawn
+                         * as unavailable rather than as an empty target.
+                         */
+                        const slot = slotAt(day, startTime);
+
+                        if (slot === undefined) {
+                          return (
+                            <div
+                              key={`${day}:${startTime}:${lane.id}`}
+                              aria-hidden
+                              className={cn(
+                                'border-l border-border bg-surface-muted/70',
+                                firstOfSlot ? 'border-t-2' : 'border-t border-border/40',
+                              )}
+                              style={{
+                                gridColumn: 3 + dayIndex,
+                                gridRow: row,
+                                height: `${rowRem}rem`,
+                              }}
+                            />
+                          );
+                        }
+
+                        // Only the slots this day actually offers, or a booking
+                        // would be judged against a Saturday row on a Tuesday.
+                        const daySlots = slots.filter(
+                          (candidate) => candidate.dayGroup === groupOf(day),
+                        );
+
+                        /*
                          * A booking is drawn in this cell if its lane starts
                          * here and its *time* reaches this slot — not only if
                          * `slotId` names it. That is what lets a 90-minute class
@@ -2104,7 +2127,7 @@ function SlotGrid({
                             slotsCovered(
                               candidate.startMinutes,
                               candidate.durationMinutes,
-                              slots,
+                              daySlots,
                             ).some((covered) => covered.id === slot.id),
                         );
 
@@ -2122,7 +2145,7 @@ function SlotGrid({
                          */
                         const continues =
                           here !== undefined &&
-                          slotsCovered(here.startMinutes, here.durationMinutes, slots)[0]?.id !==
+                          slotsCovered(here.startMinutes, here.durationMinutes, daySlots)[0]?.id !==
                             slot.id;
 
                         /*
@@ -2142,7 +2165,7 @@ function SlotGrid({
 
                         return (
                           <Cell
-                            key={`${day}:${slot.id}:${lane.id}`}
+                            key={`${day}:${startTime}:${lane.id}`}
                             day={day}
                             slot={slot}
                             lane={lane}
@@ -2186,7 +2209,7 @@ function SlotGrid({
                 */}
                 {laneless.length > 0 && (
                   <NoLaneRow
-                    slot={slot}
+                    startTime={startTime}
                     row={firstRow + lanes.length}
                     days={days}
                     placed={laneless}
@@ -2215,7 +2238,7 @@ function SlotGrid({
  * and hands over, and does not pretend to be a target.
  */
 function NoLaneRow({
-  slot,
+  startTime,
   row,
   days,
   placed,
@@ -2225,7 +2248,7 @@ function NoLaneRow({
   onSpan,
   onResize,
 }: {
-  slot: GridSlot;
+  startTime: string;
   row: number;
   days: readonly number[];
   placed: Placed[];
@@ -2252,18 +2275,18 @@ function NoLaneRow({
 
         return (
           <div
-            key={`${day}:${slot.id}:nolane`}
+            key={`${day}:${startTime}:nolane`}
             role="gridcell"
             aria-label={
               here === undefined
                 ? t('grid.emptyCell', {
                     day: String(day),
-                    time: slot.startTime,
+                    time: startTime,
                     lane: t('grid.noLane'),
                   })
                 : t('grid.filledCell', {
                     day: String(day),
-                    time: slot.startTime,
+                    time: startTime,
                     lane: t('grid.noLane'),
                     what: here.name,
                   })
