@@ -55,6 +55,7 @@ work being awkward:
 | Ownership-transfer candidates | Every admin — a picker must be complete, or it tells the owner their colleague is not an admin. |
 | A form's dropdown options | Everything the form can express. A half-filled `<select>` is a form that silently cannot say what somebody means. |
 | One student's record history | One swimmer's career, and the chart above it needs every point. |
+| A partner's groups, contacts and its Horário panel | One partnership. A school has as many classes as it has classes, and paging them would hide 6B from somebody looking for it — POOLSE-47, criterion 11. The **partner list itself is paginated**: that one grows as the club sells more water. |
 
 **An exemption is about the control, never about the fetch.** Encerramentos is exempt from
 paging and still takes `?year`: the grid shows one year, so the query returns one year. A

@@ -681,11 +681,26 @@ function parseStudent(body: Record<string, unknown>, majority: number): StudentI
           fields: { guardianName: 'students.guardianNameRequired' },
         });
       }
-      if (first.phone === null && first.email === null) {
+      /*
+       * A NIF **or** an email — the same pair `guardian_needs_a_key` demands,
+       * and not the pair this used to check.
+       *
+       * It asked for a phone number or an email, which let a guardian carrying
+       * only a telephone number through: the trigger then refused the insert
+       * during the commit and the whole save came back as a 500. The rule the
+       * database enforces is about being *dedupable* — POOLSE-17, guardians are
+       * where duplicate people come from — and a phone number does not dedupe
+       * anybody. So it has to be asked for here, where the form can point at the
+       * field, rather than discovered at the constraint.
+       *
+       * The import already refuses this row on its preview. This is the same
+       * rule on the create form, which is where it was still missing.
+       */
+      if (first.taxNumber === null && first.email === null) {
         throw new BadRequestException({
           code: 'guardian_required',
-          message: 'A guardian needs a phone number or an email address',
-          fields: { guardianPhone: 'students.guardianContactRequired' },
+          message: 'A guardian needs a NIF or an email address',
+          fields: { guardianTaxNumber: 'students.guardianKeyRequired' },
         });
       }
     }

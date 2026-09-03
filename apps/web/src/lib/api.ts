@@ -1613,3 +1613,121 @@ export interface StaffRecord {
   /** The Alunos side of the same Person, where they are also a student. */
   studentId: string | null;
 }
+
+/**
+ * Parcerias — POOLSE-47.
+ *
+ * `unitPrice` and `vatRate` are **decimal strings**, and stay strings the whole
+ * way to the screen. A lane-hour is `numeric(12,6)` in the database precisely
+ * because €14.375 is not a cents figure, and parsing it into a JavaScript number
+ * here would put the rounding back that the column type exists to prevent. They
+ * are formatted for display by the locale, never by arithmetic.
+ *
+ * `contractedCents` is different and is money: an integer, minor units, rounded
+ * once in SQL where the numeric still had its six decimal places.
+ */
+export type PartnerType =
+  | 'escola'
+  | 'agrupamento'
+  | 'ipss_misericordia'
+  | 'jardim_infancia'
+  | 'clube'
+  | 'camara'
+  | 'empresa'
+  | 'outro';
+
+export type PartnerStatus = 'ativa' | 'inativa';
+
+export type BillingModel =
+  | 'por_hora_pista'
+  | 'por_bloco'
+  | 'por_participante'
+  | 'mensal_fixo';
+
+/** One row of the partner list, derived columns computed in SQL. */
+export interface PartnerRow {
+  id: string;
+  name: string;
+  type: PartnerType;
+  status: PartnerStatus;
+  /** Hex, and never the only cue — the row always carries the name as text. */
+  color: string;
+  groupCount: number;
+  /** Hours a week in the published season. Zero, never blank. */
+  weeklyHours: number;
+  weeklyLaneHours: number;
+  contractedCents: number | null;
+  billingModel: BillingModel | null;
+}
+
+export interface PartnerList {
+  items: PartnerRow[];
+  total: number;
+  page: number;
+  limit: number;
+  canManage: boolean;
+}
+
+export interface PartnerContact {
+  id: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+export interface PartnerAgreement {
+  id: string;
+  seasonId: string | null;
+  startDate: string;
+  endDate: string | null;
+  billingModel: BillingModel;
+  /** Decimal string. Never parsed — see the note above. */
+  unitPrice: string;
+  /** A fraction as a string: '0.2300' is 23%. Null is isento. */
+  vatRate: string | null;
+  paymentPeriod: string | null;
+  notes: string | null;
+  /** Always null until file storage lands; the control is disabled, not hidden. */
+  documentKey: string | null;
+}
+
+export interface PartnerGroup {
+  id: string;
+  name: string;
+  participantCount: number;
+  levelId: string | null;
+  levelName: string | null;
+  bringsOwnInstructor: boolean;
+  ownInstructorName: string | null;
+  tag: string | null;
+  notes: string | null;
+}
+
+export interface PartnerBooking {
+  id: string;
+  groupName: string;
+  /** ISO weekday, Monday 1 … Sunday 7. */
+  weekday: number;
+  startTime: string;
+  durationMinutes: number;
+  poolName: string | null;
+  laneNames: string[];
+}
+
+export interface PartnerDetail {
+  id: string;
+  facilityId: string;
+  name: string;
+  type: PartnerType;
+  status: PartnerStatus;
+  color: string;
+  nif: string | null;
+  address: string | null;
+  notes: string | null;
+  contacts: PartnerContact[];
+  agreement: PartnerAgreement | null;
+  groups: PartnerGroup[];
+  bookings: PartnerBooking[];
+  canManage: boolean;
+}

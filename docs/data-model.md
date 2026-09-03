@@ -1465,6 +1465,102 @@ import_row_error
 `column_mapping` is stored so a repeat import from the same source reuses the mapping the
 operator already corrected — that is most of the value of the feature.
 
+### Parcerias — POOLSE-47
+
+A municipal pool sells most of its water in blocks to organisations rather than to families.
+The reference club's whole morning is a secondary school booked per class, a Misericórdia
+doing hydrotherapy, a nursery and an under-16 handball squad — none of whom has a single
+student record, and none of whom Poolse could represent before this.
+
+```
+partner
+  id, organization_id, facility_id, name, type, nif, address, notes,
+  status ('ativa'|'inativa'), color, archived_at
+  unique (organization_id, id)                       -- what the children key to
+  partial unique (organization_id, facility_id, lower(strip_accents(name)))
+
+partner_contact
+  id, organization_id, partner_id, name, role, email, phone, archived_at
+  check: email or phone present
+
+partner_agreement
+  id, organization_id, partner_id, season_id?, start_date, end_date?,
+  billing_model ('por_hora_pista'|'por_bloco'|'por_participante'|'mensal_fixo'),
+  unit_price numeric(12,6), vat_rate numeric(5,4)?, payment_period, notes,
+  document_key?, archived_at
+
+partner_group
+  id, organization_id, partner_id, name, participant_count, level_id?,
+  brings_own_instructor, own_instructor_name?, tag?, notes, archived_at
+  partial unique (organization_id, partner_id, lower(strip_accents(name)))
+
+partner_group_member
+  id, organization_id, partner_group_id, full_name, notes, archived_at
+```
+
+**The group is the bookable thing, not the partner.** `class_schedule.partner_group_id`
+references `partner_group`, so `6A` goes on the lane grid and `ES D. Dinis` never does. A
+school books thirty class-groups across a week, each with its own size, level and instructor
+arrangement; booking "the school" would be one cell meaning thirty different things.
+
+**A partner belongs to one facility.** A school using two of the club's pools is two partner
+rows — considered and accepted, because the agreement, the price and the contact are all per
+building, and one partner spanning sites would turn every one of those into a list.
+
+**`unit_price` is `numeric(12,6)`, not cents, and this is the case the rule exists for.** A
+lane-hour at €14.375 stored as 1437 cents is wrong by half a cent an hour — nothing, until it
+is multiplied by six lanes by thirty weeks and becomes real money in the figure whose whole
+job is to be the number the club invoices. The contracted *total* is money and is rounded to
+integer cents once, in SQL, at the end.
+
+**`vat_rate` is null for isento, and `fee_plan` still has no rate column.** That is not an
+inconsistency. A family's mensalidade is advertised gross, Art. 9.º CIVA exempts most sports
+tuition, and a rate nobody maintains is a rate something eventually trusts — so `fee_plan`
+deliberately has none. A partnership is the case that reasoning does not cover: it invoices an
+*organisation* against a NIF (`empresa` is one of the eight types), where the exemption often
+does not apply, and the rate is a negotiated term on a signed contract, so somebody does
+maintain it. Stored as a fraction — 0.2300 is 23%.
+
+**`status` and `archived_at` are two different retirements.** `inativa` means "not currently
+selling them water": it hides the partner from the pickers and keeps every booking it ever
+had, because a partnership that lapsed in June still explains last season's grid.
+`archived_at` means the row was a mistake, and it is refused while any group is still booked.
+
+**`document_key` is modelled and written by nothing.** The signed-contract control is present,
+styled and visibly disabled with the reason named, exactly as the logo, the pool photo and the
+student photograph are. One storage decision unblocks all four.
+
+`partner_group_member` is the nominal roster — names only, no accounts. Modelled so that
+turning it on later is a UI change rather than a migration during a support call, and shipped
+with the control disabled because a club may simply not hold the list.
+
+### Which season a booking belongs to — POOLSE-47
+
+A gap POOLSE-46 left, closed by the same migration.
+
+A turma booking's season is its turma's — `class_group.season_id`, NOT NULL since POOLSE-07. A
+parceria booking has no turma, so until this it had no season at all, and "hours a week in the
+published season" had nothing to compute against.
+
+```
+class_schedule.season_id uuid?     -- null for a turma; required for a parceria
+```
+
+> the season of a booking := `coalesce(class_schedule.season_id, class_group.season_id)`
+
+**Null for a turma and required for a parceria**, enforced by a CHECK. That is the one
+arrangement that does not create a second answer to a question which already has one: a turma
+booking carrying its own season could disagree with its class_group's, and nothing could say
+which one occupancy should believe.
+
+**An evento or a manutenção may carry one, or may not.** A maintenance window in the August
+gap between two seasons belongs to neither, and demanding a season would make the club attach
+a shutdown to a year it does not fall in. A gala inside the year is free to name its own.
+
+Deriving the season from `slot_id` was the alternative and does not work: a booking matching no
+slot renders "fora da grelha" with a null slot, and those are exactly the bookings a club
+improvises mid-season.
+
 ## Module 2 — maintenance (shape)
 
 ```

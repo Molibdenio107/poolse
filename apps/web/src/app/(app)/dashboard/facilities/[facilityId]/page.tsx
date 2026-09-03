@@ -18,6 +18,8 @@ import { HoursPanel } from './hours-panel';
 import { SlotsPanel } from './slots-panel';
 import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
+import { PartnersPanel } from './partners-panel';
+import { listPartners } from './partners.actions';
 import { PageShell } from '@/components/page-shell';
 
 /**
@@ -90,6 +92,15 @@ export default async function FacilityPage({
   const slots = await apiFetch<FacilitySlots>(`/facilities/${facilityId}/slots`).catch(
     () => null,
   );
+
+  /*
+   * Parcerias — POOLSE-47.
+   *
+   * Best-effort like the grid above it: a club that sells no water in blocks has
+   * an empty panel, and an endpoint that refuses must not cost the site page.
+   * The page number rides in the query string so the list is linkable.
+   */
+  const partners = await listPartners(facilityId, 1);
 
   const prices = await listPrices(facilityId);
   const register =
@@ -257,6 +268,15 @@ export default async function FacilityPage({
               billing={prices.billing}
               levels={register?.levels ?? []}
               canManage={register?.canManage ?? false}
+            />
+          )}
+
+          {partners !== null && (
+            <PartnersPanel
+              facilityId={facilityId}
+              partners={partners.items}
+              total={partners.total}
+              canManage={partners.canManage}
             />
           )}
 

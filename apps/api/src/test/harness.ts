@@ -94,6 +94,18 @@ const TENANT_TABLES = [
   'booking_lane',
   'class_schedule',
   'class_group',
+  /*
+   * The parceria tables — POOLSE-47. After `class_schedule`, because a booking
+   * references a partner group and the reference is not cascaded; before
+   * `student_level` and `season`, which a group and an agreement point at.
+   *
+   * Roster names first: they hang off the group and nothing hangs off them.
+   */
+  'partner_group_member',
+  'partner_group',
+  'partner_agreement',
+  'partner_contact',
+  'partner',
   'skill',
   'student',
   'student_level',
