@@ -318,3 +318,93 @@ export async function moveOccurrenceAction(
   revalidatePath('/dashboard/classes');
   return { ok: true };
 }
+
+/**
+ * A booking moved on the lane grid — POOLSE-50.
+ *
+ * The sibling of `moveSlotAction`, and it replaces it wherever the grid is
+ * doing the moving. Two differences, both the point of the ticket: it carries
+ * the **lanes** the block landed on, and it works for any subject rather than
+ * only for a turma's pattern — a school's booking is moved by exactly the same
+ * gesture as a class.
+ *
+ * Move, span and the keyboard versions of both are all this one call, because
+ * the client already knows where the block ended up and three endpoints for one
+ * outcome is three places for the rules to drift apart.
+ */
+export async function moveBookingAction(
+  organizationId: string,
+  scheduleId: string,
+  target: { weekday: number; slotId: string | null; startTime: string | null; laneIds: string[] },
+): Promise<{ ok: true } | { ok: false; errorKey: string; detail?: string }> {
+  try {
+    await apiPost(`/bookings/${scheduleId}/move`, target, { organizationId });
+  } catch (error) {
+    return bookingFailure(error);
+  }
+
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/classes');
+  return { ok: true };
+}
+
+/**
+ * Another one of these, on another day — the season-building gesture.
+ *
+ * The reference schedule repeats the same block on 2ª, 4ª and 6ª, so this is the
+ * most-used action on the grid and not an afterthought. The copy carries the
+ * subject, instructor, category and lane span; the API deliberately leaves the
+ * notes behind, because a note names a date or a reason.
+ */
+export async function duplicateBookingAction(
+  organizationId: string,
+  scheduleId: string,
+  target: { weekday: number; slotId: string | null; startTime: string | null; laneIds: string[] },
+): Promise<{ ok: true } | { ok: false; errorKey: string; detail?: string }> {
+  try {
+    await apiPost(`/bookings/${scheduleId}/duplicate`, target, { organizationId });
+  } catch (error) {
+    return bookingFailure(error);
+  }
+
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/classes');
+  return { ok: true };
+}
+
+/**
+ * A refusal, turned into something the grid can say out loud.
+ *
+ * The operator is mid-gesture with a block under their hand; "conflict" sends
+ * them hunting across six lanes for what went wrong. Every one of these names
+ * the thing in the way — and `detail` carries the lane and the booking holding
+ * it, so the message can be a sentence rather than a category.
+ */
+function bookingFailure(error: unknown): { ok: false; errorKey: string; detail?: string } {
+  if (error instanceof ApiError && error.status === 409) {
+    const body = (error.details ?? {}) as {
+      message?: string;
+      lane?: string;
+      holder?: string;
+    };
+
+    if (body.message === 'lanesNotContiguous') {
+      return { ok: false, errorKey: 'grid.lanesNotContiguous' };
+    }
+    if (body.message === 'laneTaken') {
+      return {
+        ok: false,
+        errorKey: 'grid.laneTaken',
+        detail: [body.lane, body.holder].filter(Boolean).join(' · '),
+      };
+    }
+    if (body.message === 'alreadyThere') {
+      return { ok: false, errorKey: 'grid.alreadyThere' };
+    }
+    return { ok: false, errorKey: 'grid.dropRefused' };
+  }
+
+  // The facility-hours trigger, most often: a closed day, or a booking that
+  // would run past closing.
+  return { ok: false, errorKey: 'grid.dropRefused' };
+}

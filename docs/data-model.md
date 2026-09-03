@@ -1595,6 +1595,43 @@ Deriving the season from `slot_id` was the alternative and does not work: a book
 slot renders "fora da grelha" with a null slot, and those are exactly the bookings a club
 improvises mid-season.
 
+### Writing from the lane grid — POOLSE-50
+
+Again no new tables — the gestures write `class_schedule` and `booking_lane`.
+
+`POST /bookings/:scheduleId/move` and `POST /bookings/:scheduleId/duplicate`, both taking the
+same target: `{ weekday, slotId, startTime, laneIds }`.
+
+**One target shape for every gesture.** Move, lane-span, and the keyboard versions of both are
+the same write — the client sends where the block ended up. Three endpoints for one outcome
+would be three places for the rules to drift, and the web layer mirrors this with a single
+`propose()` that the pointer and the keyboard both call.
+
+**A block takes the length of the row it lands in.** `slotId` wins over `startTime`; the slot's
+own `end_time - start_time` becomes the booking's duration. That is what makes the grid the
+club's grid rather than a backdrop. `startTime` is only accepted when `slotId` is null, which
+is the "fora da grelha" case — accepting both would be two answers to "when".
+
+**Lane spans are contiguous, within one pool.** Lanes 2 and 4 with 3 free between them is not
+a booking a pool can honour. Checked on `lane.position`, refused with `lanesNotContiguous`,
+and refused again at the gesture so the confirm dialog never asks about it.
+
+**Lane collisions are detected by time overlap, not by equal start times.** A 60-minute class
+at 09:00 and a 45-minute one at 09:30 share half an hour of the same lane while agreeing on no
+column at all. The check uses `OVERLAPS`; an equality test would sell the pool twice. The
+refusal names the lane *and* what holds it, because "there is a conflict" sends an operator
+hunting across six lanes.
+
+**A duplicate is one transaction, and copies column by column.** The row and its `booking_lane`
+rows commit together — a copy existing with no lanes looks, on the grid, exactly like a booking
+somebody forgot to place. Columns are listed explicitly rather than `select *`, so a column
+added later is a deliberate decision about whether a copy should carry it. **`notes` is
+deliberately absent**: a note almost always names a date or a reason, and carrying it onto a
+different day restates something no longer true.
+
+A duplicate onto a slot the same turma already occupies hits `class_schedule_slot_uq` and comes
+back as `alreadyThere` — in words, never as a constraint name.
+
 ## Module 2 — maintenance (shape)
 
 ```

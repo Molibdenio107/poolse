@@ -1777,6 +1777,15 @@
     "noInstructor": "Sem professor",
     "externalInstructor": "Professor da entidade",
     "emptyCell": "{day}, {time}, {lane}: livre",
-    "filledCell": "{day}, {time}, {lane}: {what}"
+    "filledCell": "{day}, {time}, {lane}: {what}",
+    "confirmDuplicate": "Duplicar {name} para {day}, {time}? O original fica onde está.",
+    "duplicateNote": "A cópia leva o grupo, o professor, a categoria e as pistas. As notas não vão — costumam referir uma data ou um motivo.",
+    "spanNote": "Ocupa {count} pistas.",
+    "spanHandle": "Arraste para ocupar mais ou menos pistas",
+    "lanesNotContiguous": "As pistas têm de ser seguidas. Não é possível ocupar a 2 e a 4 deixando a 3 livre.",
+    "laneTaken": "Essa pista já está ocupada nesse horário.",
+    "alreadyThere": "Essa turma já corre nesse dia e a essa hora.",
+    "dayClosed": "O local está encerrado nesse dia.",
+    "dropRefused": "Não foi possível colocar aqui."
   }
 }

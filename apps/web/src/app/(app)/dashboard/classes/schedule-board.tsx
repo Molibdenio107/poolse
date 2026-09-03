@@ -26,7 +26,13 @@ import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { slotKey } from '@/lib/slot-key';
 import { cn } from '@/lib/utils';
 import { addDays } from '@/lib/dates';
-import { moveOccurrenceAction, moveSlotAction, placeSlotAction } from './classes.actions';
+import {
+  duplicateBookingAction,
+  moveBookingAction,
+  moveOccurrenceAction,
+  moveSlotAction,
+  placeSlotAction,
+} from './classes.actions';
 
 /**
  * The week: what is happening, and how to change it — POOLSE-49.
@@ -88,6 +94,30 @@ function toMinutes(time: string): number {
 
 function toTime(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+/** Same lanes, same order — used to tell a real move from a drop that went home. */
+function sameLanes(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
+}
+
+/**
+ * Whether a set of lanes is one unbroken run of the grid's own order — AC6.
+ *
+ * Lanes 2 and 4 with 3 free between them is not a booking a pool can honour and
+ * is not something the reference sheet ever does. Refused at the gesture so the
+ * dialog never asks about it; the API refuses it too, because the gesture is a
+ * convenience and the API is the rule.
+ */
+function isContiguous(laneIds: readonly string[], lanes: readonly GridLane[]): boolean {
+  if (laneIds.length < 2) return true;
+
+  const positions = laneIds
+    .map((id) => lanes.findIndex((lane) => lane.id === id))
+    .sort((a, b) => a - b);
+
+  if (positions[0] === -1) return false;
+  return positions.every((position, index) => index === 0 || position === positions[index - 1]! + 1);
 }
 
 /**
@@ -183,19 +213,71 @@ type Proposal =
     }
   | {
       kind: 'move';
-      groupId: string;
+      groupId: string | null;
       scheduleId: string;
       name: string;
       weekday: number;
       startTime: string;
+      slotId: string | null;
+      laneIds: string[];
       from: { weekday: number; startTime: string };
       /** This week's session, when there is a week on screen and one exists. */
       occurrence: { sessionId: string; date: string } | null;
+    }
+  /**
+   * Another one of these, on another day — POOLSE-50.
+   *
+   * Its own kind rather than a flag on `move`, because the dialog has to say
+   * something different and the two are different writes: a move leaves one
+   * block, a duplicate leaves two. A flag would eventually be read wrong in one
+   * of the four places that branch on it.
+   */
+  | {
+      kind: 'duplicate';
+      scheduleId: string;
+      name: string;
+      weekday: number;
+      startTime: string;
+      slotId: string | null;
+      laneIds: string[];
     };
 
 type Optimistic =
   | { kind: 'place'; groupId: string; weekday: number; startMinutes: number; durationMinutes: number }
-  | { kind: 'move'; scheduleId: string; weekday: number; startMinutes: number };
+  | {
+      kind: 'move';
+      scheduleId: string;
+      weekday: number;
+      startMinutes: number;
+      slotId: string | null;
+      laneIds: string[];
+    }
+  /** The copy, drawn where it was dropped while the dialog asks about it. */
+  | {
+      kind: 'duplicate';
+      scheduleId: string;
+      weekday: number;
+      startMinutes: number;
+      slotId: string | null;
+      laneIds: string[];
+    };
+
+/**
+ * Where a block ended up — the one shape every gesture produces.
+ *
+ * Pointer and keyboard both build one of these and hand it to `propose`, which
+ * is the Dev note's "same reducer" and the reason a keyboard move cannot quietly
+ * behave differently from a dragged one. Adding a gesture means adding a caller,
+ * never a second copy of the rules.
+ */
+interface Landing {
+  weekday: number;
+  slotId: string | null;
+  startTime: string;
+  laneIds: string[];
+  /** True when the copy modifier was held **at the drop**, not at the start. */
+  duplicate: boolean;
+}
 
 /**
  * The viewer's own preferences — density, which pool, what is filtered.
@@ -311,6 +393,41 @@ export function ScheduleBoard({
   const facility = facilities.find((site) => site.id === facilityId) ?? facilities[0];
 
   /*
+   * Whether the copy modifier is down **right now** — AC3.
+   *
+   * Read at the drop rather than at the drag start, because that is the natural
+   * gesture: somebody picks a block up, moves it to Thursday, and *then* decides
+   * they meant to copy it. dnd-kit's end event carries the activator event from
+   * the start, so the modifier has to be tracked here instead.
+   *
+   * A ref and not state: nothing renders differently while Alt is held, and
+   * re-rendering the whole grid on a keypress mid-drag is a jank nobody asked
+   * for. The same ref serves the keyboard, where holding Alt and pressing Space
+   * to drop is exactly the same question asked with different fingers.
+   */
+  const altHeld = useRef(false);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      altHeld.current = event.altKey;
+    };
+    // `blur` matters: alt-tabbing away leaves the key logically down forever,
+    // and the next drop would silently duplicate.
+    const onBlur = (): void => {
+      altHeld.current = false;
+    };
+
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKey);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKey);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
+
+  /*
    * Preferences load after mount, not during render.
    *
    * `localStorage` does not exist on the server, and reading it in a `useState`
@@ -409,6 +526,37 @@ export function ScheduleBoard({
       if (target !== undefined) {
         target.weekday = optimistic.weekday;
         target.startMinutes = optimistic.startMinutes;
+        target.slotId = optimistic.slotId;
+        target.laneIds = optimistic.laneIds;
+      }
+    }
+
+    /*
+     * A copy, drawn beside the original while the dialog asks about it.
+     *
+     * The original deliberately stays where it is — that is the whole difference
+     * between duplicating and moving, and seeing both is how somebody knows
+     * which one they are about to agree to.
+     */
+    if (optimistic?.kind === 'duplicate') {
+      const source = rows.find((row) => row.scheduleId === optimistic.scheduleId);
+      if (source !== undefined) {
+        rows.push({
+          ...source,
+          key: `copy:${source.key}`,
+          // No schedule id: it does not exist yet, so it cannot be dragged again
+          // or confused for the row it was copied from.
+          scheduleId: null,
+          weekday: optimistic.weekday,
+          startMinutes: optimistic.startMinutes,
+          slotId: optimistic.slotId,
+          laneIds: optimistic.laneIds,
+          // A note names a date or a reason and does not travel — the API leaves
+          // it behind too, and the overlay has to agree or the copy would appear
+          // to carry something it will not have.
+          note: null,
+          controls: {},
+        });
       }
     }
 
@@ -558,87 +706,242 @@ export function ScheduleBoard({
    * and doing half of it here would mean a drop that moves the time and silently
    * ignores where it landed.
    */
+  /**
+   * Where a block landed, applied — the one reducer both hands call.
+   *
+   * Pointer and keyboard end up here with the same `Landing`, which is what
+   * stops a keyboard move behaving differently from a dragged one. It draws the
+   * block in its new place immediately and then asks; nothing is written until
+   * the dialog is answered.
+   *
+   * **A hard-blocked target is refused here, before the dialog** — AC8. Asking
+   * "move Cadetes to Christmas Day?" and then refusing the answer wastes the
+   * question; the drop simply does not take, and the block stays where it was.
+   */
+  function propose(subject: Placed, landing: Landing): void {
+    if (closedOn(landing.weekday) !== null || !openOn(landing.weekday)) {
+      setError('grid.dayClosed');
+      return;
+    }
+
+    // Non-contiguous is refused at the gesture as well as at the API — AC6. The
+    // API is the rule; this is what stops the dialog asking about a span the
+    // pool cannot honour.
+    if (!isContiguous(landing.laneIds, lanes)) {
+      setError('grid.lanesNotContiguous');
+      return;
+    }
+
+    setError(null);
+    const startMinutes = toMinutes(landing.startTime);
+
+    if (landing.duplicate) {
+      if (subject.scheduleId === null) return;
+      setOptimistic({
+        kind: 'duplicate',
+        scheduleId: subject.scheduleId,
+        weekday: landing.weekday,
+        startMinutes,
+        slotId: landing.slotId,
+        laneIds: landing.laneIds,
+      });
+      setProposal({
+        kind: 'duplicate',
+        scheduleId: subject.scheduleId,
+        name: subject.name,
+        weekday: landing.weekday,
+        startTime: landing.startTime,
+        slotId: landing.slotId,
+        laneIds: landing.laneIds,
+      });
+      return;
+    }
+
+    if (subject.scheduleId === null) return;
+
+    // A drop back where it started is not a move, and asking about it would be
+    // asking whether to do nothing.
+    const sameSpot =
+      subject.weekday === landing.weekday &&
+      subject.slotId === landing.slotId &&
+      sameLanes(subject.laneIds, landing.laneIds);
+    if (sameSpot) return;
+
+    setOptimistic({
+      kind: 'move',
+      scheduleId: subject.scheduleId,
+      weekday: landing.weekday,
+      startMinutes,
+      slotId: landing.slotId,
+      laneIds: landing.laneIds,
+    });
+
+    /*
+     * The occurrence being dragged — this week's, not next week's.
+     *
+     * Only a turma has one: a parceria generates dated sessions but takes no
+     * register, and "only this week" is answered by the session machinery that
+     * belongs to a class group.
+     */
+    const sessionId = subject.controls.sessionId;
+    const occurrence =
+      subject.groupId !== null && weekStart !== undefined && sessionId !== undefined && !subject.cancelled
+        ? { sessionId, date: addDays(weekStart, landing.weekday - 1) }
+        : null;
+
+    setProposal({
+      kind: 'move',
+      groupId: subject.groupId,
+      scheduleId: subject.scheduleId,
+      name: subject.name,
+      weekday: landing.weekday,
+      startTime: landing.startTime,
+      slotId: landing.slotId,
+      laneIds: landing.laneIds,
+      from: { weekday: subject.weekday, startTime: toTime(subject.startMinutes) },
+      occurrence,
+    });
+  }
+
+  /**
+   * Grow or shrink a block's lane span from the keyboard — AC2, AC9.
+   *
+   * `Shift`+arrow on a focused block, which is the gesture the edge handle makes
+   * with a pointer. Both call `propose`, so the confirm dialog, the refusals and
+   * the undo are the same in either hand.
+   */
+  function spanBy(subject: Placed, delta: number): void {
+    const ordered = lanes.filter((lane) => subject.laneIds.includes(lane.id));
+    if (ordered.length === 0) return;
+
+    const first = lanes.findIndex((lane) => lane.id === ordered[0]?.id);
+    const size = Math.max(1, ordered.length + delta);
+    const next = lanes.slice(first, first + size);
+
+    // Growing past the last lane of the pool is not a span, it is nothing.
+    if (next.length !== size) return;
+    if (sameLanes(next.map((lane) => lane.id), subject.laneIds)) return;
+
+    propose(subject, {
+      weekday: subject.weekday,
+      slotId: subject.slotId,
+      startTime: toTime(subject.startMinutes),
+      laneIds: next.map((lane) => lane.id),
+      duplicate: false,
+    });
+  }
+
   function onDragEnd(event: DragEndEvent): void {
     setDragging(null);
 
     const over = event.over;
     if (over === null) return;
 
-    const [, weekdayText, slotId] = String(over.id).split(':');
+    const [, weekdayText, slotId, laneId] = String(over.id).split(':');
     const weekday = Number(weekdayText);
     const slot = slots.find((candidate) => candidate.id === slotId);
-    if (slot === undefined) return;
+    if (slot === undefined || laneId === undefined) return;
 
-    const startTime = slot.startTime;
-    const startMinutes = toMinutes(startTime);
     const active = String(event.active.id);
+    // Read now, at the drop — see `altHeld`. Holding Alt and pressing Space to
+    // drop is the keyboard's version of the same decision.
+    const duplicate = altHeld.current;
 
+    /*
+     * The tray: an unscheduled turma being placed for the first time.
+     *
+     * Still goes through `placeSlotAction`, which creates the schedule row; the
+     * lane it landed on is applied straight afterwards by the move endpoint,
+     * because creating a schedule and giving it lanes are two different writes
+     * today and merging them is POOLSE-51's business, not this ticket's.
+     */
     if (active.startsWith('group:')) {
       const groupId = active.slice('group:'.length);
       const group = mine.find((candidate) => candidate.id === groupId);
       if (group === undefined) return;
 
-      /*
-       * The slot's own length, where there is one.
-       *
-       * A grid row is a real span — 09:00 to 09:45 — so a class dropped into it
-       * takes that length rather than whatever it happened to have. That is what
-       * makes the grid the club's grid instead of a backdrop.
-       */
+      if (closedOn(weekday) !== null || !openOn(weekday)) {
+        setError('grid.dayClosed');
+        return;
+      }
+
       const durationMinutes =
-        toMinutes(slot.endTime) - startMinutes ||
+        toMinutes(slot.endTime) - toMinutes(slot.startTime) ||
         group.schedules[0]?.durationMinutes ||
         FALLBACK_DURATION;
 
-      setOptimistic({ kind: 'place', groupId, weekday, startMinutes, durationMinutes });
+      setError(null);
+      setOptimistic({
+        kind: 'place',
+        groupId,
+        weekday,
+        startMinutes: toMinutes(slot.startTime),
+        durationMinutes,
+      });
       setProposal({
         kind: 'place',
         groupId,
         name: group.name,
         weekday,
-        startTime,
+        startTime: slot.startTime,
         durationMinutes,
       });
       return;
     }
 
-    const scheduleId = active.slice('slot:'.length);
-    const row = placed.find((candidate) => candidate.scheduleId === scheduleId);
-    if (row === undefined || row.scheduleId === null) return;
-
-    // Only a turma's pattern can be moved from here. A parceria booking is
-    // edited on the grid in POOLSE-50; dragging one now would call an action
-    // that expects a class group and get a refusal it cannot explain.
-    if (row.groupId === null) return;
-
-    // A drop back where it started is not a move, and asking about it would be
-    // asking whether to do nothing.
-    if (row.weekday === weekday && toTime(row.startMinutes) === startTime) return;
-
-    setOptimistic({ kind: 'move', scheduleId: row.scheduleId, weekday, startMinutes });
     /*
-     * The occurrence being dragged — this week's, not next week's.
+     * The edge handle: a lane span, and nothing else moves.
      *
-     * Both halves have to exist for the question to be worth asking: a week on
-     * screen, and a session generated for it. A slot the season has not reached
-     * yet has nothing to move on its own, and offering the choice anyway would
-     * be offering an answer that cannot be carried out.
+     * The block keeps its day and its slot; only the run of lanes changes, from
+     * its first lane down to whichever row the edge was dropped on. Dragging the
+     * edge *up* past the first lane is a shrink, which is why the run is built
+     * from the two endpoints rather than by appending.
      */
-    const sessionId = row.controls.sessionId;
-    const occurrence =
-      weekStart !== undefined && sessionId !== undefined && !row.cancelled
-        ? { sessionId, date: addDays(weekStart, weekday - 1) }
-        : null;
+    if (active.startsWith('edge:')) {
+      const scheduleId = active.slice('edge:'.length);
+      const subject = placed.find((candidate) => candidate.scheduleId === scheduleId);
+      if (subject === undefined) return;
 
-    setProposal({
-      kind: 'move',
-      groupId: row.groupId,
-      scheduleId: row.scheduleId,
-      name: row.name,
+      const anchor = lanes.findIndex((lane) => lane.id === subject.laneIds[0]);
+      const target = lanes.findIndex((lane) => lane.id === laneId);
+      if (anchor === -1 || target === -1) return;
+
+      const from = Math.min(anchor, target);
+      const to = Math.max(anchor, target);
+      const run = lanes.slice(from, to + 1).map((lane) => lane.id);
+
+      propose(subject, {
+        weekday: subject.weekday,
+        slotId: subject.slotId,
+        startTime: toTime(subject.startMinutes),
+        laneIds: run,
+        duplicate: false,
+      });
+      return;
+    }
+
+    const scheduleId = active.slice('slot:'.length);
+    const subject = placed.find((candidate) => candidate.scheduleId === scheduleId);
+    if (subject === undefined) return;
+
+    /*
+     * The block keeps the width it had, landing on the lane it was dropped on.
+     *
+     * A three-lane squad dragged to Thursday is still a three-lane squad; making
+     * a move silently narrow it to one lane would be the drag quietly editing
+     * something nobody touched.
+     */
+    const width = Math.max(1, subject.laneIds.length);
+    const target = lanes.findIndex((lane) => lane.id === laneId);
+    if (target === -1) return;
+    const run = lanes.slice(target, target + width).map((lane) => lane.id);
+
+    propose(subject, {
       weekday,
-      startTime,
-      from: { weekday: row.weekday, startTime: toTime(row.startMinutes) },
-      occurrence,
+      slotId: slot.id,
+      startTime: slot.startTime,
+      laneIds: run,
+      duplicate,
     });
   }
 
@@ -688,6 +991,21 @@ export function ScheduleBoard({
         return;
       }
 
+      if (asked.kind === 'duplicate') {
+        const made = await duplicateBookingAction(organizationId, asked.scheduleId, {
+          weekday: asked.weekday,
+          slotId: asked.slotId,
+          startTime: asked.slotId === null ? asked.startTime : null,
+          laneIds: asked.laneIds,
+        });
+        setOptimistic(null);
+        if (!made.ok) setError(made.detail ?? made.errorKey);
+        // No undo banner: the copy is a new block sitting on the grid, and
+        // removing it is the same gesture as removing any other.
+        else setUndo(null);
+        return;
+      }
+
       if (scope === 'week' && asked.occurrence !== null) {
         const moved = await moveOccurrenceAction(
           organizationId,
@@ -704,24 +1022,34 @@ export function ScheduleBoard({
         return;
       }
 
-      const result = await moveSlotAction(
-        organizationId,
-        asked.groupId,
-        asked.scheduleId,
-        asked.weekday,
-        asked.startTime,
-      );
+      /*
+       * The booking endpoint, not the turma one — POOLSE-50.
+       *
+       * It carries the lanes and works for any subject, which is what lets a
+       * school's booking be moved by the same gesture as a class. `moveSlotAction`
+       * stays for the undo below, which puts a *pattern* back and only ever
+       * applies to a turma.
+       */
+      const result = await moveBookingAction(organizationId, asked.scheduleId, {
+        weekday: asked.weekday,
+        slotId: asked.slotId,
+        startTime: asked.slotId === null ? asked.startTime : null,
+        laneIds: asked.laneIds,
+      });
       setOptimistic(null);
       if (!result.ok) {
-        setError(result.errorKey);
+        setError(result.detail ?? result.errorKey);
         return;
       }
 
       // Kept after the save, and this is the second half of what was asked for:
       // a move that was confirmed on purpose and is still wrong goes back in one
-      // click, to the exact day and time it came from.
-      setUndo({ groupId: asked.groupId, scheduleId: asked.scheduleId });
-      undoTarget.current = asked.from;
+      // click, to the exact day and time it came from. Only a turma has a
+      // pattern to put back, so only a turma offers it.
+      if (asked.groupId !== null) {
+        setUndo({ groupId: asked.groupId, scheduleId: asked.scheduleId });
+        undoTarget.current = asked.from;
+      }
     });
   }
 
@@ -864,6 +1192,7 @@ export function ScheduleBoard({
               rowRem={rowRem}
               density={prefs.density}
               showPoolName={poolIds.length > 1}
+              onSpan={spanBy}
             />
 
             {/*
@@ -897,6 +1226,7 @@ export function ScheduleBoard({
                 rowRem={rowRem}
                 density={prefs.density}
                 showPoolName={poolIds.length > 1}
+              onSpan={spanBy}
               />
             )}
 
@@ -915,6 +1245,7 @@ export function ScheduleBoard({
                 rowRem={rowRem}
                 density={prefs.density}
                 showPoolName={poolIds.length > 1}
+              onSpan={spanBy}
               />
             )}
 
@@ -1196,11 +1527,24 @@ function MoveDialog({
     >
       <div className="flex w-full max-w-md flex-col gap-4 rounded border border-border bg-surface p-5 shadow-lg">
         <h2 id="move-question" className="text-base font-medium">
-          {t(proposal.kind === 'move' ? 'classes.confirmMove' : 'classes.confirmPlace', {
-            name: proposal.name,
-            day: dayNames[proposal.weekday] ?? '',
-            time: proposal.startTime.slice(0, 5),
-          })}
+          {/*
+            Three questions, not two — POOLSE-50. A duplicate has to say it
+            leaves the original where it is, because the block the operator just
+            let go of looks identical either way and the difference is the whole
+            decision.
+          */}
+          {t(
+            proposal.kind === 'duplicate'
+              ? 'grid.confirmDuplicate'
+              : proposal.kind === 'move'
+                ? 'classes.confirmMove'
+                : 'classes.confirmPlace',
+            {
+              name: proposal.name,
+              day: dayNames[proposal.weekday] ?? '',
+              time: proposal.startTime.slice(0, 5),
+            },
+          )}
         </h2>
 
         {/*
@@ -1209,8 +1553,26 @@ function MoveDialog({
           Thursday. Said in the dialog rather than only on the board above,
           because this is the moment the decision is actually made.
         */}
+        {/*
+          How many lanes it will take, when that is more than one — QA 50.5.
+          A three-lane span and a one-lane block are the same shape in a dialog
+          that does not say so, and the span is exactly what an edge-drag changed.
+        */}
+        {(proposal.kind === 'move' || proposal.kind === 'duplicate') &&
+          proposal.laneIds.length > 1 && (
+            <p className="text-sm text-foreground-muted">
+              {t('grid.spanNote', { count: proposal.laneIds.length })}
+            </p>
+          )}
+
         <p className="text-sm text-foreground-muted">
-          {t(canScope ? 'classes.moveScopeNote' : 'classes.patternNote')}
+          {t(
+            proposal.kind === 'duplicate'
+              ? 'grid.duplicateNote'
+              : canScope
+                ? 'classes.moveScopeNote'
+                : 'classes.patternNote',
+          )}
         </p>
 
         <div className="flex flex-wrap justify-end gap-3">
@@ -1284,6 +1646,7 @@ function SlotGrid({
   rowRem,
   density,
   showPoolName,
+  onSpan,
 }: {
   /** Null for the weekday block, which needs no heading of its own. */
   heading: string | null;
@@ -1299,6 +1662,8 @@ function SlotGrid({
   rowRem: number;
   density: Density;
   showPoolName: boolean;
+  /** `Shift`+arrow on a focused block. The keyboard's edge handle. */
+  onSpan: (booking: Placed, delta: number) => void;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -1449,6 +1814,7 @@ function SlotGrid({
                             open={openOn(day) && closedOn(day) === null}
                             canManage={canManage}
                             dayName={dayNames[day] ?? String(day)}
+                            onSpan={onSpan}
                           />
                         );
                       })}
@@ -1479,6 +1845,7 @@ function Cell({
   open,
   canManage,
   dayName,
+  onSpan,
 }: {
   day: number;
   slot: GridSlot;
@@ -1494,6 +1861,7 @@ function Cell({
   open: boolean;
   canManage: boolean;
   dayName: string;
+  onSpan: (booking: Placed, delta: number) => void;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -1547,7 +1915,12 @@ function Cell({
           className="absolute inset-x-0.5 top-0 z-10"
           style={{ height: `calc(${span * rowRem}rem - 1px)` }}
         >
-          <BookingChip booking={booking} canManage={canManage} density={density} />
+          <BookingChip
+            booking={booking}
+            canManage={canManage}
+            density={density}
+            onSpan={onSpan}
+          />
         </div>
       )}
     </div>
@@ -1575,10 +1948,12 @@ function BookingChip({
   booking,
   canManage,
   density,
+  onSpan,
 }: {
   booking: Placed;
   canManage: boolean;
   density: Density;
+  onSpan: (booking: Placed, delta: number) => void;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -1606,8 +1981,24 @@ function BookingChip({
 
   return (
     <div
+      /*
+       * `Shift`+arrow grows and shrinks the lane span — AC2 and AC9, the
+       * keyboard's version of the edge handle below.
+       *
+       * On the wrapper rather than on the grip, because the grip belongs to
+       * dnd-kit's keyboard sensor: Space there starts a drag, and arrows during
+       * one are how a block is moved. Shift+arrow is a different question asked
+       * of the same block, so it is handled before dnd-kit sees it.
+       */
+      onKeyDown={(event) => {
+        if (!event.shiftKey || !canManage) return;
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+        event.preventDefault();
+        event.stopPropagation();
+        onSpan(booking, event.key === 'ArrowDown' ? 1 : -1);
+      }}
       className={cn(
-        'flex h-full w-full flex-col overflow-hidden rounded-sm border pl-1 pr-1 text-[0.7rem] leading-tight',
+        'relative flex h-full w-full flex-col overflow-hidden rounded-sm border pl-1 pr-1 text-[0.7rem] leading-tight',
         tint,
       )}
       style={
@@ -1663,6 +2054,21 @@ function BookingChip({
         <span className="truncate font-medium text-warning">{booking.note}</span>
       )}
 
+      {/*
+        The edge handle — AC2.
+
+        Dragged down or up across lane rows to set the span. It stops
+        propagation on pointer-down for the reason the Dev note names: without
+        it, the block's own draggable and this one fight over the pointer and
+        the block simply moves instead of growing. The same trick the register
+        and cancel controls already use.
+
+        Four pixels tall and the full width, which is a real target at compact
+        density; the keyboard equivalent is `Shift`+arrow on the block itself,
+        so this is never the only way.
+      */}
+      {draggable && <SpanHandle scheduleId={booking.scheduleId ?? ''} />}
+
       {(booking.controls.mark !== undefined || booking.controls.cancel !== undefined) && (
         <div
           className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-0.5"
@@ -1680,6 +2086,36 @@ function BookingChip({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The grip along a block's bottom edge that sets how many lanes it takes.
+ *
+ * Its own draggable with its own id prefix, so the drop handler can tell "this
+ * block goes to Thursday" from "this block now covers lanes 2 to 4" without a
+ * mode. `stopPropagation` on pointer-down is what stops the block's own
+ * draggable claiming the gesture first.
+ *
+ * Not focusable: `Shift`+arrow on the block is the keyboard path, and a second
+ * tab stop per block would put eighty-four extra stops in the grid for a gesture
+ * that already has one.
+ */
+function SpanHandle({ scheduleId }: { scheduleId: string }): React.ReactElement {
+  const t = useTranslations();
+  const { attributes, listeners, setNodeRef } = useDraggable({ id: `edge:${scheduleId}` });
+
+  return (
+    <span
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      aria-hidden
+      tabIndex={-1}
+      title={t('grid.spanHandle')}
+      onPointerDown={(event) => event.stopPropagation()}
+      className="absolute inset-x-0 bottom-0 h-1 cursor-ns-resize bg-foreground/10 hover:bg-primary/60"
+    />
   );
 }
 

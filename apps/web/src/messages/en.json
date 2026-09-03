@@ -1777,6 +1777,15 @@
     "noInstructor": "No instructor",
     "externalInstructor": "Partner's own instructor",
     "emptyCell": "{day}, {time}, {lane}: free",
-    "filledCell": "{day}, {time}, {lane}: {what}"
+    "filledCell": "{day}, {time}, {lane}: {what}",
+    "confirmDuplicate": "Duplicate {name} to {day}, {time}? The original stays where it is.",
+    "duplicateNote": "The copy carries the group, instructor, category and lanes. Notes do not travel - they usually name a date or a reason.",
+    "spanNote": "Takes {count} lanes.",
+    "spanHandle": "Drag to take more or fewer lanes",
+    "lanesNotContiguous": "Lanes must be next to each other. Taking 2 and 4 while leaving 3 free is not possible.",
+    "laneTaken": "That lane is already taken at that time.",
+    "alreadyThere": "That class already runs on that day at that time.",
+    "dayClosed": "The site is closed that day.",
+    "dropRefused": "That could not be placed here."
   }
 }

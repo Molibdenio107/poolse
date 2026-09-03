@@ -24,6 +24,7 @@ import { InventoryController } from './inventory/inventory.controller.js';
 import { SlotsController } from './facilities/slots.controller.js';
 import { PartnersController } from './facilities/partners.controller.js';
 import { GridController } from './facilities/grid.controller.js';
+import { BookingsController } from './facilities/bookings.controller.js';
 import { MeController } from './identity/me.controller.js';
 import { SessionsController } from './identity/sessions.controller.js';
 import { InvitationsController } from './invitations/invitations.controller.js';
@@ -86,6 +87,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     SlotsController,
     PartnersController,
     GridController,
+    BookingsController,
     ClassesController,
     TimetableController,
     ClosuresController,
