@@ -1809,3 +1809,39 @@ export interface FacilityGrid {
   maxConcurrentGroups: number | null;
   canManage: boolean;
 }
+
+/**
+ * How much of the water is sold — POOLSE-52.
+ *
+ * Lane-hours are **decimal strings**: a quantity that gets multiplied by a
+ * price, and never a float. Percentages arrive already computed — the web app
+ * formats them for the locale and performs no arithmetic of its own, which is
+ * criterion 8 and the reason there is only ever one answer to "what is our
+ * occupancy".
+ */
+export type TimeBand = 'manha' | 'tarde' | 'noite';
+
+export interface OccupancySlice {
+  soldLaneHours: string;
+  turmaLaneHours: string;
+  parceriaLaneHours: string;
+  headcount: number;
+  turmaHeadcount: number;
+  parceriaHeadcount: number;
+}
+
+export interface Occupancy {
+  seasonId: string;
+  seasonName: string;
+  total: OccupancySlice & { availableLaneHours: string };
+  /** Sold ÷ available. Null when the club has no slot grid to divide by. */
+  laneHourOccupancy: number | null;
+  /** Swimmers ÷ places, over booked lanes that have a capacity. */
+  seatOccupancy: number | null;
+  /** Booked lanes with no capacity recorded — the percentage's asterisk. */
+  lanesWithoutCapacity: number;
+  byDay: (OccupancySlice & { weekday: number; availableLaneHours: string })[];
+  byBand: (OccupancySlice & { band: TimeBand })[];
+  /** Owner/admin only; null otherwise. Rendered nowhere yet — POOLSE-52 AC9. */
+  contractedCents: number | null;
+}

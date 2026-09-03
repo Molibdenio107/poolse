@@ -1812,5 +1812,35 @@
     "offGrid": "Fora da grelha",
     "willUse": "Ocupa: {lanes}",
     "readOnly": "{day}, {time} · {lanes} pistas · {students} alunos"
+  },
+  "occupancy": {
+    "title": "Ocupação",
+    "hint": "Época {season}, a partir das aulas que realmente aconteceram. Encerramentos e dias fechados reduzem os dois lados da conta.",
+    "sold": "Vendido",
+    "laneHours": "{hours} pistas·hora",
+    "laneHoursShort": "Pistas·hora",
+    "ofAvailable": "de {hours} disponíveis",
+    "utilisation": "Utilização",
+    "ofWater": "da água disponível",
+    "noGrid": "Sem grelha horária definida",
+    "fullness": "Lotação",
+    "ofPlaces": "dos lugares das pistas",
+    "noCapacity": "Nenhuma pista tem lotação definida",
+    "uncovered": "{count, plural, one {Uma pista ocupada não tem lotação definida e está fora desta percentagem} other {# pistas ocupadas não têm lotação definida e estão fora desta percentagem}}.",
+    "split": "Turmas e parcerias",
+    "subject": "Tipo",
+    "swimmers": "Nadadores",
+    "turmas": "Turmas",
+    "parcerias": "Parcerias",
+    "byBand": "Por período do dia",
+    "bandSplit": "Turmas {turmas} · parcerias {parcerias}",
+    "byDay": "Por dia da semana",
+    "dayFigure": "{sold} de {available}",
+    "closed": "Fechado",
+    "band": {
+      "manha": "Manhã",
+      "tarde": "Tarde",
+      "noite": "Noite"
+    }
   }
 }

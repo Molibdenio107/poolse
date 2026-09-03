@@ -1812,5 +1812,35 @@
     "offGrid": "Off the grid",
     "willUse": "Uses: {lanes}",
     "readOnly": "{day}, {time} · {lanes} lanes · {students} students"
+  },
+  "occupancy": {
+    "title": "Occupancy",
+    "hint": "Season {season}, from the classes that actually happened. Closures and closed days reduce both sides of the sum.",
+    "sold": "Sold",
+    "laneHours": "{hours} lane-hours",
+    "laneHoursShort": "Lane-hours",
+    "ofAvailable": "of {hours} available",
+    "utilisation": "Utilisation",
+    "ofWater": "of the water available",
+    "noGrid": "No schedule grid defined",
+    "fullness": "Fullness",
+    "ofPlaces": "of the lanes' places",
+    "noCapacity": "No lane has a capacity recorded",
+    "uncovered": "{count, plural, one {One booked lane has no capacity recorded and is outside this percentage} other {# booked lanes have no capacity recorded and are outside this percentage}}.",
+    "split": "Class groups and partnerships",
+    "subject": "Kind",
+    "swimmers": "Swimmers",
+    "turmas": "Class groups",
+    "parcerias": "Partnerships",
+    "byBand": "By time of day",
+    "bandSplit": "Class groups {turmas} · partnerships {parcerias}",
+    "byDay": "By weekday",
+    "dayFigure": "{sold} of {available}",
+    "closed": "Closed",
+    "band": {
+      "manha": "Morning",
+      "tarde": "Afternoon",
+      "noite": "Evening"
+    }
   }
 }

@@ -1699,6 +1699,64 @@ Two rules inside it are worth naming because they are easy to get backwards:
   lanes is 8 a lane. Comparing the whole headcount against one lane would warn about every
   multi-lane booking a club ever makes.
 
+### Occupancy — POOLSE-52
+
+No new tables: `GET /facilities/:id/occupancy?seasonId=` is a read over the dated sessions
+POOLSE-46 already generates for every subject.
+
+**Lane-hours is the unit, because it is what a club sells.** A booking over three lanes for 45
+minutes is 2.25 lane-hours — `duration_minutes / 60.0 * lane_count`, `numeric` and never float,
+since it is a quantity that gets multiplied by a price.
+
+**Every figure is computed by Postgres**, and the web app formats without calculating. Two
+implementations of "lane-hours" is two answers, and the one on screen would be the one nobody
+could reproduce when a manager queried it.
+
+**Headcount resolves override → active enrolments → partner group size → 0**, and the ordering
+carries a trap that bit once and is now tested:
+
+> `count(*)` over an empty set is **0, not null**. A bare enrolment subquery therefore matched
+> nothing for a parceria (whose `class_group_id` is null), produced 0, and `coalesce` stopped
+> there rather than reaching `partner_group.participant_count`. Every partnership reported zero
+> swimmers while its lane-hours were perfectly correct — half the numbers right, which is the
+> worst shape a reporting bug can take. The fix is a `CASE` that yields null for a non-turma.
+
+**Lanes multiply lane-hours and never multiply headcount.** Thirty swimmers on a three-lane
+booking is thirty people and 2.25 lane-hours. `class_session_lane` is joined for the lanes and
+deliberately not for the headcount.
+
+**The denominator comes from the same dated calendar as the numerator** — the season's dates
+crossed with the day group's slots and the site's lanes, minus closures and weekdays disabled in
+`facility_hours`. `slots × lanes × 7` makes every club look under-booked, which is the version
+of this number that gets quoted at a manager and then disbelieved.
+
+**Two percentages, and only one needs capacity.**
+
+- *Utilisation* is sold ÷ available lane-hours. A lane-hour is available whether or not anybody
+  has said how many swimmers fit in it.
+- *Fullness* is swimmers ÷ places, over the booked lanes that **have** a capacity.
+  `lane.default_capacity` is nullable by design (POOLSE-43), and treating unknown capacity as
+  zero or as infinite would both be inventions. Such lanes contribute lane-hours, are excluded
+  from this fraction, and are counted in `lanesWithoutCapacity` so the screen can print the
+  asterisk instead of implying there isn't one.
+
+Both are null rather than 0 when there is nothing to divide by: a club with no slot grid has no
+occupancy, which is not the same as 0%.
+
+**Time bands are fixed**: `manha` before 12:00, `tarde` to 17:59, `noite` from 18:00, judged on
+the session's local start time. Three bands nobody has asked to change, and a setting would be a
+screen to build and a value to translate.
+
+**A draft season is refused, and that answers QA 52.12.** Occupancy is computed over dated
+sessions and POOLSE-45 made the generator refuse a draft on purpose — a draft is a plan and has
+none. Computing it from the weekly pattern would be a second definition of every figure here,
+and answering 0% for a fully-planned season would be worse than refusing. The refusal names the
+season.
+
+**Contracted partnership value is exposed and rendered nowhere.** Owner/admin only; null for
+everybody else, so an instructor can still read occupancy. It is there for the dashboards module,
+and POOLSE-47's decision that partnership billing is its own flow stands.
+
 ## Module 2 — maintenance (shape)
 
 ```

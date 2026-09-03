@@ -24,7 +24,8 @@
     "db:test": "pnpm --filter @poolse/db test",
     "api:test": "pnpm --filter @poolse/api test",
     "web:test": "pnpm --filter @poolse/web test",
-    "layout:check": "pnpm --filter @poolse/web layout:check"
+    "layout:check": "pnpm --filter @poolse/web layout:check",
+    "sql:check": "pnpm --filter @poolse/api sql:check"
   },
   "devDependencies": {
     "typescript": "^5.7.2"
