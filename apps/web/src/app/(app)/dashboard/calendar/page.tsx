@@ -1,7 +1,14 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Calendar, type Classes, type Closure } from '@/lib/api';
+import {
+  ApiError,
+  apiFetch,
+  type Calendar,
+  type Classes,
+  type Closure,
+  type FacilityGrid,
+} from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import {
   addDays,
@@ -87,6 +94,25 @@ export default async function CalendarPage({
       classes = await apiFetch<Classes>('/class-groups');
     } catch {
       classes = null;
+    }
+  }
+
+  /*
+    The lane grid — POOLSE-49.
+
+    The rows the board draws itself on, and everything sitting in them. Asked for
+    per facility because slots and lanes are properties of a building, and the
+    board shows one site at a time; the first site is the one it opens on, which
+    is the same choice the board's own selector defaults to.
+
+    Best-effort, like the turmas above: losing the grid must not cost the week,
+    and a club with no slots yet gets an empty one that says so.
+  */
+  let grid: FacilityGrid | null = null;
+  if (classes !== null) {
+    const first = classes.facilities[0]?.id;
+    if (first !== undefined) {
+      grid = await apiFetch<FacilityGrid>(`/facilities/${first}/grid`).catch(() => null);
     }
   }
 
@@ -285,6 +311,14 @@ export default async function CalendarPage({
                 dayNames={dayNames}
                 canManage={calendar.canManage}
                 weekStart={monday}
+                slots={grid?.slots ?? []}
+                lanes={grid?.lanes ?? []}
+                pools={grid?.pools ?? []}
+                bookings={grid?.bookings ?? []}
+                categories={grid?.categories ?? []}
+                instructors={grid?.instructors ?? []}
+                partners={grid?.partners ?? []}
+                levels={classes.options.levels}
               />
             ) : (
               // The turmas would not load. The week is still worth showing, and

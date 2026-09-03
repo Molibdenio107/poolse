@@ -1534,6 +1534,40 @@ student photograph are. One storage decision unblocks all four.
 turning it on later is a UI change rather than a migration during a support call, and shipped
 with the control disabled because a club may simply not hold the list.
 
+### Reading the lane grid — POOLSE-49
+
+No new tables. The grid is a read over what POOLSE-43 to 47 already built, and it is
+documented here because the *shape* of that read is load-bearing for POOLSE-50 to 54.
+
+`GET /facilities/:facilityId/grid?seasonId=` returns, in one request: the facility's slots
+(by day group), its pools and lanes, every booking in the season with the lanes it occupies,
+and the categories, instructors and partners that fill the filters.
+
+**One request, not five.** The screen cannot paint a single cell until it has slots, lanes,
+bookings and lane assignments together. Splitting them would be four round trips before first
+paint and four chances to be looking at three-quarters of a week.
+
+**Every list in it is bounded** — a facility's slots, its pools' lanes, one season's bookings
+— which is why the grid is exempt from pagination and why the exemption is about the data
+rather than about the work. It still *asks* for a fixed window: `seasonId`.
+
+**`laneIds` is an array, and that is the whole point of the ticket.** A booking across lanes
+2–4 is one row with three lane ids, drawn as one block spanning three lane rows. Returning
+one lane per row would draw Cadetes three times and leave two lanes looking free.
+
+**A booking whose time matches no slot comes back with `slotId: null`**, not filtered out.
+The screen renders it under the grid as "fora da grelha", named and timed. This replaces the
+old rule where a 06:30 class silently widened the grid — the class stays visible, and the
+grid stays the club's own grid rather than one stretched by an exception.
+
+**The instructor is `coalesce(booking.instructor_membership_id, class_group.instructor_membership_id)`.**
+The override wins, because a substitute on a Tuesday must read as the substitute rather than
+as the person they are covering for.
+
+**The filter lists are built from what is on the grid, not from the catalogue.** A filter
+offering an instructor who teaches nothing this season returns an empty grid and reads as a
+fault. The legend goes one step further and is built from what is *in view* after filtering.
+
 ### Which season a booking belongs to — POOLSE-47
 
 A gap POOLSE-46 left, closed by the same migration.

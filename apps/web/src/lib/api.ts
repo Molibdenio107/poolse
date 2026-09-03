@@ -1731,3 +1731,69 @@ export interface PartnerDetail {
   bookings: PartnerBooking[];
   canManage: boolean;
 }
+
+/**
+ * The lane grid — POOLSE-49.
+ *
+ * The rows the timetable is drawn on (slots and lanes) and everything sitting in
+ * them. One request, because the screen cannot paint a single cell until it has
+ * all of it, and every list here is bounded — a facility's slots, its lanes, one
+ * season's bookings — which is also why the grid is exempt from pagination.
+ */
+export interface GridSlot {
+  id: string;
+  dayGroup: DayGroup;
+  /** `HH:MM`, wall-clock at the facility. `24:00` is a real end time. */
+  startTime: string;
+  endTime: string;
+}
+
+export interface GridLane {
+  id: string;
+  poolId: string;
+  poolName: string;
+  name: string;
+  position: number;
+}
+
+export interface GridBooking {
+  id: string;
+  subjectType: 'turma' | 'parceria' | 'evento' | 'manutencao';
+  /** The turma behind a turma booking; null for everything else. */
+  classGroupId: string | null;
+  name: string;
+  /** The level for a turma, the partner for a parceria. */
+  subtitle: string | null;
+  instructorId: string | null;
+  instructorName: string | null;
+  instructorStatus: 'assigned' | 'unassigned' | 'external';
+  /** Null when nobody has said. Zero is a real answer and is not null. */
+  headcount: number | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  categoryColour: string | null;
+  /** Hex, and only for a parceria. Beats the category's colour. */
+  partnerColour: string | null;
+  partnerId: string | null;
+  levelId: string | null;
+  /** ISO weekday, Monday 1 … Sunday 7. */
+  weekday: number;
+  startTime: string;
+  durationMinutes: number;
+  /** Null means fora da grelha — drawn under the grid, never dropped. */
+  slotId: string | null;
+  /** Every lane it occupies, in position order. One block spans all of them. */
+  laneIds: string[];
+}
+
+export interface FacilityGrid {
+  seasonId: string | null;
+  slots: GridSlot[];
+  pools: { id: string; name: string }[];
+  lanes: GridLane[];
+  bookings: GridBooking[];
+  categories: { id: string; name: string; colour: string }[];
+  instructors: { id: string; name: string }[];
+  partners: { id: string; name: string; colour: string }[];
+  canManage: boolean;
+}

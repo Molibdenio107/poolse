@@ -1747,5 +1747,36 @@
       "por_participante": "per participant",
       "mensal_fixo": "per month"
     }
+  },
+  "grid": {
+    "time": "Time",
+    "lane": "Lane",
+    "weekdays": "Weekday grid",
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "pool": "Pool",
+    "allPools": "All pools",
+    "density": "Density",
+    "compact": "Compact",
+    "comfortable": "Comfortable",
+    "instructor": "Instructor",
+    "anyInstructor": "All instructors",
+    "category": "Category",
+    "anyCategory": "All categories",
+    "partner": "Partnership",
+    "anyPartner": "All partnerships",
+    "level": "Level",
+    "anyLevel": "All levels",
+    "hideEmptyLanes": "Hide empty lanes",
+    "noLanes": "No lanes to show. Check the selected pool and the empty-lane filter.",
+    "noSlots": "This site has no schedule grid yet.",
+    "noSlotsHint": "The grid is the set of rows a class can sit in - 06:30, 08:45, 09:30. Without them there is nowhere to put anything.",
+    "buildGrid": "Build the grid",
+    "offGrid": "Off the grid",
+    "offGridHint": "These bookings match no row of the grid. They still exist and still occupy the pool - adjust the grid or the booking's time.",
+    "noInstructor": "No instructor",
+    "externalInstructor": "Partner's own instructor",
+    "emptyCell": "{day}, {time}, {lane}: free",
+    "filledCell": "{day}, {time}, {lane}: {what}"
   }
 }

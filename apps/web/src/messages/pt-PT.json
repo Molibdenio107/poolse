@@ -1747,5 +1747,36 @@
       "por_participante": "por participante",
       "mensal_fixo": "por mês"
     }
+  },
+  "grid": {
+    "time": "Horário",
+    "lane": "Pista",
+    "weekdays": "Grelha de dias úteis",
+    "saturday": "Sábado",
+    "sunday": "Domingo",
+    "pool": "Tanque",
+    "allPools": "Todos os tanques",
+    "density": "Densidade",
+    "compact": "Compacta",
+    "comfortable": "Confortável",
+    "instructor": "Professor",
+    "anyInstructor": "Todos os professores",
+    "category": "Categoria",
+    "anyCategory": "Todas as categorias",
+    "partner": "Parceria",
+    "anyPartner": "Todas as parcerias",
+    "level": "Nível",
+    "anyLevel": "Todos os níveis",
+    "hideEmptyLanes": "Esconder pistas vazias",
+    "noLanes": "Não há pistas para mostrar. Verifique o tanque escolhido e o filtro de pistas vazias.",
+    "noSlots": "Este local ainda não tem grelha horária.",
+    "noSlotsHint": "A grelha são as linhas em que uma aula pode ficar — 06:30, 08:45, 09:30. Sem elas não há onde pousar nada.",
+    "buildGrid": "Criar a grelha",
+    "offGrid": "Fora da grelha",
+    "offGridHint": "Estas marcações não coincidem com nenhuma linha da grelha. Continuam a existir e a ocupar a piscina — ajuste a grelha ou a hora da marcação.",
+    "noInstructor": "Sem professor",
+    "externalInstructor": "Professor da entidade",
+    "emptyCell": "{day}, {time}, {lane}: livre",
+    "filledCell": "{day}, {time}, {lane}: {what}"
   }
 }

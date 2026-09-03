@@ -46,6 +46,7 @@ work being awkward:
 |---|---|
 | Encerramentos and Férias year grids | Twelve months. A year does not get longer. |
 | The turmas week grid (`GET /class-groups`) | A week. Paging it would empty Tuesday, not shorten the page — the reader would see a gap where a turma runs. |
+| The lane grid (`GET /facilities/:id/grid`) | One week of one season, at one site — POOLSE-49, criterion 14. A fixed window in both directions: the slots belong to the building and the lanes to the pool, and paging either would hide a lane that is in use. It still *asks* for a fixed window, which is what `seasonId` is for. |
 | A turma's roster, a class register | The turma's own capacity, which the club sets. |
 | One child's timetable, one person's leave year | One person, one year. |
 | Níveis, épocas, instalações, pools | A handful, by nature. Adding the tenth level is a decision, not growth. |
