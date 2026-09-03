@@ -29,7 +29,8 @@ export type DayGroup = 'weekday' | 'saturday' | 'sunday';
 
 export type SubjectType = 'turma' | 'parceria' | 'evento' | 'manutencao';
 
-export type InstructorStatus = 'assigned' | 'unassigned' | 'external';
+/** Mirrors the `instructor_status` enum. `to_define` and `uncovered` are real states. */
+export type InstructorStatus = 'assigned' | 'to_define' | 'external' | 'uncovered';
 
 export interface GridSlot {
   id: string;

@@ -186,7 +186,7 @@ interface Placed {
   name: string;
   subtitle: string | null;
   instructorName: string | null;
-  instructorStatus: 'assigned' | 'unassigned' | 'external';
+  instructorStatus: 'assigned' | 'to_define' | 'external' | 'uncovered';
   headcount: number | null;
   categoryId: string | null;
   categoryColour: string | null;
@@ -1771,6 +1771,15 @@ function SlotGrid({
 
   const columns = `${TIME_COL}rem ${LANE_COL}rem repeat(${days.length}, minmax(6rem, 1fr))`;
 
+  /*
+   * A running row cursor rather than `slotIndex * lanes.length`.
+   *
+   * Every cell is placed with an explicit `gridRow`, and a slot is no longer a
+   * fixed height: one carrying a laneless booking is a row taller. Multiplying
+   * by the index would overlap the slot below it the moment that happened.
+   */
+  let rowStart = 2;
+
   return (
     <section className="flex flex-col gap-2">
       {heading !== null && <h3 className="text-sm font-medium">{heading}</h3>}
@@ -1821,9 +1830,16 @@ function SlotGrid({
             );
           })}
 
-          {slots.map((slot, slotIndex) => {
-            // Row 1 is the header, so a block's first body row is 2.
-            const firstRow = 2 + slotIndex * lanes.length;
+          {slots.map((slot) => {
+            const laneless = placed.filter(
+              (row) => row.slotId === slot.id && row.laneIds.length === 0,
+            );
+
+            // Row 1 is the header. Each slot takes its lanes, plus one more row
+            // when something on it has no lane — so the offset is a running
+            // total rather than `index * lanes.length`.
+            const firstRow = rowStart;
+            rowStart += lanes.length + (laneless.length > 0 ? 1 : 0);
 
             return (
               <Fragment key={slot.id}>
@@ -1834,7 +1850,10 @@ function SlotGrid({
                 */}
                 <div
                   className="sticky left-0 z-20 flex items-start justify-end border-t-2 border-border bg-surface px-2 pt-1 text-right font-mono text-[0.7rem] leading-tight text-foreground-muted"
-                  style={{ gridColumn: 1, gridRow: `${firstRow} / span ${lanes.length}` }}
+                  style={{
+                    gridColumn: 1,
+                    gridRow: `${firstRow} / span ${lanes.length + (laneless.length > 0 ? 1 : 0)}`,
+                  }}
                 >
                   <span>
                     {slot.startTime}
@@ -1914,12 +1933,123 @@ function SlotGrid({
                     </Fragment>
                   );
                 })}
+
+                {/*
+                  Bookings on this slot that have no lane — the row that stops a
+                  class disappearing.
+
+                  A turma is not required to name a lane, and most clubs' older
+                  ones do not: `class_group.lane_id` was optional long before
+                  lanes were rows. When the grid became lanes-down, every one of
+                  those had no cell to be drawn in and silently vanished — the
+                  whole calendar looked empty. This is the honest place for them:
+                  present, on the right slot and day, and saying that the lane is
+                  the thing nobody has decided.
+
+                  Rendered only for slots that actually have one, so a club that
+                  has assigned every lane never sees this row at all.
+                */}
+                {laneless.length > 0 && (
+                  <NoLaneRow
+                    slot={slot}
+                    row={firstRow + lanes.length}
+                    days={days}
+                    placed={laneless}
+                    rowRem={rowRem}
+                    density={density}
+                    canManage={canManage}
+                    onSpan={onSpan}
+                  />
+                )}
               </Fragment>
             );
           })}
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * One row per slot for the bookings that name no lane.
+ *
+ * Not a droppable: there is nothing to drop *into* "no lane" — moving one of
+ * these onto a real lane is what the grid is for, and it is done by dragging the
+ * block up into a lane cell, which POOLSE-50 already handles. So this row shows
+ * and hands over, and does not pretend to be a target.
+ */
+function NoLaneRow({
+  slot,
+  row,
+  days,
+  placed,
+  rowRem,
+  density,
+  canManage,
+  onSpan,
+}: {
+  slot: GridSlot;
+  row: number;
+  days: readonly number[];
+  placed: Placed[];
+  rowRem: number;
+  density: Density;
+  canManage: boolean;
+  onSpan: (booking: Placed, delta: number) => void;
+}): React.ReactElement {
+  const t = useTranslations();
+
+  return (
+    <>
+      <div
+        className="sticky z-10 flex items-center border-l border-t border-border/40 bg-surface px-2 text-[0.7rem] italic text-foreground-muted"
+        style={{ gridColumn: 2, gridRow: row, left: `${TIME_COL}rem`, height: `${rowRem}rem` }}
+      >
+        <span className="truncate">{t('grid.noLane')}</span>
+      </div>
+
+      {days.map((day, dayIndex) => {
+        const here = placed.find((candidate) => candidate.weekday === day);
+
+        return (
+          <div
+            key={`${day}:${slot.id}:nolane`}
+            role="gridcell"
+            aria-label={
+              here === undefined
+                ? t('grid.emptyCell', {
+                    day: String(day),
+                    time: slot.startTime,
+                    lane: t('grid.noLane'),
+                  })
+                : t('grid.filledCell', {
+                    day: String(day),
+                    time: slot.startTime,
+                    lane: t('grid.noLane'),
+                    what: here.name,
+                  })
+            }
+            className="relative border-l border-t border-border/40 bg-surface-muted/40 px-0.5"
+            style={{ gridColumn: 3 + dayIndex, gridRow: row, height: `${rowRem}rem` }}
+          >
+            {here !== undefined && (
+              <div
+                className="absolute inset-x-0.5 top-0 z-10"
+                style={{ height: `calc(${rowRem}rem - 1px)` }}
+              >
+                <BookingChip
+                  booking={here}
+                  canManage={canManage}
+                  density={density}
+                  onSpan={onSpan}
+                  concurrency={1}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </>
   );
 }
 

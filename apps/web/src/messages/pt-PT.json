@@ -1797,6 +1797,7 @@
       "overCapacity": "{lane}: {headcount} para {capacity} lugares",
       "overConcurrency": "{count} grupos em simultâneo, acima do limite de {limit}",
       "weekdayDisabled": "Este dia da semana está desativado"
-    }
+    },
+    "noLane": "Sem pista"
   }
 }

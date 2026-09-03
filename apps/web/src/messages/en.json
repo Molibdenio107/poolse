@@ -1797,6 +1797,7 @@
       "overCapacity": "{lane}: {headcount} for {capacity} places",
       "overConcurrency": "{count} groups at once, above the limit of {limit}",
       "weekdayDisabled": "This weekday is switched off"
-    }
+    },
+    "noLane": "No lane"
   }
 }

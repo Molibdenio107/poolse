@@ -1768,7 +1768,7 @@ export interface GridBooking {
   subtitle: string | null;
   instructorId: string | null;
   instructorName: string | null;
-  instructorStatus: 'assigned' | 'unassigned' | 'external';
+  instructorStatus: 'assigned' | 'to_define' | 'external' | 'uncovered';
   /** Null when nobody has said. Zero is a real answer and is not null. */
   headcount: number | null;
   categoryId: string | null;
