@@ -1800,7 +1800,9 @@
       "weekdayDisabled": "This weekday is switched off"
     },
     "noLane": "No lane",
-    "durationHandle": "Drag to change how long the class runs"
+    "durationHandle": "Drag to change how long the class runs",
+    "resizingLanes": "{name} — setting lanes",
+    "resizingLength": "{name} — setting length"
   },
   "partnerClasses": {
     "title": "Partnerships",

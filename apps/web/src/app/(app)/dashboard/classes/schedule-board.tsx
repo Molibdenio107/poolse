@@ -7,10 +7,13 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
+  rectIntersection,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
@@ -126,6 +129,41 @@ function slotsCovered(
     const to = toMinutes(slot.endTime);
     return startMinutes < to && from < startMinutes + durationMinutes;
   });
+}
+
+/**
+ * Where the cursor is, and only then where the box is.
+ *
+ * dnd-kit's default is `rectIntersection`, which asks which droppable the
+ * *dragged element* overlaps most. That is right for a block the size of a cell
+ * and wrong for a 12px resize grip: the grip overlaps several lane rows at once
+ * and the winner is decided by arithmetic the operator cannot see, so the lane
+ * they land on is not reliably the one under their finger.
+ *
+ * `pointerWithin` answers the question they are actually asking — which cell am
+ * I pointing at — and `rectIntersection` remains the fallback for the keyboard,
+ * where there is no pointer to be within anything.
+ */
+const collisionDetection: CollisionDetection = (args) => {
+  const byPointer = pointerWithin(args);
+  return byPointer.length > 0 ? byPointer : rectIntersection(args);
+};
+
+/**
+ * The booking a drag id refers to, whichever grip started it.
+ *
+ * Three prefixes point at the same block — `slot:` is the block itself, `edge:`
+ * is its lane grip and `dur:` its length grip — and every reader of a drag id
+ * has to agree about that. They did not: the overlay label and the live cell
+ * preview both parsed `slot:` only, so a resize drag showed no label, no
+ * highlighted cells and no conflict warning. It worked and looked broken, which
+ * is indistinguishable from broken.
+ */
+function draggedScheduleId(dragId: string): string | null {
+  for (const prefix of ['slot:', 'edge:', 'dur:']) {
+    if (dragId.startsWith(prefix)) return dragId.slice(prefix.length);
+  }
+  return null;
 }
 
 /** Same lanes, same order — used to tell a real move from a drop that went home. */
@@ -1207,12 +1245,29 @@ export function ScheduleBoard({
     });
   }
 
-  const draggingLabel =
-    dragging === null
-      ? null
-      : dragging.startsWith('group:')
-        ? (mine.find((group) => group.id === dragging.slice('group:'.length))?.name ?? null)
-        : (placed.find((row) => row.scheduleId === dragging.slice('slot:'.length))?.name ?? null);
+  const draggingLabel = (() => {
+    if (dragging === null) return null;
+    if (dragging.startsWith('group:')) {
+      return mine.find((group) => group.id === dragging.slice('group:'.length))?.name ?? null;
+    }
+
+    const id = draggedScheduleId(dragging);
+    if (id === null) return null;
+
+    const row = placed.find((candidate) => candidate.scheduleId === id);
+    if (row === undefined) return null;
+
+    /*
+     * A resize says what it is resizing, not just what it is holding.
+     *
+     * Dragging a 12px grip with no label and no moving block looked like
+     * nothing was happening at all — the commonest reason somebody concludes a
+     * gesture does not work is that it gave them no evidence it started.
+     */
+    if (dragging.startsWith('edge:')) return t('grid.resizingLanes', { name: row.name });
+    if (dragging.startsWith('dur:')) return t('grid.resizingLength', { name: row.name });
+    return row.name;
+  })();
 
   const rowRem = ROW_REM[prefs.density];
 
@@ -1275,13 +1330,19 @@ export function ScheduleBoard({
 
   /** The block being dragged, in rule terms — null unless a drag is in flight. */
   const draggingSubject = useMemo<RuleBooking | null>(() => {
-    if (dragging === null || !dragging.startsWith('slot:')) return null;
-    const id = dragging.slice('slot:'.length);
+    if (dragging === null) return null;
+    const id = draggedScheduleId(dragging);
+    if (id === null) return null;
     return ruleBookings.find((booking) => booking.id === id) ?? null;
   }, [dragging, ruleBookings]);
 
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
       <div className="flex flex-col gap-4">
         {facilities.length > 1 && (
           <div className={`${FIELD_COLUMN} sm:w-64`}>
@@ -2698,7 +2759,7 @@ function DurationHandle({ scheduleId }: { scheduleId: string }): React.ReactElem
       aria-hidden
       tabIndex={-1}
       title={t('grid.durationHandle')}
-      onPointerDown={(event) => event.stopPropagation()}
+      // See `SpanHandle` — a second `onPointerDown` would replace dnd-kit's.
       className="absolute inset-x-2 bottom-0 h-1.5 cursor-ns-resize rounded-t bg-foreground/15 hover:bg-primary/70"
     />
   );
@@ -2728,7 +2789,19 @@ function SpanHandle({ scheduleId }: { scheduleId: string }): React.ReactElement 
       aria-hidden
       tabIndex={-1}
       title={t('grid.spanHandle')}
-      onPointerDown={(event) => event.stopPropagation()}
+      /*
+        No `onPointerDown` of its own, and that is the whole fix.
+
+        `{...listeners}` from dnd-kit *is* an `onPointerDown`. Declaring another
+        one after the spread replaces it, so the sensor never saw the press and
+        neither grip did anything at all — for three commits.
+
+        The `stopPropagation` that used to be here came from the ticket's Dev
+        note, which assumed the handle sits inside the block's own draggable. It
+        does not: `Chip` carries that draggable and is a *sibling* of these
+        grips, and events bubble up rather than sideways. So there was nothing to
+        stop, and stopping it cost the gesture.
+      */
       /*
         The corner, so it does not fight the duration grip along the edge — and
         big enough to hit. Eight pixels was a target nobody found at compact

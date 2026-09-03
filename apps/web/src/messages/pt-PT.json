@@ -1800,7 +1800,9 @@
       "weekdayDisabled": "Este dia da semana está desativado"
     },
     "noLane": "Sem pista",
-    "durationHandle": "Arraste para alterar a duração da aula"
+    "durationHandle": "Arraste para alterar a duração da aula",
+    "resizingLanes": "{name} — a definir pistas",
+    "resizingLength": "{name} — a definir a duração"
   },
   "partnerClasses": {
     "title": "Parcerias",
