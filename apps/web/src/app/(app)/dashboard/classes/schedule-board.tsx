@@ -85,7 +85,17 @@ import {
  */
 
 /** One lane row, in rem, at each density. A chip's height is computed from it. */
-const ROW_REM = { compacta: 1.125, confortavel: 1.75 } as const;
+/**
+ * One lane row, in rem, at each density — a tenth taller than it was.
+ *
+ * The first pass was drawn to the reference sheet's density, which is what a
+ * printer achieves and a screen does not: at 18px a row the group name, the
+ * instructor and the headcount were all technically present and none of them
+ * were comfortable. Everything in the grid went up by roughly ten percent
+ * together — rows, rails, columns and type — because scaling one of them
+ * alone is what makes a grid look wrong rather than small.
+ */
+const ROW_REM = { compacta: 1.25, confortavel: 1.9375 } as const;
 
 type Density = keyof typeof ROW_REM;
 
@@ -112,8 +122,8 @@ function groupOf(weekday: number): DayGroup {
 }
 
 /** Rail widths, in rem. Shared by the sticky offsets and the column template. */
-const TIME_COL = 3.75;
-const LANE_COL = 4.5;
+const TIME_COL = 4.125;
+const LANE_COL = 5;
 
 function toMinutes(time: string): number {
   const [h, m] = time.split(':');
@@ -1482,13 +1492,13 @@ export function ScheduleBoard({
             />
 
             {legend.length > 0 && (
-              <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-muted">
+              <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.825rem] text-foreground-muted">
                 {legend.map((category) => (
                   <li key={category.id} className="flex items-center gap-1.5">
                     <span
                       aria-hidden
                       className={cn(
-                        'size-3 rounded-sm border',
+                        'size-3.5 rounded-sm border',
                         CATEGORY_TINT[category.colour] ?? DEFAULT_TINT,
                       )}
                     />
@@ -1512,7 +1522,7 @@ export function ScheduleBoard({
                 <ul className="flex flex-col gap-1 text-sm">
                   {outOfGrid.map((row) => (
                     <li key={row.key} className="flex flex-wrap items-baseline gap-x-3">
-                      <span className="font-mono text-xs">{toTime(row.startMinutes)}</span>
+                      <span className="font-mono text-[0.825rem]">{toTime(row.startMinutes)}</span>
                       <span className="font-medium">{row.name}</span>
                       <span className="text-foreground-muted">
                         {dayNames[row.weekday] ?? t(`week.${row.weekday}`)}
@@ -1941,7 +1951,7 @@ function SlotGrid({
       (slot) => slot.dayGroup === groupOf(day) && slot.startTime === startTime,
     );
 
-  const columns = `${TIME_COL}rem ${LANE_COL}rem repeat(${days.length}, minmax(6rem, 1fr))`;
+  const columns = `${TIME_COL}rem ${LANE_COL}rem repeat(${days.length}, minmax(6.625rem, 1fr))`;
 
   /*
    * A running row cursor rather than `slotIndex * lanes.length`.
@@ -1966,13 +1976,13 @@ function SlotGrid({
         >
           {/* Header row: the two rail labels, then the days. */}
           <div
-            className="sticky left-0 top-0 z-30 border-b border-border bg-surface px-2 py-1 text-left text-xs font-medium uppercase tracking-wider text-foreground-muted"
+            className="sticky left-0 top-0 z-30 border-b border-border bg-surface px-2 py-1 text-left text-[0.825rem] font-medium uppercase tracking-wider text-foreground-muted"
             style={{ gridColumn: 1, gridRow: 1 }}
           >
             {t('grid.time')}
           </div>
           <div
-            className="sticky top-0 z-30 border-b border-l border-border bg-surface px-2 py-1 text-left text-xs font-medium uppercase tracking-wider text-foreground-muted"
+            className="sticky top-0 z-30 border-b border-l border-border bg-surface px-2 py-1 text-left text-[0.825rem] font-medium uppercase tracking-wider text-foreground-muted"
             style={{ gridColumn: 2, gridRow: 1, left: `${TIME_COL}rem` }}
           >
             {t('grid.lane')}
@@ -1983,7 +1993,7 @@ function SlotGrid({
             return (
               <div
                 key={day}
-                className="sticky top-0 z-20 border-b border-l border-border bg-surface px-2 py-1 text-center text-xs font-medium uppercase tracking-wider text-foreground-muted"
+                className="sticky top-0 z-20 border-b border-l border-border bg-surface px-2 py-1 text-center text-[0.825rem] font-medium uppercase tracking-wider text-foreground-muted"
                 style={{ gridColumn: 3 + index, gridRow: 1 }}
               >
                 {dayNames[day] ?? t(`week.${day}`)}
@@ -1993,8 +2003,8 @@ function SlotGrid({
                   question the operator actually has.
                 */}
                 {closed !== null && (
-                  <span className="mt-0.5 flex items-center justify-center gap-1 text-[0.65rem] font-normal normal-case text-warning">
-                    <Lock aria-hidden className="size-3" />
+                  <span className="mt-0.5 flex items-center justify-center gap-1 text-[0.715rem] font-normal normal-case text-warning">
+                    <Lock aria-hidden className="size-3.5" />
                     {closed}
                   </span>
                 )}
@@ -2043,7 +2053,7 @@ function SlotGrid({
                   ink for one fact, and the eye stops reading it.
                 */}
                 <div
-                  className="sticky left-0 z-20 flex items-start justify-end border-t-2 border-border bg-surface px-2 pt-1 text-right font-mono text-[0.7rem] leading-tight text-foreground-muted"
+                  className="sticky left-0 z-20 flex items-start justify-end border-t-2 border-border bg-surface px-2 pt-1 text-right font-mono text-[0.775rem] leading-tight text-foreground-muted"
                   style={{
                     gridColumn: 1,
                     gridRow: `${firstRow} / span ${lanes.length + (laneless.length > 0 ? 1 : 0)}`,
@@ -2065,7 +2075,7 @@ function SlotGrid({
                     <Fragment key={`${startTime}:${lane.id}`}>
                       <div
                         className={cn(
-                          'sticky z-10 flex items-center gap-1 border-l border-border bg-surface px-2 text-[0.7rem] text-foreground-muted',
+                          'sticky z-10 flex items-center gap-1 border-l border-border bg-surface px-2 text-[0.775rem] text-foreground-muted',
                           firstOfSlot ? 'border-t-2' : 'border-t border-border/40',
                         )}
                         style={{
@@ -2264,7 +2274,7 @@ function NoLaneRow({
   return (
     <>
       <div
-        className="sticky z-10 flex items-center border-l border-t border-border/40 bg-surface px-2 text-[0.7rem] italic text-foreground-muted"
+        className="sticky z-10 flex items-center border-l border-t border-border/40 bg-surface px-2 text-[0.775rem] italic text-foreground-muted"
         style={{ gridColumn: 2, gridRow: row, left: `${TIME_COL}rem`, height: `${rowRem}rem` }}
       >
         <span className="truncate">{t('grid.noLane')}</span>
@@ -2451,9 +2461,9 @@ function Cell({
       {dragging && verdict !== 'ok' && (
         <span className="pointer-events-none absolute right-0 top-0 z-20">
           {verdict === 'block' ? (
-            <Ban aria-hidden className="size-3 text-danger" />
+            <Ban aria-hidden className="size-3.5 text-danger" />
           ) : (
-            <AlertTriangle aria-hidden className="size-3 text-warning" />
+            <AlertTriangle aria-hidden className="size-3.5 text-warning" />
           )}
         </span>
       )}
@@ -2613,7 +2623,7 @@ function BookingChip({
         }
       }}
       className={cn(
-        'relative flex h-full w-full flex-col overflow-hidden border pl-1 pr-1 text-[0.7rem] leading-tight',
+        'relative flex h-full w-full flex-col overflow-hidden border pl-1 pr-1 text-[0.775rem] leading-tight',
         tint,
         /*
           Joined across the hour line. The first part loses its bottom corners
@@ -2667,7 +2677,7 @@ function BookingChip({
               title={t('grid.concurrentGroups', { count: concurrency })}
               className={cn(
                 'rounded-sm border border-primary/50 px-1 tabular-nums text-primary',
-                compact ? 'text-[0.6rem]' : 'text-[0.65rem]',
+                compact ? 'text-[0.66rem]' : 'text-[0.715rem]',
               )}
             >
               ×{concurrency}
@@ -2678,7 +2688,7 @@ function BookingChip({
             <span
               className={cn(
                 'rounded-sm border border-border px-1 tabular-nums',
-                compact ? 'text-[0.6rem]' : 'text-[0.65rem]',
+                compact ? 'text-[0.66rem]' : 'text-[0.715rem]',
               )}
             >
               {booking.headcount}
@@ -2746,7 +2756,7 @@ function BookingChip({
           {booking.controls.mark !== undefined && (
             <a
               href={booking.controls.mark.href}
-              className="rounded text-[0.65rem] font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+              className="rounded text-[0.715rem] font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
             >
               {booking.controls.mark.label}
             </a>
@@ -2831,7 +2841,7 @@ function SpanHandle({ scheduleId }: { scheduleId: string }): React.ReactElement 
         density; this is twelve with a visible notch, which is still small
         against an 18px row but is at least aimable.
       */
-      className="absolute bottom-0 right-0 flex size-3 cursor-ns-resize items-end justify-end rounded-tl border-l border-t border-foreground/30 bg-foreground/20 hover:border-primary hover:bg-primary/70"
+      className="absolute bottom-0 right-0 flex size-3.5 cursor-ns-resize items-end justify-end rounded-tl border-l border-t border-foreground/30 bg-foreground/20 hover:border-primary hover:bg-primary/70"
     >
       <span className="mb-px mr-px block h-px w-1.5 bg-foreground/50" />
     </span>
@@ -2877,7 +2887,7 @@ function Chip({
       {...(draggable ? listeners : {})}
       {...attributes}
       className={cn(
-        'flex w-full items-start gap-1 text-left text-xs font-medium',
+        'flex w-full items-start gap-1 text-left text-[0.825rem] font-medium',
         draggable ? 'cursor-grab' : 'cursor-default',
         bare === true
           ? ''
@@ -2892,19 +2902,19 @@ function Chip({
       )}
     >
       {draggable && (
-        <GripVertical aria-hidden className="mt-0.5 size-3 shrink-0 text-foreground-muted" />
+        <GripVertical aria-hidden className="mt-0.5 size-3.5 shrink-0 text-foreground-muted" />
       )}
       <span className="min-w-0 flex-1 leading-tight">
         <span className={cn('line-clamp-2 break-words', cancelled === true && 'line-through')}>
           {label}
         </span>
         {time !== undefined && (
-          <span className="block font-mono text-[0.65rem] font-normal text-foreground-muted">
+          <span className="block font-mono text-[0.715rem] font-normal text-foreground-muted">
             {time}
           </span>
         )}
         {subtitle !== undefined && subtitle !== null && (
-          <span className="block truncate text-[0.65rem] font-normal text-foreground-muted">
+          <span className="block truncate text-[0.715rem] font-normal text-foreground-muted">
             {subtitle}
           </span>
         )}
