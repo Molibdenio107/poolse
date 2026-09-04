@@ -63,6 +63,7 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
    * compute is worse than a dashboard without the figure.
    */
   let occupancy: Occupancy | null = null;
+  let occupancyFacilityId: string | null = null;
   let occupancyFailed = false;
 
   if (me !== null && membership !== null) {
@@ -79,6 +80,7 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
 
     if (first !== undefined) {
       occupancy = await apiFetch<Occupancy>(`/facilities/${first}/occupancy`).catch(() => null);
+      occupancyFacilityId = first;
       // Best-effort, but not silent: a dashboard that simply omits its main
       // panel is indistinguishable from one that has not been built.
       occupancyFailed = occupancy === null;
@@ -108,7 +110,9 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
             activeTheme={activeTheme}
           />
 
-          {occupancy !== null && <OccupancyPanel occupancy={occupancy} />}
+          {occupancy !== null && (
+            <OccupancyPanel occupancy={occupancy} facilityId={occupancyFacilityId} />
+          )}
 
           {occupancyFailed && (
             <section className="rounded border border-border bg-surface p-5">

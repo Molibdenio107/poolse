@@ -68,6 +68,7 @@ import {
   moveBookingAction,
   moveOccurrenceAction,
   moveSlotAction,
+  assignInstructorAction,
   placeSlotAction,
   setInstructorStatusAction,
 } from './classes.actions';
@@ -437,6 +438,7 @@ export function ScheduleBoard({
   laneLevelCapacity,
   maxConcurrentGroups,
   staffing,
+  staff,
   seasonId,
   seasonName,
   seasonStatus,
@@ -475,6 +477,15 @@ export function ScheduleBoard({
   maxConcurrentGroups: number | null;
   /** The season's two staffing gaps — POOLSE-53. Both zero means say nothing. */
   staffing: GridStaffing;
+  /**
+   * Every instructor at the club, for the picker on a block.
+   *
+   * Not `instructors`, which is only those with something already on this grid —
+   * that list is right for a *filter* and exactly wrong for assigning, because
+   * the person you most want to put on an empty Tuesday is the one who is not on
+   * it yet.
+   */
+  staff: { id: string; name: string }[];
   /** The season the grid was drawn for, so an export link names the same one. */
   seasonId: string | null;
   /** Named in the counter, because "7 aulas" without a season is 7 of what. */
@@ -1091,6 +1102,42 @@ export function ScheduleBoard({
     });
   }
 
+  /**
+   * Put somebody on this class — POOLSE-53's other half.
+   *
+   * Writes the booking's own override, not the turma's instructor: "Sandra runs
+   * Cadetes" is said on the Turmas screen, "somebody is covering Cadetes this
+   * Tuesday" is said here, and collapsing the two would silently reassign a
+   * whole turma from a grid cell.
+   *
+   * Null hands the booking back — to its turma's instructor where it has one,
+   * and to "a definir" where it has not. The status is never sent and never
+   * assumed: POOLSE-53 made it the database's, so the answer is read back.
+   */
+  function assignTo(subject: Placed, membershipId: string | null): void {
+    if (subject.scheduleId === null) return;
+    setFeedback(null);
+
+    startPending(async () => {
+      const result = await assignInstructorAction(
+        organizationId,
+        subject.scheduleId as string,
+        membershipId,
+      );
+
+      if (!result.ok) {
+        say('error', result.errorKey);
+        return;
+      }
+
+      say(
+        'success',
+        membershipId === null ? 'grid.assignCleared' : 'grid.assignDone',
+        result.instructorName,
+      );
+    });
+  }
+
   function resizeBy(subject: Placed, delta: number): void {
     const covered = slotsCovered(subject.startMinutes, subject.durationMinutes, slots);
     const last = covered[covered.length - 1];
@@ -1620,6 +1667,8 @@ export function ScheduleBoard({
               onSpan={spanBy}
               onResize={resizeBy}
               onStaffing={setStaffing}
+              onAssign={assignTo}
+              staff={staff}
               ruleContext={ruleContext}
               draggingSubject={draggingSubject}
             />
@@ -1666,6 +1715,24 @@ export function ScheduleBoard({
                     </li>
                   ))}
                 </ul>
+
+                {/*
+                  The way out of it — the same audit as POOLSE-53's counter.
+                  
+                  This block named a problem and offered nothing to do about it.
+                  There are exactly two fixes and the hint above names both: move
+                  the booking onto a row, which is a drag on this grid, or give
+                  the grid a row at that hour, which is the slot editor. The drag
+                  is already here; this is the other one.
+                */}
+                {facility !== undefined && (
+                  <a
+                    href={`/dashboard/facilities/${facility.id}`}
+                    className="self-start rounded border border-border px-3 py-1.5 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('grid.offGridFix')}
+                  </a>
+                )}
               </section>
             )}
           </>
@@ -2206,6 +2273,8 @@ function SlotGrid({
   onSpan,
   onResize,
   onStaffing,
+  onAssign,
+  staff,
   ruleContext,
   draggingSubject,
 }: {
@@ -2229,6 +2298,10 @@ function SlotGrid({
   onResize: (booking: Placed, delta: number) => void;
   /** The operator escalates a slot to "sem professor", or takes it back. */
   onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
+  /** Put somebody on this class, or hand it back — POOLSE-53's other half. */
+  onAssign: (booking: Placed, membershipId: string | null) => void;
+  /** Every instructor at the club, for the picker. Not only those on the grid. */
+  staff: { id: string; name: string }[];
   ruleContext: RuleContext;
   /** The block in flight, so every cell can say what dropping it here would do. */
   draggingSubject: RuleBooking | null;
@@ -2467,6 +2540,8 @@ function SlotGrid({
                             onSpan={onSpan}
                             onResize={onResize}
                             onStaffing={onStaffing}
+                            onAssign={onAssign}
+                            staff={staff}
                             ruleContext={ruleContext}
                             draggingSubject={draggingSubject}
                           />
@@ -2503,6 +2578,8 @@ function SlotGrid({
                     onSpan={onSpan}
                     onResize={onResize}
                     onStaffing={onStaffing}
+                    onAssign={onAssign}
+                    staff={staff}
                   />
                 )}
               </Fragment>
@@ -2533,6 +2610,8 @@ function NoLaneRow({
   onSpan,
   onResize,
   onStaffing,
+  onAssign,
+  staff,
 }: {
   startTime: string;
   row: number;
@@ -2546,6 +2625,10 @@ function NoLaneRow({
   onResize: (booking: Placed, delta: number) => void;
   /** The operator escalates a slot to "sem professor", or takes it back. */
   onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
+  /** Put somebody on this class, or hand it back — POOLSE-53's other half. */
+  onAssign: (booking: Placed, membershipId: string | null) => void;
+  /** Every instructor at the club, for the picker. Not only those on the grid. */
+  staff: { id: string; name: string }[];
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -2595,6 +2678,8 @@ function NoLaneRow({
                   onSpan={onSpan}
                   onResize={onResize}
                   onStaffing={onStaffing}
+                  onAssign={onAssign}
+                  staff={staff}
                   concurrency={1}
                 />
               </div>
@@ -2625,6 +2710,8 @@ function Cell({
   onSpan,
   onResize,
   onStaffing,
+  onAssign,
+  staff,
   ruleContext,
   draggingSubject,
 }: {
@@ -2649,6 +2736,10 @@ function Cell({
   onResize: (booking: Placed, delta: number) => void;
   /** The operator escalates a slot to "sem professor", or takes it back. */
   onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
+  /** Put somebody on this class, or hand it back — POOLSE-53's other half. */
+  onAssign: (booking: Placed, membershipId: string | null) => void;
+  /** Every instructor at the club, for the picker. Not only those on the grid. */
+  staff: { id: string; name: string }[];
   ruleContext: RuleContext;
   draggingSubject: RuleBooking | null;
 }): React.ReactElement {
@@ -2771,6 +2862,8 @@ function Cell({
             onSpan={onSpan}
             onResize={onResize}
             onStaffing={onStaffing}
+            onAssign={onAssign}
+            staff={staff}
             /*
               Bookings, not lanes — the thing POOLSE-51 names as most likely to
               be got wrong. An instructor on one three-lane booking is running
@@ -2822,6 +2915,8 @@ function BookingChip({
   onSpan,
   onResize,
   onStaffing,
+  onAssign,
+  staff,
   concurrency,
 }: {
   booking: Placed;
@@ -2834,6 +2929,10 @@ function BookingChip({
   onResize: (booking: Placed, delta: number) => void;
   /** The operator escalates a slot to "sem professor", or takes it back. */
   onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
+  /** Put somebody on this class, or hand it back — POOLSE-53's other half. */
+  onAssign: (booking: Placed, membershipId: string | null) => void;
+  /** Every instructor at the club, for the picker. Not only those on the grid. */
+  staff: { id: string; name: string }[];
   /** How many groups this instructor is running at this moment. 1 is silent. */
   concurrency: number;
 }): React.ReactElement {
@@ -2990,6 +3089,8 @@ function BookingChip({
           compact={compact}
           canManage={canManage}
           onStaffing={onStaffing}
+          onAssign={onAssign}
+          staff={staff}
         />
       )}
 
@@ -3063,6 +3164,84 @@ function BookingChip({
  * with either would make one of them unreachable.
  */
 /**
+ * One control for every way a class gets staffed — POOLSE-53's other half.
+ *
+ * A native `<select>`, deliberately. It is keyboard- and screen-reader-navigable
+ * without a line of code, it is the one control a browser renders well inside a
+ * 1.75rem row, and it collapses three separate gestures — assign, escalate,
+ * clear — into the single question the operator is actually asking: *who is
+ * taking this?*
+ *
+ * `stopPropagation` on pointer-down for the reason every other control in this
+ * cell does it: the block underneath is draggable, and dnd-kit would otherwise
+ * claim the gesture and move the class instead of opening the list.
+ *
+ * **`Sem professor` sits above the names, not among them.** It is not a person,
+ * and a list where an accusation about staffing is one arrow-key away from
+ * "Sandra Lopes" is a list somebody will pick from by accident.
+ */
+function InstructorPicker({
+  booking,
+  staff,
+  onAssign,
+  onStaffing,
+}: {
+  booking: Placed;
+  staff: { id: string; name: string }[];
+  onAssign: (booking: Placed, membershipId: string | null) => void;
+  onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
+}): React.ReactElement {
+  const t = useTranslations();
+
+  const UNCOVERED = '__uncovered';
+  const TO_DEFINE = '';
+
+  /*
+   * What the control currently reads.
+   *
+   * The *booking's own* instructor, so a class taking its turma's instructor
+   * shows as "a definir" rather than pre-selecting somebody the picker would
+   * then silently pin as an override on the next unrelated change.
+   */
+  const value =
+    booking.instructorStatus === 'uncovered'
+      ? UNCOVERED
+      : (staff.find((person) => person.id === booking.instructorId)?.id ?? TO_DEFINE);
+
+  return (
+    <select
+      value={value}
+      aria-label={t('grid.assignLabel')}
+      onPointerDown={(event) => event.stopPropagation()}
+      onChange={(event) => {
+        const next = event.target.value;
+        if (next === UNCOVERED) onStaffing(booking, 'uncovered');
+        else onAssign(booking, next === TO_DEFINE ? null : next);
+      }}
+      className={cn(
+        'w-full min-w-0 truncate rounded-sm border px-1 text-[0.715rem]',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
+        booking.instructorStatus === 'uncovered'
+          ? 'border-transparent bg-destructive font-medium text-destructive-foreground'
+          : 'border-border bg-surface text-foreground-muted',
+      )}
+    >
+      <option value={TO_DEFINE}>
+        {booking.instructorStatus === 'external'
+          ? (instructorDisplay(booking).name ?? t('grid.staffing.pending'))
+          : `??? ${t('grid.staffing.pending')}`}
+      </option>
+      <option value={UNCOVERED}>{t('grid.noInstructor')}</option>
+      {staff.map((person) => (
+        <option key={person.id} value={person.id}>
+          {person.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/**
  * Who is teaching this, in four states that never look like each other — POOLSE-53.
  *
  * The states carry the same absence of data and opposite meanings, so each one
@@ -3080,17 +3259,31 @@ function BookingChip({
  * **At compact density the two gaps still render.** Compact drops names, because
  * a 1.4rem row cannot hold one — but dropping the alert as well would mean the
  * density toggle silently hides the thing this whole screen is for.
+ *
+ * **And for owner/admin it is a picker, not a label.** The counter said "2 por
+ * definir", clicking it filtered the grid to those two, and then there was
+ * nothing to do to them — the booking's instructor column had no interface at
+ * all, and a parceria could not be staffed by one of the club's instructors by
+ * any route. One `<select>` carries all three transitions: choose somebody,
+ * mark it "sem professor", or hand it back. A counter that names a problem and
+ * offers no way to fix it teaches the operator that the number is not theirs.
  */
 function InstructorLine({
   booking,
   compact,
   canManage,
   onStaffing,
+  onAssign,
+  staff,
 }: {
   booking: Placed;
   compact: boolean;
   canManage: boolean;
   onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
+  /** Put somebody on this class, or hand it back — POOLSE-53's other half. */
+  onAssign: (booking: Placed, membershipId: string | null) => void;
+  /** Every instructor at the club, for the picker. Not only those on the grid. */
+  staff: { id: string; name: string }[];
 }): React.ReactElement | null {
   const t = useTranslations();
 
@@ -3103,6 +3296,22 @@ function InstructorLine({
    */
   const settable = status === 'to_define' || status === 'uncovered';
   const escalates = canManage && settable && booking.scheduleId !== null && !booking.cancelled;
+
+  /*
+   * The picker replaces the label wherever somebody may actually change this.
+   *
+   * Every state, not only the two gaps: an `assigned` block whose substitute
+   * changed needs the same control, and hiding it there would send somebody to
+   * the Turmas screen to do half of what this does. A cancelled class keeps its
+   * label — there is nobody to put on a class that is not happening.
+   */
+  const canPick = canManage && booking.scheduleId !== null && !booking.cancelled;
+
+  if (canPick && !compact) {
+    return (
+      <InstructorPicker booking={booking} staff={staff} onAssign={onAssign} onStaffing={onStaffing} />
+    );
+  }
 
   if (status === 'assigned') {
     // A staffed class at compact density shows nothing here: the row cannot hold

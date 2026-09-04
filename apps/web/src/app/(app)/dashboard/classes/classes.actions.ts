@@ -489,3 +489,37 @@ export async function setInstructorStatusAction(
   revalidatePath('/dashboard/classes');
   return { ok: true, status: answer.status };
 }
+
+/**
+ * Put somebody on a class, from the grid — the other half of POOLSE-53's alert.
+ *
+ * `membershipId` null clears the booking's override and hands it back to the
+ * turma's own instructor, which for a turma with nobody means back to
+ * "a definir". The status is never sent: POOLSE-53 made it the database's, and
+ * the answer that comes back is what the row actually holds.
+ */
+export async function assignInstructorAction(
+  organizationId: string,
+  scheduleId: string,
+  membershipId: string | null,
+): Promise<
+  { ok: true; status: string; instructorName: string | null } | { ok: false; errorKey: string }
+> {
+  let answer: { status: string; instructorName: string | null };
+  try {
+    answer = await apiPost(
+      `/bookings/${scheduleId}/instructor`,
+      { membershipId },
+      { organizationId },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      return { ok: false, errorKey: 'grid.notAllowed' };
+    }
+    return { ok: false, errorKey: 'grid.dropRefused' };
+  }
+
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/classes');
+  return { ok: true, ...answer };
+}

@@ -16,6 +16,7 @@ import {
   LaneTakenError,
   moveBooking,
   NonContiguousLanesError,
+  assignInstructor,
   setInstructorStatus,
   type BookingTarget,
   type SettableStatus,
@@ -77,6 +78,39 @@ export class BookingsController {
 
     if (copy === null) throw new NotFoundException('No such booking');
     return copy;
+  }
+
+  /**
+   * Put somebody on this class — the other half of POOLSE-53's alert.
+   *
+   * The counter named the gap and clicking it filtered the grid to it; there was
+   * then nothing to *do*. This is the doing, on the block where the gap is
+   * visible, rather than a trip to the Turmas screen — and for a parceria there
+   * was no trip to take, because it has no turma to edit.
+   *
+   * The body's `membershipId` may be null, which clears the override and hands
+   * the booking back to its turma's own instructor. The status is not accepted
+   * and not returned from the request: POOLSE-53 made it the database's, and it
+   * follows from this write.
+   */
+  @Post(':scheduleId/instructor')
+  async assign(
+    @Param('scheduleId') scheduleId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ status: string; instructorName: string | null }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const raw = body['membershipId'];
+    const membershipId =
+      raw === null || raw === undefined || raw === '' ? null : String(raw).trim();
+
+    const result = await assignInstructor(organizationId, scheduleId, membershipId);
+    // One 404 for both "no such booking" and "not an instructor here": neither
+    // is a thing this caller should be told apart, and the picker only ever
+    // offers people who are.
+    if (result === null) throw new NotFoundException('No such booking or instructor');
+    return result;
   }
 
   /**

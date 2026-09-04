@@ -487,3 +487,101 @@ export async function setInstructorStatus(
     return { status: updated.instructor_status };
   });
 }
+
+/**
+ * Who is teaching this booking — the other half of POOLSE-53.
+ *
+ * The alert said "2 por definir", clicking it filtered the grid to those two,
+ * and then there was nothing to do to them: `class_schedule.instructor_membership_id`
+ * had no interface at all. A turma could be staffed by leaving the grid and
+ * editing the turma; a **parceria could not be staffed by one of the club's own
+ * instructors by any route**, because it has no turma to edit.
+ *
+ * A counter that names a problem and offers no way to fix it is worse than no
+ * counter: it teaches the operator that the number is somebody else's job.
+ *
+ * **It writes the booking's own override, never the turma's instructor.** Those
+ * are different facts — "Sandra runs Cadetes" against "somebody is covering
+ * Cadetes this Tuesday" — and POOLSE-46 added the column precisely so a
+ * substitute on one day shows as the substitute rather than silently
+ * reassigning the whole turma. Editing the turma is still where "Sandra runs
+ * Cadetes" is said, and that is the Turmas screen's job.
+ *
+ * Null clears the override, which returns the booking to the turma's own
+ * instructor — or, where there is none, to `to_define` by POOLSE-53's trigger.
+ * The status is never written here: it is the database's, and it follows.
+ */
+export async function assignInstructor(
+  organizationId: string,
+  scheduleId: string,
+  membershipId: string | null,
+): Promise<{ status: string; instructorName: string | null } | null> {
+  return withOrg(organizationId, async (tx) => {
+    if (membershipId !== null) {
+      /*
+       * The person has to be an instructor at this club.
+       *
+       * Checked rather than trusted: the composite key stops another tenant's
+       * membership, and this stops a member of *this* tenant who does not
+       * teach — a student id pasted into the request would otherwise put a
+       * twelve-year-old on the timetable as staff.
+       */
+      const { rowCount } = await tx.query(
+        `SELECT 1
+           FROM membership m
+           JOIN membership_role r
+             ON r.membership_id = m.id AND r.organization_id = m.organization_id
+          WHERE m.id = $1 AND m.archived_at IS NULL AND r.role = 'instructor'`,
+        [membershipId],
+      );
+      if (rowCount === 0) return null;
+    }
+
+    const { rows } = await tx.query<{
+      instructor_status: string;
+      name: string | null;
+      subject: string;
+    }>(
+      `UPDATE class_schedule cs
+          SET instructor_membership_id = $2
+        WHERE cs.id = $1 AND cs.archived_at IS NULL
+      RETURNING cs.instructor_status::text AS instructor_status,
+                (SELECT nullif(btrim(concat_ws(' ',
+                          coalesce(u.cached_first_name, m.first_name),
+                          coalesce(u.cached_last_name,  m.last_name))), '')
+                   FROM membership m
+                   LEFT JOIN app_user u ON u.id = m.app_user_id
+                  WHERE m.id = coalesce(cs.instructor_membership_id,
+                                        (SELECT cg.instructor_membership_id
+                                           FROM class_group cg
+                                          WHERE cg.id = cs.class_group_id
+                                            AND cg.organization_id = cs.organization_id))
+                    AND m.organization_id = cs.organization_id) AS name,
+                coalesce(
+                  (SELECT cg.name FROM class_group cg
+                    WHERE cg.id = cs.class_group_id
+                      AND cg.organization_id = cs.organization_id),
+                  (SELECT pg.name FROM partner_group pg
+                    WHERE pg.id = cs.partner_group_id
+                      AND pg.organization_id = cs.organization_id),
+                  cs.title, '?') AS subject`,
+      [scheduleId, membershipId],
+    );
+
+    const updated = rows[0];
+    if (updated === undefined) return null;
+
+    await recordAudit(tx, {
+      action: 'booking.instructor_assigned',
+      entityType: 'class_schedule',
+      entityId: scheduleId,
+      data: {
+        name: updated.subject,
+        instructor: updated.name,
+        status: updated.instructor_status,
+      },
+    });
+
+    return { status: updated.instructor_status, instructorName: updated.name };
+  });
+}

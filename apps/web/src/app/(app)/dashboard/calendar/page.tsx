@@ -319,6 +319,10 @@ export default async function CalendarPage({
                 instructors={grid?.instructors ?? []}
                 partners={grid?.partners ?? []}
                 levels={classes.options.levels}
+                // Every instructor at the club, not only those already on the
+                // grid — the person you most want on an empty Tuesday is the
+                // one who is not on it yet.
+                staff={classes.options.instructors}
                 laneLevelCapacity={grid?.laneLevelCapacity ?? {}}
                 maxConcurrentGroups={grid?.maxConcurrentGroups ?? null}
                 // No grid means no season loaded, so there is nothing to report

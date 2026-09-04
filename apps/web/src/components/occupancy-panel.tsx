@@ -34,8 +34,15 @@ const BANDS: readonly TimeBand[] = ['manha', 'tarde', 'noite'];
 
 export async function OccupancyPanel({
   occupancy,
+  facilityId,
 }: {
   occupancy: Occupancy;
+  /**
+   * The site these figures are of, so the warning below can point at the lane
+   * editor. Null where the caller has none, and the warning then states the
+   * problem without a link rather than linking nowhere.
+   */
+  facilityId?: string | null;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -96,12 +103,25 @@ export async function OccupancyPanel({
         exclusion is worse than one that names it.
       */}
       {occupancy.lanesWithoutCapacity > 0 && (
-        <p className="flex items-start gap-2 rounded border border-warning/40 bg-warning/5 p-3 text-sm">
+        <div className="flex items-start gap-2 rounded border border-warning/40 bg-warning/5 p-3 text-sm">
           <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
-          <span>
-            {t('occupancy.uncovered', { count: occupancy.lanesWithoutCapacity })}
-          </span>
-        </p>
+          <div className="flex flex-col items-start gap-2">
+            <span>{t('occupancy.uncovered', { count: occupancy.lanesWithoutCapacity })}</span>
+            {/*
+              And the way to fix it. This said "the percentage excludes N lanes"
+              and stopped there — a figure explaining its own asterisk with no
+              route to removing it. A lane's capacity is set in the lane editor.
+            */}
+            {facilityId !== undefined && facilityId !== null && (
+              <a
+                href={`/dashboard/facilities/${facilityId}`}
+                className="rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('occupancy.setCapacity')}
+              </a>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Turmas against parcerias — the split the ticket exists to expose. */}

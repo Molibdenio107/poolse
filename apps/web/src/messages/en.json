@@ -1870,7 +1870,11 @@
     "closedEndsAfter": "The class would end after closing.",
     "openingHours": "Open {hours}",
     "closesAt": "Closes at {time}",
-    "dismiss": "Dismiss message"
+    "dismiss": "Dismiss message",
+    "assignLabel": "Who teaches this class",
+    "assignDone": "Instructor assigned.",
+    "assignCleared": "The class is to be decided again.",
+    "offGridFix": "Adjust the slot grid"
   },
   "partnerClasses": {
     "title": "Partnerships",
@@ -1915,6 +1919,7 @@
     "byDayChart": "Lane-hours sold, by day of the week",
     "ofHours": "{sold} of {available}",
     "free": "Free",
-    "unavailable": "No occupancy figures yet. This needs a published season, a slot grid and some bookings."
+    "unavailable": "No occupancy figures yet. This needs a published season, a slot grid and some bookings.",
+    "setCapacity": "Set the lanes' capacity"
   }
 }

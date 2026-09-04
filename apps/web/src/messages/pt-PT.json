@@ -1870,7 +1870,11 @@
     "closedEndsAfter": "A aula terminaria depois do fecho.",
     "openingHours": "Aberto {hours}",
     "closesAt": "Fecha às {time}",
-    "dismiss": "Fechar mensagem"
+    "dismiss": "Fechar mensagem",
+    "assignLabel": "Quem dá esta aula",
+    "assignDone": "Professor atribuído.",
+    "assignCleared": "A aula voltou a ficar por definir.",
+    "offGridFix": "Ajustar a grelha horária"
   },
   "partnerClasses": {
     "title": "Parcerias",
@@ -1915,6 +1919,7 @@
     "byDayChart": "Horas-pista vendidas, por dia da semana",
     "ofHours": "{sold} de {available}",
     "free": "Livre",
-    "unavailable": "Ainda não há dados de ocupação. É preciso uma época publicada, uma grelha horária e marcações."
+    "unavailable": "Ainda não há dados de ocupação. É preciso uma época publicada, uma grelha horária e marcações.",
+    "setCapacity": "Definir a lotação das pistas"
   }
 }
