@@ -201,14 +201,22 @@ function isContiguous(laneIds: readonly string[], lanes: readonly GridLane[]): b
  * **Colour never carries meaning alone.** Every cell prints its group name, and
  * the legend names each category in words beside its swatch. This is the cue that
  * makes a full grid scannable, not the cue that makes it readable.
+ *
+ * **All seven enum values are here, and that is a POOLSE-55 fix.** Two were
+ * missing in a way nothing failed on: `teal` had no entry and fell through to
+ * `DEFAULT_TINT`, which is blue, and `violet` pointed at `--accent` — the same
+ * near-grey as `slate`'s `--surface-muted`. A club colour-coding Competição and
+ * Hidroginástica saw one colour, and the reference seed is what made it visible.
+ * Anything added to the enum needs a line here; the fallback hides the omission.
  */
 const CATEGORY_TINT: Record<string, string> = {
   slate: 'border-border bg-surface-muted',
   blue: 'border-primary/40 bg-primary/10',
+  teal: 'border-category-teal/40 bg-category-teal/10',
   green: 'border-success/40 bg-success/10',
   amber: 'border-warning/40 bg-warning/10',
   red: 'border-danger/40 bg-danger/10',
-  violet: 'border-accent/40 bg-accent/10',
+  violet: 'border-category-violet/40 bg-category-violet/10',
 };
 
 const DEFAULT_TINT = 'border-primary/40 bg-primary/10';

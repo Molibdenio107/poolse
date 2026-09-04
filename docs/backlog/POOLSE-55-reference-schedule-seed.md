@@ -96,3 +96,134 @@ Rebuilt from the reference sheet:
 9. Every category colour is contrast-checked on the compact grid in light and dark, and the results recorded.
 10. `pnpm i18n:check` and `pnpm pt:check` are clean across the whole feature.
 11. The reference document, or a pointer to it, lives beside the seed so the comparison can be repeated.
+
+---
+
+## Verification record — 2026-09-04
+
+This is the acceptance of POOLSE-43 to 54, so it says what was actually run and
+what it found, including the things it could not do.
+
+### The seed loads, and the rules accept the real week
+
+`packages/db/src/seed-reference.ts`, run through `pnpm db:seed`. It builds a
+facility of its own — **Piscina Municipal de Santo Tirso** — rather than filling
+the club already in a developer's database, because forty seeded bookings landing
+on top of hand-typed data is unrecoverable without a reset.
+
+Measured against a real Postgres after running:
+
+| | asked for | got |
+|---|---|---|
+| Main tank | 6 lanes | 6 |
+| Laneless pool | 1 implicit lane | 1 |
+| Weekday slots | 15, with the midday hole | 15; `11:45` then `14:45`, nothing between |
+| Weekend slots | 6 | 6 |
+| Bookings | ~40 | **45** — 32 turma, 12 parceria, 1 manutenção |
+| Partners | 4 | 4, across four different `partner_type` values |
+| Partner groups | the awkward names | `6A`, `6B`, `10G 11B`, `11H/I`, `12 F/I`, `Hidroterapia`, `Sala dos 4 anos`, `Sala dos 5 anos`, `Sub-16` |
+| `uncovered` | at least 3 | 4 |
+| `to_define` | at least 2 | 10 |
+| Dated sessions | some | 186 over four weeks (132 turma, 54 other) |
+
+- **55.2, idempotent.** Second run added 0 bookings and there is one facility.
+- **55.4**, hidroginástica occupies all six lanes as one booking; so do the
+  school's two three-lane blocks side by side, and the handball club's Friday.
+- **55.5 / criterion 7, the Sandra case is accepted.** One instructor, three
+  groups, three adjacent lanes, one slot — twice a week. It loads, and the
+  session generator accepts it.
+- **55.10**, the awkward names round-trip through the database exactly.
+
+### What the seed found — three real defects
+
+**1. `class_session_instructor_free` is org-wide and crosses facilities.** The
+first version of the seed borrowed the organization's existing instructors and
+was refused. The constraint asks whether one person is in two *pools* at
+overlapping times, and two facilities are two sets of pools — so a club with its
+own Monday 06:30 class cannot lend that instructor to a second site at the same
+hour. **The rule is right and the seed was wrong**: nobody is in two buildings at
+once, and a person's time is a resource the whole organization shares. The
+reference site now brings its own staff. Recorded because it is a property of the
+model that is easy to mistake for a bug when a seed or an import hits it.
+
+**2. Two of the seven category colours were invisible.** `category_colour` is a
+seven-value enum; `CATEGORY_TINT` in `schedule-board.tsx` had five. `teal` had no
+entry and fell through to `DEFAULT_TINT`, which is blue, and `violet` pointed at
+`--accent` — the same near-grey as `slate`'s `--surface-muted`. **Seven
+categories rendered as four**, and a club colour-coding Competição and
+Hidroginástica saw one colour. Nothing failed; the fallback hid it. Fixed:
+`--category-teal` and `--category-violet` are real tokens in both themes now, and
+the map covers every enum value.
+
+**3. The main seed leaked Sunday onto the reference grid.** `seed.ts` applies its
+own `SLOT_GRID` to every facility, so the second run added three Sunday rows to a
+site whose reference document has no Sunday. Fixed by excluding the reference
+facility — it owns its own grid.
+
+### Criterion 9 — category contrast on the compact grid, measured
+
+Computed from the tokens in `globals.css`, both themes. The cell is `bg-<token>/10`
+with a `border-<token>/40`; the group name is `text-foreground`, the instructor
+line `text-foreground-muted`.
+
+| tint | light: name / instructor | dark: name / instructor |
+|---|---|---|
+| slate | 16.09 / 5.22 | 13.19 / 6.01 |
+| blue | 16.43 / 5.33 | 12.20 / 5.56 |
+| teal | 15.67 / 5.09 | 12.25 / 5.58 |
+| green | 16.15 / 5.24 | 12.32 / 5.61 |
+| amber | 16.34 / 5.30 | 12.20 / 5.56 |
+| red | 15.61 / 5.07 | 12.91 / 5.88 |
+| violet | 15.47 / 5.02 | 12.49 / 5.69 |
+
+**Every value passes AA**, including the smallest — the instructor line at
+compact density never drops below 5.02:1.
+
+**But a finding worth a decision.** The *fills* are barely distinguishable from
+one another: at 10% opacity the closest pair is 4.1 RGB units apart in light and
+3.7 in dark, which is invisible. The colour signal actually lives in the `/40`
+borders, where the closest pair is 23.5 (light) and 14.6 (dark) — blue against
+teal being the tightest.
+
+This is not an accessibility failure: every cell prints its group name and the
+legend names each category in words, so colour never carries meaning alone. It
+is a *usability* one — category colour is supposed to make a full grid scannable
+and at 10% it hardly does.
+
+**Open, and Rui's call rather than mine:** raise the category fill (12–15% would
+roughly double the separation while keeping every ratio above AA), or accept that
+the border carries it. Not changed unilaterally — the grid's look has been tuned
+across three rounds and this would alter every cell on it.
+
+### Criterion 8 — tenant isolation, done
+
+Two new blocks in `packages/db/test/tenant-isolation.sql`, tests 9 and 10, both
+passing. Test 9 asserts that org A sees none of org B's `lane`,
+`facility_time_slot`, `partner`, `partner_contact`, `partner_agreement`,
+`partner_group` or `booking_category` rows — the agreement most of all, since a
+competitor reading another club's lane-hour rate is the worst single row in this
+feature. Test 10 asserts the other half, which RLS does not cover: the composite
+keys refuse a lane in another tenant's pool, a slot on another tenant's season, a
+booking on another tenant's partner group, a `booking_lane` pointing at another
+tenant's lane, and a `slot_id` borrowed from the neighbour's grid.
+
+### Criterion 10 — i18n, clean
+
+`pnpm i18n:check`: 1692 literal and 100 computed keys resolve across both
+locales. `pnpm pt:check`: 1704 keys, no Brazilian forms, nothing left in English.
+
+### Not done
+
+- **Criterion 6 — the side-by-side PDF comparison.** The original Santo Tirso
+  document is not in the repository and this environment has no browser, so the
+  A3 export has not been laid beside it. This is the same gap POOLSE-54's
+  criterion 2 records, and closing one closes most of the other.
+  `packages/db/seeds/REFERENCE.md` says how to repeat the comparison and what to
+  compare.
+- **Criterion 11 — the reference document itself.** `REFERENCE.md` is the pointer,
+  and it is honest that the PDF is missing: it names real instructors and real
+  school classes, which is a GDPR decision rather than a storage one. Ask Rui.
+- **Criterion 4 — expressiveness.** Everything the ticket's own BA section
+  describes is expressible, and the seed proves it. Whether the *whole* sheet is
+  cannot be claimed without the sheet. Nothing was fudged to make the seed load:
+  the one refusal it hit is written up above as finding 1, and the rule was kept.

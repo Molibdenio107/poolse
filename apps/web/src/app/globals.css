@@ -73,6 +73,22 @@
     --danger: 190 71 62;
 
     /*
+     * Booking categories — POOLSE-49, and two of them added by POOLSE-55.
+     *
+     * `category_colour` is a seven-value enum and the grid had tints for five
+     * of them: `teal` had none and fell through to blue, and `violet` pointed at
+     * `--accent`, which is the same near-grey as `--surface-muted` and therefore
+     * indistinguishable from `slate`. Seven categories rendered as four, and the
+     * reference seed is what made that visible — a club colour-coding by
+     * Competição and Hidroginástica saw one colour.
+     *
+     * The other five keep pointing at existing tokens; only the two that had
+     * nothing of their own get a value here.
+     */
+    --category-teal: 20 122 122;
+    --category-violet: 124 66 168;
+
+    /*
      * Role colours — POOLSE-18.
      *
      * Six hues, deliberately clear of the amber and red that carry the
@@ -129,6 +145,10 @@
     --success: 106 187 138;
     --warning: 222 174 84;
     --danger: 224 110 100;
+
+    /* Lifted for the dark ground, the same way success/warning/danger are. */
+    --category-teal: 92 190 188;
+    --category-violet: 182 145 226;
 
     /* Lighter counterparts — same hues, readable on a dark surface. */
     --role-owner: 186 148 235;

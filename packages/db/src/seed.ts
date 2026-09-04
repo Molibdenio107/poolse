@@ -29,6 +29,7 @@
  *   pnpm db:seed
  */
 import pg from 'pg';
+import { seedReferenceSchedule } from './seed-reference.js';
 
 const { Client } = pg;
 
@@ -1192,10 +1193,20 @@ async function main(): Promise<void> {
     );
 
     if (season) {
+      /*
+       * Every site except the reference one — POOLSE-55.
+       *
+       * The reference schedule owns its own grid, and it deliberately has no
+       * Sunday: the sheet it was rebuilt from does not open on one. This loop
+       * seeded three Sunday rows onto it on the second run, which is a grid
+       * quietly disagreeing with the document it is supposed to reproduce.
+       */
       for (const site of await many<{ id: string }>(
         client,
         `SELECT id FROM facility
-          WHERE organization_id = $1 AND archived_at IS NULL ORDER BY created_at`,
+          WHERE organization_id = $1 AND archived_at IS NULL
+            AND name <> 'Piscina Municipal de Santo Tirso'
+          ORDER BY created_at`,
         [org.id],
       )) {
         for (const [group, hours] of Object.entries(SLOT_GRID)) {
@@ -1224,6 +1235,22 @@ async function main(): Promise<void> {
 
     if (counts.slots > 0) console.log(`  grelha horária: ${counts.slots} horários`);
 
+    // ---------------------------------------------------------------------
+    // The reference schedule — POOLSE-55.
+    //
+    // Its own facility, so forty seeded bookings never land on top of a club
+    // somebody has been typing into by hand. See `seed-reference.ts`.
+    // ---------------------------------------------------------------------
+    const reference = await seedReferenceSchedule(client, org.id);
+    if (reference.facility > 0) console.log(`  referência: instalação criada`);
+    if (reference.bookings > 0) {
+      console.log(
+        `  referência: ${reference.turmas} turmas, ${reference.groups} grupos, ` +
+          `${reference.bookings} marcações, ${reference.sessions} sessões`,
+      );
+    }
+    for (const note of reference.skipped) console.log(`  referência: saltou — ${note}`);
+
     await client.query('COMMIT');
 
     console.log('');
@@ -1240,6 +1267,7 @@ async function main(): Promise<void> {
     console.log(`  baixas médicas     ${counts.medicalLeave}`);
     console.log(`  artigos no armazém ${counts.inventory}`);
     console.log(`  horários na grelha ${counts.slots}`);
+    console.log(`  marcações de referência ${reference.bookings}`);
     console.log('');
     console.log('Done. Re-running only adds what is missing.');
   } catch (error) {

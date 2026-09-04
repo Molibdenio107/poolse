@@ -62,6 +62,11 @@ export default {
         success: rgb('--success'),
         warning: rgb('--warning'),
         danger: rgb('--danger'),
+        // Booking categories that have no other token to borrow — POOLSE-55.
+        category: {
+          teal: rgb('--category-teal'),
+          violet: rgb('--category-violet'),
+        },
         // POOLSE-18. Tokens rather than per-component literals, so a role reads
         // the same in the People list, a filter chip and the invite dialog.
         role: {
