@@ -180,6 +180,47 @@ for (const [key, value] of Object.entries(pt)) {
   }
 }
 
+// -------------------------------------------------- Portuguese left in English
+/*
+ * The other direction, and nobody was checking it — POOLSE-R2-07.
+ *
+ * `turma` survived in twelve English strings: "Every turma has at least one
+ * day", "No turmas at this frequency". The existing check only catches a key
+ * that is *identical* in both files, and these were not — they were English
+ * sentences with a Portuguese noun in them, which reads as a typo to an English
+ * speaker and as a half-done translation to anyone else.
+ *
+ * The nav already calls this concept "class group", so the vocabulary existed;
+ * what was missing was anything that noticed the two disagreeing.
+ */
+const PORTUGUESE_IN_ENGLISH = [
+  ['turma', 'class group'],
+  ['turmas', 'class groups'],
+  ['parceria', 'partnership'],
+  ['parcerias', 'partnerships'],
+  ['escalão', 'level'],
+  ['escalões', 'levels'],
+  ['época', 'season'],
+  ['reposição', 'make-up'],
+  ['encerramento', 'closure'],
+  ['lotação', 'capacity'],
+];
+
+for (const [key, value] of Object.entries(en)) {
+  // `{turma}` is a placeholder name — code, not prose — and renaming one would
+  // break the call site that passes it.
+  const prose = value.replace(/\{[a-zA-Z0-9_]+/g, '{');
+  for (const [portuguese, english] of PORTUGUESE_IN_ENGLISH) {
+    if (new RegExp(String.raw`\b${portuguese}\b`, 'i').test(prose)) {
+      problems.push(
+        `${key}
+    Portuguese "${portuguese}" in an English string — say "${english}"
+    ${value}`,
+      );
+    }
+  }
+}
+
 if (problems.length > 0) {
   console.log(`${problems.length} thing(s) to look at:\n`);
   for (const problem of problems) console.log(`  ${problem}\n`);
@@ -189,5 +230,8 @@ if (problems.length > 0) {
 console.log(
   `pt-PT reads as European Portuguese across ${Object.keys(pt).length} keys: ` +
     'no Brazilian forms, no Brazilian present continuous, nothing left in English.',
+);
+console.log(
+  `en reads as English across ${Object.keys(en).length} keys: no Portuguese nouns left in it.`,
 );
 console.log('This checks spelling and vocabulary. Tone and register still want a person.');

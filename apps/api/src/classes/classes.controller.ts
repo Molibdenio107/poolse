@@ -27,6 +27,7 @@ import {
   archiveClassGroup,
   createClassGroup,
   DuplicateNameError,
+  LaneOccupiedError,
   NoSuchLaneError,
   endEnrollment,
   enrol,
@@ -421,6 +422,12 @@ function asHttp(error: unknown): unknown {
     return new ConflictException(`"${error.message}" already exists`);
   }
 
+  // The lane is taken at one of the turma's hours — POOLSE-R2-01. A 409, like
+  // any other "somebody already has that", rather than the 500 it used to be.
+  if (error instanceof LaneOccupiedError) {
+    return new ConflictException({ message: 'laneOccupied' });
+  }
+
   /*
    * A lane the pool does not have — POOLSE-43.
    *
@@ -517,7 +524,13 @@ function parseTime(value: unknown): string {
 function parseDuration(value: unknown): number {
   const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
   if (!Number.isInteger(parsed) || parsed < 5 || parsed > 480) {
-    throw new BadRequestException('durationMinutes must be between 5 and 480');
+    // Named, so the screen can say it in Portuguese beside the box — the raw
+    // message was reaching the operator as "durationMinutes must be between 5
+    // and 480", which is this codebase's variable name, not their language.
+    throw new BadRequestException({
+      message: 'durationMinutes must be between 5 and 480',
+      fields: { durationMinutes: 'classes.slotDurationInvalid' },
+    });
   }
   return parsed;
 }

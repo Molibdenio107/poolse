@@ -1830,6 +1830,9 @@ export interface FacilityGrid {
   seasonName: string | null;
   /** `draft` or `published` — a draft is next year's plan and says so. */
   seasonStatus: string | null;
+  /** The dates the season covers — the grid stops drawing outside them. */
+  seasonStartsOn: string | null;
+  seasonEndsOn: string | null;
   staffing: GridStaffing;
   slots: GridSlot[];
   pools: { id: string; name: string }[];

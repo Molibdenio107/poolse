@@ -485,7 +485,8 @@
     "partnerNoRoll": "As parcerias não têm registo de presenças.",
     "nameTooLong": "O nome é demasiado longo.",
     "capacityInvalid": "A lotação tem de ser um número inteiro entre 1 e 200.",
-    "laneInvalid": "A pista tem de ser um número inteiro entre 1 e 50."
+    "laneInvalid": "A pista tem de ser um número inteiro entre 1 e 50.",
+    "slotDurationInvalid": "A duração tem de ser entre 5 e 480 minutos."
   },
   "reposicao": {
     "title": "Aulas de reposição",
@@ -1882,7 +1883,10 @@
     "assignLabel": "Quem dá esta aula",
     "assignDone": "Professor atribuído.",
     "assignCleared": "A aula voltou a ficar por definir.",
-    "offGridFix": "Ajustar a grelha horária"
+    "offGridFix": "Ajustar a grelha horária",
+    "beforeSeason": "Antes do início da época",
+    "afterSeason": "Depois do fim da época",
+    "filledCellSuspended": "{day}, {time}, {lane}: {what} — não decorre ({why})"
   },
   "partnerClasses": {
     "title": "Parcerias",

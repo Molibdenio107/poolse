@@ -27,16 +27,50 @@ import {
 
 const INITIAL: FormState = { ok: false };
 
-function Problem({ state }: { state: FormState }): React.ReactElement | null {
+/**
+ * What went wrong, in the operator's language — POOLSE-R2-04 and R2-05.
+ *
+ * Two things this used to get wrong. It ignored `fields` entirely, so a refusal
+ * that named which field and why arrived as the caller's generic sentence — or,
+ * once the fields started being honoured, as nothing at all. And it set the
+ * server's raw text immediately after the translated one with only a margin
+ * between them, which renders as
+ * "Could not add that day.durationMinutes must be between 5 and 480": two
+ * sentences run together, the second of them a variable name from this codebase.
+ *
+ * `except` is for a form that already shows a field's message beside the box it
+ * belongs to; naming it twice is not twice as clear.
+ */
+function Problem({
+  state,
+  except = [],
+}: {
+  state: FormState;
+  except?: string[];
+}): React.ReactElement | null {
   const t = useTranslations();
-  if (state.errorKey === undefined) return null;
+
+  const named = Object.entries(state.fields ?? {}).filter(([field]) => !except.includes(field));
+  if (state.errorKey === undefined && named.length === 0) return null;
+
   return (
-    <p className="text-sm text-danger">
-      {t(state.errorKey)}
-      {state.detail !== undefined && (
-        <span className="ml-2 font-mono text-xs text-foreground-muted">{state.detail}</span>
+    <div className="flex flex-col gap-1 text-sm text-danger">
+      {named.map(([field, key]) => (
+        <p key={field}>{t(key)}</p>
+      ))}
+      {state.errorKey !== undefined && (
+        <p>
+          {t(state.errorKey)}
+          {state.detail !== undefined && state.detail !== '' && (
+            // Its own line. It is the server's own words, not a translated
+            // sentence, and running it on from one reads as a typo.
+            <span className="mt-0.5 block font-mono text-xs text-foreground-muted">
+              {state.detail}
+            </span>
+          )}
+        </p>
       )}
-    </p>
+    </div>
   );
 }
 
@@ -157,7 +191,7 @@ export function ClassForm({
       </div>
 
       {state.ok && mode === 'edit' && <p className="text-sm text-success">{t('classes.saved')}</p>}
-      <Problem state={state} />
+      <Problem state={state} except={['name', 'lane', 'capacity']} />
     </form>
   );
 }

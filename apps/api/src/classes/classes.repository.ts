@@ -142,6 +142,8 @@ async function syncBookingLanes(
 }
 
 export class DuplicateNameError extends Error {}
+/** The lane a turma was moved onto is already busy at one of its hours. */
+export class LaneOccupiedError extends Error {}
 export class FullError extends Error {}
 export class AlreadyEnrolledError extends Error {}
 
@@ -519,16 +521,66 @@ export async function updateClassGroup(
       await tx.query(
         `UPDATE class_session
             SET instructor_membership_id = $2,
-                pool_id = $3,
-                lane_id = $4
+                pool_id = $3
           WHERE class_group_id = $1
             AND starts_at >= now()
             AND status <> 'cancelled'
             AND (instructor_membership_id IS DISTINCT FROM $2
-                 OR pool_id IS DISTINCT FROM $3
-                 OR lane_id IS DISTINCT FROM $4)`,
-        [groupId, input.instructorMembershipId, input.poolId, laneId],
+                 OR pool_id IS DISTINCT FROM $3)`,
+        [groupId, input.instructorMembershipId, input.poolId],
       );
+
+      /*
+       * A session's lane is a row in `class_session_lane`, not a column —
+       * POOLSE-R2-01.
+       *
+       * This used to set `class_session.lane_id`, which has never existed. A
+       * session holds its lanes in a side table because the exclusion constraint
+       * that stops two classes sharing one lane needs a row per lane and a time
+       * range to overlap — a single column could not express a class occupying
+       * three lanes, which is exactly what `Masters (1-3)` does.
+       *
+       * So every save of a turma raised `42703: column "lane_id" does not exist`
+       * and answered 500. Not on some inputs — on all of them, including a save
+       * that changed nothing, which is how QA found it. Creating worked, which
+       * is what kept it hidden: the insert path never touches this statement.
+       */
+      await tx.query(
+        `DELETE FROM class_session_lane
+          WHERE session_id IN (
+            SELECT s.id FROM class_session s
+             WHERE s.class_group_id = $1
+               AND s.starts_at >= now()
+               AND s.status <> 'cancelled'
+          )`,
+        [groupId],
+      );
+
+      if (laneId !== null) {
+        await tx.query(
+          `INSERT INTO class_session_lane
+             (organization_id, session_id, lane_id, starts_at, ends_at, cancelled)
+           SELECT $1, s.id, $3, s.starts_at, s.ends_at, false
+             FROM class_session s
+            WHERE s.class_group_id = $2
+              AND s.starts_at >= now()
+              AND s.status <> 'cancelled'`,
+          /*
+           * No `ON CONFLICT DO NOTHING` here, deliberately.
+           *
+           * It would swallow the exclusion constraint, and the turma would move
+           * onto the new lane while the one session that clashed quietly ended
+           * up with no lane at all — the operator gets the save they asked for
+           * and a class that is not where they put it. The clash is a real
+           * answer: somebody else has that lane at that hour. It surfaces as a
+           * 409 and the save does not happen.
+           *
+           * The rows for these sessions were deleted a moment ago in this same
+           * transaction, so the primary key cannot be what fires.
+           */
+          [organizationId, groupId, laneId],
+        );
+      }
 
       // The turma moved lane, so its bookings move with it.
       await syncBookingLanes(tx, organizationId, groupId);
@@ -542,6 +594,14 @@ export async function updateClassGroup(
       return true;
     });
   } catch (error) {
+    /*
+     * The new lane is already somebody else's at that hour. A real answer, and
+     * the operator can act on it — so it must not arrive as a 500 the way the
+     * missing column did.
+     */
+    if (error instanceof Error && (error as { code?: string }).code === '23P01') {
+      throw new LaneOccupiedError(input.name);
+    }
     throw asDuplicate(error, input.name);
   }
 }

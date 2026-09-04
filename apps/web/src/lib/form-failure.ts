@@ -39,6 +39,23 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
       };
     }
 
+    /*
+     * A named field beats the status code — POOLSE-R2-04.
+     *
+     * This block used to sit *below* the 409, and that lost the whole answer.
+     * The API refuses a closed day, a closed hour and a class running past
+     * closing as three different 409s, each carrying `fields` naming which one —
+     * and all three came out as the caller's generic conflict sentence: "this
+     * turma already runs at that time on that day". Three rules, one message,
+     * and the message described a fourth thing that was not true, on a turma
+     * whose timetable was empty.
+     *
+     * So: if the API said which field and why, that is the answer, whatever
+     * status it chose to carry it on.
+     */
+    const named = Object.keys(error.fields).length > 0 ? error.fields : null;
+    if (named !== null) return { ok: false, fields: named };
+
     // Two people wanting the same name, or the same slot. The caller owns this
     // sentence because only it knows what "already exists" means here.
     if (error.status === 409) return { ok: false, errorKey: `${fallbackKey}Conflict` };
@@ -50,13 +67,12 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
      * caused it. Without it, the API's own message is still better than silence,
      * so it rides along as detail: untranslated, but true and specific.
      */
+    /*
+     * A refused value with no field named. The API's own message is still better
+     * than silence, so it rides along as detail — untranslated, but true.
+     */
     if (error.status < 500) {
-      const fields = Object.keys(error.fields).length > 0 ? error.fields : undefined;
-      return {
-        ok: false,
-        errorKey: fallbackKey,
-        ...(fields ? { fields } : { detail: error.message }),
-      };
+      return { ok: false, errorKey: fallbackKey, detail: error.message };
     }
 
     return { ok: false, errorKey: fallbackKey, detail: `${error.status} ${error.message}`.trim() };

@@ -342,10 +342,13 @@ export default async function CalendarPage({
                 maxConcurrentGroups={grid?.maxConcurrentGroups ?? null}
                 // No grid means no season loaded, so there is nothing to report
                 // rather than nothing to report *yet* — POOLSE-53, criterion 8.
-                staffing={grid?.staffing ?? { uncovered: 0, toDefine: 0 }}
                 seasonId={grid?.seasonId ?? null}
                 seasonName={grid?.seasonName ?? null}
                 seasonStatus={grid?.seasonStatus ?? null}
+                // So a week outside the season says so rather than drawing a
+                // full timetable eighteen months after it ended — R2-03.
+                seasonStartsOn={grid?.seasonStartsOn ?? null}
+                seasonEndsOn={grid?.seasonEndsOn ?? null}
               />
             ) : (
               // The turmas would not load. The week is still worth showing, and

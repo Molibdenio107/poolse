@@ -145,6 +145,9 @@ interface SeasonRef {
   id: string;
   name: string;
   status: string;
+  /** `YYYY-MM-DD`, as text — see the note where these are returned. */
+  starts_on: string;
+  ends_on: string;
 }
 
 /**
@@ -157,14 +160,20 @@ interface SeasonRef {
 async function seasonFor(tx: Tx, requested: string | null): Promise<SeasonRef | null> {
   if (requested !== null) {
     const { rows } = await tx.query<SeasonRef>(
-      `SELECT id, name, status::text AS status FROM season WHERE id = $1`,
+      `SELECT id, name, status::text AS status,
+              to_char(starts_on, 'YYYY-MM-DD') AS starts_on,
+              to_char(ends_on,   'YYYY-MM-DD') AS ends_on
+         FROM season WHERE id = $1`,
       [requested],
     );
     return rows[0] ?? null;
   }
 
   const { rows } = await tx.query<SeasonRef>(
-    `SELECT id, name, status::text AS status FROM season WHERE status = 'published' LIMIT 1`,
+    `SELECT id, name, status::text AS status,
+            to_char(starts_on, 'YYYY-MM-DD') AS starts_on,
+            to_char(ends_on,   'YYYY-MM-DD') AS ends_on
+       FROM season WHERE status = 'published' LIMIT 1`,
   );
   return rows[0] ?? null;
 }
@@ -393,6 +402,17 @@ export async function readGrid(
       seasonId: season?.id ?? null,
       seasonName: season?.name ?? null,
       seasonStatus: season?.status ?? null,
+      /*
+       * The dates the season actually covers — POOLSE-R2-03.
+       *
+       * The grid draws a weekly pattern, and a pattern has no end: paging to
+       * March 2028 drew a full week of classes eighteen months after the season
+       * finished, and 2019 drew one seven years before it began. `to_char` and
+       * not the Date object, because a `date` comes back parsed at local
+       * midnight and would arrive a day out either side of a clock change.
+       */
+      seasonStartsOn: season?.starts_on ?? null,
+      seasonEndsOn: season?.ends_on ?? null,
       staffing,
       slots: slots.rows.map((row) => ({
         id: row.id,

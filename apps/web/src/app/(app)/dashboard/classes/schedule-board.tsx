@@ -438,11 +438,12 @@ export function ScheduleBoard({
   levels,
   laneLevelCapacity,
   maxConcurrentGroups,
-  staffing,
   staff,
   seasonId,
   seasonName,
   seasonStatus,
+  seasonStartsOn,
+  seasonEndsOn,
 }: {
   organizationId: string;
   groups: ClassGroup[];
@@ -477,7 +478,8 @@ export function ScheduleBoard({
   /** Null means the club has no opinion about concurrent groups. */
   maxConcurrentGroups: number | null;
   /** The season's two staffing gaps — POOLSE-53. Both zero means say nothing. */
-  staffing: GridStaffing;
+  /* `staffing` was a prop; it is now counted from the bookings this grid
+     actually draws, so the chip and the cells cannot disagree — R2-08. */
   /**
    * Every instructor at the club, for the picker on a block.
    *
@@ -493,6 +495,14 @@ export function ScheduleBoard({
   seasonName: string | null;
   /** `draft` marks the counter as next year's plan rather than this year's wall. */
   seasonStatus: string | null;
+  /**
+   * The dates the season covers — POOLSE-R2-03.
+   *
+   * Optional because the turma screen renders this board with no week in mind,
+   * and a pattern with no date cannot be outside a season.
+   */
+  seasonStartsOn?: string | null | undefined;
+  seasonEndsOn?: string | null | undefined;
 }): React.ReactElement {
   const t = useTranslations();
   const [pending, startPending] = useTransition();
@@ -817,6 +827,31 @@ export function ScheduleBoard({
 
   const visible = useMemo(() => applyGridFilters(placed, filters), [placed, filters]);
 
+  /**
+   * The counter counts what this grid draws — POOLSE-R2-08.
+   *
+   * It used to take the API's figure, which is every booking at the site in the
+   * published season. The grid beside it draws the same set narrowed by the pool
+   * the operator is looking at, so the two disagreed whenever a club had more
+   * than one tank: the chip said one number and the cells showed another, with
+   * nothing on screen explaining the gap.
+   *
+   * Two definitions of "por definir" on one screen is the thing the grid
+   * repository's own comment warns about; this removes the second one. Counted
+   * from `placed`, not `visible`, deliberately — it is the thing you click to
+   * *find* the gaps, so it must not shrink to nothing as you filter towards
+   * them.
+   */
+  const staffing = useMemo(() => {
+    const counted = { uncovered: 0, toDefine: 0 };
+    for (const booking of placed) {
+      const state = instructorDisplay(booking).state;
+      if (state === 'uncovered') counted.uncovered += 1;
+      else if (state === 'to_define') counted.toDefine += 1;
+    }
+    return counted;
+  }, [placed]);
+
   const closedOn = (day: number): string | null =>
     closures.find((closure) => closure.weekday === day)?.reason ?? null;
 
@@ -849,6 +884,40 @@ export function ScheduleBoard({
   const hoursDetail = (day: number): string | null => {
     const label = hoursLabel(facility?.hours ?? [], day);
     return label === null ? null : t('grid.openingHours', { hours: label });
+  };
+
+  /**
+   * Why a class drawn on this day is not actually happening — POOLSE-R2-02/03.
+   *
+   * The grid draws the weekly *pattern*, which is the right thing for editing it
+   * and the wrong thing to present as a week that will happen. Two ways it lies:
+   *
+   * - A closed day was labelled "encerrado" in its header **and** shown running
+   *   a full schedule underneath. The screen contradicted itself, which is worse
+   *   than being quietly wrong, because now the operator has to decide which
+   *   half to believe.
+   * - A pattern has no end, so paging to March 2028 drew a full week eighteen
+   *   months after the season finished, and 2019 drew one seven years before it
+   *   began.
+   *
+   * Both are the same sentence — *this pattern is real, this occurrence is
+   * not* — so they are one answer. The blocks stay on screen, because deleting
+   * them would hide the pattern somebody came here to edit; they are marked as
+   * not running instead.
+   *
+   * Null when the week is undated: the turma screen shows the pattern with no
+   * particular week in mind, and nothing there is or is not "happening".
+   */
+  const notRunning = (day: number): string | null => {
+    const closed = closedOn(day);
+    if (closed !== null) return closed;
+
+    if (weekStart === undefined) return null;
+    const date = addDays(weekStart, day - 1);
+
+    if (seasonStartsOn != null && date < seasonStartsOn) return t('grid.beforeSeason');
+    if (seasonEndsOn != null && date > seasonEndsOn) return t('grid.afterSeason');
+    return null;
   };
 
   const openDuring = (day: number, startTime: string, endTime: string): boolean =>
@@ -1718,6 +1787,7 @@ export function ScheduleBoard({
               closedOn={closedOn}
               openOn={openOn}
               openDuring={openDuring}
+              notRunning={notRunning}
               dragging={dragging !== null}
               canManage={canManage}
               rowRem={rowRem}
@@ -2317,6 +2387,7 @@ function SlotGrid({
   closedOn,
   openOn,
   openDuring,
+  notRunning,
   dragging,
   canManage,
   rowRem,
@@ -2341,6 +2412,8 @@ function SlotGrid({
   openOn: (day: number) => boolean;
   /** Open on this day *at this hour* — POOLSE-QA-03. */
   openDuring: (day: number, startTime: string, endTime: string) => boolean;
+  /** Why this day's classes are not happening, or null — POOLSE-R2-02/03. */
+  notRunning: (day: number) => string | null;
   dragging: boolean;
   canManage: boolean;
   rowRem: number;
@@ -2592,6 +2665,7 @@ function SlotGrid({
                               openDuring(day, slot.startTime, slot.endTime) &&
                               closedOn(day) === null
                             }
+                            suspended={notRunning(day)}
                             canManage={canManage}
                             dayName={dayNames[day] ?? String(day)}
                             onSpan={onSpan}
@@ -2762,6 +2836,7 @@ function Cell({
   firstOfSlot,
   dragging,
   open,
+  suspended,
   canManage,
   dayName,
   onSpan,
@@ -2786,6 +2861,8 @@ function Cell({
   firstOfSlot: boolean;
   dragging: boolean;
   open: boolean;
+  /** Why anything drawn here is not happening this week, or null. */
+  suspended: string | null;
   canManage: boolean;
   dayName: string;
   onSpan: (booking: Placed, delta: number) => void;
@@ -2847,12 +2924,26 @@ function Cell({
       aria-label={
         booking === undefined
           ? t('grid.emptyCell', { day: dayName, time: slot.startTime, lane: lane.name })
-          : t('grid.filledCell', {
-              day: dayName,
-              time: slot.startTime,
-              lane: lane.name,
-              what: booking.name,
-            })
+          : suspended === null
+            ? t('grid.filledCell', {
+                day: dayName,
+                time: slot.startTime,
+                lane: lane.name,
+                what: booking.name,
+              })
+            : /*
+               * The reason travels with the class, not only with the column
+               * header — POOLSE-R2-02. Somebody arrowing across the grid meets
+               * the cell, and "Cadetes" with no more said is the contradiction
+               * the report is about.
+               */
+              t('grid.filledCellSuspended', {
+                day: dayName,
+                time: slot.startTime,
+                lane: lane.name,
+                what: booking.name,
+                why: suspended,
+              })
       }
       className={cn(
         'relative border-l border-border px-0.5',
@@ -2908,9 +2999,29 @@ function Cell({
          * is what QA 49.4 is about.
          */
         <div
-          className="absolute inset-x-0.5 top-0 z-10"
+          className={cn(
+            'absolute inset-x-0.5 top-0 z-10',
+            /*
+              Not happening this week — POOLSE-R2-02/03.
+
+              Dimmed rather than removed: the pattern is what this grid is for
+              editing, and hiding it would lose the thing somebody came to
+              change. The words are in the column header and in the cell's own
+              aria-label, so the dimming is never the only carrier — the lock is
+              the third, for anyone scanning rather than reading.
+            */
+            suspended !== null && 'opacity-45 saturate-50',
+          )}
           style={{ height: `calc(${span * rowRem}rem - 1px)` }}
         >
+          {suspended !== null && (
+            <span
+              className="pointer-events-none absolute right-0.5 top-0.5 z-20 text-foreground-muted"
+              title={suspended}
+            >
+              <Lock aria-hidden className="size-3.5" />
+            </span>
+          )}
           <BookingChip
             booking={booking}
             canManage={canManage}
