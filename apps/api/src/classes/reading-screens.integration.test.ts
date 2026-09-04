@@ -186,8 +186,22 @@ test('an instructor can read all of it too', async () => {
       const today = new Date().toISOString().slice(0, 10);
       const week = new Date(Date.now() + 6 * 86_400_000).toISOString().slice(0, 10);
 
-      assert.equal((await new ClassesController().list()).groups.length, 1);
+      /*
+       * `scope=all` since slice 1.12, and the explicit argument is the point of
+       * the change rather than a workaround for it. This test asks whether the
+       * screens *load* for an instructor; the club's list is the one that used
+       * to be the only list, so it is the one that keeps this assertion meaning
+       * what it has always meant.
+       */
+      assert.equal((await new ClassesController().list('all')).groups.length, 1);
       assert.equal((await new CalendarController().read(today, week)).sessions.length, 1);
+
+      // And the new default, asserted here because this is where somebody
+      // looking for "why does an instructor see nothing" would land: the seeded
+      // turma is assigned to nobody, so none of it is theirs.
+      const mine = await new ClassesController().list();
+      assert.equal(mine.scope, 'mine');
+      assert.equal(mine.groups.length, 0);
     });
   });
 });

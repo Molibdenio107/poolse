@@ -303,7 +303,24 @@ function toGroup(row: GroupRow): ClassGroup {
  * of it. If a turma *list* view is ever built separately from the calendar, that
  * list pages; this query stays whole.
  */
-export async function listClassGroups(organizationId: string): Promise<ClassGroup[]> {
+/**
+ * The club's turmas, or one instructor's — slice 1.12.
+ *
+ * `mine` is a membership id or null, and null is not a default anybody falls
+ * into by accident: the controller decides which view the caller gets and passes
+ * one or the other. An instructor who is only an instructor gets their own; an
+ * owner who also teaches gets whichever they asked for.
+ *
+ * "Mine" is the union of the two places an assignment lives — the turma's own
+ * instructor, and any booking of it that names somebody else's substitute. A
+ * person covering one Tuesday of Cadetes sees Cadetes, because they need its
+ * register on the night they teach it. Same rule as `tenant/assignment.ts`, and
+ * the two would be worth sharing if a third caller ever appears.
+ */
+export async function listClassGroups(
+  organizationId: string,
+  mine: string | null = null,
+): Promise<ClassGroup[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<GroupRow>(
       `SELECT ${GROUP_COLUMNS} ${GROUP_JOINS}
@@ -312,7 +329,18 @@ export async function listClassGroups(organizationId: string): Promise<ClassGrou
           AND se.organization_id = cg.organization_id
           AND se.archived_at IS NULL
         WHERE cg.archived_at IS NULL
+          AND ($1::uuid IS NULL OR (
+            cg.instructor_membership_id = $1
+            OR EXISTS (
+              SELECT 1 FROM class_schedule sch
+               WHERE sch.class_group_id = cg.id
+                 AND sch.organization_id = cg.organization_id
+                 AND sch.archived_at IS NULL
+                 AND sch.instructor_membership_id = $1
+            )
+          ))
         ORDER BY cg.name`,
+      [mine],
     );
     return rows.map(toGroup);
   });

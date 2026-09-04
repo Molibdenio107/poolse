@@ -35,8 +35,14 @@ export class ExportsController {
     /*
      * The same roles as the import, and for a stronger reason. This hands over
      * every child's name, birth date and a family telephone number in one file.
-     * An instructor's own turmas are a different, narrower question, and 1.12 is
-     * where it gets answered.
+     *
+     * **Slice 1.12 looked at this and left it owner/admin**, which is the answer
+     * rather than a deferral. The slice narrows what an instructor may *do* to
+     * their own turmas — mark a register, confirm an advancement, approve a
+     * reposição — and a bulk file of every family's contact details is not one
+     * of those. An export scoped to one instructor's own students is a feature
+     * somebody can ask for; it is not this endpoint with a filter on it, because
+     * the risk here is the file leaving the building, not who is looking.
      */
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();

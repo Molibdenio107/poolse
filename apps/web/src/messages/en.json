@@ -471,7 +471,11 @@
     "chooseDay": "Choose a day",
     "noSuchLane": "That pool does not have that lane.",
     "laneRange": "lanes {from}–{to}",
-    "laneList": "lanes {lanes}"
+    "laneList": "lanes {lanes}",
+    "scopeLabel": "Which classes to show",
+    "scopeAll": "All classes",
+    "scopeMine": "My classes",
+    "scopeMineOnly": "Showing the classes assigned to you."
   },
   "reposicao": {
     "title": "Make-up classes",

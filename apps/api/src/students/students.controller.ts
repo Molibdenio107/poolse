@@ -19,6 +19,7 @@ import {
   requireGrantable,
   requireRole,
 } from '../tenant/roles.js';
+import { requireMyBooking, requireMyProposal } from '../tenant/assignment.js';
 
 interface StudentDetail extends Student {
   /**
@@ -125,8 +126,13 @@ interface StudentsResponse {
  *
  * Reading is open to any member, because an instructor needs to know who is in
  * their lane. Writing is owner and admin, the same line facilities and
- * invitations draw. Slice 1.12 revisits the whole role surface; until then the
- * rule is uniform and easy to reason about rather than clever.
+ * invitations draw.
+ *
+ * **Slice 1.12 left the register open**, and that is a decision rather than an
+ * omission: an instructor covering a colleague's class needs the name of every
+ * child in the water, and a register that hid them would be a register that
+ * fails on the one evening it matters. What 1.12 narrowed is the *acting* —
+ * `tenant/assignment.ts` — not the looking.
  *
  * Nothing here touches medical information or consent. Those live in separate
  * tables with their own access rules (slice 1.3) precisely so that this
@@ -911,14 +917,17 @@ export class RedemptionController {
   }
 
   /**
-   * Approving and rejecting are staff-only — the ticket names owner, admin and
-   * the assigned instructor. Instructors are included at the role level here;
-   * narrowing to *their own* turmas needs the per-turma assignment work that
-   * slice 1.12 is for, and is noted rather than silently assumed.
+   * Approving and rejecting are staff-only, and now narrowed to the **assigned**
+   * instructor — slice 1.12, closing what POOLSE-21 deferred.
+   *
+   * Assigned to the class being *joined*, not the one missed: the guest wants a
+   * place in somebody's water on a particular night, and the person who knows
+   * whether there is room is the one teaching it.
    */
   @Post('bookings/:bookingId/approve')
   async approve(@Param('bookingId') bookingId: string): Promise<{ approved: true }> {
     requireRole('owner', 'admin', 'instructor');
+    await requireMyBooking(bookingId);
     const { organizationId, membershipId } = currentTenant();
     settle(await decideBooking(organizationId, bookingId, 'confirmed', membershipId));
     return { approved: true };
@@ -927,6 +936,7 @@ export class RedemptionController {
   @Post('bookings/:bookingId/reject')
   async reject(@Param('bookingId') bookingId: string): Promise<{ rejected: true }> {
     requireRole('owner', 'admin', 'instructor');
+    await requireMyBooking(bookingId);
     const { organizationId, membershipId } = currentTenant();
     settle(await decideBooking(organizationId, bookingId, 'rejected', membershipId));
     return { rejected: true };
@@ -991,9 +1001,10 @@ function settle(outcome: DecideOutcome): void {
  * though the proposal is visible to them in the mobile app. `requireRole` is the
  * whole enforcement, and it is here rather than in the interface.
  *
- * The ticket also asks for the *assigned* instructor rather than any instructor.
- * Per-turma assignment is slice 1.12's work; this lets any instructor confirm and
- * says so, rather than implying a narrowing that does not exist.
+ * **The assigned instructor, not any instructor** — criterion 7 in full, closed
+ * by slice 1.12. Assigned to the student: the proposal says this child has
+ * finished their level, and the person who can confirm that is the one who has
+ * been watching them do it. Owner and admin confirm anything, as everywhere.
  */
 @Controller('transfer-proposals')
 export class AdvancementController {
@@ -1030,6 +1041,7 @@ export class AdvancementController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ confirmed: true }> {
     requireRole('owner', 'admin', 'instructor');
+    await requireMyProposal(id);
     const { organizationId, membershipId } = currentTenant();
 
     const classGroupId =

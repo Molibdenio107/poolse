@@ -8,11 +8,13 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
 import { isExclusionViolation } from './sessions.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
+import { canSeeBothViews, teachesOnly } from '../tenant/assignment.js';
 import { nameOrder, shortName } from '../people/names.js';
 import {
   facilityHours,
@@ -50,6 +52,10 @@ interface ClassesResponse {
   /** Not paginated: a week grid is a calendar — see listClassGroups. */
   groups: ClassGroup[];
   canManage: boolean;
+  /** Which view the list is showing — slice 1.12. */
+  scope: 'mine' | 'all';
+  /** Whether this person has a second view worth offering a switch to. */
+  canSwitchScope: boolean;
   /** What the create and edit forms may choose from, in one payload. */
   options: {
     /** With their age bounds, so the enrol picker can filter by them. */
@@ -78,14 +84,36 @@ const MAX_NAME = 120;
  *
  * Reading is open to any member: an instructor needs to know which turma is in
  * their lane on Tuesday. Writing is owner and admin, the line every other slice
- * draws. Slice 1.12 revisits that properly — an instructor managing their own
- * turmas is exactly the case it exists for.
+ * draws.
+ *
+ * **Slice 1.12 gives the list a point of view.** An instructor who is only an
+ * instructor sees their own turmas — a list of forty when four are yours is a
+ * list you stop reading. An **owner who also teaches gets both**, because both
+ * are real questions for the same person on the same evening: "what am I
+ * teaching" and "what is the club running". `?scope=all` or `?scope=mine`
+ * chooses; the default is whichever the caller's roles make useful.
+ *
+ * The switch is offered rather than imposed, and `scope=all` is honoured for an
+ * instructor too — the turma list is not secret, and POOLSE-49's grid already
+ * shows every booking in the building to everybody. What 1.12 narrows is the
+ * *acting*: marking a register, confirming an advancement, approving a
+ * reposição. Those live in `tenant/assignment.ts` and are refused, not hidden.
  */
 @Controller('class-groups')
 export class ClassesController {
   @Get()
-  async list(): Promise<ClassesResponse> {
-    const { organizationId } = currentTenant();
+  async list(@Query('scope') scope?: string): Promise<ClassesResponse> {
+    const { organizationId, membershipId } = currentTenant();
+
+    /*
+     * Which view, and who is entitled to a choice about it.
+     *
+     * `teachesOnly` — an instructor holding no office role — defaults to their
+     * own and may still ask for everything. Everybody else defaults to the club.
+     */
+    const wants = scope === 'mine' ? 'mine' : scope === 'all' ? 'all' : null;
+    const mineByDefault = teachesOnly();
+    const showingMine = wants === null ? mineByDefault : wants === 'mine';
 
     /*
      * Neither half is paginated — POOLSE-29, and both for stated reasons.
@@ -96,7 +124,7 @@ export class ClassesController {
      * what somebody wants.
      */
     const [groups, options, facilities] = await Promise.all([
-      listClassGroups(organizationId),
+      listClassGroups(organizationId, showingMine ? membershipId : null),
       formOptions(organizationId),
       // One query per site rather than one join: a club has two or three sites,
       // and seven rows each is a rounding error next to the turmas above.
@@ -115,6 +143,11 @@ export class ClassesController {
       organizationId,
       groups,
       canManage: hasRole('owner', 'admin'),
+      // What the list is showing, and whether this person has a second view to
+      // switch to. The screen renders the toggle from these two rather than
+      // re-deriving the rule from roles it would have to know about.
+      scope: showingMine ? ('mine' as const) : ('all' as const),
+      canSwitchScope: canSeeBothViews(),
       options,
       // The sites and their weekly opening hours — round 5. The schedule board
       // draws its rows between a day's opening and closing time rather than

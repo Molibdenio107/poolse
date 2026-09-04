@@ -1219,6 +1219,21 @@ export interface Classes {
   /** Not paginated — POOLSE-29: a week grid is a calendar, bounded by the week. */
   groups: ClassGroup[];
   canManage: boolean;
+  /**
+   * Which turmas the list is showing — slice 1.12.
+   *
+   * An instructor who is only an instructor opens on their own; anybody who can
+   * see the club opens on the club. Both may ask for the other.
+   */
+  scope: 'mine' | 'all';
+  /**
+   * Whether this person has two real views and should be offered the switch.
+   *
+   * True for the owner who also teaches, which is the case the slice names. An
+   * instructor holding no office role has one view and does not need a control
+   * that says so.
+   */
+  canSwitchScope: boolean;
   /** Not paginated: a half-filled dropdown is a form that cannot say what it means. */
   options: ClassOptions;
   /**

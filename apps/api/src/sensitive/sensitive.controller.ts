@@ -59,8 +59,14 @@ const MAX_EVIDENCE = 500;
  * having ordinary access to the student register. That split is the entire
  * reason `student_sensitive` is a separate table.
  *
- * Writing is owner and admin only. Slice 1.12 revisits the role surface; this is
- * the shape to revisit from.
+ * Writing is owner and admin only.
+ *
+ * **Slice 1.12 revisited this and changed nothing, deliberately.** Narrowing the
+ * read to an instructor's own turmas was considered and rejected on the argument
+ * the paragraph above already makes: a child in the water with epilepsy is a
+ * safety matter for whoever is standing at the poolside, and the person covering
+ * a colleague's class at short notice is exactly who would be locked out. The
+ * audit log is what makes that safe, and it is unconditional.
  */
 @Controller('students/:studentId')
 export class SensitiveController {

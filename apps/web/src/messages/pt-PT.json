@@ -471,7 +471,11 @@
     "chooseDay": "Escolha um dia",
     "noSuchLane": "Essa piscina não tem essa pista.",
     "laneRange": "pistas {from}–{to}",
-    "laneList": "pistas {lanes}"
+    "laneList": "pistas {lanes}",
+    "scopeLabel": "Que turmas mostrar",
+    "scopeAll": "Todas as turmas",
+    "scopeMine": "As minhas turmas",
+    "scopeMineOnly": "A mostrar as turmas que lhe estão atribuídas."
   },
   "reposicao": {
     "title": "Aulas de reposição",

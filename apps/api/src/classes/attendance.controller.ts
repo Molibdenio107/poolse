@@ -9,7 +9,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { requireRole } from '../tenant/roles.js';
+import { isMySession, requireMySession } from '../tenant/assignment.js';
 import {
   findRegister,
   saveRegister,
@@ -39,9 +40,17 @@ interface RegisterResponse extends Register {
  * admins can mark too, because a club where only the instructor can correct a
  * register is a club that cannot fix last Tuesday when the instructor has left.
  *
- * Slice 1.12 narrows an instructor to their *own* turmas. Until it lands, an
- * instructor can mark any class in their own organization — which is a smaller
- * gap than it sounds and is the same position every other module-1 screen is in.
+ * **Slice 1.12 narrows an instructor to their own classes**, and this is the
+ * surface it matters most on: a register is a record of who was in the water,
+ * and a colleague editing it is a colleague overwriting a fact they were not
+ * present for. Owner and admin still reach every register, because a club where
+ * the office cannot fix last Tuesday after the instructor has left is a club
+ * that phones support.
+ *
+ * "Their own" is read from `resolved_instructor_id`, so **the substitute is the
+ * assigned instructor of the night they cover** and the person they are covering
+ * for is not. Marking the register is precisely what a substitute is there to
+ * do — see `tenant/assignment.ts`.
  */
 @Controller('sessions')
 export class AttendanceController {
@@ -53,7 +62,13 @@ export class AttendanceController {
     const register = await findRegister(organizationId, id);
     if (!register) throw new NotFoundException('No such class');
 
-    return { ...register, organizationId, canRecord: hasRole('owner', 'admin', 'instructor') };
+    /*
+     * Readable by any of the three roles, writable only by the person teaching
+     * it — 1.12. An instructor looking at a colleague's register to see how a
+     * child is getting on is ordinary; editing it is not, so `canRecord` says
+     * which of the two this is and the POST enforces it regardless.
+     */
+    return { ...register, organizationId, canRecord: await isMySession(id) };
   }
 
   /**
@@ -70,6 +85,9 @@ export class AttendanceController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ recorded: true }> {
     requireRole('owner', 'admin', 'instructor');
+    // The control, not the courtesy: the screen hides the save button for a
+    // register that is not yours, and this is what refuses the request anyway.
+    await requireMySession(id);
     const { organizationId, membershipId } = currentTenant();
 
     const marks = parseMarks(body['marks']);

@@ -11,6 +11,7 @@ import { PartnerClasses } from './partner-classes';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import { PageShell } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
+import { cn } from '@/lib/utils';
 
 /**
  * The whole week, and who is in it.
@@ -21,16 +22,32 @@ import { formatCents } from '@/lib/money';
  * in August. A grid that looked like a calendar while showing a class on
  * Christmas Day would be worse than one that is honest about what it is.
  */
-export default async function ClassesPage(): Promise<React.ReactElement> {
+export default async function ClassesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ scope?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
+
+  /*
+    Which turmas — slice 1.12.
+
+    In the URL rather than in a preference, for the reason POOLSE-54 settled for
+    the grid's staffing filter: "the four I teach" is a finding somebody links to
+    or comes back to, not a habit. The API decides the default from the caller's
+    roles, so an absent parameter is not "all" — it is "whichever is useful to
+    you", and the answer comes back in `scope`.
+  */
+  const { scope } = await searchParams;
+  const asked = scope === 'mine' || scope === 'all' ? `?scope=${scope}` : '';
 
   let data: Classes | null = null;
   let failure: string | null = null;
   let noOrganization = false;
 
   try {
-    data = await apiFetch<Classes>('/class-groups');
+    data = await apiFetch<Classes>(`/class-groups${asked}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
     else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
@@ -190,6 +207,46 @@ export default async function ClassesPage(): Promise<React.ReactElement> {
 
       {data !== null && (
         <>
+          {/*
+            The switch, and only for somebody with two views — slice 1.12.
+
+            An instructor holding no office role has one list and does not need a
+            control telling them so; an owner who also teaches has two real
+            questions on the same evening — "what am I teaching" and "what is the
+            club running" — and this is how they move between them.
+          */}
+          {data.canSwitchScope && (
+            <nav aria-label={t('classes.scopeLabel')} className="flex flex-wrap items-center gap-2">
+              {(['all', 'mine'] as const).map((option) => {
+                const current = data.scope === option;
+                return (
+                  <Link
+                    key={option}
+                    href={option === 'all' ? '/dashboard/classes' : '/dashboard/classes?scope=mine'}
+                    aria-current={current ? 'page' : undefined}
+                    className={cn(
+                      'rounded border px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                      current
+                        ? 'border-primary bg-primary/10 font-medium text-primary'
+                        : 'border-border text-foreground-muted hover:border-border-strong hover:text-foreground',
+                    )}
+                  >
+                    {t(option === 'all' ? 'classes.scopeAll' : 'classes.scopeMine')}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
+
+          {/*
+            And for an instructor who has only their own, a line saying so —
+            never a silent filter. A list of four where the club runs forty must
+            explain itself, or it reads as turmas having gone missing.
+          */}
+          {!data.canSwitchScope && data.scope === 'mine' && (
+            <p className="text-sm text-foreground-muted">{t('classes.scopeMineOnly')}</p>
+          )}
+
           {data.canManage && (
             <Link
               href="/dashboard/classes/new"

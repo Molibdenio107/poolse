@@ -44,9 +44,13 @@ export function isMemberRole(value: string): value is MemberRole {
  * This is authorization, not tenant isolation — the two are easy to conflate.
  * Isolation is structural and lives in the database; if this check is missing
  * from a route, the worst case is an instructor doing an admin action *inside
- * their own organization*, not seeing another tenant. Slice 1.12 covers the rest
- * of the surface; invitations get it now because an instructor who can invite can
- * mint themselves an owner.
+ * their own organization*, not seeing another tenant.
+ *
+ * **This file answers "what kind of person is this".** The other half — "is this
+ * particular turma theirs" — is `assignment.ts`, added by slice 1.12. A handler
+ * that narrows to the assigned instructor calls both, in that order: role first,
+ * because somebody who is not staff at all should be told that rather than told
+ * the class is not theirs.
  */
 export function requireRole(...allowed: readonly MemberRole[]): void {
   const { roles } = currentTenant();
