@@ -1921,5 +1921,43 @@
     "free": "Livre",
     "unavailable": "Ainda não há dados de ocupação. É preciso uma época publicada, uma grelha horária e marcações.",
     "setCapacity": "Definir a lotação das pistas"
+  },
+  "timetableImport": {
+    "open": "Importar horário",
+    "hint": "Ou arraste o ficheiro do horário para qualquer sítio desta página.",
+    "dropHere": "Largue o horário para o importar",
+    "title": "Importar horário",
+    "subtitle": "O horário como está na parede: dias em cima, horas de lado, as turmas nas células. Nada é escrito antes de si confirmar.",
+    "confirmTitle": "Importar este ficheiro?",
+    "confirmRead": "Ler o ficheiro",
+    "read": "Ler",
+    "readSheet": "Ler esta folha",
+    "sheet": "Folha",
+    "noGrid": "Não foi encontrado um horário nesta folha. Precisa de uma linha com os dias da semana e uma coluna com as horas.",
+    "found": "{days} dias e {bookings} marcações encontradas.",
+    "unplaced": "{count, plural, one {# linha que não foi possível colocar} other {# linhas que não foi possível colocar}}",
+    "check": "Verificar conflitos",
+    "summary": "{importable} de {total} marcações prontas a importar.",
+    "blocked": "{count, plural, one {# conflito por resolver. Nada será importado enquanto assim for.} other {# conflitos por resolver. Nada será importado enquanto assim for.}}",
+    "resolve": "Ver e resolver os conflitos",
+    "commit": "Importar {count, plural, one {# marcação} other {# marcações}}",
+    "done": "{count, plural, one {# marcação importada.} other {# marcações importadas.}}",
+    "conflictsTitle": "{count, plural, one {# conflito} other {# conflitos}}",
+    "conflictsHint": "Nada é substituído. Escolha as linhas do ficheiro a não importar; o que já está no horário fica como está.",
+    "line": "linha {line}",
+    "sameFile": "com a linha {line} deste mesmo ficheiro",
+    "dropRow": "Não importar esta",
+    "keepRow": "Voltar a importar",
+    "recheck": "Verificar outra vez",
+    "failed": "Não foi possível importar o horário.",
+    "noSeason": "É preciso uma época publicada para importar um horário.",
+    "problem": {
+      "nameRequired": "A célula não tem nome.",
+      "badTime": "«{value}» não é uma hora.",
+      "badDuration": "A duração não faz sentido.",
+      "noLanes": "Não foi indicada nenhuma pista.",
+      "laneNotFound": "Não existe «{value}» neste local.",
+      "unknownSubject": "Não foi possível perceber o que é esta marcação."
+    }
   }
 }

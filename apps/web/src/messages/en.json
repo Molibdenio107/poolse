@@ -1921,5 +1921,43 @@
     "free": "Free",
     "unavailable": "No occupancy figures yet. This needs a published season, a slot grid and some bookings.",
     "setCapacity": "Set the lanes' capacity"
+  },
+  "timetableImport": {
+    "open": "Import timetable",
+    "hint": "Or drag the timetable file anywhere onto this page.",
+    "dropHere": "Drop the timetable to import it",
+    "title": "Import timetable",
+    "subtitle": "The timetable as it is on the wall: days across, times down, classes in the cells. Nothing is written until you confirm.",
+    "confirmTitle": "Import this file?",
+    "confirmRead": "Read the file",
+    "read": "Read",
+    "readSheet": "Read this sheet",
+    "sheet": "Sheet",
+    "noGrid": "No timetable was found on this sheet. It needs a row of weekday names and a column of times.",
+    "found": "{days} days and {bookings} bookings found.",
+    "unplaced": "{count, plural, one {# line that could not be placed} other {# lines that could not be placed}}",
+    "check": "Check for conflicts",
+    "summary": "{importable} of {total} bookings ready to import.",
+    "blocked": "{count, plural, one {# unresolved conflict. Nothing will be imported while it stands.} other {# unresolved conflicts. Nothing will be imported while they stand.}}",
+    "resolve": "See and resolve the conflicts",
+    "commit": "Import {count, plural, one {# booking} other {# bookings}}",
+    "done": "{count, plural, one {# booking imported.} other {# bookings imported.}}",
+    "conflictsTitle": "{count, plural, one {# conflict} other {# conflicts}}",
+    "conflictsHint": "Nothing is overwritten. Choose which lines of the file not to import; what is already on the timetable stays as it is.",
+    "line": "line {line}",
+    "sameFile": "with line {line} of this same file",
+    "dropRow": "Do not import this one",
+    "keepRow": "Import it after all",
+    "recheck": "Check again",
+    "failed": "The timetable could not be imported.",
+    "noSeason": "A published season is needed before a timetable can be imported.",
+    "problem": {
+      "nameRequired": "The cell has no name.",
+      "badTime": "“{value}” is not a time.",
+      "badDuration": "The duration does not make sense.",
+      "noLanes": "No lane was given.",
+      "laneNotFound": "There is no “{value}” at this site.",
+      "unknownSubject": "This booking could not be understood."
+    }
   }
 }

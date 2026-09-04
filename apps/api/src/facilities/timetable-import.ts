@@ -177,6 +177,16 @@ export interface TimetableContext {
 const MAX_NAME = 120;
 
 /**
+ * The largest timetable one import may carry.
+ *
+ * Fourteen slots by seven days by six lanes is 588 cells at the theoretical
+ * limit, and no club fills one. Two thousand is the inventory's number and is
+ * comfortably past anything real, which is the point of a cap — it stops a
+ * runaway file, not a big club.
+ */
+export const MAX_TIMETABLE_ROWS = 2_000;
+
+/**
  * Reasons the **database** refuses, whatever verdict the grid gives them.
  *
  * `packages/rules` marks `weekdayDisabled` a *warning*, and that is right for

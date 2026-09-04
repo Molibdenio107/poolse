@@ -114,45 +114,51 @@ agent would help. The answers, recorded because they shape everything below:
 
 ---
 
-## Where this stopped — 2026-09-04
+## State — 2026-09-04
 
-**The conflict core is built and tested. The layout reader, the dialog and the
-commit are not.** Split at a layer boundary: the model is where both of Rui's
-decisions live, and everything above it is worthless if this is wrong.
+**Built and working end to end, without the agent.** A club's wall timetable can
+be dragged onto the Calendar, read, checked and imported.
 
 ### Done
 
-`apps/api/src/facilities/timetable-import.ts` — pure, no database, 16 tests:
+- **`lib/timetable-grid.ts`** — the layout reader. Finds the day row under a
+  title, finds the time column, reads stacked classes under one hour, works out a
+  class's length from the gap to the next, splits `Masters (1-3)` into a name and
+  its lanes, and reports what it could not place rather than dropping it.
+  12 tests, including the `10G 11B` trap — a class name that looks exactly like a
+  lane list.
+- **`facilities/timetable-import.ts`** — the conflict core. 16 tests.
+- **`runTimetableImport`** — context, preview, commit, one transaction, audit.
+- **`POST /bookings/timetable-import/:facilityId`**, owner/admin. 10 integration
+  tests against a real database.
+- **`components/file-drop.tsx`** — the full-page drop, lifted out of the
+  register's importer so the Calendar did not become a third hand-rolled copy.
+- The panel, the preview and **the conflict dialog** — decision 2's interface.
 
-- Rows judged against **the existing grid plus every earlier row of the same
-  file**, which is the thing the ticket names as most likely to be got wrong.
-- Every clash names **both sides** and says whether the other party is on the
-  grid or is line N of this file — decision 2's raw material.
-- `committable` as a single boolean the commit will read, so decision 1 cannot
-  be half-implemented by a caller that forgot a case.
-- Lane cells read the way clubs write them: `1-3`, `1 a 3`, `1,2,3`, `Pista 2`.
-- An unmatched **lane** refuses its row; an unmatched **instructor** is a
-  warning and the class still lands.
+### Deliberately not built: the layout agent
 
-### The finding worth keeping
+There is **no `ANTHROPIC_API_KEY` in this environment**, so the register's own
+match agent is inert too. Building the layout agent tonight would have produced
+code nobody could exercise, and criterion 7 requires the importer to work without
+it in any case — which it now does.
 
-**`packages/rules` marks `weekdayDisabled` a warning, and the import escalates
-it.** That is right for the grid — a person is watching one drag, and a soft
-edge lets them place a block on a day they are about to open. It is wrong for an
-import: the facility-hours trigger raises `facility_closed_on_weekday` as a
-check violation, so a preview calling that row committable would promise a
-commit the transaction then refuses. The half-imported timetable, arrived at
-from the other side.
+What it is for, when it is built: a sheet the deterministic reader cannot make
+sense of. Two grids side by side, one per tank; a grid rotated so times run
+across; a legend that redefines what a cell means. `readTimetableGrid` already
+returns `unplaced` — the text in day columns it could not place — which is
+exactly the input such an agent would start from.
 
-`REFUSED_BY_DATABASE` in the module is that list, with the reason written above
-it. Anything added to `packages/rules` as a warning that the schema actually
-refuses belongs in it.
+### An imported booking is an `evento`, and that is a decision
 
-### Still to do
+A cell says "Masters" — a name, not a turma. Creating turmas from a spreadsheet
+would invent groups with no level, no capacity and no enrolment, which is a
+register nobody asked for; matching the name to an existing turma would be a
+guess with a register attached. So the booking carries its own title and holds
+the water, which is what the sheet actually asserts. The operator turns one into
+a turma from the grid when they are ready, and until then the timetable is true.
 
-- The **layout reader** — the grid-shaped sheet into `RawTimetableRow[]`. The
-  deterministic pass first, then the agent for the sheets it cannot read.
-- The **conflict dialog** — decision 2's interface. The data it needs is already
-  on every clash.
-- **Commit**, one transaction, refusing on `committable === false`.
-- The endpoint, owner/admin, and its integration tests.
+### Still open
+
+- The layout agent, above.
+- **POOLSE-56 is unbuilt and relevant**: an import is precisely how a club would
+  blow past lane capacity, and `overCapacity` is a warning rather than a block.

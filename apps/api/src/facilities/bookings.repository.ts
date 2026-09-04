@@ -1,6 +1,14 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { isContiguous, type RuleLane } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
+import {
+  canCommit,
+  previewTimetable,
+  type RawTimetableRow,
+  type TimetableContext,
+  type TimetableRow,
+  type TimetableSummary,
+} from './timetable-import.js';
 
 /**
  * Moving, spanning and duplicating a booking — POOLSE-50.
@@ -584,4 +592,295 @@ export async function assignInstructor(
 
     return { status: updated.instructor_status, instructorName: updated.name };
   });
+}
+
+/* ------------------------------------------- importing a timetable — POOLSE-57 */
+
+export interface TimetableImportRequest {
+  facilityId: string;
+  rows: RawTimetableRow[];
+  commit: boolean;
+  /**
+   * Rows the operator dropped in the conflict dialog — decision 2.
+   *
+   * Dropping a row is how a clash gets decided: the incoming class yields to
+   * what is already there. Nothing is ever overwritten, so this is the only
+   * verb the dialog has, and a row left out of the file is a row nobody
+   * imports rather than a booking somebody loses.
+   */
+  drop: number[];
+}
+
+export interface TimetableImportResult {
+  rows: TimetableRow[];
+  summary: TimetableSummary;
+  committable: boolean;
+  /** Only on a commit. */
+  created?: number;
+}
+
+/** The grid this facility already keeps, as `packages/rules` wants to see it. */
+async function timetableContext(
+  tx: Tx,
+  facilityId: string,
+  seasonId: string,
+): Promise<TimetableContext> {
+  const lanes = await tx.query<{
+    id: string;
+    name: string;
+    pool_id: string;
+    position: number;
+    default_capacity: number | null;
+  }>(
+    `SELECT l.id, l.name, l.pool_id, l.position, l.default_capacity
+       FROM lane l
+       JOIN pool p ON p.id = l.pool_id AND p.organization_id = l.organization_id
+      WHERE p.facility_id = $1 AND l.archived_at IS NULL AND p.archived_at IS NULL
+      ORDER BY p.name, l.position`,
+    [facilityId],
+  );
+
+  const instructors = await tx.query<{ id: string; name: string }>(
+    `SELECT m.id,
+            nullif(btrim(concat_ws(' ',
+              coalesce(u.cached_first_name, m.first_name),
+              coalesce(u.cached_last_name,  m.last_name))), '') AS name
+       FROM membership m
+       LEFT JOIN app_user u ON u.id = m.app_user_id
+       JOIN membership_role r
+         ON r.membership_id = m.id AND r.organization_id = m.organization_id
+      WHERE r.role = 'instructor' AND m.archived_at IS NULL`,
+  );
+
+  const existing = await tx.query<{
+    id: string;
+    name: string;
+    weekday: number;
+    start_time: string;
+    duration_minutes: number;
+    lane_ids: string[] | null;
+    pool_id: string | null;
+    instructor_id: string | null;
+    level_id: string | null;
+    headcount: number | null;
+  }>(
+    `SELECT cs.id,
+            coalesce(cg.name, pg.name, cs.title, '?')            AS name,
+            cs.weekday, cs.start_time::text, cs.duration_minutes,
+            coalesce(bl.lane_ids, '{}')                          AS lane_ids,
+            cg.pool_id,
+            coalesce(cs.instructor_membership_id, cg.instructor_membership_id)
+                                                                 AS instructor_id,
+            coalesce(cg.level_id, pg.level_id)                   AS level_id,
+            coalesce(cs.headcount_override, pg.participant_count) AS headcount
+       FROM class_schedule cs
+       LEFT JOIN class_group cg
+         ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
+       LEFT JOIN partner_group pg
+         ON pg.id = cs.partner_group_id AND pg.organization_id = cs.organization_id
+       LEFT JOIN LATERAL (
+         SELECT array_agg(b.lane_id) AS lane_ids
+           FROM booking_lane b
+          WHERE b.schedule_id = cs.id AND b.organization_id = cs.organization_id
+       ) bl ON true
+      WHERE cs.facility_id = $1
+        AND cs.archived_at IS NULL
+        AND coalesce(cs.season_id, cg.season_id) = $2`,
+    [facilityId, seasonId],
+  );
+
+  const hours = await tx.query<{ weekday: number }>(
+    `SELECT weekday FROM facility_hours WHERE facility_id = $1 AND available`,
+    [facilityId],
+  );
+
+  const capacities = await tx.query<{ lane_id: string; level_id: string; capacity: number }>(
+    `SELECT llc.lane_id, llc.level_id, llc.capacity
+       FROM lane_level_capacity llc
+       JOIN lane l ON l.id = llc.lane_id AND l.organization_id = llc.organization_id
+       JOIN pool p ON p.id = l.pool_id AND p.organization_id = l.organization_id
+      WHERE p.facility_id = $1`,
+    [facilityId],
+  );
+
+  const limit = await tx.query<{ max_concurrent_groups_per_instructor: number | null }>(
+    `SELECT max_concurrent_groups_per_instructor FROM facility WHERE id = $1`,
+    [facilityId],
+  );
+
+  const minutes = (clock: string): number => {
+    const [h, m] = clock.split(':');
+    return Number(h) * 60 + Number(m);
+  };
+
+  return {
+    lanes: lanes.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      poolId: row.pool_id,
+      position: row.position,
+      defaultCapacity: row.default_capacity,
+    })),
+    instructors: instructors.rows
+      .filter((row): row is { id: string; name: string } => row.name !== null)
+      .map((row) => ({ id: row.id, name: row.name })),
+    existing: existing.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      weekday: row.weekday,
+      startMinutes: minutes(row.start_time),
+      durationMinutes: row.duration_minutes,
+      laneIds: row.lane_ids ?? [],
+      poolId: row.pool_id,
+      instructorId: row.instructor_id,
+      levelId: row.level_id,
+      headcount: row.headcount,
+      cancelled: false,
+    })),
+    openWeekdays: hours.rows.map((row) => row.weekday),
+    // A closure cancels dated sessions, not the weekly pattern an import
+    // writes — so the pattern is judged against the club's opening hours and
+    // nothing else. POOLSE-31 is where a closed fortnight lives.
+    closures: [],
+    laneLevelCapacity: Object.fromEntries(
+      capacities.rows.map((row) => [`${row.lane_id}:${row.level_id}`, row.capacity]),
+    ),
+    maxConcurrentGroupsPerInstructor:
+      limit.rows[0]?.max_concurrent_groups_per_instructor ?? null,
+  };
+}
+
+/**
+ * Preview, then commit — one function called twice — POOLSE-57.
+ *
+ * The arrangement all five importers in this codebase share, and here it carries
+ * decision 1 as well: the commit re-runs the *same* preview and refuses on its
+ * `committable`, so an operator cannot approve one set of rows and have another
+ * written, and a file that became conflicted while they were reading it is
+ * refused rather than half-applied.
+ *
+ * **One transaction.** `withOrg` gives it one. A half-imported timetable is the
+ * thing decision 1 exists to prevent, and a failure at row thirty must take the
+ * first twenty-nine with it.
+ */
+export async function runTimetableImport(
+  organizationId: string,
+  request: TimetableImportRequest,
+): Promise<TimetableImportResult | null> {
+  return withOrg(organizationId, async (tx) => {
+    const site = await tx.query(
+      `SELECT 1 FROM facility WHERE id = $1 AND archived_at IS NULL`,
+      [request.facilityId],
+    );
+    if (site.rowCount === 0) return null;
+
+    const season = await tx.query<{ id: string }>(
+      `SELECT id FROM season WHERE status = 'published' AND archived_at IS NULL LIMIT 1`,
+    );
+    const seasonId = season.rows[0]?.id;
+    if (seasonId === undefined) return null;
+
+    /*
+     * The dropped rows leave before anything is judged.
+     *
+     * Decision 2's only verb: a clash is settled by the incoming class yielding,
+     * never by overwriting what is there. Removing them first also means the
+     * rows that remain are re-judged *without* them, so dropping one of two
+     * colliding lines clears the other's clash rather than leaving it flagged
+     * against something that is no longer coming.
+     */
+    const dropped = new Set(request.drop);
+    const kept = request.rows.filter((_, index) => !dropped.has(index));
+
+    const context = await timetableContext(tx, request.facilityId, seasonId);
+    const preview = previewTimetable(kept, context);
+
+    if (!request.commit) return { ...preview };
+
+    // Decision 1, read from one place. A caller cannot forget a case because
+    // there is only one boolean to consult.
+    if (!canCommit(preview)) return { ...preview, created: 0 };
+
+    let created = 0;
+
+    for (const row of preview.rows) {
+      if (!row.importable) continue;
+
+      /*
+       * An `evento`, not a turma.
+       *
+       * A cell on a wall sheet says "Masters" — a name, not a turma id. Creating
+       * turmas from it would invent groups with no level, no capacity and no
+       * enrolment, which is a register nobody asked for; matching it to an
+       * existing turma by name would be a guess with a register attached.
+       *
+       * So the booking carries its own title and holds the water, which is what
+       * the sheet actually asserts. The operator turns one into a turma from the
+       * grid when they are ready, and until then the timetable is true.
+       */
+      /*
+       * The day group is worked out here rather than in a `CASE` on `$4`.
+       *
+       * Reusing one parameter as both a `smallint` column and a comparison
+       * inside a `CASE` makes Postgres refuse the statement outright —
+       * "inconsistent types deduced for parameter $4" — and the honest fix is
+       * not a cast but to stop asking one placeholder to be two things.
+       */
+      const dayGroup = row.weekday === 6 ? 'saturday' : row.weekday === 7 ? 'sunday' : 'weekday';
+
+      const booking = await tx.query<{ id: string }>(
+        `INSERT INTO class_schedule
+           (organization_id, facility_id, subject_type, season_id, weekday,
+            start_time, duration_minutes, title, instructor_membership_id,
+            headcount_override, slot_id)
+         VALUES ($1, $2, 'evento', $3, $4::smallint, $5::time, $6, $7, $8, $9,
+                 (SELECT s.id FROM facility_time_slot s
+                   WHERE s.facility_id = $2 AND s.season_id = $3
+                     AND s.archived_at IS NULL
+                     AND s.day_group = $10::day_group
+                     AND s.start_time = $5::time
+                   LIMIT 1))
+         RETURNING id`,
+        [
+          organizationId,
+          request.facilityId,
+          seasonId,
+          row.weekday,
+          toClockText(row.startMinutes),
+          row.durationMinutes,
+          row.name,
+          row.instructorId,
+          row.headcount,
+          dayGroup,
+        ],
+      );
+
+      const scheduleId = booking.rows[0]!.id;
+
+      for (const laneId of row.laneIds) {
+        await tx.query(
+          `INSERT INTO booking_lane (organization_id, schedule_id, lane_id)
+           VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+          [organizationId, scheduleId, laneId],
+        );
+      }
+
+      created += 1;
+    }
+
+    await recordAudit(tx, {
+      action: 'timetable.imported',
+      entityType: 'facility',
+      entityId: request.facilityId,
+      data: { created, dropped: request.drop.length },
+    });
+
+    return { ...preview, created };
+  });
+}
+
+/** Minutes from midnight back to `HH:MM`, for the `::time` cast. */
+function toClockText(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  return `${String(hours).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 }

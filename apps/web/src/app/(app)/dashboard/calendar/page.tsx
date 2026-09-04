@@ -25,6 +25,7 @@ import { ScheduleBoard, type SessionControls } from '../classes/schedule-board';
 import { slotKey } from '@/lib/slot-key';
 import { CancelSession, GenerateSeason } from './calendar-forms';
 import { PageShell } from '@/components/page-shell';
+import { TimetableImport } from './import/import-panel';
 
 /**
  * The dated calendar — slices 1.5 and 1.6.
@@ -300,6 +301,20 @@ export default async function CalendarPage({
             <div className="flex justify-center">
               <WeekLink week={today()} label={t('calendar.today')} />
             </div>
+
+            {/*
+              Importing the wall timetable — POOLSE-57.
+              
+              Above the grid, and a drop target for the whole page: dragging the
+              club's own spreadsheet onto the calendar is the gesture people
+              already try, and the honest answer to trying it is to do the thing.
+            */}
+            {classes?.facilities[0] !== undefined && (
+              <TimetableImport
+                facilityId={classes.facilities[0].id}
+                canManage={calendar.canManage}
+              />
+            )}
 
             {classes !== null ? (
               <ScheduleBoard

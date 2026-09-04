@@ -17,10 +17,13 @@ import {
   moveBooking,
   NonContiguousLanesError,
   assignInstructor,
+  runTimetableImport,
   setInstructorStatus,
   type BookingTarget,
   type SettableStatus,
+  type TimetableImportResult,
 } from './bookings.repository.js';
+import { MAX_TIMETABLE_ROWS, type RawTimetableRow } from './timetable-import.js';
 
 /**
  * What a drag on the lane grid writes — POOLSE-50.
@@ -78,6 +81,41 @@ export class BookingsController {
 
     if (copy === null) throw new NotFoundException('No such booking');
     return copy;
+  }
+
+  /**
+   * A timetable arriving as a file — POOLSE-57.
+   *
+   * Preview and commit are one route with a flag, as every other importer's is:
+   * two routes would be two places rows become records, and applying them
+   * differently is how an approved preview becomes a different set of writes.
+   * The commit re-runs the same preview and refuses on its own `committable`,
+   * so a file that became conflicted while somebody was reading it is refused
+   * rather than half-applied.
+   *
+   * **Owner and admin.** Creating one booking is owner/admin on the grid, so
+   * creating seventy from a file is owner/admin too.
+   */
+  @Post('timetable-import/:facilityId')
+  async importTimetable(
+    @Param('facilityId') facilityId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<TimetableImportResult> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const result = await runTimetableImport(organizationId, {
+      facilityId,
+      rows: readTimetableRows(body['rows']),
+      commit: body['commit'] === true,
+      drop: readIndexes(body['drop']),
+    });
+
+    // One 404 for "no such site" and "no published season": neither is a thing
+    // this caller can act on differently, and a draft season has no timetable
+    // for a file to join.
+    if (result === null) throw new NotFoundException('No such site, or no published season');
+    return result;
   }
 
   /**
@@ -154,6 +192,68 @@ function readStatus(body: Record<string, unknown>): SettableStatus {
     throw new BadRequestException('status must be to_define or uncovered');
   }
   return raw;
+}
+
+/**
+ * The candidate bookings, off the wire.
+ *
+ * Names rather than ids throughout — the file says `Pista 2` and `Sandra`, and
+ * resolving those against *this* facility is the preview's job, not the
+ * client's. A client that sent ids would be asserting something it cannot know.
+ */
+function readTimetableRows(raw: unknown): RawTimetableRow[] {
+  if (!Array.isArray(raw)) throw new BadRequestException('rows must be a list');
+  if (raw.length === 0) throw new BadRequestException('rows is empty');
+  if (raw.length > MAX_TIMETABLE_ROWS) {
+    throw new BadRequestException(`at most ${MAX_TIMETABLE_ROWS} bookings in one import`);
+  }
+
+  return raw.map((entry, index) => {
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new BadRequestException('each row must be an object');
+    }
+    const row = entry as Record<string, unknown>;
+
+    const weekday = Number(row['weekday']);
+    if (!Number.isInteger(weekday) || weekday < 1 || weekday > 7) {
+      throw new BadRequestException(`row ${index + 1}: weekday must be 1..7`);
+    }
+
+    const lanes = Array.isArray(row['laneNames'])
+      ? row['laneNames'].map((lane) => String(lane))
+      : [];
+    if (lanes.length > 24) throw new BadRequestException(`row ${index + 1}: too many lanes`);
+
+    const headcount = row['headcount'];
+
+    return {
+      weekday,
+      startTime: String(row['startTime'] ?? ''),
+      durationMinutes: Number(row['durationMinutes'] ?? 0),
+      name: String(row['name'] ?? ''),
+      laneNames: lanes,
+      instructorName: row['instructorName'] === undefined ? null : String(row['instructorName']),
+      headcount:
+        headcount === null || headcount === undefined || headcount === ''
+          ? null
+          : Number(headcount),
+      line: Number.isInteger(Number(row['line'])) ? Number(row['line']) : index + 1,
+    } satisfies RawTimetableRow;
+  });
+}
+
+/** Row indexes the operator settled in the conflict dialog. */
+function readIndexes(raw: unknown): number[] {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) throw new BadRequestException('drop must be a list of row indexes');
+
+  return raw.map((value) => {
+    const index = typeof value === 'number' ? value : Number(value);
+    if (!Number.isInteger(index) || index < 0) {
+      throw new BadRequestException('drop must be row indexes');
+    }
+    return index;
+  });
 }
 
 function asHttp(error: unknown): unknown {
