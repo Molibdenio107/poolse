@@ -1913,6 +1913,9 @@
       "manha": "Manhã",
       "tarde": "Tarde",
       "noite": "Noite"
-    }
+    },
+    "byDayChart": "Horas-pista vendidas, por dia da semana",
+    "ofHours": "{sold} de {available}",
+    "free": "Livre"
   }
 }

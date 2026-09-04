@@ -67,6 +67,12 @@ export default {
           teal: rgb('--category-teal'),
           violet: rgb('--category-violet'),
         },
+        // Chart series slots. Validated for a data mark, which is a different
+        // job from a brand fill — see the note in globals.css.
+        chart: {
+          1: rgb('--chart-1'),
+          2: rgb('--chart-2'),
+        },
         // POOLSE-18. Tokens rather than per-component literals, so a role reads
         // the same in the People list, a filter chip and the invite dialog.
         role: {

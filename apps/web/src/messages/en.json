@@ -1902,7 +1902,7 @@
     "split": "Class groups and partnerships",
     "subject": "Kind",
     "swimmers": "Swimmers",
-    "turmas": "Class groups",
+    "turmas": "Classes",
     "parcerias": "Partnerships",
     "byBand": "By time of day",
     "bandSplit": "Class groups {turmas} · partnerships {parcerias}",
@@ -1913,6 +1913,9 @@
       "manha": "Morning",
       "tarde": "Afternoon",
       "noite": "Evening"
-    }
+    },
+    "byDayChart": "Lane-hours sold, by day of the week",
+    "ofHours": "{sold} of {available}",
+    "free": "Free"
   }
 }

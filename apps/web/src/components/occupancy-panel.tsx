@@ -1,6 +1,7 @@
 import { getTranslations, getLocale } from 'next-intl/server';
 import { AlertTriangle } from 'lucide-react';
 import type { Occupancy, TimeBand } from '@/lib/api';
+import { OccupancyBars } from './occupancy-bars';
 
 /**
  * The season, in figures — POOLSE-52, criterion 6.
@@ -12,6 +13,12 @@ import type { Occupancy, TimeBand } from '@/lib/api';
  * could reproduce when a manager queried it.
  *
  * A server component, because it renders what it is given and holds nothing.
+ *
+ * **It lives on the dashboard now, not on the facility page.** Rui's third
+ * report: this is one of the core things a dashboard is for, and a manager
+ * opening Poolse should see how much of the water is sold before they see
+ * anything else. It moved wholesale rather than being copied — two of these
+ * would be two answers to one question the day somebody edited one.
  *
  * **Lane-hours, not classes.** It is the unit the club actually sells: a booking
  * over three lanes for 45 minutes is 2.25 lane-hours, and "37% occupancy" in
@@ -167,49 +174,19 @@ export async function OccupancyPanel({
         </ul>
       </div>
 
-      {/* By day. A bar each, and the number beside it — never the bar alone. */}
-      <div className="flex flex-col gap-2 border-t border-border pt-4">
-        <h3 className="text-sm font-medium">{t('occupancy.byDay')}</h3>
-        <ul className="flex flex-col gap-1.5">
-          {occupancy.byDay.map((day) => {
-            const sold = Number(day.soldLaneHours);
-            const available = Number(day.availableLaneHours);
-            /*
-              The only division on this page, and it is a bar width rather than
-              a reported figure — the percentages a reader acts on all arrive
-              computed. A day the club is shut has no available hours and gets
-              no bar, which is why this guards against dividing by zero rather
-              than showing 0%.
-            */
-            const width = available > 0 ? Math.min(100, (sold / available) * 100) : 0;
-
-            return (
-              <li key={day.weekday} className="flex items-center gap-3">
-                <span className="w-10 shrink-0 text-sm text-foreground-muted">
-                  {t(`week.${day.weekday}`).slice(0, 3)}
-                </span>
-                <span
-                  aria-hidden
-                  className="h-2 flex-1 overflow-hidden rounded-full bg-surface-muted"
-                >
-                  <span
-                    className="block h-full rounded-full bg-primary"
-                    style={{ width: `${width}%` }}
-                  />
-                </span>
-                <span className="w-28 shrink-0 text-right text-sm tabular-nums text-foreground-muted">
-                  {available > 0
-                    ? t('occupancy.dayFigure', {
-                        sold: hours(day.soldLaneHours),
-                        available: hours(day.availableLaneHours),
-                      })
-                    : t('occupancy.closed')}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+      {/*
+        By day, as a chart — Rui's third report asked for a graphic here.
+        
+        It replaces the plain progress bar this block used to hold rather than
+        joining it: two pictures of one dataset is noise, and the old one could
+        not show the split between the club's own turmas and the water sold to
+        organisations, which is the second question every one of these figures
+        raises. See `occupancy-bars.tsx` for why the colours are what they are.
+      */}
+      <div className="border-t border-border pt-4">
+        <OccupancyBars occupancy={occupancy} locale={locale} />
       </div>
+
     </section>
   );
 }

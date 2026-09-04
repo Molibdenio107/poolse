@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Me } from '../../../lib/api';
+import { ApiError, apiFetch, type Facility, type Me, type Occupancy } from '../../../lib/api';
 import { readTheme } from '../../../lib/preferences';
 import { PreferenceSync } from './preference-sync';
 import { CreateOrganizationForm } from './create-organization-form';
 import { PageShell } from '@/components/page-shell';
+import { OccupancyPanel } from '@/components/occupancy-panel';
 
 /**
  * The dashboard — and, for now, mostly a statement that it is not built yet.
@@ -15,12 +16,16 @@ import { PageShell } from '@/components/page-shell';
  * meant the first page after signing in was about the reader rather than about
  * the pool. A dashboard is for the operation.
  *
- * **The operational dashboard is deliberately not built yet**, and this page
- * says so rather than filling the gap. Occupancy, water quality at a glance,
- * today's classes and what needs maintenance all need data this product is still
- * growing; three counts in a row standing in for them is exactly what this page
- * just stopped being. The empty state names what is coming and points at the
- * screens that do work today, which is more use than a chart of nothing.
+ * **Occupancy is the first real thing on it** — moved here from the facility
+ * page, because how much of the water is sold is the question a manager opens
+ * Poolse with, and POOLSE-52 had it filed under a site's own settings. It moved
+ * rather than being copied: two of the same panel would be two answers to one
+ * question the day somebody edited one.
+ *
+ * The rest of the operational dashboard is still deliberately not built, and
+ * the panel below says so rather than filling the gap with counts. Water quality
+ * at a glance, today's classes and what needs maintenance all need data this
+ * product is still growing.
  *
  * The "you belong to no organization yet" path stays here on purpose:
  * `dashboard/start` sends somebody with no membership to this page precisely
@@ -41,6 +46,22 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
   }
 
   const membership = me?.memberships[0] ?? null;
+
+  /*
+   * The club's site, and its season in figures.
+   *
+   * One facility per licence, so the first is the club's — and both requests are
+   * best-effort: a dashboard that fails to load because a figure would not
+   * compute is worse than a dashboard without the figure.
+   */
+  let occupancy: Occupancy | null = null;
+  if (me !== null && membership !== null) {
+    const sites = await apiFetch<Facility[]>('/facilities').catch(() => null);
+    const first = sites?.[0]?.id;
+    if (first !== undefined) {
+      occupancy = await apiFetch<Occupancy>(`/facilities/${first}/occupancy`).catch(() => null);
+    }
+  }
   const name =
     me === null
       ? null
@@ -64,6 +85,8 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
             activeLocale={activeLocale}
             activeTheme={activeTheme}
           />
+
+          {occupancy !== null && <OccupancyPanel occupancy={occupancy} />}
 
           {/*
             What this page will be, said plainly, with the way to the screens

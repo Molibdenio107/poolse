@@ -6,7 +6,6 @@ import {
   apiFetch,
   type FacilityDetail,
   type FacilitySlots,
-  type Occupancy,
   type PeopleCounts,
   type Students,
 } from '@/lib/api';
@@ -20,7 +19,6 @@ import { SlotsPanel } from './slots-panel';
 import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
 import { PartnersPanel } from './partners-panel';
-import { OccupancyPanel } from './occupancy-panel';
 import { listPartners } from './partners.actions';
 import { PageShell } from '@/components/page-shell';
 
@@ -112,9 +110,6 @@ export default async function FacilityPage({
     yet has nothing to divide by — both come back as an absent panel rather than
     a screen full of dashes.
   */
-  const occupancy = await apiFetch<Occupancy>(`/facilities/${facilityId}/occupancy`).catch(
-    () => null,
-  );
 
   const prices = await listPrices(facilityId);
   const register =
@@ -286,7 +281,6 @@ export default async function FacilityPage({
             />
           )}
 
-          {occupancy !== null && <OccupancyPanel occupancy={occupancy} />}
 
           {partners !== null && (
             <PartnersPanel

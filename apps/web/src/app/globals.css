@@ -89,6 +89,27 @@
     --category-violet: 124 66 168;
 
     /*
+     * Chart series — POOLSE-52's occupancy on the dashboard.
+     *
+     * **Not `--primary`, and that is measured rather than preferred.** The brand
+     * teal is a fill, not a data mark: at OKLCH chroma 0.069 it fails a
+     * categorical palette's chroma floor — it reads as grey next to a saturated
+     * neighbour — and it sits at 2.65:1 against white, under the 3:1 a chart
+     * mark needs. Both were run through the validator rather than judged, and
+     * the whole teal family fails the chroma floor: cyan simply has little of it.
+     *
+     * These are slots 1 and 2 of a categorical theme that passes every check on
+     * Poolse's own surfaces — lightness band, chroma floor, CVD separation
+     * (ΔE 24.7 light, 26.8 dark against a target of 8) and contrast. The dark
+     * values are their own steps for the dark ground, never an automatic flip.
+     *
+     * The brand palette is untouched: CLAUDE.md fixes it, and a chart mark is a
+     * different job from a button.
+     */
+    --chart-1: 42 120 214;
+    --chart-2: 235 104 52;
+
+    /*
      * Role colours — POOLSE-18.
      *
      * Six hues, deliberately clear of the amber and red that carry the
@@ -149,6 +170,10 @@
     /* Lifted for the dark ground, the same way success/warning/danger are. */
     --category-teal: 92 190 188;
     --category-violet: 182 145 226;
+
+    /* Stepped for the dark surface and validated against it — see the light block. */
+    --chart-1: 57 135 229;
+    --chart-2: 217 89 38;
 
     /* Lighter counterparts — same hues, readable on a dark surface. */
     --role-owner: 186 148 235;
