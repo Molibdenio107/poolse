@@ -92,3 +92,60 @@ pinned to a wall**, verified against a real render rather than asserted.
 9. Both exports are route handlers returning files, working without JavaScript, and reproducible from their URL.
 10. Exports carrying contracted partnership value are owner/admin; the plain grid export is not restricted.
 11. The existing PDF approach in the repo is reused rather than a second PDF technology being introduced.
+
+---
+
+## Verification record — 2026-09-04
+
+Criterion 2 asks for the result of a real print to be **recorded here rather than assumed**, so
+this section says exactly what was and was not checked.
+
+### Not done — the paper test
+
+**Criterion 2 is outstanding.** Nothing has been printed. The build environment has no browser and
+no printer, so no A4 or A3 sheet has been produced, held at a metre, or photocopied. Specifically
+untested:
+
+- **54.2** — legibility of group, instructor and headcount at a metre, at each page size.
+- **54.3** — the greyscale photocopy. The sheet is *built* for it (see below), but built-for and
+  verified-as are different claims.
+- **54.5 / 54.6** — page breaks and repeating headers. These are `break-inside: avoid` on a
+  `<tbody>` and a `<thead>` in a real `<table>`, which is the mechanism browsers implement for
+  exactly this, but no second page has been looked at.
+
+**How to close it:** open `/dashboard/calendar/print?local=<facilityId>`, switch between A4 and A3
+with the control on screen, print each to PDF, then print one on paper and photocopy it. If the
+8.5pt cell type is too small at a metre, the size to change is the `text-[8.5pt]` on the table and
+the `w-[22mm]` lane rail — in that order.
+
+### Done, and how it was checked
+
+- **Greyscale survival is structural, not a colour choice.** The page is black on white throughout.
+  Every cell carries its group name, instructor and headcount as text; the legend is a list of
+  category *names*; an uncovered slot prints `!!` and `???` marks a slot still to be decided, both
+  keyed in a line under the grid. The only colour on the sheet is a 2.5pt left rule in a partner's
+  own colour, and nothing depends on it.
+- **The workbook was exercised end to end** with a throwaway script (the check `server-only` keeps
+  out of `node --test`, the same gap the register's export has). Verified against a file read back
+  through ExcelJS: two sheets named `Horário` and `Marcações`; a three-lane booking merged across
+  its three rows; a 90-minute class continuing into the next row as `(Absolutos)`; a booking with
+  no lane listed under **Fora da grelha** rather than dropped; the CSV form starting with a BOM and
+  delimited with semicolons.
+- **The round trip is a committed test.** `booking-sheet.test.ts` reads the real catalogues from
+  disk in both locales and asserts every exported header maps back to its own field — criterion 7,
+  and it fails if somebody rewords a label a year from now.
+- **The placement engine is a committed test.** `grid-layout.test.ts`, 13 cases. It is what
+  criterion 8 rests on: the screen, the printed sheet and the `Horário` worksheet are three
+  separate renders that share one answer to "which class is in lane 3 at 09:30".
+
+### Scope notes
+
+- **Criterion 10 — neither export is role-restricted, deliberately.** The rule is that exports
+  carrying *contracted partnership value* are owner/admin. Both of these are drawn from
+  `GET /facilities/:id/grid`, which never touches `partner_agreement`: there is no unit price, no
+  lane-hour rate and no invoice total in either file. An instructor may take the wall sheet home,
+  which is the point of a wall sheet. The day a price reaches these files, the role check comes
+  with it.
+- **The staffing filter's query parameter was renamed** from `professor` to `estado`. POOLSE-53
+  shipped it a day earlier; `professor` is the instructor filter here and one word cannot be two
+  questions. `lib/grid-filters.ts` owns the vocabulary now.

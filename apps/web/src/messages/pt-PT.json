@@ -1812,7 +1812,55 @@
       "raiseAlert": "Marcar como sem professor",
       "clearAlert": "Voltar a «a definir»"
     },
-    "notAllowed": "Não tem permissão para alterar isto."
+    "notAllowed": "Não tem permissão para alterar isto.",
+    "export": {
+      "field": {
+        "subject": "Tipo",
+        "name": "Nome",
+        "partner": "Parceria",
+        "weekday": "Dia da semana",
+        "startTime": "Hora",
+        "endTime": "Hora de fim",
+        "durationMinutes": "Duração",
+        "pool": "Tanque",
+        "lanes": "Pistas",
+        "instructor": "Professor",
+        "instructorStatus": "Estado do professor",
+        "headcount": "Alunos",
+        "category": "Categoria",
+        "level": "Nível",
+        "notes": "Notas"
+      },
+      "subject": {
+        "turma": "Turma",
+        "parceria": "Parceria",
+        "evento": "Evento",
+        "manutencao": "Manutenção"
+      },
+      "status": {
+        "assigned": "Atribuído",
+        "to_define": "A definir",
+        "external": "Professor da entidade",
+        "uncovered": "Sem professor"
+      },
+      "scheduleSheet": "Horário",
+      "bookingsSheet": "Marcações",
+      "excel": "Excel",
+      "print": "Imprimir",
+      "printTitle": "Horário — {facility}",
+      "generated": "Gerado a {date}",
+      "draft": "ÉPOCA EM RASCUNHO — não é o horário em vigor",
+      "filteredBy": "Filtrado por: {filters}",
+      "unfiltered": "Horário completo, sem filtros",
+      "legend": "Legenda",
+      "noCategory": "Sem categoria",
+      "offGrid": "Fora da grelha",
+      "noLane": "Sem pista",
+      "paper": "Papel",
+      "failed": "Não foi possível gerar o ficheiro.",
+      "forbidden": "Não tem permissão para exportar isto.",
+      "empty": "Não há marcações para exportar."
+    }
   },
   "partnerClasses": {
     "title": "Parcerias",

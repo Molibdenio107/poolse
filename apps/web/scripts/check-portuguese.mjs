@@ -62,6 +62,10 @@ const SAME_ON_PURPOSE = new Map([
   // left untranslated; it is what the format is called in every language.
   ['students.export.formatCsv', 'a file format and its extension'],
   ['students.export.formatXlsx', 'a product name and its extension — Excel is Excel in Portuguese'],
+  // The timetable export's button — POOLSE-54. Same reasoning as the register's
+  // above: it names the application the file opens in, and that application is
+  // called Excel in Lisbon too.
+  ['grid.export.excel', 'a product name — Excel is Excel in Portuguese'],
   ['invite.email', 'as above'],
   ['invite.emailLabel', 'as above'],
   ['progress.minutes', '"min" is the abbreviation in both languages'],

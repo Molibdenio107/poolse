@@ -1812,7 +1812,55 @@
       "raiseAlert": "Flag as having no instructor",
       "clearAlert": "Back to “to be decided”"
     },
-    "notAllowed": "You do not have permission to change this."
+    "notAllowed": "You do not have permission to change this.",
+    "export": {
+      "field": {
+        "subject": "Type",
+        "name": "Name",
+        "partner": "Partner",
+        "weekday": "Day of week",
+        "startTime": "Start",
+        "endTime": "End time",
+        "durationMinutes": "Duration",
+        "pool": "Pool",
+        "lanes": "Lanes",
+        "instructor": "Instructor",
+        "instructorStatus": "Instructor status",
+        "headcount": "Swimmers",
+        "category": "Category",
+        "level": "Level",
+        "notes": "Notes"
+      },
+      "subject": {
+        "turma": "Class",
+        "parceria": "Partnership",
+        "evento": "Event",
+        "manutencao": "Maintenance"
+      },
+      "status": {
+        "assigned": "Assigned",
+        "to_define": "To be decided",
+        "external": "Partner's own instructor",
+        "uncovered": "No instructor"
+      },
+      "scheduleSheet": "Schedule",
+      "bookingsSheet": "Bookings",
+      "excel": "Excel",
+      "print": "Print",
+      "printTitle": "Schedule — {facility}",
+      "generated": "Generated {date}",
+      "draft": "DRAFT SEASON — not the timetable in force",
+      "filteredBy": "Filtered by: {filters}",
+      "unfiltered": "Full schedule, no filters",
+      "legend": "Legend",
+      "noCategory": "No category",
+      "offGrid": "Off the grid",
+      "noLane": "No lane",
+      "paper": "Paper",
+      "failed": "The file could not be generated.",
+      "forbidden": "You do not have permission to export this.",
+      "empty": "There are no bookings to export."
+    }
   },
   "partnerClasses": {
     "title": "Partnerships",

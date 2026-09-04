@@ -43,6 +43,12 @@ const EXEMPT = [
   // rectangle. The shell's chrome is hidden at print time rather than absent, so
   // this stays an ordinary authenticated page.
   'report',
+  // The printed timetable - POOLSE-54. A document rather than a screen, for the
+  // same reasons as the report above and one more: its page geometry is chosen
+  // per request (A4 or A3, landscape), so it owns an `@page` rule that no shared
+  // shell could express. The shell's chrome is hidden at print time rather than
+  // absent, so this stays an ordinary authenticated page.
+  'calendar/print',
 ];
 
 /** Outer-layout classes on a page root — the thing the shell now owns. */

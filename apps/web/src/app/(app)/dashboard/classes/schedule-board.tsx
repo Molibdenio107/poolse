@@ -18,7 +18,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { AlertTriangle, Ban, GripVertical, Lock } from 'lucide-react';
+import { AlertTriangle, Ban, Download, GripVertical, Lock, Printer } from 'lucide-react';
 import {
   concurrentGroups,
   evaluate,
@@ -42,6 +42,26 @@ import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { slotKey } from '@/lib/slot-key';
 import { cn } from '@/lib/utils';
 import { addDays } from '@/lib/dates';
+import {
+  applyGridFilters,
+  FILTER_PARAM,
+  gridFilterQuery,
+  parseStaffing,
+  staffingParam,
+  type GridFilters,
+} from '@/lib/grid-filters';
+import {
+  cellAt,
+  groupOf,
+  instructorDisplay,
+  type InstructorState,
+  rowTimes,
+  slotAt as slotAtTime,
+  slotsCovered,
+  slotsFor,
+  toMinutes,
+  toTime,
+} from '@/lib/grid-layout';
 import {
   duplicateBookingAction,
   moveBookingAction,
@@ -107,57 +127,9 @@ const FALLBACK_DURATION = 45;
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
-/**
- * Which set of slots a day draws from — POOLSE-44.
- *
- * Saturday and Sunday have their own rows because a club that opens at 07:30 on
- * a Saturday and 06:30 on a Tuesday has to be able to say so. That is why the
- * weekend used to be a separate grid: not width, but a different set of rows.
- *
- * One grid handles it by making a *row* a start time rather than a slot, and
- * letting each day answer for itself whether it has a slot at that time. A
- * Saturday-only 07:30 is one row where the weekdays are simply blank.
- */
-function groupOf(weekday: number): DayGroup {
-  if (weekday === 6) return 'saturday';
-  if (weekday === 7) return 'sunday';
-  return 'weekday';
-}
-
 /** Rail widths, in rem. Shared by the sticky offsets and the column template. */
 const TIME_COL = 4.125;
 const LANE_COL = 5;
-
-function toMinutes(time: string): number {
-  const [h, m] = time.split(':');
-  return Number(h) * 60 + Number(m);
-}
-
-function toTime(minutes: number): string {
-  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-}
-
-/**
- * Every slot a booking's own time runs through, in grid order.
- *
- * A class is not obliged to be one row long. A 90-minute masters session in a
- * grid of 45-minute rows covers two, and drawing it one row tall made the second
- * half invisible — the row underneath looked free while the pool was busy.
- *
- * Half-open, so a class ending exactly when the next row starts does not claim
- * it: 09:30–10:15 covers the 09:30 row and not the 10:15 one.
- */
-function slotsCovered(
-  startMinutes: number,
-  durationMinutes: number,
-  slots: readonly GridSlot[],
-): GridSlot[] {
-  return slots.filter((slot) => {
-    const from = toMinutes(slot.startTime);
-    const to = toMinutes(slot.endTime);
-    return startMinutes < to && from < startMinutes + durationMinutes;
-  });
-}
 
 /**
  * Where the cursor is, and only then where the box is.
@@ -393,24 +365,6 @@ interface Landing {
  * toggle. Per-viewer convenience, never shared state: two people looking at the
  * same club see the same timetable, and their own density.
  */
-/**
- * The four instructor states — POOLSE-53.
- *
- * `assigned` and `external` are facts the database keeps for itself. The other
- * two are the club's own reading of the same empty field and mean opposite
- * things, which is why nothing here ever converts one into the other.
- */
-type InstructorState = 'assigned' | 'to_define' | 'external' | 'uncovered';
-
-/**
- * The query parameter the counter writes.
- *
- * Named in Portuguese, and its values too — `?professor=sem-professor` is a link
- * somebody pastes into a message to a colleague, and it should read like the
- * screen it opens rather than like the column it filters.
- */
-const STAFFING_PARAM = 'professor';
-
 const PREFS_KEY = 'poolse.laneGrid.prefs';
 
 interface Prefs {
@@ -465,6 +419,7 @@ export function ScheduleBoard({
   laneLevelCapacity,
   maxConcurrentGroups,
   staffing,
+  seasonId,
   seasonName,
   seasonStatus,
 }: {
@@ -502,6 +457,8 @@ export function ScheduleBoard({
   maxConcurrentGroups: number | null;
   /** The season's two staffing gaps — POOLSE-53. Both zero means say nothing. */
   staffing: GridStaffing;
+  /** The season the grid was drawn for, so an export link names the same one. */
+  seasonId: string | null;
   /** Named in the counter, because "7 aulas" without a season is 7 of what. */
   seasonName: string | null;
   /** `draft` marks the counter as next year's plan rather than this year's wall. */
@@ -755,18 +712,19 @@ export function ScheduleBoard({
    * lunch, or reach with the browser's back button — so the URL is the state,
    * exactly as `FilterSelect` does it for the register.
    */
-  const staffingFilter = useMemo<InstructorState | null>(() => {
-    const raw = searchParams.get(STAFFING_PARAM);
-    return raw === 'sem-professor' ? 'uncovered' : raw === 'a-definir' ? 'to_define' : null;
-  }, [searchParams]);
+  const staffingFilter = useMemo<InstructorState | null>(
+    () => parseStaffing(searchParams.get(FILTER_PARAM.staffing)),
+    [searchParams],
+  );
 
   function filterStaffing(next: InstructorState | null): void {
     const query = new URLSearchParams(searchParams.toString());
+    const value = staffingParam(next);
 
     // Clicking the counter that is already on turns it off. A filter with no way
     // back that is not the browser's back button is a trap.
-    if (next === null || next === staffingFilter) query.delete(STAFFING_PARAM);
-    else query.set(STAFFING_PARAM, next === 'uncovered' ? 'sem-professor' : 'a-definir');
+    if (value === null || next === staffingFilter) query.delete(FILTER_PARAM.staffing);
+    else query.set(FILTER_PARAM.staffing, value);
 
     const href = query.size > 0 ? `${pathname}?${query}` : pathname;
     startNavigation(() => router.replace(href, { scroll: false }));
@@ -779,18 +737,28 @@ export function ScheduleBoard({
    * reader the lane does not exist; hiding the chip leaves the grid's shape
    * intact and the hole visible, which is what a planner is looking for.
    */
-  const visible = useMemo(
-    () =>
-      placed.filter(
-        (row) =>
-          (prefs.instructorId === '' || row.instructorId === prefs.instructorId) &&
-          (prefs.categoryId === '' || row.categoryId === prefs.categoryId) &&
-          (prefs.partnerId === '' || row.partnerId === prefs.partnerId) &&
-          (prefs.levelId === '' || row.levelId === prefs.levelId) &&
-          (staffingFilter === null || row.instructorStatus === staffingFilter),
-      ),
-    [placed, prefs, staffingFilter],
+  /**
+   * Everything the grid is filtered by, in one object.
+   *
+   * Five of these live in `localStorage` and one in the URL, and that split is
+   * about where each belongs rather than about what they are — so they are
+   * gathered here before anything acts on them. The export links below send this
+   * same object down the wire, which is what makes an exported sheet contain
+   * exactly the blocks that were on screen.
+   */
+  const filters = useMemo<GridFilters>(
+    () => ({
+      poolId: prefs.poolId,
+      instructorId: prefs.instructorId,
+      categoryId: prefs.categoryId,
+      partnerId: prefs.partnerId,
+      levelId: prefs.levelId,
+      staffing: staffingFilter,
+    }),
+    [prefs, staffingFilter],
   );
+
+  const visible = useMemo(() => applyGridFilters(placed, filters), [placed, filters]);
 
   const closedOn = (day: number): string | null =>
     closures.find((closure) => closure.weekday === day)?.reason ?? null;
@@ -1565,6 +1533,12 @@ export function ScheduleBoard({
           </section>
         ) : (
           <>
+            <ExportLinks
+              facilityId={facility?.id ?? ''}
+              seasonId={seasonId}
+              filters={filters}
+            />
+
             <StaffingCounter
               staffing={staffing}
               seasonName={seasonName}
@@ -1661,6 +1635,61 @@ export function ScheduleBoard({
         )}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+/**
+ * The two ways the timetable leaves the screen — POOLSE-54, criterion 9.
+ *
+ * **Ordinary links, not buttons.** One opens a page laid out for paper, the
+ * other is a file the browser downloads; neither needs JavaScript, and both are
+ * reproducible from the URL they point at, which is what makes a filtered
+ * export shareable — 54.15.
+ *
+ * They carry every filter, including the five the screen keeps in
+ * `localStorage`. That is the whole reason `gridFilterQuery` exists: a sheet
+ * printed from a filtered grid must contain what was on screen, and must say so
+ * in its header rather than leaving somebody to notice.
+ */
+function ExportLinks({
+  facilityId,
+  seasonId,
+  filters,
+}: {
+  facilityId: string;
+  seasonId: string | null;
+  filters: GridFilters;
+}): React.ReactElement | null {
+  const t = useTranslations();
+
+  // No site means no grid to export. The empty-grid message already says so.
+  if (facilityId === '') return null;
+
+  const query = gridFilterQuery(filters, {
+    [FILTER_PARAM.facility]: facilityId,
+    [FILTER_PARAM.season]: seasonId,
+  });
+
+  const style =
+    'inline-flex h-control items-center gap-1.5 rounded border border-border px-2.5 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {/*
+        A new tab, because the print page replaces the whole screen and somebody
+        who has spent ten minutes arranging a grid should still have it when the
+        printing is done.
+      */}
+      <a href={`/dashboard/calendar/print?${query}`} target="_blank" rel="noopener" className={style}>
+        <Printer aria-hidden className="size-4" />
+        {t('grid.export.print')}
+      </a>
+
+      <a href={`/dashboard/calendar/export?${query}`} className={style}>
+        <Download aria-hidden className="size-4" />
+        {t('grid.export.excel')}
+      </a>
+    </div>
   );
 }
 
@@ -2169,8 +2198,8 @@ function SlotGrid({
     );
   }
 
-  /** Where each lane sits in the block, so a chip can span from its first one. */
-  const laneIndex = new Map(lanes.map((lane, index) => [lane.id, index]));
+  /** Which lanes are actually drawn, so a span is clipped to what is on screen. */
+  const laneKeys = new Set(lanes.map((lane) => lane.id));
 
   /*
    * A row is a start time, not a slot — which is what lets one grid hold the
@@ -2182,18 +2211,11 @@ function SlotGrid({
    * them; a day with no slot at that time gets a cell that says so instead of a
    * droppable one.
    */
-  const groups = new Set(days.map((day) => groupOf(day)));
-  const times = [
-    ...new Set(
-      slots.filter((slot) => groups.has(slot.dayGroup)).map((slot) => slot.startTime),
-    ),
-  ].sort((a, b) => toMinutes(a) - toMinutes(b));
+  const times = rowTimes(slots, days);
 
   /** That day's own slot at this time, if it has one. */
   const slotAt = (day: number, startTime: string): GridSlot | undefined =>
-    slots.find(
-      (slot) => slot.dayGroup === groupOf(day) && slot.startTime === startTime,
-    );
+    slotAtTime(slots, day, startTime);
 
   const columns = `${TIME_COL}rem ${LANE_COL}rem repeat(${days.length}, minmax(6.625rem, 1fr))`;
 
@@ -2363,59 +2385,21 @@ function SlotGrid({
 
                         // Only the slots this day actually offers, or a booking
                         // would be judged against a Saturday row on a Tuesday.
-                        const daySlots = slots.filter(
-                          (candidate) => candidate.dayGroup === groupOf(day),
-                        );
+                        const daySlots = slotsFor(slots, day);
 
                         /*
-                         * A booking is drawn in this cell if its lane starts
-                         * here and its *time* reaches this slot — not only if
-                         * `slotId` names it. That is what lets a 90-minute class
-                         * appear in both the rows it actually occupies.
-                         */
-                        const here = placed.find(
-                          (candidate) =>
-                            candidate.weekday === day &&
-                            candidate.laneIds[0] === lane.id &&
-                            candidate.slotId !== null &&
-                            slotsCovered(
-                              candidate.startMinutes,
-                              candidate.durationMinutes,
-                              daySlots,
-                            ).some((covered) => covered.id === slot.id),
-                        );
-
-                        /*
-                         * Which part of the block this is. The first slot draws
-                         * the label and the handles; the ones after it are the
-                         * same class continuing, joined across the hour line the
-                         * way a paper timetable does.
+                         * What sits here, and how much of the grid it takes.
                          *
-                         * They cannot be one element: lanes are nested inside
-                         * slots, so slot 1 lane 1 and slot 2 lane 1 are six rows
-                         * apart with other lanes between them. One block
-                         * stretched across that would cover lanes it does not
-                         * occupy.
+                         * One call, into `lib/grid-layout.ts`, which the printed
+                         * sheet uses too — POOLSE-54, criterion 8. Two copies of
+                         * "which slots does a 90-minute class cover" would be
+                         * two answers to the one question the wall and the
+                         * screen have to agree about.
                          */
-                        const continues =
-                          here !== undefined &&
-                          slotsCovered(here.startMinutes, here.durationMinutes, daySlots)[0]?.id !==
-                            slot.id;
-
-                        /*
-                         * How many lane rows this booking covers, clipped to the
-                         * lanes actually on screen — "esconder pistas vazias"
-                         * can hide a lane in the middle of a span, and a block
-                         * that kept its original height would then overhang the
-                         * slot below it.
-                         */
-                        const span =
-                          here === undefined
-                            ? 1
-                            : Math.max(
-                                1,
-                                here.laneIds.filter((id) => laneIndex.has(id)).length,
-                              );
+                        const cell = cellAt(placed, day, lane.id, slot, daySlots, laneKeys);
+                        const here = cell?.booking;
+                        const continues = cell?.continues ?? false;
+                        const span = cell?.span ?? 1;
 
                         return (
                           <Cell
@@ -3089,7 +3073,7 @@ function InstructorLine({
      * one, and the partner's own name where it did not, because "a school is
      * sending somebody" is still more than the club knows about an empty slot.
      */
-    const who = booking.ownInstructorName ?? booking.instructorName ?? booking.subtitle;
+    const who = instructorDisplay(booking).name;
 
     return (
       <span className="flex min-w-0 items-center gap-1 text-foreground-muted">

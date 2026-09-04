@@ -121,6 +121,8 @@ export interface Staffing {
 }
 
 export interface Grid {
+  /** The site the sheet is of. The printed timetable is titled with it. */
+  facilityName: string;
   seasonId: string | null;
   /** Named, because the counter has to say which season it is counting. */
   seasonName: string | null;
@@ -178,11 +180,12 @@ export async function readGrid(
   seasonId: string | null,
 ): Promise<Grid | null> {
   return withOrg(organizationId, async (tx) => {
-    const site = await tx.query(
-      `SELECT 1 FROM facility WHERE id = $1 AND archived_at IS NULL`,
+    const site = await tx.query<{ name: string }>(
+      `SELECT name FROM facility WHERE id = $1 AND archived_at IS NULL`,
       [facilityId],
     );
-    if (site.rowCount === 0) return null;
+    const facilityName = site.rows[0]?.name;
+    if (facilityName === undefined) return null;
 
     const season = await seasonFor(tx, seasonId);
 
@@ -386,6 +389,7 @@ export async function readGrid(
     }
 
     return {
+      facilityName,
       seasonId: season?.id ?? null,
       seasonName: season?.name ?? null,
       seasonStatus: season?.status ?? null,

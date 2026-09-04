@@ -324,6 +324,7 @@ export default async function CalendarPage({
                 // No grid means no season loaded, so there is nothing to report
                 // rather than nothing to report *yet* — POOLSE-53, criterion 8.
                 staffing={grid?.staffing ?? { uncovered: 0, toDefine: 0 }}
+                seasonId={grid?.seasonId ?? null}
                 seasonName={grid?.seasonName ?? null}
                 seasonStatus={grid?.seasonStatus ?? null}
               />

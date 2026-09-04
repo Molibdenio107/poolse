@@ -1808,6 +1808,8 @@ export interface GridStaffing {
 }
 
 export interface FacilityGrid {
+  /** The site this grid is of — the printed sheet is titled with it. */
+  facilityName: string;
   seasonId: string | null;
   /** The counter has to say which season it counted. */
   seasonName: string | null;
