@@ -1894,14 +1894,6 @@ function StaffingCounter({
             busy && 'opacity-60',
           )}
         >
-          {/*
-            `???` is a symbol, not a string — criterion 11. It is what the club
-            already writes on its own printed sheet, and it means the same thing
-            in both locales, so it never goes through the catalogue.
-          */}
-          <span aria-hidden className="font-mono">
-            ???
-          </span>
           {t('grid.staffing.toDefine', { count: staffing.toDefine })}
         </button>
       )}
@@ -3229,7 +3221,7 @@ function InstructorPicker({
       <option value={TO_DEFINE}>
         {booking.instructorStatus === 'external'
           ? (instructorDisplay(booking).name ?? t('grid.staffing.pending'))
-          : `??? ${t('grid.staffing.pending')}`}
+          : t('grid.staffing.pending')}
       </option>
       <option value={UNCOVERED}>{t('grid.noInstructor')}</option>
       {staff.map((person) => (
@@ -3246,9 +3238,16 @@ function InstructorPicker({
  *
  * The states carry the same absence of data and opposite meanings, so each one
  * gets its own words and, where it matters, its own icon. **Colour is never the
- * signal**: `Sem professor` says "sem professor" and `???` prints the symbol the
- * club already writes on its printed sheet, so a screen reader and a monochrome
- * print-out both read the same thing the grid does — 53.12.
+ * signal**: every state says what it is in words, so a screen reader and a
+ * monochrome print-out both read what the grid reads — 53.12.
+ *
+ * **`???` is not on the screen, and that is a correction.** POOLSE-53 put it
+ * here on the argument that it is the club's own notation, which it is — on
+ * paper. On a screen it reads as broken software: an unresolved variable, a
+ * missing glyph, a placeholder somebody forgot. Rui reported the counter button
+ * as a fault for exactly that reason. The mark stays on the **printed sheet**,
+ * where the club already writes it and where a key underneath says what it
+ * means; on screen the words carry it, and they always did.
  *
  * **The alert is a chip with its own background, not coloured text.** The Dev
  * note names the failure mode precisely: a red `Sem professor` on a partner
@@ -3352,13 +3351,7 @@ function InstructorLine({
       <span className="truncate">{t('grid.noInstructor')}</span>
     </>
   ) : (
-    <>
-      {/* A symbol, not a string — criterion 11. It means the same in both locales. */}
-      <span aria-hidden className="shrink-0 font-mono">
-        ???
-      </span>
-      <span className="truncate">{t('grid.staffing.pending')}</span>
-    </>
+    <span className="truncate">{t('grid.staffing.pending')}</span>
   );
 
   /*

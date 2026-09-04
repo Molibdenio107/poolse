@@ -88,3 +88,25 @@ availability or contracted hours — a real feature, and a different one.
 9. The count comes from the same request that loads the grid, and is exposed on the API for the facility page to reuse.
 10. The alert chip is contrast-checked in light and dark against every category and partner colour it can sit on.
 11. `Sem professor` and `A definir` exist in pt-PT and en; `???` is a symbol and is not translated.
+
+---
+
+## Correction — 2026-09-04, criterion 11
+
+Criterion 11 says `???` is a symbol rather than a translated string, and the
+first build put it on the screen: on the header counter, in the cell chip and in
+the instructor picker.
+
+**Rui reported the counter button as a fault** — `??? 2 por definir` reads as
+broken software, not as notation: an unresolved variable, a missing glyph, a
+placeholder somebody forgot to replace. He was right, and the mistake was mine
+rather than the ticket's. The argument for `???` is that it is what the club
+writes on its own printed sheet — which is true, *on paper*, where the reader is
+holding the same document the club has always used and where the key underneath
+says what the mark means.
+
+So the line is: **`???` stays on the printed sheet and comes off the screen.**
+The print render still marks a to-be-decided slot with it and still keys it, so
+criterion 11 holds where it was actually about. On screen every state says what
+it is in words, which is what criterion 1 asked for and what was already true —
+the symbol was never carrying meaning there, only noise.
