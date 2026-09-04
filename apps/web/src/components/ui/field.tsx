@@ -126,6 +126,7 @@ export function TextField({
   autoComplete,
   placeholder,
   maxLength,
+  inputMode,
   onValueChange,
   className,
   inputClassName,
@@ -135,6 +136,15 @@ export function TextField({
   autoComplete?: string;
   placeholder?: string;
   maxLength?: number;
+  /**
+   * The keypad to offer, for a field that holds digits but is not `type="number"`.
+   *
+   * A number input carries browser validation that refuses silently — the bubble
+   * does not always show, and the form then does nothing with no explanation
+   * (POOLSE-QA-07). Those fields are text validated by the API, and this is what
+   * keeps a phone showing the right keyboard.
+   */
+  inputMode?: 'numeric' | 'decimal' | 'tel';
   /**
    * Extra classes on the `<input>` itself, where `className` styles the column.
    *
@@ -182,6 +192,7 @@ export function TextField({
         autoComplete={autoComplete}
         placeholder={placeholder}
         maxLength={maxLength}
+        inputMode={inputMode}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
         className={cn(CONTROL_LINE, error !== undefined && INVALID, inputClassName)}

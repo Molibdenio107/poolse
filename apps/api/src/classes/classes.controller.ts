@@ -438,9 +438,24 @@ function asHttp(error: unknown): unknown {
 
 function parseGroup(body: Record<string, unknown>): ClassGroupInput {
   const name = typeof body['name'] === 'string' ? body['name'].trim() : '';
-  if (name.length === 0) throw new BadRequestException('name is required');
+  /*
+   * Refusals name the field — POOLSE-QA-06.
+   *
+   * `fields` maps a field to a translation key the web app owns, so the message
+   * lands beside the box that caused it instead of as one sentence at the top of
+   * a six-field form. The prose in `message` is for the log, never for a user.
+   */
+  if (name.length === 0) {
+    throw new BadRequestException({
+      message: 'name is required',
+      fields: { name: 'classes.nameRequired' },
+    });
+  }
   if (name.length > MAX_NAME) {
-    throw new BadRequestException(`name may be at most ${MAX_NAME} characters`);
+    throw new BadRequestException({
+      message: `name may be at most ${MAX_NAME} characters`,
+      fields: { name: 'classes.nameTooLong' },
+    });
   }
 
   return {
@@ -448,8 +463,8 @@ function parseGroup(body: Record<string, unknown>): ClassGroupInput {
     levelId: optionalId(body['levelId']),
     poolId: optionalId(body['poolId']),
     instructorMembershipId: optionalId(body['instructorMembershipId']),
-    capacity: optionalCount(body['capacity'], 'capacity', 200),
-    lane: optionalCount(body['lane'], 'lane', 50),
+    capacity: optionalCount(body['capacity'], 'capacity', 200, 'classes.capacityInvalid'),
+    lane: optionalCount(body['lane'], 'lane', 50, 'classes.laneInvalid'),
   };
 }
 
@@ -459,11 +474,25 @@ function optionalId(value: unknown): string | null {
 }
 
 /** Empty means "not decided" — for capacity, that means no limit. */
-function optionalCount(value: unknown, field: string, max: number): number | null {
+function optionalCount(
+  value: unknown,
+  field: string,
+  max: number,
+  errorKey?: string,
+): number | null {
   if (value === undefined || value === null || value === '') return null;
   const parsed = typeof value === 'number' ? value : Number(String(value).trim());
   if (!Number.isInteger(parsed) || parsed <= 0 || parsed > max) {
-    throw new BadRequestException(`${field} must be a whole number between 1 and ${max}`);
+    /*
+     * A negative lotação used to be stopped only by `min="1"` on the input, and
+     * the browser's own bubble did not show — so the button did nothing at all
+     * and looked broken (POOLSE-QA-07). The rule belongs here, where a crafted
+     * request meets it too, and it names the field so the form can point at it.
+     */
+    throw new BadRequestException({
+      message: `${field} must be a whole number between 1 and ${max}`,
+      ...(errorKey === undefined ? {} : { fields: { [field]: errorKey } }),
+    });
   }
   return parsed;
 }

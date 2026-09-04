@@ -3,7 +3,13 @@
 import { useState, useTransition } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import {
+  CONTROL_LINE,
+  FIELD_COLUMN,
+  FIELD_LABEL,
+  SelectField,
+  TextField,
+} from '@/components/ui/field';
 import { fitsLevel, type AgeFit } from '@/lib/ages';
 import { cn } from '@/lib/utils';
 import type { ClassGroup, ClassOptions } from '@/lib/api';
@@ -68,20 +74,18 @@ export function ClassForm({
         padded out by the stretch.
       */}
       <div className="grid items-start gap-x-4 gap-y-5 sm:grid-cols-2">
-        <div className={`${FIELD_COLUMN} sm:col-span-2`}>
-          <label htmlFor="class-name" className={FIELD_LABEL}>
-            {t('classes.nameLabel')}
-          </label>
-          <input
-            id="class-name"
-            name="name"
-            required
-            maxLength={120}
-            defaultValue={group?.name ?? ''}
-            placeholder={t('classes.namePlaceholder')}
-            className={CONTROL_LINE}
-          />
-        </div>
+        <TextField
+          name="name"
+          label={t('classes.nameLabel')}
+          initial={group?.name ?? ''}
+          required
+          maxLength={120}
+          placeholder={t('classes.namePlaceholder')}
+          className="sm:col-span-2"
+          {...(state.fields?.['name'] === undefined
+            ? {}
+            : { error: t(state.fields['name']) })}
+        />
 
         <LevelChoice
           organizationId={organizationId}
@@ -89,51 +93,57 @@ export function ClassForm({
           value={group?.levelId ?? ''}
           mode={mode}
         />
-        <Choose
-          id="class-instructor"
+        <SelectField
           name="instructorMembershipId"
           label={t('classes.instructor')}
-          none={t('classes.noInstructor')}
-          choices={options.instructors}
-          value={group?.instructorMembershipId ?? ''}
+          initial={group?.instructorMembershipId ?? ''}
+          options={[
+            { value: '', label: t('classes.noInstructor') },
+            ...options.instructors.map((one) => ({ value: one.id, label: one.name })),
+          ]}
         />
-        <Choose
-          id="class-pool"
+        <SelectField
           name="poolId"
           label={t('classes.pool')}
-          none={t('classes.noPool')}
-          choices={options.pools}
-          value={group?.poolId ?? ''}
+          initial={group?.poolId ?? ''}
+          options={[
+            { value: '', label: t('classes.noPool') },
+            ...options.pools.map((one) => ({ value: one.id, label: one.name })),
+          ]}
         />
 
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="class-lane" className={FIELD_LABEL}>
-            {t('classes.lane')}
-          </label>
-          <input
-            id="class-lane"
-            name="lane"
-            type="number"
-            min={1}
-            defaultValue={group?.lane ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
+        {/*
+          Lane and lotação are text, not `type="number"` with `min` — POOLSE-QA-07.
 
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="class-capacity" className={FIELD_LABEL}>
-            {t('classes.capacity')}
-          </label>
-          <input
-            id="class-capacity"
-            name="capacity"
-            type="number"
-            min={1}
-            defaultValue={group?.capacity ?? ''}
-            className={CONTROL_LINE}
-          />
-          <p className="text-sm text-foreground-muted">{t('classes.capacityHint')}</p>
-        </div>
+          The browser was the only thing rejecting a negative lotação, and its
+          bubble never showed: the button did nothing and was indistinguishable
+          from a broken one. The rule now lives in the API, which a crafted
+          request meets too, and comes back naming the field so it lands here.
+        */}
+        <TextField
+          name="lane"
+          label={t('classes.lane')}
+          initial={group?.lane === null || group?.lane === undefined ? '' : String(group.lane)}
+          inputMode="numeric"
+          {...(state.fields?.['lane'] === undefined
+            ? {}
+            : { error: t(state.fields['lane']) })}
+        />
+
+        <TextField
+          name="capacity"
+          label={t('classes.capacity')}
+          initial={
+            group?.capacity === null || group?.capacity === undefined
+              ? ''
+              : String(group.capacity)
+          }
+          inputMode="numeric"
+          hint={t('classes.capacityHint')}
+          {...(state.fields?.['capacity'] === undefined
+            ? {}
+            : { error: t(state.fields['capacity']) })}
+        />
       </div>
 
       <div>
@@ -149,38 +159,6 @@ export function ClassForm({
       {state.ok && mode === 'edit' && <p className="text-sm text-success">{t('classes.saved')}</p>}
       <Problem state={state} />
     </form>
-  );
-}
-
-function Choose({
-  id,
-  name,
-  label,
-  none,
-  choices,
-  value,
-}: {
-  id: string;
-  name: string;
-  label: string;
-  none: string;
-  choices: { id: string; name: string }[];
-  value: string;
-}): React.ReactElement {
-  return (
-    <div className={FIELD_COLUMN}>
-      <label htmlFor={id} className={FIELD_LABEL}>
-        {label}
-      </label>
-      <select id={id} name={name} defaultValue={value} className={CONTROL_LINE}>
-        <option value="">{none}</option>
-        {choices.map((choice) => (
-          <option key={choice.id} value={choice.id}>
-            {choice.name}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }
 

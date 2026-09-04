@@ -41,6 +41,7 @@ import type {
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { slotKey } from '@/lib/slot-key';
 import { cn } from '@/lib/utils';
+import { hoursLabel, withinHours } from '@/lib/opening-hours';
 import { Feedback, type FeedbackKind, type FeedbackMessage } from '@/components/feedback';
 import { addDays } from '@/lib/dates';
 import {
@@ -823,6 +824,37 @@ export function ScheduleBoard({
     facility?.hours.find((hour) => hour.weekday === day)?.available ?? true;
 
   /**
+   * Is the site open on this day *at this hour* — POOLSE-QA-03.
+   *
+   * `openOn` answers only "does the club open at all on a Tuesday", and for a
+   * long time that was the whole check. A site that opens at 12:30 on Tuesday
+   * therefore drew 06:30 as an ordinary free slot: same styling, same aria-label
+   * of "livre", same drop target as Monday at 06:30. The API refused the drop
+   * when it came — `outsideHours` — so nothing wrong was ever written, but the
+   * grid had spent the whole time inviting a gesture it knew would be rejected.
+   *
+   * A missing row means the club never said, and an unsaid rule is not a
+   * closure: unknown stays open, and the API remains the thing that decides.
+   *
+   * Compared as `HH:MM` strings, which is safe here and only here: both sides
+   * are zero-padded wall-clock at the same site, so lexical order is clock
+   * order. `24:00` as a closing time is a real value and still sorts last.
+   */
+  /**
+   * "Aberto 12:30–22:00" — the second line of the refusal.
+   *
+   * A message that says only "outside opening hours" leaves somebody guessing at
+   * their own timetable. Naming the hours turns the refusal into the answer.
+   */
+  const hoursDetail = (day: number): string | null => {
+    const label = hoursLabel(facility?.hours ?? [], day);
+    return label === null ? null : t('grid.openingHours', { hours: label });
+  };
+
+  const openDuring = (day: number, startTime: string, endTime: string): boolean =>
+    withinHours(facility?.hours ?? [], day, startTime, endTime);
+
+  /**
    * Every day the grid actually draws.
    *
    * Only the days the club opens — a club that is shut on Sunday should not be
@@ -951,6 +983,23 @@ export function ScheduleBoard({
   function propose(subject: Placed, landing: Landing): void {
     if (closedOn(landing.weekday) !== null || !openOn(landing.weekday)) {
       setError('grid.dayClosed');
+      return;
+    }
+
+    /*
+     * Inside the day, and inside the hours — POOLSE-QA-03.
+     *
+     * The API refuses this as `outsideHours` and always did, so the drop was
+     * never written; what it cost was a round trip and an error for a gesture
+     * the grid could see was wrong before it started. The detail names the
+     * hours, because "closed then" without saying when leaves somebody guessing
+     * at their own opening times.
+     */
+    const landingEnd = toTime(
+      toMinutes(landing.startTime) + (landing.durationMinutes ?? subject.durationMinutes),
+    );
+    if (!openDuring(landing.weekday, landing.startTime, landingEnd)) {
+      say('error', 'grid.closedOutsideHours', hoursDetail(landing.weekday));
       return;
     }
 
@@ -1198,6 +1247,15 @@ export function ScheduleBoard({
         toMinutes(slot.endTime) - toMinutes(slot.startTime) ||
         group.schedules[0]?.durationMinutes ||
         FALLBACK_DURATION;
+
+      // The same hours check as a moved block — POOLSE-QA-03. Placing a turma
+      // from the side list is the other way onto the grid, and it had the same
+      // hole.
+      const placedEnd = toTime(toMinutes(slot.startTime) + durationMinutes);
+      if (!openDuring(weekday, slot.startTime, placedEnd)) {
+        say('error', 'grid.closedOutsideHours', hoursDetail(weekday));
+        return;
+      }
 
       setError(null);
       setOptimistic({
@@ -1659,6 +1717,7 @@ export function ScheduleBoard({
               dayNames={dayNames}
               closedOn={closedOn}
               openOn={openOn}
+              openDuring={openDuring}
               dragging={dragging !== null}
               canManage={canManage}
               rowRem={rowRem}
@@ -2257,6 +2316,7 @@ function SlotGrid({
   dayNames,
   closedOn,
   openOn,
+  openDuring,
   dragging,
   canManage,
   rowRem,
@@ -2279,6 +2339,8 @@ function SlotGrid({
   dayNames: Record<number, string>;
   closedOn: (day: number) => string | null;
   openOn: (day: number) => boolean;
+  /** Open on this day *at this hour* — POOLSE-QA-03. */
+  openDuring: (day: number, startTime: string, endTime: string) => boolean;
   dragging: boolean;
   canManage: boolean;
   rowRem: number;
@@ -2526,7 +2588,10 @@ function SlotGrid({
                             density={density}
                             firstOfSlot={firstOfSlot}
                             dragging={dragging}
-                            open={openOn(day) && closedOn(day) === null}
+                            open={
+                              openDuring(day, slot.startTime, slot.endTime) &&
+                              closedOn(day) === null
+                            }
                             canManage={canManage}
                             dayName={dayNames[day] ?? String(day)}
                             onSpan={onSpan}

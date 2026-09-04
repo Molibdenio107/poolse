@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useSavedAction } from '@/lib/saved';
-import type { GridBooking, GridLane, GridSlot } from '@/lib/api';
+import type { FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
+import { withinHours } from '@/lib/opening-hours';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { withFrom } from '@/lib/back';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ export function PartnerClasses({
   slots,
   lanes,
   openWeekdays,
+  hours,
   canManage,
 }: {
   organizationId: string;
@@ -52,6 +54,7 @@ export function PartnerClasses({
   /** Parceria bookings only — the caller filters, so this renders what it is given. */
   bookings: GridBooking[];
   slots: GridSlot[];
+  hours: FacilityDay[];
   lanes: GridLane[];
   /** ISO weekdays the site opens. A closed day is not offered. */
   openWeekdays: number[];
@@ -80,6 +83,7 @@ export function PartnerClasses({
               facilityId={facilityId}
               booking={booking}
               slots={slots}
+              hours={hours}
               lanes={lanes}
               openWeekdays={openWeekdays}
               canManage={canManage}
@@ -98,6 +102,7 @@ function PartnerCard({
   slots,
   lanes,
   openWeekdays,
+  hours,
   canManage,
 }: {
   organizationId: string;
@@ -106,6 +111,7 @@ function PartnerCard({
   slots: GridSlot[];
   lanes: GridLane[];
   openWeekdays: number[];
+  hours: FacilityDay[];
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
@@ -138,7 +144,20 @@ function PartnerCard({
   /** Which slots this day group offers, so the picker never lists a Saturday row. */
   const group =
     Number(weekday) === 6 ? 'saturday' : Number(weekday) === 7 ? 'sunday' : 'weekday';
-  const daySlots = slots.filter((slot) => slot.dayGroup === group);
+  /*
+   * The hours this day actually offers — POOLSE-QA-04.
+   *
+   * `dayGroup` alone only keeps Saturday's rows off a Tuesday. It said nothing
+   * about a site that opens at 12:30, so the editor listed 06:30–07:15 through
+   * 11:45–12:30 as ordinary choices and the API refused every one of them. The
+   * same rule the calendar grid uses, from the same function, so the two screens
+   * cannot drift apart again.
+   */
+  const daySlots = slots.filter(
+    (slot) =>
+      slot.dayGroup === group &&
+      withinHours(hours, Number(weekday), slot.startTime, slot.endTime),
+  );
 
   const scheduleChanged =
     Number(weekday) !== booking.weekday ||

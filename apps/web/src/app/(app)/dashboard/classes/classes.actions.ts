@@ -3,30 +3,27 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ApiError, apiPatch, apiPost } from '../../../../lib/api';
+import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
-  if (error instanceof ApiError) {
-    if (error.status === 409) return { ok: false, errorKey: `${errorKey}Conflict` };
-
-    /*
-     * A lane the pool does not have — POOLSE-43. The number is named, because
-     * "that lane does not exist" without saying which one leaves somebody
-     * re-reading a form with six fields in it.
-     */
-    if (error.status === 400 && error.message === 'noSuchLane') {
-      const details = (error.details ?? {}) as Record<string, unknown>;
-      return {
-        ok: false,
-        errorKey: 'classes.noSuchLane',
-        detail: String(details['lane'] ?? ''),
-      };
-    }
-
-    if (error.status < 500) return { ok: false, errorKey };
-    return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
+  /*
+   * A lane the pool does not have — POOLSE-43. The number is named, because
+   * "that lane does not exist" without saying which one leaves somebody
+   * re-reading a form with six fields in it.
+   */
+  if (error instanceof ApiError && error.status === 400 && error.message === 'noSuchLane') {
+    const details = (error.details ?? {}) as Record<string, unknown>;
+    return {
+      ok: false,
+      errorKey: 'classes.noSuchLane',
+      detail: String(details['lane'] ?? ''),
+    };
   }
-  return { ok: false, errorKey, detail: String(error) };
+
+  // Everything else — session, role, refused value, unreachable API — reads the
+  // same way here as everywhere else in the app. POOLSE-QA-06.
+  return describeFailure(error, errorKey);
 }
 
 function groupBody(formData: FormData): Record<string, string> {

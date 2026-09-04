@@ -18,7 +18,12 @@
     "actions": "Actions",
     "change": "Change",
     "undo": "Undo",
-    "edit": "Edit"
+    "edit": "Edit",
+    "sessionExpired": "Your session has expired. Sign in again and retry.",
+    "notAllowed": "Your role does not allow this.",
+    "noOrganization": "Your account does not belong to an organization.",
+    "notFound": "This no longer exists. It may have been removed.",
+    "apiUnreachable": "Could not reach the server. Check that the API is running."
   },
   "pagination": {
     "label": "Pagination",
@@ -477,7 +482,10 @@
     "scopeAll": "All classes",
     "scopeMine": "My classes",
     "scopeMineOnly": "Showing the classes assigned to you.",
-    "partnerNoRoll": "Partnerships take no attendance register."
+    "partnerNoRoll": "Partnerships take no attendance register.",
+    "nameTooLong": "That name is too long.",
+    "capacityInvalid": "Capacity must be a whole number between 1 and 200.",
+    "laneInvalid": "Lane must be a whole number between 1 and 50."
   },
   "reposicao": {
     "title": "Make-up classes",
@@ -1808,7 +1816,7 @@
     "staffing": {
       "uncovered": "{count, plural, one {# class with no instructor in {season}} other {# classes with no instructor in {season}}}",
       "uncoveredBare": "{count, plural, one {# class with no instructor} other {# classes with no instructor}}",
-      "toDefine": "{count, plural, one {# still to decide} other {# still to decide}}",
+      "toDefine": "{count, plural, one {# class with instructor still to decide} other {# classes with instructor still to decide}}",
       "pending": "To be decided",
       "ownTeacher": "Partner's own instructor",
       "draftSeason": "Draft season",

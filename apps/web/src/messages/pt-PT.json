@@ -18,7 +18,12 @@
     "actions": "Ações",
     "change": "Alterar",
     "undo": "Anular",
-    "edit": "Editar"
+    "edit": "Editar",
+    "sessionExpired": "A sua sessão expirou. Volte a entrar e tente novamente.",
+    "notAllowed": "A sua função não permite esta operação.",
+    "noOrganization": "A sua conta não pertence a nenhuma organização.",
+    "notFound": "Já não existe. Pode ter sido removido entretanto.",
+    "apiUnreachable": "Não foi possível contactar o servidor. Verifique se a API está a correr."
   },
   "pagination": {
     "label": "Paginação",
@@ -477,7 +482,10 @@
     "scopeAll": "Todas as turmas",
     "scopeMine": "As minhas turmas",
     "scopeMineOnly": "A mostrar as turmas que lhe estão atribuídas.",
-    "partnerNoRoll": "As parcerias não têm registo de presenças."
+    "partnerNoRoll": "As parcerias não têm registo de presenças.",
+    "nameTooLong": "O nome é demasiado longo.",
+    "capacityInvalid": "A lotação tem de ser um número inteiro entre 1 e 200.",
+    "laneInvalid": "A pista tem de ser um número inteiro entre 1 e 50."
   },
   "reposicao": {
     "title": "Aulas de reposição",
@@ -1808,7 +1816,7 @@
     "staffing": {
       "uncovered": "{count, plural, one {# aula sem professor em {season}} other {# aulas sem professor em {season}}}",
       "uncoveredBare": "{count, plural, one {# aula sem professor} other {# aulas sem professor}}",
-      "toDefine": "{count, plural, one {# por definir} other {# por definir}}",
+      "toDefine": "{count, plural, one {# aula com professor por definir} other {# aulas com professor por definir}}",
       "pending": "A definir",
       "ownTeacher": "Professor da entidade",
       "draftSeason": "Época em rascunho",

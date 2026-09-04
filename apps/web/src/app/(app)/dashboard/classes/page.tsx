@@ -369,6 +369,9 @@ export default async function ClassesPage({
               slots={grid.slots}
               lanes={grid.lanes}
               openWeekdays={grid.openWeekdays}
+              // The site's hours, so the time picker cannot offer an hour the
+              // club is shut — POOLSE-QA-04.
+              hours={data.facilities.find((site) => site.id === grid.facilityId)?.hours ?? []}
               canManage={data.canManage}
             />
           )}
