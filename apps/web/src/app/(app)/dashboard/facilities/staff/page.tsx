@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type OrganizationMember, type People } from '../../../../../lib/api';
@@ -15,7 +16,7 @@ import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
 import { RevokeButton } from './revoke-button';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * Slice 0.5 made visible: who is in this organization, who has been asked, and
@@ -72,7 +73,7 @@ export default async function PeoplePage({
   const back = backTarget(from, '/dashboard');
 
   let people: People | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let noOrganization = false;
   let notPermitted = false;
 
@@ -93,7 +94,7 @@ export default async function PeoplePage({
       if (error.code === 'forbidden_role') notPermitted = true;
       else noOrganization = true;
     } else {
-      failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+      failure = describeLoad(error);
     }
   }
 
@@ -150,10 +151,10 @@ export default async function PeoplePage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {people !== null && (

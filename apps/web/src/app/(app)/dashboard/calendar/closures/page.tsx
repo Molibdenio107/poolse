@@ -1,11 +1,12 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Closures } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { cn } from '@/lib/utils';
 import { ClosureCalendar } from './closure-calendar';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * When the pool is shut — slice 1.5, rebuilt as a year for POOLSE-31.
@@ -47,7 +48,7 @@ export default async function ClosuresPage({
   const year = Number.isInteger(parsed) && parsed > 2000 && parsed < 2100 ? parsed : thisYear;
 
   let data: Closures | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let noOrganization = false;
 
   try {
@@ -60,7 +61,7 @@ export default async function ClosuresPage({
     data = await apiFetch<Closures>(`/closures?year=${year}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   const years = yearsAround(thisYear);
@@ -121,10 +122,10 @@ export default async function ClosuresPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {data !== null && (

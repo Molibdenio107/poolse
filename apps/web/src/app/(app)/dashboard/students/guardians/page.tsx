@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Guardians } from '../../../../../lib/api';
@@ -6,7 +7,7 @@ import { Pagination } from '@/components/pagination';
 import { SearchInput, SearchStatus } from '@/components/search-input';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { RoleBadge } from '@/components/role-badge';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * Encarregados de educação — POOLSE-35.
@@ -34,7 +35,7 @@ export default async function GuardiansPage({
   const term = search.trim();
 
   let data: Guardians | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
 
   try {
     const query = new URLSearchParams();
@@ -43,7 +44,7 @@ export default async function GuardiansPage({
 
     data = await apiFetch<Guardians>(`/guardians${query.size > 0 ? `?${query}` : ''}`);
   } catch (error) {
-    failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    failure = describeLoad(error);
   }
 
   const guardians = data?.guardians.items ?? [];
@@ -68,10 +69,10 @@ export default async function GuardiansPage({
 
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {data !== null && (

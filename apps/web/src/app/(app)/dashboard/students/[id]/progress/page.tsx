@@ -1,4 +1,5 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import {
   ApiError,
   apiFetch,
@@ -11,7 +12,7 @@ import { formatTime, ProgressChart } from '@/components/progress-chart';
 import { Hint } from '@/components/ui/tooltip';
 import { AddRecordForm, ArchiveRecordButton, FavouriteStrokeForm } from './progress-forms';
 import { BackLink } from '@/components/back-link';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * Backlog story 6 — a student's performances over time.
@@ -31,7 +32,7 @@ export default async function ProgressPage({
 
   let student: Student | null = null;
   let progression: Progression | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let missing = false;
 
   try {
@@ -43,7 +44,7 @@ export default async function ProgressPage({
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
       missing = true;
     } else {
-      failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+      failure = describeLoad(error);
     }
   }
 
@@ -85,10 +86,10 @@ export default async function ProgressPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {progression !== null && (

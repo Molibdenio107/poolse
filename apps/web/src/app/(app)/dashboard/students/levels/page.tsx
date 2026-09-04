@@ -1,11 +1,12 @@
 import { getTranslations } from 'next-intl/server';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import Link from 'next/link';
 import { ApiError, apiFetch, type Students, type StudentLevel } from '../../../../../lib/api';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CreateLevelForm } from './level-forms';
 import { LevelList } from './level-list';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * The progression an operator puts their students through.
@@ -43,12 +44,12 @@ export default async function LevelsPage({
   const byAgeOrder = (await searchParams).sort === 'age';
 
   let data: Students | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
 
   try {
     data = await apiFetch<Students>('/students');
   } catch (error) {
-    failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    failure = describeLoad(error);
   }
 
   const all = data?.levels ?? [];
@@ -63,10 +64,10 @@ export default async function LevelsPage({
 
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {data !== null && (

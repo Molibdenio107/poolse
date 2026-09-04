@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type People, type StaffRecord } from '@/lib/api';
 import { PageShell, PageError } from '@/components/page-shell';
@@ -27,7 +28,7 @@ export default async function StaffMemberPage({
 
   let staff: StaffRecord | null = null;
   let people: People | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let notPermitted = false;
 
   try {
@@ -39,7 +40,7 @@ export default async function StaffMemberPage({
     ]);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) notPermitted = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   // The full legal name: this is a record, not a row — POOLSE-32 criterion 3.
@@ -58,7 +59,7 @@ export default async function StaffMemberPage({
         </section>
       )}
 
-      {failure !== null && <PageError message={t('account.unavailable')} detail={failure} />}
+      {failure !== null && <PageError message={t(failure.key)} detail={failure.detail} />}
 
       {staff !== null && people !== null && (
         <>

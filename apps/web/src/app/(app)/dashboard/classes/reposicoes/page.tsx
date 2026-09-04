@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ApiError, apiFetch, type Me, type ReposicaoSettings } from '@/lib/api';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { ReposicaoSettingsForm } from './reposicoes-form';
 
 /**
@@ -28,7 +29,7 @@ export default async function ReposicoesPage(): Promise<React.ReactElement> {
 
   let settings: ReposicaoSettings | null = null;
   let organizationId = '';
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let notPermitted = false;
 
   try {
@@ -40,7 +41,7 @@ export default async function ReposicoesPage(): Promise<React.ReactElement> {
     organizationId = me.memberships[0]?.organizationId ?? '';
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) notPermitted = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   return (
@@ -61,10 +62,10 @@ export default async function ReposicoesPage(): Promise<React.ReactElement> {
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {settings !== null && (

@@ -23,7 +23,9 @@
     "notAllowed": "A sua função não permite esta operação.",
     "noOrganization": "A sua conta não pertence a nenhuma organização.",
     "notFound": "Já não existe. Pode ter sido removido entretanto.",
-    "apiUnreachable": "Não foi possível contactar o servidor. Verifique se a API está a correr."
+    "apiUnreachable": "Não foi possível contactar o servidor. Verifique se a API está a correr.",
+    "serverError": "Ocorreu um erro no servidor ao carregar esta página.",
+    "requestRefused": "O servidor recusou este pedido."
   },
   "pagination": {
     "label": "Paginação",

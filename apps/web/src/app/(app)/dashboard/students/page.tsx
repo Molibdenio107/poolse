@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Students } from '../../../../lib/api';
@@ -14,7 +15,7 @@ import { photoUrlFor } from '@/lib/photo';
 import { ArchiveStudentButton } from './student-forms';
 import { StudentActions } from './import-panel';
 import { PaymentMark } from './payment-mark';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -86,7 +87,7 @@ export default async function StudentsPage({
   if (overdueOnly) exportQuery.set('sort', 'overdue');
 
   let data: Students | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let noOrganization = false;
 
   try {
@@ -95,7 +96,7 @@ export default async function StudentsPage({
     if (error instanceof ApiError && error.status === 403) {
       noOrganization = true;
     } else {
-      failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+      failure = describeLoad(error);
     }
   }
 
@@ -135,10 +136,10 @@ export default async function StudentsPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {data !== null && (

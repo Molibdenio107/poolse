@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -10,7 +11,7 @@ import {
 import { readTheme } from '../../../lib/preferences';
 import { PreferenceSync } from './preference-sync';
 import { CreateOrganizationForm } from './create-organization-form';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { OccupancyPanel } from '@/components/occupancy-panel';
 
 /**
@@ -45,12 +46,12 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
   const activeTheme = await readTheme();
 
   let me: Me | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
 
   try {
     me = await apiFetch<Me>('/me');
   } catch (error) {
-    failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    failure = describeLoad(error);
   }
 
   const membership = me?.memberships[0] ?? null;
@@ -95,10 +96,10 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
     <PageShell title={name ?? t('nav.dashboard')} subtitle={t('dashboard.subtitle')}>
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {me !== null && (

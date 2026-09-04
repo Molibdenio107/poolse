@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -20,7 +21,7 @@ import { StudentWeek } from './student-week';
 import { FeesBlock } from './fees-block';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * One student's record.
@@ -48,7 +49,7 @@ export default async function StudentPage({
   let student: Student | null = null;
   let credits: ReposicaoCredit[] = [];
   let register: Students | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let missing = false;
 
   let timetable: TimetableEntry[] = [];
@@ -81,7 +82,7 @@ export default async function StudentPage({
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
       missing = true;
     } else {
-      failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+      failure = describeLoad(error);
     }
   }
 
@@ -167,10 +168,10 @@ export default async function StudentPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {student !== null && register !== null && (

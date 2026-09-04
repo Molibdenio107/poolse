@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Register } from '@/lib/api';
 import { longDate } from '@/lib/dates';
 import { RegisterForm } from './register-form';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { laneLabel } from '@/lib/lanes';
 
 type RegisterResponse = Register & { organizationId: string; canRecord: boolean };
@@ -29,7 +30,7 @@ export default async function AttendancePage({
   const { week } = await searchParams;
 
   let register: RegisterResponse | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let notPermitted = false;
 
   try {
@@ -37,7 +38,7 @@ export default async function AttendancePage({
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) notFound();
     if (error instanceof ApiError && error.code === 'forbidden_role') notPermitted = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   // Back to the week the instructor came from, not to today's. Marking last
@@ -71,10 +72,10 @@ export default async function AttendancePage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {register !== null && (

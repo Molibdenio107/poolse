@@ -1,10 +1,11 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type ActiveSession, type Me, type People } from '@/lib/api';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { apiFetch, type ActiveSession, type Me, type People } from '@/lib/api';
 import { ProfileForm } from './profile-form';
 import { TransferOwnership } from './transfer-ownership';
 import { Sessions } from '../sessions';
 import { PhotoUpload } from '@/components/photo-upload';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * "O meu perfil" — backlog round 3, story 1.
@@ -32,12 +33,12 @@ export default async function ProfilePage(): Promise<React.ReactElement> {
   const format = await getFormatter();
 
   let me: Me | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
 
   try {
     me = await apiFetch<Me>('/me');
   } catch (error) {
-    failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    failure = describeLoad(error);
   }
 
   /*
@@ -94,10 +95,10 @@ export default async function ProfilePage(): Promise<React.ReactElement> {
 
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {me !== null && (

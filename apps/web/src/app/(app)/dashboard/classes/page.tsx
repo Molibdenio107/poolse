@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -9,7 +10,7 @@ import {
 } from '@/lib/api';
 import { PartnerClasses } from './partner-classes';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
@@ -43,14 +44,14 @@ export default async function ClassesPage({
   const asked = scope === 'mine' || scope === 'all' ? `?scope=${scope}` : '';
 
   let data: Classes | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let noOrganization = false;
 
   try {
     data = await apiFetch<Classes>(`/class-groups${asked}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   /*
@@ -264,10 +265,10 @@ export default async function ClassesPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {data !== null && (

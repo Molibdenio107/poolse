@@ -1,10 +1,11 @@
 import { getLocale, getTranslations } from 'next-intl/server';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ApiError, apiFetch, type Seasons } from '../../../../../lib/api';
 import { mediumDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { SeasonReset } from './season-reset';
 import { SeasonDrafts } from './season-drafts';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * Seasons — POOLSE-07.
@@ -23,12 +24,12 @@ export default async function SeasonsPage(): Promise<React.ReactElement> {
   const locale = await getLocale();
 
   let data: Seasons | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
 
   try {
     data = await apiFetch<Seasons>('/seasons');
   } catch (error) {
-    failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    failure = describeLoad(error);
   }
 
   return (
@@ -40,10 +41,10 @@ export default async function SeasonsPage(): Promise<React.ReactElement> {
 
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {data !== null && (

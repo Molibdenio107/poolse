@@ -23,7 +23,9 @@
     "notAllowed": "Your role does not allow this.",
     "noOrganization": "Your account does not belong to an organization.",
     "notFound": "This no longer exists. It may have been removed.",
-    "apiUnreachable": "Could not reach the server. Check that the API is running."
+    "apiUnreachable": "Could not reach the server. Check that the API is running.",
+    "serverError": "The server hit an error loading this page.",
+    "requestRefused": "The server refused this request."
   },
   "pagination": {
     "label": "Pagination",

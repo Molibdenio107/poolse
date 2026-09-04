@@ -1,4 +1,5 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import {
   ApiError,
   apiFetch,
@@ -8,7 +9,7 @@ import {
 import { BackLink } from '@/components/back-link';
 import { ChevronRight } from 'lucide-react';
 import { MedicalLeavePanel } from './medical-leave';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import {
   MedicalNotesForm,
   RecordConsentForm,
@@ -36,7 +37,7 @@ export default async function SensitivePage({
 
   let student: Student | null = null;
   let record: SensitiveRecord | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let notPermitted = false;
   let missing = false;
 
@@ -48,7 +49,7 @@ export default async function SensitivePage({
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) notPermitted = true;
     else if (error instanceof ApiError && error.status === 404) missing = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   const live = record?.consent.filter((entry) => entry.withdrawnAt === null) ?? [];
@@ -76,10 +77,10 @@ export default async function SensitivePage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {record !== null && (

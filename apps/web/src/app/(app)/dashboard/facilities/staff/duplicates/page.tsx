@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -8,7 +9,7 @@ import {
   type People,
 } from '@/lib/api';
 import { MergeButton } from './merge-button';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 
@@ -36,7 +37,7 @@ export default async function DuplicatesPage({
 
   let report: Paginated<MergeCandidate> | null = null;
   let organizationId = '';
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let notPermitted = false;
 
   try {
@@ -57,7 +58,7 @@ export default async function DuplicatesPage({
     organizationId = people.organizationId;
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) notPermitted = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   if (report !== null && isPastEnd(page, report.total, report.limit)) {
@@ -81,10 +82,10 @@ export default async function DuplicatesPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {report !== null && report.total === 0 && (

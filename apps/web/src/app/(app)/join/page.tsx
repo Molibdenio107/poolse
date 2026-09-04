@@ -1,9 +1,10 @@
 import { UserButton } from '@clerk/nextjs';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type InvitationPreview, type Me } from '../../../lib/api';
 import { PreferenceControls } from '../preference-controls';
 import { AcceptForm } from './accept-form';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * The invitee's side of slice 0.5.
@@ -27,7 +28,7 @@ export default async function JoinPage({
   const { token } = await searchParams;
 
   let preview: InvitationPreview | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
 
   // Who is about to accept. The invitation names an address, but the token is
   // what actually grants membership — so if somebody is signed in as one person
@@ -46,7 +47,7 @@ export default async function JoinPage({
         `/join/preview?token=${encodeURIComponent(token)}`,
       );
     } catch (error) {
-      failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+      failure = describeLoad(error);
     }
   }
 
@@ -70,10 +71,10 @@ export default async function JoinPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {preview !== null && preview.status !== 'pending' && (

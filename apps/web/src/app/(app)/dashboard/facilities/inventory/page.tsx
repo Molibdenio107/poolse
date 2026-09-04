@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Inventory } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { InventoryPanel } from './inventory-panel';
@@ -49,7 +50,7 @@ export default async function InventoryPage({
   if (page > 1) query.set('page', String(page));
 
   let data: Inventory | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let noOrganization = false;
 
   try {
@@ -63,7 +64,7 @@ export default async function InventoryPage({
     data = await apiFetch<Inventory>(`/inventory${query.size > 0 ? `?${query}` : ''}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   /*
@@ -96,10 +97,10 @@ export default async function InventoryPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {/*

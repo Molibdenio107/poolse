@@ -1,9 +1,10 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Facilities } from '@/lib/api';
+import { apiFetch, type Facilities } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
 import { PoolForm } from '../../pool-form';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * Adding a pool, on its own page.
@@ -23,12 +24,12 @@ export default async function NewPoolPage({
   const { facilityId = '' } = await searchParams;
 
   let data: Facilities | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
 
   try {
     data = await apiFetch<Facilities>('/facilities');
   } catch (error) {
-    failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    failure = describeLoad(error);
   }
 
   // The facility comes from the link that got here. Checked against what this
@@ -46,10 +47,10 @@ export default async function NewPoolPage({
 
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {data !== null && facility === null && (

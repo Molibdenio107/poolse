@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
@@ -24,7 +25,7 @@ import {
 import { ScheduleBoard, type SessionControls } from '../classes/schedule-board';
 import { slotKey } from '@/lib/slot-key';
 import { CancelSession, GenerateSeason } from './calendar-forms';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { TimetableImport } from './import/import-panel';
 
 /**
@@ -66,14 +67,14 @@ export default async function CalendarPage({
   const season = seasonOf(today());
 
   let calendar: Calendar | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let noOrganization = false;
 
   try {
     calendar = await apiFetch<Calendar>(`/calendar?from=${monday}&to=${sunday}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   /*
@@ -231,10 +232,10 @@ export default async function CalendarPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {calendar !== null && (

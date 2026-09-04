@@ -1,8 +1,9 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type ClassGroup, type Classes } from '@/lib/api';
 import { PersonAvatar } from '@/components/person-avatar';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import {
   AddSlotForm,
   ArchiveClassButton,
@@ -28,7 +29,7 @@ export default async function ClassPage({
 
   let group: (ClassGroup & { canManage: boolean }) | null = null;
   let all: Classes | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let missing = false;
 
   try {
@@ -38,7 +39,7 @@ export default async function ClassPage({
     ]);
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) missing = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   const dayNames = Object.fromEntries(
@@ -77,10 +78,10 @@ export default async function ClassPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {group !== null && all !== null && (

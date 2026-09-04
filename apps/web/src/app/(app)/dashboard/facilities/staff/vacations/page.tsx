@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -13,7 +14,7 @@ import { Pagination } from '@/components/pagination';
 import { readPage } from '@/lib/pagination';
 import { MyVacations } from './my-vacations';
 import { TeamMap } from './team-map';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * Férias — backlog round 3, stories 6, 7 and 8.
@@ -49,7 +50,7 @@ export default async function VacationsPage({
   let mine: MyVacationsData | null = null;
   let queue: PendingVacations | null = null;
   let team: TeamVacations | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let notPermitted = false;
 
   try {
@@ -68,7 +69,7 @@ export default async function VacationsPage({
     }
   } catch (error) {
     if (error instanceof ApiError && error.code === 'forbidden_role') notPermitted = true;
-    else failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    else failure = describeLoad(error);
   }
 
   // Someone who is not an owner or admin typing ?tab=team gets the refusal in
@@ -89,10 +90,10 @@ export default async function VacationsPage({
 
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {mine !== null && (

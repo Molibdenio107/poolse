@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import {
@@ -20,7 +21,7 @@ import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
 import { PartnersPanel } from './partners-panel';
 import { listPartners } from './partners.actions';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * One site, in detail — backlog round 3, stories 2 and 3.
@@ -66,13 +67,13 @@ export default async function FacilityPage({
   const { facilityId } = await params;
 
   let site: FacilityDetail | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
 
   try {
     site = await apiFetch<FacilityDetail>(`/facilities/${facilityId}`);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) notFound();
-    failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+    failure = describeLoad(error);
   }
 
   /*
@@ -128,10 +129,10 @@ export default async function FacilityPage({
     >
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {site !== null && (

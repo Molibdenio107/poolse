@@ -1,4 +1,5 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ApiError, apiFetch, type PoolDetail } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
@@ -6,7 +7,7 @@ import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from '../../facility-forms';
 import { PoolForm } from '../../pool-form';
 import { ReadingsBlock } from '../../readings-block';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 
 /**
  * One pool: its details, editable, and its gallery.
@@ -39,7 +40,7 @@ export default async function PoolPage({
   const back = backTarget(from, '/dashboard/facilities');
 
   let pool: (PoolDetail & { canManage: boolean }) | null = null;
-  let failure: string | null = null;
+  let failure: LoadFailure | null = null;
   let missing = false;
 
   try {
@@ -48,7 +49,7 @@ export default async function PoolPage({
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
       missing = true;
     } else {
-      failure = error instanceof ApiError ? `${error.status} ${error.message}` : String(error);
+      failure = describeLoad(error);
     }
   }
 
@@ -68,10 +69,10 @@ export default async function PoolPage({
       )}
 
       {failure !== null && (
-        <section className="rounded border border-danger/40 bg-danger/10 p-5">
-          <p className="font-medium text-danger">{t('account.unavailable')}</p>
-          <p className="mt-1 font-mono text-sm text-foreground-muted">{failure}</p>
-        </section>
+        <PageError
+          message={t(failure.key)}
+          {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
       )}
 
       {pool !== null && (
