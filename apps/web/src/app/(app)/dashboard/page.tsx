@@ -28,10 +28,12 @@ import { OccupancyPanel } from '@/components/occupancy-panel';
  * rather than being copied: two of the same panel would be two answers to one
  * question the day somebody edited one.
  *
- * The rest of the operational dashboard is still deliberately not built, and
- * the panel below says so rather than filling the gap with counts. Water quality
- * at a glance, today's classes and what needs maintenance all need data this
- * product is still growing.
+ * The "coming soon" panel that used to sit under it is **gone**, at Rui's
+ * request. It earned its place while the page was empty — an operator landing on
+ * a blank screen cannot tell a dashboard that has no content from one that
+ * failed to load. With a real panel on the page that ambiguity is gone, and a
+ * card explaining what is not here yet becomes furniture between the reader and
+ * what is.
  *
  * The "you belong to no organization yet" path stays here on purpose:
  * `dashboard/start` sends somebody with no membership to this page precisely
@@ -114,38 +116,6 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
                 {t('occupancy.title')}
               </h2>
               <p className="mt-1 text-sm text-foreground-muted">{t('occupancy.unavailable')}</p>
-            </section>
-          )}
-
-          {/*
-            What this page will be, said plainly, with the way to the screens
-            that already work. An operator who lands here should not have to
-            guess whether Poolse has no dashboard or whether theirs failed to
-            load — the two look identical from a blank panel.
-          */}
-          {membership !== null && (
-            <section className="flex flex-col gap-4 rounded border border-dashed border-border bg-surface p-5">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-lg font-medium">{t('dashboard.soonTitle')}</h2>
-                <p className="text-sm text-foreground-muted">{t('dashboard.soonHint')}</p>
-              </div>
-
-              <nav className="flex flex-wrap gap-2">
-                {[
-                  { href: '/dashboard/calendar', label: t('calendar.title') },
-                  { href: '/dashboard/facilities', label: t('facilities.title') },
-                  { href: '/dashboard/classes', label: t('classes.title') },
-                  { href: '/dashboard/students', label: t('students.title') },
-                ].map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="rounded border border-border px-4 py-2 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
             </section>
           )}
 

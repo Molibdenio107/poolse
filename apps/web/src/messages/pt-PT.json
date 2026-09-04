@@ -1312,9 +1312,7 @@
     "trial": "Período experimental",
     "trialDaysLeft": "{days, plural, one {Falta # dia} other {Faltam # dias}} de experiência.",
     "trialEnded": "O período experimental terminou. Por agora nada foi bloqueado.",
-    "trialNoCard": "Sem cartão associado. A subscrição chega numa fase posterior.",
-    "soonTitle": "O seu painel operacional está a caminho",
-    "soonHint": "A ocupação, a qualidade da água e as aulas do dia vão aparecer aqui. Entretanto, tudo o que já está feito fica a um clique."
+    "trialNoCard": "Sem cartão associado. A subscrição chega numa fase posterior."
   },
   "marketing": {
     "pricingLink": "Preços",

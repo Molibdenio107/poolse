@@ -1312,9 +1312,7 @@
     "trial": "Trial",
     "trialDaysLeft": "{days, plural, one {# day left} other {# days left}} of your trial.",
     "trialEnded": "Your trial has ended. Nothing is blocked, for now.",
-    "trialNoCard": "No card on file. Subscriptions arrive in a later phase.",
-    "soonTitle": "Your operational dashboard is coming",
-    "soonHint": "Occupancy, water quality and the day's classes will land here. In the meantime, everything that is built is one click away."
+    "trialNoCard": "No card on file. Subscriptions arrive in a later phase."
   },
   "marketing": {
     "pricingLink": "Pricing",

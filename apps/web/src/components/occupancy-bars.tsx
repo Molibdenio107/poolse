@@ -11,14 +11,22 @@ import type { Occupancy } from '@/lib/api';
  * how much is left.
  *
  * ---------------------------------------------------------------------------
- * Why this is hand-rolled SVG
+ * HTML and CSS, not SVG. This was rebuilt, and the reason is worth keeping.
  * ---------------------------------------------------------------------------
  *
- * The same reason `progress-chart.tsx` is: ECharts and Recharts stay reserved
- * for the phase 4/5 sensor time-series, where panning a year of readings earns a
- * library. Six bars do not, and a charting library in a **server component**
- * would mean shipping it to the browser to draw something that never changes
- * after render.
+ * The first version was inline SVG on a 100-unit `viewBox` with a label rail of
+ * 46 and a value rail of 92 — which leaves a plot **38 units wide in the
+ * negative**. Every bar had a negative width. On top of that,
+ * `preserveAspectRatio="none"` stretched the viewBox to the column, so the
+ * labels were scaled about eight times horizontally and twice vertically: the
+ * text came out as smears.
+ *
+ * Both faults are the same fault — hand-maintaining a coordinate system for a
+ * chart whose bars are *percentages of a row*. A `div` with `width: 62%` needs
+ * no coordinate system, cannot go negative, reflows on a phone for free, and
+ * renders its labels as real text at the real size. `progress-chart.tsx` uses
+ * SVG because it draws a *path* through points, which HTML genuinely cannot do;
+ * this draws rectangles, which is all HTML does.
  *
  * ---------------------------------------------------------------------------
  * The colours were validated, not chosen
@@ -30,19 +38,10 @@ import type { Occupancy } from '@/lib/api';
  * two clear every check on Poolse's own surfaces in both themes, with a
  * colour-blind separation of ΔE 24.7 against a target of 8.
  *
- * **And colour still is not the signal.** Two series, both named in the legend
- * *and* direct-labelled on the bar wherever the segment has room, plus the
- * figures repeated as text on the right. A reader who sees no colour at all
- * still gets every number.
+ * **And colour still is not the signal.** Both series are named in the legend,
+ * and every row carries "18 de 27" as text on its right. A reader who sees no
+ * colour at all gets every number.
  */
-
-/** Bar geometry, in the SVG's own units. */
-const ROW = 28;
-const BAR = 14;
-const GAP = 2; // the surface gap between stacked fills — never let two meet
-const LABEL_W = 46;
-const VALUE_W = 92;
-
 export async function OccupancyBars({
   occupancy,
   locale,
@@ -56,9 +55,9 @@ export async function OccupancyBars({
     new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value);
 
   /*
-   * Only the days the club actually opens. A row of six zeroes for a Sunday the
-   * pool is shut is a sixth of the chart spent saying nothing — the same rule
-   * the lane grid follows about drawing a closed column.
+   * Only the days the club actually opens. A row of zeroes for a Sunday the pool
+   * is shut is a seventh of the chart spent saying nothing — the same rule the
+   * lane grid follows about not drawing a closed column.
    */
   const days = occupancy.byDay
     .map((day) => ({
@@ -72,17 +71,22 @@ export async function OccupancyBars({
 
   if (days.length === 0) return null;
 
-  // One scale for every bar, so two days are comparable by length. The busiest
-  // day's *available* hours set it — bars are read against capacity, not against
-  // each other's sold total.
-  const scale = Math.max(...days.map((day) => Math.max(day.available, day.turma + day.parceria)));
+  /*
+   * One scale for every row, so two days are comparable by length.
+   *
+   * The busiest day's *available* hours set it, not its sold hours: bars are
+   * read against capacity. Guarded above zero because a club with a season but
+   * no slot grid has no capacity to divide by, and every width would be NaN.
+   */
+  const scale = Math.max(
+    ...days.map((day) => Math.max(day.available, day.turma + day.parceria)),
+    0,
+  );
   if (scale <= 0) return null;
 
-  const width = 100;
-  const plot = width - LABEL_W - VALUE_W;
-  const height = days.length * ROW;
-
-  const x = (value: number): number => (value / scale) * plot;
+  /** A share of the widest row, as a CSS width. Never over 100, never NaN. */
+  const share = (value: number): string =>
+    `${Math.max(0, Math.min(100, (value / scale) * 100))}%`;
 
   return (
     <figure className="m-0 flex flex-col gap-3">
@@ -90,99 +94,58 @@ export async function OccupancyBars({
         {t('occupancy.byDayChart')}
       </figcaption>
 
-      {/*
-        `viewBox` with no fixed width, so the chart is as wide as its column and
-        the bars keep their proportions on a phone. `preserveAspectRatio` off, so
-        it stretches horizontally rather than shrinking the type.
-      */}
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-        className="w-full"
-        style={{ height: `${height * 2.1}px` }}
-        role="img"
-        aria-label={t('occupancy.byDayChart')}
-      >
-        {days.map((day, index) => {
-          const y = index * ROW + (ROW - BAR) / 2;
+      <ul className="flex flex-col gap-2">
+        {days.map((day) => {
           const sold = day.turma + day.parceria;
-          const turmaW = x(day.turma);
-          const parceriaW = x(day.parceria);
 
           return (
-            <g key={day.weekday}>
-              {/* The day, in the rail. */}
-              <text
-                x={0}
-                y={index * ROW + ROW / 2}
-                dominantBaseline="middle"
-                className="fill-foreground-muted"
-                style={{ fontSize: '9px' }}
-              >
-                {t(`week.${day.weekday}`)}
-              </text>
+            <li key={day.weekday} className="flex items-center gap-3">
+              <span className="w-10 shrink-0 text-sm text-foreground-muted">
+                {t(`week.${day.weekday}`).slice(0, 3)}
+              </span>
 
               {/*
-                The track: the water that was there to sell. A lighter step of
-                the same surface family rather than a third series colour — it is
-                context, not a category.
+                The track is the water that was available; the fills are what was
+                sold. `aria-hidden` because the figures to its right say the same
+                thing in words — the bar is the shape of the answer, never the
+                only copy of it.
               */}
-              <rect
-                x={LABEL_W}
-                y={y}
-                width={Math.max(x(day.available), 0)}
-                height={BAR}
-                rx={3}
-                className="fill-surface-muted stroke-border"
-                strokeWidth={0.5}
-              />
-
-              {turmaW > 0 && (
-                <rect
-                  x={LABEL_W}
-                  y={y}
-                  width={turmaW}
-                  height={BAR}
-                  rx={3}
-                  className="fill-chart-1"
-                />
-              )}
-
-              {parceriaW > 0 && (
-                <rect
-                  // The 2px surface gap, so two fills never touch and the
-                  // boundary between them is readable at a glance.
-                  x={LABEL_W + turmaW + (turmaW > 0 ? GAP : 0)}
-                  y={y}
-                  width={Math.max(parceriaW - (turmaW > 0 ? GAP : 0), 0)}
-                  height={BAR}
-                  rx={3}
-                  className="fill-chart-2"
-                />
-              )}
-
-              {/*
-                The numbers, as text, on the right of every bar — the relief the
-                palette's contrast check obliges and the thing that makes the
-                chart readable with no colour at all.
-              */}
-              <text
-                x={width}
-                y={index * ROW + ROW / 2}
-                textAnchor="end"
-                dominantBaseline="middle"
-                className="fill-foreground"
-                style={{ fontSize: '9px', fontVariantNumeric: 'tabular-nums' }}
+              <span
+                aria-hidden
+                className="relative h-4 flex-1 overflow-hidden rounded-full border border-border bg-surface-muted"
               >
-                {t('occupancy.ofHours', {
-                  sold: number(sold),
-                  available: number(day.available),
-                })}
-              </text>
-            </g>
+                <span className="absolute inset-y-0 left-0 flex w-full">
+                  <span
+                    className="h-full rounded-l-full bg-chart-1"
+                    style={{ width: share(day.turma) }}
+                  />
+                  {/*
+                    A 2px surface gap between the two fills, so they never meet
+                    and the boundary stays readable at a glance. Only where both
+                    are present — a lone fill keeps its whole width.
+                  */}
+                  {day.turma > 0 && day.parceria > 0 && (
+                    <span className="h-full w-0.5 shrink-0 bg-surface" />
+                  )}
+                  <span
+                    className="h-full bg-chart-2"
+                    style={{ width: share(day.parceria) }}
+                  />
+                </span>
+              </span>
+
+              <span className="w-28 shrink-0 text-right text-sm tabular-nums text-foreground-muted">
+                {day.available > 0
+                  ? t('occupancy.ofHours', {
+                      sold: number(sold),
+                      available: number(day.available),
+                    })
+                  : t('occupancy.closed')}
+              </span>
+            </li>
           );
         })}
-      </svg>
+      </ul>
 
       {/* Two series, so a legend is always present — and it names them in words. */}
       <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-foreground-muted">
