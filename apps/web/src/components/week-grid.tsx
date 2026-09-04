@@ -31,6 +31,16 @@ export interface WeekEntry {
    */
   href?: string;
   muted?: boolean;
+  /**
+   * A hex, drawn as a left rule — parcerias on the turma screen.
+   *
+   * The **partner's own colour**, the same one the lane grid tints its blocks
+   * with, so the same school reads the same on both screens. A left rule rather
+   * than a background because an operator's arbitrary hex cannot be
+   * contrast-checked in two themes: a 3px bar has nothing written on it, and
+   * every cell still carries its name, its partner and its headcount as text.
+   */
+  accentColour?: string | null;
   /** Why this one is off — "Natal", "Férias de agosto". Shown under the title. */
   note?: string | null;
   /** Struck through: the class is not happening. */
@@ -296,11 +306,17 @@ function Slot({
   // made every slot look clipped even when it was not.
   // `relative` so the title's stretched overlay is bounded by this box and not
   // by whatever ancestor happens to be positioned.
+  /** Null unless this entry brought a colour of its own — a parceria. */
+  const accent = entry.accentColour ?? null;
+
   const classes = cn(
     'relative flex min-h-24 flex-col gap-0.5 rounded border p-3',
     entry.muted
       ? 'border-dashed border-border bg-surface-muted'
       : 'border-border bg-surface hover:border-primary/50',
+    // The accent replaces the left border's own colour, so the hover rule still
+    // lights up the other three sides and the card keeps one shape.
+    accent !== null && 'border-l-[3px]',
   );
 
   const Wrapper = linkCard && entry.href !== undefined ? 'a' : 'div';
@@ -316,6 +332,7 @@ function Slot({
             ),
           }
         : { className: classes })}
+      style={accent === null ? undefined : { borderLeftColor: accent }}
     >
       {body}
 

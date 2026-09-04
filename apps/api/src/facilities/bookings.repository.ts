@@ -43,11 +43,65 @@ export class DuplicateBookingError extends Error {
   }
 }
 
-/** Raised when the facility is shut then, or the booking would run past closing. */
+/**
+ * Raised when the facility is shut then, or the booking would run past closing.
+ *
+ * **It carries a reason and the hours, not the database's sentence.** The
+ * trigger raises prose — "Piscina Municipal opens 08:00 to 20:00 on ISO weekday
+ * 2, class starts 21:00" — which is English, is not a translation key, and is
+ * the wrong thing to put in front of an operator working in Portuguese. The API
+ * owns no locale; the web app owns every string. So this parses the trigger's
+ * message into a code plus the two facts a sentence needs, and the interface
+ * composes it.
+ */
+export type ClosedReason = 'closedThatDay' | 'outsideHours' | 'endsAfterClosing';
+
 export class ClosedError extends Error {
-  constructor(readonly detail: string) {
+  constructor(
+    readonly reason: ClosedReason,
+    /** `HH:MM`, when the trigger said. Absent for a day the site does not open. */
+    readonly opensAt: string | null,
+    readonly closesAt: string | null,
+    /** The raw message, for the log. Never shown to anybody. */
+    readonly detail: string,
+  ) {
     super('closed');
   }
+}
+
+/** `08:00:00` and `08:00` both become `08:00`; anything else becomes null. */
+function clock(raw: string | undefined): string | null {
+  return raw !== undefined && /^\d{2}:\d{2}/.test(raw) ? raw.slice(0, 5) : null;
+}
+
+/**
+ * The trigger's prose, read back into a reason and the hours it named.
+ *
+ * Keyed on the prefix rather than on the words after it, which is the same
+ * contract `scheduleRefusal` in `classes.repository.ts` already relies on — the
+ * prefixes are the API between the trigger and the application and the sentence
+ * after them is free to be reworded.
+ */
+export function readClosed(message: string): ClosedError {
+  if (message.startsWith('facility_closed_on_weekday:')) {
+    return new ClosedError('closedThatDay', null, null, message);
+  }
+
+  if (message.startsWith('outside_facility_hours:')) {
+    // "… opens 08:00:00 to 20:00:00 on ISO weekday 2, class starts 21:00:00"
+    const times = message.match(/\d{2}:\d{2}(:\d{2})?/g) ?? [];
+    return new ClosedError('outsideHours', clock(times[0]), clock(times[1]), message);
+  }
+
+  if (message.startsWith('class_ends_after_closing:')) {
+    // "… closes at 20:00:00 on ISO weekday 2, class runs 19:30:00 to 20:30:00"
+    const times = message.match(/\d{2}:\d{2}(:\d{2})?/g) ?? [];
+    return new ClosedError('endsAfterClosing', null, clock(times[0]), message);
+  }
+
+  // Some other check constraint. Nothing here knows what to say about it, and
+  // guessing would put a confident wrong sentence in front of an operator.
+  return new ClosedError('closedThatDay', null, null, message);
 }
 
 export interface BookingTarget {
@@ -187,7 +241,7 @@ function classify(error: unknown): never {
   const code = (error as { code?: string }).code;
   if (code === '23505') throw new DuplicateBookingError();
   if (code === '23514' || code === 'P0001') {
-    throw new ClosedError((error as { message?: string }).message ?? '');
+    throw readClosed((error as { message?: string }).message ?? '');
   }
   throw error;
 }

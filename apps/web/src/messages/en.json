@@ -476,7 +476,8 @@
     "scopeLabel": "Which classes to show",
     "scopeAll": "All classes",
     "scopeMine": "My classes",
-    "scopeMineOnly": "Showing the classes assigned to you."
+    "scopeMineOnly": "Showing the classes assigned to you.",
+    "partnerNoRoll": "Partnerships take no attendance register."
   },
   "reposicao": {
     "title": "Make-up classes",
@@ -1865,7 +1866,13 @@
       "failed": "The file could not be generated.",
       "forbidden": "You do not have permission to export this.",
       "empty": "There are no bookings to export."
-    }
+    },
+    "closedThatDay": "The site does not open that day.",
+    "closedOutsideHours": "That time is outside the opening hours.",
+    "closedEndsAfter": "The class would end after closing.",
+    "openingHours": "Open {hours}",
+    "closesAt": "Closes at {time}",
+    "dismiss": "Dismiss message"
   },
   "partnerClasses": {
     "title": "Partnerships",

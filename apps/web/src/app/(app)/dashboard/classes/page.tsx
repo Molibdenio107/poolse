@@ -104,7 +104,7 @@ export default async function ClassesPage({
 
   // One entry per slot per turma: a turma running Tuesday and Thursday appears
   // in both columns, which is what a week looks like.
-  const entries: WeekEntry[] = (data?.groups ?? []).flatMap((group) =>
+  const turmaEntries: WeekEntry[] = (data?.groups ?? []).flatMap((group) =>
     group.schedules.map((slot) => ({
       key: slot.id,
       weekday: slot.weekday,
@@ -172,6 +172,71 @@ export default async function ClassesPage({
       },
     })),
   );
+
+  /*
+   * The parcerias, on the same week grid as the turmas.
+   *
+   * A school's hour occupies the pool exactly as a turma does, and a "This week"
+   * that showed only turmas was telling a manager the Tuesday morning was free
+   * when a school had booked every lane of it. The Parcerias card below stays —
+   * it is where a partnership is *edited* — but the week is the week.
+   *
+   * Distinguished by the **partner's own colour** as a left rule, which is the
+   * colour the lane grid already tints its blocks with, so the same school reads
+   * the same on both screens. Never colour alone: the card carries the partner's
+   * name and the headcount as text, and the hover panel says the rest.
+   */
+  const partnerEntries: WeekEntry[] = (grid?.bookings ?? [])
+    .filter((booking) => booking.subjectType === 'parceria')
+    .map((booking) => {
+      const lanes = booking.laneIds
+        .map((id) => grid?.lanes.find((lane) => lane.id === id)?.name)
+        .filter((name): name is string => name !== undefined);
+
+      const teacher =
+        booking.ownInstructorName ?? booking.instructorName ?? booking.subtitle;
+
+      return {
+        key: `parceria:${booking.id}`,
+        weekday: booking.weekday,
+        startTime: booking.startTime,
+        durationMinutes: booking.durationMinutes,
+        title: booking.name,
+        subtitle: [booking.subtitle, lanes.join(', ')].filter(Boolean).join(' · '),
+        accentColour: booking.partnerColour,
+        detail: {
+          facts: [
+            booking.subtitle === null
+              ? null
+              : { label: t('grid.partner'), value: booking.subtitle },
+            booking.groupTag === null
+              ? null
+              : { label: t('partners.tag'), value: booking.groupTag },
+            {
+              label: t('classes.when'),
+              value: `${dayNames[booking.weekday]} · ${booking.startTime} · ${booking.durationMinutes}′`,
+            },
+            lanes.length === 0
+              ? null
+              : { label: t('grid.lane'), value: lanes.join(', ') },
+            teacher === null
+              ? null
+              : { label: t('grid.instructor'), value: teacher },
+          ].filter((fact): fact is { label: string; value: string } => fact !== null),
+          /*
+           * The participant count, where the group has been sized. A parceria
+           * takes no register — POOLSE-46 settled that — so there are no names
+           * to list, and the panel says so rather than showing an empty roll.
+           */
+          occupancy:
+            booking.headcount === null ? undefined : String(booking.headcount),
+          people: [],
+          peopleEmpty: t('classes.partnerNoRoll'),
+        },
+      };
+    });
+
+  const entries = [...turmaEntries, ...partnerEntries];
 
   /*
    * Not paginated — POOLSE-29. The week grid is a calendar bounded by the week,

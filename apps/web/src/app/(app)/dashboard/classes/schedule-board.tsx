@@ -41,6 +41,7 @@ import type {
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { slotKey } from '@/lib/slot-key';
 import { cn } from '@/lib/utils';
+import { Feedback, type FeedbackKind, type FeedbackMessage } from '@/components/feedback';
 import { addDays } from '@/lib/dates';
 import {
   applyGridFilters,
@@ -491,7 +492,34 @@ export function ScheduleBoard({
   const searchParams = useSearchParams();
   const [navigating, startNavigation] = useTransition();
 
-  const [error, setError] = useState<string | null>(null);
+  /**
+   * What the last gesture had to say — Rui's second report.
+   *
+   * It used to be a bare key rendered as a line of small red text under the
+   * grid, three screens below where the block was dropped. A message nobody can
+   * see is not feedback: the block springing back reads as a broken drag rather
+   * than as a refusal. It is now a floating message at the top of the viewport,
+   * and it carries a *detail* line so "fora do horário" can also say which hours
+   * the site keeps that day.
+   *
+   * `attempt` so the same refusal twice running still announces itself.
+   */
+  const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
+  const attempt = useRef(0);
+
+  function say(kind: FeedbackKind, key: string, detail?: string | null): void {
+    attempt.current += 1;
+    setFeedback({ kind, text: t(key), detail: detail ?? null, attempt: attempt.current });
+  }
+
+  /** Every existing `setError(key)` call site, unchanged in meaning. */
+  function setError(key: string | null): void {
+    if (key === null) {
+      setFeedback(null);
+      return;
+    }
+    say('error', key);
+  }
   const [dragging, setDragging] = useState<string | null>(null);
   /*
    * What a drop proposed, waiting to be confirmed — round 5.
@@ -1293,7 +1321,7 @@ export function ScheduleBoard({
           laneIds: asked.laneIds,
         });
         setOptimistic(null);
-        if (!made.ok) setError(made.detail ?? made.errorKey);
+        if (!made.ok) say('error', made.errorKey, made.detail);
         // No undo banner: the copy is a new block sitting on the grid, and
         // removing it is the same gesture as removing any other.
         else setUndo(null);
@@ -1333,7 +1361,7 @@ export function ScheduleBoard({
       });
       setOptimistic(null);
       if (!result.ok) {
-        setError(result.detail ?? result.errorKey);
+        say('error', result.errorKey, result.detail);
         return;
       }
 
@@ -1489,11 +1517,11 @@ export function ScheduleBoard({
           </section>
         )}
 
-        {error !== null && (
-          <p role="status" className="text-sm text-danger">
-            {t(error)}
-          </p>
-        )}
+        <Feedback
+          message={feedback}
+          onDismiss={() => setFeedback(null)}
+          dismissLabel={t('grid.dismiss')}
+        />
 
         <MoveDialog
           proposal={proposal}

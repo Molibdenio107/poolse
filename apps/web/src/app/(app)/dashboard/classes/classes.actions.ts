@@ -400,7 +400,35 @@ function bookingFailure(error: unknown): { ok: false; errorKey: string; detail?:
       message?: string;
       lane?: string;
       holder?: string;
+      reason?: string;
+      opensAt?: string | null;
+      closesAt?: string | null;
     };
+
+    /*
+     * The site is shut then — and this is what Rui's second report was about.
+     *
+     * It used to fall through to `dropRefused` ("não foi possível colocar
+     * aqui"), which is true and useless: the operator has just dropped a class
+     * on a Tuesday morning and wants to know that the pool opens at 14:45 that
+     * day. The API now sends the reason and the hours in parts, and the sentence
+     * is composed here, where the locale is.
+     */
+    if (body.message === 'closed') {
+      const hours = [body.opensAt, body.closesAt].filter(Boolean).join('–');
+      if (body.reason === 'outsideHours') {
+        return { ok: false, errorKey: 'grid.closedOutsideHours', detail: hours };
+      }
+      if (body.reason === 'endsAfterClosing') {
+        // `exactOptionalPropertyTypes` is on, so an absent detail is an absent
+        // key rather than an explicit `undefined`.
+        const closes = body.closesAt ?? '';
+        return closes === ''
+          ? { ok: false, errorKey: 'grid.closedEndsAfter' }
+          : { ok: false, errorKey: 'grid.closedEndsAfter', detail: closes };
+      }
+      return { ok: false, errorKey: 'grid.closedThatDay' };
+    }
 
     if (body.message === 'lanesNotContiguous') {
       return { ok: false, errorKey: 'grid.lanesNotContiguous' };
@@ -418,8 +446,8 @@ function bookingFailure(error: unknown): { ok: false; errorKey: string; detail?:
     return { ok: false, errorKey: 'grid.dropRefused' };
   }
 
-  // The facility-hours trigger, most often: a closed day, or a booking that
-  // would run past closing.
+  // Anything else. `dropRefused` stays as the honest last resort rather than a
+  // guess dressed up as a diagnosis.
   return { ok: false, errorKey: 'grid.dropRefused' };
 }
 

@@ -476,7 +476,8 @@
     "scopeLabel": "Que turmas mostrar",
     "scopeAll": "Todas as turmas",
     "scopeMine": "As minhas turmas",
-    "scopeMineOnly": "A mostrar as turmas que lhe estão atribuídas."
+    "scopeMineOnly": "A mostrar as turmas que lhe estão atribuídas.",
+    "partnerNoRoll": "As parcerias não têm registo de presenças."
   },
   "reposicao": {
     "title": "Aulas de reposição",
@@ -1865,7 +1866,13 @@
       "failed": "Não foi possível gerar o ficheiro.",
       "forbidden": "Não tem permissão para exportar isto.",
       "empty": "Não há marcações para exportar."
-    }
+    },
+    "closedThatDay": "O local não abre nesse dia.",
+    "closedOutsideHours": "Essa hora está fora do horário de funcionamento.",
+    "closedEndsAfter": "A aula terminaria depois do fecho.",
+    "openingHours": "Aberto {hours}",
+    "closesAt": "Fecha às {time}",
+    "dismiss": "Fechar mensagem"
   },
   "partnerClasses": {
     "title": "Parcerias",

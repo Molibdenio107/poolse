@@ -141,8 +141,21 @@ function asHttp(error: unknown): unknown {
     return new ConflictException({ message: 'alreadyThere' });
   }
 
+  /*
+   * The site is shut then — and *why*, in parts the interface can compose.
+   *
+   * `reason` plus the hours, never the trigger's own sentence: it is English
+   * prose from a migration, and an operator working in Portuguese should not be
+   * shown it. This was the whole of Rui's second report — the drop was refused
+   * correctly and the screen said only "não foi possível colocar aqui".
+   */
   if (error instanceof ClosedError) {
-    return new ConflictException({ message: 'closed', detail: error.detail });
+    return new ConflictException({
+      message: 'closed',
+      reason: error.reason,
+      opensAt: error.opensAt,
+      closesAt: error.closesAt,
+    });
   }
 
   return error;
