@@ -1,6 +1,6 @@
 # Poolse backlog
 
-55 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
+56 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
 exists, what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got
 wrong) and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance
 criteria, which are the contract.
@@ -19,7 +19,7 @@ QA section is your test list, already written.
 
 ## Index
 
-55 tickets · 24 at High priority · 51 open questions marked in the ticket files
+56 tickets · 25 at High priority · 52 open questions marked in the ticket files
 
 POOLSE-43 … 55 are one feature — lane-level scheduling and parcerias. Read
 [BUILD-ORDER.md](./BUILD-ORDER.md) before starting any of them: four decisions were taken
@@ -82,3 +82,4 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-53](./POOLSE-53-sem-professor-alerts.md) | "Sem professor" alerts | Scheduling / Staff | High | POOLSE-46, 49 | 1 |
 | [POOLSE-54](./POOLSE-54-exporting-the-grid.md) | Exporting the grid — PDF and Excel | Scheduling / Export | Medium | POOLSE-49, 52 | — |
 | [POOLSE-55](./POOLSE-55-reference-schedule-seed.md) | The reference schedule as seed, and the verification pass | Scheduling / Seed data | High | all of 43–54 | — |
+| [POOLSE-56](./POOLSE-56-a-full-slot-takes-no-more.md) | A full slot takes no more classes | Scheduling / Data integrity | High | POOLSE-51 | 1 |

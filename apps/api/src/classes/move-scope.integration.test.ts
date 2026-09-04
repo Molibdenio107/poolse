@@ -195,7 +195,33 @@ test('moving the pattern carries the future weeks and leaves the past alone', as
       const { groupId, scheduleId } = await tuesdays(tenant);
 
       const days = Object.keys(await weeks(tenant, groupId));
-      const lastTuesday = days[0]!;
+
+      /*
+       * Which of those Tuesdays are already behind us — asked, not assumed.
+       *
+       * The fixture lays down last week, this week and the two after. It used to
+       * assume only the first was past, which is true on a Monday or a Tuesday
+       * and false for the rest of the week: `moveSchedule` filters
+       * `occurs_on >= current_date`, so from Wednesday onward *this* week's
+       * Tuesday has been taught too and correctly does not move. The test failed
+       * every Wednesday to Sunday for it, which is a fixture that cannot tell a
+       * real regression from a Thursday.
+       *
+       * Read from the database rather than computed here, so the two agree about
+       * what "today" is even when the server's timezone and UTC disagree about
+       * the date — the second way this could flake, and for six hours a day.
+       */
+      const [row] = await tenant.sql<{ today: string }>(
+        'SELECT current_date::text AS today',
+      );
+      const today = row!.today;
+      const taught = days.filter((day) => day < today);
+      const toCome = days.filter((day) => day >= today);
+
+      // The fixture has to contain both kinds, or the test proves only half its
+      // sentence — and which half would depend on the day it ran.
+      assert.ok(taught.length > 0, 'the fixture should include a week already taught');
+      assert.ok(toCome.length > 0, 'the fixture should include a week still to come');
 
       // Thursdays at 17:30, from now on.
       await new ClassesController().moveSlot(groupId, scheduleId, {
@@ -205,12 +231,15 @@ test('moving the pattern carries the future weeks and leaves the past alone', as
 
       const after = await weeks(tenant, groupId);
 
-      // The week already taught keeps the time it was taught at. A register is a
-      // record of what happened, and rewriting it would make the record wrong.
-      assert.equal(after[lastTuesday], `${lastTuesday} 18:00`);
+      // A week already taught keeps the day and the time it was taught at. A
+      // register is a record of what happened, and rewriting it would make the
+      // record wrong.
+      for (const tuesday of taught) {
+        assert.equal(after[tuesday], `${tuesday} 18:00`);
+      }
 
-      // Every week from this one forward is on the Thursday of its own week.
-      for (const tuesday of days.slice(1)) {
+      // Every week still to come is on the Thursday of its own week.
+      for (const tuesday of toCome) {
         const thursday = new Date(`${tuesday}T00:00:00Z`);
         thursday.setUTCDate(thursday.getUTCDate() + 2);
         const day = thursday.toISOString().slice(0, 10);
