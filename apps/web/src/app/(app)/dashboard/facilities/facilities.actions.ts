@@ -15,6 +15,22 @@ import type { FormState } from '../actions';
 /** Same policy as the invitation actions: see the note on `failure` there. */
 function failure(error: unknown, errorKey: string): FormState {
   if (error instanceof ApiError) {
+    /*
+     * The plan is full — a 402 rather than a refusal about permission.
+     *
+     * A subscription covers one facility; a club with two buildings buys a plan
+     * with two. The message says which numbers are involved, because "you have
+     * reached your limit" without saying what the limit is leaves somebody
+     * counting their own sites to find out.
+     */
+    if (error.status === 402) {
+      const details = (error.details ?? {}) as { current?: number; allowed?: number };
+      return {
+        ok: false,
+        errorKey: 'facilities.limitReached',
+        detail: `${details.current ?? 1}/${details.allowed ?? 1}`,
+      };
+    }
     if (error.status === 409) return { ok: false, errorKey: 'facilities.duplicate' };
     if (error.status < 500) return { ok: false, errorKey };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };

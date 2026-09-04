@@ -9,9 +9,23 @@ the conflict rules, occupancy, the "sem professor" alerts and the exports — wa
 designed against **one real document**: the *Ginásio Clube de Santo Tirso*
 2025/2026 timetable.
 
-`../src/seed-reference.ts` rebuilds that document inside Poolse. Running
-`pnpm db:seed` creates a facility called **Piscina Municipal de Santo Tirso**
-containing it, and leaves every other facility in the organization alone.
+`../src/seed-reference.ts` rebuilds that document inside Poolse, **into the
+organization's own facility**. It never creates one: a tenant's licence covers a
+single site, and a seed that quietly added a second would hand somebody a plan
+they have not bought. The schema keeps multi-facility on purpose — see
+`docs/data-model.md`, open question 2 — but how many a tenant may have is the
+licence's question.
+
+Because it fills the site you already have, it is **opt-in**:
+
+```bash
+SEED_REFERENCE=yes pnpm db:seed
+```
+
+An ordinary `pnpm db:seed` leaves the timetable alone. Run the reference form on
+a scratch database, or on one whose timetable you are happy to have forty
+bookings added to — it is additive and idempotent, but it is *your* club's grid
+it is adding them to.
 
 ## Where the original lives
 
@@ -34,11 +48,11 @@ the partner entities and the class names the sheet contains.
 ```bash
 pnpm db:up          # if it is not already running
 pnpm db:migrate
-pnpm db:seed        # idempotent; run it as often as you like
+SEED_REFERENCE=yes pnpm db:seed   # idempotent; run it as often as you like
 pnpm dev
 ```
 
-Then open the lane grid for **Piscina Municipal de Santo Tirso** and, beside it,
+Then open the lane grid for the club's facility and, beside it,
 `/dashboard/calendar/print?local=<facilityId>&papel=a3` — the A3 landscape sheet
 from POOLSE-54. Compare against the original page by page: slot order, lane
 order, the same groups in the same cells, the weekend block, the legend.

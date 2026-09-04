@@ -18,6 +18,12 @@ BEGIN;
 
 INSERT INTO organization (name, slug) VALUES ('Clube Pessoal', 'clube-pessoal');
 
+-- This fixture states its own plan. A subscription covers one facility by
+-- default and `facility_licence` enforces it; nothing below is about billing,
+-- so the plan is set out of the way. The limit is asserted in `facilities.sql`.
+UPDATE organization SET max_facilities = 20;
+
+
 -- The instructor as they are today, and the account they will move to.
 SELECT provision_app_user('user_old', 'antiga@clube.pt', 'Sofia', 'Brito', NULL,
                           '2026-08-26 09:00:00+00');
@@ -245,6 +251,7 @@ DECLARE
 BEGIN
   INSERT INTO organization (name, slug) VALUES ('Clube Reconvite', 'clube-reconvite')
   RETURNING id INTO v_org;
+
 
   PERFORM provision_app_user('user_reinvite', 'antiga@clube.pt', 'Sofia', 'Antunes',
                              NULL, now());

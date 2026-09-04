@@ -373,7 +373,8 @@
     "recordAnalysisTitle": "Registar uma análise",
     "closePoolHint": "Abre o calendário de encerramentos, onde escolhe os dias.",
     "lanesInUse": "Não é possível reduzir as pistas: algumas têm turmas.",
-    "lanesHint": "Aumentar acrescenta pistas no fim. Reduzir só é possível se não tiverem turmas."
+    "lanesHint": "Aumentar acrescenta pistas no fim. Reduzir só é possível se não tiverem turmas.",
+    "limitReached": "O seu plano inclui uma instalação. Para gerir mais do que um local, é preciso mudar de plano."
   },
   "classes": {
     "title": "Turmas",

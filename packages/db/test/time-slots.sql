@@ -28,6 +28,13 @@ INSERT INTO organization (id, name, slug) VALUES
   ('77777777-7777-7777-7777-777777777777', 'Clube Grelha', 'clube-grelha'),
   ('88888888-8888-8888-8888-888888888888', 'Clube Vizinho S', 'clube-vizinho-s');
 
+-- This fixture states its own plan. A subscription covers one facility by
+-- default and `facility_licence` enforces it; nothing below is about billing,
+-- so the plan is set out of the way. The limit is asserted in `facilities.sql`.
+UPDATE organization SET max_facilities = 20;
+
+
+
 DO $$
 DECLARE v_org uuid; v_facility uuid; v_season uuid;
 BEGIN

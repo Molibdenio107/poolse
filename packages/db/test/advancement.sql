@@ -17,6 +17,12 @@ BEGIN;
 
 INSERT INTO organization (name, slug) VALUES ('Clube Progressão', 'clube-progressao');
 
+-- This fixture states its own plan. A subscription covers one facility by
+-- default and `facility_licence` enforces it; nothing below is about billing,
+-- so the plan is set out of the way. The limit is asserted in `facilities.sql`.
+UPDATE organization SET max_facilities = 20;
+
+
 SELECT provision_app_user('user_adv', 'staff@adv.pt', 'Rita', 'Nunes', NULL,
                           '2026-08-28 09:00:00+00');
 
@@ -290,6 +296,7 @@ DECLARE v_other uuid; v_visible int;
 BEGIN
   INSERT INTO organization (name, slug) VALUES ('Clube Outro', 'clube-outro-adv')
   RETURNING id INTO v_other;
+
 
   PERFORM set_config('app.organization_id', v_other::text, true);
   SET LOCAL ROLE poolse_app;

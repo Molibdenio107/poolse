@@ -20,6 +20,13 @@ INSERT INTO organization (id, name, slug) VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Clube A', 'clube-a'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Clube B', 'clube-b');
 
+-- This fixture states its own plan. A subscription covers one facility by
+-- default and `facility_licence` enforces it; nothing below is about billing,
+-- so the plan is set out of the way. The limit is asserted in `facilities.sql`.
+UPDATE organization SET max_facilities = 20;
+
+
+
 INSERT INTO facility (id, organization_id, name) VALUES
   ('a1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Sede A'),
   ('b1111111-1111-1111-1111-111111111111', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Sede B');

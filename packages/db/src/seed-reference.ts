@@ -15,12 +15,19 @@ import type pg from 'pg';
  * Three decisions worth knowing before changing anything here
  * ---------------------------------------------------------------------------
  *
- * **It builds its own facility rather than filling the one already there.** A
- * developer's database has a club in it that somebody has been typing into by
- * hand for weeks, with its own turmas and its own partners; forty seeded
- * bookings landing on top of that is unrecoverable without a reset. So the
- * reference schedule gets `Piscina Municipal de Santo Tirso`, matched by name,
- * and everything else in the org is left exactly as it was.
+ * **It fills the organization's existing facility. It never creates one.** The
+ * first version made a facility of its own, to keep forty seeded bookings off a
+ * club somebody had been typing into by hand — which solved a real problem by
+ * breaking a product rule: **an organization's licence covers one site**, and a
+ * seed that quietly adds a second is a seed that hands somebody a plan they have
+ * not bought. `docs/data-model.md` keeps multi-facility in the *schema* on
+ * purpose — a municipality with two buildings should not need two organizations
+ * — but how many a tenant may have is the licence's question, not the seed's.
+ *
+ * The trampling problem is solved the honest way instead: this whole function is
+ * **opt-in**, behind `SEED_REFERENCE=yes`. An ordinary `pnpm db:seed` leaves the
+ * timetable alone; somebody who wants the reference week asks for it, and knows
+ * what they are asking for.
  *
  * **It writes to the real tables with every constraint and trigger live.** The
  * ticket asks for the seed to go through "the same rules the API enforces", and
@@ -42,9 +49,6 @@ import type pg from 'pg';
  * Idempotent throughout: every row is matched on a natural key first, so running
  * it twice adds only what is missing and never produces two Santo Tirsos.
  */
-
-/** The site the reference sheet belongs to. Matched by name, so it is created once. */
-const FACILITY = 'Piscina Municipal de Santo Tirso';
 
 const MAIN_POOL = 'Tanque Principal';
 const LEARNING_POOL = 'Tanque de Aprendizagem';
@@ -400,24 +404,28 @@ export async function seedReferenceSchedule(
     return counts;
   }
 
-  // ----------------------------------------------------------------- the site
-  let facility = await one<{ id: string }>(
+  /*
+   * The organization's own site — never a new one.
+   *
+   * One facility per licence, so the reference schedule is built *into* whatever
+   * site the club already has rather than beside it. If there is none, there is
+   * nothing to build on and saying so beats inventing one.
+   */
+  const facility = await one<{ id: string; name: string }>(
     client,
-    `SELECT id FROM facility WHERE organization_id = $1 AND name = $2 AND archived_at IS NULL`,
-    [organizationId, FACILITY],
+    `SELECT id, name FROM facility
+      WHERE organization_id = $1 AND archived_at IS NULL
+      ORDER BY created_at LIMIT 1`,
+    [organizationId],
   );
 
   if (facility === null) {
-    facility = await one<{ id: string }>(
-      client,
-      `INSERT INTO facility (organization_id, name, city, country_code, latitude, longitude)
-       VALUES ($1, $2, 'Santo Tirso', 'PT', 41.343330, -8.475000) RETURNING id`,
-      [organizationId, FACILITY],
-    );
-    counts.facility = 1;
+    counts.skipped.push('no facility — the reference schedule fills one, it does not create one');
+    return counts;
   }
 
-  const facilityId = facility!.id;
+  const facilityId = facility.id;
+  counts.facility = 0;
 
   // ------------------------------------------------------------- the two tanks
   const pools: Record<'main' | 'learning', string> = { main: '', learning: '' };

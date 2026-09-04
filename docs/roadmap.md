@@ -101,7 +101,7 @@ Numbered as they arrived, so they can be referred to in conversation.
 | B1 | Pool length, width and maximum depth | ✅ `numeric`, so 12.5 m stays 12.5 m |
 | B2 | Pool detail view and photo upload surface | ✅ Surface built, upload deliberately inert. `pool_photo` and `facility_photo` exist and stay empty until Cloudflare R2 is configured |
 | B3 | Entity icons and consent-gated avatars | ✅ Instructors live; student photographs wait on storage, consent rule built and tested |
-| B4 | One facility per client | ❌ Rejected — a municipality with pools in two buildings would need two organizations. See `docs/data-model.md`, open question 2 |
+| B4 | One facility per client | ❌ Rejected **as a schema rule** — a municipality with pools in two buildings would need two organizations. See `docs/data-model.md`, open question 2. ✅ Adopted **as a licence rule**: `organization.max_facilities` defaults to 1 and is enforced by a trigger, so the plan bounds what the model allows. The two are not in conflict — without the schema there would be nothing to sell |
 | B5 | Invite students to the mobile app | Waits on phase 3 |
 | B6 | Student progression | ✅ Times in integer milliseconds, personal bests, chart |
 | B7 | Instructor availability grid | Waits on 1.4 — the "outside their hours" warning needs class groups to validate against |

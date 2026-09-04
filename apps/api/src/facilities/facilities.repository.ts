@@ -520,6 +520,21 @@ export async function createFacility(input: CreateFacilityInput): Promise<string
       return id;
     });
   } catch (error) {
+    /*
+     * The licence, refused by the trigger in `1788022800000_facility-licence.sql`.
+     *
+     * Turned into a typed error here rather than left as a 23514 so the screen
+     * can say something about the plan. The database is what actually stops it —
+     * a seed or a script never reaches this line — and this is what makes the
+     * refusal legible to a person.
+     */
+    if (error instanceof Error && error.message.startsWith('facility_licence_exceeded:')) {
+      const [current, allowed] = error.message
+        .slice(error.message.indexOf(':') + 1)
+        .split(' of ')
+        .map((part) => Number(part.trim()));
+      throw new FacilityLimitError(current ?? 1, allowed ?? 1);
+    }
     return asDuplicate(error, input.name);
   }
 }
@@ -531,6 +546,23 @@ export async function createFacility(input: CreateFacilityInput): Promise<string
  * Pista 6 têm turmas: Infantis A, Cadetes". A refusal that only says no leaves
  * the operator clicking through every turma to find out which.
  */
+/**
+ * Raised when a tenant's plan has no room for another site.
+ *
+ * A commercial refusal, not a validation one: the request is well-formed and the
+ * person is entitled to make it — they simply have as many facilities as they
+ * are paying for. Carries both numbers so the message can say "1 de 1" rather
+ * than leaving somebody to count their own sites.
+ */
+export class FacilityLimitError extends Error {
+  constructor(
+    readonly current: number,
+    readonly allowed: number,
+  ) {
+    super('facility limit reached');
+  }
+}
+
 export class LanesInUseError extends Error {
   constructor(
     readonly lanes: string[],

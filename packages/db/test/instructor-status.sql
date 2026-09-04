@@ -27,6 +27,13 @@ SELECT provision_app_user('user_i', 'i@clube.pt', 'Sandra', 'Lopes', NULL, '2026
 INSERT INTO organization (id, name, slug) VALUES
   ('99999999-9999-9999-9999-999999999999', 'Clube Estado', 'clube-estado');
 
+-- This fixture states its own plan. A subscription covers one facility by
+-- default and `facility_licence` enforces it; nothing below is about billing,
+-- so the plan is set out of the way. The limit is asserted in `facilities.sql`.
+UPDATE organization SET max_facilities = 20;
+
+
+
 DO $$
 DECLARE
   v_org uuid; v_facility uuid; v_pool uuid; v_season uuid;

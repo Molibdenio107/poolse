@@ -17,6 +17,12 @@ BEGIN;
 
 INSERT INTO organization (name, slug) VALUES ('Clube A', 'clube-a'), ('Clube B', 'clube-b');
 
+-- This fixture states its own plan. A subscription covers one facility by
+-- default and `facility_licence` enforces it; nothing below is about billing,
+-- so the plan is set out of the way. The limit is asserted in `facilities.sql`.
+UPDATE organization SET max_facilities = 20;
+
+
 INSERT INTO season (organization_id, name, starts_on, ends_on)
 SELECT id, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31'
   FROM organization WHERE slug IN ('clube-a', 'clube-b');
@@ -364,6 +370,7 @@ DECLARE
 BEGIN
   INSERT INTO organization (name, slug) VALUES ('Clube Horário', 'clube-horario')
   RETURNING id INTO v_org;
+
 
   INSERT INTO season (organization_id, name, starts_on, ends_on)
   VALUES (v_org, 'Época de teste', DATE '2020-01-01', DATE '2030-12-31');

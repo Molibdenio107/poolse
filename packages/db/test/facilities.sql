@@ -21,6 +21,13 @@ INSERT INTO organization (name, slug) VALUES
   ('Clube A', 'clube-a'),
   ('Clube B', 'clube-b');
 
+-- This fixture states its own plan. A subscription covers one facility by
+-- default and `facility_licence` enforces it; nothing below is about billing,
+-- so the plan is set out of the way. The limit is asserted in `facilities.sql`.
+UPDATE organization SET max_facilities = 20;
+
+
+
 -- ---------------------------------------------------------------------------
 -- Test 1 — a site with pools, created the way the API creates it
 -- ---------------------------------------------------------------------------
@@ -254,17 +261,17 @@ BEGIN
     FROM pool WHERE name = 'Tanque Olimpico';
 
   IF r.width_m <> 12.5 THEN
-    RAISE EXCEPTION 'FAIL test 8a: 12.5 m came back as % — rounded to an integer', r.width_m;
+    RAISE EXCEPTION 'FAIL test 11a: 12.5 m came back as % — rounded to an integer', r.width_m;
   END IF;
   IF r.max_depth_m <> 1.8 THEN
-    RAISE EXCEPTION 'FAIL test 8b: 1.8 m came back as %', r.max_depth_m;
+    RAISE EXCEPTION 'FAIL test 11b: 1.8 m came back as %', r.max_depth_m;
   END IF;
 
   -- A measurement of zero is an empty form, not a pool.
   BEGIN
     INSERT INTO pool (organization_id, facility_id, name, length_m)
     VALUES (v_org, v_facility, 'Tanque Impossivel 2', 0);
-    RAISE EXCEPTION 'FAIL test 8c: a pool 0 m long was accepted';
+    RAISE EXCEPTION 'FAIL test 11c: a pool 0 m long was accepted';
   EXCEPTION
     WHEN check_violation THEN NULL;
   END;
@@ -416,5 +423,82 @@ BEGIN
   RAISE NOTICE 'PASS test 10: a location is complete, in range, exact, and tenant-scoped';
 END $$;
 
-ROLLBACK;
+-- ---------------------------------------------------------------------------
+-- Test 11 — a subscription covers one facility
+--
+-- Two rules, both settled, and the point is that they are different rules.
+--
+-- The **schema** allows many: backlog story B4 proposed one facility per tenant
+-- and was rejected, because a municipality with pools in two buildings would
+-- then need two organizations with two staff lists and two invoices.
+--
+-- The **licence** is what bounds it. `organization.max_facilities` defaults to
+-- 1, and the trigger — not the API — is what refuses the second. That is the
+-- half worth a test: the application layer already forgot once, when the
+-- POOLSE-55 reference seed created a site to keep its demo data tidy and
+-- nothing objected.
+--
+-- Every other fixture in this suite raises its own plan out of the way. This is
+-- the one place the default is left alone.
+-- ---------------------------------------------------------------------------
 
+DO $$
+DECLARE
+  v_org uuid;
+  v_allowed integer;
+  v_site uuid;
+  ok boolean;
+BEGIN
+  INSERT INTO organization (name, slug) VALUES ('Clube Licença', 'clube-licenca')
+  RETURNING id INTO v_org;
+
+  -- A new organization is on a one-site plan without anybody saying so.
+  SELECT max_facilities INTO v_allowed FROM organization WHERE id = v_org;
+  IF v_allowed <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 8a: a new organization allows % facilities, not 1', v_allowed;
+  END IF;
+
+  INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina Municipal')
+  RETURNING id INTO v_site;
+
+  -- The second is refused, and refused by the database rather than by a caller.
+  ok := false;
+  BEGIN
+    INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina Norte');
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'FAIL test 8b: a second facility was accepted on a one-site plan';
+  END IF;
+
+  /*
+   * Archiving frees the place. A club that closes one pool and opens another has
+   * not bought a second licence, and making them ask support to free a slot they
+   * can see is free would be a ticket for something obviously right.
+   */
+  UPDATE facility SET archived_at = now() WHERE id = v_site;
+  INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina Nova');
+
+  -- And bringing the old one back is an insert as far as the licence is
+  -- concerned, so it is refused while the replacement is live.
+  ok := false;
+  BEGIN
+    UPDATE facility SET archived_at = NULL WHERE id = v_site;
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'FAIL test 8c: un-archiving slipped past the licence';
+  END IF;
+
+  -- Raising the plan is all it takes; nothing else about the model changes.
+  UPDATE organization SET max_facilities = 2 WHERE id = v_org;
+  UPDATE facility SET archived_at = NULL WHERE id = v_site;
+
+  -- An ordinary edit to a site that was already live counts nothing and is never
+  -- refused — the trigger fires on `archived_at`, and a rename must not trip it.
+  UPDATE facility SET name = 'Piscina Municipal de Santo Tirso' WHERE id = v_site;
+
+  RAISE NOTICE 'PASS test 11: one facility per subscription, enforced by the schema';
+END $$;
+
+ROLLBACK;

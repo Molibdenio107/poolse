@@ -92,6 +92,16 @@ invoices and fees. A per-kWh tariff in integer cents rounds €0.1548 to €0.15
 3% error on the module whose entire purpose is cost accuracy — unit prices are
 `numeric(12,6)`.
 
+**A subscription covers one facility; the schema allows many.** These are two
+different rules and both are settled. The *schema* keeps `organization 1 —— N
+facility` — backlog story B4 proposed narrowing it and was rejected, because a
+municipality with pools in two buildings would then need two organizations with
+two staff lists and two invoices. The *licence* is what bounds it:
+`organization.max_facilities` defaults to 1, is enforced by a trigger rather than
+by the API, and a club with two sites buys a plan with two. Do not re-open either
+half. The trigger exists because the application layer already forgot once — a
+seed created a second site to keep demo data tidy and nothing objected.
+
 **Every unique constraint on a soft-deletable table is partial** (`where archived_at is
 null`). Otherwise archiving an instructor and re-adding them next season violates the
 constraint against a dead row.

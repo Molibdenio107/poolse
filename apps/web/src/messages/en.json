@@ -373,7 +373,8 @@
     "recordAnalysisTitle": "Record an analysis",
     "closePoolHint": "Opens the closures calendar, where you pick the days.",
     "lanesInUse": "The lanes cannot be reduced: some of them have classes on them.",
-    "lanesHint": "Increasing adds lanes at the end. Reducing is only possible when they have no classes."
+    "lanesHint": "Increasing adds lanes at the end. Reducing is only possible when they have no classes.",
+    "limitReached": "Your plan includes one facility. Managing more than one site needs a change of plan."
   },
   "classes": {
     "title": "Class groups",

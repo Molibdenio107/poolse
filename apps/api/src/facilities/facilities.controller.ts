@@ -4,6 +4,8 @@ import {
   ConflictException,
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
   NotFoundException,
   Param,
   Patch,
@@ -28,6 +30,7 @@ import {
   createFacility,
   createPool,
   DuplicateNameError,
+  FacilityLimitError,
   LanesInUseError,
   facilityHours,
   findFacility,
@@ -461,6 +464,21 @@ function asHttp(error: unknown): unknown {
    * both. A 409 that only says no leaves the operator opening every turma to
    * find out which one is in the way.
    */
+  /*
+   * The plan is full — a 402, not a 403 or a 409.
+   *
+   * `Payment Required` is the one status that says what is actually true: the
+   * request is legitimate, the person is allowed to make it, and the answer is
+   * about money rather than about permission. A 403 would tell an owner they may
+   * not do something they may.
+   */
+  if (error instanceof FacilityLimitError) {
+    return new HttpException(
+      { message: 'facilityLimit', current: error.current, allowed: error.allowed },
+      HttpStatus.PAYMENT_REQUIRED,
+    );
+  }
+
   if (error instanceof LanesInUseError) {
     return new ConflictException({
       message: 'lanesInUse',

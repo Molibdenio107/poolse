@@ -1833,6 +1833,13 @@ policies like anything else.
    Multi-facility stays. A student therefore belongs to the organization, and a class
    group is what ties them to a pool at a site. Adding `facility_id` to `student` remains
    cheap if a customer ever needs it.
+
+   **How many a tenant may have is a separate, commercial question, and it is now
+   answered.** `organization.max_facilities` defaults to 1 and is enforced by the
+   `facility_licence` trigger — see `1788022800000_facility-licence.sql`. Archived
+   sites do not count, so replacing a pool is free; a second live one is a plan
+   change. That is not a retreat from this decision: it is what the decision makes
+   possible, because under B4 there would be no second site to sell.
 3. **Waiting-list ordering** — `waiting_position` supports manual reordering, defaulting
    to enrollment order. Confirm operators actually want to reorder before building UI for it.
 4. **Retention periods** per entity for GDPR, especially `student_sensitive` and

@@ -274,6 +274,20 @@ export async function withScratchTenant<T>(fn: (tenant: ScratchTenant) => Promis
     withOrg(organizationId, async (tx) => (await tx.query(text, values)).rows as R[]);
 
   try {
+    /*
+     * A scratch tenant states its own plan.
+     *
+     * A subscription covers one facility and `facility_licence` enforces it, so
+     * every fixture that models a two-site club — the lane tests, the partner
+     * name tests, anything asserting "and only at its own site" — would be
+     * refused by a rule it is not about. The plan is set out of the way here;
+     * `licence.integration.test.ts` is the one place it is set back to 1 and
+     * asserted.
+     */
+    await owner().query('UPDATE organization SET max_facilities = 20 WHERE id = $1', [
+      organizationId,
+    ]);
+
     const [season] = await sql<{ id: string }>(
       'SELECT id FROM season WHERE organization_id = $1 AND archived_at IS NULL LIMIT 1',
       [organizationId],

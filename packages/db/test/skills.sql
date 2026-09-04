@@ -19,6 +19,13 @@ BEGIN;
 INSERT INTO organization (name, slug) VALUES ('Clube Competências', 'clube-competencias'),
                                              ('Clube Alheio', 'clube-alheio-skills');
 
+-- This fixture states its own plan. A subscription covers one facility by
+-- default and `facility_licence` enforces it; nothing below is about billing,
+-- so the plan is set out of the way. The limit is asserted in `facilities.sql`.
+UPDATE organization SET max_facilities = 20;
+
+
+
 SELECT provision_app_user('user_skill', 'inst@skills.pt', 'Marta', 'Reis', NULL,
                           '2026-08-26 09:00:00+00');
 

@@ -1193,20 +1193,10 @@ async function main(): Promise<void> {
     );
 
     if (season) {
-      /*
-       * Every site except the reference one — POOLSE-55.
-       *
-       * The reference schedule owns its own grid, and it deliberately has no
-       * Sunday: the sheet it was rebuilt from does not open on one. This loop
-       * seeded three Sunday rows onto it on the second run, which is a grid
-       * quietly disagreeing with the document it is supposed to reproduce.
-       */
       for (const site of await many<{ id: string }>(
         client,
         `SELECT id FROM facility
-          WHERE organization_id = $1 AND archived_at IS NULL
-            AND name <> 'Piscina Municipal de Santo Tirso'
-          ORDER BY created_at`,
+          WHERE organization_id = $1 AND archived_at IS NULL ORDER BY created_at`,
         [org.id],
       )) {
         for (const [group, hours] of Object.entries(SLOT_GRID)) {
@@ -1235,14 +1225,24 @@ async function main(): Promise<void> {
 
     if (counts.slots > 0) console.log(`  grelha horária: ${counts.slots} horários`);
 
-    // ---------------------------------------------------------------------
-    // The reference schedule — POOLSE-55.
-    //
-    // Its own facility, so forty seeded bookings never land on top of a club
-    // somebody has been typing into by hand. See `seed-reference.ts`.
-    // ---------------------------------------------------------------------
-    const reference = await seedReferenceSchedule(client, org.id);
-    if (reference.facility > 0) console.log(`  referência: instalação criada`);
+    /*
+     * The reference schedule — POOLSE-55, and opt-in.
+     *
+     * It fills the organization's one facility rather than adding a second, so
+     * running it on a club somebody has been typing into by hand would put forty
+     * bookings on top of their timetable. That is a thing to ask for
+     * deliberately, not a thing `pnpm db:seed` does on the way past.
+     *
+     *   SEED_REFERENCE=yes pnpm db:seed
+     */
+    const wantsReference = process.env['SEED_REFERENCE'] === 'yes';
+    const reference = wantsReference
+      ? await seedReferenceSchedule(client, org.id)
+      : { turmas: 0, groups: 0, bookings: 0, sessions: 0, skipped: [] as string[] };
+
+    if (!wantsReference) {
+      console.log('  referência: saltada — SEED_REFERENCE=yes para a construir');
+    }
     if (reference.bookings > 0) {
       console.log(
         `  referência: ${reference.turmas} turmas, ${reference.groups} grupos, ` +
