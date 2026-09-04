@@ -1800,7 +1800,19 @@
     "durationHandle": "Arraste para alterar a duração da aula",
     "resizingLanes": "{name} — a definir pistas",
     "resizingLength": "{name} — a definir a duração",
-    "wholeWeek": "Grelha semanal, por pista"
+    "wholeWeek": "Grelha semanal, por pista",
+    "staffing": {
+      "uncovered": "{count, plural, one {# aula sem professor em {season}} other {# aulas sem professor em {season}}}",
+      "uncoveredBare": "{count, plural, one {# aula sem professor} other {# aulas sem professor}}",
+      "toDefine": "{count, plural, one {# por definir} other {# por definir}}",
+      "pending": "A definir",
+      "ownTeacher": "Professor da entidade",
+      "draftSeason": "Época em rascunho",
+      "showAll": "Ver tudo",
+      "raiseAlert": "Marcar como sem professor",
+      "clearAlert": "Voltar a «a definir»"
+    },
+    "notAllowed": "Não tem permissão para alterar isto."
   },
   "partnerClasses": {
     "title": "Parcerias",

@@ -321,6 +321,11 @@ export default async function CalendarPage({
                 levels={classes.options.levels}
                 laneLevelCapacity={grid?.laneLevelCapacity ?? {}}
                 maxConcurrentGroups={grid?.maxConcurrentGroups ?? null}
+                // No grid means no season loaded, so there is nothing to report
+                // rather than nothing to report *yet* — POOLSE-53, criterion 8.
+                staffing={grid?.staffing ?? { uncovered: 0, toDefine: 0 }}
+                seasonName={grid?.seasonName ?? null}
+                seasonStatus={grid?.seasonStatus ?? null}
               />
             ) : (
               // The turmas would not load. The week is still worth showing, and

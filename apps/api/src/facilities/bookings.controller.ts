@@ -16,7 +16,9 @@ import {
   LaneTakenError,
   moveBooking,
   NonContiguousLanesError,
+  setInstructorStatus,
   type BookingTarget,
+  type SettableStatus,
 } from './bookings.repository.js';
 
 /**
@@ -76,6 +78,48 @@ export class BookingsController {
     if (copy === null) throw new NotFoundException('No such booking');
     return copy;
   }
+
+  /**
+   * "This one has nobody" — and the way back — POOLSE-53.
+   *
+   * The one transition a person makes by hand. Everything else about
+   * `instructor_status` is the database's, which is why the body accepts exactly
+   * two values and the response says what the row ended up as rather than
+   * echoing what was asked for.
+   *
+   * Owner/admin, enforced here. Reading the counter is open to any member — an
+   * instructor should see that Thursday at seven has nobody — but declaring it
+   * is a management act, and QA 50.15's reconstructed-request test applies to
+   * this route for the same reason it applies to the other two.
+   */
+  @Post(':scheduleId/instructor-status')
+  async instructorStatus(
+    @Param('scheduleId') scheduleId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ status: string }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const result = await setInstructorStatus(organizationId, scheduleId, readStatus(body));
+    if (result === null) throw new NotFoundException('No such booking');
+    return result;
+  }
+}
+
+/**
+ * The two states a person may set.
+ *
+ * `assigned` and `external` are refused rather than silently corrected. They are
+ * facts about who is teaching, maintained by the trigger from the instructor
+ * columns, and a request that claims one is a request that has misunderstood
+ * what it is looking at — better a 400 than a save that reads back differently.
+ */
+function readStatus(body: Record<string, unknown>): SettableStatus {
+  const raw = body['status'];
+  if (raw !== 'to_define' && raw !== 'uncovered') {
+    throw new BadRequestException('status must be to_define or uncovered');
+  }
+  return raw;
 }
 
 function asHttp(error: unknown): unknown {

@@ -103,8 +103,30 @@ export interface GridBooking {
   laneIds: string[];
 }
 
+/**
+ * How much of the season has somebody teaching it — POOLSE-53.
+ *
+ * Two numbers and never one. `toDefine` and `uncovered` are the same absence of
+ * data and opposite claims about the club: "we have not decided" against
+ * "nobody is covering this". Reporting only the second would be a counter that
+ * quietly folds in every slot the club already knows about and has not staffed
+ * yet, which is a number nobody can act on by September.
+ *
+ * `external` is in neither. The school brings its own teacher; that is not the
+ * club's gap — criterion 7.
+ */
+export interface Staffing {
+  uncovered: number;
+  toDefine: number;
+}
+
 export interface Grid {
   seasonId: string | null;
+  /** Named, because the counter has to say which season it is counting. */
+  seasonName: string | null;
+  /** `draft` or `published`. A draft is next year's plan and says so. */
+  seasonStatus: string | null;
+  staffing: Staffing;
   slots: GridSlot[];
   pools: { id: string; name: string }[];
   lanes: GridLane[];
@@ -116,6 +138,13 @@ export interface Grid {
   partners: { id: string; name: string; colour: string }[];
 }
 
+/** Named and dated, because the staffing counter has to say what it counted. */
+interface SeasonRef {
+  id: string;
+  name: string;
+  status: string;
+}
+
 /**
  * The season the grid is drawn for.
  *
@@ -123,18 +152,19 @@ export interface Grid {
  * up on the wall. The caller may name another, which is what makes POOLSE-45's
  * planning view possible without this function changing.
  */
-async function seasonFor(tx: Tx, requested: string | null): Promise<string | null> {
+async function seasonFor(tx: Tx, requested: string | null): Promise<SeasonRef | null> {
   if (requested !== null) {
-    const { rows } = await tx.query<{ id: string }>(`SELECT id FROM season WHERE id = $1`, [
-      requested,
-    ]);
-    return rows[0]?.id ?? null;
+    const { rows } = await tx.query<SeasonRef>(
+      `SELECT id, name, status::text AS status FROM season WHERE id = $1`,
+      [requested],
+    );
+    return rows[0] ?? null;
   }
 
-  const { rows } = await tx.query<{ id: string }>(
-    `SELECT id FROM season WHERE status = 'published' LIMIT 1`,
+  const { rows } = await tx.query<SeasonRef>(
+    `SELECT id, name, status::text AS status FROM season WHERE status = 'published' LIMIT 1`,
   );
-  return rows[0]?.id ?? null;
+  return rows[0] ?? null;
 }
 
 /** `HH:MM` from Postgres's `HH:MM:SS`. `24:00:00` stays `24:00`, which is right. */
@@ -173,7 +203,7 @@ export async function readGrid(
              FROM facility_time_slot
             WHERE facility_id = $1 AND season_id = $2 AND archived_at IS NULL
             ORDER BY day_group, start_time`,
-          [facilityId, season],
+          [facilityId, season.id],
         );
 
     /*
@@ -275,7 +305,7 @@ export async function readGrid(
               AND cs.archived_at IS NULL
               AND coalesce(cs.season_id, cg.season_id) = $2
             ORDER BY cs.weekday, cs.start_time`,
-          [facilityId, season],
+          [facilityId, season.id],
         );
 
     const categories = await tx.query<{ id: string; name: string; colour: string }>(
@@ -334,8 +364,32 @@ export async function readGrid(
       if (id !== null && row.instructor_name !== null) instructors.set(id, row.instructor_name);
     }
 
+    /*
+     * The staffing counts — POOLSE-53, criterion 9.
+     *
+     * Counted from the rows this request already fetched rather than from a
+     * second `count(*)`. Two reasons, and the second is the one that matters:
+     * it is a free pass over an array instead of another trip to Postgres, and
+     * it **cannot disagree with what the grid draws**. A separate aggregate
+     * would be a second definition of "the season's bookings" — the season of a
+     * booking is `coalesce(cs.season_id, cg.season_id)`, and the day the two
+     * queries drift is the day the header says 7 and the operator can find 6.
+     *
+     * Over the *bookings*, not the dated sessions. "How many slots in my
+     * timetable have nobody" is a property of the pattern; counting sessions
+     * would multiply it by forty weeks and produce a number nobody can act on.
+     */
+    const staffing = { uncovered: 0, toDefine: 0 };
+    for (const row of bookings.rows) {
+      if (row.instructor_status === 'uncovered') staffing.uncovered += 1;
+      else if (row.instructor_status === 'to_define') staffing.toDefine += 1;
+    }
+
     return {
-      seasonId: season,
+      seasonId: season?.id ?? null,
+      seasonName: season?.name ?? null,
+      seasonStatus: season?.status ?? null,
+      staffing,
       slots: slots.rows.map((row) => ({
         id: row.id,
         dayGroup: row.day_group,

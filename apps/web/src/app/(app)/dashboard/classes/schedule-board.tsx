@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   DndContext,
   DragOverlay,
@@ -35,6 +36,7 @@ import type {
   GridBooking,
   GridLane,
   GridSlot,
+  GridStaffing,
 } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { slotKey } from '@/lib/slot-key';
@@ -46,6 +48,7 @@ import {
   moveOccurrenceAction,
   moveSlotAction,
   placeSlotAction,
+  setInstructorStatusAction,
 } from './classes.actions';
 
 /**
@@ -271,7 +274,9 @@ interface Placed {
   name: string;
   subtitle: string | null;
   instructorName: string | null;
-  instructorStatus: 'assigned' | 'to_define' | 'external' | 'uncovered';
+  instructorStatus: InstructorState;
+  /** The partner group's own teacher, for an `external` booking — POOLSE-53. */
+  ownInstructorName: string | null;
   headcount: number | null;
   categoryId: string | null;
   categoryColour: string | null;
@@ -388,6 +393,24 @@ interface Landing {
  * toggle. Per-viewer convenience, never shared state: two people looking at the
  * same club see the same timetable, and their own density.
  */
+/**
+ * The four instructor states — POOLSE-53.
+ *
+ * `assigned` and `external` are facts the database keeps for itself. The other
+ * two are the club's own reading of the same empty field and mean opposite
+ * things, which is why nothing here ever converts one into the other.
+ */
+type InstructorState = 'assigned' | 'to_define' | 'external' | 'uncovered';
+
+/**
+ * The query parameter the counter writes.
+ *
+ * Named in Portuguese, and its values too — `?professor=sem-professor` is a link
+ * somebody pastes into a message to a colleague, and it should read like the
+ * screen it opens rather than like the column it filters.
+ */
+const STAFFING_PARAM = 'professor';
+
 const PREFS_KEY = 'poolse.laneGrid.prefs';
 
 interface Prefs {
@@ -441,6 +464,9 @@ export function ScheduleBoard({
   levels,
   laneLevelCapacity,
   maxConcurrentGroups,
+  staffing,
+  seasonName,
+  seasonStatus,
 }: {
   organizationId: string;
   groups: ClassGroup[];
@@ -474,9 +500,22 @@ export function ScheduleBoard({
   laneLevelCapacity: Record<string, number>;
   /** Null means the club has no opinion about concurrent groups. */
   maxConcurrentGroups: number | null;
+  /** The season's two staffing gaps — POOLSE-53. Both zero means say nothing. */
+  staffing: GridStaffing;
+  /** Named in the counter, because "7 aulas" without a season is 7 of what. */
+  seasonName: string | null;
+  /** `draft` marks the counter as next year's plan rather than this year's wall. */
+  seasonStatus: string | null;
 }): React.ReactElement {
   const t = useTranslations();
   const [pending, startPending] = useTransition();
+
+  // The staffing filter is URL state — see `filterStaffing` below for why this
+  // one filter travels differently from the other five.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [navigating, startNavigation] = useTransition();
 
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
@@ -603,6 +642,7 @@ export function ScheduleBoard({
         subtitle: booking.subtitle,
         instructorName: booking.instructorName,
         instructorStatus: booking.instructorStatus,
+        ownInstructorName: booking.ownInstructorName,
         headcount: booking.headcount,
         categoryId: booking.categoryId,
         categoryColour: booking.categoryColour,
@@ -677,7 +717,12 @@ export function ScheduleBoard({
           name: group.name,
           subtitle: group.levelName ?? null,
           instructorName: null,
-          instructorStatus: 'assigned',
+          // The overlay is a block that does not exist yet, so it makes no
+          // claim about staffing — `to_define` is the state a real booking will
+          // arrive in, and drawing an alert on it would report a gap the club
+          // has not got.
+          instructorStatus: 'to_define',
+          ownInstructorName: null,
           headcount: null,
           categoryId: null,
           categoryColour: null,
@@ -701,6 +746,33 @@ export function ScheduleBoard({
   }, [bookings, controls, optimistic, mine]);
 
   /*
+   * The staffing filter lives in the URL, and the other five do not — AC5.
+   *
+   * The difference is what each one is for. Density and "which tank" are the
+   * viewer's own habits, so they belong in `localStorage` and follow the person
+   * between screens. "Show me the seven with nobody on them" is a *finding* —
+   * the thing somebody wants to send to a colleague, or come back to after
+   * lunch, or reach with the browser's back button — so the URL is the state,
+   * exactly as `FilterSelect` does it for the register.
+   */
+  const staffingFilter = useMemo<InstructorState | null>(() => {
+    const raw = searchParams.get(STAFFING_PARAM);
+    return raw === 'sem-professor' ? 'uncovered' : raw === 'a-definir' ? 'to_define' : null;
+  }, [searchParams]);
+
+  function filterStaffing(next: InstructorState | null): void {
+    const query = new URLSearchParams(searchParams.toString());
+
+    // Clicking the counter that is already on turns it off. A filter with no way
+    // back that is not the browser's back button is a trap.
+    if (next === null || next === staffingFilter) query.delete(STAFFING_PARAM);
+    else query.set(STAFFING_PARAM, next === 'uncovered' ? 'sem-professor' : 'a-definir');
+
+    const href = query.size > 0 ? `${pathname}?${query}` : pathname;
+    startNavigation(() => router.replace(href, { scroll: false }));
+  }
+
+  /*
    * The filters, applied to the chips rather than to the rows.
    *
    * Hiding a *lane* because nothing on it survived a filter would tell the
@@ -714,9 +786,10 @@ export function ScheduleBoard({
           (prefs.instructorId === '' || row.instructorId === prefs.instructorId) &&
           (prefs.categoryId === '' || row.categoryId === prefs.categoryId) &&
           (prefs.partnerId === '' || row.partnerId === prefs.partnerId) &&
-          (prefs.levelId === '' || row.levelId === prefs.levelId),
+          (prefs.levelId === '' || row.levelId === prefs.levelId) &&
+          (staffingFilter === null || row.instructorStatus === staffingFilter),
       ),
-    [placed, prefs],
+    [placed, prefs, staffingFilter],
   );
 
   const closedOn = (day: number): string | null =>
@@ -974,6 +1047,37 @@ export function ScheduleBoard({
    * duplicate. Steps to the next slot boundary rather than by a fixed number of
    * minutes, so the block always lands on a row the club actually runs.
    */
+  /**
+   * "This one has nobody" — and the way back — POOLSE-53.
+   *
+   * The only thing on this screen that writes `instructor_status` by hand.
+   * Everything else about it is the database's: assigning somebody sets
+   * `assigned`, a partner's own teacher sets `external`, and taking an
+   * instructor away returns the booking to `to_define`. What a person decides is
+   * whether an empty slot has become a problem, and that is one click.
+   *
+   * **No confirmation, and no optimistic chip.** Unlike a drag, this changes
+   * nothing about where anything is and is undone by clicking the same control
+   * again — a dialog for a reversible one-click label would be ceremony. It does
+   * not paint the new state ahead of the server either, because the answer can
+   * legitimately differ from the request: escalating a booking that turns out to
+   * be staffed comes back `assigned`, and a chip that had already gone red would
+   * flick back and look like a bug.
+   */
+  function setStaffing(subject: Placed, next: 'to_define' | 'uncovered'): void {
+    if (subject.scheduleId === null) return;
+    setError(null);
+
+    startPending(async () => {
+      const result = await setInstructorStatusAction(
+        organizationId,
+        subject.scheduleId as string,
+        next,
+      );
+      if (!result.ok) setError(result.errorKey);
+    });
+  }
+
   function resizeBy(subject: Placed, delta: number): void {
     const covered = slotsCovered(subject.startMinutes, subject.durationMinutes, slots);
     const last = covered[covered.length - 1];
@@ -1461,6 +1565,15 @@ export function ScheduleBoard({
           </section>
         ) : (
           <>
+            <StaffingCounter
+              staffing={staffing}
+              seasonName={seasonName}
+              seasonStatus={seasonStatus}
+              active={staffingFilter}
+              busy={navigating}
+              onFilter={filterStaffing}
+            />
+
             <GridToolbar
               prefs={prefs}
               update={update}
@@ -1487,6 +1600,7 @@ export function ScheduleBoard({
               showPoolName={poolIds.length > 1}
               onSpan={spanBy}
               onResize={resizeBy}
+              onStaffing={setStaffing}
               ruleContext={ruleContext}
               draggingSubject={draggingSubject}
             />
@@ -1547,6 +1661,133 @@ export function ScheduleBoard({
         )}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+/**
+ * "7 aulas sem professor em 2026/2027" — POOLSE-53.
+ *
+ * The club named this as its main problem, and the whole feature is one number
+ * and one filter: **how many, and which ones.**
+ *
+ * **Two counts, never one.** `to_define` sits beside `uncovered`, quieter.
+ * Hiding it would make the two states feel like one, which is the distinction
+ * this whole ticket exists to preserve — and a club that cannot see its twelve
+ * undecided slots will read the seven uncovered ones as the whole problem.
+ *
+ * **Absent, not zero.** A club with nothing to report gets no banner rather than
+ * a green "0 aulas sem professor" — criterion 8. A counter that is always there
+ * is furniture, and furniture does not get looked at. The one exception is a
+ * filter that is on: then the way back has to stay on screen even when the count
+ * behind it has just reached zero.
+ *
+ * **The alert is a chip with its own background**, and the same shape as its
+ * quieter neighbour, because it sits above a grid full of category and partner
+ * colours — the Dev note's failure mode is a red "Sem professor" on a red
+ * partner block. Colour is never alone here either: an icon and a full sentence.
+ */
+function StaffingCounter({
+  staffing,
+  seasonName,
+  seasonStatus,
+  active,
+  busy,
+  onFilter,
+}: {
+  staffing: GridStaffing;
+  seasonName: string | null;
+  seasonStatus: string | null;
+  active: InstructorState | null;
+  busy: boolean;
+  onFilter: (next: InstructorState | null) => void;
+}): React.ReactElement | null {
+  const t = useTranslations();
+
+  if (staffing.uncovered === 0 && staffing.toDefine === 0 && active === null) return null;
+
+  // A season with no name is a club that has not opened one; the sentence drops
+  // to the plain count rather than printing "em null".
+  const season = seasonName ?? '';
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      {staffing.uncovered > 0 && (
+        <button
+          type="button"
+          onClick={() => onFilter('uncovered')}
+          aria-pressed={active === 'uncovered'}
+          disabled={busy}
+          className={cn(
+            'inline-flex items-center gap-2 rounded px-2.5 py-1 font-medium',
+            /*
+              A solid fill, not `bg-danger/10` with red text on it. The tinted
+              version measures 4.40:1 in the light theme at 14px, which is under
+              4.5 and is not large text — so it fails 1.4.3 by a whisker. The
+              solid pair is 5.05:1 light and 5.92:1 dark, and it matches the chip
+              the cell itself draws, so the same thing looks the same in both
+              places.
+            */
+            'bg-destructive text-destructive-foreground',
+            'hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger',
+            active === 'uncovered' && 'ring-2 ring-foreground/40 ring-offset-2 ring-offset-surface',
+            busy && 'opacity-60',
+          )}
+        >
+          <AlertTriangle className="size-4 shrink-0" aria-hidden />
+          {season === ''
+            ? t('grid.staffing.uncoveredBare', { count: staffing.uncovered })
+            : t('grid.staffing.uncovered', { count: staffing.uncovered, season })}
+        </button>
+      )}
+
+      {staffing.toDefine > 0 && (
+        <button
+          type="button"
+          onClick={() => onFilter('to_define')}
+          aria-pressed={active === 'to_define'}
+          disabled={busy}
+          className={cn(
+            'inline-flex items-center gap-2 rounded border border-border px-2.5 py-1 text-foreground-muted',
+            'hover:border-border-strong hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+            active === 'to_define' && 'ring-2 ring-primary/40',
+            busy && 'opacity-60',
+          )}
+        >
+          {/*
+            `???` is a symbol, not a string — criterion 11. It is what the club
+            already writes on its own printed sheet, and it means the same thing
+            in both locales, so it never goes through the catalogue.
+          */}
+          <span aria-hidden className="font-mono">
+            ???
+          </span>
+          {t('grid.staffing.toDefine', { count: staffing.toDefine })}
+        </button>
+      )}
+
+      {/*
+        Which season these figures are about, when it is not the one on the wall.
+        A draft is next year's plan, and "7 aulas sem professor" read off next
+        year's draft as though it were September is the one way this counter can
+        actively mislead — 53.13.
+      */}
+      {seasonStatus === 'draft' && (
+        <span className="rounded border border-border px-2 py-1 text-[0.8125rem] text-foreground-muted">
+          {t('grid.staffing.draftSeason')}
+        </span>
+      )}
+
+      {active !== null && (
+        <button
+          type="button"
+          onClick={() => onFilter(null)}
+          disabled={busy}
+          className="rounded px-1 text-foreground-muted underline-offset-2 hover:text-foreground hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {t('grid.staffing.showAll')}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -1890,6 +2131,7 @@ function SlotGrid({
   showPoolName,
   onSpan,
   onResize,
+  onStaffing,
   ruleContext,
   draggingSubject,
 }: {
@@ -1911,6 +2153,8 @@ function SlotGrid({
   onSpan: (booking: Placed, delta: number) => void;
   /** `Ctrl`+arrow: lengthen or shorten the class by one slot. */
   onResize: (booking: Placed, delta: number) => void;
+  /** The operator escalates a slot to "sem professor", or takes it back. */
+  onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
   ruleContext: RuleContext;
   /** The block in flight, so every cell can say what dropping it here would do. */
   draggingSubject: RuleBooking | null;
@@ -2193,6 +2437,7 @@ function SlotGrid({
                             dayName={dayNames[day] ?? String(day)}
                             onSpan={onSpan}
                             onResize={onResize}
+                            onStaffing={onStaffing}
                             ruleContext={ruleContext}
                             draggingSubject={draggingSubject}
                           />
@@ -2228,6 +2473,7 @@ function SlotGrid({
                     canManage={canManage}
                     onSpan={onSpan}
                     onResize={onResize}
+                    onStaffing={onStaffing}
                   />
                 )}
               </Fragment>
@@ -2257,6 +2503,7 @@ function NoLaneRow({
   canManage,
   onSpan,
   onResize,
+  onStaffing,
 }: {
   startTime: string;
   row: number;
@@ -2268,6 +2515,8 @@ function NoLaneRow({
   onSpan: (booking: Placed, delta: number) => void;
   /** `Ctrl`+arrow: lengthen or shorten the class by one slot. */
   onResize: (booking: Placed, delta: number) => void;
+  /** The operator escalates a slot to "sem professor", or takes it back. */
+  onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -2316,6 +2565,7 @@ function NoLaneRow({
                   continues={false}
                   onSpan={onSpan}
                   onResize={onResize}
+                  onStaffing={onStaffing}
                   concurrency={1}
                 />
               </div>
@@ -2345,6 +2595,7 @@ function Cell({
   dayName,
   onSpan,
   onResize,
+  onStaffing,
   ruleContext,
   draggingSubject,
 }: {
@@ -2367,6 +2618,8 @@ function Cell({
   onSpan: (booking: Placed, delta: number) => void;
   /** `Ctrl`+arrow: lengthen or shorten the class by one slot. */
   onResize: (booking: Placed, delta: number) => void;
+  /** The operator escalates a slot to "sem professor", or takes it back. */
+  onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
   ruleContext: RuleContext;
   draggingSubject: RuleBooking | null;
 }): React.ReactElement {
@@ -2488,6 +2741,7 @@ function Cell({
             continues={continues}
             onSpan={onSpan}
             onResize={onResize}
+            onStaffing={onStaffing}
             /*
               Bookings, not lanes — the thing POOLSE-51 names as most likely to
               be got wrong. An instructor on one three-lane booking is running
@@ -2538,6 +2792,7 @@ function BookingChip({
   continues,
   onSpan,
   onResize,
+  onStaffing,
   concurrency,
 }: {
   booking: Placed;
@@ -2548,6 +2803,8 @@ function BookingChip({
   onSpan: (booking: Placed, delta: number) => void;
   /** `Ctrl`+arrow: lengthen or shorten the class by one slot. */
   onResize: (booking: Placed, delta: number) => void;
+  /** The operator escalates a slot to "sem professor", or takes it back. */
+  onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
   /** How many groups this instructor is running at this moment. 1 is silent. */
   concurrency: number;
 }): React.ReactElement {
@@ -2698,17 +2955,13 @@ function BookingChip({
       </div>
       )}
 
-      {!compact && !continues && (
-        <span className="truncate text-foreground-muted">
-          {/*
-            "Sem professor" is a real state and says so in words. POOLSE-53 turns
-            it into an alert; here it simply must not read as a blank line that
-            might be a rendering fault.
-          */}
-          {booking.instructorStatus === 'external'
-            ? (booking.instructorName ?? t('grid.externalInstructor'))
-            : (booking.instructorName ?? t('grid.noInstructor'))}
-        </span>
+      {!continues && (
+        <InstructorLine
+          booking={booking}
+          compact={compact}
+          canManage={canManage}
+          onStaffing={onStaffing}
+        />
       )}
 
       {booking.note !== null && !continues && (
@@ -2780,6 +3033,146 @@ function BookingChip({
  * lane span and `Alt` is already duplicate, and a third modifier that collided
  * with either would make one of them unreachable.
  */
+/**
+ * Who is teaching this, in four states that never look like each other — POOLSE-53.
+ *
+ * The states carry the same absence of data and opposite meanings, so each one
+ * gets its own words and, where it matters, its own icon. **Colour is never the
+ * signal**: `Sem professor` says "sem professor" and `???` prints the symbol the
+ * club already writes on its printed sheet, so a screen reader and a monochrome
+ * print-out both read the same thing the grid does — 53.12.
+ *
+ * **The alert is a chip with its own background, not coloured text.** The Dev
+ * note names the failure mode precisely: a red `Sem professor` on a partner
+ * block tinted red is unreadable, and a partner colour is an arbitrary hex an
+ * operator typed. A chip carries its own ground with it and can be contrast-
+ * checked once, against itself, in both themes.
+ *
+ * **At compact density the two gaps still render.** Compact drops names, because
+ * a 1.4rem row cannot hold one — but dropping the alert as well would mean the
+ * density toggle silently hides the thing this whole screen is for.
+ */
+function InstructorLine({
+  booking,
+  compact,
+  canManage,
+  onStaffing,
+}: {
+  booking: Placed;
+  compact: boolean;
+  canManage: boolean;
+  onStaffing: (booking: Placed, next: 'to_define' | 'uncovered') => void;
+}): React.ReactElement | null {
+  const t = useTranslations();
+
+  const status = booking.instructorStatus;
+
+  /*
+   * The two states an operator may set, and the toggle between them. Anything
+   * else is a fact the database maintains, so the control is simply absent —
+   * a button that would be refused is worse than no button.
+   */
+  const settable = status === 'to_define' || status === 'uncovered';
+  const escalates = canManage && settable && booking.scheduleId !== null && !booking.cancelled;
+
+  if (status === 'assigned') {
+    // A staffed class at compact density shows nothing here: the row cannot hold
+    // a name, and "somebody is teaching this" is the ordinary case that needs no
+    // marker. The other three all leave a mark at both densities.
+    if (compact) return null;
+    return <span className="truncate text-foreground-muted">{booking.instructorName}</span>;
+  }
+
+  if (status === 'external') {
+    /*
+     * The partner's own teacher — 53.8 and 53.9. Their name where the group gave
+     * one, and the partner's own name where it did not, because "a school is
+     * sending somebody" is still more than the club knows about an empty slot.
+     */
+    const who = booking.ownInstructorName ?? booking.instructorName ?? booking.subtitle;
+
+    return (
+      <span className="flex min-w-0 items-center gap-1 text-foreground-muted">
+        {!compact && who !== null && <span className="truncate">{who}</span>}
+        <span
+          className={cn(
+            'shrink-0 rounded-sm border border-border px-1',
+            compact ? 'text-[0.66rem]' : 'text-[0.715rem]',
+          )}
+        >
+          {t('grid.staffing.ownTeacher')}
+        </span>
+      </span>
+    );
+  }
+
+  const uncovered = status === 'uncovered';
+
+  const body = uncovered ? (
+    <>
+      <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+      <span className="truncate">{t('grid.noInstructor')}</span>
+    </>
+  ) : (
+    <>
+      {/* A symbol, not a string — criterion 11. It means the same in both locales. */}
+      <span aria-hidden className="shrink-0 font-mono">
+        ???
+      </span>
+      <span className="truncate">{t('grid.staffing.pending')}</span>
+    </>
+  );
+
+  /*
+   * Both fills are opaque, and that is the whole trick — criterion 10.
+   *
+   * The first version was `bg-danger/15` with `text-danger` on it, which lets
+   * the cell's own tint through and lands between 3.61:1 and 4.05:1 depending on
+   * which category the block belongs to. At 10–11px that is not large text, so
+   * it fails 1.4.3 on every colour — worst on the red category, which is exactly
+   * the case the Dev note warns about.
+   *
+   * Solid fills measure once and hold everywhere: 5.05:1 light and 5.92:1 dark
+   * for the alert, 5.22:1 and 6.01:1 for the quiet one, on any cell colour,
+   * because no cell colour reaches them.
+   */
+  const chip = cn(
+    'flex min-w-0 items-center gap-1 rounded-sm px-1',
+    compact ? 'text-[0.66rem]' : 'text-[0.715rem]',
+    uncovered
+      ? 'bg-destructive font-medium text-destructive-foreground'
+      : 'border border-border bg-surface-muted text-foreground-muted',
+  );
+
+  if (!escalates) return <span className={chip}>{body}</span>;
+
+  return (
+    <button
+      type="button"
+      /*
+       * The block underneath is draggable, and dnd-kit's pointer sensor claims
+       * the gesture unless this says otherwise — the same guard the register and
+       * cancel controls in this cell already use. The sensor's 6px activation
+       * distance means a click still reads as a click; this is for the drag that
+       * starts because somebody's finger moved seven pixels.
+       */
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={() => onStaffing(booking, uncovered ? 'to_define' : 'uncovered')}
+      // The visible words say which state it is *in*; the accessible name has to
+      // say what the button will *do*, or a screen reader hears a label that
+      // contradicts the action.
+      aria-label={uncovered ? t('grid.staffing.clearAlert') : t('grid.staffing.raiseAlert')}
+      title={uncovered ? t('grid.staffing.clearAlert') : t('grid.staffing.raiseAlert')}
+      className={cn(
+        chip,
+        'text-left hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
+      )}
+    >
+      {body}
+    </button>
+  );
+}
+
 function DurationHandle({ scheduleId }: { scheduleId: string }): React.ReactElement {
   const t = useTranslations();
   const { attributes, listeners, setNodeRef } = useDraggable({ id: `dur:${scheduleId}` });

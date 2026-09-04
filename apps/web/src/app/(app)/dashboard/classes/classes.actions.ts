@@ -422,3 +422,42 @@ function bookingFailure(error: unknown): { ok: false; errorKey: string; detail?:
   // would run past closing.
   return { ok: false, errorKey: 'grid.dropRefused' };
 }
+
+/**
+ * "This one has nobody" — and the way back — POOLSE-53.
+ *
+ * The only transition an operator makes by hand. Everything else about a
+ * booking's instructor status is the database's: assigning somebody sets
+ * `assigned`, a partner's own teacher sets `external`, and removing an
+ * instructor returns the booking to `to_define`. What a person decides is
+ * whether an empty slot has become a problem.
+ *
+ * **The API's answer is returned, not the request's.** Escalating a booking that
+ * turns out to be staffed comes back `assigned`, because the trigger corrected
+ * it — so the caller renders what the database holds rather than what it asked
+ * for. A screen that assumed otherwise would draw a red chip on a class with a
+ * name on it.
+ */
+export async function setInstructorStatusAction(
+  organizationId: string,
+  scheduleId: string,
+  status: 'to_define' | 'uncovered',
+): Promise<{ ok: true; status: string } | { ok: false; errorKey: string }> {
+  let answer: { status: string };
+  try {
+    answer = await apiPost<{ status: string }>(
+      `/bookings/${scheduleId}/instructor-status`,
+      { status },
+      { organizationId },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      return { ok: false, errorKey: 'notAllowed' };
+    }
+    return { ok: false, errorKey: 'dropRefused' };
+  }
+
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/classes');
+  return { ok: true, status: answer.status };
+}

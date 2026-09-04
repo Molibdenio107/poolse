@@ -461,6 +461,19 @@ class_schedule                  -- a booking: the recurring weekly pattern
   check (subject_type names exactly the one subject column it should)
   unique (organization_id, coalesce(class_group_id, partner_group_id),
           weekday, start_time) where archived_at is null
+  -- instructor_status is a state machine kept by trigger, not a derived value
+  -- POOLSE-53. Default 'to_define'. On every insert and update:
+  --   an instructor resolves (the booking's override, else the turma's) -> 'assigned'
+  --   partner_group.brings_own_instructor                               -> 'external'
+  --   was 'assigned'/'external' and neither now holds                   -> 'to_define'
+  --   'to_define' and 'uncovered' are otherwise left exactly as set
+  -- The system never converts 'to_define' and 'uncovered' into one another:
+  -- they are the same missing instructor and opposite claims about the club,
+  -- and deriving either from a null column erases the distinction. Only a
+  -- person sets 'uncovered' (POST /bookings/:id/instructor-status, owner/admin).
+  -- Changing class_group.instructor_membership_id or
+  -- partner_group.brings_own_instructor re-runs the rule over the bookings
+  -- affected, so the state cannot be reached from one path and missed by another.
 
 booking_lane                    -- the lanes a booking occupies; POOLSE-46
   organization_id, schedule_id, lane_id

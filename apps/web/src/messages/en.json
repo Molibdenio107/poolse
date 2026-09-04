@@ -1800,7 +1800,19 @@
     "durationHandle": "Drag to change how long the class runs",
     "resizingLanes": "{name} — setting lanes",
     "resizingLength": "{name} — setting length",
-    "wholeWeek": "Weekly grid, by lane"
+    "wholeWeek": "Weekly grid, by lane",
+    "staffing": {
+      "uncovered": "{count, plural, one {# class with no instructor in {season}} other {# classes with no instructor in {season}}}",
+      "uncoveredBare": "{count, plural, one {# class with no instructor} other {# classes with no instructor}}",
+      "toDefine": "{count, plural, one {# still to decide} other {# still to decide}}",
+      "pending": "To be decided",
+      "ownTeacher": "Partner's own instructor",
+      "draftSeason": "Draft season",
+      "showAll": "Show all",
+      "raiseAlert": "Flag as having no instructor",
+      "clearAlert": "Back to “to be decided”"
+    },
+    "notAllowed": "You do not have permission to change this."
   },
   "partnerClasses": {
     "title": "Partnerships",

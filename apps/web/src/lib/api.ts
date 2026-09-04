@@ -1794,8 +1794,26 @@ export interface GridBooking {
   laneIds: string[];
 }
 
+/**
+ * The two staffing gaps, counted over the season's bookings — POOLSE-53.
+ *
+ * Never one number. `toDefine` is "we have not decided"; `uncovered` is "nobody
+ * is covering this". Folding them together makes the alert include every slot
+ * the club already knows about and has not staffed yet, which is a figure nobody
+ * can act on. `external` — the school's own teacher — is in neither.
+ */
+export interface GridStaffing {
+  uncovered: number;
+  toDefine: number;
+}
+
 export interface FacilityGrid {
   seasonId: string | null;
+  /** The counter has to say which season it counted. */
+  seasonName: string | null;
+  /** `draft` or `published` — a draft is next year's plan and says so. */
+  seasonStatus: string | null;
+  staffing: GridStaffing;
   slots: GridSlot[];
   pools: { id: string; name: string }[];
   lanes: GridLane[];

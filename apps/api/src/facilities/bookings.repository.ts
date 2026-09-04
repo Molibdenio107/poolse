@@ -373,3 +373,63 @@ export async function duplicateBooking(
     return { id: copyId };
   });
 }
+
+/**
+ * The operator escalates a slot to "sem professor", or takes it back — POOLSE-53.
+ *
+ * **Only between the two states a person is entitled to set.** `assigned` and
+ * `external` are facts the database maintains for itself — somebody is teaching
+ * this, or the school is sending someone — and letting a request claim either
+ * would put a name-shaped blank on the grid. The state machine in
+ * `1788019200000_instructor-status.sql` would overrule it on the way in anyway;
+ * refusing here means the caller finds out rather than watching a save appear to
+ * work and read back differently.
+ *
+ * The interesting outcome is the one that looks like a bug: escalating a booking
+ * that turns out to have an instructor comes back `assigned`, because the
+ * trigger corrected it. So the new state is **returned**, not assumed, and the
+ * screen renders what the database actually holds.
+ */
+export type SettableStatus = 'to_define' | 'uncovered';
+
+export async function setInstructorStatus(
+  organizationId: string,
+  scheduleId: string,
+  status: SettableStatus,
+): Promise<{ status: string } | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ name: string; instructor_status: string }>(
+      `UPDATE class_schedule cs
+          SET instructor_status = $2
+        WHERE cs.id = $1 AND cs.archived_at IS NULL
+      RETURNING cs.instructor_status,
+                coalesce(
+                  (SELECT cg.name FROM class_group cg
+                    WHERE cg.id = cs.class_group_id
+                      AND cg.organization_id = cs.organization_id),
+                  (SELECT pg.name FROM partner_group pg
+                    WHERE pg.id = cs.partner_group_id
+                      AND pg.organization_id = cs.organization_id),
+                  cs.title, '?') AS name`,
+      [scheduleId, status],
+    );
+
+    const updated = rows[0];
+    if (updated === undefined) return null;
+
+    /*
+     * Audited, because it is the club saying a slot is a problem — or saying it
+     * is not one any more. That second one is the reason this is in the log: a
+     * gap that stopped being reported and nobody remembers deciding to stop
+     * reporting it is exactly the question a manager asks in October.
+     */
+    await recordAudit(tx, {
+      action: 'booking.instructor_status',
+      entityType: 'class_schedule',
+      entityId: scheduleId,
+      data: { name: updated.name, status: updated.instructor_status },
+    });
+
+    return { status: updated.instructor_status };
+  });
+}
