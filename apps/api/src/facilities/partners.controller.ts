@@ -15,6 +15,12 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import {
+  MAX_PARTNER_ROWS,
+  PARTNER_IMPORT_FIELDS,
+  type PartnerImportField,
+  type RawPartnerRow,
+} from './partner-import.js';
+import {
   addContact,
   addGroup,
   archiveGroup,
@@ -28,6 +34,8 @@ import {
   isPartnerType,
   listBookablePartners,
   listPartners,
+  runPartnerImport,
+  type PartnerImportResult,
   PARTNER_TYPES,
   PartnerInUseError,
   removeContact,
@@ -203,6 +211,42 @@ export class PartnersController {
     return created;
   }
 
+
+  /**
+   * Importing a partnerships sheet — POOLSE-48.
+   *
+   * Preview and commit are one route with a flag, for the reason the register and
+   * the inventory both settled: two routes would be two places the rows are
+   * turned into records, and applying them differently is how an approved preview
+   * becomes a different set of writes.
+   *
+   * **Owner and admin** — criterion 11. Creating one partner is owner/admin on the
+   * form, so creating forty from a file is owner/admin too. An import that took a
+   * role the single create refuses would be the permission model, worked around by
+   * uploading a spreadsheet.
+   *
+   * On a literal segment, so `/facilities/:id/partners/import` can never be read
+   * as a partner whose id is the word "import".
+   */
+  @Post('facilities/:facilityId/partners/import')
+  async import(
+    @Param('facilityId') facilityId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<PartnerImportResult> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const result = await runPartnerImport(organizationId, {
+      facilityId,
+      rows: readImportRows(body['rows']),
+      commit: body['commit'] === true,
+      include: readInclude(body['include']),
+    });
+
+    if (result === null) throw new NotFoundException('No such site');
+    return result;
+  }
+
   @Post('partners/:partnerId/groups')
   async createGroup(
     @Param('partnerId') partnerId: string,
@@ -256,6 +300,53 @@ export class PartnersController {
     if (!archived) throw new NotFoundException('No such group');
     return { archived: true };
   }
+}
+
+/**
+ * The rows, off the wire.
+ *
+ * Keys the API does not know are dropped rather than refused: the web app maps
+ * columns and only sends what it mapped, so an unknown key means the two halves
+ * are out of step and silently ignoring it is kinder than a 400 nobody can act
+ * on. Every value becomes a string — the file reader already made them strings,
+ * and a number arriving here would reach `previewPartners` untrimmed.
+ */
+function readImportRows(raw: unknown): RawPartnerRow[] {
+  if (!Array.isArray(raw)) throw new BadRequestException('rows must be a list');
+  if (raw.length === 0) throw new BadRequestException('rows is empty');
+  if (raw.length > MAX_PARTNER_ROWS) {
+    throw new BadRequestException(`at most ${MAX_PARTNER_ROWS} rows in one import`);
+  }
+
+  const known = new Set<string>(PARTNER_IMPORT_FIELDS);
+
+  return raw.map((entry) => {
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new BadRequestException('each row must be an object of field to value');
+    }
+
+    const row: RawPartnerRow = {};
+    for (const [key, value] of Object.entries(entry as Record<string, unknown>)) {
+      if (!known.has(key)) continue;
+      if (value === null || value === undefined) continue;
+      row[key as PartnerImportField] = typeof value === 'string' ? value : String(value);
+    }
+    return row;
+  });
+}
+
+/** Which rows the operator ticked. Null is "you decide", not "none of them". */
+function readInclude(raw: unknown): number[] | null {
+  if (raw === undefined || raw === null) return null;
+  if (!Array.isArray(raw)) throw new BadRequestException('include must be a list of row indexes');
+
+  return raw.map((value) => {
+    const index = typeof value === 'number' ? value : Number(value);
+    if (!Number.isInteger(index) || index < 0) {
+      throw new BadRequestException('include must be row indexes');
+    }
+    return index;
+  });
 }
 
 function asHttp(error: unknown): unknown {

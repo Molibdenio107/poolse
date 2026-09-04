@@ -1,6 +1,15 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { TOTAL_COUNT, windowed, type Paginated, type PageQuery } from '../common/pagination.js';
+import {
+  previewPartners,
+  type ExistingPartner,
+  type PartnerGroupTree,
+  type PartnerImportContext,
+  type PartnerImportRow,
+  type PartnerSummary,
+  type RawPartnerRow,
+} from './partner-import.js';
 
 /**
  * Parcerias — POOLSE-47.
@@ -964,5 +973,258 @@ export async function archiveGroup(organizationId: string, groupId: string): Pro
     });
 
     return true;
+  });
+}
+
+/* ------------------------------------------------------- importing — POOLSE-48 */
+
+export interface PartnerImportRequest {
+  facilityId: string;
+  rows: RawPartnerRow[];
+  commit: boolean;
+  /** Row indexes ticked on the preview. Null means "the default selection". */
+  include: number[] | null;
+}
+
+export interface PartnerImportResult {
+  rows: PartnerImportRow[];
+  partners: PartnerGroupTree[];
+  summary: PartnerSummary;
+  /** Only on a commit. */
+  createdPartners?: number;
+  createdGroups?: number;
+  updatedGroups?: number;
+  skipped?: number;
+}
+
+/** The partners already at this site, with everything a row could match or change. */
+async function existingPartners(tx: Tx, facilityId: string): Promise<ExistingPartner[]> {
+  const { rows } = await tx.query<{
+    id: string;
+    name: string;
+    type: string;
+    groups:
+      | {
+          id: string;
+          name: string;
+          participant_count: number;
+          tag: string | null;
+          own_instructor_name: string | null;
+          level_id: string | null;
+          notes: string | null;
+        }[]
+      | null;
+  }>(
+    `SELECT p.id, p.name, p.type::text AS type,
+            (SELECT json_agg(json_build_object(
+                      'id', g.id,
+                      'name', g.name,
+                      'participant_count', g.participant_count,
+                      'tag', g.tag,
+                      'own_instructor_name', g.own_instructor_name,
+                      'level_id', g.level_id,
+                      'notes', g.notes) ORDER BY g.name)
+               FROM partner_group g
+              WHERE g.partner_id = p.id
+                AND g.organization_id = p.organization_id
+                AND g.archived_at IS NULL) AS groups
+       FROM partner p
+      WHERE p.facility_id = $1 AND p.archived_at IS NULL`,
+    [facilityId],
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    type: row.type as ExistingPartner['type'],
+    groups: (row.groups ?? []).map((group) => ({
+      id: group.id,
+      name: group.name,
+      participantCount: group.participant_count,
+      tag: group.tag,
+      ownInstructorName: group.own_instructor_name,
+      levelId: group.level_id,
+      notes: group.notes,
+    })),
+  }));
+}
+
+/**
+ * Preview, then commit — one function called twice — POOLSE-48.
+ *
+ * The same arrangement the register and the inventory use, for the same reason:
+ * the failure this cannot afford is an operator approving one set of rows and a
+ * different set being written. `previewPartners` decides everything; this reads
+ * the context, and on a commit writes exactly what the preview said.
+ *
+ * **One transaction for the whole file** — criterion 8. `withOrg` gives one, and
+ * a partner created without the groups that justified it is worse than nothing:
+ * the operator would re-import to fix it and get a second, differently-broken
+ * half.
+ */
+export async function runPartnerImport(
+  organizationId: string,
+  request: PartnerImportRequest,
+): Promise<PartnerImportResult | null> {
+  return withOrg(organizationId, async (tx) => {
+    const site = await tx.query(
+      `SELECT 1 FROM facility WHERE id = $1 AND archived_at IS NULL`,
+      [request.facilityId],
+    );
+    if (site.rowCount === 0) return null;
+
+    const levels = await tx.query<{ id: string; name: string }>(
+      `SELECT id, name FROM student_level WHERE archived_at IS NULL`,
+    );
+
+    const context: PartnerImportContext = {
+      existing: await existingPartners(tx, request.facilityId),
+      levels: levels.rows,
+    };
+
+    const { rows, partners, summary } = previewPartners(request.rows, context);
+    if (!request.commit) return { rows, partners, summary };
+
+    const ticked = request.include === null ? null : new Set(request.include);
+
+    let createdPartners = 0;
+    let createdGroups = 0;
+    let updatedGroups = 0;
+    let skipped = 0;
+
+    /** Partner key to id, filled as partners are found or created. */
+    const partnerIds = new Map<string, string>();
+    for (const node of partners) {
+      if (node.partnerId !== null) partnerIds.set(node.key, node.partnerId);
+    }
+
+    for (const row of rows) {
+      if (!row.importable) continue;
+
+      /*
+       * The default when the client expressed no selection: create what is new,
+       * leave what already exists alone. The same rule the preview ticks on
+       * screen, so the two agree by construction rather than by memory —
+       * criterion 5's "unticked by default", enforced on this side too.
+       */
+      const wanted = ticked === null ? !row.existing : ticked.has(row.index);
+      if (!wanted) {
+        skipped += 1;
+        continue;
+      }
+
+      /*
+       * The partner, once per file however many rows named it — criterion 3.
+       *
+       * Created lazily rather than up front, so a partnership whose every row
+       * the operator unticked is never created at all. A school in the list with
+       * no classes under it is a row nobody asked for.
+       */
+      let partnerId = partnerIds.get(row.partnerKey);
+      if (partnerId === undefined) {
+        const made = await tx.query<{ id: string }>(
+          `INSERT INTO partner (organization_id, facility_id, name, type)
+           VALUES ($1, $2, $3, $4::partner_type) RETURNING id`,
+          [organizationId, request.facilityId, row.partnerName, row.partnerType],
+        );
+        partnerId = made.rows[0]!.id;
+        partnerIds.set(row.partnerKey, partnerId);
+        createdPartners += 1;
+
+        await recordAudit(tx, {
+          action: 'partner.imported',
+          entityType: 'partner',
+          entityId: partnerId,
+          data: { name: row.partnerName, type: row.partnerType },
+        });
+      }
+
+      /*
+       * A contact, only where the sheet carried one and the partner has none.
+       *
+       * A partnerships file repeats the coordinator on every row, so inserting
+       * per row would give a school twelve identical contacts. And a club that
+       * has already typed one in should not have it displaced by a spreadsheet.
+       *
+       * `contactReachable` is the preview's answer, not a second condition:
+       * `partner_contact_reachable` refuses a contact with neither an email nor
+       * a telephone, and deciding that here as well as there is how the two
+       * drift into a commit that 500s on a file the preview approved.
+       */
+      if (row.contactReachable) {
+        await tx.query(
+          `INSERT INTO partner_contact (organization_id, partner_id, name, email, phone)
+           SELECT $1, $2, $3, $4::citext, $5
+            WHERE NOT EXISTS (
+              SELECT 1 FROM partner_contact
+               WHERE partner_id = $2 AND organization_id = $1 AND archived_at IS NULL
+            )`,
+          [
+            organizationId,
+            partnerId,
+            row.contactName ?? row.contactEmail ?? '',
+            row.contactEmail,
+            row.contactPhone,
+          ],
+        );
+      }
+
+      if (row.groupId !== null) {
+        /*
+         * The stocktake. Only what the sheet actually said: `coalesce` on the
+         * nullable columns so a file with no Tag column does not blank a tag
+         * somebody typed. Re-importing last year's list has to be harmless,
+         * because it is the commonest thing a club will really do with this.
+         */
+        await tx.query(
+          `UPDATE partner_group
+              SET participant_count = $2,
+                  tag = coalesce($3, tag),
+                  own_instructor_name = coalesce($4, own_instructor_name),
+                  brings_own_instructor = brings_own_instructor OR $4 IS NOT NULL,
+                  level_id = coalesce($5, level_id),
+                  notes = coalesce($6, notes)
+            WHERE id = $1 AND archived_at IS NULL`,
+          [
+            row.groupId,
+            row.participantCount,
+            row.tag,
+            row.ownInstructorName,
+            row.levelId,
+            row.notes,
+          ],
+        );
+        updatedGroups += 1;
+        continue;
+      }
+
+      await tx.query(
+        `INSERT INTO partner_group
+           (organization_id, partner_id, name, participant_count, level_id,
+            brings_own_instructor, own_instructor_name, tag, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          organizationId,
+          partnerId,
+          row.groupName,
+          row.participantCount,
+          row.levelId,
+          row.ownInstructorName !== null,
+          row.ownInstructorName,
+          row.tag,
+          row.notes,
+        ],
+      );
+      createdGroups += 1;
+    }
+
+    await recordAudit(tx, {
+      action: 'partners.imported',
+      entityType: 'facility',
+      entityId: request.facilityId,
+      data: { createdPartners, createdGroups, updatedGroups, skipped },
+    });
+
+    return { rows, partners, summary, createdPartners, createdGroups, updatedGroups, skipped };
   });
 }

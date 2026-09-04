@@ -93,3 +93,56 @@ in the week is done on the grid (POOLSE-49) or comes back through the bookings s
 10. The partner list exports as `.xlsx` and `.csv` whose header row is the import's own field labels, and a round trip maps itself in both locales — proven by a test that reads the real catalogue.
 11. Import and export are owner/admin, enforced in the API.
 12. The column matcher reuses `matchFields`; the file reader reuses `lib/read-sheet.ts`. No second copy of either.
+
+---
+
+## Where this stopped — 2026-09-04
+
+**The API half is built and tested. The wizard and the export are not.**
+Split at a layer boundary, as BUILD-ORDER allows, because the interface is the
+inventory wizard's 950 lines with the vocabulary changed and the model half is
+where the thinking was.
+
+### Done
+
+- `apps/api/src/facilities/partner-import.ts` — the pure half. Grouping,
+  stocktakes, the type reader, every problem and warning. **19 unit tests.**
+- `runPartnerImport` in `partners.repository.ts` — context, preview, commit, one
+  transaction, audit.
+- `POST /facilities/:facilityId/partners/import`, owner/admin, preview and
+  commit as one route with a flag — criteria 2, 3, 4, 5, 6, 7, 8, 9, 11, 12.
+  **13 integration tests.**
+- `apps/web/src/lib/partner-sheet.ts` — the column vocabulary, reusing
+  `matchFields`. Criterion 12's "no second copy of the matcher".
+
+### Still to do
+
+- The wizard and the full-page dropzone on the partners list — criteria 1 and 2's
+  UI half, QA 48.8, 48.9, 48.10.
+- The partner list export as `.xlsx`/`.csv` with the import's own labels, and its
+  round-trip test — criterion 10, QA 48.13. `booking-sheet.test.ts` from
+  POOLSE-54 is the pattern to copy exactly.
+- `partner-sheet.ts` has no test yet; the round-trip test above is where it gets
+  one, against the real catalogues in both locales.
+
+### Two findings worth keeping
+
+**1. `normaliseKey` must match the database exactly, and the first version did
+not.** `partner_name_uq` and `partner_group_name_uq` are on
+`lower(strip_accents(name))` — accents and case only. The first draft also
+flattened punctuation, which would have read `11H/I` in a file and a recorded
+`11H I` as the same class, offered a stocktake, and overwritten one class's
+headcount with the other's. **Being stricter than the database is visible;
+being looser destroys data quietly.**
+
+`apps/api/src/inventory/inventory.ts` has the **same disagreement**, and its own
+comment claims otherwise. `Pull-buoys` and `Pull buoys` are one item to its
+preview and two to `inventory_item_name_uq`. Not changed here — it is another
+ticket's shipped importer — but it should be.
+
+**2. `partner_contact_reachable` is a `guardian_needs_a_key` in a new place.** A
+contact needs an email *or* a telephone. The first version inserted a contact
+whenever the sheet had a *name*, so a `Contacto` column with no address would
+have 500ed and rolled back the whole file — which is exactly how the register's
+version of this reached production. The preview now warns and the contact is
+skipped.
