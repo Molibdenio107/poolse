@@ -208,18 +208,27 @@ function isContiguous(laneIds: readonly string[], lanes: readonly GridLane[]): b
  * near-grey as `slate`'s `--surface-muted`. A club colour-coding Competição and
  * Hidroginástica saw one colour, and the reference seed is what made it visible.
  * Anything added to the enum needs a line here; the fallback hides the omission.
+ *
+ * **The fill is 15%, and the number was measured rather than chosen.** At 10%
+ * every ratio passed comfortably and the seven tints were 4 RGB units apart at
+ * their closest — invisible, so the colour was doing no work and the `/40`
+ * borders carried the whole signal. 15% roughly doubles the separation (8.0 in
+ * light, 5.5 in dark) and the worst pairing, the instructor line on the palest
+ * tint, is 4.65:1 light and 4.99:1 dark. That is the ceiling: going further
+ * would take the muted text under AA, so anything darker has to move the text
+ * token first.
  */
 const CATEGORY_TINT: Record<string, string> = {
   slate: 'border-border bg-surface-muted',
-  blue: 'border-primary/40 bg-primary/10',
-  teal: 'border-category-teal/40 bg-category-teal/10',
-  green: 'border-success/40 bg-success/10',
-  amber: 'border-warning/40 bg-warning/10',
-  red: 'border-danger/40 bg-danger/10',
-  violet: 'border-category-violet/40 bg-category-violet/10',
+  blue: 'border-primary/40 bg-primary/15',
+  teal: 'border-category-teal/40 bg-category-teal/15',
+  green: 'border-success/40 bg-success/15',
+  amber: 'border-warning/40 bg-warning/15',
+  red: 'border-danger/40 bg-danger/15',
+  violet: 'border-category-violet/40 bg-category-violet/15',
 };
 
-const DEFAULT_TINT = 'border-primary/40 bg-primary/10';
+const DEFAULT_TINT = 'border-primary/40 bg-primary/15';
 
 /**
  * What the page hands over for one slot in the week on screen.

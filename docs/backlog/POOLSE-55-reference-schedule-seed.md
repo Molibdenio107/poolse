@@ -166,6 +166,10 @@ Computed from the tokens in `globals.css`, both themes. The cell is `bg-<token>/
 with a `border-<token>/40`; the group name is `text-foreground`, the instructor
 line `text-foreground-muted`.
 
+*Measured at the 10% fill this section was written against. The fill was raised
+to 15% on the strength of it — see the note below the table for the numbers that
+ship.*
+
 | tint | light: name / instructor | dark: name / instructor |
 |---|---|---|
 | slate | 16.09 / 5.22 | 13.19 / 6.01 |
@@ -190,10 +194,13 @@ legend names each category in words, so colour never carries meaning alone. It
 is a *usability* one — category colour is supposed to make a full grid scannable
 and at 10% it hardly does.
 
-**Open, and Rui's call rather than mine:** raise the category fill (12–15% would
-roughly double the separation while keeping every ratio above AA), or accept that
-the border carries it. Not changed unilaterally — the grid's look has been tuned
-across three rounds and this would alter every cell on it.
+**Closed 2026-09-04 — Rui chose to raise the fill to 15%.** The separation
+roughly doubles (8.0 in light, 5.5 in dark, from 4.1 and 3.7) and every ratio
+stays above AA; the worst pairing is now the instructor line on the palest tint
+at 4.65:1 light and 4.99:1 dark.
+
+**That is the ceiling.** Going darker takes `--foreground-muted` under 4.5:1, so
+any further increase has to move the text token first rather than the fill.
 
 ### Criterion 8 — tenant isolation, done
 
