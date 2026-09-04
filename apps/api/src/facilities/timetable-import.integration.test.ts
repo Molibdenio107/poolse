@@ -283,3 +283,47 @@ test('an empty file and an oversized one are refused before anything is read', a
     });
   });
 });
+
+test('a second trip through the dialog drops the row that was pointed at', async () => {
+  /*
+   * The bug this exists to keep fixed.
+   *
+   * `previewTimetable` numbers rows by their position in the array it is given,
+   * so previewing the array with the first drop already removed renumbers
+   * everything after it. The dialog sends back the numbers it was shown, and
+   * the second drop would land on a different row — quietly, behind a preview
+   * that looks entirely reasonable.
+   */
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await sixLanes(tenant);
+      const bookings = new BookingsController();
+
+      const rows = [
+        row({ name: 'Fica', laneNames: ['Pista 2'], line: 2 }),
+        row({ name: 'Colide', laneNames: ['Pista 2'], line: 3 }),
+        row({ name: 'Sai Depois', laneNames: ['Pista 3'], line: 4 }),
+      ];
+
+      // Round one: the operator drops the collision.
+      const first = await bookings.importTimetable(tenant.facilityId, { rows, drop: [1] });
+      assert.deepEqual(
+        first.rows.map((one) => one.index),
+        [0, 2],
+        'the survivors keep the numbers the file gave them',
+      );
+
+      // Round two: they change their mind about the third row and drop it too,
+      // using the number this screen just showed them.
+      const second = await bookings.importTimetable(tenant.facilityId, {
+        rows,
+        drop: [1, 2],
+        commit: true,
+      });
+      assert.equal(second.created, 1);
+
+      const grid = await new GridController().read(tenant.facilityId);
+      assert.deepEqual(grid.bookings.map((one) => one.name), ['Fica']);
+    });
+  });
+});

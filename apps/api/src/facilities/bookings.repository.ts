@@ -790,10 +790,32 @@ export async function runTimetableImport(
      * against something that is no longer coming.
      */
     const dropped = new Set(request.drop);
-    const kept = request.rows.filter((_, index) => !dropped.has(index));
+    const kept: RawTimetableRow[] = [];
+    /*
+     * ...but their positions do not, and that is the whole subtlety.
+     *
+     * `previewTimetable` numbers rows by where they sit in the array it is
+     * given, so previewing the *filtered* array renumbers everything after a
+     * dropped row. The dialog sends back the numbers it was shown, and the
+     * second trip through it would then drop a different row than the operator
+     * pointed at — quietly, with a plausible-looking preview.
+     *
+     * So the original position travels with the row and is put back below. What
+     * the dialog is shown and what it sends are the same numbers on every round.
+     */
+    const origin: number[] = [];
+    request.rows.forEach((row, index) => {
+      if (dropped.has(index)) return;
+      kept.push(row);
+      origin.push(index);
+    });
 
     const context = await timetableContext(tx, request.facilityId, seasonId);
-    const preview = previewTimetable(kept, context);
+    const judged = previewTimetable(kept, context);
+    const preview = {
+      ...judged,
+      rows: judged.rows.map((row) => ({ ...row, index: origin[row.index] ?? row.index })),
+    };
 
     if (!request.commit) return { ...preview };
 
