@@ -1916,6 +1916,7 @@
     },
     "byDayChart": "Horas-pista vendidas, por dia da semana",
     "ofHours": "{sold} de {available}",
-    "free": "Livre"
+    "free": "Livre",
+    "unavailable": "Ainda não há dados de ocupação. É preciso uma época publicada, uma grelha horária e marcações."
   }
 }

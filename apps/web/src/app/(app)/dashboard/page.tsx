@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Facility, type Me, type Occupancy } from '../../../lib/api';
+import {
+  ApiError,
+  apiFetch,
+  type Facilities,
+  type Me,
+  type Occupancy,
+} from '../../../lib/api';
 import { readTheme } from '../../../lib/preferences';
 import { PreferenceSync } from './preference-sync';
 import { CreateOrganizationForm } from './create-organization-form';
@@ -55,11 +61,25 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
    * compute is worse than a dashboard without the figure.
    */
   let occupancy: Occupancy | null = null;
+  let occupancyFailed = false;
+
   if (me !== null && membership !== null) {
-    const sites = await apiFetch<Facility[]>('/facilities').catch(() => null);
-    const first = sites?.[0]?.id;
+    /*
+     * `/facilities` answers with an object, not an array — `{ organizationId,
+     * facilities, canManage, timezones }`. The first version of this typed it as
+     * `Facility[]`, so `sites[0]` was always undefined and the panel silently
+     * never rendered: `.catch(() => null)` and a `!== null` guard between them
+     * turned a wrong type into no error and no output, which is the hardest
+     * shape of bug to see.
+     */
+    const sites = await apiFetch<Facilities>('/facilities').catch(() => null);
+    const first = sites?.facilities[0]?.id;
+
     if (first !== undefined) {
       occupancy = await apiFetch<Occupancy>(`/facilities/${first}/occupancy`).catch(() => null);
+      // Best-effort, but not silent: a dashboard that simply omits its main
+      // panel is indistinguishable from one that has not been built.
+      occupancyFailed = occupancy === null;
     }
   }
   const name =
@@ -87,6 +107,15 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
           />
 
           {occupancy !== null && <OccupancyPanel occupancy={occupancy} />}
+
+          {occupancyFailed && (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('occupancy.title')}
+              </h2>
+              <p className="mt-1 text-sm text-foreground-muted">{t('occupancy.unavailable')}</p>
+            </section>
+          )}
 
           {/*
             What this page will be, said plainly, with the way to the screens

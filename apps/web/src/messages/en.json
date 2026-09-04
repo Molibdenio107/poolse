@@ -1916,6 +1916,7 @@
     },
     "byDayChart": "Lane-hours sold, by day of the week",
     "ofHours": "{sold} of {available}",
-    "free": "Free"
+    "free": "Free",
+    "unavailable": "No occupancy figures yet. This needs a published season, a slot grid and some bookings."
   }
 }
