@@ -1,7 +1,7 @@
 // The `.ts` on the specifier is not a slip: this module is reached by
 // `node --test`, whose resolver does not add extensions. `inventory-sheet.ts`
 // carries one for the same reason.
-import { matchFields, type MatchResult, type MatchSpec, type Sheet } from './sheet.ts';
+import { looksNumeric, matchFields, type MatchResult, type MatchSpec, type Sheet } from './sheet.ts';
 
 /**
  * The timetable's field vocabulary — POOLSE-54.
@@ -104,8 +104,8 @@ const SYNONYMS: [BookingField, string[]][] = [
  * swimmers in the register.
  */
 const EXPECTED_SHAPE: Partial<Record<BookingField, (looks: string[]) => boolean>> = {
-  durationMinutes: (looks) => looks.some((shape) => /^\d+ digits$/.test(shape)),
-  headcount: (looks) => looks.some((shape) => /^\d+ digits$/.test(shape)),
+  durationMinutes: looksNumeric,
+  headcount: looksNumeric,
 };
 
 export const BOOKING_MATCH: MatchSpec<BookingField> = {

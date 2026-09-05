@@ -393,6 +393,34 @@ export interface ColumnShape {
   looks: string[];
 }
 
+/**
+ * A number written with a decimal separator — round 5.
+ *
+ * **The comma is why this exists.** `shapeOf` stripped `.` along with the other
+ * punctuation before testing for digits, and did not strip `,`. So the same
+ * measurement shaped two different ways depending on locale:
+ *
+ *     "7.4"  -> "2 digits"     (a number)
+ *     "7,4"  -> "one word"     (indistinguishable from "Bom")
+ *
+ * pt-PT is this product's default locale, so the half that lost was the half
+ * that matters. It made a numeric shape-check unusable on a Portuguese sheet —
+ * every metric column would have taken `matchFields`' 45-point contradiction
+ * penalty, dropping even an exact header match into the band the mapping step
+ * stops and asks about.
+ *
+ * Its own shape rather than folding into `N digits`, because the digit count is
+ * load-bearing elsewhere: a telephone is 9 to 13 *digits*, and a pH is not a
+ * two-digit number however you strip it. `looksNumeric` below is what a caller
+ * wants when it only means "this is a number".
+ *
+ * Exactly one separator, digits either side. `1.234` matches and is genuinely
+ * ambiguous — 1234 in pt-PT, 1.234 in en — but it is a number under either
+ * reading, which is all this shape claims. A phone written `912.345.678` has two
+ * separators, so it falls through to the digit path and still counts nine.
+ */
+const DECIMAL = /^[+-]?\d+[.,]\d+$/;
+
 function shapeOf(value: string): string | null {
   const text = value.trim();
   if (text === '') return null;
@@ -401,11 +429,27 @@ function shapeOf(value: string): string | null {
     return 'date';
   }
 
-  const digits = text.replace(/[\s.\-+()]/g, '');
+  // Before the digit path, or the separator would be stripped and the number
+  // would be counted as digits it does not have.
+  if (DECIMAL.test(text)) return 'decimal';
+
+  const digits = text.replace(/[\s.,\-+()]/g, '');
   if (/^\d+$/.test(digits)) return `${digits.length} digits`;
 
   const words = text.split(/\s+/).length;
   return words === 1 ? 'one word' : `${Math.min(words, 4)} words`;
+}
+
+/**
+ * "This column holds numbers", whatever kind — round 5.
+ *
+ * The one predicate four importers were each writing as `/^\d+ digits$/`, which
+ * silently excluded decimals and therefore excluded most Portuguese
+ * measurements. Written once so the next importer inherits the right answer
+ * instead of the tempting one.
+ */
+export function looksNumeric(looks: string[]): boolean {
+  return looks.some((shape) => shape === 'decimal' || /^\d+ digits$/.test(shape));
 }
 
 /** The shape of every column, computed once per sheet. */

@@ -1,7 +1,7 @@
 // The `.ts` on the specifier is not a slip: this module is reached by
 // `node --test`, whose resolver does not add extensions. `inventory-sheet.ts`
 // and `booking-sheet.ts` carry one for the same reason.
-import { matchFields, type MatchResult, type MatchSpec, type Sheet } from './sheet.ts';
+import { looksNumeric, matchFields, type MatchResult, type MatchSpec, type Sheet } from './sheet.ts';
 
 /**
  * The partnerships importer's vocabulary — POOLSE-48.
@@ -184,7 +184,7 @@ const SYNONYMS: [PartnerField, string[]][] = [
  * recognising whatever somebody called it.
  */
 const EXPECTED_SHAPE: Partial<Record<PartnerField, (looks: string[]) => boolean>> = {
-  participantCount: (looks) => looks.some((shape) => /^\d+ digits$/.test(shape)),
+  participantCount: looksNumeric,
   contactEmail: (looks) => looks.includes('email'),
 };
 

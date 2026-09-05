@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   applyMapping,
   describeColumns,
+  looksNumeric,
   guessMapping,
   hasName,
   matchColumns,
@@ -331,4 +332,50 @@ test('a column is described by its shape, never by its contents', () => {
   assert.ok(!described.includes('912345678'), 'no telephone number');
   assert.ok(!described.includes('rita@example.test'), 'no email address');
   assert.ok(!described.includes('Rita'), 'no name');
+});
+
+test('a Portuguese decimal is a number, and so is an English one — round 5', () => {
+  /*
+   * The bug this fixed: `shapeOf` stripped `.` before testing for digits and did
+   * not strip `,`, so the same measurement shaped two different ways depending
+   * on locale — and pt-PT, the default, was the half that lost.
+   *
+   *     "7.4"  -> "2 digits"     a number
+   *     "7,4"  -> "one word"     indistinguishable from "Bom"
+   *
+   * It made a numeric shape-check unusable on a Portuguese sheet: every metric
+   * column would have taken the 45-point contradiction penalty.
+   */
+  const [enDecimal, ptDecimal, note, phone, spaced, dotted] = describeColumns({
+    headers: ['A', 'B', 'C', 'D', 'E', 'F'],
+    rows: [
+      ['7.4', '7,4', 'Bom', '963855201', '963 855 201', '963.855.201'],
+      ['28.5', '28,5', 'Turvo', '917677815', '917 677 815', '917.677.815'],
+    ],
+  });
+
+  assert.deepEqual(enDecimal?.looks, ['decimal']);
+  assert.deepEqual(ptDecimal?.looks, ['decimal'], 'the half that used to lose');
+  assert.deepEqual(note?.looks, ['one word']);
+
+  // Its own shape rather than folded into the digit count, because the count is
+  // load-bearing: a telephone is 9 digits however it is punctuated, and a pH is
+  // not a two-digit number.
+  assert.deepEqual(phone?.looks, ['9 digits']);
+  assert.deepEqual(spaced?.looks, ['9 digits']);
+  assert.deepEqual(dotted?.looks, ['9 digits'], 'two separators is not a decimal');
+});
+
+test('looksNumeric is the one predicate four importers were each writing', () => {
+  // They all said `/^\d+ digits$/`, which silently excluded decimals and so
+  // excluded most Portuguese measurements. Written once, so the next importer
+  // inherits the right answer rather than the tempting one.
+  assert.equal(looksNumeric(['decimal']), true);
+  assert.equal(looksNumeric(['9 digits']), true);
+  assert.equal(looksNumeric(['2 digits', 'decimal']), true, 'a mixed column still counts');
+
+  assert.equal(looksNumeric(['one word']), false);
+  assert.equal(looksNumeric(['date']), false);
+  assert.equal(looksNumeric(['email']), false);
+  assert.equal(looksNumeric([]), false);
 });

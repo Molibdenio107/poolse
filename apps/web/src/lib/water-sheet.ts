@@ -2,7 +2,13 @@
 // `node --test`, whose resolver does not add extensions. `inventory-sheet.ts`
 // carries one for the same reason, and `allowImportingTsExtensions` is on so the
 // bundler is equally happy.
-import { matchFields, type MatchResult, type MatchSpec, type Sheet } from './sheet.ts';
+import {
+  looksNumeric,
+  matchFields,
+  type MatchResult,
+  type MatchSpec,
+  type Sheet,
+} from './sheet.ts';
 import { POOL_METRICS } from './pool-metrics.ts';
 
 /**
@@ -128,30 +134,30 @@ const SYNONYMS: [WaterField, string[]][] = [
 ];
 
 /**
- * **No `expectedShape`, and that is a finding rather than an omission.**
+ * Every metric holds numbers, and saying so catches a shifted sheet.
  *
- * The obvious rule is "every metric is a number", which would catch a sheet
- * whose headers have shifted by one. It cannot be written correctly today,
- * because `shapeOf` in `sheet.ts` does not see a Portuguese decimal as a number:
+ * **This could not be written when the water importer was built.** `shapeOf`
+ * stripped a dot before testing for digits and did not strip a comma, so a pH
+ * of `7,4` shaped identically to a note reading `Bom` — and a numeric check
+ * would have applied `matchFields`' 45-point contradiction penalty to every
+ * metric column in every pt-PT sheet, dropping exact header matches into the
+ * band the mapping step stops and asks about. On the product's own default
+ * locale.
  *
- *     "7.4"  -> "2 digits"      (the dot is stripped with the other punctuation)
- *     "7,4"  -> "one word"      (the comma is not, so it is not all digits)
- *     "Bom"  -> "one word"
+ * `shapeOf` now has a `decimal` shape and `looksNumeric` reads both, so the
+ * check does what it was always meant to: a column headed "pH" full of dates is
+ * a sheet whose headers have shifted, and that is worth a question.
  *
- * A pH of 7,4 is therefore shaped identically to a note reading "Bom". Adding
- * the check would apply `matchFields`' 45-point contradiction penalty to every
- * metric column in every pt-PT water log — dropping an *exact* header match on
- * "pH" into the band the screen stops and asks about, on the product's own
- * default locale. A rule that fires on the ordinary case is worse than no rule.
- *
- * The fix belongs in `shapeOf`, where it would help all four importers, and it
- * changes matching for the three that already ship — so it is raised as its own
- * change rather than smuggled in here. Until then the header carries the match,
- * which for nine well-known metric names is most of the work anyway.
+ * The date and time fields get no shape. A club writes dates six different ways
+ * and `parseImportDate` is more forgiving than any pattern worth writing here.
  */
+const EXPECTED_SHAPE: Partial<Record<WaterField, (looks: string[]) => boolean>> =
+  Object.fromEntries(POOL_METRICS.map((metric) => [metric, looksNumeric]));
+
 export const WATER_MATCH: MatchSpec<WaterField> = {
   empty: EMPTY_WATER_MAPPING,
   synonyms: SYNONYMS,
+  expectedShape: EXPECTED_SHAPE,
 };
 
 /** Which column is which, with how sure it is about each. */

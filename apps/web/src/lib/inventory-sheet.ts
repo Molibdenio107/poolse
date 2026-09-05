@@ -2,7 +2,7 @@
 // `node --test`, whose resolver does not add extensions. `landing.ts` carries
 // one for the same reason, and `allowImportingTsExtensions` is on so the
 // bundler is equally happy.
-import { matchFields, type MatchResult, type MatchSpec, type Sheet } from './sheet.ts';
+import { looksNumeric, matchFields, type MatchResult, type MatchSpec, type Sheet } from './sheet.ts';
 
 /**
  * The inventory importer's half of `sheet.ts` — round 6.
@@ -139,7 +139,7 @@ const SYNONYMS: [InventoryField, string[]][] = [
  * worth a question rather than a silent mapping.
  */
 const EXPECTED_SHAPE: Partial<Record<InventoryField, (looks: string[]) => boolean>> = {
-  quantity: (looks) => looks.some((shape) => /^\d+ digits$/.test(shape)),
+  quantity: looksNumeric,
 };
 
 export const INVENTORY_MATCH: MatchSpec<InventoryField> = {
