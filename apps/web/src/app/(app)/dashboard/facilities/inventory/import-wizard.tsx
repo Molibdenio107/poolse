@@ -13,6 +13,7 @@ import {
   type InventoryMapping,
 } from '@/lib/inventory-sheet';
 import type { ColumnMatch, MatchResult, NamedSheet, Sheet } from '@/lib/sheet';
+import { useImportWizard, type ImportStage } from '@/lib/use-import-wizard';
 import {
   matchSheetAction,
   readSheetAction,
@@ -47,8 +48,6 @@ import {
 const READ_INITIAL: ReadState = { ok: false, attempt: 0 };
 const RUN_INITIAL: ImportState = { ok: false, attempt: 0 };
 const MATCH_INITIAL: MatchState = { attempt: 0 };
-
-type Stage = 'upload' | 'map' | 'preview' | 'done';
 
 const BUTTON =
   'rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50 ' +
@@ -112,106 +111,41 @@ export function InventoryImportWizard({
   const [runState, runAction, running] = useActionState(runImportAction, RUN_INITIAL);
   const [matchState, matchAction, matching] = useActionState(matchSheetAction, MATCH_INITIAL);
 
-  const [stage, setStage] = useState<Stage>('upload');
-  const [sheets, setSheets] = useState<NamedSheet[]>([]);
-  const [sheetIndex, setSheetIndex] = useState(0);
-  const [match, setMatch] = useState<MatchResult<InventoryField> | null>(null);
-  const [fileName, setFileName] = useState('');
-  const [mapping, setMapping] = useState<InventoryMapping | null>(null);
-  const [rows, setRows] = useState<InventoryImportRowResult[]>([]);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [created, setCreated] = useState(0);
-  const [updated, setUpdated] = useState(0);
-
-  const readAt = useRef(0);
-  const runAt = useRef(0);
-  const matchAt = useRef(0);
-  const seeded = useRef<File | null>(null);
-
   /*
-   * A dropped file goes through exactly the same action as a chosen one.
+   * The four steps, from the shared machine — round 5.
    *
-   * Not a second read path: the drop is only a different way of naming the file,
-   * and everything after it has to be identical or the two ways in would drift.
+   * This file used to carry its own copy: the same stages, the same nine
+   * pieces of state, the same three effects keyed on attempt, and the same
+   * rule for what is ticked when the preview opens. The register carried an
+   * identical one. What differs between the two importers is what they draw,
+   * which is why the machine moved and the screen did not.
    */
-  useEffect(() => {
-    if (initialFile === null || seeded.current === initialFile) return;
-    seeded.current = initialFile;
-
-    const formData = new FormData();
-    formData.set('file', initialFile);
-    startTransition(() => readAction(formData));
-  }, [initialFile, readAction]);
-
-  // Both effects key on `attempt` rather than on `ok`, so a second upload of the
-  // same file still moves the wizard on.
-  useEffect(() => {
-    if (readState.attempt === readAt.current) return;
-    readAt.current = readState.attempt;
-    if (!readState.ok || readState.sheets === undefined || readState.sheets.length === 0) return;
-
-    setSheets(readState.sheets);
-    setSheetIndex(0);
-    setMatch(readState.match ?? null);
-    setMapping(readState.match?.mapping ?? { ...EMPTY_INVENTORY_MAPPING });
-    setFileName(readState.fileName ?? '');
-    setStage('map');
-  }, [readState]);
-
-  useEffect(() => {
-    if (matchState.attempt === matchAt.current) return;
-    matchAt.current = matchState.attempt;
-    if (matchState.match === undefined) return;
-
-    setMatch(matchState.match);
-    setMapping(matchState.match.mapping);
-  }, [matchState]);
-
-  useEffect(() => {
-    if (runState.attempt === runAt.current) return;
-    runAt.current = runState.attempt;
-    if (!runState.ok || runState.result === undefined) return;
-
-    if (runState.committed === true) {
-      setCreated(runState.result.created ?? 0);
-      setUpdated(runState.result.updated ?? 0);
-      setStage('done');
-      return;
-    }
-
-    setRows(runState.result.rows);
-    /*
-     * What is ticked when the preview opens: everything that can be written and
-     * is not already in the store. Unticking the stocktake rows is the default
-     * the screen argues for and the one the API takes when a caller sends no
-     * selection at all — the two agree on purpose.
-     */
-    setSelected(
-      new Set(
-        runState.result.rows
-          .filter((row) => row.importable && row.duplicate === null)
-          .map((row) => row.index),
-      ),
-    );
-    setStage('preview');
-  }, [runState]);
-
-  const sheet = sheets[sheetIndex] ?? null;
-
-  const chooseSheet = (index: number): void => {
-    const chosen = sheets[index];
-    if (chosen === undefined) return;
-
-    setSheetIndex(index);
-    // Cleared rather than carried: the previous sheet's mapping is a set of
-    // column *indexes* into a grid that no longer has those columns.
-    setMapping({ ...EMPTY_INVENTORY_MAPPING });
-    setMatch(null);
-
-    const formData = new FormData();
-    formData.set('sheet', JSON.stringify({ headers: chosen.headers, rows: chosen.rows }));
-    startTransition(() => matchAction(formData));
-  };
+  const {
+    stage,
+    setStage,
+    sheets,
+    sheet,
+    sheetIndex,
+    chooseSheet,
+    match,
+    mapping,
+    setMapping,
+    rows,
+    selected,
+    setSelected,
+    fileName,
+    created,
+    updated,
+    restart,
+  } = useImportWizard<InventoryField, InventoryImportRowResult>({
+    empty: EMPTY_INVENTORY_MAPPING,
+    initialFile,
+    readState,
+    readAction,
+    matchState,
+    matchAction,
+    runState,
+  });
 
   return (
     <div className="flex flex-col gap-5">
@@ -272,12 +206,7 @@ export function InventoryImportWizard({
           action={runAction}
           pending={running}
           state={runState}
-          onRestart={() => {
-            setSheets([]);
-            setMatch(null);
-            setMapping(null);
-            setStage('upload');
-          }}
+          onRestart={restart}
         />
       )}
 
@@ -327,9 +256,9 @@ export function InventoryImportWizard({
  * not a label — the same rule the rest of the app follows about colour never
  * carrying meaning on its own.
  */
-function Steps({ stage }: { stage: Stage }): React.ReactElement {
+function Steps({ stage }: { stage: ImportStage }): React.ReactElement {
   const t = useTranslations();
-  const order: Stage[] = ['upload', 'map', 'preview', 'done'];
+  const order: ImportStage[] = ['upload', 'map', 'preview', 'done'];
   const at = order.indexOf(stage);
 
   return (

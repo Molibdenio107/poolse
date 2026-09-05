@@ -113,6 +113,12 @@ turns that into a 409 with the figures as fields, and `FormState.values` carries
 implementations of one sum agree until the day they do not. See `pool_capacity_respected`
 and `poolCapacityRefusal`.
 
+**A column-mapping importer uses `useImportWizard`.** The four-step machine —
+upload, map, preview, commit — lives in `lib/use-import-wizard.ts`, generic over the field
+type. A new importer supplies its own preview rendering and nothing else. The calendar's
+(a grid layout, no columns) and the water log's (matches in the browser, no model call) are
+deliberately not callers.
+
 **An importer is a `MatchSpec`, never a new pipeline.** There are four — the register, the
 store room, the wall timetable and the water log. A new one is a field list, a synonym list
 and `matchFields` in `lib/<thing>-sheet.ts`, plus a preview/commit pair on one API route
