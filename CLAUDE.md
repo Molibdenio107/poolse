@@ -106,6 +106,18 @@ seed created a second site to keep demo data tidy and nothing objected.
 null`). Otherwise archiving an instructor and re-adding them next season violates the
 constraint against a dead row.
 
+**A refusal that needs numbers carries them as structure, never as prose.** A rule enforced
+by a trigger raises with a machine-readable `DETAIL` (`pool_capacity|40|32|12`); the API
+turns that into a 409 with the figures as fields, and `FormState.values` carries them to
+`t(key, values)`. Do not re-derive the numbers in TypeScript to build the sentence — two
+implementations of one sum agree until the day they do not. See `pool_capacity_respected`
+and `poolCapacityRefusal`.
+
+**Capacity rules compose, they do not override.** An enrolment must fit its turma
+(`class_group.capacity`), the turmas sharing a slot must fit the tank (`pool.max_capacity`),
+and `lane_level_capacity` is a separate teaching judgement. A null ceiling means "not
+measured" and enforces nothing — never treat it as zero.
+
 **Light and dark mode in every app**, from the first component. Colors come from tokens;
 no literal hex in components.
 
@@ -153,6 +165,22 @@ Decisions taken in review that are not obvious from the code, so they are not re
 When something genuinely needs a call, ask once, tightly, with a recommended default.
 Not a list of open questions — that moves the work back onto the one person who has the
 least time.
+
+## Housekeeping
+
+Four rules that keep the repo's own memory usable. They apply to every ticket.
+
+- **Docs follow behaviour.** When a change alters behaviour, roles or schema, update the
+  docs in the *same commit*: `docs/data-model.md` for schema, `docs/features/<area>.md` for
+  behaviour. Create the feature page if it does not exist. Short and factual — what it does,
+  who can do it, what rules apply. The argument belongs in `docs/decisions.md`.
+- **CLAUDE.md stays current.** A new convention, shared component, validation approach or
+  role guard earns one line here, so the next session uses it instead of reinventing it.
+- **Refactor by proposal, not by reflex.** Code that is clearly duplicated or has outgrown
+  what it was built for is *proposed* in one line and left alone until Rui says yes. Collect
+  the proposals in the session summary.
+- **Decisions log.** `docs/decisions.md`, one dated line per product decision taken in
+  conversation — especially one that reverses an earlier decision.
 
 ## Backlog
 
