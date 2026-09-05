@@ -75,7 +75,21 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
       return { ok: false, errorKey: fallbackKey, detail: error.message };
     }
 
-    return { ok: false, errorKey: fallbackKey, detail: `${error.status} ${error.message}`.trim() };
+    /*
+     * A server error gets the sentence and **no detail** — round 5, G2.
+     *
+     * Every branch above attaches the API's own message as a second line,
+     * because for a refusal it is specific and true: which lane, which hours,
+     * which field. A 500 has none of that. What it carries is
+     * "500 Internal server error", which is the exact string G2 names — it
+     * tells an operator nothing they can act on and reads as the product
+     * leaking its plumbing at the moment it has already failed them.
+     *
+     * The log line above still has the status, the code and the message, so
+     * nothing is lost for whoever has to diagnose it. What changes is who is
+     * made to read it.
+     */
+    return { ok: false, errorKey: fallbackKey };
   }
 
   /*

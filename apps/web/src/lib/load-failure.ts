@@ -26,12 +26,21 @@ export function describeLoad(error: unknown): LoadFailure {
     if (error.status === 404) return { key: 'common.notFound', detail: '' };
 
     /*
-     * The server answered and it went wrong there. The status and message are
-     * kept, because this is the one a developer has to diagnose — but they go on
-     * their own line rather than running on from the sentence above.
+     * The server answered and it went wrong there — round 5, G2.
+     *
+     * The status and message used to ride along on their own line. They are the
+     * one thing a developer needs and the one thing an operator cannot use:
+     * "500 Internal server error" is the string G2 names, and putting it under
+     * a page that has already failed reads as the product leaking its plumbing.
+     *
+     * Logged rather than shown, so nothing is lost for whoever has to diagnose
+     * it. A 4xx keeps its detail below, because there the API's own message is
+     * specific and true — which field, which rule.
      */
     if (error.status >= 500) {
-      return { key: 'common.serverError', detail: `${error.status} ${error.message}`.trim() };
+      // eslint-disable-next-line no-console -- the server log is the point.
+      console.error(`[load] HTTP ${error.status}`, error.code, error.message);
+      return { key: 'common.serverError', detail: '' };
     }
 
     return { key: 'common.requestRefused', detail: `${error.status} ${error.message}`.trim() };

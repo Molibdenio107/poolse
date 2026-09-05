@@ -51,6 +51,18 @@ export interface FeedbackMessage {
    * time.
    */
   attempt: number;
+  /**
+   * Something to do about it, offered in the message — round 5, G2.
+   *
+   * The Undo on a cancelled class is the case this exists for. Two consequences
+   * follow from an action being present and both are handled below: the message
+   * stays up longer, because there is now a decision to make and not only a
+   * sentence to read, and the action disappears with the message rather than
+   * lingering as a button that no longer means anything.
+   *
+   * The label is translated by the caller. This component composes no sentences.
+   */
+  action?: { label: string; onAct: () => void };
 }
 
 const TONE: Record<FeedbackKind, { box: string; icon: typeof Info }> = {
@@ -65,6 +77,16 @@ const TONE: Record<FeedbackKind, { box: string; icon: typeof Info }> = {
 
 /** How long a message that is only good news stays up. */
 const DISMISS_AFTER = 5_000;
+
+/**
+ * Longer when there is something to do about it — G2 asks for seven seconds.
+ *
+ * Five is enough to read "Class cancelled". It is not enough to read it, decide
+ * that it was the wrong class, and reach the Undo — and a window that expires
+ * mid-decision is worse than no Undo, because the operator has already stopped
+ * looking for another way back.
+ */
+const DISMISS_WITH_ACTION = 7_000;
 
 export function Feedback({
   message,
@@ -98,7 +120,10 @@ export function Feedback({
      * further along.
      */
     if (kind === 'success' || kind === 'info') {
-      timer.current = setTimeout(onDismiss, DISMISS_AFTER);
+      timer.current = setTimeout(
+        onDismiss,
+        message.action === undefined ? DISMISS_AFTER : DISMISS_WITH_ACTION,
+      );
     }
 
     return () => {
@@ -143,6 +168,25 @@ export function Feedback({
             <p className="mt-0.5 text-sm opacity-90">{message.detail}</p>
           )}
         </div>
+
+        {/*
+          The offer, before the close — G2. A button rather than a link: it does
+          something rather than going somewhere, and it is inside the live region
+          so a screen reader hearing "Class cancelled" hears that there is an
+          undo as part of the same announcement.
+        */}
+        {message.action !== undefined && (
+          <button
+            type="button"
+            onClick={() => {
+              message.action?.onAct();
+              onDismiss();
+            }}
+            className="shrink-0 rounded px-2 py-1 text-sm font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+          >
+            {message.action.label}
+          </button>
+        )}
 
         <button
           type="button"
