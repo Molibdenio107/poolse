@@ -13,10 +13,36 @@
  * prose everywhere, so reaching for a backtick inside a SQL comment is natural.
  * The only defence is a check that names the real problem.
  *
- * Heuristic and deliberately so: it looks at every backtick-delimited run that
- * contains SQL keywords and reports any that appear to have been cut short. It
- * cannot be exact without parsing TypeScript, and it does not need to be — a
- * false positive costs one glance and a false negative is what we have now.
+ * ---------------------------------------------------------------------------
+ * Two passes, since round 5 — and why the first version was not enough
+ * ---------------------------------------------------------------------------
+ *
+ * The original walked the file once and decided "is this literal SQL?" by
+ * testing the line the literal *opened on*. That misses the shape this codebase
+ * actually writes most often:
+ *
+ *     await tx.query(
+ *       `
+ *       SELECT ...
+ *
+ * The opening line is a bare backtick with no keyword on it, so the literal was
+ * never recognised as SQL and a backtick three lines down went unreported. It
+ * let exactly that through in ticket 10.3: a comment containing a quoted column
+ * name passed this check, and the TypeScript parse error is what caught it —
+ * which is the failure mode this script exists to prevent.
+ *
+ * So: find each literal's extent first, ask whether SQL appears **anywhere**
+ * inside it, and only then look for the offending lines. A keyword after the
+ * comment counts just as much as one before it.
+ *
+ * ---------------------------------------------------------------------------
+ * The self-test
+ * ---------------------------------------------------------------------------
+ *
+ * This runs its own fixtures before it scans anything, every time. A guard that
+ * has never been shown to fail is a guard nobody should trust — and this one
+ * silently stopped working for at least one shape without anybody noticing. The
+ * fixtures cost a millisecond and mean the check can no longer rot quietly.
  *
  * Run: pnpm --filter @poolse/api sql:check
  */
@@ -38,53 +64,153 @@ function walk(dir) {
 
 const SQL = /\b(SELECT|INSERT|UPDATE|DELETE|WITH|ALTER|CREATE)\b/i;
 
-const problems = [];
-
-for (const file of walk(ROOT)) {
-  const text = readFileSync(file, 'utf8');
-  const lines = text.split('\n');
-
-  /*
-   * Track whether we are inside a template literal, line by line.
-   *
-   * Crude on purpose. What it is looking for is a line *inside* a SQL literal
-   * that contains a backtick — because that backtick is almost certainly meant
-   * as prose quoting and is in fact closing the string.
-   */
-  let inLiteral = false;
-  let literalStart = 0;
-  let looksLikeSql = false;
+/**
+ * Every template literal in the file, as a line range.
+ *
+ * Parity, not parsing. A line with an odd number of backticks opens or closes a
+ * literal; an even number leaves the state alone. That is crude and it is enough,
+ * because the bug being hunted — a quoted identifier in a comment — always
+ * writes backticks in pairs and so never disturbs the count.
+ *
+ * It cannot see a literal inside a string, or an escaped backtick. Both are
+ * vanishingly rare in this codebase and a false positive costs one glance,
+ * which is the trade the original made and the right one.
+ */
+function literalsIn(lines) {
+  const found = [];
+  let open = null;
 
   lines.forEach((line, index) => {
     const ticks = (line.match(/`/g) ?? []).length;
+    if (ticks % 2 === 0) return;
 
-    if (!inLiteral) {
-      if (ticks % 2 === 1) {
-        inLiteral = true;
-        literalStart = index + 1;
-        looksLikeSql = SQL.test(line);
-      }
-      return;
-    }
-
-    // Inside a literal: a line that is only prose but carries a backtick pair
-    // is the bug — it closes and reopens the string mid-SQL.
-    if (looksLikeSql && ticks >= 2 && /^\s*\*/.test(line)) {
-      problems.push(
-        `${file}:${index + 1}\n` +
-          `    a backtick inside a SQL template literal (opened line ${literalStart})\n` +
-          `    ${line.trim()}\n` +
-          `    -> the first one ends the string. Write the identifier bare.`,
-      );
-    }
-
-    if (ticks % 2 === 1) {
-      inLiteral = false;
-      looksLikeSql = false;
-    } else if (!looksLikeSql) {
-      looksLikeSql = SQL.test(line);
+    if (open === null) open = index;
+    else {
+      found.push({ from: open, to: index });
+      open = null;
     }
   });
+
+  // A literal still open at the end of the file is one the parity could not
+  // pair up. Reported to its last line rather than dropped: an unclosed literal
+  // is itself worth looking at.
+  if (open !== null) found.push({ from: open, to: lines.length - 1 });
+  return found;
+}
+
+/**
+ * The lines that end a SQL literal early, in one file.
+ *
+ * Exported shape rather than printed here, so the self-test below can call it
+ * with fixtures instead of writing files to disk.
+ */
+function scan(lines) {
+  const problems = [];
+
+  for (const { from, to } of literalsIn(lines)) {
+    const body = lines.slice(from, to + 1);
+
+    // Pass one: is this a SQL literal at all? Anywhere inside it counts.
+    if (!body.some((line) => SQL.test(line))) continue;
+
+    // Pass two: a prose line carrying a backtick pair closes and reopens the
+    // string mid-statement. The `*` prefix is what distinguishes a comment from
+    // SQL that legitimately mentions one.
+    body.forEach((line, offset) => {
+      const ticks = (line.match(/`/g) ?? []).length;
+      if (ticks >= 2 && /^\s*\*/.test(line)) {
+        problems.push({ line: from + offset + 1, opened: from + 1, text: line.trim() });
+      }
+    });
+  }
+
+  return problems;
+}
+
+// ---------------------------------------------------------------------------
+// The self-test
+// ---------------------------------------------------------------------------
+
+const TICK = '`';
+
+/** Each fixture is [name, lines, howManyProblemsExpected]. */
+const FIXTURES = [
+  [
+    'the shape that got through in 10.3 — a bare opening backtick, comment before the keyword',
+    [
+      '  await tx.query(',
+      `    ${TICK}`,
+      '    /*',
+      `     * A note about ${TICK}starts_on${TICK}, which closes the literal.`,
+      '     */',
+      '    SELECT 1',
+      `    ${TICK},`,
+      '  );',
+    ],
+    1,
+  ],
+  [
+    'the shape the original already caught — keyword on the opening line',
+    [
+      `  await tx.query(${TICK}SELECT 1`,
+      `     * mentions ${TICK}a_table${TICK} in prose`,
+      `    ${TICK});`,
+    ],
+    1,
+  ],
+  [
+    'a SQL literal with no backticks in it is fine',
+    [`  await tx.query(${TICK}`, '    SELECT 1', '    FROM student', `  ${TICK});`],
+    0,
+  ],
+  [
+    'a non-SQL literal may quote whatever it likes',
+    [
+      `  const message = ${TICK}`,
+      `     * see ${TICK}field.tsx${TICK} for the shared control`,
+      `  ${TICK};`,
+    ],
+    0,
+  ],
+  [
+    'SQL that legitimately mentions a quoted identifier outside a comment is not flagged',
+    [`  await tx.query(${TICK}`, "    SELECT 1 -- no backticks here", `  ${TICK});`],
+    0,
+  ],
+];
+
+function selfTest() {
+  const failures = [];
+
+  for (const [name, lines, expected] of FIXTURES) {
+    const found = scan(lines).length;
+    if (found !== expected) failures.push(`  ${name}\n    expected ${expected}, found ${found}`);
+  }
+
+  if (failures.length > 0) {
+    console.log('The check is broken. Its own fixtures do not pass:\n');
+    for (const failure of failures) console.log(`${failure}\n`);
+    process.exit(2);
+  }
+}
+
+selfTest();
+
+// ---------------------------------------------------------------------------
+// The scan
+// ---------------------------------------------------------------------------
+
+const problems = [];
+
+for (const file of walk(ROOT)) {
+  for (const found of scan(readFileSync(file, 'utf8').split('\n'))) {
+    problems.push(
+      `${file}:${found.line}\n` +
+        `    a backtick inside a SQL template literal (opened line ${found.opened})\n` +
+        `    ${found.text}\n` +
+        `    -> the first one ends the string. Write the identifier bare.`,
+    );
+  }
 }
 
 if (problems.length > 0) {
@@ -93,4 +219,4 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log('No backticks inside SQL template literals.');
+console.log(`No backticks inside SQL template literals (${FIXTURES.length} fixtures pass).`);
