@@ -18,7 +18,15 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { AlertTriangle, Ban, Download, GripVertical, Lock, Printer } from 'lucide-react';
+import {
+  AlertTriangle,
+  Ban,
+  ClipboardCheck,
+  Download,
+  GripVertical,
+  Lock,
+  Printer,
+} from 'lucide-react';
 import {
   concurrentGroups,
   evaluate,
@@ -3218,7 +3226,7 @@ function BookingChip({
         }
       }}
       className={cn(
-        'relative flex h-full w-full flex-col overflow-hidden border pl-1 pr-1 text-[0.775rem] leading-tight',
+        'group/block relative flex h-full w-full flex-col overflow-hidden border pl-1 pr-1 text-[0.775rem] leading-tight',
         tint,
         /*
           Joined across the hour line. The first part loses its bottom corners
@@ -3353,17 +3361,43 @@ function BookingChip({
         </>
       )}
 
+      {/*
+        The actions, on hover and on focus — round 5, ticket 9.4.
+
+        They used to sit in the block permanently as two small text links, which
+        on a seven-column week is a lot of ink saying the same two words over and
+        over. Now they appear when the block is hovered or when anything inside
+        it takes focus.
+
+        **Opacity, never conditional rendering.** A control that is not in the
+        DOM cannot be reached by Tab, and "keep keyboard focus reachable" is half
+        the ticket. So they are always mounted and always tabbable;
+        `focus-within` on the block is what makes them visible when somebody
+        arrives by keyboard, and `pointer-events-none` while hidden is what stops
+        an invisible button swallowing a click meant for the block.
+
+        `motion-safe` on the fade, because a control blinking in and out on every
+        pointer cross is exactly the motion somebody turns animations off to
+        avoid.
+      */}
       {!continues &&
         (booking.controls.mark !== undefined || booking.controls.cancel !== undefined) && (
         <div
-          className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-0.5"
+          className={cn(
+            'mt-auto flex flex-wrap items-center gap-1',
+            'pointer-events-none opacity-0',
+            'group-hover/block:pointer-events-auto group-hover/block:opacity-100',
+            'group-focus-within/block:pointer-events-auto group-focus-within/block:opacity-100',
+            'motion-safe:transition-opacity motion-safe:duration-150',
+          )}
           onPointerDown={(event) => event.stopPropagation()}
         >
           {booking.controls.mark !== undefined && (
             <a
               href={booking.controls.mark.href}
-              className="rounded text-[0.715rem] font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+              className="inline-flex items-center gap-1 rounded border border-primary/40 px-1.5 py-0.5 text-[0.715rem] font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
             >
+              <ClipboardCheck aria-hidden className="size-3" />
               {booking.controls.mark.label}
             </a>
           )}
@@ -3647,9 +3681,28 @@ function DurationHandle({ scheduleId }: { scheduleId: string }): React.ReactElem
       aria-hidden
       tabIndex={-1}
       title={t('grid.durationHandle')}
-      // See `SpanHandle` — a second `onPointerDown` would replace dnd-kit's.
-      className="absolute inset-x-2 bottom-0 h-1.5 cursor-ns-resize rounded-t bg-foreground/15 hover:bg-primary/70"
-    />
+      /*
+        Larger, and it says so on hover — round 5, ticket 9.3.
+
+        1.5px of tinted edge was a target you found by accident. It is now 4px
+        of hit area with a visible bar inside it, and both grow on hover so the
+        thing under the cursor is unmistakably the thing that will move.
+
+        See `SpanHandle` — a second `onPointerDown` would replace dnd-kit's.
+      */
+      className={cn(
+        'group/dur absolute inset-x-2 bottom-0 flex h-1 cursor-ns-resize items-center justify-center',
+        'hover:h-2',
+        'motion-safe:transition-all motion-safe:duration-100',
+      )}
+    >
+      {/*
+        The grip itself, inside a taller invisible target. A bar rather than a
+        tint: "you can pull this" carried only by a colour change is a cue a
+        colour-blind reader does not get.
+      */}
+      <span className="block h-0.5 w-full rounded-full bg-foreground/25 group-hover/dur:h-1 group-hover/dur:bg-primary" />
+    </span>
   );
 }
 

@@ -1600,7 +1600,9 @@
     "clearRange": "Limpar seleção",
     "gridHint": "Clique num dia para começar um encerramento. Os feriados aparecem a cinzento.",
     "rangeHeldHint": "Estes dias estão selecionados. Preencha o motivo abaixo ou clique em qualquer dia para recomeçar.",
-    "fromWaterHint": "Escolha no calendário os dias a encerrar. O motivo já vem escrito: {reason}"
+    "fromWaterHint": "Escolha no calendário os dias a encerrar. O motivo já vem escrito: {reason}",
+    "cancelled": "Aula cancelada",
+    "restoreFailed": "Não foi possível repor a aula."
   },
   "inventory": {
     "title": "Inventário",

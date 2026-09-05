@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiPost } from '../../../../lib/api';
 import type { FormState } from '../actions';
+import { describeFailure } from '@/lib/form-failure';
 
 export interface GenerateState extends FormState {
   /** What the run actually did, so the button can say more than "done". */
@@ -193,5 +194,33 @@ export async function cancelSessionAction(
   }
 
   revalidateCalendar();
+  return { ok: true };
+}
+
+/**
+ * Put a cancelled occurrence back — round 5, ticket 9.6.
+ *
+ * What the Undo on the cancel toast calls. The endpoint behind it was removed
+ * on purpose in backlog round 3 and is back on Rui's call; `docs/decisions.md`
+ * carries the date.
+ *
+ * A class cancelled by a *closure* comes back as a 409 rather than being
+ * restored — the pool is still shut, and that is not a fact for one operator to
+ * overrule from a toast. `describeFailure` turns it into a sentence.
+ */
+export async function restoreSessionAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const sessionId = String(formData.get('sessionId') ?? '');
+
+  try {
+    await apiPost(`/sessions/${sessionId}/restore`, {}, { organizationId });
+  } catch (error) {
+    return describeFailure(error, 'calendar.restoreFailed');
+  }
+
+  revalidatePath('/dashboard/calendar');
   return { ok: true };
 }

@@ -1600,7 +1600,9 @@
     "clearRange": "Clear selection",
     "gridHint": "Click a day to start a closure. Holidays are shown in grey.",
     "rangeHeldHint": "These days are selected. Fill in the reason below, or click any day to start again.",
-    "fromWaterHint": "Pick the days to close on the calendar. The reason is already written: {reason}"
+    "fromWaterHint": "Pick the days to close on the calendar. The reason is already written: {reason}",
+    "cancelled": "Class cancelled",
+    "restoreFailed": "The class could not be put back."
   },
   "inventory": {
     "title": "Inventory",

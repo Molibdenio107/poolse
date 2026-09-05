@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { startTransition, useActionState, useEffect, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
+import { X } from 'lucide-react';
+import { Feedback, type FeedbackMessage } from '@/components/feedback';
 import type { Closure } from '@/lib/api';
 import type { FormState } from '../actions';
 import {
   cancelSessionAction,
+  restoreSessionAction,
   createClosureAction,
   generateSeasonAction,
   removeClosureAction,
@@ -272,7 +275,70 @@ export function CancelSession({
 }): React.ReactElement | null {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(cancelSessionAction, INITIAL);
+  const [restoreState, restore] = useActionState(restoreSessionAction, INITIAL);
   const [open, setOpen] = useState(false);
+
+  /*
+   * The toast, with its Undo — round 5, ticket 9.6.
+   *
+   * Raised here rather than by the grid, because this is the component that
+   * knows which occurrence was called off. The board has its own `Feedback` for
+   * drags; this one is passed *into* the board as a node and has no way to
+   * reach it.
+   *
+   * `attempt` is what makes cancelling a second class re-announce rather than
+   * look like nothing happened — the same reason `Feedback` asks for it.
+   */
+  const [toast, setToast] = useState<FeedbackMessage | null>(null);
+  const attempt = useRef(0);
+  const settled = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Only on the transition into success, and only once per submission: this
+    // effect re-runs on every render the action causes.
+    if (!state.ok || state.errorKey !== undefined) return;
+    if (settled.current === sessionId) return;
+    if (!open) return;
+
+    settled.current = sessionId;
+    setOpen(false);
+    attempt.current += 1;
+
+    setToast({
+      kind: 'success',
+      text: t('calendar.cancelled'),
+      attempt: attempt.current,
+      action: {
+        label: t('common.undo'),
+        onAct: () => {
+          const form = new FormData();
+          form.set('organizationId', organizationId);
+          form.set('sessionId', sessionId);
+          startTransition(() => restore(form));
+        },
+      },
+    });
+  }, [state, open, sessionId, organizationId, restore, t]);
+
+  // A refused undo is worth saying — the commonest reason is a closure, which
+  // the operator can act on by removing the closure.
+  useEffect(() => {
+    if (restoreState.ok || restoreState.errorKey === undefined) return;
+    attempt.current += 1;
+    setToast({
+      kind: 'error',
+      text: t(restoreState.errorKey),
+      attempt: attempt.current,
+    });
+  }, [restoreState, t]);
+
+  const toastNode = (
+    <Feedback
+      message={toast}
+      onDismiss={() => setToast(null)}
+      dismissLabel={t('common.close')}
+    />
+  );
 
   if (byClosure) {
     return (
@@ -290,21 +356,40 @@ export function CancelSession({
   // Cancelled by a person: there is nothing to offer. The slot is already struck
   // through and carries the reason, so an empty action area says everything a
   // control would have, minus the one it is no longer allowed to say.
-  if (cancelled) return null;
+  /*
+   * Cancelled by a person: there is no control left to offer, but the toast
+   * still has to render — the row re-renders as cancelled the instant the
+   * action succeeds, and returning null here would take the Undo away half a
+   * second after offering it.
+   */
+  if (cancelled) return toastNode;
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={cn(
-          'rounded text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-          // Matches the "Marcar presenças" link it sits beside on the grid.
-          compact === true ? 'text-[0.65rem] font-medium' : 'text-sm',
-        )}
-      >
-        {t('calendar.cancel')}
-      </button>
+      <>
+        {toastNode}
+        {/*
+          Icon and label, never icon-only — round 5, ticket 9.4.
+
+          It was a 0.65rem text link crowded against "Marcar presenças". Both
+          are now buttons with a shape and a word, at a size somebody can read
+          without leaning in: a trash can on its own asks the reader to guess,
+          and this one calls off a class.
+        */}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={cn(
+            'inline-flex items-center gap-1 rounded border border-danger/40 px-1.5 py-0.5',
+            'text-danger hover:bg-danger/10',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
+            compact === true ? 'text-[0.715rem] font-medium' : 'text-sm',
+          )}
+        >
+          <X aria-hidden className="size-3" />
+          {t('calendar.cancel')}
+        </button>
+      </>
     );
   }
 
