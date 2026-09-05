@@ -1,4 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { STRICT } from '../common/throttle.js';
 import { currentAuth } from '../auth/auth.context.js';
 import { ensureAppUser } from '../identity/identity.service.js';
 import {
@@ -33,12 +35,14 @@ export class JoinController {
    * mode comes back as a status, not an error: "this link expired" is an ordinary
    * thing to be told, and it needs to be told in the reader's language.
    */
+  @Throttle(STRICT)
   @Get('preview')
   async preview(@Query('token') token?: string): Promise<InvitationPreview> {
     if (!token) throw new BadRequestException('A token is required');
     return findInvitationByTokenHash(hashToken(token));
   }
 
+  @Throttle(STRICT)
   @Post()
   async accept(@Body() body: AcceptBody): Promise<AcceptResult> {
     const token = typeof body.token === 'string' ? body.token.trim() : '';

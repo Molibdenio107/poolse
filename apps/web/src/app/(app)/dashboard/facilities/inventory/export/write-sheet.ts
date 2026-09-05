@@ -2,6 +2,7 @@ import 'server-only';
 import ExcelJS from 'exceljs';
 import type { InventoryItem } from '@/lib/api';
 import { INVENTORY_EXPORT_FIELDS, type InventoryField } from '@/lib/inventory-sheet';
+import { toCsv } from '@/lib/csv';
 
 /**
  * The store room as a workbook — round 6.
@@ -89,11 +90,6 @@ export async function inventoryWorkbook(
   return (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
 }
 
-/** One CSV field, quoted only where it has to be. */
-function csvCell(value: string): string {
-  return /[";\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-}
-
 /**
  * The same list as a CSV.
  *
@@ -105,6 +101,5 @@ function csvCell(value: string): string {
  * survives either way; Excel is the fussy one.
  */
 export function inventoryCsv(headers: string[], items: InventoryItem[]): string {
-  const lines = [headers, ...items.map(rowFor)].map((row) => row.map(csvCell).join(';'));
-  return `﻿${lines.join('\r\n')}\r\n`;
+  return toCsv([headers, ...items.map(rowFor)]);
 }

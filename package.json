@@ -25,9 +25,25 @@
     "api:test": "pnpm --filter @poolse/api test",
     "web:test": "pnpm --filter @poolse/web test",
     "layout:check": "pnpm --filter @poolse/web layout:check",
-    "sql:check": "pnpm --filter @poolse/api sql:check"
+    "sql:check": "pnpm --filter @poolse/api sql:check",
+    "csv:check": "pnpm --filter @poolse/web csv:check",
+    "audit:check": "pnpm audit --audit-level high",
+    "security:check": "pnpm sql:check && pnpm csv:check && pnpm audit:check"
   },
   "devDependencies": {
     "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "ajv@^8": ">=8.18.0",
+      "body-parser": ">=1.20.6",
+      "glob@^10": ">=10.5.0",
+      "multer": ">=2.2.0",
+      "picomatch@^4": ">=4.0.4",
+      "postcss": ">=8.5.23",
+      "qs": ">=6.16.0",
+      "tmp": ">=0.2.6",
+      "webpack": ">=5.104.1"
+    }
   }
 }

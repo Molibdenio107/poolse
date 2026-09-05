@@ -1,4 +1,7 @@
 import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { throttlerOptions, UserThrottlerGuard } from './common/throttle.js';
 import { ClerkAuthMiddleware } from './auth/clerk-auth.middleware.js';
 import { AttendanceController } from './classes/attendance.controller.js';
 import { SeasonsController } from './classes/seasons.controller.js';
@@ -72,6 +75,7 @@ const PUBLIC_ROUTES = ['health', 'webhooks/(.*)'] as const;
 const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.*)'] as const;
 
 @Module({
+  imports: [ThrottlerModule.forRoot(throttlerOptions)],
   controllers: [
     HealthController,
     MeController,
@@ -119,6 +123,15 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     VacationsController,
     RecordsController,
     JoinController,
+  ],
+  providers: [
+    /*
+     * Global, for the same default-deny reason the auth middleware is global: a
+     * new endpoint should be covered because nobody had to remember it. Routes
+     * that need the tighter ceiling opt in with `@Throttle({ strict: ... })`;
+     * nothing can opt out of having a ceiling at all.
+     */
+    { provide: APP_GUARD, useClass: UserThrottlerGuard },
   ],
 })
 export class AppModule implements NestModule {

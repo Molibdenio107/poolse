@@ -2,6 +2,7 @@ import 'server-only';
 import ExcelJS from 'exceljs';
 import type { GridBooking, GridLane, GridSlot } from '@/lib/api';
 import { BOOKING_FIELDS, type BookingField } from '@/lib/booking-sheet';
+import { toCsv } from '@/lib/csv';
 import {
   cellAt,
   instructorDisplay,
@@ -330,11 +331,6 @@ export async function scheduleWorkbook(grid: SheetGrid, words: SheetWords): Prom
   return (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
 }
 
-/** One CSV field, quoted only where it has to be. */
-function csvCell(value: string): string {
-  return /[";\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-}
-
 /**
  * `Marcações` alone, as a CSV — 54.10.
  *
@@ -355,10 +351,8 @@ export function bookingsCsv(grid: SheetGrid, words: SheetWords): string {
     (a, b) => a.weekday - b.weekday || toMinutes(a.startTime) - toMinutes(b.startTime),
   );
 
-  const lines = [
+  return toCsv([
     BOOKING_FIELDS.map((field) => words.field[field]),
     ...ordered.map((booking) => bookingRow(booking, grid.lanes, words)),
-  ].map((row) => row.map(csvCell).join(';'));
-
-  return `\uFEFF${lines.join('\r\n')}\r\n`;
+  ]);
 }

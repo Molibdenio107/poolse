@@ -37,6 +37,22 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   app.enableCors({ origin: process.env['WEB_ORIGIN'] ?? 'http://localhost:3000' });
 
+  /*
+   * One proxy in front of us, and exactly one.
+   *
+   * Railway, Fly and Vercel all terminate TLS and forward, so without this every
+   * request appears to come from the platform's own address and `req.ip` is
+   * useless — which matters because it is the rate limiter's fallback key for
+   * routes that run before a session exists.
+   *
+   * `1` rather than `true`: trusting the whole chain means trusting whatever a
+   * caller writes in `X-Forwarded-For`, and then anybody can present a fresh IP
+   * per request and the fallback bucket stops existing. One hop is the platform's
+   * hop. If a CDN is ever put in front, this becomes 2 — deliberately, not by
+   * turning it off.
+   */
+  app.set('trust proxy', 1);
+
   // A truncated link in an email is a 404, not a 500 — POOLSE-R3-01.
   app.useGlobalFilters(new BadInputFilter());
 

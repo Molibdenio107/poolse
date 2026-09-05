@@ -2,6 +2,7 @@ import 'server-only';
 import ExcelJS from 'exceljs';
 import type { Student } from '@/lib/api';
 import { EXPORT_FIELDS, type ImportField } from '@/lib/sheet';
+import { toCsv } from '@/lib/csv';
 
 /**
  * Slice 1.11 — the register as a workbook.
@@ -122,11 +123,6 @@ export async function studentsWorkbook(
   return (await workbook.xlsx.writeBuffer()) as ArrayBuffer;
 }
 
-/** One CSV field, quoted only where it has to be. */
-function csvCell(value: string): string {
-  return /[";\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-}
-
 /**
  * The same register as a CSV.
  *
@@ -138,8 +134,5 @@ function csvCell(value: string): string {
  * the round trip survives either way; Excel is the fussy one.
  */
 export function studentsCsv(headers: string[], students: Student[]): string {
-  const lines = [headers, ...students.map(rowFor)].map((row) =>
-    row.map(csvCell).join(';'),
-  );
-  return `\uFEFF${lines.join('\r\n')}\r\n`;
+  return toCsv([headers, ...students.map(rowFor)]);
 }

@@ -18,6 +18,8 @@
  *   cannot place is left unmapped rather than attached to whatever was nearest.
  */
 
+import { readCsvCell } from './csv.ts';
+
 /**
  * The fields a column can be pointed at.
  *
@@ -153,7 +155,12 @@ export function parseCsv(input: string): Sheet {
   let quoted = false;
 
   const endField = (): void => {
-    row.push(field);
+    // `readCsvCell` undoes the apostrophe our own exporter puts in front of a
+    // value a spreadsheet would otherwise execute, so a file exported from
+    // Poolse re-imports byte for byte. It leaves everything else alone, which
+    // matters here — most files reaching this parser were written by somebody
+    // else's system and have no escaping of ours to undo.
+    row.push(readCsvCell(field));
     field = '';
   };
   const endRow = (): void => {

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { AlertTriangle } from 'lucide-react';
 import type { PoolAnalysis } from '@/lib/api';
 import type { Excursion } from '@/lib/water';
+import { toCsv } from '@/lib/csv';
 import { EntityIcon } from '@/components/entity-icon';
 
 /**
@@ -165,10 +166,7 @@ export function ExportAnalyses({
   headers: { takenAt: string; notes: string; export: string };
 }): React.ReactElement {
   const download = (): void => {
-    const cell = (value: string | number | null): string =>
-      '"' + String(value ?? '').replace(/"/g, '""') + '"';
-
-    const rows = [
+    const rows: (string | number | null)[][] = [
       [
         headers.takenAt,
         ...metrics.map((metric) => `${metric.label} (${metric.unit})`),
@@ -184,8 +182,10 @@ export function ExportAnalyses({
       ]),
     ];
 
-    const csv = rows.map((row) => row.map(cell).join(';')).join('\r\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    // `toCsv` carries the byte-order mark, the semicolons and the CRLF, and is
+    // the only thing in the app allowed to write a CSV cell — see `lib/csv.ts`.
+    const csv = toCsv(rows.map((row) => row.map((value) => String(value ?? ''))));
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
 
     const link = document.createElement('a');

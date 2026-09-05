@@ -11,7 +11,8 @@
     "test": "node --test \"src/**/*.test.ts\"",
     "layout:check": "node scripts/check-layout.mjs",
     "contrast:check": "node scripts/check-contrast.mjs",
-    "pt:check": "node scripts/check-portuguese.mjs"
+    "pt:check": "node scripts/check-portuguese.mjs",
+    "csv:check": "node scripts/check-csv.mjs"
   },
   "dependencies": {
     "@poolse/rules": "workspace:*",
