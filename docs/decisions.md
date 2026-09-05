@@ -32,3 +32,6 @@ This file is for the calls themselves.
 - **2026-09-05** — A turma requires a tank and a lane count; an instructor stays optional. Refusing an unstaffed turma would make the product unusable in September, which is the month a club sets its timetable up.
 - **2026-09-05** — POOLSE-QA-07's "an empty save is still a save" is superseded for turmas. Its point was that an empty form must not 500; the answer is now a 400 naming the two fields, which is the same courtesy by a better route.
 - **2026-09-05** — The weekly timetable hides weekdays the site is shut on, except where a class already runs on one. The existing "a disabled weekday keeps its classes" rule wins over the new filter.
+- **2026-09-05** — Restoring a cancelled occurrence is owner/admin, narrower than cancelling it. An instructor may call off their own class; putting one back undoes somebody else's decision as often as your own.
+- **2026-09-05** — A class cancelled *by a closure* cannot be restored from the toast. Those come back when the closure is lifted, in SQL; the pool being shut is not a fact for one operator to overrule.
+- **2026-09-05** — Past days on the calendar are faded and undraggable, not hidden. The register of a class that happened is still worth opening.

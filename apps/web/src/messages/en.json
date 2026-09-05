@@ -1733,7 +1733,8 @@
     "failed": "The grid could not be saved.",
     "versusHours": "The hours above say when the site is open. The grid says which rows classes sit in inside those hours — it is what the calendar will draw.",
     "minutes": "{count} min",
-    "repeatsUntil": "Repeats until the site closes at {until}."
+    "repeatsUntil": "Repeats until the site closes at {until}.",
+    "confirmGenerate": "This changes the calendar grid and this site’s schedule grid together. Continue?"
   },
   "partners": {
     "title": "Partnerships",

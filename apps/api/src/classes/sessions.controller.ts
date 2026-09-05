@@ -33,6 +33,7 @@ import {
   sessionsForStudent,
   updateClosure,
   cancelSession,
+  restoreSession,
   setSubstitute,
   type Closure,
   type ClosureImpact,
@@ -424,20 +425,44 @@ export class SessionsCalendarController {
     return { cancelled: true };
   }
 
-  /*
-   * There is no `POST :id/restore`. Backlog round 3, story 5 removed the
-   * operator-facing restore, and the endpoint went with the control rather than
-   * staying behind as the one caller-less route in the API — dead code that
-   * implements a withdrawn feature is how the feature comes back by accident.
+  /**
+   * Put a cancelled occurrence back — round 5, ticket 9.6.
    *
-   * A class cancelled by a *closure* still returns on its own: `generate_sessions`
-   * restores those in SQL when the closure is removed, which is a different
-   * mechanism, still covered by `sessions.sql` test 5, and untouched by any of
-   * this.
+   * **The decision changed, and this is the revert.** Backlog round 3, story 5
+   * removed the operator-facing restore and took the endpoint with it, on the
+   * argument that dead code implementing a withdrawn feature is how the feature
+   * comes back by accident. That comment said reinstating it would be a revert
+   * of one commit if the decision changed. Rui asked for the Undo on the cancel
+   * toast, which needs exactly this — so it is back on purpose, with a caller,
+   * and `docs/decisions.md` carries the date and the reversal.
    *
-   * Reinstating the operator-facing restore is a revert of one commit if the
-   * decision changes.
+   * **Owner and admin only**, which is narrower than cancelling: an instructor
+   * may cancel their own class, and putting one back is an undo of somebody
+   * else's decision as often as of your own.
+   *
+   * A class cancelled by a *closure* is refused rather than restored. Those come
+   * back on their own when the closure is lifted — `generate_sessions` does it
+   * in SQL, covered by `sessions.sql` test 5 — and the pool being shut is not a
+   * fact for one operator to overrule from a toast.
    */
+  @Post(':id/restore')
+  async restore(@Param('id') id: string): Promise<{ restored: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const outcome = await restoreSession(organizationId, id);
+
+    if (outcome === 'not_cancelled') {
+      throw new NotFoundException('No such class, or it is not cancelled');
+    }
+    if (outcome === 'closure') {
+      throw new ConflictException({
+        code: 'cancelled_by_closure',
+        message: 'This class is cancelled by a closure — remove the closure instead',
+      });
+    }
+    return { restored: true };
+  }
 
   /**
    * Who is taking it instead. Null clears the substitution and hands the class

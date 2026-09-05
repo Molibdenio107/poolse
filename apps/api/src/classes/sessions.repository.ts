@@ -748,6 +748,55 @@ export async function cancelSession(
   });
 }
 
+/**
+ * Put a cancelled occurrence back — round 5, ticket 9.6.
+ *
+ * **This reinstates what backlog round 3, story 5 deliberately removed**, on
+ * Rui's explicit call, so that the cancel toast can offer an Undo. The comment
+ * that removed it said reinstating would be a revert of one commit if the
+ * decision changed; the decision changed, and this is that revert. It is here on
+ * purpose rather than back by accident — `docs/decisions.md` carries the date.
+ *
+ * **A closure's cancellation is not undone here.** `generate_sessions` restores
+ * those in SQL when the closure is lifted, which is a different mechanism for a
+ * different fact: the pool was shut, and it is not for one operator to say
+ * otherwise from a toast. So a session cancelled *by a closure* — one carrying a
+ * `closure_id` — is refused, and the answer is to remove the closure.
+ *
+ * Idempotent by the `status = 'cancelled'` guard: the Undo can only be pressed
+ * once, and a second press is not an error worth showing anybody.
+ */
+export async function restoreSession(
+  organizationId: string,
+  sessionId: string,
+): Promise<'restored' | 'not_cancelled' | 'closure'> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ closure_id: string | null }>(
+      `SELECT closure_id FROM class_session
+        WHERE id = $1 AND status = 'cancelled'`,
+      [sessionId],
+    );
+
+    const found = rows[0];
+    if (!found) return 'not_cancelled';
+    if (found.closure_id !== null) return 'closure';
+
+    await tx.query(
+      `UPDATE class_session
+          SET status = 'scheduled', cancellation_reason = NULL
+        WHERE id = $1 AND status = 'cancelled'`,
+      [sessionId],
+    );
+
+    await recordAudit(tx, {
+      action: 'class_session.restored',
+      entityType: 'class_session',
+      entityId: sessionId,
+    });
+    return 'restored';
+  });
+}
+
 export interface Clash {
   /** The class already in that slot. */
   className: string;

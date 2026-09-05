@@ -428,6 +428,7 @@ export function ScheduleBoard({
   dayNames,
   canManage,
   weekStart,
+  todayWeekday,
   slots,
   lanes,
   pools,
@@ -463,6 +464,17 @@ export function ScheduleBoard({
    * there is no single week to move.
    */
   weekStart?: string | undefined;
+  /**
+   * Today's ISO weekday, when the week on screen is the one containing today —
+   * round 5, ticket 9.1.
+   *
+   * Classes on the days before it are drawn faded and cannot be dragged: a
+   * lesson that has already happened is a record, and moving it would be
+   * rewriting the past rather than planning. The calendar passes it; the turma
+   * screen does not, because that board shows a recurring pattern rather than a
+   * particular week and no day of it is behind us.
+   */
+  todayWeekday?: number | undefined;
   /** The facility's grid rows — POOLSE-44. Empty means no grid has been built. */
   slots: GridSlot[];
   lanes: GridLane[];
@@ -1778,6 +1790,7 @@ export function ScheduleBoard({
             />
 
             <SlotGrid
+              todayWeekday={todayWeekday}
               heading={null}
               slots={slots}
               days={shownDays}
@@ -1854,7 +1867,16 @@ export function ScheduleBoard({
                   the grid a row at that hour, which is the slot editor. The drag
                   is already here; this is the other one.
                 */}
-                {facility !== undefined && (
+                {/*
+                  Owner and admin only — round 5, ticket 9.2.
+
+                  It was shown to everybody, which sent an instructor to a page
+                  whose slot editor refuses them. The endpoints behind it have
+                  always been owner/admin, so this is the control catching up
+                  with the rule rather than the rule changing — and hiding it is
+                  never the permission, only the courtesy.
+                */}
+                {facility !== undefined && canManage && (
                   <a
                     href={`/dashboard/facilities/${facility.id}`}
                     className="self-start rounded border border-border px-3 py-1.5 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -2379,6 +2401,7 @@ function MoveDialog({
  */
 function SlotGrid({
   heading,
+  todayWeekday,
   slots,
   days,
   lanes,
@@ -2403,6 +2426,8 @@ function SlotGrid({
 }: {
   /** Null for the weekday block, which needs no heading of its own. */
   heading: string | null;
+  /** Today, when the week on screen holds it — 9.1. Undefined on other weeks. */
+  todayWeekday?: number | undefined;
   slots: GridSlot[];
   days: readonly number[];
   lanes: GridLane[];
@@ -2648,6 +2673,7 @@ function SlotGrid({
 
                         return (
                           <Cell
+                            todayWeekday={todayWeekday}
                             key={`${day}:${startTime}:${lane.id}`}
                             day={day}
                             slot={slot}
@@ -2824,6 +2850,7 @@ function NoLaneRow({
 
 function Cell({
   day,
+  todayWeekday,
   slot,
   lane,
   column,
@@ -2848,6 +2875,8 @@ function Cell({
   draggingSubject,
 }: {
   day: number;
+  /** Today, when the week on screen holds it. Undefined on every other week. */
+  todayWeekday?: number | undefined;
   slot: GridSlot;
   lane: GridLane;
   column: number;
@@ -3024,6 +3053,8 @@ function Cell({
           )}
           <BookingChip
             booking={booking}
+            // A day already behind us — 9.1. Faded, and not draggable.
+            past={todayWeekday !== undefined && day < todayWeekday}
             canManage={canManage}
             density={density}
             continues={continues}
@@ -3086,6 +3117,7 @@ function BookingChip({
   onAssign,
   staff,
   concurrency,
+  past,
 }: {
   booking: Placed;
   canManage: boolean;
@@ -3103,6 +3135,15 @@ function BookingChip({
   staff: { id: string; name: string }[];
   /** How many groups this instructor is running at this moment. 1 is silent. */
   concurrency: number;
+  /**
+   * On a day the week has already passed — round 5, ticket 9.1.
+   *
+   * A lesson that has happened is a record. Fading it keeps the week readable
+   * as "here is where we are", and taking the grip off stops a stray drag
+   * rewriting the past — which the API would accept, because a schedule has no
+   * opinion about which weekday is behind us.
+   */
+  past?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -3123,7 +3164,8 @@ function BookingChip({
    * exist yet cannot be picked up again. A cancelled class stays put because
    * moving something that is not happening is not a thing to offer.
    */
-  const draggable = canManage && booking.scheduleId !== null && !booking.cancelled;
+  const draggable =
+    canManage && booking.scheduleId !== null && !booking.cancelled && past !== true;
 
   const compact = density === 'compacta';
 
@@ -3184,6 +3226,19 @@ function BookingChip({
           elements read as one block that happens to cross a row boundary.
         */
         continues ? 'rounded-b-sm border-t-0' : 'rounded-t-sm',
+        /*
+          A day already behind us — round 5, ticket 9.1.
+
+          Faded rather than hidden or greyed to a flat colour: the class still
+          happened and its register is still worth opening, so it has to stay
+          readable. 60% keeps it above the contrast floor against both grounds,
+          which a lighter touch would not.
+
+          The fade is not the only signal that it cannot be moved — the grip and
+          the resize handles are gone too, so the block says what it is with
+          shape as well as with tone.
+        */
+        past === true && 'opacity-60',
       )}
       style={
         booking.partnerColour === null

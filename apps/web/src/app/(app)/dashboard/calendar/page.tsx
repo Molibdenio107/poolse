@@ -348,6 +348,9 @@ export default async function CalendarPage({
                 seasonStatus={grid?.seasonStatus ?? null}
                 // So a week outside the season says so rather than drawing a
                 // full timetable eighteen months after it ended — R2-03.
+                // Fade what has already happened — 9.1. Only meaningful on the
+                // week that contains today; other weeks pass undefined.
+                todayWeekday={todayWeekday}
                 seasonStartsOn={grid?.seasonStartsOn ?? null}
                 seasonEndsOn={grid?.seasonEndsOn ?? null}
               />

@@ -387,7 +387,28 @@ function Generator({
   const skipped = proposed.length - wanted.length;
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form
+      action={action}
+      /*
+       * Confirm before rebuilding the grid — round 5, ticket 9.2.
+       *
+       * Generating slots is the one action here that changes what every other
+       * screen looks like: the calendar draws its rows from this table, so a new
+       * grid moves the whole week under whoever is reading it. The operator
+       * standing in this panel knows that; the colleague with the calendar open
+       * does not.
+       *
+       * `window.confirm` rather than a component, deliberately. It is one
+       * sentence and one decision, it is keyboard-reachable and screen-reader
+       * announced without any work, and it cannot be dismissed by a stray click
+       * on a backdrop. A bespoke dialog here would be more code doing the same
+       * job slightly worse.
+       */
+      onSubmit={(event) => {
+        if (!window.confirm(t('slots.confirmGenerate'))) event.preventDefault();
+      }}
+      className="flex flex-col gap-4"
+    >
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="facilityId" value={facilityId} />
       <input

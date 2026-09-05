@@ -1733,7 +1733,8 @@
     "failed": "Não foi possível guardar a grelha.",
     "versusHours": "O horário acima diz quando a instalação está aberta. A grelha diz em que linhas as aulas assentam dentro desse horário — é o que o calendário vai desenhar.",
     "minutes": "{count} min",
-    "repeatsUntil": "Repete-se até ao fecho da instalação, às {until}."
+    "repeatsUntil": "Repete-se até ao fecho da instalação, às {until}.",
+    "confirmGenerate": "Isto altera a grelha do calendário e a grelha de horários deste local ao mesmo tempo. Continuar?"
   },
   "partners": {
     "title": "Parcerias",
