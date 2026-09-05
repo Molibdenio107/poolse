@@ -55,11 +55,33 @@ export interface TurmaDetail {
 export function TurmaHoverCard({
   title,
   detail,
+  actions,
   children,
+  side = 'right',
 }: {
   title: string;
   detail: TurmaDetail;
+  /**
+   * What you do to this class, at the foot of the card — round 6, ticket 4.0.
+   *
+   * The calendar's two controls used to live *inside* the block, revealed on
+   * hover: two small buttons in a cell one seventh of a column wide, on eighty
+   * of them. They belong here, where there is room for an icon and a word.
+   *
+   * A node rather than a shape, because the two are a link and a client
+   * component the page already owns, and describing them as data would mean
+   * this component knowing what a register and a cancellation are.
+   *
+   * The card stays a shortcut and never the only route: everything it offers is
+   * also on the turma's own page and on the session's.
+   */
+  actions?: React.ReactNode;
   children: React.ReactNode;
+  /**
+   * Which way it opens. `right` suits a week grid whose slots are tall and
+   * narrow; the lane grid is wider than it is tall, so its blocks pass `top`.
+   */
+  side?: 'top' | 'right' | 'bottom' | 'left';
 }): React.ReactElement {
   const t = useTranslations();
 
@@ -76,7 +98,7 @@ export function TurmaHoverCard({
 
       <HoverCardPrimitive.Portal>
         <HoverCardPrimitive.Content
-          side="right"
+          side={side}
           align="start"
           sideOffset={8}
           collisionPadding={12}
@@ -136,6 +158,19 @@ export function TurmaHoverCard({
               </>
             )}
           </div>
+
+          {/*
+            The actions, last and under a rule — round 6, ticket 4.0.
+
+            At the foot because the card answers "what is this" before it offers
+            "what would you like to do to it", and because a destructive control
+            under the cursor's entry point is a control people press by accident.
+          */}
+          {actions !== undefined && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+              {actions}
+            </div>
+          )}
         </HoverCardPrimitive.Content>
       </HoverCardPrimitive.Portal>
     </HoverCardPrimitive.Root>

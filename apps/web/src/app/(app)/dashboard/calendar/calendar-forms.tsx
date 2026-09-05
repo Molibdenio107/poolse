@@ -4,9 +4,8 @@ import { startTransition, useActionState, useEffect, useRef, useState } from 're
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
-import { cn } from '@/lib/utils';
-import { X } from 'lucide-react';
 import { Feedback, type FeedbackMessage } from '@/components/feedback';
+import { Dialog } from '@/components/ui/dialog';
 import type { Closure } from '@/lib/api';
 import type { FormState } from '../actions';
 import {
@@ -230,78 +229,74 @@ export function RemoveClosure({
 }
 
 /**
- * Calls off one class. It does not put it back — backlog round 3, story 5.
+ * What the confirmation has to be able to say — round 6, ticket 4.1.
  *
- * The restore control is gone, deliberately and on the operator's instruction.
- * What is *not* gone is the row: a cancelled session keeps `status = 'cancelled'`
- * rather than being deleted, because attendance history, invoicing and any later
- * "was there a class that Tuesday?" all rest on it. Nothing here offers to bring
- * it back; the record simply survives underneath.
+ * Data, not a rendered control. Round 5 had the page build one `CancelSession`
+ * per session and hand it to the grid as a node, which is why the confirmation
+ * ended up rendered inside a grid cell: the form replaced its own trigger, and
+ * the trigger lived in a box a seventh of a column wide with `overflow-hidden`
+ * on it.
  *
- * A class the *closure* took down is a different thing and still says so. That
- * one is undone by removing the closure, which is a real action on a real
- * screen, so the label points there rather than pretending nothing can be done.
+ * Now the page passes the two strings it is uniquely able to produce — the
+ * turma's name and the date formatted in the reader's locale — and the board
+ * owns one dialog for whichever class is being called off.
+ */
+export interface CancelTarget {
+  sessionId: string;
+  className: string;
+  /** Date and time, already formatted in the reader's locale. */
+  when: string;
+}
+
+/**
+ * Calls off one class, and offers to put it back — round 5, ticket 9.6.
+ *
+ * A cancelled session keeps `status = 'cancelled'` rather than being deleted,
+ * because attendance history, invoicing and any later "was there a class that
+ * Tuesday?" all rest on it. The Undo in the toast restores that row; a class the
+ * *closure* took down is refused, because that one is undone by removing the
+ * closure, which is a real action on a real screen.
  *
  * The label stays "Cancelar aula" rather than "Remover": a class that does not
  * happen has been cancelled, and calling it removal would suggest the evening is
  * erased from the record, which is exactly what does not happen.
+ *
+ * **One instance, mounted by the board, not one per class** — round 6, ticket
+ * 4.1. Two things follow from that and both were bugs before it. The dialog is
+ * centred over the page through `Dialog`, which portals to the body, so no
+ * cell's overflow or stacking context can clip it. And the toast outlives the
+ * class it is about: round 5 had to keep a control rendering after its row had
+ * already re-rendered as cancelled, or the Undo vanished half a second after
+ * being offered.
  */
-export function CancelSession({
+export function CancelSessionDialog({
   organizationId,
-  sessionId,
-  className,
-  when,
-  cancelled,
-  byClosure,
-  compact,
+  target,
+  onClose,
 }: {
   organizationId: string;
-  sessionId: string;
-  /** The turma's name, for the confirmation. */
-  className: string;
-  /** Date and time, already formatted in the reader's locale. */
-  when: string;
-  cancelled: boolean;
-  byClosure: boolean;
-  /**
-   * Inside a chip on the schedule grid — round 5.
-   *
-   * The trigger there sits beside "Marcar presenças", and the two have to look
-   * like one pair of controls rather than a link and a shout. Only the trigger
-   * shrinks: the confirmation it opens is a destructive question and stays at
-   * the size everything else on the page is read at.
-   */
-  compact?: boolean;
-}): React.ReactElement | null {
+  /** The class being called off, or null when nothing is being asked. */
+  target: CancelTarget | null;
+  onClose: () => void;
+}): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(cancelSessionAction, INITIAL);
   const [restoreState, restore] = useActionState(restoreSessionAction, INITIAL);
-  const [open, setOpen] = useState(false);
 
-  /*
-   * The toast, with its Undo — round 5, ticket 9.6.
-   *
-   * Raised here rather than by the grid, because this is the component that
-   * knows which occurrence was called off. The board has its own `Feedback` for
-   * drags; this one is passed *into* the board as a node and has no way to
-   * reach it.
-   *
-   * `attempt` is what makes cancelling a second class re-announce rather than
-   * look like nothing happened — the same reason `Feedback` asks for it.
-   */
   const [toast, setToast] = useState<FeedbackMessage | null>(null);
   const attempt = useRef(0);
   const settled = useRef<string | null>(null);
+
+  const sessionId = target?.sessionId ?? null;
 
   useEffect(() => {
     // Only on the transition into success, and only once per submission: this
     // effect re-runs on every render the action causes.
     if (!state.ok || state.errorKey !== undefined) return;
-    if (settled.current === sessionId) return;
-    if (!open) return;
+    if (sessionId === null || settled.current === sessionId) return;
 
     settled.current = sessionId;
-    setOpen(false);
+    onClose();
     attempt.current += 1;
 
     setToast({
@@ -318,7 +313,7 @@ export function CancelSession({
         },
       },
     });
-  }, [state, open, sessionId, organizationId, restore, t]);
+  }, [state, sessionId, organizationId, restore, onClose, t]);
 
   // A refused undo is worth saying — the commonest reason is a closure, which
   // the operator can act on by removing the closure.
@@ -332,131 +327,85 @@ export function CancelSession({
     });
   }, [restoreState, t]);
 
-  const toastNode = (
-    <Feedback
-      message={toast}
-      onDismiss={() => setToast(null)}
-      dismissLabel={t('common.close')}
-    />
-  );
-
-  if (byClosure) {
-    return (
-      <span
-        className={cn(
-          'text-foreground-muted',
-          compact === true ? 'text-[0.65rem]' : 'text-xs',
-        )}
-      >
-        {t('calendar.byClosure')}
-      </span>
-    );
-  }
-
-  // Cancelled by a person: there is nothing to offer. The slot is already struck
-  // through and carries the reason, so an empty action area says everything a
-  // control would have, minus the one it is no longer allowed to say.
-  /*
-   * Cancelled by a person: there is no control left to offer, but the toast
-   * still has to render — the row re-renders as cancelled the instant the
-   * action succeeds, and returning null here would take the Undo away half a
-   * second after offering it.
-   */
-  if (cancelled) return toastNode;
-
-  if (!open) {
-    return (
-      <>
-        {toastNode}
-        {/*
-          Icon and label, never icon-only — round 5, ticket 9.4.
-
-          It was a 0.65rem text link crowded against "Marcar presenças". Both
-          are now buttons with a shape and a word, at a size somebody can read
-          without leaning in: a trash can on its own asks the reader to guess,
-          and this one calls off a class.
-        */}
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={cn(
-            'inline-flex items-center gap-1 rounded border border-danger/40 px-1.5 py-0.5',
-            'text-danger hover:bg-danger/10',
-            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
-            compact === true ? 'text-[0.715rem] font-medium' : 'text-sm',
-          )}
-        >
-          <X aria-hidden className="size-3" />
-          {t('calendar.cancel')}
-        </button>
-      </>
-    );
-  }
-
   return (
-    <form action={action} className="flex flex-col gap-2">
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="sessionId" value={sessionId} />
+    <>
+      <Feedback message={toast} onDismiss={() => setToast(null)} dismissLabel={t('common.close')} />
 
-      {/*
-        Named, because it is the difference between a confirmation and a speed
-        bump. Seven columns of small cards are easy to mis-click, and "are you
-        sure?" cannot tell you that you are about to call off Thursday's class
-        instead of Tuesday's.
-      */}
-      <p className="text-sm font-medium">
-        {t('calendar.confirmQuestion', { name: className, when })}
-      </p>
+      <Dialog
+        open={target !== null}
+        onClose={onClose}
+        title={t('calendar.cancel')}
+        closeLabel={t('common.close')}
+      >
+        <form action={action} className="flex flex-col gap-4">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          <input type="hidden" name="sessionId" value={target?.sessionId ?? ''} />
 
-      {/*
-        The scope — POOLSE-14.
-        
-        Radios rather than two buttons, and "this occurrence" selected: the
-        narrow, recoverable choice is the default, and removing a whole term is
-        something somebody has to reach for. The past is never affected either
-        way, which the hint says out loud because it is the question an operator
-        would otherwise have to guess at.
-      */}
-      <fieldset className="flex flex-col gap-1">
-        <legend className="sr-only">{t('calendar.removeScope')}</legend>
-        {(['occurrence', 'future'] as const).map((option) => (
-          <label key={option} className="flex items-start gap-2 text-sm">
-            <input
-              type="radio"
-              name="scope"
-              value={option}
-              defaultChecked={option === 'occurrence'}
-              className="mt-0.5 size-4 accent-primary"
-            />
-            <span>{t(`calendar.removalScope.${option}`)}</span>
-          </label>
-        ))}
-        <p className="mt-1 text-sm text-foreground-muted">{t('calendar.scopeHint')}</p>
-      </fieldset>
+          {/*
+            Named, because it is the difference between a confirmation and a
+            speed bump. Seven columns of small cards are easy to mis-click, and
+            "are you sure?" cannot tell you that you are about to call off
+            Thursday's class instead of Tuesday's.
+          */}
+          <p className="text-sm font-medium">
+            {t('calendar.confirmQuestion', {
+              name: target?.className ?? '',
+              when: target?.when ?? '',
+            })}
+          </p>
 
-      <input
-        name="reason"
-        maxLength={200}
-        placeholder={t('calendar.cancelReason')}
-        className={CONTROL_LINE}
-      />
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded bg-danger px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-60"
-        >
-          {t('calendar.confirmCancel')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-sm text-foreground-muted hover:underline"
-        >
-          {t('calendar.keep')}
-        </button>
-      </div>
-      <Problem state={state} />
-    </form>
+          {/*
+            The scope — POOLSE-14.
+
+            Radios rather than two buttons, and "this occurrence" selected: the
+            narrow, recoverable choice is the default, and removing a whole term
+            is something somebody has to reach for. The past is never affected
+            either way, which the hint says out loud because it is the question
+            an operator would otherwise have to guess at.
+          */}
+          <fieldset className="flex flex-col gap-1">
+            <legend className="sr-only">{t('calendar.removeScope')}</legend>
+            {(['occurrence', 'future'] as const).map((option) => (
+              <label key={option} className="flex items-start gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="scope"
+                  value={option}
+                  defaultChecked={option === 'occurrence'}
+                  className="mt-0.5 size-4 accent-primary"
+                />
+                <span>{t(`calendar.removalScope.${option}`)}</span>
+              </label>
+            ))}
+            <p className="mt-1 text-sm text-foreground-muted">{t('calendar.scopeHint')}</p>
+          </fieldset>
+
+          <input
+            name="reason"
+            maxLength={200}
+            placeholder={t('calendar.cancelReason')}
+            className={CONTROL_LINE}
+          />
+
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded bg-danger px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-60"
+            >
+              {t('calendar.confirmCancel')}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-sm text-foreground-muted hover:underline"
+            >
+              {t('calendar.keep')}
+            </button>
+          </div>
+          <Problem state={state} />
+        </form>
+      </Dialog>
+    </>
   );
 }

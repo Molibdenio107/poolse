@@ -1,6 +1,16 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  createContext,
+  Fragment,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -26,6 +36,7 @@ import {
   GripVertical,
   Lock,
   Printer,
+  X,
 } from 'lucide-react';
 import {
   concurrentGroups,
@@ -48,6 +59,9 @@ import type {
 } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { slotKey } from '@/lib/slot-key';
+import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
+import { CancelSessionDialog, type CancelTarget } from '../calendar/calendar-forms';
+import { Dialog } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { hoursLabel, withinHours } from '@/lib/opening-hours';
 import { Feedback, type FeedbackKind, type FeedbackMessage } from '@/components/feedback';
@@ -258,10 +272,22 @@ export interface SessionControls {
   sessionId?: string | undefined;
   /** "Take the register", already pointed at the right week. */
   mark?: { href: string; label: string } | undefined;
-  /** The cancel/restore form — a client component the page renders. */
-  cancel?: React.ReactNode;
+  /**
+   * What the confirmation needs to name the class it is calling off — round 6.
+   *
+   * Absent when there is nothing to offer: already cancelled, or the reader
+   * cannot manage the club. Round 5 passed the whole form as a node, which is
+   * how it came to be rendered inside a grid cell; the board owns one dialog now
+   * and this is what it asks about.
+   *
+   * The session id is `sessionId` above — this is only what a person has to read
+   * to be sure which Tuesday they are about to call off.
+   */
+  cancel?: { className: string; when: string } | undefined;
   /** Whether this week's occurrence is cancelled, and why. */
   cancelled?: boolean;
+  /** Cancelled by a closure rather than by a person — undone by removing it. */
+  byClosure?: boolean;
   note?: string | null;
 }
 
@@ -294,6 +320,19 @@ interface Placed {
   cancelled: boolean;
   note: string | null;
   controls: SessionControls;
+  /**
+   * What the hover card says about this class — round 6, ticket 4.0.
+   *
+   * Built here rather than in the block, because the facts come from things
+   * only the board has: the lane rows, the tanks, the level list and the turma's
+   * own roll. Threading four more props down through `Cell` to reach a card
+   * would be plumbing for its own sake.
+   *
+   * Null for anything that is not a turma. A parceria is a school's booking
+   * rather than a class with a register, so a card offering to take one would
+   * be offering something POOLSE-46 settled does not exist.
+   */
+  detail: TurmaDetail | null;
 }
 
 /**
@@ -393,6 +432,25 @@ interface Landing {
  * toggle. Per-viewer convenience, never shared state: two people looking at the
  * same club see the same timetable, and their own density.
  */
+/**
+ * "Call off this class" travels by context — round 6, ticket 4.1.
+ *
+ * The button that asks is in a hover card attached to a block, five components
+ * below the board: `SlotGrid`, a day, a lane row, a `Cell`, then the chip. The
+ * board is the only place that can own the dialog, because there must be one of
+ * it and not eighty-four.
+ *
+ * Five prop hops would be five signatures widened to carry something only the
+ * last one uses, on a file this size. A context is the boring version: one
+ * provider, one hook, and nothing in between has to know the request exists.
+ * `onSpan` and the rest stay props because the things they act on are the
+ * board's own state and they are read at every level on the way down.
+ *
+ * Null outside a board, which is what the turma screen gets — it has no
+ * sessions, so nothing ever asks.
+ */
+const CancelRequest = createContext<((booking: Placed) => void) | null>(null);
+
 const PREFS_KEY = 'poolse.laneGrid.prefs';
 
 interface Prefs {
@@ -670,6 +728,90 @@ export function ScheduleBoard({
    * settled that a parceria takes no register.
    */
   const placed = useMemo(() => {
+    /*
+     * The tank and the lane numbers a booking sits on — round 6, ticket 4.0.
+     *
+     * The lane rows carry both, so one lookup answers both questions. A booking
+     * with no lane is `fora da grelha` rather than an error, and says so.
+     */
+    const whereItSwims = (laneIds: string[]): { pool: string | null; lanes: number[] } => {
+      const rows = laneIds
+        .map((laneId) => lanes.find((lane) => lane.id === laneId))
+        .filter((lane): lane is GridLane => lane !== undefined);
+
+      const poolId = rows[0]?.poolId ?? null;
+
+      return {
+        pool: poolId === null ? null : (pools.find((pool) => pool.id === poolId)?.name ?? null),
+        lanes: rows.map((lane) => lane.position).sort((left, right) => left - right),
+      };
+    };
+
+    /*
+     * What the hover card says — round 6, ticket 4.0.
+     *
+     * The seven facts the ticket names, in the order somebody reads a cell:
+     * level, who is running it, when, where, and how full. The instructor line
+     * falls back to "ainda sem instrutor" rather than being omitted, because a
+     * missing row reads as "not applicable" and an unstaffed class is a gap the
+     * club needs to see.
+     */
+    const cardFor = (booking: GridBooking): TurmaDetail | null => {
+      if (booking.classGroupId === null) return null;
+
+      const group = groups.find((candidate) => candidate.id === booking.classGroupId);
+      const start = toMinutes(booking.startTime);
+      const where = whereItSwims(booking.laneIds);
+
+      const facts: { label: string; value: string }[] = [
+        { label: t('grid.level'), value: booking.subtitle ?? t('classes.noLevel') },
+        {
+          label: t('grid.instructor'),
+          value: booking.instructorName ?? t('classes.noInstructorYet'),
+        },
+        {
+          label: t('grid.time'),
+          value: `${toTime(start)}–${toTime(start + booking.durationMinutes)}`,
+        },
+        {
+          label: t('grid.pool'),
+          value: where.pool ?? group?.poolName ?? t('classes.noPool'),
+        },
+        {
+          label: t('grid.lane'),
+          value:
+            where.lanes.length === 0
+              ? t('grid.noLane')
+              : t('classes.laneList', { lanes: where.lanes.join(', ') }),
+        },
+      ];
+
+      /*
+       * `shortName`, and the ones actually in the turma.
+       *
+       * "Maria Santos" rather than five parts of a Portuguese name — the same
+       * choice the week grid makes, and for the same reason: this is a card
+       * somebody scans. Waiting-list entries are left out because they are not
+       * in the water, and a card saying 14/12 would report a turma over its
+       * ceiling that is not.
+       */
+      const people = (group?.students ?? [])
+        .filter((student) => student.status === 'active')
+        .map((student) => student.shortName);
+
+      return {
+        facts,
+        // Only where the turma has a ceiling. "9/—" is not a fraction, and a
+        // null capacity means "not measured" rather than zero — the same rule
+        // `pool.max_capacity` follows.
+        ...(group?.capacity == null
+          ? {}
+          : { occupancy: `${people.length}/${group.capacity}` }),
+        people,
+        peopleEmpty: t('classes.nobodyEnrolled'),
+      };
+    };
+
     const rows: Placed[] = bookings.map((booking) => {
       const startMinutes = toMinutes(booking.startTime);
       const key =
@@ -702,6 +844,7 @@ export function ScheduleBoard({
         cancelled: control.cancelled ?? false,
         note: control.note ?? null,
         controls: control,
+        detail: cardFor(booking),
       };
     });
 
@@ -747,6 +890,9 @@ export function ScheduleBoard({
           // to carry something it will not have.
           note: null,
           controls: {},
+          // The copy inherits the original's facts: it is the same turma, the
+          // same roll and the same level, at an hour nobody has agreed to yet.
+          detail: source.detail,
         });
       }
     }
@@ -782,12 +928,15 @@ export function ScheduleBoard({
           cancelled: false,
           note: null,
           controls: {},
+          // A block that does not exist yet makes no claims. It is on screen for
+          // as long as the dialog is asking about it.
+          detail: null,
         });
       }
     }
 
     return rows;
-  }, [bookings, controls, optimistic, mine]);
+  }, [bookings, controls, optimistic, mine, groups, lanes, pools, t]);
 
   /*
    * The staffing filter lives in the URL, and the other five do not — AC5.
@@ -1661,6 +1810,30 @@ export function ScheduleBoard({
     return ruleBookings.find((booking) => booking.id === id) ?? null;
   }, [dragging, ruleBookings]);
 
+  /*
+   * The class somebody is being asked about, or null — round 6, ticket 4.1.
+   *
+   * One dialog for the whole board. Round 5 mounted one confirmation per
+   * session, each rendering in place of its own trigger inside a grid cell, and
+   * both halves of that were wrong: the form was clipped by the cell it lived
+   * in, and eighty-four of them were mounted to ask at most one question.
+   *
+   * `askToCancel` is memoised because it goes into a context, and a new function
+   * on every render would re-render every block on the grid.
+   */
+  const [cancelling, setCancelling] = useState<CancelTarget | null>(null);
+
+  const askToCancel = useCallback((booking: Placed): void => {
+    const { sessionId, cancel } = booking.controls;
+    if (sessionId === undefined || cancel === undefined) return;
+    setCancelling({ sessionId, className: cancel.className, when: cancel.when });
+  }, []);
+
+  const stopCancelling = useCallback(() => setCancelling(null), []);
+
+  /** Whether "Adjust the slot grid" is asking before it leaves — ticket 4.2. */
+  const [adjustingGrid, setAdjustingGrid] = useState(false);
+
   return (
     <DndContext
       sensors={sensors}
@@ -1668,6 +1841,7 @@ export function ScheduleBoard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
+      <CancelRequest.Provider value={askToCancel}>
       <div className="flex flex-col gap-4">
         {facilities.length > 1 && (
           <div className={`${FIELD_COLUMN} sm:w-64`}>
@@ -1884,19 +2058,40 @@ export function ScheduleBoard({
                   with the rule rather than the rule changing — and hiding it is
                   never the permission, only the courtesy.
                 */}
+                {/*
+                  And it asks before it goes — round 6, ticket 4.2.
+
+                  Round 5 built the confirmation and put it on the far side of
+                  the journey, as a `window.confirm` on the slot editor's own
+                  Generate button. That is where the change happens, so it was
+                  not wrong; it was just not where somebody presses this. The
+                  sentence is the same one, from the same key, because there is
+                  one fact to state and it should not exist twice.
+
+                  What it warns about is real and worth reading twice: the
+                  calendar draws its rows from `facility_time_slot`, and so does
+                  this site's schedule grid — they are one table, so a new grid
+                  moves the week under whoever has the calendar open. The
+                  opening hours are deliberately *not* rewritten: the grid is
+                  validated to sit inside them, and a slot editor that could
+                  widen a building's hours would have the relationship the wrong
+                  way round.
+                */}
                 {facility !== undefined && canManage && (
-                  <a
-                    href={`/dashboard/facilities/${facility.id}`}
+                  <button
+                    type="button"
+                    onClick={() => setAdjustingGrid(true)}
                     className="self-start rounded border border-border px-3 py-1.5 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('grid.offGridFix')}
-                  </a>
+                  </button>
                 )}
               </section>
             )}
           </>
         )}
       </div>
+      </CancelRequest.Provider>
 
       <DragOverlay>
         {draggingLabel === null ? null : (
@@ -1905,6 +2100,52 @@ export function ScheduleBoard({
           </span>
         )}
       </DragOverlay>
+
+      {/*
+        The confirmation, centred over the page and portaled out of the grid —
+        round 6, ticket 4.1. Mounted whether or not anything is being cancelled,
+        because it also holds the toast whose Undo has to outlive the block it
+        was raised from.
+      */}
+      <CancelSessionDialog
+        organizationId={organizationId}
+        target={cancelling}
+        onClose={stopCancelling}
+      />
+
+      {/*
+        "Adjust the slot grid" — round 6, ticket 4.2.
+
+        A plain link would have been enough to *go* there. It is not enough to
+        warn, and the warning is the point: the grid is shared, so changing it
+        moves every calendar in the club. Asking here as well as at the editor
+        means the operator reads it before they have started, rather than after
+        they have filled in four fields.
+      */}
+      <Dialog
+        open={adjustingGrid}
+        onClose={() => setAdjustingGrid(false)}
+        title={t('grid.offGridFix')}
+        closeLabel={t('common.close')}
+      >
+        <p className="text-sm">{t('slots.confirmGenerate')}</p>
+
+        <div className="mt-4 flex items-center gap-3">
+          <a
+            href={facility === undefined ? '#' : `/dashboard/facilities/${facility.id}`}
+            className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('common.continue')}
+          </a>
+          <button
+            type="button"
+            onClick={() => setAdjustingGrid(false)}
+            className="text-sm text-foreground-muted hover:underline"
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      </Dialog>
     </DndContext>
   );
 }
@@ -3191,7 +3432,9 @@ function BookingChip({
       ? 'border-dashed border-border bg-surface-muted'
       : (CATEGORY_TINT[booking.categoryColour ?? ''] ?? DEFAULT_TINT);
 
-  return (
+  const askToCancel = useContext(CancelRequest);
+
+  const block = (
     <div
       /*
        * `Shift`+arrow grows and shrinks the lane span — AC2 and AC9, the
@@ -3361,50 +3604,90 @@ function BookingChip({
         </>
       )}
 
-      {/*
-        The actions, on hover and on focus — round 5, ticket 9.4.
-
-        They used to sit in the block permanently as two small text links, which
-        on a seven-column week is a lot of ink saying the same two words over and
-        over. Now they appear when the block is hovered or when anything inside
-        it takes focus.
-
-        **Opacity, never conditional rendering.** A control that is not in the
-        DOM cannot be reached by Tab, and "keep keyboard focus reachable" is half
-        the ticket. So they are always mounted and always tabbable;
-        `focus-within` on the block is what makes them visible when somebody
-        arrives by keyboard, and `pointer-events-none` while hidden is what stops
-        an invisible button swallowing a click meant for the block.
-
-        `motion-safe` on the fade, because a control blinking in and out on every
-        pointer cross is exactly the motion somebody turns animations off to
-        avoid.
-      */}
-      {!continues &&
-        (booking.controls.mark !== undefined || booking.controls.cancel !== undefined) && (
-        <div
-          className={cn(
-            'mt-auto flex flex-wrap items-center gap-1',
-            'pointer-events-none opacity-0',
-            'group-hover/block:pointer-events-auto group-hover/block:opacity-100',
-            'group-focus-within/block:pointer-events-auto group-focus-within/block:opacity-100',
-            'motion-safe:transition-opacity motion-safe:duration-150',
-          )}
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          {booking.controls.mark !== undefined && (
-            <a
-              href={booking.controls.mark.href}
-              className="inline-flex items-center gap-1 rounded border border-primary/40 px-1.5 py-0.5 text-[0.715rem] font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
-            >
-              <ClipboardCheck aria-hidden className="size-3" />
-              {booking.controls.mark.label}
-            </a>
-          )}
-          {booking.controls.cancel}
-        </div>
-        )}
     </div>
+  );
+
+  /*
+   * The card, and the two things you do to a class — round 6, ticket 4.0.
+   *
+   * Round 5 put the register and cancel controls *inside* the block, revealed
+   * on hover: two buttons in a cell one seventh of a column wide, faded in with
+   * opacity so they stayed tabbable. It worked and it was the wrong place. A
+   * block on this grid is a rectangle whose height means a duration and whose
+   * rows mean lanes — there is no spare room in it, and at compact density there
+   * is none at all.
+   *
+   * They move to the foot of the hover card, which is the same card the turma
+   * screens already open on a slot: name, level, instructor, when, which tank,
+   * which lanes, how full, and the roll. Extended rather than duplicated, so the
+   * two screens cannot drift.
+   *
+   * A parceria gets no card. It has no register to take and POOLSE-46 settled
+   * that it never will, so `detail` is null for it and the block keeps the plain
+   * behaviour it had.
+   *
+   * The continuation row of a class that crosses an hour line gets none either:
+   * it is the same class, and two cards opening from one block would be one
+   * card too many.
+   */
+  /*
+   * A class the closure took down says so, and offers nothing.
+   *
+   * That one is undone by removing the closure, which is a real action on a
+   * real screen — so the card names the reason rather than showing a control
+   * that would be refused.
+   */
+  const byClosure = booking.cancelled && booking.controls.byClosure === true;
+
+  const actions =
+    !byClosure && booking.controls.mark === undefined && booking.controls.cancel === undefined ? (
+      undefined
+    ) : (
+      <>
+        {byClosure && (
+          <span className="text-sm text-foreground-muted">{t('calendar.byClosure')}</span>
+        )}
+
+        {booking.controls.mark !== undefined && (
+          <a
+            href={booking.controls.mark.href}
+            className="inline-flex items-center gap-1.5 rounded border border-primary/40 px-2 py-1 text-sm font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+          >
+            <ClipboardCheck aria-hidden className="size-3.5" />
+            {booking.controls.mark.label}
+          </a>
+        )}
+
+        {booking.controls.cancel !== undefined && (
+          <button
+            type="button"
+            onClick={() => askToCancel?.(booking)}
+            className="inline-flex items-center gap-1.5 rounded border border-danger/40 px-2 py-1 text-sm font-medium text-danger hover:bg-danger/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+          >
+            <X aria-hidden className="size-3.5" />
+            {t('calendar.cancel')}
+          </button>
+        )}
+      </>
+    );
+
+  if (booking.detail === null || continues) return block;
+
+  return (
+    <TurmaHoverCard
+      title={booking.name}
+      detail={booking.detail}
+      /*
+        Above the block rather than beside it. A lane grid is wider than it is
+        tall and its rows are 20 pixels at compact density, so a card opening to
+        the right lands over the next two days of the week; opening upward it
+        lands over the hour that has already been read.
+      */
+      side="top"
+      {...(actions === undefined ? {} : { actions })}
+    >
+      {block}
+    </TurmaHoverCard>
   );
 }
 

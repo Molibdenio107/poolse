@@ -106,6 +106,14 @@ seed created a second site to keep demo data tidy and nothing objected.
 null`). Otherwise archiving an instructor and re-adding them next season violates the
 constraint against a dead row.
 
+**A question asked in the middle of the page uses `components/ui/dialog.tsx`.** It portals
+to the body, so no ancestor's `overflow`, `transform` or `z-index` can clip it; it closes on
+Escape and on the backdrop, moves focus in and gives it back, and keeps Tab inside itself.
+Never render a confirmation in place of its own trigger — round 5's did, which put a form
+inside a calendar cell one seventh of a column wide. Never `window.confirm` either: two
+confirmations in two visual languages make an operator wonder whether they are being asked
+the same thing.
+
 **A refusal that needs numbers carries them as structure, never as prose.** A rule enforced
 by a trigger raises with a machine-readable `DETAIL` (`pool_capacity|40|32|12`); the API
 turns that into a 409 with the figures as fields, and `FormState.values` carries them to

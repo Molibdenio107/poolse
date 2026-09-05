@@ -24,7 +24,7 @@ import {
 } from '@/lib/dates';
 import { ScheduleBoard, type SessionControls } from '../classes/schedule-board';
 import { slotKey } from '@/lib/slot-key';
-import { CancelSession, GenerateSeason } from './calendar-forms';
+import { GenerateSeason } from './calendar-forms';
 import { PageError, PageShell } from '@/components/page-shell';
 import { TimetableImport } from './import/import-panel';
 
@@ -166,20 +166,20 @@ export default async function CalendarPage({
   );
 
   /*
-    The two things you do to a session, rendered here and handed to the board.
-
-    They are server-rendered because `CancelSession` needs the formatted date and
-    the locale, and the board is a client component that has neither. Passing
-    finished nodes keeps the board ignorant of what a cancel form is, which is
-    why it can stay a grid rather than becoming the calendar's controller.
-  */
-  /*
     The two controls, keyed by the slot they belong to.
 
     Keyed by turma + weekday + time rather than by session id, because the grid
     is drawn from the weekly pattern and looks its session up. A slot with no
     session generated yet simply finds nothing here and shows no controls, which
     is honest: there is no occurrence to mark or cancel.
+
+    **Data, not rendered controls** — round 6, ticket 4.1. Round 5 built one
+    `CancelSession` node per session here and handed them to the grid, on the
+    reasoning that only the server can format a date in the reader's locale.
+    That part is still true and is why `when` is computed here. What was wrong
+    was shipping the whole *form*: it rendered in place of its own trigger, which
+    on this screen is a box a seventh of a column wide with `overflow-hidden` on
+    it. The board now owns one dialog and this passes it the two strings it needs.
   */
   const controls: Record<string, SessionControls> = Object.fromEntries(
     (calendar?.sessions ?? []).map((session) => {
@@ -198,19 +198,16 @@ export default async function CalendarPage({
                 href: `/dashboard/calendar/sessions/${session.id}?week=${monday}`,
                 label: t('attendance.mark'),
               },
+          // Nothing to call off twice, and nothing for somebody who may not.
           cancel:
-            calendar?.canManage === true ? (
-              <CancelSession
-                organizationId={calendar.organizationId}
-                sessionId={session.id}
-                className={session.className}
-                when={`${longDate(session.localDate, locale)}, ${session.localTime}`}
-                cancelled={cancelled}
-                byClosure={session.byClosure}
-                compact
-              />
-            ) : undefined,
+            calendar?.canManage === true && !cancelled
+              ? {
+                  className: session.className,
+                  when: `${longDate(session.localDate, locale)}, ${session.localTime}`,
+                }
+              : undefined,
           cancelled,
+          byClosure: session.byClosure,
           note: cancelled
             ? (session.cancellationReason ?? t('calendar.cancelledNoReason'))
             : null,

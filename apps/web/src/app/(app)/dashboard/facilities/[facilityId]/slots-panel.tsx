@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import type { DayGroup, FacilityDay, TimeSlot } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
+import { Dialog } from '@/components/ui/dialog';
 import type { FormState } from '../../actions';
 import { addSlotsAction, removeSlotAction, updateSlotAction } from './slots.actions';
 
@@ -337,6 +338,10 @@ function Generator({
   const [from, setFrom] = useState('09:00');
   const [to, setTo] = useState('09:45');
 
+  /** The confirmation, and the form it submits once it is answered — 4.2. */
+  const [confirming, setConfirming] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
+
   const valid = isClock(from) && isClock(to);
   const length = valid ? toMinutes(to) - toMinutes(from) : 0;
 
@@ -387,28 +392,7 @@ function Generator({
   const skipped = proposed.length - wanted.length;
 
   return (
-    <form
-      action={action}
-      /*
-       * Confirm before rebuilding the grid — round 5, ticket 9.2.
-       *
-       * Generating slots is the one action here that changes what every other
-       * screen looks like: the calendar draws its rows from this table, so a new
-       * grid moves the whole week under whoever is reading it. The operator
-       * standing in this panel knows that; the colleague with the calendar open
-       * does not.
-       *
-       * `window.confirm` rather than a component, deliberately. It is one
-       * sentence and one decision, it is keyboard-reachable and screen-reader
-       * announced without any work, and it cannot be dismissed by a stray click
-       * on a backdrop. A bespoke dialog here would be more code doing the same
-       * job slightly worse.
-       */
-      onSubmit={(event) => {
-        if (!window.confirm(t('slots.confirmGenerate'))) event.preventDefault();
-      }}
-      className="flex flex-col gap-4"
-    >
+    <form ref={form} action={action} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="facilityId" value={facilityId} />
       <input
@@ -502,13 +486,64 @@ function Generator({
 
       <Failure state={state} />
 
+      {/*
+        Confirm before rebuilding the grid — round 5, ticket 9.2; the dialog is
+        round 6, ticket 4.2.
+
+        Generating slots is the one action here that changes what every other
+        screen looks like: the calendar draws its rows from this table, so a new
+        grid moves the whole week under whoever is reading it. The operator
+        standing in this panel knows that; the colleague with the calendar open
+        does not.
+
+        Round 5 asked with `window.confirm`, which was defensible on its own —
+        one sentence, one decision, announced and keyboard-reachable for free.
+        It stops being defensible now that the calendar asks the same question
+        with the app's own dialog: two confirmations for one change, in two
+        visual languages, is the kind of inconsistency that makes somebody
+        wonder whether they are being asked the same thing.
+
+        `type="button"` on the trigger, and the form submitted by ref on
+        confirm — so the destructive step is the second press rather than the
+        first, and Escape leaves everything as it was.
+      */}
       <button
-        type="submit"
+        type="button"
         disabled={pending || wanted.length === 0}
+        onClick={() => setConfirming(true)}
         className={cn(BUTTON, 'self-start')}
       >
         {pending ? t('common.working') : t('slots.generateAction', { count: wanted.length })}
       </button>
+
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t('slots.generate')}
+        closeLabel={t('common.close')}
+      >
+        <p className="text-sm">{t('slots.confirmGenerate')}</p>
+
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setConfirming(false);
+              form.current?.requestSubmit();
+            }}
+            className={BUTTON}
+          >
+            {t('common.continue')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            className="text-sm text-foreground-muted hover:underline"
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      </Dialog>
     </form>
   );
 }

@@ -13,6 +13,7 @@ looks for it.
 | [navigation.md](navigation.md) | The home route, the menu, the shared page shell |
 | [facilities.md](facilities.md) | Sites, tanks, lanes, capacity |
 | [classes.md](classes.md) | Turmas, parcerias, the lane grid |
+| [calendar.md](calendar.md) | The dated week, the hover card, cancelling a class |
 | [billing.md](billing.md) | Price list, periodicities, what a student pays |
 
 Pages are added as the sections they describe are touched. An absent page means nobody has
