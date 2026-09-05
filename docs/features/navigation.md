@@ -43,3 +43,28 @@ The "Voltar" control sits in a sticky strip beneath the app bar. It has **no rul
 it** — content passes under an opaque background while scrolling, without a dividing line.
 Three pages render a `BackLink` in their body rather than through the shell's prop; those
 never had one either.
+
+
+## Invitations
+
+An invitation is a bearer credential: whoever holds the link joins the club with the roles
+it names. So only its **SHA-256 hash is stored**, and it is good for **24 hours** from
+issue.
+
+| Action | Roles |
+|---|---|
+| See the staff list and its pending invitations | owner, admin |
+| Invite somebody | whoever may invite that role — POOLSE-01 |
+| Resend | as above, and only an invitation the caller could have sent |
+| Revoke | as above |
+
+A lapsed invitation shows as **"Invitation expired"** in the muted, informational style —
+not as an error. A 24-hour window makes expiry the ordinary Monday-morning outcome rather
+than something that went wrong, and red rows people see every week are red rows people stop
+reading. **Resend** beside it issues a new token and a fresh day, and revokes the old one in
+the same transaction.
+
+Reissuing is bounded by `requireOwnKind`: a person can only resend an invitation they could
+have sent themselves, so an instructor cannot reissue an invitation to an admin — and a
+missing invitation and somebody else's give the same answer, so neither can be discovered by
+trying.

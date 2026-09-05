@@ -343,12 +343,31 @@ export default async function PeoplePage({
                         */}
                         <DeliveryBadge delivery={invitation.delivery} />
                       </span>
+                      {/*
+                        Expired reads as information, not as an error — round 5,
+                        ticket 7.
+
+                        A lapsed invitation is the ordinary outcome of a 24-hour
+                        window, not something that went wrong: nobody made a
+                        mistake and nothing needs investigating. Danger styling
+                        here would put a red row in front of an operator every
+                        Monday morning and teach them to ignore red rows. The
+                        muted state plus the word is the whole message, and
+                        Resend beside it is the fix.
+
+                        Not a colour on its own either: "Invitation expired" is
+                        the text, so it reads the same to somebody who cannot
+                        tell the two greys apart.
+                      */}
                       <span className="text-sm text-foreground-muted">
-                        {t('invite.expiresOn', {
-                          date: format.dateTime(new Date(invitation.expiresAt), {
-                            dateStyle: 'long',
-                          }),
-                        })}
+                        {new Date(invitation.expiresAt).getTime() <= Date.now()
+                          ? t('invite.expired')
+                          : t('invite.expiresOn', {
+                              date: format.dateTime(new Date(invitation.expiresAt), {
+                                dateStyle: 'long',
+                                timeStyle: 'short',
+                              }),
+                            })}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-1">

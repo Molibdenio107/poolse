@@ -1257,11 +1257,12 @@
     "emailInvalid": "That is not a valid email address. Check it and try again.",
     "emailRequired": "An email address is required.",
     "rolesRequired": "Choose at least one role.",
-    "reissue": "New link",
-    "reissueHint": "Withdraws the previous link and generates a fresh one for the same address.",
+    "reissue": "Resend",
+    "reissueHint": "Issues a new link and a fresh 24 hours.",
     "reissueFailed": "Could not generate a new link.",
     "emailed": "Invitation emailed to {email}.",
-    "emailedHint": "The link is here too, in case the email is slow. It is shown only once."
+    "emailedHint": "The link is here too, in case the email is slow. It is shown only once.",
+    "expired": "Invitation expired"
   },
   "join": {
     "title": "Invitation",

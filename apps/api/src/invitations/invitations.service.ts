@@ -1,7 +1,19 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-/** Seven days. Long enough to survive a weekend, short enough that a stray link dies. */
-export const INVITATION_TTL_DAYS = 7;
+/**
+ * Twenty-four hours — round 5, ticket 7.
+ *
+ * It was seven days, on the argument that a link should survive a weekend. That
+ * is a real cost and the ticket takes it deliberately: an invitation is a bearer
+ * credential, and one that works for a week is a week in which a forwarded
+ * email, a shared inbox or a screenshot in a group chat is a working key into
+ * the club. A day is long enough for somebody to act on a message they were
+ * expecting, and Resend costs one click for everybody else.
+ *
+ * Hours rather than days because a day is now the whole window: expressing it
+ * as `1` would make the next change to it look like a typo.
+ */
+export const INVITATION_TTL_HOURS = 24;
 
 /** 256 bits, base64url so it survives being pasted into a URL, a chat, an email. */
 const TOKEN_BYTES = 32;
@@ -38,7 +50,7 @@ export function hashToken(token: string): string {
 
 export function invitationExpiry(from: Date = new Date()): Date {
   const expires = new Date(from);
-  expires.setUTCDate(expires.getUTCDate() + INVITATION_TTL_DAYS);
+  expires.setUTCHours(expires.getUTCHours() + INVITATION_TTL_HOURS);
   return expires;
 }
 

@@ -1257,11 +1257,12 @@
     "emailInvalid": "Email inválido. Verifique o endereço e tente de novo.",
     "emailRequired": "Indique um email.",
     "rolesRequired": "Escolha pelo menos uma função.",
-    "reissue": "Nova ligação",
-    "reissueHint": "Anula a ligação anterior e gera uma nova para o mesmo email.",
+    "reissue": "Reenviar",
+    "reissueHint": "Emite uma nova ligação e mais 24 horas.",
     "reissueFailed": "Não foi possível gerar uma nova ligação.",
     "emailed": "Convite enviado por email para {email}.",
-    "emailedHint": "A ligação também está aqui, caso o email demore. Só é mostrada uma vez."
+    "emailedHint": "A ligação também está aqui, caso o email demore. Só é mostrada uma vez.",
+    "expired": "Convite expirado"
   },
   "join": {
     "title": "Convite",
