@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { apiPost } from '@/lib/api';
 import { readSheet, type ReadFailure } from '@/lib/read-sheet';
+import { reportMediaType, type ReportRow } from '@/lib/analysis-report';
+import { analysisReportParser } from '@/lib/analysis-report-agent';
 import { describeFailure } from '@/lib/form-failure';
 import type { NamedSheet } from '@/lib/sheet';
 import type { PoolMetric } from '@/lib/pool-metrics';
@@ -27,6 +29,22 @@ export interface WaterReadState {
   ok: boolean;
   /** Every sheet with data on it, so a workbook with a tab per tank can be picked. */
   sheets?: NamedSheet[];
+  /**
+   * What a report extracted, already in field names — round 6, ticket 1.
+   *
+   * Present instead of `sheets` when the file was a PDF or a photograph. There
+   * is no mapping step to run: the parser answers in the shape
+   * `applyWaterMapping` would have produced, so the wizard goes straight to the
+   * preview the spreadsheet path reaches two steps later.
+   */
+  report?: ReportRow[];
+  /**
+   * True when the file was a report and this build cannot read one.
+   *
+   * A state of its own rather than an `errorKey`, because it is not a failure —
+   * the feature is switched off, which is a sentence rather than a red box.
+   */
+  reportDisabled?: boolean;
   fileName?: string;
   errorKey?: string;
   /** Increments on every attempt, so a repeated failure still re-announces itself. */
@@ -41,7 +59,20 @@ const READ_ERRORS: Record<ReadFailure, string> = {
   fileUnreadable: 'students.import.errorFileUnreadable',
 };
 
-/** Step one: the file becomes sheets. The mapping happens in the browser. */
+/**
+ * Step one: the file becomes sheets, or becomes rows.
+ *
+ * **One action, two readers, decided by the file type** — round 6, ticket 1. A
+ * spreadsheet goes to `readSheet` and then to a mapping step in the browser; a
+ * PDF or a photograph goes to the import agent and arrives already in field
+ * names. They converge immediately: both produce rows for the same
+ * `runWaterImportAction`, which is the same validate-preview-commit the other
+ * three importers use.
+ *
+ * Two entry points rather than two *pipelines*, which is the distinction
+ * CLAUDE.md draws. What the operator is shown and what gets written still come
+ * from one code path.
+ */
 export async function readWaterFileAction(
   previous: WaterReadState,
   formData: FormData,
@@ -54,6 +85,11 @@ export async function readWaterFileAction(
   const upload = formData.get('file');
   const file = upload instanceof File ? upload : null;
 
+  const mediaType = file === null ? null : reportMediaType(file.name);
+  if (file !== null && mediaType !== null) {
+    return readReport(file, mediaType, attempt);
+  }
+
   const result = await readSheet(file);
   if ('error' in result) {
     return { ok: false, errorKey: READ_ERRORS[result.error], attempt };
@@ -62,6 +98,49 @@ export async function readWaterFileAction(
   // The reader returns sheets only; the name is the browser's, and it is worth
   // keeping so the wizard can say which file it is showing.
   return { ok: true, sheets: result.sheets, fileName: file?.name ?? '', attempt };
+}
+
+/**
+ * A laboratory report, read by the import agent — round 6, ticket 1.
+ *
+ * The bytes are read here and go no further than the model call: nothing is
+ * stored, which is the same rule the three spreadsheet importers follow and the
+ * reason none of them has an upload session to expire.
+ *
+ * **The original file is not kept, and the ticket asked for it.** There is no
+ * file storage in Poolse — it is a deliberately deferred decision, and the three
+ * photo controls that wait on it are visibly disabled for the same reason. This
+ * would be the fourth. When storage lands, this function is where the report is
+ * written and where the analysis rows learn its id.
+ */
+async function readReport(
+  file: File,
+  mediaType: NonNullable<ReturnType<typeof reportMediaType>>,
+  attempt: number,
+): Promise<WaterReadState> {
+  const parser = analysisReportParser();
+  if (!parser.available()) {
+    return { ok: false, reportDisabled: true, fileName: file.name, attempt };
+  }
+
+  const result = await parser.parse({
+    name: file.name,
+    mediaType,
+    bytes: Buffer.from(await file.arrayBuffer()),
+  });
+
+  if ('error' in result) {
+    return {
+      ok: false,
+      ...(result.error === 'disabled'
+        ? { reportDisabled: true }
+        : { errorKey: `facilities.waterImport.report.${result.error}` }),
+      fileName: file.name,
+      attempt,
+    };
+  }
+
+  return { ok: true, report: result.rows, fileName: file.name, attempt };
 }
 
 /** One row of the preview, as the API describes it. */

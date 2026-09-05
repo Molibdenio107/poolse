@@ -4,7 +4,8 @@ import type { PoolAnalysis, PoolMetric } from '@/lib/api';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { TrendChart } from '@/components/trend-chart';
 import { excursions, HEALTHY } from '@/lib/water';
-import { ExportAnalyses, ImportAnalysis, UnsafeWaterNotice } from './water-actions';
+import { ExportAnalyses, UnsafeWaterNotice } from './water-actions';
+import { WaterImport } from './pools/[poolId]/water-import';
 import { AnalysisForm, ArchiveAnalysisButton } from './analysis-forms';
 
 /**
@@ -240,10 +241,28 @@ export async function ReadingsBlock({
           </summary>
           <div className="flex flex-col gap-4 border-t border-border p-4">
             <AnalysisForm organizationId={organizationId} poolId={poolId} poolName={poolName} />
-            <ImportAnalysis />
           </div>
         </details>
       )}
+
+      {/*
+        Importing a report — round 6, ticket 1.
+
+        Directly under "Record an analysis" and outside its disclosure, so it is
+        visible whether or not the form is open. The two are alternatives to each
+        other: type four numbers, or hand over the document they came on. Burying
+        one inside the other would make the choice depend on somebody having
+        already opened the wrong half.
+
+        It replaces the disabled placeholder that stood here for two phases
+        naming the two things it waited on. One of them — parsing — has arrived.
+        The other, keeping the original file, has not: file storage is still a
+        deferred decision, and this would be its fourth caller.
+
+        The wizard renders nothing for somebody who may not write, so a
+        read-only visitor sees the readings and no control the API would refuse.
+      */}
+      {canManage && <WaterImport poolId={poolId} canManage={canManage} />}
     </div>
   );
 }

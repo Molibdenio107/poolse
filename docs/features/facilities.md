@@ -60,7 +60,7 @@ Readings live on the tank's own page: `/dashboard/facilities/pools/<id>`.
 |---|---|
 | Read the analyses and the trend | everybody |
 | Record one analysis by hand | owner, admin |
-| Import a water log | owner, admin |
+| Import a water log or an analysis report | owner, admin |
 | Archive an analysis | owner, admin |
 
 Nine metrics — pH, temperature, free and combined chlorine, total alkalinity,
@@ -71,11 +71,39 @@ Five of them have a published band a Portuguese municipal pool is inspected agai
 other four get no invented one. A reading outside its band raises the "shut the pool?"
 notice, which offers and never acts.
 
-### Importing a log
+### Importing a log or a report
 
-Upload → map the columns → check → commit, the same four steps as the register, the store
-room and the wall timetable. The **Import readings** button is in the page header, and a
-file dragged anywhere on the page opens the same flow.
+**Import an analysis report** sits in the Water quality card, directly under *Record an
+analysis* and always visible — the two are alternatives to each other, so neither is buried
+inside the other. A file dragged anywhere on the pool's page opens the same flow.
+
+Two kinds of file are accepted, and **the file type decides which reader sees it**:
+
+- **A spreadsheet** (`.xlsx`, `.csv`) — the club's own log. Upload → map the columns →
+  check → commit, the same four steps as the register, the store room and the wall
+  timetable.
+- **A report** (PDF, or a photograph as `.png` / `.jpg` / `.webp` / `.gif`) — a laboratory's
+  document, which has no columns to map. It goes to an import agent that extracts the date,
+  the tank and the readings, and lands on the same preview two steps later.
+
+The two are ways *in*, not two pipelines: what the operator is shown and what gets written
+come from one path either way.
+
+#### Report parsing is off unless it is switched on
+
+Two switches. `WATER_REPORT_AI_ENABLED=true` says the club wants it, `ANTHROPIC_API_KEY`
+says it can work. With either missing, dropping a PDF says **"Report parsing is not enabled
+yet"** — a sentence, not an error — and points at the spreadsheet import and the manual form.
+
+- **Only the document is sent.** No club name, no tanks, no previous readings.
+- **Nothing extracted is written.** Every value goes through the same validation a
+  spreadsheet's does and appears on the same preview, where a person ticks the rows.
+- **A decimal comma is preserved** as written; the API is the only place that turns text
+  into a number.
+- **The original file is not kept.** The ticket asked for it; file storage is still a
+  deferred decision, and this would be its fourth caller alongside the three photo controls.
+
+The parser sits behind `AnalysisReportParser` so the Excel mapping can share it later.
 
 - **The file is read on the Next server and never leaves it.** What crosses to the API is
   rows in Poolse's own field names.

@@ -367,10 +367,6 @@
     "emptyLatest": "The latest reading for each measurement, at a glance.",
     "emptyTrend": "A trend for every measurement, from the first analysis onwards.",
     "emptyReport": "A printable report and a CSV export of the whole record.",
-    "importAnalysis": "Import an analysis report",
-    "importNoStorage": "File storage is not configured yet, so there is nowhere to keep the document.",
-    "importNoParsing": "Reading values out of a laboratory PDF is not built yet.",
-    "importMeanwhile": "In the meantime, enter the values above — they give you the same trend and the same report.",
     "exportAnalyses": "Export as CSV",
     "waterOutOfRange": "This water is outside the recommended range",
     "aboveRange": "above the {from}–{to} range",
@@ -390,10 +386,10 @@
     "maxCapacityHint": "Students allowed in the water at once, across every class.",
     "maxCapacityUnlimited": "No limit set — classes in this tank are not capped.",
     "waterImport": {
-      "action": "Import readings",
-      "hint": "An .xlsx or .csv water log, or drag one onto this page.",
-      "drop": "Drop the water log to import it",
-      "choose": "Choose a file, or drag one anywhere onto this page.",
+      "action": "Import an analysis report",
+      "hint": "An .xlsx or .csv water log, or a report as a PDF or a photograph. You can also drag one onto this page.",
+      "drop": "Drop the file to import it",
+      "choose": "Choose a file, or drag one anywhere onto this page. It takes .xlsx, .csv, PDFs and images.",
       "pick": "Choose a file",
       "sheet": "Sheet",
       "unmapped": "— not imported —",
@@ -408,6 +404,12 @@
       "state": "Will import",
       "willImport": "Will import",
       "failed": "The readings could not be imported.",
+      "report": {
+        "disabled": "Report parsing is not enabled yet.",
+        "disabledHint": "Ask for it to be switched on, or import an .xlsx or .csv — or record the analysis by hand in the form above.",
+        "unreadable": "This report could not be read. Check that the file opens and try again.",
+        "nothingFound": "No readings were found in this report."
+      },
       "problem": {
         "dateMissing": "No date",
         "dateInvalid": "The date could not be read",

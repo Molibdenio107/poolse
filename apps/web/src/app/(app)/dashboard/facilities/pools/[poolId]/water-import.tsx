@@ -2,11 +2,12 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Check, Upload, X } from 'lucide-react';
+import { AlertTriangle, Check, Info, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { NamedSheet } from '@/lib/sheet';
+import { REPORT_MEDIA_TYPES } from '@/lib/analysis-report';
 import {
   applyWaterMapping,
   matchWaterColumns,
@@ -42,7 +43,19 @@ import {
  * dragging onto — the same rule the Calendar's importer follows.
  */
 
-const ACCEPTED = ['.xlsx', '.csv'];
+/**
+ * What may be dropped here — round 6, ticket 1.
+ *
+ * Two kinds of file, and the type is what decides which reader sees it. A
+ * spreadsheet is a club's own log and goes through the mapping step; a PDF or a
+ * photograph is a laboratory's report and goes to the import agent. Nothing in
+ * the wizard branches on it beyond the first step, because both arrive at the
+ * same preview.
+ */
+const ACCEPTED = ['.xlsx', '.csv', ...Object.keys(REPORT_MEDIA_TYPES)];
+
+/** What the file picker offers, built from the same list so the two agree. */
+const ACCEPT_ATTRIBUTE = [...ACCEPTED, 'text/csv'].join(',');
 
 const BUTTON =
   'inline-flex items-center gap-2 rounded bg-primary px-4 py-2 text-sm font-medium ' +
@@ -76,6 +89,7 @@ export function WaterImport({
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const reportAt = useRef(0);
 
   const [read, readAction, reading] = useActionState(readWaterFileAction, {
     ok: false,
@@ -89,6 +103,15 @@ export function WaterImport({
 
   const sheets = read.sheets ?? [];
   const sheet: NamedSheet | undefined = sheets[sheetAt];
+
+  /*
+   * A report has no columns to map, so its rows come straight from the parser.
+   *
+   * The one shape difference between the two ways in, and it is deliberately
+   * confined to this line: everything past it — the preview, the tick boxes,
+   * the commit — reads `rows` and cannot tell which kind of file produced them.
+   */
+  const report = read.report;
 
   /*
    * A dropped file opens the picker rather than being read.
@@ -116,14 +139,38 @@ export function WaterImport({
     setStep('mapping');
   }, [sheet]);
 
+  /*
+   * A parsed report skips the mapping step and asks for its preview at once.
+   *
+   * Keyed on `attempt` rather than on the rows, so dropping the same report
+   * twice still moves the wizard on — the same rule `useImportWizard` follows,
+   * for the same reason.
+   */
+  useEffect(() => {
+    if (read.attempt === reportAt.current) return;
+    reportAt.current = read.attempt;
+    if (read.report === undefined) return;
+
+    const data = new FormData();
+    data.set('poolId', poolId);
+    data.set('rows', JSON.stringify(read.report));
+    data.set('commit', 'false');
+    startTransition(() => importAction(data));
+  }, [read, poolId, importAction]);
+
   useEffect(() => {
     if (result.rows === undefined) return;
     setStep(result.created === undefined ? 'preview' : 'done');
   }, [result.attempt, result.rows, result.created]);
 
-  const rows = useMemo(
-    () => (sheet === undefined ? [] : sheet.rows.map((row) => applyWaterMapping(row, mapping))),
-    [sheet, mapping],
+  const rows = useMemo<Record<string, string>[]>(
+    () =>
+      report !== undefined
+        ? report
+        : sheet === undefined
+          ? []
+          : sheet.rows.map((row) => applyWaterMapping(row, mapping)),
+    [report, sheet, mapping],
   );
 
   const importable = (result.rows ?? []).filter((row) => row.importable);
@@ -136,9 +183,16 @@ export function WaterImport({
       <DropOverlay shown={dragging} label={t('facilities.waterImport.drop')} />
 
       {/*
-        Always visible, primary, in the page header — the ticket's own words. The
-        old control was a text link inside a card most operators never scrolled
-        to. `bg-primary` with `text-primary-foreground` is a token pair, so it
+        Always visible, primary, in the Water quality card directly under
+        "Record an analysis" — round 6, ticket 1.
+
+        Round 5 put it in the page header, which was the wrong half of a right
+        instinct: the control needed to stop being a text link nobody scrolled
+        to, but a page header is about the *page* and this is about the readings.
+        Beside the form it complements is where somebody with a report in hand is
+        already looking.
+
+        `bg-primary` with `text-primary-foreground` is a token pair, so it
         carries its own contrast in both themes rather than being a colour that
         happens to work in one.
       */}
@@ -152,7 +206,7 @@ export function WaterImport({
           ref={fileInput}
           type="file"
           name="file"
-          accept=".xlsx,.csv,text/csv"
+          accept={ACCEPT_ATTRIBUTE}
           onChange={() => startTransition(() => formRef.current?.requestSubmit())}
         />
       </form>
@@ -201,7 +255,29 @@ export function WaterImport({
               </p>
             )}
 
-            {step === 'reading' && sheets.length === 0 && (
+            {/*
+              Report parsing is switched off — round 6, ticket 1.
+
+              Deliberately not the red box above. Nothing failed: this club has
+              not turned the feature on, which is a fact rather than a fault, and
+              a screen that shows a failure for an unconfigured feature teaches
+              people to ignore the failures that matter. The sentence beneath
+              says what still works, because somebody holding a PDF needs
+              somewhere to go.
+            */}
+            {read.reportDisabled === true && (
+              <div className="mb-4 flex items-start gap-2 rounded border border-border bg-surface-muted p-3 text-sm">
+                <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-foreground-muted" />
+                <span className="flex flex-col gap-1">
+                  <span className="font-medium">{t('facilities.waterImport.report.disabled')}</span>
+                  <span className="text-foreground-muted">
+                    {t('facilities.waterImport.report.disabledHint')}
+                  </span>
+                </span>
+              </div>
+            )}
+
+            {step === 'reading' && sheets.length === 0 && report === undefined && (
               <div className="flex flex-col items-start gap-3 py-6">
                 <p className="text-sm text-foreground-muted">
                   {t('facilities.waterImport.choose')}
@@ -265,9 +341,20 @@ export function WaterImport({
 
               {step === 'preview' && (
                 <>
-                  <button type="button" className={BUTTON_QUIET} onClick={() => setStep('mapping')}>
-                    {t('common.back')}
-                  </button>
+                  {/*
+                    A report has no mapping step behind it, so there is nowhere
+                    for Back to go — offering it would take somebody to a screen
+                    of empty dropdowns over a file that has no columns.
+                  */}
+                  {sheet !== undefined && (
+                    <button
+                      type="button"
+                      className={BUTTON_QUIET}
+                      onClick={() => setStep('mapping')}
+                    >
+                      {t('common.back')}
+                    </button>
+                  )}
                   <form action={importAction}>
                     <input type="hidden" name="poolId" value={poolId} />
                     <input type="hidden" name="rows" value={JSON.stringify(rows)} />

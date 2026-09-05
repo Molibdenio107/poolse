@@ -6,7 +6,6 @@ import { AlertTriangle } from 'lucide-react';
 import type { PoolAnalysis } from '@/lib/api';
 import type { Excursion } from '@/lib/water';
 import { toCsv } from '@/lib/csv';
-import { EntityIcon } from '@/components/entity-icon';
 
 /**
  * "This water is out of range — do you want to shut the pool?"
@@ -107,44 +106,6 @@ export function UnsafeWaterNotice({
   );
 }
 
-/**
- * Importing a lab's analysis sheet — present, styled, and switched off.
- *
- * The same treatment the photo and logo controls get, for the same reason: a
- * button that opens a file picker and then discards the file is worse than one
- * that is plainly off and says why. Two things are missing rather than one, and
- * both are named — object storage to keep the file, and the parsing that would
- * read values out of a PDF a laboratory sends. An operator who knows that stops
- * looking for the feature and types the four numbers instead, which is what the
- * form beside it is for.
- */
-export function ImportAnalysis(): React.ReactElement {
-  const t = useTranslations();
-
-  return (
-    <div className="flex flex-col items-start gap-2 rounded border border-dashed border-border bg-surface-muted p-4">
-      <button
-        type="button"
-        disabled
-        className="inline-flex cursor-not-allowed items-center gap-2 rounded border border-border bg-surface px-3 py-2 text-sm text-foreground-muted opacity-60"
-      >
-        <EntityIcon kind="photo" />
-        {t('facilities.importAnalysis')}
-      </button>
-
-      {/*
-        Both reasons, as visible text. "Not available" without the why reads as a
-        bug; naming the two things it waits on makes it a roadmap item.
-      */}
-      <ul className="list-inside list-disc text-sm text-foreground-muted">
-        <li>{t('facilities.importNoStorage')}</li>
-        <li>{t('facilities.importNoParsing')}</li>
-      </ul>
-
-      <p className="text-sm text-foreground-muted">{t('facilities.importMeanwhile')}</p>
-    </div>
-  );
-}
 
 /**
  * The analyses as a spreadsheet, built in the browser from what is on the page.

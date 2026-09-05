@@ -367,10 +367,6 @@
     "emptyLatest": "O valor mais recente de cada medição, num relance.",
     "emptyTrend": "Uma tendência para cada medição, a partir da primeira análise.",
     "emptyReport": "Um relatório para imprimir e uma exportação em CSV de todo o registo.",
-    "importAnalysis": "Importar relatório de análise",
-    "importNoStorage": "O armazenamento de ficheiros ainda não está configurado, por isso não há onde guardar o documento.",
-    "importNoParsing": "A leitura de valores a partir de um PDF do laboratório ainda não está feita.",
-    "importMeanwhile": "Entretanto, introduza os valores acima — dão-lhe a mesma tendência e o mesmo relatório.",
     "exportAnalyses": "Exportar em CSV",
     "waterOutOfRange": "Esta água está fora do intervalo recomendado",
     "aboveRange": "acima do intervalo {from}–{to}",
@@ -390,10 +386,10 @@
     "maxCapacityHint": "Alunos autorizados na água em simultâneo, somando todas as turmas.",
     "maxCapacityUnlimited": "Sem limite definido — as turmas deste tanque não são limitadas.",
     "waterImport": {
-      "action": "Importar leituras",
-      "hint": "Um registo de água em .xlsx ou .csv, ou arraste um para esta página.",
-      "drop": "Largue o registo de água para o importar",
-      "choose": "Escolha um ficheiro, ou arraste um para qualquer ponto desta página.",
+      "action": "Importar um boletim de análise",
+      "hint": "Um registo de água em .xlsx ou .csv, ou um boletim em PDF ou fotografia. Também pode arrastá-lo para esta página.",
+      "drop": "Largue o ficheiro para o importar",
+      "choose": "Escolha um ficheiro, ou arraste um para qualquer ponto desta página. Aceita .xlsx, .csv, PDF e imagens.",
       "pick": "Escolher ficheiro",
       "sheet": "Folha",
       "unmapped": "— não importar —",
@@ -408,6 +404,12 @@
       "state": "A importar",
       "willImport": "Vai ser importada",
       "failed": "Não foi possível importar as leituras.",
+      "report": {
+        "disabled": "A leitura automática de boletins ainda não está ativa.",
+        "disabledHint": "Peça para a ativar, ou importe um .xlsx ou .csv — ou registe a análise à mão no formulário acima.",
+        "unreadable": "Não foi possível ler este boletim. Verifique se o ficheiro abre e tente outra vez.",
+        "nothingFound": "Não foram encontradas leituras neste boletim."
+      },
       "problem": {
         "dateMissing": "Sem data",
         "dateInvalid": "Não foi possível ler a data",

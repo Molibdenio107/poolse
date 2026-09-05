@@ -119,6 +119,14 @@ type. A new importer supplies its own preview rendering and nothing else. The ca
 (a grid layout, no columns) and the water log's (matches in the browser, no model call) are
 deliberately not callers.
 
+**A document importer is an `AnalysisReportParser`.** A file with no columns — a
+laboratory's PDF, a photograph of a log — cannot have a mapping step, so it is read by a
+parser that answers in the *same field names* the mapping step produces and joins the
+ordinary validate–preview–commit path. Two ways in, one pipeline. Every such parser is
+optional and off unless its own flag and `ANTHROPIC_API_KEY` are both set, sends the
+document and nothing else about the tenant, and has everything it extracts confirmed by a
+person on the preview. `lib/analysis-report.ts` is the contract; `-agent.ts` is the model.
+
 **An importer is a `MatchSpec`, never a new pipeline.** There are four — the register, the
 store room, the wall timetable and the water log. A new one is a field list, a synonym list
 and `matchFields` in `lib/<thing>-sheet.ts`, plus a preview/commit pair on one API route

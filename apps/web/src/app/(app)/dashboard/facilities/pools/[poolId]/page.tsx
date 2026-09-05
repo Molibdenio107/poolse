@@ -7,7 +7,6 @@ import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from '../../facility-forms';
 import { PoolForm } from '../../pool-form';
 import { ReadingsBlock } from '../../readings-block';
-import { WaterImport } from './water-import';
 import { PageError, PageShell } from '@/components/page-shell';
 
 /**
@@ -60,22 +59,16 @@ export default async function PoolPage({
       subtitle={pool?.facilityName ?? ''}
       back={{ href: back.href, label: t(back.labelKey) }}
       /*
-        The import sits in the page header — round 5, ticket 5.
+        The import is not here — round 6, ticket 1, reversing round 5.
 
-        It used to be a text link inside the readings card, which is a card most
-        operators never scrolled to. Primary style and up here, so it is the
-        thing you see when you arrive with a spreadsheet in hand. `WaterImport`
-        renders nothing at all for somebody who may not write, so the header
-        stays the icon alone for them rather than a control that 403s.
+        Round 5 moved it up from a text link inside the readings card, on the
+        grounds that nobody scrolled to it. Right problem, wrong destination: a
+        page header is about the page, and this is about the readings. It now
+        sits in the Water quality card directly under "Record an analysis",
+        beside the form it is the alternative to.
       */
-      actions={
-        <span className="flex items-center gap-3">
-          {pool !== null && <WaterImport poolId={poolId} canManage={pool.canManage} />}
-          <EntityIcon kind="pool" className="size-6 text-primary" />
-        </span>
-      }
+      actions={<EntityIcon kind="pool" className="size-6 text-primary" />}
     >
-
 
       {missing && (
         <section className="rounded border border-border bg-surface p-5">
