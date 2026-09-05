@@ -73,13 +73,19 @@ function prune(item: Item, roles: readonly string[]): Item | null {
  * them. POOLSE-36 is superseded — Staff is no longer a main-menu item, so there
  * is nothing left to reorder.
  *
- * **Instalações is first, and Dashboard sits below it.** The order is not
- * decoration: the first item in a sidebar is read as the place you are meant to
- * be, and for an Owner or Admin that is the facility — POOLSE-37 already lands
- * them there. Dashboard stays a real destination, just not the front door,
- * because what it shows is your own account rather than the operation.
+ * **Dashboard is first, and Instalações sits below it — round 5, ticket 1.**
+ * This reverses the order POOLSE-37 and POOLSE-38 argued for, deliberately
+ * rather than by drift, so the reasoning is worth keeping straight. The old
+ * argument was that the first item is read as the place you are meant to be, and
+ * that the dashboard was about *you* — your account, your roles, your sessions —
+ * rather than about the pool. That was true when it was written and stopped
+ * being true in round 4, which moved every account question to "O meu perfil"
+ * and put occupancy on the dashboard instead. A page that answers "how much of
+ * the water is sold" *is* about the operation, so it is now the front door, and
+ * the logo and the post-sign-in redirect both land on it.
  */
 const SECTIONS: Item[] = [
+  { href: '/dashboard', key: 'nav.dashboard', icon: 'dashboard' },
   {
     href: '/dashboard/facilities',
     key: 'facilities.title',
@@ -121,7 +127,6 @@ const SECTIONS: Item[] = [
       },
     ],
   },
-  { href: '/dashboard', key: 'nav.dashboard', icon: 'dashboard' },
   {
     href: '/dashboard/classes',
     key: 'classes.title',

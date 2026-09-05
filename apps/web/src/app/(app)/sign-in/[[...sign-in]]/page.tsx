@@ -15,7 +15,7 @@ export default function SignInPage(): React.ReactElement {
         turma. Forcing it would send them to the landing page and lose the link
         they clicked.
       */}
-      <SignIn fallbackRedirectUrl="/dashboard/start" />
+      <SignIn fallbackRedirectUrl="/dashboard" />
     </main>
   );
 }

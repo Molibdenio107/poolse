@@ -36,9 +36,17 @@ import { OccupancyPanel } from '@/components/occupancy-panel';
  * card explaining what is not here yet becomes furniture between the reader and
  * what is.
  *
- * The "you belong to no organization yet" path stays here on purpose:
- * `dashboard/start` sends somebody with no membership to this page precisely
- * because `CreateOrganizationForm` lives on it.
+ * The "you belong to no organization yet" path stays here on purpose: this is
+ * where `CreateOrganizationForm` lives, and somebody with no membership has to
+ * land somewhere that offers them a way forward.
+ *
+ * **This is the home route — round 5, ticket 1.** Sign-in comes straight here
+ * and so does the logo. `dashboard/start` and `lib/landing.ts` are gone with
+ * that change: POOLSE-37 resolved a landing page per role, and there is nothing
+ * left to resolve once every role lands on the same one. Both fetches below stay
+ * best-effort for the same reason they always were, which is now load-bearing —
+ * an instructor or a guardian opening the front door must get a page, not a
+ * permission error, so a figure that will not compute becomes a muted note.
  */
 export default async function DashboardPage(): Promise<React.ReactElement> {
   const t = await getTranslations();
