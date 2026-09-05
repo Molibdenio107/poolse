@@ -25,7 +25,7 @@ import { matchFields, type MatchResult, type MatchSpec, type Sheet } from './she
  * no code package, and the failure mode of the copies drifting is a column that
  * is ignored, not a column written to the wrong place.
  */
-export const INVENTORY_FIELDS = ['name', 'quantity', 'unit', 'notes', 'pools'] as const;
+export const INVENTORY_FIELDS = ['name', 'quantity', 'unit', 'location', 'notes', 'pools'] as const;
 
 export type InventoryField = (typeof INVENTORY_FIELDS)[number];
 
@@ -35,6 +35,7 @@ export const EMPTY_INVENTORY_MAPPING: InventoryMapping = {
   name: null,
   quantity: null,
   unit: null,
+  location: null,
   notes: null,
   pools: null,
 };
@@ -71,20 +72,39 @@ const SYNONYMS: [InventoryField, string[]][] = [
       'units',
     ],
   ],
+  /*
+   * **The place words moved to `location` — round 5, ticket 6.0.**
+   *
+   * `pools` used to answer to "local", "localizacao", "onde", "location" and
+   * "where" as well as to the tank words. That was wrong before this ticket and
+   * merely invisible: a club's "Localização" column holds room names, so the
+   * matcher claimed it for `pools` and the API then failed to resolve
+   * "Balneário masculino" as a tank. The column was mapped and the values were
+   * refused, which reads as the importer being broken rather than as a mismatch.
+   *
+   * Now the tank words are here and the place words are on `location`, where
+   * they always belonged.
+   */
   [
     'pools',
+    ['piscina', 'piscinas', 'tanque', 'tanques', 'pool', 'pools', 'tank', 'tanks'],
+  ],
+  [
+    'location',
     [
-      'piscina',
-      'piscinas',
-      'tanque',
-      'tanques',
       'local',
       'localizacao',
       'onde',
-      'pool',
-      'pools',
+      'arrumacao',
+      'arrecadacao',
+      'armario',
+      'sala',
       'location',
       'where',
+      'room',
+      'stored',
+      'shelf',
+      'cupboard',
     ],
   ],
   ['unit', ['unidade', 'medida', 'un', 'unit', 'measure']],
@@ -161,6 +181,7 @@ export const INVENTORY_EXPORT_FIELDS: InventoryField[] = [
   'name',
   'quantity',
   'unit',
+  'location',
   'pools',
   'notes',
 ];

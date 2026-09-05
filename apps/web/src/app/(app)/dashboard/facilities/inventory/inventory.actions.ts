@@ -78,6 +78,8 @@ export async function addItemAction(
         name,
         quantity,
         unit: String(formData.get('unit') ?? '').trim(),
+        // Empty means "not recorded"; the API keeps it null — 6.0.
+        location: String(formData.get('location') ?? '').trim(),
         notes: String(formData.get('notes') ?? '').trim(),
         ...scope,
       },
@@ -114,6 +116,8 @@ export async function updateItemAction(
         name,
         quantity,
         unit: String(formData.get('unit') ?? '').trim(),
+        // Empty means "not recorded"; the API keeps it null — 6.0.
+        location: String(formData.get('location') ?? '').trim(),
         notes: String(formData.get('notes') ?? '').trim(),
         ...scope,
       },

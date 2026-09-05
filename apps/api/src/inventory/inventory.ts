@@ -28,6 +28,14 @@ export const INVENTORY_IMPORT_FIELDS = [
   'quantity',
   /** Pares, caixas, metros. Left blank on most rows, because the name carries it. */
   'unit',
+  /**
+   * Where the kit lives — round 5, ticket 6.0.
+   *
+   * Free text, stored as written. The words on the web side moved off `pools`
+   * to get here: a club's "Localização" column holds room names, and matching
+   * them against tank names failed every row it claimed.
+   */
+  'location',
   'notes',
   /**
    * Which tanks this serves, as the sheet wrote it.
@@ -104,6 +112,7 @@ export interface InventoryRow {
   name: string;
   quantity: number;
   unit: string | null;
+  location: string | null;
   notes: string | null;
   scope: InventoryScope;
   /** Pool ids this row resolved to. Empty unless `scope` is `pools`. */
@@ -133,6 +142,7 @@ export interface ExistingItem {
   name: string;
   quantity: number;
   unit: string | null;
+  location: string | null;
   notes: string | null;
   scope: InventoryScope;
   poolIds: string[];
@@ -155,6 +165,7 @@ export const MAX_INVENTORY_ROWS = 2_000;
 
 const MAX_NAME = 120;
 const MAX_UNIT = 40;
+const MAX_LOCATION = 120;
 const MAX_NOTES = 500;
 
 /**
@@ -288,6 +299,15 @@ function validateRow(
     unit = null;
   }
 
+  // Same treatment as the unit: too long is a refusal naming the field rather
+  // than a silent truncation, because a place name cut in half is a place name
+  // nobody can find.
+  let location = cell(raw.location);
+  if (location !== null && location.length > MAX_LOCATION) {
+    problems.push({ field: 'location', code: 'tooLong', value: location });
+    location = null;
+  }
+
   let notes = cell(raw.notes);
   if (notes !== null && notes.length > MAX_NOTES) {
     problems.push({ field: 'notes', code: 'tooLong', value: notes });
@@ -342,6 +362,7 @@ function validateRow(
     name,
     quantity: 'error' in quantity ? 0 : quantity.value,
     unit,
+    location,
     notes,
     scope,
     poolIds,

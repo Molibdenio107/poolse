@@ -23,3 +23,6 @@ This file is for the calls themselves.
 - **2026-09-05** — The water import is per tank, from the tank's own page. A row whose tank column names a different tank is refused rather than imported into whichever tank was open.
 - **2026-09-05** — An out-of-range reading imports with no warning of its own; only unreadable values refuse a row. Losing the day a pool was unsafe is the worst thing an importer of safety records could do.
 - **2026-09-05** — Ticket 5's wizard is built as its own leaner file; the extraction of a shared import wizard waits until there are four examples to generalise from rather than three.
+- **2026-09-05** — An inventory item's location is free text with suggestions, not a rooms entity. The words the club types are the data that would tell us what rooms to model, if rooms ever earn a table.
+- **2026-09-05** — The place words (local, localização, onde, location, where) moved from the inventory importer's `pools` field to the new `location` field. They were always place words; matching them against tank names failed every column they claimed.
+- **2026-09-05** — Naming a student on a lost item stamps that they were told, as part of recording it rather than as a second button. An item that names a student and is not marked as notified is a state nobody would mean.

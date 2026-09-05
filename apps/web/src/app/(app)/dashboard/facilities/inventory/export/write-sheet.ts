@@ -47,6 +47,7 @@ export function rowFor(item: InventoryItem): string[] {
     name: item.name,
     quantity: String(item.quantity),
     unit: item.unit ?? '',
+    location: item.location ?? '',
     notes: item.notes ?? '',
     pools: scopeCell(item),
   };

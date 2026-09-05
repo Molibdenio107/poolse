@@ -26,7 +26,8 @@
     "notFound": "This no longer exists. It may have been removed.",
     "apiUnreachable": "Could not reach the server. Check that the API is running.",
     "serverError": "The server hit an error loading this page.",
-    "requestRefused": "The server refused this request."
+    "requestRefused": "The server refused this request.",
+    "remove": "Remove"
   },
   "pagination": {
     "label": "Pagination",
@@ -1628,6 +1629,7 @@
       "name": "Item",
       "quantity": "Quantity",
       "unit": "Unit",
+      "location": "Location",
       "notes": "Notes",
       "pools": "Pools"
     },
@@ -1674,7 +1676,31 @@
     "search": "Search items",
     "searchPlaceholder": "Name or note — floats, cupboard 2…",
     "noMatches": "No item matches \"{term}\".",
-    "actions": "Actions"
+    "actions": "Actions",
+    "locationLabel": "Location",
+    "locationHint": "Where it belongs — a balneário, the office, a cupboard.",
+    "lostAndFound": {
+      "title": "Lost and found",
+      "outstanding": "{count, plural, one {# waiting} other {# waiting}}",
+      "empty": "Nothing has been handed in.",
+      "add": "Record something found",
+      "save": "Record it",
+      "description": "What is it",
+      "descriptionRequired": "Say what was found.",
+      "locationFound": "Where it was found",
+      "foundOn": "Found on",
+      "foundOnInvalid": "That is not a date.",
+      "student": "Whose is it",
+      "noStudent": "Nobody yet",
+      "studentHint": "Naming a student records that they were told.",
+      "waiting": "Waiting to be collected",
+      "returned": "Returned",
+      "notified": "The student was told",
+      "markReturned": "Mark as returned",
+      "saveFailed": "The item could not be recorded.",
+      "returnFailed": "The item could not be marked as returned.",
+      "removeFailed": "The item could not be removed."
+    }
   },
   "slots": {
     "title": "Schedule grid",

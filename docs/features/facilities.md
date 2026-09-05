@@ -92,3 +92,43 @@ file dragged anywhere on the page opens the same flow.
 - **A repeated moment is a warning, not a refusal** — a re-uploaded month that overlaps the
   last one is ordinary, and being told is enough.
 - Nothing is written until the operator commits; a preview writes nothing at all.
+
+
+## Inventory
+
+`/dashboard/facilities/inventory`. An item belongs to a **site** and says which tanks it
+serves; it is not a property of any one pool.
+
+Each item carries a name, a count, an optional unit, and a **location** — free text saying
+where it belongs, suggested from what this site already uses. Deliberately not a rooms
+entity: a club knows "balneário masculino" as a word, and a rooms table would mean creating
+one before you can add a mop.
+
+The importer reads a `Localização` column into that field. Before round 5 those words
+belonged to the tank matcher, which claimed the column and then failed to resolve room
+names as tanks — mapped, refused, and reading as a broken importer.
+
+## Lost and found
+
+The same screen, in a card that is **collapsed by default** — the store room is what
+somebody opens this page for. The header carries the count of items still waiting, so the
+reason to open it is visible while it is shut.
+
+| Action | Roles |
+|---|---|
+| Read the list | everybody |
+| Record something found | owner, admin |
+| Mark as returned | owner, admin |
+| Remove an item | owner, admin |
+
+An item is a description, where it was found, the date, notes, and optionally **whose it
+is**. Naming a student stamps `student_notified_at` — the record the mobile app will read
+when the notifications subsystem lands in phase 3.0. That stamp outlives the item being
+returned, because "we told them" and "they collected it" are different facts.
+
+The schema keeps two pairs honest rather than trusting a code path: a returned item always
+has a returned date and vice versa, and nobody can be marked as notified about an item with
+no owner.
+
+There is no photo control. File storage is deferred, and the three existing photo controls
+are the ones that get one when it lands.

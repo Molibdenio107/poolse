@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import { listFacilities, type Facility } from '../facilities/facilities.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { readSearch } from '../common/search.js';
@@ -26,7 +26,17 @@ import {
   type InventoryImportResult,
   type InventoryItem,
   type InventoryItemInput,
+  locationsAt,
 } from './inventory.repository.js';
+import {
+  archiveLostAndFound,
+  createLostAndFound,
+  listLostAndFound,
+  returnLostAndFound,
+  studentsForPicker,
+  type LostAndFoundInput,
+  type LostAndFoundItem,
+} from './lost-and-found.repository.js';
 import {
   INVENTORY_IMPORT_FIELDS,
   MAX_INVENTORY_ROWS,
@@ -70,6 +80,16 @@ export class InventoryController {
     /** The site actually being shown — the requested one, or the first. */
     facilityId: string | null;
     items: Paginated<InventoryItem>;
+    /**
+     * What this site already calls its places — round 5, ticket 6.0.
+     *
+     * Travels with the store for the same reason the site list does: the
+     * location box cannot render its suggestions without it, and a second round
+     * trip would put a loading state on a datalist. Lost and found reads the
+     * same list, because "where it belongs" and "where it turned up" are one
+     * vocabulary.
+     */
+    locations: string[];
   }> {
     const { organizationId } = currentTenant();
     const window = readPageQuery(page, limit);
@@ -90,6 +110,7 @@ export class InventoryController {
         facilityId === null
           ? { items: [], total: 0, page: window.page, limit: window.limit }
           : await listInventory(organizationId, facilityId, readSearch(search), window),
+      locations: facilityId === null ? [] : await locationsAt(organizationId, facilityId),
     };
   }
 
@@ -128,6 +149,73 @@ export class InventoryController {
    * that has since been archived should show somebody their inventory, not an
    * error page about a facility they no longer have.
    */
+  // -------------------------------------------------------------------------
+  // Lost and found — round 5, ticket 6.1
+  //
+  // On this controller rather than its own, because it is the same screen and
+  // the same site picker. Reads open, writes owner/admin, exactly as the store
+  // room beside it.
+  // -------------------------------------------------------------------------
+
+  @Get('lost-and-found')
+  async lostAndFound(
+    @Query('facilityId') requested?: string,
+  ): Promise<{
+    items: LostAndFoundItem[];
+    /** The register, complete — a picker with a window cannot find everybody. */
+    students: { id: string; name: string }[];
+    canManage: boolean;
+  }> {
+    const { organizationId } = currentTenant();
+    const facilityId = await this.resolveFacility(organizationId, requested);
+
+    return {
+      items: facilityId === null ? [] : await listLostAndFound(organizationId, facilityId),
+      // Only worth fetching for somebody who can use the form it fills.
+      students: hasRole('owner', 'admin') ? await studentsForPicker(organizationId) : [],
+      canManage: hasRole('owner', 'admin'),
+    };
+  }
+
+  @Post('lost-and-found')
+  async recordFound(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const facilityId = readId(body['facilityId'], 'facilityId');
+    const id = await createLostAndFound(organizationId, facilityId, readFound(body));
+    if (id === null) throw new NotFoundException('No such site');
+    return { id };
+  }
+
+  @Post('lost-and-found/:itemId/return')
+  async giveBack(@Param('itemId') itemId: string): Promise<{ returned: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    if (!(await returnLostAndFound(organizationId, itemId))) {
+      throw new NotFoundException('No such item, or it is already returned');
+    }
+    return { returned: true };
+  }
+
+  /**
+   * Removing an item — owner/admin, per G1.
+   *
+   * `requireCanArchive` rather than `requireRole` so it reads the same as every
+   * other removal in the app and moves with them if the rule ever changes.
+   */
+  @Post('lost-and-found/:itemId/archive')
+  async removeFound(@Param('itemId') itemId: string): Promise<{ archived: true }> {
+    requireCanArchive();
+    const { organizationId } = currentTenant();
+
+    if (!(await archiveLostAndFound(organizationId, itemId))) {
+      throw new NotFoundException('No such item');
+    }
+    return { archived: true };
+  }
+
   private async resolveFacility(
     organizationId: string,
     requested?: string,
@@ -190,7 +278,7 @@ export class InventoryController {
     return result;
   }
 
-  /** Corrects an item — in practice, its count after somebody has been counting. */
+/** Corrects an item — in practice, its count after somebody has been counting. */
   @Patch(':itemId')
   async edit(
     @Param('itemId') itemId: string,
@@ -227,6 +315,45 @@ function asHttp(error: unknown): unknown {
     return new ConflictException('An item with that name is already recorded at this site');
   }
   return error;
+}
+
+  /** One lost item off the wire. */
+function readFound(body: Record<string, unknown>): LostAndFoundInput {
+  const description = text(body['description'], 'description', 200);
+  if (description === null) {
+    throw new BadRequestException({
+      message: 'description is required',
+      fields: { description: 'inventory.lostAndFound.descriptionRequired' },
+    });
+  }
+
+  /*
+   * A date, and only a date. The column is `date` rather than `timestamptz`
+   * precisely so an item found on Tuesday does not acquire a time nobody typed —
+   * and so that a club in one timezone reading a record from another sees the
+   * day it happened rather than the day it happened to be stored on.
+   */
+  const foundOn = body['foundOn'];
+  const found = typeof foundOn === 'string' && foundOn.trim() !== '' ? foundOn.trim() : null;
+  if (found !== null && !/^\d{4}-\d{2}-\d{2}$/.test(found)) {
+    throw new BadRequestException({
+      message: 'foundOn must be a date',
+      fields: { foundOn: 'inventory.lostAndFound.foundOnInvalid' },
+    });
+  }
+
+  const studentId = body['studentId'];
+
+  return {
+    description,
+    locationFound: text(body['locationFound'], 'locationFound', 120),
+    foundOn: found,
+    notes: text(body['notes'], 'notes', 500),
+    // Optional and usually absent: a towel on a bench belongs to nobody until
+    // somebody claims it.
+    studentId:
+      typeof studentId === 'string' && studentId.trim() !== '' ? studentId.trim() : null,
+  };
 }
 
 function readId(raw: unknown, field: string): string {
@@ -290,6 +417,9 @@ function readItem(body: Record<string, unknown>): InventoryItemInput {
     name,
     quantity,
     unit: text(body['unit'], 'unit', 40),
+    // Free text, capped where a place name stops being one. Long enough for
+    // "Arrecadação do balneário masculino", short enough not to be a note.
+    location: text(body['location'], 'location', 120),
     notes: text(body['notes'], 'notes', 500),
     scope,
     poolIds,

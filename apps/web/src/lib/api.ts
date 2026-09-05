@@ -386,6 +386,8 @@ export interface InventoryItem {
   quantity: number;
   /** What the number counts when the name does not say — pares, caixas, metros. */
   unit: string | null;
+  /** Free text, where it belongs. Suggested from what the site already uses. */
+  location: string | null;
   notes: string | null;
   scope: InventoryScope;
   /** Empty unless `scope` is `pools`. */
@@ -427,6 +429,32 @@ export interface Inventory {
   facilityId: string | null;
   /** `total` is how many matched the search, not how many the site has. */
   items: Paginated<InventoryItem>;
+  /** What this site already calls its places, for the location suggestions. */
+  locations: string[];
+}
+
+/** One item somebody left behind — round 5, ticket 6.1. */
+export interface LostAndFoundItem {
+  id: string;
+  description: string;
+  locationFound: string | null;
+  /** ISO date, no time: the column is a `date` so it never grows one. */
+  foundOn: string;
+  notes: string | null;
+  studentId: string | null;
+  /** Composed by the server. Null when nobody has claimed it. */
+  studentName: string | null;
+  /** When the student was told. Outlives the item being returned. */
+  studentNotifiedAt: string | null;
+  status: 'found' | 'returned';
+  returnedAt: string | null;
+}
+
+export interface LostAndFound {
+  items: LostAndFoundItem[];
+  /** The register, complete — a picker with a window cannot find everybody. */
+  students: { id: string; name: string }[];
+  canManage: boolean;
 }
 
 /** The whole filtered list, for the export route. No window. */
@@ -896,6 +924,8 @@ export interface InventoryImportRowResult {
   name: string;
   quantity: number;
   unit: string | null;
+  /** Free text, where it belongs. Suggested from what the site already uses. */
+  location: string | null;
   notes: string | null;
   scope: InventoryScope;
   poolIds: string[];

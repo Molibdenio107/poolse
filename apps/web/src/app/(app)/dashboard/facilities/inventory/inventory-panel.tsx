@@ -72,6 +72,7 @@ export function InventoryPanel({
   total,
   search,
   canManage,
+  locations,
 }: {
   organizationId: string;
   facilities: { id: string; name: string; pools: Pool[] }[];
@@ -82,6 +83,8 @@ export function InventoryPanel({
   total: number;
   search: string;
   canManage: boolean;
+  /** What this site already calls its places — the location suggestions. */
+  locations: string[];
 }): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
@@ -299,6 +302,7 @@ export function InventoryPanel({
                 organizationId={organizationId}
                 facilityId={facilityId}
                 pools={pools}
+                locations={locations}
               />
             </div>
           )}
@@ -547,6 +551,7 @@ export function InventoryPanel({
                     item={item}
                     pools={pools}
                     canManage={canManage}
+                  locations={locations}
                   />
                 ))}
               </tbody>
@@ -602,11 +607,13 @@ function ItemRow({
   item,
   pools,
   canManage,
+  locations,
 }: {
   organizationId: string;
   item: InventoryItem;
   pools: Pool[];
   canManage: boolean;
+  locations: string[];
 }): React.ReactElement {
   const t = useTranslations();
   const [editing, setEditing] = useState(false);
@@ -627,7 +634,7 @@ function ItemRow({
             <input type="hidden" name="organizationId" value={organizationId} />
             <input type="hidden" name="itemId" value={item.id} />
 
-            <Fields item={item} pools={pools} />
+            <Fields item={item} pools={pools} locations={locations} />
 
             <div className="flex flex-wrap gap-3">
               <button
@@ -665,6 +672,15 @@ function ItemRow({
 
       <td className="py-3 pr-4">
         <ScopeText item={item} />
+        {/*
+          Where it lives, under which tanks it serves — round 5, 6.0. Muted and
+          beneath, because the tank answers "is this mine to use" and the
+          location answers "where do I go and get it"; the first is the column's
+          heading and the second is the follow-up.
+        */}
+        {item.location !== null && item.location !== '' && (
+          <span className="block text-sm text-foreground-muted">{item.location}</span>
+        )}
       </td>
 
       {/*
@@ -731,10 +747,12 @@ function AddItemForm({
   organizationId,
   facilityId,
   pools,
+  locations,
 }: {
   organizationId: string;
   facilityId: string;
   pools: Pool[];
+  locations: string[];
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(addItemAction, INITIAL);
@@ -744,7 +762,7 @@ function AddItemForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="facilityId" value={facilityId} />
 
-      <Fields pools={pools} />
+      <Fields pools={pools} locations={locations} />
 
       <button
         type="submit"
@@ -760,7 +778,16 @@ function AddItemForm({
 }
 
 /** The same fields, whether adding or correcting. */
-function Fields({ item, pools }: { item?: InventoryItem; pools: Pool[] }): React.ReactElement {
+function Fields({
+  item,
+  pools,
+  locations,
+}: {
+  item?: InventoryItem;
+  pools: Pool[];
+  /** What this site already calls its places, for the location suggestions. */
+  locations: string[];
+}): React.ReactElement {
   const t = useTranslations();
   const suffix = item?.id ?? 'new';
   const [scope, setScope] = useState<InventoryScope>(item?.scope ?? 'facility');
@@ -816,6 +843,42 @@ function Fields({ item, pools }: { item?: InventoryItem; pools: Pool[] }): React
             placeholder={t('inventory.unitPlaceholder')}
             className={CONTROL_LINE}
           />
+        </div>
+
+        {/*
+          Where it belongs — round 5, ticket 6.0.
+
+          An ordinary text box with a `datalist`, not a `<select>`: the club's
+          own words are suggestions, never a closed list, so the first operator
+          who needs "Arrecadação do fundo" can type it. The suggestions are what
+          this site already uses, which is what keeps three spellings of
+          "Balneário masculino" from appearing without anybody maintaining a
+          rooms table. Deliberately not a rooms entity — the ticket says so.
+        */}
+        <div className={cn(FIELD_COLUMN, 'sm:w-48')}>
+          <label htmlFor={`item-location-${suffix}`} className={FIELD_LABEL}>
+            {t('inventory.field.location')}
+          </label>
+          <input
+            id={`item-location-${suffix}`}
+            name="location"
+            maxLength={120}
+            defaultValue={item?.location ?? ''}
+            list={`locations-${suffix}`}
+            aria-describedby={`item-location-hint-${suffix}`}
+            className={CONTROL_LINE}
+          />
+          <datalist id={`locations-${suffix}`}>
+            {locations.map((place) => (
+              <option key={place} value={place} />
+            ))}
+          </datalist>
+          <p
+            id={`item-location-hint-${suffix}`}
+            className="text-sm text-foreground-muted"
+          >
+            {t('inventory.locationHint')}
+          </p>
         </div>
 
         <div className={cn(FIELD_COLUMN, 'sm:w-64')}>

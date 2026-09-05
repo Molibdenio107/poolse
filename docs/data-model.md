@@ -1887,3 +1887,37 @@ policies like anything else.
 4. **Retention periods** per entity for GDPR, especially `student_sensitive` and
    `audit_log`. The audit trail must exist from day one; how long it is kept can be decided
    later.
+
+
+### Lost and found — round 5, ticket 6.1
+
+```
+inventory_item
+  + location text                       -- free text, suggested; not a rooms entity
+
+lost_and_found_item
+  id, organization_id, facility_id, description, location_found,
+  found_on date, notes, student_id, student_notified_at, status, returned_at,
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  fk (organization_id, facility_id) -> facility
+  fk (organization_id, student_id)  -> student
+  check (status = 'returned') = (returned_at is not null)
+  check student_notified_at is null or student_id is not null
+  check btrim(description) <> ''
+  rls: organization_id = current_organization_id()
+```
+
+**Its own table, not a flag on `inventory_item`.** An inventory item is club property with a
+count; a lost item is one specific object belonging to somebody else, with a date, a status
+and possibly a name. Sharing a table would put a `WHERE kind = …` on every inventory query
+and a quantity of 1 on every lost-property row.
+
+**`student_notified_at` is a stamp, not a notification row.** The notifications subsystem is
+phase 3.0 and is meant to be built once; a second store here would be something for it to
+migrate away from. The stamp records the same fact — when, and therefore whether — and
+outlives the item being returned.
+
+**Both check constraints exist because the pairs are one fact written twice.** A status and
+its timestamp, and a notification and its subject. Neither is left to whichever code path
+happens to set them.

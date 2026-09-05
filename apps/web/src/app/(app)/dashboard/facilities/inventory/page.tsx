@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type Inventory } from '@/lib/api';
+import { ApiError, apiFetch, type Inventory, type LostAndFound } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { InventoryPanel } from './inventory-panel';
+import { LostAndFoundPanel } from './lost-and-found-panel';
 
 const BASE = '/dashboard/facilities/inventory';
 
@@ -50,6 +51,7 @@ export default async function InventoryPage({
   if (page > 1) query.set('page', String(page));
 
   let data: Inventory | null = null;
+  let lost: LostAndFound | null = null;
   let failure: LoadFailure | null = null;
   let noOrganization = false;
 
@@ -62,6 +64,19 @@ export default async function InventoryPage({
      * somebody an inventory.
      */
     data = await apiFetch<Inventory>(`/inventory${query.size > 0 ? `?${query}` : ''}`);
+
+    /*
+     * Lost property, fetched separately and best-effort — round 5, 6.1.
+     *
+     * Separate because it is a different table with a different shape and its
+     * own permissions, and folding it into the store's response would make one
+     * query answer two questions. Best-effort because the card is collapsed by
+     * default: a store room that fails to load because the lost-property list
+     * did would be the tail wagging the dog.
+     */
+    lost = await apiFetch<LostAndFound>(
+      `/inventory/lost-and-found${requested.trim() ? `?facilityId=${encodeURIComponent(requested.trim())}` : ''}`,
+    ).catch(() => null);
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
     else failure = describeLoad(error);
@@ -121,11 +136,22 @@ export default async function InventoryPage({
           )}
 
 
+          {lost !== null && data.facilityId !== null && (
+            <LostAndFoundPanel
+              facilityId={data.facilityId}
+              items={lost.items}
+              students={lost.students}
+              locations={data.locations}
+              canManage={lost.canManage}
+            />
+          )}
+
           <InventoryPanel
             organizationId={data.organizationId}
             facilities={data.facilities}
             facilityId={data.facilityId}
             items={data.items.items}
+            locations={data.locations}
             total={data.items.total}
             search={search.trim()}
             canManage={data.canManage}

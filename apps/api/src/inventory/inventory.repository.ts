@@ -44,6 +44,15 @@ export interface InventoryItem {
   name: string;
   quantity: number;
   unit: string | null;
+  /**
+   * Where the item belongs, in the club's own words — round 5, ticket 6.0.
+   *
+   * Free text, not a rooms entity: a club knows "balneário masculino" as a word,
+   * and a rooms table would mean stopping to create one before adding a mop.
+   * The form suggests what this site already uses, which keeps the words
+   * consistent without anybody maintaining a list.
+   */
+  location: string | null;
   notes: string | null;
   scope: InventoryScope;
   /** Empty unless `scope` is `pools`. */
@@ -56,6 +65,7 @@ export interface InventoryItemInput {
   name: string;
   quantity: number;
   unit: string | null;
+  location: string | null;
   notes: string | null;
   scope: InventoryScope;
   /** Ignored unless `scope` is `pools`. */
@@ -69,6 +79,7 @@ interface ItemRow {
   name: string;
   quantity: number;
   unit: string | null;
+  location: string | null;
   notes: string | null;
   scope: InventoryScope;
   pool_ids: string[] | null;
@@ -82,6 +93,7 @@ function toItem(row: ItemRow): InventoryItem {
     name: row.name,
     quantity: row.quantity,
     unit: row.unit,
+    location: row.location,
     notes: row.notes,
     scope: row.scope,
     poolIds: row.pool_ids ?? [],
@@ -104,7 +116,7 @@ function toItem(row: ItemRow): InventoryItem {
  */
 const SELECT_ITEMS = `
   SELECT ${TOTAL_COUNT},
-         i.id, i.facility_id, i.name, i.quantity, i.unit, i.notes, i.scope,
+         i.id, i.facility_id, i.name, i.quantity, i.unit, i.location, i.notes, i.scope,
          scoped.pool_ids, scoped.pool_names
     FROM inventory_item i
     LEFT JOIN LATERAL (
@@ -235,8 +247,8 @@ export async function addInventoryItem(
     try {
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO inventory_item
-           (organization_id, facility_id, name, quantity, unit, notes, scope)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+           (organization_id, facility_id, name, quantity, unit, location, notes, scope)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id`,
         [
           organizationId,
@@ -244,6 +256,7 @@ export async function addInventoryItem(
           input.name,
           input.quantity,
           input.unit,
+          input.location,
           input.notes,
           input.scope,
         ],
@@ -289,9 +302,9 @@ export async function updateInventoryItem(
     try {
       await tx.query(
         `UPDATE inventory_item
-            SET name = $2, quantity = $3, unit = $4, notes = $5, scope = $6
+            SET name = $2, quantity = $3, unit = $4, location = $5, notes = $6, scope = $7
           WHERE id = $1 AND archived_at IS NULL`,
-        [itemId, input.name, input.quantity, input.unit, input.notes, input.scope],
+        [itemId, input.name, input.quantity, input.unit, input.location, input.notes, input.scope],
       );
     } catch (error) {
       return asDuplicate<boolean>(error, input.name);
@@ -389,12 +402,13 @@ async function existingItems(tx: Tx, facilityId: string): Promise<ExistingItem[]
     name: string;
     quantity: number;
     unit: string | null;
+    location: string | null;
     notes: string | null;
     scope: InventoryScope;
     pool_ids: string[] | null;
   }>(
     `
-    SELECT i.id, i.name, i.quantity, i.unit, i.notes, i.scope,
+    SELECT i.id, i.name, i.quantity, i.unit, i.location, i.notes, i.scope,
            (SELECT array_agg(link.pool_id)
               FROM inventory_item_pool link
              WHERE link.item_id = i.id) AS pool_ids
@@ -409,6 +423,7 @@ async function existingItems(tx: Tx, facilityId: string): Promise<ExistingItem[]
     name: row.name,
     quantity: row.quantity,
     unit: row.unit,
+    location: row.location,
     notes: row.notes,
     scope: row.scope,
     poolIds: row.pool_ids ?? [],
@@ -504,8 +519,8 @@ export async function runInventoryImport(
 
       const { rows: inserted } = await tx.query<{ id: string }>(
         `INSERT INTO inventory_item
-           (organization_id, facility_id, name, quantity, unit, notes, scope)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+           (organization_id, facility_id, name, quantity, unit, location, notes, scope)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id`,
         [
           organizationId,
@@ -513,6 +528,7 @@ export async function runInventoryImport(
           row.name,
           row.quantity,
           row.unit,
+          row.location,
           row.notes,
           row.scope,
         ],
@@ -537,5 +553,41 @@ export async function runInventoryImport(
     });
 
     return { rows, summary, created, updated, skipped };
+  });
+}
+
+/**
+ * The place names this site already uses — round 5, ticket 6.0.
+ *
+ * The suggestion list behind the location box. It is what keeps "Balneário
+ * masculino" from becoming four spellings without anybody maintaining a rooms
+ * table: an operator sees what their colleagues typed and picks it.
+ *
+ * Unpaginated, and comfortably so — the bound is how many places a club stores
+ * kit in, which is a dozen. Sorted the way a person reads them, folding accents
+ * so "Arrecadação" and "arrecadacao" sit together rather than at opposite ends.
+ *
+ * Lost property draws on the same list, because "where it belongs" and "where it
+ * turned up" are the same vocabulary.
+ */
+export async function locationsAt(
+  organizationId: string,
+  facilityId: string,
+): Promise<string[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ location: string }>(
+      `SELECT DISTINCT location
+         FROM (
+           SELECT location FROM inventory_item
+            WHERE facility_id = $1 AND archived_at IS NULL AND location IS NOT NULL
+           UNION ALL
+           SELECT location_found AS location FROM lost_and_found_item
+            WHERE facility_id = $1 AND archived_at IS NULL AND location_found IS NOT NULL
+         ) AS both
+        WHERE btrim(location) <> ''
+        ORDER BY location`,
+      [facilityId],
+    );
+    return rows.map((row) => row.location);
   });
 }

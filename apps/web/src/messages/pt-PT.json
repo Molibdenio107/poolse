@@ -26,7 +26,8 @@
     "notFound": "Já não existe. Pode ter sido removido entretanto.",
     "apiUnreachable": "Não foi possível contactar o servidor. Verifique se a API está a correr.",
     "serverError": "Ocorreu um erro no servidor ao carregar esta página.",
-    "requestRefused": "O servidor recusou este pedido."
+    "requestRefused": "O servidor recusou este pedido.",
+    "remove": "Remover"
   },
   "pagination": {
     "label": "Paginação",
@@ -1628,6 +1629,7 @@
       "name": "Artigo",
       "quantity": "Quantidade",
       "unit": "Unidade",
+      "location": "Localização",
       "notes": "Notas",
       "pools": "Piscinas"
     },
@@ -1674,7 +1676,31 @@
     "search": "Procurar artigo",
     "searchPlaceholder": "Nome ou nota — pranchas, armário 2…",
     "noMatches": "Nenhum artigo corresponde a \"{term}\".",
-    "actions": "Ações"
+    "actions": "Ações",
+    "locationLabel": "Localização",
+    "locationHint": "Onde pertence — um balneário, o escritório, um armário.",
+    "lostAndFound": {
+      "title": "Achados e perdidos",
+      "outstanding": "{count, plural, one {# por entregar} other {# por entregar}}",
+      "empty": "Não foi entregue nada.",
+      "add": "Registar um achado",
+      "save": "Registar",
+      "description": "O que é",
+      "descriptionRequired": "Indique o que foi encontrado.",
+      "locationFound": "Onde foi encontrado",
+      "foundOn": "Encontrado a",
+      "foundOnInvalid": "Isto não é uma data.",
+      "student": "De quem é",
+      "noStudent": "Ainda ninguém",
+      "studentHint": "Indicar um aluno regista que foi avisado.",
+      "waiting": "À espera de ser levantado",
+      "returned": "Entregue",
+      "notified": "O aluno foi avisado",
+      "markReturned": "Marcar como entregue",
+      "saveFailed": "Não foi possível registar o achado.",
+      "returnFailed": "Não foi possível marcar como entregue.",
+      "removeFailed": "Não foi possível remover o achado."
+    }
   },
   "slots": {
     "title": "Grelha horária",
