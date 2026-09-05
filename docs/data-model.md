@@ -1812,6 +1812,32 @@ season.
 everybody else, so an instructor can still read occupancy. It is there for the dashboards module,
 and POOLSE-47's decision that partnership billing is its own flow stands.
 
+### `lesson_plan` — what one lesson is for
+
+```
+lesson_plan        organization_id, class_group_id, on_date date, body text,
+                   updated_by (membership), created_at, updated_at, archived_at
+                   unique (organization_id, class_group_id, on_date) where archived_at is null
+```
+
+What an instructor writes before Tuesday: the drills, the distances, the skill the group is
+working on.
+
+**Keyed on the turma and the date, not on `class_session.id`.** Sessions are regenerated —
+`generateSeason` rebuilds the clean future when a turma moves — so a plan hanging off a
+rebuilt row would vanish when somebody changed the pool. A plan is preparation for a date,
+and outlives whatever the timetable later did with that date.
+
+**One row per lesson, replaced in place.** No history: this is a working note somebody edits
+until the lesson happens. `updated_by` and `updated_at` say who last touched it.
+
+**An empty plan is a deleted plan.** A check constraint refuses a blank body and the API
+removes the row when the box is cleared, because a stored row of whitespace reads as a plan
+that says nothing — worse than none, since a colleague would stop looking.
+
+The unique index is partial, as on every soft-deletable table: a plan cleared in March must
+not block a new one for the same Tuesday next season.
+
 ## Module 2 — maintenance (shape)
 
 ```

@@ -106,6 +106,11 @@ seed created a second site to keep demo data tidy and nothing objected.
 null`). Otherwise archiving an instructor and re-adding them next season violates the
 constraint against a dead row.
 
+**A permission about a *row* is a repository answer, not `requireRole`.** "The instructor
+responsible for this turma" cannot be written as a role, so the repository resolves the row,
+decides, and the controller turns a refusal into a 403 — while the read endpoint returns the
+same answer as `canEdit` so the screen and the guard cannot disagree. See `lesson-plans.repository.ts`.
+
 **A question asked in the middle of the page uses `components/ui/dialog.tsx`.** It portals
 to the body, so no ancestor's `overflow`, `transform` or `z-index` can clip it; it closes on
 Escape and on the backdrop, moves focus in and gives it back, and keeps Tab inside itself.

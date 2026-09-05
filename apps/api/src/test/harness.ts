@@ -91,6 +91,9 @@ const TENANT_TABLES = [
   // everywhere in this list.
   'class_session_lane',
   'class_session',
+  // A lesson plan points at its turma, so it goes before `class_group` — round
+  // 6, ticket 4.3.
+  'lesson_plan',
   'booking_lane',
   'class_schedule',
   'class_group',

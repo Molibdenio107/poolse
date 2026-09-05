@@ -64,6 +64,7 @@ export function Dialog({
   closeLabel,
   children,
   className,
+  placement = 'centre',
 }: {
   open: boolean;
   onClose: () => void;
@@ -73,6 +74,19 @@ export function Dialog({
   closeLabel: string;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Centred, or a sheet down the right-hand edge — round 6, ticket 4.3.
+   *
+   * A layout choice and nothing else: the portal, the Escape key, the focus
+   * round trip and the scroll lock are identical, and duplicating all four to
+   * get a different position is how two dialogs end up behaving differently in
+   * the one respect nobody tests.
+   *
+   * Centred asks a question and waits. A sheet is somewhere to work while the
+   * week is still visible behind it, which is what a lesson plan wants — an
+   * instructor writing Tuesday's plan is looking at Tuesday.
+   */
+  placement?: 'centre' | 'side';
 }): React.ReactElement | null {
   const panel = useRef<HTMLDivElement>(null);
   const returnTo = useRef<HTMLElement | null>(null);
@@ -155,7 +169,12 @@ export function Dialog({
        * its target, and the test would throw away what somebody had typed.
        */
       onMouseDown={close}
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-[1px] sm:items-center sm:p-8"
+      className={cn(
+        'fixed inset-0 z-50 flex overflow-y-auto bg-black/40 backdrop-blur-[1px]',
+        placement === 'side'
+          ? 'items-stretch justify-end p-0 sm:p-4'
+          : 'items-start justify-center p-4 sm:items-center sm:p-8',
+      )}
     >
       <div
         ref={panel}
@@ -166,8 +185,10 @@ export function Dialog({
         tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
         className={cn(
-          'w-full max-w-lg rounded-lg border border-border bg-surface p-5 shadow-lg',
-          'focus:outline-none',
+          'w-full border border-border bg-surface p-5 shadow-lg focus:outline-none',
+          placement === 'side'
+            ? 'max-w-md self-stretch overflow-y-auto sm:rounded-lg'
+            : 'max-w-lg rounded-lg',
           className,
         )}
       >

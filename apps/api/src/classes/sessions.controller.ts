@@ -41,6 +41,11 @@ import {
   type GenerationResult,
   type Session,
 } from './sessions.repository.js';
+import {
+  readLessonPlan,
+  saveLessonPlan,
+  type LessonPlan,
+} from './lesson-plans.repository.js';
 
 /**
  * Slices 1.5 and 1.6 — the closure calendar, and the dated sessions around it.
@@ -50,6 +55,15 @@ import {
  */
 
 const MAX_REASON = 200;
+
+/**
+ * The ceiling on one lesson plan.
+ *
+ * Generous past any real session's worth of drills, and present so the field
+ * cannot be used to put a novel in the database. A plan longer than this is a
+ * document, and documents wait on file storage like everything else.
+ */
+const MAX_PLAN = 8000;
 /**
  * The widest window anyone may ask for in one request.
  *
@@ -462,6 +476,61 @@ export class SessionsCalendarController {
       });
     }
     return { restored: true };
+  }
+
+  /**
+   * The plan for this lesson — round 6, ticket 4.3.
+   *
+   * Readable by any member. An instructor covering for a colleague needs to
+   * know what the group was doing, and a guardian asking what Tuesday holds is
+   * asking a reasonable question about a class their child is in.
+   *
+   * The response carries `canEdit`, which is the same answer the write guard
+   * gives — so the screen and the API cannot disagree about who may type.
+   */
+  @Get(':id/plan')
+  async plan(@Param('id') id: string): Promise<LessonPlan> {
+    const { organizationId, roles, membershipId } = currentTenant();
+
+    const plan = await readLessonPlan(organizationId, id, roles, membershipId);
+    if (plan === null) throw new NotFoundException('No such class');
+    return plan;
+  }
+
+  /**
+   * Writes it — the turma's instructor, a substitute, an owner or an admin.
+   *
+   * **The guard is here, not only in the UI.** `requireRole` cannot express
+   * this one: "the instructor responsible for *this* turma" is a fact about a
+   * row, not about a role, so the repository resolves the occurrence and
+   * answers, and a refusal is a 403 rather than a silently ignored save.
+   *
+   * `PUT`, because a plan is one thing per lesson that is replaced rather than
+   * appended to. An empty body removes it: clearing the box means there is no
+   * plan, and a stored row of whitespace would read as a plan that says nothing.
+   */
+  @Put(':id/plan')
+  async savePlan(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ saved: boolean }> {
+    const { organizationId, roles, membershipId } = currentTenant();
+
+    const text = body['body'];
+    if (typeof text !== 'string') {
+      throw new BadRequestException('body must be text');
+    }
+    if (text.length > MAX_PLAN) {
+      throw new BadRequestException(`body must be at most ${MAX_PLAN} characters`);
+    }
+
+    const outcome = await saveLessonPlan(organizationId, id, text, roles, membershipId);
+
+    if (outcome === 'notFound') throw new NotFoundException('No such class');
+    if (outcome === 'refused') {
+      throw new ForbiddenException('Only this class instructor, an owner or an admin may plan it');
+    }
+    return { saved: outcome === 'saved' };
   }
 
   /**

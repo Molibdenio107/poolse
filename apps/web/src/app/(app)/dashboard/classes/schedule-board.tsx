@@ -62,6 +62,7 @@ import { slotKey } from '@/lib/slot-key';
 import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
 import { CancelSessionDialog, type CancelTarget } from '../calendar/calendar-forms';
 import { Dialog } from '@/components/ui/dialog';
+import { LessonPlanPanel } from '../calendar/lesson-plan-panel';
 import { cn } from '@/lib/utils';
 import { hoursLabel, withinHours } from '@/lib/opening-hours';
 import { Feedback, type FeedbackKind, type FeedbackMessage } from '@/components/feedback';
@@ -450,6 +451,15 @@ interface Landing {
  * sessions, so nothing ever asks.
  */
 const CancelRequest = createContext<((booking: Placed) => void) | null>(null);
+
+/**
+ * "Open this lesson's plan" — round 6, ticket 4.3, and the same reasoning.
+ *
+ * Separate from `CancelRequest` rather than one context carrying both, because
+ * they are available in different circumstances: a past lesson can be planned
+ * and read, and cannot be called off.
+ */
+const PlanRequest = createContext<((sessionId: string) => void) | null>(null);
 
 const PREFS_KEY = 'poolse.laneGrid.prefs';
 
@@ -1834,6 +1844,11 @@ export function ScheduleBoard({
   /** Whether "Adjust the slot grid" is asking before it leaves — ticket 4.2. */
   const [adjustingGrid, setAdjustingGrid] = useState(false);
 
+  /** The lesson whose plan is open, or null — ticket 4.3. */
+  const [planning, setPlanning] = useState<string | null>(null);
+  const openPlan = useCallback((sessionId: string) => setPlanning(sessionId), []);
+  const closePlan = useCallback(() => setPlanning(null), []);
+
   return (
     <DndContext
       sensors={sensors}
@@ -1842,6 +1857,7 @@ export function ScheduleBoard({
       onDragEnd={onDragEnd}
     >
       <CancelRequest.Provider value={askToCancel}>
+      <PlanRequest.Provider value={openPlan}>
       <div className="flex flex-col gap-4">
         {facilities.length > 1 && (
           <div className={`${FIELD_COLUMN} sm:w-64`}>
@@ -2091,6 +2107,7 @@ export function ScheduleBoard({
           </>
         )}
       </div>
+      </PlanRequest.Provider>
       </CancelRequest.Provider>
 
       <DragOverlay>
@@ -2112,6 +2129,12 @@ export function ScheduleBoard({
         target={cancelling}
         onClose={stopCancelling}
       />
+
+      {/*
+        The lesson plan — round 6, ticket 4.3. A sheet down the side, so the week
+        stays on screen while somebody writes Tuesday's drills.
+      */}
+      <LessonPlanPanel sessionId={planning} onClose={closePlan} />
 
       {/*
         "Adjust the slot grid" — round 6, ticket 4.2.
@@ -3433,6 +3456,7 @@ function BookingChip({
       : (CATEGORY_TINT[booking.categoryColour ?? ''] ?? DEFAULT_TINT);
 
   const askToCancel = useContext(CancelRequest);
+  const openPlan = useContext(PlanRequest);
 
   const block = (
     <div
@@ -3517,6 +3541,19 @@ function BookingChip({
           cancelled={booking.cancelled}
           draggable={draggable}
           bare
+          /*
+            A turma's dated occurrence opens its plan — ticket 4.3.
+
+            Only where there is a session behind it, which is the calendar and
+            not the turma screen. A **past** lesson gets one too, deliberately:
+            9.1 takes the grip off a day already behind us, and the ticket asks
+            that the plan stay readable so the history can be consulted. The
+            panel is read-only for anyone who may not write, which is the API's
+            answer rather than this component's guess.
+          */
+          {...(booking.controls.sessionId === undefined || openPlan === null
+            ? {}
+            : { onOpen: () => openPlan(booking.controls.sessionId!) })}
         />
 
         {/*
@@ -4055,6 +4092,7 @@ function Chip({
   placed,
   bare,
   draggable = true,
+  onOpen,
 }: {
   id: string;
   label: string;
@@ -4065,6 +4103,18 @@ function Chip({
   /** Inside a session chip, which already draws the border and the background. */
   bare?: boolean;
   draggable?: boolean;
+  /**
+   * What a click on the class does — round 6, ticket 4.3.
+   *
+   * The chip is already the drag handle, and the two do not fight: dnd-kit's
+   * pointer sensor needs 6px of movement before it claims the gesture, so a
+   * press that does not move stays an ordinary click on an ordinary button.
+   *
+   * Absent everywhere but the calendar. On the turma screen there is no dated
+   * occurrence to plan, and a chip that did nothing on click would be worse
+   * than one that is plainly not clickable.
+   */
+  onOpen?: (() => void) | undefined;
 }): React.ReactElement {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id,
@@ -4077,9 +4127,10 @@ function Chip({
       type="button"
       {...(draggable ? listeners : {})}
       {...attributes}
+      {...(onOpen === undefined ? {} : { onClick: onOpen })}
       className={cn(
         'flex w-full items-start gap-1 text-left text-[0.825rem] font-medium',
-        draggable ? 'cursor-grab' : 'cursor-default',
+        draggable ? 'cursor-grab' : onOpen === undefined ? 'cursor-default' : 'cursor-pointer',
         bare === true
           ? ''
           : cn(

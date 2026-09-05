@@ -55,6 +55,40 @@ confirmation per session, each rendering in place of its own trigger — which o
 is a box a seventh of a column wide with `overflow-hidden` on it, so the form was clipped by
 the cell it lived in.
 
+## The training plan
+
+Clicking a class opens a sheet down the side of the page — the week stays visible behind it,
+because somebody writing Tuesday's plan is looking at Tuesday. Partnership bookings are not
+clickable: a school's hour has no lesson to plan.
+
+| Action | Roles |
+|---|---|
+| Read the plan | everybody |
+| Write it | owner, admin, the turma's instructor, and a substitute covering that lesson |
+
+A **substitute** counts because they are the person who will actually teach it, and a plan
+they cannot edit is a plan they will keep somewhere else. Where a turma has **no instructor
+at all**, only owner and admin can write — there is nobody else to name.
+
+The check is about a row rather than a role, so `requireRole` cannot express it: the API
+resolves the occurrence and answers, and a refusal is a 403. The response carries `canEdit`,
+which is the same answer, so the screen and the guard cannot disagree.
+
+The panel holds:
+
+- **A plain-text plan**, saved with an explicit button. Not autosave — a plan is prose
+  somebody is composing, and writing half a sentence to a colleague's screen is worse than a
+  button.
+- **Copy from the previous lesson**, which fills the box from the same turma's last plan.
+  Disabled once anything is typed, so it cannot overwrite five minutes of work. It looks at
+  plans rather than at sessions: what somebody wants is the last thing they wrote, not the
+  last Tuesday the club opened.
+- **The level's skills**, in teaching order, each adding its name as a line. Suggestions,
+  not a checklist — what was actually covered is `skill_progress`, which is about a student.
+
+A **cancelled** lesson keeps its plan and says so; a class brought back by Undo comes back
+with what was written for it. A **past** lesson opens too, so the history can be read.
+
 ## The past
 
 Days already behind the current one are faded and cannot be dragged: a lesson that has
