@@ -1187,6 +1187,8 @@ export interface Progression {
   favouriteStroke: Stroke | null;
   strokes: Stroke[];
   canRecord: boolean;
+  /** Withdrawing a time is owner/admin since round 5's G1 — separate from recording one. */
+  canArchive: boolean;
 }
 
 export interface ActiveSession {

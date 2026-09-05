@@ -9,7 +9,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireRole } from '../tenant/roles.js';
+import { canArchive, hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   addRecord,
   archiveRecord,
@@ -24,6 +24,8 @@ interface ProgressionResponse extends Progression {
   organizationId: string;
   strokes: Stroke[];
   canRecord: boolean;
+  /** Withdrawing a time, which since G1 is a different permission from recording one. */
+  canArchive: boolean;
 }
 
 const MAX_NOTE = 500;
@@ -54,6 +56,13 @@ export class RecordsController {
       organizationId,
       strokes: STROKES,
       canRecord: hasRole('owner', 'admin', 'instructor'),
+      /*
+       * Separate from `canRecord` since round 5's G1 — recording a time and
+       * withdrawing one are now different permissions, so one flag can no
+       * longer answer both. The screen hides the control it is false for; the
+       * endpoint refuses it either way.
+       */
+      canArchive: canArchive(),
     };
   }
 
@@ -78,28 +87,34 @@ export class RecordsController {
   }
 
   /**
-   * The one archive action instructors keep — and deliberately not
-   * `requireCanArchive`.
+   * Owner and admin, as of round 5's G1 — and this is the one line that comment
+   * asked for.
    *
-   * POOLSE-03 restricts archiving to owners and admins, and every other archive
-   * endpoint now shares that check. This one is different in kind: a swim time
-   * is data the instructor recorded minutes earlier at the poolside, and
-   * withdrawing a mistyped one is part of recording them. Routing it through an
-   * admin would mean wrong times sitting on a child's progression until somebody
-   * senior had a moment.
+   * **What was here, and why it was reasonable.** This was the single archive
+   * endpoint instructors kept. The argument was good: a swim time is data the
+   * instructor recorded minutes earlier at the poolside, withdrawing a mistyped
+   * one is part of recording them, and routing it through an admin leaves a
+   * wrong time on a child's progression until somebody senior has a moment. The
+   * comment ended by saying that if it should follow the others after all, it is
+   * one line — written out so that would be a decision rather than an oversight
+   * found by a later sweep.
    *
-   * Nothing is destroyed either way — `archiveRecord` is a soft delete and the
-   * time stays in the table, out of the bests.
+   * G1 is that sweep, and Rui's rule is explicit: every remove and delete is
+   * owner/admin, hidden for other roles and refused server-side. So it follows
+   * the others.
    *
-   * If this should follow the others after all, it is one line. It is written
-   * out so that is a decision rather than an oversight found by a later sweep.
+   * **The cost is real and worth stating.** An instructor who mistypes a time
+   * can no longer withdraw it themselves. Nothing is lost — `archiveRecord` is a
+   * soft delete and the time stays in the table, out of the bests — but the
+   * correction now waits for an admin. `docs/decisions.md` carries the date, and
+   * reversing it is the same one line in the other direction.
    */
   @Post(':recordId/archive')
   async archive(
     @Param('studentId') studentId: string,
     @Param('recordId') recordId: string,
   ): Promise<{ archived: true }> {
-    requireRole('owner', 'admin', 'instructor');
+    requireCanArchive();
     const { organizationId } = currentTenant();
 
     if (!(await archiveRecord(organizationId, studentId, recordId))) {

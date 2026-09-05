@@ -38,9 +38,23 @@ export async function listMedicalLeave(
       active: boolean;
     }>(
       `
+      /*
+       * ::text on both dates — round 5, ticket 10.3.
+       *
+       * The row type has always said string, and it was not one: pg parses a
+       * date column into a JS Date at *local* midnight, so 2026-08-16 left this
+       * API as "2026-08-15T23:00:00.000Z". Not merely a time nobody entered —
+       * the day *before*, because local midnight in WEST is 23:00 the previous
+       * day in UTC. Every client rendering that ISO string in UTC showed a
+       * medical leave starting a day early.
+       *
+       * Cast in SQL rather than formatted in TypeScript: the column holds a
+       * calendar date with no timezone in it, and the moment it becomes a Date
+       * a timezone has been invented. This never lets one exist.
+       */
       SELECT l.id,
-             l.starts_on,
-             l.ends_on,
+             l.starts_on::text AS starts_on,
+             l.ends_on::text   AS ends_on,
              l.reason,
              l.justification_reference,
              nullif(btrim(coalesce(u.cached_first_name, '') || ' ' ||

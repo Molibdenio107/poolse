@@ -205,7 +205,15 @@ export default async function ProgressPage({
                             .join(' · ')}
                         </span>
                       </div>
-                      {progression.canRecord && (
+                      {/*
+                        `canArchive`, not `canRecord` — round 5, G1.
+
+                        Recording a time and withdrawing one are different
+                        permissions now: an instructor still records, and only
+                        owner and admin remove. Hiding it is the courtesy; the
+                        endpoint refuses it either way.
+                      */}
+                      {progression.canArchive && (
                         <ArchiveRecordButton
                           organizationId={progression.organizationId}
                           studentId={id}

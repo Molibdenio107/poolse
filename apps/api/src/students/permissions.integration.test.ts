@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AdvancementController, RedemptionController } from './students.controller.js';
+import { RecordsController } from './records.controller.js';
 import { listMembers } from '../invitations/invitations.repository.js';
 import { readPageQuery } from '../common/pagination.js';
 import {
@@ -316,5 +317,69 @@ test('a re-invited colleague appears on the staff list once, not twice', async (
         'the total must not count the duplicate the join used to create',
       );
     });
+  });
+});
+
+/**
+ * G1 — round 5. Removals are owner and admin, everywhere.
+ *
+ * The audit found exactly one exception: withdrawing a swim time allowed
+ * instructors, on a written argument that a mistyped time is the instructor's
+ * own data recorded minutes earlier and that routing the correction through an
+ * admin leaves a wrong figure on a child's progression. That comment ended by
+ * saying it was one line if the rule should apply after all, written out so the
+ * change would be a decision rather than an oversight found by a later sweep.
+ *
+ * G1 is that sweep, so it follows the others. This is the denial test the
+ * conventions ask for — and the record that the capability was taken away
+ * deliberately, so anybody restoring it is reversing a decision rather than
+ * fixing a bug.
+ */
+test('G1 — an instructor records a time but cannot withdraw one', async () => {
+  await withScratchTenant(async (tenant) => {
+    const records = new RecordsController();
+
+    const [student] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name)
+       VALUES ($1, 'Duarte', 'Melo') RETURNING id`,
+      [tenant.organizationId],
+    );
+
+    const instructor = await addMember(tenant, 'Rita', 'Ramos', ['instructor']);
+
+    // Recording is still theirs — that half is untouched.
+    const { id } = await actingAs(tenant, { membershipId: instructor, roles: ['instructor'] }, () =>
+      // The time arrives as its parts, the way the poolside form sends it.
+      records.add(student!.id, {
+        stroke: 'freestyle',
+        distanceM: 50,
+        seconds: 41,
+        hundredths: 23,
+        swumOn: '2026-09-01',
+      }),
+    );
+    assert.ok(id);
+
+    // Withdrawing one is not.
+    await actingAs(tenant, { membershipId: instructor, roles: ['instructor'] }, async () => {
+      await expectStatus(() => records.archive(student!.id, id), 403);
+
+      // And the screen is told, so it can hide the control rather than offer a
+      // button that 403s — the courtesy, never the permission.
+      const progression = await records.read(student!.id);
+      assert.equal(progression.canRecord, true);
+      assert.equal(progression.canArchive, false);
+    });
+
+    // An admin can, and the time is soft-deleted rather than destroyed.
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      assert.deepEqual(await records.archive(student!.id, id), { archived: true });
+    });
+
+    const [row] = await tenant.sql<{ archived: string | null }>(
+      `SELECT archived_at::text AS archived FROM student_record WHERE id = $1`,
+      [id],
+    );
+    assert.ok(row?.archived, 'archived, not deleted — the time stays out of the bests');
   });
 });
