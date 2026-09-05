@@ -15,6 +15,8 @@ export interface Pool {
   widthM: number | null;
   maxDepthM: number | null;
   minDepthM: number | null;
+  /** Swimmers in the water at once, across every turma. Null is no ceiling — 4.2. */
+  maxCapacity: number | null;
 }
 
 export interface Photo {
@@ -129,7 +131,8 @@ export async function listFacilities(organizationId: string): Promise<Facility[]
                             'lengthM', p.length_m::float8,
                             'widthM', p.width_m::float8,
                             'maxDepthM', p.max_depth_m::float8,
-                            'minDepthM', p.min_depth_m::float8
+                            'minDepthM', p.min_depth_m::float8,
+                            'maxCapacity', p.max_capacity
                           ) ORDER BY p.name
                         ),
                         '[]'::json
@@ -193,6 +196,7 @@ export async function findPool(
       width_m: number | null;
       max_depth_m: number | null;
       min_depth_m: number | null;
+      max_capacity: number | null;
       photos: Photo[] | null;
     }>(
       `
@@ -208,6 +212,7 @@ export async function findPool(
              p.width_m::float8     AS width_m,
              p.max_depth_m::float8 AS max_depth_m,
              p.min_depth_m::float8 AS min_depth_m,
+             p.max_capacity,
              (
                SELECT coalesce(
                         json_agg(
@@ -247,6 +252,7 @@ export async function findPool(
       widthM: row.width_m,
       maxDepthM: row.max_depth_m,
       minDepthM: row.min_depth_m,
+      maxCapacity: row.max_capacity,
       photos: row.photos ?? [],
     };
   });
@@ -663,6 +669,8 @@ export interface CreatePoolInput {
   widthM: number | null;
   maxDepthM: number | null;
   minDepthM: number | null;
+  /** Swimmers in the water at once, across every turma. Null is no ceiling — 4.2. */
+  maxCapacity: number | null;
 }
 
 /**
@@ -684,9 +692,9 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO pool (
            organization_id, facility_id, name, kind, volume_litres,
-           length_m, width_m, max_depth_m, min_depth_m
+           length_m, width_m, max_depth_m, min_depth_m, max_capacity
          )
-         VALUES ($1, $2, $3, $4::pool_kind, $5, $6, $7, $8, $9)
+         VALUES ($1, $2, $3, $4::pool_kind, $5, $6, $7, $8, $9, $10)
          RETURNING id`,
         [
           input.organizationId,
@@ -698,6 +706,7 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
           input.widthM,
           input.maxDepthM,
           input.minDepthM,
+          input.maxCapacity,
         ],
       );
 
@@ -737,6 +746,8 @@ export interface UpdatePoolInput {
   widthM: number | null;
   maxDepthM: number | null;
   minDepthM: number | null;
+  /** Swimmers in the water at once, across every turma. Null is no ceiling — 4.2. */
+  maxCapacity: number | null;
 }
 
 /**
@@ -761,7 +772,8 @@ export async function updatePool(
       const { rows } = await tx.query<{ id: string }>(
         `UPDATE pool
             SET name = $2, kind = $3::pool_kind, volume_litres = $4,
-                length_m = $5, width_m = $6, max_depth_m = $7, min_depth_m = $8
+                length_m = $5, width_m = $6, max_depth_m = $7, min_depth_m = $8,
+                max_capacity = $9
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -773,6 +785,7 @@ export async function updatePool(
           input.widthM,
           input.maxDepthM,
           input.minDepthM,
+          input.maxCapacity,
         ],
       );
       if (!rows[0]) return false;

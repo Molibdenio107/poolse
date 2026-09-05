@@ -116,6 +116,22 @@ export default async function PoolPage({
                   value={pool.laneCount === null ? null : `${pool.laneCount}`}
                 />
                 {/*
+                  The tank's ceiling — round 5, 4.2.
+
+                  Unset says so in words rather than showing a dash. A dash reads
+                  as "not filled in yet"; what an operator needs to know is that
+                  no limit is being enforced on this tank, which is a different
+                  and more consequential fact.
+                */}
+                <Detail
+                  label={t('facilities.maxCapacityLabel')}
+                  value={
+                    pool.maxCapacity === null
+                      ? t('facilities.maxCapacityUnlimited')
+                      : `${pool.maxCapacity}`
+                  }
+                />
+                {/*
                   Grouped and in both units — round 4. A bare 106500 is a number
                   somebody has to count the digits of, and a pool is quoted in m3
                   as often as in litres.

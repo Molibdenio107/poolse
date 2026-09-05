@@ -55,8 +55,13 @@ function Problem({
 
   return (
     <div className="flex flex-col gap-1 text-sm text-danger">
+      {/*
+        `state.values` fills the holes in a message that has any — the tank
+        ceiling's refusal quotes three numbers. A key without placeholders
+        ignores them, so they are passed unconditionally rather than branched on.
+      */}
       {named.map(([field, key]) => (
-        <p key={field}>{t(key)}</p>
+        <p key={field}>{t(key, state.values)}</p>
       ))}
       {state.errorKey !== undefined && (
         <p>
@@ -176,7 +181,7 @@ export function ClassForm({
           hint={t('classes.capacityHint')}
           {...(state.fields?.['capacity'] === undefined
             ? {}
-            : { error: t(state.fields['capacity']) })}
+            : { error: t(state.fields['capacity'], state.values) })}
         />
       </div>
 

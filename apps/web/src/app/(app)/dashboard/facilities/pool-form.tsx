@@ -15,6 +15,7 @@ export interface PoolFormValues {
   kind?: 'indoor' | 'outdoor';
   volumeLitres?: number | null;
   laneCount?: number | null;
+  maxCapacity?: number | null;
   lengthM?: number | null;
   widthM?: number | null;
   maxDepthM?: number | null;
@@ -59,6 +60,7 @@ function PoolDimensions({ pool }: { pool?: PoolFormValues | undefined }): React.
   // Controlled for the same reason the four measurements are: React 19 clears an
   // uncontrolled field when the action returns a validation error.
   const [laneCount, setLaneCount] = useState(asText(pool?.laneCount));
+  const [maxCapacity, setMaxCapacity] = useState(asText(pool?.maxCapacity));
 
   // What the calculation last wrote, so an operator's own figure can be told
   // apart from one this control put there.
@@ -103,12 +105,33 @@ function PoolDimensions({ pool }: { pool?: PoolFormValues | undefined }): React.
 
         {(
           [
-            ['pool-length', 'lengthM', t('facilities.lengthLabel'), lengthM, setLengthM],
-            ['pool-width', 'widthM', t('facilities.widthLabel'), widthM, setWidthM],
-            ['pool-min-depth', 'minDepthM', t('facilities.minDepthLabel'), minDepthM, setMinDepthM],
-            ['pool-depth', 'maxDepthM', t('facilities.depthLabel'), maxDepthM, setMaxDepthM],
+            ['pool-length', 'lengthM', t('facilities.lengthLabel'), lengthM, setLengthM, null],
+            ['pool-width', 'widthM', t('facilities.widthLabel'), widthM, setWidthM, null],
+            /*
+             * Round 5, 4.0: "Zona menos funda" became "Prof. mín." — the field
+             * asks for a number, and naming it after a place in the pool made it
+             * read as a description of the shallow end rather than as its depth.
+             * Both depths carry a hint saying which extreme they mean, because
+             * "min" and "max" on their own are only obvious once you know.
+             */
+            [
+              'pool-min-depth',
+              'minDepthM',
+              t('facilities.minDepthLabel'),
+              minDepthM,
+              setMinDepthM,
+              t('facilities.minDepthHint'),
+            ],
+            [
+              'pool-depth',
+              'maxDepthM',
+              t('facilities.depthLabel'),
+              maxDepthM,
+              setMaxDepthM,
+              t('facilities.depthHint'),
+            ],
           ] as const
-        ).map(([id, name, label, value, set]) => (
+        ).map(([id, name, label, value, set, hint]) => (
           <div key={id} className={FIELD_COLUMN}>
             <label htmlFor={id} className={FIELD_LABEL}>
               {label}
@@ -126,7 +149,18 @@ function PoolDimensions({ pool }: { pool?: PoolFormValues | undefined }): React.
               value={value}
               onChange={(event) => set(event.target.value)}
               className={CONTROL_LINE}
+              {...(hint === null ? {} : { 'aria-describedby': `${id}-hint` })}
             />
+            {/*
+              Visible text, not a tooltip. Anything the operator needs is on the
+              page; a tooltip may clarify a control but is never the only place
+              a piece of information appears.
+            */}
+            {hint !== null && (
+              <p id={`${id}-hint`} className="text-sm text-foreground-muted">
+                {hint}
+              </p>
+            )}
           </div>
         ))}
       </fieldset>
@@ -155,6 +189,39 @@ function PoolDimensions({ pool }: { pool?: PoolFormValues | undefined }): React.
           */}
           <p id="pool-lanes-hint" className="text-sm text-foreground-muted">
             {t('facilities.lanesHint')}
+          </p>
+        </div>
+
+        {/*
+          How many swimmers the tank holds at once — round 5, ticket 4.2.
+          
+          Beside the lane count because they answer the same question from two
+          directions, and both belong to the water rather than to any one turma.
+          
+          Left empty is "not measured", and the ticket asks for that to mean no
+          enforcement at all — so there is no placeholder number and no default.
+          A club that has not counted its ceiling goes on timetabling exactly as
+          it did, and the tank card says the limit is unset rather than implying
+          one.
+        */}
+        <div className={FIELD_COLUMN + ' sm:w-40'}>
+          <label htmlFor="pool-max-capacity" className={FIELD_LABEL}>
+            {t('facilities.maxCapacityLabel')}
+          </label>
+          <input
+            id="pool-max-capacity"
+            name="maxCapacity"
+            type="number"
+            min={1}
+            step={1}
+            inputMode="numeric"
+            value={maxCapacity}
+            onChange={(event) => setMaxCapacity(event.target.value)}
+            aria-describedby="pool-max-capacity-hint"
+            className={CONTROL_LINE}
+          />
+          <p id="pool-max-capacity-hint" className="text-sm text-foreground-muted">
+            {t('facilities.maxCapacityHint')}
           </p>
         </div>
 

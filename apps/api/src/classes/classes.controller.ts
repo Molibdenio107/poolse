@@ -239,13 +239,21 @@ export class ClassesController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    const outcome = await addSchedule(
-      organizationId,
-      id,
-      parseWeekday(body['weekday']),
-      parseTime(body['startTime']),
-      parseDuration(body['durationMinutes']),
-    );
+    // The tank ceiling is enforced by a trigger, so it arrives as a thrown
+    // error rather than an outcome. `asHttp` turns it into the 409 that carries
+    // the three figures — 4.2.
+    let outcome: Awaited<ReturnType<typeof addSchedule>>;
+    try {
+      outcome = await addSchedule(
+        organizationId,
+        id,
+        parseWeekday(body['weekday']),
+        parseTime(body['startTime']),
+        parseDuration(body['durationMinutes']),
+      );
+    } catch (error) {
+      throw asHttp(error);
+    }
 
     if (outcome === 'not_found') throw new NotFoundException('No such class group');
     if (outcome === 'duplicate') {
@@ -272,13 +280,20 @@ export class ClassesController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    const outcome = await moveSchedule(
-      organizationId,
-      id,
-      scheduleId,
-      parseWeekday(body['weekday']),
-      parseTime(body['startTime']),
-    );
+    // A drop onto the calendar is the other way a turma reaches a slot, so the
+    // tank ceiling has to answer here too — 4.2.
+    let outcome: Awaited<ReturnType<typeof moveSchedule>>;
+    try {
+      outcome = await moveSchedule(
+        organizationId,
+        id,
+        scheduleId,
+        parseWeekday(body['weekday']),
+        parseTime(body['startTime']),
+      );
+    } catch (error) {
+      throw asHttp(error);
+    }
 
     if (outcome === 'not_found') throw new NotFoundException('No such slot');
     if (outcome === 'duplicate') {
@@ -440,7 +455,46 @@ function asHttp(error: unknown): unknown {
     return new BadRequestException({ message: 'noSuchLane', lane: error.lane });
   }
 
+  const full = poolCapacityRefusal(error);
+  if (full !== null) return full;
+
   return error;
+}
+
+/**
+ * The tank is full — round 5, ticket 4.2.
+ *
+ * The three figures come out of the database rather than being recounted here.
+ * `pool_capacity_respected` raises with `pool_capacity|<max>|<taken>|<asked>` in
+ * its DETAIL, so this reads them off `error.detail` — a real field on a pg
+ * error, not prose parsed out of a message somebody will reword later.
+ *
+ * That is the whole reason for the arrangement: the sentence the ticket asks
+ * for — "the tank holds 40, this slot already has 32, so this class may take
+ * 8" — needs numbers, and re-deriving them in TypeScript would mean writing the
+ * overlap query a second time. Two implementations of one sum agree until the
+ * day they do not, and the day they do not is a refusal quoting a figure the
+ * operator cannot see on the screen.
+ *
+ * `remaining` is computed rather than sent because it is the subtraction, not a
+ * fourth fact — and it can go negative when an existing turma is widened, which
+ * is honest: it says how far over the edit would put them.
+ */
+function poolCapacityRefusal(error: unknown): ConflictException | null {
+  const detail = (error as { detail?: unknown }).detail;
+  if (typeof detail !== 'string' || !detail.startsWith('pool_capacity|')) return null;
+
+  const [, max, taken, asked] = detail.split('|');
+  const maxN = Number(max);
+  const takenN = Number(taken);
+  if (!Number.isFinite(maxN) || !Number.isFinite(takenN)) return null;
+
+  return new ConflictException({
+    code: 'pool_full',
+    message: `The pool holds ${max}; classes in this slot already total ${taken}`,
+    fields: { capacity: 'classes.poolFull' },
+    poolCapacity: { max: maxN, taken: takenN, asked: Number(asked), remaining: maxN - takenN },
+  });
 }
 
 function parseGroup(body: Record<string, unknown>): ClassGroupInput {

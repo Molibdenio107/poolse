@@ -321,6 +321,8 @@ export interface Pool {
   volumeLitres: number | null;
   laneCount: number | null;
   minDepthM: number | null;
+  /** Swimmers in the water at once, across every turma. Null is no ceiling — 4.2. */
+  maxCapacity: number | null;
   /** Metres. Decimal — 12.5 m is an ordinary pool length. */
   lengthM: number | null;
   widthM: number | null;

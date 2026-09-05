@@ -29,6 +29,19 @@ export interface FormState {
    * form makes somebody hunt for which of a dozen boxes it meant.
    */
   fields?: Record<string, string>;
+  /**
+   * Numbers a refusal needs to say something useful — round 5, 4.2.
+   *
+   * A translation key is a sentence with holes in it, and some refusals only
+   * mean anything filled in: "the tank holds 40, this slot already has 32, so
+   * this class may take 8" is actionable where "the pool is full" is not. The
+   * values come from the API, which got them from the database, so nothing is
+   * recomputed on the way to the screen.
+   *
+   * Passed to `t(key, values)` by whichever renderer shows the message. A key
+   * with no placeholders ignores them, so it costs nothing to pass always.
+   */
+  values?: Record<string, string | number>;
 }
 
 export interface InviteState extends FormState {

@@ -106,6 +106,8 @@ function poolBody(formData: FormData): Record<string, string> {
     // zero, and the CHECK constraints refuse a zero anyway.
     volumeLitres: String(formData.get('volumeLitres') ?? '').trim(),
     laneCount: String(formData.get('laneCount') ?? '').trim(),
+    // Empty is "no ceiling measured", and the API keeps it null — 4.2.
+    maxCapacity: String(formData.get('maxCapacity') ?? '').trim(),
     lengthM: String(formData.get('lengthM') ?? '').trim(),
     widthM: String(formData.get('widthM') ?? '').trim(),
     minDepthM: String(formData.get('minDepthM') ?? '').trim(),

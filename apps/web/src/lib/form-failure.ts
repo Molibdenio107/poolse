@@ -54,7 +54,7 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
      * status it chose to carry it on.
      */
     const named = Object.keys(error.fields).length > 0 ? error.fields : null;
-    if (named !== null) return { ok: false, fields: named };
+    if (named !== null) return { ok: false, fields: named, ...capacityValues(error) };
 
     // Two people wanting the same name, or the same slot. The caller owns this
     // sentence because only it knows what "already exists" means here.
@@ -86,6 +86,33 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
    */
   log(`${fallbackKey}: no response`, null, String(error));
   return { ok: false, errorKey: 'common.apiUnreachable', detail: String(error) };
+}
+
+/**
+ * The figures a "this pool is full" refusal carries — round 5, 4.2.
+ *
+ * The API sends them as structure rather than prose, having read them off the
+ * database's own DETAIL, so the sentence on screen quotes the same numbers the
+ * trigger counted. Narrowed here rather than trusted: `details` is somebody
+ * else's JSON, and a missing field must degrade to a message without numbers
+ * rather than to `undefined` in the middle of a sentence.
+ */
+function capacityValues(error: ApiError): { values?: Record<string, number> } {
+  const body = error.details;
+  if (typeof body !== 'object' || body === null) return {};
+
+  const full = (body as { poolCapacity?: unknown }).poolCapacity;
+  if (typeof full !== 'object' || full === null) return {};
+
+  const { max, taken, remaining } = full as Record<string, unknown>;
+  if (typeof max !== 'number' || typeof taken !== 'number' || typeof remaining !== 'number') {
+    return {};
+  }
+
+  // Never negative on screen. Widening a turma that is already over the ceiling
+  // produces a negative remainder, which is true and reads as a bug; "0 left"
+  // plus the two real figures says the same thing without the puzzle.
+  return { values: { max, taken, remaining: Math.max(remaining, 0) } };
 }
 
 function log(where: string, code: string | null, message: string): void {

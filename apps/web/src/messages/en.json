@@ -247,7 +247,7 @@
       "indoor": "Indoor",
       "outdoor": "Outdoor"
     },
-    "lanesLabel": "Lanes",
+    "lanesLabel": "Number of lanes",
     "volumeLabel": "Litres",
     "lanes": "{count, plural, one {# lane} other {# lanes}}",
     "volume": "{litres} L",
@@ -266,6 +266,7 @@
     "lengthLabel": "Length (m)",
     "widthLabel": "Width (m)",
     "depthLabel": "Max depth (m)",
+    "depthHint": "The maximum depth, at the deepest point.",
     "size": "{size} m",
     "depth": "{depth} m deep",
     "backToFacilities": "Back to facilities",
@@ -317,7 +318,8 @@
     "readingAdd": "Record a reading",
     "readingImport": "Import analysis report",
     "readingsSoon": "Not available yet — this arrives with the maintenance module.",
-    "minDepthLabel": "Shallow end (m)",
+    "minDepthLabel": "Min depth (m)",
+    "minDepthHint": "The minimum depth, at the shallowest point.",
     "volumeComputed": "About {litres} L from these dimensions, using the average depth.",
     "volumeUseComputed": "Use the calculated figure",
     "volumeHint": "Fill in all four measurements and this is worked out for you.",
@@ -381,7 +383,10 @@
     "closePoolHint": "Opens the closures calendar, where you pick the days.",
     "lanesInUse": "The lanes cannot be reduced: some of them have classes on them.",
     "lanesHint": "Increasing adds lanes at the end. Reducing is only possible when they have no classes.",
-    "limitReached": "Your plan includes one facility. Managing more than one site needs a change of plan."
+    "limitReached": "Your plan includes one facility. Managing more than one site needs a change of plan.",
+    "maxCapacityLabel": "Max capacity",
+    "maxCapacityHint": "Students allowed in the water at once, across every class.",
+    "maxCapacityUnlimited": "No limit set — classes in this tank are not capped."
   },
   "classes": {
     "title": "Class groups",
@@ -488,7 +493,8 @@
     "nameTooLong": "That name is too long.",
     "capacityInvalid": "Capacity must be a whole number between 1 and 200.",
     "laneInvalid": "Lane must be a whole number between 1 and 50.",
-    "slotDurationInvalid": "Duration must be between 5 and 480 minutes."
+    "slotDurationInvalid": "Duration must be between 5 and 480 minutes.",
+    "poolFull": "The tank holds {max} swimmers and this slot already has {taken}, so this class can take {remaining}."
   },
   "reposicao": {
     "title": "Make-up classes",

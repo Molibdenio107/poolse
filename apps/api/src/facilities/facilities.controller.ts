@@ -373,6 +373,8 @@ export class FacilitiesController {
     const widthM = positiveMetres(body['widthM'], 'widthM');
     const maxDepthM = positiveMetres(body['maxDepthM'], 'maxDepthM');
     const minDepthM = positiveMetres(body['minDepthM'], 'minDepthM');
+    // Swimmers, so a whole number — the same reader the lane count uses.
+    const maxCapacity = positiveInteger(body['maxCapacity'], 'maxCapacity');
 
     let id: string | null;
     try {
@@ -387,6 +389,7 @@ export class FacilitiesController {
         widthM,
         maxDepthM,
         minDepthM,
+        maxCapacity,
       });
     } catch (error) {
       throw asHttp(error);
@@ -420,6 +423,7 @@ export class FacilitiesController {
         widthM: positiveMetres(body['widthM'], 'widthM'),
         maxDepthM: positiveMetres(body['maxDepthM'], 'maxDepthM'),
         minDepthM: positiveMetres(body['minDepthM'], 'minDepthM'),
+        maxCapacity: positiveInteger(body['maxCapacity'], 'maxCapacity'),
       });
     } catch (error) {
       throw asHttp(error);

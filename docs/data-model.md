@@ -183,9 +183,10 @@ facility                        -- a site; a personal org has exactly one
 
 pool
   id, organization_id, facility_id, name, kind ('indoor'|'outdoor'),
-  volume_litres, lanes_enabled boolean, archived_at
+  volume_litres, lanes_enabled boolean, max_capacity integer, archived_at
   unique (organization_id, facility_id, lower(name)) where archived_at is null
   check volume_litres > 0
+  check max_capacity is null or max_capacity > 0
 
 lane                            -- POOLSE-43
   id, organization_id, pool_id, name, position smallint,
@@ -1418,6 +1419,47 @@ an operator types their own number.
 
 `numeric`, not integer: the offered figure is very rarely whole, and the old `integer`
 column would have truncated it silently.
+
+### How many swimmers the tank holds — round 5, ticket 4.2
+
+```
+pool
+  + max_capacity integer                    -- null means no ceiling, and none enforced
+  check max_capacity is null or max_capacity > 0
+
+pool_capacity_respected(organization_id, class_group_id)   -- raises check_violation
+  triggers: class_schedule after insert/update
+            class_group    after update of capacity, pool_id, archived_at
+```
+
+**Three capacity rules now exist and they answer three different questions.** Keeping them
+straight is the whole difficulty:
+
+| Rule | Question | Where |
+|---|---|---|
+| `class_group.capacity` | How many places does this turma promise? | `enrollment_respects_capacity` trigger |
+| `lane_level_capacity` | How many of this level fit in one lane? | A teaching judgement — POOLSE-49 |
+| `pool.max_capacity` | How many bodies are in the water at once? | `pool_capacity_respected` trigger |
+
+They compose rather than override: an enrolment must fit its turma, the turmas sharing a
+slot must fit the tank, and the per-lane level caps go on meaning what they meant.
+
+**A trigger rather than an `EXCLUDE` constraint**, because this is a statement about a
+*sum*. The conflict rules next door use exclusion constraints since "the same instructor in
+two pools at once" is a statement about a pair of rows, which is what GiST can refuse; no
+exclusion constraint can express an aggregate.
+
+**The refusal carries its numbers in `DETAIL`**, as `pool_capacity|<max>|<taken>|<asked>`.
+That is the one place this departs from the enrolment precedent, which says "full" and
+leaves the API to re-count. The sentence the ticket asks for quotes three figures, and
+re-deriving them in TypeScript would mean writing the overlap query twice — two
+implementations of one sum that agree until the day they do not.
+
+**Null is "not measured", never zero.** A club that has not counted its ceiling goes on
+timetabling exactly as before, and the tank card says the limit is unset rather than
+implying one. Partnership bookings count as nothing, because `class_schedule` rows with
+`subject_type = 'parceria'` carry no headcount at all — inventing one would refuse real
+timetables on a figure nobody entered.
 
 ### Medical leave
 

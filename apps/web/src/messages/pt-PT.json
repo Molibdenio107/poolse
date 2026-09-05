@@ -266,6 +266,7 @@
     "lengthLabel": "Comprimento (m)",
     "widthLabel": "Largura (m)",
     "depthLabel": "Prof. máx. (m)",
+    "depthHint": "A profundidade máxima, no ponto mais fundo.",
     "size": "{size} m",
     "depth": "{depth} m de profundidade",
     "backToFacilities": "Voltar às instalações",
@@ -317,7 +318,8 @@
     "readingAdd": "Registar leitura",
     "readingImport": "Importar relatório de análise",
     "readingsSoon": "Ainda não disponível — chega com o módulo de manutenção.",
-    "minDepthLabel": "Zona menos funda (m)",
+    "minDepthLabel": "Prof. mín. (m)",
+    "minDepthHint": "A profundidade mínima, no ponto menos fundo.",
     "volumeComputed": "Cerca de {litres} L a partir destas dimensões, usando a profundidade média.",
     "volumeUseComputed": "Usar o valor calculado",
     "volumeHint": "Preencha as quatro medidas e este valor é calculado automaticamente.",
@@ -381,7 +383,10 @@
     "closePoolHint": "Abre o calendário de encerramentos, onde escolhe os dias.",
     "lanesInUse": "Não é possível reduzir as pistas: algumas têm turmas.",
     "lanesHint": "Aumentar acrescenta pistas no fim. Reduzir só é possível se não tiverem turmas.",
-    "limitReached": "O seu plano inclui uma instalação. Para gerir mais do que um local, é preciso mudar de plano."
+    "limitReached": "O seu plano inclui uma instalação. Para gerir mais do que um local, é preciso mudar de plano.",
+    "maxCapacityLabel": "Capacidade máxima",
+    "maxCapacityHint": "Alunos autorizados na água em simultâneo, somando todas as turmas.",
+    "maxCapacityUnlimited": "Sem limite definido — as turmas deste tanque não são limitadas."
   },
   "classes": {
     "title": "Turmas",
@@ -488,7 +493,8 @@
     "nameTooLong": "O nome é demasiado longo.",
     "capacityInvalid": "A lotação tem de ser um número inteiro entre 1 e 200.",
     "laneInvalid": "A pista tem de ser um número inteiro entre 1 e 50.",
-    "slotDurationInvalid": "A duração tem de ser entre 5 e 480 minutos."
+    "slotDurationInvalid": "A duração tem de ser entre 5 e 480 minutos.",
+    "poolFull": "O tanque comporta {max} nadadores e este horário já tem {taken}, pelo que esta turma pode levar {remaining}."
   },
   "reposicao": {
     "title": "Aulas de reposição",
