@@ -50,7 +50,14 @@ test('saving a turma with nothing changed succeeds', async () => {
       const classes = new ClassesController();
       const { pool } = await twoLanes(tenant);
 
-      const { id } = await classes.create({ name: 'Cadetes', poolId: pool, capacity: 7 });
+      const { id } = await classes.create({
+        name: 'Cadetes',
+        poolId: pool,
+        // A lane count, because 8.2 requires one. The gesture under test is
+        // still "open it, touch nothing, press Save".
+        lane: 1,
+        capacity: 7,
+      });
       const before = await classes.one(id);
 
       const saved = await classes.update(id, {
@@ -72,19 +79,58 @@ test('saving a turma with nothing changed succeeds', async () => {
   });
 });
 
-test('a save with every field empty is still a save, not a 500', async () => {
+/**
+ * Round 5, ticket 8.2 replaced what this used to assert.
+ *
+ * It read "a save with every field empty is still a save, not a 500" —
+ * POOLSE-QA-07, whose point was that an empty form must not crash. That still
+ * holds and is still the thing being tested; what changed is the answer. A tank
+ * and a lane count are now required, so an empty save is a **400 naming the two
+ * fields**, not a silent success.
+ *
+ * The rule it replaces was not wrong when it was written: it was about a 500.
+ * Refusing in words is the same courtesy by a better route, and a turma with no
+ * water could not be placed on the grid, counted against a tank's ceiling, or
+ * used to tell an instructor where to stand.
+ */
+test('8.2 — a turma with no tank and no lanes is refused, in words', async () => {
   await withScratchTenant(async (tenant) => {
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       const classes = new ClassesController();
-      const { id } = await classes.create({ name: 'Sem nada' });
 
+      // Creating one is refused for the same reason as saving one.
+      await expectStatus(() => classes.create({ name: 'Sem nada' }), 400);
+
+      const { pool } = await twoLanes(tenant);
+      const { id } = await classes.create({ name: 'Sem nada', poolId: pool, lane: 1 });
+
+      // Emptying the tank on an existing turma is refused too — the rule is
+      // about the row, not about how it got there.
+      await expectStatus(
+        () =>
+          classes.update(id, {
+            name: 'Sem nada',
+            levelId: '',
+            poolId: '',
+            instructorMembershipId: '',
+            capacity: '',
+            lane: '',
+          }),
+        400,
+      );
+
+      /*
+       * The instructor stays optional, deliberately. A club fills a timetable in
+       * September and staffs it in October; refusing a turma with nobody against
+       * it yet would make the product unusable in the month it is set up.
+       */
       const saved = await classes.update(id, {
         name: 'Sem nada',
         levelId: '',
-        poolId: '',
+        poolId: pool,
         instructorMembershipId: '',
         capacity: '',
-        lane: '',
+        lane: '1',
       });
       assert.deepEqual(saved, { updated: true });
     });

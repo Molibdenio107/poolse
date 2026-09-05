@@ -8,6 +8,7 @@ import type { FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 import { withinHours } from '@/lib/opening-hours';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { withFrom } from '@/lib/back';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../actions';
 import { moveBookingAction } from './classes.actions';
@@ -43,6 +44,7 @@ export function PartnerClasses({
   organizationId,
   facilityId,
   bookings,
+  allBookings,
   slots,
   lanes,
   openWeekdays,
@@ -53,6 +55,8 @@ export function PartnerClasses({
   facilityId: string;
   /** Parceria bookings only — the caller filters, so this renders what it is given. */
   bookings: GridBooking[];
+  /** Every booking on the grid, for working out whether a tank is full — 8.1. */
+  allBookings: GridBooking[];
   slots: GridSlot[];
   hours: FacilityDay[];
   lanes: GridLane[];
@@ -61,27 +65,61 @@ export function PartnerClasses({
   canManage: boolean;
 }): React.ReactElement | null {
   const t = useTranslations();
+  const [open, setOpen] = useState(false);
 
   // Nothing to show is not an empty state here: the Classes screen belongs to
   // turmas, and a club with no partnerships should not be told so twice.
   if (bookings.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-      <div>
-        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          {t('partnerClasses.title')}
-        </h2>
-        <p className="mt-1 text-sm text-foreground-muted">{t('partnerClasses.hint')}</p>
-      </div>
+    <section className="rounded border border-border bg-surface">
+      {/*
+        Collapsed by default — round 5, ticket 8.0.
 
-      <ul className="flex flex-col gap-3">
+        This screen belongs to turmas. Partnerships are edited here because there
+        is nowhere better, not because they are what somebody came for, and an
+        expanded list of a school's twelve groups pushed the week's own turmas
+        below the fold every time.
+
+        The heading is the toggle: a real button with `aria-expanded`, so it is
+        reachable and announced, and the count is on the closed header so the
+        reason to open it is visible while it is shut.
+      */}
+      <h2>
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          aria-controls="partner-classes-body"
+          className="flex w-full items-center justify-between gap-3 p-5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+        >
+          <span>
+            <span className="block text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {t('partnerClasses.title')}
+              <span className="ml-2 normal-case tracking-normal text-foreground">
+                {t('partnerClasses.count', { count: bookings.length })}
+              </span>
+            </span>
+            <span className="mt-1 block text-sm text-foreground-muted">
+              {t('partnerClasses.hint')}
+            </span>
+          </span>
+          <ChevronDown
+            aria-hidden
+            className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')}
+          />
+        </button>
+      </h2>
+
+      {open && (
+      <ul id="partner-classes-body" className="flex flex-col gap-3 border-t border-border p-5">
         {bookings.map((booking) => (
           <li key={booking.id}>
             <PartnerCard
               organizationId={organizationId}
               facilityId={facilityId}
               booking={booking}
+              allBookings={allBookings}
               slots={slots}
               hours={hours}
               lanes={lanes}
@@ -91,14 +129,69 @@ export function PartnerClasses({
           </li>
         ))}
       </ul>
+      )}
     </section>
   );
+}
+
+/**
+ * Which lanes of the tank are in use at this booking's hour — round 5, 8.1.
+ *
+ * **Visible text, with the tooltip saying the same thing.** The ticket asks for
+ * a hover tooltip; the convention is that a tooltip may clarify a control but is
+ * never the only place a piece of information appears. Both are satisfied by
+ * putting the sentence on the card and letting `title` repeat it — and the
+ * element is focusable, so the hover is not a mouse-only feature.
+ *
+ * Counted across *everything* sharing the tank at that time, not just this
+ * booking: "all lanes taken" is a fact about the water, and a card that only
+ * knew its own lanes would say three of six were busy while a turma held the
+ * other three.
+ *
+ * The numbers are the lanes' own positions, so "1, 3, 4" means the lanes the
+ * club calls 1, 3 and 4 — not the first, third and fourth of whatever this
+ * booking happens to hold.
+ */
+function lanesInUse(
+  booking: GridBooking,
+  all: GridBooking[],
+  lanes: GridLane[],
+): { taken: number[]; total: number } | null {
+  const own = lanes.find((lane) => lane.id === booking.laneIds[0]);
+  if (own === undefined) return null;
+
+  const poolLanes = lanes.filter((lane) => lane.poolId === own.poolId);
+  const start = toMinutes(booking.startTime);
+  const end = start + booking.durationMinutes;
+
+  const busy = new Set<string>();
+  for (const other of all) {
+    if (other.weekday !== booking.weekday) continue;
+    const from = toMinutes(other.startTime);
+    if (from >= end || from + other.durationMinutes <= start) continue;
+    for (const laneId of other.laneIds) busy.add(laneId);
+  }
+
+  return {
+    taken: poolLanes
+      .filter((lane) => busy.has(lane.id))
+      .map((lane) => lane.position)
+      .sort((left, right) => left - right),
+    total: poolLanes.length,
+  };
+}
+
+/** `HH:MM` to minutes past midnight, for the overlap test above. */
+function toMinutes(time: string): number {
+  const [hours = '0', minutes = '0'] = time.split(':');
+  return Number(hours) * 60 + Number(minutes);
 }
 
 function PartnerCard({
   organizationId,
   facilityId,
   booking,
+  allBookings,
   slots,
   lanes,
   openWeekdays,
@@ -108,6 +201,7 @@ function PartnerCard({
   organizationId: string;
   facilityId: string;
   booking: GridBooking;
+  allBookings: GridBooking[];
   slots: GridSlot[];
   lanes: GridLane[];
   openWeekdays: number[];
@@ -213,6 +307,7 @@ function PartnerCard({
   }
 
   const pending = busy || groupPending;
+  const laneUse = lanesInUse(booking, allBookings, lanes);
 
   return (
     <div className="flex flex-col gap-3 rounded border border-border p-4">
@@ -238,6 +333,31 @@ function PartnerCard({
         {booking.groupTag !== null && (
           <span className="rounded border border-border px-1.5 py-0.5 text-xs text-foreground-muted">
             {booking.groupTag}
+          </span>
+        )}
+
+        {/*
+          Which lanes the tank has busy at this hour — 8.1.
+
+          `tabIndex={0}` so the tooltip is reachable without a mouse: a control
+          whose meaning is only available to a pointer is a control half the
+          users cannot read. The `title` repeats the visible sentence rather
+          than adding to it, because a tooltip may clarify and may never be the
+          only place something appears.
+        */}
+        {laneUse !== null && (
+          <span
+            tabIndex={0}
+            title={
+              laneUse.taken.length >= laneUse.total
+                ? t('partnerClasses.allLanesTaken')
+                : t('partnerClasses.lanesInUse', { lanes: laneUse.taken.join(', ') })
+            }
+            className="rounded text-sm text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {laneUse.taken.length >= laneUse.total
+              ? t('partnerClasses.allLanesTaken')
+              : t('partnerClasses.lanesInUse', { lanes: laneUse.taken.join(', ') })}
           </span>
         )}
       </div>

@@ -99,9 +99,25 @@ export function WeekGrid({
   linkTitles,
   linkCards,
   todayWeekday,
+  openWeekdays,
+  closedLabel,
   className,
 }: {
   entries: WeekEntry[];
+  /**
+   * The ISO weekdays the site opens — round 5, ticket 8.4.
+   *
+   * A club shut on Wednesdays should not be shown a Wednesday column: a day it
+   * never uses is a seventh of the width spent saying nothing, on the screen
+   * where width is scarcest.
+   *
+   * Omitted means "show the usual week", which is what every caller that has no
+   * opening hours to hand does — the closures calendar, a student's own
+   * timetable.
+   */
+  openWeekdays?: number[];
+  /** What to call a closed day that still has classes. Translated by the caller. */
+  closedLabel?: string;
   /** Indexed by ISO weekday, so dayNames[1] is Monday. Supplied translated. */
   dayNames: Record<number, string>;
   emptyLabel: string;
@@ -143,11 +159,29 @@ export function WeekGrid({
     list.sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
-  // Monday to Saturday always. Saturday morning is when a swimming school runs
-  // half its children's classes, so a grid that hid it until something appeared
-  // there had the week wrong. Sunday shows up only when it is used — most pools
-  // do not open, and an empty seventh column makes the six that matter narrower.
-  const days = WEEKDAYS.filter((day) => day <= 6 || (byDay.get(day)?.length ?? 0) > 0);
+  /*
+   * Which columns the week has.
+   *
+   * **A day the site opens, or a day something already happens on** — round 5,
+   * ticket 8.4. The second half is the important one and is the existing rule
+   * about disabled weekdays, kept: turning off Wednesday must not hide the turma
+   * that still runs on it, because a class you cannot see is a class you cannot
+   * move or cancel. Such a day is drawn and flagged rather than dropped.
+   *
+   * Without `openWeekdays` the old rule stands: Monday to Saturday always, and
+   * Sunday when it is used. Saturday morning is when a swimming school runs half
+   * its children's classes, so a grid that hid it until something appeared there
+   * had the week wrong.
+   */
+  const has = (day: number): boolean => (byDay.get(day)?.length ?? 0) > 0;
+  const days =
+    openWeekdays === undefined
+      ? WEEKDAYS.filter((day) => day <= 6 || has(day))
+      : WEEKDAYS.filter((day) => openWeekdays.includes(day) || has(day));
+
+  /** A day with classes on it that the site says it is shut on. */
+  const closedButUsed = (day: number): boolean =>
+    openWeekdays !== undefined && !openWeekdays.includes(day) && has(day);
 
   // An empty week still gets its grid.
   //
@@ -182,6 +216,18 @@ export function WeekGrid({
               )}
             >
               {dayNames[day]}
+              {/*
+                A day the site says it is shut on, still carrying classes — 8.4.
+
+                Flagged rather than hidden, and flagged in words: a turma you
+                cannot see is a turma you cannot move or cancel, and a colour on
+                its own would not say why this column is different.
+              */}
+              {closedButUsed(day) && (
+                <span className="ml-2 normal-case tracking-normal text-warning">
+                  {closedLabel ?? ''}
+                </span>
+              )}
             </h3>
 
             {(byDay.get(day) ?? []).length === 0 ? (

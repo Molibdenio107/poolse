@@ -519,13 +519,47 @@ function parseGroup(body: Record<string, unknown>): ClassGroupInput {
     });
   }
 
+  const poolId = optionalId(body['poolId']);
+  const lane = optionalCount(body['lane'], 'lane', 50, 'classes.laneInvalid');
+
+  /*
+   * A turma needs water and it needs lanes — round 5, ticket 8.2.
+   *
+   * Both were optional and both are now required, refused here rather than only
+   * in the form: a turma with no tank cannot be placed on the grid, cannot be
+   * counted against a tank's capacity, and cannot tell an instructor where to
+   * stand. It was saveable, and what it produced was a row that every later
+   * screen had to special-case.
+   *
+   * **The instructor is deliberately still optional.** A club fills a timetable
+   * in September and staffs it in October, and refusing a turma with nobody
+   * against it yet would make the product unusable in exactly the month it is
+   * set up. The screens flag it instead — `instructorStatus` already carries
+   * that, and 8.2 puts the words on the card.
+   *
+   * Named fields, so each lands beside the control that caused it rather than
+   * as one sentence at the top of a form with six boxes.
+   */
+  if (poolId === null) {
+    throw new BadRequestException({
+      message: 'a class group needs a pool',
+      fields: { poolId: 'classes.poolRequired' },
+    });
+  }
+  if (lane === null || lane < 1) {
+    throw new BadRequestException({
+      message: 'a class group needs at least one lane',
+      fields: { lane: 'classes.laneRequired' },
+    });
+  }
+
   return {
     name,
     levelId: optionalId(body['levelId']),
-    poolId: optionalId(body['poolId']),
+    poolId,
     instructorMembershipId: optionalId(body['instructorMembershipId']),
     capacity: optionalCount(body['capacity'], 'capacity', 200, 'classes.capacityInvalid'),
-    lane: optionalCount(body['lane'], 'lane', 50, 'classes.laneInvalid'),
+    lane,
   };
 }
 

@@ -470,7 +470,7 @@
     "noInstructor": "No instructor",
     "pool": "Pool",
     "noPool": "No pool",
-    "lane": "Lane",
+    "lane": "Number of lanes",
     "laneN": "lane {lane}",
     "capacity": "Capacity",
     "capacityHint": "Leave blank for no limit.",
@@ -543,7 +543,12 @@
     "capacityInvalid": "Capacity must be a whole number between 1 and 200.",
     "laneInvalid": "Lane must be a whole number between 1 and 50.",
     "slotDurationInvalid": "Duration must be between 5 and 480 minutes.",
-    "poolFull": "The tank holds {max} swimmers and this slot already has {taken}, so this class can take {remaining}."
+    "poolFull": "The tank holds {max} swimmers and this slot already has {taken}, so this class can take {remaining}.",
+    "laneHint": "How many lanes this class group uses.",
+    "poolRequired": "Choose the tank this class group swims in.",
+    "laneRequired": "Say how many lanes it uses.",
+    "noInstructorYet": "No instructor assigned yet",
+    "closedDay": "closed"
   },
   "reposicao": {
     "title": "Make-up classes",
@@ -1983,7 +1988,10 @@
     "students": "Students",
     "offGrid": "Off the grid",
     "willUse": "Uses: {lanes}",
-    "readOnly": "{day}, {time} · {lanes} lanes · {students} students"
+    "readOnly": "{day}, {time} · {lanes} lanes · {students} students",
+    "count": "{count, plural, one {# group} other {# groups}}",
+    "allLanesTaken": "All lanes taken",
+    "lanesInUse": "Lanes in use: {lanes}"
   },
   "occupancy": {
     "title": "Occupancy",

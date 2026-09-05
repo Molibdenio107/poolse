@@ -470,7 +470,7 @@
     "noInstructor": "Sem instrutor",
     "pool": "Tanque",
     "noPool": "Sem tanque",
-    "lane": "Pista",
+    "lane": "Número de pistas",
     "laneN": "pista {lane}",
     "capacity": "Lotação",
     "capacityHint": "Em branco significa sem limite.",
@@ -543,7 +543,12 @@
     "capacityInvalid": "A lotação tem de ser um número inteiro entre 1 e 200.",
     "laneInvalid": "A pista tem de ser um número inteiro entre 1 e 50.",
     "slotDurationInvalid": "A duração tem de ser entre 5 e 480 minutos.",
-    "poolFull": "O tanque comporta {max} nadadores e este horário já tem {taken}, pelo que esta turma pode levar {remaining}."
+    "poolFull": "O tanque comporta {max} nadadores e este horário já tem {taken}, pelo que esta turma pode levar {remaining}.",
+    "laneHint": "Quantas pistas esta turma ocupa.",
+    "poolRequired": "Escolha o tanque onde esta turma nada.",
+    "laneRequired": "Indique quantas pistas ocupa.",
+    "noInstructorYet": "Ainda sem instrutor",
+    "closedDay": "encerrado"
   },
   "reposicao": {
     "title": "Aulas de reposição",
@@ -1983,7 +1988,10 @@
     "students": "N.º de alunos",
     "offGrid": "Fora da grelha",
     "willUse": "Ocupa: {lanes}",
-    "readOnly": "{day}, {time} · {lanes} pistas · {students} alunos"
+    "readOnly": "{day}, {time} · {lanes} pistas · {students} alunos",
+    "count": "{count, plural, one {# grupo} other {# grupos}}",
+    "allLanesTaken": "Todas as pistas ocupadas",
+    "lanesInUse": "Pistas ocupadas: {lanes}"
   },
   "occupancy": {
     "title": "Ocupação",

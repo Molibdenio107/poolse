@@ -144,8 +144,20 @@ export default async function ClassesPage({
                   amount: formatCents(locale, group.monthlyPriceCents),
                 }),
               },
+          /*
+           * Who teaches it, or that nobody does yet — round 5, ticket 8.2.
+           *
+           * A missing instructor does not block saving a turma: a club fills a
+           * timetable in September and staffs it in October. What it does do is
+           * say so on the card, so an unstaffed class is visible on the screen
+           * where the week is planned rather than discovered in the pool.
+           *
+           * It appears in the hover card's own list rather than as a badge,
+           * beside the instructor it is standing in for — the same row, so the
+           * reader looks in one place for the answer either way.
+           */
           group.instructorName === null
-            ? null
+            ? { label: t('classes.instructor'), value: t('classes.noInstructorYet') }
             : { label: t('classes.instructor'), value: group.instructorName },
           {
             label: t('classes.when'),
@@ -334,6 +346,11 @@ export default async function ClassesPage({
               entries={entries}
               dayNames={dayNames}
               emptyLabel={t('classes.noSlots')}
+              // Only the days the site opens — round 5, ticket 8.4. A day it is
+              // shut on that still carries a turma is drawn and flagged, never
+              // hidden: a class you cannot see is one you cannot move.
+              {...(grid === null ? {} : { openWeekdays: grid.openWeekdays })}
+              closedLabel={t('classes.closedDay')}
               // The one screen where a class on the grid opens its turma.
               // The whole square opens the turma here — this grid has no
               // controls on it, so the card can mean exactly one thing.
@@ -367,6 +384,9 @@ export default async function ClassesPage({
               organizationId={data.organizationId}
               facilityId={grid.facilityId}
               bookings={grid.bookings.filter((booking) => booking.subjectType === 'parceria')}
+              // Everything sharing the water, so "all lanes taken" can be true
+              // when a turma holds the other half — 8.1.
+              allBookings={grid.bookings}
               slots={grid.slots}
               lanes={grid.lanes}
               openWeekdays={grid.openWeekdays}

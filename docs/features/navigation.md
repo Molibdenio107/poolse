@@ -68,3 +68,24 @@ Reissuing is bounded by `requireOwnKind`: a person can only resend an invitation
 have sent themselves, so an instructor cannot reissue an invitation to an admin — and a
 missing invitation and somebody else's give the same answer, so neither can be discovered by
 trying.
+
+
+## Turmas — the class groups screen
+
+A turma needs a **tank and a lane count**; both are refused server-side, naming the field.
+A turma with no water cannot be placed on the grid, counted against a tank's ceiling, or
+used to tell an instructor where to stand.
+
+An **instructor is not required**. A club fills a timetable in September and staffs it in
+October, so an unstaffed turma saves and says "No instructor assigned yet" on its card
+instead.
+
+The **weekly timetable shows only the weekdays the site opens**, plus any closed day that
+still carries a class — drawn and flagged `closed`, never hidden. A class you cannot see is
+a class you cannot move or cancel.
+
+**Partnerships are collapsed by default**, with the number of groups on the closed header.
+Hovering or focusing a partnership shows which lanes of its tank are busy at that hour —
+counted across everything sharing the water, so "All lanes taken" can be true when a turma
+holds the other half. The sentence is visible text as well as a tooltip: a tooltip may
+clarify, and may never be the only place a piece of information appears.
