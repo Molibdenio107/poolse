@@ -2001,7 +2001,8 @@
     "readOnly": "{day}, {time} · {lanes} pistas · {students} alunos",
     "count": "{count, plural, one {# grupo} other {# grupos}}",
     "allLanesTaken": "Todas as pistas ocupadas",
-    "lanesInUse": "Pistas ocupadas: {lanes}"
+    "lanesInUse": "Pistas ocupadas: {lanes}",
+    "lane": "Pista {lane}:"
   },
   "occupancy": {
     "title": "Ocupação",

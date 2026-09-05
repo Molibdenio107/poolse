@@ -2001,7 +2001,8 @@
     "readOnly": "{day}, {time} · {lanes} lanes · {students} students",
     "count": "{count, plural, one {# group} other {# groups}}",
     "allLanesTaken": "All lanes taken",
-    "lanesInUse": "Lanes in use: {lanes}"
+    "lanesInUse": "Lanes in use: {lanes}",
+    "lane": "Lane {lane}:"
   },
   "occupancy": {
     "title": "Occupancy",

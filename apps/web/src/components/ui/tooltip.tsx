@@ -51,7 +51,15 @@ export function Hint({
   side = 'top',
 }: {
   children: React.ReactNode;
-  text: string;
+  /**
+   * A sentence, or something built from sentences.
+   *
+   * Widened from `string` in round 6: the partnership hover has to render a
+   * list, because "lanes 1, 3 and 4" prose cannot show a lane number as its own
+   * marker. Still bounded by the convention rather than by the type — the
+   * content explains, and never carries a fact that appears nowhere else.
+   */
+  text: React.ReactNode;
   side?: 'top' | 'right' | 'bottom' | 'left';
 }): React.ReactElement {
   return (

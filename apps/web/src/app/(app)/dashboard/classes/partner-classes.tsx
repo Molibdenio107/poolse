@@ -7,6 +7,7 @@ import { useSavedAction } from '@/lib/saved';
 import type { FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 import { withinHours } from '@/lib/opening-hours';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { Hint } from '@/components/ui/tooltip';
 import { withFrom } from '@/lib/back';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -156,7 +157,7 @@ function lanesInUse(
   booking: GridBooking,
   all: GridBooking[],
   lanes: GridLane[],
-): { taken: number[]; total: number } | null {
+): { taken: { position: number; by: string }[]; total: number } | null {
   const own = lanes.find((lane) => lane.id === booking.laneIds[0]);
   if (own === undefined) return null;
 
@@ -164,21 +165,68 @@ function lanesInUse(
   const start = toMinutes(booking.startTime);
   const end = start + booking.durationMinutes;
 
-  const busy = new Set<string>();
+  /*
+   * Who holds each lane, not merely that somebody does — round 6, ticket 3.
+   *
+   * The list in the hover gives every lane a row, and a row reading only "3."
+   * is a marker with nothing beside it. The name is what makes the breakdown
+   * worth opening: it says the tank is full *of what*, which is the question
+   * somebody looking at a clash is actually asking.
+   *
+   * First writer wins on the rare double-booking, so the row is stable rather
+   * than depending on array order.
+   */
+  const busy = new Map<string, string>();
   for (const other of all) {
     if (other.weekday !== booking.weekday) continue;
     const from = toMinutes(other.startTime);
     if (from >= end || from + other.durationMinutes <= start) continue;
-    for (const laneId of other.laneIds) busy.add(laneId);
+    for (const laneId of other.laneIds) if (!busy.has(laneId)) busy.set(laneId, other.name);
   }
 
   return {
     taken: poolLanes
       .filter((lane) => busy.has(lane.id))
-      .map((lane) => lane.position)
-      .sort((left, right) => left - right),
+      .map((lane) => ({ position: lane.position, by: busy.get(lane.id) ?? '' }))
+      .sort((left, right) => left.position - right.position),
     total: poolLanes.length,
   };
+}
+
+/**
+ * The busy lanes, each marked with its own number — round 6, ticket 3.
+ *
+ * **An `<ol>` with no list-style, and the number written out.** A browser's own
+ * marker counts the items, so lanes 1, 3 and 4 would be marked "1. 2. 3." — a
+ * list that says the tank has three lanes in use and names the wrong ones. The
+ * marker has to be the lane's own position, which means rendering it.
+ *
+ * `<ol>` rather than `<ul>` because the order carries meaning: these are lanes
+ * across a tank, read left to right, and a screen reader announcing them as an
+ * ordered list of three is telling the truth about the shape of the water.
+ *
+ * The number is `aria-hidden` and repeated inside the row's accessible label,
+ * because "3." read as a bare marker beside a name is two fragments rather than
+ * a sentence.
+ */
+function LaneList({ taken }: { taken: { position: number; by: string }[] }): React.ReactElement {
+  const t = useTranslations();
+
+  return (
+    <ol className="flex list-none flex-col gap-0.5 p-0">
+      {taken.map((lane) => (
+        <li key={lane.position} className="flex items-baseline gap-1.5">
+          <span aria-hidden className="w-5 shrink-0 text-right tabular-nums text-foreground-muted">
+            {lane.position}.
+          </span>
+          <span>
+            <span className="sr-only">{t('partnerClasses.lane', { lane: lane.position })} </span>
+            {lane.by}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 /** `HH:MM` to minutes past midnight, for the overlap test above. */
@@ -337,28 +385,40 @@ function PartnerCard({
         )}
 
         {/*
-          Which lanes the tank has busy at this hour — 8.1.
+          Which lanes the tank has busy at this hour — 8.1, reworked in round 6.
 
-          `tabIndex={0}` so the tooltip is reachable without a mouse: a control
-          whose meaning is only available to a pointer is a control half the
-          users cannot read. The `title` repeats the visible sentence rather
-          than adding to it, because a tooltip may clarify and may never be the
-          only place something appears.
+          **The summary stays visible; the hover breaks it down.** A `title`
+          attribute cannot hold a list, and round 6 asks for one whose markers
+          are the lane numbers themselves. So the sentence a person needs —
+          "all lanes taken", or which numbers — is still text on the card, and
+          the tooltip adds only who is in each lane, which every other card on
+          this screen already says out loud. Nothing lives in the tooltip alone.
+
+          `tabIndex={0}` so it opens on keyboard focus as well as hover: a
+          control whose meaning is only available to a pointer is a control
+          half the users cannot read. Radix handles the rest.
         */}
         {laneUse !== null && (
-          <span
-            tabIndex={0}
-            title={
-              laneUse.taken.length >= laneUse.total
-                ? t('partnerClasses.allLanesTaken')
-                : t('partnerClasses.lanesInUse', { lanes: laneUse.taken.join(', ') })
+          <Hint
+            text={
+              laneUse.taken.length >= laneUse.total ? (
+                t('partnerClasses.allLanesTaken')
+              ) : (
+                <LaneList taken={laneUse.taken} />
+              )
             }
-            className="rounded text-sm text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            {laneUse.taken.length >= laneUse.total
-              ? t('partnerClasses.allLanesTaken')
-              : t('partnerClasses.lanesInUse', { lanes: laneUse.taken.join(', ') })}
-          </span>
+            <span
+              tabIndex={0}
+              className="rounded text-sm text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {laneUse.taken.length >= laneUse.total
+                ? t('partnerClasses.allLanesTaken')
+                : t('partnerClasses.lanesInUse', {
+                    lanes: laneUse.taken.map((lane) => lane.position).join(', '),
+                  })}
+            </span>
+          </Hint>
         )}
       </div>
 
