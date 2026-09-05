@@ -22,7 +22,7 @@ import {
   billingSettings,
   repriceStudentFee,
   setBillingSettings,
-  setOccurrencePaid,
+  markFeePaid,
   setSocio,
   setStudentPaid,
   studentFees,
@@ -283,7 +283,7 @@ export class StudentFeesController {
       throw new BadRequestException('periodStart is required — which occurrence is this');
     }
 
-    const marked = await setOccurrencePaid(
+    const marked = await markFeePaid(
       organizationId,
       studentId,
       id,

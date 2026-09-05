@@ -106,12 +106,24 @@ export function FeesBlock({
   const grandTotal = live.reduce((sum, line) => sum + line.payableCents, 0);
 
   /*
-   * What is still owed, with the late penalty on top.
+   * The two halves of the period, split out — round 6, ticket 5.1.
    *
-   * One penalty however many lines are late — "the student pays a penalty" —
-   * and it is added here rather than written as a charge: an automatic fee with
+   * "Total" alone answered a question nobody asks at a counter. What an office
+   * is asked is how much has come in and how much is still to come, and those
+   * are two numbers whichever way round they are read. They come from the same
+   * `payableCents` the lines show, so the pair cannot disagree with the rows
+   * above it — and both change the moment a Paid box does, because the action
+   * revalidates this page rather than patching a figure in the browser.
+   *
+   * The **penalty sits on the remainder**, never on what is paid. One penalty
+   * however many lines are late — "the student pays a penalty" — and it is
+   * added here rather than written as a charge, because an automatic fee with
    * nobody's name against it has to be defensible at a counter.
    */
+  const paidTotal = live
+    .filter((line) => line.isPaid)
+    .reduce((sum, line) => sum + line.payableCents, 0);
+
   const outstanding =
     live.filter((line) => !line.isPaid).reduce((sum, line) => sum + line.payableCents, 0) +
     fees.penaltyCents;
@@ -264,17 +276,42 @@ export function FeesBlock({
         {t('fees.periodTotalTitle')}
       </h2>
     {live.length > 0 && (
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded bg-surface-muted p-4">
-        <span className="font-medium">{t('fees.grandTotal')}</span>
-        <span className="flex flex-col items-end">
+      <div className="flex flex-col gap-3 rounded bg-surface-muted p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <span className="font-medium">{t('fees.grandTotal')}</span>
           <span className="text-xl font-medium tabular-nums">
             {formatCents(locale, grandTotal)}
           </span>
+        </div>
+
+        {/*
+          Paid, and still to pay — round 6, ticket 5.1.
+
+          Two lines rather than one, and **the one that matters is bold**: while
+          anything is outstanding the remainder is what somebody is here to act
+          on, and once everything is settled the paid total is the answer. Weight
+          is the emphasis rather than colour, because colour alone may never
+          carry meaning — and both lines are always present, so nothing has to be
+          inferred from what is missing.
+        */}
+        <dl className="flex flex-col gap-1 border-t border-border/60 pt-3 text-sm">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+            <dt className={cn(outstanding <= 0 && 'font-medium')}>{t('fees.totalPaid')}</dt>
+            <dd className={cn('tabular-nums', outstanding <= 0 && 'font-medium text-primary')}>
+              {formatCents(locale, paidTotal)}
+            </dd>
+          </div>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+            <dt className={cn(outstanding > 0 && 'font-medium')}>{t('fees.totalRemaining')}</dt>
+            <dd className={cn('tabular-nums', outstanding > 0 && 'font-medium text-warning')}>
+              {formatCents(locale, Math.max(0, outstanding))}
+            </dd>
+          </div>
+        </dl>
+
+        <span className="flex flex-col items-end">
           {outstanding > 0 ? (
             <span className="flex flex-col items-end">
-              <span className="text-sm text-warning tabular-nums">
-                {t('fees.outstanding', { amount: formatCents(locale, outstanding) })}
-              </span>
               {/*
                 Each penalty named for what it is on — round 5. A club may fine
                 a late mensalidade and forgive a late quota, and a single
@@ -345,7 +382,6 @@ function FeeRow({
 
   const [, reprice, repricing] = useSavedAction(repriceFeeAction, INITIAL);
   const [, archive, archiving] = useSavedAction(archiveFeeAction, INITIAL);
-  const [, markPaid, marking] = useSavedAction(markPaidAction, INITIAL);
 
   const discounted = line.payableCents !== line.periodTotalCents;
 
@@ -437,81 +473,6 @@ function FeeRow({
           </span>
         )}
 
-        {/*
-          Paid, by hand — a form rather than a checkbox with an onChange, so it
-          works before any JavaScript has loaded and so the state on screen is
-          always the state on the server rather than an optimistic guess.
-
-          Text beside the mark, never colour alone.
-        */}
-        <form action={markPaid} className="flex items-center gap-2">
-          <input type="hidden" name="studentId" value={studentId} />
-          <input type="hidden" name="feeId" value={line.id} />
-          <input type="hidden" name="isPaid" value={showingPaid ? 'false' : 'true'} />
-          <input type="hidden" name="periodStart" value={period ?? ''} />
-          <button
-            type="submit"
-            // An ended line has no occurrence to settle, so there is nothing to
-            // press — and pressing it would write a payment for a null period.
-            disabled={marking || period === null}
-            aria-pressed={showingPaid}
-            className={cn(
-              'flex items-center gap-1.5 rounded px-2 py-0.5',
-              showingPaid && 'bg-primary/10 text-primary',
-              !showingPaid && onCurrent && line.isOverdue && 'bg-danger/10 text-danger',
-              !showingPaid && !(onCurrent && line.isOverdue) &&
-                'border border-border text-foreground-muted hover:bg-surface-muted',
-            )}
-          >
-            <Check aria-hidden className={cn('size-3.5', !showingPaid && 'opacity-40')} />
-            {showingPaid
-              ? onCurrent
-                ? t('fees.paidOn', { date: line.paidOn ?? '' })
-                : t('fees.paidLabel')
-              : onCurrent && line.isOverdue
-                ? t('fees.overdueSince', { date: line.dueOn ?? '' })
-                : onCurrent
-                  ? t('fees.dueBy', { date: line.dueOn ?? '' })
-                  : t('fees.notPaid')}
-          </button>
-
-          {/*
-            The period switcher — round 5, ticket 10.0.
-
-            The toggle was always per period; there was simply no way to reach a
-            period other than the current one, so "history is kept" was true in
-            the table and invisible on the screen.
-
-            Only offered where there *is* history. A club in its first month
-            would otherwise get a select with one option, which is a control that
-            asks a question with a single answer.
-
-            The current period leads and is the default, so the ordinary case —
-            "has this month been paid" — costs nobody an extra click.
-          */}
-          {periodChoices.length > 1 && (
-            <>
-              <label htmlFor={`period-${line.id}`} className="sr-only">
-                {t('fees.periodSwitcher')}
-              </label>
-              <select
-                id={`period-${line.id}`}
-                value={period ?? ''}
-                onChange={(event) => setPeriod(event.target.value)}
-                className="rounded border border-border bg-surface px-1.5 py-0.5 text-sm tabular-nums"
-              >
-                {periodChoices.map((choice) => (
-                  <option key={choice} value={choice}>
-                    {choice === line.currentPeriodStart
-                      ? t('fees.periodCurrent', { date: choice })
-                      : choice}
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
-        </form>
-
         <span className="ml-auto flex gap-2">
           {line.planAmountCentsNow !== null && (
             <form action={reprice}>
@@ -555,7 +516,26 @@ function FeeRow({
         facility sets what a month costs and what each period discounts, and the
         family says which of them they want. The plan's default only seeds it.
       */}
-      <PeriodPicker studentId={studentId} line={line} periods={periods} />
+      {/*
+        How they pay, and whether they have — round 6, ticket 5.0.
+
+        Side by side because they are one question asked twice: what this family
+        agreed to, and whether this period of it has arrived. Round 5 had the
+        Paid toggle up among the discounts and the out-of-date warning, which is
+        where a line explains its price rather than where somebody works.
+      */}
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        <PeriodPicker studentId={studentId} line={line} periods={periods} />
+        <PaidToggle
+          studentId={studentId}
+          line={line}
+          period={period}
+          onPeriod={setPeriod}
+          choices={periodChoices}
+          showingPaid={showingPaid}
+          onCurrent={onCurrent}
+        />
+      </div>
 
       {editing && (
         <EditFeeForm
@@ -566,6 +546,132 @@ function FeeRow({
         />
       )}
     </li>
+  );
+}
+
+/**
+ * Paid, for one period — round 5, ticket 10.0; moved and re-dressed in round 6.
+ *
+ * **A checkbox that is a submit button, and both halves are deliberate.** It
+ * reads as a checkbox — a square, a tick, `role="checkbox"` and `aria-checked`,
+ * so a screen reader announces the state rather than a verb — and it submits a
+ * form, so it works before any JavaScript has loaded and what is on screen is
+ * always what is on the server rather than an optimistic guess. An
+ * `<input type="checkbox">` with an `onChange` would have been neither.
+ *
+ * **No disabled state for a role that cannot get here.** The ticket asks for the
+ * control to be owner/admin, disabled with a tooltip for everybody else. The
+ * guard exists and is older than the ticket: `GET /students/:id/fees` is itself
+ * `requireRole('owner', 'admin')`, because what a family pays is not something
+ * the instructor who teaches them is entitled to see. Nobody else can load this
+ * card, so a disabled state on it would be code no user can reach — and the
+ * write endpoint carries the same guard regardless.
+ */
+function PaidToggle({
+  studentId,
+  line,
+  period,
+  onPeriod,
+  choices,
+  showingPaid,
+  onCurrent,
+}: {
+  studentId: string;
+  line: StudentFeeLine;
+  /** Which occurrence is being settled. Null on a line that has ended. */
+  period: string | null;
+  onPeriod: (period: string) => void;
+  /** The current period, plus every one already settled. */
+  choices: string[];
+  showingPaid: boolean;
+  onCurrent: boolean;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [, markPaid, marking] = useSavedAction(markPaidAction, INITIAL);
+
+  return (
+    <form action={markPaid} className="flex items-end gap-2">
+      <input type="hidden" name="studentId" value={studentId} />
+      <input type="hidden" name="feeId" value={line.id} />
+      <input type="hidden" name="isPaid" value={showingPaid ? 'false' : 'true'} />
+      <input type="hidden" name="periodStart" value={period ?? ''} />
+
+      <span className={FIELD_COLUMN}>
+        <span className={FIELD_LABEL}>{t('fees.paidHeading')}</span>
+        <button
+          type="submit"
+          role="checkbox"
+          aria-checked={showingPaid}
+          // An ended line has no occurrence to settle, so there is nothing to
+          // press — and pressing it would write a payment for a null period.
+          disabled={marking || period === null}
+          className={cn(
+            'flex h-control items-center gap-2 rounded border px-2.5 text-sm disabled:opacity-60',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+            showingPaid && 'border-primary/40 bg-primary/10 text-primary',
+            !showingPaid && onCurrent && line.isOverdue && 'border-danger/40 bg-danger/10 text-danger',
+            !showingPaid &&
+              !(onCurrent && line.isOverdue) &&
+              'border-border text-foreground-muted hover:bg-surface-muted',
+          )}
+        >
+          {/*
+            The box, drawn rather than borrowed. Text beside it in every state,
+            because colour and a tick are two ways of saying the same thing and
+            neither may be the only one.
+          */}
+          <span
+            aria-hidden
+            className={cn(
+              'flex size-4 shrink-0 items-center justify-center rounded-sm border',
+              showingPaid ? 'border-primary bg-primary text-primary-foreground' : 'border-border',
+            )}
+          >
+            {showingPaid && <Check className="size-3" />}
+          </span>
+          {showingPaid
+            ? onCurrent
+              ? t('fees.paidOn', { date: line.paidOn ?? '' })
+              : t('fees.paidLabel')
+            : onCurrent && line.isOverdue
+              ? t('fees.overdueSince', { date: line.dueOn ?? '' })
+              : onCurrent
+                ? t('fees.dueBy', { date: line.dueOn ?? '' })
+                : t('fees.notPaid')}
+        </button>
+      </span>
+
+      {/*
+        The period switcher — round 5, ticket 10.0.
+
+        Only offered where there *is* history. A club in its first month would
+        otherwise get a select with one option, which is a control that asks a
+        question with a single answer. The current period leads and is the
+        default, so the ordinary case — "has this month been paid" — costs
+        nobody an extra click.
+      */}
+      {choices.length > 1 && (
+        <span className={FIELD_COLUMN}>
+          <label htmlFor={`period-${line.id}`} className={FIELD_LABEL}>
+            {t('fees.periodSwitcher')}
+          </label>
+          <select
+            id={`period-${line.id}`}
+            value={period ?? ''}
+            onChange={(event) => onPeriod(event.target.value)}
+            className={cn(CONTROL_LINE, 'w-auto tabular-nums')}
+          >
+            {choices.map((choice) => (
+              <option key={choice} value={choice}>
+                {choice === line.currentPeriodStart
+                  ? t('fees.periodCurrent', { date: choice })
+                  : choice}
+              </option>
+            ))}
+          </select>
+        </span>
+      )}
+    </form>
   );
 }
 
@@ -612,7 +718,16 @@ function PeriodPicker({
       <input type="hidden" name="discountValue" value={discountValue} />
       <input type="hidden" name="discountReason" value={line.discountReason ?? ''} />
 
-      <div className={cn(FIELD_COLUMN, 'max-w-xs')}>
+      {/*
+        Sized to its longest option — round 6, ticket 5.0.
+
+        `w-auto` rather than a width: the options are "Mês", "Trimestral" and
+        "6 meses" in pt and their translations in en, and any fixed width would
+        be right in one language and wrong in the other. A full-width select for
+        three short words also read as the most important control on the line,
+        which it is not.
+      */}
+      <div className={FIELD_COLUMN}>
         <label htmlFor={`pay-${line.id}`} className={FIELD_LABEL}>
           {t('fees.howTheyPay')}
         </label>
@@ -621,7 +736,7 @@ function PeriodPicker({
           name="feePeriodId"
           value={periodId}
           onChange={(event) => setPeriodId(event.target.value)}
-          className={CONTROL_LINE}
+          className={cn(CONTROL_LINE, 'w-auto')}
         >
           {periods.map((period) => (
             <option key={period.id} value={period.id}>

@@ -1812,6 +1812,18 @@ season.
 everybody else, so an instructor can still read occupancy. It is there for the dashboards module,
 and POOLSE-47's decision that partnership billing is its own flow stands.
 
+### `student_fee_payment.source` — how a period was settled
+
+`payment_source` is `manual`, `mbway` or `sepa`, defaulting to `manual`. Every row that
+existed before it was an office tick and is backfilled as one.
+
+An enum rather than a lookup table: the set is closed and only a developer opens it, because
+adding a provider is an integration rather than a value an operator types.
+
+It exists so a webhook settling a month in phase 2 is distinguishable from a clerk settling
+it — without it, a club reconciling its bank statement against Poolse cannot tell which rows
+should appear on it.
+
 ### `lesson_plan` — what one lesson is for
 
 ```

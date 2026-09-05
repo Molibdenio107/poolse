@@ -62,14 +62,40 @@ Three sibling cards, in this order:
 
 ### Paid, per period
 
-Each fee line carries a **Paid** toggle for one billing period at a time, persisting
-`paid_on`, `recorded_by` and the period it settles. Untoggling clears it.
+Each fee line carries a **Paid** checkbox for one billing period at a time, beside the
+*How they pay* dropdown — the two are one question asked twice: what this family agreed to,
+and whether this period of it has arrived.
+
+It persists `paid_on`, `recorded_by`, `source` and the period it settles. Unticking clears
+it.
+
+**`source` says how it was settled** — `manual`, `mbway` or `sepa`. Every payment so far is
+an office tick; the column exists so that a webhook settling a month in phase 2 is
+distinguishable from a clerk settling it, which is what a club reconciling a bank statement
+needs. `markFeePaid` takes the value and defaults to `manual`.
 
 The current period is shown by default. Where a line has been settled before, a small
 switcher steps back through the periods that actually exist — a club that started in March
 is not offered a February. History is kept: settling one period never touches another.
 
 An ended line has no current period and nothing to press.
+
+The control is a checkbox that submits a form: it reads as a checkbox to assistive
+technology, and it still works before any JavaScript has loaded, so what is on screen is
+always what is on the server. There is no disabled state for other roles because there is
+no other role here — `GET /students/:id/fees` is itself owner/admin, since what a family
+pays is not something the instructor who teaches them may see.
+
+### Period total
+
+Three figures: the **total to pay** for the period, then **Total paid** and **Total
+remaining to pay** beneath it. Whichever is the live question is bold — the remainder while
+anything is outstanding, the paid total once everything is settled. Both are always present,
+so nothing has to be inferred from what is missing, and weight rather than colour carries
+the emphasis.
+
+The late penalty sits on the remainder, never on what is paid. All three come from the same
+`payableCents` the lines show, and all three change the moment a Paid box does.
 
 ### Medical leave dates
 

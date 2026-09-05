@@ -1174,13 +1174,27 @@ export async function archiveStudentFee(
  * two settlements of the same occurrence would double every total built from
  * them.
  */
-export async function setOccurrencePaid(
+/**
+ * How a period was settled — round 6, ticket 5.0.
+ *
+ * `manual` is somebody in the office ticking a box, which is every payment
+ * recorded so far. The other two are the providers phase 2 brings: a webhook
+ * settling a month has to be distinguishable from a clerk settling it, or a club
+ * reconciling its bank statement has no way to tell which rows should be on it.
+ *
+ * This is the extension point the ticket asks for. A webhook calls `markFeePaid`
+ * with its own source and touches nothing else.
+ */
+export type PaymentSource = 'manual' | 'mbway' | 'sepa';
+
+export async function markFeePaid(
   organizationId: string,
   studentId: string,
   feeId: string,
   periodStart: string,
   isPaid: boolean,
   paidOn: string | null,
+  source: PaymentSource = 'manual',
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     // Through the student, so a fee id from another child's record answers "no
@@ -1195,11 +1209,13 @@ export async function setOccurrencePaid(
     if (isPaid) {
       await tx.query(
         `INSERT INTO student_fee_payment (organization_id, student_fee_id, period_start,
-                                          paid_on, recorded_by)
-         VALUES ($1, $2, $3::date, coalesce($4::date, current_date), $5)
+                                          paid_on, recorded_by, source)
+         VALUES ($1, $2, $3::date, coalesce($4::date, current_date), $5, $6::payment_source)
          ON CONFLICT (student_fee_id, period_start)
-           DO UPDATE SET paid_on = EXCLUDED.paid_on, recorded_by = EXCLUDED.recorded_by`,
-        [organizationId, feeId, periodStart, paidOn, currentTenant().membershipId],
+           DO UPDATE SET paid_on = EXCLUDED.paid_on,
+                         recorded_by = EXCLUDED.recorded_by,
+                         source = EXCLUDED.source`,
+        [organizationId, feeId, periodStart, paidOn, currentTenant().membershipId, source],
       );
     } else {
       await tx.query(
@@ -1213,7 +1229,7 @@ export async function setOccurrencePaid(
       action: isPaid ? 'student_fee.paid' : 'student_fee.unpaid',
       entityType: 'student_fee',
       entityId: feeId,
-      data: { studentId, periodStart, paidOn },
+      data: { studentId, periodStart, paidOn, source },
     });
     return true;
   });
