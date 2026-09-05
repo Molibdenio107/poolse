@@ -576,16 +576,37 @@ export async function locationsAt(
 ): Promise<string[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ location: string }>(
-      `SELECT DISTINCT location
+      /*
+       * `place`, not `both` — round 6, ticket 2.
+       *
+       * `BOTH` is a reserved word in SQL: it is the keyword in
+       * `trim(both ' ' from x)`, so Postgres refuses it as a bare table alias
+       * and this statement failed to parse. Every request to `GET /inventory`
+       * calls this, so the whole store-room screen answered with a 500 — the
+       * page rendered "The server hit an error loading this page." and nothing
+       * in the trace pointed at an alias.
+       *
+       * It got through because the alias is the one part of a query no test
+       * result ever mentions and no type ever names. The integration test
+       * beside this loads the page's own endpoint, empty and populated, which
+       * is the only thing that would have caught it.
+       *
+       * `GROUP BY` rather than `SELECT DISTINCT`, so the ordering can fold
+       * accents — under `DISTINCT`, Postgres requires every `ORDER BY`
+       * expression to appear in the select list, and the comment above has
+       * always promised a sort a person would recognise.
+       */
+      `SELECT location
          FROM (
            SELECT location FROM inventory_item
             WHERE facility_id = $1 AND archived_at IS NULL AND location IS NOT NULL
            UNION ALL
            SELECT location_found AS location FROM lost_and_found_item
             WHERE facility_id = $1 AND archived_at IS NULL AND location_found IS NOT NULL
-         ) AS both
+         ) AS place
         WHERE btrim(location) <> ''
-        ORDER BY location`,
+        GROUP BY location
+        ORDER BY lower(strip_accents(location))`,
       [facilityId],
     );
     return rows.map((row) => row.location);

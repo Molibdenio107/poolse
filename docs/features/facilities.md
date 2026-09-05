@@ -108,6 +108,10 @@ The importer reads a `Localização` column into that field. Before round 5 thos
 belonged to the tank matcher, which claimed the column and then failed to resolve room
 names as tanks — mapped, refused, and reading as a broken importer.
 
+The suggestion list is every place name this site already uses, drawn from the store room
+and the lost-property box together, sorted with accents folded so "armário" and
+"Arrecadação" sit where a person expects them.
+
 ## Lost and found
 
 The same screen, in a card that is **collapsed by default** — the store room is what

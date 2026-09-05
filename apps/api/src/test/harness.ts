@@ -126,6 +126,14 @@ const TENANT_TABLES = [
   'inventory_item_pool',
   'inventory_item',
   /*
+   * Lost property, which round 5 added and never listed here.
+   *
+   * It points at `facility` by composite key and nothing cascades it, so the
+   * first test to record a found item failed teardown on the foreign key —
+   * exactly the way this list's comment says a gap announces itself.
+   */
+  'lost_and_found_item',
+  /*
    * The water log, before the tank it belongs to — round 5, ticket 5.
    *
    * `pool_analysis_value` cascades from its analysis, so it needs no line of its
