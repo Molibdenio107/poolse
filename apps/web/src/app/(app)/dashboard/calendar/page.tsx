@@ -223,6 +223,25 @@ export default async function CalendarPage({
     <PageShell
       title={t('calendar.title')}
       subtitle={t('calendar.subtitle')}
+      /*
+        Importing the wall timetable — POOLSE-57, moved to the header in round
+        5, ticket 9.0.
+
+        It sat above the grid, which put a page-level action inside the page's
+        content and left it competing with the week for attention. The drop
+        target is unaffected: it has always been the whole window rather than
+        the button, so dragging the club's spreadsheet anywhere on the calendar
+        still works from up here.
+      */
+      actions={
+        classes?.facilities[0] === undefined ? undefined : (
+          <TimetableImport
+            facilityId={classes.facilities[0].id}
+            canManage={calendar?.canManage ?? false}
+            compact
+          />
+        )
+      }
     >
 
       {noOrganization && (
@@ -302,20 +321,6 @@ export default async function CalendarPage({
             <div className="flex justify-center">
               <WeekLink week={today()} label={t('calendar.today')} />
             </div>
-
-            {/*
-              Importing the wall timetable — POOLSE-57.
-              
-              Above the grid, and a drop target for the whole page: dragging the
-              club's own spreadsheet onto the calendar is the gesture people
-              already try, and the honest answer to trying it is to do the thing.
-            */}
-            {classes?.facilities[0] !== undefined && (
-              <TimetableImport
-                facilityId={classes.facilities[0].id}
-                canManage={calendar.canManage}
-              />
-            )}
 
             {classes !== null ? (
               <ScheduleBoard

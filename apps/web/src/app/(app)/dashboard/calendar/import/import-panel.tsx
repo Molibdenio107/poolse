@@ -54,9 +54,12 @@ function isAccepted(file: File): boolean {
 export function TimetableImport({
   facilityId,
   canManage,
+  compact = false,
 }: {
   facilityId: string;
   canManage: boolean;
+  /** In the page header, where there is no room for the hint beside it — 9.0. */
+  compact?: boolean;
 }): React.ReactElement | null {
   const t = useTranslations();
 
@@ -116,7 +119,17 @@ export function TimetableImport({
             {t('timetableImport.open')}
           </span>
         </button>
-        {!open && <span className="text-sm text-foreground-muted">{t('timetableImport.hint')}</span>}
+        {/*
+          The hint stays out of the page header — round 5, ticket 9.0.
+
+          It earned its place beside the button when both sat above the grid
+          with room to spare. In the header it would push the title, and the
+          same sentence is the first thing the panel says when it opens, so
+          nothing is lost by holding it until then.
+        */}
+        {!open && !compact && (
+          <span className="text-sm text-foreground-muted">{t('timetableImport.hint')}</span>
+        )}
       </div>
 
       {/*
