@@ -57,6 +57,22 @@ export interface FeePlan {
   /** Quotas only. A mensalidade is banded by its level, which says it better. */
   ageBand: FeeAgeBand;
   /**
+   * The plan's periodicity and what it charges once its discount is off —
+   * round 5, ticket 3.0.
+   *
+   * All three are null when the plan names no default period, and the list then
+   * shows `amountCents` on its own rather than inventing a periodicity for it.
+   *
+   * `periodTotalCents` is display only and nothing stores it: `student_fee`
+   * still snapshots the amount and the discount when a family agrees a price,
+   * which is what stops an edit here rewriting an agreement. It comes from
+   * `fee_total_cents`, the same function the snapshot uses, so the price list
+   * and the agreement round identically.
+   */
+  periodMonths: number | null;
+  periodDiscountPercent: number | null;
+  periodTotalCents: number | null;
+  /**
    * The turmas this price governs, matched by level and weekly sessions.
    *
    * Empty on a quota, and on a mensalidade nothing is timetabled for yet — a
@@ -354,10 +370,37 @@ export async function listFeePlans(
       amount_cents: number;
       default_fee_period_id: string | null;
       age_band: FeeAgeBand;
+      period_months: number | null;
+      period_discount_percent: string | null;
+      period_total_cents: number | null;
       class_groups: { id: string; name: string }[];
     }>(
       `SELECT p.id, p.kind, p.level_id, l.name AS level_name, p.lessons_per_week,
               p.amount_cents, p.default_fee_period_id, p.age_band,
+              /*
+               * What the club actually charges for this price, once its own
+               * periodicity discount is taken off — round 5, ticket 3.0.
+               *
+               * amount_cents is a *monthly* number, and the price list was
+               * showing it under a column headed with the total's name. A club
+               * on six-monthly billing at 10% off reads 35,00 and invoices
+               * 189,00, and neither figure explains the other.
+               *
+               * fee_total_cents rather than arithmetic here or in the web app:
+               * it is the definition POOLSE-42 AC7 established and the same one
+               * student_fee snapshots, so the price list and a family's
+               * agreement cannot round differently. Nothing is stored — this is
+               * display only, exactly as the ticket asks.
+               *
+               * Null when the plan names no default period: a club that has not
+               * chosen a periodicity has no discount to apply, and the column
+               * falls back to the monthly figure rather than inventing one.
+               */
+              fp.months AS period_months,
+              fp.discount_percent AS period_discount_percent,
+              CASE WHEN fp.id IS NULL THEN NULL
+                   ELSE fee_total_cents(p.amount_cents, fp.months, fp.discount_percent)
+              END AS period_total_cents,
               /*
                * Which turmas this price actually governs.
                *
@@ -371,6 +414,12 @@ export async function listFeePlans(
          FROM fee_plan p
          LEFT JOIN student_level l
                 ON l.id = p.level_id AND l.organization_id = p.organization_id
+         -- The periodicity this price is billed on, for the discounted total
+         -- above. Archived periods still resolve: a plan pointing at one is a
+         -- price list to correct, not a row to hide.
+         LEFT JOIN fee_period fp
+                ON fp.id = p.default_fee_period_id
+               AND fp.organization_id = p.organization_id
          LEFT JOIN LATERAL (
            SELECT json_agg(json_build_object('id', cg.id, 'name', cg.name)
                            ORDER BY cg.name) AS groups
@@ -398,6 +447,10 @@ export async function listFeePlans(
       amountCents: row.amount_cents,
       defaultFeePeriodId: row.default_fee_period_id,
       ageBand: row.age_band,
+      periodMonths: row.period_months,
+      periodDiscountPercent:
+        row.period_discount_percent === null ? null : Number(row.period_discount_percent),
+      periodTotalCents: row.period_total_cents,
       classGroups: row.class_groups,
     }));
   });
@@ -412,28 +465,73 @@ export interface FeePlanInput {
   ageBand: FeeAgeBand;
 }
 
+/**
+ * Raised when the price list already answers this question — round 5, 3.1.
+ *
+ * The schema has said so since the price list was built: `fee_plan` carries two
+ * partial unique indexes, one per kind. What was missing is the translation from
+ * `23505` into something a form can say, so adding a second price for a level
+ * and frequency that already had one came back as a 500 — an error page for what
+ * is really the club telling itself it has already answered this.
+ *
+ * `which` is the kind, because the two constraints are two different sentences.
+ * A mensalidade is unique per level *and lessons per week* — the same level
+ * taught twice a week is a different price and must stay addable. A quota is
+ * unique per age band, of which a club has a handful.
+ */
+export class DuplicateFeePlanError extends Error {
+  constructor(readonly which: 'mensalidade' | 'quota') {
+    super(`A ${which} price already exists for that combination`);
+  }
+}
+
+/**
+ * The two indexes, by name, mapped to which sentence to tell.
+ *
+ * Matched on the constraint name rather than on the input, because the database
+ * is the thing that actually knows — a check written here against the input
+ * would be a second opinion that drifts, and would still lose the race between
+ * two people saving at once.
+ */
+function duplicatePlanFrom(error: unknown): DuplicateFeePlanError | null {
+  if (!(error instanceof Error)) return null;
+  const { code, constraint } = error as { code?: string; constraint?: string };
+  if (code !== '23505') return null;
+
+  if (constraint === 'fee_plan_level_frequency_uq') return new DuplicateFeePlanError('mensalidade');
+  if (constraint === 'fee_plan_one_quota_uq') return new DuplicateFeePlanError('quota');
+  return null;
+}
+
 export async function createFeePlan(
   organizationId: string,
   facilityId: string,
   input: FeePlanInput,
 ): Promise<string> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO fee_plan (organization_id, facility_id, kind, level_id,
-                             lessons_per_week, amount_cents, default_fee_period_id,
-                             age_band)
-       VALUES ($1, $2, $3::fee_plan_kind, $4, $5, $6, $7, $8::fee_age_band) RETURNING id`,
-      [
-        organizationId,
-        facilityId,
-        input.kind,
-        input.levelId,
-        input.lessonsPerWeek,
-        input.amountCents,
-        input.defaultFeePeriodId,
-        input.ageBand,
-      ],
-    );
+    let rows: { id: string }[];
+    try {
+      ({ rows } = await tx.query<{ id: string }>(
+        `INSERT INTO fee_plan (organization_id, facility_id, kind, level_id,
+                               lessons_per_week, amount_cents, default_fee_period_id,
+                               age_band)
+         VALUES ($1, $2, $3::fee_plan_kind, $4, $5, $6, $7, $8::fee_age_band) RETURNING id`,
+        [
+          organizationId,
+          facilityId,
+          input.kind,
+          input.levelId,
+          input.lessonsPerWeek,
+          input.amountCents,
+          input.defaultFeePeriodId,
+          input.ageBand,
+        ],
+      ));
+    } catch (error) {
+      const duplicate = duplicatePlanFrom(error);
+      if (duplicate !== null) throw duplicate;
+      throw error;
+    }
 
     const id = rows[0]?.id;
     if (id === undefined) throw new Error('Could not create the plan');
@@ -460,23 +558,32 @@ export async function updateFeePlan(
   input: FeePlanInput,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string }>(
-      `UPDATE fee_plan
-          SET kind = $3::fee_plan_kind, level_id = $4, lessons_per_week = $5,
-              amount_cents = $6, default_fee_period_id = $7, age_band = $8::fee_age_band
-        WHERE id = $2 AND facility_id = $1 AND archived_at IS NULL
-      RETURNING id`,
-      [
-        facilityId,
-        planId,
-        input.kind,
-        input.levelId,
-        input.lessonsPerWeek,
-        input.amountCents,
-        input.defaultFeePeriodId,
-        input.ageBand,
-      ],
-    );
+    // Editing a price onto a level and frequency another price already holds is
+    // the same collision as adding one, and was the same 500 — 3.1 covers both.
+    let rows: { id: string }[];
+    try {
+      ({ rows } = await tx.query<{ id: string }>(
+        `UPDATE fee_plan
+            SET kind = $3::fee_plan_kind, level_id = $4, lessons_per_week = $5,
+                amount_cents = $6, default_fee_period_id = $7, age_band = $8::fee_age_band
+          WHERE id = $2 AND facility_id = $1 AND archived_at IS NULL
+        RETURNING id`,
+        [
+          facilityId,
+          planId,
+          input.kind,
+          input.levelId,
+          input.lessonsPerWeek,
+          input.amountCents,
+          input.defaultFeePeriodId,
+          input.ageBand,
+        ],
+      ));
+    } catch (error) {
+      const duplicate = duplicatePlanFrom(error);
+      if (duplicate !== null) throw duplicate;
+      throw error;
+    }
     if (rows[0] === undefined) return false;
 
     /*

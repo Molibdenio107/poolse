@@ -967,6 +967,16 @@ export interface FeePlan {
   defaultFeePeriodId: string | null;
   /** Quotas only. A mensalidade is banded by its level, which says it better. */
   ageBand: FeeAgeBand;
+  /**
+   * The plan's periodicity and what it charges with that discount off — 3.0.
+   *
+   * All three null when the plan names no default period, and the list then
+   * shows the monthly amount alone rather than inventing a periodicity. The
+   * total comes from SQL's `fee_total_cents`; nothing here recomputes it.
+   */
+  periodMonths: number | null;
+  periodDiscountPercent: number | null;
+  periodTotalCents: number | null;
   /** The turmas this price governs, matched by level and weekly sessions. */
   classGroups: { id: string; name: string }[];
 }

@@ -25,6 +25,59 @@ import {
 } from './prices.actions';
 
 /**
+ * What a price actually charges — round 5, ticket 3.0.
+ *
+ * The column used to show `amountCents`, which is a *monthly* figure, under a
+ * heading that reads as the total. A club billing six-monthly at 10% off saw
+ * 35,00 and invoiced 189,00, and neither number explained the other.
+ *
+ * So the charged total leads and the monthly amount follows it, muted — the
+ * ticket asks for the base to stay visible, and "35,00/mes x 6, -10%" is the
+ * line that shows where the total came from without a tooltip. A tooltip would
+ * be the wrong tool twice over: this is information rather than clarification,
+ * and the convention is that a tooltip may never be the only place something
+ * appears.
+ *
+ * A plan with no default period has nothing to discount by, so it shows the
+ * monthly amount alone rather than a total computed against a guess.
+ *
+ * The total is `periodTotalCents` from the API, computed by `fee_total_cents` in
+ * SQL. Nothing is multiplied here: the price list and a family's agreed line
+ * have to round identically, and two implementations of one formula is how they
+ * stop.
+ */
+function PlanAmount({
+  plan,
+  locale,
+  className,
+}: {
+  plan: FeePlan;
+  locale: string;
+  className?: string;
+}): React.ReactElement {
+  const t = useTranslations();
+
+  if (plan.periodTotalCents === null || plan.periodMonths === null) {
+    return <span className={cn('tabular-nums', className)}>{formatCents(locale, plan.amountCents)}</span>;
+  }
+
+  return (
+    <span className="flex flex-col items-end">
+      <span className={cn('tabular-nums', className)}>
+        {formatCents(locale, plan.periodTotalCents)}
+      </span>
+      <span className="text-sm font-normal tabular-nums text-foreground-muted">
+        {t('fees.amountBasis', {
+          amount: formatCents(locale, plan.amountCents),
+          months: plan.periodMonths,
+          discount: plan.periodDiscountPercent ?? 0,
+        })}
+      </span>
+    </span>
+  );
+}
+
+/**
  * A facility's prices — POOLSE-42, second pass.
  *
  * Four things a club decides about money, in the order they depend on each
@@ -175,7 +228,7 @@ export function PricesPanel({
                       </td>
                       <td className="py-2 pr-4 tabular-nums">{plan.lessonsPerWeek}</td>
                       <td className="py-2 pr-4 text-right tabular-nums">
-                        {formatCents(locale, plan.amountCents)}
+                        <PlanAmount plan={plan} locale={locale} />
                       </td>
                       {canManage && (
                         <td className="py-2">
@@ -269,9 +322,7 @@ export function PricesPanel({
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <span className="font-medium">{t(`fees.band.${quota.ageBand}`)}</span>
                 <span className="flex items-center gap-3">
-                  <span className="tabular-nums text-lg font-medium">
-                    {formatCents(locale, quota.amountCents)}
-                  </span>
+                  <PlanAmount plan={quota} locale={locale} className="text-lg font-medium" />
                   {canManage && (
                     <span className="flex gap-2">
                       <button

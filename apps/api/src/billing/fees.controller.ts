@@ -1,4 +1,13 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  ConflictException,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import {
@@ -20,6 +29,7 @@ import {
   updateFeePeriod,
   updateFeePlan,
   updateStudentFee,
+  DuplicateFeePlanError,
   DuplicateSocioNumberError,
   type BillingSettings,
   type FeeAgeBand,
@@ -28,6 +38,44 @@ import {
   type FeePlan,
   type StudentFees,
 } from './fees.repository.js';
+
+/**
+ * The price list already answers this — round 5, 3.1.
+ *
+ * A 409 rather than a 400: nothing about the request is malformed, and the same
+ * body would have been accepted a moment before somebody else saved. The `code`
+ * is stable so the form can translate it; the prose is for a caller that is not
+ * our own screen.
+ *
+ * Both constraints get their own field hint, because they are two different
+ * things to fix — a mensalidade collides on level and lessons per week, a quota
+ * on its age band, and pointing at the wrong control is worse than pointing at
+ * none.
+ *
+ * **One field named per case, not two.** The mensalidade collision is really
+ * about the pair, but the prices panel renders `fields` by joining their
+ * translated values into a single line — so naming both the level and the
+ * frequency with the same key prints the sentence twice. The sentence already
+ * says "this level and periodicity"; the control it hangs on is the level.
+ */
+function refuseDuplicatePlan(error: unknown): never {
+  if (error instanceof DuplicateFeePlanError) {
+    throw new ConflictException(
+      error.which === 'quota'
+        ? {
+            code: 'fee_plan_quota_exists',
+            message: 'A membership fee already exists for that age band',
+            fields: { ageBand: 'fees.planQuotaExists' },
+          }
+        : {
+            code: 'fee_plan_exists',
+            message: 'A price for this level and periodicity already exists',
+            fields: { levelId: 'fees.planExists' },
+          },
+    );
+  }
+  throw error;
+}
 
 /**
  * The price list and what a student pays — POOLSE-42.
@@ -108,7 +156,12 @@ export class FeePlansController {
   ): Promise<{ id: string }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
-    return { id: await createFeePlan(organizationId, facilityId, readPlan(body)) };
+
+    try {
+      return { id: await createFeePlan(organizationId, facilityId, readPlan(body)) };
+    } catch (error) {
+      refuseDuplicatePlan(error);
+    }
   }
 
   @Patch(':id')
@@ -120,8 +173,12 @@ export class FeePlansController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    if (!(await updateFeePlan(organizationId, facilityId, id, readPlan(body)))) {
-      throw new BadRequestException('No such plan');
+    try {
+      if (!(await updateFeePlan(organizationId, facilityId, id, readPlan(body)))) {
+        throw new BadRequestException('No such plan');
+      }
+    } catch (error) {
+      refuseDuplicatePlan(error);
     }
     return { updated: true };
   }

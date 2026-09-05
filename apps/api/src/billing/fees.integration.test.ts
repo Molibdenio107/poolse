@@ -851,3 +851,144 @@ test('a price says which turmas it governs', async () => {
     });
   });
 });
+
+/**
+ * Round 5, ticket 3.1 — the price list saying it has already answered this.
+ *
+ * The schema has enforced both of these since the price list was built; what was
+ * missing was the translation from `23505` into something a form can say, so a
+ * second price for a level and frequency that already had one arrived as a 500.
+ * An operator was shown an error page for the club telling itself it has a price
+ * for that already.
+ *
+ * The third assertion is the one that stops the fix going too far: a level
+ * taught a *different* number of times a week is a different price and has to
+ * stay addable, or the constraint would be reported for rows it does not cover.
+ */
+test('3.1 — a price the list already holds is refused as a conflict, not a crash', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { plan, level } = await priceList(tenant);
+    const plans = new FeePlansController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      // Same level, same lessons per week — the collision the ticket describes.
+      await expectStatus(
+        () =>
+          plans.create(tenant.facilityId, {
+            kind: 'mensalidade',
+            levelId: level,
+            lessonsPerWeek: 2,
+            amountCents: 4000,
+          }),
+        409,
+      );
+
+      // Editing an existing price onto that same pair is the same collision.
+      const other = (
+        await plans.create(tenant.facilityId, {
+          kind: 'mensalidade',
+          levelId: level,
+          lessonsPerWeek: 3,
+          amountCents: 4200,
+        })
+      ).id;
+
+      await expectStatus(
+        () =>
+          plans.update(tenant.facilityId, other, {
+            kind: 'mensalidade',
+            levelId: level,
+            lessonsPerWeek: 2,
+            amountCents: 4200,
+          }),
+        409,
+      );
+
+      // And a frequency nobody has priced yet is still an ordinary save — the
+      // constraint covers the pair, not the level.
+      const fourth = await plans.create(tenant.facilityId, {
+        kind: 'mensalidade',
+        levelId: level,
+        lessonsPerWeek: 4,
+        amountCents: 4300,
+      });
+      assert.ok(fourth.id, 'a new frequency for a priced level is not a duplicate');
+      assert.notEqual(fourth.id, plan);
+    });
+  });
+});
+
+/**
+ * A club charges one membership rate per age band, and the second one is a 409.
+ *
+ * A separate index from the mensalidade one and a separate sentence: a quota
+ * collides on its band, and pointing somebody at the level control they never
+ * touched would be worse than saying nothing.
+ */
+test('3.1 — a second quota for one age band is refused the same way', async () => {
+  await withScratchTenant(async (tenant) => {
+    const plans = new FeePlansController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await plans.create(tenant.facilityId, {
+        kind: 'quota',
+        amountCents: 5000,
+        ageBand: 'any',
+      });
+
+      await expectStatus(
+        () => plans.create(tenant.facilityId, { kind: 'quota', amountCents: 6000, ageBand: 'any' }),
+        409,
+      );
+
+      // A different band is a different rate, and stays addable — the rule the
+      // banded quota was added for in the first place.
+      const child = await plans.create(tenant.facilityId, {
+        kind: 'quota',
+        amountCents: 2500,
+        ageBand: 'under_18',
+      });
+      assert.ok(child.id, 'a child rate beside an unbanded quota is not a duplicate');
+    });
+  });
+});
+
+/**
+ * Round 5, ticket 3.0 — the price list shows what it charges.
+ *
+ * `amountCents` is monthly and the column reads as a total, so a club billing
+ * quarterly at 5% off saw 35,00 where it invoices 99,75. The total rides along
+ * from SQL rather than being multiplied in the web app, so the price list and a
+ * family's snapshot round through the same function.
+ */
+test('3.0 — a plan carries the total its periodicity actually charges', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { trimestral, level } = await priceList(tenant);
+    const plans = new FeePlansController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await plans.create(tenant.facilityId, {
+        kind: 'mensalidade',
+        levelId: level,
+        lessonsPerWeek: 3,
+        amountCents: 3500,
+        defaultFeePeriodId: trimestral,
+      });
+
+      const { plans: list } = await plans.list(tenant.facilityId);
+      const quarterly = list.find((row) => row.lessonsPerWeek === 3);
+
+      // 35,00 x 3 months, less 5% — rounded once, by fee_total_cents.
+      assert.equal(quarterly?.periodTotalCents, 9975);
+      assert.equal(quarterly?.periodMonths, 3);
+      assert.equal(quarterly?.periodDiscountPercent, 5);
+      assert.equal(quarterly?.amountCents, 3500, 'the monthly amount is untouched');
+
+      // The plan priceList made names no period, so there is nothing to discount
+      // by and the list says so rather than inventing a periodicity.
+      const monthlyOnly = list.find((row) => row.lessonsPerWeek === 2);
+      assert.equal(monthlyOnly?.periodTotalCents, null);
+      assert.equal(monthlyOnly?.periodMonths, null);
+    });
+  });
+});
