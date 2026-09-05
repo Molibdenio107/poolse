@@ -19,3 +19,7 @@ This file is for the calls themselves.
 - **2026-09-05** — Partnership bookings count as zero against a tank ceiling, because they carry no headcount. Revisit if partner groups ever gain one.
 - **2026-09-05** — The per-session restore endpoint is reinstated, owner/admin only, so ticket 9.6's Undo can work. This reverses backlog round 3, story 5, which removed the operator-facing restore deliberately — reversed on request, not by drift.
 - **2026-09-05** — Lost and found records that a student was told with a `student_notified_at` stamp on the item, not a new `student_notification` table. The notifications subsystem is phase 3.0 and is meant to be built once; a second store would be something for it to migrate away from.
+- **2026-09-05** — The water-quality importer makes no model call. The mapping step stays a `MatchSpec` like the other three, so an assisted matcher slots in at one call site if it is ever wanted.
+- **2026-09-05** — The water import is per tank, from the tank's own page. A row whose tank column names a different tank is refused rather than imported into whichever tank was open.
+- **2026-09-05** — An out-of-range reading imports with no warning of its own; only unreadable values refuse a row. Losing the day a pool was unsafe is the worst thing an importer of safety records could do.
+- **2026-09-05** — Ticket 5's wizard is built as its own leaner file; the extraction of a shared import wizard waits until there are four examples to generalise from rather than three.

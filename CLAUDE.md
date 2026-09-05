@@ -113,6 +113,12 @@ turns that into a 409 with the figures as fields, and `FormState.values` carries
 implementations of one sum agree until the day they do not. See `pool_capacity_respected`
 and `poolCapacityRefusal`.
 
+**An importer is a `MatchSpec`, never a new pipeline.** There are four — the register, the
+store room, the wall timetable and the water log. A new one is a field list, a synonym list
+and `matchFields` in `lib/<thing>-sheet.ts`, plus a preview/commit pair on one API route
+with a `commit` flag. Never two routes: what the operator was shown and what gets written
+have to come from one code path. The file is read on the Next server and never leaves it.
+
 **Capacity rules compose, they do not override.** An enrolment must fit its turma
 (`class_group.capacity`), the turmas sharing a slot must fit the tank (`pool.max_capacity`),
 and `lane_level_capacity` is a separate teaching judgement. A null ceiling means "not

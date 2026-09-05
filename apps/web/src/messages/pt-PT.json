@@ -10,6 +10,7 @@
     "reorderGrabbed": "{name} agarrado, posição {position} de {total}.",
     "reorderFailed": "Não foi possível guardar a nova ordem. A lista foi reposta.",
     "back": "Voltar",
+    "close": "Fechar",
     "copy": "Copiar",
     "copied": "Copiado",
     "backToDashboard": "Voltar ao painel",
@@ -386,7 +387,54 @@
     "limitReached": "O seu plano inclui uma instalação. Para gerir mais do que um local, é preciso mudar de plano.",
     "maxCapacityLabel": "Capacidade máxima",
     "maxCapacityHint": "Alunos autorizados na água em simultâneo, somando todas as turmas.",
-    "maxCapacityUnlimited": "Sem limite definido — as turmas deste tanque não são limitadas."
+    "maxCapacityUnlimited": "Sem limite definido — as turmas deste tanque não são limitadas.",
+    "waterImport": {
+      "action": "Importar leituras",
+      "hint": "Um registo de água em .xlsx ou .csv, ou arraste um para esta página.",
+      "drop": "Largue o registo de água para o importar",
+      "choose": "Escolha um ficheiro, ou arraste um para qualquer ponto desta página.",
+      "pick": "Escolher ficheiro",
+      "sheet": "Folha",
+      "unmapped": "— não importar —",
+      "column": "Coluna {at}",
+      "needBoth": "Indique pelo menos uma data e uma leitura antes de verificar o ficheiro.",
+      "check": "Verificar o ficheiro",
+      "commit": "{count, plural, =0 {Não importar nada} one {Importar # leitura} other {Importar # leituras}}",
+      "summary": "{total} linhas lidas. {importable} podem ser importadas, {refused} não.",
+      "done": "{created, plural, one {# leitura importada} other {# leituras importadas}}. {skipped, plural, =0 {} one {# deixada de fora} other {# deixadas de fora}}",
+      "line": "Linha",
+      "readings": "Leituras",
+      "state": "A importar",
+      "willImport": "Vai ser importada",
+      "failed": "Não foi possível importar as leituras.",
+      "problem": {
+        "dateMissing": "Sem data",
+        "dateInvalid": "Não foi possível ler a data",
+        "timeInvalid": "Não foi possível ler a hora",
+        "noReadings": "Sem leituras nesta linha",
+        "valueInvalid": "Não é um número: {metrics}",
+        "otherPool": "Pertence a outro tanque"
+      },
+      "warning": {
+        "duplicateInFile": "Repete uma linha anterior",
+        "alreadyRecorded": "Já registada neste tanque"
+      },
+      "field": {
+        "takenOn": "Data",
+        "takenTime": "Hora",
+        "pool": "Tanque",
+        "notes": "Notas",
+        "ph": "pH",
+        "temperature": "Temperatura",
+        "free_chlorine": "Cloro livre",
+        "combined_chlorine": "Cloro combinado",
+        "total_alkalinity": "Alcalinidade total",
+        "calcium_hardness": "Dureza cálcica",
+        "cyanuric_acid": "Ácido cianúrico",
+        "turbidity": "Turvação",
+        "salt": "Sal"
+      }
+    }
   },
   "classes": {
     "title": "Turmas",

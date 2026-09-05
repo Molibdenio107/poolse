@@ -50,3 +50,45 @@ This is one of three capacity rules and they compose rather than override:
 | `class_group.capacity` | How many places does this turma promise? |
 | `lane_level_capacity` | How many of this level fit in one lane? |
 | `pool.max_capacity` | How many bodies are in the water at once? |
+
+
+## Water quality
+
+Readings live on the tank's own page: `/dashboard/facilities/pools/<id>`.
+
+| Action | Roles |
+|---|---|
+| Read the analyses and the trend | everybody |
+| Record one analysis by hand | owner, admin |
+| Import a water log | owner, admin |
+| Archive an analysis | owner, admin |
+
+Nine metrics — pH, temperature, free and combined chlorine, total alkalinity,
+calcium hardness, cyanuric acid, turbidity, salt. The **unit is the server's**, from
+`METRIC_UNITS`: a file cannot talk a club into recording pH in ppm.
+
+Five of them have a published band a Portuguese municipal pool is inspected against; the
+other four get no invented one. A reading outside its band raises the "shut the pool?"
+notice, which offers and never acts.
+
+### Importing a log
+
+Upload → map the columns → check → commit, the same four steps as the register, the store
+room and the wall timetable. The **Import readings** button is in the page header, and a
+file dragged anywhere on the page opens the same flow.
+
+- **The file is read on the Next server and never leaves it.** What crosses to the API is
+  rows in Poolse's own field names.
+- **Headers are matched by synonyms, pt and en.** No model call. "Cloro combinado" and
+  "Cloro livre" are told apart, and a lone "Cloro" is read as the free one.
+- **A row is one analysis**, with a column per metric; the wide row becomes several values.
+- **Dates** are read as ISO, `dd/mm/yyyy`, or an Excel serial. **Readings** accept the
+  Portuguese comma: `7,4` is 7.4. A thousands separator is refused rather than guessed,
+  because `1.234` means two different numbers in the two locales.
+- **An out-of-range reading imports.** It is the reason the log exists. Only a value that
+  is not a number, a date that is not a date, or a row with no readings is refused.
+- **A row naming another tank is refused**, so a club's all-tanks export cannot be imported
+  into whichever tank happened to be open.
+- **A repeated moment is a warning, not a refusal** — a re-uploaded month that overlaps the
+  last one is ordinary, and being told is enough.
+- Nothing is written until the operator commits; a preview writes nothing at all.

@@ -1,5 +1,11 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import {
+  checkAnalysisRows,
+  type AnalysisImportRow,
+  type AnalysisImportSummary,
+  type RawAnalysisRow,
+} from './analysis-import.js';
 
 /**
  * Water-quality analyses — round 4.
@@ -206,5 +212,147 @@ export async function archiveAnalysis(
     });
 
     return true;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// The import — round 5, ticket 5
+// ---------------------------------------------------------------------------
+//
+// The same arrangement as the register's and the store room's: one function,
+// called with `commit` false and then true, so a preview and the write that
+// follows it cannot be produced by two code paths that agree until the evening
+// they do not.
+
+export interface AnalysisImportRequest {
+  poolId: string;
+  rows: RawAnalysisRow[];
+  commit: boolean;
+  /**
+   * The row indexes the operator ticked, or null for "everything importable".
+   *
+   * Only consulted on a commit, and the server still refuses any row with a
+   * problem whatever arrives here — a tick on a broken row is a client that is
+   * out of date, not permission.
+   */
+  include: number[] | null;
+}
+
+export interface AnalysisImportResult {
+  rows: AnalysisImportRow[];
+  summary: AnalysisImportSummary;
+  /** Present only on a commit. */
+  created?: number;
+  /** Importable rows the operator did not tick. */
+  skipped?: number;
+}
+
+/**
+ * When this tank was last sampled, as the deduplicator needs it.
+ *
+ * Read as text in the facility's own reckoning rather than as a timestamp,
+ * because the sheet says "2026-09-01 08:30" and the column holds an instant. One
+ * conversion, done by Postgres, beats two done here in opposite directions.
+ *
+ * Unpaginated and comfortably so: a tank's log is a few hundred rows after
+ * years, held for the length of one request.
+ */
+async function recordedMoments(tx: Tx, poolId: string): Promise<Set<string>> {
+  const { rows } = await tx.query<{ moment: string; day: string }>(
+    `SELECT to_char(taken_at, 'YYYY-MM-DD HH24:MI') AS moment,
+            to_char(taken_at, 'YYYY-MM-DD') AS day
+       FROM pool_analysis
+      WHERE pool_id = $1 AND archived_at IS NULL`,
+    [poolId],
+  );
+
+  // Both keys, because a sheet with no time column dedupes on the day alone and
+  // one with a time column dedupes on the minute. Holding both means the same
+  // set answers either question.
+  const moments = new Set<string>();
+  for (const row of rows) {
+    moments.add(row.moment);
+    moments.add(row.day);
+  }
+  return moments;
+}
+
+/**
+ * Preview, or write.
+ *
+ * The whole commit is one transaction. A half-applied water log is worse than
+ * none: nobody can tell which half landed, and running it again doubles what
+ * did.
+ *
+ * Returns null when the tank does not exist in this organization — a stale page,
+ * or somebody else's pool id, which RLS makes indistinguishable from here.
+ */
+export async function runAnalysisImport(
+  organizationId: string,
+  membershipId: string | null,
+  request: AnalysisImportRequest,
+): Promise<AnalysisImportResult | null> {
+  return withOrg(organizationId, async (tx) => {
+    const pool = await tx.query<{ name: string }>(
+      `SELECT name FROM pool WHERE id = $1 AND archived_at IS NULL`,
+      [request.poolId],
+    );
+    const poolName = pool.rows[0]?.name;
+    if (poolName === undefined) return null;
+
+    const checked = checkAnalysisRows(request.rows, {
+      poolName,
+      existing: await recordedMoments(tx, request.poolId),
+    });
+
+    if (!request.commit) return checked;
+
+    const wanted = request.include === null ? null : new Set(request.include);
+    let created = 0;
+    let skipped = 0;
+
+    for (const row of checked.rows) {
+      if (!row.importable) continue;
+      if (wanted !== null && !wanted.has(row.index)) {
+        skipped += 1;
+        continue;
+      }
+
+      // Midnight when the sheet carries no time. A club that records the day but
+      // not the hour gets one reading a day in order, which is what its log
+      // means; inventing "now" would put yesterday's sample after today's.
+      const takenAt = `${row.takenOn} ${row.takenTime ?? '00:00'}`;
+
+      const inserted = await tx.query<{ id: string }>(
+        `INSERT INTO pool_analysis (organization_id, pool_id, taken_at, notes, recorded_by)
+         VALUES ($1, $2, $3::timestamptz, $4, $5)
+         RETURNING id`,
+        [organizationId, request.poolId, takenAt, row.notes, membershipId],
+      );
+
+      const id = inserted.rows[0]?.id;
+      if (!id) throw new Error('Could not record the analysis');
+
+      for (const measurement of row.values) {
+        // The unit comes from METRIC_UNITS, never from the file: a sheet cannot
+        // talk this club into recording pH in ppm.
+        await tx.query(
+          `INSERT INTO pool_analysis_value (organization_id, analysis_id, metric, value, unit)
+           VALUES ($1, $2, $3::pool_metric, $4, $5)`,
+          [organizationId, id, measurement.metric, measurement.value, METRIC_UNITS[measurement.metric]],
+        );
+      }
+
+      created += 1;
+    }
+
+    await recordAudit(tx, {
+      action: 'pool.analysesImported',
+      entityType: 'pool',
+      entityId: request.poolId,
+      data: { created, skipped, refused: checked.summary.refused },
+    });
+
+    return { ...checked, created, skipped };
   });
 }

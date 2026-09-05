@@ -19,9 +19,15 @@ import {
   listAnalyses,
   METRIC_UNITS,
   POOL_METRICS,
+  runAnalysisImport,
+  type AnalysisImportResult,
   type PoolAnalysis,
   type PoolMetric,
 } from './analyses.repository.js';
+import {
+  MAX_ANALYSIS_IMPORT_ROWS,
+  type RawAnalysisRow,
+} from './analysis-import.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   archiveFacility,
@@ -197,6 +203,38 @@ export class FacilitiesController {
     } catch (error) {
       throw asHttp(error);
     }
+  }
+
+  /**
+   * Import a club's water log — round 5, ticket 5.
+   *
+   * Preview then commit, one route with a flag, so what the operator was shown
+   * and what gets written cannot come from two code paths.
+   *
+   * Owner and admin, the same line `recordAnalysis` draws one method up. An
+   * import that took a role the single form refuses would be the permission
+   * model worked around by uploading a file.
+   *
+   * A literal segment under `pools/:poolId`, so it can never be read as an
+   * analysis whose id is the word "import".
+   */
+  @Post('pools/:poolId/analyses/import')
+  async importAnalyses(
+    @Param('poolId') poolId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<AnalysisImportResult> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+
+    const result = await runAnalysisImport(organizationId, membershipId, {
+      poolId,
+      rows: readAnalysisRows(body['rows']),
+      commit: body['commit'] === true,
+      include: readAnalysisInclude(body['include']),
+    });
+
+    if (result === null) throw new NotFoundException('No such pool');
+    return result;
   }
 
   @Post('analyses/:id/archive')
@@ -559,6 +597,57 @@ function positiveMetres(value: unknown, field: string): number | null {
     throw new BadRequestException(`${field} must be less than 1000 metres`);
   }
   return Math.round(parsed * 100) / 100;
+}
+
+/**
+ * The fields a water-log row may carry, off the wire.
+ *
+ * Unknown keys are dropped rather than refused: the web app owns the mapping and
+ * this list is the authority, so a client sending a field this build does not
+ * know is a client ahead of the server, not an attack.
+ */
+const ANALYSIS_FIELDS = new Set<string>([
+  'takenOn',
+  'takenTime',
+  'pool',
+  'notes',
+  ...POOL_METRICS,
+]);
+
+function readAnalysisRows(raw: unknown): RawAnalysisRow[] {
+  if (!Array.isArray(raw)) throw new BadRequestException('rows must be a list');
+  if (raw.length === 0) throw new BadRequestException('rows is empty');
+  if (raw.length > MAX_ANALYSIS_IMPORT_ROWS) {
+    throw new BadRequestException(`at most ${MAX_ANALYSIS_IMPORT_ROWS} rows in one import`);
+  }
+
+  return raw.map((entry) => {
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new BadRequestException('each row must be an object of field to value');
+    }
+
+    const row: RawAnalysisRow = {};
+    for (const [key, value] of Object.entries(entry as Record<string, unknown>)) {
+      if (!ANALYSIS_FIELDS.has(key)) continue;
+      if (value === null || value === undefined) continue;
+      row[key] = typeof value === 'string' ? value : String(value);
+    }
+    return row;
+  });
+}
+
+/** Row indexes, or null when the caller expressed no selection at all. */
+function readAnalysisInclude(raw: unknown): number[] | null {
+  if (raw === undefined || raw === null) return null;
+  if (!Array.isArray(raw)) throw new BadRequestException('include must be a list of row indexes');
+
+  return raw.map((entry) => {
+    const index = typeof entry === 'number' ? entry : Number(entry);
+    if (!Number.isInteger(index) || index < 0 || index >= MAX_ANALYSIS_IMPORT_ROWS) {
+      throw new BadRequestException('include must hold row indexes');
+    }
+    return index;
+  });
 }
 
 /**

@@ -10,6 +10,7 @@
     "reorderGrabbed": "{name} picked up, position {position} of {total}.",
     "reorderFailed": "The new order could not be saved. The list has been put back.",
     "back": "Back",
+    "close": "Close",
     "copy": "Copy",
     "copied": "Copied",
     "backToDashboard": "Back to dashboard",
@@ -386,7 +387,54 @@
     "limitReached": "Your plan includes one facility. Managing more than one site needs a change of plan.",
     "maxCapacityLabel": "Max capacity",
     "maxCapacityHint": "Students allowed in the water at once, across every class.",
-    "maxCapacityUnlimited": "No limit set — classes in this tank are not capped."
+    "maxCapacityUnlimited": "No limit set — classes in this tank are not capped.",
+    "waterImport": {
+      "action": "Import readings",
+      "hint": "An .xlsx or .csv water log, or drag one onto this page.",
+      "drop": "Drop the water log to import it",
+      "choose": "Choose a file, or drag one anywhere onto this page.",
+      "pick": "Choose a file",
+      "sheet": "Sheet",
+      "unmapped": "— not imported —",
+      "column": "Column {at}",
+      "needBoth": "Point at least a date and one reading at a column before checking the file.",
+      "check": "Check the file",
+      "commit": "{count, plural, =0 {Import nothing} one {Import # reading} other {Import # readings}}",
+      "summary": "{total} rows read. {importable} can be imported, {refused} cannot.",
+      "done": "{created, plural, one {# reading imported} other {# readings imported}}. {skipped, plural, =0 {} one {# left out} other {# left out}}",
+      "line": "Line",
+      "readings": "Readings",
+      "state": "Will import",
+      "willImport": "Will import",
+      "failed": "The readings could not be imported.",
+      "problem": {
+        "dateMissing": "No date",
+        "dateInvalid": "The date could not be read",
+        "timeInvalid": "The time could not be read",
+        "noReadings": "No readings on this line",
+        "valueInvalid": "Not a number: {metrics}",
+        "otherPool": "Belongs to another tank"
+      },
+      "warning": {
+        "duplicateInFile": "Repeats an earlier line",
+        "alreadyRecorded": "Already recorded for this tank"
+      },
+      "field": {
+        "takenOn": "Date",
+        "takenTime": "Time",
+        "pool": "Tank",
+        "notes": "Notes",
+        "ph": "pH",
+        "temperature": "Temperature",
+        "free_chlorine": "Free chlorine",
+        "combined_chlorine": "Combined chlorine",
+        "total_alkalinity": "Total alkalinity",
+        "calcium_hardness": "Calcium hardness",
+        "cyanuric_acid": "Cyanuric acid",
+        "turbidity": "Turbidity",
+        "salt": "Salt"
+      }
+    }
   },
   "classes": {
     "title": "Class groups",

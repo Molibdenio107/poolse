@@ -125,6 +125,16 @@ const TENANT_TABLES = [
    */
   'inventory_item_pool',
   'inventory_item',
+  /*
+   * The water log, before the tank it belongs to — round 5, ticket 5.
+   *
+   * `pool_analysis_value` cascades from its analysis, so it needs no line of its
+   * own; `pool_analysis` does not cascade from `pool`, for the same reason a
+   * lane does not. This announced itself exactly as the comment above promises —
+   * a foreign-key violation during teardown, the first time a test wrote an
+   * analysis rather than only reading one.
+   */
+  'pool_analysis',
   'lane',
   'pool',
   'booking_category',
