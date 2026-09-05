@@ -63,14 +63,23 @@ export function PageShell({
           "Voltar" as content passes underneath. `z-10` is below the app bar's
           `z-20` and above the page.
 
-          Round 5: the padding used to be `pt-page-y` (2.5rem), which made this a
-          tall block whose text sat well below where it stuck — so as the page
+          The padding used to be `pt-page-y` (2.5rem), which made this a tall
+          block whose text sat well below where it stuck — so as the page
           scrolled, the link drifted out of the strip and the strip covered it.
-          Symmetric `py-2` and a hairline make it an actual bar, and the label
-          stays put and readable at every scroll position.
+          Symmetric `py-2` is what fixed that, and it stays: the label holds its
+          position at every scroll offset.
+
+          **The hairline under it is gone — round 5, ticket 2.** It was added
+          alongside that padding to make the strip read as a bar, and it is the
+          line the ticket asks to remove app-wide. Removing it here is the whole
+          change: no page draws its own, and the three pages that render a
+          `BackLink` in their body rather than through this prop never had one.
+          What it cost is only cosmetic — content still passes under an opaque
+          `bg-background` while scrolling, now without a rule marking the edge.
+          Nothing depended on the 1px for spacing.
         */}
         {back !== undefined && (
-          <div className="sticky top-app-bar z-10 -mx-page -mt-2 border-b border-border bg-background px-page py-2">
+          <div className="sticky top-app-bar z-10 -mx-page -mt-2 bg-background px-page py-2">
             <BackLink href={back.href} label={back.label} />
           </div>
         )}
