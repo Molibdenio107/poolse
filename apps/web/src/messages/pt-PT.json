@@ -831,7 +831,14 @@
     "outstanding": "{amount} por pagar",
     "allPaid": "Tudo pago",
     "quotaUnavailable": "Não há quota de sócio definida neste local, por isso não foi atribuída nenhuma. Crie um plano do tipo Quota de sócio na tabela de preços.",
-    "socioHint": "Marcar como sócio atribui automaticamente a quota deste local. Pode removê-la depois e continuar sócio — uma quota dispensada é um caso real."
+    "socioHint": "Marcar como sócio atribui automaticamente a quota deste local. Pode removê-la depois e continuar sócio — uma quota dispensada é um caso real.",
+    "membershipTitle": "Quota de sócio",
+    "membershipHint": "Se este aluno é sócio, e desde quando.",
+    "periodTotalTitle": "Total do período",
+    "periodSwitcher": "Que período",
+    "periodCurrent": "{date} (atual)",
+    "paidLabel": "Pago",
+    "notPaid": "Por pagar"
   },
   "students": {
     "title": "Alunos",

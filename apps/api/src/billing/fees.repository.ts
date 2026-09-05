@@ -119,6 +119,15 @@ export interface StudentFeeLine {
   dueOn: string | null;
   isPaid: boolean;
   paidOn: string | null;
+  /**
+   * Every period this line has been settled for, newest first — 10.0.
+   *
+   * The Paid toggle was always per period; what was missing was any way to see
+   * or reach a period other than the current one. This is the history the
+   * switcher steps through, and it is what makes "history is kept" checkable
+   * rather than a claim.
+   */
+  paidPeriods: string[];
   /** Past its due date and unsettled. What the list column and the penalty read. */
   isOverdue: boolean;
   /**
@@ -670,6 +679,7 @@ export async function studentFees(
       due_on: string | null;
       is_paid: boolean;
       paid_on: string | null;
+      paid_periods: string[];
       is_overdue: boolean;
       plan_amount_cents_now: number | null;
       band_changed: boolean;
@@ -692,6 +702,7 @@ export async function studentFees(
               to_char(cur.period_start, 'YYYY-MM-DD') AS current_period_start,
               to_char(fee_due_on(cur.period_start, f.payment_due_day), 'YYYY-MM-DD') AS due_on,
               (pay.id IS NOT NULL) AS is_paid,
+              coalesce(paid_hist.periods, ARRAY[]::text[]) AS paid_periods,
               to_char(pay.paid_on, 'YYYY-MM-DD') AS paid_on,
               -- Overdue is a fact about today, so it is decided here rather than
               -- on the client, where a stale page would age into a wrong answer.
@@ -722,6 +733,24 @@ export async function studentFees(
          ) cur ON true
          LEFT JOIN student_fee_payment pay
                 ON pay.student_fee_id = sf.id AND pay.period_start = cur.period_start
+         /*
+          * Every period this line has been settled for — round 5, ticket 10.0.
+          *
+          * The Paid toggle has always been per period; what was missing was any
+          * way to see or reach a period other than the current one. This is the
+          * history the switcher steps through, newest first so "last month" is
+          * the first place it looks.
+          *
+          * Aggregated in the same statement rather than fetched per line: a
+          * student on three plans would otherwise be four round trips, and the
+          * bound here is how many periods a club has billed, which is dozens.
+          */
+         LEFT JOIN LATERAL (
+           SELECT array_agg(to_char(hist.period_start, 'YYYY-MM-DD')
+                            ORDER BY hist.period_start DESC) AS periods
+             FROM student_fee_payment hist
+            WHERE hist.student_fee_id = sf.id
+         ) paid_hist ON true
          JOIN student st ON st.id = sf.student_id
          /*
           * The quota that applies to this student today.
@@ -911,6 +940,7 @@ export async function studentFees(
         dueOn: row.due_on,
         isPaid: row.is_paid,
         paidOn: row.paid_on,
+        paidPeriods: row.paid_periods,
         isOverdue: row.is_overdue,
         planAmountCentsNow: row.plan_amount_cents_now,
         bandChanged: row.band_changed,

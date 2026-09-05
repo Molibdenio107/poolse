@@ -120,6 +120,22 @@ export function FeesBlock({
   const sites = [...new Set(live.map((line) => line.facilityId))];
 
   return (
+    /*
+      Three sibling cards, not one — round 5, tickets 10.1 and 10.2.
+
+      This was a single card carrying four different things stacked on top of
+      each other: what the timetable puts this student on, what they pay for it,
+      what the club charges them as a member, and the total. Reading it meant
+      working out where one ended and the next began, and the membership form sat
+      at the bottom looking like a footnote to the fees above it rather than a
+      thing of its own.
+
+      Now: **Plans**, **Membership**, **Period total**, in that order, each with
+      its own heading and its own border. The order is the argument — the first
+      says what they attend, the second what they belong to, and the third adds
+      the two up. A total above its parts would be a figure nobody could check.
+    */
+    <>
     <section className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
       <div>
         <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -205,54 +221,9 @@ export function FeesBlock({
       })}
 
       {/*
-        The one number somebody reads out loud. Shown once, under everything,
-        including the quota — which is a line like any other and so is already in
-        the sum rather than added on afterwards by this component.
+        Lines that have finished, folded away. History rather than a bill: the
+        club still needs to be able to answer "what were they on last year".
       */}
-      {live.length > 0 && (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded bg-surface-muted p-4">
-          <span className="font-medium">{t('fees.grandTotal')}</span>
-          <span className="flex flex-col items-end">
-            <span className="text-xl font-medium tabular-nums">
-              {formatCents(locale, grandTotal)}
-            </span>
-            {outstanding > 0 ? (
-              <span className="flex flex-col items-end">
-                <span className="text-sm text-warning tabular-nums">
-                  {t('fees.outstanding', { amount: formatCents(locale, outstanding) })}
-                </span>
-                {/*
-                  Each penalty named for what it is on — round 5. A club may fine
-                  a late mensalidade and forgive a late quota, and a single
-                  figure could not be checked against either rule.
-                */}
-                {fees.penalties.mensalidadeCents > 0 && (
-                  <span className="flex items-center gap-1.5 text-sm text-danger">
-                    <AlertTriangle aria-hidden className="size-3.5" />
-                    {t('fees.penaltyMensalidadeApplied', {
-                      amount: formatCents(locale, fees.penalties.mensalidadeCents),
-                    })}
-                  </span>
-                )}
-                {fees.penalties.quotaCents > 0 && (
-                  <span className="flex items-center gap-1.5 text-sm text-danger">
-                    <AlertTriangle aria-hidden className="size-3.5" />
-                    {t('fees.penaltyQuotaApplied', {
-                      amount: formatCents(locale, fees.penalties.quotaCents),
-                    })}
-                  </span>
-                )}
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 text-sm text-primary">
-                <Check aria-hidden className="size-4" />
-                {t('fees.allPaid')}
-              </span>
-            )}
-          </span>
-        </div>
-      )}
-
       {ended.length > 0 && (
         <details className="text-sm">
           <summary className="cursor-pointer text-foreground-muted hover:text-foreground">
@@ -273,8 +244,89 @@ export function FeesBlock({
         </details>
       )}
 
+    </section>
+
+    {/*
+      Period total, in a card of its own — 10.2.
+
+      It was a tinted strip at the bottom of the fees card, which put the
+      answer in the same visual box as the workings. On its own it can be
+      found without reading what is above it — and it sits *below* Plans and
+      Membership because it is their sum, and a total above its parts is a
+      figure nobody can check.
+
+      The discount is already in it: every amount comes from fee_total_cents
+      in SQL, the same function ticket 3 put behind the price list, so this
+      and the price list cannot round differently.
+    */}
+    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+      <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+        {t('fees.periodTotalTitle')}
+      </h2>
+    {live.length > 0 && (
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded bg-surface-muted p-4">
+        <span className="font-medium">{t('fees.grandTotal')}</span>
+        <span className="flex flex-col items-end">
+          <span className="text-xl font-medium tabular-nums">
+            {formatCents(locale, grandTotal)}
+          </span>
+          {outstanding > 0 ? (
+            <span className="flex flex-col items-end">
+              <span className="text-sm text-warning tabular-nums">
+                {t('fees.outstanding', { amount: formatCents(locale, outstanding) })}
+              </span>
+              {/*
+                Each penalty named for what it is on — round 5. A club may fine
+                a late mensalidade and forgive a late quota, and a single
+                figure could not be checked against either rule.
+              */}
+              {fees.penalties.mensalidadeCents > 0 && (
+                <span className="flex items-center gap-1.5 text-sm text-danger">
+                  <AlertTriangle aria-hidden className="size-3.5" />
+                  {t('fees.penaltyMensalidadeApplied', {
+                    amount: formatCents(locale, fees.penalties.mensalidadeCents),
+                  })}
+                </span>
+              )}
+              {fees.penalties.quotaCents > 0 && (
+                <span className="flex items-center gap-1.5 text-sm text-danger">
+                  <AlertTriangle aria-hidden className="size-3.5" />
+                  {t('fees.penaltyQuotaApplied', {
+                    amount: formatCents(locale, fees.penalties.quotaCents),
+                  })}
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-sm text-primary">
+              <Check aria-hidden className="size-4" />
+              {t('fees.allPaid')}
+            </span>
+          )}
+        </span>
+      </div>
+    )}
+    </section>
+
+    {/*
+      Membership, as its own card — 10.1.
+
+      It was the last block inside the fees card, which made a club's quota read
+      as one more line of what this student pays. It is not: being a sócio is a
+      fact about the person that happens to carry a fee, and the form that sets
+      it belongs beside the plans rather than under them.
+    */}
+    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+      <div>
+        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {t('fees.membershipTitle')}
+        </h2>
+        <p className="mt-1 text-sm text-foreground-muted">{t('fees.membershipHint')}</p>
+      </div>
+
       <SocioForm studentId={studentId} socio={fees.socio} />
     </section>
+    </>
   );
 }
 
@@ -296,6 +348,31 @@ function FeeRow({
   const [, markPaid, marking] = useSavedAction(markPaidAction, INITIAL);
 
   const discounted = line.payableCents !== line.periodTotalCents;
+
+  /*
+   * Which period the Paid toggle is talking about — round 5, ticket 10.0.
+   *
+   * The current one by default, because "has this month been paid" is the
+   * question somebody opens this screen with. The rest are what has already been
+   * settled, newest first, so stepping back is stepping through real history
+   * rather than through an invented calendar — a club that started in March has
+   * no February to offer.
+   *
+   * The current period leads the list even when it is unpaid and therefore not
+   * in `paidPeriods`; `Set` is what keeps it from appearing twice on a month
+   * that has been settled.
+   */
+  const periodChoices = [
+    ...new Set(
+      [line.currentPeriodStart, ...line.paidPeriods].filter(
+        (value): value is string => value !== null,
+      ),
+    ),
+  ];
+  const [period, setPeriod] = useState<string | null>(line.currentPeriodStart);
+  const onCurrent = period === line.currentPeriodStart;
+  // A past period is settled exactly when it is in the history.
+  const showingPaid = onCurrent ? line.isPaid : period !== null && line.paidPeriods.includes(period);
 
   return (
     <li className="flex flex-col gap-2 py-3 first:pt-0">
@@ -367,32 +444,72 @@ function FeeRow({
 
           Text beside the mark, never colour alone.
         */}
-        <form action={markPaid} className="flex items-center">
+        <form action={markPaid} className="flex items-center gap-2">
           <input type="hidden" name="studentId" value={studentId} />
           <input type="hidden" name="feeId" value={line.id} />
-          <input type="hidden" name="isPaid" value={line.isPaid ? 'false' : 'true'} />
-          <input type="hidden" name="periodStart" value={line.currentPeriodStart ?? ''} />
+          <input type="hidden" name="isPaid" value={showingPaid ? 'false' : 'true'} />
+          <input type="hidden" name="periodStart" value={period ?? ''} />
           <button
             type="submit"
             // An ended line has no occurrence to settle, so there is nothing to
             // press — and pressing it would write a payment for a null period.
-            disabled={marking || line.currentPeriodStart === null}
-            aria-pressed={line.isPaid}
+            disabled={marking || period === null}
+            aria-pressed={showingPaid}
             className={cn(
               'flex items-center gap-1.5 rounded px-2 py-0.5',
-              line.isPaid && 'bg-primary/10 text-primary',
-              !line.isPaid && line.isOverdue && 'bg-danger/10 text-danger',
-              !line.isPaid && !line.isOverdue &&
+              showingPaid && 'bg-primary/10 text-primary',
+              !showingPaid && onCurrent && line.isOverdue && 'bg-danger/10 text-danger',
+              !showingPaid && !(onCurrent && line.isOverdue) &&
                 'border border-border text-foreground-muted hover:bg-surface-muted',
             )}
           >
-            <Check aria-hidden className={cn('size-3.5', !line.isPaid && 'opacity-40')} />
-            {line.isPaid
-              ? t('fees.paidOn', { date: line.paidOn ?? '' })
-              : line.isOverdue
+            <Check aria-hidden className={cn('size-3.5', !showingPaid && 'opacity-40')} />
+            {showingPaid
+              ? onCurrent
+                ? t('fees.paidOn', { date: line.paidOn ?? '' })
+                : t('fees.paidLabel')
+              : onCurrent && line.isOverdue
                 ? t('fees.overdueSince', { date: line.dueOn ?? '' })
-                : t('fees.dueBy', { date: line.dueOn ?? '' })}
+                : onCurrent
+                  ? t('fees.dueBy', { date: line.dueOn ?? '' })
+                  : t('fees.notPaid')}
           </button>
+
+          {/*
+            The period switcher — round 5, ticket 10.0.
+
+            The toggle was always per period; there was simply no way to reach a
+            period other than the current one, so "history is kept" was true in
+            the table and invisible on the screen.
+
+            Only offered where there *is* history. A club in its first month
+            would otherwise get a select with one option, which is a control that
+            asks a question with a single answer.
+
+            The current period leads and is the default, so the ordinary case —
+            "has this month been paid" — costs nobody an extra click.
+          */}
+          {periodChoices.length > 1 && (
+            <>
+              <label htmlFor={`period-${line.id}`} className="sr-only">
+                {t('fees.periodSwitcher')}
+              </label>
+              <select
+                id={`period-${line.id}`}
+                value={period ?? ''}
+                onChange={(event) => setPeriod(event.target.value)}
+                className="rounded border border-border bg-surface px-1.5 py-0.5 text-sm tabular-nums"
+              >
+                {periodChoices.map((choice) => (
+                  <option key={choice} value={choice}>
+                    {choice === line.currentPeriodStart
+                      ? t('fees.periodCurrent', { date: choice })
+                      : choice}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </form>
 
         <span className="ml-auto flex gap-2">

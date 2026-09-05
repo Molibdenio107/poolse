@@ -1059,6 +1059,8 @@ export interface StudentFeeLine {
   dueOn: string | null;
   isPaid: boolean;
   paidOn: string | null;
+  /** Every period this line has been settled for, newest first — 10.0. */
+  paidPeriods: string[];
   isOverdue: boolean;
   /** Set only when the plan has moved on — that is the marker, and the whole rule. */
   planAmountCentsNow: number | null;

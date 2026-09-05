@@ -831,7 +831,14 @@
     "outstanding": "{amount} outstanding",
     "allPaid": "All paid",
     "quotaUnavailable": "This site has no membership subscription defined, so none was attached. Add a plan of type Membership subscription to the price list.",
-    "socioHint": "Marking somebody a member attaches this site's subscription automatically. You can remove it afterwards and they stay a member — a waived subscription is a real case."
+    "socioHint": "Marking somebody a member attaches this site's subscription automatically. You can remove it afterwards and they stay a member — a waived subscription is a real case.",
+    "membershipTitle": "Membership",
+    "membershipHint": "Whether this student is a sócio, and since when.",
+    "periodTotalTitle": "Period total",
+    "periodSwitcher": "Which period",
+    "periodCurrent": "{date} (current)",
+    "paidLabel": "Paid",
+    "notPaid": "Not paid"
   },
   "students": {
     "title": "Students",
