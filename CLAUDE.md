@@ -164,6 +164,12 @@ in `numeric` with an explicit unit column — pH, °C, ppm and kWh do not share 
 **Times are stored UTC, displayed in the facility's timezone.** Class schedules are the
 place this bites; get it right once in the scheduling layer.
 
+**One content width, and the calendar is the single exception.** `PageShell` caps every page
+at `max-w-page`; `width="wide"` exists for a screen whose content is a grid rather than prose,
+and the calendar is meant to stay its only caller. A second caller is a decision to take out
+loud, not a tidy-up — if a third appears, ask what those pages have in common instead of
+widening them one at a time.
+
 **A dated grid is drawn from minutes, not from rows.** The calendar places blocks at
 `top = minutes × PX_PER_MINUTE` from `lib/calendar-scale.ts`; a slot-as-table-row makes a
 45-minute class in a 60-minute slot read as an hour. One scale constant, shared by the

@@ -15,7 +15,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import type { GridBooking, GridLane, GridSlot } from '@/lib/api';
+import type { FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 
 /** Only what a colour and a legend need; the API sends them already ordered. */
 export type CalendarLevel = { id: string; name: string };
@@ -66,13 +66,19 @@ import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
  * the old one felt clunky.
  */
 
-/** One lane column. Wide enough for "Iniciados A" and an instructor's name. */
-const COL_WIDTH = 116;
+/**
+ * One lane column.
+ *
+ * Narrowed in round 6 once the header stopped repeating "Pista" on every column:
+ * the widest thing a column has to carry is now a turma's name, which truncates,
+ * rather than a heading that had to be read in full.
+ */
+const COL_WIDTH = 92;
 
 /** The time gutter down the left. */
 const GUTTER = 56;
 
-const DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
+const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
 export interface CalendarGridProps {
   /** Monday of the week on screen, ISO. */
@@ -82,6 +88,13 @@ export interface CalendarGridProps {
   /** Set only on the week containing today. Drives the now-line and the fade. */
   todayWeekday?: number | undefined;
   closures: { weekday: number; reason: string }[];
+  /**
+   * The site's opening hours, one row per weekday.
+   *
+   * A day the pool does not open is not drawn — seven columns of which two are
+   * empty is two columns of nothing on a screen that is short of width.
+   */
+  hours: FacilityDay[];
   slots: GridSlot[];
   lanes: GridLane[];
   pools: { id: string; name: string }[];
@@ -139,7 +152,31 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
     bookings,
     levels,
     canManage,
+    hours,
   } = props;
+
+  /*
+   * The days actually drawn.
+   *
+   * Opening hours decide it, with one exception that round 5 settled and this
+   * keeps: **a closed day that still has a class on it is drawn anyway**. A club
+   * that stops opening on Saturday does not thereby delete its Saturday classes,
+   * and a class you cannot see is a class you cannot move. It comes back shaded,
+   * with its blocks greyed, which is the screen saying "this should not be here"
+   * rather than pretending it is not.
+   */
+  const days = useMemo(() => {
+    const open = new Set(hours.filter((day) => day.available).map((day) => day.weekday));
+    const busy = new Set(bookings.map((booking) => booking.weekday));
+    const shownDays = ALL_DAYS.filter((weekday) => open.has(weekday) || busy.has(weekday));
+    // A facility with no hours recorded at all would otherwise render nothing.
+    return shownDays.length === 0 ? [...ALL_DAYS] : shownDays;
+  }, [hours, bookings]);
+
+  const openOn = useCallback(
+    (weekday: number) => hours.find((day) => day.weekday === weekday)?.available ?? true,
+    [hours],
+  );
 
   /*
    * One pool at a time when the club has more than one.
@@ -170,6 +207,24 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   const closureOf = useCallback(
     (weekday: number) => closures.find((closure) => closure.weekday === weekday) ?? null,
     [closures],
+  );
+
+  /*
+   * Which days' classes are drawn faded, and why it is only ever cosmetic.
+   *
+   * A holiday or a shutdown, and any day already past. Both mean "nothing is
+   * expected to happen here", which is worth seeing at a glance on a week that is
+   * otherwise uniform — and neither is a reason to stop somebody moving the
+   * block. Round 5 made past classes undraggable; round 6 reverses that on
+   * request. Dragging Monday's class to Thursday is ordinary planning, and the
+   * server has always been the thing that refuses an impossible move.
+   */
+  const dimmed = useCallback(
+    (weekday: number) =>
+      closureOf(weekday) !== null ||
+      !openOn(weekday) ||
+      (todayWeekday !== undefined && weekday < todayWeekday),
+    [closureOf, openOn, todayWeekday],
   );
 
   /*
@@ -495,7 +550,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         >
           <div className="min-w-max">
             <Header
-              days={DAYS}
+              days={days}
               dayNames={dayNames}
               lanes={shownLanes}
               todayWeekday={todayWeekday}
@@ -505,12 +560,12 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
             <div className="relative flex">
               <Gutter range={range} height={height} />
 
-              {DAYS.map((weekday) => (
+              {days.map((weekday) => (
                 <div
                   key={weekday}
                   className={cn(
                     'flex border-l border-border',
-                    closureOf(weekday) !== null && 'bg-surface-muted/60',
+                    (closureOf(weekday) !== null || !openOn(weekday)) && 'bg-surface-muted/60',
                   )}
                 >
                   {shownLanes.map((lane) => (
@@ -520,7 +575,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                       lane={lane}
                       height={height}
                       range={range}
-                      disabled={!canManage || closureOf(weekday) !== null}
+                      disabled={!canManage || closureOf(weekday) !== null || !openOn(weekday)}
                       onCreate={props.onCreate}
                     />
                   ))}
@@ -544,7 +599,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                 one.
               */}
               <BlockLayer
-                days={DAYS}
+                days={days}
                 shown={shown}
                 lanes={shownLanes}
                 laneIndex={laneIndex}
@@ -554,6 +609,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                 ghost={ghost}
                 canManage={canManage}
                 todayWeekday={todayWeekday}
+                dimmed={dimmed}
                 renderDetail={props.renderDetail}
                 onOpenPlan={props.onOpenPlan}
                 onResizeStart={onResizeStart}
@@ -642,12 +698,24 @@ const Header = memo(function Header({
   todayWeekday?: number | undefined;
   closureOf: (weekday: number) => { reason: string } | null;
 }): React.ReactElement {
+  const t = useTranslations();
+
   return (
     <div className="sticky top-0 z-30 flex bg-surface">
+      {/*
+        The gutter's own two rows: nothing over the dates, and the word the
+        numbers beneath belong to. Naming the row once is what lets every column
+        below it be a digit instead of "Pista 1" eighty times.
+      */}
       <div
-        className="sticky left-0 z-40 shrink-0 border-b border-r border-border bg-surface"
+        className="sticky left-0 z-40 flex shrink-0 flex-col border-b border-r border-border bg-surface"
         style={{ width: GUTTER }}
-      />
+      >
+        <div className="flex-1 border-b border-border" />
+        <div className="px-1.5 py-0.5 text-right text-[0.6875rem] uppercase tracking-wide text-foreground-muted">
+          {t('grid.lanes')}
+        </div>
+      </div>
       {days.map((weekday) => (
         <div key={weekday} className="shrink-0 border-l border-border">
           <div
@@ -662,14 +730,22 @@ const Header = memo(function Header({
             {closureOf(weekday) !== null && ' · ' + closureOf(weekday)!.reason}
           </div>
           <div className="flex">
-            {lanes.map((lane) => (
+            {lanes.map((lane, index) => (
               <div
                 key={lane.id}
-                className="shrink-0 truncate border-b border-l border-border px-1.5 py-0.5 text-center text-[0.6875rem] text-foreground-muted"
+                className="shrink-0 border-b border-l border-border px-1.5 py-0.5 text-center text-[0.6875rem] tabular-nums text-foreground-muted"
                 style={{ width: COL_WIDTH }}
+                /*
+                  The number is the lane's place in the pool, not digits pulled
+                  out of whatever the club typed: a club with "Raia A" and
+                  "Central" has no digits to pull, and a mix of parsed numbers
+                  and positions would be a column headed 4 sitting third. The
+                  full name is one hover away and stays the thing the hover card
+                  and the printed sheet use.
+                */
                 title={lane.name}
               >
-                {lane.name}
+                {index + 1}
               </div>
             ))}
           </div>
@@ -833,6 +909,8 @@ interface LayerProps {
   onOpenPlan: CalendarGridProps['onOpenPlan'];
   onResizeStart: (booking: GridBooking, clientY: number) => void;
   justDragged: React.MutableRefObject<number>;
+  /** Faded: a holiday, a day the pool is shut, or a day already gone. */
+  dimmed: (weekday: number) => boolean;
 }
 
 function BlockLayer(props: LayerProps): React.ReactElement {
@@ -898,16 +976,22 @@ function Block({
   onOpenPlan,
   onResizeStart,
   justDragged,
+  dimmed,
 }: LayerProps & { booking: GridBooking; left: number; width: number }): React.ReactElement {
   const t = useTranslations();
 
   /*
-   * A lesson that has already happened is a record, not a plan — round 5, 9.1.
-   * Faded and undraggable, but still openable: the register of a class that
-   * happened is worth reading.
+   * Faded, and still draggable — round 6, reversing round 5's 9.1.
+   *
+   * Round 5 made past classes undraggable on the argument that moving one is
+   * rewriting the past. In use that reads as the grid being broken: the block
+   * looks like every other block and does not move. Fading says "this has
+   * happened" perfectly well on its own, and a club rearranging Monday from
+   * Wednesday is doing ordinary planning. The server refuses what is actually
+   * impossible; the interface no longer guesses on its behalf.
    */
-  const past = todayWeekday !== undefined && booking.weekday < todayWeekday;
-  const movable = canManage && !past;
+  const faded = dimmed(booking.weekday);
+  const movable = canManage;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: booking.id,
@@ -939,7 +1023,8 @@ function Block({
         'ring-1 ring-black/10',
         tint,
         movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
-        past && 'opacity-60',
+        // Enough to read as "not today" and still enough to read.
+        faded && 'opacity-55 saturate-50',
         // 150ms on hover elevation, and nothing at all while a drag is live.
         isDragging ? 'z-40 shadow-lg' : anyDrag ? '' : 'transition-shadow duration-150 hover:shadow-md',
       )}

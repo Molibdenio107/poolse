@@ -1896,6 +1896,7 @@
     }
   },
   "grid": {
+    "lanes": "Lanes",
     "time": "Time",
     "lane": "Lane",
     "pool": "Pool",

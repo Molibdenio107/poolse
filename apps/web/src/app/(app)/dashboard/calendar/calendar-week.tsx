@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Ban, ClipboardCheck } from 'lucide-react';
-import type { ClassGroup, GridBooking, GridLane, GridSlot } from '@/lib/api';
+import type { ClassGroup, FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 import { slotKey } from '@/lib/slot-key';
 import { startTimeOf } from '@/lib/calendar-scale';
 import { slotsFor, toMinutes } from '@/lib/grid-layout';
@@ -37,6 +37,7 @@ export function CalendarWeek({
   dayNames,
   todayWeekday,
   closures,
+  hours,
   slots,
   lanes,
   pools,
@@ -51,6 +52,7 @@ export function CalendarWeek({
   dayNames: Record<number, string>;
   todayWeekday?: number | undefined;
   closures: { weekday: number; reason: string }[];
+  hours: FacilityDay[];
   slots: GridSlot[];
   lanes: GridLane[];
   pools: { id: string; name: string }[];
@@ -272,6 +274,7 @@ export function CalendarWeek({
         dayNames={dayNames}
         todayWeekday={todayWeekday}
         closures={closures}
+        hours={hours}
         slots={slots}
         lanes={lanes}
         pools={pools}

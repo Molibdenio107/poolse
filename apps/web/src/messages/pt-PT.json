@@ -1896,6 +1896,7 @@
     }
   },
   "grid": {
+    "lanes": "Pistas",
     "time": "Horário",
     "lane": "Pista",
     "pool": "Tanque",

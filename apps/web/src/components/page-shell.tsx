@@ -13,9 +13,18 @@ import { cn } from '@/lib/utils';
  * time, always for a good local reason, and the only defence is that adding it
  * fails a check rather than looking tidy in review.
  *
- * **One content width, centred, and wide content scrolls inside itself.** Still
- * no `max-w` *variants* — the choice AC5 rejected was per-page widths, and that
- * stands. What changed is the single width itself: full-bleed reads as designed
+ * **One content width, centred, and wide content scrolls inside itself** — with
+ * exactly one exception, added in round 6 and named here so it stays one.
+ *
+ * AC5 rejected per-page widths and the reason still holds for every page made of
+ * text and forms: a paragraph 2,000px wide is unreadable, and letting each screen
+ * pick its own width is how an app stops looking like one app. What it did not
+ * anticipate is a screen whose content is a *grid* — seven days times the pool's
+ * lanes — where the cap is not protecting the reader from anything and is simply
+ * throwing away half the monitor. `width="wide"` is for that, and the calendar is
+ * the only caller. Adding a second one is a decision, not a tidy-up: if a third
+ * appears, the honest move is to ask what these pages have in common rather than
+ * to keep widening them one at a time. What changed is the single width itself: full-bleed reads as designed
  * at 1440 and as an accident at 2560, where a table row puts the name and its
  * action a forearm apart. The cap is `max-w-page` in the Tailwind config, so it
  * is one number for the whole app; below it the page is fluid and nothing about
@@ -37,6 +46,7 @@ export function PageShell({
   filters,
   children,
   className,
+  width = 'default',
 }: {
   title: string;
   subtitle?: string | undefined;
@@ -49,10 +59,20 @@ export function PageShell({
   children: React.ReactNode;
   /** For the content column only. Never for outer padding. */
   className?: string;
+  /**
+   * `wide` for a screen whose content is a grid rather than prose — see above.
+   * The calendar is the only caller and is meant to stay so.
+   */
+  width?: 'default' | 'wide';
 }): React.ReactElement {
   return (
     <main className="flex min-h-screen w-full justify-center px-page py-page-y">
-      <div className="flex w-full max-w-page flex-col gap-page-gap">
+      <div
+        className={cn(
+          'flex w-full flex-col gap-page-gap',
+          width === 'wide' ? 'max-w-page-wide' : 'max-w-page',
+        )}
+      >
         {/*
           Sticky, since round 4 — the way out of a screen must not be something
           you scroll back up to find.

@@ -24,8 +24,20 @@ Turmas screen goes on using `classes/schedule-board.tsx` for the recurring patte
 were one component told apart by whether a week was passed, which meant every change to the
 calendar was a change to Turmas as well.
 
-**Columns are day × pista, time down the left.** Seven days, each subdivided by lane, with a
-sticky two-row header and a sticky time gutter. A club with more than one pool sees a pool
+**Columns are day × pista, time down the left**, with a sticky two-row header and a sticky
+time gutter. The header names the row "Pistas" once and numbers the columns by each lane's
+place in its pool — the lane's own name is on hover, and is what the hover card and the
+printed sheet still use.
+
+**Only the weekdays the site opens on are drawn**, from the opening hours on the facility's
+own screen — with the exception round 5 settled: a closed day that still carries a class is
+drawn anyway, shaded, so the class can be seen and moved. A class you cannot see is a class
+you cannot fix.
+
+**The calendar is the one page with a wider content column.** Its content is a grid rather
+than prose, so the app's single width was throwing away half the monitor rather than
+protecting anybody's reading. See the note in `components/page-shell.tsx`; it is meant to
+stay the only caller. A club with more than one pool sees a pool
 picker and one pool at a time — three pools of eight lanes is 168 columns, which is not a
 first paint anybody can read.
 
@@ -54,8 +66,14 @@ the block goes back where it came from and the reason appears above the grid.
 
 Escape, or a click away, puts the block back and writes nothing.
 
-Classes on days already past are faded and cannot be dragged — a lesson that has happened is
-a record, not a plan — but they still open.
+Classes are faded on a day already past, on a public holiday, and on a day the pool is shut —
+all three mean "nothing is expected here", which is worth seeing at a glance on a week that is
+otherwise uniform.
+
+**Faded classes still drag.** Round 5 made past ones undraggable on the argument that moving
+one rewrites the past; in use that read as the grid being broken, because the block looks like
+every other block and does not move. Rearranging Monday from Wednesday is ordinary planning,
+and the server is what refuses a move that is actually impossible.
 
 Clicking empty space offers the club's unscheduled turmas and puts the chosen one on that
 day at that time. It does not open the new-turma form: that form deliberately carries no day

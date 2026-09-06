@@ -221,6 +221,7 @@ export default async function CalendarPage({
     <PageShell
       title={t('calendar.title')}
       subtitle={t('calendar.subtitle')}
+      width="wide"
       /*
         Importing the wall timetable — POOLSE-57, moved to the header in round
         5, ticket 9.0.
@@ -335,6 +336,12 @@ export default async function CalendarPage({
                 dayNames={dayNames}
                 todayWeekday={todayWeekday}
                 closures={closedDays}
+                /*
+                  The site's own opening hours. The grid draws only the weekdays
+                  the pool opens on — plus any that still carry a class, which is
+                  round 5's rule and stays.
+                */
+                hours={classes.facilities[0]?.hours ?? []}
                 slots={grid?.slots ?? []}
                 lanes={grid?.lanes ?? []}
                 pools={grid?.pools ?? []}

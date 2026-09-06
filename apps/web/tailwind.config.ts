@@ -141,6 +141,10 @@ export default {
          * small-screen behaviour is unchanged.
          */
         page: '80rem',
+        // Round 6, and the calendar alone — see the note in page-shell.tsx.
+        // Seven days of lanes on a 1440 monitor need the room; wider than this
+        // and the time gutter is a forearm from Sunday.
+        'page-wide': '104rem',
         /*
          * A single form control, and a column of them.
          *
