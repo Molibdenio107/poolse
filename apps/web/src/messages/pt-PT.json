@@ -1519,6 +1519,9 @@
     "guest": "Reposição"
   },
   "calendar": {
+    "resizeLanes": "Arraste para alterar as pistas ocupadas",
+    "lanesChanged": "{count, plural, one {Passa a ocupar 1 pista.} other {Passa a ocupar # pistas.}}",
+    "lanesEveryWeek": "As pistas pertencem à marcação semanal, por isso esta alteração vale para todas as semanas.",
     "placeHere": "Colocar turma aqui",
     "nothingToPlace": "Todas as turmas já estão na grelha. Crie uma nova para a colocar aqui.",
     "laneAfterwards": "A pista fica por definir — arraste o bloco para a pista certa depois de o colocar.",

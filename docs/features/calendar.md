@@ -52,11 +52,24 @@ evento and a manutenção take the neutral. Colour never carries meaning alone.
 The grid opens scrolled to the first class of the week, and on the week containing today it
 draws a line at the current time.
 
+**The card does not scroll vertically.** It is as tall as the day and the page scrolls
+instead, so a pool day is not read through a letterbox. The cost is that the day and lane
+headers scroll away with it: CSS cannot scroll one axis inside a container and stick to the
+viewport on the other, and the grid still needs its own horizontal scrolling for the lanes.
+What survives is the sideways stickiness — the time gutter stays pinned as you scroll across
+the week.
+
 ## Moving a class
 
-Drag a block to move it; drag its bottom edge to change how long it runs. Both snap to the
+Drag a block to move it. Drag its **bottom** edge to change how long it runs — snapped to the
 facility's own slot rows, falling back to the grid's granularity where no row covers that
-time.
+time. Drag its **left or right** edge to change how many pistas it takes; a booking always
+occupies a contiguous run of lanes, and one lane is the floor.
+
+A lane change applies to **every week**, and the confirmation says so with a single button
+rather than offering a choice. Lanes belong to the recurring booking: there is no
+per-occurrence field to put them in, so "this week only" is not something the data can
+express. A move or a duration change still asks the two-way question.
 
 **The block moves the moment it is dropped**, and a small popover at the drop point asks the
 one thing a drag cannot say for itself — whether this is *this week only* or *every week*.

@@ -1519,6 +1519,9 @@
     "guest": "Make-up"
   },
   "calendar": {
+    "resizeLanes": "Drag to change how many lanes it uses",
+    "lanesChanged": "{count, plural, one {It will use 1 lane.} other {It will use # lanes.}}",
+    "lanesEveryWeek": "Lanes belong to the weekly booking, so this change applies to every week.",
     "placeHere": "Put a class here",
     "nothingToPlace": "Every class is already on the grid. Create a new one to place it here.",
     "laneAfterwards": "The lane is not set — drag the block to the right lane once it is placed.",

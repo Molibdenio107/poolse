@@ -69,11 +69,13 @@ import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
 /**
  * One lane column.
  *
- * Narrowed in round 6 once the header stopped repeating "Pista" on every column:
- * the widest thing a column has to carry is now a turma's name, which truncates,
- * rather than a heading that had to be read in full.
+ * Narrowed twice in round 6. Once the header stopped repeating "Pista" on every
+ * column there was nothing left that had to be read in full: the widest thing a
+ * column carries is a turma's name, and a name truncates. At 64px a six-lane pool
+ * fits a week across a laptop without sideways scrolling, which is worth more
+ * than the tail of "Iniciados A" — the full name is on the block's hover card.
  */
-const COL_WIDTH = 92;
+const COL_WIDTH = 64;
 
 /** The time gutter down the left. */
 const GUTTER = 56;
@@ -138,6 +140,15 @@ interface ScopeAsk extends Pending {
   booking: GridBooking;
   x: number;
   y: number;
+  /**
+   * A lane change, which has only one possible answer.
+   *
+   * Lanes live on the recurring booking: `moveOccurrenceAction` carries a start
+   * time and nothing else, so "this week only" is not a thing the data can
+   * express. The popover says so and offers the one button, rather than offering
+   * a choice that would silently do the same thing either way.
+   */
+  seriesOnly?: boolean;
 }
 
 export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
@@ -396,7 +407,12 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
 
   // ---------------------------------------------------------------- resizing
 
-  const resizing = useRef<{ booking: GridBooking; from: number } | null>(null);
+  /** Which edge is being dragged, and where the pointer started. */
+  const resizing = useRef<{
+    booking: GridBooking;
+    edge: 'bottom' | 'left' | 'right';
+    from: number;
+  } | null>(null);
 
   // `up` reads the latest ghost without re-subscribing the window listeners each
   // time one arrives — re-binding two listeners per snap step would cost more
@@ -404,9 +420,12 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   const ghostRef = useRef<Pending | null>(null);
   ghostRef.current = ghost;
 
-  const onResizeStart = useCallback((booking: GridBooking, clientY: number) => {
-    resizing.current = { booking, from: clientY };
-  }, []);
+  const onResizeStart = useCallback(
+    (booking: GridBooking, edge: 'bottom' | 'left' | 'right', from: number) => {
+      resizing.current = { booking, edge, from };
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!canManage) return undefined;
@@ -415,8 +434,48 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       const state = resizing.current;
       if (state === null) return;
 
-      const { booking, from } = state;
+      const { booking, edge, from } = state;
       const startMinutes = toMinutes(booking.startTime);
+
+      /*
+       * Sideways: the run of lanes changes and nothing else does.
+       *
+       * A booking occupies a contiguous run — `laneIds` is "every lane it
+       * occupies, in position order" — so the right edge moves the end and the
+       * left edge moves the start, both clamped inside the lanes on screen. One
+       * lane is the floor: a class in no lanes is not a class.
+       */
+      if (edge !== 'bottom') {
+        const firstIndex = laneIndex.get(booking.laneIds[0] ?? '') ?? 0;
+        const lastIndex = firstIndex + Math.max(1, booking.laneIds.length) - 1;
+        const moved = Math.round((event.clientX - from) / COL_WIDTH);
+
+        const from0 =
+          edge === 'left'
+            ? Math.max(0, Math.min(firstIndex + moved, lastIndex))
+            : firstIndex;
+        const to0 =
+          edge === 'right'
+            ? Math.min(shownLanes.length - 1, Math.max(lastIndex + moved, firstIndex))
+            : lastIndex;
+
+        const laneIds = shownLanes.slice(from0, to0 + 1).map((lane) => lane.id);
+        if (laneIds.length === 0) return;
+
+        setGhost((current) =>
+          current !== null && current.laneIds.join() === laneIds.join()
+            ? current
+            : {
+                bookingId: booking.id,
+                weekday: booking.weekday,
+                laneIds,
+                startMinutes,
+                durationMinutes: booking.durationMinutes,
+              },
+        );
+        return;
+      }
+
       const durationMinutes = snapDuration(
         startMinutes,
         startMinutes + booking.durationMinutes + pxToMinutes(event.clientY - from),
@@ -444,10 +503,21 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       resizing.current = null;
       setGhost(null);
       if (state === null || target === null) return;
-      if (target.durationMinutes === state.booking.durationMinutes) return;
+
+      const sideways = state.edge !== 'bottom';
+      const unchanged = sideways
+        ? target.laneIds.join() === state.booking.laneIds.join()
+        : target.durationMinutes === state.booking.durationMinutes;
+      if (unchanged) return;
 
       setPending((current) => new Map(current).set(state.booking.id, target));
-      setAsk({ ...target, booking: state.booking, x: 0, y: 0 });
+      setAsk({
+        ...target,
+        booking: state.booking,
+        x: 0,
+        y: 0,
+        ...(sideways ? { seriesOnly: true } : {}),
+      });
     }
 
     window.addEventListener('pointermove', move);
@@ -456,7 +526,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
     };
-  }, [canManage, slots, step]);
+  }, [canManage, slots, step, laneIndex, shownLanes]);
 
   // ------------------------------------------------------------ the decision
 
@@ -515,10 +585,20 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
     const node = scroller.current;
     if (node === null || bookings.length === 0) return;
 
+    /*
+     * The window, not the card: the card no longer scrolls vertically.
+     *
+     * Measured from the card's own position in the document so the first class
+     * lands just under the top of the viewport, with half an hour of headroom
+     * above it — a club whose grid opens at six otherwise starts on two hours of
+     * empty canvas, and the first thing anybody does is scroll past it.
+     */
     const earliest = Math.min(...bookings.map((booking) => toMinutes(booking.startTime)));
-    node.scrollTop = Math.max(0, minutesToPx(earliest - range.startMinutes - 30));
+    const offset = minutesToPx(earliest - range.startMinutes - 30);
+    const top = node.getBoundingClientRect().top + window.scrollY + Math.max(0, offset);
+    window.scrollTo({ top: Math.max(0, top - 16), behavior: 'auto' });
     // Only when the week changes. Re-running it on every render would yank the
-    // grid back up under somebody who had scrolled away.
+    // page back under somebody who had scrolled away.
   }, [props.weekStart, bookings.length, range.startMinutes]);
 
   return (
@@ -544,9 +624,24 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         onDragMove={onDragMove}
         onDragEnd={onDragEnd}
       >
+        {/*
+          Horizontal scrolling only — round 6.
+
+          The card used to cap at 70vh and scroll inside itself, which meant a
+          pool day was read through a letterbox. It is now as tall as the day, so
+          there is nothing to scroll vertically and the page takes over.
+
+          **The day and lane headers scroll away with it, and that is the cost of
+          this.** CSS cannot scroll one axis in a container and stick to the
+          viewport on the other: `overflow-x: auto` forces `overflow-y` to auto
+          too, so a `sticky top` here can only stick to a box that no longer
+          moves. What survives is the sideways stickiness — the time gutter stays
+          pinned when you scroll across the week, which is the axis that actually
+          scrolls now.
+        */}
         <div
           ref={scroller}
-          className="relative max-h-[70vh] overflow-auto rounded border border-border bg-surface"
+          className="relative overflow-x-auto rounded border border-border bg-surface"
         >
           <div className="min-w-max">
             <Header
@@ -701,7 +796,7 @@ const Header = memo(function Header({
   const t = useTranslations();
 
   return (
-    <div className="sticky top-0 z-30 flex bg-surface">
+    <div className="z-30 flex bg-surface">
       {/*
         The gutter's own two rows: nothing over the dates, and the word the
         numbers beneath belong to. Naming the row once is what lets every column
@@ -907,7 +1002,11 @@ interface LayerProps {
   todayWeekday?: number | undefined;
   renderDetail: CalendarGridProps['renderDetail'];
   onOpenPlan: CalendarGridProps['onOpenPlan'];
-  onResizeStart: (booking: GridBooking, clientY: number) => void;
+  onResizeStart: (
+    booking: GridBooking,
+    edge: 'bottom' | 'left' | 'right',
+    from: number,
+  ) => void;
   justDragged: React.MutableRefObject<number>;
   /** Faded: a holiday, a day the pool is shut, or a day already gone. */
   dimmed: (weekday: number) => boolean;
@@ -1055,17 +1154,44 @@ function Block({
         </p>
       )}
 
+      {/*
+        Three edges. The bottom changes how long the class runs; the left and
+        right change how many pistas it takes. `stopPropagation` keeps the drag
+        sensor out of it, so grabbing an edge never also starts a move.
+      */}
       {movable && (
-        <span
-          role="presentation"
-          onPointerDown={(event) => {
-            event.stopPropagation();
-            event.preventDefault();
-            onResizeStart(booking, event.clientY);
-          }}
-          className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize"
-          aria-label={t('calendar.resize')}
-        />
+        <>
+          <span
+            role="presentation"
+            aria-label={t('calendar.resize')}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              onResizeStart(booking, 'bottom', event.clientY);
+            }}
+            className="absolute inset-x-2 bottom-0 h-2 cursor-ns-resize"
+          />
+          <span
+            role="presentation"
+            aria-label={t('calendar.resizeLanes')}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              onResizeStart(booking, 'left', event.clientX);
+            }}
+            className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize"
+          />
+          <span
+            role="presentation"
+            aria-label={t('calendar.resizeLanes')}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              onResizeStart(booking, 'right', event.clientX);
+            }}
+            className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize"
+          />
+        </>
       )}
     </div>
   );
@@ -1132,22 +1258,41 @@ function ScopePopover({
         style={style}
       >
         <p className="text-sm">
-          {t('calendar.movedTo', { time: startTimeOf(ask.startMinutes).slice(0, 5) })}
+          {ask.seriesOnly === true
+            ? t('calendar.lanesChanged', { count: ask.laneIds.length })
+            : t('calendar.movedTo', { time: startTimeOf(ask.startMinutes).slice(0, 5) })}
         </p>
+
+        {/*
+          Said out loud rather than left to be discovered: a lane change lands on
+          every week, because lanes belong to the recurring booking and there is
+          no per-occurrence field to put them in.
+        */}
+        {ask.seriesOnly === true && (
+          <p className="mt-1 text-sm text-foreground-muted">{t('calendar.lanesEveryWeek')}</p>
+        )}
+
         <div className="mt-2 flex flex-col gap-1.5">
-          <button
-            type="button"
-            onClick={() => onScope('week')}
-            className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            {t('calendar.thisWeekOnly')}
-          </button>
+          {ask.seriesOnly !== true && (
+            <button
+              type="button"
+              onClick={() => onScope('week')}
+              className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {t('calendar.thisWeekOnly')}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onScope('series')}
-            className="rounded border border-border-strong px-3 py-1.5 text-sm hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className={cn(
+              'rounded px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+              ask.seriesOnly === true
+                ? 'bg-primary text-primary-foreground hover:opacity-90'
+                : 'border border-border-strong hover:border-primary/50',
+            )}
           >
-            {t('calendar.wholeSeries')}
+            {ask.seriesOnly === true ? t('common.continue') : t('calendar.wholeSeries')}
           </button>
           <button
             type="button"
