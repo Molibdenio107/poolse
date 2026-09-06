@@ -97,7 +97,9 @@ export function CalendarWeek({
       const session = controlsFor(booking);
 
       const facts = [
-        { label: t('grid.lane'), value: String(booking.laneIds.length) },
+        // "Pistas ocupadas: 4", not "Pista: 4" — the number is a count of lanes,
+        // and the old label read as the name of a single one.
+        { label: t('calendar.lanesOccupied'), value: String(booking.laneIds.length) },
         {
           label: t('calendar.time'),
           value: `${booking.startTime.slice(0, 5)} · ${booking.durationMinutes} min`,
@@ -274,7 +276,20 @@ export function CalendarWeek({
         laneIds: to.laneIds,
         durationMinutes: to.durationMinutes,
       });
-      if (!result.ok) return result.errorKey;
+      /*
+       * The server's own sentence, where it sent one.
+       *
+       * A refusal here can come from several rules — a lane already taken, an
+       * instructor over their concurrent-group limit, the pool's capacity — and
+       * they are different problems with different answers. Returning only the
+       * generic key made every one of them read as "it did not work", which is
+       * the shape of report that cannot be acted on.
+       */
+      if (!result.ok) {
+        return result.detail === undefined || result.detail === ''
+          ? result.errorKey
+          : `${result.errorKey} ${result.detail}`;
+      }
       router.refresh();
       return null;
     },

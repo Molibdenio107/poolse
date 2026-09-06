@@ -45,13 +45,23 @@ first paint anybody can read.
 45-minute class in a 60-minute slot is three-quarters of it, and two classes that overlap by
 ten minutes overlap by ten minutes on screen.
 
+**Above the grid is one card that is both the legend and the filter.** Each level has a
+swatch, a checkbox and a count of what it accounts for this week, laid out in columns; below
+them come parcerias, eventos and manutenção, and a turma with no level where there is one.
+Unticking hides those blocks; "Mostrar tudo" brings everything back. The counts are taken
+before the filter, so a row that is switched off still says what it is hiding.
+
 **Colour is the turma's own, and the level's when it has none.** A turma can be given one of
 eight colours on its own screen; without one it takes its level's tint, which is what an
 uncoloured club sees. A parceria keeps its partner's colour; an evento and a manutenção take
 the neutral. The legend names each level in words — colour never carries meaning alone.
 
 The grid opens scrolled to the first class of the week, and on the week containing today it
-draws a line at the current time.
+draws a line at the current time. Today's column carries a faint tint that stays, and pulses
+once for two seconds when the week is opened — dropped entirely under `prefers-reduced-motion`.
+
+While a block is being dragged it shows the time it would land at, not the time it came from:
+the block is under the pointer and the gutter is a week away on the left.
 
 **The card does not scroll vertically.** It is as tall as the day and the page scrolls
 instead, so a pool day is not read through a letterbox. The cost is that the day and lane

@@ -1681,7 +1681,16 @@
       },
       "failed": "The teacher could not be changed.",
       "awayRefused": "That person is away on this day."
-    }
+    },
+    "show": "Show",
+    "showAll": "Show all",
+    "noLevel": "No level",
+    "subject": {
+      "parceria": "Partnerships",
+      "evento": "Events",
+      "manutencao": "Maintenance"
+    },
+    "lanesOccupied": "Lanes occupied"
   },
   "inventory": {
     "title": "Inventory",

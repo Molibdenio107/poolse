@@ -15,6 +15,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
+import { Handshake } from 'lucide-react';
 import type { FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 
 /** Only what a colour and a legend need; the API sends them already ordered. */
@@ -79,6 +80,18 @@ const COL_WIDTH = 64;
 
 /** The time gutter down the left. */
 const GUTTER = 56;
+
+/**
+ * The rule between one day and the next, in pixels.
+ *
+ * **This number and the `border-l-2` class have to agree**, and they are apart
+ * because Tailwind needs a literal class name. They stopped agreeing once: the
+ * rule went from 1px to 2px to make the days findable, and the block layer went
+ * on adding 1 — so every block drifted a pixel per day, up to seven by Sunday,
+ * and a drag near a lane edge landed one lane over from where it looked. That is
+ * the bug this constant exists to prevent, so change both or neither.
+ */
+const DAY_RULE = 2;
 
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
@@ -251,9 +264,54 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [, startWrite] = useTransition();
 
+  /*
+   * The filter key for one block.
+   *
+   * A turma answers with its level, because that is what the legend colours and
+   * what somebody means by "hide the Masters". Everything else answers with what
+   * kind of thing it is: a parceria has no level, and a club wanting the schools
+   * off the screen for a minute is asking about parcerias, not about a level
+   * they do not have.
+   */
+  const keyOf = useCallback(
+    (booking: GridBooking): string =>
+      booking.subjectType === 'turma' ? (booking.levelId ?? 'no-level') : booking.subjectType,
+    [],
+  );
+
+  /** Hidden, not shown: an empty set means everything, which is the default. */
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+
+  const toggle = useCallback((key: string) => {
+    setHidden((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  /*
+   * How many blocks each key accounts for, counted before the filter.
+   *
+   * So a row that is switched off still says how much it is hiding, and a level
+   * with nothing on this week says zero rather than vanishing — a checkbox that
+   * disappears when you use it is a checkbox you cannot undo.
+   */
+  const counts = useMemo(() => {
+    const tally = new Map<string, number>();
+    for (const booking of bookings) {
+      const key = keyOf(booking);
+      tally.set(key, (tally.get(key) ?? 0) + 1);
+    }
+    return tally;
+  }, [bookings, keyOf]);
+
   const shown = useMemo(
     () =>
-      bookings.map((booking) => {
+      bookings
+        .filter((booking) => !hidden.has(keyOf(booking)))
+        .map((booking) => {
         const override = pending.get(booking.id);
         if (override === undefined) return booking;
         return {
@@ -263,8 +321,8 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
           durationMinutes: override.durationMinutes,
           laneIds: override.laneIds,
         };
-      }),
-    [bookings, pending],
+        }),
+    [bookings, pending, hidden, keyOf],
   );
 
   // ---------------------------------------------------------------- dragging
@@ -584,6 +642,21 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   const scroller = useRef<HTMLDivElement>(null);
 
   /*
+   * A short pulse on today's column when this week is opened.
+   *
+   * Two seconds, then it stops for good: a column that goes on blinking is a
+   * column nobody can read, and the tint underneath carries the answer from then
+   * on.
+   */
+  const [pulsing, setPulsing] = useState(false);
+  useEffect(() => {
+    if (todayWeekday === undefined) return undefined;
+    setPulsing(true);
+    const timer = window.setTimeout(() => setPulsing(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [todayWeekday, props.weekStart]);
+
+  /*
    * Open on the first class of the week rather than at 06:00.
    *
    * A club whose grid runs from six in the morning opens on two hours of empty
@@ -618,13 +691,33 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         onPool={setPoolId}
         levels={levels}
         order={order}
+        counts={counts}
+        hidden={hidden}
+        onToggle={toggle}
+        onShowAll={() => setHidden(new Set())}
       />
 
-      {error !== null && (
-        <p role="status" className="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-          {t(error)}
-        </p>
-      )}
+      {/*
+        The refusal, with whatever the server said about it.
+
+        The key and the server's own sentence travel joined by a NUL, which
+        cannot occur in either — a shape rather than a second state field,
+        because `onMove` returns one string and this is the only place that
+        reads it.
+      */}
+      {error !== null &&
+        (() => {
+          const [key, detail] = error.split(' ');
+          return (
+            <p
+              role="status"
+              className="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger"
+            >
+              {t(key!)}
+              {detail === undefined || detail === '' ? '' : ` — ${detail}`}
+            </p>
+          );
+        })()}
 
       <DndContext
         sensors={sensors}
@@ -673,6 +766,17 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                     // ladder of columns and finding Thursday meant counting.
                     'flex border-l-2 border-border-strong',
                     (closureOf(weekday) !== null || !openOn(weekday)) && 'bg-surface-muted/60',
+                    /*
+                      Today, twice over: a tint that stays, and a pulse that does
+                      not. Landing on this week from "Hoje" and having to find
+                      which column is today is the thing the button was pressed
+                      to avoid; the tint answers it for as long as you are here,
+                      and the pulse answers it in the first second, when you are
+                      looking for the answer. `motion-reduce` drops the second —
+                      a flashing column is exactly what that setting is for.
+                    */
+                    todayWeekday === weekday && 'bg-primary/[0.06]',
+                    todayWeekday === weekday && pulsing && 'animate-pulse motion-reduce:animate-none',
                   )}
                 >
                   {shownLanes.map((lane) => (
@@ -736,56 +840,140 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
 
 /* ------------------------------------------------------------------ pieces */
 
+/** The things on the grid that are not turmas, and so have no level. */
+const SUBJECT_KEYS = ['parceria', 'evento', 'manutencao'] as const;
+
+/**
+ * What is on the grid, and what to leave off it.
+ *
+ * **The legend and the filter are one control**, which is the point. Round 6
+ * shipped a legend: eight swatches on one line, wrapping mid-row on a laptop and
+ * telling you what the colours meant without letting you do anything about it.
+ * Ticking the thing you are reading is a shorter distance than reading a legend
+ * and then finding a filter somewhere else — the same shape the vacations team
+ * map uses, which is where this layout comes from.
+ *
+ * Everything is on until it is switched off, and "Mostrar tudo" is always there
+ * to get back — a filter you cannot undo in one click is a filter people learn
+ * not to touch.
+ */
 function Toolbar({
   pools,
   poolId,
   onPool,
   levels,
   order,
+  counts,
+  hidden,
+  onToggle,
+  onShowAll,
 }: {
   pools: { id: string; name: string }[];
   poolId: string;
   onPool: (id: string) => void;
   levels: CalendarLevel[];
   order: ReadonlyMap<string, number>;
+  counts: ReadonlyMap<string, number>;
+  hidden: ReadonlySet<string>;
+  onToggle: (key: string) => void;
+  onShowAll: () => void;
 }): React.ReactElement {
   const t = useTranslations();
 
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      {pools.length > 1 ? (
+  /** One row: a checkbox, its colour, its name and how much it accounts for. */
+  const row = (key: string, label: string, tint: number | null, icon?: React.ReactNode) => {
+    const count = counts.get(key) ?? 0;
+    return (
+      <li key={key}>
         <label className="flex items-center gap-2 text-sm">
-          <span className="text-foreground-muted">{t('calendar.pool')}</span>
-          <select
-            value={poolId}
-            onChange={(event) => onPool(event.target.value)}
-            className="h-control rounded border border-border-strong bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            {pools.map((pool) => (
-              <option key={pool.id} value={pool.id}>
-                {pool.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        <span />
-      )}
-
-      {/*
-        The legend names every level in words. Colour is the cue that makes a
-        full week scannable, never the cue that makes it readable.
-      */}
-      <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foreground-muted">
-        {levels.map((level) => (
-          <li key={level.id} className="flex items-center gap-1.5">
+          <input
+            type="checkbox"
+            checked={!hidden.has(key)}
+            onChange={() => onToggle(key)}
+            className="size-4 shrink-0 accent-primary"
+          />
+          {icon ?? (
             <span
               aria-hidden="true"
-              className={cn('size-2.5 rounded-sm', tintClass(levelTint({ subjectType: 'turma', levelId: level.id } as never, order)))}
+              className={cn('size-3 shrink-0 rounded-sm', tintClass(tint))}
             />
-            {level.name}
-          </li>
-        ))}
+          )}
+          <span className="truncate">{label}</span>
+          {/*
+            Counted before the filter, so a row that is off still says what it is
+            hiding and a level with nothing this week says zero rather than
+            disappearing — a checkbox that vanishes when you use it cannot be
+            undone.
+          */}
+          <span className="ml-auto shrink-0 tabular-nums text-foreground-muted">{count}</span>
+        </label>
+      </li>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {t('calendar.show')}
+        </h2>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {pools.length > 1 && (
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-foreground-muted">{t('calendar.pool')}</span>
+              <select
+                value={poolId}
+                onChange={(event) => onPool(event.target.value)}
+                className="h-control rounded border border-border-strong bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {pools.map((pool) => (
+                  <option key={pool.id} value={pool.id}>
+                    {pool.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <button
+            type="button"
+            onClick={onShowAll}
+            disabled={hidden.size === 0}
+            className="rounded border border-border-strong px-2.5 py-1 text-sm hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+          >
+            {t('calendar.showAll')}
+          </button>
+        </div>
+      </div>
+
+      {/*
+        A grid rather than a wrapping line. Eight levels on one line broke
+        mid-row at every window width and the names never lined up, so the eye
+        had to search each one out instead of running down a column.
+      */}
+      <ul className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {levels.map((level) =>
+          row(
+            level.id,
+            level.name,
+            levelTint({ subjectType: 'turma', levelId: level.id } as never, order),
+          ),
+        )}
+
+        {/* A turma nobody has given a level. Only offered when there is one. */}
+        {(counts.get('no-level') ?? 0) > 0 && row('no-level', t('calendar.noLevel'), null)}
+
+        {SUBJECT_KEYS.filter((key) => (counts.get(key) ?? 0) > 0).map((key) =>
+          row(
+            key,
+            t(`calendar.subject.${key}`),
+            null,
+            key === 'parceria' ? (
+              <Handshake className="size-3.5 shrink-0 text-foreground-muted" aria-hidden="true" />
+            ) : undefined,
+          ),
+        )}
       </ul>
     </div>
   );
@@ -1044,8 +1232,10 @@ function BlockLayer(props: LayerProps): React.ReactElement {
     const day = days.indexOf(weekday);
     const lane = laneIndex.get(laneId);
     if (day < 0 || lane === undefined) return null;
-    // Each day carries a 1px left border, which the header matches.
-    return GUTTER + day * (lanes.length * COL_WIDTH + 1) + 1 + lane * COL_WIDTH;
+    // Each day carries a rule on its left, which the header matches.
+    return (
+      GUTTER + day * (lanes.length * COL_WIDTH + DAY_RULE) + DAY_RULE + lane * COL_WIDTH
+    );
   };
 
   return (
@@ -1100,6 +1290,7 @@ function Block({
   onResizeStart,
   justDragged,
   dimmed,
+  ghost,
 }: LayerProps & { booking: GridBooking; left: number; width: number }): React.ReactElement {
   const t = useTranslations();
 
@@ -1129,6 +1320,13 @@ function Block({
       : tintClass(levelTint(booking, order));
 
   const anyDrag = dragging !== null;
+
+  /*
+   * The ghost, when it belongs to this block. Null for every other block, so
+   * only the one being moved re-reads its time.
+   */
+  const moving = ghost !== null && ghost.bookingId === booking.id ? ghost : null;
+
   const card = renderDetail(booking);
 
   const block = (
@@ -1171,11 +1369,28 @@ function Block({
     >
       <p className="truncate text-[0.75rem] font-medium leading-tight">{booking.name}</p>
 
-      {/* The time only when there is room for it under the name. */}
+      {/*
+        The time, live while the block is moving — the thing a calendar drag is
+        actually about.
+
+        The block is under the pointer and the gutter is a week away on the far
+        left, so reading the landing time off the ruler means looking away from
+        what you are doing. `moving` is the snapped target, so it changes in
+        steps rather than continuously: it reads as a time being chosen, not as a
+        number spinning.
+      */}
       {height >= TIME_VISIBLE_MIN_HEIGHT && (
-        <p className="truncate text-[0.6875rem] leading-tight opacity-90">
-          {booking.startTime.slice(0, 5)}
-          {booking.instructorName === null ? '' : ` · ${booking.instructorName}`}
+        <p
+          className={cn(
+            'truncate text-[0.6875rem] leading-tight opacity-90',
+            moving !== null && 'font-semibold opacity-100',
+          )}
+        >
+          {(moving === null ? booking.startTime : startTimeOf(moving.startMinutes)).slice(0, 5)}
+          {moving === null && booking.instructorName !== null
+            ? ` · ${booking.instructorName}`
+            : ''}
+          {moving !== null ? ` – ${startTimeOf(moving.startMinutes + moving.durationMinutes).slice(0, 5)}` : ''}
         </p>
       )}
 

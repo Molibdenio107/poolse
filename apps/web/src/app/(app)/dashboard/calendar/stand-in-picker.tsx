@@ -50,9 +50,17 @@ export function StandInPicker({
     };
   }, [sessionId]);
 
-  if (options === null) {
-    return <p className="text-sm text-foreground-muted">{t('common.working')}</p>;
-  }
+  /*
+   * While the options load, the control is the control — disabled, with the
+   * name it will have.
+   *
+   * It used to render the word "A processar…" on its own, which in the hover
+   * card's narrow column clipped to a fragment of itself: a card that says
+   * "ocessar" is worse than one that says nothing. A disabled select also keeps
+   * the card's height steady, so the thing under the pointer does not jump the
+   * moment the answer arrives.
+   */
+  const loading = options === null;
 
   function choose(value: string): void {
     setError(null);
@@ -83,16 +91,16 @@ export function StandInPicker({
 
       <select
         id={`stand-in-${sessionId}`}
-        value={options.currentId ?? ''}
-        disabled={saving}
+        value={options?.currentId ?? ''}
+        disabled={saving || loading}
         onChange={(event) => choose(event.target.value)}
-        className={cn(CONTROL_LINE, compact && 'h-8 text-sm')}
+        className={cn(CONTROL_LINE, compact && 'h-8 text-sm', loading && 'opacity-60')}
       >
         {/* Clearing puts the turma's own instructor back, because they were
             never replaced. */}
         <option value="">{t('calendar.standIn.none')}</option>
 
-        {options.candidates.map((candidate) => {
+        {(options?.candidates ?? []).map((candidate) => {
           /*
            * The reason travels in the label, not only in the disabled state.
            * A `<select>` gives no other way to say *why* an option is out, and

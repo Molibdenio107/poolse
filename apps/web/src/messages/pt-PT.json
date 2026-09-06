@@ -1681,7 +1681,16 @@
       },
       "failed": "Não foi possível alterar o professor.",
       "awayRefused": "Essa pessoa está ausente neste dia."
-    }
+    },
+    "show": "Mostrar",
+    "showAll": "Mostrar tudo",
+    "noLevel": "Sem nível",
+    "subject": {
+      "parceria": "Parcerias",
+      "evento": "Eventos",
+      "manutencao": "Manutenção"
+    },
+    "lanesOccupied": "Pistas ocupadas"
   },
   "inventory": {
     "title": "Inventário",

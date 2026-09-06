@@ -17,6 +17,16 @@ is.
 A subscription covers one site; `organization.max_facilities` defaults to 1 and a trigger
 enforces it. A club with two sites buys a plan with two.
 
+## Opening hours
+
+The card says when each weekday is open. **The slot-grid builder that used to sit inside it is
+gone** — the calendar places a class from its own minutes now, so those rows are no longer
+something an operator arranges the timetable with.
+
+The rows themselves are untouched: the calendar still snaps a drag to them, so 06:30 stays
+06:30 rather than rounding to the quarter, and the Turmas board, the printed sheet and the
+XLSX export all still read them.
+
 ## Espaços
 
 The non-pool parts of a site — balneários, sala de máquinas, arrecadação, receção, exterior —

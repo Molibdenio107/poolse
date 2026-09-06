@@ -6,7 +6,6 @@ import {
   ApiError,
   apiFetch,
   type FacilityDetail,
-  type FacilitySlots,
   type PeopleCounts,
   type Students,
 } from '@/lib/api';
@@ -16,7 +15,6 @@ import { PhotoGallery } from '@/components/photo-gallery';
 import { CityPicker } from './city-picker';
 import { WeatherPanel } from './weather-panel';
 import { HoursPanel } from './hours-panel';
-import { SlotsPanel } from './slots-panel';
 import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
 import { PartnersPanel } from './partners-panel';
@@ -86,16 +84,6 @@ export default async function FacilityPage({
    * simply absent rather than rendered empty or rendered with a refusal in it.
    * The levels come from the register, for the optional level a plan suggests.
    */
-  /*
-   * The schedule grid — POOLSE-44.
-   *
-   * Best-effort: the slot editor is one block on a long page, and a club with
-   * no season yet has no grid to show. Losing it must not cost the site.
-   */
-  const slots = await apiFetch<FacilitySlots>(`/facilities/${facilityId}/slots`).catch(
-    () => null,
-  );
-
   /*
    * Parcerias — POOLSE-47.
    *
@@ -248,35 +236,22 @@ export default async function FacilityPage({
             />
 
             {/*
-              The schedule grid, inside this card rather than beside it.
+              The schedule grid used to be here, and is not any more — round 6.
 
-              It was its own section and read as a duplicate of the hours above
-              it, which is fair: both blocks answered "when does this building
-              run" and the page asked the question twice. They are not the same
-              fact — the hours say when the site is open at all, the grid says
-              which rows a class may sit in inside those hours — but that
-              distinction only earns a heading of its own once the calendar draws
-              those rows, and it does not yet.
+              It answered "which rows may a class sit in", which mattered while
+              the board drew a slot as a table row. The calendar now places a
+              class from its own minutes, so the rows are no longer a thing an
+              operator arranges the timetable *with*; they are a thing the drag
+              quietly lands on.
 
-              So: one card about when the building runs, in two parts, with the
-              second explaining itself.
+              **The rows themselves are untouched.** They still exist, the
+              calendar still snaps to them — 06:30 stays 06:30 rather than
+              rounding to the quarter — and the Turmas board, the printed sheet
+              and the XLSX export all still read them. What went is the editor,
+              because a grid nobody has to maintain by hand is a page nobody
+              should have to read. If a club ever needs to change those rows
+              again, this is where it comes back.
             */}
-            {slots !== null && (
-              <div className="flex flex-col gap-4 border-t border-border pt-4">
-                <div>
-                  <h3 className="text-sm font-medium">{t('slots.title')}</h3>
-                  <p className="mt-1 text-sm text-foreground-muted">{t('slots.versusHours')}</p>
-                </div>
-
-                <SlotsPanel
-                  organizationId={site.organizationId}
-                  facilityId={site.id}
-                  slots={slots.slots}
-                  hours={site.hours}
-                  canManage={site.canManage}
-                />
-              </div>
-            )}
           </section>
 
           {prices !== null && (
