@@ -164,6 +164,17 @@ in `numeric` with an explicit unit column — pH, °C, ppm and kWh do not share 
 **Times are stored UTC, displayed in the facility's timezone.** Class schedules are the
 place this bites; get it right once in the scheduling layer.
 
+**Management seats are capped per tenant by a soft quota**
+(`organization.max_management_users`, nullable = unlimited), checked when an invitation is
+*created* and counting pending, unexpired ones — a 24-hour window otherwise lets a tenant
+overshoot. Exactly one Owner per tenant, enforced; transfer is the only way to change it.
+`docs/decisions.md`, 2026-09-06.
+
+**Cost per tenant is a design constraint, not a later optimisation.** The first production
+tenant is a free pilot, so prefer designs that keep one tenant inside free tiers and keep
+every metered or pay-per-use call — the Claude API lab-report parsers above — behind its
+own feature flag, off by default.
+
 ## How a session runs
 
 1. Open with one line on where things stand and what tonight's slice is.

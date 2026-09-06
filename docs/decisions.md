@@ -8,6 +8,10 @@ quietly re-reversed six months later by somebody reading the older comment.
 Schema decisions live in `docs/data-model.md`; standing conventions live in `CLAUDE.md`.
 This file is for the calls themselves.
 
+Most entries are one line. A sizing or pricing call that sets numbers other decisions will
+be measured against gets a dated section of its own instead, because the numbers are the
+decision and a line that omits them is not usable later.
+
 ## Round 5 — September 2026
 
 - **2026-09-05** — Round 5 branches from `refinements-round-4`, not `main`. `main` is 86 commits behind and lacks the calendar, partnerships, fees and inventory screens every round-5 ticket edits.
@@ -57,3 +61,33 @@ This file is for the calls themselves.
 - **2026-09-05** — `student_fee_payment` gains `source` (`manual` / `mbway` / `sepa`), and `setOccurrencePaid` becomes `markFeePaid` taking it. A webhook settling a month must be distinguishable from a clerk settling it, or a bank reconciliation cannot be done.
 - **2026-09-05** — The Period total card shows Total paid and Total remaining as two lines, with the live one in bold. Weight rather than colour, and both always present so nothing is inferred from an absence.
 - **2026-09-05** — No disabled Paid control for non-managers: `GET /students/:id/fees` is already owner/admin, so a disabled state would be code no user can reach.
+
+## 2026-09-06 — Management user sizing per tenant
+
+**Decision.** Poolse targets 10–30 management logins per tenant (Owner, Admin,
+Instructor, Maintenance). Nothing may degrade up to ~150. Students and
+Encarregados de Educação are excluded from this count and scale independently.
+
+**Rules.**
+- Exactly one Owner per tenant, enforced. Transfer ownership is the only way to
+  change it.
+- Seat cap is a soft quota: `organization.max_management_users` (nullable =
+  unlimited), checked when an invitation is *created*, not when accepted.
+- Pending, unexpired invitations count toward the quota — the 24h expiry window
+  would otherwise let a tenant overshoot.
+- Staff list needs search + pagination beyond ~30 rows.
+
+**Plan tiers (indicative, not final).** Starter 5 seats / 1 facility · Pro 25 ·
+Business 100 · above that, custom.
+
+**Rationale.** A single municipal pool or swim school runs ~1 owner, 1–2 admins,
+6–15 instructors, 2–4 maintenance staff. A multi-facility câmara group reaches
+40–60. Every management user is a billed Clerk MAU. The quota exists so the
+pricing model is enforceable before the second, paying tenant — the first
+production tenant is a free pilot and will not test the limit.
+
+**Open.** Whether students and guardians become Clerk users at all when the
+mobile app ships, or get a lighter auth path.
+
+**Not built in this pass.** `max_management_users` is not in the schema yet; it
+goes in with the next migration that already touches `organization`.
