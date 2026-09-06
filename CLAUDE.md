@@ -164,6 +164,26 @@ in `numeric` with an explicit unit column — pH, °C, ppm and kWh do not share 
 **Times are stored UTC, displayed in the facility's timezone.** Class schedules are the
 place this bites; get it right once in the scheduling layer.
 
+**A dated grid is drawn from minutes, not from rows.** The calendar places blocks at
+`top = minutes × PX_PER_MINUTE` from `lib/calendar-scale.ts`; a slot-as-table-row makes a
+45-minute class in a 60-minute slot read as an hour. One scale constant, shared by the
+blocks, the now-line, the drag maths and the auto-scroll — a second one is how they stop
+agreeing. `calendar/calendar-grid.tsx` is the dated week; `classes/schedule-board.tsx` is
+still the recurring pattern, and they are deliberately two components.
+
+**A drag costs a transform, never a reflow, and one droppable per column.** Measured on a
+real club, the old board mounted 2,256 droppables — day × slot × lane, each running a rules
+`evaluate()` on drag start — and `pointerWithin` walked all of them per pointer move. The
+calendar mounts one per day-and-lane (168) and derives the minute from the pointer's travel.
+Drag state changes on the *snapped* value, so a render happens once per step rather than
+once per frame, and every transition is off while a drag is live.
+
+**Eight level tints, solid, measured in both themes.** `--level-1…8` plus `--level-none` in
+`globals.css`. Solid blocks with white text rather than a wash of the surface: the same eight
+hues washed at 15% sit ΔE 4.5 apart, which is about one just-noticeable difference and means
+the colour is doing no work. Solid they are ΔE 26.7 apart, white text is ≥4.6:1, and the dark
+set is solved against the dark card rather than being the light set at another opacity.
+
 **A derived answer is derived once, on the server.** Overdue cleaning is
 `now() - last cleaning > interval`, computed in SQL in `spaces.repository.ts` and shipped as a
 boolean; the client renders it and never recomputes it. The same reasoning as the trigger

@@ -1519,6 +1519,13 @@
     "guest": "Make-up"
   },
   "calendar": {
+    "pool": "Pool",
+    "time": "Time",
+    "resize": "Drag to change the duration",
+    "moveScope": "Scope of the change",
+    "movedTo": "Moved to {time}.",
+    "thisWeekOnly": "This week only",
+    "wholeSeries": "Every week",
     "addClosure": "Add a closure",
     "addClosureHint": "Classes on these days are cancelled with the reason you give. Deleting the closure brings them back on the next generation.",
     "adding": "Adding…",

@@ -22,7 +22,8 @@ import {
   shortDate,
   today,
 } from '@/lib/dates';
-import { ScheduleBoard, type SessionControls } from '../classes/schedule-board';
+import type { SessionControls } from '../classes/schedule-board';
+import { CalendarWeek } from './calendar-week';
 import { slotKey } from '@/lib/slot-key';
 import { GenerateSeason } from './calendar-forms';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -320,41 +321,28 @@ export default async function CalendarPage({
             </div>
 
             {classes !== null ? (
-              <ScheduleBoard
+              /*
+                The dated week — round 6.
+
+                Its own grid, not the turma board. Blocks are placed from their
+                minutes on a pixel scale, columns are day × pista, and a drag
+                costs a transform rather than a reflow. The board next door goes
+                on drawing the recurring pattern, untouched.
+              */
+              <CalendarWeek
                 organizationId={classes.organizationId}
-                groups={classes.groups}
-                facilities={classes.facilities}
-                closures={closedDays}
-                controls={controls}
-                dayNames={dayNames}
-                canManage={calendar.canManage}
                 weekStart={monday}
+                dayNames={dayNames}
+                todayWeekday={todayWeekday}
+                closures={closedDays}
                 slots={grid?.slots ?? []}
                 lanes={grid?.lanes ?? []}
                 pools={grid?.pools ?? []}
                 bookings={grid?.bookings ?? []}
-                categories={grid?.categories ?? []}
-                instructors={grid?.instructors ?? []}
-                partners={grid?.partners ?? []}
                 levels={classes.options.levels}
-                // Every instructor at the club, not only those already on the
-                // grid — the person you most want on an empty Tuesday is the
-                // one who is not on it yet.
-                staff={classes.options.instructors}
-                laneLevelCapacity={grid?.laneLevelCapacity ?? {}}
-                maxConcurrentGroups={grid?.maxConcurrentGroups ?? null}
-                // No grid means no season loaded, so there is nothing to report
-                // rather than nothing to report *yet* — POOLSE-53, criterion 8.
-                seasonId={grid?.seasonId ?? null}
-                seasonName={grid?.seasonName ?? null}
-                seasonStatus={grid?.seasonStatus ?? null}
-                // So a week outside the season says so rather than drawing a
-                // full timetable eighteen months after it ended — R2-03.
-                // Fade what has already happened — 9.1. Only meaningful on the
-                // week that contains today; other weeks pass undefined.
-                todayWeekday={todayWeekday}
-                seasonStartsOn={grid?.seasonStartsOn ?? null}
-                seasonEndsOn={grid?.seasonEndsOn ?? null}
+                groups={classes.groups}
+                controls={controls}
+                canManage={calendar.canManage}
               />
             ) : (
               // The turmas would not load. The week is still worth showing, and

@@ -1519,6 +1519,13 @@
     "guest": "Reposição"
   },
   "calendar": {
+    "pool": "Piscina",
+    "time": "Horário",
+    "resize": "Arraste para alterar a duração",
+    "moveScope": "Alcance da alteração",
+    "movedTo": "Movido para as {time}.",
+    "thisWeekOnly": "Só esta semana",
+    "wholeSeries": "Todas as semanas",
     "addClosure": "Adicionar encerramento",
     "addClosureHint": "As aulas destes dias são canceladas com o motivo indicado. Apagar o encerramento repõe-nas na próxima geração.",
     "adding": "A adicionar…",

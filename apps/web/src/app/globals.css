@@ -89,6 +89,40 @@
     --category-violet: 124 66 168;
 
     /*
+     * Level colours on the calendar — round 6.
+     *
+     * **Solid blocks with white text, not a tint of the card.** The category
+     * palette above washes its hue over the surface at 15%, which works for
+     * seven categories used as a secondary cue. Eight of them, carrying the
+     * primary signal on a dense week, does not: measured, the eight washes sat
+     * ΔE 4.5 apart at their closest — about one just-noticeable difference, so
+     * the colour would have been doing no work at all. Solid, the same eight are
+     * ΔE 26.7 apart.
+     *
+     * Each value is the *most saturated* lightness at that hue which still
+     * carries white text at 4.5:1, found by search rather than by eye. Worst
+     * pairing in this theme: white on `lime`/`amber`/`orange`/`magenta` at
+     * 4.65:1, and every block sits at least 4.65:1 against the card, comfortably
+     * past the 3:1 that 1.4.11 asks of a non-text boundary.
+     *
+     * The dark set below is solved again against the dark card. It is not this
+     * set at a different opacity — that is the trap this palette exists to avoid.
+     *
+     * **Colour still never carries meaning alone**: every block prints its
+     * turma's name and the legend names each level in words.
+     */
+    --level-1: 42 124 146;
+    --level-2: 38 130 87;
+    --level-3: 75 130 38;
+    --level-4: 138 114 40;
+    --level-5: 174 96 50;
+    --level-6: 201 69 91;
+    --level-7: 198 57 163;
+    --level-8: 135 93 208;
+    /* A turma with no level, and every subject that is not a turma. */
+    --level-none: 100 116 126;
+
+    /*
      * Chart series — POOLSE-52's occupancy on the dashboard.
      *
      * **Not `--primary`, and that is measured rather than preferred.** The brand
@@ -170,6 +204,21 @@
     /* Lifted for the dark ground, the same way success/warning/danger are. */
     --category-teal: 92 190 188;
     --category-violet: 182 145 226;
+
+    /*
+     * Solved against the dark card, not lifted from the light set — see above.
+     * Worst white-on-block here is 4.61:1 and the weakest block against the card
+     * is 3.62:1.
+     */
+    --level-1: 48 124 145;
+    --level-2: 43 130 90;
+    --level-3: 78 130 43;
+    --level-4: 134 112 45;
+    --level-5: 168 97 56;
+    --level-6: 195 75 95;
+    --level-7: 191 64 159;
+    --level-8: 134 94 201;
+    --level-none: 92 106 117;
 
     /* Stepped for the dark surface and validated against it — see the light block. */
     --chart-1: 57 135 229;

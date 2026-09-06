@@ -38,7 +38,13 @@ import { cn } from '@/lib/utils';
 /** ~300 ms, per the ticket: long enough that crossing the grid does not flicker. */
 const OPEN_DELAY = 300;
 
-/** Short, so moving between two slots does not feel sticky. */
+/**
+ * Short, so moving between two slots does not feel sticky.
+ *
+ * The turma board keeps this; the calendar passes 0, because its blocks sit
+ * edge to edge on a dense week and a card that outlives the pointer by even a
+ * tenth of a second is a card sitting over the block you were reaching for.
+ */
 const CLOSE_DELAY = 120;
 
 export interface TurmaDetail {
@@ -58,6 +64,8 @@ export function TurmaHoverCard({
   actions,
   children,
   side = 'right',
+  suppressed = false,
+  closeDelay = CLOSE_DELAY,
 }: {
   title: string;
   detail: TurmaDetail;
@@ -82,11 +90,29 @@ export function TurmaHoverCard({
    * narrow; the lane grid is wider than it is tall, so its blocks pass `top`.
    */
   side?: 'top' | 'right' | 'bottom' | 'left';
+  /**
+   * Shut, and not merely hidden — round 6.
+   *
+   * The calendar passes true while a drag is in progress. It renders the trigger
+   * *without* the hover card around it, so there is nothing to open late over
+   * the block being dragged and nothing to intercept the pointer.
+   *
+   * The ticket asked for `pointer-events: none` on the card instead. That would
+   * work for the drag and break the card's own reason to exist: Take the
+   * register and Cancel class are buttons inside it. Removing the card for the
+   * duration of a drag gets the same result without disabling the two controls
+   * the round-6 ticket moved in here.
+   */
+  suppressed?: boolean;
+  /** The calendar asks for 0 — see the note on CLOSE_DELAY. */
+  closeDelay?: number;
 }): React.ReactElement {
   const t = useTranslations();
 
+  if (suppressed) return <>{children}</>;
+
   return (
-    <HoverCardPrimitive.Root openDelay={OPEN_DELAY} closeDelay={CLOSE_DELAY}>
+    <HoverCardPrimitive.Root openDelay={OPEN_DELAY} closeDelay={closeDelay}>
       {/*
         `asChild` so the trigger stays the slot's own element — an anchor stays an
         anchor and keeps its href, rather than being wrapped in a button that

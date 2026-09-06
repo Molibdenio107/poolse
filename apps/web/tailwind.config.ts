@@ -67,6 +67,20 @@ export default {
           teal: rgb('--category-teal'),
           violet: rgb('--category-violet'),
         },
+        // Level colours on the calendar — round 6. Solid blocks carrying white
+        // text, indexed by a level's sortOrder so a colour is stable when
+        // another level is added. See the measured note in globals.css.
+        level: {
+          1: rgb('--level-1'),
+          2: rgb('--level-2'),
+          3: rgb('--level-3'),
+          4: rgb('--level-4'),
+          5: rgb('--level-5'),
+          6: rgb('--level-6'),
+          7: rgb('--level-7'),
+          8: rgb('--level-8'),
+          none: rgb('--level-none'),
+        },
         // Chart series slots. Validated for a data mark, which is a different
         // job from a brand fill — see the note in globals.css.
         chart: {

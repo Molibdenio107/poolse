@@ -17,6 +17,48 @@ call off.
 
 Every write is refused by the API for anyone else. Hiding a control is never the control.
 
+## The week grid
+
+The calendar draws its own grid (`calendar/calendar-grid.tsx`), not the turma board. The
+Turmas screen goes on using `classes/schedule-board.tsx` for the recurring pattern; the two
+were one component told apart by whether a week was passed, which meant every change to the
+calendar was a change to Turmas as well.
+
+**Columns are day × pista, time down the left.** Seven days, each subdivided by lane, with a
+sticky two-row header and a sticky time gutter. A club with more than one pool sees a pool
+picker and one pool at a time — three pools of eight lanes is 168 columns, which is not a
+first paint anybody can read.
+
+**Blocks are placed from their minutes**, not from table rows, at one pixel per minute. A
+45-minute class in a 60-minute slot is three-quarters of it, and two classes that overlap by
+ten minutes overlap by ten minutes on screen.
+
+**Colour is the level**, one of eight tints in the club's own level order, named in words in
+the legend beside the grid. A parceria keeps its partner's colour; a turma with no level, an
+evento and a manutenção take the neutral. Colour never carries meaning alone.
+
+The grid opens scrolled to the first class of the week, and on the week containing today it
+draws a line at the current time.
+
+## Moving a class
+
+Drag a block to move it; drag its bottom edge to change how long it runs. Both snap to the
+facility's own slot rows, falling back to the grid's granularity where no row covers that
+time.
+
+**The block moves the moment it is dropped**, and a small popover at the drop point asks the
+one thing a drag cannot say for itself — whether this is *this week only* or *every week*.
+That question is unchanged from round 5; what changed is that it is asked beside the block
+instead of in a modal, and the answer is written in the background. If the server refuses,
+the block goes back where it came from and the reason appears above the grid.
+
+Escape, or a click away, puts the block back and writes nothing.
+
+Classes on days already past are faded and cannot be dragged — a lesson that has happened is
+a record, not a plan — but they still open.
+
+Clicking empty space starts a new turma with that day, time and pista already filled in.
+
 ## The hover card
 
 Hovering or keyboard-focusing a class opens the same card the turma screens use, extended
