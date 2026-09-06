@@ -6,7 +6,7 @@ import { Check } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { TextAreaField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
-import { logCleaning } from '../../[facilityId]/spaces.actions';
+import { logCleaning } from '../../spaces.actions';
 
 /**
  * "Marcar como limpo" — one tap, and nothing else.

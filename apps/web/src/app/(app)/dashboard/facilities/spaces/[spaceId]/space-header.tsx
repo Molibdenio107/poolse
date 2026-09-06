@@ -10,8 +10,8 @@ import type { Space } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
-import { archiveSpace, updateSpace } from '../../[facilityId]/spaces.actions';
-import { SPACE_TYPES } from '../../[facilityId]/spaces-panel';
+import { archiveSpace, updateSpace } from '../../spaces.actions';
+import { SPACE_TYPES } from '../../spaces-panel';
 
 /**
  * The header: what this space is, and whether it needs attention.

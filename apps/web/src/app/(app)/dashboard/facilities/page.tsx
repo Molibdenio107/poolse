@@ -6,6 +6,8 @@ import { ActionButton } from '@/components/action-button';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from './facility-forms';
+import { SpacesPanel } from './spaces-panel';
+import { listSpaces } from './spaces.actions';
 import { PageError, PageShell } from '@/components/page-shell';
 
 /**
@@ -33,6 +35,26 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
       failure = describeLoad(error);
     }
   }
+
+  /*
+   * Each site's espaços — round 6.
+   *
+   * One request per site, in parallel. That is a loop over an endpoint, which is
+   * usually the wrong shape; here it is the right one, because a licence bounds
+   * a club to the sites it has paid for and that is one for most of them and two
+   * or three for a câmara. Folding it into `/facilities` would put the cleaning
+   * state of every site behind the request that draws the page, and lose the
+   * property that a site whose spaces fail to load still renders.
+   *
+   * `listSpaces` returns null on a refusal, so a failed block is simply absent.
+   */
+  const spacesBySite = new Map(
+    await Promise.all(
+      (data?.facilities ?? []).map(
+        async (facility) => [facility.id, await listSpaces(facility.id)] as const,
+      ),
+    ),
+  );
 
   return (
     <PageShell
@@ -164,6 +186,22 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {/*
+                  Espaços, directly under this site's tanks — round 6.
+
+                  The order is deliberate: the tanks are what a swimming pool is,
+                  and the balneários, the sala de máquinas and the arrecadação
+                  are the rest of the building around them.
+                */}
+                {spacesBySite.get(facility.id) != null && (
+                  <SpacesPanel
+                    facilityId={facility.id}
+                    spaces={spacesBySite.get(facility.id)!.items}
+                    canManage={spacesBySite.get(facility.id)!.canManage}
+                    variant="block"
+                  />
                 )}
 
                 <div className="border-t border-border pt-4">

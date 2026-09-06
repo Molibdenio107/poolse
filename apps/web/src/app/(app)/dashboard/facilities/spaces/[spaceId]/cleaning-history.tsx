@@ -5,7 +5,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import type { Cleaning } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
-import { archiveCleaning } from '../../[facilityId]/spaces.actions';
+import { archiveCleaning } from '../../spaces.actions';
 
 /**
  * Who cleaned this, and when. Reverse-chronological.

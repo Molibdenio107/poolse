@@ -8,7 +8,7 @@ import type { Issue } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
-import { archiveIssue, reportIssue, resolveIssue } from '../../[facilityId]/spaces.actions';
+import { archiveIssue, reportIssue, resolveIssue } from '../../spaces.actions';
 
 /**
  * What is broken here, and what was.

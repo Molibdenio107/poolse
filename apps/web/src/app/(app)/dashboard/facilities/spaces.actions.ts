@@ -8,7 +8,7 @@ import {
   apiPost,
   type SpaceList,
 } from '@/lib/api';
-import type { FormState } from '../../actions';
+import type { FormState } from '../actions';
 
 /**
  * Espaços — round 6.
@@ -40,7 +40,17 @@ function failure(error: unknown, errorKey: string): FormState {
   return { ok: false, errorKey, detail: String(error) };
 }
 
+/*
+ * Both screens the espaços appear on.
+ *
+ * The list is where the block actually lives — Instalações, inside each site's
+ * card — and the site's own page is revalidated too because the count and the
+ * overdue state are read there as well. Revalidating one and not the other is
+ * how a screen ends up showing a cleaning that happened ten minutes ago as
+ * still outstanding.
+ */
 function refreshFacility(facilityId: string): void {
+  revalidatePath('/dashboard/facilities');
   revalidatePath(`/dashboard/facilities/${facilityId}`);
 }
 

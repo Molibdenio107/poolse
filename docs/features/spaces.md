@@ -8,10 +8,20 @@ are in [../decisions.md](../decisions.md).
 
 ## Where it lives
 
-**Facility details → Espaços**, a section directly below Piscinas. One row per space showing
-its name, its type, when it was last cleaned as a relative time ("Limpo há 2 dias") and how
-many issues are open. The name is the link through to the detail screen; there is no separate
-"ver detalhes", matching the Piscinas and Instalações lists.
+**Two places, one component.** Espaços appears on **Instalações**, inside each site's card
+directly under that site's tanks, and again on a **site's own page** below Piscinas. Same data
+and same controls; only the framing differs — a block with a rule above it inside a card, a
+section of its own on the site page. `SpacesPanel` takes a `variant` and nothing else changes,
+because a second copy is how two screens start disagreeing about what a space is.
+
+One row per space showing its name, its type, when it was last cleaned as a relative time
+("Limpo há 2 dias") and how many issues are open. The name is the link through to the detail
+screen; there is no separate "ver detalhes", matching the Piscinas and Instalações lists.
+
+Instalações fetches one space list per site, in parallel. That is a loop over an endpoint,
+which is usually wrong; here it is right, because a licence bounds a club to the sites it has
+paid for — one for most, two or three for a câmara — and folding it into `/facilities` would
+put every site's cleaning state behind the request that draws the page.
 
 **Space detail** at `/dashboard/facilities/spaces/{id}`: the header, "Marcar como limpo", the
 cleaning history, then the issues.

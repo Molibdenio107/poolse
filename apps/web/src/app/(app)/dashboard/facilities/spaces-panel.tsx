@@ -11,7 +11,7 @@ import type { Space, SpaceType } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
-import type { FormState } from '../../actions';
+import type { FormState } from '../actions';
 import { createSpace } from './spaces.actions';
 
 /**
@@ -20,6 +20,16 @@ import { createSpace } from './spaces.actions';
  * A facility has always had Piscinas; it has never had the balneários, the sala
  * de máquinas, the arrecadação or the car park, which is where most of the work
  * of running a pool actually happens.
+ *
+ * **It appears twice, from one component.** On Instalações it sits inside each
+ * site's card directly under that site's tanks; on the site's own page it is a
+ * section like the others. Same data, same controls, two presentations — because
+ * a bordered card nested inside a bordered card reads as a different kind of
+ * thing, while a bare block floating on the page reads as unfinished.
+ *
+ * `variant` is the only difference, and it is deliberately the *only* difference:
+ * a second copy of this panel is how the two screens start disagreeing about what
+ * a space is.
  *
  * **The row is the summary and the link.** Name, type, when it was last cleaned
  * and how many issues are open — the four things somebody wants before deciding
@@ -64,10 +74,13 @@ export function SpacesPanel({
   facilityId,
   spaces,
   canManage,
+  variant = 'card',
 }: {
   facilityId: string;
   spaces: Space[];
   canManage: boolean;
+  /** `block` sits inside a site card on Instalações; `card` stands alone. */
+  variant?: 'card' | 'block';
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -82,12 +95,28 @@ export function SpacesPanel({
   // dialog open with what somebody typed still in it.
   if (state.ok && adding) setAdding(false);
 
+  const block = variant === 'block';
+  const Wrapper = block ? 'div' : 'section';
+  const Heading = block ? 'h3' : 'h2';
+
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    <Wrapper
+      className={cn(
+        'flex flex-col',
+        block
+          ? 'gap-3 border-t border-border pt-4'
+          : 'gap-4 rounded border border-border bg-surface p-5',
+      )}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+        <Heading
+          className={cn(
+            'text-sm text-foreground-muted',
+            !block && 'font-medium uppercase tracking-wider',
+          )}
+        >
           {t('spaces.title')}
-        </h2>
+        </Heading>
 
         {canManage && (
           <button type="button" onClick={() => setAdding(true)} className={BUTTON}>
@@ -211,6 +240,6 @@ export function SpacesPanel({
           </div>
         </form>
       </Dialog>
-    </section>
+    </Wrapper>
   );
 }

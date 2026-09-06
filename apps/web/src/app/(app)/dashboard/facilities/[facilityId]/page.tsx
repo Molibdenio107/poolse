@@ -21,8 +21,8 @@ import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
 import { PartnersPanel } from './partners-panel';
 import { listPartners } from './partners.actions';
-import { SpacesPanel } from './spaces-panel';
-import { listSpaces } from './spaces.actions';
+import { SpacesPanel } from '../spaces-panel';
+import { listSpaces } from '../spaces.actions';
 import { PageError, PageShell } from '@/components/page-shell';
 
 /**
@@ -106,10 +106,8 @@ export default async function FacilityPage({
   const partners = await listPartners(facilityId, 1);
 
   /*
-   * Espaços — round 6.
-   *
-   * Best-effort like the panels around it: a site whose spaces cannot be read
-   * loses that block rather than the whole page.
+   * Espaços — round 6. Best-effort like the panels around it: a site whose
+   * spaces cannot be read loses that block rather than the whole page.
    */
   const spaces = await listSpaces(facilityId);
 
@@ -333,11 +331,10 @@ export default async function FacilityPage({
           </section>
 
           {/*
-            Espaços, directly below Piscinas — round 6.
-
-            The order is deliberate: the tanks are what a swimming pool is, and
-            the balneários, the sala de máquinas and the arrecadação are the rest
-            of the building around them.
+            Espaços, directly below Piscinas — round 6, and the same component
+            Instalações draws inside each site card. The order is deliberate: the
+            tanks are what a swimming pool is, and the balneários, the sala de
+            máquinas and the arrecadação are the rest of the building round them.
           */}
           {spaces !== null && (
             <SpacesPanel

@@ -20,8 +20,9 @@ enforces it. A club with two sites buys a plan with two.
 ## Espaços
 
 The non-pool parts of a site — balneários, sala de máquinas, arrecadação, receção, exterior —
-are a section of their own below Piscinas, each with a cleaning log and a list of open issues.
-They have their own page: [spaces.md](spaces.md).
+appear below that site's tanks in two places: inside each card on Instalações, and on the
+site's own page. Each has a cleaning log and a list of open issues. They have their own page:
+[spaces.md](spaces.md).
 
 An inventory item's location is now a space rather than free text; the old `location` column is
 still present until it is dropped separately.
