@@ -39,6 +39,8 @@ export interface ClassGroup {
   instructorMembershipId: string | null;
   instructorName: string | null;
   capacity: number | null;
+  /** The turma's own tint on the grid; null means the level's is used. */
+  colour: string | null;
   lane: number | null;
   schedules: ScheduleSlot[];
   students: EnrolledStudent[];
@@ -195,6 +197,7 @@ const GROUP_COLUMNS = `
   cg.instructor_membership_id,
   short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
   cg.capacity,
+  cg.colour::text AS colour,
   -- The lane, still as the number the interface shows — POOLSE-43. The column
   -- became a reference to a lane row, whose position is what it used to hold.
   ln.position AS lane,
@@ -253,6 +256,7 @@ interface GroupRow {
   instructor_membership_id: string | null;
   instructor_name: string | null;
   capacity: number | null;
+  colour: string | null;
   lane: number | null;
   schedules: ScheduleSlot[] | null;
   students: EnrolledStudent[] | null;
@@ -271,6 +275,7 @@ function toGroup(row: GroupRow): ClassGroup {
     instructorMembershipId: row.instructor_membership_id,
     instructorName: row.instructor_name,
     capacity: row.capacity,
+    colour: row.colour,
     lane: row.lane,
     schedules: row.schedules ?? [],
     students: row.students ?? [],
@@ -363,6 +368,24 @@ export async function findClassGroup(
   });
 }
 
+/** The eight tints a turma may wear. A token, never a hex — see the migration. */
+export const CLASS_COLOURS = [
+  'teal',
+  'green',
+  'lime',
+  'amber',
+  'orange',
+  'rose',
+  'magenta',
+  'violet',
+] as const;
+
+export type ClassColour = (typeof CLASS_COLOURS)[number];
+
+export function isClassColour(value: string): value is ClassColour {
+  return (CLASS_COLOURS as readonly string[]).includes(value);
+}
+
 export interface ClassGroupInput {
   name: string;
   levelId: string | null;
@@ -370,6 +393,8 @@ export interface ClassGroupInput {
   instructorMembershipId: string | null;
   capacity: number | null;
   lane: number | null;
+  /** Null means nobody chose, and the calendar falls back to the level's tint. */
+  colour: ClassColour | null;
 }
 
 export async function createClassGroup(
@@ -405,9 +430,9 @@ export async function createClassGroup(
         // create one in a retired season, which is the point of retiring it.
         `INSERT INTO class_group (
            organization_id, name, level_id, pool_id, instructor_membership_id, capacity, lane_id,
-           facility_id, season_id
+           colour, facility_id, season_id
          ) VALUES (
-           $1, $2, $3, $4, $5, $6, $7,
+           $1, $2, $3, $4, $5, $6, $7, $8,
            /*
             * The site — POOLSE-42, which needs one to find the price list.
             *
@@ -442,6 +467,7 @@ export async function createClassGroup(
           input.instructorMembershipId,
           input.capacity,
           laneId,
+          input.colour,
         ],
       );
 
@@ -474,7 +500,8 @@ export async function updateClassGroup(
       const { rows } = await tx.query<{ id: string }>(
         `UPDATE class_group
             SET name = $2, level_id = $3, pool_id = $4,
-                instructor_membership_id = $5, capacity = $6, lane_id = $7
+                instructor_membership_id = $5, capacity = $6, lane_id = $7,
+                colour = $8
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -485,6 +512,7 @@ export async function updateClassGroup(
           input.instructorMembershipId,
           input.capacity,
           laneId,
+          input.colour,
         ],
       );
       if (!rows[0]) return false;

@@ -76,6 +76,13 @@ export interface GridBooking {
   categoryName: string | null;
   /** A token name from `category_colour`, resolved to a design token by the web app. */
   categoryColour: string | null;
+  /**
+   * The turma's own colour, when somebody chose one — round 6.
+   *
+   * A token name from `class_colour`, resolved to a design token by the web app.
+   * Null is the ordinary state and means the calendar falls back to the level.
+   */
+  classColour: string | null;
   /** Hex, and only for a parceria. Takes precedence over the category's colour. */
   partnerColour: string | null;
   partnerId: string | null;
@@ -281,6 +288,7 @@ export async function readGrid(
                   pg.own_instructor_name,
                   pg.notes                                           AS group_notes,
                   coalesce(cg.level_id, pg.level_id)                 AS level_id,
+                  cg.colour::text                                    AS class_colour,
                   cs.weekday,
                   cs.start_time::text,
                   cs.duration_minutes,
@@ -442,6 +450,7 @@ export async function readGrid(
         categoryId: row.category_id,
         categoryName: row.category_name,
         categoryColour: row.category_colour,
+        classColour: row.class_colour,
         partnerColour: row.partner_colour,
         partnerId: row.partner_id,
         partnerGroupId: row.partner_group_id,
@@ -482,6 +491,7 @@ interface GridBookingRow {
   category_id: string | null;
   category_name: string | null;
   category_colour: string | null;
+  class_colour: string | null;
   partner_colour: string | null;
   partner_id: string | null;
   partner_group_id: string | null;

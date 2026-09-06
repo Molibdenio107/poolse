@@ -1,3 +1,4 @@
+import { Handshake } from 'lucide-react';
 import { Hint } from '@/components/ui/tooltip';
 import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,15 @@ export interface WeekEntry {
    * every cell still carries its name, its partner and its headcount as text.
    */
   accentColour?: string | null;
+  /**
+   * A mark for a kind of entry that is not a turma — round 6.
+   *
+   * A name and a label rather than a node: this file is rendered by three
+   * screens, one of them the printed sheet, so a caller passing JSX would be
+   * deciding how it looks in a context it cannot see. The label comes with it
+   * because this component holds no strings of its own.
+   */
+  badge?: { icon: 'partnership'; label: string };
   /** Why this one is off — "Natal", "Férias de agosto". Shown under the title. */
   note?: string | null;
   /** Struck through: the class is not happening. */
@@ -302,6 +312,17 @@ function Slot({
           )}
         >
           {entry.title}
+        </span>
+      )}
+      {/*
+        The mark that says this is a parceria rather than a turma. Beside the
+        subtitle, which already names the school — the icon is the fast cue, the
+        words are the answer, and neither is colour.
+      */}
+      {entry.badge !== undefined && (
+        <span className="flex items-center gap-1 text-sm text-foreground-muted">
+          <Handshake className="size-3.5 shrink-0" aria-hidden="true" />
+          {entry.badge.label}
         </span>
       )}
       {entry.subtitle != null && (

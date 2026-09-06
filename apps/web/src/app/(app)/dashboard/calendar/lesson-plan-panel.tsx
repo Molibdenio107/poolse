@@ -46,10 +46,24 @@ const BUTTON_QUIET =
 export function LessonPlanPanel({
   sessionId,
   onClose,
+  actions,
 }: {
   /** The lesson being planned, or null when the sheet is shut. */
   sessionId: string | null;
   onClose: () => void;
+  /**
+   * Take the register and Cancel class, at the foot of the sheet — round 6.
+   *
+   * They already live on the hover card, and they are here too because this is
+   * where somebody ends up when they click a class rather than pass over it.
+   * Having opened the lesson, being told to close it and hover the block instead
+   * to mark attendance is the kind of thing that makes a feature go unused.
+   *
+   * A node rather than a shape, for the same reason the hover card takes one:
+   * they are a link and a client component the calendar owns, and describing
+   * them as data would mean this sheet knowing what a register is.
+   */
+  actions?: React.ReactNode;
 }): React.ReactElement {
   const t = useTranslations();
   const format = useFormatter();
@@ -240,6 +254,10 @@ export function LessonPlanPanel({
                 when: format.dateTime(new Date(plan.updatedAt), 'short'),
               })}
             </p>
+          )}
+
+          {actions !== undefined && (
+            <div className="border-t border-border pt-4">{actions}</div>
           )}
         </div>
       )}

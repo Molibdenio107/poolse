@@ -45,9 +45,10 @@ first paint anybody can read.
 45-minute class in a 60-minute slot is three-quarters of it, and two classes that overlap by
 ten minutes overlap by ten minutes on screen.
 
-**Colour is the level**, one of eight tints in the club's own level order, named in words in
-the legend beside the grid. A parceria keeps its partner's colour; a turma with no level, an
-evento and a manutenção take the neutral. Colour never carries meaning alone.
+**Colour is the turma's own, and the level's when it has none.** A turma can be given one of
+eight colours on its own screen; without one it takes its level's tint, which is what an
+uncoloured club sees. A parceria keeps its partner's colour; an evento and a manutenção take
+the neutral. The legend names each level in words — colour never carries meaning alone.
 
 The grid opens scrolled to the first class of the week, and on the week containing today it
 draws a line at the current time.

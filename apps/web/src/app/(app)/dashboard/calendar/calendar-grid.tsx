@@ -511,11 +511,20 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       if (unchanged) return;
 
       setPending((current) => new Map(current).set(state.booking.id, target));
+
+      // Point at the block that changed, not at the middle of the screen. The
+      // element is still on the page at this instant, so its box is the honest
+      // anchor; if it has gone, the popover centres itself as it used to.
+      const node = document.querySelector<HTMLElement>(
+        `[data-booking="${state.booking.id}"]`,
+      );
+      const box = node?.getBoundingClientRect();
+
       setAsk({
         ...target,
         booking: state.booking,
-        x: 0,
-        y: 0,
+        x: box === undefined ? 0 : box.left + box.width / 2,
+        y: box === undefined ? 0 : box.bottom,
         ...(sideways ? { seriesOnly: true } : {}),
       });
     }
@@ -1117,6 +1126,7 @@ function Block({
         if (Date.now() - justDragged.current < 250) return;
         onOpenPlan(booking);
       }}
+      data-booking={booking.id}
       className={cn(
         'pointer-events-auto absolute overflow-hidden rounded px-1.5 py-1 text-left text-white',
         'ring-1 ring-black/10',
@@ -1201,7 +1211,16 @@ function Block({
       title={card.title}
       detail={card.detail}
       side="right"
-      closeDelay={0}
+      /*
+        Not 0, and this is a correction — round 6.
+        
+        The ticket asked for "closes immediately on pointer-out" and it was taken
+        literally, which made the card useless: Marcar presenças and Cancelar
+        aula live inside it, and the pointer has to cross the gap between the
+        block and the card to reach them. At 0ms the card was gone before it got
+        there. The delay is the travel time, not a flourish.
+      */
+      closeDelay={220}
       suppressed={anyDrag}
       {...(card.actions === undefined ? {} : { actions: card.actions })}
     >
@@ -1241,10 +1260,39 @@ function ScopePopover({
     return () => document.removeEventListener('keydown', key);
   }, [onCancel]);
 
-  const style: React.CSSProperties =
-    ask.x === 0 && ask.y === 0
-      ? { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
-      : { left: Math.min(ask.x, window.innerWidth - 260), top: Math.min(ask.y + 8, window.innerHeight - 140) };
+  const anchored = !(ask.x === 0 && ask.y === 0);
+
+  const WIDTH = 240;
+  const MARGIN = 12;
+
+  /*
+   * Centred over the block, and nudged back inside the window.
+   *
+   * `clamped` is where the panel actually lands; `tail` is how far the arrow has
+   * to slide along its top edge to keep pointing at the block after that nudge.
+   * Without the second part a block near the right-hand edge gets a panel that
+   * has moved and an arrow that has not, which points at the wrong class.
+   */
+  const wanted = ask.x - WIDTH / 2;
+  const clamped = Math.max(
+    MARGIN,
+    Math.min(wanted, (typeof window === 'undefined' ? 1024 : window.innerWidth) - WIDTH - MARGIN),
+  );
+  const tail = Math.max(14, Math.min(ask.x - clamped, WIDTH - 14));
+
+  /*
+   * Below the block, unless the block is low on the screen, in which case above
+   * it. A panel that opens off the bottom of the window is a question nobody can
+   * answer.
+   */
+  const viewportHeight = typeof window === 'undefined' ? 768 : window.innerHeight;
+  const below = ask.y + 170 < viewportHeight;
+
+  const style: React.CSSProperties = anchored
+    ? below
+      ? { left: clamped, top: ask.y + 10, width: WIDTH }
+      : { left: clamped, top: Math.max(MARGIN, ask.y - 180), width: WIDTH }
+    : { left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: WIDTH };
 
   return (
     <>
@@ -1254,9 +1302,26 @@ function ScopePopover({
         ref={box}
         role="dialog"
         aria-label={t('calendar.moveScope')}
-        className="fixed z-50 w-60 rounded border border-border bg-surface p-3 shadow-lg"
+        className="fixed z-50 rounded border border-border bg-surface p-3 shadow-lg"
         style={style}
       >
+        {/*
+          The tail: a square rotated 45°, carrying only the two borders that end
+          up on the outside. All four would draw the panel's own edge straight
+          through the middle of the arrow, which is the usual way this is got
+          wrong. Which two depends on whether the panel sits below the block or
+          above it.
+        */}
+        {anchored && (
+          <span
+            aria-hidden="true"
+            className={cn(
+              'absolute size-3 rotate-45 bg-surface',
+              below ? 'border-l border-t border-border' : 'border-b border-r border-border',
+            )}
+            style={below ? { left: tail - 6, top: -6.5 } : { left: tail - 6, bottom: -6.5 }}
+          />
+        )}
         <p className="text-sm">
           {ask.seriesOnly === true
             ? t('calendar.lanesChanged', { count: ask.laneIds.length })

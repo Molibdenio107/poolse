@@ -216,11 +216,49 @@ export function startTimeOf(minutes: number): string {
  */
 export const LEVEL_TINTS = 8;
 
+/** The eight tints, in the order the tokens are numbered. */
+const COLOUR_INDEX: Record<string, number> = {
+  teal: 1,
+  green: 2,
+  lime: 3,
+  amber: 4,
+  orange: 5,
+  rose: 6,
+  magenta: 7,
+  violet: 8,
+};
+
+/**
+ * The CSS colour a stored class-colour token paints with.
+ *
+ * `rgb(var(--level-N))` rather than a hex, so the swatch a club picked follows
+ * the theme: the same token is a different colour in dark mode, which is the
+ * whole reason these are tokens. Null for anything unrecognised, so a value from
+ * a newer build is simply not painted rather than rendering as `rgb(var())`.
+ */
+export function classColourVar(colour: string | null | undefined): string | null {
+  if (colour === null || colour === undefined) return null;
+  const index = COLOUR_INDEX[colour];
+  return index === undefined ? null : `rgb(var(--level-${index}))`;
+}
+
 export function levelTint(
-  booking: Pick<GridBooking, 'subjectType' | 'levelId'>,
+  booking: Pick<GridBooking, 'subjectType' | 'levelId'> & { classColour?: string | null },
   order: ReadonlyMap<string, number>,
 ): number | null {
   if (booking.subjectType !== 'turma') return null;
+
+  /*
+   * The turma's own colour wins — round 6.
+   *
+   * A level answers "what kind of class is this"; it cannot answer "which one is
+   * mine", and a club with Competição A and Competição B had no way to tell them
+   * apart. When somebody has chosen, that choice is the answer; the level is what
+   * the grid falls back to, which is what every uncoloured club goes on seeing.
+   */
+  const chosen = booking.classColour ?? null;
+  if (chosen !== null && COLOUR_INDEX[chosen] !== undefined) return COLOUR_INDEX[chosen]!;
+
   if (booking.levelId === null) return null;
 
   const place = order.get(booking.levelId);

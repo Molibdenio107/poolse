@@ -201,6 +201,7 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                     spaces={spacesBySite.get(facility.id)!.items}
                     canManage={spacesBySite.get(facility.id)!.canManage}
                     variant="block"
+                    backTo="/dashboard/facilities"
                   />
                 )}
 

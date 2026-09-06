@@ -1850,6 +1850,28 @@ that says nothing — worse than none, since a colleague would stop looking.
 The unique index is partial, as on every soft-deletable table: a plan cleared in March must
 not block a new one for the same Tuesday next season.
 
+### A turma's own colour — round 6
+
+```
+class_colour = teal | green | lime | amber | orange | rose | magenta | violet
+
+class_group
+  + colour class_colour            -- nullable; null means the level's tint is used
+```
+
+**An enum, not a hex, for the three reasons `booking_category.colour` already gave.** Colour
+comes from tokens and no literal hex appears in a component; light and dark are two paintings
+of one token, so a stored hex is right in one theme and wrong in the other; and every one of
+the eight was measured for contrast in both. A free picker lets a club choose pale yellow and
+takes the block's own text to 1.3:1 with nothing to warn them. `partner.colour` stays a hex,
+predating this and not changed by a slice about turmas.
+
+**The names are the tints', not the levels'.** A value means "the fourth colour", so
+reordering the club's levels does not silently repaint every turma that chose one.
+
+**Null is the ordinary state** and the calendar falls back to the level's tint — which is what
+an uncoloured club already sees, and what it goes on seeing until somebody picks something.
+
 ### Espaços, cleaning and issues — round 6
 
 The non-pool parts of a facility, what has been cleaned in them, and what is broken.

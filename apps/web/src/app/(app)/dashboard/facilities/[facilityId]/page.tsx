@@ -341,6 +341,7 @@ export default async function FacilityPage({
               facilityId={facilityId}
               spaces={spaces.items}
               canManage={spaces.canManage}
+              backTo={`/dashboard/facilities/${facilityId}`}
             />
           )}
 

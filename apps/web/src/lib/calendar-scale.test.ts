@@ -133,3 +133,23 @@ test('no level, and everything that is not a turma, takes the neutral', () => {
   // A level the client has never heard of is neutral too, not a crash.
   assert.equal(levelTint({ subjectType: 'turma', levelId: 'zzz' } as never, order), null);
 });
+
+/**
+ * A turma's own colour beats its level's — round 6.
+ *
+ * The level answers "what kind of class is this"; it cannot answer "which one is
+ * mine", which is why a club with Competição A and Competição B asked for this.
+ */
+test('a chosen colour wins over the level, and an unset one falls back', () => {
+  const order = levelOrder(LEVELS);
+  const turma = (levelId: string | null, classColour: string | null) =>
+    ({ subjectType: 'turma', levelId, classColour }) as never;
+
+  assert.equal(levelTint(turma('a', 'violet'), order), 8);
+  // Falls back to the level, which is what every uncoloured club goes on seeing.
+  assert.equal(levelTint(turma('b', null), order), 2);
+  // A colour on a turma with no level still paints: the choice is the answer.
+  assert.equal(levelTint(turma(null, 'rose'), order), 6);
+  // A token this build has never heard of is neutral rather than a crash.
+  assert.equal(levelTint(turma('a', 'chartreuse'), order), 1);
+});

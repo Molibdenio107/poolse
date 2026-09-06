@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Plus, Wrench } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { timeAgo } from '@/lib/relative-time';
 import { withFrom } from '@/lib/back';
@@ -75,16 +75,40 @@ export function SpacesPanel({
   spaces,
   canManage,
   variant = 'card',
+  backTo,
 }: {
   facilityId: string;
   spaces: Space[];
   canManage: boolean;
   /** `block` sits inside a site card on Instalações; `card` stands alone. */
   variant?: 'card' | 'block';
+  /**
+   * Where a space's own screen should send somebody back to.
+   *
+   * The panel appears on two screens and the way back is different from each.
+   * It used to be hardcoded to the site's page, so opening a space from
+   * Instalações and pressing Voltar landed you somewhere you had never been.
+   */
+  backTo: string;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
   const [adding, setAdding] = useState(false);
+
+  /*
+   * Shut to begin with, on both screens.
+   *
+   * A site card already carries its tanks, its photographs and its counts; a
+   * seven-row list of rooms under all of that is a lot of page for something
+   * most visits are not about. **The summary in the header is what makes that
+   * safe** — how many spaces, how many overdue, how many open issues — so the
+   * two things worth acting on are legible without opening anything, which is
+   * the whole reason the feature exists.
+   */
+  const [open, setOpen] = useState(false);
+
+  const overdue = spaces.filter((space) => space.overdue).length;
+  const issues = spaces.reduce((total, space) => total + space.openIssues, 0);
 
   const [state, dispatch, pending] = useSavedAction<FormState, FormData>(
     createSpace.bind(null, facilityId),
@@ -109,16 +133,58 @@ export function SpacesPanel({
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Heading
-          className={cn(
-            'text-sm text-foreground-muted',
-            !block && 'font-medium uppercase tracking-wider',
-          )}
-        >
-          {t('spaces.title')}
+        <Heading className="contents">
+          <button
+            type="button"
+            onClick={() => setOpen((shown) => !shown)}
+            aria-expanded={open}
+            className="flex flex-1 items-center gap-2 rounded text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <ChevronRight
+              aria-hidden="true"
+              className={cn(
+                'size-4 shrink-0 text-foreground-muted transition-transform duration-150',
+                open && 'rotate-90',
+              )}
+            />
+            <span
+              className={cn(
+                'text-sm text-foreground-muted',
+                !block && 'font-medium uppercase tracking-wider',
+              )}
+            >
+              {t('spaces.title')}
+            </span>
+
+            {/*
+              The summary, and the reason a shut section is safe. Numbers rather
+              than a chevron alone: overdue cleaning and open faults are the two
+              things this feature exists to surface, and hiding them behind a
+              click would undo it.
+            */}
+            {!open && spaces.length > 0 && (
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground-muted">
+                <span>{t('spaces.count', { count: spaces.length })}</span>
+
+                {overdue > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded bg-danger/10 px-1.5 py-0.5 font-medium text-danger">
+                    <AlertTriangle className="size-3" aria-hidden="true" />
+                    {t('spaces.overdueCount', { count: overdue })}
+                  </span>
+                )}
+
+                {issues > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded bg-warning/10 px-1.5 py-0.5 font-medium text-warning">
+                    <Wrench className="size-3" aria-hidden="true" />
+                    {t('spaces.openIssues', { count: issues })}
+                  </span>
+                )}
+              </span>
+            )}
+          </button>
         </Heading>
 
-        {canManage && (
+        {canManage && open && (
           <button type="button" onClick={() => setAdding(true)} className={BUTTON}>
             <Plus className="size-4" aria-hidden="true" />
             {t('spaces.add')}
@@ -126,7 +192,7 @@ export function SpacesPanel({
         )}
       </div>
 
-      {spaces.length === 0 ? (
+      {!open ? null : spaces.length === 0 ? (
         <p className="text-sm text-foreground-muted">{t('spaces.none')}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-border">
@@ -137,10 +203,7 @@ export function SpacesPanel({
               <li key={space.id} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                   <Link
-                    href={withFrom(
-                      `/dashboard/facilities/spaces/${space.id}`,
-                      `/dashboard/facilities/${facilityId}`,
-                    )}
+                    href={withFrom(`/dashboard/facilities/spaces/${space.id}`, backTo)}
                     className="rounded font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {space.name}
@@ -174,8 +237,17 @@ export function SpacesPanel({
                     {ago === null ? t('spaces.neverCleaned') : t('spaces.cleanedAgo', { ago })}
                   </span>
 
+                  {/*
+                    Amber, and an icon, and never on its own: an open fault is
+                    worth noticing but is not the red that overdue cleaning
+                    earns. A space can be spotless and still have a broken
+                    shower, and the two should not look like the same problem.
+                  */}
                   {space.openIssues > 0 && (
-                    <span>{t('spaces.openIssues', { count: space.openIssues })}</span>
+                    <span className="inline-flex items-center gap-1 font-medium text-warning">
+                      <Wrench className="size-3.5" aria-hidden="true" />
+                      {t('spaces.openIssues', { count: space.openIssues })}
+                    </span>
                   )}
                 </div>
               </li>

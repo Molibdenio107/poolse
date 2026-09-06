@@ -65,7 +65,9 @@ export function CalendarWeek({
   const t = useTranslations();
   const router = useRouter();
 
-  const [planning, setPlanning] = useState<string | null>(null);
+  const [planning, setPlanning] = useState<{ sessionId: string; booking: GridBooking } | null>(
+    null,
+  );
   const [cancelling, setCancelling] = useState<CancelTarget | null>(null);
   const [placing, setPlacing] = useState<{ weekday: number; startMinutes: number } | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
@@ -153,7 +155,7 @@ export function CalendarWeek({
     (booking: GridBooking) => {
       const session = controlsFor(booking);
       if (session?.sessionId === undefined) return;
-      setPlanning(session.sessionId);
+      setPlanning({ sessionId: session.sessionId, booking });
     },
     [controlsFor],
   );
@@ -288,7 +290,17 @@ export function CalendarWeek({
       />
 
       {planning !== null && (
-        <LessonPlanPanel sessionId={planning} onClose={() => setPlanning(null)} />
+        <LessonPlanPanel
+          sessionId={planning.sessionId}
+          onClose={() => setPlanning(null)}
+          /*
+            The same two controls the hover card carries, built by the same
+            function. One definition, two places it can be reached from.
+          */
+          {...(renderDetail(planning.booking).actions === undefined
+            ? {}
+            : { actions: renderDetail(planning.booking).actions })}
+        />
       )}
 
       <CancelSessionDialog

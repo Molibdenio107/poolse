@@ -14,8 +14,14 @@ and same controls; only the framing differs — a block with a rule above it ins
 section of its own on the site page. `SpacesPanel` takes a `variant` and nothing else changes,
 because a second copy is how two screens start disagreeing about what a space is.
 
+**The section starts collapsed**, on both screens, with a summary in its header: how many
+spaces, how many overdue, how many open issues. The two things worth acting on stay legible
+without opening anything, which is what makes closing it safe.
+
 One row per space showing its name, its type, when it was last cleaned as a relative time
-("Limpo há 2 dias") and how many issues are open. The name is the link through to the detail
+("Limpo há 2 dias") and how many issues are open. An open issue is marked in amber with its
+own icon — a space can be spotless and still have a broken shower, and that is not the red
+that overdue cleaning earns. The name is the link through to the detail
 screen; there is no separate "ver detalhes", matching the Piscinas and Instalações lists.
 
 Instalações fetches one space list per site, in parallel. That is a loop over an endpoint,

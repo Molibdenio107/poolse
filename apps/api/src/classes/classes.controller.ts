@@ -39,6 +39,8 @@ import {
   timetableFor,
   updateClassGroup,
   type ClassGroup,
+  isClassColour,
+  type ClassColour,
   type ClassGroupInput,
   type TimetableEntry,
 } from './classes.repository.js';
@@ -560,7 +562,29 @@ function parseGroup(body: Record<string, unknown>): ClassGroupInput {
     instructorMembershipId: optionalId(body['instructorMembershipId']),
     capacity: optionalCount(body['capacity'], 'capacity', 200, 'classes.capacityInvalid'),
     lane,
+    colour: optionalColour(body['colour']),
   };
+}
+
+/**
+ * The turma's colour, or nothing.
+ *
+ * Empty means nobody chose, which is the ordinary state and the one the calendar
+ * falls back from. A value that is not one of the eight is refused rather than
+ * dropped: a client sending `#ff0000` has misunderstood the contract, and
+ * silently storing null would leave somebody wondering why their colour never
+ * took.
+ */
+function optionalColour(value: unknown): ClassColour | null {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (trimmed.length === 0) return null;
+  if (!isClassColour(trimmed)) {
+    throw new BadRequestException({
+      message: 'colour is not one of the class colours',
+      fields: { colour: 'classes.colourInvalid' },
+    });
+  }
+  return trimmed;
 }
 
 function optionalId(value: unknown): string | null {

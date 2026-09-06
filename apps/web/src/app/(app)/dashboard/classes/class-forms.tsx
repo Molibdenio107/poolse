@@ -10,6 +10,7 @@ import {
   SelectField,
   TextField,
 } from '@/components/ui/field';
+import { ColourSwatches } from '@/components/ui/colour-swatches';
 import { fitsLevel, type AgeFit } from '@/lib/ages';
 import { cn } from '@/lib/utils';
 import type { ClassGroup, ClassOptions } from '@/lib/api';
@@ -182,6 +183,23 @@ export function ClassForm({
           {...(state.fields?.['capacity'] === undefined
             ? {}
             : { error: t(state.fields['capacity'], state.values) })}
+        />
+
+        {/*
+          The turma's colour on the grid — round 6.
+
+          Eight tokens and a clear, not a free picker: the eight were measured
+          for contrast in both themes, and a hex is one colour for two of them.
+          Empty is the ordinary answer and means the calendar uses the level's
+          tint, which is what an uncoloured club already sees.
+        */}
+        <ColourSwatches
+          name="colour"
+          label={t('classes.colour')}
+          initial={group?.colour ?? null}
+          hint={t('classes.colourHint')}
+          clearLabel={t('classes.colourNone')}
+          nameOf={(colour) => t(`classes.colours.${colour}`)}
         />
       </div>
 

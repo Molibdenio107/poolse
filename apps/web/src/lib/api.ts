@@ -1302,9 +1302,22 @@ export interface EnrolledStudent {
   waitingPosition: number | null;
 }
 
+/** The eight tints a turma may wear — round 6. A token, never a hex. */
+export type ClassColour =
+  | 'teal'
+  | 'green'
+  | 'lime'
+  | 'amber'
+  | 'orange'
+  | 'rose'
+  | 'magenta'
+  | 'violet';
+
 export interface ClassGroup {
   id: string;
   name: string;
+  /** Null means nobody chose; the calendar falls back to the level's tint. */
+  colour: ClassColour | null;
   levelId: string | null;
   levelName: string | null;
   poolId: string | null;
@@ -1910,6 +1923,8 @@ export interface GridBooking {
   categoryId: string | null;
   categoryName: string | null;
   categoryColour: string | null;
+  /** The turma's own tint, when somebody chose one. Beats the level's. */
+  classColour: ClassColour | null;
   /** Hex, and only for a parceria. Beats the category's colour. */
   partnerColour: string | null;
   partnerId: string | null;

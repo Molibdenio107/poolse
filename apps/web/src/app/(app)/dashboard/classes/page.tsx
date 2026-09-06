@@ -12,6 +12,7 @@ import { PartnerClasses } from './partner-classes';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
+import { classColourVar } from '@/lib/calendar-scale';
 import { cn } from '@/lib/utils';
 
 /**
@@ -112,6 +113,13 @@ export default async function ClassesPage({
       startTime: slot.startTime,
       durationMinutes: slot.durationMinutes,
       title: group.name,
+      /*
+        The turma's own colour, as a left rule — round 6, and the same treatment
+        a parceria already gets below. A token rather than a hex, so it follows
+        the theme; null when nobody chose one, which leaves the card exactly as
+        it was.
+      */
+      accentColour: classColourVar(group.colour),
       subtitle: [group.poolName, group.lane === null ? null : t('classes.laneN', { lane: group.lane })]
         .filter(Boolean)
         .join(' · '),
@@ -217,6 +225,13 @@ export default async function ClassesPage({
         title: booking.name,
         subtitle: [booking.subtitle, lanes.join(', ')].filter(Boolean).join(' · '),
         accentColour: booking.partnerColour,
+        /*
+          A parceria is a different kind of thing from a turma, and on a screen
+          that now colours both it needs to say so in something other than
+          colour. The handshake is the icon for an agreement with somebody
+          outside the club.
+        */
+        badge: { icon: 'partnership' as const, label: t('grid.partnership') },
         detail: {
           facts: [
             booking.subtitle === null
