@@ -57,7 +57,14 @@ Escape, or a click away, puts the block back and writes nothing.
 Classes on days already past are faded and cannot be dragged — a lesson that has happened is
 a record, not a plan — but they still open.
 
-Clicking empty space starts a new turma with that day, time and pista already filled in.
+Clicking empty space offers the club's unscheduled turmas and puts the chosen one on that
+day at that time. It does not open the new-turma form: that form deliberately carries no day
+or time, so a day and a time sent to it would go nowhere. Creating a genuinely new turma is a
+link inside the same dialog, and it comes back here to be placed.
+
+**The lane is not set by the click.** `placeSlotAction` does not return the schedule it
+created, so there is no id to give a lane to; drag the block across to the right pista once it
+is placed.
 
 ## The hover card
 

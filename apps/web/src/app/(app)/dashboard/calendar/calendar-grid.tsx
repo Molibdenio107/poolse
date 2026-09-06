@@ -15,7 +15,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import type { ClassGroup, GridBooking, GridLane, GridSlot } from '@/lib/api';
+import type { GridBooking, GridLane, GridSlot } from '@/lib/api';
 
 /** Only what a colour and a legend need; the API sends them already ordered. */
 export type CalendarLevel = { id: string; name: string };
@@ -75,7 +75,6 @@ const GUTTER = 56;
 const DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
 export interface CalendarGridProps {
-  organizationId: string;
   /** Monday of the week on screen, ISO. */
   weekStart: string;
   /** Dated headers — "Ter · 25 ago". */
@@ -88,7 +87,6 @@ export interface CalendarGridProps {
   pools: { id: string; name: string }[];
   bookings: GridBooking[];
   levels: CalendarLevel[];
-  groups: ClassGroup[];
   canManage: boolean;
   /** Hover-card content and actions for one booking, built by the page. */
   renderDetail: (booking: GridBooking) => {

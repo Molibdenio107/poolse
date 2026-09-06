@@ -1519,6 +1519,10 @@
     "guest": "Make-up"
   },
   "calendar": {
+    "placeHere": "Put a class here",
+    "nothingToPlace": "Every class is already on the grid. Create a new one to place it here.",
+    "laneAfterwards": "The lane is not set — drag the block to the right lane once it is placed.",
+    "createTurma": "Create a new class",
     "pool": "Pool",
     "time": "Time",
     "resize": "Drag to change the duration",

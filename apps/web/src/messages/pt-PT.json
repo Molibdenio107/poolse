@@ -1519,6 +1519,10 @@
     "guest": "Reposição"
   },
   "calendar": {
+    "placeHere": "Colocar turma aqui",
+    "nothingToPlace": "Todas as turmas já estão na grelha. Crie uma nova para a colocar aqui.",
+    "laneAfterwards": "A pista fica por definir — arraste o bloco para a pista certa depois de o colocar.",
+    "createTurma": "Criar uma turma nova",
     "pool": "Piscina",
     "time": "Horário",
     "resize": "Arraste para alterar a duração",
