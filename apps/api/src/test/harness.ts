@@ -126,6 +126,15 @@ const TENANT_TABLES = [
    * a season's scheduling with it. Only a teardown genuinely removes a pool, so
    * only a teardown has to know this order.
    */
+  /*
+   * Espaços and what happens in them — round 6.
+   *
+   * `maintenance_request` first of the three, and early in the list overall: it
+   * points at a facility, a space, a pool *and* an inventory item, so it has to
+   * go before every one of them. A cleaning points only at its space.
+   */
+  'maintenance_request',
+  'cleaning_log',
   'inventory_item_pool',
   'inventory_item',
   /*
@@ -149,6 +158,11 @@ const TENANT_TABLES = [
   'lane',
   'pool',
   'booking_category',
+  /*
+   * After `inventory_item`, which points at it since the locations became
+   * spaces, and before `facility`, which it points at itself.
+   */
+  'space',
   'facility_photo',
   'facility',
   'invitation',

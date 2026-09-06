@@ -164,6 +164,36 @@ in `numeric` with an explicit unit column — pH, °C, ppm and kWh do not share 
 **Times are stored UTC, displayed in the facility's timezone.** Class schedules are the
 place this bites; get it right once in the scheduling layer.
 
+**A derived answer is derived once, on the server.** Overdue cleaning is
+`now() - last cleaning > interval`, computed in SQL in `spaces.repository.ts` and shipped as a
+boolean; the client renders it and never recomputes it. The same reasoning as the trigger
+refusals that carry their numbers: two implementations of one rule agree until the day they do
+not. It is also why there is no `is_overdue` column — a stored flag needs a worker to keep it
+true, and that is a per-tenant cost.
+
+**A null ceiling, interval or limit means "not measured" and enforces nothing.**
+`pool.max_capacity`, `space.expected_cleaning_interval_hours`,
+`organization.max_management_users`. Never read one as zero. Its counterpart is that an
+*absence of history* is not evidence: a space with a schedule and no cleaning at all is
+overdue, not fine.
+
+**Out of service is not deleted.** `space.active = false` means shut for works — still listed,
+still openable, and exempt from the overdue rule; `archived_at` is deletion. Where a table
+carries both, they must mean different things and the difference belongs in a column comment.
+
+**An elapsed time is `timeAgo` from `lib/relative-time.ts`**, which returns the phrase and lets
+`t('…', { ago })` own the word order. Never build "há 2 dias" in a component: it is a
+Portuguese string hard-coded into an interface that ships in two languages.
+
+**Enum values are English snake_case; the Portuguese is an i18n key.** `fault` / `restock`
+render as "Avaria" / "Reposição". Check a candidate word against the words the schema already
+uses — `reposicao` was taken by the make-up-lesson module, and one word meaning two things in
+one schema is how somebody joins the wrong table at midnight.
+
+**A new tenant table goes in `TENANT_TABLES` in `apps/api/src/test/harness.ts`**, child-first,
+in the same commit as its migration. A forgotten one fails every integration test at teardown
+with a foreign-key violation that looks nothing like the change that caused it.
+
 **Management seats are capped per tenant by a soft quota**
 (`organization.max_management_users`, nullable = unlimited), checked when an invitation is
 *created* and counting pending, unexpired ones — a 24-hour window otherwise lets a tenant

@@ -17,6 +17,15 @@ is.
 A subscription covers one site; `organization.max_facilities` defaults to 1 and a trigger
 enforces it. A club with two sites buys a plan with two.
 
+## Espaços
+
+The non-pool parts of a site — balneários, sala de máquinas, arrecadação, receção, exterior —
+are a section of their own below Piscinas, each with a cleaning log and a list of open issues.
+They have their own page: [spaces.md](spaces.md).
+
+An inventory item's location is now a space rather than free text; the old `location` column is
+still present until it is dropped separately.
+
 ## A tank
 
 Name, kind (indoor or outdoor), and optionally its measurements: length, width, **min

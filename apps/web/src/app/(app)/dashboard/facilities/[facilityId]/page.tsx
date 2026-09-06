@@ -21,6 +21,8 @@ import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
 import { PartnersPanel } from './partners-panel';
 import { listPartners } from './partners.actions';
+import { SpacesPanel } from './spaces-panel';
+import { listSpaces } from './spaces.actions';
 import { PageError, PageShell } from '@/components/page-shell';
 
 /**
@@ -102,6 +104,14 @@ export default async function FacilityPage({
    * The page number rides in the query string so the list is linkable.
    */
   const partners = await listPartners(facilityId, 1);
+
+  /*
+   * Espaços — round 6.
+   *
+   * Best-effort like the panels around it: a site whose spaces cannot be read
+   * loses that block rather than the whole page.
+   */
+  const spaces = await listSpaces(facilityId);
 
   /*
     The season in figures — POOLSE-52.
@@ -321,6 +331,21 @@ export default async function FacilityPage({
               </ul>
             )}
           </section>
+
+          {/*
+            Espaços, directly below Piscinas — round 6.
+
+            The order is deliberate: the tanks are what a swimming pool is, and
+            the balneários, the sala de máquinas and the arrecadação are the rest
+            of the building around them.
+          */}
+          {spaces !== null && (
+            <SpacesPanel
+              facilityId={facilityId}
+              spaces={spaces.items}
+              canManage={spaces.canManage}
+            />
+          )}
 
           <section className="rounded border border-border bg-surface p-5">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">

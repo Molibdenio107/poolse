@@ -91,3 +91,19 @@ mobile app ships, or get a lighter auth path.
 
 **Not built in this pass.** `max_management_users` is not in the schema yet; it
 goes in with the next migration that already touches `organization`.
+
+## Round 6 — Espaços, cleaning and maintenance requests
+
+- **2026-09-06** — A facility's non-pool areas are `space`, not `room`. The concept has to hold the car park and the plant room as comfortably as it holds a balneário, and "room" quietly excludes both.
+- **2026-09-06** — `maintenance_request` is built as the seed of Módulo 2 rather than as a spaces-only feature: keyed on a facility, with nullable `space_id`, `pool_id` and `inventory_item_id`. Equipment and tank faults will extend this table instead of arriving with one of their own, because two places to look for "what is broken at this site" is the failure the module exists to prevent.
+- **2026-09-06** — Overdue is derived at query time, in SQL, in one place. No `is_overdue` column, no cron job, no worker — a stored flag needs a process to keep it true, and per-tenant running cost is a design constraint. The API ships the boolean and the client renders it rather than re-deriving it.
+- **2026-09-06** — An archived cleaning log did not happen: every last-cleaned read filters it out, so deleting a mistaken entry puts the space back to overdue. The alternative leaves a dirty room looking clean because somebody corrected a mistake.
+- **2026-09-06** — A space with a cleaning interval and no cleaning at all is overdue, not blank. An absence of history is not evidence of cleanliness, and it is exactly the state the feature exists to surface.
+- **2026-09-06** — `space.active = false` means out of service and is exempt from the overdue rule; `archived_at` remains deletion. Two flags earn their place only by meaning different things, and the exemption is what gives `active` a job — nobody cleans a balneário shut for building works.
+- **2026-09-06** — Enum values stay English snake_case and the Portuguese is an i18n key. `restock`, not `reposicao`: that word is already the make-up-lesson module's, and one word meaning two unrelated things in one schema is how somebody joins the wrong table at midnight.
+- **2026-09-06** — Logging a cleaning and reporting an issue are open to every management login, including instructors; resolving is owner, admin or maintenance. Reporting is noticing, resolving is a judgement that the work was done — and a feature that made an instructor find an admin to record that they mopped the balneário would simply not be used.
+- **2026-09-06** — A cleaning log has no edit control at all. An entry is a claim about a moment; correcting one means archiving it, which is owner/admin.
+- **2026-09-06** — Resolving an already-resolved issue is a 409, not a silent second write. Two people closing the same fault from two phones must not quietly rewrite who fixed it and when.
+- **2026-09-06** — A space's type is optional and defaults to `other`, matching the column default; only a *stated* invalid type is refused. A club naming a room the six categories do not cover must not be stopped by the classification.
+- **2026-09-06** — The free-text inventory locations became spaces, matched case- and accent-insensitively per facility, named with the spelling on the earliest-created item. Only non-archived items mint a space; archived ones are linked where one already exists. `inventory_item.location` stays in place — dropping it is a separate change so the result can be eyeballed first.
+- **2026-09-06** — The API answers `canManage`, `canLog` and `canResolve` on the read, from the same helper the guards use. The screen shows a control only where pressing it would work, and the client never derives a permission from a role list.

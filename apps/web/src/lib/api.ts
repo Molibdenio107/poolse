@@ -540,6 +540,81 @@ export interface FacilityDetail extends Facility, Place {
   hours: FacilityDay[];
 }
 
+/**
+ * Espaços — the non-pool parts of a site, round 6.
+ *
+ * `overdue` arrives computed. It is derived in SQL from the last cleaning and
+ * the interval, and the client renders the boolean rather than re-deriving it:
+ * two implementations of one rule agree until the day they do not, and this rule
+ * is the entire point of the feature.
+ */
+export type SpaceType =
+  | 'changing_room'
+  | 'technical'
+  | 'storage'
+  | 'reception'
+  | 'outdoor'
+  | 'other';
+
+export type IssueType = 'fault' | 'restock';
+
+export interface Space {
+  id: string;
+  facilityId: string;
+  name: string;
+  type: SpaceType;
+  description: string | null;
+  /** False means out of service: still listed, still openable, never overdue. */
+  active: boolean;
+  /** Null means no schedule, and therefore never overdue. Never read as zero. */
+  intervalHours: number | null;
+  /** Null when it has never been cleaned — a state the row renders in words. */
+  lastCleanedAt: string | null;
+  overdue: boolean;
+  openIssues: number;
+}
+
+export interface Cleaning {
+  id: string;
+  performedAt: string;
+  performedBy: string | null;
+  note: string | null;
+}
+
+export interface Issue {
+  id: string;
+  type: IssueType;
+  description: string;
+  reportedAt: string;
+  reportedBy: string | null;
+  status: 'open' | 'resolved';
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  resolutionNote: string | null;
+}
+
+/** What the caller may do, answered by the same helper the guards use. */
+interface SpacePermissions {
+  /** Owner/admin: add, edit and delete. */
+  canManage: boolean;
+  /** Any management login: log a cleaning, report an issue. */
+  canLog: boolean;
+  /** Owner/admin/maintenance: resolve. */
+  canResolve: boolean;
+}
+
+export interface SpaceList extends SpacePermissions {
+  facilityId: string;
+  items: Space[];
+}
+
+export interface SpaceDetail extends SpacePermissions {
+  facilityId: string;
+  space: Space;
+  cleanings: Paginated<Cleaning>;
+  issues: Issue[];
+}
+
 export type VacationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
 
 export interface VacationRequest {

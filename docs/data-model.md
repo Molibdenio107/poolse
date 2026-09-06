@@ -1850,6 +1850,97 @@ that says nothing — worse than none, since a colleague would stop looking.
 The unique index is partial, as on every soft-deletable table: a plan cleared in March must
 not block a new one for the same Tuesday next season.
 
+### Espaços, cleaning and issues — round 6
+
+The non-pool parts of a facility, what has been cleaned in them, and what is broken.
+
+```
+space
+  id, organization_id, facility_id, name, type space_type, description,
+  active boolean not null default true,
+  expected_cleaning_interval_hours integer,
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  unique (organization_id, facility_id, id)   -- the key children hang off
+  fk (organization_id, facility_id) -> facility
+  unique index (organization_id, facility_id, lower(strip_accents(name)))
+    where archived_at is null
+  check btrim(name) <> ''
+  check expected_cleaning_interval_hours is null or > 0
+  rls: organization_id = current_organization_id()
+
+space_type = changing_room | technical | storage | reception | outdoor | other
+
+cleaning_log
+  id, organization_id, space_id, performed_by, performed_at timestamptz default now(),
+  note, created_at, updated_at, archived_at
+  unique (organization_id, id)
+  fk (organization_id, space_id)     -> space
+  fk (organization_id, performed_by) -> membership
+  index (organization_id, space_id, performed_at desc) where archived_at is null
+  rls: organization_id = current_organization_id()
+
+maintenance_request
+  id, organization_id, facility_id,
+  space_id, pool_id, inventory_item_id,          -- all nullable: Módulo 2's room to grow
+  type maintenance_request_type, description, reported_by, reported_at,
+  status maintenance_request_status default 'open',
+  resolved_by, resolved_at, resolution_note,
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  fk (organization_id, facility_id)                     -> facility
+  fk (organization_id, facility_id, space_id)           -> space
+  fk (organization_id, facility_id, pool_id)            -> pool
+  fk (organization_id, facility_id, inventory_item_id)  -> inventory_item
+  fk (organization_id, reported_by) -> membership
+  fk (organization_id, resolved_by) -> membership
+  check btrim(description) <> ''
+  check (status='open'     and resolved_by is null and resolved_at is null
+                           and resolution_note is null)
+     or (status='resolved' and resolved_by is not null and resolved_at is not null)
+  index (organization_id, space_id) where status = 'open' and archived_at is null
+  rls: organization_id = current_organization_id()
+
+maintenance_request_type   = fault | restock
+maintenance_request_status = open | resolved
+
+inventory_item
+  + space_id uuid                       -- nullable; fk (organization_id, facility_id, space_id)
+```
+
+**Overdue is derived, never stored.** `now() - max(performed_at) > interval`, computed in the
+list query. There is no `is_overdue` column and nothing keeps one current: a stored flag would
+need a cron job or a worker, and per-tenant running cost is a design constraint. The rule lives
+in exactly one place — `OVERDUE` in `apps/api/src/spaces/spaces.repository.ts` — and the API
+ships the boolean rather than letting the client re-derive it.
+
+**An archived cleaning did not happen.** Every last-cleaned read filters `archived_at is null`,
+so deleting an entry logged against the wrong room puts the space straight back to overdue.
+The alternative leaves a dirty room looking clean because somebody corrected a mistake.
+
+**`active` and `archived_at` are different facts.** `active = false` is out of service — still
+listed, still openable, and never overdue, because nobody cleans a room that is shut. That
+exemption is what the flag is for. `archived_at` is deletion.
+
+**The three nullable targets on `maintenance_request` are MATCH SIMPLE**, Postgres's default:
+a composite key with a null column is not checked at all. That is exactly the wanted behaviour
+— a request with no space skips the space key, one with a space must satisfy it in full — and
+it is also what would silently stop protecting anything if `facility_id` ever became nullable.
+`tenant-isolation.sql`, test 11, is what would notice.
+
+**`fault` and `restock`, not `avaria` and `reposicao`.** The operator reads "Avaria" and
+"Reposição"; those are i18n keys. The stored value is English like every other enum here, and
+`reposicao` is already taken by the make-up-lesson module — one word meaning two unrelated
+things in one schema is how somebody joins the wrong table at midnight.
+
+**The inventory locations became spaces.** `inventory_item.location` was free text by design
+(round 5, ticket 6.0); this slice reads it. One space per distinct
+`lower(strip_accents(btrim(location)))` per facility, `type = other`, named with the spelling
+on the earliest-created item. Only non-archived items mint a space; archived ones are linked
+where one exists. An item with a null or blank location keeps a null `space_id`.
+**`location` is deliberately still there** — dropping it is a separate follow-up, so the result
+can be eyeballed against the original text first.
+
 ## Module 2 — maintenance (shape)
 
 ```
@@ -1867,6 +1958,11 @@ task_completion    id, organization_id, maintenance_task_id, completed_at,
 
 `reading` is shared with the personal app unchanged — a personal organization has one
 facility, one pool, and one member who records readings. No separate table, no branching.
+
+**`maintenance_request` already exists** — see the section above. Round 6 built it as the seed
+of this module rather than as a spaces-only feature, which is why it is keyed on a facility and
+carries a nullable `pool_id` and `inventory_item_id` it does not yet use. Equipment and tank
+faults extend that table; they do not get one of their own.
 
 ## Module 3 — energy (shape)
 

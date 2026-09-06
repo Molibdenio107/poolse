@@ -12,6 +12,7 @@ looks for it.
 |---|---|
 | [navigation.md](navigation.md) | The home route, the menu, the shared page shell |
 | [facilities.md](facilities.md) | Sites, tanks, lanes, capacity |
+| [spaces.md](spaces.md) | Espaços, the cleaning log, maintenance requests |
 | [classes.md](classes.md) | Turmas, parcerias, the lane grid |
 | [calendar.md](calendar.md) | The dated week, the hover card, cancelling a class |
 | [billing.md](billing.md) | Price list, periodicities, what a student pays |

@@ -426,4 +426,119 @@ BEGIN
   RAISE NOTICE 'PASS test 10: the composite keys hold across every table in the feature';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 11 — the espaços tables, and their three nullable targets
+-- ---------------------------------------------------------------------------
+--
+-- `maintenance_request` is the one worth asserting hardest. It carries three
+-- nullable foreign keys so Módulo 2 can reuse it, and a nullable composite key
+-- is MATCH SIMPLE: it is *not checked at all* when any of its columns is null.
+-- That is the behaviour this feature wants, and it is also exactly the kind of
+-- thing that silently stops protecting anything if a later migration makes
+-- facility_id nullable. This test is what would notice.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid := 'a1111111-1111-1111-1111-111111111111';
+  v_fac_b uuid := 'b1111111-1111-1111-1111-111111111111';
+  v_space_a uuid; v_space_b uuid; v_pool_b uuid;
+  v_member_a uuid; v_member_b uuid; v_seen integer; ok boolean;
+BEGIN
+  INSERT INTO space (organization_id, facility_id, name) VALUES (v_a, v_fac_a, 'Balneário A')
+  RETURNING id INTO v_space_a;
+  INSERT INTO space (organization_id, facility_id, name) VALUES (v_b, v_fac_b, 'Balneário B')
+  RETURNING id INTO v_space_b;
+
+  SELECT id INTO v_pool_b FROM pool WHERE organization_id = v_b LIMIT 1;
+
+  INSERT INTO membership (organization_id, status, first_name, last_name, email)
+  VALUES (v_a, 'active', 'Ana', 'A', 'ana.ti@a.pt') RETURNING id INTO v_member_a;
+  INSERT INTO membership (organization_id, status, first_name, last_name, email)
+  VALUES (v_b, 'active', 'Bruno', 'B', 'bruno.ti@b.pt') RETURNING id INTO v_member_b;
+
+  -- A space at the neighbour's site.
+  ok := false;
+  BEGIN
+    INSERT INTO space (organization_id, facility_id, name) VALUES (v_a, v_fac_b, 'Roubado');
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 11a: org A made a space at org B site'; END IF;
+
+  -- A cleaning of the neighbour's space.
+  ok := false;
+  BEGIN
+    INSERT INTO cleaning_log (organization_id, space_id, performed_by)
+    VALUES (v_a, v_space_b, v_member_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 11b: org A logged a clean of org B space'; END IF;
+
+  -- A cleaning credited to the neighbour's staff.
+  ok := false;
+  BEGIN
+    INSERT INTO cleaning_log (organization_id, space_id, performed_by)
+    VALUES (v_a, v_space_a, v_member_b);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 11c: a clean was credited across tenants'; END IF;
+
+  -- Each nullable target in turn, pointed at the neighbour.
+  ok := false;
+  BEGIN
+    INSERT INTO maintenance_request
+      (organization_id, facility_id, space_id, type, description, reported_by)
+    VALUES (v_a, v_fac_a, v_space_b, 'fault', 'Porta', v_member_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 11d: a request named org B space'; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO maintenance_request
+      (organization_id, facility_id, pool_id, type, description, reported_by)
+    VALUES (v_a, v_fac_a, v_pool_b, 'fault', 'Filtro', v_member_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 11e: a request named org B pool'; END IF;
+
+  -- A request with no target at all is legitimate — "the front door lock is
+  -- broken" belongs to the site — and must still be refused across tenants only
+  -- by the facility key.
+  INSERT INTO maintenance_request
+    (organization_id, facility_id, type, description, reported_by)
+  VALUES (v_a, v_fac_a, 'restock', 'Faltam sacos do lixo', v_member_a);
+
+  ok := false;
+  BEGIN
+    INSERT INTO maintenance_request
+      (organization_id, facility_id, type, description, reported_by)
+    VALUES (v_a, v_fac_b, 'fault', 'Fechadura', v_member_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 11f: a request was filed at org B site'; END IF;
+
+  -- And the policies themselves, from the app role.
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  SELECT count(*) INTO v_seen FROM space;
+  IF v_seen <> 1 THEN RAISE EXCEPTION 'FAIL test 11g: org B saw % spaces, not 1', v_seen; END IF;
+
+  SELECT count(*) INTO v_seen FROM maintenance_request;
+  IF v_seen <> 0 THEN RAISE EXCEPTION 'FAIL test 11h: org B saw % of org A requests', v_seen; END IF;
+
+  -- Writing into the neighbour is refused by WITH CHECK, not merely hidden.
+  ok := false;
+  BEGIN
+    INSERT INTO space (organization_id, facility_id, name) VALUES (v_a, v_fac_a, 'Contrabando');
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 11i: org B wrote a space into org A'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 11: spaces, cleaning logs and requests are isolated both ways';
+END $$;
+
 ROLLBACK;
