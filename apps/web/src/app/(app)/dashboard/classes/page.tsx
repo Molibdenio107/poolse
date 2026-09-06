@@ -115,11 +115,17 @@ export default async function ClassesPage({
       title: group.name,
       /*
         The turma's own colour, as a left rule — round 6, and the same treatment
-        a parceria already gets below. A token rather than a hex, so it follows
-        the theme; null when nobody chose one, which leaves the card exactly as
-        it was.
+        a parceria already gets below.
+
+        Falls back to the level's, which is what the calendar draws, so a turma
+        looks the same on both screens without anybody having coloured anything.
+        A token rather than a hex, so it follows the theme.
       */
-      accentColour: classColourVar(group.colour),
+      accentColour: classColourVar(
+        group.colour ??
+          (data?.options.levels ?? []).find((level) => level.id === group.levelId)?.colour ??
+          null,
+      ),
       subtitle: [group.poolName, group.lane === null ? null : t('classes.laneN', { lane: group.lane })]
         .filter(Boolean)
         .join(' · '),

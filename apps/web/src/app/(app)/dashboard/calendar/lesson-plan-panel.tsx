@@ -115,6 +115,16 @@ export function LessonPlanPanel({
       open={sessionId !== null}
       onClose={onClose}
       placement="side"
+      /*
+        Wider than the default sheet — round 6.
+
+        A lesson plan is prose being composed: sets, distances and strokes, one
+        line each. At the sheet's usual 28rem a line like "8 x 50 costas com
+        prancha, 20\" descanso" wrapped twice, so a plan that is eight lines in
+        somebody's head looked like sixteen and was hard to read back. `cn` uses
+        tailwind-merge, so this width simply replaces the component's own.
+      */
+      className="max-w-2xl"
       title={t('calendar.plan.title')}
       {...(plan === undefined
         ? {}
@@ -180,10 +190,13 @@ export function LessonPlanPanel({
                   id="lesson-plan"
                   value={body}
                   onChange={(event) => setBody(event.target.value)}
-                  rows={14}
+                  rows={16}
                   maxLength={8000}
                   placeholder={t('calendar.plan.placeholder')}
-                  className={cn(CONTROL_LINE, 'h-auto resize-y py-2 leading-relaxed')}
+                  // A floor as well as a row count: the sheet is tall, and a box
+                  // that stops halfway down it invites scrolling inside a panel
+                  // that has room to spare.
+                  className={cn(CONTROL_LINE, 'h-auto min-h-[22rem] resize-y py-2 leading-relaxed')}
                 />
               </div>
 

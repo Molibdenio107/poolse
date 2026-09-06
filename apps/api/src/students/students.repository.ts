@@ -20,6 +20,8 @@ export interface StudentLevel {
   id: string;
   name: string;
   sortOrder: number;
+  /** The level's own colour, a `class_colour` token. Null means it has none. */
+  colour: string | null;
   /**
    * Months, both optional and independent — backlog round 4 ticket 2, and
    * POOLSE-06.
@@ -288,6 +290,7 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       max_age_months: number | null;
       admits_male: boolean;
       admits_female: boolean;
+      colour: string | null;
       student_count: string;
     }>(`
       SELECT l.id,
@@ -304,6 +307,7 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
                   AND s.level_id = l.id
                   AND s.archived_at IS NULL
              ) AS student_count
+             , l.colour::text AS colour
         FROM student_level l
        WHERE l.archived_at IS NULL
        ORDER BY l.sort_order, l.name
@@ -313,6 +317,7 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       id: row.id,
       name: row.name,
       sortOrder: row.sort_order,
+      colour: row.colour,
       minAgeMonths: row.min_age_months,
       maxAgeMonths: row.max_age_months,
       admitsMale: row.admits_male,
@@ -408,6 +413,15 @@ export async function createLevel(
   organizationId: string,
   name: string,
   range: LevelShape = MIXED,
+  /**
+   * The level's colour, or nothing — round 6.
+   *
+   * Null means the level has none of its own, which the calendar draws as the
+   * neutral. Every level that existed when the column arrived was backfilled
+   * with the tint its position used to give it, so this is only ever null for a
+   * level created afterwards without one being picked.
+   */
+  colour: string | null = null,
 ): Promise<string> {
   try {
     return await withOrg(organizationId, async (tx) => {
@@ -417,11 +431,11 @@ export async function createLevel(
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO student_level (organization_id, name, sort_order,
                                     min_age_months, max_age_months,
-                                    admits_male, admits_female)
+                                    admits_male, admits_female, colour)
          VALUES (
            $1, $2,
            coalesce((SELECT max(sort_order) + 1 FROM student_level WHERE archived_at IS NULL), 0),
-           $3, $4, $5, $6
+           $3, $4, $5, $6, $7
          )
          RETURNING id`,
         [
@@ -431,6 +445,7 @@ export async function createLevel(
           range.maxAgeMonths,
           range.admitsMale,
           range.admitsFemale,
+          colour,
         ],
       );
 
@@ -468,13 +483,14 @@ export async function renameLevel(
   levelId: string,
   name: string,
   range: LevelShape = MIXED,
+  colour: string | null = null,
 ): Promise<boolean> {
   try {
     return await withOrg(organizationId, async (tx) => {
       const { rows } = await tx.query<{ id: string }>(
         `UPDATE student_level
             SET name = $2, min_age_months = $3, max_age_months = $4,
-                admits_male = $5, admits_female = $6
+                admits_male = $5, admits_female = $6, colour = $7
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -484,6 +500,7 @@ export async function renameLevel(
           range.maxAgeMonths,
           range.admitsMale,
           range.admitsFemale,
+          colour,
         ],
       );
       if (!rows[0]) return false;

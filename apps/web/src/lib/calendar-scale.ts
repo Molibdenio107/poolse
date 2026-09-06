@@ -197,12 +197,12 @@ export function startTimeOf(minutes: number): string {
 /**
  * Which of the eight tints a booking wears.
  *
- * **Keyed on the level's place in the club's own order, not on a hash of its
- * id.** The API sends levels `ORDER BY sort_order, name`, so position is that
- * order. Adding a level at the end leaves every colour before it alone, which is
- * the property that matters — a hash would repaint the whole week the first time
- * somebody renamed anything, and reordering the levels is meant to change what
- * they look like, because reordering them is a statement about the club.
+ * **The level's own stored colour, not its position** — round 6.
+ *
+ * Position used to decide it, which worked and was invisible: a club that
+ * reordered its levels repainted its whole week and had no way to say
+ * "Iniciados is the green one". Levels now carry a colour, backfilled from the
+ * position they had, so nothing changed on the day and the club can now say it.
  *
  * Three cases the level cannot answer, all deliberate:
  *   - a `parceria` keeps the partner's own colour, which already beat every
@@ -261,21 +261,26 @@ export function levelTint(
 
   if (booking.levelId === null) return null;
 
-  const place = order.get(booking.levelId);
-  if (place === undefined) return null;
-
-  // Wraps rather than running out. A club with nine levels gets a repeat, which
-  // the legend makes readable because it names every level in words.
-  return (place % LEVEL_TINTS) + 1;
+  const chosenByLevel = order.get(booking.levelId);
+  if (chosenByLevel === undefined) return null;
+  return chosenByLevel;
 }
 
 /**
- * A level's place in the club's order, by id, built once per render.
+ * Each level's tint, by id, built once per render.
  *
- * Takes the list as it arrives from the API, which is already sorted — see
- * `classes.controller.ts`, `ORDER BY sort_order, name`. Sorting it again here
- * would be a second opinion about an order the club has already given.
+ * Reads the colour the level carries. A level with none — only possible for one
+ * created since the backfill without a colour being picked — is simply absent
+ * from the map, and everything at it takes the neutral, which is the honest
+ * answer: nobody has said.
  */
-export function levelOrder(levels: readonly { id: string }[]): Map<string, number> {
-  return new Map(levels.map((level, index) => [level.id, index]));
+export function levelOrder(
+  levels: readonly { id: string; colour?: string | null }[],
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const level of levels) {
+    const tint = COLOUR_INDEX[level.colour ?? ''];
+    if (tint !== undefined) map.set(level.id, tint);
+  }
+  return map;
 }

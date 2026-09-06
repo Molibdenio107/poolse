@@ -107,17 +107,28 @@ test('a block cannot be resized to nothing', () => {
 });
 
 const LEVELS = [
-  { id: 'a' },
-  { id: 'b' },
-  { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'f' }, { id: 'g' }, { id: 'h' }, { id: 'i' },
+  { id: 'a', colour: 'teal' },
+  { id: 'b', colour: 'green' },
+  { id: 'v', colour: 'violet' },
+  // A level created since the backfill, with nobody having picked a colour.
+  { id: 'none', colour: null },
 ];
 
-test('a turma takes the tint of its level’s place in the club’s order', () => {
+test('a turma takes its level’s own colour', () => {
   const order = levelOrder(LEVELS);
   assert.equal(levelTint({ subjectType: 'turma', levelId: 'a' } as never, order), 1);
   assert.equal(levelTint({ subjectType: 'turma', levelId: 'b' } as never, order), 2);
-  // A ninth level wraps rather than running out; the legend names it in words.
-  assert.equal(levelTint({ subjectType: 'turma', levelId: 'i' } as never, order), 1);
+  assert.equal(levelTint({ subjectType: 'turma', levelId: 'v' } as never, order), 8);
+});
+
+/**
+ * A level nobody has coloured is neutral, not tint 1. "Not said" must not be
+ * indistinguishable from the club's first colour — the same rule the turma
+ * itself follows.
+ */
+test('a level with no colour of its own paints nothing', () => {
+  const order = levelOrder(LEVELS);
+  assert.equal(levelTint({ subjectType: 'turma', levelId: 'none' } as never, order), null);
 });
 
 /**

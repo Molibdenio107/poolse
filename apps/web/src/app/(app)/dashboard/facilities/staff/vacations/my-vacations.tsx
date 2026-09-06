@@ -25,6 +25,12 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [state, submit, pending] = useSavedAction(requestVacationAction, INITIAL);
 
+  /*
+   * Holiday by default, because it is what most requests are and what this
+   * screen meant before the other two existed.
+   */
+  const [kind, setKind] = useState('vacation');
+
   /** Holiday name by day, so a hover can say *which* holiday. */
   const holidays = useMemo(
     () => new Map(data.holidays.map((holiday) => [holiday.day, holiday])),
@@ -162,6 +168,40 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
           <span className="text-sm">
             {t('vacations.chosen', { count: chosen.length })}
           </span>
+
+          {/*
+            What kind of leave — round 6.
+
+            All three go through this one queue, so a manager sees "who is away
+            in August" in one place and the calendar has one source to ask. Only
+            a holiday is counted against the year's entitlement: a week of flu is
+            not a week of holiday, and a club that counted it that way would be
+            docking somebody for being ill.
+          */}
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-foreground-muted">{t('vacations.kind')}</span>
+            <select
+              name="kind"
+              value={kind}
+              onChange={(event) => setKind(event.target.value)}
+              className="h-control rounded border border-border-strong bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <option value="vacation">{t('vacations.kinds.vacation')}</option>
+              <option value="medical">{t('vacations.kinds.medical')}</option>
+              <option value="personal">{t('vacations.kinds.personal')}</option>
+            </select>
+          </label>
+
+          {/* Only where it would mean something. A holiday needs no excuse. */}
+          {kind !== 'vacation' && (
+            <input
+              name="reason"
+              maxLength={200}
+              placeholder={t('vacations.leaveReasonPlaceholder')}
+              aria-label={t('vacations.reason')}
+              className="h-control min-w-48 flex-1 rounded border border-border-strong bg-background px-2.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            />
+          )}
           <button
             type="submit"
             disabled={pending || chosen.length === 0}

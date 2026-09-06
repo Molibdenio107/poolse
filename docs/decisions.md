@@ -141,3 +141,16 @@ goes in with the next migration that already touches `organization`.
 - **2026-09-06** — An open issue on a space is marked in amber with its own icon, distinct from the red of overdue cleaning. A spotless space with a broken shower is not the same problem.
 - **2026-09-06** — `SpacesPanel` takes where "back" should go, instead of assuming the site's page. Opening a space from Instalações and pressing Voltar used to land somewhere the operator had never been.
 - **2026-09-06** — `classes.colours.magenta` is listed in `SAME_ON_PURPOSE`: it is the same word in both languages. Renaming the pt-PT one to "fúcsia" to satisfy the guard would be choosing a different colour to dodge a check.
+
+## Round 6 — colours, stand-ins and leave
+
+- **2026-09-06** — A level carries its own colour, backfilled from the position the calendar was deriving it from. Nothing changed visually on the day, and the derived rule was deleted rather than left as a fallback nobody would remember. `class_colour` is reused rather than duplicated: a level's green and a turma's green must be the same green.
+- **2026-09-06** — On the Classes screen a turma's left rule is its own colour, falling back to its level's, so a turma looks the same there as on the calendar without anybody colouring anything.
+- **2026-09-06** — Changing the teacher on the calendar is a stand-in for that lesson only, written to `class_session.substitute_instructor_membership_id`. Reassigning the turma stays on the turma's own screen. Next week goes back to normal by itself, which is what a stand-in means.
+- **2026-09-06** — An instructor on approved leave is shown in the stand-in list, greyed, with the reason, and cannot be chosen; the endpoint refuses them again. Hiding them would answer "where is Ana?" with silence, and "on holiday" and "left the club" are different things.
+- **2026-09-06** — Availability is read from approved leave only. A request nobody has answered is not an absence, and treating it as one would let an unanswered form veto the timetable.
+- **2026-09-06** — Medical and personal leave join `vacation_request` as a `kind` rather than getting a table of their own — one approval queue, one thing for the calendar to ask. Only `vacation` counts against the yearly entitlement: a week of flu is not a week of holiday.
+- **2026-09-06** — The staff list shows who is away *today*, from approved leave, with the kind in words. Only today, because that list answers "who is here" rather than "who has anything booked this year".
+- **2026-09-06** — The calendar's day boundaries are a 2px `border-strong` rule against the lanes' hairlines. At 64px columns the week read as one undifferentiated ladder and finding Thursday meant counting.
+- **2026-09-06** — The first hour label sits just below its line rather than centred on it. Centred put half of it above the canvas, where the header covered it — and the club's opening hour is the time somebody is most likely to be looking for.
+- **2026-09-06** — The lesson-plan sheet is `max-w-2xl` rather than the dialog's usual `max-w-md`. A plan is prose being composed, and at 28rem a line of sets wrapped twice.

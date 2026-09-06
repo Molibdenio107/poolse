@@ -668,7 +668,10 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                 <div
                   key={weekday}
                   className={cn(
-                    'flex border-l border-border',
+                    // A day boundary is a stronger rule than a lane boundary —
+                    // with lanes at 64px the week read as one undifferentiated
+                    // ladder of columns and finding Thursday meant counting.
+                    'flex border-l-2 border-border-strong',
                     (closureOf(weekday) !== null || !openOn(weekday)) && 'bg-surface-muted/60',
                   )}
                 >
@@ -821,7 +824,7 @@ const Header = memo(function Header({
         </div>
       </div>
       {days.map((weekday) => (
-        <div key={weekday} className="shrink-0 border-l border-border">
+        <div key={weekday} className="shrink-0 border-l-2 border-border-strong">
           <div
             className={cn(
               'truncate border-b border-border px-2 py-1 text-center text-[0.8125rem] font-medium',
@@ -872,10 +875,22 @@ const Gutter = memo(function Gutter({
       className="sticky left-0 z-20 shrink-0 border-r border-border bg-surface"
       style={{ width: GUTTER, height }}
     >
-      {hourMarks(range).map((minutes) => (
+      {hourMarks(range).map((minutes, index) => (
         <span
           key={minutes}
-          className="absolute right-1.5 -translate-y-1/2 text-[0.6875rem] tabular-nums text-foreground-muted"
+          /*
+            Every label is centred on its hour line except the first, which sits
+            just under it.
+
+            The first line is the top edge of the canvas, so centring put half
+            the label above the grid and the "Pistas" header sat over it — the
+            club's opening hour, the one time on the screen somebody is most
+            likely to look for, was the one they could not read.
+          */
+          className={cn(
+            'absolute right-1.5 text-[0.6875rem] tabular-nums text-foreground-muted',
+            index === 0 ? 'translate-y-0.5' : '-translate-y-1/2',
+          )}
           style={{ top: minutesToPx(minutes - range.startMinutes) }}
         >
           {String(Math.floor(minutes / 60)).padStart(2, '0')}:

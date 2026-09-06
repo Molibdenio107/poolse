@@ -1139,7 +1139,9 @@
     "createLevel": "Create level",
     "guardianOfLabel": "Guardian of",
     "turmas": "Classes",
-    "waiting": "Waiting list"
+    "waiting": "Waiting list",
+    "levelColour": "Level colour",
+    "levelColourHint": "Optional. Used on the calendar grid for classes at this level."
   },
   "advancement": {
     "title": "Advancement",
@@ -1370,7 +1372,15 @@
     "approveFailed": "Could not approve the request.",
     "rejectFailed": "Could not refuse the request.",
     "backToPeople": "Back to People",
-    "backToVacations": "Back to leave"
+    "backToVacations": "Back to leave",
+    "kind": "Type",
+    "leaveReasonPlaceholder": "e.g. medical appointment",
+    "kinds": {
+      "vacation": "Holiday",
+      "medical": "Sick leave",
+      "personal": "Personal leave"
+    },
+    "kindInvalid": "Choose a valid kind of leave."
   },
   "weather": {
     "title": "Weather",
@@ -1658,7 +1668,20 @@
     "rangeHeldHint": "These days are selected. Fill in the reason below, or click any day to start again.",
     "fromWaterHint": "Pick the days to close on the calendar. The reason is already written: {reason}",
     "cancelled": "Class cancelled",
-    "restoreFailed": "The class could not be put back."
+    "restoreFailed": "The class could not be put back.",
+    "standIn": {
+      "label": "Teacher for this lesson",
+      "none": "The class’s own teacher",
+      "busy": "already teaching at this hour",
+      "clash": "That person already has a class at this hour.",
+      "away": {
+        "vacation": "on holiday",
+        "medical": "on sick leave",
+        "personal": "away"
+      },
+      "failed": "The teacher could not be changed.",
+      "awayRefused": "That person is away on this day."
+    }
   },
   "inventory": {
     "title": "Inventory",

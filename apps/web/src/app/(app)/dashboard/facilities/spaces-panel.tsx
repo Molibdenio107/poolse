@@ -147,12 +147,12 @@ export function SpacesPanel({
                 open && 'rotate-90',
               )}
             />
-            <span
-              className={cn(
-                'text-sm text-foreground-muted',
-                !block && 'font-medium uppercase tracking-wider',
-              )}
-            >
+            {/*
+              Bigger and bold in both places. It is a section of the page, not a
+              caption on one — the uppercase-muted treatment the other headings
+              use made it read as a label for the row above it.
+            */}
+            <span className="text-base font-semibold text-foreground">
               {t('spaces.title')}
             </span>
 

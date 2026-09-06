@@ -28,6 +28,8 @@ export interface StaffRecord {
   notes: string | null;
   status: string;
   roles: string[];
+  /** Away today, and why. Null when they are at work. Approved leave only. */
+  awayKind: 'vacation' | 'medical' | 'personal' | null;
   /** Set while a re-invite is outstanding — AC4. */
   pendingInvite: { id: string; email: string; expiresAt: string } | null;
   /** So the Alunos side of one Person is reachable from here — AC7. */
@@ -56,6 +58,7 @@ export async function findStaff(
       pending_email: string | null;
       pending_expires: Date | null;
       student_id: string | null;
+      away_kind: string | null;
     }>(
       `SELECT m.id AS membership_id,
               m.app_user_id,
@@ -77,6 +80,37 @@ export async function findStaff(
                   FROM membership_role mr
                  WHERE mr.membership_id = m.id AND mr.archived_at IS NULL
               ), '{}') AS roles,
+              /*
+                * Away today — round 6.
+                *
+                * Approved leave only, and only *today*: the staff list answers
+                * "who is here", not "who has anything booked this year". A
+                * pending request is not an absence, and showing one as though it
+                * were would let an unanswered form take somebody off the roster.
+                *
+                * The date is the club's, from its oldest site, because a staff
+                * list is about the organization rather than about one pool. A
+                * club whose two sites straddle midnight in different zones is
+                * not a case this needs to be right about.
+                */
+               (
+                 SELECT vr.kind::text
+                   FROM vacation_day vd
+                   JOIN vacation_request vr ON vr.id = vd.vacation_request_id
+                                           AND vr.organization_id = vd.organization_id
+                  WHERE vd.membership_id = m.id
+                    AND vd.organization_id = m.organization_id
+                    AND vd.archived_at IS NULL
+                    AND vr.archived_at IS NULL
+                    AND vr.status = 'approved'
+                    AND vd.day = (now() AT TIME ZONE coalesce(
+                          (SELECT f.timezone FROM facility f
+                            WHERE f.organization_id = m.organization_id
+                              AND f.archived_at IS NULL
+                            ORDER BY f.created_at, f.id LIMIT 1),
+                          'Europe/Lisbon'))::date
+                  LIMIT 1
+               ) AS away_kind,
               i.id AS pending_id,
               i.email::text AS pending_email,
               i.expires_at AS pending_expires,
@@ -124,6 +158,7 @@ export async function findStaff(
       notes: row.notes,
       status: row.status,
       roles: row.roles,
+      awayKind: row.away_kind as 'vacation' | 'medical' | 'personal' | null,
       pendingInvite:
         row.pending_id === null
           ? null

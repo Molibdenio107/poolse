@@ -396,7 +396,8 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
       // by the age range of the turma's level, and a level with no ages
       // filters nothing, which is why both columns come through as nulls
       // rather than being defaulted here.
-      `SELECT id, name, min_age_months AS "minAgeMonths", max_age_months AS "maxAgeMonths"
+      `SELECT id, name, colour::text AS colour,
+              min_age_months AS "minAgeMonths", max_age_months AS "maxAgeMonths"
          FROM student_level WHERE archived_at IS NULL ORDER BY sort_order, name`,
     );
     const pools = await tx.query<Choice>(

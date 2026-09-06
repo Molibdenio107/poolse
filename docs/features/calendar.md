@@ -136,6 +136,21 @@ confirmation per session, each rendering in place of its own trigger — which o
 is a box a seventh of a column wide with `overflow-hidden` on it, so the form was clipped by
 the cell it lived in.
 
+## Who teaches a lesson
+
+The hover card and the plan sheet both carry a teacher picker for that one lesson. Choosing
+somebody records a **stand-in**: the turma's own instructor is unchanged, and the following
+week goes back to normal by itself. Reassigning the turma for good is done on the turma's own
+screen.
+
+An instructor on approved leave appears in the list with the reason against their name, greyed
+and unselectable — and the endpoint refuses them as well, because hiding a control is never
+the control. Somebody already teaching at that hour is shown with "já tem aula a esta hora"
+and can still be chosen; the database's own overlap constraint is what refuses it, and it says
+so.
+
+Owner, admin and the lesson's own instructor may set a stand-in.
+
 ## The training plan
 
 Clicking a class opens a sheet down the side of the page — the week stays visible behind it,

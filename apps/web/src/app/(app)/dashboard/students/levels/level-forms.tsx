@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '@/lib/api';
 import { overlapping } from '@/lib/levels';
 import { CONTROL_LINE, SelectField, TextField } from '@/components/ui/field';
+import { ColourSwatches } from '@/components/ui/colour-swatches';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import {
@@ -152,6 +153,24 @@ export function CreateLevelForm({
       <AgeInputs onRangeChange={setRange} />
 
       <SexBoxes {...admits} onChange={setAdmits} />
+
+      {/*
+        The level's colour on the grid — round 6.
+
+        Optional here for the same reason the ages are: a club adding "Iniciação"
+        should not have to decide what colour it is before it can save it. Every
+        level that already existed was backfilled with the tint its position used
+        to give it, so this is the club taking over a choice the app was making
+        silently on its behalf.
+      */}
+      <ColourSwatches
+        name="colour"
+        label={t('students.levelColour')}
+        initial={null}
+        hint={t('students.levelColourHint')}
+        clearLabel={t('classes.colourNone')}
+        nameOf={(colour) => t(`classes.colours.${colour}`)}
+      />
 
       <OverlapWarning levels={levels} proposed={{ ...range, ...admits }} exceptId={null} />
 
@@ -448,6 +467,16 @@ export function EditLevelForm({
         />
 
         <SexBoxes {...admits} onChange={setAdmits} />
+
+        {/* Seeded from what the level already wears — round 6. */}
+        <ColourSwatches
+          name="colour"
+          label={t('students.levelColour')}
+          initial={level.colour}
+          hint={t('students.levelColourHint')}
+          clearLabel={t('classes.colourNone')}
+          nameOf={(colour) => t(`classes.colours.${colour}`)}
+        />
 
         <OverlapWarning levels={levels} proposed={{ ...range, ...admits }} exceptId={level.id} />
 

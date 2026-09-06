@@ -11,6 +11,7 @@ import { startTimeOf } from '@/lib/calendar-scale';
 import { slotsFor, toMinutes } from '@/lib/grid-layout';
 import { Dialog } from '@/components/ui/dialog';
 import { CalendarGrid, type CalendarLevel } from './calendar-grid';
+import { StandInPicker } from './stand-in-picker';
 import { CancelSessionDialog, type CancelTarget } from './calendar-forms';
 import { LessonPlanPanel } from './lesson-plan-panel';
 import type { SessionControls } from '../classes/schedule-board';
@@ -111,7 +112,17 @@ export function CalendarWeek({
 
       const actions =
         session === undefined ? undefined : (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2">
+            {/*
+              Who is teaching this one lesson. In the card and in the plan sheet,
+              because both are places somebody arrives at a class from — and it
+              is one component, so the two cannot drift.
+            */}
+            {session.sessionId !== undefined && (
+              <StandInPicker sessionId={session.sessionId} compact />
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
             {session.mark !== undefined && (
               <Link
                 href={session.mark.href}
@@ -138,6 +149,7 @@ export function CalendarWeek({
                 {t('calendar.cancel')}
               </button>
             )}
+            </div>
           </div>
         );
 

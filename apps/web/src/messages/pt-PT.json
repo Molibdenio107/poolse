@@ -1139,7 +1139,9 @@
     "createLevel": "Criar escalão",
     "guardianOfLabel": "Encarregado de",
     "turmas": "Turmas",
-    "waiting": "Lista de espera"
+    "waiting": "Lista de espera",
+    "levelColour": "Cor do nível",
+    "levelColourHint": "Opcional. Usada na grelha do calendário para as turmas deste nível."
   },
   "advancement": {
     "title": "Progressões",
@@ -1370,7 +1372,15 @@
     "approveFailed": "Não foi possível aprovar o pedido.",
     "rejectFailed": "Não foi possível recusar o pedido.",
     "backToPeople": "Voltar a Pessoas",
-    "backToVacations": "Voltar às férias"
+    "backToVacations": "Voltar às férias",
+    "kind": "Tipo",
+    "leaveReasonPlaceholder": "Ex.: consulta médica",
+    "kinds": {
+      "vacation": "Férias",
+      "medical": "Baixa médica",
+      "personal": "Falta pessoal"
+    },
+    "kindInvalid": "Escolha um tipo de ausência válido."
   },
   "weather": {
     "title": "Meteorologia",
@@ -1658,7 +1668,20 @@
     "rangeHeldHint": "Estes dias estão selecionados. Preencha o motivo abaixo ou clique em qualquer dia para recomeçar.",
     "fromWaterHint": "Escolha no calendário os dias a encerrar. O motivo já vem escrito: {reason}",
     "cancelled": "Aula cancelada",
-    "restoreFailed": "Não foi possível repor a aula."
+    "restoreFailed": "Não foi possível repor a aula.",
+    "standIn": {
+      "label": "Professor desta aula",
+      "none": "O professor da turma",
+      "busy": "já tem aula a esta hora",
+      "clash": "Essa pessoa já tem uma aula a esta hora.",
+      "away": {
+        "vacation": "de férias",
+        "medical": "de baixa médica",
+        "personal": "ausente"
+      },
+      "failed": "Não foi possível alterar o professor.",
+      "awayRefused": "Essa pessoa está ausente neste dia."
+    }
   },
   "inventory": {
     "title": "Inventário",

@@ -1872,6 +1872,51 @@ reordering the club's levels does not silently repaint every turma that chose on
 **Null is the ordinary state** and the calendar falls back to the level's tint — which is what
 an uncoloured club already sees, and what it goes on seeing until somebody picks something.
 
+### A level's colour, and leave that is not holiday — round 6
+
+```
+student_level
+  + colour class_colour            -- backfilled from the position it used to be derived from
+
+leave_kind = vacation | medical | personal
+
+vacation_request
+  + kind   leave_kind not null default 'vacation'
+  + reason text                    -- check: null or non-blank
+  index (organization_id, kind, status) where archived_at is null
+```
+
+**A level's colour is chosen, not derived.** The calendar used to colour a turma by its
+level's *position* in the club's ordering, which worked and was invisible: reordering the
+levels repainted the whole week and there was no way to say "Iniciados is the green one". The
+backfill gives every existing level the tint its position was giving it, so nothing changed
+on the day and the derived rule was deleted rather than left running underneath.
+
+**`class_colour` is reused rather than duplicated.** A level's green and a turma's green have
+to be the same green, or a turma inheriting its level's colour changes shade for no reason
+anybody could explain.
+
+**One table for all three kinds of leave.** A second table would mean a manager looking in two
+places for "who is away in August" and the calendar joining two sources to answer one
+question. The table keeps its name; renaming it would touch every query in the module for no
+behavioural gain. **Only `vacation` counts against the yearly entitlement** — a week of flu is
+not a week of holiday, and `balanceFor` filters on the kind.
+
+**`reason` is a line, not a document and not a diagnosis.** It exists so the approval queue is
+intelligible — "consulta", "assunto familiar". Where a club files an atestado is a filing
+cabinet's problem.
+
+### Who teaches one lesson
+
+`class_session.substitute_instructor_membership_id` has existed since slice 1.4 and nothing
+wrote to it: the column was added because the overlap constraint had to reason about
+`coalesce(substitute, instructor)`, and the interface was never built. Round 6 built it.
+
+A stand-in leaves the turma's own instructor alone, so the following week goes back to normal
+by itself. Availability is read from **approved** leave only — a request nobody has answered
+is not a reason to stop assigning somebody — and against the lesson's *local* date, because a
+22:30 class in July is already tomorrow in UTC.
+
 ### Espaços, cleaning and issues — round 6
 
 The non-pool parts of a facility, what has been cleaned in them, and what is broken.

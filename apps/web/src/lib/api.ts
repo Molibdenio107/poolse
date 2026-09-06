@@ -218,6 +218,13 @@ export interface OrganizationMember {
   avatarUrl: string | null;
   /** ISO date, or null — Poolse's own column, used to flag a birthday. */
   birthDate: string | null;
+  /**
+   * Away today, and why — round 6. Null when they are at work.
+   *
+   * Approved leave only, and only today: this list answers "who is here", not
+   * "who has anything booked this year".
+   */
+  awayKind?: LeaveKind | null;
 }
 
 /** `not_configured` is not a failure — no provider is set up, so copy the link. */
@@ -615,12 +622,34 @@ export interface SpaceDetail extends SpacePermissions {
   issues: Issue[];
 }
 
+/** A possible stand-in for one lesson, and why they might not be one. */
+export interface StandInCandidate {
+  membershipId: string;
+  name: string | null;
+  /** Null when free; otherwise the approved leave they are on that day. */
+  awayReason: LeaveKind | null;
+  /** Already teaching something else at that hour. */
+  busy: boolean;
+}
+
+export interface StandInOptions {
+  currentId: string | null;
+  candidates: StandInCandidate[];
+}
+
 export type VacationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+
+/** Holiday, sick leave or personal leave — round 6. */
+export type LeaveKind = 'vacation' | 'medical' | 'personal';
 
 export interface VacationRequest {
   id: string;
   membershipId: string;
   personName: string | null;
+  /** Only `vacation` counts against the year's entitlement. */
+  kind: LeaveKind;
+  /** What the person wrote. Never a diagnosis. */
+  reason: string | null;
   status: VacationStatus;
   requestedAt: string;
   decidedAt: string | null;
@@ -718,6 +747,8 @@ export interface StudentLevel {
   id: string;
   name: string;
   sortOrder: number;
+  /** The level's own colour. Backfilled from position, so never null in practice. */
+  colour: ClassColour | null;
   /**
    * Months, both optional and independent — POOLSE-06.
    *
@@ -1341,7 +1372,14 @@ export interface ClassGroup {
 
 export interface ClassOptions {
   /** With their age bounds — the enrol picker filters on the turma's level. */
-  levels: { id: string; name: string; minAgeMonths: number | null; maxAgeMonths: number | null }[];
+  levels: {
+    id: string;
+    name: string;
+    /** The level's own colour, for the grid and the classes list — round 6. */
+    colour: ClassColour | null;
+    minAgeMonths: number | null;
+    maxAgeMonths: number | null;
+  }[];
   pools: { id: string; name: string }[];
   instructors: { id: string; name: string }[];
   /** With birth dates, so the picker can work out who fits. */

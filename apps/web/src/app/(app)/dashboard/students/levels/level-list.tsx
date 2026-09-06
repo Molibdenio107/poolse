@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '@/lib/api';
 import { AgeRangeBadge } from '@/components/age-range';
 import { levelSex } from '@/lib/levels';
+import { cn } from '@/lib/utils';
 import { Reorderable } from '@/components/reorderable';
 import { reorderLevelsAction } from '../students.actions';
 import { ArchiveLevelButton, EditLevelForm } from './level-forms';
@@ -22,6 +23,18 @@ import { LevelSkills } from './level-skills';
  * in flight — the list has to move under the pointer before the server has
  * agreed, or dragging feels broken.
  */
+/** The token each stored colour paints with. Tailwind needs whole class names. */
+const LEVEL_DOT: Record<string, string> = {
+  teal: 'bg-level-1',
+  green: 'bg-level-2',
+  lime: 'bg-level-3',
+  amber: 'bg-level-4',
+  orange: 'bg-level-5',
+  rose: 'bg-level-6',
+  magenta: 'bg-level-7',
+  violet: 'bg-level-8',
+};
+
 export function LevelList({
   organizationId,
   levels,
@@ -51,6 +64,18 @@ export function LevelList({
    */
   const details = (level: StudentLevel): React.ReactNode => (
     <div className="flex min-w-0 flex-1 flex-col gap-1">
+      {/*
+        The level's colour, as a dot beside its name — round 6.
+
+        A dot rather than a tinted row: the row already carries the ages, the
+        sexes and the student count, and a wash behind all of that would make
+        eight levels look like eight different kinds of thing. The name is
+        always there, so the colour is never the only cue.
+      */}
+      <span
+        aria-hidden="true"
+        className={cn('size-2.5 shrink-0 rounded-full', LEVEL_DOT[level.colour ?? ''] ?? 'bg-level-none')}
+      />
       <span className="truncate font-medium">{level.name}</span>
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <AgeRangeBadge level={level} />

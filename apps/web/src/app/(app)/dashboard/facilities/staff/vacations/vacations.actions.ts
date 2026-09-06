@@ -37,8 +37,23 @@ export async function requestVacationAction(
 
   if (days.length === 0) return { ok: false, errorKey: 'vacations.pickADay' };
 
+  /*
+   * Holiday unless the form says otherwise — round 6.
+   *
+   * The same queue and the same approval for all three; only a holiday is
+   * counted against the year's entitlement, which the API decides rather than
+   * this. `reason` is the line that makes the queue readable — "consulta",
+   * "assunto familiar" — and is deliberately never a diagnosis.
+   */
+  const kind = String(formData.get('kind') ?? 'vacation').trim() || 'vacation';
+  const reason = String(formData.get('reason') ?? '').trim();
+
   try {
-    await apiPost('/vacations/requests', { days }, { organizationId });
+    await apiPost(
+      '/vacations/requests',
+      { days, kind, ...(reason === '' ? {} : { reason }) },
+      { organizationId },
+    );
   } catch (error) {
     return failure(error, 'vacations.requestFailed');
   }

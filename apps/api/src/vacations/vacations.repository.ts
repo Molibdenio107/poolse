@@ -17,10 +17,16 @@ import { recordAudit } from '../audit/audit.js';
 
 export type VacationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
 
+export type LeaveKind = 'vacation' | 'medical' | 'personal';
+
 export interface VacationRequest {
   id: string;
   membershipId: string;
   personName: string | null;
+  /** Holiday, sick leave or personal leave. Only holiday touches the balance. */
+  kind: LeaveKind;
+  /** What the person wrote, for the two kinds that are not holiday. */
+  reason: string | null;
   status: VacationStatus;
   requestedAt: string;
   decidedAt: string | null;
@@ -71,6 +77,8 @@ const NAME_SQL = `short_name(u.cached_first_name, u.cached_last_name)`;
 
 interface RequestRow {
   id: string;
+  kind: string;
+  reason: string | null;
   membership_id: string;
   person_name: string | null;
   status: VacationStatus;
@@ -86,6 +94,8 @@ function toRequest(row: RequestRow): VacationRequest {
     id: row.id,
     membershipId: row.membership_id,
     personName: row.person_name,
+    kind: row.kind as LeaveKind,
+    reason: row.reason,
     status: row.status,
     requestedAt: row.requested_at.toISOString(),
     decidedAt: row.decided_at?.toISOString() ?? null,
@@ -102,6 +112,8 @@ function toRequest(row: RequestRow): VacationRequest {
  */
 const REQUEST_SELECT = `
   SELECT vr.id,
+         vr.kind::text AS kind,
+         vr.reason,
          vr.membership_id,
          ${NAME_SQL} AS person_name,
          vr.status,
@@ -329,6 +341,16 @@ export async function balanceFor(
                   AND vd.organization_id = m.organization_id
                   AND vd.archived_at IS NULL
                   AND vr.status = 'approved'
+                  /*
+                   * Holiday only — round 6.
+                   *
+                   * Sick leave and personal leave go through the same queue so a
+                   * manager sees them in one place, and they deliberately do not
+                   * consume the year's entitlement: a week of flu is not a week
+                   * of holiday, and a club that counted it that way would be
+                   * quietly docking somebody for being ill.
+                   */
+                  AND vr.kind = 'vacation'
                   AND EXTRACT(year FROM vd.day) = $2
              ) AS taken,
              (
@@ -339,6 +361,7 @@ export async function balanceFor(
                   AND vd.organization_id = m.organization_id
                   AND vd.archived_at IS NULL
                   AND vr.status = 'pending'
+                  AND vr.kind = 'vacation'
                   AND EXTRACT(year FROM vd.day) = $2
              ) AS requested
         FROM membership m
@@ -374,12 +397,22 @@ export async function createRequest(
   organizationId: string,
   membershipId: string,
   days: string[],
+  /**
+   * Holiday, sick leave or personal leave — round 6.
+   *
+   * Defaulted rather than required so every existing caller means what it
+   * always meant. All three go through this one queue; only `vacation` is
+   * counted against the year's entitlement, in `balanceFor`.
+   */
+  kind: 'vacation' | 'medical' | 'personal' = 'vacation',
+  /** The line that makes the queue intelligible. Never a diagnosis. */
+  reason: string | null = null,
 ): Promise<string> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO vacation_request (organization_id, membership_id)
-       VALUES ($1, $2) RETURNING id`,
-      [organizationId, membershipId],
+      `INSERT INTO vacation_request (organization_id, membership_id, kind, reason)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [organizationId, membershipId, kind, reason],
     );
     const id = rows[0]!.id;
 

@@ -1,6 +1,7 @@
 'use server';
 
-import { apiFetch, apiPut } from '@/lib/api';
+import { revalidatePath } from 'next/cache';
+import { ApiError, apiFetch, apiPost, apiPut, type StandInOptions } from '@/lib/api';
 import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../actions';
 
@@ -91,4 +92,46 @@ export async function saveLessonPlanAction(previous: PlanState, formData: FormDa
 
 function isForbidden(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'status' in error && error.status === 403;
+}
+
+/**
+ * Who could take this lesson — round 6.
+ *
+ * Read on demand rather than sent with the week: it needs the leave calendar and
+ * every instructor's other lessons that day, which is a real query, and most
+ * blocks on a week are never asked about.
+ */
+export async function standInOptionsAction(
+  sessionId: string,
+): Promise<StandInOptions | null> {
+  return apiFetch<StandInOptions>(`/sessions/${sessionId}/stand-in`).catch(() => null);
+}
+
+/**
+ * Puts somebody else on this lesson, or clears the stand-in.
+ *
+ * The turma's own instructor is never touched: next week goes back to normal by
+ * itself, which is what a stand-in means.
+ */
+export async function setStandInAction(
+  sessionId: string,
+  membershipId: string | null,
+): Promise<FormState> {
+  try {
+    await apiPost(`/sessions/${sessionId}/stand-in`, { membershipId });
+    revalidatePath('/dashboard/calendar');
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      const message = (error.details as { message?: string } | null)?.message;
+      return {
+        ok: false,
+        errorKey:
+          message === 'calendar.standIn.away'
+            ? 'calendar.standIn.awayRefused'
+            : 'calendar.standIn.clash',
+      };
+    }
+    return { ok: false, errorKey: 'calendar.standIn.failed' };
+  }
 }

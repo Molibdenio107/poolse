@@ -32,10 +32,13 @@ import {
   type Balance,
   type Holiday,
   type TeamMember,
+  type LeaveKind,
   type VacationRequest,
 } from './vacations.repository.js';
 
 /** One request cannot be a whole career. Anything larger is a mistake or an attack. */
+const LEAVE_KINDS = ['vacation', 'medical', 'personal'] as const;
+
 const MAX_DAYS = 60;
 const MAX_NOTE = 500;
 
@@ -122,8 +125,28 @@ export class VacationsController {
       throw new BadRequestException(`A single request may cover at most ${MAX_DAYS} days`);
     }
 
+    /*
+     * Holiday unless the request says otherwise — round 6.
+     *
+     * Absent means `vacation`, which is what every request meant before the
+     * column existed and what the ordinary one still means. An unrecognised
+     * kind is refused rather than silently treated as a holiday: a client
+     * asking for something this build does not know about should be told.
+     */
+    const raw = typeof body['kind'] === 'string' ? body['kind'].trim() : '';
+    if (raw !== '' && !LEAVE_KINDS.includes(raw as never)) {
+      throw new BadRequestException({
+        message: 'kind must be vacation, medical or personal',
+        fields: { kind: 'vacations.kindInvalid' },
+      });
+    }
+    const kind = (raw === '' ? 'vacation' : raw) as LeaveKind;
+
+    const note = typeof body['reason'] === 'string' ? body['reason'].trim() : '';
+    const reason = note === '' ? null : note;
+
     try {
-      return { id: await createRequest(organizationId, membershipId, days) };
+      return { id: await createRequest(organizationId, membershipId, days, kind, reason) };
     } catch (error) {
       if (error instanceof DayUnavailableError) {
         // The unique index caught a day this person already holds. A sentence,

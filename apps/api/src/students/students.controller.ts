@@ -67,6 +67,7 @@ import {
   type StudentLevel,
 } from './students.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
+import { isClassColour } from '../classes/classes.repository.js';
 import { readSearch } from '../common/search.js';
 import { creditsFor, type ReposicaoCredit } from './credits.repository.js';
 import {
@@ -475,6 +476,26 @@ function age(value: unknown, field: string): number | null {
   return parsed;
 }
 
+/**
+ * The level's colour, or nothing — round 6.
+ *
+ * The same eight tokens a turma may wear, because a turma that inherits its
+ * level's colour has to inherit the same green. Empty means the level has none;
+ * a value that is not one of the eight is refused rather than dropped, so a
+ * client sending a hex is told rather than left wondering why nothing took.
+ */
+function levelColour(body: Record<string, unknown>): string | null {
+  const raw = typeof body['colour'] === 'string' ? body['colour'].trim() : '';
+  if (raw === '') return null;
+  if (!isClassColour(raw)) {
+    throw new BadRequestException({
+      message: 'colour is not one of the class colours',
+      fields: { colour: 'classes.colourInvalid' },
+    });
+  }
+  return raw;
+}
+
 function ageRange(body: Record<string, unknown>): LevelShape {
   const minAgeMonths = age(body['minAgeMonths'], 'minAgeMonths');
   const maxAgeMonths = age(body['maxAgeMonths'], 'maxAgeMonths');
@@ -513,7 +534,7 @@ export class LevelsController {
 
     const name = requiredText(body['name'], 'name');
     try {
-      return { id: await createLevel(organizationId, name, ageRange(body)) };
+      return { id: await createLevel(organizationId, name, ageRange(body), levelColour(body)) };
     } catch (error) {
       throw asHttp(error);
     }
@@ -554,7 +575,7 @@ export class LevelsController {
     const name = requiredText(body['name'], 'name');
     let renamed: boolean;
     try {
-      renamed = await renameLevel(organizationId, id, name, ageRange(body));
+      renamed = await renameLevel(organizationId, id, name, ageRange(body), levelColour(body));
     } catch (error) {
       throw asHttp(error);
     }

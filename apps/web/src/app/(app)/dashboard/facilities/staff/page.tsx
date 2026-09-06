@@ -12,6 +12,7 @@ import { backTarget } from '@/lib/back';
 import { Pagination } from '@/components/pagination';
 import { SearchInput, SearchStatus } from '@/components/search-input';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
+import { CalendarOff } from 'lucide-react';
 import { Hint } from '@/components/ui/tooltip';
 import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
@@ -298,6 +299,22 @@ export default async function PeoplePage({
                           {t('people.pending')}
                         </span>
                       </Hint>
+                    )}
+                    {/*
+                      Away today — round 6.
+
+                      Only today, and only approved leave: this list answers "who
+                      is here", and a pending request is not an absence. The
+                      reason is in the words, not only in the colour — an amber
+                      chip alone would say "something", and the difference
+                      between a holiday and sick leave is the whole point of
+                      showing it.
+                    */}
+                    {member.awayKind != null && (
+                      <span className="inline-flex items-center gap-1 rounded bg-warning/15 px-2 py-0.5 text-sm text-warning">
+                        <CalendarOff className="size-3.5" aria-hidden="true" />
+                        {t(`vacations.kinds.${member.awayKind}`)}
+                      </span>
                     )}
                     <RoleBadges roles={member.roles} />
                   </div>

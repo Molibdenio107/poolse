@@ -15,6 +15,7 @@ import { withOrg } from '@poolse/db';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { moveOccurrence } from './classes.repository.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
+import { candidatesFor, setStandIn, type Candidate } from './stand-in.repository.js';
 import {
   archiveClosure,
   ClosureOverlapError,
@@ -346,6 +347,55 @@ export class SessionsCalendarController {
    * `owner` and `admin`, like every other change to a timetable — an instructor
    * may take a register, not rearrange the season.
    */
+  /**
+   * Who could teach this lesson, and what stands in the way — round 6.
+   *
+   * Readable by anybody who can see the calendar. It names instructors and says
+   * who is away; that is roster information, not a confidence, and an instructor
+   * choosing a colleague to cover for them needs it as much as an admin does.
+   */
+  @Get(':id/stand-in')
+  async standInOptions(@Param('id') id: string): Promise<{
+    currentId: string | null;
+    candidates: Candidate[];
+  }> {
+    const { organizationId } = currentTenant();
+    const found = await candidatesFor(organizationId, id);
+    if (found === null) throw new NotFoundException({ message: 'sessionNotFound' });
+    return found;
+  }
+
+  /**
+   * Puts somebody else on this lesson.
+   *
+   * Owner, admin and maintenance may not — this is a teaching decision — so it is
+   * owner, admin, and the instructor whose lesson it is. That last part is a
+   * permission about a *row*, so it is resolved against the booking rather than
+   * written as a role: an instructor who cannot come arranges their own cover,
+   * and having to find an admin to record it is how a club goes back to WhatsApp.
+   */
+  @Post(':id/stand-in')
+  async standIn(
+    @Param('id') id: string,
+    @Body() body: { membershipId?: unknown },
+  ): Promise<{ ok: true }> {
+    requireRole('owner', 'admin', 'instructor');
+    const { organizationId } = currentTenant();
+
+    const raw = body?.membershipId;
+    const membershipId = typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
+
+    const result = await setStandIn(organizationId, id, membershipId);
+    if (result === 'missing') throw new NotFoundException({ message: 'sessionNotFound' });
+    if (result === 'away') {
+      throw new ConflictException({ message: 'calendar.standIn.away' });
+    }
+    if (result === 'clash') {
+      throw new ConflictException({ message: 'calendar.standIn.clash' });
+    }
+    return { ok: true };
+  }
+
   @Post(':id/move')
   async move(
     @Param('id') id: string,

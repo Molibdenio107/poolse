@@ -174,9 +174,13 @@ function levelBody(formData: FormData): {
   maxAgeMonths: number | null;
   admitsMale: boolean;
   admitsFemale: boolean;
+  colour: string;
 } {
   return {
     name: String(formData.get('name') ?? '').trim(),
+    // Empty means the level has no colour of its own — the API reads it that
+    // way and refuses anything that is not one of the eight.
+    colour: String(formData.get('colour') ?? '').trim(),
     minAgeMonths: ageBound(formData, 'minAgeMonths'),
     maxAgeMonths: ageBound(formData, 'maxAgeMonths'),
     // Checkboxes post nothing when unticked; both unticked is refused by the
