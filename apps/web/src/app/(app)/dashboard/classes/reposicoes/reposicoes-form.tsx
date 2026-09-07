@@ -119,9 +119,6 @@ export function ReposicaoSettingsForm({
         </button>
 
         {state.ok && <span className="text-sm text-foreground-muted">{t('reposicao.saved')}</span>}
-        {state.errorKey !== undefined && (
-          <span className="text-sm text-danger">{t(state.errorKey)}</span>
-        )}
       </div>
     </form>
   );

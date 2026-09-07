@@ -117,10 +117,6 @@ export function StaffForm({
           >
             {saving ? t('common.working') : t('staff.save')}
           </button>
-          {state.ok && <span className="text-sm text-success">{t('staff.saved')}</span>}
-          {state.errorKey !== undefined && (
-            <span className="text-sm text-danger">{t(state.errorKey)}</span>
-          )}
         </div>
       </form>
 
@@ -237,9 +233,6 @@ function RoleEditor({
           ))}
       </div>
 
-      {state.errorKey !== undefined && (
-        <p className="text-sm text-danger">{t(state.errorKey)}</p>
-      )}
     </section>
   );
 }
@@ -341,7 +334,6 @@ function Reinvite({
         </button>
       </div>
 
-      {state.errorKey !== undefined && <p className="text-sm text-danger">{t(state.errorKey)}</p>}
     </form>
   );
 }

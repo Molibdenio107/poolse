@@ -56,6 +56,14 @@ translation, not the other way round. Reviewers check for Brazilian forms — *u
 untranslated in the interface. `pnpm i18n:check` proves every key exists in both files; it
 cannot tell you the Portuguese is the right Portuguese, so that part is read by a person.
 
+**A date's shape is a named format in `i18n.ts`, never an options object at the call site.**
+`long`, `short` and `stamp` are defined once and passed to *both* `getRequestConfig` and
+`NextIntlClientProvider` — a client provider inherits the locale and timezone from the server
+but neither the messages nor the formats. next-intl has no built-in names, so asking for one
+that was never configured is a `MISSING_FORMAT` throw at render time, on whichever screen
+renders it first. `pnpm i18n:check` proves every named format resolves; `tsc` cannot, because
+the name is a string.
+
 **Tooltips explain, they never inform.** A tooltip may clarify what a control does. It may
 never be the only place a piece of information appears — anything the operator needs is
 visible text. Tooltips open on keyboard focus as well as hover, because a control whose
@@ -77,6 +85,14 @@ silently overwritten the next time Clerk syncs — a bug that reproduces only so
 The save path is: write to Clerk, then re-read from Clerk (`refreshFromClerk`). Locale,
 theme, birth date and phone are Poolse's and are written directly. `docs/data-model.md`,
 decision 2, and `packages/db/test/profile.sql`, test 6.
+
+**A save says so, and it says so once.** `useSavedAction` raises the toast — one place, every
+form — so no screen has to remember to report an outcome and none of them can word it
+differently. Field errors still render beside their field, because a message at the top of the
+page cannot say which of a dozen boxes it meant; the top-of-form banner and the inline
+"Guardado" are the toast's job now. `components/ui/toast.tsx`: muted tones on the surface
+colour, an icon per tone so colour never carries the meaning alone, 4s for a success and 8s
+for a refusal.
 
 **Form fields are controlled, never `defaultValue`.** React 19 resets a form as soon
 as a function `action` returns — *including when it returns a validation error*. An
@@ -176,6 +192,79 @@ widening them one at a time.
 blocks, the now-line, the drag maths and the auto-scroll — a second one is how they stop
 agreeing. `calendar/calendar-grid.tsx` is the dated week; `classes/schedule-board.tsx` is
 still the recurring pattern, and they are deliberately two components.
+
+**A week's class can differ from its pattern, lanes included.** `class_session` carries the
+one-week answer — `moved_at`, its own `instructor_membership_id`, and its own rows in
+`class_session_lane` — and `class_schedule` carries the pattern. So the calendar's scope
+popover offers both answers for *every* change, sideways included; the earlier "a lane change
+is always every week" was a limitation of the endpoint, not a rule. `moveOccurrence` takes
+`laneIds`, where **absent means "I did not ask about pistas"** and an empty array means "in
+no pista this week" — collapsing the two makes a plain time change silently unassign lanes.
+
+**`class_session` has no `archived_at`; it has `status`.** A session ends as `cancelled`,
+which is what attendance and invoicing rest on. `cs` means `class_schedule` in most of this
+codebase and `class_schedule` *does* have the column — so a query that means the session and
+copies the habit raises `42703` at runtime and nothing catches it: `typecheck` does not read
+SQL and `sql:check` only looks for backticks. **A repository function with no integration test
+is untested SQL** — the whole stand-in feature shipped dead this way, and the browser's
+`.catch(() => null)` presented it as a dropdown greyed for ever.
+
+**A fetch that answers `null` for both "not yet" and "it failed" produces a control that is
+disabled with no explanation.** Keep `loaded` as its own state, and say what went wrong with a
+way to retry. `stand-in-picker.tsx` is the shape.
+
+**`cs` means `class_schedule` in most of this codebase, and a join to `class_group` is the
+place partnerships get silently dropped.** It has happened three times — `listSessions`,
+`occurrenceOf` and the stand-in candidate list all inner-joined it, so every parceria session
+simply was not there. Nothing errors: a query returns fewer rows and a screen renders less.
+A partnership session carries no `class_group_id`; its group, its instructor and its title
+come through `class_schedule`. Reach for `LEFT JOIN` and a `coalesce` of both sides.
+
+**A parceria takes no register, ever — but it may take a plan.** `partner.managed_lessons` is
+one switch on the partnership, off by default, and it grants the training plan and Cancelar
+aula on the calendar and nothing else. The register is not a UI choice: `partner_group` holds
+a `participant_count` and no people, and `attendance` needs a real `student_id`. A `lesson_plan`
+therefore hangs off a turma **or** a partner group, with a CHECK that exactly one is set and a
+partial unique index each — one index over both columns enforces nothing, because two partner
+plans on a day differ only by their null `class_group_id`s.
+
+**A side sheet fits the window; the one growable thing inside it takes the slack.** Make the
+panel a flex column and give the text box `flex-1 min-h-0` rather than a fixed `min-h-`. The
+`min-h-0` is the half that is easy to miss — a flex item will not shrink below its content
+without it, and the sheet scrolls anyway. A fixed floor pushes the buttons below the fold on a
+laptop, which is how a Save nobody can see gets reported as a save that does not work.
+
+**A draggable block carries no click.** Every drag and every resize ends with the browser
+firing a click on whatever is underneath, so a block that both moves and opens something will
+open it by accident. Timers that suppress the trailing click narrow the window without closing
+it. Put the action on the hover card beside the others — which is also where a keyboard can
+reach it, since the card opens on focus.
+
+**The calendar draws the pattern, overlaid with the week's own sessions.** `readGrid` returns
+`class_schedule`; the page re-times each booking to its `class_session` for that week before
+handing them to the grid. Skip the overlay and a one-week move is written, refused and
+reported correctly — and then invisible, because the block springs back to the pattern's slot.
+A change the screen cannot show reads as a change that did not happen.
+
+**A week's occurrence is found by its booking's id, never by turma-weekday-hour.**
+`bookingKey` in `lib/slot-key.ts`; `slotKey` is the fallback for a session with no booking.
+The composite was exact only while an occurrence could not leave its pattern's slot — it can
+now, so the two halves stop agreeing the moment anybody moves one week, and every control on
+the card silently vanishes from the classes that were rearranged. A lookup that returns
+`undefined` renders nothing and reports nothing: prefer a key that cannot drift.
+
+**A taught class is a record, not a plan.** One row in `attendance` for a session means it
+happened, so it does not move and it is not cancelled. `Session.registerTaken` carries the
+fact to the screen; the move endpoint asks the same question itself. The block stays
+draggable — round 6 settled that a block which looks like every other block and silently
+refuses reads as a broken grid — so the refusal is a sentence, not a disabled control.
+
+**Both axes of a drag are travel, never pointer position.** The calendar's scale lives whole
+in `lib/calendar-scale.ts`: `PX_PER_MINUTE` down, `COL_WIDTH`/`GUTTER`/`DAY_RULE` and
+`columnX`/`columnAt` across. Resolving one axis from `delta` and the other from whichever
+droppable is under the pointer puts a multi-lane block's left edge under the pointer, so it
+jumps sideways by however far along it was grabbed and collides in lanes nobody chose. The
+blocks, the ghost and the drag measure with one ruler or they disagree.
 
 **A drag costs a transform, never a reflow, and one droppable per column.** Measured on a
 real club, the old board mounted 2,256 droppables — day × slot × lane, each running a rules

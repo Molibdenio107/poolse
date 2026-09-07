@@ -47,6 +47,9 @@ export function LessonPlanPanel({
   sessionId,
   onClose,
   actions,
+  className,
+  facts,
+  teacher,
 }: {
   /** The lesson being planned, or null when the sheet is shut. */
   sessionId: string | null;
@@ -64,6 +67,26 @@ export function LessonPlanPanel({
    * them as data would mean this sheet knowing what a register is.
    */
   actions?: React.ReactNode;
+  /**
+   * The class this plan belongs to, and the facts about it.
+   *
+   * A sheet that opens with a date and a text box asks somebody to remember
+   * which of the week's blocks they clicked. The name and the same facts the
+   * hover card carries — level, pistas, hour, instructor, whether the register
+   * is taken — come from one function, so the two never describe the class
+   * differently.
+   */
+  className?: string;
+  facts?: { label: string; value: string }[];
+  /**
+   * Who is teaching this one lesson, placed above Save.
+   *
+   * Separate from `actions` because of where it goes rather than what it is:
+   * the picker writes on change, and sitting under Save it read as something
+   * Save would record. Above it, with the plan, it is plainly part of the same
+   * screenful.
+   */
+  teacher?: React.ReactNode;
 }): React.ReactElement {
   const t = useTranslations();
   const format = useFormatter();
@@ -124,7 +147,18 @@ export function LessonPlanPanel({
         somebody's head looked like sixteen and was hard to read back. `cn` uses
         tailwind-merge, so this width simply replaces the component's own.
       */
-      className="max-w-2xl"
+      /*
+        A column that fills the sheet, so the plan fits instead of scrolling.
+
+        Everything here has a natural height except the text box, which had a
+        22rem floor and pushed Save, the teacher and the two buttons below the
+        fold — on a laptop the sheet scrolled before a word was typed. As a
+        flex column the fixed parts keep their size and the box absorbs whatever
+        is left, which is the one thing here that can honestly be any height.
+        `overflow-y-auto` stays on the panel underneath as the honest fallback
+        for a genuinely short window.
+      */
+      className="flex max-w-2xl flex-col"
       title={t('calendar.plan.title')}
       {...(plan === undefined
         ? {}
@@ -134,11 +168,31 @@ export function LessonPlanPanel({
       {plan === undefined ? (
         <p className="text-sm text-foreground-muted">{t('common.working')}</p>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {failure !== undefined && (
             <p className="rounded border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
               {t(failure)}
             </p>
+          )}
+
+          {/*
+            Which class this is. The date is already the sheet's description, so
+            this carries the name and the facts that place it in the week.
+          */}
+          {(className !== undefined || facts !== undefined) && (
+            <div className="rounded border border-border bg-surface-muted p-3">
+              {className !== undefined && <p className="font-medium">{className}</p>}
+              {facts !== undefined && facts.length > 0 && (
+                <dl className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-foreground-muted">
+                  {facts.map((fact) => (
+                    <div key={fact.label} className="flex gap-1.5">
+                      <dt>{fact.label}:</dt>
+                      <dd className="text-foreground">{fact.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
           )}
 
           {/*
@@ -182,7 +236,7 @@ export function LessonPlanPanel({
                 </div>
               )}
 
-              <div className="flex flex-col gap-1.5">
+              <div className="flex min-h-0 flex-1 flex-col gap-1.5">
                 <label htmlFor="lesson-plan" className="text-sm font-medium">
                   {t('calendar.plan.label')}
                 </label>
@@ -190,15 +244,35 @@ export function LessonPlanPanel({
                   id="lesson-plan"
                   value={body}
                   onChange={(event) => setBody(event.target.value)}
-                  rows={16}
+                  rows={6}
                   maxLength={8000}
                   placeholder={t('calendar.plan.placeholder')}
-                  // A floor as well as a row count: the sheet is tall, and a box
-                  // that stops halfway down it invites scrolling inside a panel
-                  // that has room to spare.
-                  className={cn(CONTROL_LINE, 'h-auto min-h-[22rem] resize-y py-2 leading-relaxed')}
+                  /*
+                    The box takes whatever the sheet has left.
+                    
+                    `rows` is only the floor for a window too short to give it
+                    anything; `flex-1` with `min-h-0` is what actually sizes it,
+                    and `min-h-0` is the half that matters — without it a flex
+                    item refuses to shrink below its content and the sheet
+                    scrolls anyway. A long plan scrolls inside the box, which is
+                    what a text box is for, rather than pushing Save off-screen.
+                  */
+                  className={cn(CONTROL_LINE, 'h-auto min-h-0 flex-1 resize-none py-2 leading-relaxed')}
                 />
               </div>
+
+              {/*
+                The teacher, immediately above Save.
+
+                It saves on change rather than with the form, and under the
+                button it read as something the button would record — so
+                somebody could choose a stand-in, not press Save, and reasonably
+                believe they had lost it. Above the button it is part of what is
+                plainly on screen together.
+              */}
+              {teacher !== undefined && (
+                <div className="border-t border-border pt-4">{teacher}</div>
+              )}
 
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -252,8 +326,10 @@ export function LessonPlanPanel({
                 <p className="text-sm text-foreground-muted">{t('calendar.plan.none')}</p>
               ) : (
                 // `whitespace-pre-wrap`, because the plan is lines. Rendering it
-                // as a paragraph would run the drills together into prose.
-                <p className="whitespace-pre-wrap rounded border border-border bg-surface-muted p-3 text-sm">
+                // as a paragraph would run the drills together into prose. It
+                // takes the sheet's spare height and scrolls inside itself, so a
+                // long plan does not push the buttons under it off-screen.
+                <p className="min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap rounded border border-border bg-surface-muted p-3 text-sm">
                   {plan.body}
                 </p>
               )}
@@ -264,7 +340,10 @@ export function LessonPlanPanel({
             <p className="text-sm text-foreground-muted">
               {t('calendar.plan.lastSaved', {
                 who: plan.updatedBy ?? t('calendar.plan.someone'),
-                when: format.dateTime(new Date(plan.updatedAt), 'short'),
+                // A moment rather than a day: "guardado a 11/09/26, 21:04"
+                // without the clock is a sentence that answers the wrong
+                // question.
+                when: format.dateTime(new Date(plan.updatedAt), 'stamp'),
               })}
             </p>
           )}

@@ -93,6 +93,12 @@ function partnerBody(formData: FormData): Record<string, unknown> {
     nif: text(formData, 'nif') || null,
     address: text(formData, 'address') || null,
     notes: text(formData, 'notes') || null,
+    /*
+      One body serves creating and editing, so this covers both forms — and a
+      form that does not carry the field at all sends false, which is what a
+      parceria has always been.
+    */
+    managedLessons: formData.get('managedLessons') === 'on',
   };
 }
 

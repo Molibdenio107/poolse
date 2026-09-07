@@ -208,9 +208,6 @@ export function MedicalLeavePanel({
             </p>
           </div>
 
-          {state.errorKey !== undefined && (
-            <p className="text-sm text-danger">{t(state.errorKey)}</p>
-          )}
 
           {/*
             The atestado itself — present, styled and switched off, the same

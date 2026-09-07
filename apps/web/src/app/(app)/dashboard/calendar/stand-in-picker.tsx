@@ -37,18 +37,35 @@ export function StandInPicker({
 }): React.ReactElement {
   const t = useTranslations();
   const [options, setOptions] = useState<StandInOptions | null>(null);
+  /*
+   * Loaded, as a fact of its own — and this is the bug that made the picker
+   * unusable rather than merely slow.
+   *
+   * `standInOptionsAction` answers `null` for *every* failure, so "has not
+   * arrived yet" and "the server refused" arrived as the same value. The
+   * control read that one value as "still loading" and stayed disabled for
+   * ever, saying nothing — which is what a broken query on the endpoint looked
+   * like from the pool deck: a greyed dropdown with no explanation.
+   *
+   * Two states, so the third can be said out loud.
+   */
+  const [loaded, setLoaded] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saving, save] = useTransition();
 
   useEffect(() => {
     let live = true;
+    setLoaded(false);
     void standInOptionsAction(sessionId).then((found) => {
-      if (live) setOptions(found);
+      if (!live) return;
+      setOptions(found);
+      setLoaded(true);
     });
     return () => {
       live = false;
     };
-  }, [sessionId]);
+  }, [sessionId, attempt]);
 
   /*
    * While the options load, the control is the control — disabled, with the
@@ -60,7 +77,8 @@ export function StandInPicker({
    * the card's height steady, so the thing under the pointer does not jump the
    * moment the answer arrives.
    */
-  const loading = options === null;
+  const loading = !loaded;
+  const failed = loaded && options === null;
 
   function choose(value: string): void {
     setError(null);
@@ -92,9 +110,11 @@ export function StandInPicker({
       <select
         id={`stand-in-${sessionId}`}
         value={options?.currentId ?? ''}
-        disabled={saving || loading}
+        // Failed as well as loading: with nothing in the list there is nothing to
+        // choose, and the sentence underneath is what says why.
+        disabled={saving || loading || failed}
         onChange={(event) => choose(event.target.value)}
-        className={cn(CONTROL_LINE, compact && 'h-8 text-sm', loading && 'opacity-60')}
+        className={cn(CONTROL_LINE, compact && 'h-8 text-sm', (loading || failed) && 'opacity-60')}
       >
         {/* Clearing puts the turma's own instructor back, because they were
             never replaced. */}
@@ -126,6 +146,25 @@ export function StandInPicker({
           );
         })}
       </select>
+
+      {/*
+        The load itself failed — a sentence and a way back, not a dead control.
+
+        `retry` bumps `attempt`, which is the effect's other dependency, so the
+        same fetch runs again without the card having to be closed and reopened.
+      */}
+      {failed && (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-danger">
+          {t('calendar.standIn.loadFailed')}
+          <button
+            type="button"
+            onClick={() => setAttempt((n) => n + 1)}
+            className="rounded underline underline-offset-2 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+          >
+            {t('calendar.standIn.retry')}
+          </button>
+        </p>
+      )}
 
       {error !== null && <p className="text-sm text-danger">{t(error)}</p>}
     </div>

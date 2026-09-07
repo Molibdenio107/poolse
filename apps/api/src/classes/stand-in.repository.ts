@@ -48,6 +48,7 @@ export async function candidatesFor(
       on_date: string;
       starts_at: Date;
       ends_at: Date;
+      pool_id: string | null;
       instructor: string | null;
       substitute: string | null;
     }>(
@@ -61,11 +62,29 @@ export async function candidatesFor(
        * me pick somebody who is away". The same expression the calendar renders
        * with, so both agree by construction.
        */
+      /*
+       * **`class_session` has no `archived_at`.** It never did — a session is
+       * ended by `status = 'cancelled'`, which is what attendance and invoicing
+       * rest on, and there is no soft-delete column to test. Asking for one
+       * raised `42703 column cs.archived_at does not exist`, the endpoint
+       * answered 500, and the browser turned that into a picker that sat
+       * disabled for ever. `status <> 'cancelled'` is the predicate that was
+       * meant, and the one `moveOccurrence` already uses.
+       *
+       * **The instructor is the session's own, not the turma's.** A booking may
+       * override the turma's instructor for its own slot, and that override is
+       * copied onto the session — so reading `class_group` put the wrong name in
+       * the box for the 348-of-471 sessions that carry one. The order here is
+       * the generated `resolved_instructor_id`'s, with the turma last as the
+       * fallback for a session created before the column existed.
+       */
       `SELECT to_char(cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'),
                       'YYYY-MM-DD')                        AS on_date,
               cs.starts_at,
               cs.ends_at,
-              cg.instructor_membership_id                  AS instructor,
+              cs.pool_id,
+              coalesce(cs.instructor_membership_id,
+                       cg.instructor_membership_id)        AS instructor,
               cs.substitute_instructor_membership_id       AS substitute
          FROM class_session cs
          LEFT JOIN class_group cg ON cg.id = cs.class_group_id
@@ -74,7 +93,7 @@ export async function candidatesFor(
                                  AND p.organization_id = cs.organization_id
          LEFT JOIN facility f     ON f.id = p.facility_id
                                  AND f.organization_id = cs.organization_id
-        WHERE cs.id = $1 AND cs.archived_at IS NULL`,
+        WHERE cs.id = $1 AND cs.status <> 'cancelled'`,
       [sessionId],
     );
     const lesson = session.rows[0];
@@ -111,25 +130,32 @@ export async function candidatesFor(
                    AND vd.day = $2::date
                  LIMIT 1
               )                                                AS away_reason,
+              /*
+               * Exactly what class_session_instructor_free refuses, and nothing
+               * else. (No backticks in here: one ends the template literal.)
+               *
+               * The constraint reads the generated resolved_instructor_id
+               * column -- coalesce(substitute, instructor) *on the session* --
+               * and only fires when the two lessons are in *different* pools
+               * (pool_id WITH <>). One person watching two lanes of the same
+               * tank is a thing clubs do, and the database allows it.
+               *
+               * This used to rebuild the coalesce by hand out of class_group,
+               * which is a different answer, and it left the pool out entirely.
+               * So it called somebody busy the database would have accepted and
+               * stayed quiet about the case it would refuse. Reading the
+               * generated column is what keeps the warning and the refusal the
+               * same rule.
+               */
               EXISTS (
                 SELECT 1
                   FROM class_session other
                  WHERE other.organization_id = m.organization_id
                    AND other.id <> $1
-                   AND other.archived_at IS NULL
                    AND other.status <> 'cancelled'
-                   /*
-                    * The same coalesce(substitute, instructor) the exclusion
-                    * constraint uses, so this warns about exactly what the
-                    * database would refuse rather than about something adjacent.
-                    */
-                   AND coalesce(
-                         other.substitute_instructor_membership_id,
-                         (SELECT g2.instructor_membership_id
-                            FROM class_group g2
-                           WHERE g2.id = other.class_group_id
-                             AND g2.organization_id = other.organization_id)
-                       ) = m.id
+                   AND other.resolved_instructor_id = m.id
+                   AND other.pool_id IS NOT NULL
+                   AND other.pool_id IS DISTINCT FROM $5::uuid
                    AND tstzrange(other.starts_at, other.ends_at)
                        && tstzrange($3::timestamptz, $4::timestamptz)
               )                                                AS busy
@@ -141,7 +167,7 @@ export async function candidatesFor(
           AND m.status = 'active'
           AND mr.role = 'instructor'
         ORDER BY name NULLS LAST`,
-      [sessionId, lesson.on_date, lesson.starts_at, lesson.ends_at],
+      [sessionId, lesson.on_date, lesson.starts_at, lesson.ends_at, lesson.pool_id],
     );
 
     return {
@@ -177,7 +203,7 @@ export async function setStandIn(
          FROM class_session cs
          LEFT JOIN pool p     ON p.id = cs.pool_id AND p.organization_id = cs.organization_id
          LEFT JOIN facility f ON f.id = p.facility_id AND f.organization_id = cs.organization_id
-        WHERE cs.id = $1 AND cs.archived_at IS NULL`,
+        WHERE cs.id = $1 AND cs.status <> 'cancelled'`,
       [sessionId],
     );
     if (session.rowCount === 0) return 'missing';
@@ -209,7 +235,7 @@ export async function setStandIn(
       await tx.query(
         `UPDATE class_session
             SET substitute_instructor_membership_id = $2
-          WHERE id = $1 AND archived_at IS NULL`,
+          WHERE id = $1 AND status <> 'cancelled'`,
         [sessionId, membershipId],
       );
     } catch (error) {

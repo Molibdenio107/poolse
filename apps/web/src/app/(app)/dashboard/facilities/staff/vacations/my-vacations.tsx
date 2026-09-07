@@ -218,10 +218,6 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
               {t('vacations.clearSelection')}
             </button>
           )}
-          {state.ok && <span className="text-sm text-success">{t('vacations.requested')}</span>}
-          {state.errorKey !== undefined && (
-            <span className="text-sm text-danger">{t(state.errorKey)}</span>
-          )}
         </div>
 
         <p className="text-sm text-foreground-muted">{t('vacations.gridHint')}</p>
@@ -332,9 +328,6 @@ function RequestList({ data }: { data: MyVacations }): React.ReactElement {
         ))}
       </ul>
 
-      {state.errorKey !== undefined && (
-        <p className="text-sm text-danger">{t(state.errorKey)}</p>
-      )}
     </section>
   );
 }

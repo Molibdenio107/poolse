@@ -1530,7 +1530,7 @@ student record, and none of whom Poolse could represent before this.
 ```
 partner
   id, organization_id, facility_id, name, type, nif, address, notes,
-  status ('ativa'|'inativa'), color, archived_at
+  status ('ativa'|'inativa'), color, managed_lessons bool default false, archived_at
   unique (organization_id, id)                       -- what the children key to
   partial unique (organization_id, facility_id, lower(strip_accents(name)))
 
@@ -1827,9 +1827,13 @@ should appear on it.
 ### `lesson_plan` — what one lesson is for
 
 ```
-lesson_plan        organization_id, class_group_id, on_date date, body text,
-                   updated_by (membership), created_at, updated_at, archived_at
-                   unique (organization_id, class_group_id, on_date) where archived_at is null
+lesson_plan        organization_id, class_group_id?, partner_group_id?, on_date date,
+                   body text, updated_by (membership), created_at, updated_at, archived_at
+                   check: exactly one of class_group_id / partner_group_id
+                   partial unique (organization_id, class_group_id, on_date)
+                     where archived_at is null and class_group_id is not null
+                   partial unique (organization_id, partner_group_id, on_date)
+                     where archived_at is null and partner_group_id is not null
 ```
 
 What an instructor writes before Tuesday: the drills, the distances, the skill the group is
@@ -1849,6 +1853,19 @@ that says nothing — worse than none, since a colleague would stop looking.
 
 The unique index is partial, as on every soft-deletable table: a plan cleared in March must
 not block a new one for the same Tuesday next season.
+
+**A plan belongs to a turma or to a partner group, never both and never neither.** A CHECK
+holds it, because two nullable parents is exactly the shape that quietly allows a row
+belonging to nothing. There are *two* partial unique indexes rather than one over both
+columns: a single index would not enforce anything on the partnership side, since two partner
+plans on one day differ by their null `class_group_id`s and nulls never compare equal. An
+`ON CONFLICT` against either has to spell out the whole index predicate — `archived_at IS
+NULL` alone does not imply it, and Postgres then reports that no matching constraint exists.
+
+The partnership half exists only for a `partner` with `managed_lessons` set: the club runs
+those lessons, so their blocks carry a plan and can be cancelled. They still take no
+register — `partner_group` holds a `participant_count` and no people, and `attendance` needs
+a real `student_id` on every row. Decided 2026-09-07.
 
 ### A turma's own colour — round 6
 

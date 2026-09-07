@@ -39,7 +39,9 @@ than prose, so the app's single width was throwing away half the monitor rather 
 protecting anybody's reading. See the note in `components/page-shell.tsx`; it is meant to
 stay the only caller. A club with more than one pool sees a pool
 picker and one pool at a time — three pools of eight lanes is 168 columns, which is not a
-first paint anybody can read.
+first paint anybody can read. The picker sits at the **left** of the toolbar with a primary
+border: it decides which pistas the whole week is drawn from, so it outranks everything else
+on that row.
 
 **Blocks are placed from their minutes**, not from table rows, at one pixel per minute. A
 45-minute class in a 60-minute slot is three-quarters of it, and two classes that overlap by
@@ -77,10 +79,38 @@ facility's own slot rows, falling back to the grid's granularity where no row co
 time. Drag its **left or right** edge to change how many pistas it takes; a booking always
 occupies a contiguous run of lanes, and one lane is the floor.
 
-A lane change applies to **every week**, and the confirmation says so with a single button
-rather than offering a choice. Lanes belong to the recurring booking: there is no
-per-occurrence field to put them in, so "this week only" is not something the data can
-express. A move or a duration change still asks the two-way question.
+**Every change asks the same two-way question** — this week only, or every week — whether
+what moved was the hour, the day, the duration or the run of pistas. A lane change used to be
+an exception, offering one button that said it applied to every week: lanes lived only on the
+recurring booking and a one-week move carried a start time and nothing else. A session has
+its own lane rows, so one week can now differ from the pattern, and "pista 3 is shut for
+repairs this Tuesday" is a thing the timetable can hold.
+
+"This week only" writes the session and leaves the booking alone, so the following weeks keep
+the pattern's own pistas and hour. If the pista is genuinely taken at that time the move is
+refused, and the refusal names the lane and the class already in it rather than saying only
+that something is in the way.
+
+**A class whose register has been taken does not move at all.** One mark on it means somebody
+stood at the poolside with a list, so the day, the hour and the pista stopped being a plan and
+became a record of what happened. The block still drags — a block that looks like every other
+block and silently refuses reads as a broken grid — and the server refuses with a sentence
+saying why. The hover card carries "Presenças: já marcadas" so it can be seen before anybody
+tries.
+
+**A drag moves a block by how far the pointer travelled, on both axes.** The lane used to come
+from whichever column the pointer was over, which put the block's left edge under the pointer
+— so a block spanning several pistas, grabbed anywhere but its left edge, jumped sideways by
+the grab offset and landed on lanes nobody had pointed at. `columnX` and `columnAt` in
+`lib/calendar-scale.ts` are the one ruler the blocks, the ghost and the drag all measure with.
+
+**A week that has been moved is drawn where it moved to.** The grid itself is the recurring
+pattern; this screen overlays the week's own sessions on top of it, so a class put on
+Wednesday for one week appears on Wednesday. A class with no session that week stays where
+the pattern puts it.
+
+**A block is not clickable.** It is a thing you drag, and every drag and resize ends with a
+click fired underneath it. The plan is opened from the hover card instead — see below.
 
 **The block moves the moment it is dropped**, and a small popover at the drop point asks the
 one thing a drag cannot say for itself — whether this is *this week only* or *every week*.
@@ -146,6 +176,12 @@ confirmation per session, each rendering in place of its own trigger — which o
 is a box a seventh of a column wide with `overflow-hidden` on it, so the form was clipped by
 the cell it lived in.
 
+The card's controls — the register link, Cancel, the teacher picker — belong to the week's
+*occurrence*, and they are found by the **booking's id** rather than by its turma, weekday and
+hour. A week that has been moved no longer sits at its pattern's slot, so a key made of those
+three stops matching the block and the controls disappear from exactly the classes that have
+been rearranged.
+
 ## Who teaches a lesson
 
 The hover card and the plan sheet both carry a teacher picker for that one lesson. Choosing
@@ -153,19 +189,43 @@ somebody records a **stand-in**: the turma's own instructor is unchanged, and th
 week goes back to normal by itself. Reassigning the turma for good is done on the turma's own
 screen.
 
+The name the box shows is the **session's** teacher — a booking may override the turma's
+instructor for its own slot, and that override is what the grid draws.
+
 An instructor on approved leave appears in the list with the reason against their name, greyed
 and unselectable — and the endpoint refuses them as well, because hiding a control is never
 the control. Somebody already teaching at that hour is shown with "já tem aula a esta hora"
 and can still be chosen; the database's own overlap constraint is what refuses it, and it says
-so.
+so. "Busy" means exactly what that constraint refuses — the same person in a *different* tank
+at an overlapping time. One person watching two lanes of one tank is allowed, so it is not
+flagged.
+
+If the list cannot be loaded the picker says so and offers a retry, rather than sitting
+disabled with no explanation.
 
 Owner, admin and the lesson's own instructor may set a stand-in.
 
 ## The training plan
 
-Clicking a class opens a sheet down the side of the page — the week stays visible behind it,
-because somebody writing Tuesday's plan is looking at Tuesday. Partnership bookings are not
-clickable: a school's hour has no lesson to plan.
+**Plano de treino** on the hover card opens a sheet down the side of the page — the week stays
+visible behind it, because somebody writing Tuesday's plan is looking at Tuesday. It sits
+beside Take the register and Cancel class.
+
+A partnership booking has no card actions **unless the club runs its lessons** — the
+`Aulas dadas por nós` switch on the partnership's own screen, under Instalações. Turned on,
+its blocks carry the plan and Cancelar aula. They never carry a register: a partnership
+group has a number of participants rather than a list of students, so there is nobody to
+mark present.
+
+The sheet opens with **the class it belongs to** — its name and the same facts the hover card
+carries — so a plan is never a text box floating free of what it is for. The teacher picker
+sits directly **above Save**: it writes on change rather than with the form, and under the
+button it read as something Save would record.
+
+**The sheet fits the window.** It is a column whose text box takes the height that is left,
+so Save and the buttons under it are always visible; a long plan scrolls inside the box. Its
+foot carries Take the register and Cancel class — not the teacher picker, which is already
+above Save, and not the plan button, which would lead back into the sheet you are reading.
 
 | Action | Roles |
 |---|---|

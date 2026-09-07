@@ -38,6 +38,84 @@ export function minutesToPx(minutes: number): number {
   return minutes * PX_PER_MINUTE;
 }
 
+/*
+ * -----------------------------------------------------------------------------
+ * The other axis
+ * -----------------------------------------------------------------------------
+ *
+ * The vertical scale has lived here since round 6 and the horizontal one lived
+ * in the grid component, which is the asymmetry that let a real bug through: the
+ * time a drag resolved to came from how far the pointer had *travelled*, and the
+ * pista it resolved to came from whichever column the pointer was *over*. Those
+ * are different questions, and for any block wider than one lane they give
+ * different answers.
+ *
+ * Both axes are arithmetic over a constant. Both belong in the file the test
+ * runner can import.
+ */
+
+/**
+ * One lane column.
+ *
+ * 64px: a six-lane pool then fits a week across a laptop without scrolling
+ * sideways, which is worth more than the tail of a truncated turma name. The
+ * full name is on the hover card.
+ */
+export const COL_WIDTH = 64;
+
+/** The time gutter down the left. */
+export const GUTTER = 56;
+
+/**
+ * The rule between one day and the next, in pixels.
+ *
+ * **This number and the `border-l-2` class have to agree**, and they are apart
+ * because Tailwind needs a literal class name. They stopped agreeing once: the
+ * rule went from 1px to 2px to make the days findable and the block layer went
+ * on adding 1, so every block drifted a pixel per day, up to seven by Sunday.
+ * Change both or neither.
+ */
+export const DAY_RULE = 2;
+
+/** Where a (day, lane) column starts, in the scrolling canvas. */
+export function columnX(dayIndex: number, laneIndex: number, laneCount: number): number {
+  return GUTTER + dayIndex * (laneCount * COL_WIDTH + DAY_RULE) + DAY_RULE + laneIndex * COL_WIDTH;
+}
+
+/**
+ * The inverse: the column nearest a given offset.
+ *
+ * Rounding rather than flooring, because the input is a column edge that has
+ * been dragged — halfway across is the point at which it should step. The carry
+ * loops are what let a block dragged off the right-hand end of Tuesday arrive at
+ * the left-hand end of Wednesday instead of sticking to Tuesday's last pista.
+ */
+export function columnAt(
+  x: number,
+  laneCount: number,
+  dayCount: number,
+): { dayIndex: number; laneIndex: number } {
+  const stride = laneCount * COL_WIDTH + DAY_RULE;
+  const inside = x - GUTTER;
+
+  let dayIndex = Math.floor(inside / stride);
+  let laneIndex = Math.round((inside - dayIndex * stride - DAY_RULE) / COL_WIDTH);
+
+  while (laneIndex >= laneCount) {
+    laneIndex -= laneCount;
+    dayIndex += 1;
+  }
+  while (laneIndex < 0) {
+    laneIndex += laneCount;
+    dayIndex -= 1;
+  }
+
+  return {
+    dayIndex: Math.max(0, Math.min(dayCount - 1, dayIndex)),
+    laneIndex: Math.max(0, Math.min(laneCount - 1, laneIndex)),
+  };
+}
+
 export function pxToMinutes(px: number): number {
   return px / PX_PER_MINUTE;
 }

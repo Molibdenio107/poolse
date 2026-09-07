@@ -272,3 +272,148 @@ test('a plan is refused for a class that does not exist', async () => {
     });
   });
 });
+
+/*
+ * ---------------------------------------------------------------------------
+ * Partnerships the club runs the lessons for
+ * ---------------------------------------------------------------------------
+ *
+ * POOLSE-46 settled that a parceria takes no register and has no plan, and that
+ * is still what a partnership is by default. `partner.managed_lessons` is the
+ * exception a club sets on the partnership itself: a school that buys an hour
+ * and has us teach it gets a plan and Cancelar aula, and still no register --
+ * a partner group holds a `participant_count` and no students, so there is
+ * nobody to mark.
+ *
+ * The switch is what these pin. A partnership with it off must answer exactly as
+ * it did before, or every existing parceria quietly changes behaviour.
+ */
+
+/** A partnership, one group, and one session of it next week. */
+async function partnership(
+  tenant: ScratchTenant,
+  managed: boolean,
+): Promise<{ sessionId: string; groupId: string; instructorId: string }> {
+  const [pool] = await tenant.sql<{ id: string }>(
+    `INSERT INTO pool (organization_id, facility_id, name, kind)
+     VALUES ($1, $2, 'Tanque da Escola', 'indoor') RETURNING id`,
+    [tenant.organizationId, tenant.facilityId],
+  );
+
+  const instructorId = await addMember(tenant, 'Nuno', 'Teixeira', ['instructor']);
+
+  const [partner] = await tenant.sql<{ id: string }>(
+    `INSERT INTO partner (organization_id, facility_id, name, type, managed_lessons)
+     VALUES ($1, $2, 'Escola do Juncal', 'escola', $3) RETURNING id`,
+    [tenant.organizationId, tenant.facilityId, managed],
+  );
+
+  const [group] = await tenant.sql<{ id: string }>(
+    `INSERT INTO partner_group (organization_id, partner_id, name, participant_count)
+     VALUES ($1, $2, '3.o ano', 22) RETURNING id`,
+    [tenant.organizationId, partner!.id],
+  );
+
+  /*
+   * `season_id` is required here and forbidden on a turma booking --
+   * `class_schedule_season_source`, POOLSE-47's rule: a turma takes its season
+   * from its turma, everything else carries its own.
+   */
+  const [schedule] = await tenant.sql<{ id: string }>(
+    `INSERT INTO class_schedule
+       (organization_id, facility_id, subject_type, partner_group_id, season_id, weekday,
+        start_time, duration_minutes, instructor_membership_id)
+     VALUES ($1, $2, 'parceria', $3, $4, 2, TIME '10:00', 45, $5) RETURNING id`,
+    [tenant.organizationId, tenant.facilityId, group!.id, tenant.seasonId, instructorId],
+  );
+
+  // No `class_group_id`: that is the whole point of a parceria session.
+  const [session] = await tenant.sql<{ id: string }>(
+    `INSERT INTO class_session
+       (organization_id, schedule_id, pool_id, starts_at, duration_minutes, occurs_on)
+     VALUES ($1, $2, $3, now() + interval '7 days', 45, (now() + interval '7 days')::date)
+     RETURNING id`,
+    [tenant.organizationId, schedule!.id, pool!.id],
+  );
+
+  return { sessionId: session!.id, groupId: group!.id, instructorId };
+}
+
+test('a partnership the club runs gets a plan, stored against its group', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const parceria = await partnership(tenant, true);
+      const calendar = new SessionsCalendarController();
+
+      const empty = await calendar.plan(parceria.sessionId);
+      assert.equal(empty.body, '');
+      // It belongs to the partner group and to no turma, which is the CHECK the
+      // migration added holding at the other end.
+      assert.equal(empty.classGroupId, null);
+      assert.equal(empty.partnerGroupId, parceria.groupId);
+      assert.equal(empty.canEdit, true);
+
+      await calendar.savePlan(parceria.sessionId, { body: '8 x 25 costas' });
+
+      const saved = await calendar.plan(parceria.sessionId);
+      assert.equal(saved.body, '8 x 25 costas');
+
+      // And it landed on the partner column, not the turma one.
+      const [row] = await tenant.sql<{ n: string }>(
+        `SELECT count(*) AS n FROM lesson_plan
+          WHERE partner_group_id = $1 AND class_group_id IS NULL AND archived_at IS NULL`,
+        [parceria.groupId],
+      );
+      assert.equal(row!.n, '1');
+    });
+  });
+});
+
+test('a partnership the club does not run has no plan at all', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const parceria = await partnership(tenant, false);
+
+      // The same 404 as a session in another club: a caller probing ids learns
+      // nothing from the difference, and there is genuinely nothing to plan.
+      await expectStatus(() => new SessionsCalendarController().plan(parceria.sessionId), 404);
+      await expectStatus(
+        () => new SessionsCalendarController().savePlan(parceria.sessionId, { body: 'x' }),
+        404,
+      );
+    });
+  });
+});
+
+test('the instructor on a partnership booking may write its plan', async () => {
+  await withScratchTenant(async (tenant) => {
+    let sessionId = '';
+    let instructorId = '';
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const parceria = await partnership(tenant, true);
+      sessionId = parceria.sessionId;
+      instructorId = parceria.instructorId;
+    });
+
+    // A parceria has no turma to take an instructor from, so the booking's own
+    // is the person who will be standing on the deck -- and the one who needs
+    // to write the plan.
+    await actingAs(tenant, { membershipId: instructorId, roles: ['instructor'] }, async () => {
+      const plan = await new SessionsCalendarController().plan(sessionId);
+      assert.equal(plan.canEdit, true);
+      await new SessionsCalendarController().savePlan(sessionId, { body: 'Aquecimento 200 m' });
+    });
+
+    // Somebody else's instructor reads it and is refused by the API.
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      const plan = await new SessionsCalendarController().plan(sessionId);
+      assert.equal(plan.body, 'Aquecimento 200 m');
+      assert.equal(plan.canEdit, false);
+      await expectStatus(
+        () => new SessionsCalendarController().savePlan(sessionId, { body: 'nao' }),
+        403,
+      );
+    });
+  });
+});

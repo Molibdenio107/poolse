@@ -19,3 +19,27 @@
 export function slotKey(groupId: string, weekday: number, startTime: string): string {
   return `${groupId}|${weekday}|${startTime}`;
 }
+
+/**
+ * The key for one week's occurrence of a *booking*, which is the one the
+ * calendar uses.
+ *
+ * `slotKey` above identifies a slot by turma, weekday and hour, and that was
+ * exact for as long as an occurrence could not leave its pattern's slot. It can
+ * now — a one-week move carries a day, an hour and a set of pistas — and the
+ * moment it does, the session sits at one slot while the block on the grid is
+ * still drawn at the pattern's. The composite key then matched nothing, and
+ * every class anybody had moved for a week silently lost its register link, its
+ * cancel button, its teacher picker and its lesson plan. It looked like the
+ * click had stopped working.
+ *
+ * A booking's id does not move when one of its weeks does, so this is stable by
+ * construction. Both the map and the lookup call it, for the same reason
+ * `slotKey` is a function: two hand-written template literals are two things
+ * that can drift.
+ *
+ * `slotKey` stays for the sessions that have no booking behind them at all.
+ */
+export function bookingKey(scheduleId: string): string {
+  return `booking:${scheduleId}`;
+}

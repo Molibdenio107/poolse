@@ -21,7 +21,12 @@ import type { FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 /** Only what a colour and a legend need; the API sends them already ordered. */
 export type CalendarLevel = { id: string; name: string };
 import {
+  COL_WIDTH,
+  columnAt,
+  columnX,
   dayRange,
+  DAY_RULE,
+  GUTTER,
   hourMarks,
   levelOrder,
   levelTint,
@@ -76,22 +81,16 @@ import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
  * fits a week across a laptop without sideways scrolling, which is worth more
  * than the tail of "Iniciados A" — the full name is on the block's hover card.
  */
-const COL_WIDTH = 64;
-
-/** The time gutter down the left. */
-const GUTTER = 56;
-
 /**
- * The rule between one day and the next, in pixels.
+ * What joins a refusal's key to the server's own words about it.
  *
- * **This number and the `border-l-2` class have to agree**, and they are apart
- * because Tailwind needs a literal class name. They stopped agreeing once: the
- * rule went from 1px to 2px to make the days findable, and the block layer went
- * on adding 1 — so every block drifted a pixel per day, up to seven by Sunday,
- * and a drag near a lane edge landed one lane over from where it looked. That is
- * the bug this constant exists to prevent, so change both or neither.
+ * A NUL, because it cannot occur in a translation key or in a lane's name, and
+ * because `onMove` answers with one string. Exported so the side that builds it
+ * and the side that reads it have one spelling of it — it used to be written as
+ * a raw NUL byte at both ends, which worked and made both files unreadable to
+ * `grep`, which reports them as binary and prints nothing.
  */
-const DAY_RULE = 2;
+export const SEP = '\0';
 
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
@@ -122,8 +121,6 @@ export interface CalendarGridProps {
     detail: TurmaDetail;
     actions?: React.ReactNode;
   };
-  /** Click a block: open that lesson's plan. */
-  onOpenPlan: (booking: GridBooking) => void;
   /** Click empty space: start creating something there. */
   onCreate: (weekday: number, laneId: string, startMinutes: number) => void;
   /**
@@ -154,14 +151,15 @@ interface ScopeAsk extends Pending {
   x: number;
   y: number;
   /**
-   * A lane change, which has only one possible answer.
+   * Whether the pistas are what changed, rather than the hour.
    *
-   * Lanes live on the recurring booking: `moveOccurrenceAction` carries a start
-   * time and nothing else, so "this week only" is not a thing the data can
-   * express. The popover says so and offers the one button, rather than offering
-   * a choice that would silently do the same thing either way.
+   * It picks the sentence and nothing else. It used to remove the "só esta
+   * semana" button as well, because lanes lived only on the recurring booking
+   * and a one-week move carried a start time and nothing else — so offering the
+   * choice would have done the same thing either way. A session now has its own
+   * lane rows, so both answers are real and both are offered.
    */
-  seriesOnly?: boolean;
+  lanesChanged?: boolean;
 }
 
 export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
@@ -331,18 +329,11 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   const [ghost, setGhost] = useState<Pending | null>(null);
 
   /*
-   * When the last drag finished.
+   * A little travel before the sensor claims the gesture.
    *
-   * A pointer-up that ends a drag still fires a click on the element underneath,
-   * so without this every move would also open the lesson plan of the thing that
-   * was moved. The sensor's 4px threshold decides what counts as a drag; this
-   * only suppresses the click that follows one.
-   */
-  const draggedAt = useRef(0);
-
-  /*
-   * The pointer sensor needs a little travel before it claims the gesture, or a
-   * click that opens the lesson plan would be swallowed as a one-pixel drag.
+   * It kept a click from being swallowed as a one-pixel drag when a click still
+   * did something; it stays because a block that jumps on the first pixel of a
+   * hover is a block nobody can rest a pointer on to read its card.
    */
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -384,39 +375,68 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
     );
   }
 
-  /** Where a drag currently points, in the grid's own terms. */
+  /**
+   * Where a drag currently points, in the grid's own terms.
+   *
+   * **Both axes are travel, not pointer position.** The vertical always was —
+   * `delta.y` is how far the block has moved from where it started. The
+   * horizontal used to read whichever column the pointer was over, which put the
+   * block's *left edge* under the pointer and so shifted a multi-lane block
+   * sideways by however far along it had been grabbed. `columnAt` above has the
+   * whole story.
+   *
+   * `over` is still consulted, for one thing only: whether the pointer is over
+   * the grid at all. A drag that has wandered onto a closed day or off the
+   * canvas resolves to nothing and the block stays where it was.
+   */
   function resolve(
     event: DragMoveEvent | DragEndEvent,
     booking: GridBooking,
   ): Pending | null {
-    const over = event.over;
-    if (over === null) return null;
+    if (event.over === null) return null;
 
-    const [, weekdayText, laneId] = String(over.id).split(':');
-    const weekday = Number(weekdayText);
-    if (laneId === undefined || Number.isNaN(weekday)) return null;
+    // `findIndex` rather than `indexOf`: `days` is narrowed to the seven ISO
+    // weekday literals and a booking's weekday is a plain number.
+    const dayNow = days.findIndex((day) => day === booking.weekday);
+    const laneNow = laneIndex.get(booking.laneIds[0] ?? '');
+    if (dayNow < 0) return null;
 
-    const from = toMinutes(booking.startTime);
-    const moved = from + pxToMinutes(event.delta.y);
+    /*
+     * A block spanning several lanes keeps its width and moves as one thing —
+     * dropping a three-lane booking and having it collapse to one would be a
+     * data change nobody asked for. A block in no lane keeps that too: its width
+     * is zero and it travels by day and hour alone.
+     */
+    const width = booking.laneIds.length;
+
+    const from = columnX(dayNow, laneNow ?? 0, shownLanes.length) + event.delta.x;
+    const { dayIndex, laneIndex: dropped } = columnAt(
+      from,
+      shownLanes.length,
+      days.length,
+    );
+
+    const weekday = days[dayIndex];
+    if (weekday === undefined) return null;
+
+    // Kept on the grid: a four-lane block cannot start in the second-to-last
+    // pista of a six-lane tank.
+    const start = Math.min(dropped, Math.max(0, shownLanes.length - width));
+    const laneIds =
+      laneNow === undefined ? [] : shownLanes.slice(start, start + width).map((lane) => lane.id);
+
     const startMinutes = snapStart(
-      Math.max(range.startMinutes, Math.min(moved, range.endMinutes - booking.durationMinutes)),
+      Math.max(
+        range.startMinutes,
+        Math.min(
+          toMinutes(booking.startTime) + pxToMinutes(event.delta.y),
+          range.endMinutes - booking.durationMinutes,
+        ),
+      ),
       weekday,
       slots,
       step,
     );
-
-    /*
-     * A block spanning several lanes keeps its width and moves as one thing.
-     * The lane it was grabbed by becomes the lane it is dropped on, and the rest
-     * follow — dropping a three-lane booking and having it collapse to one lane
-     * would be a data change nobody asked for.
-     */
-    const width = booking.laneIds.length;
-    const first = laneIndex.get(laneId);
-    if (first === undefined) return null;
-
-    const start = Math.min(first, Math.max(0, shownLanes.length - width));
-    const laneIds = shownLanes.slice(start, start + width).map((lane) => lane.id);
 
     return {
       bookingId: booking.id,
@@ -431,7 +451,6 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
     const active = String(event.active.id);
     setDragging(null);
     setGhost(null);
-    draggedAt.current = Date.now();
 
     const booking = bookingById(active);
     if (booking === null) return;
@@ -583,7 +602,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         booking: state.booking,
         x: box === undefined ? 0 : box.left + box.width / 2,
         y: box === undefined ? 0 : box.bottom,
-        ...(sideways ? { seriesOnly: true } : {}),
+        ...(sideways ? { lanesChanged: true } : {}),
       });
     }
 
@@ -700,14 +719,18 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       {/*
         The refusal, with whatever the server said about it.
 
-        The key and the server's own sentence travel joined by a NUL, which
+        The key and the server's own sentence travel joined by `SEP`, which
         cannot occur in either — a shape rather than a second state field,
         because `onMove` returns one string and this is the only place that
         reads it.
+
+        The constant is exported so there is one spelling of it and one place to
+        change it; both ends used to carry a raw NUL byte, which agreed with
+        itself and made both files invisible to `grep`.
       */}
       {error !== null &&
         (() => {
-          const [key, detail] = error.split(' ');
+          const [key, detail] = error.split(SEP);
           return (
             <p
               role="status"
@@ -764,7 +787,13 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                     // A day boundary is a stronger rule than a lane boundary —
                     // with lanes at 64px the week read as one undifferentiated
                     // ladder of columns and finding Thursday meant counting.
-                    'flex border-l-2 border-border-strong',
+                    //
+                    // `relative` is load-bearing: it makes this the containing
+                    // block for the now-line inside it. Without it the line's
+                    // `left-0` resolved against the whole canvas, so it was
+                    // drawn from x=0 — over the time gutter — and stopped one
+                    // day's width later instead of spanning today's pistas.
+                    'relative flex border-l-2 border-border-strong',
                     (closureOf(weekday) !== null || !openOn(weekday)) && 'bg-surface-muted/60',
                     /*
                       Today, twice over: a tint that stays, and a pulse that does
@@ -822,9 +851,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                 todayWeekday={todayWeekday}
                 dimmed={dimmed}
                 renderDetail={props.renderDetail}
-                onOpenPlan={props.onOpenPlan}
                 onResizeStart={onResizeStart}
-                justDragged={draggedAt}
               />
             </div>
           </div>
@@ -914,18 +941,23 @@ function Toolbar({
   return (
     <div className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          {t('calendar.show')}
-        </h2>
+        {/*
+          The tank comes first, and it is the loudest thing on the row.
 
-        <div className="flex flex-wrap items-center gap-3">
+          It decides which pistas the whole week is drawn from, so it outranks
+          everything else here — and it used to sit on the right at the same
+          weight as "Ver todos", which made the page's most consequential control
+          look like a tidy-up button. Left, labelled in full strength, and with a
+          primary border so the eye lands on it before the filters below.
+        */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           {pools.length > 1 && (
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-foreground-muted">{t('calendar.pool')}</span>
+            <label className="flex items-center gap-2">
+              <span className="text-sm font-medium text-foreground">{t('calendar.pool')}</span>
               <select
                 value={poolId}
                 onChange={(event) => onPool(event.target.value)}
-                className="h-control rounded border border-border-strong bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="h-control rounded border-2 border-primary/60 bg-background px-2 text-sm font-medium text-foreground hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {pools.map((pool) => (
                   <option key={pool.id} value={pool.id}>
@@ -936,15 +968,19 @@ function Toolbar({
             </label>
           )}
 
-          <button
-            type="button"
-            onClick={onShowAll}
-            disabled={hidden.size === 0}
-            className="rounded border border-border-strong px-2.5 py-1 text-sm hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
-          >
-            {t('calendar.showAll')}
-          </button>
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('calendar.show')}
+          </h2>
         </div>
+
+        <button
+          type="button"
+          onClick={onShowAll}
+          disabled={hidden.size === 0}
+          className="rounded border border-border-strong px-2.5 py-1 text-sm hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+        >
+          {t('calendar.showAll')}
+        </button>
       </div>
 
       {/*
@@ -1213,13 +1249,11 @@ interface LayerProps {
   canManage: boolean;
   todayWeekday?: number | undefined;
   renderDetail: CalendarGridProps['renderDetail'];
-  onOpenPlan: CalendarGridProps['onOpenPlan'];
   onResizeStart: (
     booking: GridBooking,
     edge: 'bottom' | 'left' | 'right',
     from: number,
   ) => void;
-  justDragged: React.MutableRefObject<number>;
   /** Faded: a holiday, a day the pool is shut, or a day already gone. */
   dimmed: (weekday: number) => boolean;
 }
@@ -1227,15 +1261,17 @@ interface LayerProps {
 function BlockLayer(props: LayerProps): React.ReactElement {
   const { days, shown, lanes, laneIndex, range, ghost } = props;
 
-  /** Left offset of a (day, lane) column inside the scrolling canvas. */
+  /**
+   * Left offset of a (day, lane) column inside the scrolling canvas.
+   *
+   * `columnX` is the shared ruler — the drag measures with the same one, which
+   * is what stops a block landing somewhere other than where it was drawn.
+   */
   const xOf = (weekday: number, laneId: string): number | null => {
     const day = days.indexOf(weekday);
     const lane = laneIndex.get(laneId);
     if (day < 0 || lane === undefined) return null;
-    // Each day carries a rule on its left, which the header matches.
-    return (
-      GUTTER + day * (lanes.length * COL_WIDTH + DAY_RULE) + DAY_RULE + lane * COL_WIDTH
-    );
+    return columnX(day, lane, lanes.length);
   };
 
   return (
@@ -1286,9 +1322,7 @@ function Block({
   canManage,
   todayWeekday,
   renderDetail,
-  onOpenPlan,
   onResizeStart,
-  justDragged,
   dimmed,
   ghost,
 }: LayerProps & { booking: GridBooking; left: number; width: number }): React.ReactElement {
@@ -1322,6 +1356,15 @@ function Block({
   const anyDrag = dragging !== null;
 
   /*
+   * A ghost with no drag behind it is an edge being resized.
+   *
+   * The resize runs on window pointer handlers and a ref, neither of which
+   * re-renders anything, so the ghost is the only reactive trace of it — and
+   * it is enough: it is set for the whole gesture and cleared on pointer-up.
+   */
+  const isResizing = ghost !== null && dragging === null;
+
+  /*
    * The ghost, when it belongs to this block. Null for every other block, so
    * only the one being moved re-reads its time.
    */
@@ -1334,17 +1377,27 @@ function Block({
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      onClick={() => {
-        // The click that follows a drop is not a click on the block.
-        if (Date.now() - justDragged.current < 250) return;
-        onOpenPlan(booking);
-      }}
+      /*
+        No click handler, and that is the point.
+
+        A block used to open its lesson plan when clicked, which put a sheet in
+        the way of the gesture a block on this grid is actually for: every drag
+        and every resize ends with the browser firing a click on whatever is
+        underneath. Guarding that with a 250ms stamp worked and still left the
+        plan one twitchy pointer away from opening mid-move.
+
+        The plan is reached from a button on the hover card now, beside Take the
+        register and Cancel — where somebody already looks for what they can do
+        with a class, and where a keyboard reaches it too.
+      */
       data-booking={booking.id}
       className={cn(
         'pointer-events-auto absolute overflow-hidden rounded px-1.5 py-1 text-left text-white',
         'ring-1 ring-black/10',
         tint,
-        movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+        // Nothing on a block is clickable now, so a read-only one says so
+        // rather than offering a pointer that does nothing.
+        movable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default',
         // Enough to read as "not today" and still enough to read.
         faded && 'opacity-55 saturate-50',
         // 150ms on hover elevation, and nothing at all while a drag is live.
@@ -1451,7 +1504,9 @@ function Block({
         there. The delay is the travel time, not a flourish.
       */
       closeDelay={220}
-      suppressed={anyDrag}
+      // Shut for a resize as well as a drag: a card opening over an edge being
+      // dragged is the same interruption, and it covers the block being sized.
+      suppressed={anyDrag || isResizing}
       {...(card.actions === undefined ? {} : { actions: card.actions })}
     >
       {block}
@@ -1553,41 +1608,33 @@ function ScopePopover({
           />
         )}
         <p className="text-sm">
-          {ask.seriesOnly === true
+          {ask.lanesChanged === true
             ? t('calendar.lanesChanged', { count: ask.laneIds.length })
             : t('calendar.movedTo', { time: startTimeOf(ask.startMinutes).slice(0, 5) })}
         </p>
 
         {/*
-          Said out loud rather than left to be discovered: a lane change lands on
-          every week, because lanes belong to the recurring booking and there is
-          no per-occurrence field to put them in.
-        */}
-        {ask.seriesOnly === true && (
-          <p className="mt-1 text-sm text-foreground-muted">{t('calendar.lanesEveryWeek')}</p>
-        )}
+          Both answers, whichever changed.
 
+          A lane change used to offer one button saying it applied to every week,
+          which was honest about a limitation that no longer exists: a session
+          carries its own lane rows now, so "pista 3 is shut this Tuesday" is a
+          thing the data can hold. The question is the same question either way.
+        */}
         <div className="mt-2 flex flex-col gap-1.5">
-          {ask.seriesOnly !== true && (
-            <button
-              type="button"
-              onClick={() => onScope('week')}
-              className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              {t('calendar.thisWeekOnly')}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => onScope('week')}
+            className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('calendar.thisWeekOnly')}
+          </button>
           <button
             type="button"
             onClick={() => onScope('series')}
-            className={cn(
-              'rounded px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-              ask.seriesOnly === true
-                ? 'bg-primary text-primary-foreground hover:opacity-90'
-                : 'border border-border-strong hover:border-primary/50',
-            )}
+            className="rounded border border-border-strong px-3 py-1.5 text-sm hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            {ask.seriesOnly === true ? t('common.continue') : t('calendar.wholeSeries')}
+            {t('calendar.wholeSeries')}
           </button>
           <button
             type="button"

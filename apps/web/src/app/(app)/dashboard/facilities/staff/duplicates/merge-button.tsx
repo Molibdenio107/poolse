@@ -41,7 +41,6 @@ export function MergeButton({
         >
           {label}
         </button>
-        {state.errorKey !== undefined && <p className="text-sm text-danger">{t(state.errorKey)}</p>}
       </div>
     );
   }

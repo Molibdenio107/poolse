@@ -175,9 +175,6 @@ export function ArchiveButton({
         {t('common.cancel')}
       </button>
 
-      {state.errorKey !== undefined && (
-        <span className="text-sm text-danger">{t(state.errorKey)}</span>
-      )}
     </form>
   );
 }

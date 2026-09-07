@@ -144,6 +144,7 @@ async function laneConflicts(
   startTime: string,
   durationMinutes: number,
   laneIds: string[],
+  seasonId: string | null,
 ): Promise<{ laneName: string; holder: string } | null> {
   if (laneIds.length === 0) return null;
 
@@ -167,11 +168,28 @@ async function laneConflicts(
         AND cs.archived_at IS NULL
         AND cs.weekday = $2
         AND cs.id <> $3
+        /*
+         * The same season the grid is drawing, and only that one.
+         * (No backticks in here: one ends the template literal.)
+         *
+         * coalesce(cs.season_id, cg.season_id) is POOLSE-47's rule and the
+         * expression grid.repository.ts filters the week with -- a turma takes
+         * its season from its turma, everything else carries its own. Without
+         * this the check reached across every season the club has ever run, so
+         * next year's draft on the same pista and hour would refuse a move onto
+         * a lane that is visibly empty. There is one season in the database
+         * today, which is the only reason nobody has hit it yet.
+         *
+         * The caller resolves it, rather than this re-deriving it from the
+         * schedule being excluded: duplicateBooking excludes a row that does not
+         * exist yet, so there would be nothing to look it up from.
+         */
+        AND coalesce(cs.season_id, cg.season_id) IS NOT DISTINCT FROM $6::uuid
         AND (cs.start_time, cs.start_time + make_interval(mins => cs.duration_minutes))
             OVERLAPS ($4::time, $4::time + make_interval(mins => $5))
       ORDER BY l.position
       LIMIT 1`,
-    [laneIds, weekday, scheduleId, startTime, durationMinutes],
+    [laneIds, weekday, scheduleId, startTime, durationMinutes, seasonId],
   );
 
   const hit = rows[0];
@@ -284,9 +302,14 @@ export async function moveBooking(
   target: BookingTarget,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ duration_minutes: number; name: string }>(
+    const { rows } = await tx.query<{
+      duration_minutes: number;
+      name: string;
+      season_id: string | null;
+    }>(
       `SELECT cs.duration_minutes,
-              coalesce(cg.name, pg.name, cs.title, '?') AS name
+              coalesce(cg.name, pg.name, cs.title, '?') AS name,
+              coalesce(cs.season_id, cg.season_id) AS season_id
          FROM class_schedule cs
          LEFT JOIN class_group cg
            ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
@@ -314,6 +337,7 @@ export async function moveBooking(
       startTime,
       duration,
       target.laneIds,
+      booking.season_id,
     );
     if (clash !== null) throw new LaneTakenError(clash.laneName, clash.holder);
 
@@ -364,8 +388,16 @@ export async function duplicateBooking(
   target: BookingTarget,
 ): Promise<{ id: string } | null> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ duration_minutes: number; name: string }>(
+    const { rows } = await tx.query<{
+      duration_minutes: number;
+      name: string;
+      season_id: string | null;
+    }>(
       `SELECT duration_minutes,
+              coalesce(cs.season_id, (SELECT cg.season_id FROM class_group cg
+                                       WHERE cg.id = cs.class_group_id
+                                         AND cg.organization_id = cs.organization_id))
+                                                                          AS season_id,
               coalesce((SELECT name FROM class_group cg
                          WHERE cg.id = cs.class_group_id
                            AND cg.organization_id = cs.organization_id),
@@ -386,7 +418,9 @@ export async function duplicateBooking(
     const { startTime, durationMinutes } = await timeFor(tx, target);
     const duration = target.durationMinutes ?? durationMinutes ?? source.duration_minutes;
 
-    // The new row is not yet in the table, so nothing to exclude from the check.
+    // The new row is not yet in the table, so nothing to exclude from the check —
+    // and nothing to read a season from either, which is why the copy carries the
+    // source's own.
     const clash = await laneConflicts(
       tx,
       '00000000-0000-0000-0000-000000000000',
@@ -394,6 +428,7 @@ export async function duplicateBooking(
       startTime,
       duration,
       target.laneIds,
+      source.season_id,
     );
     if (clash !== null) throw new LaneTakenError(clash.laneName, clash.holder);
 

@@ -114,9 +114,6 @@ function RequestCard({
           <span className="text-sm text-foreground-muted">{t('vacations.rejectHint')}</span>
         )}
 
-        {state.errorKey !== undefined && (
-          <span className="text-sm text-danger">{t(state.errorKey)}</span>
-        )}
       </div>
 
       {/*

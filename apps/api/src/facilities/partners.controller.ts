@@ -404,11 +404,22 @@ function readPartner(body: Record<string, unknown>): PartnerInput {
     throw new BadRequestException('nif must be nine digits');
   }
 
+  /*
+   * Off unless the form says otherwise.
+   *
+   * A checkbox that is not ticked sends nothing at all, so an absent value has
+   * to mean false rather than "leave it alone" — and false is the safe reading
+   * either way: it is what a parceria was before this switch existed, and
+   * turning it on is a decision somebody makes on purpose.
+   */
+  const managedLessons = body['managedLessons'] === true || body['managedLessons'] === 'on';
+
   return {
     name: readText(body['name'], 'name', 160),
     type,
     status,
     color,
+    managedLessons,
     nif,
     address: optionalText(body['address'], 'address', 400),
     notes: optionalText(body['notes'], 'notes', 2000),

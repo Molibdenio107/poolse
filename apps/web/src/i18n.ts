@@ -18,6 +18,35 @@ export const defaultLocale: Locale = 'pt-PT';
  * share one tenant and may read different languages, and nobody wants to bookmark
  * `/pt-PT/turmas`.
  */
+/**
+ * The named date formats, defined once for both sides of the boundary.
+ *
+ * next-intl has no built-in `long` or `short`: asking for one that was never
+ * configured throws `MISSING_FORMAT` at render time, which is how the lesson
+ * plan panel came to break the calendar every time a turma was clicked. There is
+ * nothing to catch that earlier — a format name is a string, so `typecheck` has
+ * no opinion and the panel only renders once somebody opens it.
+ *
+ * Naming them here rather than repeating an options object at each call site is
+ * also what makes a date the same shape wherever it appears. The two are the
+ * same argument as `PX_PER_MINUTE`: one definition, or they drift.
+ *
+ * **Both places need them.** `getRequestConfig` covers server components;
+ * `NextIntlClientProvider` in `(app)/layout.tsx` has to be handed the same
+ * object, because in next-intl v3 a client provider inherits the locale and the
+ * timezone from the server but not the messages or the formats.
+ */
+export const formats = {
+  dateTime: {
+    /** A date written out: "11 de setembro de 2026". */
+    long: { dateStyle: 'long' },
+    /** A date in digits, for a label with no room: "11/09/26". */
+    short: { dateStyle: 'short' },
+    /** A moment, not a day — "guardado a 11/09/26, 21:04". */
+    stamp: { dateStyle: 'short', timeStyle: 'short' },
+  },
+} as const;
+
 export default getRequestConfig(async () => {
   // The cookie, not `requestLocale`: with no `/[locale]/` segment there is
   // nothing in the URL for next-intl to read, so that argument is always
@@ -33,5 +62,6 @@ export default getRequestConfig(async () => {
     locale: resolved,
     messages: (await import(`./messages/${resolved}.json`)).default,
     timeZone: 'Europe/Lisbon',
+    formats,
   };
 });

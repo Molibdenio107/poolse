@@ -413,13 +413,45 @@ export class SessionsCalendarController {
       throw new BadRequestException('startTime must be HH:MM');
     }
 
-    const outcome = await moveOccurrence(organizationId, id, date, startTime);
+    /*
+     * Lanes are optional, and absent is not the same as empty.
+     *
+     * Absent means "I did not ask about pistas" — the class keeps the ones it
+     * has and they follow the clock. An empty array means "this week, in no
+     * pista", which is a real state a booking can be in and one the grid draws.
+     * Collapsing the two would make a plain time change quietly unassign the
+     * lanes, which is the shape of bug that is only noticed a week later.
+     */
+    const raw = body['laneIds'];
+    if (raw !== undefined && !Array.isArray(raw)) {
+      throw new BadRequestException('laneIds must be an array of lane ids');
+    }
+    const laneIds =
+      raw === undefined ? null : (raw as unknown[]).map((one) => String(one));
 
-    if (outcome === 'not_found') throw new NotFoundException('No such class');
-    if (outcome === 'occupied') {
-      // The lane is genuinely busy, or the class is already there. Either way it
-      // is a sentence the screen can say rather than a stack trace.
-      throw new ConflictException({ message: 'occurrenceOccupied' });
+    const result = await moveOccurrence(organizationId, id, date, startTime, laneIds);
+
+    if (result.outcome === 'not_found') throw new NotFoundException('No such class');
+    if (result.outcome === 'taught') {
+      // The register is taken, so the class happened. Where it happened is a
+      // record rather than a plan, and a record is not dragged about.
+      throw new ConflictException({ message: 'occurrenceTaught' });
+    }
+    if (result.outcome === 'occupied') {
+      /*
+       * The lane is genuinely busy, or the class is already there.
+       *
+       * The figures travel as structure, never as a built sentence: the lane and
+       * the class holding it come back as fields and the screen composes the
+       * words where the locale is. "Essa pista já está ocupada" on its own sends
+       * an operator hunting across six lanes for which one.
+       */
+      throw new ConflictException({
+        message: 'occurrenceOccupied',
+        ...(result.clash === null
+          ? {}
+          : { lane: result.clash.lane, holder: result.clash.holder }),
+      });
     }
 
     return { moved: true };

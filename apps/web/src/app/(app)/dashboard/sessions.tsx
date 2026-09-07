@@ -25,9 +25,6 @@ function EndSession({ sessionId }: { sessionId: string }): React.ReactElement {
       >
         {pending ? t('common.working') : t('sessions.end')}
       </button>
-      {state.errorKey !== undefined && (
-        <span className="text-sm text-danger">{t(state.errorKey)}</span>
-      )}
     </form>
   );
 }

@@ -141,7 +141,6 @@ export function SeasonReset({
         </button>
       </div>
 
-      {state.errorKey !== undefined && <p className="text-sm text-danger">{t(state.errorKey)}</p>}
       {state.detail !== undefined && (
         <p className="font-mono text-sm text-foreground-muted">{state.detail}</p>
       )}

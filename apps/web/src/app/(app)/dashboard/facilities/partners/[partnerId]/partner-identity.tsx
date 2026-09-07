@@ -125,6 +125,34 @@ export function PartnerIdentity({
             />
           </div>
 
+          {/*
+            Who runs these lessons, which is a rule and not a preference.
+
+            Ticked, the partnership's blocks on the calendar carry a training
+            plan and can be cancelled, exactly like a turma's. Unticked — the
+            default, and what every parceria was before this existed — they carry
+            neither, because the school brings its own coach and the club is
+            selling it an hour of water.
+
+            **It never brings a register.** A partner group holds a headcount and
+            no people, so there is nobody to mark present. The hint says so
+            rather than leaving somebody to discover the absence.
+          */}
+          <label className="flex max-w-form items-start gap-2.5">
+            <input
+              type="checkbox"
+              name="managedLessons"
+              defaultChecked={partner.managedLessons}
+              className="mt-0.5 size-4 shrink-0 accent-primary"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium">{t('partners.managedLessons')}</span>
+              <span className="text-sm text-foreground-muted">
+                {t('partners.managedLessonsHint')}
+              </span>
+            </span>
+          </label>
+
           <TextAreaField
             name="notes"
             label={t('partners.notes')}
@@ -133,9 +161,6 @@ export function PartnerIdentity({
             maxLength={2000}
           />
 
-          {state.errorKey !== undefined && (
-            <p className="text-sm text-danger">{t(state.errorKey)}</p>
-          )}
 
           <div className="flex gap-2">
             <button type="submit" disabled={pending} className={BUTTON}>
@@ -167,6 +192,12 @@ export function PartnerIdentity({
             </dd>
           </div>
           <Fact label={t('partners.status')} value={t(`partners.state.${partner.status}`)} />
+          <Fact
+            label={t('partners.managedLessons')}
+            value={t(
+              partner.managedLessons ? 'partners.managedLessonsOn' : 'partners.managedLessonsOff',
+            )}
+          />
           {partner.notes !== null && (
             <div className="sm:col-span-2">
               <dt className="text-sm text-foreground-muted">{t('partners.notes')}</dt>

@@ -295,18 +295,46 @@ export async function undoSlotAction(
  *
  * A date and a wall clock go over the wire, not an instant: the pool knows which
  * timezone 18:00 is in and the browser does not.
+ *
+ * **`laneIds` carries the pistas, and omitting it is not the same as sending
+ * none.** Omitted, the class keeps the lanes it has and they follow the clock;
+ * an empty array puts it in no lane for that week. This used not to exist, so a
+ * drag sideways followed by "só esta semana" silently discarded the pista and
+ * then refused the move because the *old* one was busy — "essa pista já está
+ * ocupada", pointing at a lane the operator had never touched.
  */
 export async function moveOccurrenceAction(
   organizationId: string,
   sessionId: string,
   date: string,
   startTime: string,
-): Promise<{ ok: true } | { ok: false; errorKey: string }> {
+  laneIds?: string[],
+): Promise<{ ok: true } | { ok: false; errorKey: string; detail?: string }> {
   try {
-    await apiPost(`/sessions/${sessionId}/move`, { date, startTime }, { organizationId });
+    await apiPost(
+      `/sessions/${sessionId}/move`,
+      { date, startTime, ...(laneIds === undefined ? {} : { laneIds }) },
+      { organizationId },
+    );
   } catch (error) {
     if (error instanceof ApiError && error.status === 409) {
-      return { ok: false, errorKey: 'classes.occurrenceOccupied' };
+      // The lane and the class holding it, where the server named them — the
+      // same shape `bookingFailure` uses, so the grid renders one refusal.
+      const body = (error.details ?? {}) as {
+        message?: string;
+        lane?: string;
+        holder?: string;
+      };
+      // The class already happened. A different refusal from a busy lane, and
+      // one nothing can be done about — so it says so rather than reading as a
+      // clash somebody could go and clear.
+      if (body.message === 'occurrenceTaught') {
+        return { ok: false, errorKey: 'classes.occurrenceTaught' };
+      }
+      const detail = [body.lane, body.holder].filter(Boolean).join(' · ');
+      return detail === ''
+        ? { ok: false, errorKey: 'classes.occurrenceOccupied' }
+        : { ok: false, errorKey: 'classes.occurrenceOccupied', detail };
     }
     return { ok: false, errorKey: 'classes.slotRefused' };
   }

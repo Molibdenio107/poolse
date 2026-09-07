@@ -39,9 +39,6 @@ export function ReissueButton({
         >
           {pending ? t('common.working') : t('invite.reissue')}
         </button>
-        {state.errorKey !== undefined && (
-          <span className="text-sm text-danger">{t(state.errorKey)}</span>
-        )}
       </form>
 
       {state.invitation !== undefined && (

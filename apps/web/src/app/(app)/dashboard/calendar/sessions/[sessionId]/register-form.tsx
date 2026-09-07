@@ -104,10 +104,6 @@ export function RegisterForm({ register }: { register: Register & { organization
           {pending ? t('common.working') : t('attendance.save')}
         </button>
 
-        {state.ok && <span className="text-sm text-success">{t('attendance.saved')}</span>}
-        {state.errorKey !== undefined && (
-          <span className="text-sm text-danger">{t(state.errorKey)}</span>
-        )}
       </div>
 
       <ul className="flex flex-col divide-y divide-border rounded border border-border bg-surface">

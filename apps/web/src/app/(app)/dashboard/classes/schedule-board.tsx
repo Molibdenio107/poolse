@@ -289,6 +289,24 @@ export interface SessionControls {
   cancelled?: boolean;
   /** Cancelled by a closure rather than by a person — undone by removing it. */
   byClosure?: boolean;
+  /**
+   * Whether the register has been taken, so the class happened.
+   *
+   * Shown as a fact on the hover card rather than used to grey the block out.
+   * Round 6 settled that a block which looks like every other block and refuses
+   * to move reads as a broken grid; the server refuses the move and says why,
+   * and this is what lets the card say it beforehand.
+   */
+  registerTaken?: boolean;
+  /**
+   * Somebody else is covering this one lesson.
+   *
+   * The block already shows their name — the calendar overlays it, the way it
+   * overlays a moved hour — and this is what lets the card label it as the
+   * teacher *for this lesson* rather than as the turma's, so a stand-in is not
+   * mistaken for a permanent reassignment.
+   */
+  standIn?: boolean;
   note?: string | null;
 }
 

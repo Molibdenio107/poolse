@@ -24,7 +24,7 @@ import {
 } from '@/lib/dates';
 import type { SessionControls } from '../classes/schedule-board';
 import { CalendarWeek } from './calendar-week';
-import { slotKey } from '@/lib/slot-key';
+import { bookingKey, slotKey } from '@/lib/slot-key';
 import { GenerateSeason } from './calendar-forms';
 import { PageError, PageShell } from '@/components/page-shell';
 import { TimetableImport } from './import/import-panel';
@@ -187,13 +187,30 @@ export default async function CalendarPage({
       const cancelled = session.status === 'cancelled';
 
       return [
-        slotKey(session.classGroupId, session.weekday, session.localTime),
+        /*
+          Keyed by the booking, not by the slot it happens to sit in this week.
+
+          A session moved for one week keeps its booking and changes its day and
+          hour, so a key made of turma-weekday-hour stops matching the block that
+          is still drawn at the pattern's slot — and the controls vanish from
+          exactly the classes somebody has been rearranging. The composite is the
+          fallback for a session with no booking behind it.
+        */
+        session.scheduleId === null
+          ? slotKey(session.classGroupId, session.weekday, session.localTime)
+          : bookingKey(session.scheduleId),
         {
           // What "move only this week" moves. The board has the pattern and
           // the week; this is the one occurrence where the two meet.
           sessionId: session.id,
-          // Nothing to mark on a class that is not happening.
-          mark: cancelled
+          /*
+            Nothing to mark on a class that is not happening — and nothing to
+            mark on a parceria at all, whoever runs its lessons. A partner group
+            carries a `participant_count` and no people, so there is no roll to
+            take: `attendance` needs a real student on every row. A partnership
+            the club runs gets the plan and Cancelar aula, and stops there.
+          */
+          mark: cancelled || session.classGroupId === null
             ? undefined
             : {
                 href: `/dashboard/calendar/sessions/${session.id}?week=${monday}`,
@@ -209,6 +226,8 @@ export default async function CalendarPage({
               : undefined,
           cancelled,
           byClosure: session.byClosure,
+          registerTaken: session.registerTaken,
+          standIn: session.substituteName !== null,
           note: cancelled
             ? (session.cancellationReason ?? t('calendar.cancelledNoReason'))
             : null,
@@ -216,6 +235,58 @@ export default async function CalendarPage({
       ];
     }),
   );
+
+  /*
+   * The week as it actually is, not as the pattern says it should be.
+   *
+   * `readGrid` draws `class_schedule` — the recurring pattern — because that is
+   * what a timetable is. But this screen is a *dated* week, and a class moved
+   * for one week only lives on `class_session`, which the grid never reads. So
+   * a one-week move was written correctly, refused correctly, and then vanished:
+   * the block sprang back to the pattern's slot on the next refresh, which
+   * looks exactly like a drag that did not work.
+   *
+   * Overlaid here rather than in `readGrid` because the sessions for this week
+   * are already loaded — the controls above are built from them — and the grid
+   * endpoint takes no date range at all. A booking with no session this week is
+   * left where the pattern puts it, which is right: nothing has said otherwise.
+   */
+  const movedThisWeek = new Map(
+    (calendar?.sessions ?? [])
+      .filter((session) => session.scheduleId !== null)
+      .map((session) => [session.scheduleId!, session]),
+  );
+
+  const bookings = (grid?.bookings ?? []).map((booking) => {
+    const session = movedThisWeek.get(booking.id);
+    if (session === undefined) return booking;
+
+    return {
+      ...booking,
+      weekday: session.weekday,
+      startTime: session.localTime,
+      durationMinutes: session.durationMinutes,
+      /*
+       * The pattern's pistas stand when the session has none of its own — a
+       * booking whose lanes were never copied onto its sessions would otherwise
+       * lose them the moment this overlay touched it.
+       */
+      laneIds: session.laneIds.length > 0 ? session.laneIds : booking.laneIds,
+      /*
+       * And the person actually teaching it this week.
+       *
+       * A stand-in lives on the session; the block was drawing the booking's
+       * instructor, so recording that Bruno covers Tuesday changed the hover
+       * card and left Ana's name on the block. The same reasoning as the hour:
+       * this screen is a dated week, so it shows what is true that week.
+       *
+       * Only when there *is* a stand-in. Without one the booking's own name is
+       * the better answer — it already resolves the booking's override over the
+       * turma's instructor, which the session's column does not.
+       */
+      instructorName: session.substituteName ?? booking.instructorName,
+    };
+  });
 
   return (
     <PageShell
@@ -345,7 +416,7 @@ export default async function CalendarPage({
                 slots={grid?.slots ?? []}
                 lanes={grid?.lanes ?? []}
                 pools={grid?.pools ?? []}
-                bookings={grid?.bookings ?? []}
+                bookings={bookings}
                 levels={classes.options.levels}
                 groups={classes.groups}
                 controls={controls}

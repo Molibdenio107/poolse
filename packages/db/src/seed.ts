@@ -312,6 +312,7 @@ async function main(): Promise<void> {
       guardians: 0,
       skills: 0,
       medicalLeave: 0,
+      awayToday: 0,
       inventory: 0,
       slots: 0,
     };
@@ -1019,6 +1020,86 @@ async function main(): Promise<void> {
       counts.vacations = 3;
     }
 
+    /*
+     * Somebody away **today**, which is a different fixture from the three above.
+     *
+     * The Staff list answers "who is here", so its away chip reads approved leave
+     * covering *today* and nothing else. The demo states above are a week next
+     * April — right for the vacation map and the approval queue, and invisible on
+     * the list, which meant the chip could only ever be checked by hand-editing
+     * the database. This is the row that makes it show up.
+     *
+     * **Anchored to today, in the facility's own timezone.** A fixed date would
+     * stop being today tomorrow, and `current_date` on the server is the wrong
+     * day for the three hours either side of midnight in the club's zone — so the
+     * days come from the same expression `staff.repository.ts` reads them with.
+     * Two implementations of one date is how a seed and a screen disagree.
+     *
+     * Its own guard, and its own question: "is anybody already off today?" rather
+     * than "has this script run?". Re-seeding next week finds nobody off, and
+     * adds somebody.
+     */
+    const awayToday = await one<{ n: string }>(
+      client,
+      `SELECT count(*) AS n
+         FROM vacation_day vd
+         JOIN vacation_request vr ON vr.id = vd.vacation_request_id
+         JOIN membership m ON m.id = vd.membership_id
+         JOIN app_user u ON u.id = m.app_user_id
+        WHERE vd.organization_id = $1
+          AND u.clerk_user_id LIKE 'seed:%'
+          AND vd.archived_at IS NULL
+          AND vr.archived_at IS NULL
+          AND vr.status = 'approved'
+          AND vd.day = (now() AT TIME ZONE coalesce((
+                SELECT f.timezone FROM facility f
+                 WHERE f.organization_id = $1 AND f.archived_at IS NULL
+                 ORDER BY f.created_at, f.id LIMIT 1
+              ), 'Europe/Lisbon'))::date`,
+      [org.id],
+    );
+
+    if (Number(awayToday?.n ?? 0) === 0 && staff.length >= 2) {
+      const localDays = await many<{ day: string }>(
+        client,
+        `SELECT to_char((now() AT TIME ZONE coalesce((
+                  SELECT f.timezone FROM facility f
+                   WHERE f.organization_id = $1 AND f.archived_at IS NULL
+                   ORDER BY f.created_at, f.id LIMIT 1
+                ), 'Europe/Lisbon'))::date + g, 'YYYY-MM-DD') AS day
+           FROM generate_series(0, 2) AS g`,
+        [org.id],
+      );
+      const days = localDays.map((row) => row.day);
+
+      // Today and the two days after: on holiday.
+      await requestLeave(client, org.id, staff[0]!.id, 'approved', staff[1]!.id, null, days);
+
+      /*
+       * And one on sick leave, today only.
+       *
+       * Two people with two different reasons, because the chip's whole argument
+       * is that the reason is in the words rather than in the colour — and a
+       * fixture with one absence would show an amber chip and prove nothing
+       * about whether the second one reads differently.
+       */
+      if (staff[2]) {
+        await requestLeave(
+          client,
+          org.id,
+          staff[2].id,
+          'approved',
+          staff[0]!.id,
+          null,
+          days.slice(0, 1),
+          'medical',
+        );
+        counts.awayToday = 2;
+      } else {
+        counts.awayToday = 1;
+      }
+    }
+
     // ---------------------------------------------------------------------
     // Baixas médicas, so the medical panel is not describing itself — round 6.
     //
@@ -1201,13 +1282,30 @@ async function main(): Promise<void> {
       )) {
         for (const [group, hours] of Object.entries(SLOT_GRID)) {
           for (const [from, to] of hours) {
+            /*
+             * Overlap, not an identical start time.
+             *
+             * `facility_time_slot_no_overlap` refuses two live slots that share
+             * any minute, and a club that has since rebuilt its grid by hand has
+             * rows at different hours — 09:00 and 09:45 where this list says
+             * 08:45 and 09:30. Matching on `start_time` found nothing, the
+             * insert then hit the constraint, and the whole seed rolled back
+             * with a message about an exclusion constraint and no hint that the
+             * timetable was the reason. Which contradicts the line this script
+             * prints when it finishes: re-running only adds what is missing.
+             *
+             * So the question is the one the constraint asks. A slot whose hour
+             * is already spoken for is not missing, and the operator's own grid
+             * wins over this list.
+             */
             const already = await one<{ id: string }>(
               client,
               `SELECT id FROM facility_time_slot
                 WHERE organization_id = $1 AND facility_id = $2 AND season_id = $3
-                  AND day_group = $4::day_group AND start_time = $5::time
-                  AND archived_at IS NULL`,
-              [org.id, site.id, season.id, group, from],
+                  AND day_group = $4::day_group
+                  AND archived_at IS NULL
+                  AND (start_time, end_time) OVERLAPS ($5::time, $6::time)`,
+              [org.id, site.id, season.id, group, from, to],
             );
             if (already) continue;
 
@@ -1264,6 +1362,7 @@ async function main(): Promise<void> {
     console.log(`  skills added       ${counts.skills}`);
     console.log(`  guardians linked   ${counts.guardians}`);
     console.log(`  leave requests     ${counts.vacations}`);
+    console.log(`  ausentes hoje      ${counts.awayToday}`);
     console.log(`  baixas médicas     ${counts.medicalLeave}`);
     console.log(`  artigos no armazém ${counts.inventory}`);
     console.log(`  horários na grelha ${counts.slots}`);
@@ -1293,11 +1392,15 @@ async function requestLeave(
   decidedBy: string | null,
   note: string | null,
   days: string[],
+  // Holiday unless somebody says otherwise, which is what the column defaults to
+  // and what nearly every request is.
+  kind: 'vacation' | 'medical' | 'personal' = 'vacation',
 ): Promise<void> {
   const request = await one<{ id: string }>(
     client,
-    `INSERT INTO vacation_request (organization_id, membership_id) VALUES ($1, $2) RETURNING id`,
-    [organizationId, membershipId],
+    `INSERT INTO vacation_request (organization_id, membership_id, kind)
+     VALUES ($1, $2, $3::leave_kind) RETURNING id`,
+    [organizationId, membershipId, kind],
   );
 
   for (const day of days) {

@@ -87,6 +87,14 @@ export interface GridBooking {
   partnerColour: string | null;
   partnerId: string | null;
   /**
+   * Whether the club runs this partnership's lessons.
+   *
+   * False for a turma, which does not need it: the calendar reads it only to
+   * decide whether a *parceria* block offers a training plan and Cancelar aula.
+   * A school that brings its own coach goes on offering neither.
+   */
+  managedLessons: boolean;
+  /**
    * The partner group behind a parceria booking, with the fields an edit needs.
    *
    * Carried here so the Classes screen can offer a partnership's timetable as an
@@ -282,6 +290,7 @@ export async function readGrid(
                   bc.colour::text                                    AS category_colour,
                   p.color                                            AS partner_colour,
                   p.id                                               AS partner_id,
+                  coalesce(p.managed_lessons, false)                 AS managed_lessons,
                   pg.id                                              AS partner_group_id,
                   pg.tag                                             AS group_tag,
                   coalesce(pg.brings_own_instructor, false)           AS brings_own_instructor,
@@ -453,6 +462,7 @@ export async function readGrid(
         classColour: row.class_colour,
         partnerColour: row.partner_colour,
         partnerId: row.partner_id,
+        managedLessons: row.managed_lessons,
         partnerGroupId: row.partner_group_id,
         groupTag: row.group_tag,
         bringsOwnInstructor: row.brings_own_instructor,
@@ -494,6 +504,7 @@ interface GridBookingRow {
   class_colour: string | null;
   partner_colour: string | null;
   partner_id: string | null;
+  managed_lessons: boolean;
   partner_group_id: string | null;
   group_tag: string | null;
   brings_own_instructor: boolean;

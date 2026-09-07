@@ -1043,6 +1043,18 @@ function asDuplicate(error: unknown, name: string): unknown {
   return error;
 }
 
+/** Which lane a one-week move was refused by, and who is already in it. */
+export interface OccupiedLane {
+  lane: string;
+  holder: string;
+}
+
+export type MoveOccurrence =
+  | { outcome: 'moved' }
+  | { outcome: 'not_found' }
+  | { outcome: 'taught' }
+  | { outcome: 'occupied'; clash: OccupiedLane | null };
+
 /**
  * Moving one week's class, without moving every week's.
  *
@@ -1055,27 +1067,92 @@ function asDuplicate(error: unknown, name: string): unknown {
  * `moved_at`, and leaves `occurs_on` alone — which is what stops the next
  * regeneration quietly putting a second class back on Tuesday.
  *
- * The lane rows follow through `class_session_lane_sync`, so the lane the class
- * moved into is the one the exclusion constraint checks. A clash comes back as
- * `occupied` rather than as a stack trace: the lane is genuinely busy, and that
- * is a sentence an operator can act on.
+ * ---------------------------------------------------------------------------
+ * Lanes, since round 7 — and the bug that made it necessary
+ * ---------------------------------------------------------------------------
+ *
+ * `laneIds` used not to exist here, and the grid offered "só esta semana"
+ * anyway. So dragging a block sideways into a free pista and choosing one week
+ * silently threw the pista away and re-checked the move against the pista the
+ * class was already in — which, if something was there at the new hour, refused
+ * with "essa pista já está ocupada" while pointing at a lane the operator had
+ * never touched. Reported as "it says the lane is taken and the lanes are free",
+ * and that is exactly what it was.
+ *
+ * A session's lanes are its own rows in `class_session_lane`, so one week can
+ * differ from the pattern — "pista 3 is shut for repairs this Tuesday" is now a
+ * thing the data can say. Passing `null` leaves them alone, which is what a move
+ * that only changes the time means; the rows then follow the clock through
+ * `class_session_lane_sync`.
+ *
+ * A clash comes back as `occupied` **with the lane and the class holding it**,
+ * rather than as a stack trace or a bare category. The figures travel as
+ * structure and the sentence is composed where the locale is.
  */
 export async function moveOccurrence(
   organizationId: string,
   sessionId: string,
   date: string,
   startTime: string,
-): Promise<'moved' | 'not_found' | 'occupied'> {
+  laneIds: string[] | null = null,
+): Promise<MoveOccurrence> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ starts_at: Date; occurs_on: string }>(
-      `SELECT starts_at, occurs_on::text AS occurs_on
-         FROM class_session
-        WHERE id = $1 AND status <> 'cancelled'`,
+    const { rows } = await tx.query<{
+      starts_at: Date;
+      occurs_on: string;
+      register_taken: boolean;
+    }>(
+      `SELECT cs.starts_at,
+              cs.occurs_on::text AS occurs_on,
+              EXISTS (
+                SELECT 1 FROM attendance a
+                 WHERE a.class_session_id = cs.id
+                   AND a.organization_id = cs.organization_id
+              ) AS register_taken
+         FROM class_session cs
+        WHERE cs.id = $1 AND cs.status <> 'cancelled'`,
       [sessionId],
     );
 
     const before = rows[0];
-    if (!before) return 'not_found';
+    if (!before) return { outcome: 'not_found' };
+
+    /*
+     * A class that has already been taught does not move.
+     *
+     * One mark on the register means somebody stood at the poolside with a
+     * list, so the day, the hour and the pista are no longer a plan — they are
+     * a record of what happened, and moving them would make the record wrong.
+     * The same reasoning as the cancel path, which leaves a marked session
+     * alone rather than calling it off.
+     *
+     * Refused here rather than only hidden on the grid, because hiding a
+     * control is never the control.
+     */
+    if (before.register_taken) return { outcome: 'taught' };
+
+    /*
+     * A savepoint, because a refusal here is an ordinary answer.
+     *
+     * `withOrg` runs one transaction, and a statement that raises poisons all of
+     * it — so without this, asking which lane was in the way after the constraint
+     * fired would itself fail with "current transaction is aborted", and the
+     * honest 409 would come back as a 500. It also puts the deleted lane rows
+     * below back, which is what makes a refused move leave the week untouched.
+     */
+    await tx.query('SAVEPOINT before_move');
+
+    /*
+     * The lanes go first, and they go by being deleted.
+     *
+     * The exclusion constraint lives on `class_session_lane`, and a row that is
+     * about to move is still holding its old window while the new one is
+     * inserted — so replacing the set wholesale is both simpler than diffing and
+     * the only order that cannot collide with itself.
+     */
+    if (laneIds !== null) {
+      await tx.query(`DELETE FROM class_session_lane WHERE session_id = $1`, [sessionId]);
+    }
 
     try {
       /*
@@ -1097,12 +1174,36 @@ export async function moveOccurrence(
           WHERE cs.id = $1`,
         [sessionId, date, startTime],
       );
+
+      /*
+       * The new lanes, stamped with the window the session now actually has.
+       *
+       * `ends_at` is written by a BEFORE trigger from `duration_minutes`, so it
+       * is read back rather than recomputed here — the same reasoning as every
+       * other derived answer in this codebase, and the reason the sync trigger
+       * exists at all.
+       */
+      if (laneIds !== null && laneIds.length > 0) {
+        await tx.query(
+          `INSERT INTO class_session_lane
+             (organization_id, session_id, lane_id, starts_at, ends_at, cancelled)
+           SELECT cs.organization_id, cs.id, unnest($2::uuid[]), cs.starts_at, cs.ends_at,
+                  cs.status = 'cancelled'
+             FROM class_session cs
+            WHERE cs.id = $1`,
+          [sessionId, laneIds],
+        );
+      }
     } catch (error) {
       // 23P01 is the lane exclusion; 23505 the one-occurrence-per-booking key.
       const code = (error as { code?: string }).code;
-      if (code === '23P01' || code === '23505') return 'occupied';
+      if (code === '23P01' || code === '23505') {
+        return { outcome: 'occupied', clash: await occupiedBy(tx, sessionId, laneIds, date, startTime) };
+      }
       throw error;
     }
+
+    await tx.query('RELEASE SAVEPOINT before_move');
 
     await recordAudit(tx, {
       action: 'class_session.moved',
@@ -1114,11 +1215,91 @@ export async function moveOccurrence(
         occursOn: before.occurs_on,
         from: before.starts_at.toISOString(),
         to: `${date} ${startTime}`,
+        ...(laneIds === null ? {} : { lanes: laneIds.length }),
       },
     });
 
-    return 'moved';
+    return { outcome: 'moved' };
   });
+}
+
+/**
+ * Which lane refused the move, and what is already swimming in it.
+ *
+ * Asked *after* the constraint has spoken, not instead of it. The database is
+ * what decides — this only puts a name to the refusal, so the screen can say
+ * "Pista 5 · Masters" rather than "conflito" and the operator knows where to
+ * look. Running it before the write would be a second implementation of the
+ * same rule, and two of those agree until the day they do not.
+ *
+ * The transaction is aborted by the time this runs, so it goes to a savepoint —
+ * `withOrg` is one transaction and a failed statement poisons it otherwise.
+ */
+async function occupiedBy(
+  tx: Tx,
+  sessionId: string,
+  laneIds: string[] | null,
+  date: string,
+  startTime: string,
+): Promise<OccupiedLane | null> {
+  await tx.query('ROLLBACK TO SAVEPOINT before_move');
+
+  const { rows } = await tx.query<{ lane: string; holder: string }>(
+    /*
+     * Overlap against the window the move was *asking for*, in the facility's
+     * own zone — the same conversion the UPDATE does, because a clash reported
+     * against a different hour than the one that was refused would send somebody
+     * hunting in the wrong row.
+     */
+    `WITH target AS (
+       SELECT cs.id,
+              ($2::date + $3::time) AT TIME ZONE coalesce((
+                SELECT f.timezone
+                  FROM pool p
+                  JOIN facility f
+                    ON f.id = p.facility_id AND f.organization_id = p.organization_id
+                 WHERE p.id = cs.pool_id AND p.organization_id = cs.organization_id
+              ), 'Europe/Lisbon') AS starts_at,
+              cs.duration_minutes
+         FROM class_session cs
+        WHERE cs.id = $1
+     )
+     SELECT l.name AS lane,
+            /*
+             * A name, never an id.
+             *
+             * This used to fall back to the session's uuid, so a lane held by a
+             * partnership booking produced "Pista 5 - db638469-c7cc-..." on
+             * screen: a refusal that names nothing an operator can go and look
+             * at. A partner session carries no group of its own -- the booking
+             * behind it does -- so the name is reached through the schedule,
+             * the same way the grid reaches it.
+             */
+            coalesce(cg.name, pg.name, sch.title, '?') AS holder
+       FROM target t
+       JOIN class_session_lane csl
+         ON csl.lane_id = ANY(coalesce($4::uuid[], (
+              SELECT array_agg(lane_id) FROM class_session_lane WHERE session_id = t.id
+            )))
+        AND NOT csl.cancelled
+        AND csl.session_id <> t.id
+        AND tstzrange(csl.starts_at, csl.ends_at)
+            && tstzrange(t.starts_at, t.starts_at + make_interval(mins => t.duration_minutes))
+       JOIN lane l ON l.id = csl.lane_id AND l.organization_id = csl.organization_id
+       JOIN class_session other
+         ON other.id = csl.session_id AND other.organization_id = csl.organization_id
+       LEFT JOIN class_group cg
+         ON cg.id = other.class_group_id AND cg.organization_id = other.organization_id
+       LEFT JOIN class_schedule sch
+         ON sch.id = other.schedule_id AND sch.organization_id = other.organization_id
+       LEFT JOIN partner_group pg
+         ON pg.id = sch.partner_group_id AND pg.organization_id = sch.organization_id
+      ORDER BY l.position
+      LIMIT 1`,
+    [sessionId, date, startTime, laneIds],
+  );
+
+  return rows[0] ?? null;
 }
 
 /**

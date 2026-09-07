@@ -146,6 +146,12 @@ export interface PartnerDetail {
   nif: string | null;
   address: string | null;
   notes: string | null;
+  /**
+   * The club runs these lessons, so their blocks carry a training plan and can
+   * be cancelled from the calendar. Never a register: a partner group has a
+   * headcount and no people, and `attendance` needs a real student.
+   */
+  managedLessons: boolean;
   contacts: PartnerContact[];
   agreement: PartnerAgreement | null;
   groups: PartnerGroup[];
@@ -160,6 +166,7 @@ export interface PartnerInput {
   nif: string | null;
   address: string | null;
   notes: string | null;
+  managedLessons: boolean;
 }
 
 export interface ContactInput {
@@ -433,8 +440,10 @@ export async function getPartner(
       nif: string | null;
       address: string | null;
       notes: string | null;
+      managed_lessons: boolean;
     }>(
-      `SELECT id, facility_id, name, type, status, color, nif, address, notes
+      `SELECT id, facility_id, name, type, status, color, nif, address, notes,
+              managed_lessons
          FROM partner
         WHERE id = $1 AND archived_at IS NULL`,
       [partnerId],
@@ -554,6 +563,7 @@ export async function getPartner(
       nif: partner.nif,
       address: partner.address,
       notes: partner.notes,
+      managedLessons: partner.managed_lessons,
       contacts: contacts.rows,
       agreement:
         agreement === undefined
@@ -610,8 +620,9 @@ export async function createPartner(
     try {
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO partner
-           (organization_id, facility_id, name, type, status, color, nif, address, notes)
-         VALUES ($1, $2, $3, $4::partner_type, $5::partner_status, $6, $7, $8, $9)
+           (organization_id, facility_id, name, type, status, color, nif, address, notes,
+            managed_lessons)
+         VALUES ($1, $2, $3, $4::partner_type, $5::partner_status, $6, $7, $8, $9, $10)
          RETURNING id`,
         [
           organizationId,
@@ -623,6 +634,7 @@ export async function createPartner(
           input.nif,
           input.address,
           input.notes,
+          input.managedLessons,
         ],
       );
       id = rows[0]!.id;
@@ -651,7 +663,7 @@ export async function updatePartner(
       const { rowCount } = await tx.query(
         `UPDATE partner
             SET name = $2, type = $3::partner_type, status = $4::partner_status,
-                color = $5, nif = $6, address = $7, notes = $8
+                color = $5, nif = $6, address = $7, notes = $8, managed_lessons = $9
           WHERE id = $1 AND archived_at IS NULL`,
         [
           partnerId,
@@ -662,6 +674,7 @@ export async function updatePartner(
           input.nif,
           input.address,
           input.notes,
+          input.managedLessons,
         ],
       );
       if (rowCount === 0) return false;

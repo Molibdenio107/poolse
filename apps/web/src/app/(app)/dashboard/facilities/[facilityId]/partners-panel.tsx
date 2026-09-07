@@ -153,9 +153,6 @@ export function PartnersPanel({
             />
           </div>
 
-          {state.errorKey !== undefined && (
-            <p className="text-sm text-danger">{t(state.errorKey)}</p>
-          )}
 
           <div className="flex gap-2">
             <button type="submit" disabled={pending} className={BUTTON}>

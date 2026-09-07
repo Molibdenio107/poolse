@@ -3,6 +3,8 @@ import { enUS, ptPT } from '@clerk/localizations';
 import { ClerkProvider } from '@clerk/nextjs';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
+import { formats } from '../../i18n';
+import { ToastProvider } from '../../components/ui/toast';
 import { readTheme } from '../../lib/preferences';
 import { ThemeScript } from '../../lib/theme-script';
 import '../globals.css';
@@ -57,8 +59,41 @@ export default async function AppLayout({
         suppressHydrationWarning
       >
         <head>{theme === 'system' && <ThemeScript />}</head>
-        <body>
-          <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        {/*
+          Suppressed on the body as well as the html, and for a different
+          reason than the theme.
+
+          Browser extensions write their own attributes onto <body> before
+          React hydrates -- ColorZilla's `cz-shortcut-listen`, password
+          managers, translation add-ons. React compares the server's markup
+          against what it finds and reports a mismatch it can do nothing
+          about, on a developer's machine only.
+
+          It is noise, and noise on the console is worse than it looks: it
+          is the thing a real hydration bug hides behind. This silences the
+          body element's own attributes and nothing inside it, so a genuine
+          mismatch in the tree is still reported.
+        */}
+        <body suppressHydrationWarning>
+          {/*
+            `formats` as well as `messages`.
+
+            A client provider inherits the locale, the current time and the
+            timezone from the server, and neither the messages nor the formats —
+            so a client component asking for a named format it could see on the
+            server threw `MISSING_FORMAT` instead. Both come from `i18n.ts`, so
+            the two sides of the boundary cannot describe a date differently.
+          */}
+          <NextIntlClientProvider messages={messages} formats={formats}>
+            {/*
+              Inside the intl provider, because a toast is words: it translates
+              its own close button and `useSavedAction` hands it an already
+              translated sentence. Outside everything else, so one stack serves
+              every screen and a message raised from inside a dialog is not
+              unmounted with it.
+            */}
+            <ToastProvider>{children}</ToastProvider>
+          </NextIntlClientProvider>
         </body>
       </html>
     </ClerkProvider>

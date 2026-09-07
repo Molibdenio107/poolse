@@ -4,13 +4,13 @@ import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Ban, ClipboardCheck } from 'lucide-react';
+import { Ban, ClipboardCheck, NotebookPen } from 'lucide-react';
 import type { ClassGroup, FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
-import { slotKey } from '@/lib/slot-key';
+import { bookingKey, slotKey } from '@/lib/slot-key';
 import { startTimeOf } from '@/lib/calendar-scale';
 import { slotsFor, toMinutes } from '@/lib/grid-layout';
 import { Dialog } from '@/components/ui/dialog';
-import { CalendarGrid, type CalendarLevel } from './calendar-grid';
+import { CalendarGrid, SEP, type CalendarLevel } from './calendar-grid';
 import { StandInPicker } from './stand-in-picker';
 import { CancelSessionDialog, type CancelTarget } from './calendar-forms';
 import { LessonPlanPanel } from './lesson-plan-panel';
@@ -79,52 +79,89 @@ export function CalendarWeek({
 
   const controlsFor = useCallback(
     (booking: GridBooking): SessionControls | undefined =>
+      /*
+        A parceria has controls only when the club runs its lessons.
+        
+        POOLSE-46 settled that a school's hour takes no register and has no plan,
+        and that is still the default — `managedLessons` is the partnership's own
+        switch, set on its detail screen, and it is off unless somebody turns it
+        on. What it grants is the plan and Cancelar aula; the register stays out
+        for a reason the schema enforces rather than this file: a partner group
+        has a headcount and no students to mark.
+
+        The guard matters beyond the buttons. Widening it to *every* booking sent
+        a partnership drag down the one-week path, which writes the session and
+        leaves the booking where it was — so the block snapped back on the next
+        refresh and the drag looked broken.
+
+        Then the booking's own key — see `bookingKey` — with the slot composite
+        as the fallback for a session with no booking behind it.
+      */
       booking.classGroupId === null
-        ? undefined
-        : controls[slotKey(booking.classGroupId, booking.weekday, booking.startTime)],
+        ? (booking.managedLessons ? controls[bookingKey(booking.id)] : undefined)
+        : (controls[bookingKey(booking.id)] ??
+          controls[slotKey(booking.classGroupId, booking.weekday, booking.startTime)]),
     [controls],
   );
 
-  /*
-   * The hover card's contents.
+  /**
+   * Who is teaching this one lesson, built once and placed twice.
    *
-   * Built here rather than in the grid because the two actions are a link and a
-   * client component this screen owns, and describing them as data would mean
-   * the grid knowing what a register and a cancellation are.
+   * The hover card wants it compact and at the top of its actions; the plan
+   * sheet wants it full width and directly above Save, so it is plain that
+   * pressing Save is not what records it. Same component either way — two
+   * copies would be two things that drift.
    */
-  const renderDetail = useCallback(
-    (booking: GridBooking) => {
+  const teacherFor = useCallback(
+    (booking: GridBooking, compact: boolean): React.ReactNode => {
       const session = controlsFor(booking);
+      if (session?.sessionId === undefined) return undefined;
+      return <StandInPicker sessionId={session.sessionId} compact={compact} />;
+    },
+    [controlsFor],
+  );
 
-      const facts = [
-        // "Pistas ocupadas: 4", not "Pista: 4" — the number is a count of lanes,
-        // and the old label read as the name of a single one.
-        { label: t('calendar.lanesOccupied'), value: String(booking.laneIds.length) },
-        {
-          label: t('calendar.time'),
-          value: `${booking.startTime.slice(0, 5)} · ${booking.durationMinutes} min`,
-        },
-      ];
-      if (booking.subtitle !== null) {
-        facts.unshift({ label: t('classes.level'), value: booking.subtitle });
-      }
-      if (booking.instructorName !== null) {
-        facts.push({ label: t('roles.instructor'), value: booking.instructorName });
-      }
-
-      const actions =
-        session === undefined ? undefined : (
-          <div className="flex flex-col gap-2">
+  /**
+   * Take the register, Cancel, and the way into the plan.
+   *
+   * One row, built once and placed twice — the hover card takes all of it, the
+   * plan sheet takes it without the plan button, since offering a way into the
+   * sheet you are already reading is a control that does nothing.
+   *
+   * The teacher picker is deliberately *not* in here. It goes above Save in the
+   * sheet and at the top of the card, so it is `teacherFor`'s and the two places
+   * compose them in the order each one wants.
+   */
+  const sessionButtons = useCallback(
+    (booking: GridBooking, withPlan: boolean): React.ReactNode => {
+      const session = controlsFor(booking);
+      if (session === undefined) return undefined;
+      return (
+          <div className="flex flex-wrap items-center gap-2">
             {/*
-              Who is teaching this one lesson. In the card and in the plan sheet,
-              because both are places somebody arrives at a class from — and it
-              is one component, so the two cannot drift.
+              The way into the plan, and the only way.
+
+              It used to be a click on the block itself, which put the sheet in
+              the way of the gesture the block is actually for: a block on this
+              grid is a thing you drag, and every drag ends with a click the
+              browser fires underneath it. Guarding that with a timer worked and
+              still left the plan one mis-click away from opening mid-move.
+              Here it sits beside Take the register and Cancel, which is where
+              somebody already looks for what they can do with a class.
             */}
-            {session.sessionId !== undefined && (
-              <StandInPicker sessionId={session.sessionId} compact />
+            {withPlan && session.sessionId !== undefined && (
+              <button
+                type="button"
+                onClick={() =>
+                  setPlanning({ sessionId: session.sessionId!, booking })
+                }
+                className="inline-flex items-center gap-1.5 rounded border border-primary/40 px-2 py-1 text-sm font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+              >
+                <NotebookPen className="size-4" aria-hidden="true" />
+                {t('calendar.plan.title')}
+              </button>
             )}
 
-            <div className="flex flex-wrap items-center gap-2">
             {session.mark !== undefined && (
               <Link
                 href={session.mark.href}
@@ -151,7 +188,67 @@ export function CalendarWeek({
                 {t('calendar.cancel')}
               </button>
             )}
-            </div>
+        </div>
+      );
+    },
+    [controlsFor, t],
+  );
+
+  /*
+   * The hover card's contents.
+   *
+   * Built here rather than in the grid because the two actions are a link and a
+   * client component this screen owns, and describing them as data would mean
+   * the grid knowing what a register and a cancellation are.
+   */
+  const renderDetail = useCallback(
+    (booking: GridBooking) => {
+      const session = controlsFor(booking);
+
+      const facts = [
+        // "Pistas ocupadas: 4", not "Pista: 4" — the number is a count of lanes,
+        // and the old label read as the name of a single one.
+        { label: t('calendar.lanesOccupied'), value: String(booking.laneIds.length) },
+        {
+          label: t('calendar.time'),
+          value: `${booking.startTime.slice(0, 5)} · ${booking.durationMinutes} min`,
+        },
+      ];
+      if (booking.subtitle !== null) {
+        facts.unshift({ label: t('classes.level'), value: booking.subtitle });
+      }
+      if (booking.instructorName !== null) {
+        facts.push({
+          // "Professor desta aula" when somebody is covering, so a stand-in
+          // reads as this week's arrangement rather than as a new instructor.
+          label: session?.standIn === true ? t('calendar.standIn.label') : t('roles.instructor'),
+          value: booking.instructorName,
+        });
+      }
+      /*
+       * Visible text, not a tooltip.
+       *
+       * A taken register is the reason this class will refuse to be moved, and
+       * anything the operator needs is on the card rather than behind a hover
+       * inside a hover.
+       */
+      if (session?.registerTaken === true) {
+        facts.push({ label: t('calendar.registerLabel'), value: t('calendar.registerTaken') });
+      }
+
+      const actions =
+        session === undefined ? undefined : (
+          <div className="flex flex-col gap-2">
+            {/*
+              Who is teaching this one lesson. In the card and in the plan sheet,
+              because both are places somebody arrives at a class from — and it
+              is one component, so the two cannot drift. The sheet puts it above
+              its Save button, which is why it is built by `teacherFor` rather
+              than inline here.
+            */}
+            {teacherFor(booking, true)}
+
+            {sessionButtons(booking, true)}
           </div>
         );
 
@@ -161,17 +258,7 @@ export function CalendarWeek({
         ...(actions === undefined ? {} : { actions }),
       };
     },
-    [controlsFor, t],
-  );
-
-  /** A click on a block opens that lesson's plan, exactly as it did before. */
-  const onOpenPlan = useCallback(
-    (booking: GridBooking) => {
-      const session = controlsFor(booking);
-      if (session?.sessionId === undefined) return;
-      setPlanning({ sessionId: session.sessionId, booking });
-    },
-    [controlsFor],
+    [controlsFor, sessionButtons, teacherFor, t],
   );
 
   /*
@@ -258,13 +345,32 @@ export function CalendarWeek({
       const session = controlsFor(booking);
 
       if (scope === 'week' && session?.sessionId !== undefined) {
+        /*
+         * The day the block landed on, not the Monday it was dragged inside.
+         *
+         * This used to send `weekStart` — so "só esta semana" on a class dragged
+         * from Tuesday to Wednesday moved it to *Monday* at the new hour, and on
+         * a busy Monday that came back as "essa pista já está ocupada" against a
+         * lane nobody had touched. `to.weekday` is ISO, Monday 1, and the week
+         * starts on the Monday, so the offset is one subtraction.
+         */
+        const day = new Date(`${weekStart}T00:00:00Z`);
+        day.setUTCDate(day.getUTCDate() + to.weekday - 1);
+
         const moved = await moveOccurrenceAction(
           organizationId,
           session.sessionId,
-          weekStart,
+          day.toISOString().slice(0, 10),
           startTime,
+          // The pistas the block landed on. One week can now differ from the
+          // pattern, so the lane change no longer has to be thrown away.
+          to.laneIds,
         );
-        if (!moved.ok) return moved.errorKey;
+        if (!moved.ok) {
+          return moved.detail === undefined || moved.detail === ''
+            ? moved.errorKey
+            : `${moved.errorKey}${SEP}${moved.detail}`;
+        }
         router.refresh();
         return null;
       }
@@ -288,7 +394,7 @@ export function CalendarWeek({
       if (!result.ok) {
         return result.detail === undefined || result.detail === ''
           ? result.errorKey
-          : `${result.errorKey} ${result.detail}`;
+          : `${result.errorKey}${SEP}${result.detail}`;
       }
       router.refresh();
       return null;
@@ -311,7 +417,6 @@ export function CalendarWeek({
         levels={levels}
         canManage={canManage}
         renderDetail={renderDetail}
-        onOpenPlan={onOpenPlan}
         onCreate={onCreate}
         onMove={onMove}
       />
@@ -321,12 +426,27 @@ export function CalendarWeek({
           sessionId={planning.sessionId}
           onClose={() => setPlanning(null)}
           /*
-            The same two controls the hover card carries, built by the same
-            function. One definition, two places it can be reached from.
+            The class the plan is for, so the sheet is not a text box floating
+            free of what it belongs to. The same title and the same facts the
+            hover card shows, built by the same function — one definition, two
+            places it can be reached from.
           */
-          {...(renderDetail(planning.booking).actions === undefined
+          className={renderDetail(planning.booking).title}
+          facts={renderDetail(planning.booking).detail.facts}
+          {...(teacherFor(planning.booking, false) === undefined
             ? {}
-            : { actions: renderDetail(planning.booking).actions })}
+            : { teacher: teacherFor(planning.booking, false) })}
+          /*
+            The button row without the teacher and without the plan button.
+
+            `renderDetail`'s actions are the card's — they lead with the picker,
+            which the sheet already shows above Save, so passing them here put a
+            second identical dropdown at the bottom of the same panel. And a way
+            into the sheet you are reading is a control that does nothing.
+          */
+          {...(sessionButtons(planning.booking, false) === undefined
+            ? {}
+            : { actions: sessionButtons(planning.booking, false) })}
         />
       )}
 

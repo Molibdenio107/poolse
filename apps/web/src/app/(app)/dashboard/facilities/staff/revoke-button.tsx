@@ -31,9 +31,6 @@ export function RevokeButton({
       >
         {pending ? t('common.working') : t('invite.revoke')}
       </button>
-      {state.errorKey !== undefined && (
-        <span className="text-sm text-danger">{t(state.errorKey)}</span>
-      )}
     </form>
   );
 }

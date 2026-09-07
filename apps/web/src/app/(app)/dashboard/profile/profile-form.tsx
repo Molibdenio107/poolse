@@ -141,7 +141,6 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
           {pending ? t('common.working') : t('common.save')}
         </button>
 
-        {state.ok && <span className="text-sm text-success">{t('profile.saved')}</span>}
       </div>
 
       {/* Only for a failure that belongs to no field — the API being down, say. */}

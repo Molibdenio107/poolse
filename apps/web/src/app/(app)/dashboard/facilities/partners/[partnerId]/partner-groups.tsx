@@ -277,7 +277,6 @@ function GroupForm({
         />
       )}
 
-      {state.errorKey !== undefined && <p className="text-sm text-danger">{t(state.errorKey)}</p>}
 
       <div className="flex gap-2">
         <button type="submit" disabled={pending} className={BUTTON}>
@@ -311,9 +310,6 @@ function RemoveGroup({
         than at the top of the page. "This group is still booked" is only useful
         next to the group it is about.
       */}
-      {state.errorKey !== undefined && (
-        <span className="text-sm text-danger">{t(state.errorKey)}</span>
-      )}
 
       <button
         type="submit"

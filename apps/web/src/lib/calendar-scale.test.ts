@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  COL_WIDTH,
+  columnAt,
+  columnX,
   dayRange,
   hourMarks,
   levelOrder,
@@ -163,4 +166,103 @@ test('a chosen colour wins over the level, and an unset one falls back', () => {
   assert.equal(levelTint(turma(null, 'rose'), order), 6);
   // A token this build has never heard of is neutral rather than a crash.
   assert.equal(levelTint(turma('a', 'chartreuse'), order), 1);
+});
+
+/*
+ * -----------------------------------------------------------------------------
+ * The horizontal scale, and the drag that used to disagree with it
+ * -----------------------------------------------------------------------------
+ *
+ * A block's lane came from whichever droppable the pointer was over, which put
+ * the block's *left edge* under the pointer. Grab a four-lane block by its third
+ * lane and it jumped two pistas right of where it was drawn -- onto lanes nobody
+ * had pointed at, colliding with whatever was in them. That is what "the lane
+ * conflict looks non-existent" was: the conflict was real, in a lane the screen
+ * was not showing the block in.
+ *
+ * The fix is to resolve the lane from travel, exactly as the time already was.
+ * These tests are that arithmetic, which is the whole of it.
+ */
+
+const LANES = 6;
+const DAYS = 7;
+
+test('a column and its offset are inverses of each other', () => {
+  for (let day = 0; day < DAYS; day += 1) {
+    for (let lane = 0; lane < LANES; lane += 1) {
+      const at = columnAt(columnX(day, lane, LANES), LANES, DAYS);
+      assert.deepEqual(at, { dayIndex: day, laneIndex: lane });
+    }
+  }
+});
+
+test('a block travels by the pointer, not by where it was grabbed', () => {
+  // Four lanes wide, starting at pista 1 of Tuesday. This is the shape that
+  // broke: grabbing it anywhere but its left edge used to move it further than
+  // the pointer went.
+  const start = columnX(1, 0, LANES);
+
+  // Nudged one column right.
+  assert.deepEqual(columnAt(start + COL_WIDTH, LANES, DAYS), { dayIndex: 1, laneIndex: 1 });
+  // Not moved at all is not moved at all, whatever the grab offset was.
+  assert.deepEqual(columnAt(start, LANES, DAYS), { dayIndex: 1, laneIndex: 0 });
+  // Less than half a column does not step.
+  assert.deepEqual(columnAt(start + COL_WIDTH / 2 - 1, LANES, DAYS), {
+    dayIndex: 1,
+    laneIndex: 0,
+  });
+  // Half a column does.
+  assert.deepEqual(columnAt(start + COL_WIDTH / 2 + 1, LANES, DAYS), {
+    dayIndex: 1,
+    laneIndex: 1,
+  });
+});
+
+test('dragged off the end of a day, a block arrives at the start of the next', () => {
+  const lastOfTuesday = columnX(1, LANES - 1, LANES);
+
+  // One column past Tuesday's last pista is Wednesday's first, not Tuesday's
+  // last clamped in place.
+  assert.deepEqual(columnAt(lastOfTuesday + COL_WIDTH, LANES, DAYS), {
+    dayIndex: 2,
+    laneIndex: 0,
+  });
+
+  // And backwards over the same boundary.
+  const firstOfWednesday = columnX(2, 0, LANES);
+  assert.deepEqual(columnAt(firstOfWednesday - COL_WIDTH, LANES, DAYS), {
+    dayIndex: 1,
+    laneIndex: LANES - 1,
+  });
+});
+
+test('the day rule does not accumulate across the week', () => {
+  // Seven days of a two-pixel rule is fourteen pixels, a fifth of a column. If
+  // the drag maths used a plain multiplication it would drift, and Sunday would
+  // land one pista out -- which is the bug DAY_RULE was written to prevent on
+  // the block layer and would have come back here.
+  const sundayLane3 = columnX(6, 3, LANES);
+  assert.deepEqual(columnAt(sundayLane3, LANES, DAYS), { dayIndex: 6, laneIndex: 3 });
+  assert.deepEqual(columnAt(sundayLane3 + COL_WIDTH, LANES, DAYS), {
+    dayIndex: 6,
+    laneIndex: 4,
+  });
+});
+
+test('a drag past either end of the grid is held at the edge', () => {
+  assert.deepEqual(columnAt(-10_000, LANES, DAYS), { dayIndex: 0, laneIndex: 0 });
+  assert.deepEqual(columnAt(10_000, LANES, DAYS), {
+    dayIndex: DAYS - 1,
+    laneIndex: LANES - 1,
+  });
+});
+
+test('a one-lane tank has no sideways travel to get wrong', () => {
+  assert.deepEqual(columnAt(columnX(3, 0, 1), 1, DAYS), { dayIndex: 3, laneIndex: 0 });
+  // A nudge inside the single column stays put; a full column is the next day.
+  assert.deepEqual(columnAt(columnX(3, 0, 1) + 10, 1, DAYS), { dayIndex: 3, laneIndex: 0 });
+  assert.deepEqual(columnAt(columnX(3, 0, 1) + COL_WIDTH, 1, DAYS), {
+    dayIndex: 4,
+    laneIndex: 0,
+  });
 });

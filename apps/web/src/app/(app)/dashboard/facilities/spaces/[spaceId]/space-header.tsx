@@ -171,9 +171,6 @@ export function SpaceHeader({
             {t('spaces.activeLabel')}
           </label>
 
-          {state.errorKey !== undefined && (
-            <p className="text-sm text-danger">{t(state.errorKey)}</p>
-          )}
 
           <div className="flex items-center gap-3">
             <button type="submit" disabled={pending} className={BUTTON}>

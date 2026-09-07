@@ -154,7 +154,6 @@ export function AddRecordForm({
         </button>
       </div>
 
-      {state.ok && <p className="text-sm text-success">{t('progress.added')}</p>}
       {state.errorKey !== undefined && (
         <p className="text-sm text-danger">
           {t(state.errorKey)}
@@ -221,9 +220,6 @@ export function FavouriteStrokeForm({
         {pending ? t('common.working') : t('common.save')}
       </button>
 
-      {state.errorKey !== undefined && (
-        <span className="text-sm text-danger">{t(state.errorKey)}</span>
-      )}
     </form>
   );
 }

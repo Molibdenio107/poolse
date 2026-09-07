@@ -221,9 +221,6 @@ export function RemoveClosure({
       >
         {t('calendar.remove')}
       </button>
-      {state.errorKey !== undefined && (
-        <span className="text-xs text-danger">{t(state.errorKey)}</span>
-      )}
     </form>
   );
 }

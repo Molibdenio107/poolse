@@ -244,9 +244,6 @@ export function LevelSkills({
                 maxLength={500}
               />
 
-              {state.errorKey !== undefined && (
-                <p className="text-sm text-danger">{t(state.errorKey)}</p>
-              )}
             </form>
           )}
         </div>

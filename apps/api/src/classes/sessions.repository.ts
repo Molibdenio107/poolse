@@ -18,12 +18,21 @@ export interface Closure {
 
 export interface Session {
   id: string;
-  classGroupId: string;
+  /** The turma, or null when the session belongs to a partnership booking. */
+  classGroupId: string | null;
   className: string;
   levelName: string | null;
   poolName: string | null;
   /** Every lane it occupies, by position. Empty when none was chosen. */
   lanes: number[];
+  /**
+   * The same lanes, by id.
+   *
+   * Positions are what a person reads; ids are what the grid draws with. The
+   * calendar needs both because it redraws a moved week at the session's own
+   * pistas, and a position cannot be matched back to a column.
+   */
+  laneIds: string[];
   instructorName: string | null;
   substituteName: string | null;
   /** ISO instant. The facility's local date and time are derived below. */
@@ -36,8 +45,26 @@ export interface Session {
   durationMinutes: number;
   status: 'scheduled' | 'cancelled' | 'completed';
   cancellationReason: string | null;
+  /**
+   * The recurring booking this is one week of, when it came from one.
+   *
+   * Null for a session created on its own. It is what the calendar keys its
+   * per-occurrence controls by: a session moved for one week no longer sits at
+   * its pattern's day and hour, so a key made of those two stops matching the
+   * block on the grid, and the register, the cancel and the teacher picker all
+   * quietly disappear from it.
+   */
+  scheduleId: string | null;
   /** True when a closure cancelled it, rather than a person. */
   byClosure: boolean;
+  /**
+   * Whether somebody has marked this register — so the class happened.
+   *
+   * The calendar reads it to stop offering a drag on a lesson that has already
+   * been taught, and the move endpoint refuses one for the same reason. Both
+   * ends read this same fact, so the screen and the guard cannot disagree.
+   */
+  registerTaken: boolean;
   enrolled: number;
   /**
    * The active roll, alphabetical — POOLSE-15.
@@ -412,7 +439,10 @@ export async function generateSeason(
 const SESSION_COLUMNS = `
   cs.id,
   cs.class_group_id,
-  cg.name AS class_name,
+  -- A turma's name, or the partner group's. The schedule's own title is the
+  -- last resort for a booking that is neither, which the grid renders too.
+  -- (No backticks in here: one ends the template literal.)
+  coalesce(cg.name, pg.name, sch.title, '?') AS class_name,
   l.name  AS level_name,
   p.name  AS pool_name,
   /*
@@ -426,6 +456,12 @@ const SESSION_COLUMNS = `
       JOIN lane ln ON ln.id = csl.lane_id
      WHERE csl.session_id = cs.id
   ), '{}') AS lanes,
+  coalesce((
+    SELECT array_agg(csl.lane_id ORDER BY ln.position)
+      FROM class_session_lane csl
+      JOIN lane ln ON ln.id = csl.lane_id
+     WHERE csl.session_id = cs.id
+  ), '{}') AS lane_ids,
   short_name(iu.cached_first_name, iu.cached_last_name) AS instructor_name,
   short_name(su.cached_first_name, su.cached_last_name) AS substitute_name,
   cs.starts_at,
@@ -437,13 +473,29 @@ const SESSION_COLUMNS = `
   cs.duration_minutes,
   cs.status,
   cs.cancellation_reason,
+  cs.schedule_id,
   cs.closure_id IS NOT NULL AS by_closure,
-  (
-    SELECT count(*) FROM enrollment e
-     WHERE e.organization_id = cs.organization_id
-       AND e.class_group_id = cs.class_group_id
-       AND e.status = 'active'
-  )::int AS enrolled,
+  -- A register with a single mark on it means somebody stood at the poolside
+  -- with a list. The class happened, and where it happened is a record.
+  EXISTS (
+    SELECT 1 FROM attendance a
+     WHERE a.class_session_id = cs.id AND a.organization_id = cs.organization_id
+  ) AS register_taken,
+  /*
+   * How many are expected. A turma counts its enrolments; a parceria has none
+   * and carries a participant_count instead, which is the number the school
+   * told us. Exactly one of the two ever contributes.
+   */
+  coalesce(
+    (
+      SELECT count(*) FROM enrollment e
+       WHERE e.organization_id = cs.organization_id
+         AND e.class_group_id = cs.class_group_id
+         AND e.status = 'active'
+    ),
+    0
+  )::int + coalesce(CASE WHEN cs.class_group_id IS NULL THEN pg.participant_count END, 0)
+    AS enrolled,
   -- The names behind that count — POOLSE-15. Wrapped in coalesce because a
   -- turma with nobody in it aggregates to NULL rather than to an empty array,
   -- and the mapper should not have to know that.
@@ -459,12 +511,32 @@ const SESSION_COLUMNS = `
 
 const SESSION_JOINS = `
   FROM class_session cs
-  JOIN class_group cg ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
-  LEFT JOIN student_level l ON l.id = cg.level_id AND l.organization_id = cg.organization_id
+  /*
+   * LEFT, and this is the line that matters.
+   *
+   * It was an inner join, which silently dropped every session belonging to a
+   * parceria -- they carry no class_group_id, the booking behind them does. For
+   * as long as a partnership had nothing on the calendar but a rectangle that
+   * was invisible rather than wrong. It stopped being invisible the moment
+   * partner.managed_lessons gave those blocks a plan and a cancel button: the
+   * switch was saved, the grid knew about it, and the controls came back empty
+   * because the sessions they hang off had never been in the list.
+   *
+   * The partner group is reached through the schedule, the same way
+   * occurrenceOf and the grid reach it. (No backticks: one ends the literal.)
+   */
+  LEFT JOIN class_group cg ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
+  LEFT JOIN class_schedule sch ON sch.id = cs.schedule_id AND sch.organization_id = cs.organization_id
+  LEFT JOIN partner_group pg ON pg.id = sch.partner_group_id AND pg.organization_id = sch.organization_id
+  LEFT JOIN student_level l
+         ON l.id = coalesce(cg.level_id, pg.level_id) AND l.organization_id = cs.organization_id
   LEFT JOIN pool p     ON p.id = cs.pool_id AND p.organization_id = cs.organization_id
   LEFT JOIN facility f ON f.id = p.facility_id AND f.organization_id = cs.organization_id
-  LEFT JOIN membership im ON im.id = cg.instructor_membership_id
-                         AND im.organization_id = cg.organization_id
+  LEFT JOIN membership im
+         ON im.id = coalesce(cs.instructor_membership_id,
+                             cg.instructor_membership_id,
+                             sch.instructor_membership_id)
+        AND im.organization_id = cs.organization_id
   LEFT JOIN app_user iu ON iu.id = im.app_user_id
   LEFT JOIN membership sm ON sm.id = cs.substitute_instructor_membership_id
                          AND sm.organization_id = cs.organization_id
@@ -473,11 +545,12 @@ const SESSION_JOINS = `
 
 interface SessionRow {
   id: string;
-  class_group_id: string;
+  class_group_id: string | null;
   class_name: string;
   level_name: string | null;
   pool_name: string | null;
   lanes: number[] | null;
+  lane_ids: string[] | null;
   instructor_name: string | null;
   substitute_name: string | null;
   starts_at: Date;
@@ -487,7 +560,9 @@ interface SessionRow {
   duration_minutes: number;
   status: Session['status'];
   cancellation_reason: string | null;
+  schedule_id: string | null;
   by_closure: boolean;
+  register_taken: boolean;
   enrolled: number;
   students: string[];
 }
@@ -500,6 +575,7 @@ function toSession(row: SessionRow): Session {
     levelName: row.level_name,
     poolName: row.pool_name,
     lanes: row.lanes ?? [],
+    laneIds: row.lane_ids ?? [],
     instructorName: row.instructor_name,
     substituteName: row.substitute_name,
     startsAt: row.starts_at.toISOString(),
@@ -509,7 +585,9 @@ function toSession(row: SessionRow): Session {
     durationMinutes: row.duration_minutes,
     status: row.status,
     cancellationReason: row.cancellation_reason,
+    scheduleId: row.schedule_id,
     byClosure: row.by_closure,
+    registerTaken: row.register_taken,
     enrolled: row.enrolled,
     students: row.students,
   };

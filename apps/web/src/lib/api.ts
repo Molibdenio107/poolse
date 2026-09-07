@@ -1472,7 +1472,13 @@ export interface CalendarSession {
   status: 'scheduled' | 'cancelled' | 'completed';
   cancellationReason: string | null;
   /** True when a closure cancelled it rather than a person. */
+  /** Every lane it occupies this week, by id — what the grid draws with. */
+  laneIds: string[];
+  /** The recurring booking this is one week of, or null for a one-off. */
+  scheduleId: string | null;
   byClosure: boolean;
+  /** Somebody marked this register, so the class happened and does not move. */
+  registerTaken: boolean;
   enrolled: number;
   /** The active roll, alphabetical — POOLSE-15, for the hover panel. */
   students: string[];
@@ -1912,6 +1918,12 @@ export interface PartnerDetail {
   nif: string | null;
   address: string | null;
   notes: string | null;
+  /**
+   * The club runs these lessons: their calendar blocks carry a training plan
+   * and can be cancelled. Never a register — a partnership group has a
+   * headcount rather than a list of students.
+   */
+  managedLessons: boolean;
   contacts: PartnerContact[];
   agreement: PartnerAgreement | null;
   groups: PartnerGroup[];
@@ -1966,6 +1978,8 @@ export interface GridBooking {
   /** Hex, and only for a parceria. Beats the category's colour. */
   partnerColour: string | null;
   partnerId: string | null;
+  /** The club runs this partnership's lessons: plan and cancel are offered. */
+  managedLessons: boolean;
   /** The partner group behind a parceria booking, with what an edit needs. */
   partnerGroupId: string | null;
   groupTag: string | null;

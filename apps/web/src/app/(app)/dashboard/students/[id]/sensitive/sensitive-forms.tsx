@@ -73,7 +73,6 @@ export function MedicalNotesForm({
         </button>
       </div>
 
-      {state.ok && <p className="text-sm text-success">{t('sensitive.saved')}</p>}
       <Problem state={state} />
     </form>
   );
@@ -197,9 +196,6 @@ export function WithdrawConsentButton({
       >
         {t('common.cancel')}
       </button>
-      {state.errorKey !== undefined && (
-        <span className="text-sm text-danger">{t(state.errorKey)}</span>
-      )}
     </form>
   );
 }

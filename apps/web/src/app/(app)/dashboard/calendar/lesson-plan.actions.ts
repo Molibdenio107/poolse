@@ -15,7 +15,10 @@ import type { FormState } from '../actions';
 
 export interface LessonPlan {
   sessionId: string;
-  classGroupId: string;
+  /** The turma, or null when the lesson belongs to a partnership. */
+  classGroupId: string | null;
+  /** The partner group, when it is one. Exactly one of the two is set. */
+  partnerGroupId: string | null;
   onDate: string;
   body: string;
   updatedAt: string | null;

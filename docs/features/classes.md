@@ -16,6 +16,15 @@ write above is refused by the API for anyone else.
 
 ## Partnerships on this screen
 
+**A partnership can be one the club runs the lessons for.** `Aulas dadas por nós`, a single
+switch on the partnership's own screen under Instalações, off by default. Turned on, its
+blocks on the calendar carry a training plan and can be cancelled, exactly like a turma's.
+
+It never brings a register. A partnership group has a `participant_count` and no student
+records, so there is nobody to mark present — a headcount would be a different feature with
+its own table. Off by default means every partnership that existed before goes on behaving as
+POOLSE-46 settled: an hour of water, sold, with the school's own coach on the deck.
+
 One card per **booking**, not per group. A school group that swims Monday and Wednesday is
 two rows on the grid and two lines on an invoice, so editing "6A" as one thing would beg the
 question of which hour had just moved.
