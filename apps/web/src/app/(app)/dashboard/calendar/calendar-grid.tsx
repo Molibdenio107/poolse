@@ -15,7 +15,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { Handshake } from 'lucide-react';
+import { AlertTriangle, Handshake } from 'lucide-react';
 import type { FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 
 /** Only what a colour and a legend need; the API sends them already ordered. */
@@ -32,6 +32,7 @@ import {
   levelTint,
   minutesToPx,
   MIN_BLOCK_HEIGHT,
+  NO_LANE_ID,
   pxToMinutes,
   snapDuration,
   snapStart,
@@ -42,6 +43,7 @@ import {
 import { toMinutes } from '@/lib/grid-layout';
 import { cn } from '@/lib/utils';
 import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
+import { useToast } from '@/components/ui/toast';
 
 /**
  * The dated week, drawn on a pixel scale — round 6.
@@ -208,13 +210,49 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
    * with one pool never sees the control.
    */
   const [poolId, setPoolId] = useState<string>(() => pools[0]?.id ?? '');
-  const shownLanes = useMemo(
-    () =>
-      (pools.length > 1 ? lanes.filter((lane) => lane.poolId === poolId) : lanes)
-        .slice()
-        .sort((a, b) => a.position - b.position),
-    [lanes, pools.length, poolId],
+
+  /*
+   * Whether this week has a class in no pista at all — round 8.
+   *
+   * Not filtered by the chosen tank, deliberately: a booking with no lanes is in
+   * no *pool* either, so there is no tank it could be filtered out of. Hiding it
+   * behind a tank selector would put it back where it was, which was invisible.
+   */
+  const hasLaneless = useMemo(
+    () => bookings.some((booking) => booking.laneIds.length === 0),
+    [bookings],
   );
+
+  const shownLanes = useMemo(() => {
+    const real = (pools.length > 1 ? lanes.filter((lane) => lane.poolId === poolId) : lanes)
+      .slice()
+      .sort((a, b) => a.position - b.position);
+
+    if (!hasLaneless) return real;
+
+    /*
+     * The Sem pista column, first in every day — see `NO_LANE_ID`.
+     *
+     * A `GridLane` in shape so that nothing downstream needs to know it is not
+     * one: the header, the columns and `columnX` all take it as an ordinary
+     * lane, and only the three places that *write* a lane list check the id.
+     * `position: -1` keeps it first if anything sorts this list again.
+     */
+    return [
+      {
+        id: NO_LANE_ID,
+        poolId: '',
+        poolName: '',
+        name: '',
+        position: -1,
+        defaultCapacity: null,
+      },
+      ...real,
+    ];
+  }, [lanes, pools.length, poolId, hasLaneless]);
+
+  /** How many leading columns are not real pistas: one, or none. */
+  const laneFloor = hasLaneless ? 1 : 0;
 
   const laneIndex = useMemo(
     () => new Map(shownLanes.map((lane, index) => [lane.id, index])),
@@ -259,8 +297,30 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
    */
   const [pending, setPending] = useState<Map<string, Pending>>(new Map());
   const [ask, setAsk] = useState<ScopeAsk | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [, startWrite] = useTransition();
+
+  /**
+   * A refused move, said where every other outcome is said — round 8.
+   *
+   * It used to be a red bar above the grid. On a calendar that is as tall as the
+   * pool day, "above the grid" is off the top of the screen by the time somebody
+   * has dragged a block to Thursday afternoon — so the one message that has to
+   * be read was in the one place nobody was looking. The toast is fixed to the
+   * viewport, already carries every save in the app, and gives a refusal eight
+   * seconds rather than four.
+   *
+   * The key and the server's own sentence still travel joined by `SEP`; this is
+   * the only place that splits them.
+   */
+  const { show } = useToast();
+  const refuse = useCallback(
+    (failure: string): void => {
+      const [key, detail] = failure.split(SEP);
+      if (key === undefined || key === '') return;
+      show('danger', detail === undefined || detail === '' ? t(key) : `${t(key)} — ${detail}`);
+    },
+    [show, t],
+  );
 
   /*
    * The filter key for one block.
@@ -346,7 +406,6 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   );
 
   function onDragStart(event: DragStartEvent): void {
-    setError(null);
     setDragging(String(event.active.id));
   }
 
@@ -398,16 +457,22 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
     // `findIndex` rather than `indexOf`: `days` is narrowed to the seven ISO
     // weekday literals and a booking's weekday is a plain number.
     const dayNow = days.findIndex((day) => day === booking.weekday);
-    const laneNow = laneIndex.get(booking.laneIds[0] ?? '');
+    // A booking with no pista is drawn in the Sem pista column, so that is the
+    // column its travel is measured from — round 8.
+    const laneNow = laneIndex.get(booking.laneIds[0] ?? NO_LANE_ID);
     if (dayNow < 0) return null;
 
     /*
      * A block spanning several lanes keeps its width and moves as one thing —
      * dropping a three-lane booking and having it collapse to one would be a
-     * data change nobody asked for. A block in no lane keeps that too: its width
-     * is zero and it travels by day and hour alone.
+     * data change nobody asked for.
+     *
+     * A block in no lane is one column wide rather than zero, because it is
+     * drawn in the Sem pista column and has to travel like everything else.
+     * Where it *lands* is what decides its lanes: a real pista assigns that
+     * pista, which is the entire point of drawing it at all.
      */
-    const width = booking.laneIds.length;
+    const width = Math.max(1, booking.laneIds.length);
 
     const from = columnX(dayNow, laneNow ?? 0, shownLanes.length) + event.delta.x;
     const { dayIndex, laneIndex: dropped } = columnAt(
@@ -419,11 +484,42 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
     const weekday = days[dayIndex];
     if (weekday === undefined) return null;
 
-    // Kept on the grid: a four-lane block cannot start in the second-to-last
-    // pista of a six-lane tank.
+    /*
+     * Kept on the grid: a four-lane block cannot start in the second-to-last
+     * pista of a six-lane tank.
+     *
+     * **The Sem pista column is a drop target both ways** — round 8. Dragging a
+     * block out of it onto a pista assigns that pista; dragging one into it
+     * clears them, which is the same gesture read backwards and the thing a club
+     * needs when a tank closes. It was display-only for an afternoon, on the
+     * grounds that an accidental drag would silently unassign pistas — but no
+     * move here is silent: every one of them goes through the scope popover
+     * first, which is the confirmation that objection was asking for.
+     *
+     * A block landing on the column keeps `laneIds` empty because the synthetic
+     * lane is filtered out below, so "no pista" is expressed by an empty array —
+     * which is exactly what the move endpoint reads as "in no pista".
+     */
     const start = Math.min(dropped, Math.max(0, shownLanes.length - width));
+
+    /*
+     * Landing on the Sem pista column means no pista, whatever the block's width.
+     *
+     * The alternative — slice the span and filter the synthetic lane out of it —
+     * turns a three-lane block dropped half over the column into a two-lane
+     * block, which is a change to the data nobody asked for and no way to
+     * predict from the gesture. The column is one column wide and sits at index
+     * 0, so "its left edge is on the column" is the whole test.
+     */
     const laneIds =
-      laneNow === undefined ? [] : shownLanes.slice(start, start + width).map((lane) => lane.id);
+      hasLaneless && start === 0
+        ? []
+        : shownLanes
+            .slice(start, start + width)
+            // Never written to a booking: it is a column, not a pista, and an
+            // empty list is how "no pista" is said.
+            .filter((lane) => lane.id !== NO_LANE_ID)
+            .map((lane) => lane.id);
 
     const startMinutes = snapStart(
       Math.max(
@@ -465,7 +561,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
     if (unmoved) return;
 
     if (closureOf(target.weekday) !== null) {
-      setError('grid.dayClosed');
+      refuse('grid.dayClosed');
       return;
     }
 
@@ -523,20 +619,35 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
        * lane is the floor: a class in no lanes is not a class.
        */
       if (edge !== 'bottom') {
-        const firstIndex = laneIndex.get(booking.laneIds[0] ?? '') ?? 0;
+        /*
+         * A block in no pista has no run of lanes to widen — round 8.
+         *
+         * Sideways resize means "occupy one more pista, or one fewer", and a
+         * class in none has neither end to pull. Dragging it into a pista is
+         * what the move is for, and that is a different gesture with a different
+         * confirmation.
+         */
+        if (booking.laneIds.length === 0) return;
+
+        const firstIndex = laneIndex.get(booking.laneIds[0] ?? '') ?? laneFloor;
         const lastIndex = firstIndex + Math.max(1, booking.laneIds.length) - 1;
         const moved = Math.round((event.clientX - from) / COL_WIDTH);
 
+        // Floored at the first *real* pista, so a left edge dragged all the way
+        // across cannot swallow the display-only Sem pista column.
         const from0 =
           edge === 'left'
-            ? Math.max(0, Math.min(firstIndex + moved, lastIndex))
+            ? Math.max(laneFloor, Math.min(firstIndex + moved, lastIndex))
             : firstIndex;
         const to0 =
           edge === 'right'
             ? Math.min(shownLanes.length - 1, Math.max(lastIndex + moved, firstIndex))
             : lastIndex;
 
-        const laneIds = shownLanes.slice(from0, to0 + 1).map((lane) => lane.id);
+        const laneIds = shownLanes
+          .slice(from0, to0 + 1)
+          .filter((lane) => lane.id !== NO_LANE_ID)
+          .map((lane) => lane.id);
         if (laneIds.length === 0) return;
 
         setGhost((current) =>
@@ -641,7 +752,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         next.delete(asked.booking.id);
         return next;
       });
-      if (failure !== null) setError(failure);
+      if (failure !== null) refuse(failure);
     });
   }
 
@@ -717,30 +828,21 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       />
 
       {/*
-        The refusal, with whatever the server said about it.
+        What the first column of every day is, said in full — round 8.
 
-        The key and the server's own sentence travel joined by `SEP`, which
-        cannot occur in either — a shape rather than a second state field,
-        because `onMove` returns one string and this is the only place that
-        reads it.
-
-        The constant is exported so there is one spelling of it and one place to
-        change it; both ends used to carry a raw NUL byte, which agreed with
-        itself and made both files invisible to `grep`.
+        The column header is abbreviated to eight characters because the column
+        is 64px wide, and an abbreviation whose only expansion is a tooltip would
+        be information living in a tooltip. This is the visible half, and it
+        appears only when there is something in that column to explain.
       */}
-      {error !== null &&
-        (() => {
-          const [key, detail] = error.split(SEP);
-          return (
-            <p
-              role="status"
-              className="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger"
-            >
-              {t(key!)}
-              {detail === undefined || detail === '' ? '' : ` — ${detail}`}
-            </p>
-          );
-        })()}
+      {hasLaneless && (
+        <p className="flex items-start gap-2 text-sm text-foreground-muted">
+          <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+          {t('grid.noLaneNote', {
+            count: bookings.filter((booking) => booking.laneIds.length === 0).length,
+          })}
+        </p>
+      )}
 
       <DndContext
         sensors={sensors}
@@ -816,6 +918,14 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                       height={height}
                       range={range}
                       disabled={!canManage || closureOf(weekday) !== null || !openOn(weekday)}
+                      /*
+                        The Sem pista column accepts a drop but not a click —
+                        round 8. Dropping a class there clears its pistas, which
+                        is what the column is for; *creating* a class there would
+                        make another one with no pista, and the whole reason the
+                        column exists is that those are hard to find.
+                      */
+                      creatable={lane.id !== NO_LANE_ID}
                       onCreate={props.onCreate}
                     />
                   ))}
@@ -1061,24 +1171,48 @@ const Header = memo(function Header({
             {closureOf(weekday) !== null && ' · ' + closureOf(weekday)!.reason}
           </div>
           <div className="flex">
-            {lanes.map((lane, index) => (
-              <div
-                key={lane.id}
-                className="shrink-0 border-b border-l border-border px-1.5 py-0.5 text-center text-[0.6875rem] tabular-nums text-foreground-muted"
-                style={{ width: COL_WIDTH }}
-                /*
-                  The number is the lane's place in the pool, not digits pulled
-                  out of whatever the club typed: a club with "Raia A" and
-                  "Central" has no digits to pull, and a mix of parsed numbers
-                  and positions would be a column headed 4 sitting third. The
-                  full name is one hover away and stays the thing the hover card
-                  and the printed sheet use.
-                */
-                title={lane.name}
-              >
-                {index + 1}
-              </div>
-            ))}
+            {/*
+              A pista's number is its place among the *real* pistas. With the Sem
+              pista column present it already sits at index 1, so it needs no
+              offset; without it the first pista is at index 0 and needs one.
+              Getting this wrong heads the first pista "2".
+            */}
+            {lanes.map((lane, index, all) => {
+              const noLane = lane.id === NO_LANE_ID;
+              const offset = all[0]?.id === NO_LANE_ID ? 0 : 1;
+
+              return (
+                <div
+                  key={lane.id}
+                  className={cn(
+                    'shrink-0 border-b border-l border-border px-1.5 py-0.5 text-center text-[0.6875rem] text-foreground-muted',
+                    noLane ? 'bg-surface-muted' : 'tabular-nums',
+                  )}
+                  style={{ width: COL_WIDTH }}
+                  /*
+                    The number is the lane's place in the pool, not digits pulled
+                    out of whatever the club typed: a club with "Raia A" and
+                    "Central" has no digits to pull, and a mix of parsed numbers
+                    and positions would be a column headed 4 sitting third. The
+                    full name is one hover away and stays the thing the hover card
+                    and the printed sheet use.
+
+                    The Sem pista column is headed by a word rather than a number,
+                    because it is not a pista and numbering it would make the real
+                    ones read one place further along than they are — round 8.
+                  */
+                  title={noLane ? t('grid.noLaneFull') : lane.name}
+                >
+                  {/*
+                    Abbreviated because the column is 64px wide, and never only a
+                    tooltip: the note above the grid says the same thing in full,
+                    which is the rule about a tooltip explaining rather than
+                    informing.
+                  */}
+                  {noLane ? t('grid.noLaneShort') : index + offset}
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
@@ -1138,6 +1272,7 @@ function LaneColumn({
   height,
   range,
   disabled,
+  creatable = true,
   onCreate,
 }: {
   weekday: number;
@@ -1145,6 +1280,15 @@ function LaneColumn({
   height: number;
   range: { startMinutes: number };
   disabled: boolean;
+  /**
+   * Whether clicking empty space here starts a class — round 8.
+   *
+   * Separate from `disabled`, which governs the *drop*. The Sem pista column
+   * takes drops (that is how a class's pistas are cleared) and refuses clicks
+   * (creating a class with no pista is how they get lost in the first place).
+   * One flag for both would have meant choosing which of the two to get wrong.
+   */
+  creatable?: boolean;
   onCreate: (weekday: number, laneId: string, startMinutes: number) => void;
 }): React.ReactElement {
   const { setNodeRef, isOver } = useDroppable({
@@ -1156,13 +1300,13 @@ function LaneColumn({
     <div
       ref={setNodeRef}
       onClick={(event) => {
-        if (disabled) return;
+        if (disabled || !creatable) return;
         const box = event.currentTarget.getBoundingClientRect();
         onCreate(weekday, lane.id, range.startMinutes + pxToMinutes(event.clientY - box.top));
       }}
       className={cn(
         'relative shrink-0 border-l border-border/60 first:border-l-0',
-        !disabled && 'cursor-copy',
+        !disabled && creatable && 'cursor-copy',
         isOver && 'bg-primary/5',
       )}
       style={{
@@ -1277,7 +1421,10 @@ function BlockLayer(props: LayerProps): React.ReactElement {
   return (
     <div className="pointer-events-none absolute inset-0">
       {shown.map((booking) => {
-        const left = xOf(booking.weekday, booking.laneIds[0] ?? '');
+        // A class in no pista is drawn in the Sem pista column rather than not
+        // at all — round 8. `xOf` still answers null when that column is absent,
+        // which cannot happen while such a class exists.
+        const left = xOf(booking.weekday, booking.laneIds[0] ?? NO_LANE_ID);
         if (left === null) return null;
 
         return (
@@ -1293,7 +1440,7 @@ function BlockLayer(props: LayerProps): React.ReactElement {
 
       {ghost !== null &&
         (() => {
-          const left = xOf(ghost.weekday, ghost.laneIds[0] ?? '');
+          const left = xOf(ghost.weekday, ghost.laneIds[0] ?? NO_LANE_ID);
           if (left === null) return null;
           return (
             <div

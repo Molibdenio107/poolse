@@ -164,7 +164,17 @@ function ToastCard({
       */
       role={toast.tone === 'success' ? 'status' : 'alert'}
       className={cn(
-        'pointer-events-auto flex w-full max-w-md items-start gap-2.5 rounded-lg border',
+        /*
+          Width follows the words — round 8.
+
+          It used to be `w-full max-w-md`, so "Guardado" sat in a 28rem box with
+          24rem of empty surface beside it, and every message looked the same
+          size whatever it said. `w-auto` lets the box hug its text; `max-w-md`
+          stays as the ceiling so a long refusal wraps into a readable column
+          instead of running the width of a monitor, and `min-w-0` lets it
+          actually shrink below the flex container's idea of its content.
+        */
+        'pointer-events-auto flex w-auto min-w-0 max-w-md items-start gap-2.5 rounded-lg border',
         'bg-surface px-3 py-2.5 shadow-lg',
         tone.box,
         'animate-in fade-in-0 slide-in-from-top-2 motion-reduce:animate-none',

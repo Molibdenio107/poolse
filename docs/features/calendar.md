@@ -72,12 +72,45 @@ viewport on the other, and the grid still needs its own horizontal scrolling for
 What survives is the sideways stickiness — the time gutter stays pinned as you scroll across
 the week.
 
+### A class with no pista
+
+A booking may occupy no lane at all — `laneIds` is empty, which is an ordinary state for a
+class nobody has placed in the tank yet. Those used to be drawn nowhere: the grid had no
+column to put them in, so they existed, were refused by nothing, and were invisible. A class
+the screen cannot show reads as a class that is not there.
+
+They now appear in a **Sem pista** column, first in every day, headed `s/ pista`. A note above
+the grid says how many there are and what the column is, so the abbreviation is never
+explained only by a tooltip.
+
+The column appears only when the week actually contains such a class, so a club that always
+assigns pistas never sees it. It is present on **every** day rather than only the days that
+have one — the whole horizontal scale is one uniform stride per day, shared by the blocks, the
+ghost and the drag maths, and days of different widths would make that stride depend on the
+day.
+
+It is a drop target **both ways**. Dragging a block out of it onto a pista assigns that pista;
+dropping a block into it clears its pistas, which is what a club needs when a tank closes.
+Landing on the column means *no pista* whatever the block's width — a three-lane block dropped
+half over it does not become a two-lane block. Every move goes through the scope popover
+first, so no such change is silent.
+
+Two things it does not do: it takes no **click**, because creating a class there would make
+another class with no pista and those are exactly what the column exists to surface; and
+sideways **resize** is not offered for a class with no pistas, because there is no run of
+lanes to widen.
+
 ## Moving a class
 
 Drag a block to move it. Drag its **bottom** edge to change how long it runs — snapped to the
 facility's own slot rows, falling back to the grid's granularity where no row covers that
 time. Drag its **left or right** edge to change how many pistas it takes; a booking always
 occupies a contiguous run of lanes, and one lane is the floor.
+
+A change to the length is scoped like any other: *só esta semana* makes that one week longer
+and leaves the rest, *todas as semanas* changes the recurring booking. A week that says
+nothing about its length keeps the one it has, so a plain time change never resets a week
+somebody deliberately made longer.
 
 **Every change asks the same two-way question** — this week only, or every week — whether
 what moved was the hour, the day, the duration or the run of pistas. A lane change used to be
@@ -137,6 +170,46 @@ link inside the same dialog, and it comes back here to be placed.
 **The lane is not set by the click.** `placeSlotAction` does not return the schedule it
 created, so there is no id to give a lane to; drag the block across to the right pista once it
 is placed.
+
+### What "todas as semanas" changes
+
+A series move rewrites the recurring booking **and re-times the weeks that were still sitting
+where it put them**. Without that second half the move is written and then invisible: the
+calendar draws each booking at its session for that week, so the block springs back and
+nothing reports a failure, because there was none.
+
+Three kinds of week stay where they are:
+
+- one moved by hand — that is what *só esta semana* means, and a "pista 3 is shut that
+  Tuesday" has to survive a later change to the timetable;
+- one in the past — a series change is a change going forward;
+- one whose register has been taken — a taught class is a record, not a plan.
+
+**The week you dragged is the exception to the first of those.** You have just moved that
+block and answered "todas as semanas", so its old one-week exception is spent: it follows the
+pattern like the others and stops being an exception. Every other hand-moved week stays.
+
+A week that stays behind is **counted and said**, whether it was kept by design or blocked
+because its new hour was already occupied that week. Both look identical on screen — a block
+that does not move — and silence is what makes a working change read as a broken one. A
+blocked week never fails the whole move: refusing an entire series change because one
+Wednesday in November has something in it would make the feature unusable.
+
+### When a move is refused
+
+A refusal appears as a toast at the top of the window, not as a bar above the grid — on a
+calendar as tall as the pool day, a bar above the grid is off screen by the time somebody has
+dragged a block to Thursday afternoon. It stays eight seconds and carries the server's own
+sentence alongside the generic reason, because a refusal can come from several different rules
+and folding them into "it did not work" produces a report nobody can act on.
+
+**A lane clash names the slot it is defending**, not only the lane and the class:
+"Pista 2 · Hidro ginastica bebés · na marcação semanal de Quarta, 10:45". This matters because
+a series move is checked against the **recurring booking** — that is what a series move
+rewrites — while the calendar draws each week's **session**. A class whose sessions have all
+been moved elsewhere, one week at a time, still holds its original pattern slot, so it can
+block a move while being drawn on another day entirely. Naming the day and hour is what closes
+that gap; the pattern still blocks, because it is the timetable.
 
 ## The hover card
 

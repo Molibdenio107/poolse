@@ -429,3 +429,93 @@ test('the untaught weeks of the same turma still move', async () => {
     });
   });
 });
+
+/**
+ * A length is one more thing a single week can differ in — round 8.
+ *
+ * The one-week move carried a date, a time and (since the tests above) a set of
+ * pistas. It never carried a **length**, so dragging a block's bottom edge and
+ * answering "só esta semana" wrote the hour and silently dropped the resize: the
+ * block sprang back to its old height and the gesture looked like it had done
+ * nothing — while the same drag answered "todas as semanas" worked, because the
+ * series path has taken a duration since POOLSE-50.
+ *
+ * Reported as "resizing works for every week but not for this week".
+ */
+async function lengthOf(
+  tenant: ScratchTenant,
+  sessionId: string,
+): Promise<{ mins: number; agrees: boolean }> {
+  const [row] = await tenant.sql<{ mins: number; agrees: boolean }>(
+    `SELECT cs.duration_minutes AS mins,
+            cs.ends_at = cs.starts_at + make_interval(mins => cs.duration_minutes) AS agrees
+       FROM class_session cs WHERE cs.id = $1`,
+    [sessionId],
+  );
+  return { mins: row!.mins, agrees: row!.agrees };
+}
+
+test('one week can run longer, and next week does not', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const fixture = await oneTurma(tenant);
+      const was = await lengthOf(tenant, fixture.sessionId);
+
+      await new SessionsCalendarController().move(fixture.sessionId, {
+        date: tuesday(0),
+        startTime: '19:30',
+        durationMinutes: 90,
+      });
+
+      const now = await lengthOf(tenant, fixture.sessionId);
+      assert.equal(now.mins, 90);
+      // `ends_at` is derived by a BEFORE trigger rather than written here, so a
+      // duration that changed without it would leave the two disagreeing — and
+      // the lane exclusion is on a window built from them.
+      assert.equal(now.agrees, true);
+
+      // The point of "só esta semana": next week keeps the length it had.
+      assert.equal((await lengthOf(tenant, fixture.nextWeekId)).mins, was.mins);
+    });
+  });
+});
+
+test('a move that does not mention a length leaves this week’s alone', async () => {
+  // Absent means "I did not ask about the length", exactly as it does for
+  // pistas. A plain time change must not quietly reset a week that was
+  // deliberately made longer.
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const fixture = await oneTurma(tenant);
+      const sessions = new SessionsCalendarController();
+
+      await sessions.move(fixture.sessionId, {
+        date: tuesday(0),
+        startTime: '19:30',
+        durationMinutes: 90,
+      });
+      await sessions.move(fixture.sessionId, { date: tuesday(0), startTime: '20:00' });
+
+      const now = await lengthOf(tenant, fixture.sessionId);
+      assert.equal(now.mins, 90);
+      assert.equal(now.agrees, true);
+    });
+  });
+});
+
+test('a length outside the sane range is refused rather than written', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const fixture = await oneTurma(tenant);
+      await expectStatus(
+        () =>
+          new SessionsCalendarController().move(fixture.sessionId, {
+            date: tuesday(0),
+            startTime: '19:30',
+            durationMinutes: 900,
+          }),
+        400,
+      );
+    });
+  });
+});

@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { ApiError, apiPatch, apiPost } from '../../../../lib/api';
 import { describeFailure } from '@/lib/form-failure';
@@ -309,11 +310,24 @@ export async function moveOccurrenceAction(
   date: string,
   startTime: string,
   laneIds?: string[],
+  /**
+   * A new length for this week only — round 8.
+   *
+   * Undefined means "I did not ask about the length", the same contract
+   * `laneIds` has. A resize answered "só esta semana" used to send the hour and
+   * drop the length, so the block sprang back to its old height.
+   */
+  durationMinutes?: number,
 ): Promise<{ ok: true } | { ok: false; errorKey: string; detail?: string }> {
   try {
     await apiPost(
       `/sessions/${sessionId}/move`,
-      { date, startTime, ...(laneIds === undefined ? {} : { laneIds }) },
+      {
+        date,
+        startTime,
+        ...(laneIds === undefined ? {} : { laneIds }),
+        ...(durationMinutes === undefined ? {} : { durationMinutes }),
+      },
       { organizationId },
     );
   } catch (error) {
@@ -367,17 +381,46 @@ export async function moveBookingAction(
     laneIds: string[];
     /** An explicit length, when the block edge was dragged. Null takes the slot s. */
     durationMinutes?: number | null;
+    /**
+     * The date of the occurrence that was dragged — round 8.
+     *
+     * That week follows the pattern even if it had been moved by hand before,
+     * because the operator has just dragged that very block and said "todas as
+     * semanas". Without it a series move left the block exactly where they
+     * picked it up and reported nothing.
+     */
+    fromDate?: string | null;
   },
-): Promise<{ ok: true } | { ok: false; errorKey: string; detail?: string }> {
+): Promise<
+  | { ok: true; weeksBlocked: number; weeksKept: number }
+  | { ok: false; errorKey: string; detail?: string }
+> {
+  let result: { weeksFollowed?: number; weeksBlocked?: number; weeksKept?: number };
   try {
-    await apiPost(`/bookings/${scheduleId}/move`, target, { organizationId });
+    result = await apiPost<{
+      weeksFollowed: number;
+      weeksBlocked: number;
+      weeksKept: number;
+    }>(`/bookings/${scheduleId}/move`, target, { organizationId });
   } catch (error) {
-    return bookingFailure(error);
+    return await bookingFailure(error);
   }
 
   revalidatePath('/dashboard/calendar');
   revalidatePath('/dashboard/classes');
-  return { ok: true };
+  /*
+   * How many weeks stayed behind — round 8.
+   *
+   * A series move re-times the sessions still sitting where the pattern put
+   * them; one whose new hour is already taken that week is left alone rather
+   * than failing the whole move. That is a success with a caveat, not a
+   * refusal, so it comes back on the ok path and the grid says it as a warning.
+   */
+  return {
+    ok: true,
+    weeksBlocked: result.weeksBlocked ?? 0,
+    weeksKept: result.weeksKept ?? 0,
+  };
 }
 
 /**
@@ -403,7 +446,7 @@ export async function duplicateBookingAction(
   try {
     await apiPost(`/bookings/${scheduleId}/duplicate`, target, { organizationId });
   } catch (error) {
-    return bookingFailure(error);
+    return await bookingFailure(error);
   }
 
   revalidatePath('/dashboard/calendar');
@@ -419,7 +462,9 @@ export async function duplicateBookingAction(
  * the thing in the way — and `detail` carries the lane and the booking holding
  * it, so the message can be a sentence rather than a category.
  */
-function bookingFailure(error: unknown): { ok: false; errorKey: string; detail?: string } {
+async function bookingFailure(
+  error: unknown,
+): Promise<{ ok: false; errorKey: string; detail?: string }> {
   if (error instanceof ApiError && error.status === 409) {
     const body = (error.details ?? {}) as {
       message?: string;
@@ -428,6 +473,9 @@ function bookingFailure(error: unknown): { ok: false; errorKey: string; detail?:
       reason?: string;
       opensAt?: string | null;
       closesAt?: string | null;
+      /** Where the blocking booking's *pattern* sits — round 8. */
+      weekday?: number;
+      startTime?: string;
     };
 
     /*
@@ -459,10 +507,37 @@ function bookingFailure(error: unknown): { ok: false; errorKey: string; detail?:
       return { ok: false, errorKey: 'grid.lanesNotContiguous' };
     }
     if (body.message === 'laneTaken') {
+      /*
+       * Where the blocker sits, and that it is the *pattern* — round 8.
+       *
+       * This check defends the recurring booking, which is right: a series move
+       * rewrites the recurring booking. But the calendar draws each week's
+       * *session*, and a class every one of whose sessions has been moved
+       * elsewhere is drawn nowhere near the slot its pattern still holds. Naming
+       * only the lane and the holder produced a refusal citing a class the
+       * operator could see on another day — true, and impossible to act on.
+       *
+       * The day is translated here rather than assembled on the client, because
+       * the words and their order belong to the catalogue: `laneTakenPattern`
+       * owns the sentence and this only fills the holes.
+       */
+      const t = await getTranslations();
+      const where =
+        typeof body.weekday === 'number' &&
+        body.weekday >= 1 &&
+        body.weekday <= 7 &&
+        typeof body.startTime === 'string' &&
+        body.startTime !== ''
+          ? t('grid.laneTakenPattern', {
+              day: t(`week.${body.weekday}`),
+              time: body.startTime,
+            })
+          : '';
+
       return {
         ok: false,
         errorKey: 'grid.laneTaken',
-        detail: [body.lane, body.holder].filter(Boolean).join(' · '),
+        detail: [body.lane, body.holder, where].filter(Boolean).join(' · '),
       };
     }
     if (body.message === 'alreadyThere') {

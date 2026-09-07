@@ -228,3 +228,32 @@ export function applyPartnerMapping(
 export function hasPartnerAndGroup(mapping: PartnerMapping): boolean {
   return mapping.partnerName !== null && mapping.groupName !== null;
 }
+
+/**
+ * The columns an export writes, in the order a person reads them — criterion 10.
+ *
+ * The other half of a contract with `SYNONYMS` above: **what the exporter
+ * writes, the matcher must read back.** The header row of an exported file is
+ * `partners.field.*` straight out of the catalogue — the very labels the mapping
+ * step shows — so a club can export the list in August, correct the headcounts a
+ * school sent late, and import the file again without touching a dropdown.
+ *
+ * The order is `PARTNER_FIELDS`' own, written out rather than derived from it:
+ * the field list is a vocabulary and the column order is a reading order, and
+ * they are free to diverge the day somebody adds a field that belongs at the
+ * end of the sheet but not at the end of the mapping step. `partner-sheet.test.ts`
+ * holds both halves still — every exported column maps itself, in both locales.
+ */
+export const PARTNER_EXPORT_FIELDS: PartnerField[] = [
+  'partnerName',
+  'partnerType',
+  'groupName',
+  'participantCount',
+  'levelName',
+  'tag',
+  'ownInstructorName',
+  'contactName',
+  'contactEmail',
+  'contactPhone',
+  'notes',
+];

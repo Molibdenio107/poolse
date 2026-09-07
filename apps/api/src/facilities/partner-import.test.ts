@@ -6,6 +6,7 @@ import {
   readPartnerType,
   type ExistingPartner,
   type PartnerImportContext,
+  type PartnerType,
   type RawPartnerRow,
 } from './partner-import.js';
 
@@ -289,6 +290,37 @@ test('the type is read the way a person writes it', () => {
   // contains "escolas", and the exact pass is what stops `escola` claiming it.
   assert.equal(readPartnerType('Agrupamento de Escolas'), 'agrupamento');
   assert.equal(readPartnerType('Escola Secundária'), 'escola');
+});
+
+test('every type Poolse writes is a type Poolse reads back', () => {
+  /*
+   * Criterion 10, at the one point the round trip is not about column headings.
+   *
+   * The export writes the enum's own spelling into the Tipo column rather than a
+   * translated word, so that a list exported under `en` re-imports under pt-PT
+   * unchanged. That only works if every value survives the journey — and two of
+   * them, joined by an underscore, did not: `jardim_infancia` matched nothing in
+   * the human vocabulary and came back as `outro` with a warning.
+   *
+   * Written over the whole enum rather than over the two that were broken,
+   * because the failure is silent — a downgraded type is a warning on a preview
+   * nobody reads twice — and a ninth value added later would have exactly the
+   * same problem.
+   */
+  const every: PartnerType[] = [
+    'escola',
+    'agrupamento',
+    'ipss_misericordia',
+    'jardim_infancia',
+    'clube',
+    'camara',
+    'empresa',
+    'outro',
+  ];
+
+  for (const type of every) {
+    assert.equal(readPartnerType(type), type, `${type} does not survive its own export`);
+  }
 });
 
 test('an unrecognised type imports as outro with a warning, and is not refused', () => {

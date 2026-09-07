@@ -429,7 +429,32 @@ export class SessionsCalendarController {
     const laneIds =
       raw === undefined ? null : (raw as unknown[]).map((one) => String(one));
 
-    const result = await moveOccurrence(organizationId, id, date, startTime, laneIds);
+    /*
+     * A new length, when the block's bottom edge was dragged — round 8.
+     *
+     * Optional, and absent is not the same as zero: absent means "I did not ask
+     * about the length" and the week keeps the one it has. The same bounds
+     * `class_schedule` carries, because a session is not a different kind of
+     * thing from the booking it came from.
+     */
+    const rawDuration = body['durationMinutes'];
+    let durationMinutes: number | null = null;
+    if (rawDuration !== null && rawDuration !== undefined && rawDuration !== '') {
+      const minutes = Number(rawDuration);
+      if (!Number.isInteger(minutes) || minutes < 5 || minutes > 480) {
+        throw new BadRequestException('durationMinutes must be between 5 and 480');
+      }
+      durationMinutes = minutes;
+    }
+
+    const result = await moveOccurrence(
+      organizationId,
+      id,
+      date,
+      startTime,
+      laneIds,
+      durationMinutes,
+    );
 
     if (result.outcome === 'not_found') throw new NotFoundException('No such class');
     if (result.outcome === 'taught') {

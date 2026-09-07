@@ -269,6 +269,7 @@ export default async function FacilityPage({
           {partners !== null && (
             <PartnersPanel
               facilityId={facilityId}
+              facilityName={site.name}
               partners={partners.items}
               total={partners.total}
               canManage={partners.canManage}

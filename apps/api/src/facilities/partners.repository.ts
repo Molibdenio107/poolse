@@ -1241,3 +1241,123 @@ export async function runPartnerImport(
     return { rows, partners, summary, createdPartners, createdGroups, updatedGroups, skipped };
   });
 }
+
+/**
+ * One line per group, in the import's own vocabulary — POOLSE-48, criterion 10.
+ *
+ * The export's whole purpose is that it comes back. A club exports the list in
+ * August, corrects the headcounts a school sent late, and imports the file
+ * again — and that only works if the shape leaving is the shape arriving. So
+ * this returns exactly the fields `PARTNER_IMPORT_FIELDS` names and in the same
+ * grain: **one row is one group**, with the partner's name repeated down the
+ * column, which is what the importer expects to read.
+ *
+ * Three things it deliberately does:
+ *
+ * - **A partner with no groups still gets a line**, with the group cell empty.
+ *   Skipping it would drop a real partnership out of its own export, and an
+ *   operator re-importing the file would silently lose it. As a blank it comes
+ *   back as one refused row with a named cause, which is a question rather than
+ *   a disappearance.
+ * - **One contact, the first by name.** The sheet has one set of contact
+ *   columns, and a partner with three contacts cannot be flattened into them
+ *   without inventing a rule about which one matters. The first is arbitrary but
+ *   stable, and the round trip neither creates duplicates nor deletes the other
+ *   two — the importer only ever adds a contact it can reach.
+ * - **The level's name, not its id.** A uuid in a spreadsheet is a cell nobody
+ *   can correct, and `levelName` is what the mapping step reads back.
+ */
+export interface PartnerExportRow {
+  partnerName: string;
+  partnerType: PartnerType;
+  groupName: string;
+  participantCount: number;
+  levelName: string | null;
+  tag: string | null;
+  ownInstructorName: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  notes: string | null;
+}
+
+export async function exportPartners(
+  organizationId: string,
+  facilityId: string,
+): Promise<PartnerExportRow[] | null> {
+  return withOrg(organizationId, async (tx) => {
+    const site = await tx.query(
+      `SELECT 1 FROM facility WHERE id = $1 AND archived_at IS NULL`,
+      [facilityId],
+    );
+    if (site.rowCount === 0) return null;
+
+    /*
+     * A LEFT JOIN, and that is the whole reason a partner with no groups
+     * survives the export. An inner join here would be the same silent
+     * subtraction the calendar's join to `class_group` made three times.
+     */
+    const { rows } = await tx.query<{
+      partner_name: string;
+      partner_type: PartnerType;
+      group_name: string | null;
+      participant_count: number | null;
+      level_name: string | null;
+      tag: string | null;
+      own_instructor_name: string | null;
+      contact_name: string | null;
+      contact_email: string | null;
+      contact_phone: string | null;
+      notes: string | null;
+    }>(
+      `SELECT p.name                AS partner_name,
+              p.type                AS partner_type,
+              g.name                AS group_name,
+              g.participant_count,
+              sl.name               AS level_name,
+              g.tag,
+              g.own_instructor_name,
+              c.name                AS contact_name,
+              c.email               AS contact_email,
+              c.phone               AS contact_phone,
+              g.notes
+         FROM partner p
+         LEFT JOIN partner_group g
+           ON g.partner_id = p.id
+          AND g.organization_id = p.organization_id
+          AND g.archived_at IS NULL
+         LEFT JOIN student_level sl
+           ON sl.id = g.level_id
+          AND sl.organization_id = g.organization_id
+         LEFT JOIN LATERAL (
+           SELECT pc.name, pc.email, pc.phone
+             FROM partner_contact pc
+            WHERE pc.partner_id = p.id
+              AND pc.organization_id = p.organization_id
+              AND pc.archived_at IS NULL
+            ORDER BY pc.name
+            LIMIT 1
+         ) c ON true
+        WHERE p.facility_id = $1
+          AND p.archived_at IS NULL
+        ORDER BY p.name, g.name NULLS FIRST`,
+      [facilityId],
+    );
+
+    return rows.map((row) => ({
+      partnerName: row.partner_name,
+      partnerType: row.partner_type,
+      groupName: row.group_name ?? '',
+      // Null only where the LEFT JOIN found no group at all; a group's own count
+      // is `NOT NULL DEFAULT 0`, so zero here is never a missing number.
+      participantCount: row.participant_count ?? 0,
+      levelName: row.level_name,
+      tag: row.tag,
+      ownInstructorName: row.own_instructor_name,
+      contactName: row.contact_name,
+      contactEmail: row.contact_email,
+      contactPhone: row.contact_phone,
+      notes: row.notes,
+    }));
+  });
+}

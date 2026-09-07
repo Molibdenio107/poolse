@@ -1095,6 +1095,18 @@ export async function moveOccurrence(
   date: string,
   startTime: string,
   laneIds: string[] | null = null,
+  /**
+   * A new length for this week only — round 8.
+   *
+   * Null means "I did not ask about the length", exactly as `laneIds` means "I
+   * did not ask about pistas": the session keeps the duration it has. Without
+   * it, dragging a block's bottom edge and answering "só esta semana" wrote the
+   * hour and silently dropped the length, so the block sprang back to its old
+   * height and the resize looked like it had done nothing — while the same
+   * gesture answered "todas as semanas" worked, because that path has carried a
+   * duration since POOLSE-50.
+   */
+  durationMinutes: number | null = null,
 ): Promise<MoveOccurrence> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
@@ -1170,9 +1182,14 @@ export async function moveOccurrence(
                       ON f.id = p.facility_id AND f.organization_id = p.organization_id
                    WHERE p.id = cs.pool_id AND p.organization_id = cs.organization_id
                 ), 'Europe/Lisbon'),
+                -- Null keeps the length this week already had. ends_at is not
+                -- written here: a BEFORE trigger derives it from the start and
+                -- the duration, which is the one place that sum is done.
+                -- (No backticks in here: one would end the template literal.)
+                duration_minutes = coalesce($4::int, cs.duration_minutes),
                 moved_at = now()
           WHERE cs.id = $1`,
-        [sessionId, date, startTime],
+        [sessionId, date, startTime, durationMinutes],
       );
 
       /*

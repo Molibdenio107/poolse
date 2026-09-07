@@ -49,19 +49,43 @@ export class BookingsController {
   async move(
     @Param('scheduleId') scheduleId: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ moved: true }> {
+  ): Promise<{
+    moved: true;
+    weeksFollowed: number;
+    weeksBlocked: number;
+    weeksKept: number;
+  }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    let moved: boolean;
+    let moved: { followed: number; blocked: number; kept: number } | null;
     try {
       moved = await moveBooking(organizationId, scheduleId, readTarget(body));
     } catch (error) {
       throw asHttp(error);
     }
 
-    if (!moved) throw new NotFoundException('No such booking');
-    return { moved: true };
+    if (moved === null) throw new NotFoundException('No such booking');
+
+    /*
+     * How many of the booking's own weeks came with it — round 8.
+     *
+     * A series move rewrites the recurring booking *and* re-times the sessions
+     * still sitting where it put them. Two counts come back because they are two
+     * different facts and only one of them is a problem: `weeksBlocked` are
+     * weeks whose new hour was already taken, and `weeksKept` are weeks somebody
+     * had deliberately moved by hand, which stay by design.
+     *
+     * Both are reported because their symptom is identical and invisible — a
+     * block that does not move. That was the whole of the "nothing happens, no
+     * feedback whatsoever" report.
+     */
+    return {
+      moved: true,
+      weeksFollowed: moved.followed,
+      weeksBlocked: moved.blocked,
+      weeksKept: moved.kept,
+    };
   }
 
   @Post(':scheduleId/duplicate')
@@ -262,12 +286,20 @@ function asHttp(error: unknown): unknown {
   }
 
   if (error instanceof LaneTakenError) {
-    // Named, both of them: which lane, and who is in it. "There is a conflict"
-    // sends the operator hunting across a six-lane grid for it.
+    /*
+     * Named, all four: which lane, who is in it, and **where that one sits** —
+     * round 8. "There is a conflict" sends the operator hunting across a
+     * six-lane grid; naming only the lane and the holder sent them hunting for a
+     * class the calendar was drawing on another day entirely, because this check
+     * defends the recurring pattern and the calendar draws the week's sessions.
+     * The day and hour are what close that gap.
+     */
     return new ConflictException({
       message: 'laneTaken',
       lane: error.laneName,
       holder: error.holder,
+      weekday: error.weekday,
+      startTime: error.startTime,
     });
   }
 
@@ -354,5 +386,21 @@ function readTarget(body: Record<string, unknown>): BookingTarget {
     durationMinutes = minutes;
   }
 
-  return { weekday, slotId, startTime, laneIds, durationMinutes };
+  /*
+   * The week the block was dragged in — round 8.
+   *
+   * Optional, and absent means "no particular week", which is exactly how this
+   * behaved before it existed. When it is sent, the occurrence in that week
+   * follows the pattern **even if it had been moved by hand before**: the
+   * operator has this minute dragged that very block and answered "todas as
+   * semanas", so treating its own week as an untouchable exception contradicts
+   * the gesture that asked for the change. Every *other* hand-moved week stays.
+   */
+  const rawFrom = body['fromDate'];
+  const fromDate =
+    typeof rawFrom === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawFrom.trim())
+      ? rawFrom.trim()
+      : null;
+
+  return { weekday, slotId, startTime, laneIds, durationMinutes, fromDate };
 }

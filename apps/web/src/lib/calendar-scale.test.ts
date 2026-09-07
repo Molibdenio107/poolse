@@ -9,6 +9,7 @@ import {
   levelOrder,
   levelTint,
   minutesToPx,
+  NO_LANE_ID,
   snapDuration,
   snapStart,
   snapStep,
@@ -265,4 +266,68 @@ test('a one-lane tank has no sideways travel to get wrong', () => {
     dayIndex: 4,
     laneIndex: 0,
   });
+});
+
+/*
+ * -----------------------------------------------------------------------------
+ * The Sem pista column — round 8
+ * -----------------------------------------------------------------------------
+ *
+ * A class in no pista is drawn in a synthetic lane prepended to every day, so
+ * that it is drawn at all. The geometry is not special-cased for it: the day's
+ * stride simply grows by one column, and the ruler the blocks, the ghost and the
+ * drag all share goes on being the same ruler.
+ *
+ * These hold that still. The failure they guard against is the one rounds 6 and
+ * 7 kept meeting — a block drawn at one column and landing at another — arriving
+ * again through a column that is a lane in the arithmetic and not in the data.
+ */
+
+test('the extra column widens the day and nothing else', () => {
+  // Same day, same real pista, one column further along — and exactly one.
+  for (let day = 0; day < DAYS; day += 1) {
+    assert.equal(
+      columnX(day, 1, LANES + 1) - columnX(day, 0, LANES),
+      day * COL_WIDTH + COL_WIDTH,
+      `day ${day} did not shift by exactly one column plus its own strides`,
+    );
+  }
+});
+
+test('a column and its offset are still inverses with the extra column', () => {
+  // Including index 0, which is the Sem pista column itself: the arithmetic has
+  // to be able to name it, because that is where a lane-less block is drawn.
+  for (let day = 0; day < DAYS; day += 1) {
+    for (let lane = 0; lane < LANES + 1; lane += 1) {
+      const at = columnAt(columnX(day, lane, LANES + 1), LANES + 1, DAYS);
+      assert.deepEqual(at, { dayIndex: day, laneIndex: lane });
+    }
+  }
+});
+
+test('a block dragged off the end of a day still lands in the next day’s first column', () => {
+  /*
+   * The carry loop, with the extra column in the stride. This is what would go
+   * wrong if the column count and the stride ever disagreed: a drag off the
+   * right-hand edge of Tuesday would arrive somewhere inside Tuesday.
+   *
+   * Note what "first column" now means — index 0 is Sem pista, and the component
+   * is what floors a real block past it. The ruler's job is to say where the
+   * pointer is; refusing the column is a separate decision, made once, where the
+   * lane list is built.
+   */
+  const from = columnX(1, LANES, LANES + 1) + COL_WIDTH;
+  assert.deepEqual(columnAt(from, LANES + 1, DAYS), { dayIndex: 2, laneIndex: 0 });
+});
+
+test('the synthetic lane’s id cannot be a real lane’s', () => {
+  // It is written into `laneIds` nowhere, but it does travel through the same
+  // arrays as real ids. A collision with something a database could generate
+  // would put it in a booking.
+  assert.match(NO_LANE_ID, /^__poolse:/);
+  assert.doesNotMatch(
+    NO_LANE_ID,
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    'a uuid-shaped id could collide with a real lane',
+  );
 });

@@ -214,9 +214,34 @@ test('a length longer than the class runs still collides on its own lane', async
         }),
         (error: unknown) => {
           assert.ok(error instanceof ConflictException);
-          const body = error.getResponse() as { message: string; holder: string };
+          const body = error.getResponse() as {
+            message: string;
+            lane: string;
+            holder: string;
+            weekday: number;
+            startTime: string;
+          };
           assert.equal(body.message, 'laneTaken');
           assert.equal(body.holder, 'Infantis');
+
+          /*
+           * Where the blocker sits, not only what it is called — round 8.
+           *
+           * This check defends the recurring booking, which is right, because a
+           * series move rewrites the recurring booking. But the calendar draws
+           * each week's *session*, and a class every one of whose sessions has
+           * been moved elsewhere is drawn nowhere near the slot its pattern
+           * still holds. Rui met exactly that: a refusal naming a class he
+           * could see on Saturday while being stopped on Wednesday, with
+           * nothing on screen to explain it.
+           *
+           * So the day and the hour travel with the refusal. Asserted here
+           * because they are consumed by a string in the web app and `tsc` has
+           * no opinion about a field that quietly stops being sent.
+           */
+          assert.equal(body.lane, 'Pista 1');
+          assert.equal(body.weekday, 3);
+          assert.equal(body.startTime, '10:15');
           return true;
         },
       );
@@ -479,6 +504,269 @@ test('another tenant cannot move this booking', async () => {
           404,
         );
       });
+    });
+  });
+});
+
+/**
+ * A series move takes its weeks with it — round 8.
+ *
+ * Without this the move was written and then invisible: the calendar draws each
+ * booking where its `class_session` for that week actually is (round 7's
+ * overlay, which is what made one-week moves visible), and a series move
+ * rewrote only `class_schedule`. The block sprang straight back to the session's
+ * old slot on the next render, with no error, because nothing had failed.
+ *
+ * The same drift is what produced refusals citing classes nobody could see: a
+ * booking whose pattern says Wednesday 14:15 while every session sits at 10:15
+ * still defends 14:15 against everyone else.
+ *
+ * `moveOccurrence` is the other side of this and stays as it is — a session
+ * moved by hand is an exception the timetable must not overwrite.
+ */
+async function sessionsOf(
+  tenant: ScratchTenant,
+  scheduleId: string,
+): Promise<{ occurs_on: string; at: string; lanes: string | null }[]> {
+  return tenant.sql<{ occurs_on: string; at: string; lanes: string | null }>(
+    `SELECT s.occurs_on::text AS occurs_on,
+            to_char(s.starts_at AT TIME ZONE 'Europe/Lisbon', 'HH24:MI') AS at,
+            (SELECT string_agg(l.name, ',' ORDER BY l.position)
+               FROM class_session_lane csl JOIN lane l ON l.id = csl.lane_id
+              WHERE csl.session_id = s.id) AS lanes
+       FROM class_session s
+      WHERE s.schedule_id = $1
+      ORDER BY s.occurs_on`,
+    [scheduleId],
+  );
+}
+
+/** A generated week, as the season builder would leave it. */
+async function session(
+  tenant: ScratchTenant,
+  scheduleId: string,
+  occursOn: string,
+  startTime: string,
+  laneIds: string[],
+  moved = false,
+): Promise<string> {
+  const [row] = await tenant.sql<{ id: string }>(
+    `INSERT INTO class_session
+       (organization_id, schedule_id, occurs_on, starts_at, ends_at, duration_minutes, moved_at)
+     VALUES ($1, $2, $3::date,
+             ($3::date + $4::time) AT TIME ZONE 'Europe/Lisbon',
+             ($3::date + $4::time) AT TIME ZONE 'Europe/Lisbon' + interval '45 minutes',
+             45, $5)
+     RETURNING id`,
+    [tenant.organizationId, scheduleId, occursOn, startTime, moved ? new Date() : null],
+  );
+
+  await tenant.sql(
+    `INSERT INTO class_session_lane
+       (organization_id, session_id, lane_id, starts_at, ends_at)
+     SELECT $1, s.id, unnest($3::uuid[]), s.starts_at, s.ends_at
+       FROM class_session s WHERE s.id = $2`,
+    [tenant.organizationId, row!.id, laneIds],
+  );
+  return row!.id;
+}
+
+/** A Wednesday comfortably in the future, so "from today on" is unambiguous. */
+function wednesdayIn(weeks: number): string {
+  const day = new Date();
+  day.setUTCHours(12, 0, 0, 0);
+  day.setUTCDate(day.getUTCDate() + ((3 - day.getUTCDay() + 7) % 7) + weeks * 7);
+  return day.toISOString().slice(0, 10);
+}
+
+test('a series move takes its weeks with it', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await sixLanePool(tenant);
+      const early = await slot(tenant, '10:00', '10:45');
+      const late = await slot(tenant, '16:00', '16:45');
+
+      const id = await parceria(tenant, 'EPA', '6A', early, 3, '10:00', [lanes[1]!]);
+      const next = wednesdayIn(1);
+      const after = wednesdayIn(2);
+      await session(tenant, id, next, '10:00', [lanes[1]!]);
+      await session(tenant, id, after, '10:00', [lanes[1]!]);
+
+      const moved = await new BookingsController().move(id, {
+        weekday: 3,
+        slotId: late,
+        laneIds: [lanes[3]],
+      });
+
+      assert.equal(moved.weeksFollowed, 2);
+      assert.equal(moved.weeksBlocked, 0);
+
+      const rows = await sessionsOf(tenant, id);
+      assert.deepEqual(
+        rows.map((row) => `${row.occurs_on} ${row.at} ${row.lanes}`),
+        [`${next} 16:00 Pista 4`, `${after} 16:00 Pista 4`],
+      );
+    });
+  });
+});
+
+test('a week moved by hand is not overwritten by a later series move', async () => {
+  // The whole point of `moved_at`: "pista 3 is shut that Tuesday" has to
+  // survive a later change to the timetable, or one-week moves are a lie.
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await sixLanePool(tenant);
+      const early = await slot(tenant, '10:00', '10:45');
+      const late = await slot(tenant, '16:00', '16:45');
+
+      const id = await parceria(tenant, 'EPA', '6A', early, 3, '10:00', [lanes[1]!]);
+      const exception = wednesdayIn(1);
+      const ordinary = wednesdayIn(2);
+      await session(tenant, id, exception, '08:30', [lanes[5]!], true);
+      await session(tenant, id, ordinary, '10:00', [lanes[1]!]);
+
+      const moved = await new BookingsController().move(id, {
+        weekday: 3,
+        slotId: late,
+        laneIds: [lanes[3]],
+      });
+
+      assert.equal(moved.weeksFollowed, 1);
+
+      const rows = await sessionsOf(tenant, id);
+      assert.deepEqual(
+        rows.map((row) => `${row.occurs_on} ${row.at} ${row.lanes}`),
+        // The exception keeps its own hour and its own pista; the ordinary week
+        // follows the pattern.
+        [`${exception} 08:30 Pista 6`, `${ordinary} 16:00 Pista 4`],
+      );
+    });
+  });
+});
+
+test('a week already taught is left exactly where it happened', async () => {
+  // A taught class is a record, not a plan — the same rule `moveOccurrence`
+  // enforces for a single occurrence, applied to the series.
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await sixLanePool(tenant);
+      const early = await slot(tenant, '10:00', '10:45');
+      const late = await slot(tenant, '16:00', '16:45');
+
+      const id = await parceria(tenant, 'EPA', '6A', early, 3, '10:00', [lanes[1]!]);
+      const taught = wednesdayIn(1);
+      const sessionId = await session(tenant, id, taught, '10:00', [lanes[1]!]);
+
+      const [student] = await tenant.sql<{ id: string }>(
+        `INSERT INTO student (organization_id, first_name, last_name)
+         VALUES ($1, 'Ana', 'Matos') RETURNING id`,
+        [tenant.organizationId],
+      );
+      await tenant.sql(
+        `INSERT INTO attendance
+           (organization_id, class_session_id, student_id, status, recorded_by_membership_id)
+         VALUES ($1, $2, $3, 'present', $4)`,
+        [tenant.organizationId, sessionId, student!.id, tenant.ownerMembershipId],
+      );
+
+      const moved = await new BookingsController().move(id, {
+        weekday: 3,
+        slotId: late,
+        laneIds: [lanes[3]],
+      });
+
+      assert.equal(moved.weeksFollowed, 0);
+
+      const rows = await sessionsOf(tenant, id);
+      assert.equal(rows[0]?.at, '10:00');
+      assert.equal(rows[0]?.lanes, 'Pista 2');
+    });
+  });
+});
+
+test('the week that was dragged follows, even if it had been moved by hand', async () => {
+  /*
+   * The exception to the exception — round 8, and the whole of Rui's third
+   * report: "the every week set seems to not work, nothing happens, no feedback
+   * whatsoever".
+   *
+   * He had spent the afternoon moving blocks one week at a time, so the session
+   * in the week on screen was almost always `moved_at IS NOT NULL`. A series
+   * move then re-timed three later weeks correctly and left the one block he was
+   * looking at exactly where he had picked it up — with `weeksBlocked` at zero,
+   * so nothing was said either. Indistinguishable from a feature that does
+   * nothing at all.
+   *
+   * Naming the dragged week fixes it: the operator moved that very block a
+   * second ago and answered "todas as semanas", so its old exception is spent.
+   * Every *other* hand-moved week still stays, which the test below this one
+   * holds still.
+   */
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await sixLanePool(tenant);
+      const early = await slot(tenant, '10:00', '10:45');
+      const late = await slot(tenant, '16:00', '16:45');
+
+      const id = await parceria(tenant, 'EPA', '6A', early, 3, '10:00', [lanes[1]!]);
+      const onScreen = wednesdayIn(1);
+      const other = wednesdayIn(2);
+      // The one being dragged, previously moved by hand to another hour.
+      await session(tenant, id, onScreen, '08:30', [lanes[5]!], true);
+      await session(tenant, id, other, '10:00', [lanes[1]!]);
+
+      const moved = await new BookingsController().move(id, {
+        weekday: 3,
+        slotId: late,
+        laneIds: [lanes[3]],
+        fromDate: onScreen,
+      });
+
+      assert.equal(moved.weeksFollowed, 2);
+      assert.equal(moved.weeksKept, 0);
+
+      const rows = await sessionsOf(tenant, id);
+      assert.deepEqual(
+        rows.map((row) => `${row.occurs_on} ${row.at} ${row.lanes}`),
+        [`${onScreen} 16:00 Pista 4`, `${other} 16:00 Pista 4`],
+      );
+
+      // And it is no longer an exception, so the next series move carries it too
+      // without having to be told which week is on screen.
+      const [after] = await tenant.sql<{ hand: boolean }>(
+        `SELECT moved_at IS NOT NULL AS hand FROM class_session
+          WHERE schedule_id = $1 AND occurs_on = $2::date`,
+        [id, onScreen],
+      );
+      assert.equal(after?.hand, false);
+    });
+  });
+});
+
+test('weeks kept back are counted, so a block that does not move says why', async () => {
+  // The silence was the defect. A hand-moved week staying put is correct and
+  // invisible, and invisible is what made this read as broken.
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await sixLanePool(tenant);
+      const early = await slot(tenant, '10:00', '10:45');
+      const late = await slot(tenant, '16:00', '16:45');
+
+      const id = await parceria(tenant, 'EPA', '6A', early, 3, '10:00', [lanes[1]!]);
+      await session(tenant, id, wednesdayIn(1), '08:30', [lanes[5]!], true);
+      await session(tenant, id, wednesdayIn(2), '08:30', [lanes[5]!], true);
+      await session(tenant, id, wednesdayIn(3), '10:00', [lanes[1]!]);
+
+      // No `fromDate`: nothing was dragged, so every hand-moved week is kept.
+      const moved = await new BookingsController().move(id, {
+        weekday: 3,
+        slotId: late,
+        laneIds: [lanes[3]],
+      });
+
+      assert.equal(moved.weeksFollowed, 1);
+      assert.equal(moved.weeksKept, 2);
+      assert.equal(moved.weeksBlocked, 0);
     });
   });
 });

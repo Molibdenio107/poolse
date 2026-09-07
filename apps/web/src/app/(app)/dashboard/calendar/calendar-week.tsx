@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useToast } from '@/components/ui/toast';
 import { Ban, ClipboardCheck, NotebookPen } from 'lucide-react';
 import type { ClassGroup, FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 import { bookingKey, slotKey } from '@/lib/slot-key';
@@ -64,6 +65,7 @@ export function CalendarWeek({
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
+  const { show } = useToast();
   const router = useRouter();
 
   const [planning, setPlanning] = useState<{ sessionId: string; booking: GridBooking } | null>(
@@ -365,6 +367,10 @@ export function CalendarWeek({
           // The pistas the block landed on. One week can now differ from the
           // pattern, so the lane change no longer has to be thrown away.
           to.laneIds,
+          // And its length, for the same reason — round 8. Dragging the bottom
+          // edge and answering "só esta semana" used to write the hour and drop
+          // the length, so the block sprang back to its old height.
+          to.durationMinutes,
         );
         if (!moved.ok) {
           return moved.detail === undefined || moved.detail === ''
@@ -375,12 +381,26 @@ export function CalendarWeek({
         return null;
       }
 
+      /*
+       * The day the block was dragged *from*, in the week on screen — round 8.
+       *
+       * A series move re-times the weeks still sitting where the pattern put
+       * them, and deliberately leaves alone the ones somebody moved by hand.
+       * Without naming this week, a block that had been moved by hand earlier
+       * stayed exactly where it was picked up: the move landed, three later
+       * weeks followed, and the one on screen did not — which looks precisely
+       * like a feature that does nothing.
+       */
+      const draggedFrom = new Date(`${weekStart}T00:00:00Z`);
+      draggedFrom.setUTCDate(draggedFrom.getUTCDate() + booking.weekday - 1);
+
       const result = await moveBookingAction(organizationId, booking.id, {
         weekday: to.weekday,
         slotId: null,
         startTime,
         laneIds: to.laneIds,
         durationMinutes: to.durationMinutes,
+        fromDate: draggedFrom.toISOString().slice(0, 10),
       });
       /*
        * The server's own sentence, where it sent one.
@@ -396,10 +416,33 @@ export function CalendarWeek({
           ? result.errorKey
           : `${result.errorKey}${SEP}${result.detail}`;
       }
+
+      /*
+       * Weeks that could not follow the pattern — round 8.
+       *
+       * A series move re-times the sessions still sitting where the pattern put
+       * them. One whose new hour is already taken that week stays where it is,
+       * which is a success with a caveat rather than a refusal — so it is said
+       * as a warning here rather than returned as a failure, which would send
+       * the block home from a move that did in fact happen.
+       */
+      if (result.weeksBlocked > 0) {
+        show('warning', t('grid.weeksBlocked', { count: result.weeksBlocked }));
+      } else if (result.weeksKept > 0) {
+        /*
+         * Weeks somebody had moved by hand, which stay by design.
+         *
+         * Said out loud because its symptom is identical to a failure — some
+         * blocks in other weeks do not move — and silence is what made this read
+         * as broken. Only when nothing was blocked, so one message is shown
+         * rather than two about the same move.
+         */
+        show('warning', t('grid.weeksKept', { count: result.weeksKept }));
+      }
       router.refresh();
       return null;
     },
-    [controlsFor, organizationId, router, weekStart],
+    [controlsFor, organizationId, router, weekStart, show, t],
   );
 
   return (

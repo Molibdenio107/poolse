@@ -86,13 +86,38 @@ The save path is: write to Clerk, then re-read from Clerk (`refreshFromClerk`). 
 theme, birth date and phone are Poolse's and are written directly. `docs/data-model.md`,
 decision 2, and `packages/db/test/profile.sql`, test 6.
 
+**A series move re-times the weeks that still sit where the pattern put them.** The calendar
+draws each booking at its `class_session` for that week, so a move that rewrites only
+`class_schedule` is written and then invisible — the block springs back, and nothing reports a
+failure because there was none. `retimeSessions` in `bookings.repository.ts` is the other half
+of round 7's overlay. It skips a week moved by hand (`moved_at`), a week in the past and a
+week whose register is taken — **except the week that was dragged**, named by `fromDate`,
+which follows and loses its exception, because the operator just moved that block and said
+"every week". A week left behind is counted and reported either way (`weeksKept`,
+`weeksBlocked`): "kept by design" and "failed" look identical on screen, and silence is what
+made this read as a feature that did nothing; a week whose new hour is occupied is left alone and **counted**,
+one savepoint each, because failing a whole series change over one November Wednesday makes
+the feature unusable. Re-stamp `class_session_lane` with it — the exclusion constraint is on
+those rows and they carry their own copy of the window.
+
+**A guard that reads the pattern and a screen that draws the week will disagree, so a refusal
+must say which one it is defending.** A series move is checked against `class_schedule`,
+because that is what it rewrites; the calendar draws `class_session`. A turma whose sessions
+have all been moved elsewhere one week at a time still holds its pattern slot — so it blocks a
+move while being drawn on another day, and "Pista 2 already has X" names a class the operator
+can see somewhere else entirely. The fix is never to weaken the guard: it is to carry the
+blocker's own weekday and hour on the 409 and say them. Same family as the trigger refusals
+that carry their numbers.
+
 **A save says so, and it says so once.** `useSavedAction` raises the toast — one place, every
 form — so no screen has to remember to report an outcome and none of them can word it
 differently. Field errors still render beside their field, because a message at the top of the
 page cannot say which of a dozen boxes it meant; the top-of-form banner and the inline
 "Guardado" are the toast's job now. `components/ui/toast.tsx`: muted tones on the surface
 colour, an icon per tone so colour never carries the meaning alone, 4s for a success and 8s
-for a refusal.
+for a refusal, and `w-auto` up to `max-w-md` so the box hugs its words. A saturated fill was
+offered and declined twice — these appear dozens of times an afternoon. **The calendar's move
+refusals go here too**, rather than into a bar above a grid that is taller than the window.
 
 **Form fields are controlled, never `defaultValue`.** React 19 resets a form as soon
 as a function `action` returns — *including when it returns a validation error*. An
@@ -156,11 +181,29 @@ optional and off unless its own flag and `ANTHROPIC_API_KEY` are both set, sends
 document and nothing else about the tenant, and has everything it extracts confirmed by a
 person on the preview. `lib/analysis-report.ts` is the contract; `-agent.ts` is the model.
 
-**An importer is a `MatchSpec`, never a new pipeline.** There are four — the register, the
-store room, the wall timetable and the water log. A new one is a field list, a synonym list
-and `matchFields` in `lib/<thing>-sheet.ts`, plus a preview/commit pair on one API route
-with a `commit` flag. Never two routes: what the operator was shown and what gets written
-have to come from one code path. The file is read on the Next server and never leaves it.
+**An importer is a `MatchSpec`, never a new pipeline.** There are five — the register, the
+store room, the wall timetable, the water log and parcerias. A new one is a field list, a
+synonym list and `matchFields` in `lib/<thing>-sheet.ts`, plus a preview/commit pair on one
+API route with a `commit` flag. Never two routes: what the operator was shown and what gets
+written have to come from one code path. The file is read on the Next server and never
+leaves it.
+
+**What an export writes, its importer reads back — and a test proves it against the real
+catalogue.** The header row is `<thing>.field.*` from the translation catalogue, not prose
+invented for the file, so a club exports, corrects and re-imports with no column mapped by
+hand. Two rules fall out of it. **Any value that has to survive the journey is written in a
+form that is the same in both languages** — the inventory's `all`, a partner type's own enum
+spelling — because a file exported under `en` re-imports under `pt-PT`. And **a label chosen
+for the export is a label the matcher must not hand to another field**: `partners.field.contactName`
+is "Contacto" rather than the partner screens' "Nome", because a bare "Nome" is what claims
+the entity's column. `tsc` has no opinion about either, so the guard is a round-trip test
+reading `messages/*.json` from disk — `partner-sheet.test.ts` is the shape.
+
+**A round trip changes nothing.** Exporting a list and importing it back must produce a
+preview of stocktakes with nothing to update, and a commit that writes no rows. It is the
+cheapest end-to-end assertion an importer has, and it fails on a dropped field, on a value
+written in a shape the reader parses differently, and on the two sides disagreeing about
+what one row is. `partner-export.integration.test.ts` caught one of those.
 
 **Capacity rules compose, they do not override.** An enrolment must fit its turma
 (`class_group.capacity`), the turmas sharing a slot must fit the tank (`pool.max_capacity`),
@@ -200,6 +243,10 @@ popover offers both answers for *every* change, sideways included; the earlier "
 is always every week" was a limitation of the endpoint, not a rule. `moveOccurrence` takes
 `laneIds`, where **absent means "I did not ask about pistas"** and an empty array means "in
 no pista this week" — collapsing the two makes a plain time change silently unassign lanes.
+It takes `durationMinutes` on the same contract, and for the same reason: without it a resize
+answered "só esta semana" wrote the hour and dropped the length, so the block sprang back and
+the gesture looked inert. Never write `ends_at` alongside it — a BEFORE trigger derives it
+from the start and the duration, and the lane exclusion guards a window built from those two.
 
 **`class_session` has no `archived_at`; it has `status`.** A session ends as `cancelled`,
 which is what attendance and invoicing rest on. `cs` means `class_schedule` in most of this
@@ -258,6 +305,16 @@ happened, so it does not move and it is not cancelled. `Session.registerTaken` c
 fact to the screen; the move endpoint asks the same question itself. The block stays
 draggable — round 6 settled that a block which looks like every other block and silently
 refuses reads as a broken grid — so the refusal is a sentence, not a disabled control.
+
+**A class with no pista is drawn in a Sem pista column, which is a drop target both ways.**
+`laneIds` may be empty — ordinary for a class nobody has placed yet — and the grid used to
+draw none of them, so nine dev bookings existed and were invisible. The column is a synthetic
+lane (`NO_LANE_ID`) prepended to *every* day, present only when the week has one, because
+`columnX` is one uniform stride per day and a per-day column count would make the ruler depend
+on the day. Out of it onto a pista assigns that pista; into it clears them — landing on the
+column means no pista whatever the block's width, rather than slicing the span and filtering,
+which would silently narrow a wide block. The id is never written to a booking; the column
+takes no click (`creatable`, separate from `disabled`) and offers no sideways resize.
 
 **Both axes of a drag are travel, never pointer position.** The calendar's scale lives whole
 in `lib/calendar-scale.ts`: `PX_PER_MINUTE` down, `COL_WIDTH`/`GUTTER`/`DAY_RULE` and

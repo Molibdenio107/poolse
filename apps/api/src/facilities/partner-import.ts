@@ -286,6 +286,23 @@ export function readPartnerType(raw: string | null): PartnerType | null {
   const key = normaliseKey(raw);
   if (key === '') return null;
 
+  /*
+   * The enum's own spelling first — POOLSE-48, criterion 10.
+   *
+   * This is what Poolse's own export writes into the Tipo column, and it has to
+   * come back as the same type. Two of the eight are a pair of words joined by
+   * an underscore — `jardim_infancia`, `ipss_misericordia` — which no entry in
+   * the human vocabulary below contains, so before this a jardim de infância
+   * exported and re-imported came back as `outro` with an "unknown type"
+   * warning: the round trip quietly downgrading the one type the reference seed
+   * uses most.
+   *
+   * Checked before the words rather than added to them, because it is a
+   * different kind of match: the words are what a *person* writes in either
+   * language, and this is what the machine writes in neither.
+   */
+  if (TYPES.some(([type]) => type === key)) return key as PartnerType;
+
   for (const [type, words] of TYPES) {
     // Exact first, across every type, so "escola" does not win a row that says
     // "agrupamento de escolas" merely by being checked earlier.

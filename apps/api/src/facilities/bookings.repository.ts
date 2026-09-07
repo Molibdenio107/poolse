@@ -37,9 +37,29 @@ export class NonContiguousLanesError extends Error {
   }
 }
 
-/** Raised when a lane in the target span is already taken at that day and time. */
+/**
+ * Raised when a lane in the target span is already taken at that day and time.
+ *
+ * It carries **where the blocker sits**, not only what it is called — round 8.
+ *
+ * A series move is checked against the recurring pattern, which is the right
+ * thing to check because a series move rewrites the pattern. But the calendar
+ * draws each week's *session*, and a booking every one of whose sessions has
+ * been moved elsewhere is drawn nowhere near the slot its pattern still holds.
+ * So "Pista 2 already has Hidro ginastica bebés" named a class the operator
+ * could see on Saturday while being refused on Wednesday, with nothing on
+ * screen to explain it. Both halves were behaving as designed; the message was
+ * the part that could not be acted on.
+ */
 export class LaneTakenError extends Error {
-  constructor(readonly laneName: string, readonly holder: string) {
+  constructor(
+    readonly laneName: string,
+    readonly holder: string,
+    /** ISO weekday of the pattern slot being defended, 1..7. */
+    readonly weekday: number,
+    /** `HH:MM` of that slot, in the facility's own wall clock. */
+    readonly startTime: string,
+  ) {
     super('lane taken');
   }
 }
@@ -129,6 +149,16 @@ export interface BookingTarget {
    * the second half of it be invisible.
    */
   durationMinutes?: number | null;
+  /**
+   * The date of the occurrence that was dragged — round 8.
+   *
+   * Null means "no particular week", which is how this behaved before it
+   * existed. When set, that week's session follows the pattern even if it had
+   * been moved by hand: the operator has just dragged that block and answered
+   * "todas as semanas", and treating its own week as an untouchable exception
+   * would contradict the gesture. Every other hand-moved week still stays.
+   */
+  fromDate?: string | null;
 }
 
 /**
@@ -145,17 +175,27 @@ async function laneConflicts(
   durationMinutes: number,
   laneIds: string[],
   seasonId: string | null,
-): Promise<{ laneName: string; holder: string } | null> {
+): Promise<{ laneName: string; holder: string; weekday: number; startTime: string } | null> {
   if (laneIds.length === 0) return null;
 
-  const { rows } = await tx.query<{ lane_name: string; holder: string }>(
+  const { rows } = await tx.query<{
+    lane_name: string;
+    holder: string;
+    weekday: number;
+    start_time: string;
+  }>(
     /*
      * Overlap, not equality. A 45-minute class at 09:00 and a 60-minute one at
      * 09:30 are a clash even though no two columns match — comparing start times
      * would let the second one through and the pool would be double-sold.
      */
     `SELECT l.name AS lane_name,
-            coalesce(cg.name, pg.name, cs.title, '?') AS holder
+            coalesce(cg.name, pg.name, cs.title, '?') AS holder,
+            -- Where the blocker actually sits, so the refusal can say so. The
+            -- pattern's own day and hour, which is what this check defends and
+            -- what the calendar may well not be drawing this week.
+            cs.weekday,
+            to_char(cs.start_time, 'HH24:MI') AS start_time
        FROM booking_lane bl
        JOIN class_schedule cs
          ON cs.id = bl.schedule_id AND cs.organization_id = bl.organization_id
@@ -193,7 +233,14 @@ async function laneConflicts(
   );
 
   const hit = rows[0];
-  return hit === undefined ? null : { laneName: hit.lane_name, holder: hit.holder };
+  return hit === undefined
+    ? null
+    : {
+        laneName: hit.lane_name,
+        holder: hit.holder,
+        weekday: hit.weekday,
+        startTime: hit.start_time,
+      };
 }
 
 /**
@@ -300,7 +347,7 @@ export async function moveBooking(
   organizationId: string,
   scheduleId: string,
   target: BookingTarget,
-): Promise<boolean> {
+): Promise<{ followed: number; blocked: number; kept: number } | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
       duration_minutes: number;
@@ -321,7 +368,7 @@ export async function moveBooking(
     );
 
     const booking = rows[0];
-    if (booking === undefined) return false;
+    if (booking === null || booking === undefined) return null;
 
     await assertContiguous(tx, target.laneIds);
 
@@ -339,7 +386,9 @@ export async function moveBooking(
       target.laneIds,
       booking.season_id,
     );
-    if (clash !== null) throw new LaneTakenError(clash.laneName, clash.holder);
+    if (clash !== null) {
+      throw new LaneTakenError(clash.laneName, clash.holder, clash.weekday, clash.startTime);
+    }
 
     try {
       await tx.query(
@@ -354,6 +403,14 @@ export async function moveBooking(
 
     await setLanes(tx, organizationId, scheduleId, target.laneIds);
 
+    const weeks = await retimeSessions(
+      tx,
+      organizationId,
+      scheduleId,
+      target.laneIds,
+      target.fromDate ?? null,
+    );
+
     await recordAudit(tx, {
       action: 'booking.moved',
       entityType: 'class_schedule',
@@ -363,11 +420,185 @@ export async function moveBooking(
         weekday: target.weekday,
         startTime,
         lanes: target.laneIds.length,
+        // How many weeks came with it, so the log distinguishes a change to next
+        // term's plan from a change that moved eleven classes.
+        weeksFollowed: weeks.followed,
+        weeksBlocked: weeks.blocked,
+        weeksKept: weeks.kept,
       },
     });
 
-    return true;
+    return weeks;
   });
+}
+
+/**
+ * The weeks a series move takes with it — round 8.
+ *
+ * **Without this a series move is written and then invisible.** The calendar
+ * draws each booking where its `class_session` for that week actually is —
+ * round 7 added that overlay so a one-week move could be seen at all — and this
+ * function is the other half of it, which was missing. Moving a booking
+ * rewrote `class_schedule` and nothing else, so the block sprang straight back
+ * to the session's old slot on the next render: no error, no movement, nothing
+ * to report. Rui's words were "if set to every week it doesn't seem to work, and
+ * no feedback is given".
+ *
+ * It is also what stops the pattern and its weeks drifting apart, which is the
+ * *other* half of the same bug: a booking whose pattern says Wednesday 14:15
+ * while every session sits at 10:15 still defends 14:15 against everybody else,
+ * so the grid refuses moves citing a class that is drawn nowhere near it.
+ *
+ * **Three kinds of week are deliberately left where they are:**
+ *
+ * - one somebody moved by hand (`moved_at IS NOT NULL`). That is what "só esta
+ *   semana" means, and what `moved_at` exists to record — "pista 3 is shut this
+ *   Tuesday" must survive a later change to the timetable.
+ * - one already in the past. A series change is a change going forward; moving
+ *   last Wednesday's class is rewriting history rather than planning.
+ * - one whose register has been taken. Somebody stood at the poolside with a
+ *   list, so the day, hour and pista are a record. The move endpoint refuses a
+ *   single occurrence for the same reason.
+ *
+ * Today is read in the facility's own zone rather than the server's, because a
+ * club in the Azores at 23:30 is not yet on tomorrow and its session rows are
+ * stamped in local wall time.
+ */
+async function retimeSessions(
+  tx: Tx,
+  organizationId: string,
+  scheduleId: string,
+  laneIds: string[],
+  fromDate: string | null,
+): Promise<{ followed: number; blocked: number; kept: number }> {
+  const { rows } = await tx.query<{
+    id: string;
+    new_date: string;
+    starts_at: Date;
+    ends_at: Date;
+    duration_minutes: number;
+    hand_moved: boolean;
+    dragged: boolean;
+  }>(
+    /*
+     * The new window is computed from the schedule the UPDATE above has just
+     * written, not from the caller's arguments, so a session cannot disagree
+     * with the pattern it is following even if the two were derived differently.
+     * `occurs_on` moves to the new weekday **within its own week**, so a booking
+     * moved from Wednesday to Friday takes each week's session to that week's
+     * Friday rather than collapsing them all onto one date.
+     *
+     * A week already taught is excluded here rather than being reported: it is
+     * not a decision anybody can revisit, and offering a count of it would
+     * suggest otherwise.
+     */
+    `WITH pattern AS (
+       SELECT cs.weekday, cs.start_time, cs.duration_minutes,
+              coalesce(f.timezone, 'Europe/Lisbon') AS tz
+         FROM class_schedule cs
+         JOIN facility f
+           ON f.id = cs.facility_id AND f.organization_id = cs.organization_id
+        WHERE cs.id = $1
+     )
+     SELECT s.id,
+            (date_trunc('week', s.occurs_on::timestamp)::date + (p.weekday - 1)) AS new_date,
+            ((date_trunc('week', s.occurs_on::timestamp)::date + (p.weekday - 1))
+               + p.start_time) AT TIME ZONE p.tz AS starts_at,
+            ((date_trunc('week', s.occurs_on::timestamp)::date + (p.weekday - 1))
+               + p.start_time) AT TIME ZONE p.tz
+              + make_interval(mins => p.duration_minutes) AS ends_at,
+            p.duration_minutes,
+            s.moved_at IS NOT NULL AS hand_moved,
+            -- The week the operator was looking at when they dragged the block.
+            ($3::date IS NOT NULL
+               AND date_trunc('week', s.occurs_on::timestamp)
+                 = date_trunc('week', $3::timestamp)) AS dragged
+       FROM class_session s
+       JOIN pattern p ON true
+      WHERE s.schedule_id = $1
+        AND s.organization_id = $2
+        AND s.occurs_on >= (now() AT TIME ZONE p.tz)::date
+        AND NOT EXISTS (
+          SELECT 1 FROM attendance a
+           WHERE a.class_session_id = s.id AND a.organization_id = s.organization_id
+        )
+      ORDER BY s.occurs_on`,
+    [scheduleId, organizationId, fromDate],
+  );
+
+  let followed = 0;
+  let blocked = 0;
+  let kept = 0;
+
+  for (const session of rows) {
+    /*
+     * Which weeks follow, and the one exception to the exception.
+     *
+     * A week moved by hand stays where it is — that is what "só esta semana"
+     * means, and what `moved_at` records. **Except the week that was just
+     * dragged**: the operator moved that very block a second ago and answered
+     * "todas as semanas", so keeping its old exception would leave the block
+     * sitting exactly where they had picked it up, reporting nothing, which is
+     * indistinguishable from a feature that does not work. It was reported that
+     * way — "nothing happens, no feedback whatsoever" — and it was this.
+     */
+    if (session.hand_moved && !session.dragged) {
+      kept += 1;
+      continue;
+    }
+
+    await tx.query('SAVEPOINT retime_week');
+    try {
+      await tx.query(
+        `UPDATE class_session
+            SET occurs_on = $2, starts_at = $3, ends_at = $4, duration_minutes = $5,
+                -- Back on the pattern, so it is no longer an exception to it.
+                moved_at = CASE WHEN $6 THEN NULL ELSE moved_at END
+          WHERE id = $1`,
+        [
+          session.id,
+          session.new_date,
+          session.starts_at,
+          session.ends_at,
+          session.duration_minutes,
+          session.dragged,
+        ],
+      );
+
+      /*
+       * The lane rows carry their own copy of the window and the exclusion
+       * constraint is on *them*, so a session re-timed without its lanes
+       * re-stamped would leave the database defending an hour the class no
+       * longer runs at. Rewritten wholesale rather than diffed, because a series
+       * move can change the lane span as well as the hour.
+       */
+      await tx.query(`DELETE FROM class_session_lane WHERE session_id = $1`, [session.id]);
+      if (laneIds.length > 0) {
+        await tx.query(
+          `INSERT INTO class_session_lane
+                 (organization_id, session_id, lane_id, starts_at, ends_at, cancelled)
+           SELECT s.organization_id, s.id, lane.id, s.starts_at, s.ends_at,
+                  s.status = 'cancelled'
+             FROM class_session s
+             CROSS JOIN unnest($2::uuid[]) AS lane(id)
+            WHERE s.id = $1`,
+          [session.id, laneIds],
+        );
+      }
+
+      await tx.query('RELEASE SAVEPOINT retime_week');
+      followed += 1;
+    } catch (error) {
+      // 23P01 is the lane exclusion, 23505 one-occurrence-per-booking-per-day.
+      // Anything else is not a clash and has no business being swallowed.
+      const code = (error as { code?: string }).code;
+      await tx.query('ROLLBACK TO SAVEPOINT retime_week');
+      if (code !== '23P01' && code !== '23505') throw error;
+      blocked += 1;
+    }
+  }
+
+  return { followed, blocked, kept };
 }
 
 /**
@@ -430,7 +661,9 @@ export async function duplicateBooking(
       target.laneIds,
       source.season_id,
     );
-    if (clash !== null) throw new LaneTakenError(clash.laneName, clash.holder);
+    if (clash !== null) {
+      throw new LaneTakenError(clash.laneName, clash.holder, clash.weekday, clash.startTime);
+    }
 
     let copyId: string;
     try {

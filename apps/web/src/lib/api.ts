@@ -1853,6 +1853,137 @@ export interface PartnerRow {
   billingModel: BillingModel | null;
 }
 
+/**
+ * Importing a partnerships sheet — POOLSE-48.
+ *
+ * Mirrors `apps/api/src/facilities/partner-import.ts`. The shape worth pausing
+ * on is that the preview is a **tree** — `partners`, each naming the indexes of
+ * its own rows — rather than a flat list. A school's sheet has a row per class
+ * with the school's name repeating down the column, so twelve rows across three
+ * schools is three partnerships with twelve turmas, and a flat list of twelve
+ * rows each saying "this partner already exists" would be technically true and
+ * completely misleading.
+ */
+export type PartnerImportField =
+  | 'partnerName'
+  | 'partnerType'
+  | 'groupName'
+  | 'participantCount'
+  | 'levelName'
+  | 'tag'
+  | 'ownInstructorName'
+  | 'contactName'
+  | 'contactEmail'
+  | 'contactPhone'
+  | 'notes';
+
+export interface PartnerImportProblem {
+  field: PartnerImportField;
+  code: 'partnerRequired' | 'groupRequired' | 'tooLong' | 'badCount';
+  value?: string;
+}
+
+export interface PartnerImportWarning {
+  field: PartnerImportField;
+  code:
+    | 'unknownType'
+    | 'countMissing'
+    | 'typeConflict'
+    | 'levelNotFound'
+    | 'badEmail'
+    | 'contactNotReachable';
+  value?: string;
+}
+
+export interface PartnerImportUpdate {
+  field: 'participantCount' | 'tag' | 'ownInstructorName' | 'levelId' | 'notes';
+  before: string;
+  after: string;
+}
+
+export interface PartnerImportRowResult {
+  index: number;
+  line: number;
+  partnerName: string;
+  partnerType: PartnerType;
+  groupName: string;
+  participantCount: number;
+  levelName: string | null;
+  levelId: string | null;
+  tag: string | null;
+  ownInstructorName: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  /** Whether a contact can be written at all — `partner_contact_reachable`. */
+  contactReachable: boolean;
+  notes: string | null;
+  partnerKey: string;
+  /** Set when the club already has this partnership at the site. */
+  partnerId: string | null;
+  /** Set when it already has this group on that partnership — a stocktake. */
+  groupId: string | null;
+  problems: PartnerImportProblem[];
+  warnings: PartnerImportWarning[];
+  updates: PartnerImportUpdate[];
+  existing: boolean;
+  /** An earlier line of the same file naming the same group. */
+  repeatOfLine: number | null;
+  importable: boolean;
+}
+
+/** One partnership on the preview, with the indexes of the rows that named it. */
+export interface PartnerImportTree {
+  key: string;
+  name: string;
+  type: PartnerType;
+  partnerId: string | null;
+  isNew: boolean;
+  rows: number[];
+}
+
+export interface PartnerImportSummary {
+  total: number;
+  importable: number;
+  refused: number;
+  partnersToCreate: number;
+  partnersExisting: number;
+  groupsToCreate: number;
+  groupsExisting: number;
+  groupsToUpdate: number;
+  flagged: number;
+}
+
+export interface PartnerImportResult {
+  rows: PartnerImportRowResult[];
+  partners: PartnerImportTree[];
+  summary: PartnerImportSummary;
+  /** Present only on a commit. */
+  createdPartners?: number;
+  createdGroups?: number;
+  updatedGroups?: number;
+  skipped?: number;
+}
+
+/** One line per group, in the importer's own vocabulary — criterion 10. */
+export interface PartnerExportRow {
+  partnerName: string;
+  partnerType: PartnerType;
+  groupName: string;
+  participantCount: number;
+  levelName: string | null;
+  tag: string | null;
+  ownInstructorName: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  notes: string | null;
+}
+
+export interface PartnerExport {
+  rows: PartnerExportRow[];
+}
+
 export interface PartnerList {
   items: PartnerRow[];
   total: number;

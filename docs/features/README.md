@@ -14,6 +14,7 @@ looks for it.
 | [facilities.md](facilities.md) | Sites, tanks, lanes, capacity |
 | [spaces.md](spaces.md) | Espaços, the cleaning log, maintenance requests |
 | [classes.md](classes.md) | Turmas, parcerias, the lane grid |
+| [parcerias.md](parcerias.md) | Partnerships, their groups, the import and the export |
 | [calendar.md](calendar.md) | The dated week, the hover card, cancelling a class |
 | [billing.md](billing.md) | Price list, periodicities, what a student pays |
 

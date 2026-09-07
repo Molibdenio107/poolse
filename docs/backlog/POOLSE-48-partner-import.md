@@ -96,14 +96,14 @@ in the week is done on the grid (POOLSE-49) or comes back through the bookings s
 
 ---
 
-## Where this stopped — 2026-09-04
+## Built — the model on 2026-09-04, the interface on 2026-09-07
 
-**The API half is built and tested. The wizard and the export are not.**
-Split at a layer boundary, as BUILD-ORDER allows, because the interface is the
-inventory wizard's 950 lines with the vocabulary changed and the model half is
-where the thinking was.
+**Every criterion is met.** The model shipped first, on its own, because the
+interface is the inventory wizard's 950 lines with the vocabulary changed and the
+model half is where the thinking was — a split at a layer boundary, as
+BUILD-ORDER allows. The interface followed three days later.
 
-### Done
+### Done — 2026-09-04, the model
 
 - `apps/api/src/facilities/partner-import.ts` — the pure half. Grouping,
   stocktakes, the type reader, every problem and warning. **19 unit tests.**
@@ -115,15 +115,47 @@ where the thinking was.
 - `apps/web/src/lib/partner-sheet.ts` — the column vocabulary, reusing
   `matchFields`. Criterion 12's "no second copy of the matcher".
 
-### Still to do
+### Done — 2026-09-07, the interface
 
-- The wizard and the full-page dropzone on the partners list — criteria 1 and 2's
-  UI half, QA 48.8, 48.9, 48.10.
-- The partner list export as `.xlsx`/`.csv` with the import's own labels, and its
-  round-trip test — criterion 10, QA 48.13. `booking-sheet.test.ts` from
-  POOLSE-54 is the pattern to copy exactly.
-- `partner-sheet.ts` has no test yet; the round-trip test above is where it gets
-  one, against the real catalogues in both locales.
+- `partner-import-wizard.tsx` and `partner-import.actions.ts` on the facility
+  page's Parcerias panel — the four steps on `useImportWizard`, with a **tree**
+  preview rather than a flat table. Criteria 1, 2, 3's UI half, 5 and 9;
+  QA 48.1, 48.2, 48.3, 48.8, 48.11.
+- The full-page dropzone, with the confirmation in `components/ui/dialog.tsx` so
+  Escape cancels and a `.pdf` is told it cannot be read — criterion 1,
+  QA 48.9, 48.10.
+- `partners/export/route.ts` and its `write-sheet.ts`, `.xlsx` and `.csv`, with
+  `GET facilities/:facilityId/partners/export` behind it — criteria 10 and 11.
+- `partner-sheet.test.ts`, 8 tests: the round trip against the real catalogues in
+  both locales (QA 48.13), the two name columns not read as each other, and the
+  export/vocabulary contract in both directions.
+- `partner-export.integration.test.ts`, 5 tests: the grain, the group-less
+  partnership, the role, the tenant boundary, and **a list exported and imported
+  again changing nothing at all**.
+
+### Three findings from the interface half
+
+**1. `readPartnerType` could not read its own export.** Two of the eight enum
+values are a pair of words joined by an underscore — `jardim_infancia`,
+`ipss_misericordia` — and no entry in the human vocabulary contains one. A jardim
+de infância exported and re-imported therefore came back as `outro` with an
+"unknown type" warning: the round trip quietly downgrading the one type the
+reference seed uses most. Fixed by checking the enum's own spelling first, and
+guarded by a test over the whole enum rather than over the two that were broken —
+a ninth value would have the same problem, and the failure is a warning on a
+preview nobody reads twice.
+
+**2. The export's label for a contact cannot be "Nome".** That is what the partner
+screens call it, and it is the obvious thing to reuse. But `partnerName` claims a
+bare "Nome" on purpose — a sheet with one name column and a headcount beside it is
+a sheet saying whose classes these are — so every file Poolse exported would have
+handed the entity's column to the contact on the way back in. "Contacto", with a
+test.
+
+**3. The round trip is the strongest cheap test an importer has.** "Export it,
+import it, assert nothing changed" fails on a dropped field, on a value written in
+a shape the reader parses differently, and on the two sides disagreeing about what
+one row is. Finding 1 was caught by it, not by the header-mapping test.
 
 ### Two findings worth keeping
 

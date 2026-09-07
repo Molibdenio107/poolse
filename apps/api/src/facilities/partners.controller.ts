@@ -28,6 +28,7 @@ import {
   BILLING_MODELS,
   createPartner,
   DuplicateNameError,
+  exportPartners,
   getPartner,
   isBillingModel,
   isPartnerStatus,
@@ -46,6 +47,7 @@ import {
   type ContactInput,
   type GroupInput,
   type PartnerDetail,
+  type PartnerExportRow,
   type PartnerInput,
   type PartnerRow,
 } from './partners.repository.js';
@@ -90,6 +92,34 @@ export class PartnersController {
     const result = await listPartners(organizationId, facilityId, readPageQuery(page, limit));
 
     return { ...result, canManage: hasRole('owner', 'admin') };
+  }
+
+  /**
+   * The partner list, as rows a spreadsheet can hold — POOLSE-48, criterion 10.
+   *
+   * **Owner and admin**, the same as the import. A partner sheet carries every
+   * school the club works with, its coordinator's name, their email and their
+   * telephone; that is not a list an instructor needs in order to teach, and the
+   * single-partner screens are already narrowed the same way.
+   *
+   * On a literal segment under the facility, so it can never be read as a
+   * partner whose id is the word "export" — the same guard the import route has.
+   *
+   * The header row is not built here. This answers rows; the web app writes the
+   * file, because the labels the header carries are the *importer's* labels and
+   * those live in the translation catalogue, on that side.
+   */
+  @Get('facilities/:facilityId/partners/export')
+  async exportAll(
+    @Param('facilityId') facilityId: string,
+  ): Promise<{ rows: PartnerExportRow[] }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const rows = await exportPartners(organizationId, facilityId);
+    if (rows === null) throw new NotFoundException('No such site');
+
+    return { rows };
   }
 
   /**

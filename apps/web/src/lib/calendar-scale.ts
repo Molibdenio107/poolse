@@ -77,6 +77,33 @@ export const GUTTER = 56;
  */
 export const DAY_RULE = 2;
 
+/**
+ * The column a class with no pista is drawn in — round 8.
+ *
+ * A booking may occupy no lane at all: `laneIds` is empty, which is an ordinary
+ * state for a class nobody has placed in the tank yet. Until now the grid drew
+ * none of them — `xOf` had no column to ask for and returned null — so six of
+ * the dev tenant's bookings existed, were refused by nothing, and were invisible.
+ * A class the screen cannot show reads as a class that is not there.
+ *
+ * **A synthetic lane rather than a special case in the geometry.** The whole
+ * horizontal scale is `columnX(day, laneIndex, laneCount)` with one uniform
+ * stride per day, and every part of the drag measures with it. Making the column
+ * a lane that happens to be first keeps that ruler exactly as it was; giving
+ * some days an extra column and not others would make the stride depend on the
+ * day, which is the shape of bug rounds 6 and 7 were spent removing.
+ *
+ * It is prepended only when the week actually contains such a class, so a club
+ * that always assigns pistas never sees it.
+ *
+ * **It is display-only.** A block can be dragged *out* of it into a real pista,
+ * which is the point — the invisible six become visible and fixable. A block
+ * cannot be dragged *into* it: removing a class's pistas by dragging is an easy
+ * accident with no undo, and every write path below floors its column index past
+ * this one and filters this id out of any lane list it builds.
+ */
+export const NO_LANE_ID = '__poolse:no-lane__';
+
 /** Where a (day, lane) column starts, in the scrolling canvas. */
 export function columnX(dayIndex: number, laneIndex: number, laneCount: number): number {
   return GUTTER + dayIndex * (laneCount * COL_WIDTH + DAY_RULE) + DAY_RULE + laneIndex * COL_WIDTH;
