@@ -246,9 +246,14 @@ export async function saveSocioAction(
 ): Promise<FormState> {
   const studentId = String(formData.get('studentId') ?? '');
 
-  let result: { quotaAdded: boolean; quotaUnavailable: boolean };
+  let result: {
+    quotaAdded: boolean;
+    quotaUnavailable: boolean;
+    quotaRemoved: boolean;
+    quotaKept: boolean;
+  };
   try {
-    result = await apiPatch<{ quotaAdded: boolean; quotaUnavailable: boolean }>(
+    result = await apiPatch<typeof result>(
       `/students/${studentId}/socio`,
       {
         isSocio: formData.get('isSocio') === 'on',
@@ -268,5 +273,12 @@ export async function saveSocioAction(
    * something and did not.
    */
   if (result.quotaUnavailable) return { ok: true, errorKey: 'fees.quotaUnavailable' };
+
+  /*
+   * The quota survived the untick because it is paid or already on a document —
+   * F-01. Said out loud: a line that stays behind with no explanation reads as
+   * the toggle not having worked, which is exactly what was reported.
+   */
+  if (result.quotaKept) return { ok: true, errorKey: 'fees.quotaKept' };
   return { ok: true };
 }

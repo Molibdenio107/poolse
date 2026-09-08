@@ -131,9 +131,32 @@ line whose plan has since changed and offers to update it, one line at a time, b
 Three sibling cards, in this order:
 
 1. **Plans** — what the timetable puts them on, and the fee lines that follow from it.
-2. **Membership** — whether they are a sócio, and since when.
+2. **Membership** — whether they are a sócio, and since when. See *Membership and the
+   quota* below: the toggle attaches and detaches a fee line.
 3. **Period total** — the sum of the two, below them because a total above its parts is a
    figure nobody can check.
+
+### Membership and the quota
+
+Ticking **sócio** attaches the facility's quota fee line automatically. Unticking it **takes
+that line away again** — the two directions are symmetric, because a toggle that attaches a
+charge and cannot detach it leaves a family paying for a membership they gave up.
+
+Two things stop the removal, and both are history:
+
+- the line has been **marked paid** for any period, or
+- it already sits on an **issued document** whose invoice has not since been credited.
+
+In either case the line stays and the screen says why. Archiving it would take money out of a
+total that has already been reconciled or sent to a family.
+
+**"Sócio yes, quota waived" still works.** Removing the line by hand does not untick the
+membership — an honorary member is a real case — and unticking afterwards finds nothing to
+take, which is reported as neither a removal nor a keep.
+
+There is no column recording which line the toggle created. "The live quota line" is the same
+set on both sides, which is what makes tick → untick → tick land back where it started; the
+paid and invoiced guards are what protect an operator's own work.
 
 ### Paid, per period
 

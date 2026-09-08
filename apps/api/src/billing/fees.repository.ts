@@ -1883,6 +1883,14 @@ export interface SocioResult {
    * way to tell which. The screen says so rather than silently doing nothing.
    */
   quotaUnavailable: boolean;
+  /** The quota line this took away, when sócio was switched off — F-01. */
+  quotaRemoved: boolean;
+  /**
+   * Switched off, and the quota stayed because it is already paid or already on
+   * a document. The screen says which, because a line that survives an untick
+   * with no explanation reads as the toggle not having worked.
+   */
+  quotaKept: boolean;
 }
 
 export async function setSocio(
@@ -1912,7 +1920,13 @@ export async function setSocio(
       throw error;
     }
     if (rows[0] === undefined) {
-      return { updated: false, quotaAdded: false, quotaUnavailable: false };
+      return {
+        updated: false,
+        quotaAdded: false,
+        quotaUnavailable: false,
+        quotaRemoved: false,
+        quotaKept: false,
+      };
     }
 
     await recordAudit(tx, {
@@ -1936,7 +1950,91 @@ export async function setSocio(
      * yet gets nothing attached and is told why — guessing would put another
      * pool's price on their record.
      */
-    if (!input.isSocio) return { updated: true, quotaAdded: false, quotaUnavailable: false };
+    /*
+     * Switching sócio off takes the quota away again — F-01.
+     *
+     * The add was automatic, so the removal has to be: a toggle that attaches a
+     * charge and then cannot detach it leaves a family paying 4,00 EUR a month
+     * for a membership they gave up, and the operator with no way to tell why
+     * the line is still there.
+     *
+     * **Symmetric with the add, deliberately.** The add refuses to create a
+     * second line when any live quota already exists, so "the live quota line"
+     * is the same set on both sides — which is what makes ticking, unticking and
+     * ticking again land back where it started. There is no provenance column
+     * saying which line the toggle created, and adding one would be a schema
+     * change; the guards below are what actually protect the operator's work.
+     *
+     * **Two things stop a removal, and both are history.** A line somebody has
+     * marked paid, and a line already sitting on an issued document. Archiving
+     * either would take money out of a total that has been reported or sent to a
+     * family. Those cases keep the line and say so — which is the "quota
+     * dispensada" case the hint beside the toggle already describes, arrived at
+     * from the other direction.
+     */
+    if (!input.isSocio) {
+      const { rows: live } = await tx.query<{
+        id: string;
+        settled: boolean;
+        invoiced: boolean;
+      }>(
+        `SELECT sf.id,
+                EXISTS (SELECT 1 FROM student_fee_payment pay
+                         WHERE pay.student_fee_id = sf.id) AS settled,
+                /*
+                 * On a document that still stands. A line whose invoice has
+                 * since been credited is not being asked for, so it does not
+                 * hold the quota in place — the same definition of "live" the
+                 * invoicing module uses everywhere else.
+                 */
+                EXISTS (SELECT 1 FROM invoice_line il
+                          JOIN invoice i ON i.id = il.invoice_id
+                                        AND i.organization_id = il.organization_id
+                         WHERE il.student_fee_id = sf.id
+                           AND il.document_kind = 'invoice'
+                           AND NOT EXISTS (SELECT 1 FROM invoice c
+                                            WHERE c.corrects_invoice_id = i.id
+                                              AND c.organization_id = i.organization_id
+                                              AND c.kind = 'credit_note')) AS invoiced
+           FROM student_fee sf
+           JOIN fee_plan p ON p.id = sf.fee_plan_id
+          WHERE sf.student_id = $1 AND sf.archived_at IS NULL AND sf.ends_on IS NULL
+            AND p.kind = 'quota'
+          ORDER BY sf.starts_on, sf.id`,
+        [studentId],
+      );
+
+      let removed = false;
+      let kept = false;
+
+      for (const line of live) {
+        if (line.settled || line.invoiced) {
+          kept = true;
+          continue;
+        }
+
+        await tx.query(
+          `UPDATE student_fee SET archived_at = now()
+            WHERE id = $1 AND archived_at IS NULL`,
+          [line.id],
+        );
+        await recordAudit(tx, {
+          action: 'student_fee.archived',
+          entityType: 'student_fee',
+          entityId: line.id,
+          data: { studentId, reason: 'socio_off' },
+        });
+        removed = true;
+      }
+
+      return {
+        updated: true,
+        quotaAdded: false,
+        quotaUnavailable: false,
+        quotaRemoved: removed,
+        quotaKept: kept,
+      };
+    }
 
     const { rows: existing } = await tx.query<{ id: string }>(
       `SELECT sf.id FROM student_fee sf
@@ -1946,7 +2044,15 @@ export async function setSocio(
       [studentId],
     );
     // Already paying one. Turning the toggle on twice must not create a second.
-    if (existing.length > 0) return { updated: true, quotaAdded: false, quotaUnavailable: false };
+    if (existing.length > 0) {
+      return {
+        updated: true,
+        quotaAdded: false,
+        quotaUnavailable: false,
+        quotaRemoved: false,
+        quotaKept: false,
+      };
+    }
 
     const { rows: added } = await tx.query<{ id: string }>(
       `WITH site AS (
@@ -2004,6 +2110,8 @@ export async function setSocio(
       updated: true,
       quotaAdded: quotaId !== undefined,
       quotaUnavailable: quotaId === undefined,
+      quotaRemoved: false,
+      quotaKept: false,
     };
   });
 }

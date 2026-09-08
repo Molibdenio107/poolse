@@ -915,7 +915,8 @@
     "coversTo": "Cover until",
     "proRata": "Pro rata",
     "proRataLabel": "Charge only the part of the period",
-    "proRataHint": "For someone joining mid-season. Without it the whole premium is charged — which is what many clubs do, because it is what the insurer charged them."
+    "proRataHint": "For someone joining mid-season. Without it the whole premium is charged — which is what many clubs do, because it is what the insurer charged them.",
+    "quotaKept": "The membership fee was not removed because it is already paid or already on an invoice. They are no longer a member; the fee stays on the record."
   },
   "categories": {
     "title": "Fee categories",

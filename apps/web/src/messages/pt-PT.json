@@ -915,7 +915,8 @@
     "coversTo": "Cobertura até",
     "proRata": "Proporcional",
     "proRataLabel": "Cobrar só a parte do período",
-    "proRataHint": "Para quem entra a meio da época. Sem esta opção, é cobrado o valor inteiro — que é o que muitos clubes fazem, porque foi o que a seguradora lhes cobrou."
+    "proRataHint": "Para quem entra a meio da época. Sem esta opção, é cobrado o valor inteiro — que é o que muitos clubes fazem, porque foi o que a seguradora lhes cobrou.",
+    "quotaKept": "A quota não foi removida porque já está paga ou já consta de uma fatura. Deixou de ser sócio; a quota mantém-se no registo."
   },
   "categories": {
     "title": "Categorias de preço",

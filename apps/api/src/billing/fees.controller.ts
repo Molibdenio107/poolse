@@ -438,7 +438,13 @@ export class StudentSocioController {
   async update(
     @Param('studentId') studentId: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ updated: true; quotaAdded: boolean; quotaUnavailable: boolean }> {
+  ): Promise<{
+    updated: true;
+    quotaAdded: boolean;
+    quotaUnavailable: boolean;
+    quotaRemoved: boolean;
+    quotaKept: boolean;
+  }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
@@ -463,12 +469,21 @@ export class StudentSocioController {
     }
     if (!result.updated) throw new BadRequestException('No such student');
 
-    // Reported rather than silent: the screen says whether a quota was attached,
-    // and says so when the club has none to attach.
+    /*
+     * Reported rather than silent, in all four directions — F-01.
+     *
+     * The screen says whether a quota was attached, whether the club had none to
+     * attach, whether one was taken away, and whether one stayed behind because
+     * it is already paid or already on a document. A line that survives an
+     * untick with nothing said about it is what made this read as a toggle that
+     * had not saved.
+     */
     return {
       updated: true,
       quotaAdded: result.quotaAdded,
       quotaUnavailable: result.quotaUnavailable,
+      quotaRemoved: result.quotaRemoved,
+      quotaKept: result.quotaKept,
     };
   }
 }
