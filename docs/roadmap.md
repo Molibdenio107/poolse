@@ -347,9 +347,9 @@ expensive mistake.
 
 | # | Slice | Done when |
 |---|---|---|
-| 2.1 | Fee plans + student subscriptions (records only, no charging) | Who owes what is visible and correct |
-| 2.2 | Invoice generation with series, sequential numbering, lines and VAT | A sibling pair on one document, numbered correctly |
-| 2.3 | Invoice statuses, overdue view, chase action | The operator can chase payments |
+| 2.1 | Fee plans + student subscriptions (records only, no charging) | ✅ Who owes what is visible and correct |
+| 2.2 | Invoice generation with series, sequential numbering, lines and VAT | ✅ A sibling pair lands on one document, numbered `FT A/1` and never renumbered |
+| 2.3 | Invoice statuses, overdue view, chase action | ✅ **Em dívida** lists what is owed, oldest first; payments are child rows and the status is derived |
 | 2.4 | Operator pays Poolse — Stripe subscription on the organization | Poolse can take money |
 
 Do 2.1–2.3 before touching Stripe. Most of the value of billing is knowing who owes what;
@@ -358,10 +358,36 @@ integration cost lives.
 
 **Student→operator automated collection is not in this phase.** A SEPA mandate and an
 MB WAY authorisation both require the payer to act, and the payer has no account and no
-app until phase 3. It is slice 3.5, below. Chasing in 2.3 needs notifications (phase 3.0)
-or falls back to exporting a list — decide which when you get there.
+app until phase 3. It is slice 3.5, below.
 
-## Phase 3 — student app and notifications
+**2.3 took the fallback, deliberately.** Chasing needed either notifications (3.0) or
+something simpler, and with phase 3 moved to last the choice made itself: a chase is a
+**record of what a person did** — telephoned, wrote, spoke to the family — rather than a
+message Poolse sent. `invoice_chase` carries a channel on the row, so when 3.0 eventually
+lands it writes into the same history rather than starting a second one. Nothing about the
+screens has to change.
+
+## Phase 3 — student app and notifications *(moved to last — 8 September 2026)*
+
+**Build this after phases 4, 5 and 6.** The backoffice is what a club pays for and what
+phase 1 was designed to make independently valuable; a second app is the largest single
+piece of work left and it serves people who are not the customer. Taken as a decision
+rather than as drift, so the three consequences are written down here rather than met one
+at a time:
+
+- **4.2 is the only real dependency.** "An out-of-range reading reaches someone" needs
+  delivery. `sendEmail` in `apps/api/src/notifications/notifier.ts` already works — it
+  carries invitation and vacation email today — so an alert goes out by transactional
+  email, and the reading is flagged on the pool's own page besides. What 3.0 adds later is
+  per-person preferences and push, which is an upgrade rather than a prerequisite.
+  POOLSE-26 is the same shape and takes the same answer.
+- **Collections move with 3.5**, and POOLSE-24 and POOLSE-25 move with them. Chasing stays
+  manual for longer, which is exactly what 2.3 built.
+- **3.6 stops being a problem.** It depended on phase 4, and the note below flagged the
+  reorder as a risk. With phase 3 last, the conflict is gone.
+
+2.4 is unaffected: the club paying Poolse by Stripe involves a person who already has a
+login.
 
 | # | Slice | Done when |
 |---|---|---|
@@ -376,8 +402,9 @@ or falls back to exporting a list — decide which when you get there.
 **3.5 is where open question 1 gets answered** — Stripe Connect or direct. Answer it before
 starting the slice, not during.
 
-**3.6 depends on phase 4.** Either ship 3.0–3.5 and add it after phase 4, or accept the
-reorder. Flagged so it is a choice, not a surprise.
+**3.6 depended on phase 4**, which is why it was flagged here as a choice rather than a
+surprise. The choice was made on 8 September 2026 by moving this whole phase after 4, 5
+and 6 — so 3.6 now simply follows the readings it needs.
 
 ## Phase 4 — maintenance
 

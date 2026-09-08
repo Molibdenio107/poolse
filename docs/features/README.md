@@ -17,6 +17,7 @@ looks for it.
 | [parcerias.md](parcerias.md) | Partnerships, their groups, the import and the export |
 | [calendar.md](calendar.md) | The dated week, the hover card, cancelling a class |
 | [billing.md](billing.md) | Price list, periodicities, what a student pays |
+| [invoicing.md](invoicing.md) | The documents a fee line becomes: numbering, runs, credit notes, payments and chasing |
 
 Pages are added as the sections they describe are touched. An absent page means nobody has
 had reason to write one yet, not that the section is undocumented by policy.

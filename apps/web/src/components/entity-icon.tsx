@@ -4,6 +4,7 @@ import {
   CalendarRange,
   Camera,
   GraduationCap,
+  FileText,
   HeartPulse,
   LayoutDashboard,
   TrendingUp,
@@ -35,6 +36,9 @@ const ICONS = {
   calendar: CalendarRange,
   people: Users,
   photo: Camera,
+  // A document, not a coin or a card: what Faturação holds is a numbered record
+  // rather than a payment, and 2.3 is where money arrives.
+  invoice: FileText,
   // Backlog round 3, story 9. `HeartPulse` rather than a cross or a pill: the
   // record holds medical notes and consents, not medication, and a red cross
   // reads as an emergency the screen is not reporting.

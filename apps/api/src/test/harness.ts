@@ -78,6 +78,23 @@ const TENANT_TABLES = [
    * a facility before them is the foreign-key violation this list exists to
    * prevent, and it is how these three announced themselves.
    */
+  /*
+   * Invoicing — phase 2.2. Before the fee lines its lines charge, and before
+   * the facility its series hang off.
+   *
+   * Like `audit_log` and `consent` above, `invoice` and `invoice_line` carry no
+   * DELETE grant for the app role, and for the same kind of reason: a document
+   * the application can erase is not a document. Teardown is the owner's
+   * connection, which is what makes cleaning up possible without weakening
+   * that.
+   */
+  // Settlement — 2.3. A payment and a chase each point at a document, so both
+  // go before it.
+  'invoice_payment',
+  'invoice_chase',
+  'invoice_line',
+  'invoice',
+  'invoice_series',
   // A settlement points at a line, so it goes before it.
   'student_fee_payment',
   'student_fee',

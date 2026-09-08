@@ -152,6 +152,50 @@ a zero rate are two different statements, and a schema that cannot tell them apa
 it while invoicing. This reverses the "no VAT rate anywhere" comment that `fee_plan.amount_cents`
 used to carry; the exemption *reason* is invoicing's to add.
 
+**An invoice is written once, and its number comes from the database.** `poolse_app` holds
+SELECT and INSERT on `invoice` and `invoice_line` and nothing else — a revoke rather than a
+trigger, because a missing privilege cannot be forgotten by application code. So there is no
+`updated_at`, no `archived_at`, and no edit: a correction is a credit note in its own book,
+and settlement in 2.3 arrives as a child table the way `student_fee_payment` did. `number` is
+allocated by a BEFORE INSERT trigger from `invoice_series.next_number` — **a column and not a
+Postgres sequence**, because a sequence is not transactional and a rolled-back document would
+leave a gap the series may not have. An INSERT that supplies a number is refused. The row lock
+that allocation takes also serialises every insert into one series, which is what makes the
+double-billing trigger sound; a refactor to a sequence passes most tests and breaks both
+properties. These are **internal records, not legal faturas** — `atcud` and
+`at_validation_code` are reserved and null until certification, and the screens say so.
+
+**"Already billed" means "on a document not since credited", so it is a constraint trigger
+and not a partial index.** After a credit note the occurrence is chargeable again — that is
+how a club fixes a document it got wrong — and "live" needs a join an index cannot do.
+`invoice_charged_on` is the one definition, read by that trigger *and* by the monthly run, so
+a preview cannot offer a line the commit then refuses. The run itself is `runInvoices(…,
+commit)`: preview and write are one path with a flag, like every importer here, and the
+per-student action is the same call with `studentIds` set.
+
+**An invoice is addressed to a payer — the guardian, or the student on the adult path — so
+siblings land on one document.** `invoice_payer_membership_id` says it once; null means the
+student is their own payer. Everything the document says about a person is a **snapshot**,
+including each line's `student_tax_number`, which is not the payer's: a parent deducting
+lessons on their IRS does it against the child's number.
+
+**A document line stores the club's own words, never a translated enum.** `fee_plan` has no
+`name` in this schema — a plan's label is its kind, its level and its frequency — so
+`invoice_line.description` holds the level's or season's name, `lessons_per_week` the
+frequency, and the sentence is composed by `LineLabel` where the catalogue is. Storing
+"Mensalidade" would freeze a document at the language of whoever pressed the button.
+
+**A document's state is `total − paid` and never a column.** `invoice_status` is the one
+definition — credited beats paid beats overdue, and a partly paid document past its due date
+is still overdue. A payment is a **child row** (`invoice_payment`), soft-deleted, summed on
+every read, so recording one moves a badge without writing to the invoice; an overpayment
+settles and `outstandingCents` floors at zero. A credit note is never paid, refused by a
+trigger because a bank feed will be a second way in. **`due_on` may precede `issued_on`** — a
+club billing October in December is ordinary, and 2.2's CHECK to the contrary was dropped
+rather than replaced. **Chasing records what a person did**, not what Poolse sent: nothing is
+delivered until the notifications phase, the channel is on the row so that phase writes into
+the same history, and the screens say so plainly.
+
 **A fee line with no `fee_period_id` is charged once**, and only an inscrição or a seguro may
 be one. The period is how a recurring line knows what an occurrence is worth and when the next
 falls due; a fee paid once has neither, and forcing it to name one makes the arithmetic wrong

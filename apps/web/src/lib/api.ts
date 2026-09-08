@@ -2451,3 +2451,162 @@ export interface Occupancy {
   /** Owner/admin only; null otherwise. Rendered nowhere yet — POOLSE-52 AC9. */
   contractedCents: number | null;
 }
+
+/**
+ * Invoicing — phase 2.2.
+ *
+ * **Internal records, not legal faturas.** Poolse is not certified software
+ * under Decreto-Lei 28/2019; what a club gets is a priced, numbered, immutable
+ * document it hands to whatever issues its faturas. The screens say so, because
+ * a club that thought otherwise would find out at the wrong moment.
+ */
+export type InvoiceDocumentKind = 'invoice' | 'credit_note';
+
+/**
+ * What state a document is in — 2.3.
+ *
+ * Derived on the server and rendered here; there is no status column. The
+ * precedence matters: a **credited** document is owed by nobody whatever was
+ * paid against it, and a partly paid document past its due date is still
+ * **overdue** — half of nothing arriving on time is still late.
+ */
+export type InvoiceStatus =
+  | 'open'
+  | 'partly_paid'
+  | 'overdue'
+  | 'paid'
+  | 'credited'
+  | 'credit_note';
+
+/** How money reached the club. The same enum the fee register already uses. */
+export type PaymentSource = 'manual' | 'mbway' | 'sepa';
+
+/** How a family was asked. A person's action until the notifications phase. */
+export type ChaseChannel = 'email' | 'phone' | 'message' | 'in_person' | 'letter';
+
+export interface InvoicePayment {
+  id: string;
+  amountCents: number;
+  paidOn: string;
+  source: PaymentSource;
+  reference: string | null;
+  notes: string | null;
+  recordedByName: string | null;
+}
+
+export interface InvoiceChase {
+  id: string;
+  chasedOn: string;
+  channel: ChaseChannel;
+  note: string | null;
+  recordedByName: string | null;
+}
+
+export interface InvoiceSeries {
+  id: string;
+  kind: InvoiceDocumentKind;
+  name: string;
+  prefix: string;
+  nextNumber: number;
+  isDefault: boolean;
+  /** Has issued at least one document, so its letter is fixed. */
+  inUse: boolean;
+}
+
+export interface InvoiceLine {
+  id: string | null;
+  studentId: string;
+  studentName: string;
+  studentTaxNumber: string | null;
+  studentFeeId: string;
+  kind: FeeKind;
+  /**
+   * The club's own words — a level's name, or a season's. Never the kind:
+   * `kind` is an enum whose Portuguese is a translation key, so the sentence is
+   * composed on screen rather than stored half-translated on the document.
+   */
+  description: string | null;
+  lessonsPerWeek: number | null;
+  periodStart: string;
+  months: number;
+  /** Gross, VAT included, integer cents. */
+  amountCents: number;
+  vatRate: number;
+  vatExempt: boolean;
+  vatExemptionReason: string | null;
+  vatCents: number;
+  netCents: number;
+  creditsInvoiceLineId: string | null;
+}
+
+export interface Invoice {
+  id: string;
+  kind: InvoiceDocumentKind;
+  documentNo: string;
+  number: number;
+  seriesId: string;
+  facilityId: string;
+  facilityName: string;
+  issuedOn: string;
+  dueOn: string;
+  systemEntryAt: string;
+  payerMembershipId: string | null;
+  payerStudentId: string | null;
+  payerName: string;
+  payerTaxNumber: string | null;
+  payerAddress: string | null;
+  payerEmail: string | null;
+  correctsInvoiceId: string | null;
+  correctsDocumentNo: string | null;
+  creditedByInvoiceId: string | null;
+  creditedByDocumentNo: string | null;
+  notes: string | null;
+  totalCents: number;
+  vatCents: number;
+  netCents: number;
+  lineCount: number;
+  /** Settlement — 2.3. All derived on the server, never recomputed here. */
+  status: InvoiceStatus;
+  paidCents: number;
+  /** Floored at zero: an overpayment settles rather than owing a family money. */
+  outstandingCents: number;
+  /** Days past due, null once settled or credited. From the database's date. */
+  daysOverdue: number | null;
+  lastChasedOn: string | null;
+  chaseCount: number;
+  lines?: InvoiceLine[];
+  payments?: InvoicePayment[];
+  chases?: InvoiceChase[];
+}
+
+export interface InvoiceDraft {
+  /** `m:<id>` for a guardian, `s:<id>` for a student who pays for themselves. */
+  payerKey: string;
+  payerMembershipId: string | null;
+  payerStudentId: string | null;
+  payerName: string;
+  payerTaxNumber: string | null;
+  payerAddress: string | null;
+  payerEmail: string | null;
+  lines: InvoiceLine[];
+  totalCents: number;
+  vatCents: number;
+  /** Present only on a run that was committed. */
+  documentNo?: string;
+  invoiceId?: string;
+}
+
+export interface InvoiceRun {
+  periodStart: string;
+  dueOn: string;
+  seriesId: string;
+  drafts: InvoiceDraft[];
+  /**
+   * Occurrences left out because they are already on a live document.
+   *
+   * Shown rather than dropped: "nothing to bill" and "everything is already
+   * billed" look identical on an empty table and are different things to do.
+   */
+  alreadyChargedCount: number;
+  committed: boolean;
+}

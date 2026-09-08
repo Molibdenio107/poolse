@@ -2161,6 +2161,155 @@ Neither reference is cascaded, so `fee_category` sits **after** `class_group` in
 `TENANT_TABLES`: deleting the categories first fails on the foreign key, which is the key
 doing its job.
 
+### Invoicing — phase 2.2, 8 September 2026
+
+```
+invoice_series
+  id, organization_id, facility_id, kind, name, prefix, next_number,
+  is_default, at_validation_code, created_at, updated_at, archived_at
+
+invoice
+  id, organization_id, facility_id, series_id, kind, number, document_no,
+  corrects_invoice_id, issued_on, due_on, system_entry_at,
+  payer_membership_id, payer_student_id,
+  payer_name, payer_tax_number, payer_address, payer_email,
+  atcud, notes, created_at
+
+invoice_line
+  id, organization_id, invoice_id, document_kind,
+  student_id, student_fee_id, credits_invoice_line_id,
+  student_name, student_tax_number, description, lessons_per_week,
+  kind, period_start, months, amount_cents,
+  vat_rate, vat_exempt, vat_exemption_reason, sort_order, created_at
+```
+
+**Internal records, not legal faturas.** Decreto-Lei 28/2019 requires certified software, an
+AT validation code per series, an ATCUD and a QR on every document and a SAF-T (PT) export.
+Poolse issues none of that; what a club gets is a priced, numbered, immutable document it
+hands to whatever issues its faturas. `invoice_series.at_validation_code` and `invoice.atcud`
+are reserved and null, and are the only speculative columns in the module.
+
+**A series belongs to a facility, one per document type**, seeded by a trigger on `facility`
+so no screen can leave a site unable to issue anything. The prefix is unique per
+*organization* rather than per facility: the club is one legal entity, and two sites both
+numbering `FT A/1` would issue two different documents under one number. A second site
+therefore takes the first free suffix — `A2` — and an operator may rename it while the book is
+still empty.
+
+**`next_number` is a column, not a Postgres sequence.** A sequence is not transactional: a
+rolled-back insert consumes its number and leaves a gap, which is the one thing a numbering
+series may not do. The `UPDATE … RETURNING` that reads and bumps it happens inside a BEFORE
+INSERT trigger on `invoice`, so the allocation and the row it numbers are one statement and
+application code cannot hold, skip or retry a number. The row lock that UPDATE takes also
+serialises every insert into one series, which is what makes the double-billing check below
+sound.
+
+**A document is written once.** `poolse_app` holds SELECT and INSERT on `invoice` and
+`invoice_line` and nothing else — a revoke rather than a trigger, because a missing privilege
+cannot be forgotten by application code. There is no `archived_at` and no `updated_at`,
+because nothing archives or updates a document. Settlement, when 2.3 brings it, arrives as a
+child table exactly as `student_fee_payment` did.
+
+**A correction is a credit note.** `invoice.kind` is `invoice | credit_note`, a credit note
+names its original in `corrects_invoice_id` (a CHECK ties the two together both ways), and one
+partial unique index allows one credit note per document. The kind travels into the composite
+foreign key `(organization_id, series_id, kind)`, so a fatura cannot be numbered in the credit
+note book — a key rather than a trigger, because a key cannot be raced.
+
+**One live charge per fee occurrence**, enforced by the constraint trigger
+`invoice_line_one_charge`. Not a partial unique index, because "live" means "not since
+credited" and that needs a join: after a credit note the occurrence is billable again, which
+is how a club fixes a document it got wrong. `invoice_charged_on(organization_id,
+student_fee_id, period_start, except_line_id)` is the one definition, read by that trigger
+*and* by the monthly run, so a preview cannot offer a line the commit then refuses. The
+refusal carries the document number as a machine-readable `DETAIL`
+(`invoice_line_already_charged|FT A/3`), like every other refusal that needs figures.
+
+**`invoice_line.document_kind` is a copy of `invoice.kind`**, filled by a BEFORE trigger when
+a caller omits it and refused when it disagrees — the pair `student_fee.kind` already uses,
+and for the same reason: the partial rules above cannot join.
+
+**Amounts are gross with the VAT already inside them**, the rule `fee_plan` settled in round
+9, and `vat_exempt` is its own flag rather than a rate of zero. `invoice_vat_cents(gross,
+rate)` is the single definition of the tax inside an amount, and `vat_exemption_reason`
+finally gives the exemption somewhere to say why. Totals are summed in SQL from the lines and
+never stored: the lines cannot change, so there is nothing to drift and one definition instead
+of two.
+
+**Everything a document says about a person is a snapshot** — the payer's name, NIF, address
+and email; each line's student name and NIF. A family that corrects a surname or moves house
+must not silently rewrite what they were sent last March. `invoice_line.student_tax_number` is
+not a duplicate of the payer's: `student.tax_number` exists because a parent deducting lessons
+on their IRS does it against the *child's* number, so a document addressed to a guardian
+routinely carries a different number per line.
+
+**A document is addressed to a payer, and siblings land on one of them.**
+`invoice_payer_membership_id(organization_id, student_id)` is the one definition: the primary
+guardian, else the oldest live link, else null — and null means the student is their own
+payer, which is the adult path and also a student nobody has given a guardian yet. Exactly one
+of `payer_membership_id` and `payer_student_id` is set, said with a CHECK rather than with the
+adult-path function, which is STABLE and cannot appear in one.
+
+**The line carries the club's own words and nothing a catalogue could translate.**
+`fee_plan` has no name in this schema — a plan's label is its kind, its level and its
+frequency — so `description` holds the level's or the season's name, `lessons_per_week` the
+frequency, and `kind` stays an enum whose Portuguese is an i18n key. A document storing
+"Mensalidade" would read half in Portuguese for a club working in English and would be frozen
+at the language of whoever pressed the button.
+
+`invoice_line`, `invoice` and `invoice_series` sit **before** `student_fee` in
+`TENANT_TABLES`, child-first: a line points at a fee line, and a series at a facility. Like
+`audit_log` and `consent`, these two carry no DELETE grant for the app role, so teardown is
+the owner's connection — the same arrangement, for the same reason.
+
+### Settlement and chasing — phase 2.3, 8 September 2026
+
+```
+invoice_payment
+  id, organization_id, invoice_id, amount_cents, paid_on, source,
+  reference, notes, recorded_by, created_at, updated_at, archived_at
+
+invoice_chase
+  id, organization_id, invoice_id, chased_on, channel, note,
+  recorded_by, created_at, updated_at, archived_at
+```
+
+**A payment is a child row, never a column on the document.** `poolse_app` holds SELECT and
+INSERT on `invoice` and nothing else, so a `settled_on` column could not have been written
+even if somebody wanted one — and it is the honest shape anyway: a family paying half in
+October and half in November is two facts, and a single date holds neither. `payment_source`
+is reused from the fee register rather than reinvented.
+
+**There is no status column, and `invoice-settlement.sql` test 2 asserts there is not.** A
+document's state is `total − paid`, `due_on` against today, and whether a credit note exists —
+all already stored. `invoice_status(kind, credited, total, paid, due_on)` is that derivation,
+written once, STABLE because it reads `current_date`. The precedence is the order an operator
+cares about: **credited** beats **paid** beats **overdue**, and a partly paid document past its
+due date is still overdue, because half of nothing arriving on time is still late.
+
+**`invoice_dates_ordered` was dropped.** 2.2 wrote `CHECK (due_on >= issued_on)` on the
+assumption that a document is issued before it falls due. That is wrong for a club billing in
+arrears: bill October on the 2nd of December and the run dates the document today with a due
+date six weeks behind. Nothing replaces it — there is no ordering rule between those two dates
+that is true of every real document, and a constraint that is right most of the time fails on
+the case somebody is actually in.
+
+**A credit note is never paid**, refused by a BEFORE INSERT trigger rather than by a screen,
+because there will be a second way in when a bank feed arrives. Money against one is money
+against the wrong document.
+
+**Payments are soft-deleted.** An entry against the wrong document has to be removable, and a
+hard DELETE would take the record of the mistake with it; every sum filters `archived_at`.
+
+**`invoice_chase` records what a person did, not what Poolse sent.** The notification
+subsystem is phase 3.0 and phase 3 now comes last, so a chase is somebody telephoning or
+writing. The channel is an enum on the row (`email`, `phone`, `message`, `in_person`,
+`letter`) precisely so that 3.0 writes into the same history later rather than starting a
+second one.
+
+`invoice_payment` and `invoice_chase` sit **before** `invoice` in `TENANT_TABLES`; both point
+at a document.
+
 ## Module 2 — maintenance (shape)
 
 ```

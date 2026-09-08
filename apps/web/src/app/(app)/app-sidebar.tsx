@@ -149,6 +149,21 @@ const SECTIONS: Item[] = [
     icon: 'calendar',
     children: [{ href: '/dashboard/calendar/closures', key: 'calendar.closures' }],
   },
+  /*
+   * Faturação — phase 2.2.
+   *
+   * Its own section rather than a child of Alunos: a document belongs to a
+   * payer, and a payer is often a guardian with two children on one invoice, so
+   * filing it under the register would put it under the wrong noun. Owner and
+   * admin only, and the endpoints refuse everybody else besides — a menu that is
+   * merely absent is a URL somebody can still type.
+   */
+  {
+    href: '/dashboard/faturacao',
+    key: 'invoices.title',
+    icon: 'invoice',
+    roles: ['owner', 'admin'],
+  },
   {
     href: '/dashboard/students',
     key: 'students.title',

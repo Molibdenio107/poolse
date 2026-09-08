@@ -54,6 +54,10 @@ import {
 } from './billing/fees.controller.js';
 import { InsurancePoliciesController } from './billing/insurance.controller.js';
 import {
+  InvoiceSeriesController,
+  InvoicesController,
+} from './billing/invoices.controller.js';
+import {
   EnrollmentCategoryController,
   FeeCategoriesController,
 } from './billing/categories.controller.js';
@@ -117,6 +121,8 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     FeePeriodsController,
     FeePlansController,
     InsurancePoliciesController,
+    InvoicesController,
+    InvoiceSeriesController,
     FeeCategoriesController,
     EnrollmentCategoryController,
     StudentFeesController,
