@@ -1269,7 +1269,11 @@
     "badgeGuardian": "Enc. de educação",
     "nifInvalid": "Este NIF não é possível — verifique os nove dígitos.",
     "nifSharedWithStudent": "O encarregado não pode ter o mesmo NIF do aluno.",
-    "nifSharedBetweenGuardians": "Dois encarregados não podem ter o mesmo NIF."
+    "nifSharedBetweenGuardians": "Dois encarregados não podem ter o mesmo NIF.",
+    "birthDateInvalid": "Indique uma data válida.",
+    "birthDateFuture": "A data de nascimento não pode ser no futuro.",
+    "required": "Este campo é obrigatório.",
+    "tooLong": "Este valor é demasiado longo."
   },
   "advancement": {
     "title": "Progressões",

@@ -931,18 +931,45 @@ function isMinor(birthDate: string, majority: number): boolean {
 
 function requiredText(value: unknown, field: string): string {
   const trimmed = typeof value === 'string' ? value.trim() : '';
-  if (trimmed.length === 0) throw new BadRequestException(`${field} is required`);
+  if (trimmed.length === 0) {
+    throw new BadRequestException({
+      code: 'required',
+      message: `${field} is required`,
+      fields: { [field]: 'students.required' },
+    });
+  }
   if (trimmed.length > MAX_NAME) {
-    throw new BadRequestException(`${field} may be at most ${MAX_NAME} characters`);
+    throw new BadRequestException({
+      code: 'too_long',
+      message: `${field} may be at most ${MAX_NAME} characters`,
+      fields: { [field]: 'students.tooLong' },
+    });
   }
   return trimmed;
 }
 
+/**
+ * Every refusal on this form names the field it is about — F-09.
+ *
+ * A rejected create used to come back as a bare 400: a generic toast, no field
+ * marked, and — because the inputs were uncontrolled — the whole form cleared.
+ * Somebody who mistyped a year of birth lost the name, the level, the contact
+ * details and the guardian they had just entered, and was told only that it did
+ * not work.
+ *
+ * The message is a translation key rather than a sentence, like every other
+ * field error here, so the form puts it under the box in the operator's own
+ * language.
+ */
 function optionalText(value: unknown, field: string, max: number): string | null {
   const trimmed = typeof value === 'string' ? value.trim() : '';
   if (trimmed.length === 0) return null;
   if (trimmed.length > max) {
-    throw new BadRequestException(`${field} may be at most ${max} characters`);
+    throw new BadRequestException({
+      code: 'too_long',
+      message: `${field} may be at most ${max} characters`,
+      fields: { [field]: 'students.tooLong' },
+    });
   }
   return trimmed;
 }
@@ -959,15 +986,29 @@ function parseBirthDate(value: unknown): string | null {
   if (raw.length === 0) return null;
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    throw new BadRequestException('birthDate must be a date, as YYYY-MM-DD');
+    throw new BadRequestException({
+      code: 'birth_date_invalid',
+      message: 'birthDate must be a date, as YYYY-MM-DD',
+      fields: { birthDate: 'students.birthDateInvalid' },
+    });
   }
 
   const parsed = new Date(`${raw}T00:00:00Z`);
   if (Number.isNaN(parsed.getTime())) {
-    throw new BadRequestException('birthDate is not a real date');
+    throw new BadRequestException({
+      code: 'birth_date_invalid',
+      message: 'birthDate is not a real date',
+      fields: { birthDate: 'students.birthDateInvalid' },
+    });
   }
+  // A student born tomorrow is a typo every time — and now it says so beside
+  // the date rather than as "could not add the student".
   if (parsed.getTime() > Date.now()) {
-    throw new BadRequestException('birthDate cannot be in the future');
+    throw new BadRequestException({
+      code: 'birth_date_future',
+      message: 'birthDate cannot be in the future',
+      fields: { birthDate: 'students.birthDateFuture' },
+    });
   }
   return raw;
 }

@@ -95,13 +95,20 @@ const BLANK: Draft = {
 
 export function GuardianBlock({
   guardians,
-  birthDateInputId,
+  birthDate,
   ageOfMajority,
   errors,
 }: {
   guardians: Guardian[] | undefined;
-  /** The date field elsewhere in the same form, watched for changes. */
-  birthDateInputId: string;
+  /**
+   * The date of birth as the form currently has it — F-09.
+   *
+   * Was `birthDateInputId`, and this block listened to that input through
+   * `document.getElementById`. The date field is controlled now, so it has no
+   * stable id to listen to — and the value it was reaching for is simply passed
+   * in, which is what the listener was standing in for.
+   */
+  birthDate: string;
   /** The club's maioridade — POOLSE-22. Never a hardcoded 18. */
   ageOfMajority: number;
   errors: Record<string, string> | undefined;
@@ -109,27 +116,7 @@ export function GuardianBlock({
   const t = useTranslations();
 
   const [drafts, setDrafts] = useState<Draft[]>(() => (guardians ?? []).map(draftOf));
-  const [birthDate, setBirthDate] = useState('');
   const [reopened, setReopened] = useState(false);
-
-  /*
-   * Heard from the date input rather than lifted into shared state, because it
-   * sits several fields away and threading a value through everything between
-   * them would couple the whole form to this one block.
-   */
-  useEffect(() => {
-    const input = document.getElementById(birthDateInputId);
-    if (!(input instanceof HTMLInputElement)) return;
-
-    const read = (): void => setBirthDate(input.value);
-    read();
-    input.addEventListener('change', read);
-    input.addEventListener('input', read);
-    return () => {
-      input.removeEventListener('change', read);
-      input.removeEventListener('input', read);
-    };
-  }, [birthDateInputId]);
 
   const age = birthDate === '' ? null : ageInYears(birthDate);
   const minor = age !== null && age < ageOfMajority;

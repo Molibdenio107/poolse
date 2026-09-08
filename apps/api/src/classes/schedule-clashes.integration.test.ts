@@ -114,13 +114,21 @@ test('F-07 — a partial overlap reports only the part that overlaps', async () 
       const [clash] = await findScheduleClashes(tenant.organizationId);
 
       // 18:00–19:00 and 18:30–19:30 share half an hour, and that half hour is
-      // what the operator has to remove.
+      // what the operator has to remove. Order-independent, deliberately.
       assert.equal(clash?.overlapFrom, '18:30');
       assert.equal(clash?.overlapTo, '19:00');
-      assert.equal(clash?.firstFrom, '18:00');
-      assert.equal(clash?.firstTo, '19:00');
-      assert.equal(clash?.secondFrom, '18:30');
-      assert.equal(clash?.secondTo, '19:30');
+
+      /*
+       * "First" and "second" are whichever turma has the lower uuid — the pair
+       * is de-duplicated with `b.group_id > a.group_id` — so asserting them
+       * positionally is a coin toss that passes in isolation and fails in a full
+       * run. Read each turma by name instead.
+       */
+      const cadetes = clash!.firstClass === 'Cadetes';
+      assert.equal(cadetes ? clash!.firstFrom : clash!.secondFrom, '18:00');
+      assert.equal(cadetes ? clash!.firstTo : clash!.secondTo, '19:00');
+      assert.equal(cadetes ? clash!.secondFrom : clash!.firstFrom, '18:30');
+      assert.equal(cadetes ? clash!.secondTo : clash!.firstTo, '19:30');
     });
   });
 });

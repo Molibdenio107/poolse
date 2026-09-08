@@ -221,3 +221,69 @@ test('F-02 — an inline guardian is still attached to the person who holds that
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Every refusal names its field — F-09
+// ---------------------------------------------------------------------------
+//
+// A rejected create came back as a bare 400: a generic toast, no field marked,
+// and — because the inputs were uncontrolled — the whole form cleared. Somebody
+// who mistyped a year lost the name, the level, the contact details and the
+// guardian they had just entered.
+//
+// The form half is React's (controlled fields keep what was typed); this is the
+// server half, which is what tells the form *which* box to mark.
+
+test('F-09 — a future date of birth is refused, and names the field', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const students = new StudentsController();
+
+      try {
+        await students.create(minor({ birthDate: '2030-01-01' }));
+        assert.fail('a student born in 2030 should be refused');
+      } catch (error) {
+        const refusal = error as { status?: number; response?: { fields?: Record<string, string> } };
+        assert.equal(refusal.status, 400);
+        // The field, so the message lands under the date rather than at the top
+        // of a page with a dozen boxes on it.
+        assert.equal(refusal.response?.fields?.['birthDate'], 'students.birthDateFuture');
+      }
+    });
+  });
+});
+
+test('F-09 — a malformed date and a missing name name their fields too', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const students = new StudentsController();
+
+      const named = async (
+        body: Record<string, unknown>,
+        field: string,
+        key: string,
+      ): Promise<void> => {
+        try {
+          await students.create(body);
+          assert.fail(`${field} should have been refused`);
+        } catch (error) {
+          const refusal = error as {
+            status?: number;
+            response?: { fields?: Record<string, string> };
+          };
+          assert.equal(refusal.status, 400);
+          assert.equal(refusal.response?.fields?.[field], key);
+        }
+      };
+
+      await named(minor({ birthDate: '11-04-2016' }), 'birthDate', 'students.birthDateInvalid');
+      await named(minor({ firstName: '' }), 'firstName', 'students.required');
+      await named(minor({ lastName: '  ' }), 'lastName', 'students.required');
+      await named(
+        minor({ contactPhone: 'x'.repeat(41) }),
+        'contactPhone',
+        'students.tooLong',
+      );
+    });
+  });
+});

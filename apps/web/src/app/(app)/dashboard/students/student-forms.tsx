@@ -5,13 +5,13 @@ import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { Guardian, StudentLevel } from '../../../../lib/api';
 import {
-  CONTROL_BLOCK,
   CONTROL_LINE,
   FIELD_COLUMN,
   FIELD_LABEL,
+  SelectField,
+  TextAreaField,
   TextField,
 } from '@/components/ui/field';
-import { cn } from '@/lib/utils';
 import { GuardianBlock } from './guardian-block';
 import { fitsLevel } from '@/lib/ages';
 import type { FormState } from '../actions';
@@ -76,52 +76,83 @@ export function StudentForm({
     INITIAL,
   );
 
+  /*
+   * The date of birth, lifted — F-09.
+   *
+   * The guardian block branches on it and used to read this input out of the DOM
+   * by id. A controlled field generates its own id, and holding the value here
+   * is what that listener was standing in for.
+   */
+  const [birthDate, setBirthDate] = useState(student?.birthDate ?? '');
+
+  /**
+   * The server's error for one field, ready to spread onto its component.
+   *
+   * Spread rather than passed as `error={undefined}` because these props are
+   * `exactOptionalPropertyTypes`: an explicit undefined is not the same as
+   * absent.
+   */
+  const fieldError = (name: string): { error?: string } =>
+    state.fields?.[name] === undefined ? {} : { error: t(state.fields[name]!) };
+
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       {student?.id !== undefined && <input type="hidden" name="studentId" value={student.id} />}
 
+      {/*
+        Every field controlled — F-09, and the tidy-up the NIF field's comment
+        used to defer.
+
+        React 19 resets a form as soon as a function action returns, *including*
+        when it returns a validation error. So a future date of birth cleared the
+        name, the level, the contact details and the guardian somebody had just
+        typed, at the exact moment they were being asked to correct one field.
+        POOLSE-09 and POOLSE-10 were the same bug twice; this was the third.
+
+        These components also carry their own label, hint and field-level error,
+        which is what lets each server rejection land under the box it is about
+        rather than as a sentence at the top of the page.
+      */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="student-first" className={FIELD_LABEL}>
-            {t('students.firstName')}
-          </label>
-          <input
-            id="student-first"
-            name="firstName"
-            required
-            maxLength={120}
-            defaultValue={student?.firstName ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
+        <TextField
+          name="firstName"
+          label={t('students.firstName')}
+          initial={student?.firstName ?? ''}
+          maxLength={120}
+          required
+          className="max-w-none"
+          {...fieldError('firstName')}
+        />
 
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="student-last" className={FIELD_LABEL}>
-            {t('students.lastName')}
-          </label>
-          <input
-            id="student-last"
-            name="lastName"
-            required
-            maxLength={120}
-            defaultValue={student?.lastName ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
+        <TextField
+          name="lastName"
+          label={t('students.lastName')}
+          initial={student?.lastName ?? ''}
+          maxLength={120}
+          required
+          className="max-w-none"
+          {...fieldError('lastName')}
+        />
 
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="student-birth" className={FIELD_LABEL}>
-            {t('students.birthDate')}
-          </label>
-          <input
-            id="student-birth"
-            name="birthDate"
-            type="date"
-            defaultValue={student?.birthDate ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
+        {/*
+          Held in state rather than read out of the DOM by id.
+
+          The guardian block needs to know the date to decide whether to show
+          itself, and it used to listen to this input through
+          `document.getElementById`. A controlled field has no stable id — the
+          component generates its own — and lifting the value is what that hack
+          was standing in for anyway.
+        */}
+        <TextField
+          name="birthDate"
+          type="date"
+          label={t('students.birthDate')}
+          initial={student?.birthDate ?? ''}
+          onValueChange={setBirthDate}
+          className="max-w-none"
+          {...fieldError('birthDate')}
+        />
 
         {/*
           Masculino or feminino — round 5, and optional.
@@ -131,60 +162,40 @@ export function StudentForm({
           answer: most imported rows have nothing here, and a required field
           would be filled in by guessing from a first name.
         */}
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="student-gender" className={FIELD_LABEL}>
-            {t('students.gender')}
-          </label>
-          <select
-            id="student-gender"
-            name="gender"
-            defaultValue={student?.gender ?? ''}
-            className={CONTROL_LINE}
-          >
-            <option value="">{t('students.genderUnknown')}</option>
-            <option value="male">{t('students.genderMale')}</option>
-            <option value="female">{t('students.genderFemale')}</option>
-          </select>
-        </div>
+        <SelectField
+          name="gender"
+          label={t('students.gender')}
+          initial={student?.gender ?? ''}
+          options={[
+            { value: '', label: t('students.genderUnknown') },
+            { value: 'male', label: t('students.genderMale') },
+            { value: 'female', label: t('students.genderFemale') },
+          ]}
+          className="max-w-none"
+          {...fieldError('gender')}
+        />
 
         <LevelPicker levels={levels} student={student} />
 
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="student-email" className={FIELD_LABEL}>
-            {t('students.contactEmail')}
-          </label>
-          <input
-            id="student-email"
-            name="contactEmail"
-            type="email"
-            defaultValue={student?.contactEmail ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
+        <TextField
+          name="contactEmail"
+          type="email"
+          label={t('students.contactEmail')}
+          initial={student?.contactEmail ?? ''}
+          maxLength={254}
+          className="max-w-none"
+          {...fieldError('contactEmail')}
+        />
 
-        <div className={FIELD_COLUMN}>
-          <label htmlFor="student-phone" className={FIELD_LABEL}>
-            {t('students.contactPhone')}
-          </label>
-          <input
-            id="student-phone"
-            name="contactPhone"
-            defaultValue={student?.contactPhone ?? ''}
-            className={CONTROL_LINE}
-          />
-        </div>
+        <TextField
+          name="contactPhone"
+          label={t('students.contactPhone')}
+          initial={student?.contactPhone ?? ''}
+          maxLength={40}
+          className="max-w-none"
+          {...fieldError('contactPhone')}
+        />
 
-        {/*
-          `TextField` rather than a raw input, unlike its neighbours.
-
-          This is the one field on the form that the *server* can reject — a NIF
-          another student already has comes back as a 409 naming this field — and
-          an uncontrolled input is wiped by React 19 the moment the action
-          returns, which is exactly when somebody is being asked to correct it.
-          POOLSE-09 and POOLSE-10 were both this bug. The neighbours predate the
-          component and are a separate tidy-up; adding a seventeenth of them
-          knowingly would not be.
-        */}
         <TextField
           name="taxNumber"
           label={t('students.taxNumber')}
@@ -192,27 +203,22 @@ export function StudentForm({
           maxLength={40}
           hint={t('students.taxNumberHint')}
           className="max-w-none"
-          {...(state.fields?.['taxNumber'] !== undefined
-            ? { error: t(state.fields['taxNumber']) }
-            : {})}
+          {...fieldError('taxNumber')}
         />
       </div>
 
       {/* Prose, so it takes the wider cap rather than the single-control one. */}
-      <div className={cn(FIELD_COLUMN, 'max-w-form')}>
-        <label htmlFor="student-notes" className={FIELD_LABEL}>
-          {t('students.notes')}
-        </label>
-        {/* CONTROL_BLOCK, not CONTROL_LINE: the fixed height would fight `rows`. */}
-        <textarea
-          id="student-notes"
+      <div className="max-w-form">
+        <TextAreaField
           name="notes"
+          label={t('students.notes')}
+          initial={student?.notes ?? ''}
           rows={3}
           maxLength={2000}
-          defaultValue={student?.notes ?? ''}
-          className={CONTROL_BLOCK}
+          className="max-w-none"
+          {...fieldError('notes')}
         />
-        <p className="text-sm text-warning">{t('students.notesWarning')}</p>
+        <p className="mt-1.5 text-sm text-warning">{t('students.notesWarning')}</p>
       </div>
 
       {/*
@@ -222,7 +228,7 @@ export function StudentForm({
       <GuardianBlock
         ageOfMajority={ageOfMajority}
         guardians={student?.guardians}
-        birthDateInputId="student-birth"
+        birthDate={birthDate}
         errors={state.fields}
       />
 

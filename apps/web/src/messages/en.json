@@ -1269,7 +1269,11 @@
     "badgeGuardian": "Guardian",
     "nifInvalid": "That NIF is not possible — check the nine digits.",
     "nifSharedWithStudent": "A guardian cannot have the same NIF as the student.",
-    "nifSharedBetweenGuardians": "Two guardians cannot share a NIF."
+    "nifSharedBetweenGuardians": "Two guardians cannot share a NIF.",
+    "birthDateInvalid": "Enter a valid date.",
+    "birthDateFuture": "The date of birth cannot be in the future.",
+    "required": "This field is required.",
+    "tooLong": "This value is too long."
   },
   "advancement": {
     "title": "Advancement",
