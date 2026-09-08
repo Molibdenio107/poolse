@@ -59,7 +59,7 @@ BEGIN
    WHERE organization_id = v_org AND facility_id = v_facility AND name = 'ES D. Dinis';
 
   INSERT INTO partner (organization_id, facility_id, name, type, nif, address, color, notes)
-  VALUES (v_org, v_facility, 'Misericórdia de Santo Tirso', 'ipss_misericordia', '501234567',
+  VALUES (v_org, v_facility, 'Misericórdia de Santo Tirso', 'ipss_misericordia', '501234560',
           'Praça 25 de Abril, Santo Tirso', '#b3d49d',
           'Hidroterapia. Grupo pequeno, precisa de água mais quente.')
   ON CONFLICT DO NOTHING;

@@ -22,7 +22,7 @@ after(closeHarness);
 const DINIS = {
   name: 'ES D. Dinis',
   type: 'escola',
-  nif: '501234567',
+  nif: '501234560',
   color: '#67a6b6',
 };
 

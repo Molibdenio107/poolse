@@ -1266,7 +1266,10 @@
     "levelColourHint": "Optional. Used on the calendar grid for classes at this level.",
     "emergencyNameRequired": "Give a name, or choose someone in the club.",
     "badgeAdult": "Adult",
-    "badgeGuardian": "Guardian"
+    "badgeGuardian": "Guardian",
+    "nifInvalid": "That NIF is not possible — check the nine digits.",
+    "nifSharedWithStudent": "A guardian cannot have the same NIF as the student.",
+    "nifSharedBetweenGuardians": "Two guardians cannot share a NIF."
   },
   "advancement": {
     "title": "Advancement",
@@ -2104,7 +2107,8 @@
       "contactEmail": "Email",
       "contactPhone": "Phone",
       "notes": "Notes"
-    }
+    },
+    "nifInvalid": "That NIF is not possible — check the nine digits."
   },
   "grid": {
     "partnership": "Partnership",

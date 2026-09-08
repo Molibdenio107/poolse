@@ -11,6 +11,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { isValidNif } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import {
   hasRole,
@@ -741,6 +742,8 @@ function parseStudent(body: Record<string, unknown>, majority: number): StudentI
     }
   }
 
+  refuseSharedNifs(optionalText(body['taxNumber'], 'taxNumber', 40), guardians);
+
   return {
     firstName: requiredText(body['firstName'], 'firstName'),
     lastName: requiredText(body['lastName'], 'lastName'),
@@ -748,9 +751,20 @@ function parseStudent(body: Record<string, unknown>, majority: number): StudentI
     levelId: optionalText(body['levelId'], 'levelId', 64),
     contactEmail: optionalText(body['contactEmail'], 'contactEmail', 254),
     contactPhone: optionalText(body['contactPhone'], 'contactPhone', 40),
-    // Never validated as a real NIF — an operator copying a number off a form
-    // should not be stopped by a checksum. Same rule as `membership.tax_number`.
-    taxNumber: optionalText(body['taxNumber'], 'taxNumber', 40),
+    /*
+     * Checked against the mod-11 rule — F-02, reversing the comment that used to
+     * sit here.
+     *
+     * The old argument was that a wrong-but-plausible number is a correction
+     * rather than a crash, so an operator copying one off a form should not be
+     * stopped by a checksum. QA showed what that costs: `134167211` went in on a
+     * student *and* on their guardian in one submit, and the duplicate guard
+     * that is meant to catch one NIF twice in a club is keyed on that number —
+     * so a number that cannot exist silently defeats it.
+     *
+     * Empty stays allowed. Most students have none recorded.
+     */
+    taxNumber: readNif(body['taxNumber'], 'taxNumber'),
     notes: optionalText(body['notes'], 'notes', MAX_NOTES),
     // Masculino or feminino, and anything else is "not recorded" — which is the
     // ordinary state of an imported row and must stay representable.
@@ -810,7 +824,7 @@ function readGuardian(
     relationship: optionalText(entry['relationship'], 'guardianRelationship', 80),
     phone: optionalText(entry['phone'], 'guardianPhone', 40),
     email: optionalText(entry['email'], 'guardianEmail', 254),
-    taxNumber: optionalText(entry['taxNumber'], 'guardianTaxNumber', 20),
+    taxNumber: readNif(entry['taxNumber'], 'guardianTaxNumber'),
     address: optionalText(entry['address'], 'guardianAddress', 500),
     // The first listed is the primary contact unless one says otherwise. The
     // repository re-checks this; here it only carries what was asked for.
@@ -819,6 +833,81 @@ function readGuardian(
 
   if (guardian.membershipId === null && guardian.name === null) return null;
   return guardian;
+}
+
+/**
+ * One NIF, one person — F-02.
+ *
+ * A NIF is a national identity number, so a child and their mother cannot hold
+ * the same one, and two guardians on one child certainly cannot. Both went
+ * through: the unique indexes are per table (`student.tax_number` and
+ * `membership.tax_number`), so a student and a membership sharing a number
+ * violates neither, and nothing between them was looking.
+ *
+ * Checked here rather than in the repository because this is where the whole
+ * submit is visible at once — a request naming one student and two guardians is
+ * the only place the three numbers can be compared, and the field it names is
+ * the guardian's, because the student's is the one the operator meant.
+ *
+ * Deliberately **not** extended to "this NIF already belongs to somebody in the
+ * club". An inline guardian whose NIF matches an existing person is *attached*
+ * to them, which is what stops the second sibling producing a second mother —
+ * see `syncGuardians`. Refusing that would break the case the dedupe exists for,
+ * and the dual-role case POOLSE-23 settled besides.
+ */
+function refuseSharedNifs(studentNif: string | null, guardians: GuardianInput[]): void {
+  const seen = new Map<string, 'student' | 'guardian'>();
+
+  if (studentNif !== null) seen.set(normaliseNif(studentNif), 'student');
+
+  for (const guardian of guardians) {
+    if (guardian.taxNumber === null) continue;
+    const key = normaliseNif(guardian.taxNumber);
+    const holder = seen.get(key);
+
+    if (holder === 'student') {
+      throw new BadRequestException({
+        code: 'nif_shared_with_student',
+        message: 'A guardian cannot have the same NIF as the student',
+        fields: { guardianTaxNumber: 'students.nifSharedWithStudent' },
+      });
+    }
+    if (holder === 'guardian') {
+      throw new BadRequestException({
+        code: 'nif_shared_between_guardians',
+        message: 'Two guardians cannot share a NIF',
+        fields: { guardianTaxNumber: 'students.nifSharedBetweenGuardians' },
+      });
+    }
+
+    seen.set(key, 'guardian');
+  }
+}
+
+/** Digits only, so `123 456 789` and `123456789` are one number. */
+function normaliseNif(nif: string): string {
+  return nif.replace(/\s/g, '');
+}
+
+/**
+ * An optional NIF, refused when it cannot be a real one — F-02.
+ *
+ * `isValidNif` lives in `@poolse/rules` so the form and the API cannot disagree
+ * about it: a field that accepts a number the server then rejects is the failure
+ * that package exists to prevent.
+ */
+function readNif(value: unknown, field: string): string | null {
+  const text = optionalText(value, field, 40);
+  if (text === null) return null;
+
+  if (!isValidNif(text)) {
+    throw new BadRequestException({
+      code: 'nif_invalid',
+      message: 'That is not a possible NIF',
+      fields: { [field]: 'students.nifInvalid' },
+    });
+  }
+  return normaliseNif(text);
 }
 
 /**

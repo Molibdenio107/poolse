@@ -67,7 +67,7 @@ BEGIN
 
   -- The reference club's actual morning, near enough.
   INSERT INTO partner (organization_id, facility_id, name, type, nif, color)
-  VALUES (v_org, v_central, 'ES D. Dinis', 'escola', '501234567', '#67a6b6')
+  VALUES (v_org, v_central, 'ES D. Dinis', 'escola', '501234560', '#67a6b6')
   RETURNING id INTO v_dinis;
 
   INSERT INTO partner (organization_id, facility_id, name, type)

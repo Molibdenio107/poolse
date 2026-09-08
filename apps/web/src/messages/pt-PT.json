@@ -1266,7 +1266,10 @@
     "levelColourHint": "Opcional. Usada na grelha do calendário para as turmas deste nível.",
     "emergencyNameRequired": "Indique um nome ou escolha uma pessoa do clube.",
     "badgeAdult": "Adulto",
-    "badgeGuardian": "Enc. de educação"
+    "badgeGuardian": "Enc. de educação",
+    "nifInvalid": "Este NIF não é possível — verifique os nove dígitos.",
+    "nifSharedWithStudent": "O encarregado não pode ter o mesmo NIF do aluno.",
+    "nifSharedBetweenGuardians": "Dois encarregados não podem ter o mesmo NIF."
   },
   "advancement": {
     "title": "Progressões",
@@ -2104,7 +2107,8 @@
       "contactEmail": "E-mail",
       "contactPhone": "Telefone",
       "notes": "Notas"
-    }
+    },
+    "nifInvalid": "Este NIF não é possível — verifique os nove dígitos."
   },
   "grid": {
     "partnership": "Parceria",

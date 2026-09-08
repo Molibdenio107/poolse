@@ -5,6 +5,7 @@ import {
   concurrentGroups,
   evaluate,
   isContiguous,
+  isValidNif,
   overlaps,
   verdictOf,
   type RuleBooking,
@@ -321,4 +322,43 @@ test('every reason is returned, not just the first', () => {
 
   assert.ok(reasons.some((reason) => reason.code === 'weekdayDisabled'));
   assert.ok(reasons.some((reason) => reason.code === 'overCapacity'));
+});
+
+// ---------------------------------------------------------------------------
+// The NIF checksum — F-02
+// ---------------------------------------------------------------------------
+
+test('a NIF with a correct check digit is accepted', () => {
+  /*
+   * Every one of these has its check digit computed, not chosen. Two invented
+   * examples went in first and the test caught them, which is the right way
+   * round — but it is worth saying that a fixture for a checksum has to be
+   * derived from the checksum or it is testing nothing.
+   *
+   * `450000010` is the case an implementation written from memory gets wrong:
+   * the weighted sum leaves a remainder below 2, so the check digit is 0 rather
+   * than `11 - remainder`.
+   */
+  for (const nif of ['123456789', '501442600', '450000010', '199999996']) {
+    assert.ok(isValidNif(nif), `${nif} should be valid`);
+  }
+});
+
+test('a wrong check digit is refused', () => {
+  // The number from the QA report, which was accepted on both the student and
+  // the guardian in one submit.
+  assert.equal(isValidNif('134167211'), false);
+  assert.equal(isValidNif('123456788'), false);
+});
+
+test('anything that is not nine digits is refused', () => {
+  assert.equal(isValidNif('12345678'), false, 'eight digits');
+  assert.equal(isValidNif('1234567890'), false, 'ten digits');
+  assert.equal(isValidNif(''), false, 'empty is not this function to allow');
+  assert.equal(isValidNif('12345678A'), false);
+});
+
+test('whitespace is tolerated, because operators paste from spreadsheets', () => {
+  assert.equal(isValidNif(' 123456789 '), true);
+  assert.equal(isValidNif('123 456 789'), true);
 });

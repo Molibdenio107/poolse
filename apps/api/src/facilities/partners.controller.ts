@@ -11,6 +11,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { isValidNif } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
@@ -429,9 +430,21 @@ function readPartner(body: Record<string, unknown>): PartnerInput {
     throw new BadRequestException('color must be a hex colour like #67a6b6');
   }
 
+  /*
+   * Nine digits *and* a valid check digit — F-02.
+   *
+   * This used to check only the shape. A partner is invoiced, so a NIF that
+   * cannot exist is a document that has to be reissued; `isValidNif` is the same
+   * rule the student and guardian fields now use, from `@poolse/rules`, so the
+   * three cannot drift.
+   */
   const nif = optionalText(body['nif'], 'nif', 9);
-  if (nif !== null && !/^[0-9]{9}$/.test(nif)) {
-    throw new BadRequestException('nif must be nine digits');
+  if (nif !== null && !isValidNif(nif)) {
+    throw new BadRequestException({
+      code: 'nif_invalid',
+      message: 'That is not a possible NIF',
+      fields: { nif: 'partners.nifInvalid' },
+    });
   }
 
   /*

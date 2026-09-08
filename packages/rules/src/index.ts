@@ -341,3 +341,55 @@ export function poolOf(laneIds: readonly string[], lanes: readonly RuleLane[]): 
   );
   return pools.size === 1 ? [...pools][0]! : null;
 }
+
+// ---------------------------------------------------------------------------
+// The Portuguese NIF — F-02
+// ---------------------------------------------------------------------------
+//
+// Here rather than in either app, for the reason everything else in this file
+// is here: **the client and the server have to agree.** A form that accepts a
+// number the API then refuses is the same failure the conflict rules exist to
+// prevent, one field smaller.
+//
+// **This reverses a written decision.** `students.controller.ts` carried the
+// comment "never validated as a real NIF — an operator copying a number off a
+// form should not be stopped by a checksum", and `membership.tax_number` says
+// the same. The argument was that a wrong-but-plausible number is a correction
+// rather than a crash. QA showed the cost of that: `134167211` was accepted on
+// a student *and* on their guardian in one submit, and the duplicate guard that
+// is supposed to catch a NIF twice in a club is keyed on that number — so a bad
+// one silently defeats it. A checksum is the cheapest way to keep the key
+// meaningful, and it rejects only numbers that cannot exist.
+//
+// An **empty** NIF stays allowed everywhere it is allowed today. Most students
+// have none recorded, and requiring one would be a different decision entirely.
+
+/**
+ * Whether a string is a possible Portuguese NIF.
+ *
+ * Nine digits, and the ninth is a mod-11 check digit over the first eight
+ * weighted 9…2. A remainder of 0 or 1 means the check digit is 0, which is the
+ * rule people get wrong when they implement this from memory.
+ *
+ * Deliberately *not* a check on the leading digit. The valid prefixes have been
+ * extended more than once by the AT — 1, 2, 3 for individuals, 5 for companies,
+ * 45 for non-residents, 70/74/75/77/79, 90/91/98/99 — and a list of them in
+ * this file would be a list that ages badly and starts refusing real numbers.
+ * The checksum is the part that is stable.
+ *
+ * Whitespace is tolerated because operators paste from spreadsheets; anything
+ * else that is not a digit is a no.
+ */
+export function isValidNif(nif: string): boolean {
+  const digits = nif.replace(/\s/g, '');
+  if (!/^\d{9}$/.test(digits)) return false;
+
+  let sum = 0;
+  for (let index = 0; index < 8; index += 1) {
+    sum += Number(digits[index]) * (9 - index);
+  }
+
+  const remainder = sum % 11;
+  const check = remainder < 2 ? 0 : 11 - remainder;
+  return check === Number(digits[8]);
+}

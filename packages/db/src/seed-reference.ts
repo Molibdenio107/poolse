@@ -128,7 +128,7 @@ const PARTNERS: {
   {
     name: 'Escola Secundária D. Dinis',
     type: 'escola',
-    nif: '600078432',
+    nif: '600078434',
     colour: '#67a6b6',
     groups: [
       { name: '6A', count: 24, tag: 'DE', ownInstructor: 'Prof. Silva', notes: null },
@@ -141,7 +141,7 @@ const PARTNERS: {
   {
     name: 'Santa Casa da Misericórdia de Santo Tirso',
     type: 'ipss_misericordia',
-    nif: '500745291',
+    nif: '500745293',
     colour: '#b3d49d',
     groups: [
       {
@@ -169,7 +169,7 @@ const PARTNERS: {
   {
     name: 'Andebol Clube de Santo Tirso',
     type: 'clube',
-    nif: '503998211',
+    nif: '503998214',
     colour: '#c98a8a',
     groups: [
       { name: 'Sub-16', count: 18, tag: null, ownInstructor: 'Pedro Sousa', notes: null },

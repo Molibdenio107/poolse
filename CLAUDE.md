@@ -132,6 +132,17 @@ one cause. Use `TextField` / `SelectField` / `TextAreaField` from
 `apps/web/src/components/ui/field.tsx`; they are controlled, re-seed only when the server's
 value actually changes, and carry their own label, hint and field-level error.
 
+**A NIF is checksum-validated, and `isValidNif` in `@poolse/rules` is the one definition.**
+Nine digits with a mod-11 check digit; empty stays allowed everywhere it already was. It lives
+in the shared package for the reason the conflict rules do — a form that accepts a number the
+API refuses is the failure that package exists to prevent. This **reverses** the "never
+validated as a real NIF" comment that `students.controller.ts` and `membership.tax_number`
+used to carry: the duplicate-person guard is *keyed* on the NIF, so a number that cannot exist
+silently defeats it. **One NIF is one person**: a student and their guardian may not share one
+in a submit, nor may two guardians — checked in the controller, which is the only place the
+whole request is visible. An inline guardian whose NIF matches an existing person is still
+*attached* to them, because that is what stops a second sibling producing a second mother.
+
 **Money amounts are integer minor units; unit prices are not.** `amount_cents` for
 invoices and fees. A per-kWh tariff in integer cents rounds €0.1548 to €0.15 and puts a
 3% error on the module whose entire purpose is cost accuracy — unit prices are
