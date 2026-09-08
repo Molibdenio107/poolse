@@ -83,6 +83,27 @@ async function priceList(tenant: ScratchTenant): Promise<{
   });
 }
 
+/**
+ * A line whose current occurrence is already past its due day — on any day.
+ *
+ * These three tests set `payment_due_day = 8` and asserted `isOverdue`, which is
+ * `fee_due_on(current period start, due day) < current_date`. The line started on
+ * the 5th, so its current occurrence is *this* month's and its due date is the
+ * 8th of this month — in the future for the first week of every month. All three
+ * failed from the 1st to the 8th and passed for the rest of the month, which is a
+ * fixture that cannot tell a real regression from a Tuesday.
+ *
+ * The 28th fixes it without a clock to inject. A monthly occurrence beginning on
+ * the 28th means the current one started this month if today is the 28th or
+ * later, and last month otherwise — and the 8th of *that* month is behind us
+ * either way. Nothing here reads the calendar, so nothing here can disagree with
+ * the database about what today is.
+ *
+ * Held to one constant so the next test asserting lateness reaches for this
+ * rather than inventing a third date that works in September.
+ */
+const OVERDUE_SINCE = '2026-01-28';
+
 async function addStudent(
   tenant: ScratchTenant,
   firstName: string,
@@ -442,8 +463,8 @@ test('settling the same occurrence twice keeps one payment, not two', async () =
 /**
  * Overdue, and the penalty it earns.
  *
- * The line starts in the past so its occurrence is genuinely behind the due day
- * rather than depending on which day this test happens to run.
+ * `OVERDUE_SINCE` is what makes the occurrence genuinely behind its due day
+ * rather than behind it for three weeks in four.
  */
 test('an unsettled occurrence past its due day is overdue, and earns one penalty', async () => {
   await withScratchTenant(async (tenant) => {
@@ -460,7 +481,7 @@ test('an unsettled occurrence past its due day is overdue, and earns one penalty
       await fees.create(student, {
         feePlanId: plan,
         feePeriodId: mensal,
-        startsOn: '2026-01-05',
+        startsOn: OVERDUE_SINCE,
       });
 
       const before = await fees.list(student);
@@ -670,7 +691,11 @@ test('a percentage penalty is worked out from the monthly mensalidade', async ()
     );
 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
-      await fees.create(student, { feePlanId: plan, feePeriodId: mensal, startsOn: '2026-01-05' });
+      await fees.create(student, {
+        feePlanId: plan,
+        feePeriodId: mensal,
+        startsOn: OVERDUE_SINCE,
+      });
 
       const seen = await fees.list(student);
       // 35,00 € a month, ten per cent of it.
@@ -700,8 +725,16 @@ test('a late quota is a separate decision from a late mensalidade', async () => 
         await plans.create(tenant.facilityId, { kind: 'quota', amountCents: 2500 })
       ).id;
 
-      await fees.create(student, { feePlanId: plan, feePeriodId: mensal, startsOn: '2026-01-05' });
-      await fees.create(student, { feePlanId: quota, feePeriodId: mensal, startsOn: '2026-01-05' });
+      await fees.create(student, {
+        feePlanId: plan,
+        feePeriodId: mensal,
+        startsOn: OVERDUE_SINCE,
+      });
+      await fees.create(student, {
+        feePlanId: quota,
+        feePeriodId: mensal,
+        startsOn: OVERDUE_SINCE,
+      });
 
       const seen = await fees.list(student);
       assert.equal(seen.penalties.mensalidadeCents, 0, 'switched off, however late it is');

@@ -27,7 +27,19 @@ export interface LessonPlan {
   classGroupId: string | null;
   /** The partner group, when it is one. Exactly one of the two is set. */
   partnerGroupId: string | null;
-  /** ISO date. Cast to text in SQL: a `date` parsed by pg is a day early in UTC. */
+  /**
+   * The day this lesson is actually taught, in the facility's own timezone.
+   *
+   * **Not the key the plan is stored under.** A plan is filed by `occurs_on` —
+   * the day the pattern implied — because that is what survives a regeneration,
+   * and a one-week move deliberately leaves it alone. So a class moved from
+   * Saturday to Wednesday keeps a Saturday key and is taught on a Wednesday, and
+   * the screen said "sábado" over a lesson nobody would attend that day.
+   *
+   * The key stays internal. What comes out here is where the class is.
+   *
+   * ISO date, cast to text in SQL: a `date` parsed by pg is a day early in UTC.
+   */
   onDate: string;
   /** Empty string when nothing has been written yet. */
   body: string;
@@ -40,14 +52,23 @@ export interface LessonPlan {
   cancelled: boolean;
   /** The level's skills, in their own order, for the suggestions strip. */
   skills: string[];
-  /** The same turma's previous lesson, for "copy from the previous lesson". */
+  /**
+   * The same turma's previous lesson, for "copy from the previous lesson".
+   *
+   * Its `onDate` is the day that lesson was taught, resolved the same way as the
+   * one above — a label saying one thing here and another there is worse than
+   * either of them being wrong consistently.
+   */
   previous: { onDate: string; body: string } | null;
 }
 
 interface Occurrence {
   class_group_id: string | null;
   partner_group_id: string | null;
+  /** The pattern's day — the key a plan is filed under, and never displayed. */
   on_date: string;
+  /** The day the class actually runs, which is what a person is shown. */
+  local_date: string;
   level_id: string | null;
   instructor_membership_id: string | null;
   substitute_instructor_membership_id: string | null;
@@ -83,6 +104,11 @@ async function occurrenceOf(
       `SELECT cs.class_group_id,
               sch.partner_group_id,
               cs.occurs_on::text AS on_date,
+              -- Where the class is, as against where the pattern filed it. The
+              -- two differ for any week somebody has moved, which is exactly the
+              -- week an instructor is most likely to be reading the plan for.
+              session_local_date(cs.organization_id, cs.pool_id, cs.starts_at)::text
+                AS local_date,
               coalesce(cg.level_id, pg.level_id) AS level_id,
               -- The turma's instructor, or the booking's for a parceria. Either
               -- way it is the person who will be standing on the deck.
@@ -197,9 +223,35 @@ export async function readLessonPlan(
      * what somebody wants is the last thing they actually wrote, not the last
      * Tuesday the club happened to open.
      */
-    const previous = await tx.query<{ on_date: string; body: string }>(
-      `SELECT p.on_date::text AS on_date, p.body
+    const previous = await tx.query<{ on_date: string; shown_on: string; body: string }>(
+      /*
+       * Ordered by the key and labelled by the day.
+       *
+       * `on_date` is what makes "the one before this one" answerable at all — it
+       * is the plan's own column, and the session it belongs to may have been
+       * regenerated since. The label comes from that session where there still is
+       * one, and falls back to the key where there is not: a plan whose week was
+       * removed is still the last thing somebody wrote, and dropping it would
+       * empty the button that copies it.
+       *
+       * A partnership session carries no `class_group_id` and reaches its group
+       * through the booking, which is why both sides are matched.
+       */
+      `SELECT p.on_date::text AS on_date,
+              coalesce(s.local_date::text, p.on_date::text) AS shown_on,
+              p.body
          FROM lesson_plan p
+         LEFT JOIN LATERAL (
+           SELECT session_local_date(cs.organization_id, cs.pool_id, cs.starts_at) AS local_date
+             FROM class_session cs
+             LEFT JOIN class_schedule sch
+                    ON sch.id = cs.schedule_id AND sch.organization_id = cs.organization_id
+            WHERE cs.organization_id = p.organization_id
+              AND cs.occurs_on = p.on_date
+              AND cs.class_group_id IS NOT DISTINCT FROM p.class_group_id
+              AND sch.partner_group_id IS NOT DISTINCT FROM p.partner_group_id
+            LIMIT 1
+         ) s ON true
         WHERE p.class_group_id IS NOT DISTINCT FROM $1
           AND p.partner_group_id IS NOT DISTINCT FROM $2
           AND p.on_date < $3
@@ -234,7 +286,7 @@ export async function readLessonPlan(
       sessionId,
       classGroupId: occurrence.class_group_id,
       partnerGroupId: occurrence.partner_group_id,
-      onDate: occurrence.on_date,
+      onDate: occurrence.local_date,
       body: row?.body ?? '',
       updatedAt: row?.updated_at.toISOString() ?? null,
       updatedBy: row?.updated_by ?? null,
@@ -244,7 +296,7 @@ export async function readLessonPlan(
       previous:
         previous.rows[0] === undefined
           ? null
-          : { onDate: previous.rows[0].on_date, body: previous.rows[0].body },
+          : { onDate: previous.rows[0].shown_on, body: previous.rows[0].body },
     };
   });
 }
@@ -294,7 +346,7 @@ export async function saveLessonPlan(
           data: {
             classGroupId: occurrence.class_group_id,
             partnerGroupId: occurrence.partner_group_id,
-            onDate: occurrence.on_date,
+            onDate: occurrence.local_date,
           },
         });
       }
@@ -345,7 +397,7 @@ export async function saveLessonPlan(
       data: {
         classGroupId: occurrence.class_group_id,
         partnerGroupId: occurrence.partner_group_id,
-        onDate: occurrence.on_date,
+        onDate: occurrence.local_date,
       },
     });
 

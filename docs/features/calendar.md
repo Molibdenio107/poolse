@@ -303,6 +303,13 @@ carries — so a plan is never a text box floating free of what it is for. The t
 sits directly **above Save**: it writes on change rather than with the form, and under the
 button it read as something Save would record.
 
+**The sheet is dated by the day the class is taught**, not by the day the plan is filed under.
+A plan is stored against the day the pattern implied, so it survives a regeneration — a plan
+hanging off a rebuilt session row is a plan that disappears when somebody changes the pool. A
+one-week move deliberately leaves that day alone, so for any week that has been moved the two
+differ, and the sheet used to say "quarta-feira" over a lesson taught on the Saturday. The key
+is internal; what a person reads is where the class is.
+
 **The sheet fits the window.** It is a column whose text box takes the height that is left,
 so Save and the buttons under it are always visible; a long plan scrolls inside the box. Its
 foot carries Take the register and Cancel class — not the teacher picker, which is already

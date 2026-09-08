@@ -417,3 +417,49 @@ test('the instructor on a partnership booking may write its plan', async () => {
     });
   });
 });
+
+/**
+ * A moved lesson is dated by the day it is taught, not by the day it is filed.
+ *
+ * A plan is keyed on `occurs_on` so it survives a regeneration — a plan hanging
+ * off a rebuilt session row is a plan that vanishes when somebody changes the
+ * pool. But a one-week move deliberately leaves `occurs_on` alone, so the key is
+ * the pattern's day and the class is somewhere else: a Wednesday class moved to
+ * Saturday kept a Wednesday key, and the panel said "quarta-feira" above a
+ * lesson nobody would attend that day.
+ *
+ * Both halves are asserted here, because fixing one by breaking the other is the
+ * obvious wrong repair: the screen must say Saturday **and** the row must still
+ * be filed under Wednesday.
+ */
+test('a lesson moved for one week is dated where it is taught, and still filed where it was', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { first, groupId } = await twoLessons(tenant);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const sessions = new SessionsCalendarController();
+      const before = await sessions.plan(first);
+
+      // Three days later, that week only — the gesture that produces the drift.
+      const moved = new Date(`${before.onDate}T12:00:00Z`);
+      moved.setUTCDate(moved.getUTCDate() + 3);
+      const movedTo = moved.toISOString().slice(0, 10);
+
+      await sessions.move(first, { date: movedTo, startTime: '10:00' });
+      await sessions.savePlan(first, { body: 'Viragens' });
+
+      const after = await sessions.plan(first);
+      assert.equal(after.onDate, movedTo, 'the panel says the day the class runs');
+      assert.equal(after.body, 'Viragens');
+
+      // And the row is still filed under the day the pattern implied, which is
+      // what stops the next regeneration losing it.
+      const [row] = await tenant.sql<{ on_date: string }>(
+        `SELECT on_date::text AS on_date FROM lesson_plan
+          WHERE class_group_id = $1 AND archived_at IS NULL`,
+        [groupId],
+      );
+      assert.equal(row?.on_date, before.onDate);
+    });
+  });
+});
