@@ -917,6 +917,24 @@
     "proRataLabel": "Cobrar só a parte do período",
     "proRataHint": "Para quem entra a meio da época. Sem esta opção, é cobrado o valor inteiro — que é o que muitos clubes fazem, porque foi o que a seguradora lhes cobrou."
   },
+  "categories": {
+    "title": "Categorias de preço",
+    "hint": "Porque é que uma pessoa paga um valor diferente da do lado — sénior, estudante, funcionário.",
+    "none": "Ainda não há categorias.",
+    "add": "Adicionar categoria",
+    "name": "Nome",
+    "nameRequired": "Indique um nome para a categoria.",
+    "nameTaken": "Já existe uma categoria com esse nome.",
+    "sortOrder": "Ordem",
+    "usedBy": "{groups} turmas · {enrollments} inscrições",
+    "inUse": "Esta categoria ainda é usada por {groups} turmas e {enrollments} inscrições. Retire-a de todas antes de a arquivar.",
+    "archive": "Arquivar categoria",
+    "onGroup": "Categoria da turma",
+    "onEnrollment": "Categoria deste aluno",
+    "fromGroup": "Da turma",
+    "noCategory": "Sem categoria",
+    "saveFailed": "Não foi possível guardar a categoria."
+  },
   "insurance": {
     "title": "Apólice de seguro",
     "hint": "O seguro que o clube tem contratado e o que paga por cada pessoa segurada.",
@@ -1235,7 +1253,9 @@
     "waiting": "Lista de espera",
     "levelColour": "Cor do nível",
     "levelColourHint": "Opcional. Usada na grelha do calendário para as turmas deste nível.",
-    "emergencyNameRequired": "Indique um nome ou escolha uma pessoa do clube."
+    "emergencyNameRequired": "Indique um nome ou escolha uma pessoa do clube.",
+    "badgeAdult": "Adulto",
+    "badgeGuardian": "Enc. de educação"
   },
   "advancement": {
     "title": "Progressões",

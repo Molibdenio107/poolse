@@ -310,6 +310,26 @@ export default async function StudentsPage({
                         </Link>
                         {/* Beside the name, on the day — round 4. */}
                         <BirthdayFlag birthDate={student.birthDate} />
+                        {/*
+                          Both capacities, on one row — POOLSE-23 AC6.
+
+                          A grandmother who swims on Tuesdays and brings her
+                          granddaughter on Thursdays is one person and appears
+                          once; these say which of the two she is, and when she
+                          is both, that she is both. Words rather than colour,
+                          and beside the name because they are facts about the
+                          person rather than about their level or their fees.
+                        */}
+                        {student.isAdultStudent && (
+                          <span className="rounded bg-surface-muted px-2 py-0.5 text-sm font-normal text-foreground-muted">
+                            {t('students.badgeAdult')}
+                          </span>
+                        )}
+                        {student.isGuardian && (
+                          <span className="rounded border border-primary/40 px-2 py-0.5 text-sm font-normal text-primary">
+                            {t('students.badgeGuardian')}
+                          </span>
+                        )}
                       </span>
                       <span className="truncate text-sm text-foreground-muted">
                         {[

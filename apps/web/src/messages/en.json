@@ -917,6 +917,24 @@
     "proRataLabel": "Charge only the part of the period",
     "proRataHint": "For someone joining mid-season. Without it the whole premium is charged — which is what many clubs do, because it is what the insurer charged them."
   },
+  "categories": {
+    "title": "Fee categories",
+    "hint": "Why one person pays a different price from the next — senior, student, staff.",
+    "none": "No categories yet.",
+    "add": "Add a category",
+    "name": "Name",
+    "nameRequired": "Give the category a name.",
+    "nameTaken": "A category with that name already exists.",
+    "sortOrder": "Order",
+    "usedBy": "{groups} class groups · {enrollments} enrolments",
+    "inUse": "This category is still used by {groups} class groups and {enrollments} enrolments. Take it off all of them before archiving it.",
+    "archive": "Archive category",
+    "onGroup": "The class group's category",
+    "onEnrollment": "This student's own category",
+    "fromGroup": "From the class group",
+    "noCategory": "No category",
+    "saveFailed": "The category could not be saved."
+  },
   "insurance": {
     "title": "Insurance policy",
     "hint": "The insurance the club holds, and what it pays for each insured person.",
@@ -1235,7 +1253,9 @@
     "waiting": "Waiting list",
     "levelColour": "Level colour",
     "levelColourHint": "Optional. Used on the calendar grid for classes at this level.",
-    "emergencyNameRequired": "Give a name, or choose someone in the club."
+    "emergencyNameRequired": "Give a name, or choose someone in the club.",
+    "badgeAdult": "Adult",
+    "badgeGuardian": "Guardian"
   },
   "advancement": {
     "title": "Advancement",

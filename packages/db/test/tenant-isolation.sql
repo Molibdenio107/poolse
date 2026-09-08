@@ -676,4 +676,73 @@ BEGIN
   RAISE NOTICE 'PASS test 12: apólices and cover lines are isolated both ways';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 13 — fee categories, and the two places they are named
+-- ---------------------------------------------------------------------------
+--
+-- A category is a label a club invents, and both a turma and an enrolment point
+-- at one. Neither reference is cascaded, so the interesting half is the same as
+-- always: naming the neighbour's category would put one club's concession on
+-- another club's turma, and RLS does not catch it — both rows pass their own
+-- policy. Only the composite key refuses it.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid := 'a1111111-1111-1111-1111-111111111111';
+  v_cat_a uuid; v_cat_b uuid;
+  v_season_a uuid; v_group_a uuid;
+  v_seen integer; ok boolean;
+BEGIN
+  INSERT INTO fee_category (organization_id, name) VALUES (v_a, 'Sénior')
+  RETURNING id INTO v_cat_a;
+  INSERT INTO fee_category (organization_id, name) VALUES (v_b, 'Sénior')
+  RETURNING id INTO v_cat_b;
+
+  -- The same name at two clubs is ordinary: the index is per organization.
+  IF v_cat_a IS NULL OR v_cat_b IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 13a: two clubs could not both have a Sénior category';
+  END IF;
+
+  SELECT id INTO v_season_a FROM season WHERE organization_id = v_a LIMIT 1;
+  IF v_season_a IS NULL THEN
+    INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+    VALUES (v_a, 'Época A', DATE '2026-09-01', DATE '2027-07-31', 'draft')
+    RETURNING id INTO v_season_a;
+  END IF;
+
+  INSERT INTO class_group (organization_id, season_id, facility_id, name, fee_category_id)
+  VALUES (v_a, v_season_a, v_fac_a, 'Hidro Sénior', v_cat_a)
+  RETURNING id INTO v_group_a;
+
+  -- A turma on the neighbour's category.
+  ok := false;
+  BEGIN
+    INSERT INTO class_group (organization_id, season_id, facility_id, name, fee_category_id)
+    VALUES (v_a, v_season_a, v_fac_a, 'Roubada', v_cat_b);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 13b: org A used org B category'; END IF;
+
+  -- And the categories themselves, from the app role.
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  SELECT count(*) INTO v_seen FROM fee_category;
+  IF v_seen <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 13c: org B saw % categories, not 1', v_seen;
+  END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO fee_category (organization_id, name) VALUES (v_a, 'Contrabando');
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 13d: org B wrote a category into org A'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 13: fee categories are isolated, and so is naming one';
+END $$;
+
 ROLLBACK;

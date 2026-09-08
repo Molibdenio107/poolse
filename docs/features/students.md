@@ -63,16 +63,48 @@ The picker lists **every** active membership rather than a page of them: a picke
 one page offers only the people who happened to land on it, and the operator concludes the
 person is not in the system and types the name in by hand.
 
+## The fee category
+
+Why one person pays a different price from the person in the next lane: **Sénior**,
+**Estudante**, **Funcionário**. A club invents its own, so it is a list the club maintains
+rather than a fixed set.
+
+**A reference, never a percentage.** What a category is *worth* belongs to the pricing engine,
+which is not built. A number typed into a form here would be a discount nobody can report on
+and nobody can change in one place.
+
+**Set on the turma or on the enrolment, and the enrolment wins.** A senior turma carries the
+category so nobody types it forty times; the one member of it who is staff carries their own.
+Clearing a person's own category puts them back on their turma's — *not* on none, which is why
+that clear is its own action rather than saving an empty value.
+
+Renaming a category reaches everything at once, because a turma holds its id rather than a
+copy of its name. A category a turma or an enrolment still names cannot be archived, and the
+refusal counts both.
+
+Reading the list is open to anyone who may see a turma — it is a label printed beside a name
+and says nothing about money. Writing is the owner and admins.
+
+## Both capacities, one record
+
+A person who is an adult student **and** an encarregado de educação is one record and appears
+once in Alunos, with a badge for each. She has to: the list is over `student`, and she has one
+student record.
+
+The half worth stating is how "guardian" is asked. It is an **outbound** edge — she is
+somebody's encarregada. Asking "does this person have any guardian edges at all" finds the ones
+she holds over her granddaughter, which would take her off the adult path and address her own
+consent form to a parent she does not have.
+
+## Levels
+
+Senior levels sit in the **same ladder** as everything else, ordered by the same `sort_order`
+and bounded by the same age range. Not a parallel programme: POOLSE-19's "next level" logic
+walks that one ladder, and a second list would need a branch in it.
+
 ## Not built yet
 
-The ticket's remaining criteria, and why each is separable:
-
-- **AC4 — a fee category on the turma or the enrolment**, with the enrolment winning. It is a
-  new concept on a price list that has just been reshaped, and belongs with the invoicing work
-  rather than beside it.
-- **AC6 — one record with both badges** for a person who is an adult student *and* an
-  encarregado de educação. A students-list change, not a record change.
 - **AC7 — communications routed to the adult student rather than a guardian.** There is
   nothing to route: `notifications/` sends invitation and vacation email and no messaging
   feature exists. The rule is written down in the ticket and should be built with the feature
-  it belongs to, not stubbed ahead of it.
+  it belongs to, not stubbed ahead of it. It is the only criterion of POOLSE-23 still open.

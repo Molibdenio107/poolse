@@ -171,6 +171,18 @@ export interface Student {
   paymentState: 'none' | 'paid' | 'due' | 'overdue';
   /** POOLSE-42 — a fact about the person, not "has an active quota line". */
   isSocio: boolean;
+  /**
+   * The two capacities one person can be in at once — POOLSE-23 AC6.
+   *
+   * A grandmother who swims on Tuesdays and brings her granddaughter on
+   * Thursdays is one record with two things true about her, not two records.
+   * `isGuardian` is an *outbound* edge — she is somebody's encarregada — which
+   * is the half that is easy to get wrong: asking "does this person have any
+   * guardian edges at all" would take her off the adult path for edges that
+   * point away from her.
+   */
+  isAdultStudent: boolean;
+  isGuardian: boolean;
   socioNumber: string | null;
   notes: string | null;
   /**
@@ -661,6 +673,36 @@ const PAYMENT_STATE = `(
    WHERE sf.student_id = s.id AND sf.archived_at IS NULL AND cur.period_start IS NOT NULL
 )`;
 
+/**
+ * Both capacities one person can be in, for the badges — POOLSE-23 AC6.
+ *
+ * A grandmother who swims on Tuesdays and brings her granddaughter on Thursdays
+ * is **one record**: one person, one row in Alunos, with two things true about
+ * her. The ticket's failure is her appearing twice, which she cannot here
+ * because this list is over `student` — so what was missing was any way to see
+ * the second half at all.
+ *
+ * `is_adult_student` reuses the enrolment path's own definition rather than
+ * restating it: at or above the club's age of majority with no live guardian
+ * link.
+ *
+ * `is_guardian` asks about an **outbound** edge, and that is the part the
+ * ticket warns about. A senior who is also an avó has guardian edges *from*
+ * her and none *to* her; asking "does this person have any guardian edges at
+ * all" gets her wrong in both directions at once — it would call her a
+ * guardian of herself and take her off the adult path for having one.
+ */
+const IS_ADULT_STUDENT = `student_is_adult_path(s.organization_id, s.id)`;
+
+const IS_GUARDIAN = `(
+  s.membership_id IS NOT NULL AND EXISTS (
+    SELECT 1 FROM guardian_link gl2
+     WHERE gl2.guardian_membership_id = s.membership_id
+       AND gl2.organization_id = s.organization_id
+       AND gl2.archived_at IS NULL
+  )
+)`;
+
 export interface StudentQuery {
   /**
    * Show only the students who owe money — round 5.
@@ -704,6 +746,8 @@ export async function listStudents(
       guardians: Guardian[];
       photo_storage_key: string | null;
       photo_consent: boolean;
+      is_adult_student: boolean;
+      is_guardian: boolean;
     }>(
       `
       SELECT ${TOTAL_COUNT},
@@ -726,7 +770,9 @@ export async function listStudents(
              s.notes,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
-             ${PHOTO_CONSENT} AS photo_consent
+             ${PHOTO_CONSENT} AS photo_consent,
+             ${IS_ADULT_STUDENT} AS is_adult_student,
+             ${IS_GUARDIAN} AS is_guardian
         FROM student s
         LEFT JOIN student_level l
                ON l.id = s.level_id
@@ -1213,6 +1259,8 @@ function toStudent(row: {
   guardians: Guardian[];
   photo_storage_key: string | null;
   photo_consent: boolean;
+  is_adult_student: boolean;
+  is_guardian: boolean;
 }): Student {
   return {
     id: row.id,
@@ -1242,6 +1290,8 @@ function toStudent(row: {
     notes: row.notes,
     photoStorageKey: row.photo_storage_key,
     photoConsent: row.photo_consent,
+    isAdultStudent: row.is_adult_student,
+    isGuardian: row.is_guardian,
   };
 }
 

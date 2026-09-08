@@ -851,6 +851,18 @@ export interface Student {
   paymentState: 'none' | 'paid' | 'due' | 'overdue';
   /** POOLSE-42 — membership is a fact about the person, not a derived one. */
   isSocio: boolean;
+  /**
+   * The two capacities one person can be in at once — POOLSE-23 AC6.
+   *
+   * A grandmother who swims on Tuesdays and brings her granddaughter on
+   * Thursdays is one record with two things true about her, not two records.
+   * `isGuardian` is an *outbound* edge — she is somebody's encarregada — which
+   * is the half that is easy to get wrong: asking "does this person have any
+   * guardian edges at all" would take her off the adult path for edges that
+   * point away from her.
+   */
+  isAdultStudent: boolean;
+  isGuardian: boolean;
   socioNumber: string | null;
   /** Null unless a live `photo` consent exists — the API decides, not the caller. */
   photoStorageKey: string | null;

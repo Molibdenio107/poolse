@@ -101,6 +101,15 @@ const TENANT_TABLES = [
   'class_schedule',
   'class_group',
   /*
+   * After the turma, not before it — POOLSE-23 AC4.
+   *
+   * A turma and an enrolment both point at a fee category and neither
+   * reference is cascaded, so deleting the categories first fails on the
+   * foreign key. Which is the key doing its job: a category something still
+   * names is not one a teardown should be able to remove quietly either.
+   */
+  'fee_category',
+  /*
    * The parceria tables — POOLSE-47. After `class_schedule`, because a booking
    * references a partner group and the reference is not cascaded; before
    * `student_level` and `season`, which a group and an agreement point at.

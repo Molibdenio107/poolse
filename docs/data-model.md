@@ -2136,6 +2136,31 @@ Naming somebody grants them nothing, and that is a property of the shape: it tou
 `membership_role` nor `guardian_link`, so there is no path by which it could. Blank strings
 are refused, so "is there a contact" has one answer rather than two.
 
+### The fee category — POOLSE-23 AC4, 8 September 2026
+
+```
+fee_category
+  id, organization_id, name, sort_order,
+  created_at, updated_at, archived_at
+```
+
+**A lookup table, not an enum**, by the standing rule: an operator invents these, and a
+bombeiros discount started in March should not wait for a deploy. Unique per organization on
+`lower(strip_accents(name))` and partial on `archived_at IS NULL` — "Senior" and "Sénior" are
+one word to a club, and a category retired and brought back next season must not collide with
+the dead row.
+
+`class_group.fee_category_id` and `enrollment.fee_category_id` both name one, both nullable,
+both composite-keyed to their own tenant. **The enrolment wins**, and
+`enrolment_fee_category(organization_id, enrollment_id)` is that precedence written once — the
+same reasoning as `fee_total_cents`, because the pricing engine that reads this next must not
+spell it differently. Null means the club has said nothing, which is not a category called
+"normal" and must never become one.
+
+Neither reference is cascaded, so `fee_category` sits **after** `class_group` in
+`TENANT_TABLES`: deleting the categories first fails on the foreign key, which is the key
+doing its job.
+
 ## Module 2 — maintenance (shape)
 
 ```

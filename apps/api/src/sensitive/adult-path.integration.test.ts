@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SensitiveController } from './sensitive.controller.js';
+import { StudentsController } from '../students/students.controller.js';
 import {
   actingAs,
   addMember,
@@ -342,6 +343,55 @@ test('an emergency contact is a person or free text, never both', async () => {
         () => controller.setEmergencyContact(id, { phone: '912 000 000' }),
         400,
       );
+    });
+  });
+});
+
+test('23.6 — an adult student who is also an EE is one record with both badges', async () => {
+  /*
+   * The avó who swims on Tuesdays and brings her granddaughter on Thursdays.
+   *
+   * Two things are being asserted and the second is the one the ticket warns
+   * about. She appears **once** — which she must, because Alunos is a list over
+   * `student` and she has one record. And she is on the **adult path**, because
+   * her guardian edges point *away* from her: asking "does this person have any
+   * guardian edges at all" would find the ones she holds over her
+   * granddaughter, take her off the adult path and address her consent form to
+   * a parent she does not have.
+   */
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const avo = await student(tenant, 'Amélia', bornYearsAgo(72));
+
+      // She is a person in the club, and that person is her student record.
+      const membership = await addMember(tenant, 'Amélia', 'Marques', ['guardian']);
+      await tenant.sql(`UPDATE student SET membership_id = $2 WHERE id = $1`, [avo, membership]);
+
+      // And she is the encarregada of her granddaughter — an outbound edge.
+      const neta = await student(tenant, 'Rita', bornYearsAgo(8));
+      await tenant.sql(
+        `INSERT INTO guardian_link
+           (organization_id, student_id, guardian_membership_id, relationship)
+         VALUES ($1, $2, $3, 'avo')`,
+        [tenant.organizationId, neta, membership],
+      );
+
+      // Still an adult: the edges she holds are not edges over her.
+      const seen = await new SensitiveController().read(avo);
+      assert.equal(seen.enrolment?.adultPath, true);
+      assert.equal(seen.enrolment?.hasGuardian, false);
+      assert.equal(seen.enrolment?.consentForm, 'self');
+
+      const { students } = await new StudentsController().list();
+      const rows = students.items.filter((row) => row.id === avo);
+      assert.equal(rows.length, 1, 'one person, one row');
+      assert.equal(rows[0]?.isAdultStudent, true);
+      assert.equal(rows[0]?.isGuardian, true, 'and both badges on it');
+
+      // Her granddaughter is neither, and is on the guardian path.
+      const child = students.items.find((row) => row.id === neta);
+      assert.equal(child?.isAdultStudent, false);
+      assert.equal(child?.isGuardian, false);
     });
   });
 });
