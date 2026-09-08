@@ -1755,7 +1755,7 @@
     "generate": "Generate the season",
     "clashTitle": "Two class groups clash",
     "clashHint": "The same instructor is in two class groups at the same time. Fix them and generate the season again.",
-    "clashRow": "{first} and {second} — {time}",
+    "clashRow": "{day}: {first} ({firstFrom}–{firstTo}) and {second} ({secondFrom}–{secondTo}) — they overlap from {overlapFrom} to {overlapTo}.",
     "clashFailed": "The season could not be generated because of a schedule clash.",
     "instructorBusy": "That instructor already has a class at one of those times.",
     "generateFailed": "The season could not be generated.",

@@ -1081,8 +1081,25 @@ export interface ScheduleClash {
   firstClass: string;
   secondClass: string;
   weekday: number;
-  firstTime: string;
-  secondTime: string;
+  /**
+   * Each turma's own hours — F-07.
+   *
+   * This used to be `firstTime` and `secondTime`, which were the two *start*
+   * times, and the screen joined them with an en dash as though they were a
+   * range: two classes both starting at 12:45 rendered as "Segunda 12:45–12:45",
+   * a window of no length.
+   *
+   * Both turmas' real hours travel, because they are what the operator needs to
+   * decide *which one to move* — and the overlap travels too, because that is
+   * the part that makes it a clash. Neither answers the other's question.
+   */
+  firstFrom: string;
+  firstTo: string;
+  secondFrom: string;
+  secondTo: string;
+  /** When the instructor is actually in two places: the intersection. */
+  overlapFrom: string;
+  overlapTo: string;
 }
 
 export async function findScheduleClashes(organizationId: string): Promise<ScheduleClash[]> {
@@ -1091,8 +1108,12 @@ export async function findScheduleClashes(organizationId: string): Promise<Sched
       first_class: string;
       second_class: string;
       weekday: number;
-      first_time: string;
-      second_time: string;
+      first_from: string;
+      first_to: string;
+      second_from: string;
+      second_to: string;
+      overlap_from: string;
+      overlap_to: string;
     }>(`
       WITH slot AS (
         SELECT cg.id AS group_id,
@@ -1112,8 +1133,14 @@ export async function findScheduleClashes(organizationId: string): Promise<Sched
       SELECT a.name              AS first_class,
              b.name              AS second_class,
              a.weekday,
-             to_char(a.start_time, 'HH24:MI') AS first_time,
-             to_char(b.start_time, 'HH24:MI') AS second_time
+             to_char(a.start_time, 'HH24:MI') AS first_from,
+             to_char(a.end_time,   'HH24:MI') AS first_to,
+             to_char(b.start_time, 'HH24:MI') AS second_from,
+             to_char(b.end_time,   'HH24:MI') AS second_to,
+             -- The intersection: the later start, the earlier end. Computed here
+             -- rather than on the client, like every other derived answer.
+             to_char(greatest(a.start_time, b.start_time), 'HH24:MI') AS overlap_from,
+             to_char(least(a.end_time, b.end_time), 'HH24:MI')        AS overlap_to
         FROM slot a
         JOIN slot b
           ON b.instructor_membership_id = a.instructor_membership_id
@@ -1131,8 +1158,12 @@ export async function findScheduleClashes(organizationId: string): Promise<Sched
       firstClass: row.first_class,
       secondClass: row.second_class,
       weekday: row.weekday,
-      firstTime: row.first_time,
-      secondTime: row.second_time,
+      firstFrom: row.first_from,
+      firstTo: row.first_to,
+      secondFrom: row.second_from,
+      secondTo: row.second_to,
+      overlapFrom: row.overlap_from,
+      overlapTo: row.overlap_to,
     }));
   });
 }

@@ -14,7 +14,17 @@ export interface GenerateState extends FormState {
    * Checked before generating rather than caught afterwards, so the answer names
    * the two turmas to fix instead of reporting that a year of rows failed.
    */
-  clashes?: { firstClass: string; secondClass: string; weekday: number; firstTime: string; secondTime: string }[];
+  clashes?: {
+    firstClass: string;
+    secondClass: string;
+    weekday: number;
+    firstFrom: string;
+    firstTo: string;
+    secondFrom: string;
+    secondTo: string;
+    overlapFrom: string;
+    overlapTo: string;
+  }[];
 }
 
 function failure(error: unknown, errorKey: string): FormState {
@@ -60,12 +70,23 @@ function clashesFrom(error: ApiError): NonNullable<GenerateState['clashes']> {
     const firstClass = typeof row['firstClass'] === 'string' ? row['firstClass'] : null;
     const secondClass = typeof row['secondClass'] === 'string' ? row['secondClass'] : null;
     const weekday = typeof row['weekday'] === 'number' ? row['weekday'] : null;
-    const firstTime = typeof row['firstTime'] === 'string' ? row['firstTime'] : null;
-    const secondTime = typeof row['secondTime'] === 'string' ? row['secondTime'] : null;
+
+    /** A clock time, or an empty string. Still narrowed field by field. */
+    const time = (key: string): string => (typeof row[key] === 'string' ? row[key] : '');
 
     if (firstClass === null || secondClass === null || weekday === null) return [];
     return [
-      { firstClass, secondClass, weekday, firstTime: firstTime ?? '', secondTime: secondTime ?? '' },
+      {
+        firstClass,
+        secondClass,
+        weekday,
+        firstFrom: time('firstFrom'),
+        firstTo: time('firstTo'),
+        secondFrom: time('secondFrom'),
+        secondTo: time('secondTo'),
+        overlapFrom: time('overlapFrom'),
+        overlapTo: time('overlapTo'),
+      },
     ];
   });
 }

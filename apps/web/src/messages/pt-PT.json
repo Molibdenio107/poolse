@@ -1755,7 +1755,7 @@
     "generate": "Gerar a época",
     "clashTitle": "Há turmas em conflito",
     "clashHint": "O mesmo instrutor está em duas turmas à mesma hora. Corrija-as e gere a época outra vez.",
-    "clashRow": "{first} e {second} — {time}",
+    "clashRow": "{day}: {first} ({firstFrom}–{firstTo}) e {second} ({secondFrom}–{secondTo}) — sobrepõem-se das {overlapFrom} às {overlapTo}.",
     "clashFailed": "Não foi possível gerar a época por causa de um conflito de horário.",
     "instructorBusy": "Esse instrutor já tem aula a uma dessas horas.",
     "generateFailed": "Não foi possível gerar a época.",

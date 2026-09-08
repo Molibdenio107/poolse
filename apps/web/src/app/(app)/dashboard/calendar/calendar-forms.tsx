@@ -89,11 +89,26 @@ export function GenerateSeason({
           <p className="font-medium text-danger">{t('calendar.clashTitle')}</p>
           <ul className="flex flex-col gap-1 text-sm">
             {state.clashes.map((clash) => (
-              <li key={`${clash.firstClass}-${clash.secondClass}-${clash.firstTime}`}>
+              <li key={`${clash.firstClass}-${clash.secondClass}-${clash.overlapFrom}`}>
+                {/*
+                  Both turmas' own hours and the overlap between them — F-07.
+
+                  This used to join the two *start* times with an en dash, so two
+                  classes both starting at 12:45 read "Segunda 12:45–12:45": a
+                  window of no length, and nothing an operator could act on. The
+                  hours say which class to move; the overlap says why it is a
+                  clash.
+                */}
                 {t('calendar.clashRow', {
+                  day: t(`week.${clash.weekday}`),
                   first: clash.firstClass,
+                  firstFrom: clash.firstFrom,
+                  firstTo: clash.firstTo,
                   second: clash.secondClass,
-                  time: `${t(`week.${clash.weekday}`)} ${clash.firstTime}–${clash.secondTime}`,
+                  secondFrom: clash.secondFrom,
+                  secondTo: clash.secondTo,
+                  overlapFrom: clash.overlapFrom,
+                  overlapTo: clash.overlapTo,
                 })}
               </li>
             ))}
