@@ -137,6 +137,34 @@ invoices and fees. A per-kWh tariff in integer cents rounds €0.1548 to €0.15
 3% error on the module whose entire purpose is cost accuracy — unit prices are
 `numeric(12,6)`.
 
+**One price list, four `fee_kind`s — never a table per fee type.** `mensalidade`,
+`inscricao`, `seguro`, `quota`, all on `fee_plan`, each with its shape held by a CHECK: only
+a mensalidade is priced by a level and a frequency, only a quota is banded by age, and
+inscrição and seguro belong to a season. The **recurrence is the plan's, not the kind's** —
+the default per kind is an API opinion, and the schema enforces only that a `fee_period` may
+be named by a plan that recurs by the facility's periodicity list. A new kind is a value and
+a row in that table; if it seems to want its own table, that is four read paths and four
+copies of every bug. `docs/decisions.md`, 2026-09-08.
+
+**Amounts are gross and `vat_rate` says what is already inside them; `vat_exempt` is its own
+flag.** Never a rate of zero standing in for isento — on a Portuguese invoice an exemption and
+a zero rate are two different statements, and a schema that cannot tell them apart discovers
+it while invoicing. This reverses the "no VAT rate anywhere" comment that `fee_plan.amount_cents`
+used to carry; the exemption *reason* is invoicing's to add.
+
+**A partial unique index cannot join, which is why a snapshot sometimes carries a foreign
+row's column.** `student_fee.kind` is the case: "one inscrição per student per season" is only
+sayable with the kind on that row. Where that happens, a BEFORE trigger fills the copy from
+its source when a caller does not send it — every existing caller predates the column, as with
+`class_session.occurs_on` — and a constraint trigger refuses one that disagrees. A copy with
+neither is a copy that drifts.
+
+**The season is organization-scoped and already built; a screen picks from it, never keeps its
+own.** `season` has the name, both dates, one `published` at a time and its own page under
+Turmas, and it is wired into `generate_sessions`, `class_group`, `class_schedule` and
+`facility_time_slot`. Anything that needs a season reads that list — the price list filters out
+`archived`, because a year that has ended cannot be priced afresh.
+
 **A subscription covers one facility; the schema allows many.** These are two
 different rules and both are settled. The *schema* keeps `organization 1 —— N
 facility` — backlog story B4 proposed narrowing it and was rejected, because a

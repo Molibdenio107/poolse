@@ -1094,10 +1094,42 @@ export type FeeAgeBand = 'any' | 'under_18' | 'adult';
 /** How a late payment is charged. `none` is most clubs, and the default. */
 export type FeePenaltyKind = 'none' | 'amount' | 'percent';
 
+/**
+ * What a price is for — four kinds on one list, never a table each.
+ *
+ * Invoicing will carry the kind on every line it writes, which is why the kinds
+ * exist before invoicing does: adding one afterwards means rewriting lines that
+ * have already been sent.
+ */
+export type FeeKind = 'mensalidade' | 'inscricao' | 'seguro' | 'quota';
+
+/**
+ * How often a price is charged.
+ *
+ * An attribute of the plan rather than of its kind — a club is free to make its
+ * quota annual or monthly. Only `periodicity` may name a fee period.
+ */
+export type FeeRecurrence = 'periodicity' | 'annual' | 'one_off';
+
 export interface FeePlan {
   id: string;
-  kind: 'mensalidade' | 'quota';
-  /** A mensalidade has both; a quota has neither. There is no name. */
+  kind: FeeKind;
+  recurrence: FeeRecurrence;
+  /**
+   * The IVA already inside `amountCents`, and whether the price is isento.
+   *
+   * Gross always: the rate says what the amount contains, never what to add to
+   * it. Isento is its own flag because an exemption and a zero rate are two
+   * different statements on a Portuguese invoice.
+   */
+  vatRate: number;
+  vatExempt: boolean;
+  /** The season an inscrição or a seguro belongs to. Null on the other two. */
+  seasonId: string | null;
+  seasonName: string | null;
+  /** The cheaper renovação price, for a family that paid in an earlier season. */
+  isRenewal: boolean;
+  /** A mensalidade has both; every other kind has neither. There is no name. */
   levelId: string | null;
   levelName: string | null;
   lessonsPerWeek: number | null;
@@ -1558,6 +1590,32 @@ export interface Season {
   /** True for the published season — the same fact, kept for existing readers. */
   active: boolean;
   classGroups: number;
+}
+
+/**
+ * An apólice the club holds — the facility's half of the seguro.
+ *
+ * `costPerPersonCents` is what the club pays its insurer, not what a family
+ * pays: the family's price is the seguro fee plan, and a club adding a euro of
+ * admin to it would otherwise have nowhere to put the difference.
+ *
+ * `daysToExpiry`, `expired` and `renewalDue` are derived on the server against
+ * the database's own date. Nothing here recomputes them — a browser's clock is
+ * not the club's, and two implementations of one rule agree until they do not.
+ */
+export interface InsurancePolicy {
+  id: string;
+  insurer: string;
+  policyNumber: string;
+  validFrom: string;
+  validTo: string;
+  costPerPersonCents: number;
+  notes: string | null;
+  daysToExpiry: number;
+  expired: boolean;
+  renewalDue: boolean;
+  /** How many students hold cover under it — and the reason to renew. */
+  coveredCount: number;
 }
 
 /** What a reset would retire, so the confirmation can name real numbers. */

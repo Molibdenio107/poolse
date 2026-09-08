@@ -9,8 +9,12 @@ import {
   type BillingSettings,
   type FeeAgeBand,
   type FeePenaltyKind,
+  type FeeKind,
   type FeePeriod,
   type FeePlan,
+  type FeeRecurrence,
+  type Season,
+  type Seasons,
 } from '@/lib/api';
 import type { FormState } from '../../actions';
 
@@ -25,8 +29,17 @@ import type { FormState } from '../../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
   if (error instanceof ApiError) {
-    if (error.status === 409) return { ok: false, errorKey: 'fees.nameTaken' };
+    /*
+     * The field message first, whatever the status.
+     *
+     * A 409 used to become "esse nome já existe" before the fields were looked
+     * at, which is right for a periodicity — its name is what collides — and
+     * wrong for a price, where the API names the control that is taken: the
+     * level, the age band or the season. With four kinds on the list there are
+     * four such sentences, and all of them were arriving as the one about names.
+     */
     if (Object.keys(error.fields).length > 0) return { ok: false, fields: error.fields };
+    if (error.status === 409) return { ok: false, errorKey: 'fees.nameTaken' };
     if (error.status < 500) return { ok: false, errorKey, detail: error.message };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
   }
@@ -37,16 +50,34 @@ function refresh(facilityId: string): void {
   revalidatePath(`/dashboard/facilities/${facilityId}`);
 }
 
-export async function listPrices(
-  facilityId: string,
-): Promise<{ plans: FeePlan[]; periods: FeePeriod[]; billing: BillingSettings } | null> {
+export async function listPrices(facilityId: string): Promise<{
+  plans: FeePlan[];
+  periods: FeePeriod[];
+  billing: BillingSettings;
+  seasons: Season[];
+} | null> {
   try {
-    const [plans, periods, billing] = await Promise.all([
+    /*
+     * The seasons come along because an inscrição and a seguro belong to one.
+     *
+     * From the club's own list rather than a facility-scoped copy: a season is
+     * organization-wide and already has a screen that creates, publishes and
+     * retires it. This panel picks from that list; it does not keep a second one.
+     * An archived season is left out — a price list is for what the club is
+     * selling, and a year that has ended cannot be priced afresh.
+     */
+    const [plans, periods, billing, seasons] = await Promise.all([
       apiFetch<{ plans: FeePlan[] }>(`/facilities/${facilityId}/fee-plans`),
       apiFetch<{ periods: FeePeriod[] }>(`/facilities/${facilityId}/fee-periods`),
       apiFetch<BillingSettings>(`/facilities/${facilityId}/billing`),
+      apiFetch<Seasons>('/seasons'),
     ]);
-    return { plans: plans.plans, periods: periods.periods, billing };
+    return {
+      plans: plans.plans,
+      periods: periods.periods,
+      billing,
+      seasons: seasons.seasons.filter((season) => season.status !== 'archived'),
+    };
   } catch {
     /*
      * Null rather than a thrown error, because the commonest cause is a 403: an
@@ -121,12 +152,17 @@ export async function archivePeriodAction(
 }
 
 interface PlanFields {
-  kind: 'mensalidade' | 'quota';
+  kind: FeeKind;
+  recurrence: FeeRecurrence;
   levelId: string | null;
   lessonsPerWeek: number | null;
   amountCents: number;
   defaultFeePeriodId: string | null;
   ageBand: FeeAgeBand;
+  vatRate: number;
+  vatExempt: boolean;
+  seasonId: string | null;
+  isRenewal: boolean;
 }
 
 function planBody(formData: FormData): PlanFields | null {
@@ -138,14 +174,44 @@ function planBody(formData: FormData): PlanFields | null {
   const period = String(formData.get('defaultFeePeriodId') ?? '').trim();
   const lessons = String(formData.get('lessonsPerWeek') ?? '').trim();
 
+  const season = String(formData.get('seasonId') ?? '').trim();
+  const rate = Number(String(formData.get('vatRate') ?? '0').replace(',', '.'));
+
   return {
-    kind: formData.get('kind') === 'quota' ? 'quota' : 'mensalidade',
+    kind: readKind(formData.get('kind')),
+    recurrence: readRecurrence(formData.get('recurrence')),
     levelId: level === '' ? null : level,
     lessonsPerWeek: lessons === '' ? null : Number(lessons),
     amountCents,
     defaultFeePeriodId: period === '' ? null : period,
     ageBand: readBand(formData.get('ageBand')),
+    // The API drops the rate on an isento plan anyway. Sent as read so a club
+    // that unticks isento gets the number it typed back rather than a zero.
+    vatRate: Number.isFinite(rate) ? rate : 0,
+    vatExempt: formData.get('vatExempt') === 'on',
+    seasonId: season === '' ? null : season,
+    isRenewal: formData.get('isRenewal') === 'on',
   };
+}
+
+/** Anything unexpected is a mensalidade, which is what a price list mostly is. */
+function readKind(value: FormDataEntryValue | null): FeeKind {
+  return value === 'quota' || value === 'inscricao' || value === 'seguro'
+    ? value
+    : 'mensalidade';
+}
+
+/**
+ * Absent means "let the API decide from the kind".
+ *
+ * The default belongs there rather than here: it is one opinion — an inscrição
+ * is one-off, a seguro annual — and a second copy of it in the browser is one
+ * that drifts the first time somebody changes the other.
+ */
+function readRecurrence(value: FormDataEntryValue | null): FeeRecurrence {
+  return value === 'annual' || value === 'one_off' || value === 'periodicity'
+    ? value
+    : 'periodicity';
 }
 
 /** Anything unexpected is the club's single rate, which is the safe reading. */

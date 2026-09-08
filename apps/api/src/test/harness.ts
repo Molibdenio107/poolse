@@ -83,6 +83,9 @@ const TENANT_TABLES = [
   'student_fee',
   'fee_plan',
   'fee_period',
+  // A seguro line points at the apólice that covers it, so the policy goes after
+  // the lines and before the facility it is held at.
+  'insurance_policy',
   'student_sensitive',
   'consent',
   'guardian_link',

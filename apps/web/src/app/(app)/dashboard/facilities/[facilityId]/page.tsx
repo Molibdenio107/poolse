@@ -17,6 +17,8 @@ import { WeatherPanel } from './weather-panel';
 import { HoursPanel } from './hours-panel';
 import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
+import { InsurancePanel } from './insurance-panel';
+import { listPolicies } from './insurance.actions';
 import { PartnersPanel } from './partners-panel';
 import { listPartners } from './partners.actions';
 import { SpacesPanel } from '../spaces-panel';
@@ -109,6 +111,10 @@ export default async function FacilityPage({
   */
 
   const prices = await listPrices(facilityId);
+  // Null for anybody who may not read it, exactly as the price list is: what the
+  // club pays its insurer is a commercial fact and the endpoint decides, not the
+  // absence of a panel.
+  const policies = await listPolicies(facilityId);
   const register =
     prices === null ? null : await apiFetch<Students>('/students').catch(() => null);
 
@@ -259,8 +265,22 @@ export default async function FacilityPage({
               facilityId={facilityId}
               plans={prices.plans}
               periods={prices.periods}
+              seasons={prices.seasons}
               billing={prices.billing}
               levels={register?.levels ?? []}
+              canManage={register?.canManage ?? false}
+            />
+          )}
+
+          {/*
+            The apólice sits beside the price list because the two halves of the
+            seguro are one conversation: what the club is covered by, and what it
+            charges a family for being on it.
+          */}
+          {policies !== null && (
+            <InsurancePanel
+              facilityId={facilityId}
+              policies={policies}
               canManage={register?.canManage ?? false}
             />
           )}

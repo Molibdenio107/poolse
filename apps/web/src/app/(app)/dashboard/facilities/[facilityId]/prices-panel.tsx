@@ -10,9 +10,11 @@ import { centsToInput, formatCents, parseCents } from '@/lib/money';
 import type {
   BillingSettings,
   FeeAgeBand,
+  FeeKind,
   FeePenaltyKind,
   FeePeriod,
   FeePlan,
+  Season,
   StudentLevel,
 } from '@/lib/api';
 import type { FormState } from '../../actions';
@@ -144,6 +146,7 @@ export function PricesPanel({
   plans,
   periods,
   levels,
+  seasons,
   billing,
   canManage,
 }: {
@@ -151,6 +154,8 @@ export function PricesPanel({
   plans: FeePlan[];
   periods: FeePeriod[];
   levels: StudentLevel[];
+  /** The club's own seasons — an inscrição and a seguro belong to one. */
+  seasons: Season[];
   billing: BillingSettings;
   canManage: boolean;
 }): React.ReactElement {
@@ -162,8 +167,12 @@ export function PricesPanel({
   const [addingPlan, setAddingPlan] = useState(false);
   const [addingQuota, setAddingQuota] = useState(false);
 
+  const [addingSeasonal, setAddingSeasonal] = useState<FeeKind | null>(null);
+
   const mensalidades = plans.filter((plan) => plan.kind === 'mensalidade');
   const quotas = plans.filter((plan) => plan.kind === 'quota');
+  const inscricoes = plans.filter((plan) => plan.kind === 'inscricao');
+  const seguros = plans.filter((plan) => plan.kind === 'seguro');
 
   return (
     <section className="flex flex-col gap-6 rounded border border-border bg-surface p-5">
@@ -381,6 +390,52 @@ export function PricesPanel({
             </button>
           ))}
       </div>
+
+      {/* ---- what a season costs to join, and to be insured for ------------- */}
+      {/*
+        Two sections rather than one, because they are two decisions a club takes
+        at different moments: the joining price is set when the season opens, and
+        the insurance price when the apólice is renewed. Both are season-scoped,
+        which is why each row says which season it belongs to — a price list
+        holding two years at once is ordinary in June.
+      */}
+      <SeasonalPrices
+        kind="inscricao"
+        title={t('fees.inscricaoTitle')}
+        hint={t('fees.inscricaoHint')}
+        empty={t('fees.noInscricao')}
+        addLabel={t('fees.addInscricao')}
+        plans={inscricoes}
+        facilityId={facilityId}
+        periods={periods}
+        levels={levels}
+        seasons={seasons}
+        locale={locale}
+        canManage={canManage}
+        editingPlan={editingPlan}
+        setEditingPlan={setEditingPlan}
+        adding={addingSeasonal === 'inscricao'}
+        setAdding={(on) => setAddingSeasonal(on ? 'inscricao' : null)}
+      />
+
+      <SeasonalPrices
+        kind="seguro"
+        title={t('fees.seguroTitle')}
+        hint={t('fees.seguroHint')}
+        empty={t('fees.noSeguro')}
+        addLabel={t('fees.addSeguro')}
+        plans={seguros}
+        facilityId={facilityId}
+        periods={periods}
+        levels={levels}
+        seasons={seasons}
+        locale={locale}
+        canManage={canManage}
+        editingPlan={editingPlan}
+        setEditingPlan={setEditingPlan}
+        adding={addingSeasonal === 'seguro'}
+        setAdding={(on) => setAddingSeasonal(on ? 'seguro' : null)}
+      />
 
       {/* ---- when a payment is late, and what that costs -------------------- */}
       {/*
@@ -631,23 +686,179 @@ function PeriodForm({
   );
 }
 
+/**
+ * One season-scoped kind — the joining price, or the insurance price.
+ *
+ * Written once for both because they differ in three strings and nothing else.
+ * A third caller would be a reason to look again; two identical sections side by
+ * side would already have been one place to fix a bug and one to forget.
+ *
+ * Each row leads with the season, because that is what distinguishes the rows:
+ * a club in June is looking at this year's price and next year's together, and a
+ * list showing two amounts with no year against them is a list nobody can act on.
+ * The renovação row says so in words, not by being second.
+ */
+function SeasonalPrices({
+  kind,
+  title,
+  hint,
+  empty,
+  addLabel,
+  plans,
+  facilityId,
+  periods,
+  levels,
+  seasons,
+  locale,
+  canManage,
+  editingPlan,
+  setEditingPlan,
+  adding,
+  setAdding,
+}: {
+  kind: 'inscricao' | 'seguro';
+  title: string;
+  hint: string;
+  empty: string;
+  addLabel: string;
+  plans: FeePlan[];
+  facilityId: string;
+  periods: FeePeriod[];
+  levels: StudentLevel[];
+  seasons: Season[];
+  locale: string;
+  canManage: boolean;
+  editingPlan: string | null;
+  setEditingPlan: (id: string | null) => void;
+  adding: boolean;
+  setAdding: (on: boolean) => void;
+}): React.ReactElement {
+  const t = useTranslations();
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-5">
+      <div>
+        <h3 className="text-base font-semibold">{title}</h3>
+        <p className="mt-0.5 text-sm text-foreground-muted">{hint}</p>
+      </div>
+
+      {plans.length === 0 && <p className="text-sm text-foreground-muted">{empty}</p>}
+
+      <ul className="flex flex-col divide-y divide-border">
+        {plans.map((plan) => (
+          <li key={plan.id} className="flex flex-col gap-2 py-2 first:pt-0 last:pb-0">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <span className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-medium">{plan.seasonName ?? t('fees.noSeason')}</span>
+                {plan.isRenewal && (
+                  <span className="text-sm text-foreground-muted">{t('fees.renewalRow')}</span>
+                )}
+                {/* Isento is a fact about the price, so it is said rather than
+                    implied by a rate of zero sitting quietly in a form. */}
+                <span className="text-sm text-foreground-muted">
+                  {plan.vatExempt
+                    ? t('fees.vatExemptShort')
+                    : t('fees.vatRateShort', { rate: plan.vatRate })}
+                </span>
+              </span>
+              <span className="flex items-center gap-3">
+                <PlanAmount plan={plan} locale={locale} className="text-lg font-medium" />
+                {canManage && (
+                  <span className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingPlan(editingPlan === plan.id ? null : plan.id)}
+                      aria-expanded={editingPlan === plan.id}
+                      aria-label={t('fees.edit')}
+                      className={BUTTON_QUIET}
+                    >
+                      <Pencil aria-hidden className="size-3.5" />
+                    </button>
+                    <ArchiveForm
+                      facilityId={facilityId}
+                      idName="planId"
+                      id={plan.id}
+                      action={archivePlanAction}
+                      label={t('fees.archivePlan')}
+                    />
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {canManage && editingPlan === plan.id && (
+              <PlanForm
+                facilityId={facilityId}
+                plan={plan}
+                kind={kind}
+                periods={periods}
+                levels={levels}
+                seasons={seasons}
+                onDone={() => setEditingPlan(null)}
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {canManage &&
+        (adding ? (
+          <PlanForm
+            facilityId={facilityId}
+            plan={null}
+            kind={kind}
+            periods={periods}
+            levels={levels}
+            seasons={seasons}
+            onDone={() => setAdding(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="self-start text-sm text-primary hover:underline"
+          >
+            <Plus aria-hidden className="mr-1 inline size-3.5" />
+            {addLabel}
+          </button>
+        ))}
+    </div>
+  );
+}
+
 function PlanForm({
   facilityId,
   plan,
   kind,
   periods,
   levels,
+  seasons,
   onDone,
 }: {
   facilityId: string;
   plan: FeePlan | null;
-  kind: 'mensalidade' | 'quota';
+  kind: FeeKind;
   periods: FeePeriod[];
   levels: StudentLevel[];
+  seasons?: Season[];
   onDone: () => void;
 }): React.ReactElement {
   const t = useTranslations();
   const [amount, setAmount] = useState(plan === null ? '' : centsToInput(plan.amountCents));
+
+  /*
+   * Two answers the rest of the form depends on, held here.
+   *
+   * A price charged annually or once has no periodicity to choose, and a price
+   * that is isento has no rate to type. Both are hidden rather than disabled
+   * *and* dropped by the API, so a box that is not asked about cannot be saved
+   * with a stale value in it.
+   */
+  const seasonScoped = kind === 'inscricao' || kind === 'seguro';
+  const [recurrence, setRecurrence] = useState(
+    plan?.recurrence ?? (kind === 'inscricao' ? 'one_off' : kind === 'seguro' ? 'annual' : 'periodicity'),
+  );
+  const [vatExempt, setVatExempt] = useState(plan?.vatExempt ?? seasonScoped);
 
   const [state, submit, pending] = useSavedAction(
     async (previous: FormState, formData: FormData) => {
@@ -689,6 +900,70 @@ function PlanForm({
             <p className="text-sm text-foreground-muted">{t('fees.ageBandHint')}</p>
           </div>
         )}
+
+        {seasonScoped && (
+          <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+            <label htmlFor={`f-season-${id}`} className={FIELD_LABEL}>
+              {t('fees.season')}
+            </label>
+            <select
+              id={`f-season-${id}`}
+              name="seasonId"
+              defaultValue={plan?.seasonId ?? ''}
+              required
+              className={CONTROL_LINE}
+            >
+              <option value="">{t('fees.chooseSeason')}</option>
+              {(seasons ?? []).map((season) => (
+                <option key={season.id} value={season.id}>
+                  {season.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-foreground-muted">{t('fees.seasonHint')}</p>
+            {state.fields?.['seasonId'] !== undefined && (
+              <p role="alert" className="text-sm text-danger">
+                {t(state.fields['seasonId'])}
+              </p>
+            )}
+          </div>
+        )}
+
+        {kind === 'inscricao' && (
+          <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+            <span className={FIELD_LABEL}>{t('fees.renewal')}</span>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="isRenewal"
+                defaultChecked={plan?.isRenewal ?? false}
+                className="size-4"
+              />
+              {t('fees.isRenewal')}
+            </label>
+            {/* Visible text: a club that has never charged returning families
+                less has no way to guess what this second row is for. */}
+            <p className="text-sm text-foreground-muted">{t('fees.renewalHint')}</p>
+          </div>
+        )}
+
+        <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+          <label htmlFor={`f-recurrence-${id}`} className={FIELD_LABEL}>
+            {t('fees.recurrence')}
+          </label>
+          <select
+            id={`f-recurrence-${id}`}
+            name="recurrence"
+            value={recurrence}
+            onChange={(event) => setRecurrence(event.target.value as typeof recurrence)}
+            className={CONTROL_LINE}
+          >
+            <option value="periodicity">{t('fees.recurrenceKind.periodicity')}</option>
+            <option value="annual">{t('fees.recurrenceKind.annual')}</option>
+            <option value="one_off">{t('fees.recurrenceKind.one_off')}</option>
+          </select>
+          <p className="text-sm text-foreground-muted">{t('fees.recurrenceHint')}</p>
+        </div>
 
         {kind === 'mensalidade' && (
           <>
@@ -748,23 +1023,60 @@ function PlanForm({
           <p className="text-sm text-foreground-muted">{t('fees.amountHint')}</p>
         </div>
 
+        {/* A price that does not recur by the club's periodicity list has none
+            to name, and the pair would be a contradiction the table refuses. */}
+        {recurrence === 'periodicity' && (
+          <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+            <label htmlFor={`f-period-${id}`} className={FIELD_LABEL}>
+              {t('fees.defaultPeriodLabel')}
+            </label>
+            <select
+              id={`f-period-${id}`}
+              name="defaultFeePeriodId"
+              defaultValue={plan?.defaultFeePeriodId ?? ''}
+              className={CONTROL_LINE}
+            >
+              <option value="">{t('fees.facilityDefault')}</option>
+              {periods.map((period) => (
+                <option key={period.id} value={period.id}>
+                  {period.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/*
+          IVA, on a gross amount.
+
+          The rate says what the price already contains, never what to add to
+          it — so nothing on this form multiplies anything. Isento is its own
+          box rather than "0 %", because on an invoice an exemption and a zero
+          rate are two different statements, and a seguro is normally the first.
+        */}
         <div className={cn(FIELD_COLUMN, 'max-w-none')}>
-          <label htmlFor={`f-period-${id}`} className={FIELD_LABEL}>
-            {t('fees.defaultPeriodLabel')}
+          <span className={FIELD_LABEL}>{t('fees.vat')}</span>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="vatExempt"
+              checked={vatExempt}
+              onChange={(event) => setVatExempt(event.target.checked)}
+              className="size-4"
+            />
+            {t('fees.vatExempt')}
           </label>
-          <select
-            id={`f-period-${id}`}
-            name="defaultFeePeriodId"
-            defaultValue={plan?.defaultFeePeriodId ?? ''}
-            className={CONTROL_LINE}
-          >
-            <option value="">{t('fees.facilityDefault')}</option>
-            {periods.map((period) => (
-              <option key={period.id} value={period.id}>
-                {period.name}
-              </option>
-            ))}
-          </select>
+          {!vatExempt && (
+            <input
+              aria-label={t('fees.vatRate')}
+              name="vatRate"
+              inputMode="decimal"
+              defaultValue={plan === null ? '' : String(plan.vatRate)}
+              placeholder={t('fees.vatRate')}
+              className={CONTROL_LINE}
+            />
+          )}
+          <p className="text-sm text-foreground-muted">{t('fees.vatHint')}</p>
         </div>
       </div>
 

@@ -33,7 +33,9 @@ import {
   DuplicateSocioNumberError,
   type BillingSettings,
   type FeeAgeBand,
+  type FeeKind,
   type FeePenaltyKind,
+  type FeeRecurrence,
   type FeePeriod,
   type FeePlan,
   type StudentFees,
@@ -60,22 +62,45 @@ import {
  */
 function refuseDuplicatePlan(error: unknown): never {
   if (error instanceof DuplicateFeePlanError) {
-    throw new ConflictException(
-      error.which === 'quota'
-        ? {
-            code: 'fee_plan_quota_exists',
-            message: 'A membership fee already exists for that age band',
-            fields: { ageBand: 'fees.planQuotaExists' },
-          }
-        : {
-            code: 'fee_plan_exists',
-            message: 'A price for this level and periodicity already exists',
-            fields: { levelId: 'fees.planExists' },
-          },
-    );
+    throw new ConflictException(DUPLICATE_PLAN[error.which]);
   }
   throw error;
 }
+
+/**
+ * One sentence per constraint, and each names the control that fixes it.
+ *
+ * A mensalidade collides on level and frequency, a quota on its age band, and an
+ * inscrição or a seguro on the season — four different things to correct, and
+ * pointing at the wrong control is worse than pointing at none. The season one
+ * has to say *which* of the two inscrição prices is taken, because a club that
+ * already has a joining price and is adding a renovação has done nothing wrong.
+ */
+const DUPLICATE_PLAN: Record<
+  FeeKind,
+  { code: string; message: string; fields: Record<string, string> }
+> = {
+  mensalidade: {
+    code: 'fee_plan_exists',
+    message: 'A price for this level and periodicity already exists',
+    fields: { levelId: 'fees.planExists' },
+  },
+  quota: {
+    code: 'fee_plan_quota_exists',
+    message: 'A membership fee already exists for that age band',
+    fields: { ageBand: 'fees.planQuotaExists' },
+  },
+  inscricao: {
+    code: 'fee_plan_inscricao_exists',
+    message: 'That season already has this joining price',
+    fields: { seasonId: 'fees.planInscricaoExists' },
+  },
+  seguro: {
+    code: 'fee_plan_seguro_exists',
+    message: 'That season already has an insurance price',
+    fields: { seasonId: 'fees.planSeguroExists' },
+  },
+};
 
 /**
  * The price list and what a student pays — POOLSE-42.
@@ -505,29 +530,56 @@ function readPeriod(body: Record<string, unknown>): {
   };
 }
 
+const KINDS: FeeKind[] = ['mensalidade', 'inscricao', 'seguro', 'quota'];
+
+function isFeeKind(value: unknown): value is FeeKind {
+  return KINDS.includes(value as FeeKind);
+}
+
 /**
- * A price is a level and a frequency, or it is the quota.
+ * What a plan of each kind must and must not carry.
  *
- * Both checked here as well as by the CHECK on the table, so an operator gets a
- * sentence naming what is missing rather than a constraint name.
+ * The table says all of this too. It is said here as well so an operator gets a
+ * sentence naming the box to fill rather than the name of a constraint — and
+ * because the API is where the *defaults* live: an inscrição that arrives with
+ * no recurrence is one-off, which is what every club means by it, rather than a
+ * 400 asking somebody to restate the obvious.
  */
 function readPlan(body: Record<string, unknown>): {
-  kind: 'mensalidade' | 'quota';
+  kind: FeeKind;
+  recurrence: FeeRecurrence;
   levelId: string | null;
   lessonsPerWeek: number | null;
   amountCents: number;
   defaultFeePeriodId: string | null;
   ageBand: FeeAgeBand;
+  vatRate: number;
+  vatExempt: boolean;
+  seasonId: string | null;
+  isRenewal: boolean;
 } {
   const kind = body['kind'];
-  if (kind !== 'mensalidade' && kind !== 'quota') {
-    throw new BadRequestException('kind must be mensalidade or quota');
+  if (!isFeeKind(kind)) {
+    throw new BadRequestException(`kind must be one of ${KINDS.join(', ')}`);
   }
 
   const levelId = optionalId(body['levelId']);
   const raw = body['lessonsPerWeek'];
   const lessons =
     raw === undefined || raw === null || raw === '' ? null : Number(raw);
+
+  const seasonId = optionalId(body['seasonId']);
+  const seasonScoped = kind === 'inscricao' || kind === 'seguro';
+
+  if (seasonScoped && seasonId === null) {
+    throw new BadRequestException({
+      code: 'season_required',
+      message: 'An inscrição and a seguro belong to a season',
+      fields: { seasonId: 'fees.seasonRequired' },
+    });
+  }
+
+  const recurrence = readRecurrence(body['recurrence'], kind);
 
   if (kind === 'mensalidade') {
     if (levelId === null) {
@@ -546,18 +598,50 @@ function readPlan(body: Record<string, unknown>): {
     }
   }
 
+  const vatExempt = body['vatExempt'] === true;
+
   return {
     kind,
-    // A quota has neither, whatever the client sent — the table refuses the
-    // other shape and this is what keeps the message readable.
-    levelId: kind === 'quota' ? null : levelId,
-    lessonsPerWeek: kind === 'quota' ? null : lessons,
+    recurrence,
+    // Only a mensalidade is priced by a place in the timetable, whatever the
+    // client sent — the table refuses the other shape and this is what keeps
+    // the message readable.
+    levelId: kind === 'mensalidade' ? levelId : null,
+    lessonsPerWeek: kind === 'mensalidade' ? lessons : null,
     amountCents: cents(body['amountCents'], 'amountCents'),
-    defaultFeePeriodId: optionalId(body['defaultFeePeriodId']),
+    // A periodicity belongs to a plan that is charged by one. An annual or a
+    // one-off price naming a three-month period is a pair something would read.
+    defaultFeePeriodId:
+      recurrence === 'periodicity' ? optionalId(body['defaultFeePeriodId']) : null,
     // A mensalidade is banded by its level, which says it better than a birth
     // date does. The table refuses anything else on one.
     ageBand: kind === 'quota' ? readBand(body['ageBand']) : 'any',
+    // Isento is zero, said out loud. A rate kept beside an exemption would be a
+    // number nobody charged, sitting where invoicing will look for one.
+    vatRate: vatExempt ? 0 : (rate(body['vatRate'], 'vatRate') ?? 0),
+    vatExempt,
+    seasonId: seasonScoped ? seasonId : null,
+    // Renovação is a second inscrição price and means nothing anywhere else.
+    isRenewal: kind === 'inscricao' && body['isRenewal'] === true,
   };
+}
+
+/**
+ * How often this price is charged, defaulted to what its kind usually means.
+ *
+ * The default is here rather than in the database because it is a product
+ * opinion, not a rule: a club is free to make its quota annual or monthly, and
+ * the column exists precisely so it can. What the schema enforces is the pair
+ * that cannot both be true — a periodicity on a price that does not recur by one.
+ */
+function readRecurrence(value: unknown, kind: FeeKind): FeeRecurrence {
+  if (value === 'periodicity' || value === 'annual' || value === 'one_off') return value;
+  if (value !== undefined && value !== null && value !== '') {
+    throw new BadRequestException('recurrence must be periodicity, annual or one_off');
+  }
+  if (kind === 'inscricao') return 'one_off';
+  if (kind === 'seguro') return 'annual';
+  return 'periodicity';
 }
 
 /** Which members a quota is for. Absent means the club charges one rate. */

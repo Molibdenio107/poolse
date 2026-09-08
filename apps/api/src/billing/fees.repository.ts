@@ -37,12 +37,49 @@ export interface FeePeriod {
  */
 export type FeeAgeBand = 'any' | 'under_18' | 'adult';
 
+/**
+ * What a price is for — four kinds on one list, never a table each.
+ *
+ * A mensalidade, an inscrição, a seguro and a quota are all "a named amount this
+ * facility charges", and invoicing will carry the kind on every line it writes.
+ * The kinds land before invoicing does, because adding one afterwards would mean
+ * rewriting lines that have already been sent.
+ */
+export type FeeKind = 'mensalidade' | 'inscricao' | 'seguro' | 'quota';
+
+/**
+ * How often a price is charged.
+ *
+ * An attribute of the plan rather than of its kind: a quota is not inherently
+ * annual and an inscrição is not one-off at every club. One structural rule
+ * follows — only `periodicity` may name a `fee_period`, because an annual price
+ * with a three-month periodicity beside it is a contradiction something would
+ * eventually read.
+ */
+export type FeeRecurrence = 'periodicity' | 'annual' | 'one_off';
+
 /** How a late payment is charged. `none` is most clubs, and the default. */
 export type FeePenaltyKind = 'none' | 'amount' | 'percent';
 
 export interface FeePlan {
   id: string;
-  kind: 'mensalidade' | 'quota';
+  kind: FeeKind;
+  recurrence: FeeRecurrence;
+  /**
+   * The IVA rate already inside `amountCents`, and whether the price is isento.
+   *
+   * Gross, always: the rate describes what the amount already contains and is
+   * never added on top. Isento is its own flag rather than a rate of zero,
+   * because on a Portuguese invoice an exemption and a zero rate are two
+   * different statements and invoicing has to make one of them.
+   */
+  vatRate: number;
+  vatExempt: boolean;
+  /** The season an inscrição or a seguro belongs to. Null on the other two. */
+  seasonId: string | null;
+  seasonName: string | null;
+  /** The cheaper renovação price, for a family that paid in an earlier season. */
+  isRenewal: boolean;
   /**
    * What this price is for. A mensalidade always has both; a quota has neither.
    *
@@ -372,7 +409,13 @@ export async function listFeePlans(
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
       id: string;
-      kind: 'mensalidade' | 'quota';
+      kind: FeeKind;
+      recurrence: FeeRecurrence;
+      vat_rate: string;
+      vat_exempt: boolean;
+      season_id: string | null;
+      season_name: string | null;
+      is_renewal: boolean;
       level_id: string | null;
       level_name: string | null;
       lessons_per_week: number | null;
@@ -386,6 +429,8 @@ export async function listFeePlans(
     }>(
       `SELECT p.id, p.kind, p.level_id, l.name AS level_name, p.lessons_per_week,
               p.amount_cents, p.default_fee_period_id, p.age_band,
+              p.recurrence, p.vat_rate, p.vat_exempt, p.is_renewal,
+              p.season_id, s.name AS season_name,
               /*
                * What the club actually charges for this price, once its own
                * periodicity discount is taken off — round 5, ticket 3.0.
@@ -429,6 +474,11 @@ export async function listFeePlans(
          LEFT JOIN fee_period fp
                 ON fp.id = p.default_fee_period_id
                AND fp.organization_id = p.organization_id
+         -- The season an inscrição or a seguro is for. A retired season still
+         -- resolves: last year's joining price is history worth reading, and
+         -- hiding its name would leave a row labelled with nothing.
+         LEFT JOIN season s
+                ON s.id = p.season_id AND s.organization_id = p.organization_id
          LEFT JOIN LATERAL (
            SELECT json_agg(json_build_object('id', cg.id, 'name', cg.name)
                            ORDER BY cg.name) AS groups
@@ -450,6 +500,13 @@ export async function listFeePlans(
     return rows.map((row) => ({
       id: row.id,
       kind: row.kind,
+      recurrence: row.recurrence,
+      // numeric comes back as a string from pg, like every other rate here.
+      vatRate: Number(row.vat_rate),
+      vatExempt: row.vat_exempt,
+      seasonId: row.season_id,
+      seasonName: row.season_name,
+      isRenewal: row.is_renewal,
       levelId: row.level_id,
       levelName: row.level_name,
       lessonsPerWeek: row.lessons_per_week,
@@ -466,12 +523,17 @@ export async function listFeePlans(
 }
 
 export interface FeePlanInput {
-  kind: 'mensalidade' | 'quota';
+  kind: FeeKind;
+  recurrence: FeeRecurrence;
   levelId: string | null;
   lessonsPerWeek: number | null;
   amountCents: number;
   defaultFeePeriodId: string | null;
   ageBand: FeeAgeBand;
+  vatRate: number;
+  vatExempt: boolean;
+  seasonId: string | null;
+  isRenewal: boolean;
 }
 
 /**
@@ -489,7 +551,7 @@ export interface FeePlanInput {
  * unique per age band, of which a club has a handful.
  */
 export class DuplicateFeePlanError extends Error {
-  constructor(readonly which: 'mensalidade' | 'quota') {
+  constructor(readonly which: FeeKind) {
     super(`A ${which} price already exists for that combination`);
   }
 }
@@ -509,6 +571,10 @@ function duplicatePlanFrom(error: unknown): DuplicateFeePlanError | null {
 
   if (constraint === 'fee_plan_level_frequency_uq') return new DuplicateFeePlanError('mensalidade');
   if (constraint === 'fee_plan_one_quota_uq') return new DuplicateFeePlanError('quota');
+  // One joining price per season, and one renovação beside it — `is_renewal` is
+  // in the key, which is what lets the pair coexist and refuses a third.
+  if (constraint === 'fee_plan_one_inscricao_uq') return new DuplicateFeePlanError('inscricao');
+  if (constraint === 'fee_plan_one_seguro_uq') return new DuplicateFeePlanError('seguro');
   return null;
 }
 
@@ -523,8 +589,10 @@ export async function createFeePlan(
       ({ rows } = await tx.query<{ id: string }>(
         `INSERT INTO fee_plan (organization_id, facility_id, kind, level_id,
                                lessons_per_week, amount_cents, default_fee_period_id,
-                               age_band)
-         VALUES ($1, $2, $3::fee_plan_kind, $4, $5, $6, $7, $8::fee_age_band) RETURNING id`,
+                               age_band, recurrence, vat_rate, vat_exempt, season_id,
+                               is_renewal)
+         VALUES ($1, $2, $3::fee_kind, $4, $5, $6, $7, $8::fee_age_band,
+                 $9::fee_recurrence, $10, $11, $12, $13) RETURNING id`,
         [
           organizationId,
           facilityId,
@@ -534,6 +602,11 @@ export async function createFeePlan(
           input.amountCents,
           input.defaultFeePeriodId,
           input.ageBand,
+          input.recurrence,
+          input.vatRate,
+          input.vatExempt,
+          input.seasonId,
+          input.isRenewal,
         ],
       ));
     } catch (error) {
@@ -573,8 +646,10 @@ export async function updateFeePlan(
     try {
       ({ rows } = await tx.query<{ id: string }>(
         `UPDATE fee_plan
-            SET kind = $3::fee_plan_kind, level_id = $4, lessons_per_week = $5,
-                amount_cents = $6, default_fee_period_id = $7, age_band = $8::fee_age_band
+            SET kind = $3::fee_kind, level_id = $4, lessons_per_week = $5,
+                amount_cents = $6, default_fee_period_id = $7, age_band = $8::fee_age_band,
+                recurrence = $9::fee_recurrence, vat_rate = $10, vat_exempt = $11,
+                season_id = $12, is_renewal = $13
           WHERE id = $2 AND facility_id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -586,6 +661,11 @@ export async function updateFeePlan(
           input.amountCents,
           input.defaultFeePeriodId,
           input.ageBand,
+          input.recurrence,
+          input.vatRate,
+          input.vatExempt,
+          input.seasonId,
+          input.isRenewal,
         ],
       ));
     } catch (error) {

@@ -52,6 +52,7 @@ import {
   StudentPaidController,
   StudentSocioController,
 } from './billing/fees.controller.js';
+import { InsurancePoliciesController } from './billing/insurance.controller.js';
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
 import { VacationsController } from './vacations/vacations.controller.js';
 import { PlacesController, WeatherController } from './weather/weather.controller.js';
@@ -111,6 +112,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     FacilityBillingController,
     FeePeriodsController,
     FeePlansController,
+    InsurancePoliciesController,
     StudentFeesController,
     StudentPaidController,
     StudentSocioController,

@@ -1568,13 +1568,18 @@ is multiplied by six lanes by thirty weeks and becomes real money in the figure 
 job is to be the number the club invoices. The contracted *total* is money and is rounded to
 integer cents once, in SQL, at the end.
 
-**`vat_rate` is null for isento, and `fee_plan` still has no rate column.** That is not an
-inconsistency. A family's mensalidade is advertised gross, Art. 9.º CIVA exempts most sports
-tuition, and a rate nobody maintains is a rate something eventually trusts — so `fee_plan`
-deliberately has none. A partnership is the case that reasoning does not cover: it invoices an
-*organisation* against a NIF (`empresa` is one of the eight types), where the exemption often
-does not apply, and the rate is a negotiated term on a signed contract, so somebody does
-maintain it. Stored as a fraction — 0.2300 is 23%.
+**`vat_rate` is null for isento here, and `fee_plan` now has a rate of its own.** The
+partnership rate came first and for its own reason: a partnership invoices an *organisation*
+against a NIF (`empresa` is one of the eight types), where the exemption often does not
+apply, and the rate is a negotiated term on a signed contract, so somebody maintains it.
+Stored as a fraction — 0.2300 is 23%.
+
+`fee_plan` deliberately had none, on the argument that a family's mensalidade is advertised
+gross and a rate nobody maintains is a rate something eventually trusts. **That was reversed
+on 8 September 2026**, because seguro is normally isento under Art. 9.º CIVA and invoicing has
+to say so — a schema with nowhere to record it cannot. See "Four kinds of fee" below; note
+that the two columns spell isento differently, one as a null rate and one as its own flag,
+and that invoicing will have to reconcile them.
 
 **`status` and `archived_at` are two different retirements.** `inativa` means "not currently
 selling them water": it hides the partner from the pickers and keeps every booking it ever
@@ -2024,6 +2029,77 @@ on the earliest-created item. Only non-archived items mint a space; archived one
 where one exists. An item with a null or blank location keeps a null `space_id`.
 **`location` is deliberately still there** — dropping it is a separate follow-up, so the result
 can be eyeballed against the original text first.
+
+### Four kinds of fee, and the club's apólice — 8 September 2026
+
+**`fee_kind` replaces `fee_plan_kind`: `mensalidade | inscricao | seguro | quota`.** One price
+list, four kinds, no table per kind. A new type rather than two `ALTER TYPE … ADD VALUE`,
+because Postgres will add an enum value inside a transaction but will not let the same
+transaction *use* it, and this migration uses both immediately in checks and partial indexes.
+`fee_plan_kind` is left in place with nothing using it, so the Down section has a type to put
+the column back into.
+
+Each kind's shape is a CHECK rather than a convention:
+
+| Kind | Level + lessons | Season | Age band | Renovação |
+|---|---|---|---|---|
+| `mensalidade` | required | must be null | `any` | no |
+| `quota` | must be null | must be null | any of three | no |
+| `inscricao` | must be null | required | `any` | optional |
+| `seguro` | must be null | required | `any` | no |
+
+**`recurrence` (`periodicity | annual | one_off`) is the plan's, not the kind's.** A club is
+free to make its quota annual or its inscrição recurring, so the *default* per kind lives in
+the API and the *rule* lives in the schema: only `periodicity` may name a
+`default_fee_period_id`. An annual price with a three-month periodicity beside it is a
+contradiction, and a contradiction left in two columns is one something eventually reads.
+Every plan that existed is `periodicity`, which is what `fee_period` already meant, so nothing
+on the student page changes.
+
+**`vat_rate numeric(5,2)` and `vat_exempt boolean`, on a gross amount.** The rate describes
+what `amount_cents` already contains and is never added to it. Isento is its own flag rather
+than a rate of zero, because on a Portuguese invoice an exemption and a zero rate are two
+different statements; `fee_plan_vat_exempt_is_zero` stops a row claiming both. Every existing
+plan was marked exempt, which is what the old "no VAT here" comment said these prices were.
+The exemption *reason* is invoicing's to add.
+
+**`season_id`, and one price per season.** `fee_plan_one_inscricao_uq` is
+`(organization_id, facility_id, season_id, is_renewal)` — `is_renewal` is *in* the key, which
+is exactly what lets one season hold a joining price and a cheaper renovação beside it and
+refuse a third of either. `fee_plan_one_seguro_uq` is the same without the flag. The season
+itself is unchanged: still organization-scoped, still one published at a time, and the price
+list picks from the club's own list rather than keeping a second one.
+
+```
+insurance_policy
+  id, organization_id, facility_id,
+  insurer, policy_number, valid_from, valid_to,
+  cost_per_person_cents, notes,
+  created_at, updated_at, archived_at
+```
+
+**`cost_per_person_cents` is what the club pays its insurer**, not what a family pays — the
+family's price is the seguro `fee_plan`. Usually the same number and never the same fact, and
+a club adding a euro of admin would have nowhere to put the difference if this were also the
+price. The number is unique per facility on `lower(policy_number)`, partial on
+`archived_at IS NULL` so a club renewing under the same number next year does not collide with
+the row it archived. Expiry is derived — `valid_to - current_date` in SQL, with the sixty-day
+renewal window applied once in the repository — and never recomputed in a browser whose clock
+is not the club's.
+
+**`student_fee` gains `kind`, `season_id`, `insurance_policy_id`, `covers_from`,
+`covers_to`.** The kind is snapshotted onto the line like the amount beside it, and the
+load-bearing reason is that a partial unique index cannot join: "one inscrição per student per
+season" is only sayable with the kind on this row. Two triggers keep it honest —
+`student_fee_default_kind` fills it from the plan when a caller does not send it (every caller
+predates the column, exactly as with `class_session.occurs_on`), and
+`student_fee_kind_matches_plan` refuses one that disagrees. Cover is all three columns or none
+of them, and only on a seguro line.
+
+Isolation: `insurance_policy` carries the tenant key, a composite key to its facility, its own
+RLS policy and a grant, and is asserted in `tenant-isolation.sql` test 12 — which also holds
+that a fee line cannot name the neighbour's season or the neighbour's apólice. Neither is
+something RLS catches: both rows pass their own policy, and only the composite keys refuse it.
 
 ## Module 2 — maintenance (shape)
 

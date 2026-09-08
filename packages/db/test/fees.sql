@@ -586,4 +586,203 @@ BEGIN
   RAISE NOTICE 'PASS test 9: quotas band by age, and a penalty is flat or a percentage';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 10 — the two new kinds, and what each of them is shaped like
+-- ---------------------------------------------------------------------------
+--
+-- Four kinds on one price list only works if the database says what each one is.
+-- Otherwise "an inscrição with a level and a three-month periodicity" is a row
+-- the API can write and no screen can render, and the shape of a fee becomes a
+-- convention held in whichever repository function was written last.
+--
+-- The pair worth reading twice is the inscrição index. `is_renewal` is *in* the
+-- key rather than excluded from it, which is exactly what lets one season hold a
+-- joining price and a cheaper renovação beside it and refuse a third of either.
+
+DO $$
+DECLARE
+  v_org uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_facility uuid; v_season uuid; v_other uuid; v_level uuid; v_period uuid;
+  ok boolean;
+BEGIN
+  INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina das Épocas')
+  RETURNING id INTO v_facility;
+
+  INSERT INTO fee_period (organization_id, facility_id, name, months, is_default)
+  VALUES (v_org, v_facility, 'Anual', 12, true) RETURNING id INTO v_period;
+
+  SELECT id INTO v_level FROM student_level WHERE organization_id = v_org LIMIT 1;
+
+  INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+  VALUES (v_org, 'Época 26/27', DATE '2026-09-01', DATE '2027-07-31', 'draft')
+  RETURNING id INTO v_season;
+  INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+  VALUES (v_org, 'Época 27/28', DATE '2027-09-01', DATE '2028-07-31', 'draft')
+  RETURNING id INTO v_other;
+
+  -- A joining fee: one-off, no level, no periodicity, and a season.
+  INSERT INTO fee_plan
+    (organization_id, facility_id, kind, amount_cents, season_id, recurrence, vat_exempt)
+  VALUES (v_org, v_facility, 'inscricao', 3000, v_season, 'one_off', true);
+
+  -- And the cheaper price for a family coming back, in the same season.
+  INSERT INTO fee_plan
+    (organization_id, facility_id, kind, amount_cents, season_id, recurrence,
+     is_renewal, vat_exempt)
+  VALUES (v_org, v_facility, 'inscricao', 1500, v_season, 'one_off', true, true);
+
+  -- A third is refused: one price and one renovação, never two of either.
+  ok := false;
+  BEGIN
+    INSERT INTO fee_plan
+      (organization_id, facility_id, kind, amount_cents, season_id, recurrence, vat_exempt)
+    VALUES (v_org, v_facility, 'inscricao', 3200, v_season, 'one_off', true);
+  EXCEPTION WHEN unique_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 10a: a season took two inscrição prices'; END IF;
+
+  -- The next season's is a different row and is perfectly ordinary.
+  INSERT INTO fee_plan
+    (organization_id, facility_id, kind, amount_cents, season_id, recurrence, vat_exempt)
+  VALUES (v_org, v_facility, 'inscricao', 3200, v_other, 'one_off', true);
+
+  -- An inscrição with no season: the two kinds that have one must have one.
+  ok := false;
+  BEGIN
+    INSERT INTO fee_plan
+      (organization_id, facility_id, kind, amount_cents, recurrence, vat_exempt)
+    VALUES (v_org, v_facility, 'inscricao', 3000, 'one_off', true);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 10b: an inscrição belonged to no season'; END IF;
+
+  -- And a mensalidade with one: the rule runs both ways, so nobody fills the
+  -- column on the row where it means nothing.
+  ok := false;
+  BEGIN
+    INSERT INTO fee_plan
+      (organization_id, facility_id, kind, level_id, lessons_per_week, amount_cents, season_id)
+    VALUES (v_org, v_facility, 'mensalidade', v_level, 2, 3500, v_season);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 10c: a mensalidade claimed a season'; END IF;
+
+  -- An inscrição priced by level is not a thing: it is charged to a person.
+  ok := false;
+  BEGIN
+    INSERT INTO fee_plan
+      (organization_id, facility_id, kind, level_id, lessons_per_week, amount_cents,
+       season_id, recurrence, vat_exempt)
+    VALUES (v_org, v_facility, 'inscricao', v_level, 2, 3000, v_season, 'one_off', true);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 10d: an inscrição was priced by level'; END IF;
+
+  -- A renovação of a seguro means nothing, so it is refused rather than ignored.
+  ok := false;
+  BEGIN
+    INSERT INTO fee_plan
+      (organization_id, facility_id, kind, amount_cents, season_id, recurrence,
+       is_renewal, vat_exempt)
+    VALUES (v_org, v_facility, 'seguro', 1200, v_season, 'annual', true, true);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 10e: a seguro had a renovação price'; END IF;
+
+  -- A one-off that also names a three-month periodicity is a contradiction, and
+  -- a contradiction left in two columns is one something will eventually read.
+  ok := false;
+  BEGIN
+    INSERT INTO fee_plan
+      (organization_id, facility_id, kind, amount_cents, season_id, recurrence,
+       default_fee_period_id, vat_exempt)
+    VALUES (v_org, v_facility, 'seguro', 1200, v_season, 'one_off', v_period, true);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 10f: a one-off named a periodicity'; END IF;
+
+  -- Isento is not "23 % that nobody charged". The two are different statements
+  -- and an invoice has to make one of them.
+  ok := false;
+  BEGIN
+    INSERT INTO fee_plan
+      (organization_id, facility_id, kind, amount_cents, season_id, recurrence,
+       vat_exempt, vat_rate)
+    VALUES (v_org, v_facility, 'seguro', 1200, v_season, 'annual', true, 23);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 10g: a plan was isento at 23 %%'; END IF;
+
+  -- A rate on a plan that is not exempt is ordinary, and the amount stays gross.
+  INSERT INTO fee_plan
+    (organization_id, facility_id, kind, amount_cents, season_id, recurrence,
+     vat_exempt, vat_rate)
+  VALUES (v_org, v_facility, 'seguro', 1200, v_other, 'annual', false, 23);
+
+  RAISE NOTICE 'PASS test 10: each kind has a shape, and the database holds it';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 11 — a fee line cannot lie about what kind it is
+-- ---------------------------------------------------------------------------
+--
+-- The kind is copied onto the line because a partial unique index cannot join —
+-- "one inscrição per student per season" is only sayable with it here. A copy
+-- that could drift from its plan would make that index guard the wrong rows, so
+-- one trigger fills it and another refuses a value that disagrees.
+
+DO $$
+DECLARE
+  v_org uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_facility uuid; v_season uuid; v_period uuid; v_plan uuid; v_student uuid;
+  v_kind fee_kind; ok boolean;
+BEGIN
+  SELECT id INTO v_facility FROM facility
+   WHERE organization_id = v_org AND name = 'Piscina das Épocas';
+  SELECT id INTO v_season FROM season WHERE organization_id = v_org AND name = 'Época 26/27';
+  SELECT id INTO v_period FROM fee_period
+   WHERE organization_id = v_org AND facility_id = v_facility LIMIT 1;
+  SELECT id INTO v_plan FROM fee_plan
+   WHERE organization_id = v_org AND facility_id = v_facility
+     AND kind = 'inscricao' AND season_id = v_season AND NOT is_renewal;
+
+  INSERT INTO student (organization_id, first_name, last_name)
+  VALUES (v_org, 'Mariana', 'Lopes') RETURNING id INTO v_student;
+
+  -- Written without a kind, exactly as every caller that predates the column
+  -- does. The plan's kind is what it means, so that is what it gets.
+  INSERT INTO student_fee
+    (organization_id, student_id, fee_plan_id, fee_period_id, season_id, amount_cents)
+  VALUES (v_org, v_student, v_plan, v_period, v_season, 3000);
+
+  SELECT kind INTO v_kind FROM student_fee
+   WHERE organization_id = v_org AND student_id = v_student;
+  IF v_kind <> 'inscricao' THEN
+    RAISE EXCEPTION 'FAIL test 11a: a line defaulted to %, not its plan''s kind', v_kind;
+  END IF;
+
+  -- A kind that disagrees with its plan is refused rather than quietly corrected:
+  -- the write is wrong, and being told so is more useful than being fixed.
+  ok := false;
+  BEGIN
+    INSERT INTO student_fee
+      (organization_id, student_id, fee_plan_id, fee_period_id, season_id, kind, amount_cents)
+    VALUES (v_org, v_student, v_plan, v_period, v_season, 'quota', 3000);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 11b: a line called an inscrição a quota'; END IF;
+
+  -- And the charged-twice failure, which is quiet and reaches a family as a bill.
+  ok := false;
+  BEGIN
+    INSERT INTO student_fee
+      (organization_id, student_id, fee_plan_id, fee_period_id, season_id, amount_cents)
+    VALUES (v_org, v_student, v_plan, v_period, v_season, 3000);
+  EXCEPTION WHEN unique_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 11c: one student paid two inscrições'; END IF;
+
+  RAISE NOTICE 'PASS test 11: a line takes its kind from its plan and cannot contradict it';
+END $$;
+
 ROLLBACK;

@@ -541,4 +541,139 @@ BEGIN
   RAISE NOTICE 'PASS test 11: spaces, cleaning logs and requests are isolated both ways';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 12 — the apólice, and the two new references on a fee line
+-- ---------------------------------------------------------------------------
+--
+-- `insurance_policy` is an ordinary tenant table and gets the ordinary proof.
+-- The interesting half is `student_fee`, which gained references to a season and
+-- to a policy: a line naming the neighbour's season would put one club's student
+-- inside another club's year, and one naming the neighbour's apólice would leave
+-- a swimmer covered by insurance their club never bought. Neither is something
+-- RLS catches — both rows pass their own policy — so both are composite keys,
+-- and this is what says so.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid := 'a1111111-1111-1111-1111-111111111111';
+  v_fac_b uuid := 'b1111111-1111-1111-1111-111111111111';
+  v_pol_a uuid; v_pol_b uuid;
+  v_season_a uuid; v_season_b uuid;
+  v_plan_a uuid; v_student_a uuid; v_period_a uuid;
+  v_seen integer; ok boolean;
+BEGIN
+  INSERT INTO insurance_policy
+    (organization_id, facility_id, insurer, policy_number, valid_from, valid_to,
+     cost_per_person_cents)
+  VALUES (v_a, v_fac_a, 'Fidelidade', 'AP-1', DATE '2026-09-01', DATE '2027-08-31', 850)
+  RETURNING id INTO v_pol_a;
+
+  INSERT INTO insurance_policy
+    (organization_id, facility_id, insurer, policy_number, valid_from, valid_to,
+     cost_per_person_cents)
+  VALUES (v_b, v_fac_b, 'Tranquilidade', 'AP-1', DATE '2026-09-01', DATE '2027-08-31', 900)
+  RETURNING id INTO v_pol_b;
+
+  -- The same policy number at two clubs is ordinary: the index is per facility.
+  IF v_pol_a IS NULL OR v_pol_b IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 12a: two clubs could not both hold policy AP-1';
+  END IF;
+
+  -- A policy filed at the neighbour's site.
+  ok := false;
+  BEGIN
+    INSERT INTO insurance_policy
+      (organization_id, facility_id, insurer, policy_number, valid_from, valid_to,
+       cost_per_person_cents)
+    VALUES (v_a, v_fac_b, 'Fidelidade', 'AP-2', DATE '2026-09-01', DATE '2027-08-31', 850);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 12b: org A insured org B site'; END IF;
+
+  INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+  VALUES (v_a, '2026/2027 A', DATE '2026-09-01', DATE '2027-07-31', 'draft')
+  RETURNING id INTO v_season_a;
+  INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+  VALUES (v_b, '2026/2027 B', DATE '2026-09-01', DATE '2027-07-31', 'draft')
+  RETURNING id INTO v_season_b;
+
+  INSERT INTO fee_period (organization_id, facility_id, name, months)
+  VALUES (v_a, v_fac_a, 'Anual', 12) RETURNING id INTO v_period_a;
+
+  INSERT INTO fee_plan
+    (organization_id, facility_id, kind, amount_cents, season_id, recurrence, vat_exempt)
+  VALUES (v_a, v_fac_a, 'seguro', 1200, v_season_a, 'annual', true)
+  RETURNING id INTO v_plan_a;
+
+  -- A seguro price for the neighbour's season.
+  ok := false;
+  BEGIN
+    INSERT INTO fee_plan
+      (organization_id, facility_id, kind, amount_cents, season_id, recurrence, vat_exempt)
+    VALUES (v_a, v_fac_a, 'seguro', 1200, v_season_b, 'annual', true);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 12c: org A priced org B season'; END IF;
+
+  INSERT INTO student (organization_id, first_name, last_name)
+  VALUES (v_a, 'Ana', 'Costa') RETURNING id INTO v_student_a;
+
+  -- A cover line naming the neighbour's apólice: the swimmer would be insured by
+  -- a policy their club never bought, and nothing else would ever say so.
+  ok := false;
+  BEGIN
+    INSERT INTO student_fee
+      (organization_id, student_id, fee_plan_id, fee_period_id, kind, season_id,
+       insurance_policy_id, covers_from, covers_to, amount_cents)
+    VALUES (v_a, v_student_a, v_plan_a, v_period_a, 'seguro', v_season_a,
+            v_pol_b, DATE '2026-09-01', DATE '2027-08-31', 1200);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 12d: a student was covered by org B policy'; END IF;
+
+  -- The club's own policy is accepted, so the refusal above is the key doing its
+  -- job rather than the insert being wrong in some other way.
+  INSERT INTO student_fee
+    (organization_id, student_id, fee_plan_id, fee_period_id, kind, season_id,
+     insurance_policy_id, covers_from, covers_to, amount_cents)
+  VALUES (v_a, v_student_a, v_plan_a, v_period_a, 'seguro', v_season_a,
+          v_pol_a, DATE '2026-09-01', DATE '2027-08-31', 1200);
+
+  -- And the same student cannot be insured twice for one season.
+  ok := false;
+  BEGIN
+    INSERT INTO student_fee
+      (organization_id, student_id, fee_plan_id, fee_period_id, kind, season_id,
+       insurance_policy_id, covers_from, covers_to, amount_cents)
+    VALUES (v_a, v_student_a, v_plan_a, v_period_a, 'seguro', v_season_a,
+            v_pol_a, DATE '2026-09-01', DATE '2027-08-31', 1200);
+  EXCEPTION WHEN unique_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 12e: one student, two seguros, one season'; END IF;
+
+  -- And the policies themselves, from the app role.
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  SELECT count(*) INTO v_seen FROM insurance_policy;
+  IF v_seen <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 12f: org B saw % policies, not 1', v_seen;
+  END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO insurance_policy
+      (organization_id, facility_id, insurer, policy_number, valid_from, valid_to,
+       cost_per_person_cents)
+    VALUES (v_a, v_fac_a, 'Contrabando', 'AP-9', DATE '2026-09-01', DATE '2027-08-31', 1);
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 12g: org B wrote a policy into org A'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 12: apólices and cover lines are isolated both ways';
+END $$;
+
 ROLLBACK;

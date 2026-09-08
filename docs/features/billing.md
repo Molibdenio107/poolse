@@ -20,19 +20,61 @@ A **fee period** is a name, a number of months and a discount: "Mês" (1 month, 
 
 ## Prices
 
-Two kinds, and the schema enforces one of each combination:
+Four kinds, and the schema enforces the shape of each:
 
 - **Mensalidade** — a level and a number of lessons a week. Unique per site on that pair.
 - **Quota** — the membership fee, unique per site and age band (`any`, `under_18`, `adult`).
   A banded rate beats `any` for the members it names, so a club can add a child rate without
   editing the one it already has.
+- **Inscrição** — what it costs to join for a season. One-off, one per student per season,
+  and priced per season: a club in June holds this year's and next year's side by side.
+- **Seguro** — what a family pays for the student's insurance in a season. Annual, one price
+  per season, and normally isento.
 
-A price stores a **monthly** amount, gross.
+A price stores a **monthly** amount for a mensalidade and the whole amount for the other
+three, gross in both cases.
+
+**Each price says how often it is charged** — by the club's own periodicity list, once a year,
+or once only. Only a price charged by the periodicity list names one; the form stops asking
+for a periodicity as soon as the answer is annual or one-off, because an annual price with a
+three-month period beside it is a contradiction the table refuses.
+
+**IVA is on a gross amount.** The rate says what the price already contains, never what to add
+to it. **Isento is its own box**, not a rate of zero: on an invoice an exemption and a zero
+rate are two different statements. Every price that existed before this became isento, which
+is what the old price list meant by having no rate at all.
+
+## Inscrição, and the renovação price beside it
+
+A season may hold **two** joining prices: the ordinary one, and a cheaper **renovação** for a
+family that paid in an earlier season. Both are optional and a club that charges everybody the
+same writes one row. A third of either is refused.
+
+The student-facing half — picking the renovação price by default for a returning student, and
+letting an admin override it — is the next slice. Tonight's is the price list and the schema
+it writes into.
+
+## Seguro, and the club's apólice
+
+Two halves. The **apólice** is what the club bought: seguradora, número, the period it covers,
+what it costs per insured person, and notes. It lives in its own section on the site's page,
+beside the price list, and is readable and editable by owners and admins only — what the club
+pays its insurer is a commercial fact.
+
+An apólice says how long it has left in words: a date while there is time, "termina daqui a N
+dias" inside sixty days, and "terminou há N dias" once it has lapsed. Those are two different
+situations — a renewal conversation, and a club whose swimmers are uninsured today — so they
+read differently rather than sharing an amber. The answer is computed on the server against
+the database's own date; nothing in the browser recomputes it.
+
+**An apólice that still covers students is not archived**, and the refusal says how many. The
+student-facing half — a seguro fee line giving one student a coverage period, pro-rata for a
+mid-season joiner, and the warning badge for a student with no valid cover — is the next slice.
 
 **Adding or editing a price onto a combination that already exists is a 409**, not a crash,
-carrying `fee_plan_exists` or `fee_plan_quota_exists` and a field the form can hang the
-sentence on. The database has enforced this since the price list was built; what was missing
-was the translation from a constraint violation into something a form can say.
+carrying `fee_plan_exists`, `fee_plan_quota_exists`, `fee_plan_inscricao_exists` or
+`fee_plan_seguro_exists` and a field the form can hang the sentence on — the level, the age
+band or the season, whichever is actually taken.
 
 ## What the Amount column shows
 
