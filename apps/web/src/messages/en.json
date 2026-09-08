@@ -942,7 +942,8 @@
     "notPermitted": "No access to the fee categories.",
     "onGroupHint": "Applies to everybody in the class group, unless their enrolment says otherwise.",
     "howTitle": "How it applies",
-    "howBody": "A category can be set on the class group — where it covers everybody in it — or on one student's enrolment, which beats the group's. Taking a student's own category off returns them to their group's. A category is a label: what it is worth is invoicing's business."
+    "howBody": "A category can be set on the class group — where it covers everybody in it — or on one student's enrolment, which beats the group's. Taking a student's own category off returns them to their group's. A category is a label: what it is worth is invoicing's business.",
+    "fromGroupIs": "From the class group ({name})"
   },
   "insurance": {
     "title": "Insurance policy",

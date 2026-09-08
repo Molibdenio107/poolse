@@ -1484,6 +1484,16 @@ export interface ScheduleSlot {
 export interface EnrolledStudent {
   enrollmentId: string;
   studentId: string;
+  /**
+   * This person's own fee category, against their turma's — POOLSE-23 AC4.
+   *
+   * Null means "whatever the turma says", which is the ordinary state and the
+   * one an override is cleared back to. `feeCategoryName` is what actually
+   * applies — their own where they have one, the turma's otherwise — so a
+   * roster can print the effective answer without knowing the precedence.
+   */
+  feeCategoryId: string | null;
+  feeCategoryName: string | null;
   firstName: string;
   lastName: string;
   /**

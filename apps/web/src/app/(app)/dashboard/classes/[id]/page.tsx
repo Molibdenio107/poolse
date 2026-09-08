@@ -12,6 +12,7 @@ import {
   EnrolForm,
   RemoveSlotButton,
 } from '../class-forms';
+import { EnrollmentCategoryPicker } from './enrollment-category';
 
 /**
  * One turma: what it is, when it runs, and who is in it.
@@ -182,13 +183,42 @@ export default async function ClassPage({
                         {student.shortName}
                       </Link>
                     </span>
-                    {group.canManage && (
-                      <EndEnrollmentButton
-                        organizationId={all.organizationId}
-                        groupId={group.id}
-                        enrollmentId={student.enrollmentId}
-                      />
-                    )}
+                    <span className="flex shrink-0 items-center gap-2">
+                      {/*
+                        The category that actually applies to this person —
+                        POOLSE-23 AC4.
+
+                        Shown to everybody who can read the roster and editable
+                        only by somebody who may manage it. The picker offers
+                        "from the turma" as its empty answer rather than "none",
+                        because clearing a person's own category returns them to
+                        their turma's — which is a different thing from taking
+                        them off every category, and the one an operator means.
+                      */}
+                      {all.options.feeCategories.length > 0 &&
+                        (group.canManage ? (
+                          <EnrollmentCategoryPicker
+                            enrollmentId={student.enrollmentId}
+                            categories={all.options.feeCategories}
+                            own={student.feeCategoryId}
+                            effective={student.feeCategoryName}
+                          />
+                        ) : (
+                          student.feeCategoryName !== null && (
+                            <span className="rounded bg-surface-muted px-2 py-0.5 text-sm text-foreground-muted">
+                              {student.feeCategoryName}
+                            </span>
+                          )
+                        ))}
+
+                      {group.canManage && (
+                        <EndEnrollmentButton
+                          organizationId={all.organizationId}
+                          groupId={group.id}
+                          enrollmentId={student.enrollmentId}
+                        />
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

@@ -25,6 +25,16 @@ export interface EnrolledStudent {
   lastName: string;
   status: 'active' | 'waiting';
   waitingPosition: number | null;
+  /**
+   * This person's own fee category, against their turma's — POOLSE-23 AC4.
+   *
+   * Null means "whatever the turma says", which is the ordinary state and the
+   * one an override is cleared back to. `feeCategoryName` is what actually
+   * applies — their own where they have one, the turma's otherwise — so a
+   * roster can print the effective answer without knowing the precedence.
+   */
+  feeCategoryId: string | null;
+  feeCategoryName: string | null;
 }
 
 export interface ClassGroup {
@@ -235,7 +245,15 @@ const GROUP_COLUMNS = `
                                  'firstName', s.first_name, 'lastName', s.last_name,
                                  'displayName', ${displayName('s')},
                                  'shortName', ${shortName('s')},
-                                 'status', e.status, 'waitingPosition', e.waiting_position)
+                                 'status', e.status, 'waitingPosition', e.waiting_position,
+                                 -- Their own, and the one that actually applies.
+                                 -- The precedence is resolved in SQL so a roster
+                                 -- prints the effective answer without knowing it.
+                                 'feeCategoryId', e.fee_category_id,
+                                 'feeCategoryName', (
+                                   SELECT fc.name FROM fee_category fc
+                                    WHERE fc.id = enrolment_fee_category(e.organization_id, e.id)
+                                 ))
                ORDER BY e.status, e.waiting_position NULLS FIRST, ${nameOrder('s')}
              ), '[]'::json)
       FROM enrollment e
