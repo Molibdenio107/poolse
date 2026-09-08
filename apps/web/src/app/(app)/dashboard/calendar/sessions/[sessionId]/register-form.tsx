@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
+import { AlertTriangle } from 'lucide-react';
 import type { Register } from '@/lib/api';
 import {
   ATTENDANCE_STATES,
@@ -137,6 +138,28 @@ export function RegisterForm({ register }: { register: Register & { organization
                       {t('attendance.notEnrolled')}
                     </span>
                   )
+                )}
+                {/*
+                  No valid insurance on the day of this class — round 9.
+
+                  **It changes nothing about the register.** Every mark still
+                  works, the row is not disabled, and no state on this screen
+                  depends on it: an instructor at the poolside cannot fix a
+                  seguro, and a register that would not open over a piece of
+                  paperwork is a register somebody keeps on paper instead. It is
+                  here because this is the one screen where every swimmer is
+                  looked at every week.
+
+                  Judged against the class's own day rather than today, so a
+                  register marked late still says what was true when they swam.
+                  Words and an icon, not a colour: the warning tone is a hint and
+                  never the message.
+                */}
+                {!entry.insured && (
+                  <span className="flex items-center gap-1 rounded border border-warning/40 bg-warning/10 px-2 py-0.5 text-sm font-normal text-warning">
+                    <AlertTriangle aria-hidden className="size-3.5" />
+                    {t('attendance.noInsurance')}
+                  </span>
                 )}
               </span>
 

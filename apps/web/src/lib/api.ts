@@ -1171,12 +1171,32 @@ export interface StudentFeeLine {
   planId: string;
   levelName: string | null;
   lessonsPerWeek: number | null;
-  kind: 'mensalidade' | 'quota';
+  kind: FeeKind;
   enrollmentId: string | null;
   classGroupName: string | null;
-  periodId: string;
-  periodName: string;
+  /**
+   * The periodicity this line is charged on — **null when it is charged once**.
+   *
+   * An inscrição is paid once for a season and a seguro is bought once for the
+   * season it covers, so neither names a frequency. `amountCents` is then the
+   * whole amount rather than a monthly one, and the line has one occurrence.
+   */
+  periodId: string | null;
+  periodName: string | null;
   months: number;
+  /** The season an inscrição or a seguro belongs to. Null on the other two. */
+  seasonId: string | null;
+  seasonName: string | null;
+  /**
+   * The cover a seguro line buys, and the apólice behind it.
+   *
+   * The line's own snapshot, not the policy's: correcting a typo in the policy
+   * dates must not silently rewrite what a family was told they had.
+   */
+  insurancePolicyId: string | null;
+  insurerName: string | null;
+  coversFrom: string | null;
+  coversTo: string | null;
   /** The agreed amount per month — the snapshot, never the plan's price today. */
   amountCents: number;
   discountPercent: number;
@@ -1230,10 +1250,68 @@ export interface CurrentPlan {
   hasLine: boolean;
 }
 
+/**
+ * Whether this student is insured today, and by what.
+ *
+ * A warning and never a gate: a student with no cover is enrolled, taught and
+ * marked present exactly as before. `lapsed` separates "their cover ran out"
+ * from "nobody ever insured them", which are two different things to do.
+ */
+export interface StudentCover {
+  covered: boolean;
+  coversFrom: string | null;
+  coversTo: string | null;
+  insurerName: string | null;
+  lapsed: boolean;
+}
+
+/**
+ * A season charge this student could be given, and what it needs to be given.
+ *
+ * Everything the form needs travels with it — the season, whether this student
+ * has already been charged it, and the apólices a seguro may be bought under —
+ * so the student's page makes no second request and holds no rule of its own.
+ *
+ * `suggested` is the renovação answer for this student, decided on the server.
+ * A default and not a decision: both rows come back and either can be charged.
+ */
+export interface SeasonCharge {
+  planId: string;
+  kind: 'inscricao' | 'seguro';
+  isRenewal: boolean;
+  suggested: boolean;
+  facilityId: string;
+  facilityName: string;
+  seasonId: string;
+  seasonName: string;
+  amountCents: number;
+  /** Already charged for this season. One per student per season, by index. */
+  hasLine: boolean;
+  /** The apólices this site holds. Empty on an inscrição, which needs none. */
+  policies: {
+    id: string;
+    insurer: string;
+    policyNumber: string;
+    validFrom: string;
+    validTo: string;
+  }[];
+}
+
 export interface StudentFees {
   /** What their turmas come to, before anything is charged. */
   currentPlans: CurrentPlan[];
+  /** The joining fee and the insurance fee, offered per season. */
+  seasonCharges: SeasonCharge[];
   lines: StudentFeeLine[];
+  cover: StudentCover;
+  /**
+   * Which joining price to offer this student, and whether they are returning.
+   *
+   * A suggestion, not the price: the form pre-selects it and an admin may pick
+   * the other. Decided on the server because "has paid before" is a question
+   * about rows the browser cannot see.
+   */
+  inscricao: { suggestedPlanId: string | null; returning: boolean };
   socio: { isSocio: boolean; socioNumber: string | null; socioSince: string | null };
   /**
    * One penalty per kind of charge — a club may fine a late mensalidade and not
@@ -1539,6 +1617,17 @@ export interface RegisterEntry {
    * at all, so no roster, seat count or proposal can mistake them for one.
    */
   isGuest: boolean;
+  /**
+   * Whether this swimmer had valid insurance on the day of this class.
+   *
+   * **A warning, never a gate.** Nothing here refuses a mark because of it — an
+   * instructor at the poolside cannot fix a seguro, and a register that would
+   * not open over a missing piece of paperwork is a register somebody keeps on
+   * paper instead. It is judged against the class's own day rather than today,
+   * because a register can be marked late and "was this child insured when they
+   * swam" is the question that matters.
+   */
+  insured: boolean;
   /** Null until somebody marks them — not the same as `absent`. */
   status: AttendanceStatus | null;
   note: string | null;

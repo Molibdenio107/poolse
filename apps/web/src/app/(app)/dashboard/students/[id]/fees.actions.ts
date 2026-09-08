@@ -114,15 +114,33 @@ export async function addFeeAction(_previous: FormState, formData: FormData): Pr
   const feePlanId = String(formData.get('feePlanId') ?? '');
   const feePeriodId = String(formData.get('feePeriodId') ?? '');
 
-  if (feePlanId === '' || feePeriodId === '') {
-    return { ok: false, errorKey: 'fees.planAndPeriodRequired' };
+  /*
+   * A periodicity is required for a mensalidade and a quota, and meaningless on
+   * an inscrição or a seguro — those are paid once for a season, so an empty
+   * period is what the form deliberately sends and null is what the API reads it
+   * as. Only the plan is required of everybody.
+   */
+  if (feePlanId === '') {
+    return { ok: false, fields: { feePlanId: 'fees.planRequired' } };
+  }
+
+  const policyId = String(formData.get('insurancePolicyId') ?? '').trim();
+  const coversFrom = String(formData.get('coversFrom') ?? '').trim();
+  const coversTo = String(formData.get('coversTo') ?? '').trim();
+
+  if (coversFrom !== '' && coversTo !== '' && coversTo < coversFrom) {
+    return { ok: false, fields: { coversTo: 'insurance.datesOutOfOrder' } };
   }
 
   try {
     await apiPost(`/students/${studentId}/fees`, {
       feePlanId,
-      feePeriodId,
+      feePeriodId: feePeriodId === '' ? null : feePeriodId,
       enrollmentId: String(formData.get('enrollmentId') ?? '').trim() || null,
+      insurancePolicyId: policyId === '' ? null : policyId,
+      coversFrom: coversFrom === '' ? null : coversFrom,
+      coversTo: coversTo === '' ? null : coversTo,
+      proRata: formData.get('proRata') === 'on',
       ...discountFields(formData),
     });
   } catch (error) {

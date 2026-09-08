@@ -790,7 +790,9 @@
     "kindLabel": "Tipo",
     "kind": {
       "mensalidade": "Mensalidade",
-      "quota": "Quota de sócio"
+      "quota": "Quota de sócio",
+      "inscricao": "Inscrição",
+      "seguro": "Seguro"
     },
     "amount": "Valor",
     "amountHint": "Valor por mês, com IVA incluído — como 35 ou 35,50.",
@@ -893,7 +895,27 @@
     "vatRate": "Taxa de IVA (%)",
     "vatHint": "O valor indicado já inclui o IVA. A taxa diz o que lá está dentro, não o que acrescer.",
     "vatExemptShort": "isento de IVA",
-    "vatRateShort": "IVA {rate}%"
+    "vatRateShort": "IVA {rate}%",
+    "coverUntil": "Seguro válido até {date}",
+    "coverUntilBy": "Seguro válido até {date} · {insurer}",
+    "coverLapsed": "O seguro terminou a {date}",
+    "coverNone": "Sem seguro registado",
+    "seasonCharges": "Inscrição e seguro",
+    "returningStudent": "Este aluno já pagou numa época anterior, por isso a renovação vem escolhida.",
+    "newStudent": "Este aluno ainda não tem pagamentos em épocas anteriores.",
+    "suggestedPrice": "sugerido",
+    "alreadyCharged": "já cobrado",
+    "charge": "Cobrar",
+    "planRequired": "Escolha o que vai ser cobrado.",
+    "policy": "Apólice",
+    "choosePolicy": "Escolher apólice",
+    "noPolicies": "Esta instalação ainda não tem apólices. Registe uma na página da instalação.",
+    "coversFrom": "Cobertura desde",
+    "coversFromHint": "Por omissão, todo o período da apólice.",
+    "coversTo": "Cobertura até",
+    "proRata": "Proporcional",
+    "proRataLabel": "Cobrar só a parte do período",
+    "proRataHint": "Para quem entra a meio da época. Sem esta opção, é cobrado o valor inteiro — que é o que muitos clubes fazem, porque foi o que a seguradora lhes cobrou."
   },
   "insurance": {
     "title": "Apólice de seguro",
@@ -1611,7 +1633,8 @@
     "readOnly": "Não tem permissão para marcar presenças.",
     "restricted": "Esta secção é reservada a instrutores, administradores e proprietários.",
     "attendanceRecorded": "Já há presenças marcadas nesta aula, por isso não pode ser cancelada.",
-    "guest": "Reposição"
+    "guest": "Reposição",
+    "noInsurance": "Sem seguro"
   },
   "calendar": {
     "resizeLanes": "Arraste para alterar as pistas ocupadas",

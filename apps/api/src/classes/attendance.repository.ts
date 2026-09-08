@@ -32,6 +32,17 @@ export interface RegisterEntry {
   recordedAt: string | null;
   /** False for a trial, a make-up, or a sibling brought along. */
   enrolled: boolean;
+  /**
+   * Whether this swimmer had valid insurance on the day of this class.
+   *
+   * **A warning, never a gate.** Nothing here refuses a mark because of it — an
+   * instructor at the poolside cannot fix a seguro, and a register that would
+   * not open over a missing piece of paperwork is a register somebody keeps on
+   * paper instead. It is judged against the class's own day rather than today,
+   * because a register can be marked late and "was this child insured when they
+   * swam" is the question that matters.
+   */
+  insured: boolean;
 }
 
 export interface Register {
@@ -137,6 +148,7 @@ export async function findRegister(
       recorded_at: Date | null;
       enrolled: boolean;
       is_guest: boolean;
+      insured: boolean;
     }>(
       `
       WITH roll AS (
@@ -196,7 +208,31 @@ export async function findRegister(
              ) AS recorded_by_name,
              a.recorded_at,
              bool_or(roll.enrolled) AS enrolled,
-             bool_or(roll.guest) AS is_guest
+             bool_or(roll.guest) AS is_guest,
+             /*
+              * Whether this swimmer has valid insurance on the day of the class.
+              *
+              * **A warning, not a gate.** Nothing on this screen refuses a mark
+              * because of it: an instructor at the poolside cannot fix a seguro,
+              * and a register that would not open over a missing piece of
+              * paperwork is a register somebody keeps on paper instead. What it
+              * does is put the fact in front of the one person who is looking at
+              * the child every week.
+              *
+              * Against the *session's* own day rather than today, because a
+              * register can be taken late and "was this child insured when they
+              * swam" is the question that matters. Derived here, in the same
+              * statement the roll comes from — a second round trip per student
+              * for a badge would be twenty queries on a full lane.
+              */
+             bool_or(EXISTS (
+               SELECT 1 FROM student_fee sf
+                WHERE sf.student_id = s.id
+                  AND sf.organization_id = s.organization_id
+                  AND sf.archived_at IS NULL
+                  AND sf.kind = 'seguro'
+                  AND $2::date BETWEEN sf.covers_from AND sf.covers_to
+             )) AS insured
         FROM roll
         JOIN student s ON s.id = roll.student_id
         LEFT JOIN attendance a
@@ -206,7 +242,10 @@ export async function findRegister(
                 a.recorded_by_membership_id, a.recorded_at
        ORDER BY ${nameOrder('s')}
       `,
-      [sessionId],
+      // The class's own local day, already resolved above — so the cover is
+      // judged on the day the class ran rather than the day somebody opened the
+      // register, which for a late-marked lesson is not the same question.
+      [sessionId, session.local_date],
     );
 
     return {
@@ -231,6 +270,7 @@ export async function findRegister(
         recordedAt: row.recorded_at?.toISOString() ?? null,
         enrolled: row.enrolled,
         isGuest: row.is_guest,
+        insured: row.insured,
       })),
     };
   });

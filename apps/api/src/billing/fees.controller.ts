@@ -244,15 +244,48 @@ export class StudentFeesController {
 
     const outcome = await createStudentFee(organizationId, studentId, {
       feePlanId: requiredId(body['feePlanId'], 'feePlanId'),
-      feePeriodId: requiredId(body['feePeriodId'], 'feePeriodId'),
+      /*
+       * Optional now, and absent means "charged once".
+       *
+       * An inscrição is paid once for a season and a seguro is bought once for
+       * the season it covers, so neither has a frequency to name. The repository
+       * still refuses a periodicity that was asked for and does not belong to
+       * the plan's site, so absent and wrong stay different answers.
+       */
+      feePeriodId: optionalId(body['feePeriodId']),
       enrollmentId: optionalId(body['enrollmentId']),
       ...readManualDiscount(body),
       startsOn: optionalDate(body['startsOn'], 'startsOn'),
+      insurancePolicyId: optionalId(body['insurancePolicyId']),
+      coversFrom: optionalDate(body['coversFrom'], 'coversFrom'),
+      coversTo: optionalDate(body['coversTo'], 'coversTo'),
+      // The club's call, never automatic: plenty charge the whole premium
+      // whenever somebody joins, because that is what the insurer charged them.
+      proRata: body['proRata'] === true,
     });
 
-    // The insert selects from the plan and the period; no rows means one of them
-    // is not this club's, is archived, or belongs to another site.
-    if (outcome === 'not_found') throw new BadRequestException('No such plan or periodicity');
+    /*
+     * Already charged is a 409, not a 500 and not a 400.
+     *
+     * Nothing about the request is malformed and the same body would have been
+     * accepted a moment earlier — it is the club telling itself it has already
+     * answered this. The field is the plan, because that is the control the
+     * operator pressed.
+     */
+    if (outcome === 'already_charged') {
+      throw new ConflictException({
+        code: 'student_fee_already_charged',
+        message: 'This student has already been charged that for this season',
+        fields: { feePlanId: 'fees.alreadyChargedThisSeason' },
+      });
+    }
+
+    // The insert selects from the plan, the period and the apólice; no rows
+    // means one of them is not this club's, is archived, belongs to another
+    // site, or is an apólice on a line that is not a seguro.
+    if (outcome === 'not_found') {
+      throw new BadRequestException('No such plan, periodicity or policy');
+    }
     return { created: true };
   }
 

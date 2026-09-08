@@ -2096,6 +2096,20 @@ predates the column, exactly as with `class_session.occurs_on`), and
 `student_fee_kind_matches_plan` refuses one that disagrees. Cover is all three columns or none
 of them, and only on a seguro line.
 
+**`student_fee.fee_period_id` is nullable, and null means "charged once".** A mensalidade and
+a quota are charged every something and the period is how the line knows what one occurrence is
+worth and when the next falls due. An inscrição is paid once for a season and a seguro is
+bought once for the season it covers. Forcing one to name a period makes the arithmetic wrong
+rather than merely redundant — the total is `amount × months`, so a €12,00 seguro filed against
+an "Anual" period reads as €144,00. With no period, `amount_cents` is the whole amount, months
+coalesce to 1, and the occurrence is `starts_on` itself rather than a walk. A CHECK confines
+the shape to the two kinds that mean it; every row that predates it names a period.
+
+Two partial unique indexes carry the "once per season" rule —
+`student_fee_one_inscricao_uq` and `student_fee_one_seguro_uq`, both on
+`(organization_id, student_id, season_id)`. Charged twice is quiet, reaches a family as a bill
+and is what a double-click produces; the violation is turned into a 409 naming the plan.
+
 Isolation: `insurance_policy` carries the tenant key, a composite key to its facility, its own
 RLS policy and a grant, and is asserted in `tenant-isolation.sql` test 12 — which also holds
 that a fee line cannot name the neighbour's season or the neighbour's apólice. Neither is

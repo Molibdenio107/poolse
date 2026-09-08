@@ -3,11 +3,18 @@
 import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
-import { AlertTriangle, Check, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, Check, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { formatCents, monthlyEquivalentCents } from '@/lib/money';
-import type { CurrentPlan, FeePeriod, StudentFeeLine, StudentFees } from '@/lib/api';
+import type {
+  CurrentPlan,
+  FeeKind,
+  FeePeriod,
+  SeasonCharge,
+  StudentFeeLine,
+  StudentFees,
+} from '@/lib/api';
 import type { FormState } from '../../actions';
 import {
   addFeeAction,
@@ -58,14 +65,293 @@ const BUTTON_QUIET =
  * a club has one, and naming it would be naming the only thing in its category.
  */
 function lineLabel(
-  line: { kind: 'mensalidade' | 'quota'; levelName: string | null; lessonsPerWeek: number | null },
+  line: {
+    kind: FeeKind;
+    levelName: string | null;
+    lessonsPerWeek: number | null;
+    seasonName?: string | null;
+    isRenewal?: boolean;
+  },
   // next-intl's own translator type, taken from the hook rather than described
   // again here — a hand-written signature drifts from theirs at the first change.
   t: ReturnType<typeof useTranslations>,
 ): string {
   if (line.kind === 'quota') return t('fees.kind.quota');
+
+  /*
+   * A season charge is named by its season, because that is what tells two of
+   * them apart: a family looking at "Inscrição" twice on one page needs to know
+   * which year each belongs to. The renovação says so as well — the amounts
+   * differ and the reason is not otherwise on the row.
+   */
+  if (line.kind === 'inscricao' || line.kind === 'seguro') {
+    const label = t(`fees.kind.${line.kind}`);
+    const season = line.seasonName ?? '';
+    const named = season === '' ? label : `${label} · ${season}`;
+    return line.isRenewal === true ? `${named} · ${t('fees.renewalRow')}` : named;
+  }
+
   const level = line.levelName ?? t('students.noLevel');
   return `${level} · ${t('fees.lessonsAWeek', { count: line.lessonsPerWeek ?? 1 })}`;
+}
+
+/**
+ * Whether this student is insured, said in words.
+ *
+ * **A warning and never a gate.** Nothing on this page or in the register
+ * refuses anything because of it: a club cannot put a child out of the water
+ * over a piece of paperwork, and software that tried would be worked around
+ * within a week. What this does is put the fact where somebody will see it.
+ *
+ * Three sentences, because they are three different things to do — insured
+ * until a date, insured and it ran out, never insured at all. A lapsed cover is
+ * a renewal; no cover is a conversation with a family. Colour never carries it
+ * alone: each state has its own words and the two warnings carry an icon.
+ */
+function CoverBadge({ cover }: { cover: StudentFees['cover'] }): React.ReactElement {
+  const t = useTranslations();
+
+  if (cover.covered) {
+    return (
+      <p className="flex items-center gap-1.5 text-sm text-foreground-muted">
+        <ShieldCheck aria-hidden className="size-4 shrink-0 text-primary" />
+        {cover.insurerName === null
+          ? t('fees.coverUntil', { date: cover.coversTo ?? '' })
+          : t('fees.coverUntilBy', {
+              date: cover.coversTo ?? '',
+              insurer: cover.insurerName,
+            })}
+      </p>
+    );
+  }
+
+  return (
+    <p className="flex items-center gap-1.5 text-sm text-warning">
+      <AlertTriangle aria-hidden className="size-4 shrink-0" />
+      {cover.lapsed
+        ? t('fees.coverLapsed', { date: cover.coversTo ?? '' })
+        : t('fees.coverNone')}
+    </p>
+  );
+}
+
+/**
+ * The joining fee and the insurance fee, offered per season.
+ *
+ * Both are charged once for a season, so a row that has already been charged
+ * says so and offers nothing — the unique index would refuse it anyway, and a
+ * control that produces an error is worse than one that is not there.
+ *
+ * The **renovação** price is pre-selected for a student who has paid in an
+ * earlier season and the ordinary one for anybody else, decided on the server.
+ * Both rows are listed and either can be charged, because a default that cannot
+ * be overridden is a rule, and this is a judgement.
+ */
+function SeasonCharges({
+  studentId,
+  charges,
+  returning,
+}: {
+  studentId: string;
+  charges: SeasonCharge[];
+  returning: boolean;
+}): React.ReactElement | null {
+  const t = useTranslations();
+  const locale = useLocale();
+  const [charging, setCharging] = useState<string | null>(null);
+
+  if (charges.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-5">
+      <div>
+        <h3 className="text-base font-medium">{t('fees.seasonCharges')}</h3>
+        <p className="mt-0.5 text-sm text-foreground-muted">
+          {returning ? t('fees.returningStudent') : t('fees.newStudent')}
+        </p>
+      </div>
+
+      <ul className="flex flex-col divide-y divide-border">
+        {charges.map((charge) => (
+          <li key={charge.planId} className="flex flex-col gap-2 py-2 first:pt-0 last:pb-0">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <span className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-medium">
+                  {lineLabel(
+                    {
+                      kind: charge.kind,
+                      levelName: null,
+                      lessonsPerWeek: null,
+                      seasonName: charge.seasonName,
+                      isRenewal: charge.isRenewal,
+                    },
+                    t,
+                  )}
+                </span>
+                {charge.suggested && !charge.hasLine && (
+                  <span className="text-sm text-primary">{t('fees.suggestedPrice')}</span>
+                )}
+              </span>
+              <span className="flex items-center gap-3">
+                <span className="tabular-nums">{formatCents(locale, charge.amountCents)}</span>
+                {charge.hasLine ? (
+                  // Already charged. Said rather than hidden: an operator looking
+                  // for the joining fee needs to know it is done, not to find
+                  // nothing and wonder.
+                  <span className="text-sm text-foreground-muted">{t('fees.alreadyCharged')}</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setCharging(charging === charge.planId ? null : charge.planId)}
+                    aria-expanded={charging === charge.planId}
+                    className={BUTTON_QUIET}
+                  >
+                    <Plus aria-hidden className="mr-1 inline size-3.5" />
+                    {t('fees.charge')}
+                  </button>
+                )}
+              </span>
+            </div>
+
+            {charging === charge.planId && (
+              <ChargeSeasonForm
+                studentId={studentId}
+                charge={charge}
+                onDone={() => setCharging(null)}
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Charging one season fee — and, for a seguro, saying what it covers.
+ *
+ * The cover defaults to the apólice's own period, which is what a student
+ * joining in September gets. **Pro-rata is a tick, not a rule**: plenty of clubs
+ * charge the whole premium whenever somebody joins, because that is what the
+ * insurer charged them, and which of the two applies is a commercial decision
+ * this software has no business making. When it is asked for, the arithmetic
+ * happens in SQL against the policy's dates and is snapshotted onto the line.
+ */
+function ChargeSeasonForm({
+  studentId,
+  charge,
+  onDone,
+}: {
+  studentId: string;
+  charge: SeasonCharge;
+  onDone: () => void;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [policyId, setPolicyId] = useState(charge.policies[0]?.id ?? '');
+
+  const [state, submit, pending] = useSavedAction(
+    async (previous: FormState, formData: FormData) => {
+      const next = await addFeeAction(previous, formData);
+      if (next.ok) onDone();
+      return next;
+    },
+    INITIAL,
+  );
+
+  const policy = charge.policies.find((one) => one.id === policyId);
+  const fields = state.fields ?? {};
+
+  return (
+    <form action={submit} className="flex flex-col gap-3 rounded border border-border p-4">
+      <input type="hidden" name="studentId" value={studentId} />
+      <input type="hidden" name="feePlanId" value={charge.planId} />
+      {/* No periodicity: a season charge is paid once, which is what an empty
+          period means on the way in. */}
+      <input type="hidden" name="feePeriodId" value="" />
+
+      {charge.kind === 'seguro' && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+            <label htmlFor={`policy-${charge.planId}`} className={FIELD_LABEL}>
+              {t('fees.policy')}
+            </label>
+            <select
+              id={`policy-${charge.planId}`}
+              name="insurancePolicyId"
+              value={policyId}
+              onChange={(event) => setPolicyId(event.target.value)}
+              required
+              className={CONTROL_LINE}
+            >
+              <option value="">{t('fees.choosePolicy')}</option>
+              {charge.policies.map((one) => (
+                <option key={one.id} value={one.id}>
+                  {one.insurer} · {one.policyNumber}
+                </option>
+              ))}
+            </select>
+            {charge.policies.length === 0 && (
+              // Visible text rather than a disabled control with no reason: the
+              // fix is on another screen and this is where somebody finds out.
+              <p className="text-sm text-warning">{t('fees.noPolicies')}</p>
+            )}
+          </div>
+
+          <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+            <label htmlFor={`from-${charge.planId}`} className={FIELD_LABEL}>
+              {t('fees.coversFrom')}
+            </label>
+            <input
+              id={`from-${charge.planId}`}
+              type="date"
+              name="coversFrom"
+              defaultValue={policy?.validFrom ?? ''}
+              className={CONTROL_LINE}
+            />
+            <p className="text-sm text-foreground-muted">{t('fees.coversFromHint')}</p>
+          </div>
+
+          <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+            <label htmlFor={`to-${charge.planId}`} className={FIELD_LABEL}>
+              {t('fees.coversTo')}
+            </label>
+            <input
+              id={`to-${charge.planId}`}
+              type="date"
+              name="coversTo"
+              defaultValue={policy?.validTo ?? ''}
+              className={CONTROL_LINE}
+            />
+          </div>
+
+          <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+            <span className={FIELD_LABEL}>{t('fees.proRata')}</span>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="proRata" className="size-4" />
+              {t('fees.proRataLabel')}
+            </label>
+            <p className="text-sm text-foreground-muted">{t('fees.proRataHint')}</p>
+          </div>
+        </div>
+      )}
+
+      {fields['feePlanId'] !== undefined && (
+        <p role="alert" className="text-sm text-danger">
+          {t(fields['feePlanId'])}
+        </p>
+      )}
+      <Problem state={state} />
+
+      <div className="flex gap-2">
+        <button type="submit" disabled={pending} className={BUTTON}>
+          {t('fees.charge')}
+        </button>
+        <button type="button" onClick={onDone} className={BUTTON_QUIET}>
+          {t('fees.cancel')}
+        </button>
+      </div>
+    </form>
+  );
 }
 
 function Problem({ state }: { state: FormState }): React.ReactElement | null {
@@ -154,6 +440,12 @@ export function FeesBlock({
           {t('fees.studentTitle')}
         </h2>
         <p className="mt-1 text-sm text-foreground-muted">{t('fees.studentHint')}</p>
+        {/* Up here, not beside the seguro line: a student with no cover has no
+            such line, so a badge attached to one would appear only for the
+            students who do not need it. */}
+        <div className="mt-2">
+          <CoverBadge cover={fees.cover} />
+        </div>
       </div>
 
       {/*
@@ -184,6 +476,12 @@ export function FeesBlock({
           </ul>
         )}
       </div>
+
+      <SeasonCharges
+        studentId={studentId}
+        charges={fees.seasonCharges}
+        returning={fees.inscricao.returning}
+      />
 
       {live.length === 0 && <p className="text-sm text-foreground-muted">{t('fees.noLines')}</p>}
 
@@ -734,7 +1032,7 @@ function PeriodPicker({
         <select
           id={`pay-${line.id}`}
           name="feePeriodId"
-          value={periodId}
+          value={periodId ?? ''}
           onChange={(event) => setPeriodId(event.target.value)}
           className={cn(CONTROL_LINE, 'w-auto')}
         >
@@ -1035,7 +1333,7 @@ function EditFeeForm({
           <select
             id={`edit-period-${line.id}`}
             name="feePeriodId"
-            defaultValue={line.periodId}
+            defaultValue={line.periodId ?? ''}
             className={CONTROL_LINE}
           >
             {periods.map((period) => (

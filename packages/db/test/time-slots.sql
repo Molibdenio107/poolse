@@ -94,7 +94,10 @@ DECLARE v_org uuid; v_facility uuid; v_season uuid;
 BEGIN
   v_org := '77777777-7777-7777-7777-777777777777';
   SELECT id INTO v_facility FROM facility WHERE organization_id = v_org;
-  SELECT id INTO v_season FROM season WHERE organization_id = v_org;
+  -- Named, not "the unarchived one": test 5 adds a draft for 2027/2028, which is
+  -- unarchived too, so an unqualified SELECT INTO picks whichever row the
+  -- planner reaches first and the assertions below then measure another season.
+  SELECT id INTO v_season FROM season WHERE organization_id = v_org AND name = '2026/2027';
 
   BEGIN
     INSERT INTO facility_time_slot (organization_id, facility_id, season_id, day_group, start_time, end_time)
@@ -127,7 +130,10 @@ DECLARE v_org uuid; v_facility uuid; v_season uuid;
 BEGIN
   v_org := '77777777-7777-7777-7777-777777777777';
   SELECT id INTO v_facility FROM facility WHERE organization_id = v_org;
-  SELECT id INTO v_season FROM season WHERE organization_id = v_org;
+  -- Named, not "the unarchived one": test 5 adds a draft for 2027/2028, which is
+  -- unarchived too, so an unqualified SELECT INTO picks whichever row the
+  -- planner reaches first and the assertions below then measure another season.
+  SELECT id INTO v_season FROM season WHERE organization_id = v_org AND name = '2026/2027';
 
   -- A late lane-hire slot running to the end of the day. `24:00` is how that is
   -- written, and it arithmetics to 1440 rather than wrapping to zero.
@@ -163,7 +169,10 @@ DECLARE v_org uuid; v_facility uuid; v_season uuid; n int;
 BEGIN
   v_org := '77777777-7777-7777-7777-777777777777';
   SELECT id INTO v_facility FROM facility WHERE organization_id = v_org;
-  SELECT id INTO v_season FROM season WHERE organization_id = v_org;
+  -- Named, not "the unarchived one": test 5 adds a draft for 2027/2028, which is
+  -- unarchived too, so an unqualified SELECT INTO picks whichever row the
+  -- planner reaches first and the assertions below then measure another season.
+  SELECT id INTO v_season FROM season WHERE organization_id = v_org AND name = '2026/2027';
 
   -- The reference club's weekend grid sits on hours the weekday one also uses.
   INSERT INTO facility_time_slot (organization_id, facility_id, season_id, day_group, start_time, end_time)
@@ -214,7 +223,10 @@ DECLARE v_org uuid; v_facility uuid; v_season uuid; n int;
 BEGIN
   v_org := '77777777-7777-7777-7777-777777777777';
   SELECT id INTO v_facility FROM facility WHERE organization_id = v_org;
-  SELECT id INTO v_season FROM season WHERE organization_id = v_org AND archived_at IS NULL;
+  -- Named, not "the unarchived one": test 5 adds a draft for 2027/2028, which is
+  -- unarchived too, so an unqualified SELECT INTO picks whichever row the
+  -- planner reaches first and the assertions below then measure another season.
+  SELECT id INTO v_season FROM season WHERE organization_id = v_org AND name = '2026/2027';
 
   UPDATE facility_time_slot SET archived_at = now()
    WHERE season_id = v_season AND day_group = 'weekday' AND start_time = TIME '06:30';

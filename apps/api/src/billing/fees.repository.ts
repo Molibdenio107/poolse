@@ -126,12 +126,34 @@ export interface StudentFeeLine {
   /** Composed from the level and the frequency by the client — see `levelName`. */
   levelName: string | null;
   lessonsPerWeek: number | null;
-  kind: 'mensalidade' | 'quota';
+  kind: FeeKind;
   enrollmentId: string | null;
   classGroupName: string | null;
-  periodId: string;
-  periodName: string;
+  /**
+   * The periodicity this line is charged on — **null when it is charged once**.
+   *
+   * An inscrição is paid once for a season and a seguro is bought once for the
+   * season it covers, so neither names a frequency. `amountCents` is then the
+   * whole amount rather than a monthly one, `months` is 1, and the line has
+   * exactly one occurrence, on `startsOn`.
+   */
+  periodId: string | null;
+  periodName: string | null;
   months: number;
+  /** The season an inscrição or a seguro belongs to. Null on the other two. */
+  seasonId: string | null;
+  seasonName: string | null;
+  /**
+   * The cover a seguro line buys, and the apólice it is bought under.
+   *
+   * All four null on every other kind. The dates are the line's own snapshot,
+   * not the policy's: correcting a typo in the policy must not silently rewrite
+   * what a family was told they had.
+   */
+  insurancePolicyId: string | null;
+  insurerName: string | null;
+  coversFrom: string | null;
+  coversTo: string | null;
   /** The agreed amount, per month. Never the plan's current one. */
   amountCents: number;
   discountPercent: number;
@@ -211,9 +233,77 @@ export interface CurrentPlan {
   hasLine: boolean;
 }
 
+/**
+ * Whether this student is insured today, and by what.
+ *
+ * **A warning, never a gate.** A student with no valid cover is enrolled, taught
+ * and marked present exactly as before; what changes is that somebody can see
+ * it. Blocking on it would put the office between a child and the water over a
+ * piece of paperwork, which is not a decision software should be making.
+ *
+ * Derived in SQL against the database's own date, like every other "is it true
+ * today" in this codebase — a browser holding a page open overnight would
+ * otherwise still be saying yesterday's answer.
+ */
+export interface StudentCover {
+  /** A live seguro line covering today. The only thing the badge reads. */
+  covered: boolean;
+  /** The cover that answered, or the most recent one that has run out. */
+  coversFrom: string | null;
+  coversTo: string | null;
+  insurerName: string | null;
+  /** True when there is a lapsed line rather than none at all — a different fix. */
+  lapsed: boolean;
+}
+
+/**
+ * A season charge this student could be given, and what it needs to be given.
+ *
+ * The joining fee and the insurance fee, offered from the student's own page
+ * because that is where somebody decides a person owes something. Everything the
+ * form needs travels with it — the season it is for, whether this student has
+ * already been charged it, and the apólices a seguro may be bought under — so
+ * the screen makes no second request and holds no rule of its own.
+ *
+ * `suggested` is the renovação answer for this student: the price the form
+ * pre-selects. It is a default and not a decision, which is why both rows come
+ * back and either can be charged.
+ */
+export interface SeasonCharge {
+  planId: string;
+  kind: 'inscricao' | 'seguro';
+  isRenewal: boolean;
+  suggested: boolean;
+  facilityId: string;
+  facilityName: string;
+  seasonId: string;
+  seasonName: string;
+  amountCents: number;
+  /** Already charged to this student for this season. One per student per season. */
+  hasLine: boolean;
+  /** The apólices this site holds. Empty on an inscrição, which needs none. */
+  policies: { id: string; insurer: string; policyNumber: string; validFrom: string; validTo: string }[];
+}
+
 export interface StudentFees {
   currentPlans: CurrentPlan[];
+  seasonCharges: SeasonCharge[];
   lines: StudentFeeLine[];
+  cover: StudentCover;
+  /**
+   * Which joining price this student should be offered, and why — the renovação
+   * rule.
+   *
+   * A student with a fee line in an earlier season is returning and gets the
+   * cheaper price where the club has one; anybody else gets the ordinary one.
+   * Decided here rather than in the browser because "has paid before" is a
+   * question about rows the browser cannot see, and because it is the kind of
+   * default that has to be the same on every screen that offers it.
+   *
+   * It is a *suggestion*: the form pre-selects it and an admin may choose the
+   * other, which is the whole reason this is not simply the price.
+   */
+  inscricao: { suggestedPlanId: string | null; returning: boolean };
   socio: { isSocio: boolean; socioNumber: string | null; socioSince: string | null };
   /**
    * What being late costs, split by what is late — round 5.
@@ -757,6 +847,12 @@ export async function studentFees(
       ends_on: string | null;
       current_period_start: string | null;
       due_on: string | null;
+      season_id: string | null;
+      season_name: string | null;
+      insurance_policy_id: string | null;
+      insurer_name: string | null;
+      covers_from: string | null;
+      covers_to: string | null;
       is_paid: boolean;
       paid_on: string | null;
       paid_periods: string[];
@@ -768,13 +864,21 @@ export async function studentFees(
               f.id AS facility_id, f.name AS facility_name,
               p.id AS plan_id, l.name AS level_name, p.lessons_per_week, p.kind,
               sf.enrollment_id, cg.name AS class_group_name,
-              fp.id AS period_id, fp.name AS period_name, fp.months,
+              fp.id AS period_id, fp.name AS period_name, coalesce(fp.months, 1) AS months,
+              sf.season_id, se.name AS season_name,
+              sf.insurance_policy_id, ip.insurer AS insurer_name,
+              to_char(sf.covers_from, 'YYYY-MM-DD') AS covers_from,
+              to_char(sf.covers_to, 'YYYY-MM-DD') AS covers_to,
               sf.amount_cents, sf.discount_percent,
               sf.manual_discount_percent, sf.manual_discount_cents, sf.discount_reason,
               -- The one definition, in SQL. QA 42.3.
-              fee_total_cents(sf.amount_cents, fp.months, sf.discount_percent)
+              -- Coalescing the months to 1 is what makes a line charged once
+              -- come out at its own amount: a 12,00 EUR seguro filed against an
+              -- "Anual" period would otherwise read as 144,00 EUR.
+              -- (No backticks in here: one would end the template literal.)
+              fee_total_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint, sf.discount_percent)
                 AS period_total_cents,
-              fee_payable_cents(sf.amount_cents, fp.months, sf.discount_percent,
+              fee_payable_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint, sf.discount_percent,
                                 sf.manual_discount_percent, sf.manual_discount_cents)
                 AS payable_cents,
               to_char(sf.starts_on, 'YYYY-MM-DD') AS starts_on,
@@ -802,14 +906,31 @@ export async function studentFees(
               (band.id IS NOT NULL AND band.id <> p.id) AS band_changed
          FROM student_fee sf
          JOIN fee_plan p ON p.id = sf.fee_plan_id
-         JOIN fee_period fp ON fp.id = sf.fee_period_id
+         -- Left, since a line charged once names no periodicity at all.
+         LEFT JOIN fee_period fp ON fp.id = sf.fee_period_id
          JOIN facility f ON f.id = p.facility_id
+         LEFT JOIN season se
+                ON se.id = sf.season_id AND se.organization_id = sf.organization_id
+         -- An archived apólice still resolves: last season's cover is what
+         -- covered last season, and a line labelled with nothing is worse.
+         LEFT JOIN insurance_policy ip
+                ON ip.id = sf.insurance_policy_id AND ip.organization_id = sf.organization_id
          LEFT JOIN student_level l
                 ON l.id = p.level_id AND l.organization_id = p.organization_id
          LEFT JOIN enrollment e ON e.id = sf.enrollment_id
          LEFT JOIN class_group cg ON cg.id = e.class_group_id
+         /*
+          * One occurrence, or a walk through many.
+          *
+          * A line with no periodicity is charged once, on the day it starts —
+          * there is nothing to walk. Written here rather than by giving those
+          * lines a one-month period, which would ask a family for the joining
+          * fee again every month for the rest of the season.
+          */
          LEFT JOIN LATERAL (
-           SELECT current_period_start(sf.starts_on, sf.ends_on, fp.months) AS period_start
+           SELECT CASE WHEN sf.fee_period_id IS NULL THEN sf.starts_on
+                       ELSE current_period_start(sf.starts_on, sf.ends_on, fp.months)
+                  END AS period_start
          ) cur ON true
          LEFT JOIN student_fee_payment pay
                 ON pay.student_fee_id = sf.id AND pay.period_start = cur.period_start
@@ -930,6 +1051,152 @@ export async function studentFees(
     };
 
     /*
+     * Is this student insured today?
+     *
+     * One row, ordered so a live cover answers before a lapsed one and the most
+     * recent lapsed one answers before an older one. That ordering is the whole
+     * query: the screen needs three different sentences — covered until a date,
+     * cover ran out on a date, no cover ever recorded — and they are told apart
+     * by whether a row came back and whether it covers today.
+     *
+     * Against the database's own `current_date`, like every other "is it true
+     * today" here. A page held open overnight would otherwise still be showing
+     * yesterday's answer with no way to know.
+     */
+    const { rows: coverRows } = await tx.query<{
+      covered: boolean;
+      covers_from: string;
+      covers_to: string;
+      insurer_name: string | null;
+    }>(
+      `SELECT (current_date BETWEEN sf.covers_from AND sf.covers_to) AS covered,
+              to_char(sf.covers_from, 'YYYY-MM-DD') AS covers_from,
+              to_char(sf.covers_to, 'YYYY-MM-DD') AS covers_to,
+              ip.insurer AS insurer_name
+         FROM student_fee sf
+         LEFT JOIN insurance_policy ip
+                ON ip.id = sf.insurance_policy_id AND ip.organization_id = sf.organization_id
+        WHERE sf.student_id = $1 AND sf.archived_at IS NULL AND sf.kind = 'seguro'
+        ORDER BY (current_date BETWEEN sf.covers_from AND sf.covers_to) DESC,
+                 sf.covers_to DESC
+        LIMIT 1`,
+      [studentId],
+    );
+
+    const coverRow = coverRows[0];
+    const cover: StudentCover = {
+      covered: coverRow?.covered ?? false,
+      coversFrom: coverRow?.covers_from ?? null,
+      coversTo: coverRow?.covers_to ?? null,
+      insurerName: coverRow?.insurer_name ?? null,
+      // A lapsed cover and none at all are different problems: one is a renewal,
+      // the other is a student nobody ever insured.
+      lapsed: coverRow !== undefined && !coverRow.covered,
+    };
+
+    /*
+     * Which joining price to offer, and whether this student is returning.
+     *
+     * "Returning" is *any* fee line in an earlier season — not an earlier
+     * inscrição — because a club that only started charging inscrição this year
+     * would otherwise treat every one of its long-standing families as new. The
+     * comparison is by the season's start date rather than by its name, which is
+     * a label a club may write any way it likes.
+     *
+     * The suggestion falls back to the ordinary price when the club has no
+     * renovação row, so a club that charges everybody the same needs no rule.
+     */
+    /*
+     * What could be charged this season, and what a form would need to charge it.
+     *
+     * Every published season's inscrição and seguro prices at every site this
+     * club runs — which a licence caps at one by default, so this is a handful of
+     * rows. Not narrowed to the sites the student already attends: charging the
+     * joining fee is exactly what happens *before* somebody has a turma, and a
+     * list that hid it then would hide it at the only moment it matters.
+     *
+     * `has_line` is what stops the screen offering a charge the unique index
+     * will refuse — the same answer the database gives, asked in advance so the
+     * refusal is a control that is not there rather than an error afterwards.
+     */
+    const { rows: chargeRows } = await tx.query<{
+      plan_id: string;
+      kind: 'inscricao' | 'seguro';
+      is_renewal: boolean;
+      facility_id: string;
+      facility_name: string;
+      season_id: string;
+      season_name: string;
+      amount_cents: number;
+      has_line: boolean;
+      policies: SeasonCharge['policies'];
+    }>(
+      `SELECT p.id AS plan_id, p.kind, p.is_renewal,
+              f.id AS facility_id, f.name AS facility_name,
+              s.id AS season_id, s.name AS season_name,
+              p.amount_cents,
+              EXISTS (
+                SELECT 1 FROM student_fee sf
+                 WHERE sf.student_id = $1
+                   AND sf.season_id = p.season_id
+                   AND sf.kind = p.kind
+                   AND sf.archived_at IS NULL
+              ) AS has_line,
+              CASE WHEN p.kind = 'seguro' THEN coalesce((
+                SELECT json_agg(json_build_object(
+                         'id', ip.id, 'insurer', ip.insurer,
+                         'policyNumber', ip.policy_number,
+                         'validFrom', ip.valid_from::text,
+                         'validTo', ip.valid_to::text)
+                       ORDER BY ip.valid_to DESC)
+                  FROM insurance_policy ip
+                 WHERE ip.facility_id = f.id
+                   AND ip.organization_id = f.organization_id
+                   AND ip.archived_at IS NULL
+              ), '[]'::json) ELSE '[]'::json END AS policies
+         FROM fee_plan p
+         JOIN facility f ON f.id = p.facility_id AND f.organization_id = p.organization_id
+         JOIN season s ON s.id = p.season_id AND s.organization_id = p.organization_id
+        WHERE p.kind IN ('inscricao', 'seguro')
+          AND p.archived_at IS NULL
+          AND s.status = 'published'
+        ORDER BY f.name, p.kind, p.is_renewal`,
+      [studentId],
+    );
+
+    const { rows: inscricaoRows } = await tx.query<{
+      suggested_plan_id: string | null;
+      returning: boolean;
+    }>(
+      `WITH seasons AS (
+         SELECT s.id, s.starts_on FROM season s WHERE s.status = 'published'
+       ),
+       history AS (
+         SELECT EXISTS (
+           SELECT 1
+             FROM student_fee sf
+             JOIN season past ON past.id = sf.season_id
+             JOIN seasons cur ON true
+            WHERE sf.student_id = $1
+              AND sf.archived_at IS NULL
+              AND past.starts_on < cur.starts_on
+         ) AS returning
+       )
+       SELECT history.returning,
+              (SELECT p.id
+                 FROM fee_plan p
+                 JOIN seasons cur ON cur.id = p.season_id
+                WHERE p.kind = 'inscricao' AND p.archived_at IS NULL
+                -- The renovação row first when they are returning and it exists;
+                -- otherwise the ordinary one. One ORDER BY rather than two
+                -- queries, so the fallback cannot drift from the rule.
+                ORDER BY (p.is_renewal = history.returning) DESC, p.is_renewal
+                LIMIT 1) AS suggested_plan_id
+         FROM history`,
+      [studentId],
+    );
+
+    /*
      * What their classes add up to, per site and level.
      *
      * Counted from `class_schedule` rather than from anything stored, so it
@@ -991,6 +1258,28 @@ export async function studentFees(
         defaultFeePeriodId: row.default_fee_period_id,
         hasLine: row.has_line,
       })),
+      cover,
+      seasonCharges: chargeRows.map((row) => ({
+        planId: row.plan_id,
+        kind: row.kind,
+        isRenewal: row.is_renewal,
+        // The renovação rule, applied here rather than in the browser so every
+        // screen that offers this price offers the same one.
+        suggested:
+          row.kind === 'seguro' ||
+          row.plan_id === (inscricaoRows[0]?.suggested_plan_id ?? null),
+        facilityId: row.facility_id,
+        facilityName: row.facility_name,
+        seasonId: row.season_id,
+        seasonName: row.season_name,
+        amountCents: row.amount_cents,
+        hasLine: row.has_line,
+        policies: row.policies,
+      })),
+      inscricao: {
+        suggestedPlanId: inscricaoRows[0]?.suggested_plan_id ?? null,
+        returning: inscricaoRows[0]?.returning ?? false,
+      },
       penalties,
       penaltyCents: penalties.mensalidadeCents + penalties.quotaCents,
       lines: rows.map((row) => ({
@@ -1016,6 +1305,12 @@ export async function studentFees(
         payableCents: row.payable_cents,
         startsOn: row.starts_on,
         endsOn: row.ends_on,
+        seasonId: row.season_id,
+        seasonName: row.season_name,
+        insurancePolicyId: row.insurance_policy_id,
+        insurerName: row.insurer_name,
+        coversFrom: row.covers_from,
+        coversTo: row.covers_to,
         currentPeriodStart: row.current_period_start,
         dueOn: row.due_on,
         isPaid: row.is_paid,
@@ -1036,15 +1331,42 @@ export async function studentFees(
 
 export interface StudentFeeInput {
   feePlanId: string;
-  feePeriodId: string;
+  /** Null on a line charged once — an inscrição or a seguro names no frequency. */
+  feePeriodId: string | null;
   enrollmentId: string | null;
   manualDiscountPercent: number | null;
   manualDiscountCents: number | null;
   discountReason: string | null;
   startsOn: string | null;
+  /** The apólice a seguro line is bought under. Required on one, refused on the rest. */
+  insurancePolicyId: string | null;
+  /**
+   * The cover this line buys. Absent means the whole of the apólice's own period,
+   * which is what a student joining at the start of the season gets.
+   */
+  coversFrom: string | null;
+  coversTo: string | null;
+  /**
+   * Charge a mid-season joiner for the part of the policy they will use.
+   *
+   * The club's call, not an automatic one: plenty of clubs charge the whole
+   * premium whenever somebody joins, because that is what the insurer charged
+   * *them*. When it is asked for, the arithmetic is done in SQL against the
+   * policy's own dates and the result is snapshotted like any other agreed
+   * amount — the price list is never re-read to rebuild it.
+   */
+  proRata: boolean;
 }
 
-export type FeeOutcome = 'created' | 'not_found';
+/**
+ * `already_charged` is the season kinds' own answer.
+ *
+ * One inscrição and one seguro per student per season, enforced by two partial
+ * unique indexes. Without a name for it the violation came back as a 500 quoting
+ * a constraint — which is an error page for the club telling itself it has
+ * already done this, and the commonest way to produce it is a double-click.
+ */
+export type FeeOutcome = 'created' | 'not_found' | 'already_charged';
 
 /**
  * Assigning a fee — the snapshot happens here, and only here.
@@ -1060,19 +1382,62 @@ export async function createStudentFee(
   input: StudentFeeInput,
 ): Promise<FeeOutcome> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string }>(
+    let rows: { id: string }[];
+    try {
+      ({ rows } = await tx.query<{ id: string }>(
+      /*
+       * One statement, and every derived value derived in it.
+       *
+       * The **season** comes from the plan rather than from the caller: a plan of
+       * either season kind names one, and asking a form to restate it is asking
+       * two places to agree about something only one of them knows. The CHECK on
+       * the table refuses the pair that disagree, so this is the only source.
+       *
+       * The **period** is left join: a line charged once names none, and passing
+       * one for it would put a frequency on a fee that has no next time.
+       *
+       * The **cover** defaults to the apólice's own period, which is what a
+       * student joining at the start of the season gets. A caller may narrow it,
+       * and `pro_rata` then charges for the part of the policy they will use —
+       * rounded once, at the end, like every other total here.
+       */
       `INSERT INTO student_fee (organization_id, student_id, fee_plan_id, enrollment_id,
                                 fee_period_id, amount_cents, discount_percent,
                                 manual_discount_percent, manual_discount_cents,
-                                discount_reason, starts_on)
-       SELECT $1, $2, p.id, $4, fp.id, p.amount_cents, fp.discount_percent,
-              $5, $6, $7, coalesce($8::date, current_date)
+                                discount_reason, starts_on, season_id,
+                                insurance_policy_id, covers_from, covers_to)
+       SELECT $1, $2, p.id, $4, fp.id,
+              CASE
+                WHEN $10::boolean AND ip.id IS NOT NULL AND ip.valid_to >= ip.valid_from
+                THEN round(
+                       p.amount_cents::numeric
+                       * (cover.to_day - greatest(cover.from_day, ip.valid_from) + 1)
+                       / (ip.valid_to - ip.valid_from + 1)
+                     )::int
+                ELSE p.amount_cents
+              END,
+              coalesce(fp.discount_percent, 0),
+              $5, $6, $7, coalesce($8::date, current_date),
+              p.season_id,
+              ip.id, cover.from_day, cover.to_day
          FROM fee_plan p
-         JOIN fee_period fp ON fp.id = $9 AND fp.archived_at IS NULL
+         LEFT JOIN fee_period fp
+                ON fp.id = $9 AND fp.archived_at IS NULL AND fp.facility_id = p.facility_id
+         LEFT JOIN insurance_policy ip
+                ON ip.id = $11 AND ip.organization_id = $1 AND ip.facility_id = p.facility_id
+                AND ip.archived_at IS NULL
+         CROSS JOIN LATERAL (
+           SELECT coalesce($12::date, ip.valid_from) AS from_day,
+                  coalesce($13::date, ip.valid_to)   AS to_day
+         ) cover
         WHERE p.id = $3 AND p.archived_at IS NULL
-          -- The plan and the period belong to the same site, or the line would
-          -- pair one club's price with another site's frequency.
-          AND fp.facility_id = p.facility_id
+          -- A periodicity was asked for and is not this site's, or does not
+          -- exist: refused rather than silently dropped, because a line with no
+          -- period means something specific and this is not it.
+          AND ($9::uuid IS NULL OR fp.id IS NOT NULL)
+          -- A seguro is bought under an apólice, and only a seguro is.
+          AND (p.kind <> 'seguro' OR ip.id IS NOT NULL)
+          AND (p.kind = 'seguro' OR $11::uuid IS NULL)
        RETURNING id`,
       [
         organizationId,
@@ -1084,8 +1449,26 @@ export async function createStudentFee(
         input.discountReason,
         input.startsOn,
         input.feePeriodId,
+        input.proRata,
+        input.insurancePolicyId,
+        input.coversFrom,
+        input.coversTo,
       ],
-    );
+      ));
+    } catch (error) {
+      // The two partial indexes, by name. Matched on the constraint rather than
+      // on the input, because the database is what actually knows and a check
+      // written here would still lose the race between two clicks.
+      const { code, constraint } = error as { code?: string; constraint?: string };
+      if (
+        code === '23505' &&
+        (constraint === 'student_fee_one_inscricao_uq' ||
+          constraint === 'student_fee_one_seguro_uq')
+      ) {
+        return 'already_charged';
+      }
+      throw error;
+    }
 
     const id = rows[0]?.id;
     if (id === undefined) return 'not_found';
@@ -1331,9 +1714,14 @@ export async function setStudentPaid(
     const { rows } = await tx.query<{ id: string; period_start: string }>(
       `SELECT sf.id, to_char(cur.period_start, 'YYYY-MM-DD') AS period_start
          FROM student_fee sf
-         JOIN fee_period fp ON fp.id = sf.fee_period_id
+         -- Left: a line charged once names no periodicity, and it is exactly the
+         -- kind of line this tick is meant to settle. An inner join left the
+         -- inscrição outstanding with nothing on screen to say why.
+         LEFT JOIN fee_period fp ON fp.id = sf.fee_period_id
          CROSS JOIN LATERAL (
-           SELECT current_period_start(sf.starts_on, sf.ends_on, fp.months) AS period_start
+           SELECT CASE WHEN sf.fee_period_id IS NULL THEN sf.starts_on
+                       ELSE current_period_start(sf.starts_on, sf.ends_on, fp.months)
+                  END AS period_start
          ) cur
         WHERE sf.student_id = $1 AND sf.archived_at IS NULL
           AND cur.period_start IS NOT NULL`,

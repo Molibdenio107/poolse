@@ -790,7 +790,9 @@
     "kindLabel": "Type",
     "kind": {
       "mensalidade": "Monthly fee",
-      "quota": "Membership subscription"
+      "quota": "Membership subscription",
+      "inscricao": "Registration",
+      "seguro": "Insurance"
     },
     "amount": "Amount",
     "amountHint": "Amount per month, VAT included — such as 35 or 35.50.",
@@ -893,7 +895,27 @@
     "vatRate": "VAT rate (%)",
     "vatHint": "The amount shown already includes VAT. The rate says what is inside it, not what to add.",
     "vatExemptShort": "VAT exempt",
-    "vatRateShort": "VAT {rate}%"
+    "vatRateShort": "VAT {rate}%",
+    "coverUntil": "Insured until {date}",
+    "coverUntilBy": "Insured until {date} · {insurer}",
+    "coverLapsed": "Insurance ended on {date}",
+    "coverNone": "No insurance recorded",
+    "seasonCharges": "Registration and insurance",
+    "returningStudent": "This student paid in an earlier season, so the renewal price is pre-selected.",
+    "newStudent": "This student has no payments in earlier seasons.",
+    "suggestedPrice": "suggested",
+    "alreadyCharged": "already charged",
+    "charge": "Charge",
+    "planRequired": "Choose what is being charged.",
+    "policy": "Policy",
+    "choosePolicy": "Choose a policy",
+    "noPolicies": "This site has no policies yet. Record one on the site page.",
+    "coversFrom": "Cover from",
+    "coversFromHint": "Defaults to the whole of the policy's period.",
+    "coversTo": "Cover until",
+    "proRata": "Pro rata",
+    "proRataLabel": "Charge only the part of the period",
+    "proRataHint": "For someone joining mid-season. Without it the whole premium is charged — which is what many clubs do, because it is what the insurer charged them."
   },
   "insurance": {
     "title": "Insurance policy",
@@ -1611,7 +1633,8 @@
     "readOnly": "You do not have permission to take the register.",
     "restricted": "This section is for instructors, administrators and owners.",
     "attendanceRecorded": "This class already has attendance recorded, so it cannot be cancelled.",
-    "guest": "Make-up"
+    "guest": "Make-up",
+    "noInsurance": "No insurance"
   },
   "calendar": {
     "resizeLanes": "Drag to change how many lanes it uses",

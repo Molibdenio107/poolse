@@ -50,9 +50,21 @@ A season may hold **two** joining prices: the ordinary one, and a cheaper **reno
 family that paid in an earlier season. Both are optional and a club that charges everybody the
 same writes one row. A third of either is refused.
 
-The student-facing half — picking the renovação price by default for a returning student, and
-letting an admin override it — is the next slice. Tonight's is the price list and the schema
-it writes into.
+Both are offered on the student's own page, under **Inscrição e seguro**. A student with a fee
+line in any earlier season is *returning* and the renovação price is pre-selected; anybody else
+gets the ordinary one. It is a default and not a rule — both rows are listed and an admin may
+charge either. "Returning" is any earlier fee line rather than an earlier inscrição, because a
+club that only started charging one this year would otherwise treat every long-standing family
+as new.
+
+A student may hold **one inscrição and one seguro per season**. A row already charged says so
+instead of offering a button, and a second charge is refused with a 409 naming the plan rather
+than a 500 quoting an index — which is what a double-click produces.
+
+**A season charge names no periodicity.** It is paid once, so `amountCents` is the whole amount
+and the line has exactly one occurrence, on the day it starts. A €30,00 joining fee filed
+against an "Anual" periodicity would read as €360,00, which is why `student_fee.fee_period_id`
+is nullable and only these two kinds may leave it out.
 
 ## Seguro, and the club's apólice
 
@@ -67,9 +79,30 @@ situations — a renewal conversation, and a club whose swimmers are uninsured t
 read differently rather than sharing an amber. The answer is computed on the server against
 the database's own date; nothing in the browser recomputes it.
 
-**An apólice that still covers students is not archived**, and the refusal says how many. The
-student-facing half — a seguro fee line giving one student a coverage period, pro-rata for a
-mid-season joiner, and the warning badge for a student with no valid cover — is the next slice.
+**An apólice that still covers students is not archived**, and the refusal says how many.
+
+A student's own cover is a seguro fee line pointing at one apólice, and it carries **its own**
+dates: correcting a typo in the policy must not silently rewrite what a family was told they
+had. The cover defaults to the whole of the policy's period, which is what somebody joining in
+September gets. **Pro-rata is a tick, not a rule** — plenty of clubs charge the whole premium
+whenever somebody joins, because that is what the insurer charged them, and which applies is a
+commercial decision. When it is asked for, the arithmetic runs in SQL against the policy's own
+dates and is snapshotted onto the line like any other agreed amount.
+
+## Who is not insured
+
+The student's page says one of three things, and they are three different things to do:
+insured until a date, insurance ended on a date, or no insurance recorded. A lapsed cover is a
+renewal; no cover is a conversation with a family.
+
+The register carries the same warning beside any swimmer without valid cover **on the day of
+that class** — not today, because a register can be marked late and "was this child insured
+when they swam" is the question that matters.
+
+**It never blocks anything.** Enrolment, attendance and every mark work exactly as before. An
+instructor at the poolside cannot fix a seguro, and a register that would not open over a piece
+of paperwork is a register somebody keeps on paper instead. The warning is there because that
+screen is where every swimmer is looked at every week.
 
 **Adding or editing a price onto a combination that already exists is a 409**, not a crash,
 carrying `fee_plan_exists`, `fee_plan_quota_exists`, `fee_plan_inscricao_exists` or

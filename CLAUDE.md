@@ -152,6 +152,21 @@ a zero rate are two different statements, and a schema that cannot tell them apa
 it while invoicing. This reverses the "no VAT rate anywhere" comment that `fee_plan.amount_cents`
 used to carry; the exemption *reason* is invoicing's to add.
 
+**A fee line with no `fee_period_id` is charged once**, and only an inscrição or a seguro may
+be one. The period is how a recurring line knows what an occurrence is worth and when the next
+falls due; a fee paid once has neither, and forcing it to name one makes the arithmetic wrong
+rather than redundant — the total is `amount × months`. Null means `amount_cents` is the whole
+amount, months coalesce to 1, and the occurrence is `starts_on` itself. Every join to
+`fee_period` from `student_fee` is therefore a LEFT JOIN: an inner one silently drops those
+lines, which is how the register's "pago" tick nearly left a joining fee outstanding.
+
+**A warning about a person never gates what a club does with them.** A student with no valid
+seguro is flagged on their page and in the register and is enrolled, taught and marked exactly
+as before. An instructor at the poolside cannot fix a seguro, and a register that would not
+open over a piece of paperwork is a register somebody keeps on paper instead. Where the fact
+has three states — insured, lapsed, never — say three sentences: a renewal and a family who
+never bought one are different things to do.
+
 **A partial unique index cannot join, which is why a snapshot sometimes carries a foreign
 row's column.** `student_fee.kind` is the case: "one inscrição per student per season" is only
 sayable with the kind on that row. Where that happens, a BEFORE trigger fills the copy from
