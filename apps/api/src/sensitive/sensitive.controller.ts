@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
@@ -20,6 +21,10 @@ import {
 import {
   ConsentAlreadyRecordedError,
   CONSENT_KINDS,
+  contactCandidates,
+  enrolmentContext,
+  readEmergencyContact,
+  writeEmergencyContact,
   listConsent,
   readSensitive,
   recordConsent,
@@ -27,6 +32,8 @@ import {
   writeSensitive,
   type ConsentKind,
   type ConsentRecord,
+  type EmergencyContact,
+  type EnrolmentContext,
   type SensitiveNotes,
 } from './sensitive.repository.js';
 
@@ -38,9 +45,21 @@ interface SensitiveResponse {
   canManage: boolean;
   /** Every live leave for this student, newest first. */
   medicalLeave: MedicalLeave[];
+  /**
+   * Which path this student is on — POOLSE-23.
+   *
+   * The one server-computed answer the guardian block and the consent form both
+   * branch on. Null only when the student is gone, which the read above has
+   * already refused by then.
+   */
+  enrolment: EnrolmentContext | null;
+  emergencyContact: EmergencyContact | null;
+  /** Complete, never a page — a partial picker sends people to the free text. */
+  contactCandidates: { id: string; name: string }[];
 }
 
 const MAX_NOTES = 4000;
+const MAX_CONTACT = 120;
 const MAX_EVIDENCE = 500;
 
 /**
@@ -85,6 +104,22 @@ export class SensitiveController {
       consent: await listConsent(organizationId, studentId),
       kinds: CONSENT_KINDS,
       canManage: hasRole('owner', 'admin'),
+      /*
+       * Which path this student is on — POOLSE-23 AC1.
+       *
+       * Travels with the medical page because that is where the guardian block
+       * and the consent form live, and both branch on it. Computed on the
+       * server so the screen holds no rule of its own: the ticket names
+       * "deciding the branch in the client from scattered fields" as the thing
+       * most likely to be got wrong.
+       */
+      enrolment: await enrolmentContext(organizationId, studentId),
+      emergencyContact: await readEmergencyContact(organizationId, studentId),
+      // Only for somebody who may set it. An instructor reading a student's
+      // notes has no business with the club's staff list.
+      contactCandidates: hasRole('owner', 'admin')
+        ? await contactCandidates(organizationId)
+        : [],
       // Travels with the medical page rather than behind its own request: it is
       // three rows, always shown, and a second round trip would put a loading
       // state on a panel that is usually empty.
@@ -195,9 +230,73 @@ export class SensitiveController {
       throw new BadRequestException(`Medical notes may be at most ${MAX_NOTES} characters`);
     }
 
-    if (!(await writeSensitive(organizationId, studentId, raw.length > 0 ? raw : null))) {
-      throw new NotFoundException('No such student');
+    // Mobility notes save with the medical ones because they are one panel and
+    // one Save. Same limit, same encryption, same audited write.
+    const mobility =
+      typeof body['mobilityNotes'] === 'string' ? body['mobilityNotes'].trim() : '';
+    if (mobility.length > MAX_NOTES) {
+      throw new BadRequestException(`Mobility notes may be at most ${MAX_NOTES} characters`);
     }
+
+    const saved = await writeSensitive(
+      organizationId,
+      studentId,
+      raw.length > 0 ? raw : null,
+      mobility.length > 0 ? mobility : null,
+    );
+    if (!saved) throw new NotFoundException('No such student');
+    return { saved: true };
+  }
+
+  /**
+   * Who to call — POOLSE-23 AC3.
+   *
+   * Owner and admin write it, like every other write on this screen. It is read
+   * by whoever may read the notes beside it: an emergency contact that only the
+   * office can see is an emergency contact nobody can use.
+   *
+   * **Naming somebody grants them nothing** — no role, no login, no access to
+   * this record, no place in a guardian list. Not enforced by a check but by
+   * the shape: three columns on `student`, touching neither `membership_role`
+   * nor `guardian_link`.
+   */
+  @Put('emergency-contact')
+  async setEmergencyContact(
+    @Param('studentId') studentId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ saved: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const text = (key: string): string | null => {
+      const value = typeof body[key] === 'string' ? (body[key] as string).trim() : '';
+      if (value.length > MAX_CONTACT) {
+        throw new BadRequestException(`${key} may be at most ${MAX_CONTACT} characters`);
+      }
+      return value.length > 0 ? value : null;
+    };
+
+    const membershipId = text('membershipId');
+    const name = text('name');
+    const phone = text('phone');
+
+    // A contact with neither a person nor a name is not a contact. A phone on
+    // its own is refused here rather than stored as a number nobody can place.
+    if (membershipId === null && name === null && phone !== null) {
+      throw new BadRequestException({
+        code: 'contact_needs_a_name',
+        message: 'An emergency contact needs a name or a person',
+        fields: { name: 'students.emergencyNameRequired' },
+      });
+    }
+
+    const saved = await writeEmergencyContact(organizationId, studentId, {
+      membershipId,
+      name,
+      phone,
+      relationship: text('relationship'),
+    });
+    if (!saved) throw new NotFoundException('No such student');
     return { saved: true };
   }
 
@@ -220,6 +319,39 @@ export class SensitiveController {
     const evidence = typeof body['evidenceNote'] === 'string' ? body['evidenceNote'].trim() : '';
     if (evidence.length > MAX_EVIDENCE) {
       throw new BadRequestException(`Evidence may be at most ${MAX_EVIDENCE} characters`);
+    }
+
+    /*
+     * A minor cannot sign for themselves — QA 23.3, and a 422 rather than a 400.
+     *
+     * The request is well-formed; what is wrong is the *claim* it makes about
+     * who signed, which the server is in a position to check and the client is
+     * not. The form to present is chosen by the server and validated on the way
+     * back, so a client that got it wrong — or never asked — cannot record a
+     * self-signed consent against a fifteen-year-old with a guardian.
+     *
+     * Absent means "the client did not say", which is every caller that predates
+     * this and is treated as the form the server would have chosen anyway.
+     */
+    const signedBy = body['signedBy'];
+    if (signedBy !== undefined && signedBy !== null && signedBy !== '') {
+      if (signedBy !== 'self' && signedBy !== 'guardian') {
+        throw new BadRequestException('signedBy must be self or guardian');
+      }
+
+      const context = await enrolmentContext(organizationId, studentId);
+      if (context === null) throw new NotFoundException('No such student');
+
+      if (signedBy !== context.consentForm) {
+        throw new UnprocessableEntityException({
+          code: 'wrong_consent_form',
+          message:
+            context.consentForm === 'guardian'
+              ? 'This student is a minor with a guardian, so consent is signed by the guardian'
+              : 'This student is an adult, so consent is signed by them',
+          values: { expected: context.consentForm },
+        });
+      }
     }
 
     let recorded: boolean;

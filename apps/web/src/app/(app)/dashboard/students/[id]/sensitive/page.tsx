@@ -11,6 +11,7 @@ import { ChevronRight } from 'lucide-react';
 import { MedicalLeavePanel } from './medical-leave';
 import { PageError, PageShell } from '@/components/page-shell';
 import {
+  EmergencyContactForm,
   MedicalNotesForm,
   RecordConsentForm,
   WithdrawConsentButton,
@@ -115,14 +116,69 @@ export default async function SensitivePage({
                 organizationId={record.organizationId}
                 studentId={id}
                 notes={record.notes.medicalNotes}
+                mobilityNotes={record.notes.mobilityNotes}
               />
             ) : (
-              <>
-                <p className="whitespace-pre-wrap">
-                  {record.notes.medicalNotes ?? t('sensitive.noNotes')}
-                </p>
-                <p className="mt-3 text-sm text-foreground-muted">{t('sensitive.readOnly')}</p>
-              </>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h3 className="text-sm font-medium">{t('sensitive.medicalLabel')}</h3>
+                  <p className="mt-1 whitespace-pre-wrap">
+                    {record.notes.medicalNotes ?? t('sensitive.noNotes')}
+                  </p>
+                </div>
+                {/*
+                  Read by the same people as the medical notes, and shown to them
+                  the same way — an instructor who may read one and not the other
+                  would be a distinction nobody could explain at a poolside.
+                */}
+                <div>
+                  <h3 className="text-sm font-medium">{t('sensitive.mobilityLabel')}</h3>
+                  <p className="mt-1 whitespace-pre-wrap">
+                    {record.notes.mobilityNotes ?? t('sensitive.noMobilityNotes')}
+                  </p>
+                </div>
+                <p className="text-sm text-foreground-muted">{t('sensitive.readOnly')}</p>
+              </div>
+            )}
+          </section>
+
+          {/*
+            Who to call — POOLSE-23 AC3.
+
+            Its own section rather than a field inside the notes, because it is
+            not a note: it is a person, and on the adult path it is the only
+            contact the record has. Read by whoever may read the notes above —
+            an emergency contact only the office can see is one nobody can use.
+          */}
+          <section className="rounded border border-border bg-surface p-5">
+            <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {t('sensitive.emergencyTitle')}
+            </h2>
+            <p className="mb-4 text-sm text-foreground-muted">
+              {record.enrolment?.adultPath === true
+                ? t('sensitive.emergencyHintAdult')
+                : t('sensitive.emergencyHint')}
+            </p>
+
+            {record.canManage ? (
+              <EmergencyContactForm
+                organizationId={record.organizationId}
+                studentId={id}
+                contact={record.emergencyContact}
+                people={record.contactCandidates}
+              />
+            ) : record.emergencyContact?.name === null ? (
+              <p className="text-foreground-muted">{t('sensitive.emergencyNone')}</p>
+            ) : (
+              <p>
+                {record.emergencyContact?.name}
+                {record.emergencyContact?.relationship === null
+                  ? ''
+                  : ` · ${record.emergencyContact?.relationship}`}
+                {record.emergencyContact?.phone === null
+                  ? ''
+                  : ` · ${record.emergencyContact?.phone}`}
+              </p>
             )}
           </section>
 

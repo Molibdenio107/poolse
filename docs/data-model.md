@@ -2115,6 +2115,27 @@ RLS policy and a grant, and is asserted in `tenant-isolation.sql` test 12 — wh
 that a fee line cannot name the neighbour's season or the neighbour's apólice. Neither is
 something RLS catches: both rows pass their own policy, and only the composite keys refuse it.
 
+### The adult and senior path — POOLSE-23, 8 September 2026
+
+**There is no `is_adult` column, and there must never be one.** An adult is a student at or
+above the organization's `age_of_majority` with no live `guardian_link`; the absence of the
+edge is the definition. `student_is_adult_path(organization_id, student_id)` is that sentence
+in SQL — STABLE rather than IMMUTABLE, because it reads `current_date` and a cached answer
+would be wrong on somebody's birthday, the one day it matters. A student with no birth date is
+**not** on the adult path: guessing adult for missing data skips the guardian block for a child
+nobody has finished registering.
+
+**`student_sensitive.mobility_notes_encrypted`** joins the medical notes in the same row, with
+the same app-side encryption, the same audited read and the same permission — owner, admin and
+any instructor. A second table under a second rule would have put two sensitive fields on one
+screen behind two different answers, which is a difference nobody could defend.
+
+**The emergency contact is four columns on `student`** — `emergency_contact_membership_id`,
+`_name`, `_phone`, `_relationship` — with a CHECK that a link and free text are exclusive.
+Naming somebody grants them nothing, and that is a property of the shape: it touches neither
+`membership_role` nor `guardian_link`, so there is no path by which it could. Blank strings
+are refused, so "is there a contact" has one answer rather than two.
+
 ## Module 2 — maintenance (shape)
 
 ```

@@ -1234,7 +1234,8 @@
     "turmas": "Turmas",
     "waiting": "Lista de espera",
     "levelColour": "Cor do nível",
-    "levelColourHint": "Opcional. Usada na grelha do calendário para as turmas deste nível."
+    "levelColourHint": "Opcional. Usada na grelha do calendário para as turmas deste nível.",
+    "emergencyNameRequired": "Indique um nome ou escolha uma pessoa do clube."
   },
   "advancement": {
     "title": "Progressões",
@@ -1359,7 +1360,23 @@
     "atestadoImport": "Importar",
     "atestadoExport": "Exportar",
     "atestadoNoStorage": "O armazenamento de ficheiros ainda não está configurado — indique acima onde está guardado o documento.",
-    "leaveToReposicoes": "Ir para as reposições"
+    "leaveToReposicoes": "Ir para as reposições",
+    "medicalLabel": "Notas médicas",
+    "mobilityLabel": "Mobilidade e limitações físicas",
+    "mobilityPlaceholder": "Ex.: usa bengala, precisa de entrada pela rampa, ombro direito limitado.",
+    "mobilityHint": "Visível para quem está na borda da piscina — proprietário, administradores e professores. Cada leitura fica registada.",
+    "noMobilityNotes": "Sem notas de mobilidade.",
+    "emergencyTitle": "Contacto de emergência",
+    "emergencyHint": "Quem contactar se acontecer alguma coisa durante a aula.",
+    "emergencyHintAdult": "Quem contactar se acontecer alguma coisa durante a aula. Num aluno adulto é o único contacto do registo.",
+    "emergencyNone": "Sem contacto de emergência.",
+    "emergencyPerson": "Pessoa do clube",
+    "emergencyNotInClub": "Não está no clube — escrever abaixo",
+    "emergencyName": "Nome",
+    "emergencyPhone": "Telefone",
+    "emergencyRelationship": "Relação",
+    "emergencyRelationshipHint": "Ex.: filho, vizinha, cônjuge.",
+    "emergencyNotGuardian": "Um contacto de emergência não é encarregado de educação: não dá acesso ao registo do aluno, nem função, nem conta."
   },
   "invite": {
     "open": "Convidar utilizador",

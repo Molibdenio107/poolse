@@ -26,7 +26,12 @@ export async function saveNotesAction(
     // a different and equally real statement from "leave what is there alone".
     await apiPut(
       `/students/${studentId}/sensitive`,
-      { medicalNotes: String(formData.get('medicalNotes') ?? '') },
+      {
+        medicalNotes: String(formData.get('medicalNotes') ?? ''),
+        // One panel, one Save: both boxes are sent every time, so a field left
+        // out cannot silently keep a stale value nobody can read back.
+        mobilityNotes: String(formData.get('mobilityNotes') ?? ''),
+      },
       { organizationId },
     );
   } catch (error) {
@@ -144,6 +149,53 @@ export async function removeMedicalLeaveAction(
     );
   } catch {
     return { ok: false, errorKey: 'sensitive.leaveFailed' };
+  }
+
+  revalidatePath(`/dashboard/students/${studentId}/sensitive`);
+  return { ok: true };
+}
+
+/**
+ * Who to call in an emergency — POOLSE-23 AC3.
+ *
+ * PUT for the same reason the notes are: an empty form means "there is no
+ * emergency contact", which is a real statement and not the same as "leave what
+ * is there alone".
+ *
+ * A person link and free text are alternatives, and the form sends whichever the
+ * operator filled — the API clears the other rather than refusing the pair, so
+ * nobody is asked to tidy up after a rule they cannot see.
+ */
+export async function saveEmergencyContactAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const studentId = String(formData.get('studentId') ?? '');
+
+  const membershipId = String(formData.get('membershipId') ?? '').trim();
+  const name = String(formData.get('name') ?? '').trim();
+  const phone = String(formData.get('phone') ?? '').trim();
+
+  // Checked here as well as by the API, so a phone with nobody attached to it
+  // does not cost a round trip to be told the obvious.
+  if (membershipId === '' && name === '' && phone !== '') {
+    return { ok: false, fields: { name: 'students.emergencyNameRequired' } };
+  }
+
+  try {
+    await apiPut(
+      `/students/${studentId}/emergency-contact`,
+      {
+        membershipId,
+        name,
+        phone,
+        relationship: String(formData.get('relationship') ?? '').trim(),
+      },
+      { organizationId },
+    );
+  } catch (error) {
+    return failure(error, 'sensitive.saveFailed');
   }
 
   revalidatePath(`/dashboard/students/${studentId}/sensitive`);

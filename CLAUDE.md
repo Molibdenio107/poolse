@@ -160,6 +160,14 @@ amount, months coalesce to 1, and the occurrence is `starts_on` itself. Every jo
 `fee_period` from `student_fee` is therefore a LEFT JOIN: an inner one silently drops those
 lines, which is how the register's "pago" tick nearly left a joining fee outstanding.
 
+**An adult is the absence of a guardian edge, never a flag.** A student at or above the club's
+`age_of_majority` with no live `guardian_link` is on the adult path; `student_is_adult_path`
+is the one definition and every screen reads it rather than deriving it. An `is_adult` column
+would drift the first time a birth date is corrected. A student with **no** birth date is on
+the guardian path — guessing adult for missing data is the guess that cannot be recovered from.
+The server also chooses the consent form and **validates it on the way back** with a 422: a
+client cannot record a self-signed consent against a minor who has a guardian.
+
 **A warning about a person never gates what a club does with them.** A student with no valid
 seguro is flagged on their page and in the register and is enrolled, taught and marked exactly
 as before. An instructor at the poolside cannot fix a seguro, and a register that would not

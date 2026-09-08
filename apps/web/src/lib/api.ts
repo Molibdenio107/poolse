@@ -1337,8 +1337,47 @@ export interface ConsentRecord {
 export interface SensitiveNotes {
   /** Decrypted for the caller. The database only ever held ciphertext. */
   medicalNotes: string | null;
+  /**
+   * Mobility and physical limitations — POOLSE-23.
+   *
+   * Beside the medical notes because they are the same class of fact: something
+   * about a person's body that whoever is at the poolside needs to know before
+   * that person is in the water. Same encryption, same audited read, same
+   * permission — owner, admin and any instructor.
+   */
+  mobilityNotes: string | null;
   recordedAt: string | null;
   recordedByName: string | null;
+}
+
+/**
+ * Which path a student is on, and therefore which consent applies.
+ *
+ * Computed on the server, never in the browser. An adult is at or above the
+ * club's own age of majority with no live guardian link — the absence of the
+ * edge is the definition, and there is deliberately no `isAdult` column, so a
+ * corrected birth date moves somebody between paths with nothing to migrate.
+ */
+export interface EnrolmentContext {
+  adultPath: boolean;
+  ageYears: number | null;
+  ageOfMajority: number;
+  hasGuardian: boolean;
+  consentForm: 'self' | 'guardian';
+}
+
+/**
+ * Who to call — and what this deliberately is not.
+ *
+ * Naming somebody grants them nothing: no role, no login, no access to this
+ * student's record, no place in any guardian list. A person link or free text,
+ * never both.
+ */
+export interface EmergencyContact {
+  membershipId: string | null;
+  name: string | null;
+  phone: string | null;
+  relationship: string | null;
 }
 
 /**
@@ -1372,6 +1411,11 @@ export interface SensitiveRecord {
   canManage: boolean;
   /** Every live leave for this student, newest first. */
   medicalLeave: MedicalLeave[];
+  /** Which path this student is on — the one answer the screen branches on. */
+  enrolment: EnrolmentContext | null;
+  emergencyContact: EmergencyContact | null;
+  /** Complete, never a page — a partial picker sends people to the free text. */
+  contactCandidates: { id: string; name: string }[];
 }
 
 export type Stroke = 'freestyle' | 'backstroke' | 'breaststroke' | 'butterfly' | 'medley';

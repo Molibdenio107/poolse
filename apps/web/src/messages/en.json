@@ -1234,7 +1234,8 @@
     "turmas": "Classes",
     "waiting": "Waiting list",
     "levelColour": "Level colour",
-    "levelColourHint": "Optional. Used on the calendar grid for classes at this level."
+    "levelColourHint": "Optional. Used on the calendar grid for classes at this level.",
+    "emergencyNameRequired": "Give a name, or choose someone in the club."
   },
   "advancement": {
     "title": "Advancement",
@@ -1359,7 +1360,23 @@
     "atestadoImport": "Import",
     "atestadoExport": "Export",
     "atestadoNoStorage": "File storage is not configured yet — record where the document is filed in the field above.",
-    "leaveToReposicoes": "Go to make-up classes"
+    "leaveToReposicoes": "Go to make-up classes",
+    "medicalLabel": "Medical notes",
+    "mobilityLabel": "Mobility and physical limitations",
+    "mobilityPlaceholder": "e.g. uses a walking stick, needs the ramp entrance, limited right shoulder.",
+    "mobilityHint": "Visible to whoever is at the poolside — the owner, admins and instructors. Every read is logged.",
+    "noMobilityNotes": "No mobility notes.",
+    "emergencyTitle": "Emergency contact",
+    "emergencyHint": "Who to call if something happens during a class.",
+    "emergencyHintAdult": "Who to call if something happens during a class. For an adult student it is the only contact on the record.",
+    "emergencyNone": "No emergency contact.",
+    "emergencyPerson": "Someone in the club",
+    "emergencyNotInClub": "Not in the club — type below",
+    "emergencyName": "Name",
+    "emergencyPhone": "Phone",
+    "emergencyRelationship": "Relationship",
+    "emergencyRelationshipHint": "e.g. son, neighbour, spouse.",
+    "emergencyNotGuardian": "An emergency contact is not a guardian: it grants no access to the student record, no role and no account."
   },
   "invite": {
     "open": "Invite user",
