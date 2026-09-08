@@ -750,7 +750,23 @@ const INVOICE_COLUMNS = `
   i.facility_id, f.name AS facility_name,
   to_char(i.issued_on, 'YYYY-MM-DD') AS issued_on,
   to_char(i.due_on, 'YYYY-MM-DD') AS due_on,
-  to_char(i.system_entry_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS system_entry_at,
+  /*
+   * Left as a timestamptz and converted by toISOString below — F-04.
+   *
+   * This was hand-formatted with OF, which renders the offset as +00. ISO 8601
+   * wants +00:00 or Z, so new Date(...) returned Invalid Date and the page threw
+   * FORMATTING_ERROR on every document. Nothing was null and nothing read the
+   * wrong column: the value was written correctly and mangled on the way out.
+   *
+   * The rule the rest of this codebase follows, and the reason it does not have
+   * this bug: a **date** is to_char'd to text, because a date parsed by pg
+   * becomes midnight UTC and reads as the day before west of Greenwich; an
+   * **instant** is left alone, because pg parses its own output correctly and
+   * toISOString is a standard-library job rather than a format string.
+   *
+   * (No backticks in this string: one would end the template literal.)
+   */
+  i.system_entry_at,
   i.payer_membership_id, i.payer_student_id, i.payer_name, i.payer_tax_number,
   i.payer_address, i.payer_email::text AS payer_email,
   i.corrects_invoice_id, orig.document_no AS corrects_document_no,
@@ -779,7 +795,7 @@ interface InvoiceRow {
   facility_name: string;
   issued_on: string;
   due_on: string;
-  system_entry_at: string;
+  system_entry_at: Date;
   payer_membership_id: string | null;
   payer_student_id: string | null;
   payer_name: string;
@@ -812,7 +828,7 @@ function toInvoice(row: InvoiceRow): Invoice {
     facilityName: row.facility_name,
     issuedOn: row.issued_on,
     dueOn: row.due_on,
-    systemEntryAt: row.system_entry_at,
+    systemEntryAt: row.system_entry_at.toISOString(),
     payerMembershipId: row.payer_membership_id,
     payerStudentId: row.payer_student_id,
     payerName: row.payer_name,

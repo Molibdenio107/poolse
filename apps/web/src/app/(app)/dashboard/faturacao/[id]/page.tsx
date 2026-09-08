@@ -63,6 +63,21 @@ export default async function InvoicePage({
   const day = (iso: string): string =>
     format.dateTime(new Date(`${iso}T12:00:00Z`), 'long');
 
+  /*
+   * An instant, or an em dash — F-04.
+   *
+   * `format.dateTime` throws FORMATTING_ERROR on an unparseable value, and a
+   * `throw` in a server component takes the whole page down: the document, the
+   * lines, the totals and the credit-note button, over one field in the corner.
+   * A date that cannot be read is worth saying nothing about, not worth losing
+   * the invoice for.
+   */
+  const stamp = (value: string | null): string => {
+    if (value === null) return '—';
+    const at = new Date(value);
+    return Number.isNaN(at.getTime()) ? '—' : format.dateTime(at, 'stamp');
+  };
+
   return (
     <PageShell title={invoice.documentNo} subtitle={t(`invoices.kind.${invoice.kind}`)}>
       <div className="flex flex-col gap-6">
@@ -135,7 +150,7 @@ export default async function InvoicePage({
               is also the SAF-T field of the same name.
             */}
             <dt className="text-foreground-muted">{t('invoices.enteredAt')}</dt>
-            <dd>{format.dateTime(new Date(invoice.systemEntryAt), 'stamp')}</dd>
+            <dd>{stamp(invoice.systemEntryAt)}</dd>
           </dl>
         </section>
 

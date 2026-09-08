@@ -208,6 +208,21 @@ test('what the preview showed is what is issued, and the numbers are sequential'
       // The due date comes from the facility's own payment day for the month
       // being billed, not from today.
       assert.equal(first?.dueOn.slice(0, 7), '2026-10');
+
+      /*
+       * The registered-at instant has to be readable by a Date — F-04.
+       *
+       * It was shipped through to_char with an OF offset, which renders +00
+       * rather than +00:00, so every document's page threw FORMATTING_ERROR on
+       * this one field and took the whole invoice down with it. Asserting the
+       * parse rather than the string, because the string's exact shape is not
+       * the contract — being an instant a client can read is.
+       */
+      assert.ok(
+        !Number.isNaN(new Date(first!.systemEntryAt).getTime()),
+        'systemEntryAt must parse as an instant',
+      );
+      assert.match(first!.systemEntryAt, /Z$|[+-]\d{2}:\d{2}$/, 'a full ISO 8601 offset');
     });
   });
 });
