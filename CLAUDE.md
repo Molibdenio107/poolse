@@ -93,7 +93,11 @@ failure because there was none. `retimeSessions` in `bookings.repository.ts` is 
 of round 7's overlay. It skips a week moved by hand (`moved_at`), a week in the past and a
 week whose register is taken — **except the week that was dragged**, named by `fromDate`,
 which follows and loses its exception, because the operator just moved that block and said
-"every week". A week left behind is counted and reported either way (`weeksKept`,
+"every week". **`fromDate` names the day the block was drawn on, not the week the pattern
+files it under**: the two differ for a class moved across a week boundary, and matching by week
+both missed the block on screen and claimed its neighbour instead. Where a week *lands*, and
+whether it is behind us, stay derived from `occurs_on` — one session per pattern week is the
+invariant the unique index rests on. A week left behind is counted and reported either way (`weeksKept`,
 `weeksBlocked`): "kept by design" and "failed" look identical on screen, and silence is what
 made this read as a feature that did nothing; a week whose new hour is occupied is left alone and **counted**,
 one savepoint each, because failing a whole series change over one November Wednesday makes

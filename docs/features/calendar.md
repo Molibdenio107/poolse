@@ -189,6 +189,14 @@ Three kinds of week stay where they are:
 block and answered "todas as semanas", so its old one-week exception is spent: it follows the
 pattern like the others and stops being an exception. Every other hand-moved week stays.
 
+The week you dragged is identified by **the day the block was drawn on**, not by the week the
+pattern files it under. The two are the same for almost every class, and differ for one that
+has been moved across a week boundary — a Sunday class put on the Monday after it, say. Such a
+class is drawn in the following week while still belonging to its own; naming it by the pattern
+meant the one block on screen was not recognised as the one being dragged, so it stayed exactly
+where it was picked up while later weeks moved. It follows its own pattern week, so a class
+that had slipped out of its week comes back to it.
+
 A week that stays behind is **counted and said**, whether it was kept by design or blocked
 because its new hour was already occupied that week. Both look identical on screen — a block
 that does not move — and silence is what makes a working change read as a broken one. A

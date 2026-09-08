@@ -4,6 +4,7 @@ import { ConflictException } from '@nestjs/common';
 import { BookingsController } from './bookings.controller.js';
 import { GridController } from './grid.controller.js';
 import { PartnersController } from './partners.controller.js';
+import { SessionsCalendarController } from '../classes/sessions.controller.js';
 import { actingAs, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 import type { ScratchTenant } from '../test/harness.js';
 
@@ -767,6 +768,123 @@ test('weeks kept back are counted, so a block that does not move says why', asyn
       assert.equal(moved.weeksFollowed, 1);
       assert.equal(moved.weeksKept, 2);
       assert.equal(moved.weeksBlocked, 0);
+    });
+  });
+});
+
+/** `days` after an ISO date, as an ISO date. Noon, so no zone can shift the day. */
+function plusDays(date: string, days: number): string {
+  const day = new Date(`${date}T12:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + days);
+  return day.toISOString().slice(0, 10);
+}
+
+/*
+ * A session that has left its own week, and the two questions that then differ.
+ *
+ * `occurs_on` is the day the *pattern* implied and a one-week move deliberately
+ * does not change it — that is what stops the next regeneration putting a second
+ * class back on the old day. So a class moved from Sunday to Monday, or from a
+ * Wednesday onto the Monday after it, sits in one ISO week while being filed
+ * under another. Logged on 2026-09-07 as known and not fixed.
+ *
+ * `retimeSessions` asks two different things and used to ask both of `occurs_on`:
+ *
+ * - **which pattern week does this session belong to** — the answer that decides
+ *   where it lands and whether that week is already behind us. `occurs_on` is
+ *   the right source, and it keeps the one-session-per-pattern-week invariant
+ *   the unique index is built on.
+ * - **is this the block the operator just dragged** — an on-screen question. The
+ *   calendar draws each session at `starts_at`, and the grid sends the day the
+ *   block was sitting on. Answered from `occurs_on`, a block that had slipped
+ *   into another week was not recognised as the dragged one, so the one thing
+ *   the operator was looking at stayed exactly where they picked it up: round
+ *   8's silent "every week does nothing", still there for a slipped week.
+ */
+test('the dragged week follows even when it had slipped into the next week', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await sixLanePool(tenant);
+      const early = await slot(tenant, '10:00', '10:45');
+      const late = await slot(tenant, '16:00', '16:45');
+
+      const id = await parceria(tenant, 'EPA', '6A', early, 3, '10:00', [lanes[1]!]);
+
+      // The week it belongs to, and the Monday it was moved to — the next ISO week.
+      const belongsTo = wednesdayIn(1);
+      const onScreen = plusDays(belongsTo, 5);
+      const ordinary = wednesdayIn(2);
+
+      const slipped = await session(tenant, id, belongsTo, '10:00', [lanes[1]!]);
+      // Moved by the real gesture, so the drift is the one the calendar makes.
+      await new SessionsCalendarController().move(slipped, {
+        date: onScreen,
+        startTime: '08:30',
+      });
+      await session(tenant, id, ordinary, '10:00', [lanes[1]!]);
+
+      const moved = await new BookingsController().move(id, {
+        weekday: 3,
+        slotId: late,
+        laneIds: [lanes[3]],
+        // The day the block was drawn on, which is the week the operator is in.
+        fromDate: onScreen,
+      });
+
+      assert.equal(moved.weeksFollowed, 2);
+      assert.equal(moved.weeksKept, 0);
+
+      const rows = await sessionsOf(tenant, id);
+      assert.deepEqual(
+        rows.map((row) => `${row.occurs_on} ${row.at} ${row.lanes}`),
+        // Back on its own pattern week, at the new hour and pista: the operator
+        // said "todas as semanas", and this week's exception is spent.
+        [`${belongsTo} 16:00 Pista 4`, `${ordinary} 16:00 Pista 4`],
+      );
+    });
+  });
+});
+
+test('the week that follows is the one dragged, not the one that shares its week', async () => {
+  // The other half of the same line. Matching by ISO week made every hand-moved
+  // session in the week on screen look dragged — so with a slipped block the
+  // wrong one lost its exception, and the block being held stayed put.
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await sixLanePool(tenant);
+      const early = await slot(tenant, '10:00', '10:45');
+      const late = await slot(tenant, '16:00', '16:45');
+
+      const id = await parceria(tenant, 'EPA', '6A', early, 3, '10:00', [lanes[1]!]);
+
+      const belongsTo = wednesdayIn(1);
+      const onScreen = plusDays(belongsTo, 5);
+      const neighbour = wednesdayIn(2);
+
+      const slipped = await session(tenant, id, belongsTo, '10:00', [lanes[1]!]);
+      await new SessionsCalendarController().move(slipped, {
+        date: onScreen,
+        startTime: '08:30',
+      });
+      // Its neighbour owns the week on screen, and was itself moved by hand.
+      await session(tenant, id, neighbour, '08:00', [lanes[5]!], true);
+
+      const moved = await new BookingsController().move(id, {
+        weekday: 3,
+        slotId: late,
+        laneIds: [lanes[3]],
+        fromDate: onScreen,
+      });
+
+      assert.equal(moved.weeksFollowed, 1);
+      assert.equal(moved.weeksKept, 1);
+
+      const rows = await sessionsOf(tenant, id);
+      assert.deepEqual(
+        rows.map((row) => `${row.occurs_on} ${row.at} ${row.lanes}`),
+        // The dragged one follows; the neighbour keeps the answer already given.
+        [`${belongsTo} 16:00 Pista 4`, `${neighbour} 08:00 Pista 6`],
+      );
     });
   });
 });

@@ -488,6 +488,16 @@ async function retimeSessions(
      * moved from Wednesday to Friday takes each week's session to that week's
      * Friday rather than collapsing them all onto one date.
      *
+     * Two different questions are asked here and they have two different
+     * sources. **Where does this session land, and is its week behind us** is
+     * about the pattern, so it is asked of `occurs_on` — which keeps one session
+     * per pattern week, the invariant the unique index is built on. **Is this
+     * the block the operator just dragged** is about the screen, so it is asked
+     * of where the session actually is. A one-week move changes `starts_at` and
+     * deliberately leaves `occurs_on` alone, so for a class moved across a week
+     * boundary the two disagree, and asking the second question of the first is
+     * how the one block on screen failed to be recognised as the dragged one.
+     *
      * A week already taught is excluded here rather than being reported: it is
      * not a decision anybody can revisit, and offering a count of it would
      * suggest otherwise.
@@ -509,10 +519,14 @@ async function retimeSessions(
               + make_interval(mins => p.duration_minutes) AS ends_at,
             p.duration_minutes,
             s.moved_at IS NOT NULL AS hand_moved,
-            -- The week the operator was looking at when they dragged the block.
+            -- The block the operator was holding, named by the day it was
+            -- drawn on. That is where the session actually is rather than where
+            -- the pattern filed it, and the two differ for a week that has been
+            -- moved across a week boundary: asked of occurs_on, the one block on
+            -- screen was not recognised as the dragged one and stayed put.
             ($3::date IS NOT NULL
-               AND date_trunc('week', s.occurs_on::timestamp)
-                 = date_trunc('week', $3::timestamp)) AS dragged
+               AND session_local_date(s.organization_id, s.pool_id, s.starts_at)
+                 = $3::date) AS dragged
        FROM class_session s
        JOIN pattern p ON true
       WHERE s.schedule_id = $1
