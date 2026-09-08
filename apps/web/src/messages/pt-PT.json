@@ -1273,7 +1273,8 @@
     "birthDateInvalid": "Indique uma data válida.",
     "birthDateFuture": "A data de nascimento não pode ser no futuro.",
     "required": "Este campo é obrigatório.",
-    "tooLong": "Este valor é demasiado longo."
+    "tooLong": "Este valor é demasiado longo.",
+    "ageConfirmRequired": "Confirme o escalão para continuar."
   },
   "advancement": {
     "title": "Progressões",

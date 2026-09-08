@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { Guardian, StudentLevel } from '../../../../lib/api';
@@ -175,7 +175,12 @@ export function StudentForm({
           {...fieldError('gender')}
         />
 
-        <LevelPicker levels={levels} student={student} />
+        <LevelPicker
+          levels={levels}
+          student={student}
+          birthDate={birthDate}
+          {...fieldError('ageConfirmed')}
+        />
 
         <TextField
           name="contactEmail"
@@ -332,30 +337,25 @@ export function ArchiveStudentButton({
 function LevelPicker({
   levels,
   student,
+  birthDate,
+  error,
 }: {
   levels: StudentLevel[];
   student: StudentFormValues | undefined;
+  /**
+   * The date of birth as the form has it — F-09.
+   *
+   * This used to be read out of the DOM with `document.getElementById`, the same
+   * hack the guardian block used. The date field is controlled now and generates
+   * its own id, so the value is passed in; a listener left behind would have
+   * silently stopped warning about a level that does not fit.
+   */
+  birthDate: string;
+  /** The acknowledgement's own message, when the form came back asking for it. */
+  error?: string;
 }): React.ReactElement {
   const t = useTranslations();
   const [levelId, setLevelId] = useState(student?.levelId ?? '');
-  const [birthDate, setBirthDate] = useState(student?.birthDate ?? '');
-
-  // The date input is elsewhere in the same form, so its changes are heard here
-  // rather than lifted into shared state — one listener beats threading a value
-  // through every field between them.
-  useEffect(() => {
-    const input = document.getElementById('student-birth');
-    if (!(input instanceof HTMLInputElement)) return;
-
-    const read = (): void => setBirthDate(input.value);
-    read();
-    input.addEventListener('change', read);
-    input.addEventListener('input', read);
-    return () => {
-      input.removeEventListener('change', read);
-      input.removeEventListener('input', read);
-    };
-  }, []);
 
   const dob = birthDate === '' ? null : birthDate;
   const chosen = levels.find((level) => level.id === levelId) ?? null;
@@ -406,14 +406,36 @@ function LevelPicker({
             })}
           </p>
           {/*
-            Required, so the form cannot be submitted with the mismatch
-            unacknowledged — but it is a tick, not a wall. One deliberate click,
-            and the club's judgement wins.
+            Acknowledged in the app's own words, not the browser's — F-16.
+
+            This was a native `required` checkbox, so an unticked box produced
+            the browser's built-in bubble: "Please check this box if you want to
+            proceed", in English, in a Portuguese interface, with no way to
+            translate it. The rule is unchanged — the form cannot be submitted
+            with the mismatch unacknowledged, and it is still a tick rather than
+            a wall — but the refusal now comes from the action and lands beside
+            the box like every other field error here.
+
+            The hidden input is what tells the action a mismatch is on screen at
+            all. Without it the server would have to re-derive "does this level
+            fit this date", which is a second implementation of `fitsLevel`.
           */}
+          <input type="hidden" name="levelAgeMismatch" value="1" />
           <label className="flex items-center gap-2">
-            <input type="checkbox" required className="size-4 accent-primary" />
+            <input
+              type="checkbox"
+              name="ageConfirmed"
+              value="yes"
+              className="size-4 accent-primary"
+              aria-describedby={error === undefined ? undefined : 'student-age-confirm-error'}
+            />
             {t('students.ageConfirm')}
           </label>
+          {error !== undefined && (
+            <p id="student-age-confirm-error" role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          )}
         </div>
       )}
     </div>

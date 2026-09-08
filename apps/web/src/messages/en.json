@@ -1273,7 +1273,8 @@
     "birthDateInvalid": "Enter a valid date.",
     "birthDateFuture": "The date of birth cannot be in the future.",
     "required": "This field is required.",
-    "tooLong": "This value is too long."
+    "tooLong": "This value is too long.",
+    "ageConfirmRequired": "Confirm the level to continue."
   },
   "advancement": {
     "title": "Advancement",

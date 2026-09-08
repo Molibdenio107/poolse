@@ -71,6 +71,26 @@ function guardiansFrom(formData: FormData): unknown[] {
 }
 
 /**
+ * The escalão mismatch has to be acknowledged — F-16.
+ *
+ * The checkbox used to be a native `required`, which produced the browser's own
+ * bubble: "Please check this box if you want to proceed", in English, in a
+ * Portuguese interface, untranslatable. The rule is unchanged and still a tick
+ * rather than a wall; only who says no has moved, so the sentence can be ours.
+ *
+ * Checked here rather than on the server because the mismatch is a *client*
+ * judgement — `fitsLevel` against a date the form is holding — and asking the
+ * API to re-derive it would be a second implementation of the same rule.
+ */
+function unacknowledgedAgeMismatch(formData: FormData): FormState | null {
+  const mismatch = String(formData.get('levelAgeMismatch') ?? '') === '1';
+  const confirmed = String(formData.get('ageConfirmed') ?? '') !== '';
+
+  if (!mismatch || confirmed) return null;
+  return { ok: false, fields: { ageConfirmed: 'students.ageConfirmRequired' } };
+}
+
+/**
  * Turns the API's field errors into a `FormState` the form can place.
  *
  * A guardian rejection names the field it is about — POOLSE-04 asks for the
@@ -96,6 +116,9 @@ export async function createStudentAction(
   if (!body['firstName'] || !body['lastName']) {
     return { ok: false, errorKey: 'students.nameRequired' };
   }
+
+  const unacknowledged = unacknowledgedAgeMismatch(formData);
+  if (unacknowledged !== null) return unacknowledged;
 
   let created: { id: string };
   try {
@@ -127,6 +150,9 @@ export async function updateStudentAction(
   if (!body['firstName'] || !body['lastName']) {
     return { ok: false, errorKey: 'students.nameRequired' };
   }
+
+  const unacknowledged = unacknowledgedAgeMismatch(formData);
+  if (unacknowledged !== null) return unacknowledged;
 
   try {
     await apiPatch(`/students/${studentId}`, body, { organizationId });

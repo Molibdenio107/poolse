@@ -44,6 +44,16 @@ export const formats = {
     short: { dateStyle: 'short' },
     /** A moment, not a day — "guardado a 11/09/26, 21:04". */
     stamp: { dateStyle: 'short', timeStyle: 'short' },
+    /**
+     * A month, for a picker or a heading — "setembro de 2026" — F-17.
+     *
+     * Named here like every other shape, so no call site builds one from an
+     * options object. It exists because a native `<input type="month">` renders
+     * its label in the *browser's* locale and cannot be told otherwise: a
+     * Portuguese interface showed "September 2026", and no amount of i18n on our
+     * side could reach inside the control.
+     */
+    month: { year: 'numeric', month: 'long' },
   },
 } as const;
 
