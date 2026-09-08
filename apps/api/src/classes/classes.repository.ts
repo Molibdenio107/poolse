@@ -41,6 +41,16 @@ export interface ClassGroup {
   capacity: number | null;
   /** The turma's own tint on the grid; null means the level's is used. */
   colour: string | null;
+  /**
+   * The fee category everybody in this turma is on unless their enrolment says
+   * otherwise — POOLSE-23 AC4.
+   *
+   * The name travels with the id so a list can print it without a second
+   * request, and because renaming the category has to reach every turma at
+   * once — which it does, since this is resolved rather than copied.
+   */
+  feeCategoryId: string | null;
+  feeCategoryName: string | null;
   lane: number | null;
   schedules: ScheduleSlot[];
   students: EnrolledStudent[];
@@ -198,6 +208,10 @@ const GROUP_COLUMNS = `
   short_name(u.cached_first_name, u.cached_last_name) AS instructor_name,
   cg.capacity,
   cg.colour::text AS colour,
+  cg.fee_category_id,
+  (SELECT fc.name FROM fee_category fc
+    WHERE fc.id = cg.fee_category_id AND fc.organization_id = cg.organization_id)
+    AS fee_category_name,
   -- The lane, still as the number the interface shows — POOLSE-43. The column
   -- became a reference to a lane row, whose position is what it used to hold.
   ln.position AS lane,
@@ -257,6 +271,8 @@ interface GroupRow {
   instructor_name: string | null;
   capacity: number | null;
   colour: string | null;
+  fee_category_id: string | null;
+  fee_category_name: string | null;
   lane: number | null;
   schedules: ScheduleSlot[] | null;
   students: EnrolledStudent[] | null;
@@ -276,6 +292,8 @@ function toGroup(row: GroupRow): ClassGroup {
     instructorName: row.instructor_name,
     capacity: row.capacity,
     colour: row.colour,
+    feeCategoryId: row.fee_category_id,
+    feeCategoryName: row.fee_category_name,
     lane: row.lane,
     schedules: row.schedules ?? [],
     students: row.students ?? [],
@@ -395,6 +413,15 @@ export interface ClassGroupInput {
   lane: number | null;
   /** Null means nobody chose, and the calendar falls back to the level's tint. */
   colour: ClassColour | null;
+  /**
+   * The fee category everybody in this turma is on unless their enrolment says
+   * otherwise — POOLSE-23 AC4.
+   *
+   * Part of the turma's own input rather than a separate endpoint, so there is
+   * one write path for one field. A senior turma carries it once instead of
+   * forty enrolments each carrying it.
+   */
+  feeCategoryId: string | null;
 }
 
 export async function createClassGroup(
@@ -430,9 +457,9 @@ export async function createClassGroup(
         // create one in a retired season, which is the point of retiring it.
         `INSERT INTO class_group (
            organization_id, name, level_id, pool_id, instructor_membership_id, capacity, lane_id,
-           colour, facility_id, season_id
+           colour, fee_category_id, facility_id, season_id
          ) VALUES (
-           $1, $2, $3, $4, $5, $6, $7, $8,
+           $1, $2, $3, $4, $5, $6, $7, $8, $9,
            /*
             * The site — POOLSE-42, which needs one to find the price list.
             *
@@ -468,6 +495,7 @@ export async function createClassGroup(
           input.capacity,
           laneId,
           input.colour,
+          input.feeCategoryId,
         ],
       );
 
@@ -501,7 +529,7 @@ export async function updateClassGroup(
         `UPDATE class_group
             SET name = $2, level_id = $3, pool_id = $4,
                 instructor_membership_id = $5, capacity = $6, lane_id = $7,
-                colour = $8
+                colour = $8, fee_category_id = $9
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -513,6 +541,7 @@ export async function updateClassGroup(
           input.capacity,
           laneId,
           input.colour,
+          input.feeCategoryId,
         ],
       );
       if (!rows[0]) return false;

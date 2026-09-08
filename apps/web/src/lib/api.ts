@@ -1515,6 +1515,16 @@ export interface ClassGroup {
   name: string;
   /** Null means nobody chose; the calendar falls back to the level's tint. */
   colour: ClassColour | null;
+  /**
+   * The fee category everybody in this turma is on unless their enrolment says
+   * otherwise — POOLSE-23 AC4.
+   *
+   * The name travels with the id so a list prints it without a second request,
+   * and because renaming the category reaches every turma at once — it is
+   * resolved, never copied.
+   */
+  feeCategoryId: string | null;
+  feeCategoryName: string | null;
   levelId: string | null;
   levelName: string | null;
   poolId: string | null;
@@ -1536,6 +1546,25 @@ export interface ClassGroup {
   monthlyPriceCents: number | null;
 }
 
+/**
+ * A fee category — POOLSE-23 AC4.
+ *
+ * The reason one person pays a different price from the person in the next lane:
+ * Sénior, Estudante, Funcionário. A club invents its own.
+ *
+ * **A label, never a price.** What one is worth belongs to the pricing engine,
+ * so there is deliberately no amount here. The two counts are what make
+ * archiving a decision rather than a click — and they are the pair the refusal
+ * comes back with if somebody archives one that is still in use.
+ */
+export interface FeeCategory {
+  id: string;
+  name: string;
+  sortOrder: number;
+  usedByGroups: number;
+  usedByEnrollments: number;
+}
+
 export interface ClassOptions {
   /** With their age bounds — the enrol picker filters on the turma's level. */
   levels: {
@@ -1550,6 +1579,13 @@ export interface ClassOptions {
   instructors: { id: string; name: string }[];
   /** With birth dates, so the picker can work out who fits. */
   students: { id: string; name: string; birthDate: string | null }[];
+  /**
+   * The club's fee categories — POOLSE-23 AC4.
+   *
+   * A label, not a price: what one is worth belongs to the pricing engine. The
+   * turma's is the default for everybody in it, and an enrolment may override it.
+   */
+  feeCategories: { id: string; name: string }[];
 }
 
 export interface Classes {

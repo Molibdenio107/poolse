@@ -163,6 +163,10 @@ const SECTIONS: Item[] = [
       // POOLSE-35.
       { href: '/dashboard/students/guardians', key: 'students.guardiansTitle' },
       { href: '/dashboard/students/levels', key: 'students.levels' },
+      // Categorias next to Níveis: both are lists a club sets up once and then
+      // rarely touches, and a category is a fact about a person's price in the
+      // same way a level is a fact about their swimming.
+      { href: '/dashboard/students/categories', key: 'categories.title' },
       // Reposicoes moved here in round 5: a make-up class is something a
       // student is owed, and the person looking for one is looking at a student.
       { href: '/dashboard/classes/reposicoes', key: 'reposicao.title' },

@@ -219,30 +219,14 @@ export async function categoryForEnrollment(
   });
 }
 
-/** Set or clear the category a whole turma is on. Null clears it. */
-export async function setGroupCategory(
-  organizationId: string,
-  classGroupId: string,
-  categoryId: string | null,
-): Promise<boolean> {
-  return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string }>(
-      `UPDATE class_group SET fee_category_id = $2
-        WHERE id = $1 AND archived_at IS NULL
-      RETURNING id`,
-      [classGroupId, categoryId],
-    );
-    if (rows[0] === undefined) return false;
-
-    await recordAudit(tx, {
-      action: 'class_group.fee_category_set',
-      entityType: 'class_group',
-      entityId: classGroupId,
-      data: { categoryId },
-    });
-    return true;
-  });
-}
+/*
+ * There is deliberately no `setGroupCategory` here.
+ *
+ * A turma's category is part of `ClassGroupInput` and is written by the form
+ * that owns every other fact about the turma. A function here would be a second
+ * write path for one field, and two write paths are how two screens end up
+ * disagreeing about what was saved.
+ */
 
 /**
  * Set or clear one person's own category, which beats their turma's.

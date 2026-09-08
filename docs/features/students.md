@@ -85,6 +85,12 @@ refusal counts both.
 Reading the list is open to anyone who may see a turma — it is a label printed beside a name
 and says nothing about money. Writing is the owner and admins.
 
+**Where each is set.** The club's list lives at **Alunos → Categorias**. A turma's category is
+part of the turma's own form, beside its level and its pool — there is deliberately no separate
+endpoint for that one field, because a second write path is how two screens end up disagreeing
+about what was saved. A student's own category is set from their enrolment, which has no form
+of its own.
+
 ## Both capacities, one record
 
 A person who is an adult student **and** an encarregado de educação is one record and appears

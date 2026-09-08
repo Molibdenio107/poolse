@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {
   EnrollmentCategoryController,
   FeeCategoriesController,
-  GroupCategoryController,
 } from './categories.controller.js';
+import { ClassesController } from '../classes/classes.controller.js';
 import { categoryForEnrollment } from './categories.repository.js';
 import { LevelsController, StudentsController } from '../students/students.controller.js';
 import {
@@ -66,6 +66,35 @@ async function turmaWithStudent(
   return { groupId: group!.id, enrollmentId: enrollment!.id };
 }
 
+/**
+ * Put a turma on a category through the turma's own update — the one write path.
+ *
+ * There is deliberately no endpoint for just this field. It is a fact about the
+ * turma like its level and its pool, saved by the form that owns the rest of
+ * them, and a second path is how two screens end up disagreeing about what was
+ * saved. So the test writes it the way the screen does: the whole turma.
+ */
+async function setTurmaCategory(
+  tenant: ScratchTenant,
+  groupId: string,
+  categoryId: string,
+): Promise<void> {
+  const [row] = await tenant.sql<{ name: string; lane: number | null; pool_id: string }>(
+    `SELECT cg.name, l.position AS lane, cg.pool_id
+       FROM class_group cg
+       LEFT JOIN lane l ON l.id = cg.lane_id
+      WHERE cg.id = $1`,
+    [groupId],
+  );
+
+  await new ClassesController().update(groupId, {
+    name: row!.name,
+    poolId: row!.pool_id,
+    lane: String(row!.lane ?? 1),
+    feeCategoryId: categoryId,
+  });
+}
+
 test('the enrolment beats the turma, and clearing it goes back to the turma', async () => {
   await withScratchTenant(async (tenant) => {
     await actingAs(tenant, { roles: ['owner'] }, async () => {
@@ -80,7 +109,7 @@ test('the enrolment beats the turma, and clearing it goes back to the turma', as
       assert.equal(await categoryForEnrollment(tenant.organizationId, enrollmentId), null);
 
       // The turma's, which is how a club avoids typing it forty times.
-      await new GroupCategoryController().set(groupId, { categoryId: senior });
+      await setTurmaCategory(tenant, groupId, senior);
       assert.equal(
         (await categoryForEnrollment(tenant.organizationId, enrollmentId))?.name,
         'Sénior',
@@ -116,7 +145,7 @@ test('a category is a reference, so renaming it reaches everything at once', asy
       const id = (await categories.create({ name: 'Senior' })).id;
 
       const { groupId, enrollmentId } = await turmaWithStudent(tenant, 'Hidroginástica');
-      await new GroupCategoryController().set(groupId, { categoryId: id });
+      await setTurmaCategory(tenant, groupId, id);
 
       await categories.rename(id, { name: 'Sénior' });
 
@@ -150,7 +179,7 @@ test('a category something still uses is not archived, and the refusal counts bo
       const id = (await categories.create({ name: 'Sénior' })).id;
 
       const { groupId, enrollmentId } = await turmaWithStudent(tenant, 'Hidroginástica Sénior');
-      await new GroupCategoryController().set(groupId, { categoryId: id });
+      await setTurmaCategory(tenant, groupId, id);
       await new EnrollmentCategoryController().set(enrollmentId, { categoryId: id });
 
       const { categories: listed } = await categories.list();
@@ -162,7 +191,7 @@ test('a category something still uses is not archived, and the refusal counts bo
 
       // Freed on both sides, it files away.
       await new EnrollmentCategoryController().clear(enrollmentId);
-      await new GroupCategoryController().set(groupId, { categoryId: '' });
+      await setTurmaCategory(tenant, groupId, '');
       await categories.archive(id);
       assert.equal((await categories.list()).categories.length, 0);
     });
@@ -219,6 +248,50 @@ test('AC5 — a senior level sits in the same ladder as the children\'s ones', a
       assert.ok(names.includes('Iniciação'));
       assert.ok(names.includes('Hidroginástica Sénior'));
       assert.equal(names.length, 2, 'one ladder, both levels in it');
+    });
+  });
+});
+
+test('a turma keeps its colour and its category across a save', async () => {
+  /*
+   * The regression this exists for, and it was live.
+   *
+   * `groupBody` in the web app is a hand-written list of FormData keys and
+   * nothing typechecks it against the form. `colour` was missing from it from
+   * round 6 until round 10: the swatches rendered, an operator picked one, the
+   * value never left the browser, the API defaulted it to null and the calendar
+   * went on using the level's tint. Nothing errored, because nothing was wrong —
+   * the field simply was not sent.
+   *
+   * This asserts the API half: what the update is given, it keeps. The other
+   * half is a rule in `classes.actions.ts` saying to add every new control's
+   * name to that list — which is what a comment can do and a type cannot.
+   */
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const senior = (await new FeeCategoriesController().create({ name: 'Sénior' })).id;
+      const { groupId } = await turmaWithStudent(tenant, 'Hidroginástica Sénior');
+
+      const [before] = await tenant.sql<{ name: string; pool_id: string }>(
+        `SELECT name, pool_id FROM class_group WHERE id = $1`,
+        [groupId],
+      );
+
+      await new ClassesController().update(groupId, {
+        name: before!.name,
+        poolId: before!.pool_id,
+        lane: '1',
+        colour: 'violet',
+        feeCategoryId: senior,
+      });
+
+      const [after] = await tenant.sql<{ colour: string | null; fee_category_id: string | null }>(
+        `SELECT colour::text AS colour, fee_category_id FROM class_group WHERE id = $1`,
+        [groupId],
+      );
+
+      assert.equal(after?.colour, 'violet', 'the colour survived the save');
+      assert.equal(after?.fee_category_id, senior, 'and so did the category');
     });
   });
 });

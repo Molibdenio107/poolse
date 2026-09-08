@@ -142,6 +142,29 @@ export function ClassForm({
             ...options.instructors.map((one) => ({ value: one.id, label: one.name })),
           ]}
         />
+        {/*
+          The turma's fee category — POOLSE-23 AC4.
+
+          Here rather than on a screen of its own, because it is a fact about
+          this turma like its level and its pool, and it is written by the form
+          that owns the rest of them. A senior turma says so once instead of
+          forty enrolments each saying it.
+
+          Offered only when the club has any: a club with no concessions should
+          not be shown an empty picker asking it to choose one.
+        */}
+        {options.feeCategories.length > 0 && (
+          <SelectField
+            name="feeCategoryId"
+            label={t('categories.onGroup')}
+            initial={group?.feeCategoryId ?? ''}
+            options={[
+              { value: '', label: t('categories.noCategory') },
+              ...options.feeCategories.map((one) => ({ value: one.id, label: one.name })),
+            ]}
+            hint={t('categories.onGroupHint')}
+          />
+        )}
         <SelectField
           name="poolId"
           label={t('classes.pool')}

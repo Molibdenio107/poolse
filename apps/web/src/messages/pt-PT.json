@@ -933,7 +933,16 @@
     "onEnrollment": "Categoria deste aluno",
     "fromGroup": "Da turma",
     "noCategory": "Sem categoria",
-    "saveFailed": "Não foi possível guardar a categoria."
+    "saveFailed": "Não foi possível guardar a categoria.",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "rename": "Editar categoria",
+    "sortOrderHint": "Menor primeiro. Deixe a zero para ordem alfabética.",
+    "archiveAsk": "Arquivar a categoria \"{name}\"? Deixa de aparecer nas listas, mas o histórico mantém-se.",
+    "notPermitted": "Sem acesso às categorias de preço.",
+    "onGroupHint": "Aplica-se a todos os alunos da turma, salvo se a inscrição disser outra coisa.",
+    "howTitle": "Como se aplica",
+    "howBody": "A categoria pode ser definida na turma — e vale para toda a gente que lá está — ou na inscrição de um aluno, que ganha à da turma. Retirar a categoria própria de um aluno devolve-o à da turma. Uma categoria é uma etiqueta: quanto vale fica para a faturação."
   },
   "insurance": {
     "title": "Apólice de seguro",

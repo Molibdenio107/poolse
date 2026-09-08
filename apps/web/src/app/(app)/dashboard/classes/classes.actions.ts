@@ -27,6 +27,19 @@ function failure(error: unknown, errorKey: string): FormState {
   return describeFailure(error, errorKey);
 }
 
+/**
+ * Every field the turma form posts — and it has to be *every* one.
+ *
+ * This is a hand-written list of FormData keys, which nothing typechecks: a
+ * control on the form whose name is missing here posts its value and has it
+ * dropped on the floor, silently and on every save. `colour` was exactly that
+ * from round 6 until round 10 — the swatches rendered, the operator picked one,
+ * the API defaulted it back to null and the calendar went on using the level's
+ * tint. Nothing errored, because nothing was wrong: the value simply never left.
+ *
+ * When you add a control to `class-forms.tsx`, add its name here in the same
+ * commit, and assert it survives a save.
+ */
 function groupBody(formData: FormData): Record<string, string> {
   return {
     name: String(formData.get('name') ?? '').trim(),
@@ -35,6 +48,8 @@ function groupBody(formData: FormData): Record<string, string> {
     instructorMembershipId: String(formData.get('instructorMembershipId') ?? '').trim(),
     capacity: String(formData.get('capacity') ?? '').trim(),
     lane: String(formData.get('lane') ?? '').trim(),
+    colour: String(formData.get('colour') ?? '').trim(),
+    feeCategoryId: String(formData.get('feeCategoryId') ?? '').trim(),
   };
 }
 

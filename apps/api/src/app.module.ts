@@ -56,7 +56,6 @@ import { InsurancePoliciesController } from './billing/insurance.controller.js';
 import {
   EnrollmentCategoryController,
   FeeCategoriesController,
-  GroupCategoryController,
 } from './billing/categories.controller.js';
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
 import { VacationsController } from './vacations/vacations.controller.js';
@@ -119,7 +118,6 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     FeePlansController,
     InsurancePoliciesController,
     FeeCategoriesController,
-    GroupCategoryController,
     EnrollmentCategoryController,
     StudentFeesController,
     StudentPaidController,

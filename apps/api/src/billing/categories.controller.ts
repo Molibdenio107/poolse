@@ -17,7 +17,6 @@ import {
   listCategories,
   renameCategory,
   setEnrollmentCategory,
-  setGroupCategory,
   CategoryInUseError,
   DuplicateCategoryError,
   type FeeCategory,
@@ -115,30 +114,18 @@ export class FeeCategoriesController {
 }
 
 /**
- * Putting a turma or one person on a category.
+ * Putting **one person** on a category, against their turma's.
  *
- * Two endpoints rather than one with a discriminator, because they are two
- * different decisions: a turma's category is a policy about a programme, and an
- * enrolment's is an exception made for a person. The precedence between them
- * lives in SQL, in `enrolment_fee_category`, so nothing here has to know it.
+ * There is deliberately no endpoint for the turma's own: that is part of the
+ * turma's input, saved by the form that owns every other fact about it. A second
+ * write path for one field is how two screens end up disagreeing about what was
+ * saved.
+ *
+ * This one has no such home — an enrolment has no form of its own, and "this
+ * person, not their turma" is a decision taken from the student's record. The
+ * precedence between the two lives in SQL, in `enrolment_fee_category`, so
+ * nothing here has to know it.
  */
-@Controller('class-groups/:classGroupId')
-export class GroupCategoryController {
-  @Patch('fee-category')
-  async set(
-    @Param('classGroupId') classGroupId: string,
-    @Body() body: Record<string, unknown>,
-  ): Promise<{ updated: true }> {
-    requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
-
-    if (!(await setGroupCategory(organizationId, classGroupId, optionalId(body['categoryId'])))) {
-      throw new BadRequestException('No such turma');
-    }
-    return { updated: true };
-  }
-}
-
 @Controller('enrollments/:enrollmentId')
 export class EnrollmentCategoryController {
   @Patch('fee-category')

@@ -67,6 +67,8 @@ interface ClassesResponse {
     instructors: Choice[];
     /** With birth dates, for the same reason. */
     students: (Choice & { birthDate: string | null })[];
+    /** The club's fee categories, for the turma's own — POOLSE-23 AC4. */
+    feeCategories: Choice[];
   };
   /**
    * Every site and its weekly opening hours — round 5.
@@ -426,11 +428,19 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
          FROM student WHERE archived_at IS NULL ORDER BY ${nameOrder('student')}`,
     );
 
+    // The club's fee categories, so the turma form has something to pick from
+    // — POOLSE-23 AC4. Complete rather than paged: a club has a handful.
+    const feeCategories = await tx.query<Choice>(
+      `SELECT id, name FROM fee_category WHERE archived_at IS NULL
+        ORDER BY sort_order, lower(strip_accents(name))`,
+    );
+
     return {
       levels: levels.rows,
       pools: pools.rows,
       instructors: instructors.rows,
       students: students.rows,
+      feeCategories: feeCategories.rows,
     };
   });
 }
@@ -564,6 +574,9 @@ function parseGroup(body: Record<string, unknown>): ClassGroupInput {
     capacity: optionalCount(body['capacity'], 'capacity', 200, 'classes.capacityInvalid'),
     lane,
     colour: optionalColour(body['colour']),
+    // Empty means the turma is on no category, which is the ordinary state —
+    // POOLSE-23 AC4. Not a category called "normal".
+    feeCategoryId: optionalId(body['feeCategoryId']),
   };
 }
 

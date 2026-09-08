@@ -933,7 +933,16 @@
     "onEnrollment": "This student's own category",
     "fromGroup": "From the class group",
     "noCategory": "No category",
-    "saveFailed": "The category could not be saved."
+    "saveFailed": "The category could not be saved.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "rename": "Edit category",
+    "sortOrderHint": "Lowest first. Leave at zero for alphabetical order.",
+    "archiveAsk": "Archive the category \"{name}\"? It stops appearing in lists, but the history stays.",
+    "notPermitted": "No access to the fee categories.",
+    "onGroupHint": "Applies to everybody in the class group, unless their enrolment says otherwise.",
+    "howTitle": "How it applies",
+    "howBody": "A category can be set on the class group — where it covers everybody in it — or on one student's enrolment, which beats the group's. Taking a student's own category off returns them to their group's. A category is a label: what it is worth is invoicing's business."
   },
   "insurance": {
     "title": "Insurance policy",
