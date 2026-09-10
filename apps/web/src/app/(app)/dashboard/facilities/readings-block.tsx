@@ -1,6 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
-import type { PoolAnalysis, PoolMetric } from '@/lib/api';
+import type { PoolAlert, PoolAnalysis, PoolMetric } from '@/lib/api';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { TrendChart } from '@/components/trend-chart';
 import { excursions, HEALTHY } from '@/lib/water';
@@ -38,6 +38,8 @@ export async function ReadingsBlock({
   poolId,
   poolName,
   analyses,
+  alerts,
+  emailConfigured,
   canManage,
 }: {
   organizationId: string;
@@ -45,6 +47,10 @@ export async function ReadingsBlock({
   poolName: string;
   /** Oldest first, as the API sends them. */
   analyses: PoolAnalysis[];
+  /** Newest first, as the API sends them — slice 4.2. */
+  alerts: PoolAlert[];
+  /** Whether an alert would actually be sent from this environment. */
+  emailConfigured: boolean;
   canManage: boolean;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -218,6 +224,60 @@ export async function ReadingsBlock({
             />
           </div>
         </>
+      )}
+
+      {/*
+        What was actually sent, and to how many people — slice 4.2.
+
+        Under the readings because it answers the next question an operator has:
+        the band is crossed, and did anybody hear about it. It renders only when
+        there is a history, so a tank that has never had a bad reading carries no
+        empty panel — and it renders *outside* the "no analyses yet" branch,
+        because archiving a mistyped reading does not unsend the email it caused.
+
+        **A count, not the addresses.** This panel is readable by any member and
+        the club's staff addresses are not what it is for.
+
+        **"Registado, sem envio" is said in words.** An alert with no delivery is
+        the ordinary state on a laptop and a real state in production — a club
+        whose staff have no email addresses on file — and a row that looked
+        identical either way would let somebody believe a message went out. Same
+        reasoning as the chase list in 2.3.
+      */}
+      {alerts.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium">{t('facilities.alertHistory')}</h3>
+          <p className="text-sm text-foreground-muted">{t('facilities.alertHint')}</p>
+
+          {!emailConfigured && (
+            <p className="text-sm text-foreground-muted">{t('facilities.alertNoEmail')}</p>
+          )}
+
+          <ul className="flex flex-col divide-y divide-border rounded border border-border">
+            {alerts.map((alert) => (
+              <li
+                key={alert.id}
+                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-3 text-sm"
+              >
+                <span className="flex flex-wrap items-baseline gap-x-2">
+                  {/* A named format, never an options object — see i18n.ts. */}
+                  <span className="font-medium">
+                    {format.dateTime(new Date(alert.raisedAt), 'stamp')}
+                  </span>
+                  <span className="text-foreground-muted">
+                    {alert.metrics.map((metric) => labelFor(metric)).join(', ')}
+                  </span>
+                </span>
+
+                <span className="text-foreground-muted">
+                  {alert.deliveredAt === null
+                    ? t('facilities.alertNotSent')
+                    : t('facilities.alertDelivered', { count: alert.recipients })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {/*

@@ -177,6 +177,8 @@ export default async function PoolPage({
               poolId={pool.id}
               poolName={pool.name}
               analyses={pool.analyses}
+              alerts={pool.alerts}
+              emailConfigured={pool.emailConfigured}
               canManage={pool.canManage}
             />
           </section>

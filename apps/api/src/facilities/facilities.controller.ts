@@ -6,6 +6,7 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  Logger,
   NotFoundException,
   Param,
   Patch,
@@ -16,11 +17,15 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import {
   archiveAnalysis,
   createAnalysis,
+  findWaterAlertNotice,
   listAnalyses,
+  listPoolAlerts,
+  markAlertSent,
   METRIC_UNITS,
   POOL_METRICS,
   runAnalysisImport,
   type AnalysisImportResult,
+  type PoolAlertRecord,
   type PoolAnalysis,
   type PoolMetric,
 } from './analyses.repository.js';
@@ -29,6 +34,8 @@ import {
   type RawAnalysisRow,
 } from './analysis-import.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
+import { emailIsConfigured, sendEmail } from '../notifications/notifier.js';
+import { waterAlertEmail } from '../notifications/water-alert-email.js';
 import {
   archiveFacility,
   archivePool,
@@ -112,6 +119,8 @@ interface FacilitiesResponse {
  */
 @Controller('facilities')
 export class FacilitiesController {
+  private readonly logger = new Logger(FacilitiesController.name);
+
   @Get()
   async list(): Promise<FacilitiesResponse> {
     const { organizationId } = currentTenant();
@@ -137,6 +146,16 @@ export class FacilitiesController {
       organizationId: string;
       canManage: boolean;
       analyses: PoolAnalysis[];
+      alerts: PoolAlertRecord[];
+      /**
+       * Whether an alert would actually be sent from this environment — 4.2.
+       *
+       * The panel says so rather than leaving an operator to assume. On a laptop
+       * with no provider configured the alert is recorded and written to the log,
+       * and a screen that implied an email had gone out would be the same
+       * hopeful label 2.3's chase list was built to avoid.
+       */
+      emailConfigured: boolean;
     }
   > {
     const { organizationId } = currentTenant();
@@ -152,8 +171,11 @@ export class FacilitiesController {
       canManage: hasRole('owner', 'admin'),
       // The analyses travel with the pool rather than behind their own
       // request: small, always shown, and a second round trip would put a
-      // spinner on a panel of four rows.
+      // spinner on a panel of four rows. The alerts ride along for the same
+      // reason — ten rows at most, rendered in the same panel.
       analyses: await listAnalyses(organizationId, poolId),
+      alerts: await listPoolAlerts(organizationId, poolId),
+      emailConfigured: emailIsConfigured(),
     };
   }
 
@@ -191,17 +213,71 @@ export class FacilitiesController {
       : null;
 
     try {
-      return {
-        id: await createAnalysis(organizationId, {
-          poolId,
-          takenAt,
-          notes,
-          recordedBy: membershipId,
-          values,
-        }),
-      };
+      const { id, alertId } = await createAnalysis(organizationId, {
+        poolId,
+        takenAt,
+        notes,
+        recordedBy: membershipId,
+        values,
+      });
+
+      // After the analysis is committed, and it can never undo one. See
+      // `notifyWaterAlert`.
+      if (alertId !== null) await this.notifyWaterAlert(organizationId, alertId);
+
+      return { id };
     } catch (error) {
       throw asHttp(error);
+    }
+  }
+
+  /**
+   * Tells whoever can act on it — slice 4.2.
+   *
+   * **Outside the transaction that wrote the reading, and unable to fail it.**
+   * `sendEmail` never throws and this catches everything else, because an
+   * operator pressing Guardar must not see a failure because a mail server was
+   * slow — the reading is recorded either way, the pool's page already shows the
+   * crossed band, and the email is the part that reaches somebody who is not
+   * looking at the screen. Exactly the shape `VacationsController.notify` uses.
+   *
+   * **One message per recipient, not one with everybody in the To field.** A
+   * club's staff addresses are not something Poolse should show to each other,
+   * and a provider that rejects one address must not take the rest of the club
+   * down with it.
+   *
+   * The alert row is stamped with who was written to and whether anything left
+   * the building, so the panel can say "recorded, not sent" rather than implying
+   * a message arrived. On a laptop with `EMAIL_PROVIDER=console` that is exactly
+   * what happened: the message is in the log.
+   */
+  private async notifyWaterAlert(organizationId: string, alertId: string): Promise<void> {
+    try {
+      const notice = await findWaterAlertNotice(organizationId, alertId);
+      if (notice === null) return;
+
+      let delivered = false;
+      for (const to of notice.recipients) {
+        const sent = await sendEmail(
+          waterAlertEmail({
+            to,
+            organizationName: notice.organizationName,
+            facilityName: notice.facilityName,
+            poolName: notice.poolName,
+            takenAt: notice.takenAt,
+            timezone: notice.facilityTimezone,
+            excursions: notice.excursions,
+            locale: notice.organizationLocale,
+          }),
+        );
+        // One address that went through is enough to call the alert delivered;
+        // the recipient list is recorded whole either way.
+        delivered = delivered || sent;
+      }
+
+      await markAlertSent(organizationId, alertId, notice.recipients, delivered);
+    } catch (error) {
+      this.logger.warn(`Could not send water alert ${alertId}: ${String(error)}`);
     }
   }
 
@@ -234,6 +310,14 @@ export class FacilitiesController {
     });
 
     if (result === null) throw new NotFoundException('No such pool');
+
+    // Sequentially, and after the whole import committed. Usually there is
+    // nothing here: only a sample inside the alert window raises one, and a
+    // club's first import is its history.
+    for (const alertId of result.alertIds ?? []) {
+      await this.notifyWaterAlert(organizationId, alertId);
+    }
+
     return result;
   }
 

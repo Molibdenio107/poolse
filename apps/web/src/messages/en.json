@@ -232,6 +232,11 @@
     "noCandidatesHint": "Invite somebody as an administrator first. Ownership only passes to administrators."
   },
   "facilities": {
+    "alertDelivered": "Sent to {count, plural, one {# recipient} other {# recipients}}",
+    "alertHint": "When a recent analysis falls outside the recommended range, Poolse emails the people who can act on it: the owner, admin staff and maintenance.",
+    "alertHistory": "Water out-of-range alerts",
+    "alertNoEmail": "Email sending is not configured in this environment. Alerts are recorded, but nothing is sent.",
+    "alertNotSent": "Recorded, not sent",
     "title": "Facilities",
     "subtitle": "The organization’s sites, and the pools at each one.",
     "addSite": "Add a facility",

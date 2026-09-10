@@ -8,28 +8,12 @@
  * imported from a Client Component module". Types are erased at compile time and
  * cross that boundary harmlessly, which is why every other client component in
  * this app can say `import type { Student } from '@/lib/api'` and be fine. A
- * `const` cannot.
+ * `const` cannot. `lib/skills.ts` is the same shape for the same reason.
  *
- * The analysis form needs the list at runtime, to render one input per metric.
- * So the list lives here — no imports, no side effects, safe on both sides — and
- * `api.ts` re-exports the type for the server code that already reads it there.
- * `lib/skills.ts` is the same shape for the same reason.
- *
- * Kept in step with the `pool_metric` enum and with `METRIC_UNITS` in
- * `apps/api/src/facilities/analyses.repository.ts` by hand. Adding one is a
- * migration, a unit, and two translations, so it is not a change anybody makes
- * by accident.
+ * **The list itself now lives in `@poolse/rules` — slice 4.2.** It used to be
+ * declared here with a comment saying it was kept in step with the API's copy
+ * *by hand*, which is exactly the arrangement that goes wrong quietly. The
+ * package is a leaf with no imports and no side effects, so it is as safe on the
+ * client as this file ever was, and there is now one list rather than two.
  */
-export const POOL_METRICS = [
-  'ph',
-  'temperature',
-  'free_chlorine',
-  'combined_chlorine',
-  'total_alkalinity',
-  'calcium_hardness',
-  'cyanuric_acid',
-  'turbidity',
-  'salt',
-] as const;
-
-export type PoolMetric = (typeof POOL_METRICS)[number];
+export { POOL_METRICS, type PoolMetric } from '@poolse/rules';

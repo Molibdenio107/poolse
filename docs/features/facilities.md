@@ -91,6 +91,40 @@ Five of them have a published band a Portuguese municipal pool is inspected agai
 other four get no invented one. A reading outside its band raises the "shut the pool?"
 notice, which offers and never acts.
 
+The bands and the metric list live in `@poolse/rules`, so the screen and the API judge a
+reading by the same numbers.
+
+### An out-of-range reading reaches someone
+
+Slice 4.2. A reading recorded outside its band raises an **alert**: a row on
+`pool_analysis_alert`, written in the same transaction as the reading, and one email per
+recipient sent immediately after it commits.
+
+| | |
+|---|---|
+| Who is written to | owner, admin and maintenance — resolved by role, deduplicated |
+| Who is not | instructors, students, encarregados. Somebody at the poolside cannot dose a tank |
+| Which readings are named | only the ones outside their band, with the value, the unit and the band |
+| When it does *not* fire | the water is fine; no metric measured has a published band; the sample is more than 48 hours old; this analysis has already alerted |
+| Where it shows | *Alertas de água fora dos parâmetros*, on the tank's page under the warning |
+
+**A backdated sample raises nothing.** A club's first act is to import its history, and forty
+emails about water dosed last winter would teach it to filter the channel before it carried
+anything urgent. The reading is still recorded and the crossed band is still flagged on the
+page — only the email is withheld. The same rule applies to the manual form, because an
+operator typing in last month's sheet is doing the same thing more slowly.
+
+**The panel says whether anything was actually sent.** With no email provider configured — a
+laptop, or a club whose staff have no addresses on file — the alert reads *"Registado, sem
+envio"* and the message goes to the log. Nothing implies a person was contacted when they
+were not, which is the rule the chase list follows too.
+
+**The email reports; it never acts.** It carries every number and no instruction: closing a
+pool stays a decision taken on the closure form, where the operator can pick the days.
+
+**Not the missing-reading alert** (POOLSE-26). That is about a sample that never happened,
+and it needs intervals, escalation tiers and suppression rules of its own.
+
 ### Importing a log or a report
 
 **Import an analysis report** sits in the Water quality card, directly under *Record an

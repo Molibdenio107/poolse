@@ -1398,6 +1398,64 @@ API, so the application never produces two spellings of "ppm".
 of whose five measurements are visible, is a worse record than none; the cascade is what
 makes that safe.
 
+#### Out-of-range alerts — slice 4.2
+
+```
+pool_analysis_alert
+  id, organization_id, pool_id, analysis_id,
+  raised_at timestamptz not null default now(),
+  metrics pool_metric[] not null,                       -- snapshot of what failed
+  recipients text[] not null default '{}',              -- who was written to, as they were then
+  delivered_at timestamptz,                             -- null = recorded, nothing sent
+  created_at, updated_at                                -- no archived_at
+  unique (organization_id, id)
+  unique (organization_id, analysis_id)                 -- one alert per analysis, not partial
+  foreign key (organization_id, pool_id) references pool (organization_id, id)
+  foreign key (organization_id, analysis_id) references pool_analysis (organization_id, id)
+    on delete cascade
+  check (cardinality(metrics) > 0)
+  check (delivered_at is null or cardinality(recipients) > 0)
+  revoke delete from poolse_app
+```
+
+**The breach is derived; the alert is a record.** Whether a reading sits outside its band is
+answered by `excursions()` in `@poolse/rules`, from the values and the published bands, and
+is never stored as a flag — the same reasoning as `invoice_status` and the overdue-cleaning
+rule. What is stored is the part that cannot be derived twice: that on this date, these
+people were told. An email is not idempotent.
+
+**`metrics` is a snapshot, which is not a contradiction of that.** `pool_analysis_value` has
+no `archived_at` and a measurement is corrected in place, so a history that re-derived which
+readings were bad would silently rewrite itself the first time somebody fixed a typo. Same
+argument as every snapshot on an invoice line.
+
+**No `archived_at`, and no DELETE grant.** There is nothing here for an operator to remove:
+the row says an email went out, and that either happened or it did not. The privilege is
+absent as it is on `invoice` and `audit_log` — a missing grant cannot be forgotten by
+application code. Teardown runs as the owner, which is what lets the harness clean it up
+without weakening that.
+
+**One alert per analysis**, which is what makes the send path safe to re-enter: a retried
+submit, or two people pressing Guardar at once, cannot email a club twice about one sample. A
+*second* analysis of the same tank alerts again, which is right — somebody dosed the pool in
+between.
+
+**Only a recent sample alerts.** `ALERT_WINDOW_HOURS` in `@poolse/rules` is 48, compared
+against `taken_at` in SQL so the clock is the database's. A club's first act is to import its
+history, and forty emails about water dosed last winter would teach it to filter the channel
+before it ever carried something urgent. The reading is still recorded and the pool's page
+still flags the crossed band.
+
+**Recipients resolve by role at send time** — owner, admin and maintenance, deduplicated,
+`coalesce(app_user.cached_email, membership.email)` so the staff member with no login is
+included. Instructors are out: somebody at the poolside cannot dose a tank. The addresses are
+then written onto the row, because "who was told" is not recoverable from the roles once
+that person has left.
+
+**This is not POOLSE-26.** The missing-reading alert is a different fact — a sample that never
+happened — with its own intervals, two-tier escalation and suppression rules, and it gets its
+own table and its own evaluation job.
+
 ### A pool's dimensions
 
 ```

@@ -411,10 +411,18 @@ and 6 — so 3.6 now simply follows the readings it needs.
 | # | Slice | Done when |
 |---|---|---|
 | 4.1 | Readings: record, list, chart per pool | A technician logs pH and temperature. **Surfaces on the pool's own page** — see the note below |
-| 4.2 | Safe ranges + alerts through the notification subsystem | Out-of-range reading reaches someone |
+| 4.2 | Safe ranges + alerts through the notification subsystem | ✅ **An out-of-range reading reaches someone.** The published bands moved to `@poolse/rules` so the pool's page and the API judge a reading by the same numbers; a recent analysis outside its band writes an alert inside the transaction that wrote the reading and emails owner, admin and maintenance after it commits. A sample older than 48 hours is recorded and alerts nobody, so importing a year of lab sheets sends no email. The panel says whether anything actually left the building. **Per-pool bands are not built** — the published ones are the only ones, which is a real limitation for a hotel tank kept at 30 °C |
 | 4.3 | Maintenance tasks, recurrence, assignment | A task appears for the right person |
 | 4.4 | Completion log and history | Who did what, when |
 | 4.5 | Personal app on the same reading model | An individual tracks their own pool |
+
+**4.2 turned out to be half-built.** Round 4 wrote the bands and the on-screen
+warning; what was missing was the half the "done when" actually names — the reading
+reaching somebody who is not looking at the screen. It also did not need phase 3, exactly
+as the note under phase 3 predicted: `sendEmail` already carried invitation and vacation
+mail, and per-person preferences and push remain an upgrade rather than a prerequisite.
+POOLSE-26 is still open and is a *different* alert — a sample that never happened, with
+intervals, escalation tiers and a scheduled job of its own.
 
 **Maintenance data belongs on the pool's own page, not on a separate maintenance
 screen.** Backlog note from the operator: a pool already has a page carrying its

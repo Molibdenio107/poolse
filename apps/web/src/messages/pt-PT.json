@@ -232,6 +232,11 @@
     "noCandidatesHint": "Convide alguém como administrador primeiro. A propriedade só passa a administradores."
   },
   "facilities": {
+    "alertDelivered": "Enviado a {count, plural, one {# destinatário} other {# destinatários}}",
+    "alertHint": "Quando uma análise recente fica fora do intervalo recomendado, o Poolse avisa por email quem pode agir: proprietário, administração e manutenção.",
+    "alertHistory": "Alertas de água fora dos parâmetros",
+    "alertNoEmail": "O envio de email não está configurado neste ambiente. Os alertas são registados, mas nada é enviado.",
+    "alertNotSent": "Registado, sem envio",
     "title": "Instalações",
     "subtitle": "Os locais da organização e os tanques em cada um.",
     "addSite": "Adicionar instalação",

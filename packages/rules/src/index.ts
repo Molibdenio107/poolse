@@ -393,3 +393,14 @@ export function isValidNif(nif: string): boolean {
   const check = remainder < 2 ? 0 : 11 - remainder;
   return check === Number(digits[8]);
 }
+
+// ---------------------------------------------------------------------------
+// Water quality — slice 4.2
+// ---------------------------------------------------------------------------
+//
+// The metrics, their units and the bands a reading is judged against. Its own
+// file rather than more of this one: the conflict rules above are about where a
+// booking may go, and a reader looking for what a safe pH is should not have to
+// scroll past lane arithmetic to find it. Re-exported here so `@poolse/rules`
+// stays one entry point.
+export * from './water.js';

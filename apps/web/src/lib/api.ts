@@ -727,9 +727,30 @@ export interface WeatherResponse {
   weather: Weather | null;
 }
 
+/**
+ * One out-of-range water alert — slice 4.2.
+ *
+ * `recipients` is a count and not a list of addresses: the readings panel is
+ * readable by any member, and "did this reach anybody" is the question somebody
+ * actually has. `deliveredAt` null means recorded and not sent, which the panel
+ * says in words rather than leaving to be assumed.
+ */
+export interface PoolAlert {
+  id: string;
+  raisedAt: string;
+  takenAt: string;
+  metrics: PoolMetric[];
+  recipients: number;
+  deliveredAt: string | null;
+}
+
 export interface PoolDetail extends Pool {
   /** Every analysis of this pool, oldest first. */
   analyses: PoolAnalysis[];
+  /** Out-of-range alerts, newest first, capped at ten — slice 4.2. */
+  alerts: PoolAlert[];
+  /** Whether an alert would actually be sent from this environment. */
+  emailConfigured: boolean;
   organizationId: string;
   facilityId: string;
   facilityName: string;

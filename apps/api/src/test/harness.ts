@@ -183,6 +183,17 @@ const TENANT_TABLES = [
    * a foreign-key violation during teardown, the first time a test wrote an
    * analysis rather than only reading one.
    */
+  /*
+   * The alert before the analysis it is about — slice 4.2.
+   *
+   * It cascades from `pool_analysis`, so in principle it needs no line here.
+   * It gets one anyway because its *other* composite key points at `pool`, which
+   * does not cascade, so a teardown that deleted pools first would fail on the
+   * key. And, like `invoice` and `audit_log`, it carries no DELETE grant for the
+   * app role — cleaning it up is possible only because teardown runs as the
+   * owner.
+   */
+  'pool_analysis_alert',
   'pool_analysis',
   'lane',
   'pool',

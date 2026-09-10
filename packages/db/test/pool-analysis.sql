@@ -16,6 +16,12 @@
 -- measurements visible, is a worse record than no record. The cascade is what
 -- makes that safe.
 --
+-- **Tests 8 to 12 are slice 4.2's** — `pool_analysis_alert`. The two to keep if
+-- this file is ever cut down are 8, one alert per analysis, which is what stops a
+-- retried submit from emailing a club twice about one sample; and 11, the absent
+-- DELETE grant, which a future `GRANT ALL` would undo while passing everything
+-- else here.
+--
 -- Run: pnpm db:test
 
 \set ON_ERROR_STOP on
@@ -277,6 +283,186 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'PASS test 7: analyses and their values are visible only to their own tenant';
+END $$;
+
+RESET ROLE;
+
+-- ---------------------------------------------------------------------------
+-- Test 8 — one alert per analysis
+--
+-- Slice 4.2. The unique index is what makes the send path safe to re-enter: a
+-- retried submit, or two people pressing Guardar at once, must not produce two
+-- emails about one sample. Not partial, because this table has no `archived_at`
+-- — an alert is a record of something that happened and there is nothing for an
+-- operator to remove.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid := '55555555-5555-5555-5555-555555555555';
+  v_pool uuid; v_analysis uuid;
+BEGIN
+  SELECT a.id, a.pool_id INTO v_analysis, v_pool
+    FROM pool_analysis a WHERE a.organization_id = v_org LIMIT 1;
+
+  INSERT INTO pool_analysis_alert (organization_id, pool_id, analysis_id, metrics)
+  VALUES (v_org, v_pool, v_analysis, ARRAY['ph']::pool_metric[]);
+
+  BEGIN
+    INSERT INTO pool_analysis_alert (organization_id, pool_id, analysis_id, metrics)
+    VALUES (v_org, v_pool, v_analysis, ARRAY['free_chlorine']::pool_metric[]);
+    RAISE EXCEPTION 'FAIL test 8: one analysis raised two alerts';
+  EXCEPTION WHEN unique_violation THEN
+    NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 8: an analysis raises at most one alert';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 9 — an alert about nothing, and a delivery to nobody
+--
+-- Two CHECKs that exist because both states are writable by a careless caller
+-- and neither means anything. `excursions()` returning an empty list is the
+-- signal *not* to raise an alert, so a row with no metrics is a bug that would
+-- otherwise sit in the compliance record; and `delivered_at` with an empty
+-- recipient list claims a message reached nobody in particular.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid := '55555555-5555-5555-5555-555555555555';
+  v_pool uuid; v_analysis uuid;
+BEGIN
+  -- A second analysis, because the first already has its one alert.
+  SELECT id INTO v_pool FROM pool WHERE organization_id = v_org LIMIT 1;
+
+  INSERT INTO pool_analysis (organization_id, pool_id, taken_at)
+  VALUES (v_org, v_pool, TIMESTAMPTZ '2026-08-28 07:30:00+00')
+  RETURNING id INTO v_analysis;
+
+  BEGIN
+    INSERT INTO pool_analysis_alert (organization_id, pool_id, analysis_id, metrics)
+    VALUES (v_org, v_pool, v_analysis, ARRAY[]::pool_metric[]);
+    RAISE EXCEPTION 'FAIL test 9a: an alert was raised about no metric at all';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    INSERT INTO pool_analysis_alert (organization_id, pool_id, analysis_id, metrics,
+                                     recipients, delivered_at)
+    VALUES (v_org, v_pool, v_analysis, ARRAY['ph']::pool_metric[],
+            ARRAY[]::text[], now());
+    RAISE EXCEPTION 'FAIL test 9b: an alert claimed delivery to an empty recipient list';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 9: an empty metric list and a delivery to nobody are both refused';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 10 — the alert cannot name the neighbour's pool
+--
+-- The composite key again, for the same reason test 6 asserts it on the
+-- analysis: RLS does not catch a cross-tenant *reference*, because each row
+-- passes its own policy.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid := '55555555-5555-5555-5555-555555555555';
+  v_analysis uuid; v_their_pool uuid;
+BEGIN
+  -- One that has not already alerted, or the unique index from test 8 answers
+  -- first and this passes for the wrong reason.
+  SELECT a.id INTO v_analysis
+    FROM pool_analysis a
+   WHERE a.organization_id = v_org
+     AND NOT EXISTS (
+       SELECT 1 FROM pool_analysis_alert al
+        WHERE al.analysis_id = a.id AND al.organization_id = a.organization_id
+     )
+   LIMIT 1;
+  IF v_analysis IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 10: the fixture has no un-alerted analysis to use';
+  END IF;
+
+  SELECT id INTO v_their_pool
+    FROM pool WHERE organization_id = '66666666-6666-6666-6666-666666666666';
+
+  BEGIN
+    INSERT INTO pool_analysis_alert (organization_id, pool_id, analysis_id, metrics)
+    VALUES (v_org, v_their_pool, v_analysis, ARRAY['ph']::pool_metric[]);
+    RAISE EXCEPTION 'FAIL test 10: our alert named the neighbour''s pool';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 10: the composite key refuses a cross-tenant pool on an alert';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 11 — the app role cannot delete an alert, and cannot read another's
+--
+-- The missing DELETE grant is the same instrument `invoice` uses: a privilege
+-- that was never granted cannot be forgotten by application code, whereas a
+-- trigger can be dropped by a later migration that meant something else. The
+-- test is here because a well-meaning `GRANT ALL` in a future migration would
+-- pass every other assertion in this file.
+-- ---------------------------------------------------------------------------
+
+DO $$
+BEGIN
+  IF has_table_privilege('poolse_app', 'pool_analysis_alert', 'DELETE') THEN
+    RAISE EXCEPTION 'FAIL test 11a: poolse_app can delete an alert';
+  END IF;
+
+  IF NOT has_table_privilege('poolse_app', 'pool_analysis_alert', 'SELECT') THEN
+    RAISE EXCEPTION 'FAIL test 11b: poolse_app cannot read alerts';
+  END IF;
+
+  IF NOT has_table_privilege('poolse_app', 'pool_analysis_alert', 'INSERT') THEN
+    RAISE EXCEPTION 'FAIL test 11c: poolse_app cannot raise an alert';
+  END IF;
+
+  -- UPDATE is needed, and only for `delivered_at` and `recipients`: the send
+  -- happens after the transaction that wrote the reading has committed.
+  IF NOT has_table_privilege('poolse_app', 'pool_analysis_alert', 'UPDATE') THEN
+    RAISE EXCEPTION 'FAIL test 11d: poolse_app cannot stamp what the send did';
+  END IF;
+
+  RAISE NOTICE 'PASS test 11: the app may raise, read and stamp an alert, and never delete one';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 12 — an alert is the tenant's own
+-- ---------------------------------------------------------------------------
+
+SET LOCAL ROLE poolse_app;
+
+DO $$
+DECLARE
+  v_a uuid := '55555555-5555-5555-5555-555555555555';
+  v_b uuid := '66666666-6666-6666-6666-666666666666';
+  n int;
+BEGIN
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  SELECT count(*) INTO n FROM pool_analysis_alert WHERE organization_id = v_a;
+  IF n <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 12a: the neighbouring club could read % of our alerts', n;
+  END IF;
+
+  PERFORM set_config('app.organization_id', v_a::text, true);
+
+  SELECT count(*) INTO n FROM pool_analysis_alert WHERE organization_id = v_a;
+  IF n < 1 THEN
+    RAISE EXCEPTION 'FAIL test 12b: our own alerts were not visible to us';
+  END IF;
+
+  RAISE NOTICE 'PASS test 12: alerts are visible only to their own tenant';
 END $$;
 
 RESET ROLE;

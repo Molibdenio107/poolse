@@ -370,6 +370,14 @@ is untested SQL** — the whole stand-in feature shipped dead this way, and the 
 disabled with no explanation.** Keep `loaded` as its own state, and say what went wrong with a
 way to retry. `stand-in-picker.tsx` is the shape.
 
+**A column of a custom enum array is read `::text[]`, never bare.** node-postgres has a parser
+for `text[]` and none for `pool_metric[]`, so a bare select hands JavaScript the string
+`'{ph}'` — `.map()` over it iterates characters and `new Set(…)` of it matches no metric name.
+It typechecks perfectly, because the row type is whatever the query was told to claim, and it
+is invisible on a screen that only counts the rows. Slice 4.2's alert email was built from
+exactly that set and would have gone out with an empty list; the integration test is what
+found it, which is the same lesson as the paragraph above.
+
 **`cs` means `class_schedule` in most of this codebase, and a join to `class_group` is the
 place partnerships get silently dropped.** It has happened three times — `listSessions`,
 `occurrenceOf` and the stand-in candidate list all inner-joined it, so every parceria session
@@ -452,6 +460,27 @@ boolean; the client renders it and never recomputes it. The same reasoning as th
 refusals that carry their numbers: two implementations of one rule agree until the day they do
 not. It is also why there is no `is_overdue` column — a stored flag needs a worker to keep it
 true, and that is a per-tenant cost.
+
+**A breach is derived; being told about it is a record.** `excursions()` and the published
+bands live in `@poolse/rules` — with `POOL_METRICS` and `METRIC_UNITS`, which the API and the
+web app each used to declare by hand — so the pool's page and the alert email cannot disagree
+about whether a reading is bad. What `pool_analysis_alert` stores is the part that cannot be
+derived twice: that on this date, these people were told. **An email is not idempotent**, so
+the row is written inside the transaction that wrote the reading, one per analysis by unique
+index, and the *sending* happens after the commit where it can never roll a reading back.
+`metrics` is a snapshot even so, because a measurement is corrected in place and a compliance
+record that rewrote itself when somebody fixed a typo would not be one.
+
+**Only a recent sample alerts, and the screen says whether anything was sent.**
+`ALERT_WINDOW_HOURS` is 48, compared against `taken_at` in SQL; a club's first act is to
+import its history, and forty emails about water dosed last winter teach it to filter the
+channel before it ever carries something urgent. The reading is still recorded either way.
+Recipients resolve **by role** at send time — owner, admin, maintenance, deduplicated, over
+`coalesce(app_user.cached_email, membership.email)` so the staff member with no login is
+included — and the addresses are then written onto the row, because "who was told" is not
+recoverable from the roles once that person has left. `delivered_at` null means recorded and
+not sent, said in words: the same honesty the chase list owes about what Poolse has and has
+not delivered.
 
 **A null ceiling, interval or limit means "not measured" and enforces nothing.**
 `pool.max_capacity`, `space.expected_cleaning_interval_hours`,
