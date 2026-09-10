@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import type { SkillState } from './skills';
 import type { PoolMetric } from './pool-metrics';
+import type { BandMap, BandOverride } from './water';
 
 /**
  * Server-side client for the Poolse API.
@@ -345,6 +346,9 @@ export interface Pool {
  * code that already reads it from `@/lib/api` keeps working.
  */
 export type { PoolMetric } from './pool-metrics';
+// The band types travel with the pool, and they are the rules package's — one
+// vocabulary for a band, whichever side of the wire it is on.
+export type { Band, BandMap, BandOverride } from './water';
 
 export interface AnalysisValue {
   metric: PoolMetric;
@@ -749,6 +753,16 @@ export interface PoolDetail extends Pool {
   analyses: PoolAnalysis[];
   /** Out-of-range alerts, newest first, capped at ten — slice 4.2. */
   alerts: PoolAlert[];
+  /**
+   * The band each metric is judged by on this pool, resolved by the API.
+   *
+   * A metric absent from the map is not judged — nothing published a band, or
+   * this club switched it off. Never merged on the client: the screen renders
+   * what it is given, the way it renders the overdue-cleaning boolean.
+   */
+  bands: BandMap;
+  /** The raw overrides, which only the editor needs — see `SafeRangesForm`. */
+  bandOverrides: BandOverride[];
   /** Whether an alert would actually be sent from this environment. */
   emailConfigured: boolean;
   organizationId: string;

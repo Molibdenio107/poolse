@@ -1456,6 +1456,48 @@ that person has left.
 happened — with its own intervals, two-tier escalation and suppression rules, and it gets its
 own table and its own evaluation job.
 
+#### A pool's own safe range — slice 4.2, second half
+
+```
+pool_metric_range
+  id, organization_id, pool_id,
+  metric pool_metric not null,
+  min_value numeric(10,3),                              -- null: not judged from below
+  max_value numeric(10,3),                              -- null: not judged from above
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  unique (organization_id, pool_id, metric) where archived_at is null
+  foreign key (organization_id, pool_id) references pool (organization_id, id)
+  check (min_value is null or min_value >= 0)
+  check (max_value is null or max_value >= 0)
+  check (min_value is null or max_value is null or max_value >= min_value)
+  check (metric <> 'ph' or both bounds <= 14)
+```
+
+**A row is an exception; no row is the answer for almost every pool.** Seeding nine rows per
+pool from the published set was rejected: it makes "has anybody changed this?" unanswerable, it
+freezes every tank at whatever the constant said the day the pool was created, and a later
+correction to a published band would then reach nobody.
+
+**Three states, and the third is why the bounds are nullable.** No row means the published
+band; a row means its bounds, on the sides that carry one; a row with **neither** bound means
+the metric is not judged on this pool at all. That last one is the hotel tank kept at 30 °C,
+which is outside the published temperature band every day of its life and alerted every day
+before this table existed. `resolveBands` in `@poolse/rules` is the only place the two meet —
+the API resolves and ships the answer, and no client merges anything.
+
+A null bound is **not zero**, the same rule as `pool.max_capacity` and every other ceiling
+here. An outdoor tank can carry a floor and no ceiling; `Excursion.limit` is the bound actually
+crossed, which is what makes every sentence about an excursion sayable without a null check.
+
+**Soft-deleted, so the unique index is partial.** A club that overrides pH, reverts and
+overrides it again next season must not collide with the dead row — and a threshold that
+decided whether anybody was warned is worth keeping a record of. Reverting archives; it does
+not delete.
+
+**All four privileges, unlike the alert beside it.** This is a setting, edited in place, and
+nothing about it is a statement that something happened.
+
 ### A pool's dimensions
 
 ```

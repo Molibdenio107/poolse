@@ -71,10 +71,11 @@ export const METRIC_UNITS: Record<PoolMetric, string> = {
  * email off the back of these, and a threshold nobody chose would be a threshold
  * that pages somebody at midnight for no reason.
  *
- * Per-pool overrides are the next slice, not this one: a hotel tank kept at
- * 30 °C is a real case and it is out of range here. When they arrive, a null
- * bound means "not measured" and enforces nothing, as every other ceiling in
- * this schema does.
+ * **These are the defaults, not the whole answer.** A pool may override any of
+ * them, drop one bound, or switch a metric off entirely — `resolveBands` is
+ * where the two meet, and `pool_metric_range` is where a club's own numbers
+ * live. Nothing reads this constant directly except that function and a caller
+ * that genuinely means "what does the regulation say".
  */
 export const HEALTHY: Partial<Record<PoolMetric, { from: number; to: number }>> = {
   ph: { from: 7.2, to: 7.6 },
@@ -84,23 +85,100 @@ export const HEALTHY: Partial<Record<PoolMetric, { from: number; to: number }>> 
   total_alkalinity: { from: 80, to: 120 },
 };
 
+/**
+ * A band a reading is judged against.
+ *
+ * Both bounds are optional and independent, and **a null bound is not judged** —
+ * the same rule as `pool.max_capacity` and every other ceiling in this schema.
+ * So an outdoor tank can carry a floor and no ceiling, and a band with neither
+ * bound is a metric this pool is not judged on at all.
+ */
+export interface Band {
+  from: number | null;
+  to: number | null;
+}
+
+/** What a pool overrides, as it comes out of `pool_metric_range`. */
+export interface BandOverride extends Band {
+  metric: PoolMetric;
+}
+
+/**
+ * The effective band per metric. A metric absent from the map is not judged —
+ * either because nothing published a band for it, or because this pool switched
+ * it off.
+ */
+export type BandMap = Partial<Record<PoolMetric, Band>>;
+
 export interface Excursion {
   metric: PoolMetric;
   value: number;
   unit: string;
-  from: number;
-  to: number;
+  from: number | null;
+  to: number | null;
   /** Which side it fell off, so the message can say "too high" rather than "wrong". */
   direction: 'low' | 'high';
+  /**
+   * The bound that was actually crossed — `to` for a high reading, `from` for a
+   * low one.
+   *
+   * Always a number, which is what makes every sentence about an excursion
+   * sayable without a null check: a reading cannot be above a ceiling that does
+   * not exist. The full range is still on the row for the sentence that wants to
+   * name both ends, and it is null on the side that is not judged.
+   */
+  limit: number;
 }
 
 /**
- * Every reading in an analysis that sits outside its published band.
+ * The band each metric is judged by on one pool, published values overridden.
+ *
+ * **One merge, in one place, or the screen and the email disagree** — which is
+ * the failure 4.2 existed to fix and would be reintroduced by a second copy of
+ * this loop. The API resolves it and ships the answer; the client renders what
+ * it is given and never merges anything itself.
+ *
+ * Three states, and the third is the reason the bounds are nullable:
+ *
+ * - **No override** — the published band stands. The ordinary case, and what
+ *   every pool has until somebody says otherwise.
+ * - **An override with a bound** — that bound, on that side. A tank with a floor
+ *   and no ceiling is judged only from below.
+ * - **An override with neither bound** — the metric is dropped from the map, so
+ *   this pool is not judged on it at all. A hotel tank kept at 30 °C is the case:
+ *   it is out of the published temperature band every day of its life, and
+ *   without this it would alert every day.
+ */
+export function resolveBands(overrides: readonly BandOverride[]): BandMap {
+  const bands: BandMap = { ...HEALTHY };
+
+  for (const override of overrides) {
+    if (override.from === null && override.to === null) {
+      // Not "fall back to the published band" — an explicit refusal to judge.
+      // The two are different answers and a club that switched temperature off
+      // would be very surprised by the other one.
+      delete bands[override.metric];
+      continue;
+    }
+
+    bands[override.metric] = { from: override.from, to: override.to };
+  }
+
+  return bands;
+}
+
+/**
+ * Every reading in an analysis that sits outside its band.
  *
  * **Only the metrics with a band are judged.** A pool with an unusual cyanuric
  * acid level produces no excursion here, because nothing in this file knows what
  * a bad one would be — and a warning derived from a number nobody chose is a
- * warning an operator learns to ignore.
+ * warning an operator learns to ignore. The same silence now covers a metric a
+ * pool has switched off, which is the same statement arrived at deliberately.
+ *
+ * `bands` defaults to the published set, so a caller with no pool in hand — a
+ * unit test, or a screen showing what the regulation says — gets the regulation.
+ * Every caller that has a pool passes that pool's resolved map.
  *
  * The result is deliberately a list rather than a boolean. "The water is unsafe"
  * is not something to tell somebody without saying which reading says so: an
@@ -110,17 +188,18 @@ export interface Excursion {
  */
 export function excursions(
   values: { metric: PoolMetric; value: number; unit: string }[],
+  bands: BandMap = HEALTHY,
 ): Excursion[] {
   const out: Excursion[] = [];
 
   for (const reading of values) {
-    const band = HEALTHY[reading.metric];
+    const band = bands[reading.metric];
     if (band === undefined) continue;
 
-    if (reading.value < band.from) {
-      out.push({ ...reading, from: band.from, to: band.to, direction: 'low' });
-    } else if (reading.value > band.to) {
-      out.push({ ...reading, from: band.from, to: band.to, direction: 'high' });
+    if (band.from !== null && reading.value < band.from) {
+      out.push({ ...reading, from: band.from, to: band.to, direction: 'low', limit: band.from });
+    } else if (band.to !== null && reading.value > band.to) {
+      out.push({ ...reading, from: band.from, to: band.to, direction: 'high', limit: band.to });
     }
   }
 

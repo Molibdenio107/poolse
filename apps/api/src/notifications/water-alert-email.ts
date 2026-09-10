@@ -56,8 +56,16 @@ interface Copy {
   subject: (pool: string) => string;
   intro: (facility: string, pool: string) => string;
   sampledAt: string;
-  above: (from: number, to: number) => string;
-  below: (from: number, to: number) => string;
+  /** Both bounds are judged, so the sentence can name the whole range. */
+  aboveRange: (from: number, to: number) => string;
+  belowRange: (from: number, to: number) => string;
+  /**
+   * Only the bound that was crossed is judged — a pool with a ceiling and no
+   * floor, which `pool_metric_range` allows and a real outdoor tank wants.
+   * Naming a range here would mean inventing the other end.
+   */
+  aboveLimit: (to: number) => string;
+  belowLimit: (from: number) => string;
   closing: string;
   signature: string;
   metric: Record<PoolMetric, string>;
@@ -69,8 +77,10 @@ const COPY: Record<'pt-PT' | 'en', Copy> = {
     intro: (facility: string, pool: string) =>
       `Uma análise à água registada em ${facility} indica que ${pool} está fora do intervalo recomendado:`,
     sampledAt: 'Amostra recolhida',
-    above: (from: number, to: number) => `acima do intervalo ${from}–${to}`,
-    below: (from: number, to: number) => `abaixo do intervalo ${from}–${to}`,
+    aboveRange: (from: number, to: number) => `acima do intervalo ${from}–${to}`,
+    belowRange: (from: number, to: number) => `abaixo do intervalo ${from}–${to}`,
+    aboveLimit: (to: number) => `acima do máximo de ${to}`,
+    belowLimit: (from: number) => `abaixo do mínimo de ${from}`,
     closing:
       'Confirme a leitura na página da piscina. O Poolse não fecha piscinas automaticamente — essa decisão é sua.',
     signature: 'Esta mensagem foi enviada automaticamente pelo Poolse.',
@@ -91,8 +101,10 @@ const COPY: Record<'pt-PT' | 'en', Copy> = {
     intro: (facility: string, pool: string) =>
       `A water analysis recorded at ${facility} puts ${pool} outside the recommended range:`,
     sampledAt: 'Sample taken',
-    above: (from: number, to: number) => `above the ${from}–${to} range`,
-    below: (from: number, to: number) => `below the ${from}–${to} range`,
+    aboveRange: (from: number, to: number) => `above the ${from}–${to} range`,
+    belowRange: (from: number, to: number) => `below the ${from}–${to} range`,
+    aboveLimit: (to: number) => `above the ${to} maximum`,
+    belowLimit: (from: number) => `below the ${from} minimum`,
     closing:
       "Check the reading on the pool's page. Poolse never closes a pool by itself — that decision is yours.",
     signature: 'This message was sent automatically by Poolse.',
@@ -134,10 +146,20 @@ export function waterAlertEmail(input: WaterAlertEmailInput): Email {
   ).format(input.takenAt);
 
   const line = (excursion: Excursion): string => {
+    // The whole range where both ends are judged, the crossed bound alone where
+    // they are not. `limit` is always a number — a reading cannot be above a
+    // ceiling that does not exist — which is what keeps this a choice of
+    // sentence rather than a null check.
+    const bothJudged = excursion.from !== null && excursion.to !== null;
+
     const side =
       excursion.direction === 'high'
-        ? copy.above(excursion.from, excursion.to)
-        : copy.below(excursion.from, excursion.to);
+        ? bothJudged
+          ? copy.aboveRange(excursion.from as number, excursion.limit)
+          : copy.aboveLimit(excursion.limit)
+        : bothJudged
+          ? copy.belowRange(excursion.limit, excursion.to as number)
+          : copy.belowLimit(excursion.limit);
 
     // pH is measured in pH. Printing both would read "pH: 8.4 pH", so the unit
     // is dropped where it is the name of the thing.

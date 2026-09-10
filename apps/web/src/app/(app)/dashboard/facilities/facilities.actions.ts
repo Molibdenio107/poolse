@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { ApiError, apiPatch, apiPost } from '../../../../lib/api';
+import { ApiError, apiPatch, apiPost, apiPut } from '../../../../lib/api';
 import { POOL_METRICS } from '../../../../lib/pool-metrics';
 import type { FormState } from '../actions';
 
@@ -239,6 +239,96 @@ export async function recordAnalysisAction(
 
   revalidatePath(`/dashboard/facilities/pools/${poolId}`);
   return { ok: true };
+}
+
+/**
+ * A pool's own safe ranges — slice 4.2, second half.
+ *
+ * **Three states per metric, and the form posts a mode rather than guessing from
+ * empty boxes.** "Use the reference", "these numbers", and "do not judge this
+ * metric here" are three different instructions, and two of them would look
+ * identical as a pair of blank inputs. The mode is what tells them apart, and
+ * an empty custom band is refused rather than quietly read as the third.
+ *
+ * A metric on the reference is simply left out of `ranges`, which is the API's
+ * contract: what arrives is the complete set of exceptions this pool should have.
+ *
+ * **A decimal comma is a number**, as it is in every importer here. Somebody
+ * typing 7,4 into a Portuguese interface means 7.4, and the field is a text
+ * input precisely so the browser cannot refuse it silently first.
+ */
+export async function savePoolRangesAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const poolId = String(formData.get('poolId') ?? '');
+
+  const ranges: { metric: string; from: number | null; to: number | null }[] = [];
+  const fields: Record<string, string> = {};
+
+  for (const metric of POOL_METRICS) {
+    const mode = String(formData.get(`mode-${metric}`) ?? 'reference');
+
+    if (mode === 'reference') continue;
+
+    if (mode === 'off') {
+      ranges.push({ metric, from: null, to: null });
+      continue;
+    }
+
+    const from = bound(formData.get(`min-${metric}`));
+    const to = bound(formData.get(`max-${metric}`));
+
+    // The one ambiguity the mode cannot resolve on its own: "own interval" with
+    // nothing in it. Named on the minimum, because that is the first box.
+    if (from === null && to === null) {
+      fields[`min-${metric}`] = 'facilities.rangeNeedsABound';
+      continue;
+    }
+    if (from === undefined) fields[`min-${metric}`] = 'facilities.rangeNotANumber';
+    if (to === undefined) fields[`max-${metric}`] = 'facilities.rangeNotANumber';
+    if (from === undefined || to === undefined) continue;
+
+    // Checked here as well as by the API, so the sentence lands beside the box
+    // rather than arriving as one message at the top of a nine-row form.
+    if (from !== null && to !== null && to < from) {
+      fields[`max-${metric}`] = 'facilities.rangeOutOfOrder';
+      continue;
+    }
+
+    ranges.push({ metric, from, to });
+  }
+
+  if (Object.keys(fields).length > 0) {
+    return { ok: false, errorKey: 'facilities.rangesFailed', fields };
+  }
+
+  try {
+    await apiPut(`/pools/${poolId}/ranges`, { ranges }, { organizationId });
+  } catch (error) {
+    return failure(error, 'facilities.rangesFailed');
+  }
+
+  revalidatePath(`/dashboard/facilities/pools/${poolId}`);
+  return { ok: true };
+}
+
+/**
+ * One end of a band: a number, null for "not judged", or undefined for "that is
+ * not a number at all".
+ *
+ * Three outcomes rather than two, because a blank box and a typo are different
+ * things to say to somebody.
+ */
+function bound(raw: FormDataEntryValue | null): number | null | undefined {
+  const text = String(raw ?? '').trim().replace(',', '.');
+  if (text === '') return null;
+
+  const parsed = Number(text);
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+
+  return parsed;
 }
 
 export async function archiveAnalysisAction(

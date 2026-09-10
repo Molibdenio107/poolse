@@ -82,6 +82,7 @@ Readings live on the tank's own page: `/dashboard/facilities/pools/<id>`.
 | Record one analysis by hand | owner, admin |
 | Import a water log or an analysis report | owner, admin |
 | Archive an analysis | owner, admin |
+| Set this pool's own safe ranges | owner, admin |
 
 Nine metrics — pH, temperature, free and combined chlorine, total alkalinity,
 calcium hardness, cyanuric acid, turbidity, salt. The **unit is the server's**, from
@@ -92,7 +93,38 @@ other four get no invented one. A reading outside its band raises the "shut the 
 notice, which offers and never acts.
 
 The bands and the metric list live in `@poolse/rules`, so the screen and the API judge a
-reading by the same numbers.
+reading by the same numbers. **A pool may set its own** — see below.
+
+### This pool's ranges
+
+Under *Qualidade da água*, behind **Intervalos desta piscina**, owner and admin only. Three
+states per metric:
+
+| State | What it means |
+|---|---|
+| **Referência (7.2–7.6)** | The published band a Portuguese municipal pool is inspected against. No row is stored |
+| **Intervalo próprio** | This club's own numbers. Either bound may be left empty, and an empty bound is *not judged* — an outdoor tank can have a floor and no ceiling |
+| **Não avisar** | The metric is not judged here at all. Readings are still recorded and shown; only the warning and the email stop |
+
+For the four metrics with no published band — calcium hardness, cyanuric acid, turbidity, salt
+— there are two states rather than three, because "reference" and "do not warn" would mean the
+same thing. A club that does test them can still give them a band, and it will then be warned.
+
+**The hotel pool is the case this exists for.** A tank kept at 30 °C is outside the published
+25–29 every day of its life, so before this it raised an alert every day until somebody stopped
+reading them.
+
+**An own interval with both boxes empty is refused**, naming the field: it looks identical to
+"use the reference" and to "do not warn", and guessing which was meant is the one thing the
+three-state control exists to avoid.
+
+**A metric left on the reference is not stored**, so a later correction to a published band
+reaches every pool that never overrode it. Reverting a metric archives its row rather than
+deleting it — a threshold that decided whether anybody was warned is worth a record.
+
+The chart shades a band only where both ends are judged; a one-sided band would need the other
+edge invented. The numbers are always in the list below it, and a warning always names the
+bound that was crossed.
 
 ### An out-of-range reading reaches someone
 

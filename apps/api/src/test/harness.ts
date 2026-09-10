@@ -195,6 +195,9 @@ const TENANT_TABLES = [
    */
   'pool_analysis_alert',
   'pool_analysis',
+  // A pool's own safe ranges, before the tank they belong to. Not cascaded, for
+  // the same reason a lane is not: only a teardown genuinely deletes a pool.
+  'pool_metric_range',
   'lane',
   'pool',
   'booking_category',

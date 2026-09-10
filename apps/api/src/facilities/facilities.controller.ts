@@ -20,11 +20,16 @@ import {
   findWaterAlertNotice,
   listAnalyses,
   listPoolAlerts,
+  listPoolRanges,
   markAlertSent,
   METRIC_UNITS,
   POOL_METRICS,
+  resolveBands,
   runAnalysisImport,
+  savePoolRanges,
   type AnalysisImportResult,
+  type BandMap,
+  type BandOverride,
   type PoolAlertRecord,
   type PoolAnalysis,
   type PoolMetric,
@@ -148,6 +153,24 @@ export class FacilitiesController {
       analyses: PoolAnalysis[];
       alerts: PoolAlertRecord[];
       /**
+       * The band each metric is judged by on this pool, published values
+       * overridden — resolved here and never on the client.
+       *
+       * A metric absent from the map is not judged: either nothing published a
+       * band for it, or this club switched it off. The screen draws what it is
+       * given, the same way it renders the overdue-cleaning boolean rather than
+       * recomputing the interval.
+       */
+      bands: BandMap;
+      /**
+       * The raw overrides, for the editor only.
+       *
+       * The resolved map above cannot answer "is this metric on the reference or
+       * deliberately set to the same numbers", and the form has to show which of
+       * its three states each metric is in.
+       */
+      bandOverrides: BandOverride[];
+      /**
        * Whether an alert would actually be sent from this environment — 4.2.
        *
        * The panel says so rather than leaving an operator to assume. On a laptop
@@ -163,6 +186,9 @@ export class FacilitiesController {
     const detail = await findPool(organizationId, poolId);
     if (!detail) throw new NotFoundException('No such pool');
 
+    // Read once and used twice — resolved for the screen, raw for the editor.
+    const overrides = await listPoolRanges(organizationId, poolId);
+
     // Carried in the response for the same reason the listings carry it: the
     // client never names its own tenant, it echoes back the one the API resolved.
     return {
@@ -175,6 +201,8 @@ export class FacilitiesController {
       // reason — ten rows at most, rendered in the same panel.
       analyses: await listAnalyses(organizationId, poolId),
       alerts: await listPoolAlerts(organizationId, poolId),
+      bands: resolveBands(overrides),
+      bandOverrides: overrides,
       emailConfigured: emailIsConfigured(),
     };
   }
@@ -329,6 +357,38 @@ export class FacilitiesController {
     const archived = await archiveAnalysis(organizationId, id);
     if (!archived) throw new NotFoundException('No such analysis');
     return { archived: true };
+  }
+
+  /**
+   * Set this pool's own safe ranges — slice 4.2, second half.
+   *
+   * **The whole set in one call**, so what arrives is the complete list of
+   * exceptions this pool should have and a metric left out reverts to the
+   * published band. Nine requests for a nine-row form would be nine audit
+   * entries and a half-saved band table if the eighth failed.
+   *
+   * `owner` and `admin`, the same line every other write to a pool draws. Not
+   * maintenance: this decides whether anybody is warned at all, which is a
+   * different kind of decision from recording a reading — and widening it is a
+   * call to take out loud rather than to slip into a UI ticket.
+   */
+  @Put('pools/:poolId/ranges')
+  async savePoolRanges(
+    @Param('poolId') poolId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ saved: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const detail = await findPool(organizationId, poolId);
+    if (!detail) throw new NotFoundException('No such pool');
+
+    try {
+      await savePoolRanges(organizationId, poolId, readBandOverrides(body['ranges']));
+      return { saved: true };
+    } catch (error) {
+      throw asHttp(error);
+    }
   }
 
   /**
@@ -840,6 +900,81 @@ function readWeek(value: unknown): FacilityDayInput[] {
   });
 
   return days.sort((a, b) => a.weekday - b.weekday);
+}
+
+/**
+ * A pool's safe-range overrides, in a shape the database will accept.
+ *
+ * Validated here rather than left to the CHECK constraints, for the reason
+ * `readWeek` gives one screen up: a constraint violation arrives as a 500 and a
+ * Postgres string, and "max_value >= min_value" is a message for whoever wrote
+ * the migration rather than for somebody who typed 7.6 into the minimum box.
+ *
+ * **A metric absent from the list reverts to the published band**, which is the
+ * contract `savePoolRanges` rests on, so an empty list is legitimate and means
+ * "use the reference everywhere". A metric sent twice is refused rather than
+ * silently last-wins: two answers about one band is a client bug, and picking
+ * one of them hides it.
+ *
+ * **Both bounds null is allowed and means "do not judge this metric here".** It
+ * is the one case that looks like an empty form and is not — see `resolveBands`.
+ */
+function readBandOverrides(value: unknown): BandOverride[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new BadRequestException('ranges must be a list');
+
+  const seen = new Set<string>();
+
+  return value.map((entry): BandOverride => {
+    if (typeof entry !== 'object' || entry === null) {
+      throw new BadRequestException('each range must be an object');
+    }
+    const range = entry as Record<string, unknown>;
+
+    const metric = range['metric'];
+    if (typeof metric !== 'string' || !(POOL_METRICS as readonly string[]).includes(metric)) {
+      throw new BadRequestException(`${String(metric)} is not a metric this pool measures`);
+    }
+    if (seen.has(metric)) {
+      throw new BadRequestException(`${metric} was sent twice`);
+    }
+    seen.add(metric);
+
+    const from = bound(range['from'], `${metric}.from`);
+    const to = bound(range['to'], `${metric}.to`);
+
+    // Said in the language of the form, and field-named, because every refusal
+    // on a form has to say which box it meant — F-09's rule.
+    if (from !== null && to !== null && to < from) {
+      throw new BadRequestException({
+        message: `${metric}: the maximum cannot be below the minimum`,
+        field: `${metric}.to`,
+      });
+    }
+
+    if (metric === 'ph' && ((from !== null && from > 14) || (to !== null && to > 14))) {
+      throw new BadRequestException({ message: 'A pH cannot exceed 14', field: 'ph.to' });
+    }
+
+    return { metric: metric as PoolMetric, from, to };
+  });
+}
+
+/** One end of a band: a number at or above zero, or null for "not judged". */
+function bound(value: unknown, field: string): number | null {
+  if (value === null || value === undefined || value === '') return null;
+
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new BadRequestException({ message: `${field} must be a number`, field });
+  }
+  // The same floor the readings carry: no negative measurement on this panel is
+  // meaningful, so no negative bound is either.
+  if (parsed < 0) {
+    throw new BadRequestException({ message: `${field} cannot be negative`, field });
+  }
+
+  return parsed;
 }
 
 /**

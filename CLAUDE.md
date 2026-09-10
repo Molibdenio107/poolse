@@ -471,6 +471,17 @@ index, and the *sending* happens after the commit where it can never roll a read
 `metrics` is a snapshot even so, because a measurement is corrected in place and a compliance
 record that rewrote itself when somebody fixed a typo would not be one.
 
+**A pool's band is the published one until a club says otherwise, and `resolveBands` is where
+the two meet.** `pool_metric_range` holds only exceptions — no row is the answer for almost
+every pool, which is what lets a later correction to a published band reach everybody who never
+overrode it. Three states and the third is why both bounds are nullable: no row is the
+reference, a row is its bounds *on the sides that carry one*, and a row with **neither** bound
+means the metric is not judged here at all. Never collapse the first and the third — a hotel
+tank kept at 30 °C is outside the published temperature band every day of its life, and that
+distinction is the difference between one alert and one a day forever. `Excursion.limit` is the
+bound actually crossed, so every sentence about an excursion is sayable without a null check,
+and the API ships the *resolved* map: no client merges bands.
+
 **Only a recent sample alerts, and the screen says whether anything was sent.**
 `ALERT_WINDOW_HOURS` is 48, compared against `taken_at` in SQL; a club's first act is to
 import its history, and forty emails about water dosed last winter teach it to filter the

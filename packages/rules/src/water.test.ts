@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { excursions, HEALTHY, METRIC_UNITS, POOL_METRICS } from './water.js';
+import { excursions, HEALTHY, METRIC_UNITS, POOL_METRICS, resolveBands } from './water.js';
 
 /**
  * The band rule — slice 4.2.
@@ -83,4 +83,91 @@ test('every metric has a unit, and every band is the right way round', () => {
     assert.ok(band, metric);
     assert.ok(band.from < band.to, `${metric}: ${band.from} is not below ${band.to}`);
   }
+});
+
+/**
+ * Per-pool bands — slice 4.2, second half.
+ *
+ * `resolveBands` is the only place a club's own numbers meet the published ones,
+ * and the three states it distinguishes are the whole feature: no override, an
+ * override, and an override that says "do not judge this at all". Conflating the
+ * first and the third is the bug that would make a hotel pool alert every day
+ * again, so both directions are pinned.
+ */
+
+test('with no overrides, the published bands stand', () => {
+  const bands = resolveBands([]);
+  assert.deepEqual(bands.ph, { from: 7.2, to: 7.6 });
+  assert.equal(bands.cyanuric_acid, undefined);
+});
+
+test('an override replaces the published band for that metric only', () => {
+  const bands = resolveBands([{ metric: 'temperature', from: 28, to: 31 }]);
+
+  assert.deepEqual(bands.temperature, { from: 28, to: 31 });
+  assert.deepEqual(bands.ph, { from: 7.2, to: 7.6 }, 'the others are untouched');
+
+  // The hotel tank: 30 °C is out of the published band and inside its own.
+  assert.deepEqual(excursions([{ metric: 'temperature', value: 30, unit: '°C' }]).length, 1);
+  assert.deepEqual(
+    excursions([{ metric: 'temperature', value: 30, unit: '°C' }], bands),
+    [],
+    'the same reading is fine against the pool that chose it',
+  );
+});
+
+test('an override with neither bound drops the metric rather than falling back', () => {
+  const bands = resolveBands([{ metric: 'temperature', from: null, to: null }]);
+
+  assert.equal(bands.temperature, undefined, 'not the published band');
+  assert.deepEqual(
+    excursions([{ metric: 'temperature', value: 45, unit: '°C' }], bands),
+    [],
+    'a metric switched off never raises anything',
+  );
+});
+
+test('a one-sided band is judged on that side alone', () => {
+  const bands = resolveBands([{ metric: 'temperature', from: 24, to: null }]);
+
+  assert.deepEqual(excursions([{ metric: 'temperature', value: 34, unit: '°C' }], bands), []);
+
+  const [low] = excursions([{ metric: 'temperature', value: 21, unit: '°C' }], bands);
+  assert.equal(low?.direction, 'low');
+  assert.equal(low?.limit, 24, 'the crossed bound is always a number');
+  assert.equal(low?.to, null, 'and the side nobody judges stays null');
+});
+
+test('an override can give a band to a metric that never had one', () => {
+  // The case this form adds beyond the overrides it was built for: a club that
+  // does test cyanuric acid can say what a bad one is.
+  const bands = resolveBands([{ metric: 'cyanuric_acid', from: 30, to: 50 }]);
+
+  const [high] = excursions([{ metric: 'cyanuric_acid', value: 80, unit: 'ppm' }], bands);
+  assert.equal(high?.metric, 'cyanuric_acid');
+  assert.equal(high?.limit, 50);
+});
+
+test('the last override for a metric wins, and the rest of the map survives it', () => {
+  // Not a case the API can produce — it refuses a metric sent twice — but the
+  // resolver is a pure function anybody may call, and silently keeping the first
+  // would be the surprising half of the two.
+  const bands = resolveBands([
+    { metric: 'ph', from: 7, to: 8 },
+    { metric: 'ph', from: null, to: null },
+  ]);
+
+  assert.equal(bands.ph, undefined);
+  assert.deepEqual(bands.free_chlorine, { from: 0.5, to: 2 });
+});
+
+test('resolveBands does not mutate the published constant', () => {
+  resolveBands([{ metric: 'ph', from: 1, to: 2 }]);
+  resolveBands([{ metric: 'temperature', from: null, to: null }]);
+
+  // A shallow copy taken the wrong way round would leave every later request in
+  // the process judging pH from 1 to 2, which is the kind of bug that only shows
+  // up on the second club of the afternoon.
+  assert.deepEqual(HEALTHY.ph, { from: 7.2, to: 7.6 });
+  assert.deepEqual(HEALTHY.temperature, { from: 25, to: 29 });
 });

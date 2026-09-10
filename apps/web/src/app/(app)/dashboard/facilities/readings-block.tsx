@@ -1,12 +1,12 @@
 import { ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
-import type { PoolAlert, PoolAnalysis, PoolMetric } from '@/lib/api';
+import type { BandMap, BandOverride, PoolAlert, PoolAnalysis, PoolMetric } from '@/lib/api';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { TrendChart } from '@/components/trend-chart';
-import { excursions, HEALTHY } from '@/lib/water';
+import { excursions } from '@/lib/water';
 import { ExportAnalyses, UnsafeWaterNotice } from './water-actions';
 import { WaterImport } from './pools/[poolId]/water-import';
-import { AnalysisForm, ArchiveAnalysisButton } from './analysis-forms';
+import { AnalysisForm, ArchiveAnalysisButton, SafeRangesForm } from './analysis-forms';
 
 /**
  * Water quality — round 4, built.
@@ -39,6 +39,8 @@ export async function ReadingsBlock({
   poolName,
   analyses,
   alerts,
+  bands,
+  bandOverrides,
   emailConfigured,
   canManage,
 }: {
@@ -49,6 +51,17 @@ export async function ReadingsBlock({
   analyses: PoolAnalysis[];
   /** Newest first, as the API sends them — slice 4.2. */
   alerts: PoolAlert[];
+  /**
+   * The band each metric is judged by *on this pool*, resolved by the API.
+   *
+   * Not `HEALTHY`, which this file used to read: a club may override a band,
+   * drop one bound or switch a metric off, and the published constant knows
+   * none of that. The merge happens once, on the server, so the chart, the
+   * warning and the alert email cannot disagree.
+   */
+  bands: BandMap;
+  /** The raw overrides, for the editor's three-state selects. */
+  bandOverrides: BandOverride[];
   /** Whether an alert would actually be sent from this environment. */
   emailConfigured: boolean;
   canManage: boolean;
@@ -65,6 +78,20 @@ export async function ReadingsBlock({
   );
 
   const latest = analyses[analyses.length - 1];
+
+  /*
+   * The chart shades a region, so it needs both edges.
+   *
+   * A one-sided band is real — an outdoor tank with a floor and no ceiling — and
+   * a shaded area with one edge missing would have to invent the other one. So
+   * the band is drawn only where both ends are judged; the numbers are always in
+   * the list below, and the warning still names the bound that was crossed.
+   */
+  const bandFor = (metric: PoolMetric): { from: number; to: number } | undefined => {
+    const band = bands[metric];
+    if (band === undefined || band.from === null || band.to === null) return undefined;
+    return { from: band.from, to: band.to };
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -114,7 +141,7 @@ export async function ReadingsBlock({
           */}
           <UnsafeWaterNotice
             poolId={poolId}
-            excursions={latest === undefined ? [] : excursions(latest.values)}
+            excursions={latest === undefined ? [] : excursions(latest.values, bands)}
           />
 
           {measured.length > 0 && (
@@ -142,7 +169,12 @@ export async function ReadingsBlock({
                         .find((value) => value.metric === metric)?.unit ??
                       ''
                     }
-                    band={HEALTHY[metric]}
+                    /*
+                      This pool's band, not the published one. A tank judged
+                      only from below draws one edge, and a metric switched off
+                      draws none — the honest picture either way.
+                    */
+                    band={bandFor(metric)}
                   />
                 );
               })}
@@ -323,6 +355,34 @@ export async function ReadingsBlock({
         read-only visitor sees the readings and no control the API would refuse.
       */}
       {canManage && <WaterImport poolId={poolId} canManage={canManage} />}
+
+      {/*
+        What this tank's water is supposed to look like — slice 4.2, second half.
+
+        Behind a disclosure and last in the panel, because it is a setting rather
+        than a job: a club sets it once when a tank is not a municipal pool, and
+        never looks at it again. `<details>` for the reason the analysis form
+        uses one — the browser's own disclosure is keyboard-operable and
+        announced as one before any JavaScript arrives.
+      */}
+      {canManage && (
+        <details className="group rounded border border-border">
+          <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <ChevronRight
+              aria-hidden
+              className="size-4 transition-transform group-open:rotate-90"
+            />
+            {t('facilities.rangesTitle')}
+          </summary>
+          <div className="flex flex-col gap-4 border-t border-border p-4">
+            <SafeRangesForm
+              organizationId={organizationId}
+              poolId={poolId}
+              overrides={bandOverrides}
+            />
+          </div>
+        </details>
+      )}
     </div>
   );
 }

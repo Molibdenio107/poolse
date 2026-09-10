@@ -5,6 +5,8 @@ import {
   ALERT_WINDOW_HOURS,
   METRIC_UNITS,
   excursions,
+  resolveBands,
+  type BandOverride,
   type Excursion,
   type PoolMetric,
 } from '@poolse/rules';
@@ -40,9 +42,13 @@ export {
   METRIC_UNITS,
   HEALTHY,
   excursions,
+  resolveBands,
   ALERT_WINDOW_HOURS,
-  type PoolMetric,
+  type Band,
+  type BandMap,
+  type BandOverride,
   type Excursion,
+  type PoolMetric,
 } from '@poolse/rules';
 
 export interface AnalysisValue {
@@ -394,6 +400,136 @@ export async function runAnalysisImport(
 }
 
 // ---------------------------------------------------------------------------
+// A pool's own safe ranges — slice 4.2, second half
+// ---------------------------------------------------------------------------
+//
+// 4.2 shipped with the published bands as the only ones. This is the half that
+// lets a club say what its own water is supposed to look like — a hotel tank at
+// 30 °C, an outdoor pool judged only from below, a metric switched off.
+//
+// **`resolveBands` in `@poolse/rules` is the only place the two meet.** Nothing
+// here merges an override onto a published band, and nothing on the client does
+// either: the API resolves and ships the answer, exactly as the overdue-cleaning
+// rule does.
+
+// A row of `pool_metric_range` is a `BandOverride` from `@poolse/rules` — the
+// same `from` / `to` the bands and the excursions use, rather than a second
+// vocabulary meaning the same thing. The columns are `min_value` / `max_value`
+// because `from` is a SQL keyword; the mapping happens once, in `readRanges`.
+
+/**
+ * This tank's live overrides.
+ *
+ * Almost always empty, which is the design: a row is an exception and the
+ * published band is the answer for nearly every pool.
+ */
+export async function listPoolRanges(
+  organizationId: string,
+  poolId: string,
+): Promise<BandOverride[]> {
+  return withOrg(organizationId, (tx) => readRanges(tx, poolId));
+}
+
+/**
+ * The same read, inside a caller's transaction.
+ *
+ * `raiseAlert` needs it there: the band a reading is judged by has to be the one
+ * in force at the instant the reading was written, and a second connection could
+ * see a band somebody changed in between.
+ */
+async function readRanges(tx: Tx, poolId: string): Promise<BandOverride[]> {
+  const { rows } = await tx.query<{
+    metric: PoolMetric;
+    // ::float8 both, or numeric arrives as a string and every comparison
+    // against a reading becomes a string comparison that looks right for
+    // single digits and stops being right at 10.
+    min_value: number | null;
+    max_value: number | null;
+  }>(
+    `SELECT metric, min_value::float8, max_value::float8
+       FROM pool_metric_range
+      WHERE pool_id = $1 AND archived_at IS NULL
+      ORDER BY metric::text`,
+    [poolId],
+  );
+
+  return rows.map((row) => ({
+    metric: row.metric,
+    from: row.min_value,
+    to: row.max_value,
+  }));
+}
+
+/**
+ * Replace this pool's whole set of overrides.
+ *
+ * **The whole set, not one metric at a time.** The form is nine rows with one
+ * Guardar, so a per-metric endpoint would mean nine requests, nine audit entries
+ * and a half-saved band table if the eighth failed. What arrives is the complete
+ * list of exceptions this pool should have; **a metric absent from it reverts to
+ * the published band**, which is the only way "put this one back to the
+ * reference" can be expressed without a second verb.
+ *
+ * An entry with both bounds null is not the same as an absent one: it says this
+ * pool is not judged on that metric. `resolveBands` is where that distinction is
+ * honoured, and the controller is where it is validated.
+ *
+ * Reverting archives rather than deletes, so the record of a threshold that
+ * decided whether anybody was warned survives. The partial unique index is what
+ * lets the same metric be overridden again afterwards.
+ */
+export async function savePoolRanges(
+  organizationId: string,
+  poolId: string,
+  overrides: BandOverride[],
+): Promise<void> {
+  await withOrg(organizationId, async (tx) => {
+    const keep = overrides.map((override) => override.metric);
+
+    // Archive first: a metric moving from an override to the reference has to
+    // let go of its row before the upsert below could collide with it. The cast
+    // is on the array, not on each element, so an empty list is still a typed
+    // empty array rather than a syntax error.
+    await tx.query(
+      `UPDATE pool_metric_range
+          SET archived_at = now()
+        WHERE pool_id = $1
+          AND archived_at IS NULL
+          AND NOT (metric = ANY ($2::text[]::pool_metric[]))`,
+      [poolId, keep],
+    );
+
+    for (const override of overrides) {
+      await tx.query(
+        `INSERT INTO pool_metric_range
+           (organization_id, pool_id, metric, min_value, max_value)
+         VALUES ($1, $2, $3::pool_metric, $4, $5)
+         ON CONFLICT (organization_id, pool_id, metric) WHERE archived_at IS NULL
+         DO UPDATE SET min_value = excluded.min_value,
+                       max_value = excluded.max_value`,
+        [organizationId, poolId, override.metric, override.from, override.to],
+      );
+    }
+
+    await recordAudit(tx, {
+      action: 'pool.rangesSaved',
+      entityType: 'pool',
+      entityId: poolId,
+      data: {
+        overridden: overrides
+          .filter((one) => one.from !== null || one.to !== null)
+          .map((one) => one.metric),
+        // Named separately because "we stopped judging this metric" is the entry
+        // somebody will come looking for after an alert that never arrived.
+        notJudged: overrides
+          .filter((one) => one.from === null && one.to === null)
+          .map((one) => one.metric),
+      },
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Out-of-range alerts — slice 4.2
 // ---------------------------------------------------------------------------
 //
@@ -437,8 +573,14 @@ async function raiseAlert(
 ): Promise<string | null> {
   // The unit comes from METRIC_UNITS, exactly as the row's own does — the bands
   // are stated in those units and a reading judged in another one is nonsense.
+  //
+  // The bands are this pool's, read inside the caller's transaction: the band in
+  // force at the instant the reading was written is the one it is judged by, and
+  // it is the same resolution the screen renders from. A club that switched
+  // temperature off gets no email about temperature.
   const failed = excursions(
     values.map((reading) => ({ ...reading, unit: METRIC_UNITS[reading.metric] })),
+    resolveBands(await readRanges(tx, poolId)),
   );
   if (failed.length === 0) return null;
 
@@ -600,6 +742,7 @@ export async function findWaterAlertNotice(
       organization_locale: string;
       facility_name: string;
       facility_timezone: string;
+      pool_id: string;
       pool_name: string;
       taken_at: Date;
       metrics: string[];
@@ -610,6 +753,7 @@ export async function findWaterAlertNotice(
              o.locale AS organization_locale,
              f.name     AS facility_name,
              f.timezone AS facility_timezone,
+             p.id       AS pool_id,
              p.name     AS pool_name,
              a.taken_at,
              -- ::text[] for the reason listPoolAlerts gives. Here it was worse
@@ -679,7 +823,8 @@ export async function findWaterAlertNotice(
       facilityTimezone: row.facility_timezone,
       poolName: row.pool_name,
       takenAt: row.taken_at,
-      excursions: excursions(row.values ?? []).filter((one) => named.has(one.metric)),
+      excursions: excursions(row.values ?? [], resolveBands(await readRanges(tx, row.pool_id)))
+        .filter((one) => named.has(one.metric)),
       recipients: people.map((person) => person.email),
     };
   });

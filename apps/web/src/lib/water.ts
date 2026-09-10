@@ -13,6 +13,10 @@
 export {
   HEALTHY,
   excursions,
+  resolveBands,
   ALERT_WINDOW_HOURS,
+  type Band,
+  type BandMap,
+  type BandOverride,
   type Excursion,
 } from '@poolse/rules';

@@ -22,6 +22,12 @@
 -- DELETE grant, which a future `GRANT ALL` would undo while passing everything
 -- else here.
 --
+-- **Tests 13 to 16 are `pool_metric_range`**, the second half of the same slice.
+-- 13 is the one that matters: a bound may be null on either side or on both, and
+-- what that means is decided by `resolveBands` rather than by this table. A
+-- well-meaning NOT NULL here would take away both the one-sided band and the off
+-- switch, and every test above it would still pass.
+--
 -- Run: pnpm db:test
 
 \set ON_ERROR_STOP on
@@ -463,6 +469,158 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'PASS test 12: alerts are visible only to their own tenant';
+END $$;
+
+RESET ROLE;
+
+-- ---------------------------------------------------------------------------
+-- Test 13 — a pool's own safe range, and the bounds it may hold
+--
+-- Slice 4.2's second half. Both bounds are nullable and independent, because a
+-- null bound is not judged — an outdoor tank with a floor and no ceiling is a
+-- real pool, and a row with neither bound is how a club says "do not judge this
+-- metric here" without a column for it.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid := '55555555-5555-5555-5555-555555555555';
+  v_pool uuid;
+  n int;
+BEGIN
+  SELECT id INTO v_pool FROM pool WHERE organization_id = v_org LIMIT 1;
+
+  -- A hotel tank: its own temperature band, both ends.
+  INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+  VALUES (v_org, v_pool, 'temperature', 28, 31);
+
+  -- One end only, which is the case a NOT NULL would have made unsayable.
+  INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+  VALUES (v_org, v_pool, 'free_chlorine', 0.5, NULL);
+
+  -- Neither end: not judged at all.
+  INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+  VALUES (v_org, v_pool, 'turbidity', NULL, NULL);
+
+  SELECT count(*) INTO n FROM pool_metric_range
+   WHERE pool_id = v_pool AND archived_at IS NULL;
+  IF n <> 3 THEN
+    RAISE EXCEPTION 'FAIL test 13a: expected three ranges, found %', n;
+  END IF;
+
+  -- A band the wrong way round would make every reading an excursion in both
+  -- directions at once, which is a typo that reads fine on a form.
+  BEGIN
+    INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+    VALUES (v_org, v_pool, 'ph', 7.6, 7.2);
+    RAISE EXCEPTION 'FAIL test 13b: a maximum below the minimum was accepted';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  -- Equal ends are allowed: "exactly 7.4" is a strict club, not a mistake.
+  INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+  VALUES (v_org, v_pool, 'salt', 4000, 4000);
+
+  BEGIN
+    INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+    VALUES (v_org, v_pool, 'total_alkalinity', -1, 100);
+    RAISE EXCEPTION 'FAIL test 13c: a negative bound was accepted';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  -- pH has a real ceiling here, exactly as it does on the reading.
+  BEGIN
+    INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+    VALUES (v_org, v_pool, 'ph', 7, 15);
+    RAISE EXCEPTION 'FAIL test 13d: a pH ceiling above 14 was accepted';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 13: a range may hold one bound, both, or neither, and never a bad pair';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 14 — one live range per metric per pool, and archiving frees the slot
+--
+-- The partial unique index. A club that overrides pH, reverts to the reference
+-- and overrides it again next season must not collide with the dead row — the
+-- same reason every unique constraint on a soft-deletable table here is partial.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid := '55555555-5555-5555-5555-555555555555';
+  v_pool uuid;
+BEGIN
+  SELECT id INTO v_pool FROM pool WHERE organization_id = v_org LIMIT 1;
+
+  BEGIN
+    INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+    VALUES (v_org, v_pool, 'temperature', 26, 30);
+    RAISE EXCEPTION 'FAIL test 14a: one pool held two live temperature ranges';
+  EXCEPTION WHEN unique_violation THEN
+    NULL;
+  END;
+
+  UPDATE pool_metric_range SET archived_at = now()
+   WHERE pool_id = v_pool AND metric = 'temperature' AND archived_at IS NULL;
+
+  -- Reverting and overriding again is an ordinary thing to do across seasons.
+  INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+  VALUES (v_org, v_pool, 'temperature', 26, 30);
+
+  RAISE NOTICE 'PASS test 14: one live range per metric, and an archived one holds no slot';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 15 — a range cannot name the neighbour's pool, and is not visible to them
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid := '55555555-5555-5555-5555-555555555555';
+  v_their_pool uuid;
+BEGIN
+  SELECT id INTO v_their_pool
+    FROM pool WHERE organization_id = '66666666-6666-6666-6666-666666666666';
+
+  BEGIN
+    INSERT INTO pool_metric_range (organization_id, pool_id, metric, min_value, max_value)
+    VALUES (v_org, v_their_pool, 'ph', 7, 8);
+    RAISE EXCEPTION 'FAIL test 15: our range named the neighbour''s pool';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 15: the composite key refuses a cross-tenant pool on a range';
+END $$;
+
+SET LOCAL ROLE poolse_app;
+
+DO $$
+DECLARE
+  v_a uuid := '55555555-5555-5555-5555-555555555555';
+  v_b uuid := '66666666-6666-6666-6666-666666666666';
+  n int;
+BEGIN
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  SELECT count(*) INTO n FROM pool_metric_range WHERE organization_id = v_a;
+  IF n <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 16a: the neighbouring club could read % of our ranges', n;
+  END IF;
+
+  PERFORM set_config('app.organization_id', v_a::text, true);
+
+  SELECT count(*) INTO n FROM pool_metric_range WHERE organization_id = v_a;
+  IF n < 1 THEN
+    RAISE EXCEPTION 'FAIL test 16b: our own ranges were not visible to us';
+  END IF;
+
+  RAISE NOTICE 'PASS test 16: safe ranges are visible only to their own tenant';
 END $$;
 
 RESET ROLE;

@@ -77,12 +77,26 @@ export function UnsafeWaterNotice({
               <li key={excursion.metric}>
                 {t(`facilities.metric.${excursion.metric}`)}: {excursion.value}{' '}
                 {excursion.unit} —{' '}
-                {t(
-                  excursion.direction === 'high'
-                    ? 'facilities.aboveRange'
-                    : 'facilities.belowRange',
-                  { from: excursion.from, to: excursion.to },
-                )}
+                {/*
+                  The whole range where both ends are judged, the crossed bound
+                  alone where they are not — a pool may carry a floor and no
+                  ceiling. `limit` is always a number, because a reading cannot
+                  be above a ceiling that does not exist, so this is a choice of
+                  sentence rather than a null check.
+                */}
+                {excursion.from !== null && excursion.to !== null
+                  ? t(
+                      excursion.direction === 'high'
+                        ? 'facilities.aboveRange'
+                        : 'facilities.belowRange',
+                      { from: excursion.from, to: excursion.to },
+                    )
+                  : t(
+                      excursion.direction === 'high'
+                        ? 'facilities.aboveLimit'
+                        : 'facilities.belowLimit',
+                      { limit: excursion.limit },
+                    )}
               </li>
             ))}
           </ul>

@@ -178,6 +178,8 @@ export default async function PoolPage({
               poolName={pool.name}
               analyses={pool.analyses}
               alerts={pool.alerts}
+              bands={pool.bands}
+              bandOverrides={pool.bandOverrides}
               emailConfigured={pool.emailConfigured}
               canManage={pool.canManage}
             />
