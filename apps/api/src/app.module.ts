@@ -25,6 +25,7 @@ import { FacilitiesController } from './facilities/facilities.controller.js';
 import { HealthController } from './health/health.controller.js';
 import { InventoryController } from './inventory/inventory.controller.js';
 import { SpacesController } from './spaces/spaces.controller.js';
+import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { SlotsController } from './facilities/slots.controller.js';
 import { PartnersController } from './facilities/partners.controller.js';
 import { GridController } from './facilities/grid.controller.js';
@@ -100,6 +101,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     FacilitiesController,
     InventoryController,
     SpacesController,
+    MaintenanceController,
     SlotsController,
     PartnersController,
     GridController,

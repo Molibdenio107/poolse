@@ -162,6 +162,13 @@ const TENANT_TABLES = [
    * points at a facility, a space, a pool *and* an inventory item, so it has to
    * go before every one of them. A cleaning points only at its space.
    */
+  /*
+   * Planned maintenance — slice 4.3. Completions before the tasks they belong
+   * to, and the tasks before the facility, space, pool and inventory item they
+   * may name; none of those references cascades, for the reason a lane does not.
+   */
+  'maintenance_task_completion',
+  'maintenance_task',
   'maintenance_request',
   'cleaning_log',
   'inventory_item_pool',

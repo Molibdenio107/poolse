@@ -13,6 +13,8 @@ import { PreferenceSync } from './preference-sync';
 import { CreateOrganizationForm } from './create-organization-form';
 import { PageError, PageShell } from '@/components/page-shell';
 import { OccupancyPanel } from '@/components/occupancy-panel';
+import { MyTasksPanel } from './my-tasks-panel';
+import { listMyTasks } from './facilities/maintenance.actions';
 
 /**
  * The dashboard — and, for now, mostly a statement that it is not built yet.
@@ -95,6 +97,16 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
       occupancyFailed = occupancy === null;
     }
   }
+  /*
+   * What is mine — slice 4.3.
+   *
+   * `listMyTasks` answers null for anybody the endpoint refuses, which is every
+   * student and encarregado. That is not a failure worth a banner: the panel
+   * simply is not there, exactly as the occupancy one is absent for a club with
+   * no bookings.
+   */
+  const myTasks = me === null ? null : await listMyTasks();
+
   const name =
     me === null
       ? null
@@ -122,6 +134,8 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
           {occupancy !== null && (
             <OccupancyPanel occupancy={occupancy} facilityId={occupancyFacilityId} />
           )}
+
+          {myTasks !== null && <MyTasksPanel list={myTasks} />}
 
           {occupancyFailed && (
             <section className="rounded border border-border bg-surface p-5">

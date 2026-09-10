@@ -1498,6 +1498,61 @@ not delete.
 **All four privileges, unlike the alert beside it.** This is a setting, edited in place, and
 nothing about it is a statement that something happened.
 
+### Planned maintenance
+
+```
+maintenance_task
+  id, organization_id, facility_id,
+  space_id, pool_id, inventory_item_id,                 -- at most one, all optional
+  title text not null, description text,
+  interval_days integer not null check (> 0),
+  assigned_to uuid,                                     -- membership, null = anybody
+  active boolean not null default true,                 -- paused, not deleted
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  foreign key (organization_id, facility_id) references facility (organization_id, id)
+  foreign key (organization_id, facility_id, <target>) references <target table>   -- MATCH SIMPLE
+  foreign key (organization_id, assigned_to) references membership (organization_id, id)
+
+maintenance_task_completion
+  id, organization_id, task_id,
+  performed_at timestamptz not null default now(),      -- when the work happened
+  performed_by uuid not null, note text,
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  foreign key (organization_id, task_id) references maintenance_task (organization_id, id)
+```
+
+**Two tables, and the second is what makes the first answerable.** A task with no record of
+having been done cannot say when it is next due, which is why 4.4's completion log arrives with
+4.3 — the roadmap split them and the split does not survive contact with the schema.
+
+**`interval_days` is NOT NULL, and that is the boundary with `maintenance_request`.** A job
+with no cadence is a request: raised once, done once, closed. Making the interval optional here
+would give one fact two homes. `active` is how a task is paused, exactly as `space.active`
+pauses a room.
+
+**Due-ness is derived, never stored**, in the same four ordered branches as overdue cleaning:
+paused is never due, never-done is due, otherwise time since the last completion against the
+interval. There is no `next_due_at` column — a stored flag needs a worker to keep it true, and
+a completion backdated to when the work actually happened has to move the next due date with
+it.
+
+**The three target columns are independent and optional**, as `maintenance_request`'s are, and
+all three route through `facility_id` so a named target is proved to be at this site. MATCH
+SIMPLE is what makes them optional: with any column of the key null the constraint is not
+checked at all. "At most one" is checked by the API, not the schema — the columns stay
+independent so módulo 2 can grow into them.
+
+**A completion is not cascaded from its task.** Only a teardown genuinely deletes a task, and a
+cascade would be a path by which a mistyped delete quietly took a year of compliance history.
+`archived_at IS NULL` is the rule and not an optimisation: a deleted completion did not happen,
+so removing one puts its task straight back to due.
+
+**No unique index on the title.** "Verificar dosagem" is a legitimate name for two tasks on one
+site when they name two different tanks, and a constraint refusing the second is one an
+operator works around by typing "Verificar dosagem 2".
+
 ### A pool's dimensions
 
 ```

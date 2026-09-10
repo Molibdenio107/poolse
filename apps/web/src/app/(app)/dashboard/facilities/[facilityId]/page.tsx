@@ -23,6 +23,8 @@ import { PartnersPanel } from './partners-panel';
 import { listPartners } from './partners.actions';
 import { SpacesPanel } from '../spaces-panel';
 import { listSpaces } from '../spaces.actions';
+import { MaintenancePanel } from '../maintenance-panel';
+import { listTasks } from '../maintenance.actions';
 import { PageError, PageShell } from '@/components/page-shell';
 
 /**
@@ -100,6 +102,16 @@ export default async function FacilityPage({
    * spaces cannot be read loses that block rather than the whole page.
    */
   const spaces = await listSpaces(facilityId);
+
+  /*
+   * Planned maintenance — slice 4.3.
+   *
+   * Best-effort like the blocks around it: null means the endpoint refused or
+   * was unreachable, and an absent panel costs nothing, where a panel rendered
+   * empty would say this site has no maintenance plan when in fact nobody
+   * knows.
+   */
+  const tasks = await listTasks(facilityId);
 
   /*
     The season in figures — POOLSE-52.
@@ -339,6 +351,24 @@ export default async function FacilityPage({
               canManage={spaces.canManage}
               backTo={`/dashboard/facilities/${facilityId}`}
             />
+          )}
+
+          {/*
+            Manutenção, after the rooms and before the photographs.
+
+            It comes last of the operational blocks because it is about the
+            future — what has to happen again — where everything above it is
+            about what the site *is*. A task may be about a tank, a room, a piece
+            of kit or the building itself, which is why it is a section of the
+            site rather than a block inside Espaços or Piscinas.
+          */}
+          {tasks !== null && (
+            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('maintenance.section')}
+              </h2>
+              <MaintenancePanel facilityId={facilityId} list={tasks} />
+            </section>
           )}
 
           <section className="rounded border border-border bg-surface p-5">

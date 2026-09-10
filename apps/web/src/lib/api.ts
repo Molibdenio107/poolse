@@ -626,6 +626,82 @@ export interface SpaceDetail extends SpacePermissions {
   issues: Issue[];
 }
 
+/**
+ * Planned maintenance — slice 4.3.
+ *
+ * `state` is derived on the server on every read, and the client renders it. It
+ * is never recomputed here: there is no `next_due_at` column and no worker, and
+ * two implementations of one rule agree until the day they do not.
+ */
+export type TaskState = 'paused' | 'due' | 'scheduled';
+
+export interface MaintenanceTask {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  title: string;
+  description: string | null;
+  intervalDays: number;
+  active: boolean;
+  assignedTo: string | null;
+  assignedToName: string | null;
+  /** True when that person has left the staff list — the job now belongs to nobody. */
+  assigneeArchived: boolean;
+  spaceId: string | null;
+  spaceName: string | null;
+  poolId: string | null;
+  poolName: string | null;
+  inventoryItemId: string | null;
+  inventoryItemName: string | null;
+  lastDoneAt: string | null;
+  lastDoneByName: string | null;
+  /** Null when it has never been done, which is exactly when it is already due. */
+  nextDueAt: string | null;
+  state: TaskState;
+  /** Whole days late. Zero unless due. */
+  daysOverdue: number;
+}
+
+export interface TaskCompletion {
+  id: string;
+  performedAt: string;
+  performedByName: string | null;
+  note: string | null;
+}
+
+export interface TaskOption {
+  id: string;
+  name: string;
+}
+
+export interface TaskTarget extends TaskOption {
+  kind: 'space' | 'pool' | 'item';
+}
+
+export interface TaskList {
+  tasks: MaintenanceTask[];
+  /** So the screen hides forms the API would refuse — never the control itself. */
+  canPlan: boolean;
+  canComplete: boolean;
+  /**
+   * The pickers, whole and shipped with the list.
+   *
+   * Empty for somebody who may not plan, and empty on the dashboard's "mine"
+   * endpoint, which has no form on it. A picker assembled from a paginated list
+   * would offer only page 1 — the trap POOLSE-29 names.
+   */
+  assignees?: TaskOption[];
+  targets?: TaskTarget[];
+}
+
+export interface TaskDetail {
+  task: MaintenanceTask;
+  canPlan: boolean;
+  canComplete: boolean;
+  /** Whole, and empty for somebody who may not plan. */
+  assignees?: TaskOption[];
+}
+
 /** A possible stand-in for one lesson, and why they might not be one. */
 export interface StandInCandidate {
   membershipId: string;

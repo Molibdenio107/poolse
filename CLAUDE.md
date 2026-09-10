@@ -493,6 +493,22 @@ recoverable from the roles once that person has left. `delivered_at` null means 
 not sent, said in words: the same honesty the chase list owes about what Poolse has and has
 not delivered.
 
+**A recurring job is a `maintenance_task`; a one-off is a `maintenance_request`, and
+`interval_days` is the boundary.** Round 6 built the unplanned half — somebody notices a shower
+is broken — and 4.3 built the planned one. The interval is NOT NULL precisely so the two cannot
+be confused: a job with no cadence *is* a request, and a nullable interval would give one fact
+two homes. Pausing is `active`, as it is on a space. **Due-ness is derived in SQL, in the same
+four ordered branches as overdue cleaning** — paused is never due, never-done *is* due, else
+time since the last completion — and there is no `next_due_at` column, because a completion
+backdated to when the work actually happened has to move the next due date with it. A deleted
+completion did not happen, so removing one puts its task straight back to due.
+
+**Assignment is a person here and a role in 4.2's alerts, and the difference is the point.** An
+alert has to *reach* somebody who can act, so a role is right and turnover must not orphan it. A
+task is a to-do list, and a job assigned to three people is a job none of them does. Unassigned
+means everybody sees it, so nothing is invisible; a task whose person has left says so rather
+than being reassigned by Poolse.
+
 **A null ceiling, interval or limit means "not measured" and enforces nothing.**
 `pool.max_capacity`, `space.expected_cleaning_interval_hours`,
 `organization.max_management_users`. Never read one as zero. Its counterpart is that an

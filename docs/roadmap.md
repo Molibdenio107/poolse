@@ -412,9 +412,14 @@ and 6 — so 3.6 now simply follows the readings it needs.
 |---|---|---|
 | 4.1 | Readings: record, list, chart per pool | A technician logs pH and temperature. **Surfaces on the pool's own page** — see the note below |
 | 4.2 | Safe ranges + alerts through the notification subsystem | ✅ **An out-of-range reading reaches someone.** The published bands moved to `@poolse/rules` so the pool's page and the API judge a reading by the same numbers; a recent analysis outside its band writes an alert inside the transaction that wrote the reading and emails owner, admin and maintenance after it commits. A sample older than 48 hours is recorded and alerts nobody, so importing a year of lab sheets sends no email. The panel says whether anything actually left the building. **A pool may set its own bands** — its own numbers, one bound only, or the metric not judged at all — so the hotel tank kept at 30 °C no longer alerts every day |
-| 4.3 | Maintenance tasks, recurrence, assignment | A task appears for the right person |
-| 4.4 | Completion log and history | Who did what, when |
+| 4.3 | Maintenance tasks, recurrence, assignment | ✅ **A task appears for the right person.** A recurring job with an interval in days, optionally about a room, a tank or a piece of kit, optionally somebody's. Due-ness is derived in SQL — paused is never due, never-done is due — and the site's page lists them worst first while the dashboard shows each person their own. **Not built:** a notification when one falls due, which needs the same scheduled job POOLSE-26 wants |
+| 4.4 | Completion log and history | ✅ **Arrived with 4.3, because the split does not survive contact with the schema** — a task cannot say when it is next due without a record of having been done. `maintenance_task_completion` carries who, when the *work happened* (not when it was typed), and a note; the task's own page is the history. There is no edit: an entry is a claim about a moment, and a deleted one did not happen |
 | 4.5 | Personal app on the same reading model | An individual tracks their own pool |
+
+**4.3 and 4.4 were built as one slice**, and the reason is worth keeping: due-ness is
+derived from the completion history, so a task without that history cannot answer the
+question 4.3 exists to answer. Splitting them would have meant either a stored next-due
+date — a flag needing a worker, which this project deliberately avoids — or half a feature.
 
 **4.2 turned out to be half-built.** Round 4 wrote the bands and the on-screen
 warning; what was missing was the half the "done when" actually names — the reading

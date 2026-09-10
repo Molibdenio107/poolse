@@ -13,6 +13,7 @@ looks for it.
 | [navigation.md](navigation.md) | The home route, the menu, the shared page shell |
 | [facilities.md](facilities.md) | Sites, tanks, lanes, capacity |
 | [spaces.md](spaces.md) | Espaços, the cleaning log, maintenance requests |
+| [maintenance.md](maintenance.md) | Planned maintenance: recurring tasks, who they are for, and the record of every time one was done |
 | [classes.md](classes.md) | Turmas, parcerias, the lane grid |
 | [parcerias.md](parcerias.md) | Partnerships, their groups, the import and the export |
 | [calendar.md](calendar.md) | The dated week, the hover card, cancelling a class |
