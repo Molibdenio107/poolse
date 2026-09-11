@@ -438,7 +438,16 @@
       "periodOverlap": "The period overlaps bill {number} ({from} to {to}).",
       "remove": "Remove bill",
       "removeHint": "A bill is not edited: remove it and file it again.",
-      "removeConfirm": "The bill stops counting. Its number is free to be filed again."
+      "removeConfirm": "The bill stops counting. Its number is free to be filed again.",
+      "importAction": "Import a bill",
+      "importPageTitle": "Import a bill",
+      "importPageSubtitle": "Drop the bill as a PDF; the CPE printed on it finds the meter. Check and file.",
+      "meterLabel": "Meter",
+      "meterHint": "The meter this bill is filed on. A bill read from a PDF picks it by its CPE.",
+      "meterMatched": "Picked by the CPE printed on the bill.",
+      "chooseMeter": "Choose a meter…",
+      "chooseMeterFirst": "Choose the meter before checking or filing.",
+      "noMeters": "No meters yet. Add a meter to a site to file bills."
     },
     "title": "Energy",
     "subtitle": "Each site's meters and their readings.",

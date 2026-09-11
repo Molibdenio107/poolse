@@ -102,8 +102,11 @@ the form says so. Numbers are copied as printed ("15,41 €") and become cents i
 `draftToBody`, for the model's answer and a typed figure alike.
 
 **Where.** The meter page has a *Faturas* section — period, number, kWh, €, €/kWh — each
-bill openable to its registers and lines. A bill is not edited; it is removed and filed
-again. Same roles as readings.
+bill openable to its registers and lines, and *Registar fatura* for that meter. The Energia
+screen has **Importar fatura** for a stack of bills whose meter is not known up front: the
+form is handed every meter in the club, the PDF is read first, and the meter carrying the
+bill's CPE is selected — a picker stands in when no meter carries it yet, and to overrule.
+A bill is not edited; it is removed and filed again. Same roles as readings.
 
 **Real samples.** Two real EDP PDFs live at `apps/web/test-fixtures/energy/private/`,
 gitignored (names, NIFs, CPEs inside). The committed fixture in `energy-invoice.test.ts` is

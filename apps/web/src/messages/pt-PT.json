@@ -438,7 +438,16 @@
       "periodOverlap": "O período sobrepõe-se à fatura {number} ({from} a {to}).",
       "remove": "Remover fatura",
       "removeHint": "Uma fatura não se edita: remova-a e registe-a de novo.",
-      "removeConfirm": "A fatura deixa de contar. O número fica livre para a registar de novo."
+      "removeConfirm": "A fatura deixa de contar. O número fica livre para a registar de novo.",
+      "importAction": "Importar fatura",
+      "importPageTitle": "Importar uma fatura",
+      "importPageSubtitle": "Deixe a fatura em PDF; o CPE impresso encontra o contador. Confira e registe.",
+      "meterLabel": "Contador",
+      "meterHint": "O contador em que esta fatura fica registada. Uma fatura lida do PDF escolhe-o pelo CPE.",
+      "meterMatched": "Escolhido pelo CPE impresso na fatura.",
+      "chooseMeter": "Escolha um contador…",
+      "chooseMeterFirst": "Escolha o contador antes de verificar ou registar.",
+      "noMeters": "Ainda não há contadores. Adicione um contador a uma instalação para poder registar faturas."
     },
     "title": "Energia",
     "subtitle": "Os contadores de cada instalação e as suas leituras.",

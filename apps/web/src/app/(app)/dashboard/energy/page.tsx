@@ -4,6 +4,7 @@ import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { withFrom } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
+import { Upload } from 'lucide-react';
 import { PageError, PageShell } from '@/components/page-shell';
 import { EnergyPanel } from '../facilities/energy-panel';
 import { listMeters } from '../facilities/energy.actions';
@@ -45,7 +46,25 @@ export default async function EnergyPage(): Promise<React.ReactElement> {
     <PageShell
       title={t('energy.title')}
       subtitle={t('energy.subtitle')}
-      actions={<EntityIcon kind="energy" className="size-6 text-primary" />}
+      actions={
+        <div className="flex items-center gap-3">
+          {/*
+            The way in for a stack of bills: read the PDF first, and the CPE on
+            it picks the meter. Only when there is a meter to file on and this
+            person may file — the API refuses the rest besides.
+          */}
+          {panels.some(({ list }) => list !== null && list.canRecord && list.meters.length > 0) && (
+            <Link
+              href="/dashboard/energy/import"
+              className="inline-flex h-control items-center gap-1.5 rounded border border-border-strong px-3 text-sm transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <Upload className="size-4" aria-hidden="true" />
+              {t('energy.invoice.importAction')}
+            </Link>
+          )}
+          <EntityIcon kind="energy" className="size-6 text-primary" />
+        </div>
+      }
     >
       {failure !== null && (
         <PageError

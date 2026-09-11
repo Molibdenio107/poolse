@@ -45,7 +45,25 @@ import {
  *
  * Money and quantities are text with a decimal comma, exactly as the bill
  * prints them. `draftToBody` is the one place they become numbers.
+ *
+ * **Two homes.** On a meter's page the meter is fixed. On the Energia screen
+ * the form is handed every meter in the club and picks one itself: a bill read
+ * off a PDF selects the meter whose CPE it names, and a person confirms or
+ * corrects it in the picker. That is the reason `energy_meter.cpe` exists.
  */
+
+/** A meter the form may file a bill on, with what it needs to match a CPE. */
+export interface MeterOption {
+  id: string;
+  facilityId: string;
+  label: string;
+  cpe: string | null;
+}
+
+/** A CPE as the schema compares it: no spaces, upper-case. */
+function compactCpe(text: string | null): string {
+  return (text ?? '').replace(/\s+/g, '').toUpperCase();
+}
 
 const INITIAL_READ: InvoiceReadState = { ok: false, attempt: 0 };
 const INITIAL_SEND: InvoicePreviewState = { ok: false, attempt: 0 };
@@ -65,16 +83,27 @@ export function InvoiceForm({
   meterId,
   facilityId,
   meterCpe,
+  meters,
   importAvailable,
 }: {
-  meterId: string;
-  facilityId: string;
-  meterCpe: string | null;
+  /** Fixed, on a meter's page. Absent when `meters` offers the choice. */
+  meterId?: string;
+  facilityId?: string;
+  meterCpe?: string | null;
+  /** Every meter a bill may be filed on — the Energia screen's way in. */
+  meters?: MeterOption[];
   /** Whether the parser is on for this club — decided on the server. */
   importAvailable: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
+
+  const [selectedId, setSelectedId] = useState(meterId ?? '');
+  const selected: MeterOption | null =
+    meters?.find((m) => m.id === selectedId) ??
+    (meterId !== undefined && facilityId !== undefined
+      ? { id: meterId, facilityId, label: '', cpe: meterCpe ?? null }
+      : null);
 
   const [draft, setDraft] = useState<InvoiceDraft>(emptyInvoiceDraft);
   const [source, setSource] = useState<'manual' | 'import'>('manual');
@@ -93,14 +122,20 @@ export function InvoiceForm({
     setDraft(read.draft);
     setSource('import');
     setFileName(read.fileName ?? '');
-  }, [read]);
+    // The bill names its delivery point; the meter carrying that CPE is the one.
+    if (meters !== undefined) {
+      const cpe = compactCpe(read.draft.cpe);
+      const match = cpe === '' ? undefined : meters.find((m) => compactCpe(m.cpe) === cpe);
+      if (match !== undefined) setSelectedId(match.id);
+    }
+  }, [read, meters]);
 
   // A commit that worked goes to the bill's own page.
   useEffect(() => {
-    if (commit.invoiceId !== undefined) {
-      router.push(`/dashboard/facilities/energy/${meterId}/invoices/${commit.invoiceId}`);
+    if (commit.invoiceId !== undefined && selected !== null) {
+      router.push(`/dashboard/facilities/energy/${selected.id}/invoices/${commit.invoiceId}`);
     }
-  }, [commit.invoiceId, meterId, router]);
+  }, [commit.invoiceId, selected, router]);
 
   // Whichever came back last is what the form reports.
   const latest = commit.attempt >= preview.attempt ? commit : preview;
@@ -115,8 +150,8 @@ export function InvoiceForm({
 
   const hidden = (
     <>
-      <input type="hidden" name="meterId" value={meterId} />
-      <input type="hidden" name="facilityId" value={facilityId} />
+      <input type="hidden" name="meterId" value={selected?.id ?? ''} />
+      <input type="hidden" name="facilityId" value={selected?.facilityId ?? ''} />
       <input type="hidden" name="source" value={source} />
       <input type="hidden" name="sourceFileName" value={fileName} />
       <input type="hidden" name="draft" value={JSON.stringify(draft)} />
@@ -155,6 +190,32 @@ export function InvoiceForm({
         )}
       </section>
 
+      {/* ---- Contador ------------------------------------------------------ */}
+      {meters !== undefined && (
+        <section className="flex flex-col gap-2">
+          <Field
+            label={t('energy.invoice.meterLabel')}
+            hint={
+              selected !== null && read.ok && compactCpe(read.draft?.cpe ?? null) !== '' && compactCpe(selected.cpe) === compactCpe(read.draft?.cpe ?? null)
+                ? t('energy.invoice.meterMatched')
+                : t('energy.invoice.meterHint')
+            }
+            required
+          >
+            {(id, cls) => (
+              <select id={id} className={cls} value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+                <option value="">{t('energy.invoice.chooseMeter')}</option>
+                {meters.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}{m.cpe !== null ? ` · ${m.cpe}` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+        </section>
+      )}
+
       {/* ---- Cabeçalho ----------------------------------------------------- */}
       <section className="flex flex-col gap-4">
         <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -182,7 +243,17 @@ export function InvoiceForm({
           <Field label={t('energy.invoice.dueOn')} error={err('dueOn')}>
             {(id, cls) => <input id={id} type="date" className={cls} value={draft.dueOn} onChange={(e) => patch({ dueOn: e.target.value })} />}
           </Field>
-          <Field label={t('energy.invoice.cpe')} hint={meterCpe === null ? t('energy.invoice.cpeWillBeSet') : t('energy.invoice.cpeOfMeter', { cpe: meterCpe })} error={err('cpe')}>
+          <Field
+            label={t('energy.invoice.cpe')}
+            hint={
+              selected === null
+                ? undefined
+                : selected.cpe === null
+                  ? t('energy.invoice.cpeWillBeSet')
+                  : t('energy.invoice.cpeOfMeter', { cpe: selected.cpe })
+            }
+            error={err('cpe')}
+          >
             {(id, cls) => <input id={id} className={cls} value={draft.cpe} onChange={(e) => patch({ cpe: e.target.value })} />}
           </Field>
           <Field label={t('energy.invoice.meterSerial')} error={err('meterSerial')}>
@@ -414,17 +485,19 @@ export function InvoiceForm({
 
       {latest.errorKey !== undefined && <p className="text-sm text-danger">{t(latest.errorKey)}</p>}
 
+      {selected === null && <p className="text-sm text-foreground-muted">{t('energy.invoice.chooseMeterFirst')}</p>}
+
       <div className="flex flex-wrap gap-2">
         <form action={previewAction}>
           {hidden}
-          <button type="submit" disabled={previewing || committing} className={BUTTON}>
+          <button type="submit" disabled={previewing || committing || selected === null} className={BUTTON}>
             <FileSearch className="size-4" aria-hidden="true" />
             {previewing ? t('common.working') : t('energy.invoice.verify')}
           </button>
         </form>
         <form action={commitAction}>
           {hidden}
-          <button type="submit" disabled={previewing || committing} className={PRIMARY}>
+          <button type="submit" disabled={previewing || committing || selected === null} className={PRIMARY}>
             <Check className="size-4" aria-hidden="true" />
             {committing ? t('common.working') : t('energy.invoice.file')}
           </button>
@@ -443,7 +516,7 @@ function Field({
   children,
 }: {
   label: string;
-  hint?: string;
+  hint?: string | undefined;
   error?: string | undefined;
   required?: boolean;
   children: (id: string, className: string) => React.ReactNode;
