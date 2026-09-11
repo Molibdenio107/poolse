@@ -802,6 +802,20 @@ export interface EnergyInvoiceList {
   canRecord: boolean;
 }
 
+/** One month of bills across the club, by the month the billing period ends in. */
+export interface MonthlyCost {
+  month: string;
+  totalCents: number | null;
+  kwh: number | null;
+  bills: number;
+}
+
+export interface EnergyCosts {
+  months: MonthlyCost[];
+  latest: (EnergyInvoiceSummary & { meterName: string; facilityName: string }) | null;
+  billCount: number;
+}
+
 /** What a preview says — field refusals, warnings with figures, and the headline kWh. */
 export interface EnergyInvoiceCheck {
   fields: Record<string, string>;

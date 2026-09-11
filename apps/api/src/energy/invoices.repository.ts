@@ -556,3 +556,80 @@ export async function archiveInvoice(organizationId: string, invoiceId: string):
     return true;
   });
 }
+
+// ---------------------------------------------------------------------------
+// What energy costs — the dashboard's question
+// ---------------------------------------------------------------------------
+
+/** One calendar month of bills across the whole club. */
+export interface MonthlyCost {
+  /** `YYYY-MM`, the month a billing period ends in. */
+  month: string;
+  /** Electricity total incl. VAT, or null when no bill ended that month. */
+  totalCents: number | null;
+  kwh: number | null;
+  bills: number;
+}
+
+export interface EnergyCosts {
+  months: MonthlyCost[];
+  /** The most recent bill by period end, for the headline. */
+  latest: (InvoiceSummary & { meterName: string; facilityName: string }) | null;
+  billCount: number;
+}
+
+/**
+ * The last `months` months of bills, every month present, bucketed by the
+ * month the billing period *ends* in — the same rule the consumption chart
+ * uses for a reading: a period is attributed to the moment the club knew it.
+ * Dates, not instants, so no timezone applies.
+ */
+export async function energyCosts(organizationId: string, months = 12): Promise<EnergyCosts> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ month: string; total_cents: number | null; kwh: number | null; bills: number }>(
+      `WITH months AS (
+         SELECT to_char(date_trunc('month', current_date) - (n || ' months')::interval, 'YYYY-MM') AS month
+           FROM generate_series($2::int - 1, 0, -1) AS n
+       ),
+       billed AS (
+         SELECT to_char(i.period_end, 'YYYY-MM') AS month,
+                i.total_cents,
+                ${BILLED_KWH} AS kwh
+           FROM energy_invoice i
+          WHERE i.organization_id = $1 AND i.archived_at IS NULL
+       )
+       SELECT months.month,
+              sum(billed.total_cents)::int AS total_cents,
+              sum(billed.kwh)::float8 AS kwh,
+              count(billed.month)::int AS bills
+         FROM months
+         LEFT JOIN billed ON billed.month = months.month
+        GROUP BY months.month
+        ORDER BY months.month`,
+      [organizationId, months],
+    );
+
+    const { rows: latest } = await tx.query<SummaryRow & { meter_name: string; facility_name: string }>(
+      `SELECT ${SUMMARY_COLUMNS}, m.name AS meter_name, f.name AS facility_name
+         FROM energy_invoice i
+         JOIN energy_meter m ON m.id = i.meter_id AND m.organization_id = i.organization_id
+         JOIN facility f ON f.id = m.facility_id AND f.organization_id = m.organization_id
+        WHERE i.organization_id = $1 AND i.archived_at IS NULL
+        ORDER BY i.period_end DESC, i.issued_on DESC
+        LIMIT 1`,
+      [organizationId],
+    );
+
+    const { rows: counted } = await tx.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM energy_invoice WHERE organization_id = $1 AND archived_at IS NULL`,
+      [organizationId],
+    );
+
+    const top = latest[0];
+    return {
+      months: rows.map((r) => ({ month: r.month, totalCents: r.total_cents, kwh: r.kwh, bills: r.bills })),
+      latest: top === undefined ? null : { ...summaryOf(top), meterName: top.meter_name, facilityName: top.facility_name },
+      billCount: counted[0]?.n ?? 0,
+    };
+  });
+}

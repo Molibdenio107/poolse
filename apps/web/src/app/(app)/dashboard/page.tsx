@@ -5,6 +5,7 @@ import {
   ApiError,
   apiFetch,
   type Facilities,
+  type EnergyCosts,
   type Me,
   type Occupancy,
   type PoolDetail,
@@ -16,6 +17,7 @@ import { PageError, PageShell } from '@/components/page-shell';
 import { OccupancyPanel } from '@/components/occupancy-panel';
 import { MyTasksPanel } from './my-tasks-panel';
 import { MyPoolPanel } from './my-pool-panel';
+import { EnergyCostsPanel } from './energy-costs-panel';
 import { listMyTasks } from './facilities/maintenance.actions';
 
 /**
@@ -137,6 +139,17 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
    */
   const myTasks = me === null ? null : await listMyTasks();
 
+  /*
+   * What electricity costs — slice 5.3. Owner, admin and maintenance; the
+   * endpoint refuses everybody else with a 403, which is not a failure worth a
+   * banner: the panel simply is not there, as the tasks panel is not for a
+   * student.
+   */
+  const energyCosts =
+    me === null || membership === null
+      ? null
+      : await apiFetch<EnergyCosts>('/energy/costs').catch(() => null);
+
   const name =
     me === null
       ? null
@@ -170,6 +183,8 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
           )}
 
           {myTasks !== null && <MyTasksPanel list={myTasks} />}
+
+          {energyCosts !== null && <EnergyCostsPanel costs={energyCosts} />}
 
           {poolsFailed && (
             <section className="rounded border border-border bg-surface p-5">

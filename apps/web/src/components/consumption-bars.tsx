@@ -25,16 +25,26 @@ export async function ConsumptionBars({
   monthly,
   unit,
   locale,
+  money = false,
 }: {
   monthly: MonthlyConsumption[];
+  /** The unit named in the caption and the table head — "kWh", or "€" for money. */
   unit: string;
   locale: string;
+  /**
+   * Euros rather than a quantity — slice 5.3's cost panel. The values are
+   * still plain numbers (euros, not cents) so the bars need no second scale;
+   * only the formatting and the words change.
+   */
+  money?: boolean;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
 
   const number = (value: number): string =>
-    new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value);
+    money
+      ? new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(value)
+      : new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value);
 
   const max = Math.max(0, ...monthly.map((m) => m.consumed ?? 0));
 
@@ -52,7 +62,7 @@ export async function ConsumptionBars({
         className="grid h-40 items-end gap-1.5"
         style={{ gridTemplateColumns: `repeat(${monthly.length}, minmax(0, 1fr))` }}
         role="img"
-        aria-label={t('energy.chartLabel', { unit })}
+        aria-label={t(money ? 'energy.costChartLabel' : 'energy.chartLabel', { unit })}
       >
         {monthly.map((m) => {
           const height = m.consumed === null || max === 0 ? 0 : (m.consumed / max) * 100;
@@ -68,7 +78,7 @@ export async function ConsumptionBars({
                 <div
                   className="rounded-t bg-chart-1"
                   style={{ height: `${Math.max(height, 2)}%` }}
-                  title={`${label(m.month)}: ${number(m.consumed)} ${unit}`}
+                  title={`${label(m.month)}: ${number(m.consumed)}${money ? '' : ` ${unit}`}`}
                 />
               )}
             </div>
@@ -88,12 +98,12 @@ export async function ConsumptionBars({
       </div>
 
       <figcaption className="text-sm text-foreground-muted">
-        {t('energy.chartCaption', { unit })}
+        {t(money ? 'energy.costChartCaption' : 'energy.chartCaption', { unit })}
       </figcaption>
 
       {/* The record, always. */}
       <table className="w-full text-sm">
-        <caption className="sr-only">{t('energy.chartLabel', { unit })}</caption>
+        <caption className="sr-only">{t(money ? 'energy.costChartLabel' : 'energy.chartLabel', { unit })}</caption>
         <thead>
           <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">
             <th scope="col" className="py-1 font-medium">{t('energy.month')}</th>

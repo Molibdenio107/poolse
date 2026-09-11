@@ -279,6 +279,8 @@
     "consumption": "Consumo por mês",
     "chartLabel": "Consumo mensal em {unit}",
     "chartCaption": "Cada barra é o consumo apurado pelas leituras desse mês, em {unit}. Um mês sem leitura fica em branco — não é zero.",
+    "costChartLabel": "Custo mensal em euros",
+    "costChartCaption": "Cada barra é o total das faturas de eletricidade cujo período terminou nesse mês, com IVA. Um mês sem fatura fica em branco.",
     "noReadingThatMonth": "sem leitura",
     "month": "Mês",
     "recordTitle": "Registar uma leitura",
@@ -310,6 +312,12 @@
     "cpeInvalid": "Não parece um CPE (PT0002…).",
     "cpeTaken": "Já há um contador com este CPE.",
     "serial": "Nº do contador",
+    "costs": {
+      "title": "Energia — o que custou",
+      "summary": "{total} em {bills, plural, one {# fatura} other {# faturas}} · {kwh} kWh nos últimos 12 meses",
+      "latest": "Última fatura: {supplier}, {meter}, {from} a {to} — {total} ({perKwh} €/kWh)",
+      "open": "Abrir a energia"
+    },
     "invoice": {
       "section": "Faturas",
       "add": "Registar fatura",
@@ -447,7 +455,13 @@
       "meterMatched": "Escolhido pelo CPE impresso na fatura.",
       "chooseMeter": "Escolha um contador…",
       "chooseMeterFirst": "Escolha o contador antes de verificar ou registar.",
-      "noMeters": "Ainda não há contadores. Adicione um contador a uma instalação para poder registar faturas."
+      "noMeters": "Ainda não há contadores. Adicione um contador a uma instalação para poder registar faturas.",
+      "dropLabel": "Largue a fatura para a ler",
+      "typeInstead": "Preencher à mão",
+      "newMeter": "Criar um contador a partir desta fatura",
+      "newMeterHint": "Nenhum contador tem o CPE desta fatura. Criamos um contador «Geral» com este CPE ao registar.",
+      "newMeterSite": "Instalação do novo contador",
+      "newMeterNoPreview": "A verificação completa acontece ao registar, quando o contador existir."
     },
     "title": "Energia",
     "subtitle": "Os contadores de cada instalação e as suas leituras.",

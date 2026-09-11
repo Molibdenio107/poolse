@@ -190,3 +190,38 @@ test('5.3 — a second bill on the same period warns of the overlap; archiving f
     });
   });
 });
+
+test('5.3 — the dashboard sees what energy cost, by the month a period ended in', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const { id: meterId } = await new EnergyController().create(tenant.facilityId, { name: 'Geral', kind: 'total' });
+      const controller = new EnergyInvoicesController();
+
+      const empty = await controller.costs();
+      assert.equal(empty.billCount, 0);
+      assert.equal(empty.months.length, 12, 'twelve months whatever was filed');
+      assert.equal(empty.latest, null);
+
+      // A period ending this month, so it lands in the window whatever today is.
+      const now = new Date();
+      const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 2)).toISOString().slice(0, 10);
+      await controller.file(meterId, sampleBill({ commit: true, periodStart: start, periodEnd: end, issuedOn: end, dueOn: null }));
+
+      const costs = await controller.costs();
+      assert.equal(costs.billCount, 1);
+      const thisMonth = costs.months[costs.months.length - 1];
+      assert.equal(thisMonth?.month, end.slice(0, 7));
+      assert.equal(thisMonth?.totalCents, 4623, 'the electricity total, VAT included — not the envelope');
+      assert.equal(thisMonth?.kwh, 170);
+      assert.equal(thisMonth?.bills, 1);
+      assert.equal(costs.months[0]?.totalCents, null, 'an empty month is null, not zero');
+      assert.equal(costs.latest?.meterName, 'Geral');
+      assert.equal(costs.latest?.facilityName, 'Piscina de Teste');
+    });
+
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      await expectStatus(() => new EnergyInvoicesController().costs(), 403);
+    });
+  });
+});

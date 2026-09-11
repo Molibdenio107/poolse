@@ -14,9 +14,11 @@ import {
   addInvoice,
   archiveInvoice,
   checkInvoice,
+  energyCosts,
   getInvoice,
   listInvoices,
   InvoiceRefusedError,
+  type EnergyCosts,
   type InvoiceCheck,
   type InvoiceDetail,
   type InvoiceInput,
@@ -62,6 +64,14 @@ interface PreviewResponse extends InvoiceCheck {
 
 @Controller('energy')
 export class EnergyInvoicesController {
+  /** What the club's electricity has cost, month by month — the dashboard's panel. */
+  @Get('costs')
+  async costs(): Promise<EnergyCosts> {
+    requireRole(...ENERGY);
+    const { organizationId } = currentTenant();
+    return energyCosts(organizationId);
+  }
+
   @Get('meters/:meterId/invoices')
   async list(@Param('meterId') meterId: string): Promise<{ invoices: InvoiceSummary[]; canRecord: boolean }> {
     requireRole(...ENERGY);

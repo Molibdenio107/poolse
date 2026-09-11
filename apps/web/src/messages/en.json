@@ -279,6 +279,8 @@
     "consumption": "Consumption by month",
     "chartLabel": "Monthly consumption in {unit}",
     "chartCaption": "Each bar is the consumption the readings of that month established, in {unit}. A month with no reading is blank — not zero.",
+    "costChartLabel": "Monthly cost in euros",
+    "costChartCaption": "Each bar is the total of the electricity bills whose period ended that month, VAT included. A month with no bill is blank.",
     "noReadingThatMonth": "no reading",
     "month": "Month",
     "recordTitle": "Record a reading",
@@ -310,6 +312,12 @@
     "cpeInvalid": "That does not look like a CPE (PT0002…).",
     "cpeTaken": "Another meter already carries this CPE.",
     "serial": "Meter serial",
+    "costs": {
+      "title": "Energy — what it cost",
+      "summary": "{total} across {bills, plural, one {# bill} other {# bills}} · {kwh} kWh in the last 12 months",
+      "latest": "Latest bill: {supplier}, {meter}, {from} to {to} — {total} ({perKwh} €/kWh)",
+      "open": "Open energy"
+    },
     "invoice": {
       "section": "Bills",
       "add": "Record a bill",
@@ -447,7 +455,13 @@
       "meterMatched": "Picked by the CPE printed on the bill.",
       "chooseMeter": "Choose a meter…",
       "chooseMeterFirst": "Choose the meter before checking or filing.",
-      "noMeters": "No meters yet. Add a meter to a site to file bills."
+      "noMeters": "No meters yet. Add a meter to a site to file bills.",
+      "dropLabel": "Drop the bill to read it",
+      "typeInstead": "Type it in",
+      "newMeter": "Create a meter from this bill",
+      "newMeterHint": "No meter carries this bill's CPE. A “Geral” meter with this CPE is created when you file.",
+      "newMeterSite": "Site for the new meter",
+      "newMeterNoPreview": "The full check happens on filing, once the meter exists."
     },
     "title": "Energy",
     "subtitle": "Each site's meters and their readings.",

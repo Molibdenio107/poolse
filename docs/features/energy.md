@@ -101,12 +101,21 @@ same way EDP does. Only the document is sent, and a bill carries the holder's na
 the form says so. Numbers are copied as printed ("15,41 €") and become cents in one place,
 `draftToBody`, for the model's answer and a typed figure alike.
 
-**Where.** The meter page has a *Faturas* section — period, number, kWh, €, €/kWh — each
-bill openable to its registers and lines, and *Registar fatura* for that meter. The Energia
-screen has **Importar fatura** for a stack of bills whose meter is not known up front: the
-form is handed every meter in the club, the PDF is read first, and the meter carrying the
-bill's CPE is selected — a picker stands in when no meter carries it yet, and to overrule.
-A bill is not edited; it is removed and filed again. Same roles as readings.
+**Where.** The **Energia screen opens with the bill**: a PDF dropped anywhere on the page
+(or chosen) is read, and the form unfolds with the meter carrying the bill's CPE already
+selected — across every site in the club. A CPE no meter carries yet proposes *Criar um
+contador a partir desta fatura*: on filing, a "Geral" dial with that CPE and serial is created
+at the chosen site (one site means no question) and the bill lands on it, so the very first
+bill of a new club has somewhere to go. *Preencher à mão* opens the same form empty. The
+meter page has a *Faturas* section — period, number, kWh, €, €/kWh — each bill openable to
+its registers and lines, and *Registar fatura* for that meter. A bill is not edited; it is
+removed and filed again. Same roles as readings.
+
+**The dashboard says what it cost.** `GET /energy/costs` sums the live bills by the month
+each billing period ended in — twelve months, every month present, an empty one null — and
+names the latest bill; the dashboard draws the euros as bars (same component as the kWh
+chart, `money`), the year's total, kWh and bill count, and the latest bill's €/kWh. Absent
+until the first bill is filed; owner, admin and maintenance only.
 
 **Real samples.** Two real EDP PDFs live at `apps/web/test-fixtures/energy/private/`,
 gitignored (names, NIFs, CPEs inside). The committed fixture in `energy-invoice.test.ts` is

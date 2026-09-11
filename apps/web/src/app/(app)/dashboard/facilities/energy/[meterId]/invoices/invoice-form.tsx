@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Check, FileSearch, Plus, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, Check, FileSearch, PenLine, Plus, Trash2, Upload } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { cn } from '@/lib/utils';
 import { CONTROL_LINE, FIELD_LABEL } from '@/components/ui/field';
+import { DropOverlay, useFileDrop } from '@/components/file-drop';
+import { REPORT_MEDIA_TYPES } from '@/lib/analysis-report';
 import {
   LINE_KINDS,
   REGISTERS,
@@ -60,6 +62,20 @@ export interface MeterOption {
   cpe: string | null;
 }
 
+/** A site a new meter may be created at, when the bill's CPE matches none. */
+export interface FacilityOption {
+  id: string;
+  name: string;
+}
+
+/** The picker's value for "make a meter from this bill". */
+const NEW_METER = '__new__';
+
+function isAccepted(file: File): boolean {
+  const lower = file.name.toLowerCase();
+  return Object.keys(REPORT_MEDIA_TYPES).some((extension) => lower.endsWith(extension));
+}
+
 /** A CPE as the schema compares it: no spaces, upper-case. */
 function compactCpe(text: string | null): string {
   return (text ?? '').replace(/\s+/g, '').toUpperCase();
@@ -84,7 +100,9 @@ export function InvoiceForm({
   facilityId,
   meterCpe,
   meters,
+  facilities,
   importAvailable,
+  collapsed = false,
 }: {
   /** Fixed, on a meter's page. Absent when `meters` offers the choice. */
   meterId?: string;
@@ -92,18 +110,45 @@ export function InvoiceForm({
   meterCpe?: string | null;
   /** Every meter a bill may be filed on — the Energia screen's way in. */
   meters?: MeterOption[];
+  /**
+   * Where a meter may be created when the bill's CPE matches none — the
+   * first bill of a new club, or of a new supply. One site means no question.
+   */
+  facilities?: FacilityOption[];
   /** Whether the parser is on for this club — decided on the server. */
   importAvailable: boolean;
+  /** Only the drop zone until a bill is read or the person asks for the form. */
+  collapsed?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
 
   const [selectedId, setSelectedId] = useState(meterId ?? '');
+  const [newMeterFacilityId, setNewMeterFacilityId] = useState(
+    facilities !== undefined && facilities.length === 1 ? facilities[0]!.id : '',
+  );
+  const creating = meters !== undefined && selectedId === NEW_METER;
   const selected: MeterOption | null =
     meters?.find((m) => m.id === selectedId) ??
     (meterId !== undefined && facilityId !== undefined
       ? { id: meterId, facilityId, label: '', cpe: meterCpe ?? null }
       : null);
+  // Something to file on: an existing meter, or a site to make one at.
+  const target = selected !== null || (creating && newMeterFacilityId !== '');
+
+  const [open, setOpen] = useState(!collapsed);
+
+  // Dropping a file anywhere on the page reads it — the gesture people try
+  // first, and the reason `useFileDrop` listens on the window.
+  const fileInput = useRef<HTMLInputElement>(null);
+  const readForm = useRef<HTMLFormElement>(null);
+  const { dragging } = useFileDrop((file) => {
+    if (!importAvailable || !isAccepted(file) || fileInput.current === null) return;
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    fileInput.current.files = transfer.files;
+    startTransition(() => readForm.current?.requestSubmit());
+  });
 
   const [draft, setDraft] = useState<InvoiceDraft>(emptyInvoiceDraft);
   const [source, setSource] = useState<'manual' | 'import'>('manual');
@@ -122,20 +167,24 @@ export function InvoiceForm({
     setDraft(read.draft);
     setSource('import');
     setFileName(read.fileName ?? '');
-    // The bill names its delivery point; the meter carrying that CPE is the one.
+    setOpen(true);
+    // The bill names its delivery point; the meter carrying that CPE is the
+    // one. None carrying it, and a site to make one at: propose that.
     if (meters !== undefined) {
       const cpe = compactCpe(read.draft.cpe);
       const match = cpe === '' ? undefined : meters.find((m) => compactCpe(m.cpe) === cpe);
       if (match !== undefined) setSelectedId(match.id);
+      else if (facilities !== undefined && facilities.length > 0 && cpe !== '') setSelectedId(NEW_METER);
     }
-  }, [read, meters]);
+  }, [read, meters, facilities]);
 
-  // A commit that worked goes to the bill's own page.
+  // A commit that worked goes to the bill's own page — on the meter it was
+  // filed on, which the action reports, since it may have just made it.
   useEffect(() => {
-    if (commit.invoiceId !== undefined && selected !== null) {
-      router.push(`/dashboard/facilities/energy/${selected.id}/invoices/${commit.invoiceId}`);
+    if (commit.invoiceId !== undefined && commit.meterId !== undefined) {
+      router.push(`/dashboard/facilities/energy/${commit.meterId}/invoices/${commit.invoiceId}`);
     }
-  }, [commit.invoiceId, selected, router]);
+  }, [commit.invoiceId, commit.meterId, router]);
 
   // Whichever came back last is what the form reports.
   const latest = commit.attempt >= preview.attempt ? commit : preview;
@@ -151,7 +200,8 @@ export function InvoiceForm({
   const hidden = (
     <>
       <input type="hidden" name="meterId" value={selected?.id ?? ''} />
-      <input type="hidden" name="facilityId" value={selected?.facilityId ?? ''} />
+      <input type="hidden" name="facilityId" value={selected?.facilityId ?? (creating ? newMeterFacilityId : '')} />
+      <input type="hidden" name="newMeterFacilityId" value={creating ? newMeterFacilityId : ''} />
       <input type="hidden" name="source" value={source} />
       <input type="hidden" name="sourceFileName" value={fileName} />
       <input type="hidden" name="draft" value={JSON.stringify(draft)} />
@@ -162,14 +212,17 @@ export function InvoiceForm({
 
   return (
     <div className="flex flex-col gap-6">
+      <DropOverlay shown={dragging} label={t('energy.invoice.dropLabel')} />
+
       {/* ---- Importar ------------------------------------------------------ */}
       <section className="flex flex-col gap-3 rounded border border-dashed border-border p-4">
         <h3 className="text-sm font-medium">{t('energy.invoice.importTitle')}</h3>
         {importAvailable ? (
-          <form action={readAction} className="flex flex-wrap items-end gap-3">
+          <form ref={readForm} action={readAction} className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
               <span className={FIELD_LABEL}>{t('energy.invoice.importFile')}</span>
               <input
+                ref={fileInput}
                 type="file"
                 name="file"
                 accept=".pdf,.png,.jpg,.jpeg,.webp"
@@ -188,17 +241,27 @@ export function InvoiceForm({
         ) : (
           <p className="text-sm text-foreground-muted">{t('energy.invoice.importDisabled')}</p>
         )}
+        {!open && (
+          <button type="button" onClick={() => setOpen(true)} className={cn(BUTTON, 'self-start')}>
+            <PenLine className="size-4" aria-hidden="true" />
+            {t('energy.invoice.typeInstead')}
+          </button>
+        )}
       </section>
+
+      {open && (<>
 
       {/* ---- Contador ------------------------------------------------------ */}
       {meters !== undefined && (
-        <section className="flex flex-col gap-2">
+        <section className="grid gap-4 sm:grid-cols-2">
           <Field
             label={t('energy.invoice.meterLabel')}
             hint={
-              selected !== null && read.ok && compactCpe(read.draft?.cpe ?? null) !== '' && compactCpe(selected.cpe) === compactCpe(read.draft?.cpe ?? null)
-                ? t('energy.invoice.meterMatched')
-                : t('energy.invoice.meterHint')
+              creating
+                ? t('energy.invoice.newMeterHint')
+                : selected !== null && read.ok && compactCpe(read.draft?.cpe ?? null) !== '' && compactCpe(selected.cpe) === compactCpe(read.draft?.cpe ?? null)
+                  ? t('energy.invoice.meterMatched')
+                  : t('energy.invoice.meterHint')
             }
             required
           >
@@ -210,9 +273,22 @@ export function InvoiceForm({
                     {m.label}{m.cpe !== null ? ` · ${m.cpe}` : ''}
                   </option>
                 ))}
+                {facilities !== undefined && facilities.length > 0 && (
+                  <option value={NEW_METER}>{t('energy.invoice.newMeter')}</option>
+                )}
               </select>
             )}
           </Field>
+          {creating && facilities !== undefined && facilities.length > 1 && (
+            <Field label={t('energy.invoice.newMeterSite')} required>
+              {(id, cls) => (
+                <select id={id} className={cls} value={newMeterFacilityId} onChange={(e) => setNewMeterFacilityId(e.target.value)}>
+                  <option value="">—</option>
+                  {facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+              )}
+            </Field>
+          )}
         </section>
       )}
 
@@ -485,24 +561,26 @@ export function InvoiceForm({
 
       {latest.errorKey !== undefined && <p className="text-sm text-danger">{t(latest.errorKey)}</p>}
 
-      {selected === null && <p className="text-sm text-foreground-muted">{t('energy.invoice.chooseMeterFirst')}</p>}
+      {!target && <p className="text-sm text-foreground-muted">{t('energy.invoice.chooseMeterFirst')}</p>}
+      {creating && target && <p className="text-sm text-foreground-muted">{t('energy.invoice.newMeterNoPreview')}</p>}
 
       <div className="flex flex-wrap gap-2">
         <form action={previewAction}>
           {hidden}
-          <button type="submit" disabled={previewing || committing || selected === null} className={BUTTON}>
+          <button type="submit" disabled={previewing || committing || !target || creating} className={BUTTON}>
             <FileSearch className="size-4" aria-hidden="true" />
             {previewing ? t('common.working') : t('energy.invoice.verify')}
           </button>
         </form>
         <form action={commitAction}>
           {hidden}
-          <button type="submit" disabled={previewing || committing || selected === null} className={PRIMARY}>
+          <button type="submit" disabled={previewing || committing || !target} className={PRIMARY}>
             <Check className="size-4" aria-hidden="true" />
             {committing ? t('common.working') : t('energy.invoice.file')}
           </button>
         </form>
       </div>
+      </>)}
     </div>
   );
 }

@@ -4,10 +4,15 @@ import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { withFrom } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
-import { Upload } from 'lucide-react';
 import { PageError, PageShell } from '@/components/page-shell';
 import { EnergyPanel } from '../facilities/energy-panel';
 import { listMeters } from '../facilities/energy.actions';
+import { invoiceImportAvailable } from '../facilities/energy/invoice.actions';
+import {
+  InvoiceForm,
+  type FacilityOption,
+  type MeterOption,
+} from '../facilities/energy/[meterId]/invoices/invoice-form';
 
 /**
  * Energia — the module's own front door, at Rui's ask.
@@ -19,9 +24,13 @@ import { listMeters } from '../facilities/energy.actions';
  * facility per licence) lands straight on its meters; a municipality with two
  * sees both, named, and picks by scrolling rather than by a step.
  *
- * The same `EnergyPanel` the site page mounts, with Voltar from a meter coming
- * back here rather than to the site — `withFrom`, as everywhere. The panel on
- * the site page stays: a technician looking at a site also wants its meters.
+ * **The bill comes first, at the top, and a PDF dropped anywhere on the page
+ * is read** — Rui's ask again. An operator with a stack of bills should not
+ * have to know which meter each one is for before dropping it: the bill names
+ * its delivery point, the meter carries the same CPE, and the form matches
+ * them. A CPE no meter carries yet makes a meter, so the very first bill of a
+ * new club has somewhere to land. The panel on each site's page stays, for a
+ * technician who is already looking at the site.
  */
 export default async function EnergyPage(): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -42,29 +51,25 @@ export default async function EnergyPage(): Promise<React.ReactElement> {
           sites.facilities.map(async (site) => ({ site, list: await listMeters(site.id) })),
         );
 
+  // Everything a dropped bill may land on, across the club.
+  const several = panels.length > 1;
+  const meters: MeterOption[] = panels.flatMap(({ site, list }) =>
+    (list?.meters ?? []).map((meter) => ({
+      id: meter.id,
+      facilityId: site.id,
+      label: several ? `${site.name} · ${meter.name}` : meter.name,
+      cpe: meter.cpe,
+    })),
+  );
+  const facilities: FacilityOption[] = panels.map(({ site }) => ({ id: site.id, name: site.name }));
+  const canRecord = panels.some(({ list }) => list !== null && list.canRecord);
+  const importAvailable = await invoiceImportAvailable();
+
   return (
     <PageShell
       title={t('energy.title')}
       subtitle={t('energy.subtitle')}
-      actions={
-        <div className="flex items-center gap-3">
-          {/*
-            The way in for a stack of bills: read the PDF first, and the CPE on
-            it picks the meter. Only when there is a meter to file on and this
-            person may file — the API refuses the rest besides.
-          */}
-          {panels.some(({ list }) => list !== null && list.canRecord && list.meters.length > 0) && (
-            <Link
-              href="/dashboard/energy/import"
-              className="inline-flex h-control items-center gap-1.5 rounded border border-border-strong px-3 text-sm transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              <Upload className="size-4" aria-hidden="true" />
-              {t('energy.invoice.importAction')}
-            </Link>
-          )}
-          <EntityIcon kind="energy" className="size-6 text-primary" />
-        </div>
-      }
+      actions={<EntityIcon kind="energy" className="size-6 text-primary" />}
     >
       {failure !== null && (
         <PageError
@@ -76,6 +81,16 @@ export default async function EnergyPage(): Promise<React.ReactElement> {
       {sites !== null && sites.facilities.length === 0 && (
         <section className="rounded border border-border bg-surface p-5">
           <p className="text-sm text-foreground-muted">{t('energy.noSites')}</p>
+        </section>
+      )}
+
+      {canRecord && facilities.length > 0 && (
+        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('energy.invoice.importPageTitle')}
+          </h2>
+          <p className="text-sm text-foreground-muted">{t('energy.invoice.importPageSubtitle')}</p>
+          <InvoiceForm meters={meters} facilities={facilities} importAvailable={importAvailable} collapsed />
         </section>
       )}
 

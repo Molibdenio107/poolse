@@ -68,6 +68,8 @@ export interface InvoicePreviewState extends FormState {
   check?: EnergyInvoiceCheck;
   /** Set once a commit succeeded, so the form can navigate. */
   invoiceId?: string;
+  /** The meter the bill landed on — which the commit may have just created. */
+  meterId?: string;
   attempt: number;
 }
 
@@ -88,8 +90,9 @@ async function send(
   commit: boolean,
 ): Promise<InvoicePreviewState> {
   const attempt = previous.attempt + 1;
-  const meterId = String(formData.get('meterId') ?? '');
+  let meterId = String(formData.get('meterId') ?? '');
   const facilityId = String(formData.get('facilityId') ?? '');
+  const newMeterFacilityId = String(formData.get('newMeterFacilityId') ?? '');
   const source = formData.get('source') === 'import' ? 'import' : 'manual';
   const sourceFileName = String(formData.get('sourceFileName') ?? '') || null;
 
@@ -99,13 +102,50 @@ async function send(
   const { body, fields } = draftToBody(draft, { source, sourceFileName, commit });
   if (Object.keys(fields).length > 0) return { ok: false, fields, attempt };
 
+  /*
+   * The first bill of a new supply: no meter carries its CPE, so the bill
+   * makes one — "Geral" at the chosen site, a dial, with the bill's CPE and
+   * serial. Only on commit; a preview creates nothing. A name already taken at
+   * that site falls back to the CPE's tail, because two supplies at one site
+   * are both "the general meter" to the person typing.
+   */
+  if (commit && meterId === '' && newMeterFacilityId !== '') {
+    const cpe = String(body['cpe'] ?? '');
+    const meter = {
+      kind: 'total',
+      reads: 'cumulative_index',
+      unit: 'kWh',
+      cpe,
+      serial: body['meterSerial'] ?? '',
+    };
+    try {
+      meterId = (await apiPost<{ id: string }>(`/energy/facilities/${newMeterFacilityId}/meters`, { ...meter, name: 'Geral' })).id;
+    } catch (error) {
+      if (!(error instanceof ApiError && error.fields['name'] !== undefined)) {
+        return { ...describeFailure(error, 'energy.invoice.saveFailed'), attempt };
+      }
+      try {
+        meterId = (await apiPost<{ id: string }>(`/energy/facilities/${newMeterFacilityId}/meters`, {
+          ...meter,
+          name: `Geral ${cpe.slice(-6)}`,
+        })).id;
+      } catch (again) {
+        return { ...describeFailure(again, 'energy.invoice.saveFailed'), attempt };
+      }
+    }
+    revalidatePath('/dashboard/energy');
+    revalidatePath(`/dashboard/facilities/${newMeterFacilityId}`);
+  }
+  if (meterId === '') return { ok: false, errorKey: 'energy.invoice.chooseMeterFirst', attempt };
+
   try {
     const response = await apiPost<EnergyInvoiceCheck | { id: string }>(`/energy/meters/${meterId}/invoices`, body);
     if ('id' in response) {
       revalidatePath('/dashboard/energy');
       revalidatePath(`/dashboard/facilities/${facilityId}`);
       revalidatePath(`/dashboard/facilities/energy/${meterId}`);
-      return { ok: true, invoiceId: response.id, attempt };
+      revalidatePath('/dashboard');
+      return { ok: true, invoiceId: response.id, meterId, attempt };
     }
     // A preview: not a save, so `ok` stays false and no toast is raised; the
     // check is what the form renders.
