@@ -1,15 +1,13 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
-import { Download, FileSpreadsheet, Plus, Upload } from 'lucide-react';
+import { Download, Plus, Upload } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { formatCents } from '@/lib/money';
 import type { PartnerRow, PartnerType } from '@/lib/api';
 import { SelectField, TextField } from '@/components/ui/field';
-import { Dialog } from '@/components/ui/dialog';
-import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { PartnerImportWizard } from './partner-import-wizard';
 import { withFrom } from '@/lib/back';
 import type { FormState } from '../../actions';
@@ -56,14 +54,6 @@ const BUTTON_QUIET =
   'inline-flex h-control items-center gap-2 rounded border border-border px-3 text-sm hover:bg-surface-muted ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
-/** What the reader can actually open. A `.pdf` dropped here is a mistake, said so. */
-const ACCEPTED = ['.xlsx', '.csv'];
-
-function isAccepted(file: File): boolean {
-  const name = file.name.toLowerCase();
-  return ACCEPTED.some((extension) => name.endsWith(extension));
-}
-
 /**
  * Hours, to one decimal place, in the reader's locale.
  *
@@ -99,27 +89,15 @@ export function PartnersPanel({
   /*
    * The importer — POOLSE-48, criterion 1.
    *
-   * The whole screen is the drop target rather than a bordered rectangle
-   * somewhere down the page: a zone people miss is a zone whose miss makes the
-   * browser navigate away to render the spreadsheet, losing the page they were
-   * on. `useFileDrop` counts drag depth so the overlay does not flicker across
-   * child elements.
-   *
-   * **A drop asks before anything is read.** Files get dragged by accident, and
-   * a screen that starts reading one nobody meant to give it is a screen people
-   * stop dragging onto. The question goes through the app's dialog, so Escape
-   * closes it and focus comes back to where it was.
+   * **No longer a drop target** — Rui's call, 11 September 2026. This panel
+   * used to listen for a file dropped anywhere on the site's page, which made
+   * the whole facility screen a spreadsheet importer: an electricity bill
+   * dragged towards the energy card landed here and was refused as "not a
+   * spreadsheet". Dropping a file onto a page is the Energia screen's gesture
+   * now, and only there; parcerias are imported through the button and its
+   * file chooser, which is where a deliberate import starts anyway.
    */
   const [importing, setImporting] = useState(false);
-  const [dropped, setDropped] = useState<File | null>(null);
-  /** The file the wizard should open on, once the operator has said yes to it. */
-  const [accepted, setAccepted] = useState<File | null>(null);
-
-  const onFile = useCallback((file: File) => {
-    if (!canManage) return;
-    setDropped(file);
-  }, [canManage]);
-  const { dragging } = useFileDrop(onFile);
 
   return (
     <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
@@ -166,10 +144,7 @@ export function PartnersPanel({
           {canManage && (
             <button
               type="button"
-              onClick={() => {
-                setAccepted(null);
-                setImporting((was) => !was);
-              }}
+              onClick={() => setImporting((was) => !was)}
               aria-expanded={importing}
               className={BUTTON_QUIET}
             >
@@ -187,53 +162,6 @@ export function PartnersPanel({
         </div>
       </div>
 
-      {canManage && <DropOverlay shown={dragging} label={t('partnerImport.dropHere')} />}
-
-      {/*
-        The question a drop gets before anything is read — criterion 1, QA 48.9
-        and 48.10. A file type the reader cannot open is told so here and offered
-        only a way out, rather than being read and failing four steps later.
-      */}
-      <Dialog
-        open={dropped !== null}
-        onClose={() => setDropped(null)}
-        title={t('partnerImport.confirmTitle')}
-        description={dropped?.name ?? ''}
-        closeLabel={t('common.cancel')}
-      >
-        {dropped !== null && !isAccepted(dropped) ? (
-          <div className="flex flex-col gap-4">
-            <p className="flex items-start gap-2 text-sm text-danger">
-              <FileSpreadsheet aria-hidden className="mt-0.5 size-4 shrink-0" />
-              {t('students.import.errorFileType')}
-            </p>
-            <button type="button" onClick={() => setDropped(null)} className={BUTTON_QUIET}>
-              {t('common.cancel')}
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm text-foreground-muted">{t('partnerImport.confirmHint')}</p>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setAccepted(dropped);
-                  setDropped(null);
-                  setImporting(true);
-                }}
-                className={BUTTON}
-              >
-                {t('partnerImport.confirmRead')}
-              </button>
-              <button type="button" onClick={() => setDropped(null)} className={BUTTON_QUIET}>
-                {t('common.cancel')}
-              </button>
-            </div>
-          </div>
-        )}
-      </Dialog>
-
       {importing && canManage && (
         <div className="rounded border border-border bg-surface-muted p-4">
           <PartnerImportWizard
@@ -243,14 +171,10 @@ export function PartnersPanel({
               wizard clears its own state; the key clears everything, including
               the action states React holds outside it.
             */
-            key={accepted?.name ?? 'picker'}
+            key="picker"
             facilityId={facilityId}
             facilityName={facilityName}
-            initialFile={accepted}
-            onClose={() => {
-              setAccepted(null);
-              setImporting(false);
-            }}
+            onClose={() => setImporting(false)}
           />
         </div>
       )}

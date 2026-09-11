@@ -103,6 +103,7 @@ export function InvoiceForm({
   facilities,
   importAvailable,
   collapsed = false,
+  dropAnywhere = false,
 }: {
   /** Fixed, on a meter's page. Absent when `meters` offers the choice. */
   meterId?: string;
@@ -119,6 +120,12 @@ export function InvoiceForm({
   importAvailable: boolean;
   /** Only the drop zone until a bill is read or the person asks for the form. */
   collapsed?: boolean;
+  /**
+   * Listen for a file dropped anywhere on the page. The Energia screen's
+   * gesture and nobody else's — a meter's own page reached through the site
+   * keeps to the file chooser, so the facility screens never swallow a drop.
+   */
+  dropAnywhere?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
@@ -152,6 +159,7 @@ export function InvoiceForm({
   const fileInput = useRef<HTMLInputElement>(null);
   const readForm = useRef<HTMLFormElement>(null);
   const { dragging } = useFileDrop((file) => {
+    if (!dropAnywhere) return;
     if (!importAvailable) {
       setDropNote('energy.invoice.importDisabled');
       return;
@@ -230,7 +238,7 @@ export function InvoiceForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <DropOverlay shown={dragging} label={t('energy.invoice.dropLabel')} />
+      {dropAnywhere && <DropOverlay shown={dragging} label={t('energy.invoice.dropLabel')} />}
 
       {/* ---- Importar ------------------------------------------------------ */}
       <section className="flex flex-col gap-3 rounded border border-dashed border-border p-4">

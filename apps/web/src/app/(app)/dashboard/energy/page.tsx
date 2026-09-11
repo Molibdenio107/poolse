@@ -90,7 +90,7 @@ export default async function EnergyPage(): Promise<React.ReactElement> {
             {t('energy.invoice.importPageTitle')}
           </h2>
           <p className="text-sm text-foreground-muted">{t('energy.invoice.importPageSubtitle')}</p>
-          <InvoiceForm meters={meters} facilities={facilities} importAvailable={importAvailable} collapsed />
+          <InvoiceForm meters={meters} facilities={facilities} importAvailable={importAvailable} collapsed dropAnywhere />
         </section>
       )}
 
