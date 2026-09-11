@@ -64,9 +64,29 @@ The meter page shows the last twelve calendar months in the **site's timezone**,
 month present; a month with no closing reading is null and drawn as a labelled gap, not a
 zero-height bar. The figures are always in a table under the chart.
 
+## Planned — faturas (agreed 11 September 2026, not built)
+
+An electricity invoice (EDP Empresas is the reference layout) becomes a record on the
+meter it bills, matched by **CPE** — `energy_meter` gains a `cpe`. Two tables:
+`energy_invoice` (supplier, number, issue/due dates, billing period, contracted power,
+tariff option, and the money as integer cents: energy, power, reactive, taxes, subtotal,
+VAT, total) and `energy_invoice_line` (one per período horário — ponta, cheias, vazio
+normal, super vazio, fora de vazio, vazio, simples — with previous/current index,
+estimated flag, kWh, unit price, amount). Total kWh is a sum.
+
+**Two ways in, one pipeline**: a *Registar fatura* form, and *Importar fatura* which reads
+the PDF with a parser (`lib/energy-invoice.ts` + `-agent.ts`, behind
+`ENERGY_INVOICE_AI_ENABLED` and `ANTHROPIC_API_KEY`, off by default, sends only the
+document) and pre-fills **that same form** for the operator to correct and confirm. The
+readings chart stays as it is; invoices are their own *Faturas* section on the meter page
+and are never merged with dial readings. Same supplier + number twice is refused. The
+parser is calibrated against an anonymised sample at `apps/web/test-fixtures/energy/`,
+which Rui will provide.
+
 ## Not built
 
-- Tariffs and cost (5.3), comparison and correlation with temperature (5.4).
+- Tariffs and cost (5.3), comparison and correlation with temperature (5.4). The faturas
+  above supply cost as a fact for billed meters; tariff-based cost is for sub-meters.
 - TimescaleDB conversion — deferred until automated feeds exist; see the data model.
 - Import of readings from a spreadsheet; the `source` column (`manual | import | feed`)
   is reserved for it.
