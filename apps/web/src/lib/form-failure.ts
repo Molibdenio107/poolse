@@ -54,7 +54,7 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
      * status it chose to carry it on.
      */
     const named = Object.keys(error.fields).length > 0 ? error.fields : null;
-    if (named !== null) return { ok: false, fields: named, ...capacityValues(error) };
+    if (named !== null) return { ok: false, fields: named, ...refusalValues(error) };
 
     // Two people wanting the same name, or the same slot. The caller owns this
     // sentence because only it knows what "already exists" means here.
@@ -111,22 +111,33 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
  * else's JSON, and a missing field must degrade to a message without numbers
  * rather than to `undefined` in the middle of a sentence.
  */
-function capacityValues(error: ApiError): { values?: Record<string, number> } {
+function refusalValues(error: ApiError): { values?: Record<string, number> } {
   const body = error.details;
   if (typeof body !== 'object' || body === null) return {};
 
   const full = (body as { poolCapacity?: unknown }).poolCapacity;
-  if (typeof full !== 'object' || full === null) return {};
-
-  const { max, taken, remaining } = full as Record<string, unknown>;
-  if (typeof max !== 'number' || typeof taken !== 'number' || typeof remaining !== 'number') {
-    return {};
+  if (typeof full === 'object' && full !== null) {
+    const { max, taken, remaining } = full as Record<string, unknown>;
+    if (typeof max === 'number' && typeof taken === 'number' && typeof remaining === 'number') {
+      // Never negative on screen. Widening a turma that is already over the
+      // ceiling produces a negative remainder, which is true and reads as a
+      // bug; "0 left" plus the two real figures says the same thing without
+      // the puzzle.
+      return { values: { max, taken, remaining: Math.max(remaining, 0) } };
+    }
   }
 
-  // Never negative on screen. Widening a turma that is already over the ceiling
-  // produces a negative remainder, which is true and reads as a bug; "0 left"
-  // plus the two real figures says the same thing without the puzzle.
-  return { values: { max, taken, remaining: Math.max(remaining, 0) } };
+  // A dial that ran backwards — slice 5.1. The neighbouring reading the
+  // trigger compared against, so the sentence can quote it.
+  const index = (body as { energyIndex?: unknown }).energyIndex;
+  if (typeof index === 'object' && index !== null) {
+    const { neighbour, value } = index as Record<string, unknown>;
+    if (typeof neighbour === 'number' && typeof value === 'number') {
+      return { values: { neighbour, value } };
+    }
+  }
+
+  return {};
 }
 
 function log(where: string, code: string | null, message: string): void {

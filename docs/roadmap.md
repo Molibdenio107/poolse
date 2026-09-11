@@ -447,10 +447,12 @@ and two places in the web app that read it. The decision held.
 
 | # | Slice | Done when |
 |---|---|---|
-| 5.1 | TimescaleDB hypertable, meters with explicit `reads` semantics | Schema in place and migrating cleanly |
-| 5.2 | Manual reading entry, consumption charts | A month of data is visible |
+| 5.1 | TimescaleDB hypertable, meters with explicit `reads` semantics | ✅ **Schema in place, migrating cleanly, both ways.** `energy_meter` with `reads` (`cumulative_index` \| `interval_consumption`), a starting index, a pool it may serve and the meter it replaced; `energy_reading` on the natural key `(organization_id, meter_id, taken_at)` with no surrogate id. **Hypertable-shaped, not a hypertable** — a club types one figure a month, the extension constrains the host, and the conversion is one `create_hypertable` when automated feeds arrive. A dial that runs backwards is refused by a trigger that carries the neighbouring figure |
+| 5.2 | Manual reading entry, consumption charts | ✅ **A month of data is visible.** Meters on the site's page; each meter's own page with the last twelve months as bars (empty month = labelled gap, never zero), the reading form, and the record with what each reading consumed. Consumption is derived in SQL from `reads` and attributed to the reading that closes the interval, in the site's timezone |
 | 5.3 | Tariffs and cost per period | Cost, not just kWh |
 | 5.4 | Period comparison, correlation with temperature | The insight the module exists for |
+
+**5.1 and 5.2 shipped as one slice** (11 September 2026): a schema with no entry form is not testable, and the weekend's testing needed something to click.
 
 ## Phase 6 — AI dashboards
 

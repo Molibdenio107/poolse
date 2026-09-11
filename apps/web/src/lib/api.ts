@@ -687,6 +687,67 @@ export interface TaskTarget extends TaskOption {
   kind: 'space' | 'pool' | 'item';
 }
 
+// ---------------------------------------------------------------------------
+// Energy — slices 5.1 and 5.2
+// ---------------------------------------------------------------------------
+
+export type MeterKind = 'pump' | 'heating' | 'lighting' | 'total' | 'other';
+/** Whether a value is the dial (ever increasing) or a consumption in itself. */
+export type MeterReads = 'cumulative_index' | 'interval_consumption';
+
+export interface EnergyMeter {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  poolId: string | null;
+  poolName: string | null;
+  name: string;
+  kind: MeterKind;
+  unit: string;
+  reads: MeterReads;
+  initialIndex: number | null;
+  replacedMeterId: string | null;
+  replacedMeterName: string | null;
+  notes: string | null;
+  /** Retired — swapped out or removed. Its page opens, its form is gone. */
+  archived: boolean;
+  latestAt: string | null;
+  latestValue: number | null;
+  readingCount: number;
+}
+
+export interface EnergyReading {
+  takenAt: string;
+  value: number;
+  source: 'manual' | 'import' | 'feed';
+  recordedByName: string | null;
+  note: string | null;
+  /** Used since the reading before, derived by the API. Null when nothing to measure from. */
+  consumed: number | null;
+}
+
+export interface MonthlyConsumption {
+  /** `YYYY-MM`, in the site's timezone. */
+  month: string;
+  consumed: number | null;
+}
+
+export interface MeterList {
+  meters: EnergyMeter[];
+  pools: { id: string; name: string }[];
+  canPlan: boolean;
+  canRecord: boolean;
+}
+
+export interface MeterDetail {
+  meter: EnergyMeter;
+  readings: EnergyReading[];
+  monthly: MonthlyConsumption[];
+  pools: { id: string; name: string }[];
+  canPlan: boolean;
+  canRecord: boolean;
+}
+
 export interface TaskList {
   tasks: MaintenanceTask[];
   /** So the screen hides forms the API would refuse — never the control itself. */

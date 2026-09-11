@@ -25,6 +25,8 @@ import { SpacesPanel } from '../spaces-panel';
 import { listSpaces } from '../spaces.actions';
 import { MaintenancePanel } from '../maintenance-panel';
 import { listTasks } from '../maintenance.actions';
+import { EnergyPanel } from '../energy-panel';
+import { listMeters } from '../energy.actions';
 import { PageError, PageShell } from '@/components/page-shell';
 
 /**
@@ -112,6 +114,9 @@ export default async function FacilityPage({
    * knows.
    */
   const tasks = await listTasks(facilityId);
+
+  // The meters, same terms — slice 5.1. Absent when the endpoint refuses.
+  const meters = await listMeters(facilityId);
 
   /*
     The season in figures — POOLSE-52.
@@ -368,6 +373,20 @@ export default async function FacilityPage({
                 {t('maintenance.section')}
               </h2>
               <MaintenancePanel facilityId={facilityId} list={tasks} />
+            </section>
+          )}
+
+          {/*
+            Energy — slice 5.1. Below maintenance because it is the same shape
+            of question about the site — what does running it cost — and above
+            the photographs because it is a record and they are a description.
+          */}
+          {meters !== null && (
+            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('energy.section')}
+              </h2>
+              <EnergyPanel facilityId={facilityId} list={meters} />
             </section>
           )}
 

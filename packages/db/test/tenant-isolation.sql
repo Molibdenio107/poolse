@@ -745,4 +745,78 @@ BEGIN
   RAISE NOTICE 'PASS test 13: fee categories are isolated, and so is naming one';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 14 — the energy tables, and a reading keyed on a foreign meter
+-- ---------------------------------------------------------------------------
+--
+-- `energy_reading` has no surrogate id — its key is (organization_id, meter_id,
+-- taken_at), the hypertable shape — so the composite key to `energy_meter` is
+-- the whole of what stops one club's figure landing on another club's dial.
+-- The meter's own pool key routes through the facility, as every target does.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid := 'a1111111-1111-1111-1111-111111111111';
+  v_fac_b uuid := 'b1111111-1111-1111-1111-111111111111';
+  v_meter_a uuid; v_meter_b uuid; v_pool_b uuid; v_seen integer; ok boolean;
+BEGIN
+  SELECT id INTO v_pool_b FROM pool WHERE organization_id = v_b AND name = 'Piscina B1';
+
+  INSERT INTO energy_meter (organization_id, facility_id, name) VALUES (v_a, v_fac_a, 'Geral A')
+  RETURNING id INTO v_meter_a;
+  INSERT INTO energy_meter (organization_id, facility_id, name) VALUES (v_b, v_fac_b, 'Geral B')
+  RETURNING id INTO v_meter_b;
+
+  -- A meter at the neighbour's site, and one serving the neighbour's tank.
+  ok := false;
+  BEGIN
+    INSERT INTO energy_meter (organization_id, facility_id, name) VALUES (v_a, v_fac_b, 'Roubado');
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 14a: org A made a meter at org B site'; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO energy_meter (organization_id, facility_id, pool_id, name)
+    VALUES (v_a, v_fac_a, v_pool_b, 'Bomba');
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 14b: org A meter named org B pool'; END IF;
+
+  -- A reading on the neighbour's meter.
+  INSERT INTO energy_reading (organization_id, meter_id, taken_at, value)
+  VALUES (v_a, v_meter_a, '2026-09-01 08:00+00', 1000);
+
+  ok := false;
+  BEGIN
+    INSERT INTO energy_reading (organization_id, meter_id, taken_at, value)
+    VALUES (v_a, v_meter_b, '2026-09-01 08:00+00', 1000);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 14c: org A read org B meter'; END IF;
+
+  -- And the policies themselves, from the app role.
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  SELECT count(*) INTO v_seen FROM energy_meter;
+  IF v_seen <> 1 THEN RAISE EXCEPTION 'FAIL test 14d: org B saw % meters, not 1', v_seen; END IF;
+
+  SELECT count(*) INTO v_seen FROM energy_reading;
+  IF v_seen <> 0 THEN RAISE EXCEPTION 'FAIL test 14e: org B saw % of org A readings', v_seen; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO energy_reading (organization_id, meter_id, taken_at, value)
+    VALUES (v_a, v_meter_a, '2026-10-01 08:00+00', 1100);
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 14f: org B wrote a reading into org A'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 14: meters and readings are isolated, and a reading cannot name a foreign meter';
+END $$;
+
 ROLLBACK;

@@ -4,10 +4,11 @@
 # This file exists so a fresh clone gets a correctly-roled Postgres in one command
 # instead of a page of createdb/createrole instructions that drift.
 #
-# Phase 5 needs TimescaleDB. When that lands, swapping the image for
-# timescale/timescaledb:latest-pg16 is the whole local change — but confirm the
-# hosting provider supports it first, because that is the half that cannot be
-# swapped.
+# Phase 5's `energy_reading` is hypertable-shaped and deliberately not yet a
+# hypertable (docs/decisions.md, 2026-09-11). When automated meter feeds land,
+# swapping the image for timescale/timescaledb:latest-pg16 is the whole local
+# change — but confirm the hosting provider supports it first, because that is
+# the half that cannot be swapped.
 
 services:
   postgres:

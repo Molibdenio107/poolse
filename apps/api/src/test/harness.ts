@@ -202,6 +202,11 @@ const TENANT_TABLES = [
    */
   'pool_analysis_alert',
   'pool_analysis',
+  // Readings before their meter, and meters before the pool one may serve —
+  // slice 5.1. A meter can also point at the meter it replaced, which is a
+  // same-table key the DELETE-by-organization does not care about.
+  'energy_reading',
+  'energy_meter',
   // A pool's own safe ranges, before the tank they belong to. Not cascaded, for
   // the same reason a lane is not: only a teardown genuinely deletes a pool.
   'pool_metric_range',

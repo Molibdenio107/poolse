@@ -2505,12 +2505,28 @@ energy_meter    id, organization_id, facility_id, pool_id (nullable),
                 kind ('pump'|'heating'|'lighting'|'total'), unit,
                 reads ('cumulative_index'|'interval_consumption'),
                 initial_index numeric, replaced_meter_id (nullable), archived_at
-energy_reading  organization_id, meter_id, taken_at, value numeric, source
+energy_reading  organization_id, meter_id, taken_at, value numeric(14,3), source,
+                recorded_by, note, archived_at
                 primary key (organization_id, meter_id, taken_at)
-                -- TimescaleDB hypertable on taken_at; no surrogate id
+                -- hypertable-shaped: no surrogate id. Not yet a hypertable, see below
 tariff          id, organization_id, name, valid_from, valid_to,
-                price_per_unit numeric(12,6), currency, standing_charge_cents
+                price_per_unit numeric(12,6), currency, standing_charge_cents   -- 5.3, not built
 ```
+
+**Built in 5.1 + 5.2** (`1788508800000_energy.sql`), with `kind` gaining `other`, `unit`
+free text defaulting to `kWh`, and a CHECK that only a cumulative meter carries
+`initial_index`. `energy_reading` is **hypertable-shaped and not a hypertable**: the key is
+the one Timescale needs, but a club types one figure per meter per month, and enabling the
+extension is the hosting constraint the phase-0 note calls the half that cannot be swapped.
+Converting is one migration — `create_hypertable('energy_reading', 'taken_at',
+migrate_data => true)` — with no application change, and its trigger is automated feeds
+(roadmap, "Deferred"). `archived_at` is a column a hypertable carries without complaint.
+
+**A dial does not run backwards** — `energy_index_monotonic`, BEFORE INSERT OR UPDATE,
+compares a cumulative reading to its live neighbours (and the initial index) and raises
+`check_violation` with `energy_index_backwards|<prev>|<value>` or
+`energy_index_ahead|<next>|<value>` in DETAIL. Archived rows are out of the series, which is
+what makes a correction on the same instant possible. `docs/features/energy.md`.
 
 **`energy_meter.reads` settles what `value` means.** A cumulative meter index and an
 interval consumption figure are computed into cost in completely different ways, and

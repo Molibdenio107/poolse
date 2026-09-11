@@ -54,6 +54,8 @@ export const formats = {
      * side could reach inside the control.
      */
     month: { year: 'numeric', month: 'long' },
+    /** A month with no room for the year — the axis of a twelve-month chart: "set." */
+    monthShort: { month: 'short' },
   },
 } as const;
 

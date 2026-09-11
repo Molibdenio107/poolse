@@ -252,6 +252,17 @@ kind and opens a pool for a personal tenant and a season for a club; every calle
 it gets a club. Absence from the menu is a shape, not a permission: the API answers those
 routes, and hiding them is not the control. `docs/features/personal.md`.
 
+**`energy_meter.reads` says what a value means, and consumption is derived from it once, in
+SQL.** `cumulative_index` is the dial and consumption is `value − lag(value)` over *live*
+rows (falling back to `initial_index`); `interval_consumption` is the value itself. The one
+definition is `CONSUMED` in `energy.repository.ts`, read by the list and the monthly rollup;
+never subtract in TypeScript. `reads` is never edited — a wrong meter is retired and made
+again, and a swapped dial is a new meter with `replaced_meter_id`. `energy_reading` has **no
+surrogate id** — its key is `(organization_id, meter_id, taken_at)`, hypertable-shaped for
+the day feeds arrive, and deliberately not a hypertable until then (decisions, 2026-09-11).
+A dial running backwards is a trigger refusal carrying the neighbour in DETAIL, like
+`pool_capacity`. `docs/features/energy.md`.
+
 **A subscription covers one facility; the schema allows many.** These are two
 different rules and both are settled. The *schema* keeps `organization 1 —— N
 facility` — backlog story B4 proposed narrowing it and was rejected, because a
