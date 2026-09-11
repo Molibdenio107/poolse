@@ -30,6 +30,7 @@
  */
 import pg from 'pg';
 import { seedReferenceSchedule } from './seed-reference.js';
+import { seedEnergy } from './seed-energy.js';
 
 const { Client } = pg;
 
@@ -1067,12 +1068,19 @@ async function main(): Promise<void> {
                    WHERE f.organization_id = $1 AND f.archived_at IS NULL
                    ORDER BY f.created_at, f.id LIMIT 1
                 ), 'Europe/Lisbon'))::date + g, 'YYYY-MM-DD') AS day
-           FROM generate_series(0, 2) AS g`,
+           FROM generate_series(0, 3) AS g
+          WHERE extract(isodow FROM (now() AT TIME ZONE coalesce((
+                  SELECT f.timezone FROM facility f
+                   WHERE f.organization_id = $1 AND f.archived_at IS NULL
+                   ORDER BY f.created_at, f.id LIMIT 1
+                ), 'Europe/Lisbon'))::date + g) <> 7
+          LIMIT 3`,
         [org.id],
       );
       const days = localDays.map((row) => row.day);
 
-      // Today and the two days after: on holiday.
+      // Today and the two days after, Sundays skipped — a vacation day may not
+      // be a Sunday, and a seed run on a Friday found that out.
       await requestLeave(client, org.id, staff[0]!.id, 'approved', staff[1]!.id, null, days);
 
       /*
@@ -1348,6 +1356,13 @@ async function main(): Promise<void> {
       );
     }
     for (const note of reference.skipped) console.log(`  referência: saltou — ${note}`);
+
+    // Energy — slice 5.3. Always, because it is small and the screens are
+    // unjudgeable without a year of bills.
+    const energy = await seedEnergy(client, org.id);
+    console.log(
+      `  energia: ${energy.meters} contadores, ${energy.readings} leituras, ${energy.invoices} faturas`,
+    );
 
     await client.query('COMMIT');
 

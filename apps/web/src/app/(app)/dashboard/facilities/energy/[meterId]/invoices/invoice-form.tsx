@@ -138,12 +138,30 @@ export function InvoiceForm({
 
   const [open, setOpen] = useState(!collapsed);
 
-  // Dropping a file anywhere on the page reads it — the gesture people try
-  // first, and the reason `useFileDrop` listens on the window.
+  /*
+   * Dropping a file anywhere on the page reads it — the gesture people try
+   * first, and the reason `useFileDrop` listens on the window.
+   *
+   * **A drop that cannot be read says why.** The first version returned
+   * silently when the parser was off or the file was not a document, and the
+   * report was "dragging does not work": the overlay showed, the file landed,
+   * nothing happened. Now the card says the parser is not on, or that this is
+   * not a PDF or a photo, and the manual form is a click away.
+   */
+  const [dropNote, setDropNote] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const readForm = useRef<HTMLFormElement>(null);
   const { dragging } = useFileDrop((file) => {
-    if (!importAvailable || !isAccepted(file) || fileInput.current === null) return;
+    if (!importAvailable) {
+      setDropNote('energy.invoice.importDisabled');
+      return;
+    }
+    if (!isAccepted(file)) {
+      setDropNote('energy.invoice.chooseAFile');
+      return;
+    }
+    if (fileInput.current === null) return;
+    setDropNote(null);
     const transfer = new DataTransfer();
     transfer.items.add(file);
     fileInput.current.files = transfer.files;
@@ -240,6 +258,12 @@ export function InvoiceForm({
           </form>
         ) : (
           <p className="text-sm text-foreground-muted">{t('energy.invoice.importDisabled')}</p>
+        )}
+        {dropNote !== null && (
+          <p className="flex items-start gap-1.5 text-sm text-warning">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            {t(dropNote)}
+          </p>
         )}
         {!open && (
           <button type="button" onClick={() => setOpen(true)} className={cn(BUTTON, 'self-start')}>
