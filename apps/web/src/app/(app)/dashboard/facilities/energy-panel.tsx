@@ -38,9 +38,12 @@ export const METER_KINDS = ['total', 'pump', 'heating', 'lighting', 'other'] as 
 export function EnergyPanel({
   facilityId,
   list,
+  backTo,
 }: {
   facilityId: string;
   list: MeterList;
+  /** Where a meter's Voltar lands: the site page by default, or Energia. */
+  backTo?: string;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -67,7 +70,13 @@ export function EnergyPanel({
       {list.meters.length > 0 && (
         <ul className="flex flex-col divide-y divide-border rounded border border-border">
           {list.meters.map((meter) => (
-            <MeterRow key={meter.id} meter={meter} facilityId={facilityId} locale={locale} format={format} />
+            <MeterRow
+              key={meter.id}
+              meter={meter}
+              backTo={backTo ?? `/dashboard/facilities/${facilityId}`}
+              locale={locale}
+              format={format}
+            />
           ))}
         </ul>
       )}
@@ -86,12 +95,12 @@ export function EnergyPanel({
 
 function MeterRow({
   meter,
-  facilityId,
+  backTo,
   locale,
   format,
 }: {
   meter: EnergyMeter;
-  facilityId: string;
+  backTo: string;
   locale: string;
   format: ReturnType<typeof useFormatter>;
 }): React.ReactElement {
@@ -104,7 +113,7 @@ function MeterRow({
         <span className="flex flex-wrap items-center gap-2">
           <Gauge className="size-4 shrink-0 text-foreground-muted" aria-hidden="true" />
           <Link
-            href={withFrom(`/dashboard/facilities/energy/${meter.id}`, `/dashboard/facilities/${facilityId}`)}
+            href={withFrom(`/dashboard/facilities/energy/${meter.id}`, backTo)}
             className="text-sm font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {meter.name}

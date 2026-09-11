@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Users,
   Waves,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,8 @@ const ICONS = {
   // reads as an emergency the screen is not reporting.
   progress: TrendingUp,
   medical: HeartPulse,
+  // A bolt for the module about what running the site costs — 5.1.
+  energy: Zap,
 } satisfies Record<string, LucideIcon>;
 
 export type EntityKind = keyof typeof ICONS;

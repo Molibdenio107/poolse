@@ -302,7 +302,12 @@
     "retire": "Retirar contador",
     "retireHint": "As leituras ficam guardadas e esta página continua a abrir; o contador deixa de aparecer na instalação e não recebe mais leituras.",
     "retired": "Este contador foi retirado. O histórico mantém-se; não recebe novas leituras.",
-    "replaced": "Substituiu o contador «{name}»."
+    "replaced": "Substituiu o contador «{name}».",
+    "backToEnergy": "Voltar à energia",
+    "title": "Energia",
+    "subtitle": "Os contadores de cada instalação e as suas leituras.",
+    "noSites": "Ainda não há instalações. Crie uma em Instalações para poder adicionar contadores.",
+    "siteUnavailable": "Não foi possível carregar os contadores desta instalação."
   },
   "maintenance": {
     "about": "Sobre",

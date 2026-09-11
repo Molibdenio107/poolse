@@ -302,7 +302,12 @@
     "retire": "Retire meter",
     "retireHint": "The readings are kept and this page still opens; the meter disappears from the site and takes no more readings.",
     "retired": "This meter has been retired. Its history is kept; it takes no new readings.",
-    "replaced": "Replaced the meter “{name}”."
+    "replaced": "Replaced the meter “{name}”.",
+    "backToEnergy": "Back to energy",
+    "title": "Energy",
+    "subtitle": "Each site's meters and their readings.",
+    "noSites": "No sites yet. Create one under Facilities to add meters.",
+    "siteUnavailable": "The meters for this site could not be loaded."
   },
   "maintenance": {
     "about": "About",

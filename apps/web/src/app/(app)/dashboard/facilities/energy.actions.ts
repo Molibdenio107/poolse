@@ -19,6 +19,7 @@ import type { FormState } from '../actions';
  * month), and the meter's own page (the list and the chart).
  */
 function refresh(facilityId: string, meterId?: string): void {
+  revalidatePath('/dashboard/energy');
   revalidatePath(`/dashboard/facilities/${facilityId}`);
   if (meterId !== undefined) revalidatePath(`/dashboard/facilities/energy/${meterId}`);
 }

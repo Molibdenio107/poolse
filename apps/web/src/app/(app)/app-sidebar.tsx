@@ -188,6 +188,15 @@ const SECTIONS: Item[] = [
     roles: ['owner', 'admin'],
     kinds: ['business'],
   },
+  /*
+   * Energia — phase 5. Its own section, at Rui's ask: an operator logging the
+   * month's meter readings is doing one job across every site, and starting
+   * from Instalações puts a site page — spaces, tasks, photographs — between
+   * them and the dial. The panel on each site's page stays, because a
+   * technician looking at a site also wants its meters there. Both kinds of
+   * tenant: a garden pool has a pump.
+   */
+  { href: '/dashboard/energy', key: 'energy.section', icon: 'energy' },
   {
     href: '/dashboard/students',
     key: 'students.title',

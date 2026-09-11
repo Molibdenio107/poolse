@@ -1,8 +1,11 @@
 # Energy
 
-Meters and what they read — slices 5.1 and 5.2. A site's meters live in a panel on the
-site's page; each meter has its own page with the consumption chart, the reading form and
-the record.
+Meters and what they read — slices 5.1 and 5.2. **Energia** is its own entry in the
+navigation: one screen with every site and its meters, so the month's readings are one job
+across the whole club rather than a visit to each site page. The same panel also sits on
+each site's page, for a technician who is already looking at the site. Each meter has its
+own page with the consumption chart, the reading form and the record; Voltar returns to
+whichever of the two the meter was opened from.
 
 ## Meters
 
