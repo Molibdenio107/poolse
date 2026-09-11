@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { EntityIcon, type EntityKind } from '@/components/entity-icon';
+import type { OrganizationKind } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 /**
@@ -47,19 +48,38 @@ interface Item {
   children?: Item[];
   /** Absent means everybody. Present means only these roles. */
   roles?: readonly string[];
+  /**
+   * Absent means every kind of tenant. Present means only these — slice 4.5.
+   *
+   * A personal tenant is one person and one pool: no turmas, no calendar of
+   * them, no students, no invoices, no staff. Those sections are not hidden as
+   * a permission — the owner of a personal tenant is an owner, and the API
+   * would answer — they are absent because they are about things that do not
+   * exist there. A section for the one pool is Instalações, which already holds
+   * the tank, its readings, its kit and its tasks.
+   */
+  kinds?: readonly OrganizationKind[];
+}
+
+/** Who is looking: their roles, and what kind of tenant they are in. */
+interface Viewer {
+  roles: readonly string[];
+  kind: OrganizationKind;
 }
 
 /** Whether this person may see an item — never inherited from a parent. */
-function visible(item: Item, roles: readonly string[]): boolean {
-  return item.roles === undefined || item.roles.some((role) => roles.includes(role));
+function visible(item: Item, viewer: Viewer): boolean {
+  const byRole = item.roles === undefined || item.roles.some((role) => viewer.roles.includes(role));
+  const byKind = item.kinds === undefined || item.kinds.includes(viewer.kind);
+  return byRole && byKind;
 }
 
 /** The item and its permitted descendants, or null if the item itself is hidden. */
-function prune(item: Item, roles: readonly string[]): Item | null {
-  if (!visible(item, roles)) return null;
+function prune(item: Item, viewer: Viewer): Item | null {
+  if (!visible(item, viewer)) return null;
 
   const children = (item.children ?? [])
-    .map((child) => prune(child, roles))
+    .map((child) => prune(child, viewer))
     .filter((child): child is Item => child !== null);
 
   return children.length > 0 ? { ...item, children } : { ...item, children: [] };
@@ -119,6 +139,7 @@ const SECTIONS: Item[] = [
         href: '/dashboard/facilities/staff',
         key: 'staff.title',
         roles: ['owner', 'admin'],
+        kinds: ['business'],
         // Férias is staff leave, so it belongs to Staff — POOLSE-34 as amended.
         // The chain is Instalações → Staff → Férias.
         children: [
@@ -131,6 +152,7 @@ const SECTIONS: Item[] = [
     href: '/dashboard/classes',
     key: 'classes.title',
     icon: 'class',
+    kinds: ['business'],
     // Épocas sits under Turmas because that is what a season contains. Visible to
     // everyone — knowing which year is running is not privileged — while the
     // reset itself is owner and admin only, refused by the API rather than
@@ -147,6 +169,7 @@ const SECTIONS: Item[] = [
     href: '/dashboard/calendar',
     key: 'calendar.title',
     icon: 'calendar',
+    kinds: ['business'],
     children: [{ href: '/dashboard/calendar/closures', key: 'calendar.closures' }],
   },
   /*
@@ -163,11 +186,13 @@ const SECTIONS: Item[] = [
     key: 'invoices.title',
     icon: 'invoice',
     roles: ['owner', 'admin'],
+    kinds: ['business'],
   },
   {
     href: '/dashboard/students',
     key: 'students.title',
     icon: 'student',
+    kinds: ['business'],
     // Ordered by how close each one sits to a student — round 6. Encarregados
     // first, directly under Alunos, because a guardian is a person attached to a
     // student and the two lists are read together; Níveis next, being what a
@@ -204,17 +229,24 @@ const LINK = 'flex items-center gap-2 rounded px-3 py-2 text-sm whitespace-nowra
 const ACTIVE = 'bg-primary/15 font-medium text-primary';
 const IDLE = 'text-foreground-muted hover:bg-surface-muted hover:text-foreground';
 
-export function AppSidebar({ roles }: { roles: readonly string[] }): React.ReactElement {
+export function AppSidebar({
+  roles,
+  kind,
+}: {
+  roles: readonly string[];
+  kind: OrganizationKind;
+}): React.ReactElement {
   const t = useTranslations();
   const pathname = usePathname();
 
   /*
-   * Pruned by role, at every depth — POOLSE-38 AC5.
+   * Pruned by role and by kind of tenant, at every depth — POOLSE-38 AC5, 4.5.
    *
    * A hidden parent takes its children with it; a hidden child leaves its parent
    * standing. Never inherited: Instalações and Staff have different audiences.
    */
-  const sections = SECTIONS.map((section) => prune(section, roles)).filter(
+  const viewer: Viewer = { roles, kind };
+  const sections = SECTIONS.map((section) => prune(section, viewer)).filter(
     (section): section is Item => section !== null,
   );
 

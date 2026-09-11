@@ -243,6 +243,15 @@ Turmas, and it is wired into `generate_sessions`, `class_group`, `class_schedule
 `facility_time_slot`. Anything that needs a season reads that list — the price list filters out
 `archived`, because a year that has ended cannot be priced afresh.
 
+**A personal tenant is `organization.kind`, read in exactly two places.** `/me` carries
+`organizationKind` on each membership; the sidebar prunes by it (`kinds: ['business']` on an
+item, alongside `roles`) and the dashboard swaps occupancy for `MyPoolPanel`. Nothing else
+branches on it — a personal tenant is an ordinary tenant with fewer screens, which is what
+decision 1 promised and slice 4.5 proved by staying small. `provision_organization` takes the
+kind and opens a pool for a personal tenant and a season for a club; every caller that omits
+it gets a club. Absence from the menu is a shape, not a permission: the API answers those
+routes, and hiding them is not the control. `docs/features/personal.md`.
+
 **A subscription covers one facility; the schema allows many.** These are two
 different rules and both are settled. The *schema* keeps `organization 1 —— N
 facility` — backlog story B4 proposed narrowing it and was rejected, because a

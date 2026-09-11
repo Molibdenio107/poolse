@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { AlertTriangle } from 'lucide-react';
 import type { PoolAnalysis } from '@/lib/api';
 import type { Excursion } from '@/lib/water';
+import { excursionText } from '@/lib/excursion-text';
 import { toCsv } from '@/lib/csv';
 
 /**
@@ -73,32 +74,16 @@ export function UnsafeWaterNotice({
             in this app, and "out of range" without the number is not actionable.
           */}
           <ul className="flex flex-col gap-0.5 text-sm">
-            {excursions.map((excursion) => (
-              <li key={excursion.metric}>
-                {t(`facilities.metric.${excursion.metric}`)}: {excursion.value}{' '}
-                {excursion.unit} —{' '}
-                {/*
-                  The whole range where both ends are judged, the crossed bound
-                  alone where they are not — a pool may carry a floor and no
-                  ceiling. `limit` is always a number, because a reading cannot
-                  be above a ceiling that does not exist, so this is a choice of
-                  sentence rather than a null check.
-                */}
-                {excursion.from !== null && excursion.to !== null
-                  ? t(
-                      excursion.direction === 'high'
-                        ? 'facilities.aboveRange'
-                        : 'facilities.belowRange',
-                      { from: excursion.from, to: excursion.to },
-                    )
-                  : t(
-                      excursion.direction === 'high'
-                        ? 'facilities.aboveLimit'
-                        : 'facilities.belowLimit',
-                      { limit: excursion.limit },
-                    )}
-              </li>
-            ))}
+            {excursions.map((excursion) => {
+              // Whole range or crossed bound: `excursionText` chooses.
+              const text = excursionText(excursion);
+              return (
+                <li key={excursion.metric}>
+                  {t(`facilities.metric.${excursion.metric}`)}: {excursion.value}{' '}
+                  {excursion.unit} — {t(text.key, text.values)}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>

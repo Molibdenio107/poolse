@@ -1,4 +1,4 @@
-import { ApiError, apiFetch, type Me } from '@/lib/api';
+import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import { AppSidebar } from '../app-sidebar';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
@@ -20,7 +20,8 @@ import { UserMenu } from '../user-menu';
  */
 
 /**
- * Which roles the person signed in holds, in the organization they are acting as.
+ * Which roles the person signed in holds, in the organization they are acting
+ * as — and which kind of organization that is, since 4.5.
  *
  * `memberships[0]` mirrors TenantMiddleware, which picks the first membership
  * when no organization is named — so the navigation is filtered against the same
@@ -30,15 +31,17 @@ import { UserMenu } from '../user-menu';
  * Fails closed. If `/me` cannot be reached, no role-restricted section renders:
  * the pages behind them refuse independently, so the worst this costs is a menu
  * item missing during an outage, and the alternative failure is the wrong way
- * round.
+ * round. The kind falls back to `business`, which is the fuller menu — a
+ * personal user seeing Turmas during an outage is a nuisance, not a leak.
  */
-async function currentRoles(): Promise<string[]> {
+async function currentViewer(): Promise<{ roles: string[]; kind: OrganizationKind }> {
   try {
     const me = await apiFetch<Me>('/me');
-    return me.memberships[0]?.roles ?? [];
+    const membership = me.memberships[0];
+    return { roles: membership?.roles ?? [], kind: membership?.organizationKind ?? 'business' };
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
-    return [];
+    return { roles: [], kind: 'business' };
   }
 }
 
@@ -47,7 +50,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const roles = await currentRoles();
+  const { roles, kind } = await currentViewer();
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -58,7 +61,7 @@ export default async function DashboardLayout({
         printed today; when something is, it inherits this for free.
       */}
       <div className="contents print:hidden">
-        <AppSidebar roles={roles} />
+        <AppSidebar roles={roles} kind={kind} />
       </div>
 
       {/*

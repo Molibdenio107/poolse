@@ -18,6 +18,13 @@ tenant keys and "if personal then…" branches — is the shape that eventually 
 tenant's data into another's screen. The cost is a mostly-empty organization row per
 personal user, which is nothing.
 
+Built in slice 4.5, and it stayed small — which the roadmap named as the test of whether
+this decision had been honoured. The kind is chosen on the create-organization form and
+travels on `resolve_memberships` to `/me`; the web app reads it in exactly two places, the
+navigation and the dashboard. A personal tenant is provisioned with a pool and no season
+(below), and nothing about its size is *enforced*: `max_facilities` already caps the sites,
+and a second pool or a second member is the person's own affair.
+
 ### 2. Tenant isolation is enforced by the database, not by the repository layer
 
 Carrying `organization_id` on every table is not isolation — it is only the raw material
@@ -208,9 +215,12 @@ every table, and connecting as the owner role disables RLS everywhere at once.
 So `provision_organization` is a `SECURITY DEFINER` function with `SET search_path = public,
 pg_temp`, revoked from `PUBLIC` and granted to `poolse_app` alone. In one transaction it
 creates the organization (trialing, 14-day trial, unique slug), the membership, the owner
-role, a first facility, and the audit entries. A narrow, reviewable door instead of an open
-gate — the same pattern as the other cross-tenant functions, which are listed in the
-README.
+role, a first facility, and the audit entries — then, by `p_kind`, either the first season
+(a club: `class_group.season_id` is NOT NULL) or the first pool, named like the site (a
+personal tenant: readings hang off a tank, and a season is a turmas concept). The kind
+defaults to `business`, so every caller written before 4.5 provisions a club. A narrow,
+reviewable door instead of an open gate — the same pattern as the other cross-tenant
+functions, which are listed in the README.
 
 **A facility knows where it is, in two different senses, and both are needed.** `address`
 stays free text — it is what goes on an invoice and what a parent pastes into a maps app,

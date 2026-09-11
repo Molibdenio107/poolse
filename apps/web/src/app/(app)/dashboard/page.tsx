@@ -7,6 +7,7 @@ import {
   type Facilities,
   type Me,
   type Occupancy,
+  type PoolDetail,
 } from '../../../lib/api';
 import { readTheme } from '../../../lib/preferences';
 import { PreferenceSync } from './preference-sync';
@@ -14,6 +15,7 @@ import { CreateOrganizationForm } from './create-organization-form';
 import { PageError, PageShell } from '@/components/page-shell';
 import { OccupancyPanel } from '@/components/occupancy-panel';
 import { MyTasksPanel } from './my-tasks-panel';
+import { MyPoolPanel } from './my-pool-panel';
 import { listMyTasks } from './facilities/maintenance.actions';
 
 /**
@@ -49,6 +51,11 @@ import { listMyTasks } from './facilities/maintenance.actions';
  * best-effort for the same reason they always were, which is now load-bearing —
  * an instructor or a guardian opening the front door must get a page, not a
  * permission error, so a figure that will not compute becomes a muted note.
+ *
+ * **A personal tenant gets its pool instead of occupancy — slice 4.5.** There
+ * are no bookings to sell, so the occupancy call is not made at all rather than
+ * made and reported as unavailable; what a person with one pool opens Poolse
+ * for is whether the water is all right, and `MyPoolPanel` is that answer.
  */
 export default async function DashboardPage(): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -65,6 +72,7 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
   }
 
   const membership = me?.memberships[0] ?? null;
+  const personal = membership?.organizationKind === 'personal';
 
   /*
    * The club's site, and its season in figures.
@@ -77,7 +85,29 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
   let occupancyFacilityId: string | null = null;
   let occupancyFailed = false;
 
-  if (me !== null && membership !== null) {
+  /*
+   * The personal tenant's pools, each with its record — one round trip per tank,
+   * which for the tenant this is built for is one. Best-effort like the rest:
+   * a tank whose page will not load is simply not on the dashboard, and the
+   * pool page itself says what went wrong.
+   */
+  let pools: PoolDetail[] = [];
+  let poolsFailed = false;
+
+  if (me !== null && membership !== null && personal) {
+    const sites = await apiFetch<Facilities>('/facilities').catch(() => null);
+    const listed = sites?.facilities.flatMap((site) => site.pools) ?? [];
+    pools = (
+      await Promise.all(
+        listed.map((pool) =>
+          apiFetch<PoolDetail>(`/facilities/pools/${pool.id}`).catch(() => null),
+        ),
+      )
+    ).filter((pool): pool is PoolDetail => pool !== null);
+    // Best-effort, but not silent — the same rule as occupancy below. A
+    // dashboard with no card is indistinguishable from a tenant with no pool.
+    poolsFailed = sites === null || pools.length < listed.length;
+  } else if (me !== null && membership !== null) {
     /*
      * `/facilities` answers with an object, not an array — `{ organizationId,
      * facilities, canManage, timezones }`. The first version of this typed it as
@@ -131,11 +161,24 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
             activeTheme={activeTheme}
           />
 
+          {pools.map((pool) => (
+            <MyPoolPanel key={pool.id} pool={pool} />
+          ))}
+
           {occupancy !== null && (
             <OccupancyPanel occupancy={occupancy} facilityId={occupancyFacilityId} />
           )}
 
           {myTasks !== null && <MyTasksPanel list={myTasks} />}
+
+          {poolsFailed && (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('dashboard.myPool')}
+              </h2>
+              <p className="mt-1 text-sm text-foreground-muted">{t('dashboard.poolUnavailable')}</p>
+            </section>
+          )}
 
           {occupancyFailed && (
             <section className="rounded border border-border bg-surface p-5">

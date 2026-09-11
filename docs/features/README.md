@@ -12,6 +12,7 @@ looks for it.
 |---|---|
 | [navigation.md](navigation.md) | The home route, the menu, the shared page shell |
 | [facilities.md](facilities.md) | Sites, tanks, lanes, capacity |
+| [personal.md](personal.md) | One person and their own pool: the signup choice, and what the app hides |
 | [spaces.md](spaces.md) | Espaços, the cleaning log, maintenance requests |
 | [maintenance.md](maintenance.md) | Planned maintenance: recurring tasks, who they are for, and the record of every time one was done |
 | [classes.md](classes.md) | Turmas, parcerias, the lane grid |

@@ -172,6 +172,8 @@ import type { Paginated } from './pagination';
 
 export type { Paginated };
 
+export type OrganizationKind = 'business' | 'personal';
+
 export interface Me {
   user: {
     id: string;
@@ -190,6 +192,13 @@ export interface Me {
     organizationId: string;
     organizationName: string;
     organizationSlug: string;
+    /**
+     * `business` is a club; `personal` is one person tracking their own pool —
+     * slice 4.5. The navigation and the dashboard are shaped by it; nothing
+     * else reads it, because a personal tenant is an ordinary tenant with
+     * fewer screens.
+     */
+    organizationKind: OrganizationKind;
     membershipId: string;
     roles: string[];
     subscriptionStatus: 'trialing' | 'active' | 'past_due' | 'canceled';

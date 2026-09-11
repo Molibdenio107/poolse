@@ -108,7 +108,15 @@
     "createFailed": "Could not create the organization.",
     "facilityLabel": "Name of your first site (optional)",
     "facilityPlaceholder": "Leave blank and we use the organization name",
-    "facilityHint": "We create one site straight away so you can get started. You can rename it later."
+    "facilityHint": "We create one site straight away so you can get started. You can rename it later.",
+    "kindLabel": "What will you manage?",
+    "kindBusiness": "A club or a facility",
+    "kindBusinessHint": "Classes, students, staff, calendar and invoicing. For swim schools, municipal pools, hotels and condominiums.",
+    "kindPersonal": "My own pool",
+    "kindPersonalHint": "Record and follow your pool's water, with a warning when something leaves its range. No classes, no invoicing.",
+    "nameLabelPersonal": "Pool name",
+    "namePlaceholderPersonal": "E.g. Home pool",
+    "personalHint": "We create the pool under this name straight away, ready for its first analysis. The name and the dimensions can be changed later."
   },
   "profile": {
     "title": "My profile",
@@ -1648,7 +1656,15 @@
     "trial": "Trial",
     "trialDaysLeft": "{days, plural, one {# day left} other {# days left}} of your trial.",
     "trialEnded": "Your trial has ended. Nothing is blocked, for now.",
-    "trialNoCard": "No card on file. Subscriptions arrive in a later phase."
+    "trialNoCard": "No card on file. Subscriptions arrive in a later phase.",
+    "lastAnalysis": "Last analysis: {when} ({ago})",
+    "noAnalysisYet": "No water analyses yet. Record the first one to see the values here.",
+    "inRange": "Within range",
+    "notJudged": "No range set",
+    "outOfRange": "{count, plural, one {# value outside the recommended range.} other {# values outside the recommended range.}}",
+    "openPool": "Open the pool",
+    "myPool": "My pool",
+    "poolUnavailable": "The pool could not be loaded. Try opening the facilities page."
   },
   "marketing": {
     "pricingLink": "Pricing",

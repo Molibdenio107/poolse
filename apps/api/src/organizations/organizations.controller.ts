@@ -3,6 +3,7 @@ import { currentAuth } from '../auth/auth.context.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import { ensureAppUser } from '../identity/identity.service.js';
+import type { OrganizationKind } from '../identity/identity.repository.js';
 import {
   provisionOrganization,
   reposicaoSettings,
@@ -14,6 +15,8 @@ interface CreateOrganizationBody {
   name?: unknown;
   locale?: unknown;
   facilityName?: unknown;
+  /** `business` (the default) or `personal` — slice 4.5. */
+  kind?: unknown;
 }
 
 interface CreateOrganizationResponse {
@@ -21,6 +24,8 @@ interface CreateOrganizationResponse {
   membershipId: string;
   facilityId: string;
   slug: string;
+  /** Set for a personal tenant, which opens with its pool already there. */
+  poolId: string | null;
 }
 
 const MAX_NAME_LENGTH = 120;
@@ -56,12 +61,24 @@ export class OrganizationsController {
       throw new BadRequestException(`A facility name may be at most ${MAX_NAME_LENGTH} characters`);
     }
 
+    /*
+     * Absent means a club, so every caller written before 4.5 still creates one.
+     * Anything else is refused rather than coerced: a typo here would silently
+     * hand somebody the wrong product, and the form only ever sends the two.
+     */
+    let kind: OrganizationKind = 'business';
+    if (body.kind === 'business' || body.kind === 'personal') {
+      kind = body.kind;
+    } else if (body.kind !== undefined && body.kind !== null && body.kind !== '') {
+      throw new BadRequestException('kind must be business or personal');
+    }
+
     const user = await ensureAppUser(clerkUserId);
     const locale = typeof body.locale === 'string' && body.locale ? body.locale : user.locale;
 
     // Blank is allowed and means "same as the organization". An operator with one
     // site should not have to type its name twice, and the function decides.
-    return provisionOrganization(clerkUserId, name, locale, facilityName || null);
+    return provisionOrganization(clerkUserId, name, locale, facilityName || null, kind);
   }
 }
 

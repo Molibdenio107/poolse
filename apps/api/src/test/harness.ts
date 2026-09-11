@@ -386,26 +386,36 @@ export async function withScratchTenant<T>(fn: (tenant: ScratchTenant) => Promis
       sql,
     });
   } finally {
-    /*
-     * One transaction for the whole teardown, so a scratch tenant is either gone
-     * or still whole — never half-deleted, which is the state that leaves a
-     * foreign key dangling and the next run failing for the wrong reason.
-     */
-    const client = await owner().connect();
-    try {
-      await client.query('BEGIN');
-      for (const table of TENANT_TABLES) {
-        await client.query(`DELETE FROM ${table} WHERE organization_id = $1`, [organizationId]);
-      }
-      await client.query('DELETE FROM organization WHERE id = $1', [organizationId]);
-      await client.query('DELETE FROM app_user WHERE clerk_user_id = $1', [clerkUserId]);
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
+    await removeTenant(organizationId, clerkUserId);
+  }
+}
+
+/**
+ * Removes every trace of a tenant and the app_user who owns it.
+ *
+ * Exported for the one test that provisions through `OrganizationsController`
+ * itself rather than through `withScratchTenant` — signup is the thing under
+ * test there, so the fixture cannot be the fixture.
+ *
+ * One transaction for the whole teardown, so a scratch tenant is either gone or
+ * still whole — never half-deleted, which is the state that leaves a foreign key
+ * dangling and the next run failing for the wrong reason.
+ */
+export async function removeTenant(organizationId: string, clerkUserId: string): Promise<void> {
+  const client = await owner().connect();
+  try {
+    await client.query('BEGIN');
+    for (const table of TENANT_TABLES) {
+      await client.query(`DELETE FROM ${table} WHERE organization_id = $1`, [organizationId]);
     }
+    await client.query('DELETE FROM organization WHERE id = $1', [organizationId]);
+    await client.query('DELETE FROM app_user WHERE clerk_user_id = $1', [clerkUserId]);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
 }
 
@@ -493,6 +503,17 @@ export async function addMember(
  * by a typo that throws a TypeError. The status is what makes the assertion
  * mean what it says.
  */
+/**
+ * Removes an app_user who never got a tenant.
+ *
+ * As the owner, because the app role holds no DELETE on `app_user` — an
+ * ordinary `withoutTenantScope` delete affects zero rows and says nothing, which
+ * is how the first version of the signup test left a row behind on every run.
+ */
+export async function removeAppUser(clerkUserId: string): Promise<void> {
+  await owner().query('DELETE FROM app_user WHERE clerk_user_id = $1', [clerkUserId]);
+}
+
 export async function expectStatus(fn: () => Promise<unknown>, status: number): Promise<void> {
   try {
     await fn();

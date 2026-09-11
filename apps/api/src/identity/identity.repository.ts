@@ -13,11 +13,19 @@ export interface AppUserSummary {
   contactPhone: string | null;
 }
 
+export type OrganizationKind = 'business' | 'personal';
+
 export interface MembershipSummary {
   appUserId: string;
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
+  /**
+   * `business` is a club; `personal` is one person tracking their own pool —
+   * slice 4.5. The web app shapes its navigation from this, and nothing else
+   * reads it: a personal tenant is an ordinary tenant with fewer screens.
+   */
+  organizationKind: OrganizationKind;
   membershipId: string;
   roles: string[];
   /** trialing | active | past_due | canceled. Nothing enforces it until phase 2. */
@@ -89,6 +97,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       o_organization_id: string;
       o_organization_name: string;
       o_organization_slug: string;
+      o_organization_kind: OrganizationKind;
       o_membership_id: string;
       o_roles: string[];
       o_subscription_status: string;
@@ -100,6 +109,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       organizationId: row.o_organization_id,
       organizationName: row.o_organization_name,
       organizationSlug: row.o_organization_slug,
+      organizationKind: row.o_organization_kind,
       membershipId: row.o_membership_id,
       roles: row.o_roles,
       subscriptionStatus: row.o_subscription_status,

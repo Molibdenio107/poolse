@@ -108,7 +108,15 @@
     "createFailed": "Não foi possível criar a organização.",
     "facilityLabel": "Nome da primeira instalação (opcional)",
     "facilityPlaceholder": "Em branco, usamos o nome da organização",
-    "facilityHint": "Criamos já uma instalação para poder começar. Pode mudar o nome depois."
+    "facilityHint": "Criamos já uma instalação para poder começar. Pode mudar o nome depois.",
+    "kindLabel": "O que vai gerir?",
+    "kindBusiness": "Um clube ou uma instalação",
+    "kindBusinessHint": "Turmas, alunos, staff, calendário e faturação. Para escolas de natação, piscinas municipais, hotéis e condomínios.",
+    "kindPersonal": "A minha própria piscina",
+    "kindPersonalHint": "Registar e acompanhar a água da sua piscina, com avisos quando algo sai do intervalo. Sem turmas nem faturação.",
+    "nameLabelPersonal": "Nome da piscina",
+    "namePlaceholderPersonal": "Ex.: Piscina de casa",
+    "personalHint": "Criamos já a piscina com este nome, pronta para a primeira análise. Pode mudar o nome e as dimensões depois."
   },
   "profile": {
     "title": "O meu perfil",
@@ -1648,7 +1656,15 @@
     "trial": "Período experimental",
     "trialDaysLeft": "{days, plural, one {Falta # dia} other {Faltam # dias}} de experiência.",
     "trialEnded": "O período experimental terminou. Por agora nada foi bloqueado.",
-    "trialNoCard": "Sem cartão associado. A subscrição chega numa fase posterior."
+    "trialNoCard": "Sem cartão associado. A subscrição chega numa fase posterior.",
+    "lastAnalysis": "Última análise: {when} ({ago})",
+    "noAnalysisYet": "Ainda não há análises à água. Registe a primeira para ver aqui os valores.",
+    "inRange": "Dentro do intervalo",
+    "notJudged": "Sem intervalo definido",
+    "outOfRange": "{count, plural, one {# valor fora do intervalo recomendado.} other {# valores fora do intervalo recomendado.}}",
+    "openPool": "Abrir a piscina",
+    "myPool": "A minha piscina",
+    "poolUnavailable": "Não foi possível carregar a piscina. Tente abrir a página das instalações."
   },
   "marketing": {
     "pricingLink": "Preços",

@@ -414,7 +414,7 @@ and 6 — so 3.6 now simply follows the readings it needs.
 | 4.2 | Safe ranges + alerts through the notification subsystem | ✅ **An out-of-range reading reaches someone.** The published bands moved to `@poolse/rules` so the pool's page and the API judge a reading by the same numbers; a recent analysis outside its band writes an alert inside the transaction that wrote the reading and emails owner, admin and maintenance after it commits. A sample older than 48 hours is recorded and alerts nobody, so importing a year of lab sheets sends no email. The panel says whether anything actually left the building. **A pool may set its own bands** — its own numbers, one bound only, or the metric not judged at all — so the hotel tank kept at 30 °C no longer alerts every day |
 | 4.3 | Maintenance tasks, recurrence, assignment | ✅ **A task appears for the right person.** A recurring job with an interval in days, optionally about a room, a tank or a piece of kit, optionally somebody's. Due-ness is derived in SQL — paused is never due, never-done is due — and the site's page lists them worst first while the dashboard shows each person their own. **Not built:** a notification when one falls due, which needs the same scheduled job POOLSE-26 wants |
 | 4.4 | Completion log and history | ✅ **Arrived with 4.3, because the split does not survive contact with the schema** — a task cannot say when it is next due without a record of having been done. `maintenance_task_completion` carries who, when the *work happened* (not when it was typed), and a note; the task's own page is the history. There is no edit: an entry is a claim about a moment, and a deleted one did not happen |
-| 4.5 | Personal app on the same reading model | An individual tracks their own pool |
+| 4.5 | Personal app on the same reading model | ✅ **An individual tracks their own pool.** The create-organization form asks one question first — a club, or your own pool — and a personal tenant opens with its pool already there and no season. The navigation drops Turmas, Calendário, Alunos, Faturação and Staff; the dashboard shows the pool at a glance — the latest value of each metric judged against this pool's own bands, and when the sample was taken — in place of occupancy. Everything else is the club's own screens unchanged: the pool page, its readings, ranges, alerts, photos, kit and tasks. **Not built:** the mobile app the product spec names; this is the web app shaped for one person |
 
 **4.3 and 4.4 were built as one slice**, and the reason is worth keeping: due-ness is
 derived from the completion history, so a task without that history cannot answer the
@@ -439,6 +439,9 @@ same layout, on the same page, added in 4.1.
 
 4.5 should be small. If it is not small, the "personal user is their own organization"
 decision was not honoured somewhere upstream — that is the signal to go and fix it.
+
+**It was small**: one migration, one parameter on the signup endpoint, one field on `/me`,
+and two places in the web app that read it. The decision held.
 
 ## Phase 5 — energy
 

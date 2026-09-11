@@ -1,16 +1,21 @@
 import { withOrg, withoutTenantScope } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import type { OrganizationKind } from '../identity/identity.repository.js';
 
 export interface ProvisionedOrganization {
   organizationId: string;
   membershipId: string;
   facilityId: string;
   slug: string;
+  /** The pool a personal tenant opens with — slice 4.5. Null for a club. */
+  poolId: string | null;
 }
 
 /**
  * Stands up a whole tenant: organization on a 14-day trial, the caller as its
- * owner, and a first facility.
+ * owner, and a first facility. A club also opens with a season; a personal
+ * tenant opens with a pool instead — slice 4.5 — because readings hang off a
+ * tank and a season is a turmas concept.
  *
  * Cross-tenant by necessity — the caller belongs to nowhere yet, so there is no
  * GUC to satisfy the RLS policy on `organization` and an ordinary INSERT is
@@ -26,6 +31,7 @@ export async function provisionOrganization(
   name: string,
   locale: string,
   facilityName: string | null,
+  kind: OrganizationKind,
 ): Promise<ProvisionedOrganization> {
   return withoutTenantScope(async (tx) => {
     const { rows } = await tx.query<{
@@ -33,11 +39,13 @@ export async function provisionOrganization(
       o_membership_id: string;
       o_facility_id: string;
       o_slug: string;
-    }>('SELECT * FROM provision_organization($1, $2, $3, $4)', [
+      o_pool_id: string | null;
+    }>('SELECT * FROM provision_organization($1, $2, $3, $4, $5::organization_kind)', [
       clerkUserId,
       name,
       locale,
       facilityName,
+      kind,
     ]);
 
     const row = rows[0];
@@ -48,6 +56,7 @@ export async function provisionOrganization(
       membershipId: row.o_membership_id,
       facilityId: row.o_facility_id,
       slug: row.o_slug,
+      poolId: row.o_pool_id,
     };
   });
 }

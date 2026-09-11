@@ -65,9 +65,14 @@ export async function createOrganizationAction(
   const name = String(formData.get('name') ?? '').trim();
   if (!name) return { ok: false, errorKey: 'organization.nameRequired' };
 
+  // Anything but the second answer is a club — the API refuses a third value,
+  // and the form only ever sends the two.
+  const kind = formData.get('kind') === 'personal' ? 'personal' : 'business';
+
   try {
     await apiPost('/organizations', {
       name,
+      kind,
       facilityName: String(formData.get('facilityName') ?? '').trim(),
     });
   } catch (error) {
