@@ -37,15 +37,16 @@ import {
 /**
  * Energy — slices 5.1 and 5.2.
  *
- * The same three tiers as planned maintenance, for the same reasons. Reading is
- * open to any member. *Typing in a reading is open to every management login*:
- * the person at the meter cupboard with a torch is the maintenance member, and
- * a form they may not submit is a figure on a scrap of paper. Defining the
- * meters — what is metered, what the dial means — is owner and admin, because
- * `reads` is a decision that makes every subsequent figure right or wrong.
+ * Two tiers, and narrower than planned maintenance — Rui's call. **The whole
+ * module is owner, admin and maintenance**: what running the site costs is not
+ * an instructor's question, and the person at the meter cupboard with a torch
+ * is the maintenance member. Those three read and record. Defining the meters
+ * — what is metered, what the dial means — is owner and admin, because `reads`
+ * is a decision that makes every subsequent figure right or wrong.
  */
 
-const MANAGEMENT = ['owner', 'admin', 'instructor', 'maintenance'] as const;
+/** Who may see the module at all, and record a reading. */
+const ENERGY = ['owner', 'admin', 'maintenance'] as const;
 const CAN_PLAN = ['owner', 'admin'] as const;
 
 const MAX_NAME = 80;
@@ -80,6 +81,7 @@ interface MeterResponse {
 export class EnergyController {
   @Get('facilities/:facilityId/meters')
   async list(@Param('facilityId') facilityId: string): Promise<MeterListResponse> {
+    requireRole(...ENERGY);
     const { organizationId } = currentTenant();
     const canPlan = hasRole(...CAN_PLAN);
 
@@ -87,7 +89,7 @@ export class EnergyController {
       meters: await listMeters(organizationId, facilityId),
       pools: canPlan ? await listPools(organizationId, facilityId) : [],
       canPlan,
-      canRecord: hasRole(...MANAGEMENT),
+      canRecord: hasRole(...ENERGY),
     };
   }
 
@@ -108,6 +110,7 @@ export class EnergyController {
 
   @Get('meters/:meterId')
   async one(@Param('meterId') meterId: string): Promise<MeterResponse> {
+    requireRole(...ENERGY);
     const { organizationId } = currentTenant();
 
     const meter = await getMeter(organizationId, meterId);
@@ -125,7 +128,7 @@ export class EnergyController {
       // An archived meter takes no more readings: its series ended when it was
       // swapped out or retired, and a figure typed against it would be a figure
       // on the wrong dial.
-      canRecord: hasRole(...MANAGEMENT) && !meter.archived,
+      canRecord: hasRole(...ENERGY) && !meter.archived,
     };
   }
 
@@ -173,7 +176,7 @@ export class EnergyController {
     @Param('meterId') meterId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<{ recorded: true }> {
-    requireRole(...MANAGEMENT);
+    requireRole(...ENERGY);
     const { organizationId, membershipId } = currentTenant();
 
     if (membershipId === null) {
@@ -210,7 +213,7 @@ export class EnergyController {
     @Param('meterId') meterId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<{ archived: true }> {
-    requireRole(...MANAGEMENT);
+    requireRole(...ENERGY);
     const { organizationId } = currentTenant();
 
     const takenAt = moment(body['takenAt'], 'takenAt');

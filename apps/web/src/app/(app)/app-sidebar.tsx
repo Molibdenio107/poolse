@@ -148,6 +148,24 @@ const SECTIONS: Item[] = [
       },
     ],
   },
+  /*
+   * Energia — phase 5, directly under Instalações because it is about the
+   * building rather than the people in it. Its own section at Rui's ask: an
+   * operator logging the month's meter readings is doing one job across every
+   * site, and starting from Instalações puts a site page — spaces, tasks,
+   * photographs — between them and the dial. The panel on each site's page
+   * stays, because a technician looking at a site also wants its meters there.
+   *
+   * Owner, admin and maintenance: what running the site costs is not an
+   * instructor's question, and the API refuses the routes to everybody else
+   * besides. Both kinds of tenant, since a garden pool has a pump.
+   */
+  {
+    href: '/dashboard/energy',
+    key: 'energy.section',
+    icon: 'energy',
+    roles: ['owner', 'admin', 'maintenance'],
+  },
   {
     href: '/dashboard/classes',
     key: 'classes.title',
@@ -188,15 +206,6 @@ const SECTIONS: Item[] = [
     roles: ['owner', 'admin'],
     kinds: ['business'],
   },
-  /*
-   * Energia — phase 5. Its own section, at Rui's ask: an operator logging the
-   * month's meter readings is doing one job across every site, and starting
-   * from Instalações puts a site page — spaces, tasks, photographs — between
-   * them and the dial. The panel on each site's page stays, because a
-   * technician looking at a site also wants its meters there. Both kinds of
-   * tenant: a garden pool has a pump.
-   */
-  { href: '/dashboard/energy', key: 'energy.section', icon: 'energy' },
   {
     href: '/dashboard/students',
     key: 'students.title',

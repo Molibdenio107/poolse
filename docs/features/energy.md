@@ -28,8 +28,10 @@ retired and made again.
 retired in the same transaction (its readings and page stay; its form is gone), which is
 what frees its name for the replacement. The new page says which meter it replaced.
 
-Owner and admin define meters and retire them; every management login (owner, admin,
-instructor, maintenance) records and removes readings; any member reads.
+**The whole module is owner, admin and maintenance** — the menu entry, the site-page panel
+and every route. Those three read and record; owner and admin define meters and retire
+them. An instructor has no Energia at all: what running the site costs is not their
+question, and the API refuses the routes to everybody else besides.
 
 ## Readings
 

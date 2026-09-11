@@ -133,6 +133,12 @@ test('5.1 — a dial does not run backwards, and the refusal quotes the neighbou
       await expectStatus(() => controller.create(tenant.facilityId, { name: 'X', kind: 'total' }), 403);
     });
 
+    // An instructor has no energy module at all — not even the list. Rui's
+    // call: what running the site costs is not an instructor's question.
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      await expectStatus(() => new EnergyController().list(tenant.facilityId), 403);
+    });
+
     const id = await actingAs(tenant, { roles: ['owner'] }, async () =>
       (await new EnergyController().create(tenant.facilityId, { name: 'Geral', kind: 'total' })).id,
     );
