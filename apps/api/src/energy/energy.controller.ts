@@ -273,8 +273,24 @@ function readMeter(body: Record<string, unknown>, facilityId: string): MeterInpu
     reads: reads as MeterReads,
     initialIndex,
     replacedMeterId: id(body['replacedMeterId']),
+    cpe: cpeOf(body['cpe']),
+    serial: text(body['serial'], 40, 'serial'),
     notes: text(body['notes'], MAX_NOTES, 'notes'),
   };
+}
+
+/**
+ * A CPE as the schema wants it — compact and upper-case. The bill prints
+ * "PT 0002 000 042 466 003 BW"; a person types it with or without the spaces.
+ */
+function cpeOf(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const compact = value.replace(/\s+/g, '').toUpperCase();
+  if (compact === '') return null;
+  if (!/^[A-Z]{2}[A-Z0-9]{14,20}$/.test(compact)) {
+    throw new BadRequestException({ message: 'That is not a CPE', field: 'cpe', fields: { cpe: 'energy.cpeInvalid' } });
+  }
+  return compact;
 }
 
 /** Trimmed, capped, and empty becomes null rather than a blank string. */
@@ -320,6 +336,13 @@ function asHttp(error: unknown): unknown {
         code: 'meter_name_taken',
         message: 'A meter with that name already exists at this site',
         fields: { name: 'energy.nameTaken' },
+      });
+    }
+    if (error.field === 'cpe') {
+      return new ConflictException({
+        code: 'meter_cpe_taken',
+        message: 'Another live meter already carries that CPE',
+        fields: { cpe: 'energy.cpeTaken' },
       });
     }
     return new BadRequestException({

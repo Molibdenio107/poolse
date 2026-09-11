@@ -708,6 +708,9 @@ export interface EnergyMeter {
   initialIndex: number | null;
   replacedMeterId: string | null;
   replacedMeterName: string | null;
+  /** Código do Ponto de Entrega, compact — how a bill finds its meter. 5.3. */
+  cpe: string | null;
+  serial: string | null;
   notes: string | null;
   /** Retired — swapped out or removed. Its page opens, its form is gone. */
   archived: boolean;
@@ -730,6 +733,83 @@ export interface MonthlyConsumption {
   /** `YYYY-MM`, in the site's timezone. */
   month: string;
   consumed: number | null;
+}
+
+// Faturas — slice 5.3. Shapes mirror `invoices.repository.ts`.
+
+export interface EnergyInvoiceRegister {
+  register: 'vazio' | 'ponta' | 'cheias' | 'super_vazio' | 'total';
+  previousIndex: number | null;
+  currentIndex: number | null;
+  kwh: number;
+}
+
+export interface EnergyInvoiceLine {
+  kind: 'energy' | 'power' | 'discount' | 'tax' | 'other';
+  description: string;
+  period: 'simples' | 'ponta' | 'cheias' | 'vazio_normal' | 'super_vazio' | 'fora_vazio' | 'vazio' | null;
+  fromOn: string | null;
+  toOn: string | null;
+  quantity: number | null;
+  unit: string | null;
+  unitPrice: number | null;
+  amountCents: number;
+  discountCents: number;
+  totalCents: number;
+  vatRate: number | null;
+}
+
+export interface EnergyInvoiceSummary {
+  id: string;
+  supplier: string;
+  invoiceNumber: string;
+  issuedOn: string;
+  periodStart: string;
+  periodEnd: string;
+  days: number;
+  /** Billed energy, summed from the lines by the API. */
+  kwh: number;
+  subtotalCents: number;
+  totalCents: number;
+  documentTotalCents: number;
+  source: 'manual' | 'import' | 'feed';
+}
+
+export interface EnergyInvoiceDetail extends EnergyInvoiceSummary {
+  meterId: string;
+  meterName: string;
+  facilityId: string;
+  atcud: string | null;
+  documentReference: string | null;
+  dueOn: string | null;
+  contractedPowerKva: number | null;
+  tariff: string | null;
+  cycle: string | null;
+  readingQuality: 'real' | 'estimated' | null;
+  vatCents: number;
+  otherChargesCents: number;
+  networkAccessCents: number | null;
+  regulatedDifferenceCents: number | null;
+  notes: string | null;
+  sourceFileName: string | null;
+  recordedByName: string | null;
+  registers: EnergyInvoiceRegister[];
+  lines: EnergyInvoiceLine[];
+}
+
+export interface EnergyInvoiceList {
+  invoices: EnergyInvoiceSummary[];
+  canRecord: boolean;
+}
+
+/** What a preview says — field refusals, warnings with figures, and the headline kWh. */
+export interface EnergyInvoiceCheck {
+  fields: Record<string, string>;
+  warnings: { key: string; values: Record<string, string | number> }[];
+  billedKwh: number;
+  registerKwh: number;
+  willSetCpe: boolean;
+  willSetSerial: boolean;
 }
 
 export interface MeterList {

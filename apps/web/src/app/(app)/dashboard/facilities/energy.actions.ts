@@ -50,6 +50,8 @@ function meterBody(formData: FormData): Record<string, unknown> {
     initialIndex: initial === '' ? null : Number(initial),
     poolId: String(formData.get('poolId') ?? ''),
     replacedMeterId: String(formData.get('replacedMeterId') ?? ''),
+    cpe: String(formData.get('cpe') ?? '').trim(),
+    serial: String(formData.get('serial') ?? '').trim(),
     notes: String(formData.get('notes') ?? '').trim(),
   };
 }

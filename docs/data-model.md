@@ -2522,6 +2522,20 @@ Converting is one migration — `create_hypertable('energy_reading', 'taken_at',
 migrate_data => true)` — with no application change, and its trigger is automated feeds
 (roadmap, "Deferred"). `archived_at` is a column a hypertable carries without complaint.
 
+**Faturas — 5.3, first half** (`1788516000000_energy-invoices.sql`). `energy_meter` gained
+`cpe` (compact, `^[A-Z]{2}[A-Z0-9]{14,20}$`, unique per tenant among live meters) and
+`serial`. Three tables: `energy_invoice` — meter, supplier, the *electricity* fatura's
+number/ATCUD/subtotal/VAT/total, the *document's* reference, `other_charges_cents` and
+`document_total_cents` (CHECK: total = subtotal + VAT; document = total + other), period,
+issue/due dates, contracted power, tariff, cycle, reading quality, network access, regulated
+difference, source, recorded_by, soft delete, unique (org, lower(supplier), lower(number))
+where live; `energy_invoice_register` — (org, invoice, register) with previous/current index
+and kWh, current ≥ previous; `energy_invoice_line` — position, kind (`energy | power |
+discount | tax | other`), printed description, tariff period, date range, quantity, unit,
+`unit_price numeric(12,6)`, amount/discount/total cents, VAT rate. Lines and registers
+cascade from the bill. Billed kWh is a sum over the energy lines, never a column.
+`docs/features/energy.md`.
+
 **A dial does not run backwards** — `energy_index_monotonic`, BEFORE INSERT OR UPDATE,
 compares a cumulative reading to its live neighbours (and the initial index) and raises
 `check_violation` with `energy_index_backwards|<prev>|<value>` or

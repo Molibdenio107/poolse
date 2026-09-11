@@ -263,6 +263,14 @@ the day feeds arrive, and deliberately not a hypertable until then (decisions, 2
 A dial running backwards is a trigger refusal carrying the neighbour in DETAIL, like
 `pool_capacity`. `docs/features/energy.md`.
 
+**A bill is filed whole and never edited; its two ways in share one form and one check.**
+`energy_invoice` + registers + typed lines (5.3). `draftToBody` in `lib/energy-invoice.ts` is
+the one place a printed "15,41 €" becomes cents — the model's answer and a typed figure
+both pass through it — and `checkInvoice` on the API is the one place a bill is judged, read
+by preview and commit alike. The parser (`energy-invoice-agent.ts`) is flag-gated and
+supplier-agnostic: its prompt names concepts, never a layout. **Real bills never enter the
+repo** — `test-fixtures/**/private/` is gitignored. `docs/features/energy.md`.
+
 **A subscription covers one facility; the schema allows many.** These are two
 different rules and both are settled. The *schema* keeps `organization 1 —— N
 facility` — backlog story B4 proposed narrowing it and was rejected, because a

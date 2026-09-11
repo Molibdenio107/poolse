@@ -27,6 +27,7 @@ import { InventoryController } from './inventory/inventory.controller.js';
 import { SpacesController } from './spaces/spaces.controller.js';
 import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { EnergyController } from './energy/energy.controller.js';
+import { EnergyInvoicesController } from './energy/invoices.controller.js';
 import { SlotsController } from './facilities/slots.controller.js';
 import { PartnersController } from './facilities/partners.controller.js';
 import { GridController } from './facilities/grid.controller.js';
@@ -104,6 +105,7 @@ const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.
     SpacesController,
     MaintenanceController,
     EnergyController,
+    EnergyInvoicesController,
     SlotsController,
     PartnersController,
     GridController,

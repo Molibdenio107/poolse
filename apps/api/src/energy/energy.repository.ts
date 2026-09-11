@@ -35,6 +35,10 @@ export interface EnergyMeter {
   initialIndex: number | null;
   replacedMeterId: string | null;
   replacedMeterName: string | null;
+  /** Código do Ponto de Entrega, compact, as a bill prints it minus the spaces — 5.3. */
+  cpe: string | null;
+  /** The number on the dial, as a bill prints it. */
+  serial: string | null;
   notes: string | null;
   archived: boolean;
 
@@ -53,6 +57,8 @@ export interface MeterInput {
   reads: MeterReads;
   initialIndex: number | null;
   replacedMeterId: string | null;
+  cpe: string | null;
+  serial: string | null;
   notes: string | null;
 }
 
@@ -118,6 +124,7 @@ const METER_COLUMNS = `
   -- ::float8, or numeric arrives as a string and the form shows "18402.000".
   m.initial_index::float8 AS initial_index,
   m.replaced_meter_id, rm.name AS replaced_meter_name,
+  m.cpe, m.serial,
   m.notes, (m.archived_at IS NOT NULL) AS archived,
   latest.taken_at AS latest_at, latest.value::float8 AS latest_value,
   counted.n AS reading_count`;
@@ -135,6 +142,8 @@ interface MeterRow {
   initial_index: number | null;
   replaced_meter_id: string | null;
   replaced_meter_name: string | null;
+  cpe: string | null;
+  serial: string | null;
   notes: string | null;
   archived: boolean;
   latest_at: Date | null;
@@ -156,6 +165,8 @@ function meterOf(row: MeterRow): EnergyMeter {
     initialIndex: row.initial_index,
     replacedMeterId: row.replaced_meter_id,
     replacedMeterName: row.replaced_meter_name,
+    cpe: row.cpe,
+    serial: row.serial,
     notes: row.notes,
     archived: row.archived,
     latestAt: row.latest_at?.toISOString() ?? null,
@@ -209,7 +220,7 @@ export async function listPools(organizationId: string, facilityId: string): Pro
 
 /** Raised when a name is already taken at this site, or a target is not at it. */
 export class MeterConflictError extends Error {
-  constructor(readonly field: 'name' | 'poolId' | 'replacedMeterId') {
+  constructor(readonly field: 'name' | 'poolId' | 'replacedMeterId' | 'cpe') {
     super(`energy meter conflict on ${field}`);
   }
 }
@@ -225,6 +236,8 @@ function asMeterError(error: unknown): never {
   const code = (error as { code?: string }).code;
   const constraint = (error as { constraint?: string }).constraint ?? '';
   if (code === '23505' && constraint === 'energy_meter_name_uq') throw new MeterConflictError('name');
+  if (code === '23505' && constraint === 'energy_meter_cpe_uq') throw new MeterConflictError('cpe');
+  if (code === '23514' && constraint === 'energy_meter_cpe_shape') throw new MeterConflictError('cpe');
   if (code === '23503' && constraint.includes('pool')) throw new MeterConflictError('poolId');
   if (code === '23503' && constraint.includes('replaced')) throw new MeterConflictError('replacedMeterId');
   throw error;
@@ -256,8 +269,8 @@ export async function addMeter(organizationId: string, input: MeterInput): Promi
       .query<{ id: string }>(
         `INSERT INTO energy_meter
            (organization_id, facility_id, pool_id, name, kind, unit, reads,
-            initial_index, replaced_meter_id, notes)
-         VALUES ($1, $2, $3, $4, $5::energy_meter_kind, $6, $7::energy_meter_reads, $8, $9, $10)
+            initial_index, replaced_meter_id, cpe, serial, notes)
+         VALUES ($1, $2, $3, $4, $5::energy_meter_kind, $6, $7::energy_meter_reads, $8, $9, $10, $11, $12)
          RETURNING id`,
         [
           organizationId,
@@ -269,6 +282,8 @@ export async function addMeter(organizationId: string, input: MeterInput): Promi
           input.reads,
           input.initialIndex,
           input.replacedMeterId,
+          input.cpe,
+          input.serial,
           input.notes,
         ],
       )
@@ -297,16 +312,19 @@ export async function addMeter(organizationId: string, input: MeterInput): Promi
 export async function updateMeter(
   organizationId: string,
   meterId: string,
-  input: Pick<MeterInput, 'poolId' | 'name' | 'kind' | 'unit' | 'initialIndex' | 'notes'>,
+  input: Pick<MeterInput, 'poolId' | 'name' | 'kind' | 'unit' | 'initialIndex' | 'cpe' | 'serial' | 'notes'>,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const { rowCount } = await tx
       .query(
         `UPDATE energy_meter
             SET pool_id = $3, name = $4, kind = $5::energy_meter_kind, unit = $6,
-                initial_index = $7, notes = $8
+                initial_index = $7, cpe = $8, serial = $9, notes = $10
           WHERE organization_id = $1 AND id = $2 AND archived_at IS NULL`,
-        [organizationId, meterId, input.poolId, input.name, input.kind, input.unit, input.initialIndex, input.notes],
+        [
+          organizationId, meterId, input.poolId, input.name, input.kind, input.unit,
+          input.initialIndex, input.cpe, input.serial, input.notes,
+        ],
       )
       .catch(asMeterError);
 

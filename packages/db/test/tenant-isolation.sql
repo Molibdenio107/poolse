@@ -819,4 +819,93 @@ BEGIN
   RAISE NOTICE 'PASS test 14: meters and readings are isolated, and a reading cannot name a foreign meter';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 15 — a bill cannot be filed on a foreign meter, nor its lines on a foreign bill
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid := 'a1111111-1111-1111-1111-111111111111';
+  v_fac_b uuid := 'b1111111-1111-1111-1111-111111111111';
+  v_meter_a uuid; v_meter_b uuid; v_inv_a uuid; v_inv_b uuid; v_seen integer; ok boolean;
+BEGIN
+  INSERT INTO energy_meter (organization_id, facility_id, name, cpe)
+  VALUES (v_a, v_fac_a, 'Quadro A', 'PT0002000000000001AA') RETURNING id INTO v_meter_a;
+  INSERT INTO energy_meter (organization_id, facility_id, name, cpe)
+  VALUES (v_b, v_fac_b, 'Quadro B', 'PT0002000000000002BB') RETURNING id INTO v_meter_b;
+
+  INSERT INTO energy_invoice
+    (organization_id, meter_id, supplier, invoice_number, issued_on, period_start, period_end,
+     subtotal_cents, vat_cents, total_cents, document_total_cents)
+  VALUES (v_a, v_meter_a, 'EDP', 'FT1', DATE '2026-09-01', DATE '2026-08-01', DATE '2026-08-31',
+          4112, 511, 4623, 4623)
+  RETURNING id INTO v_inv_a;
+  INSERT INTO energy_invoice
+    (organization_id, meter_id, supplier, invoice_number, issued_on, period_start, period_end,
+     subtotal_cents, vat_cents, total_cents, document_total_cents)
+  VALUES (v_b, v_meter_b, 'EDP', 'FT1', DATE '2026-09-01', DATE '2026-08-01', DATE '2026-08-31',
+          100, 23, 123, 123)
+  RETURNING id INTO v_inv_b;
+
+  -- A bill on the neighbour's meter.
+  ok := false;
+  BEGIN
+    INSERT INTO energy_invoice
+      (organization_id, meter_id, supplier, invoice_number, issued_on, period_start, period_end,
+       subtotal_cents, vat_cents, total_cents, document_total_cents)
+    VALUES (v_a, v_meter_b, 'EDP', 'FT2', DATE '2026-09-01', DATE '2026-08-01', DATE '2026-08-31',
+            100, 23, 123, 123);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 15a: org A filed a bill on org B meter'; END IF;
+
+  -- A register and a line on the neighbour's bill.
+  ok := false;
+  BEGIN
+    INSERT INTO energy_invoice_register (organization_id, invoice_id, register, kwh)
+    VALUES (v_a, v_inv_b, 'ponta', 33);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 15b: org A wrote a register on org B bill'; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO energy_invoice_line
+      (organization_id, invoice_id, position, kind, description, amount_cents, total_cents)
+    VALUES (v_a, v_inv_b, 0, 'energy', 'Simples', 1541, 1479);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 15c: org A wrote a line on org B bill'; END IF;
+
+  -- The same CPE in two tenants is fine — two clubs, two meters, one grid.
+  -- The same CPE twice in one tenant is not.
+  ok := false;
+  BEGIN
+    INSERT INTO energy_meter (organization_id, facility_id, name, cpe)
+    VALUES (v_a, v_fac_a, 'Outro', 'PT0002000000000001AA');
+  EXCEPTION WHEN unique_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 15d: one tenant got two meters on one CPE'; END IF;
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  SELECT count(*) INTO v_seen FROM energy_invoice;
+  IF v_seen <> 1 THEN RAISE EXCEPTION 'FAIL test 15e: org B saw % bills, not 1', v_seen; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO energy_invoice_line
+      (organization_id, invoice_id, position, kind, description, amount_cents, total_cents)
+    VALUES (v_a, v_inv_a, 0, 'energy', 'Contrabando', 1, 1);
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 15f: org B wrote a line into org A'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 15: bills, registers and lines are isolated, and a CPE is one meter per tenant';
+END $$;
+
 ROLLBACK;

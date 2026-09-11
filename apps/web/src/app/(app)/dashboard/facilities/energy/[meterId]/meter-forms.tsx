@@ -206,6 +206,18 @@ export function MeterAdmin({
           />
         )}
 
+        <div className="flex flex-wrap gap-4">
+          <TextField
+            name="cpe"
+            label={t('energy.cpe')}
+            hint={t('energy.cpeHint')}
+            initial={meter.cpe ?? ''}
+            className="w-64"
+            {...(state.fields?.['cpe'] === undefined ? {} : { error: t(state.fields['cpe']) })}
+          />
+          <TextField name="serial" label={t('energy.serial')} initial={meter.serial ?? ''} className="w-48" />
+        </div>
+
         <TextAreaField name="notes" label={t('energy.notes')} initial={meter.notes ?? ''} rows={2} />
 
         {state.ok === false && state.errorKey !== undefined && (

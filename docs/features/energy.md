@@ -64,29 +64,54 @@ The meter page shows the last twelve calendar months in the **site's timezone**,
 month present; a month with no closing reading is null and drawn as a labelled gap, not a
 zero-height bar. The figures are always in a table under the chart.
 
-## Planned — faturas (agreed 11 September 2026, not built)
+## Faturas — the bill as a record (5.3, first half)
 
-An electricity invoice (EDP Empresas is the reference layout) becomes a record on the
-meter it bills, matched by **CPE** — `energy_meter` gains a `cpe`. Two tables:
-`energy_invoice` (supplier, number, issue/due dates, billing period, contracted power,
-tariff option, and the money as integer cents: energy, power, reactive, taxes, subtotal,
-VAT, total) and `energy_invoice_line` (one per período horário — ponta, cheias, vazio
-normal, super vazio, fora de vazio, vazio, simples — with previous/current index,
-estimated flag, kWh, unit price, amount). Total kWh is a sum.
+An electricity bill is filed on the meter it bills. Three tables, read off two real EDP
+documents: `energy_invoice` (the header), `energy_invoice_register` (what the dial said)
+and `energy_invoice_line` (what was charged). `energy_meter` gained `cpe` and `serial`.
 
-**Two ways in, one pipeline**: a *Registar fatura* form, and *Importar fatura* which reads
-the PDF with a parser (`lib/energy-invoice.ts` + `-agent.ts`, behind
-`ENERGY_INVOICE_AI_ENABLED` and `ANTHROPIC_API_KEY`, off by default, sends only the
-document) and pre-fills **that same form** for the operator to correct and confirm. The
-readings chart stays as it is; invoices are their own *Faturas* section on the meter page
-and are never merged with dial readings. Same supplier + number twice is refused. The
-parser is calibrated against an anonymised sample at `apps/web/test-fixtures/energy/`,
-which Rui will provide.
+**What a bill is here.** One PDF bundles several faturas — electricity, Contribuição
+Audiovisual, a services pack, débitos — so the record carries the *electricity* fatura
+(number, ATCUD, subtotal, VAT, total) and the *document* (reference, `other_charges_cents`,
+`document_total_cents`), with CHECKs that `total = subtotal + VAT` and
+`document total = total + other charges`. The subtotal is every billed line before VAT,
+taxes such as DGEG and IEC included; VAT is VAT alone. Registers are the dial — vazio,
+ponta, cheias, super vazio, total — with previous/current index and kWh, and a register
+may not run backwards (CHECK). Lines are every billed row, typed `energy | power |
+discount | tax | other`, with the printed description, tariff period, date range,
+quantity and unit, unit price (`numeric(12,6)`), amount, discount, total before VAT, and
+VAT rate. Money is integer cents. Billed kWh is the sum of the energy lines, never a column.
+
+**Two ways in, one pipeline.** *Registar fatura* on the meter page opens a form; *Importar a
+fatura* on the same page reads a PDF or a photo with the parser and fills **that same form**,
+every field editable. *Verificar* sends the form to `POST /energy/meters/:id/invoices`
+without `commit` and shows the answer: field refusals (beside their box) and warnings —
+lines that do not sum to the subtotal, registers that do not match the billed kWh, a CPE or
+serial that is not this meter's, a period overlapping a filed bill. *Registar fatura* sends
+the same body with `commit: true`; the API refuses (422, same field keys) anything the
+preview called an error and writes whole, in one transaction. A bill for a meter with no CPE
+stamps the bill's CPE and serial onto the meter — said on the preview first. The same
+supplier + number twice is refused; archived, the number is free again.
+
+**The parser** (`lib/energy-invoice.ts` + `lib/energy-invoice-agent.ts`) is off by default:
+`ENERGY_INVOICE_AI_ENABLED=true` and `ANTHROPIC_API_KEY`. Its prompt describes the
+*concepts* — the electricity fatura inside the document, the delivery point, the registers,
+the billed lines with their VAT — never a supplier's layout, so Galp or Iberdrola read the
+same way EDP does. Only the document is sent, and a bill carries the holder's name and NIF;
+the form says so. Numbers are copied as printed ("15,41 €") and become cents in one place,
+`draftToBody`, for the model's answer and a typed figure alike.
+
+**Where.** The meter page has a *Faturas* section — period, number, kWh, €, €/kWh — each
+bill openable to its registers and lines. A bill is not edited; it is removed and filed
+again. Same roles as readings.
+
+**Real samples.** Two real EDP PDFs live at `apps/web/test-fixtures/energy/private/`,
+gitignored (names, NIFs, CPEs inside). The committed fixture in `energy-invoice.test.ts` is
+the first sample's structure with an invented identity.
 
 ## Not built
 
-- Tariffs and cost (5.3), comparison and correlation with temperature (5.4). The faturas
-  above supply cost as a fact for billed meters; tariff-based cost is for sub-meters.
-- TimescaleDB conversion — deferred until automated feeds exist; see the data model.
-- Import of readings from a spreadsheet; the `source` column (`manual | import | feed`)
-  is reserved for it.
+- Tariffs and cost for meters without a bill, comparison and correlation with temperature
+  (5.4). Cost for billed meters is a fact from the bill, above.
+- Seeding a new club's history from the twelve months of consumption printed on its first
+  bill — page 4 of an EDP document has them.

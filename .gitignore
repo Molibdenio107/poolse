@@ -20,3 +20,6 @@ pnpm-debug.log*
 !.vscode/extensions.json
 
 *.tsbuildinfo
+
+# Real documents used to calibrate the import parsers — names, NIFs, CPEs inside. Never committed.
+apps/web/test-fixtures/**/private/

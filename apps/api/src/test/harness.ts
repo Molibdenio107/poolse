@@ -205,6 +205,10 @@ const TENANT_TABLES = [
   // Readings before their meter, and meters before the pool one may serve —
   // slice 5.1. A meter can also point at the meter it replaced, which is a
   // same-table key the DELETE-by-organization does not care about.
+  // Lines and registers cascade from the bill; the bill points at the meter.
+  'energy_invoice_line',
+  'energy_invoice_register',
+  'energy_invoice',
   'energy_reading',
   'energy_meter',
   // A pool's own safe ranges, before the tank they belong to. Not cascaded, for

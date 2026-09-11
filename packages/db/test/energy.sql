@@ -124,4 +124,87 @@ BEGIN
   RAISE NOTICE 'PASS test 3: an archived reading is out of the series, and back in only if it fits';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 4: a bill's totals must agree with its parts, and the same bill twice is refused
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid; v_meter uuid; v_inv uuid; ok boolean;
+BEGIN
+  SELECT id INTO v_org FROM organization WHERE slug = 'clube-energia';
+  SELECT id INTO v_meter FROM energy_meter WHERE organization_id = v_org AND name = 'Geral';
+
+  -- The first EDP sample, in cents: 41,36 s/IVA (taxes included) + 4,87 IVA = 46,23; 66,64 in the envelope.
+  INSERT INTO energy_invoice
+    (organization_id, meter_id, supplier, invoice_number, issued_on, period_start, period_end, due_on,
+     subtotal_cents, vat_cents, total_cents, other_charges_cents, document_total_cents)
+  VALUES (v_org, v_meter, 'EDP Comercial', 'FT2025 K3425/340041459032',
+          DATE '2025-11-28', DATE '2025-10-26', DATE '2025-11-25', DATE '2025-12-23',
+          4136, 487, 4623, 2041, 6664)
+  RETURNING id INTO v_inv;
+
+  INSERT INTO energy_invoice_register (organization_id, invoice_id, register, previous_index, current_index, kwh)
+  VALUES (v_org, v_inv, 'vazio', 968, 1033, 65),
+         (v_org, v_inv, 'ponta', 439, 472, 33),
+         (v_org, v_inv, 'cheias', 1113, 1185, 72);
+
+  INSERT INTO energy_invoice_line
+    (organization_id, invoice_id, position, kind, description, period, from_on, to_on,
+     quantity, unit, unit_price, amount_cents, discount_cents, total_cents, vat_rate)
+  VALUES
+    (v_org, v_inv, 0, 'energy', 'Consumo real Simples', 'simples', DATE '2025-10-26', DATE '2025-11-11',
+     92, 'kWh', 0.1675, 1541, 62, 1479, 6),
+    (v_org, v_inv, 1, 'energy', 'Consumo real Simples', 'simples', DATE '2025-11-12', DATE '2025-11-25',
+     78, 'kWh', 0.1675, 1307, 52, 1255, 6),
+    (v_org, v_inv, 2, 'power', 'Potência (4,6 kVA)', NULL, DATE '2025-10-26', DATE '2025-11-25',
+     31, 'dias', 0.4631, 1435, 57, 1378, 23),
+    (v_org, v_inv, 3, 'tax', 'DGEG', NULL, NULL, NULL, 1, 'mês', 0.07, 7, 0, 7, 23),
+    (v_org, v_inv, 4, 'tax', 'IEC', NULL, NULL, NULL, 170, 'kWh', 0.001, 17, 0, 17, 23);
+
+  -- A total that disagrees with its parts.
+  ok := false;
+  BEGIN
+    INSERT INTO energy_invoice
+      (organization_id, meter_id, supplier, invoice_number, issued_on, period_start, period_end,
+       subtotal_cents, vat_cents, total_cents, document_total_cents)
+    VALUES (v_org, v_meter, 'EDP Comercial', 'FT-typo', DATE '2025-11-28', DATE '2025-10-26', DATE '2025-11-25',
+            4112, 511, 4600, 4600);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 4a: a total that is not subtotal + VAT was accepted'; END IF;
+
+  -- A register running backwards.
+  ok := false;
+  BEGIN
+    INSERT INTO energy_invoice_register (organization_id, invoice_id, register, previous_index, current_index, kwh)
+    VALUES (v_org, v_inv, 'super_vazio', 500, 400, 0);
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 4b: a register with current below previous was accepted'; END IF;
+
+  -- The same bill twice, whatever the case of the number.
+  ok := false;
+  BEGIN
+    INSERT INTO energy_invoice
+      (organization_id, meter_id, supplier, invoice_number, issued_on, period_start, period_end,
+       subtotal_cents, vat_cents, total_cents, document_total_cents)
+    VALUES (v_org, v_meter, 'edp comercial', 'ft2025 k3425/340041459032', DATE '2025-11-28',
+            DATE '2025-10-26', DATE '2025-11-25', 4112, 511, 4623, 4623);
+  EXCEPTION WHEN unique_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 4c: the same bill was filed twice'; END IF;
+
+  -- Archived, the number is free again — a bill filed on the wrong meter is
+  -- removed and filed again.
+  UPDATE energy_invoice SET archived_at = now() WHERE id = v_inv;
+  INSERT INTO energy_invoice
+    (organization_id, meter_id, supplier, invoice_number, issued_on, period_start, period_end,
+     subtotal_cents, vat_cents, total_cents, document_total_cents)
+  VALUES (v_org, v_meter, 'EDP Comercial', 'FT2025 K3425/340041459032', DATE '2025-11-28',
+          DATE '2025-10-26', DATE '2025-11-25', 4112, 511, 4623, 4623);
+
+  RAISE NOTICE 'PASS test 4: a bill adds up, its registers only go up, and it is filed once';
+END $$;
+
 ROLLBACK;
