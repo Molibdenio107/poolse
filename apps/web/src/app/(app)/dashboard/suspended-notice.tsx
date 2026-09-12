@@ -24,6 +24,19 @@ import { PageShell } from '@/components/page-shell';
  * Rendered *instead of* the page, not above it, so nothing underneath fires a
  * request that is going to be refused.
  */
+
+/**
+ * Where a suspended club writes to.
+ *
+ * An environment variable rather than a literal, because staging and production
+ * will not share an address and because correcting a typo in it should not be a
+ * deploy of the application. The fallback is the real one, so an installation
+ * that never sets it still shows something a person can write to — an empty
+ * `mailto:` on the one screen whose whole job is "here is how to fix this"
+ * would be the worst possible failure of the default.
+ */
+const SUPPORT_EMAIL = process.env['NEXT_PUBLIC_SUPPORT_EMAIL'] ?? 'suporte@poolse.pt';
+
 export async function SuspendedNotice({
   organizationName,
   reason,
@@ -68,10 +81,10 @@ export async function SuspendedNotice({
         <p className="text-sm">
           {t('suspended.contact')}{' '}
           <a
-            href="mailto:suporte@poolse.pt"
+            href={`mailto:${SUPPORT_EMAIL}`}
             className="font-medium text-primary underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            suporte@poolse.pt
+            {SUPPORT_EMAIL}
           </a>
         </p>
       </section>

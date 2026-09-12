@@ -25,7 +25,7 @@ visible symptom when broken:
    "a prefix". A separate instance.
 2. **The API never connects as the database owner.** See "the two roles" below.
 
-## The two roles, and why this step is not optional
+## The roles, and why this step is not optional
 
 Railway hands you one connection string. It belongs to the database owner.
 
@@ -34,16 +34,30 @@ return rows, the tests pass. And every row-level security policy in the schema i
 inert, because in Postgres a table's owner bypasses RLS. There is no error. There is no
 symptom. The first symptom is a customer seeing another customer's data.
 
-So each environment gets two roles:
+So each environment gets three roles:
 
 | Role | Connection string | Used by |
 |---|---|---|
 | owner (Railway's default, usually `postgres`) | `DATABASE_URL` | migrations, and only migrations |
 | `poolse_app` | `DATABASE_APP_URL` | the API, always |
+| `poolse_platform` | `DATABASE_PLATFORM_URL` | `PlatformModule` (`/admin`) and nothing else |
 
-`pnpm db:bootstrap` creates the second one from `DATABASE_APP_URL` and then proves it can
-log in, is not a superuser, has no `BYPASSRLS`, and owns no tables. The API also refuses to
-start if it detects otherwise (`assertRlsApplies`), so this is checked twice on purpose.
+`pnpm db:bootstrap` creates the second and third from their connection strings and then
+proves each can log in, is not a superuser, has no `BYPASSRLS`, and owns no tables. The API
+refuses to start if it detects otherwise — `assertRlsApplies` for the app role and
+`assertPlatformRoleIsNarrow` for the platform one — so this is checked twice on purpose.
+
+**The third role is optional and narrow.** Leave `DATABASE_PLATFORM_URL` unset and the whole
+product runs normally; `/admin` says it is not configured rather than failing in a way that
+looks like a permission problem. Set it and the role can read seven named tables and write
+six named columns of `organization` — not the schema. It does **not** carry `BYPASSRLS`, so
+pointing it at Railway's default connection string is the mirror-image of the mistake above
+and the boot check refuses it. See `docs/features/platform.md`.
+
+**Order matters on a fresh environment**: `db:bootstrap` (creates the roles) → `db:migrate`
+(creates the tables, policies and grants) → `db:platform-admin grant <clerk_user_id>`. The
+last one is a one-off per environment, because a Clerk user id differs between the
+development, staging and production instances.
 
 ## 1. Railway — the database and the API
 

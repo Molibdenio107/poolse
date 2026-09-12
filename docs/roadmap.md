@@ -467,6 +467,28 @@ nothing, and a dropout-risk model with no dropouts is a straight line.
 | 6.3 | Energy forecasting and "what changed" |
 | 6.4 | Natural-language questions over the operator's own data |
 
+## Platform administration — alongside the phases, not inside them
+
+Built 12 September 2026. Not a phase: every phase above is something a *club* gets, and this
+is the one part of the product whose user is the operator. It is orthogonal to all of them and
+does not block any of them.
+
+| # | Slice | Done when |
+|---|---|---|
+| P.1 | Tenant overview | ✅ `/admin` lists every tenant with its plan, seats, sites and last activity, behind `PlatformAdminGuard` and a narrow cross-tenant DB role |
+| P.2 | Server and per-tenant health | ✅ `/health` reports Postgres, TimescaleDB and Clerk; a global interceptor aggregates request health into one row per tenant per hour; Sentry wired and off by default |
+| P.3 | Actions | ✅ Extend a trial, change a plan, suspend or restore — column-level grants, each write auditing itself inside its own transaction |
+| P.4 | Feature flags and "view as" | Not started. Both wait for a reason; neither has one yet |
+
+**`tenant_request_stats` is the second table to sit hypertable-shaped and un-converted**, for
+the same reason as `energy_reading` and with the same trigger — the hosting question from
+11 September. Its migration converts it and adds the retention policy automatically wherever
+the extension is present, so settling that question costs nothing here.
+
+**P.4 is deliberately not queued.** "View as" is a large security surface for a product with
+one tenant, and a feature flag with nothing to gate is a column to keep in step. Both become
+worth building the day a second tenant wants something the first does not.
+
 ## Deferred, with their trigger
 
 | Item | Build it when |

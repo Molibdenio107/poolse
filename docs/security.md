@@ -23,6 +23,12 @@ has a mechanism, and the mechanism is what to check when something looks wrong.
 | Invitation tokens | 32 random bytes, stored only as a SHA-256 hash, and the redemption routes are rate limited to 10/minute. |
 | CSV formula execution | `lib/csv.ts` is the only place a CSV cell is written. `pnpm csv:check` fails the build if a second one appears. |
 | Request floods from an account | `UserThrottlerGuard`, 300/minute, keyed on the Clerk user rather than the IP. |
+| A tenant role reaching the platform's data | `platform_admin` and `platform_audit_log` carry no grant for `poolse_app` and have RLS on with no policy naming it. Two independent refusals; asserted in `packages/db/test/platform-admin.sql`. |
+| The platform role reaching a tenant's data | `poolse_platform` does **not** have `BYPASSRLS`. It is named in a `FOR SELECT` policy on seven tables and holds no privilege on the rest, so `student`, `student_sensitive` and `invoice` are refused outright. `assertPlatformRoleIsNarrow()` refuses to boot if it is pointed at the owner. |
+| The platform role changing more than a plan | Column-level `GRANT UPDATE` on six named columns of `organization`. No INSERT, no DELETE, and `archived_at` is not among them — signup stays the only way a tenant comes into being, and the platform cannot rename or delete a club. |
+| Platform access arriving through a tenant role | It cannot. `platform_admin` is keyed on the Clerk user id and has no `organization_id`; `PlatformAdminGuard` reads `currentAuth()`, never `currentTenant()`. Being owner of a demo tenant grants nothing. |
+| An unaudited platform request | Reads are logged by `PlatformAuditInterceptor`; writes log themselves inside the transaction that performed them, so an entry cannot commit while its change rolls back. There is one write path (`changeTenant`) and it cannot skip its own entry. |
+| A suspended tenant still being served | `TenantMiddleware` refuses with `tenant_suspended` before any handler runs. `/me` and `/platform` stay open on purpose — so the club can be told why, and so an operator can undo it. |
 
 ## The checks
 
@@ -37,7 +43,24 @@ has a mechanism, and the mechanism is what to check when something looks wrong.
 
 `pnpm db:test` is the one that proves isolation — it includes a cross-tenant
 visibility test per module, and those are the tests to distrust a schema change
-against.
+against. `test/platform-admin.sql` is the newest of them and runs in both
+directions: the tenant connection cannot see the platform's tables, and the
+platform connection cannot read a register, an invoice or a medical note.
+
+**What error tracking is allowed to send.** Sentry is off unless a DSN is set, and
+when it is on, `sendDefaultPii` is `false` on both SDKs. With it on the SDK
+attaches request bodies, headers, cookies and IP addresses — which in this
+product means a student's name, a NIF or a medical note leaving the database for
+a third party. Events are tagged with the tenant's **id**, never its name.
+`tenant_request_stats` stores an error's message capped at 500 characters by a
+CHECK and its route as an Express *pattern* (`GET /students/:id`), never the URL,
+so an identifier cannot arrive that way either.
+
+**Two advisories went high and were pinned rather than tracked** (12 September 2026):
+`sharp` (via `next`) and `js-yaml` (via `@nestjs/cli`, dev-only). Both are patch-level bumps
+inside a major, so they went into `pnpm.overrides` in the root `package.json` alongside the
+others. The point is the gate: `audit:check` is set at `high` precisely so that red means
+"stop and deal with this tonight", and letting it sit red is how it stops being read.
 
 ## Still open, knowingly
 

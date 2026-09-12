@@ -207,8 +207,17 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- Test 6 — but it does write its own audit trail
 --
--- The one table it inserts into, and the reason the interceptor can record a
--- read in the same transaction as the read itself.
+-- The one table it inserts into, and the reason a platform action can record
+-- itself in the same transaction as the change it describes.
+--
+-- **Every count here is scoped to this test's own actor**, and that is a fix
+-- rather than a style. `platform_audit_log` is not tenant-scoped and is never
+-- swept, so unlike every other table in this suite it accumulates real rows from
+-- whoever has been using `/admin` on this database. The first version counted
+-- `WHERE action = 'tenants.listed'` across the whole table, passed on an empty
+-- development database, and failed the moment somebody opened the screen — which
+-- is the same lesson as every other assertion here that turned out to be
+-- measuring the fixture rather than the rule.
 -- ---------------------------------------------------------------------------
 
 DO $$
@@ -217,13 +226,18 @@ BEGIN
   INSERT INTO platform_audit_log (clerk_user_id, action, organization_id, detail)
   VALUES ('user_test_operator', 'tenants.listed', NULL, '{"search":"clube"}'::jsonb);
 
-  SELECT count(*) INTO n FROM platform_audit_log WHERE action = 'tenants.listed';
+  SELECT count(*) INTO n FROM platform_audit_log
+   WHERE clerk_user_id = 'user_test_operator';
   IF n <> 1 THEN
-    RAISE EXCEPTION 'FAIL test 6a: the platform role could not record its own read';
+    RAISE EXCEPTION 'FAIL test 6a: the platform role recorded % of its own reads, not 1', n;
   END IF;
 
   BEGIN
-    UPDATE platform_audit_log SET action = 'nothing.happened';
+    -- Scoped, even though it is expected to be refused: an UPDATE with no WHERE
+    -- clause is only harmless while the refusal holds, and a test should not be
+    -- the thing that rewrites a real trail on the day it stops holding.
+    UPDATE platform_audit_log SET action = 'nothing.happened'
+     WHERE clerk_user_id = 'user_test_operator';
     RAISE EXCEPTION 'FAIL test 6b: the platform role rewrote its own audit trail';
   EXCEPTION WHEN insufficient_privilege THEN
     RAISE NOTICE 'PASS test 6: the trail is append-only, even to the operator';
