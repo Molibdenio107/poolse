@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import { AppSidebar } from '../app-sidebar';
 import { PreferenceControls } from '../preference-controls';
@@ -38,6 +39,20 @@ async function currentViewer(): Promise<{ roles: string[]; kind: OrganizationKin
   try {
     const me = await apiFetch<Me>('/me');
     const membership = me.memberships[0];
+
+    /*
+     * Which tenant an error belongs to — slice 2.
+     *
+     * Here because this is the one place the web app learns which organization
+     * it is rendering, and every screen in the product is below this layout. The
+     * *id*, never the name: a Sentry issue titled with a club's name is the
+     * club's data in a third-party service, and the operator can look an id up
+     * in /admin. No-op with no DSN.
+     */
+    if (membership !== undefined) {
+      Sentry.setTag('tenant_id', membership.organizationId);
+    }
+
     return { roles: membership?.roles ?? [], kind: membership?.organizationKind ?? 'business' };
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;

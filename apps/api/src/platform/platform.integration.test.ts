@@ -417,3 +417,192 @@ async function tenantName(tenant: ScratchTenant): Promise<string> {
   );
   return row!.name;
 }
+
+// ---------------------------------------------------------------------------
+// Health — slice 2
+// ---------------------------------------------------------------------------
+
+test('a tenant carries a health verdict, and unknown is not green', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_health_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      const name = await tenantName(tenant);
+
+      await asOperator(clerkUserId, async () => {
+        const fresh = await rowFor(tenant, name);
+        /*
+         * A brand-new tenant has made no requests. That is `unknown`, not
+         * `green`: a club nobody used is a different fact from one that worked
+         * perfectly, and often a more interesting one.
+         */
+        assert.equal(fresh?.health, 'unknown');
+        assert.equal(fresh?.requestCount24h, 0);
+        assert.equal(fresh?.lastErrorAt, null);
+      });
+
+      // A quiet hour: a hundred requests, none of them a failure.
+      await tenant.sql(
+        `INSERT INTO tenant_request_stats (
+           organization_id, bucket, request_count, count_4xx, count_5xx,
+           p95_latency_ms, last_request_at
+         ) VALUES ($1, date_trunc('hour', now()), 100, 4, 0, 30, now())`,
+        [tenant.organizationId],
+      );
+
+      await asOperator(clerkUserId, async () => {
+        const green = await rowFor(tenant, name);
+        // Four 4xx and still green — a client meeting a 403 is the API working.
+        assert.equal(green?.health, 'green');
+        assert.equal(green?.count4xx24h, 4);
+      });
+
+      // Now three failures in a hundred: 3%, over the 2% line, and red.
+      await tenant.sql(
+        `UPDATE tenant_request_stats
+            SET count_5xx = 3,
+                last_error_at = now() - interval '5 minutes',
+                last_error_route = 'GET /classes',
+                last_error_message = 'boom'
+          WHERE organization_id = $1`,
+        [tenant.organizationId],
+      );
+
+      await asOperator(clerkUserId, async () => {
+        const red = await rowFor(tenant, name);
+        assert.equal(red?.health, 'red');
+        assert.equal(red?.count5xx24h, 3);
+        assert.ok(red?.lastErrorAt !== null);
+      });
+    } finally {
+      await removePlatformAccess(clerkUserId);
+      await clearAudit(clerkUserId);
+    }
+  });
+});
+
+test('a tenant’s week of requests reads back, with its errors deduplicated', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_reqs_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      /*
+       * Three hours, and the same route failing in two of them. A route broken
+       * for an hour writes itself into sixty buckets; a list of sixty identical
+       * lines describes one problem while hiding every other.
+       */
+      await tenant.sql(
+        `INSERT INTO tenant_request_stats (
+           organization_id, bucket, request_count, count_4xx, count_5xx,
+           p95_latency_ms, last_request_at, last_error_at, last_error_route,
+           last_error_message
+         ) VALUES
+           ($1, date_trunc('hour', now() - interval '2 hours'), 40, 0, 2, 55,
+            now() - interval '2 hours', now() - interval '2 hours', 'GET /classes', 'boom'),
+           ($1, date_trunc('hour', now() - interval '1 hour'), 60, 1, 1, 80,
+            now() - interval '1 hour', now() - interval '1 hour', 'GET /classes', 'boom again'),
+           ($1, date_trunc('hour', now()), 20, 0, 1, 30,
+            now(), now(), 'POST /students', 'nope')`,
+        [tenant.organizationId],
+      );
+
+      await asOperator(clerkUserId, async () => {
+        const requests = await controller.requests(tenant.organizationId);
+
+        assert.equal(requests.buckets.length, 3);
+        // Oldest first, so a chart renders them without reversing.
+        assert.ok(
+          new Date(requests.buckets[0]!.bucket) < new Date(requests.buckets[2]!.bucket),
+        );
+        assert.equal(requests.requestCount24h, 120);
+        assert.equal(requests.count5xx24h, 4);
+
+        // Two distinct routes from three failing buckets, newest first.
+        assert.equal(requests.errors.length, 2);
+        assert.equal(requests.errors[0]!.route, 'POST /students');
+        assert.equal(requests.errors[1]!.route, 'GET /classes');
+        // And the newest of the two `GET /classes` rows, not the first.
+        assert.equal(requests.errors[1]!.message, 'boom again');
+      });
+    } finally {
+      await removePlatformAccess(clerkUserId);
+      await clearAudit(clerkUserId);
+    }
+  });
+});
+
+test('a tenant that does not exist is a 404, not an empty week', async () => {
+  const clerkUserId = `user_404_${Math.floor(performance.now())}`;
+  await grantPlatformAccess(clerkUserId);
+
+  try {
+    await asOperator(clerkUserId, async () => {
+      await assert.rejects(
+        () => controller.requests('00000000-0000-0000-0000-000000000000'),
+        (error: { status?: number }) => error.status === 404,
+      );
+    });
+  } finally {
+    await removePlatformAccess(clerkUserId);
+    await clearAudit(clerkUserId);
+  }
+});
+
+test('reading one tenant’s requests names that tenant in the audit trail', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_auditorg_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        await new Promise<void>((resolve) => {
+          interceptor
+            .intercept(
+              contextFor(`/platform/tenants/${tenant.organizationId}/requests`, {
+                id: tenant.organizationId,
+              }),
+              { handle: () => of({}) },
+            )
+            .subscribe({ complete: () => resolve() });
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
+      const { rows } = await owner.query<{ organization_id: string | null }>(
+        'SELECT organization_id FROM platform_audit_log WHERE clerk_user_id = $1',
+        [clerkUserId],
+      );
+      assert.equal(rows.length, 1);
+      /*
+       * The first platform route that names a tenant, and the reason slice 1 put
+       * `platform_audit_log` in the harness teardown list: this foreign key is
+       * what would otherwise fail teardown with an error about a table nobody
+       * had touched.
+       */
+      assert.equal(rows[0]!.organization_id, tenant.organizationId);
+    } finally {
+      await removePlatformAccess(clerkUserId);
+      await clearAudit(clerkUserId);
+    }
+  });
+});
+
+/** A context whose route carries params — for the audit interceptor's tenant id. */
+function contextFor(path: string, params: Record<string, string>): ExecutionContext {
+  const request = {
+    method: 'GET',
+    path,
+    originalUrl: path,
+    params,
+    query: {} as Record<string, unknown>,
+    route: { path: '/platform/tenants/:id/requests' },
+  };
+  return {
+    switchToHttp: () => ({ getRequest: () => request }),
+    getHandler: () => (): null => null,
+    getClass: () => PlatformController,
+  } as unknown as ExecutionContext;
+}

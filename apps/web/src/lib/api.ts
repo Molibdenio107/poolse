@@ -2922,4 +2922,65 @@ export interface PlatformTenant {
   /** Last *recorded write*, not last login — see the API repository's note. */
   lastActivityAt: string | null;
   archivedAt: string | null;
+
+  /** Request health over the last 24 hours — slice 2. */
+  health: TenantHealth;
+  requestCount24h: number;
+  count4xx24h: number;
+  count5xx24h: number;
+  lastErrorAt: string | null;
+}
+
+/** `/health` — public, unauthenticated, tenant-less. */
+export type CheckStatus = 'ok' | 'slow' | 'failing' | 'not_installed';
+
+export interface DependencyCheck {
+  /** `postgres`, `timescale`, `clerk`. Translated by the client. */
+  name: string;
+  status: CheckStatus;
+  latencyMs: number | null;
+}
+
+export interface Health {
+  status: 'ok' | 'degraded' | 'down';
+  checks: DependencyCheck[];
+}
+
+/**
+ * Is this tenant's API behaving — slice 2.
+ *
+ * Derived on the server from the last 24 hours of `tenant_request_stats` and
+ * never stored, so the client renders the verdict and never recomputes it.
+ * `unknown` means no requests were recorded, which is a different fact from
+ * healthy.
+ */
+export type TenantHealth = 'green' | 'amber' | 'red' | 'unknown';
+
+export interface RequestBucket {
+  /** Hour, ISO instant. */
+  bucket: string;
+  requestCount: number;
+  count4xx: number;
+  count5xx: number;
+  p95LatencyMs: number;
+}
+
+export interface RecentError {
+  at: string;
+  route: string;
+  message: string | null;
+}
+
+export interface TenantRequests {
+  organizationId: string;
+  name: string;
+  windowDays: number;
+  health: TenantHealth;
+  requestCount24h: number;
+  count4xx24h: number;
+  count5xx24h: number;
+  /** Oldest first. */
+  buckets: RequestBucket[];
+  /** Newest first, one per distinct route. */
+  errors: RecentError[];
 }

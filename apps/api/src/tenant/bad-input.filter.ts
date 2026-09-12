@@ -9,6 +9,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import * as Sentry from '@sentry/nestjs';
 
 /**
  * A malformed id is a 404, not a crash — POOLSE-R3-01.
@@ -49,6 +50,24 @@ export class BadInputFilter implements ExceptionFilter {
         return;
       }
       this.logger.error(exception instanceof Error ? exception.stack : String(exception));
+
+      /*
+       * The one place a genuine fault is recognised, so the one place it is
+       * reported — slice 2.
+       *
+       * **Deliberately not `SentryGlobalFilter`.** This filter is `@Catch()`,
+       * catches everything and terminates the response; registering Sentry's
+       * alongside it would mean one of the two never running, and the one that
+       * lost would be either the 404-for-a-truncated-link behaviour above or the
+       * error reporting. Capturing here keeps both and puts the call exactly
+       * where the code has already decided "this is a real fault" — a mapped
+       * 404 and a 403 are not incidents and must not fill the inbox.
+       *
+       * The tenant id is already on the isolation scope, set by
+       * TenantMiddleware. No-op with no DSN.
+       */
+      Sentry.captureException(exception);
+
       response
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
         .json({ statusCode: 500, message: 'Internal server error' });

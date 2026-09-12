@@ -1,5 +1,5 @@
 import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { throttlerOptions, UserThrottlerGuard } from './common/throttle.js';
 import { ClerkAuthMiddleware } from './auth/clerk-auth.middleware.js';
@@ -65,6 +65,7 @@ import {
   FeeCategoriesController,
 } from './billing/categories.controller.js';
 import { PlatformModule } from './platform/platform.module.js';
+import { RequestStatsInterceptor } from './platform/request-stats.interceptor.js';
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
 import { VacationsController } from './vacations/vacations.controller.js';
 import { PlacesController, WeatherController } from './weather/weather.controller.js';
@@ -179,6 +180,19 @@ const IDENTITY_ONLY_ROUTES = [
      * nothing can opt out of having a ceiling at all.
      */
     { provide: APP_GUARD, useClass: UserThrottlerGuard },
+    /*
+     * Per-tenant request health — slice 2.
+     *
+     * Global for the same default-deny reason the throttler is: a new endpoint
+     * should be measured because nobody had to remember it. It records nothing
+     * for a request with no tenant context, so every public route, the webhook,
+     * the identity-only routes and the whole platform area are skipped by
+     * construction rather than by a list that would go stale.
+     *
+     * It aggregates in memory and writes once a minute, so this costs a request
+     * a Map lookup and nothing else.
+     */
+    { provide: APP_INTERCEPTOR, useClass: RequestStatsInterceptor },
   ],
 })
 export class AppModule implements NestModule {

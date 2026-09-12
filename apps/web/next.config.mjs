@@ -42,7 +42,31 @@ function clerkHost() {
   }
 }
 
+/**
+ * Sentry's ingest origin, read out of the DSN rather than written down.
+ *
+ * Same shape as `clerkHost()` above and for the same reason: every Sentry
+ * project has its own ingest host, and a hardcoded one would be wrong for
+ * whichever project it was not written for. A DSN is a URL — the origin is the
+ * part `connect-src` needs.
+ *
+ * Without this the browser SDK is blocked by our own Content-Security-Policy and
+ * fails with a console violation and no events, which is the worst of both: the
+ * dependency shipped and nothing is being reported. Returns null when no DSN is
+ * set, so the policy gains nothing on an installation that has no Sentry.
+ */
+function sentryOrigin() {
+  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN ?? '';
+  if (dsn === '') return null;
+  try {
+    return new URL(dsn).origin;
+  } catch {
+    return null;
+  }
+}
+
 const CLERK = clerkHost();
+const SENTRY = sentryOrigin();
 const isProduction = process.env.NODE_ENV === 'production';
 
 /**
@@ -94,7 +118,7 @@ const REPORT_ONLY_CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://img.clerk.com",
   "font-src 'self' data:",
-  `connect-src 'self'${CLERK ? ` ${CLERK}` : ''}`,
+  `connect-src 'self'${CLERK ? ` ${CLERK}` : ''}${SENTRY ? ` ${SENTRY}` : ''}`,
   // Clerk's bot check renders in a frame; nothing else may.
   'frame-src https://challenges.cloudflare.com',
   "worker-src 'self' blob:",
@@ -104,6 +128,39 @@ const REPORT_ONLY_CSP = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  /**
+   * Left for Node to require at runtime rather than bundled — slice 2.
+   *
+   * Sentry's Node SDK pulls in OpenTelemetry, which patches modules by
+   * intercepting `require` at runtime. Webpack cannot statically extract that and
+   * says so on every build: "Critical dependency: require function is used in a
+   * way in which dependencies cannot be statically extracted". The warning is
+   * harmless and the patching genuinely does not work once bundled, so the fix
+   * and the silence are the same change.
+   *
+   * Worth doing rather than living with: a build that always prints a warning is
+   * a build nobody reads the warnings of.
+   */
+  serverExternalPackages: ['require-in-the-middle', '@sentry/node'],
+
+  /**
+   * ...and the warning webpack still prints anyway.
+   *
+   * `serverExternalPackages` keeps the module out of the server bundle, which is
+   * the half that matters for the patching to work. Webpack still walks the
+   * import graph and still reports the dynamic `require`, from a dependency
+   * nobody here wrote and nobody can fix. Suppressing exactly this one module —
+   * rather than warnings in general — keeps the next real warning visible, which
+   * is the only reason to silence this one at all.
+   */
+  webpack(config) {
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings ?? []),
+      { module: /require-in-the-middle/ },
+    ];
+    return config;
+  },
 
   /**
    * The spreadsheet an operator uploads — slice 1.10.

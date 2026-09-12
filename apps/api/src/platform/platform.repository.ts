@@ -6,6 +6,11 @@ import {
   type PageQuery,
 } from '../common/pagination.js';
 import { searchPredicate } from '../common/search.js';
+import {
+  deriveHealth,
+  HEALTH_WINDOW_HOURS,
+  type TenantHealth,
+} from './tenant-health.js';
 
 /**
  * The operator's view of every tenant — slice 1.
@@ -78,6 +83,21 @@ export interface TenantRow {
   lastActivityAt: string | null;
   /** A tenant that has been deleted. Still listed — churn is worth seeing. */
   archivedAt: string | null;
+
+  /**
+   * Is this tenant's API behaving — slice 2.
+   *
+   * Derived at read time from the last `HEALTH_WINDOW_HOURS` of
+   * `tenant_request_stats`, never stored. `unknown` means no rows in the window,
+   * which is a different fact from healthy: a club that stopped logging in is
+   * not a club that worked perfectly.
+   */
+  health: TenantHealth;
+  /** The 24h figures behind the verdict. Shown as text, not only in a tooltip. */
+  requestCount24h: number;
+  count4xx24h: number;
+  count5xx24h: number;
+  lastErrorAt: string | null;
 }
 
 export interface TenantQuery {
@@ -105,6 +125,11 @@ export async function listTenants(
       pool_count: number;
       last_activity_at: Date | null;
       archived_at: Date | null;
+      request_count_24h: number;
+      count_4xx_24h: number;
+      count_5xx_24h: number;
+      last_error_at: Date | null;
+      last_request_at: Date | null;
     }>(`
       SELECT ${TOTAL_COUNT},
              o.id,
@@ -170,9 +195,41 @@ export async function listTenants(
              (
                SELECT max(a.created_at) FROM audit_log a
                 WHERE a.organization_id = o.id
-             ) AS last_activity_at
+             ) AS last_activity_at,
+
+             /*
+              * Request health over the last $5 hours — slice 2.
+              *
+              * A lateral rather than four correlated subqueries: one pass over
+              * the tenant's buckets, which is at most twenty-four rows, instead
+              * of four. Coalesced to zero so a tenant with no rows comes back
+              * as counted-nothing rather than as null, and the verdict is
+              * derived in TypeScript from those numbers.
+              *
+              * last_request_at rides along because "the newest request was an
+              * error" means last_error_at >= last_request_at, which cannot be
+              * answered from counts. Both are the max across the window, so the
+              * comparison is between the newest of each.
+              */
+             coalesce(health.request_count, 0) AS request_count_24h,
+             coalesce(health.count_4xx, 0)     AS count_4xx_24h,
+             coalesce(health.count_5xx, 0)     AS count_5xx_24h,
+             health.last_error_at,
+             health.last_request_at
 
         FROM organization o
+
+        LEFT JOIN LATERAL (
+          SELECT sum(s.request_count)::int AS request_count,
+                 sum(s.count_4xx)::int     AS count_4xx,
+                 sum(s.count_5xx)::int     AS count_5xx,
+                 max(s.last_error_at)      AS last_error_at,
+                 max(s.last_request_at)    AS last_request_at
+            FROM tenant_request_stats s
+           WHERE s.organization_id = o.id
+             AND s.bucket >= date_trunc('hour', now() - make_interval(hours => $5))
+        ) health ON true
+
        WHERE ${searchPredicate('o.name', '$2')}
        /*
         * Newest first. An operator opens this to see who signed up, and the
@@ -182,7 +239,7 @@ export async function listTenants(
         */
        ORDER BY o.created_at DESC, o.id
        LIMIT $3 OFFSET $4
-    `, [MANAGEMENT_ROLES, query.search, limit, offset]);
+    `, [MANAGEMENT_ROLES, query.search, limit, offset, HEALTH_WINDOW_HOURS]);
 
     return windowed(page, run, (row) => ({
       id: row.id,
@@ -202,6 +259,195 @@ export async function listTenants(
       poolCount: Number(row.pool_count),
       lastActivityAt: row.last_activity_at?.toISOString() ?? null,
       archivedAt: row.archived_at?.toISOString() ?? null,
+
+      health: deriveHealth({
+        requestCount: row.request_count_24h,
+        count4xx: row.count_4xx_24h,
+        count5xx: row.count_5xx_24h,
+        /*
+         * Exact, not inferred. Both stamps are the max across the window, so
+         * `>=` reads "the newest thing that happened was a failure" — and the
+         * equality matters: a request that errors writes both in the same
+         * flush, at the same instant.
+         */
+        lastWasError:
+          row.last_error_at !== null &&
+          row.last_request_at !== null &&
+          row.last_error_at >= row.last_request_at,
+      }),
+      requestCount24h: row.request_count_24h,
+      count4xx24h: row.count_4xx_24h,
+      count5xx24h: row.count_5xx_24h,
+      lastErrorAt: row.last_error_at?.toISOString() ?? null,
     }));
   });
+}
+
+/**
+ * One tenant's request health over the last week — `/platform/tenants/:id/requests`.
+ *
+ * Seven days of hourly rows, plus the errors behind them. Two statements in one
+ * transaction rather than one clever join: they answer different questions at
+ * different shapes, and a join would repeat the last-error columns across every
+ * hourly row for the client to deduplicate.
+ */
+
+/** How far back the detail page looks. A week of hours is 168 rows at most. */
+export const REQUESTS_WINDOW_DAYS = 7;
+
+/** How many distinct failures are worth listing. */
+export const RECENT_ERRORS = 20;
+
+export interface RequestBucket {
+  /** Hour, as an ISO instant. */
+  bucket: string;
+  requestCount: number;
+  count4xx: number;
+  count5xx: number;
+  p95LatencyMs: number;
+}
+
+export interface RecentError {
+  at: string;
+  route: string;
+  message: string | null;
+}
+
+export interface TenantRequests {
+  organizationId: string;
+  name: string;
+  windowDays: number;
+  health: TenantHealth;
+  requestCount24h: number;
+  count4xx24h: number;
+  count5xx24h: number;
+  /** Oldest first, so a chart can render them without reversing. */
+  buckets: RequestBucket[];
+  /** Newest first. */
+  errors: RecentError[];
+}
+
+export async function readTenantRequests(
+  organizationId: string,
+): Promise<TenantRequests | null> {
+  return withPlatform(async (tx) => {
+    const { rows: tenants } = await tx.query<{ name: string }>(
+      'SELECT name FROM organization WHERE id = $1',
+      [organizationId],
+    );
+    // Null rather than an empty week: a tenant that does not exist and a tenant
+    // that made no requests are different answers, and only one of them is a 404.
+    const tenant = tenants[0];
+    if (!tenant) return null;
+
+    const { rows: buckets } = await tx.query<{
+      bucket: Date;
+      request_count: number;
+      count_4xx: number;
+      count_5xx: number;
+      p95_latency_ms: number;
+    }>(
+      `SELECT bucket, request_count, count_4xx, count_5xx, p95_latency_ms
+         FROM tenant_request_stats
+        WHERE organization_id = $1
+          AND bucket >= date_trunc('hour', now() - make_interval(days => $2))
+        ORDER BY bucket`,
+      [organizationId, REQUESTS_WINDOW_DAYS],
+    );
+
+    /*
+     * The last N *distinct* errors, not the last N rows.
+     *
+     * A route failing every minute for an hour writes the same route into sixty
+     * buckets, and a list of twenty identical lines tells the operator about one
+     * problem while hiding however many others there were. `DISTINCT ON` the
+     * route keeps the newest of each, which is the list worth reading.
+     */
+    const { rows: errors } = await tx.query<{
+      at: Date;
+      route: string;
+      message: string | null;
+    }>(
+      `SELECT at, route, message FROM (
+         SELECT DISTINCT ON (last_error_route)
+                last_error_at      AS at,
+                last_error_route   AS route,
+                last_error_message AS message
+           FROM tenant_request_stats
+          WHERE organization_id = $1
+            AND last_error_at IS NOT NULL
+            AND bucket >= date_trunc('hour', now() - make_interval(days => $2))
+          ORDER BY last_error_route, last_error_at DESC
+       ) newest
+       ORDER BY at DESC
+       LIMIT $3`,
+      [organizationId, REQUESTS_WINDOW_DAYS, RECENT_ERRORS],
+    );
+
+    /*
+     * The 24-hour verdict, computed from the same buckets the page draws.
+     *
+     * Deliberately not a second query against the same window as `listTenants`:
+     * the detail page and the row in the table must agree, and the way to
+     * guarantee that is one rule reading one set of numbers. `deriveHealth` is
+     * that rule.
+     */
+    const since = Date.now() - HEALTH_WINDOW_HOURS * 3_600_000;
+    const recent = buckets.filter((row) => row.bucket.getTime() >= hourFloor(since));
+
+    const requestCount = sum(recent.map((row) => row.request_count));
+    const count4xx = sum(recent.map((row) => row.count_4xx));
+    const count5xx = sum(recent.map((row) => row.count_5xx));
+
+    const { rows: stamps } = await tx.query<{
+      last_error_at: Date | null;
+      last_request_at: Date | null;
+    }>(
+      `SELECT max(last_error_at) AS last_error_at, max(last_request_at) AS last_request_at
+         FROM tenant_request_stats
+        WHERE organization_id = $1
+          AND bucket >= date_trunc('hour', now() - make_interval(hours => $2))`,
+      [organizationId, HEALTH_WINDOW_HOURS],
+    );
+    const stamp = stamps[0];
+
+    return {
+      organizationId,
+      name: tenant.name,
+      windowDays: REQUESTS_WINDOW_DAYS,
+      health: deriveHealth({
+        requestCount,
+        count4xx,
+        count5xx,
+        lastWasError:
+          stamp?.last_error_at != null &&
+          stamp.last_request_at != null &&
+          stamp.last_error_at >= stamp.last_request_at,
+      }),
+      requestCount24h: requestCount,
+      count4xx24h: count4xx,
+      count5xx24h: count5xx,
+      buckets: buckets.map((row) => ({
+        bucket: row.bucket.toISOString(),
+        requestCount: row.request_count,
+        count4xx: row.count_4xx,
+        count5xx: row.count_5xx,
+        p95LatencyMs: row.p95_latency_ms,
+      })),
+      errors: errors.map((row) => ({
+        at: row.at.toISOString(),
+        route: row.route,
+        message: row.message,
+      })),
+    };
+  });
+}
+
+function sum(values: number[]): number {
+  return values.reduce((total, value) => total + value, 0);
+}
+
+/** The start of the hour a millisecond timestamp falls in. */
+function hourFloor(ms: number): number {
+  return ms - (ms % 3_600_000);
 }

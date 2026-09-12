@@ -2946,7 +2946,8 @@
       "facilities": "Facilities",
       "pools": "Pools",
       "created": "Created",
-      "activity": "Last activity"
+      "activity": "Last activity",
+      "health": "Health"
     },
     "kind": {
       "business": "Organization",
@@ -2958,6 +2959,63 @@
       "past_due": "Past due",
       "canceled": "Cancelled",
       "comped": "Comped"
+    },
+    "sortLabel": "Sort by",
+    "sort": {
+      "created": "Date created",
+      "health": "Health"
+    },
+    "health": {
+      "green": "Healthy",
+      "amber": "Some errors",
+      "red": "Unhealthy",
+      "unknown": "No data",
+      "counts": "{requests} requests · {count4xx} 4xx · {count5xx} 5xx (24h)",
+      "hint": {
+        "green": "No server errors in the last 24 hours.",
+        "amber": "There were server errors in the last 24 hours, but under 2% of requests.",
+        "red": "Server errors on 2% or more of requests in the last 24 hours, or the most recent request failed.",
+        "unknown": "No requests recorded in the last 24 hours. That is not the same as healthy."
+      }
+    },
+    "server": {
+      "ok": "Server healthy",
+      "degraded": "Server degraded",
+      "down": "Server down",
+      "unreachable": "Could not read the server status.",
+      "stale": "Status out of date — the last reading failed."
+    },
+    "dependency": {
+      "postgres": "Database",
+      "timescale": "Time series",
+      "clerk": "Authentication"
+    },
+    "check": {
+      "latency": "{ms} ms",
+      "not_installed": "not installed"
+    },
+    "chart": {
+      "volume": "Requests per hour",
+      "volumeCaption": "Last {days} days. An hour with no requests has no bar — that is not the same as zero.",
+      "volumeTip": "{hour}: {requests} requests, p95 {ms} ms",
+      "errors": "Errors per hour",
+      "errorsCaption": "Last {days} days. 4xx below, 5xx on top.",
+      "errorsTip": "{hour}: {count4xx} 4xx, {count5xx} 5xx",
+      "noData": "{hour}: not recorded"
+    },
+    "tenantRequests": "Requests",
+    "tenantRequestsSubtitle": "Request health over the last {days} days.",
+    "backToTenants": "Back to tenants",
+    "recentErrors": "Recent errors",
+    "recentErrorsHint": "One per route, newest first. A route failing for an hour appears once.",
+    "noErrors": "No server errors recorded.",
+    "noRequests": "No requests recorded.",
+    "noRequestsHint": "There was no activity in the last {days} days, or the rows have passed the 30-day retention window.",
+    "error": {
+      "when": "When",
+      "route": "Route",
+      "message": "Message",
+      "noMessage": "No message"
     }
   }
 }

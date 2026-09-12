@@ -69,6 +69,22 @@ never be the only place a piece of information appears — anything the operator
 visible text. Tooltips open on keyboard focus as well as hover, because a control whose
 meaning is only available to a mouse is a control half the users cannot understand.
 
+**Telemetry is aggregated, never one row per request; and Sentry is off unless a DSN says
+otherwise.** `RequestStatsInterceptor` buffers in memory and flushes one row per tenant per hour
+into `tenant_request_stats` — a club at 100 req/min would otherwise write 144,000 rows a day for
+data whose purpose is a coloured dot. It records nothing for a request with no tenant context, by
+construction rather than by an exclusion list. The table is **hypertable-shaped** — natural key
+`(organization_id, bucket)`, no surrogate id — and becomes a hypertable with a 30-day retention
+policy only where the `timescaledb` extension exists; where it does not, the same flush prunes past
+30 days. `poolse_app` writes it and cannot read across tenants; `poolse_platform` reads it and
+cannot write. **Health is derived at read time** in `tenant-health.ts` (one config constant: 24h
+window, 2% 5xx rate) — `unknown` is never `green`, and 4xx never colours anything. **`/health` is
+public and only Postgres can make it `down`**: the status code is the deploy gate, so a slow Clerk
+is `degraded` and HTTP 200. **Sentry no-ops without a DSN**, tags `tenant_id` (the id, never the
+name), keeps `sendDefaultPii: false` and `tracesSampleRate: 0`, and captures from `BadInputFilter`
+rather than `SentryGlobalFilter` — that filter is `@Catch()` and terminates, so two global filters
+means one never runs. `docs/features/observability.md`.
+
 **Platform administration is not a tenant role, and it has its own database login.** `member_role`
 says what somebody may do inside one club; `platform_admin` — keyed on the Clerk user id, no
 `organization_id` — says whether they may look at all of them. No role grants it, being owner of a

@@ -2946,7 +2946,8 @@
       "facilities": "Instalações",
       "pools": "Tanques",
       "created": "Criada",
-      "activity": "Última atividade"
+      "activity": "Última atividade",
+      "health": "Saúde"
     },
     "kind": {
       "business": "Organização",
@@ -2958,6 +2959,63 @@
       "past_due": "Pagamento em atraso",
       "canceled": "Cancelada",
       "comped": "Oferecida"
+    },
+    "sortLabel": "Ordenar por",
+    "sort": {
+      "created": "Data de criação",
+      "health": "Saúde"
+    },
+    "health": {
+      "green": "Saudável",
+      "amber": "Alguns erros",
+      "red": "Com problemas",
+      "unknown": "Sem dados",
+      "counts": "{requests} pedidos · {count4xx} 4xx · {count5xx} 5xx (24 h)",
+      "hint": {
+        "green": "Nenhum erro de servidor nas últimas 24 horas.",
+        "amber": "Houve erros de servidor nas últimas 24 horas, mas abaixo de 2% dos pedidos.",
+        "red": "Erros de servidor em 2% ou mais dos pedidos das últimas 24 horas, ou o pedido mais recente falhou.",
+        "unknown": "Nenhum pedido registado nas últimas 24 horas. Não é o mesmo que estar saudável."
+      }
+    },
+    "server": {
+      "ok": "Servidor operacional",
+      "degraded": "Servidor degradado",
+      "down": "Servidor indisponível",
+      "unreachable": "Não foi possível obter o estado do servidor.",
+      "stale": "Estado desatualizado — a última leitura falhou."
+    },
+    "dependency": {
+      "postgres": "Base de dados",
+      "timescale": "Séries temporais",
+      "clerk": "Autenticação"
+    },
+    "check": {
+      "latency": "{ms} ms",
+      "not_installed": "não instalado"
+    },
+    "chart": {
+      "volume": "Pedidos por hora",
+      "volumeCaption": "Últimos {days} dias. Uma hora sem pedidos não tem barra — não é a mesma coisa que zero.",
+      "volumeTip": "{hour}: {requests} pedidos, p95 {ms} ms",
+      "errors": "Erros por hora",
+      "errorsCaption": "Últimos {days} dias. 4xx em baixo, 5xx por cima.",
+      "errorsTip": "{hour}: {count4xx} 4xx, {count5xx} 5xx",
+      "noData": "{hour}: sem registo"
+    },
+    "tenantRequests": "Pedidos",
+    "tenantRequestsSubtitle": "Saúde dos pedidos nos últimos {days} dias.",
+    "backToTenants": "Voltar aos clientes",
+    "recentErrors": "Erros recentes",
+    "recentErrorsHint": "Um por rota, do mais recente para o mais antigo. Uma rota que falha durante uma hora aparece uma vez.",
+    "noErrors": "Nenhum erro de servidor registado.",
+    "noRequests": "Nenhum pedido registado.",
+    "noRequestsHint": "Não houve atividade nos últimos {days} dias, ou os registos já ultrapassaram os 30 dias de retenção.",
+    "error": {
+      "when": "Quando",
+      "route": "Rota",
+      "message": "Mensagem",
+      "noMessage": "Sem mensagem"
     }
   }
 }

@@ -2681,3 +2681,54 @@ the literal, for no behaviour.
 **`max_management_users` is reported, not enforced.** The column lands with the overview
 that reads it; the refusal at invitation time (`docs/decisions.md`, 2026-09-06) belongs with
 the ticket that can also tell an operator how to buy another seat.
+
+### Per-tenant request health — platform admin, slice 2
+
+```
+tenant_request_stats
+  organization_id, bucket (hour, timestamptz),
+  request_count, count_4xx, count_5xx, p95_latency_ms,
+  last_request_at, last_error_at, last_error_route, last_error_message,
+  created_at, updated_at
+  primary key (organization_id, bucket)        -- no surrogate id: hypertable-shaped
+  fk organization_id -> organization (id)
+  index (bucket desc)
+  check bucket = date_trunc('hour', bucket)
+  check request_count >= 0 and count_4xx >= 0 and count_5xx >= 0 and p95_latency_ms >= 0
+  check last_error_message is null or length(last_error_message) <= 500
+  check (last_error_at is null) = (last_error_route is null)
+  rls: poolse_app writes and reads only its own tenant's row;
+       poolse_platform reads every tenant's, for select, and writes none
+  timescale: hypertable on `bucket` + 30-day retention policy where the extension
+             exists; an ordinary table where it does not
+```
+
+**One row per tenant per hour, never one per request.** A club at a hundred requests a minute
+would write 144,000 rows a day — more storage than everything the club actually does, for data
+whose entire purpose is a coloured dot. `RequestStatsInterceptor` aggregates in memory and
+flushes once a minute, so the write rate is one statement per active tenant per minute whatever
+the traffic is.
+
+**Hypertable-shaped, and conditionally a hypertable.** The same position `energy_reading` took
+on 2026-09-11: the natural composite key with no surrogate id is what Timescale requires and
+the one thing that cannot be retrofitted. The migration's `DO` block converts the table and adds
+the retention policy *if* the extension is available, and leaves an ordinary table where it is
+not — the development image is `postgres:16-alpine` and the hosting question is still open. The
+API prunes past 30 days on its own flush in that case, so retention holds either way.
+
+**`last_request_at` exists so a rule is a comparison rather than a guess.** "The most recent
+request was an error" — one of the three ways a tenant goes red — is `last_error_at >=
+last_request_at`. Without the second stamp the best available answer is "there was an error
+late in the newest bucket", which is a different statement and wrong on a tenant whose next
+request succeeded.
+
+**The writer is `poolse_app`; the reader is `poolse_platform`.** Asymmetric on purpose. The
+interceptor runs in the request path and has no business borrowing the platform's login, so the
+tenant role keeps INSERT and UPDATE under a policy admitting only its own row — the upsert's
+`ON CONFLICT` needs to find that row, which is why `USING` admits it rather than nothing. No
+screen in the tenant app shows this, and an unscoped read from that connection returns nothing.
+
+**No error message longer than 500 characters, and the route is a pattern.** A Postgres error
+quoting the row that violated a constraint is the realistic way a student's name would reach a
+table that is meant to hold none, so the ceiling is a CHECK rather than a habit, and
+`last_error_route` stores `GET /students/:id` rather than the URL.

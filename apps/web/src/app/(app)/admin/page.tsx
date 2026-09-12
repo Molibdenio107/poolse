@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { Building2, User } from 'lucide-react';
+import Link from 'next/link';
 import { ApiError, apiFetch, type PlatformTenant } from '@/lib/api';
 import { DataTable, type Column } from '@/components/data-table';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
@@ -10,6 +11,9 @@ import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import type { Paginated } from '@/lib/pagination';
 import { timeAgo } from '@/lib/relative-time';
+import { cn } from '@/lib/utils';
+import { HealthBadge } from './health-badge';
+import { StatusStrip } from './status-strip';
 import { SubscriptionBadge } from './subscription-badge';
 
 /**
@@ -32,13 +36,13 @@ import { SubscriptionBadge } from './subscription-badge';
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; search?: string }>;
+  searchParams: Promise<{ page?: string; search?: string; sort?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
   const locale = await getLocale();
 
-  const { page: pageParam, search = '' } = await searchParams;
+  const { page: pageParam, search = '', sort } = await searchParams;
   const page = readPage(pageParam);
   const term = search.trim();
 
@@ -81,17 +85,50 @@ export default async function AdminPage({
 
   const columns = tenantColumns(t, format, locale);
 
+  /*
+   * Sorted in the page, not the query — and this is the one list in the product
+   * where that is right.
+   *
+   * `health` is derived at read time from a 24-hour window rather than stored,
+   * so there is no column to ORDER BY; sorting it in SQL would mean the derivation
+   * moving into the statement and existing twice. The window is one page of ten
+   * rows that has already been fetched, so ordering it here costs nothing and
+   * cannot disagree with the badge beside it. The trade is honest and worth
+   * naming: this sorts *the page*, not the whole list, which is exactly what a
+   * reader scanning one screen wants and is not a substitute for a server sort
+   * if tenants ever run to several pages.
+   */
+  const rows = sort === 'health' ? [...(tenants?.items ?? [])].sort(byHealth) : tenants?.items ?? [];
+
   return (
     <PageShell
       title={t('admin.title')}
       subtitle={t('admin.subtitle')}
       filters={
-        <SearchInput
-          label={t('admin.searchLabel')}
-          placeholder={t('admin.searchPlaceholder')}
-        />
+        <>
+          <SearchInput
+            label={t('admin.searchLabel')}
+            placeholder={t('admin.searchPlaceholder')}
+          />
+          {/*
+            The sort control lives here rather than in the table head, because
+            `DataTable.header` takes a string and widening it is a change to a
+            component every list in the app renders — proposed, not done inline.
+            Links rather than buttons: this page is a server component whose
+            filters are already a plain GET, so an anchor is linkable, survives a
+            refresh and works before any JavaScript has loaded.
+          */}
+          <SortLinks current={sort} search={term} t={t} />
+        </>
       }
     >
+      {/*
+        Is the server up — refreshed every 60s, above the table because it is the
+        question that makes the table meaningful. A tenant's health is unreadable
+        while the API is the thing that is broken.
+      */}
+      <StatusStrip />
+
       {notConfigured && (
         <PageError message={t('admin.notConfigured')} detail={t('admin.notConfiguredHint')} />
       )}
@@ -104,7 +141,7 @@ export default async function AdminPage({
 
           <DataTable
             columns={columns}
-            rows={tenants.items}
+            rows={rows}
             rowKey={(tenant) => tenant.id}
             empty={
               <PageEmpty
@@ -180,7 +217,17 @@ function tenantColumns(
           <span className="sr-only">{t(`admin.kind.${tenant.kind}`)}</span>
 
           <div className="min-w-0">
-            <div className="truncate font-medium">{tenant.name}</div>
+            {/*
+              The name is the way into the tenant's request history. A whole row
+              that navigates would swallow the badges' own focus targets; a link
+              on the name is where a reader already expects one.
+            */}
+            <Link
+              href={`/admin/tenants/${tenant.id}`}
+              className="block truncate font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {tenant.name}
+            </Link>
             <div className="truncate font-mono text-xs text-foreground-muted">
               {tenant.slug}
             </div>
@@ -192,6 +239,18 @@ function tenantColumns(
             </span>
           )}
         </div>
+      ),
+    },
+    {
+      key: 'health',
+      header: t('admin.column.health'),
+      render: (tenant) => (
+        <HealthBadge
+          health={tenant.health}
+          requests={tenant.requestCount24h}
+          count4xx={tenant.count4xx24h}
+          count5xx={tenant.count5xx24h}
+        />
       ),
     },
     {
@@ -272,4 +331,78 @@ function tenantColumns(
         ),
     },
   ];
+}
+
+/**
+ * Worst first — red, amber, unknown, green.
+ *
+ * `unknown` above `green` deliberately: a tenant nobody used is not a problem,
+ * but it is more worth a glance than one that worked. Mirrors `HEALTH_ORDER` on
+ * the API, which is the definition; duplicated here rather than shipped on the
+ * wire because it is four strings and an ordering the API has no reason to
+ * impose on a client that may want its own.
+ */
+const HEALTH_ORDER: Record<PlatformTenant['health'], number> = {
+  red: 0,
+  amber: 1,
+  unknown: 2,
+  green: 3,
+};
+
+function byHealth(a: PlatformTenant, b: PlatformTenant): number {
+  return HEALTH_ORDER[a.health] - HEALTH_ORDER[b.health];
+}
+
+/**
+ * Order by: signed up, or health.
+ *
+ * `aria-current` rather than colour alone marks the active one, and the inactive
+ * one is a real link so the choice is reversible with the keyboard and the back
+ * button. Page 1 is the absence of the parameter, the same convention
+ * `pageHref` uses, so the default view has one URL rather than two.
+ */
+function SortLinks({
+  current,
+  search,
+  t,
+}: {
+  current: string | undefined;
+  search: string;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+}): React.ReactElement {
+  const href = (sort?: string): string => {
+    const query = new URLSearchParams();
+    if (search !== '') query.set('search', search);
+    if (sort !== undefined) query.set('sort', sort);
+    return query.size > 0 ? `/admin?${query}` : '/admin';
+  };
+
+  const link = (sort: string | undefined, label: string): React.ReactElement => {
+    const active = (current === 'health' ? 'health' : undefined) === sort;
+    return (
+      <Link
+        href={href(sort)}
+        aria-current={active ? 'true' : undefined}
+        className={cn(
+          'rounded border px-2.5 text-sm leading-[var(--control-h,2.25rem)] h-control inline-flex items-center',
+          active
+            ? 'border-primary font-medium text-primary'
+            : 'border-border-strong text-foreground-muted hover:text-foreground',
+          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+        )}
+      >
+        {label}
+      </Link>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm text-foreground-muted">{t('admin.sortLabel')}</span>
+      <div className="flex items-center gap-2">
+        {link(undefined, t('admin.sort.created'))}
+        {link('health', t('admin.sort.health'))}
+      </div>
+    </div>
+  );
 }

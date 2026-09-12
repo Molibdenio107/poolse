@@ -1,4 +1,7 @@
 import './load-env.js';
+// Second, not first: the DSN comes out of the .env that `load-env` reads. See
+// the note in instrument.ts — no-op when SENTRY_DSN is absent.
+import './instrument.js';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -63,6 +66,17 @@ async function bootstrap(): Promise<void> {
 
   // A truncated link in an email is a 404, not a 500 — POOLSE-R3-01.
   app.useGlobalFilters(new BadInputFilter());
+
+  /*
+   * So `onModuleDestroy` runs on SIGTERM and SIGINT.
+   *
+   * One thing depends on it today: `RequestStatsInterceptor` flushes its buffer
+   * on the way out, so the last minute before a deploy is recorded rather than
+   * dropped. Without this hook Nest tears down without telling anybody, and
+   * every deploy would leave a small hole in the telemetry at exactly the moment
+   * somebody wants to look at it.
+   */
+  app.enableShutdownHooks();
 
   // PORT is what every platform-as-a-service injects; API_PORT is what this repo
   // calls it locally. Reading both means neither the Dockerfile nor the host has

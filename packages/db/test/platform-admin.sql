@@ -204,6 +204,162 @@ END $$;
 RESET ROLE;
 
 -- ---------------------------------------------------------------------------
+-- Test 8 — request stats: the tenant writes, and cannot read
+--
+-- Deliberately asymmetric, and the asymmetry is the design. The interceptor runs
+-- in the request path as poolse_app, so that role must be able to upsert its own
+-- tenant's row — but no screen in the tenant app has any business showing a
+-- club its own error rate, let alone anybody else's. So `WITH CHECK` admits the
+-- current tenant and `USING` admits it too (the upsert's ON CONFLICT has to find
+-- the row), while the only thing that can read across tenants is the operator.
+-- ---------------------------------------------------------------------------
+
+SET LOCAL ROLE poolse_app;
+SELECT set_config('app.organization_id', 'cccccccc-cccc-cccc-cccc-cccccccccccc', true);
+
+DO $$
+DECLARE n int;
+BEGIN
+  INSERT INTO tenant_request_stats (
+    organization_id, bucket, request_count, count_4xx, count_5xx, p95_latency_ms,
+    last_request_at
+  ) VALUES ('cccccccc-cccc-cccc-cccc-cccccccccccc', date_trunc('hour', now()),
+            10, 1, 0, 42, now());
+
+  -- The upsert the flush actually performs: counts add, p95 takes the larger.
+  INSERT INTO tenant_request_stats (
+    organization_id, bucket, request_count, count_4xx, count_5xx, p95_latency_ms,
+    last_request_at
+  ) VALUES ('cccccccc-cccc-cccc-cccc-cccccccccccc', date_trunc('hour', now()),
+            5, 0, 2, 17, now())
+  ON CONFLICT (organization_id, bucket) DO UPDATE SET
+    request_count  = tenant_request_stats.request_count + excluded.request_count,
+    count_5xx      = tenant_request_stats.count_5xx     + excluded.count_5xx,
+    p95_latency_ms = greatest(tenant_request_stats.p95_latency_ms,
+                              excluded.p95_latency_ms);
+
+  SELECT request_count INTO n FROM tenant_request_stats
+   WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  IF n <> 15 THEN
+    RAISE EXCEPTION 'FAIL test 8a: the upsert made request_count %, not 15', n;
+  END IF;
+
+  SELECT p95_latency_ms INTO n FROM tenant_request_stats
+   WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  IF n <> 42 THEN
+    RAISE EXCEPTION 'FAIL test 8b: p95 merged to % rather than taking the larger', n;
+  END IF;
+
+  RAISE NOTICE 'PASS test 8: the tenant writes its own bucket, and the upsert merges';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 9 — and cannot reach another tenant's, in either direction
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE n int;
+BEGIN
+  -- Reading across: the policy is keyed on the GUC, so this sees only its own.
+  SELECT count(*) INTO n FROM tenant_request_stats;
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 9a: a tenant sees % stat rows, not just its own', n;
+  END IF;
+
+  -- Writing across: refused by WITH CHECK, as everywhere else in the schema.
+  BEGIN
+    INSERT INTO tenant_request_stats (organization_id, bucket, last_request_at)
+    VALUES ('dddddddd-dddd-dddd-dddd-dddddddddddd', date_trunc('hour', now()), now());
+    RAISE EXCEPTION 'FAIL test 9b: a tenant wrote stats against another tenant';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 9: a tenant cannot read or write another tenant''s stats';
+  END;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 10 — an unscoped tenant connection reads nothing at all
+--
+-- The property the whole schema rests on, asserted for the newest table: a query
+-- that forgets its scope returns nothing rather than everything.
+-- ---------------------------------------------------------------------------
+
+SELECT set_config('app.organization_id', '', true);
+
+DO $$
+DECLARE n int;
+BEGIN
+  SELECT count(*) INTO n FROM tenant_request_stats;
+  IF n <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 10: an unscoped connection read % stat rows', n;
+  END IF;
+  RAISE NOTICE 'PASS test 10: an unscoped tenant connection reads no stats';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 11 — the operator reads every tenant's, and writes none
+-- ---------------------------------------------------------------------------
+
+SET LOCAL ROLE poolse_platform;
+
+DO $$
+DECLARE n int;
+BEGIN
+  SELECT count(*) INTO n FROM tenant_request_stats
+   WHERE organization_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 11a: the operator cannot read a tenant''s stats';
+  END IF;
+
+  BEGIN
+    UPDATE tenant_request_stats SET count_5xx = 0;
+    RAISE EXCEPTION 'FAIL test 11b: the operator rewrote a tenant''s error count';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 11: the operator reads every tenant''s stats and writes none';
+  END;
+END $$;
+
+RESET ROLE;
+
+-- ---------------------------------------------------------------------------
+-- Test 12 — the constraints that keep a bucket a bucket
+-- ---------------------------------------------------------------------------
+
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO tenant_request_stats (organization_id, bucket, last_request_at)
+    VALUES ('dddddddd-dddd-dddd-dddd-dddddddddddd', now(), now());
+    RAISE EXCEPTION 'FAIL test 12a: an un-truncated bucket was accepted';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  -- 500 characters, enforced by the column rather than by whichever code path
+  -- wrote it. A Postgres error quoting the row that violated a constraint is the
+  -- realistic way a student's name would reach this table.
+  BEGIN
+    INSERT INTO tenant_request_stats (
+      organization_id, bucket, last_request_at, last_error_at, last_error_route,
+      last_error_message
+    ) VALUES ('dddddddd-dddd-dddd-dddd-dddddddddddd', date_trunc('hour', now()),
+              now(), now(), 'GET /x', repeat('x', 501));
+    RAISE EXCEPTION 'FAIL test 12b: a 501-character error message was accepted';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  -- An error stamp with no route is half a fact.
+  BEGIN
+    INSERT INTO tenant_request_stats (
+      organization_id, bucket, last_request_at, last_error_at
+    ) VALUES ('dddddddd-dddd-dddd-dddd-dddddddddddd', date_trunc('hour', now()),
+              now(), now());
+    RAISE EXCEPTION 'FAIL test 12c: an error with no route was accepted';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 12: a bucket is hourly, a message is bounded, an error names a route';
+END $$;
+
+-- ---------------------------------------------------------------------------
 -- Test 7 — the two columns the overview reports against
 --
 -- `comped` is the free pilot: a live tenant deliberately not billed, which is

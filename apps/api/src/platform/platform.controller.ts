@@ -1,9 +1,22 @@
-import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { readSearch } from '../common/search.js';
 import { PlatformAction, PlatformAuditInterceptor } from './platform-audit.interceptor.js';
 import { PlatformAdminGuard } from './platform.guard.js';
-import { listTenants, type TenantRow } from './platform.repository.js';
+import {
+  listTenants,
+  readTenantRequests,
+  type TenantRequests,
+  type TenantRow,
+} from './platform.repository.js';
 
 /**
  * `GET /platform/tenants` — every tenant, one row each.
@@ -33,5 +46,26 @@ export class PlatformController {
     // gives page 1 rather than a 400, and a one-letter search is no search —
     // an operator's list should not behave differently from a club's.
     return listTenants({ search: readSearch(search) }, readPageQuery(page, limit));
+  }
+
+  /**
+   * One tenant's request health — slice 2.
+   *
+   * Audited like every other platform read, and this is the first route that
+   * names a tenant, so its audit row carries `organization_id`. That is why
+   * slice 1 put `platform_audit_log` in the harness teardown list: without it
+   * the first integration test to call this would fail teardown on a foreign key
+   * that had nothing to do with the change.
+   *
+   * A tenant that does not exist is a 404; a tenant that exists and has made no
+   * requests is a 200 with an empty week. Collapsing the two would make a
+   * mistyped id look like a quiet club.
+   */
+  @Get('tenants/:id/requests')
+  @PlatformAction('tenant.requests.read')
+  async requests(@Param('id') id: string): Promise<TenantRequests> {
+    const requests = await readTenantRequests(id);
+    if (requests === null) throw new NotFoundException('No such tenant');
+    return requests;
   }
 }

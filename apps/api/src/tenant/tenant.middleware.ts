@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
+import * as Sentry from '@sentry/nestjs';
 import { currentAuth } from '../auth/auth.context.js';
 import { listMemberships } from '../identity/identity.repository.js';
 import { tenantStorage, type TenantContext } from './tenant.context.js';
@@ -48,6 +49,19 @@ export class TenantMiddleware implements NestMiddleware {
       appUserId: membership.appUserId,
       roles: membership.roles,
     };
+
+    /*
+     * Which tenant an error belongs to — slice 2.
+     *
+     * Here rather than anywhere else because this is the moment the tenant
+     * becomes known, and the isolation scope is per request, so the tag reaches
+     * every event raised by the rest of this request and none raised by another.
+     *
+     * The *id*, never the name: a Sentry issue titled with a club's name is the
+     * club's data in a third-party service. The operator can look the id up in
+     * `/admin`. Safe to call with no DSN — every Sentry helper no-ops then.
+     */
+    Sentry.getIsolationScope().setTag('tenant_id', context.organizationId);
 
     tenantStorage.run(context, () => next());
   }

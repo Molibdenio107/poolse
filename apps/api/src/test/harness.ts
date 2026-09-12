@@ -78,6 +78,13 @@ const TENANT_TABLES = [
    * this tenant and leaves the rest, which is the right answer both ways.
    */
   'platform_audit_log',
+  /*
+   * Telemetry about a tenant rather than a tenant's data — slice 2 — but it does
+   * carry `organization_id` as a real foreign key, and the interceptor is
+   * registered globally, so any integration test that lets a minute pass leaves
+   * rows here. Early in the list for the same reason as the trail above.
+   */
+  'tenant_request_stats',
   // Bookings point at credits, credits point at the attendance row that minted
   // them, and attendance points at the session. Child first, all the way down.
   'reposicao_booking',
