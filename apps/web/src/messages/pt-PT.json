@@ -3015,7 +3015,49 @@
       "when": "Quando",
       "route": "Rota",
       "message": "Mensagem",
-      "noMessage": "Sem mensagem"
+      "noMessage": "Sem mensagem",
+      "dateRequired": "Indique uma data.",
+      "dateInvalid": "Data inválida.",
+      "dateTooFar": "No máximo dois anos a partir de hoje.",
+      "statusInvalid": "Estado de subscrição desconhecido.",
+      "atLeastOne": "Mínimo 1.",
+      "atLeastOneOrEmpty": "Mínimo 1, ou em branco para sem limite.",
+      "reasonRequired": "Escreva o motivo — é o que o cliente vai ler.",
+      "reasonTooLong": "No máximo 500 caracteres.",
+      "trialFailed": "Não foi possível alterar o período experimental.",
+      "subscriptionFailed": "Não foi possível alterar a subscrição.",
+      "planFailed": "Não foi possível alterar os limites do plano.",
+      "suspensionFailed": "Não foi possível alterar a suspensão."
+    },
+    "actions": "Ações",
+    "suspended": "Suspensa",
+    "action": {
+      "trial": "Período experimental",
+      "trialHint": "A data em que termina. Uma data passada termina-o já.",
+      "trialEndsAt": "Termina a",
+      "trialPastHint": "No máximo dois anos a partir de hoje.",
+      "subscription": "Subscrição",
+      "subscriptionHint": "O que o cliente paga. Não fecha a porta — para isso, suspenda.",
+      "plan": "Limites do plano",
+      "planHint": "Nulo não é zero: deixe em branco para sem limite.",
+      "facilitiesHint": "Tem {count} neste momento. Mínimo 1.",
+      "seatsHint": "Usa {count}. Em branco = sem limite.",
+      "suspension": "Suspensão",
+      "suspendHint": "Fecha a aplicação a toda a organização. Reversível a qualquer momento.",
+      "restoreHint": "A organização está suspensa. Reabrir devolve o acesso de imediato.",
+      "suspend": "Suspender",
+      "restore": "Reabrir",
+      "suspendConfirmTitle": "Suspender esta organização?",
+      "suspendConfirmBody": "Toda a gente na organização deixa de conseguir usar o Poolse — registos de presenças, horários, faturação, tudo. Verão apenas o motivo que escrever aqui. Nada é apagado e a suspensão é reversível.",
+      "reason": "Motivo",
+      "reasonHint": "Mostrado ao cliente tal como o escrever. Até 500 caracteres."
     }
+  },
+  "suspended": {
+    "title": "Conta suspensa",
+    "heading": "O acesso a esta organização está suspenso.",
+    "since": "Suspensa desde {date}.",
+    "dataSafe": "Nada foi apagado. Assim que a situação for resolvida, tudo volta ao que estava.",
+    "contact": "Para resolver, fale connosco:"
   }
 }

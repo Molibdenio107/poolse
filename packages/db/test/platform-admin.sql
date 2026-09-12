@@ -167,6 +167,35 @@ BEGIN
     RAISE NOTICE 'PASS test 5a: the platform role cannot write to organization';
   END;
 
+  /*
+   * Still refused after slice 3 widened the grant, and that is the assertion
+   * doing its job. The platform role gained UPDATE on six *named* columns; a
+   * bare `GRANT UPDATE ON organization` would have been one word shorter and
+   * would have handed over the name, the slug, the VAT number and archived_at
+   * with them. This block never moved and it still passes.
+   */
+  BEGIN
+    UPDATE organization SET archived_at = now()
+     WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 5c: the platform role deleted a tenant';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 5c: the platform role cannot archive a tenant';
+  END;
+
+  BEGIN
+    DELETE FROM organization WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 5d: the platform role deleted an organization row';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 5d: the platform role cannot DELETE an organization';
+  END;
+
+  BEGIN
+    INSERT INTO organization (name, slug) VALUES ('Inventado', 'inventado');
+    RAISE EXCEPTION 'FAIL test 5e: the platform role created an organization';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 5e: signup is still the only way a tenant comes into being';
+  END;
+
   BEGIN
     INSERT INTO platform_admin (clerk_user_id) VALUES ('user_self_promoted');
     RAISE EXCEPTION 'FAIL test 5b: the platform role added itself an administrator';
@@ -397,6 +426,107 @@ BEGIN
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'PASS test 7: comped is a status, and a quota is null or positive';
   END;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 13 — and the six columns it *may* write
+--
+-- The other half of test 5. Slice 3 gave the operator exactly the columns an
+-- action changes; these are them, written from the platform connection with no
+-- GUC set, which is the shape every platform statement has.
+-- ---------------------------------------------------------------------------
+
+SET LOCAL ROLE poolse_platform;
+SELECT set_config('app.organization_id', '', true);
+
+DO $$
+DECLARE v_status text; v_reason text;
+BEGIN
+  UPDATE organization
+     SET subscription_status  = 'comped',
+         trial_ends_at        = now() + interval '30 days',
+         max_facilities       = 3,
+         max_management_users = 25,
+         suspended_at         = now(),
+         suspension_reason    = 'Fatura por regularizar.'
+   WHERE id = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+
+  SELECT subscription_status::text, suspension_reason INTO v_status, v_reason
+    FROM organization WHERE id = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+
+  IF v_status <> 'comped' OR v_reason IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 13a: the six granted columns did not take (% / %)',
+      v_status, v_reason;
+  END IF;
+
+  RAISE NOTICE 'PASS test 13: the operator may set a plan, a trial and a suspension';
+END $$;
+
+RESET ROLE;
+
+-- ---------------------------------------------------------------------------
+-- Test 14 — a suspension is never half a fact
+--
+-- The pair moves together or not at all. The person who meets this is a club
+-- owner at 08:00 being told their account is closed; "suspended" with no
+-- sentence beneath it is a support call that starts from nothing.
+-- ---------------------------------------------------------------------------
+
+DO $$
+BEGIN
+  BEGIN
+    UPDATE organization SET suspended_at = now(), suspension_reason = NULL
+     WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 14a: a suspension with no reason was accepted';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE organization SET suspended_at = NULL, suspension_reason = 'órfã'
+     WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 14b: a reason with no suspension was accepted';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE organization SET suspended_at = now(), suspension_reason = '   '
+     WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 14c: a blank reason was accepted';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE organization SET suspended_at = now(), suspension_reason = repeat('x', 501)
+     WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 14d: a 501-character reason was accepted';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  RAISE NOTICE 'PASS test 14: a suspension carries a sentence, and a sentence needs a suspension';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 15 — suspension is not a subscription status
+--
+-- The two most tempting things to conflate here and the most expensive. A club
+-- whose card expired on Tuesday is past due; it is also mid-lesson with thirty
+-- children in the water. Both columns exist and only one of them shuts a door.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_suspended timestamptz;
+BEGIN
+  UPDATE organization SET subscription_status = 'past_due'
+   WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+
+  SELECT suspended_at INTO v_suspended
+    FROM organization WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+
+  IF v_suspended IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL test 15: past_due closed the tenant''s door';
+  END IF;
+
+  RAISE NOTICE 'PASS test 15: billing state and access state are two facts';
 END $$;
 
 ROLLBACK;

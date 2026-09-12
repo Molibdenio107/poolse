@@ -59,6 +59,23 @@ export class PlatformAuditInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<Request>();
 
+    /*
+     * Reads only — slice 3.
+     *
+     * A write records itself, inside the transaction that performed it
+     * (`changeTenant` in platform.repository.ts). That is the rule `audit.ts`
+     * sets out for the tenant app and it holds here for the same reason: an
+     * entry written on a separate connection can commit while the change rolls
+     * back, leaving a trail that says a tenant was suspended when it was not.
+     *
+     * So this steps aside rather than adding a second, weaker row beside the
+     * good one. The consequence worth stating: **a non-GET platform endpoint
+     * that does not call `changeTenant` is not audited at all.** There is one
+     * write path and it cannot skip its own entry, which is what makes that safe
+     * rather than merely true today.
+     */
+    if (request.method !== 'GET') return next.handle();
+
     const action =
       this.reflector.get<string | undefined>(PLATFORM_ACTION, context.getHandler()) ??
       `${request.method.toLowerCase()}.${request.route?.path ?? request.path}`;

@@ -28,9 +28,26 @@ export interface MembershipSummary {
   organizationKind: OrganizationKind;
   membershipId: string;
   roles: string[];
-  /** trialing | active | past_due | canceled. Nothing enforces it until phase 2. */
+  /** trialing | active | past_due | canceled | comped. Nothing enforces it until phase 2. */
   subscriptionStatus: string;
   trialEndsAt: string | null;
+  /**
+   * Closed by a platform administrator — slice 3.
+   *
+   * Deliberately **not** `subscription_status = 'past_due'`. A club whose card
+   * expired on Tuesday is past due and is also mid-lesson with thirty children
+   * in the water; billing state and access state move at different times and for
+   * different reasons. Only this one is enforced.
+   *
+   * Carried here rather than fetched separately because `resolve_memberships` is
+   * the query every authenticated request already makes, so the check costs no
+   * extra round trip. The membership is still returned — `/me` has to keep
+   * answering so the web app can draw the screen saying what happened. The
+   * refusal is TenantMiddleware's, one layer up.
+   */
+  suspendedAt: string | null;
+  /** Shown verbatim to the suspended tenant. Non-null exactly when suspended. */
+  suspensionReason: string | null;
 }
 
 /**
@@ -102,6 +119,8 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       o_roles: string[];
       o_subscription_status: string;
       o_trial_ends_at: Date | null;
+      o_suspended_at: Date | null;
+      o_suspension_reason: string | null;
     }>('SELECT * FROM resolve_memberships($1)', [clerkUserId]);
 
     return rows.map((row) => ({
@@ -114,6 +133,8 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       roles: row.o_roles,
       subscriptionStatus: row.o_subscription_status,
       trialEndsAt: row.o_trial_ends_at?.toISOString() ?? null,
+      suspendedAt: row.o_suspended_at?.toISOString() ?? null,
+      suspensionReason: row.o_suspension_reason,
     }));
   });
 }

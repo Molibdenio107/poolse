@@ -69,6 +69,22 @@ never be the only place a piece of information appears — anything the operator
 visible text. Tooltips open on keyboard focus as well as hover, because a control whose
 meaning is only available to a mouse is a control half the users cannot understand.
 
+**The platform writes through column grants, and a platform write records itself.**
+`poolse_platform` holds `UPDATE` on six *named* columns of `organization` — `trial_ends_at`,
+`subscription_status`, `max_facilities`, `max_management_users`, `suspended_at`,
+`suspension_reason` — and nothing else: no INSERT, no DELETE, and `archived_at` is not among
+them, so signup stays the only way a tenant comes into being and deleting one is not an
+operator action. A column grant rather than a second `SECURITY DEFINER` function, which the
+migration checklist tells you to stop and reconsider before writing. **`PlatformAuditInterceptor`
+logs reads only**; a write is recorded by `changeTenant` inside the transaction that performed
+it, carrying the before-and-after of every column that moved — so a non-GET platform endpoint
+that bypasses that helper is not audited at all, and there is exactly one write path.
+**`suspended_at` is access state and `subscription_status` is billing state**: a club whose card
+expired is `past_due` and still teaching, and only the first shuts a door — enforced in
+`TenantMiddleware` (code `tenant_suspended`), never inside `resolve_memberships`, because `/me`
+has to keep answering so the club can be told why. A suspension always carries a reason, by
+CHECK. `docs/features/platform.md`.
+
 **Telemetry is aggregated, never one row per request; and Sentry is off unless a DSN says
 otherwise.** `RequestStatsInterceptor` buffers in memory and flushes one row per tenant per hour
 into `tenant_request_stats` — a club at 100 req/min would otherwise write 144,000 rows a day for

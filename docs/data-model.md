@@ -149,9 +149,13 @@ organization
   subscription_status ('trialing'|'active'|'past_due'|'canceled'|'comped'),
   trial_ends_at, archived_at,
   max_facilities,                     -- licence: sites this subscription covers
-  max_management_users                -- soft seat quota; null = unlimited, never 0
+  max_management_users,               -- soft seat quota; null = unlimited, never 0
+  suspended_at, suspension_reason     -- the door, closed by a platform operator
   unique (slug) where archived_at is null
   check max_management_users is null or max_management_users > 0
+  check (suspended_at is null) = (suspension_reason is null)
+  check suspension_reason is null
+     or (btrim(suspension_reason) <> '' and length(suspension_reason) <= 500)
 
 app_user
   id, clerk_user_id (unique),
@@ -2732,3 +2736,46 @@ screen in the tenant app shows this, and an unscoped read from that connection r
 quoting the row that violated a constraint is the realistic way a student's name would reach a
 table that is meant to hold none, so the ceiling is a CHECK rather than a habit, and
 `last_error_route` stores `GET /students/:id` rather than the URL.
+
+### Platform actions — slice 3
+
+```
+organization
+  + suspended_at      timestamptz    -- access state, enforced by TenantMiddleware
+  + suspension_reason text           -- shown to the club verbatim; required with the above
+
+grant update (trial_ends_at, subscription_status, max_facilities,
+              max_management_users, suspended_at, suspension_reason)
+  on organization to poolse_platform
+policy organization_platform_write on organization
+  for update to poolse_platform using (true) with check (true)
+
+resolve_memberships(text)
+  + o_suspended_at, o_suspension_reason
+```
+
+**Six columns, named one at a time — not a `SECURITY DEFINER` function and not a bare
+`GRANT UPDATE`.** The migration checklist says to stop and reconsider before writing a second
+`SECURITY DEFINER` function, and reconsidering produced something narrower: Postgres grants
+`UPDATE` per column, so the operator gets exactly the six an action changes. A bare grant
+would be one word shorter and would hand over the name, the slug, the VAT number, the invoice
+series prefix and `archived_at` with them. `packages/db/test/platform-admin.sql` test 5a —
+written in slice 1, asserting the platform role cannot rewrite a tenant's *name* — passes
+unchanged, which is the reach widening by six columns and not by one more.
+
+**`suspended_at` is access state; `subscription_status` is billing state.** The two most
+tempting things to conflate here and the most expensive. A club whose card expired on Tuesday
+is `past_due` and is also mid-lesson with thirty children in the water. Only `suspended_at`
+shuts a door, and it is distinct again from `archived_at`, which is deletion and is not an
+operator action at all.
+
+**A suspension is never half a fact.** The CHECK refuses a stamp without a sentence or a
+sentence without a stamp, because the person who meets this is a club owner at 08:00 being
+told their account is closed, and "suspended" with nothing beneath it is a support call that
+starts from nothing. Bounded at 500 characters: it is a sentence, not a pasted ticket.
+
+**Suspension rides on `resolve_memberships` rather than costing a query.** That function is
+the one lookup every authenticated request already makes. It still *returns* the membership —
+enforcing inside it would make a suspended club indistinguishable from somebody who belongs to
+no organization, and `/me` has to keep answering so the web app can say what happened. The
+refusal is `TenantMiddleware`'s, one layer up, where it can carry a code and the reason.

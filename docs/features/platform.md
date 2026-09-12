@@ -132,9 +132,14 @@ sit above it, and that is the row an operator opened this screen to find.
 ## The audit trail
 
 Every request that reaches `PlatformModule` writes one line to `platform_audit_log` — who,
-what, when, and which tenant if the route names one. **Reads included.** There is nothing to
-*do* on this side of the product yet, and logging a read costs a single insert on a screen
-one person opens; the habit has to exist before the actions do.
+what, when, and which tenant if the route names one. **Reads included**: logging a read costs
+a single insert on a screen one person opens, and the habit had to exist before the actions
+did.
+
+The *mechanism* differs by direction, and the difference matters. `PlatformAuditInterceptor`
+records reads, after the handler settles. A **write records itself, inside the transaction
+that performed it** — see Actions below — because an entry written on a separate connection
+can commit while the change rolls back.
 
 The row records the *request* — the search term, the page — and never the response. A copy
 of every tenant's figures in a table nobody is watching is a second copy to protect.
@@ -145,8 +150,95 @@ interceptor in Nest and that refusal is precisely the request worth having a rec
 The table is append-only even to the operator: `poolse_platform` holds `SELECT` and `INSERT`
 and nothing else, and `poolse_app` is refused it outright.
 
+## Actions — slice 3
+
+Four things an operator can change, on `/admin/tenants/[id]`. Each is its own endpoint and
+its own small form: they are four unrelated decisions taken at different moments, and one
+Save across all of them would mean adjusting a seat count and silently rewriting a trial
+date at the same time.
+
+| Action | Endpoint | Writes |
+|---|---|---|
+| Set the trial end date | `POST /platform/tenants/:id/trial` | `trial_ends_at` |
+| Set the subscription state | `POST /platform/tenants/:id/subscription` | `subscription_status` |
+| Set the plan ceilings | `POST /platform/tenants/:id/plan` | `max_facilities`, `max_management_users` |
+| Suspend or restore | `POST /platform/tenants/:id/suspension` | `suspended_at`, `suspension_reason` |
+
+### How the platform is allowed to write at all
+
+`poolse_platform` holds **column-level `UPDATE` on exactly six columns** of `organization`,
+plus a `FOR UPDATE` policy. Not a `SECURITY DEFINER` function — the migration checklist says
+to stop and reconsider before writing a second one, and a column grant turned out to be both
+simpler and narrower. What it cannot do is unchanged and still asserted:
+
+```
+UPDATE organization SET name = …         → permission denied
+UPDATE organization SET archived_at = …  → permission denied
+DELETE FROM organization                 → permission denied
+INSERT INTO organization                 → permission denied  (signup is the only way in)
+```
+
+`packages/db/test/platform-admin.sql` test 5a — "the platform role cannot write to
+organization", written in slice 1 against the tenant's *name* — passes unchanged. The reach
+widened by six columns and the assertion guarding the rest never moved.
+
+### A write records itself
+
+`PlatformAuditInterceptor` logs **reads only**. A write is recorded by `changeTenant` inside
+the transaction that performed it, because an audit entry written on a separate connection
+can commit while the change rolls back — leaving a trail that says a tenant was suspended
+when it was not. The entry carries the **before and after of every column that actually
+moved**; a change that changes nothing records `{}` rather than a phantom edit.
+
+The consequence worth stating: a non-GET platform endpoint that does not go through
+`changeTenant` is not audited at all. There is one write path and it cannot skip its own
+entry, which is what makes that safe rather than merely true today.
+
+### Suspension
+
+**`suspended_at` is not `subscription_status = 'past_due'`.** A club whose card expired on
+Tuesday is past due; it is also mid-lesson with thirty children in the water. Billing state
+and access state move at different times and for different reasons, and only the second one
+shuts a door. It is also not `archived_at`, which is deletion and is not an operator action.
+
+A suspension **always carries a reason** — the schema refuses one without the other — because
+the person who meets it is a club owner at 08:00 being told their account is closed, and
+"suspended" with no sentence beneath it is a support call starting from nothing. The reason
+is shown to them verbatim, trimmed and capped at 500 characters.
+
+Enforced in `TenantMiddleware`, which throws 403 with `code: 'tenant_suspended'` and the
+reason on the body. Three things stay open on purpose:
+
+- **`/me` keeps answering.** It is identity-only, so the middleware never runs for it. Had
+  suspension been enforced inside `resolve_memberships` instead, a suspended club would be
+  indistinguishable from somebody who belongs to no organization — sent to create a second
+  club rather than told why the first is shut.
+- **The web app draws a screen, not an error.** `dashboard/layout.tsx` renders
+  `SuspendedNotice` *instead of* the shell, so nothing underneath fires a request that is
+  going to be refused. It quotes the reason, says when, says plainly that nothing was
+  deleted, and gives an address.
+- **`/platform` is unaffected**, so an operator who suspends the tenant they happen to belong
+  to can still reach the screen that undoes it.
+
+Suspending is behind a confirmation dialog that spells out what it does. Restoring is one
+click: nothing is made safer by slowing down the safe direction.
+
+### Validation
+
+At the edge, in `platform-actions.ts`, and every refusal names its field so the web app can
+put it beside the box that caused it.
+
+- A trial date **more than two years out is refused** — `2027` typed for `2026` is one
+  keystroke and silently gives somebody two years free. A date in the **past is allowed**:
+  ending a trial today is something an operator means to do.
+- `max_facilities` is at least 1. Lowering it below what a club already has does not
+  retroactively refuse anything — the licence trigger is on `facility` — so the existing sites
+  stay and the next one is refused. The list marks a tenant over its ceiling in red.
+- `max_management_users` is null-means-unlimited; **`0` is refused** rather than read as
+  unlimited, because a quota of nought is a tenant nobody can log into.
+- A suspension reason is required, trimmed, and at most 500 characters.
+
 ## Not in this slice
 
-Extending a trial, changing a plan, suspending a tenant, per-tenant feature flags, support
-"view as", the Clerk MAU pull and cross-tenant analytics. The screen is read-only on
-purpose: half a set of actions is a screen whose disabled controls need explaining.
+Per-tenant feature flags, support "view as", the Clerk MAU pull and cross-tenant analytics.
+Deleting a tenant is deliberately still impossible from here.

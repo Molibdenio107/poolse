@@ -43,6 +43,37 @@ export class TenantMiddleware implements NestMiddleware {
       });
     }
 
+    /*
+     * A suspended tenant is closed — slice 3, and the single most dangerous
+     * check in this file.
+     *
+     * Here rather than in `resolve_memberships`, because a suspended tenant that
+     * simply stopped resolving would be indistinguishable from somebody who
+     * belongs to no organization at all: the same 403, the same screen, and an
+     * owner sent to create a second club rather than told why the first one is
+     * shut. The membership resolves; the request does not proceed.
+     *
+     * **`/me` is unaffected**, and has to be: it is an identity-only route, so
+     * this middleware never runs for it, which is what lets the web app draw a
+     * screen saying what happened and quoting the reason. The platform area is
+     * unaffected for the same reason, so an operator who suspended their own
+     * tenant by mistake can still reach `/admin` to undo it.
+     *
+     * Its own code, like every other refusal in this API. `no_organization`
+     * sends somebody to create one and `forbidden_role` sends them to an admin;
+     * this one sends them to us, and the client has to tell the three apart.
+     */
+    if (membership.suspendedAt !== null) {
+      throw new ForbiddenException({
+        code: 'tenant_suspended',
+        message: 'This organization is suspended',
+        // The operator's own sentence, verbatim. The schema requires one
+        // whenever a tenant is suspended, so this is never an empty banner.
+        reason: membership.suspensionReason,
+        suspendedAt: membership.suspendedAt,
+      });
+    }
+
     const context: TenantContext = {
       organizationId: membership.organizationId,
       membershipId: membership.membershipId,

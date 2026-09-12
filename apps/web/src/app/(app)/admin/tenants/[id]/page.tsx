@@ -1,12 +1,13 @@
 import { notFound, redirect } from 'next/navigation';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type TenantRequests } from '@/lib/api';
+import { ApiError, apiFetch, type PlatformTenant, type TenantRequests } from '@/lib/api';
 import { DataTable, type Column } from '@/components/data-table';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { timeAgo } from '@/lib/relative-time';
 import { HealthBadge } from '../../health-badge';
 import { RequestCharts } from './request-charts';
+import { TenantActions } from './tenant-actions';
 
 /**
  * One tenant's request health over the last week — platform admin, slice 2.
@@ -32,10 +33,20 @@ export default async function TenantRequestsPage({
   const { id } = await params;
 
   let requests: TenantRequests | null = null;
+  let tenant: PlatformTenant | null = null;
   let failure: LoadFailure | null = null;
 
   try {
-    requests = await apiFetch<TenantRequests>(`/platform/tenants/${id}/requests`);
+    /*
+     * In parallel. They are two independent reads and nothing on this page needs
+     * one to ask for the other; sequential would make the page wait for the sum.
+     * Both are audited, which is two lines in the trail for one page view — the
+     * honest price of the screen showing two different things.
+     */
+    [tenant, requests] = await Promise.all([
+      apiFetch<PlatformTenant>(`/platform/tenants/${id}`),
+      apiFetch<TenantRequests>(`/platform/tenants/${id}/requests`),
+    ]);
   } catch (error) {
     if (error instanceof ApiError && error.code === 'not_platform_admin') {
       redirect('/dashboard');
@@ -79,7 +90,7 @@ export default async function TenantRequestsPage({
 
   return (
     <PageShell
-      title={requests?.name ?? t('admin.tenantRequests')}
+      title={tenant?.name ?? requests?.name ?? t('admin.tenantRequests')}
       subtitle={t('admin.tenantRequestsSubtitle', { days: requests?.windowDays ?? 7 })}
       back={{ href: '/admin', label: t('admin.backToTenants') }}
       actions={
@@ -94,6 +105,13 @@ export default async function TenantRequestsPage({
       }
     >
       {failure !== null && <PageError message={t(failure.key)} detail={failure.detail} />}
+
+      {/*
+        The actions above the charts. An operator opening this page has usually
+        come to *do* something — the chip on the list told them which tenant —
+        and the week's history is the evidence underneath rather than the point.
+      */}
+      {tenant !== null && <TenantActions tenant={tenant} />}
 
       {requests !== null && (
         <>

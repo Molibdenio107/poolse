@@ -3015,7 +3015,49 @@
       "when": "When",
       "route": "Route",
       "message": "Message",
-      "noMessage": "No message"
+      "noMessage": "No message",
+      "dateRequired": "Enter a date.",
+      "dateInvalid": "Invalid date.",
+      "dateTooFar": "At most two years from today.",
+      "statusInvalid": "Unknown subscription status.",
+      "atLeastOne": "Minimum 1.",
+      "atLeastOneOrEmpty": "Minimum 1, or blank for unlimited.",
+      "reasonRequired": "Write the reason — it is what the tenant will read.",
+      "reasonTooLong": "At most 500 characters.",
+      "trialFailed": "Could not change the trial.",
+      "subscriptionFailed": "Could not change the subscription.",
+      "planFailed": "Could not change the plan limits.",
+      "suspensionFailed": "Could not change the suspension."
+    },
+    "actions": "Actions",
+    "suspended": "Suspended",
+    "action": {
+      "trial": "Trial",
+      "trialHint": "The date it ends. A past date ends it now.",
+      "trialEndsAt": "Ends on",
+      "trialPastHint": "At most two years from today.",
+      "subscription": "Subscription",
+      "subscriptionHint": "What the tenant pays. It does not close the door — suspend for that.",
+      "plan": "Plan limits",
+      "planHint": "Null is not zero: leave blank for unlimited.",
+      "facilitiesHint": "Has {count} right now. Minimum 1.",
+      "seatsHint": "Using {count}. Blank = unlimited.",
+      "suspension": "Suspension",
+      "suspendHint": "Closes the app to the whole organization. Reversible at any time.",
+      "restoreHint": "This organization is suspended. Restoring gives access back immediately.",
+      "suspend": "Suspend",
+      "restore": "Restore",
+      "suspendConfirmTitle": "Suspend this organization?",
+      "suspendConfirmBody": "Everybody in the organization stops being able to use Poolse — registers, timetables, invoicing, all of it. They will see only the reason you write here. Nothing is deleted and the suspension can be lifted at any time.",
+      "reason": "Reason",
+      "reasonHint": "Shown to the tenant exactly as you write it. Up to 500 characters."
     }
+  },
+  "suspended": {
+    "title": "Account suspended",
+    "heading": "Access to this organization is suspended.",
+    "since": "Suspended since {date}.",
+    "dataSafe": "Nothing has been deleted. As soon as this is resolved, everything comes back as it was.",
+    "contact": "To sort this out, get in touch:"
   }
 }

@@ -1,4 +1,5 @@
 import { withPlatform } from '@poolse/db';
+import { currentAuth } from '../auth/auth.context.js';
 import {
   TOTAL_COUNT,
   windowed,
@@ -83,6 +84,13 @@ export interface TenantRow {
   lastActivityAt: string | null;
   /** A tenant that has been deleted. Still listed — churn is worth seeing. */
   archivedAt: string | null;
+  /**
+   * Closed by an operator — slice 3. Distinct from `archivedAt`, which is
+   * deletion, and from `subscriptionStatus`, which is what they are paying.
+   */
+  suspendedAt: string | null;
+  /** Non-null exactly when suspended. Shown to the club verbatim. */
+  suspensionReason: string | null;
 
   /**
    * Is this tenant's API behaving — slice 2.
@@ -102,6 +110,24 @@ export interface TenantRow {
 
 export interface TenantQuery {
   search: string | null;
+  /**
+   * One tenant, by id — slice 3.
+   *
+   * The detail page needs every column the list row has, down to the seat count
+   * and the health verdict, and building a second query for it would be two
+   * definitions of "a tenant row" that agree until somebody edits one. A filter
+   * on the same statement costs a `WHERE` clause and cannot drift.
+   */
+  organizationId?: string | null;
+}
+
+/** One tenant, or null. Same row shape as the list, from the same statement. */
+export async function readTenant(organizationId: string): Promise<TenantRow | null> {
+  const page = await listTenants(
+    { search: null, organizationId },
+    { page: 1, limit: 1, offset: 0 },
+  );
+  return page.items[0] ?? null;
 }
 
 export async function listTenants(
@@ -125,6 +151,8 @@ export async function listTenants(
       pool_count: number;
       last_activity_at: Date | null;
       archived_at: Date | null;
+      suspended_at: Date | null;
+      suspension_reason: string | null;
       request_count_24h: number;
       count_4xx_24h: number;
       count_5xx_24h: number;
@@ -142,6 +170,8 @@ export async function listTenants(
              o.max_management_users,
              o.max_facilities,
              o.archived_at,
+             o.suspended_at,
+             o.suspension_reason,
 
              /*
               * Seats in use = active management memberships + invitations still
@@ -230,7 +260,8 @@ export async function listTenants(
              AND s.bucket >= date_trunc('hour', now() - make_interval(hours => $5))
         ) health ON true
 
-       WHERE ${searchPredicate('o.name', '$2')}
+       WHERE ($6::uuid IS NULL OR o.id = $6::uuid)
+         AND ${searchPredicate('o.name', '$2')}
        /*
         * Newest first. An operator opens this to see who signed up, and the
         * tenant that needs looking at is almost always the most recent one.
@@ -239,7 +270,14 @@ export async function listTenants(
         */
        ORDER BY o.created_at DESC, o.id
        LIMIT $3 OFFSET $4
-    `, [MANAGEMENT_ROLES, query.search, limit, offset, HEALTH_WINDOW_HOURS]);
+    `, [
+      MANAGEMENT_ROLES,
+      query.search,
+      limit,
+      offset,
+      HEALTH_WINDOW_HOURS,
+      query.organizationId ?? null,
+    ]);
 
     return windowed(page, run, (row) => ({
       id: row.id,
@@ -259,6 +297,8 @@ export async function listTenants(
       poolCount: Number(row.pool_count),
       lastActivityAt: row.last_activity_at?.toISOString() ?? null,
       archivedAt: row.archived_at?.toISOString() ?? null,
+      suspendedAt: row.suspended_at?.toISOString() ?? null,
+      suspensionReason: row.suspension_reason,
 
       health: deriveHealth({
         requestCount: row.request_count_24h,
@@ -450,4 +490,185 @@ function sum(values: number[]): number {
 /** The start of the hour a millisecond timestamp falls in. */
 function hourFloor(ms: number): number {
   return ms - (ms % 3_600_000);
+}
+
+// ---------------------------------------------------------------------------
+// Actions — slice 3
+//
+// The first writes on this side of the product, and they go through one helper
+// so that none of them can forget the half that matters.
+//
+// **A write records itself, inside the transaction that performed it.** That is
+// the rule `audit.ts` sets out for the tenant app and it applies here for the
+// same reason: an audit entry written on its own connection can commit while the
+// change rolls back, leaving a log that says a trial was extended when it was
+// not — or the reverse, which is worse. `PlatformAuditInterceptor` therefore
+// logs reads only; a non-GET request is logged by this function.
+//
+// **The reach is six columns.** `poolse_platform` holds `UPDATE (trial_ends_at,
+// subscription_status, max_facilities, max_management_users, suspended_at,
+// suspension_reason)` and nothing else, so a statement here that named `name` or
+// `archived_at` would be refused by Postgres rather than by a code review.
+// ---------------------------------------------------------------------------
+
+/** What an action may set. Every key is one of the six granted columns. */
+interface TenantChange {
+  trial_ends_at?: string | null;
+  subscription_status?: SubscriptionStatus;
+  max_facilities?: number;
+  max_management_users?: number | null;
+  suspended_at?: string | null;
+  suspension_reason?: string | null;
+}
+
+/** The columns an audit entry is worth carrying. */
+const AUDITED = [
+  'trial_ends_at',
+  'subscription_status',
+  'max_facilities',
+  'max_management_users',
+  'suspended_at',
+  'suspension_reason',
+] as const;
+
+export interface TenantChangeResult {
+  organizationId: string;
+  /** Only the fields that actually moved, before and after. */
+  changed: Record<string, { before: unknown; after: unknown }>;
+}
+
+/**
+ * Apply one change to one tenant, and record it.
+ *
+ * Null for a tenant that does not exist, so the controller can answer 404 rather
+ * than reporting a successful change of nothing.
+ *
+ * The before-image is read in the same transaction as the write, so the pair in
+ * the trail is genuinely the pair — not the row as it was when the screen was
+ * drawn. With one operator that is theory; it costs one statement and means the
+ * trail cannot be wrong.
+ */
+async function changeTenant(
+  organizationId: string,
+  action: string,
+  change: TenantChange,
+): Promise<TenantChangeResult | null> {
+  const clerkUserId = currentAuth().clerkUserId;
+
+  const columns = Object.keys(change) as (keyof TenantChange)[];
+  if (columns.length === 0) {
+    throw new Error(`Platform action "${action}" asked to change nothing`);
+  }
+
+  return withPlatform(async (tx) => {
+    const { rows: before } = await tx.query<Record<string, unknown>>(
+      `SELECT ${AUDITED.join(', ')} FROM organization WHERE id = $1`,
+      [organizationId],
+    );
+    if (before.length === 0) return null;
+
+    // Built from a fixed key list, never from caller-supplied names: these
+    // become identifiers, which cannot be parameterised.
+    const assignments = columns.map((column, index) => `${column} = $${index + 2}`);
+
+    const { rows: after } = await tx.query<Record<string, unknown>>(
+      `UPDATE organization SET ${assignments.join(', ')}
+        WHERE id = $1
+        RETURNING ${AUDITED.join(', ')}`,
+      [organizationId, ...columns.map((column) => change[column] ?? null)],
+    );
+
+    const changed: TenantChangeResult['changed'] = {};
+    for (const column of AUDITED) {
+      const was = normalise(before[0]![column]);
+      const now = normalise(after[0]![column]);
+      if (was !== now) changed[column] = { before: was, after: now };
+    }
+
+    await tx.query(
+      `INSERT INTO platform_audit_log (clerk_user_id, action, organization_id, detail)
+            VALUES ($1, $2, $3, $4::jsonb)`,
+      [clerkUserId, action, organizationId, JSON.stringify({ changed })],
+    );
+
+    return { organizationId, changed };
+  });
+}
+
+/**
+ * Dates back as ISO, everything else as itself.
+ *
+ * Without it every timestamp comparison is `Date !== Date` by identity, so an
+ * action that set `trial_ends_at` to the value it already held would be recorded
+ * as a change — and the trail would stop meaning "this moved".
+ */
+function normalise(value: unknown): unknown {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
+/**
+ * Move a tenant's trial end date.
+ *
+ * A date in the past is allowed and is how a trial is ended early — an operator
+ * who wants that should not have to find another screen for it. What is refused
+ * is a date far enough out to be a typo; `2027` typed for `2026` is the mistake
+ * this catches, and it is silent otherwise.
+ */
+export async function extendTrial(
+  organizationId: string,
+  endsAt: string,
+): Promise<TenantChangeResult | null> {
+  return changeTenant(organizationId, 'tenant.trial.set', { trial_ends_at: endsAt });
+}
+
+/** Set the subscription state. `comped` is the free pilot: live, not billed. */
+export async function setSubscriptionStatus(
+  organizationId: string,
+  status: SubscriptionStatus,
+): Promise<TenantChangeResult | null> {
+  return changeTenant(organizationId, 'tenant.subscription.set', {
+    subscription_status: status,
+  });
+}
+
+/**
+ * Set the two plan ceilings.
+ *
+ * `max_facilities` is enforced by a trigger on `facility`, so lowering it below
+ * what a club already has does not retroactively refuse anything — the existing
+ * sites stay and the next one is refused. That is deliberate and is what the
+ * licence migration chose when it backfilled; the screen marks a tenant over its
+ * ceiling in red rather than pretending it cannot happen.
+ *
+ * `max_management_users` is a soft quota nothing enforces yet, so the same is
+ * true of it more loudly.
+ */
+export async function setPlanLimits(
+  organizationId: string,
+  limits: { maxFacilities: number; maxManagementUsers: number | null },
+): Promise<TenantChangeResult | null> {
+  return changeTenant(organizationId, 'tenant.plan.set', {
+    max_facilities: limits.maxFacilities,
+    max_management_users: limits.maxManagementUsers,
+  });
+}
+
+/**
+ * Close a tenant's door, or open it again.
+ *
+ * The two columns move together — the schema refuses one without the other —
+ * because a closed door with no sentence on it is a support call that starts
+ * from nothing. Restoring clears both.
+ */
+export async function setSuspension(
+  organizationId: string,
+  suspension: { reason: string } | null,
+): Promise<TenantChangeResult | null> {
+  return changeTenant(
+    organizationId,
+    suspension === null ? 'tenant.restored' : 'tenant.suspended',
+    suspension === null
+      ? { suspended_at: null, suspension_reason: null }
+      : { suspended_at: new Date().toISOString(), suspension_reason: suspension.reason },
+  );
 }

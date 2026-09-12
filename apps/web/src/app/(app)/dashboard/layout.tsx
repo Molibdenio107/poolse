@@ -3,6 +3,7 @@ import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import { AppSidebar } from '../app-sidebar';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
+import { SuspendedNotice } from './suspended-notice';
 
 /**
  * The backoffice shell.
@@ -35,7 +36,21 @@ import { UserMenu } from '../user-menu';
  * round. The kind falls back to `business`, which is the fuller menu — a
  * personal user seeing Turmas during an outage is a nuisance, not a leak.
  */
-async function currentViewer(): Promise<{ roles: string[]; kind: OrganizationKind }> {
+interface Viewer {
+  roles: string[];
+  kind: OrganizationKind;
+  /**
+   * The tenant is closed — slice 3.
+   *
+   * Null for the ordinary case. When set, the shell renders the notice *instead
+   * of* the page, because every tenant-scoped call below this point answers 403
+   * `tenant_suspended` and the alternative is a wall of "could not load" boxes
+   * with no explanation among them.
+   */
+  suspended: { name: string; reason: string | null; at: string } | null;
+}
+
+async function currentViewer(): Promise<Viewer> {
   try {
     const me = await apiFetch<Me>('/me');
     const membership = me.memberships[0];
@@ -53,10 +68,29 @@ async function currentViewer(): Promise<{ roles: string[]; kind: OrganizationKin
       Sentry.setTag('tenant_id', membership.organizationId);
     }
 
-    return { roles: membership?.roles ?? [], kind: membership?.organizationKind ?? 'business' };
+    return {
+      roles: membership?.roles ?? [],
+      kind: membership?.organizationKind ?? 'business',
+      suspended:
+        membership?.suspendedAt != null
+          ? {
+              name: membership.organizationName,
+              reason: membership.suspensionReason,
+              at: membership.suspendedAt,
+            }
+          : null,
+    };
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
-    return { roles: [], kind: 'business' };
+    /*
+     * Fails open on suspension, closed on roles — and the asymmetry is
+     * deliberate. A role-restricted section missing during an outage costs a
+     * menu item, and the pages behind it refuse independently. Showing the
+     * suspension notice because `/me` was briefly unreachable would tell a
+     * paying club its account is closed when it is not, which is a telephone
+     * call we would deserve.
+     */
+    return { roles: [], kind: 'business', suspended: null };
   }
 }
 
@@ -65,7 +99,24 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const { roles, kind } = await currentViewer();
+  const { roles, kind, suspended } = await currentViewer();
+
+  /*
+   * Instead of the shell, not inside it.
+   *
+   * The sidebar's links would all lead to refusals, and the header's brand slot
+   * belongs to a customer whose account we have just closed. One page, one
+   * sentence, and a way to reach us.
+   */
+  if (suspended !== null) {
+    return (
+      <SuspendedNotice
+        organizationName={suspended.name}
+        reason={suspended.reason}
+        suspendedAt={suspended.at}
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">

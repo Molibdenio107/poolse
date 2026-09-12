@@ -199,6 +199,17 @@ export interface Me {
      * fewer screens.
      */
     organizationKind: OrganizationKind;
+    /**
+     * Closed by a platform administrator — slice 3.
+     *
+     * Non-null exactly when `suspensionReason` is. The dashboard shell reads it
+     * and draws the notice instead of the app; every tenant-scoped API call
+     * would answer 403 `tenant_suspended` anyway, so this is what turns a wall
+     * of error screens into one sentence.
+     */
+    suspendedAt: string | null;
+    /** The operator's own words, shown verbatim. */
+    suspensionReason: string | null;
     membershipId: string;
     roles: string[];
     subscriptionStatus: 'trialing' | 'active' | 'past_due' | 'canceled';
@@ -2922,6 +2933,13 @@ export interface PlatformTenant {
   /** Last *recorded write*, not last login — see the API repository's note. */
   lastActivityAt: string | null;
   archivedAt: string | null;
+  /**
+   * Closed by an operator — slice 3. Distinct from `archivedAt`, which is
+   * deletion, and from `subscriptionStatus`, which is what they are paying.
+   */
+  suspendedAt: string | null;
+  /** Non-null exactly when suspended. Shown to the club verbatim. */
+  suspensionReason: string | null;
 
   /** Request health over the last 24 hours — slice 2. */
   health: TenantHealth;
