@@ -154,7 +154,100 @@ async function main(): Promise<void> {
     console.log(
       `  verified: ${app.user} can log in, is not a superuser, has no BYPASSRLS, owns no tables`,
     );
-    console.log('\nApplication role is ready. Run migrations next: pnpm db:migrate');
+
+    /*
+     * The platform operator's role, if this installation has one.
+     *
+     * Optional on purpose. A developer who never opens `/admin` needs nothing
+     * here, and an install that fails because an unused area was not configured
+     * is an install people learn to skip steps in.
+     *
+     * The same three checks as above, and for a sharper reason. This role *is*
+     * allowed to read across tenants — but only through the seven
+     * `FOR SELECT TO poolse_platform` policies the platform-admin migration
+     * creates. Point it at the owner and it stops being narrow: it gains write
+     * access to every table in the schema, and the whole design of the area
+     * quietly becomes decorative. `assertPlatformRoleIsNarrow` re-checks this at
+     * API boot; this is the first line.
+     */
+    const platformUrl = process.env['DATABASE_PLATFORM_URL'];
+    if (!platformUrl) {
+      console.log(
+        '\n  DATABASE_PLATFORM_URL is not set — skipping the platform role.\n' +
+          '  Set it if you want the /admin area; see docs/features/platform.md.',
+      );
+    } else {
+      const platform = parseAppUrl(platformUrl);
+
+      if (platform.user === ownerName) {
+        throw new Error(
+          `DATABASE_PLATFORM_URL connects as "${platform.user}", which is the owner. ` +
+            'The platform role must be a separate, narrow login — see docs/features/platform.md.',
+        );
+      }
+      if (platform.user === app.user) {
+        throw new Error(
+          'DATABASE_PLATFORM_URL and DATABASE_APP_URL are the same role. The whole ' +
+            'point of the second one is that the tenant connection cannot read across tenants.',
+        );
+      }
+      if (!/^[a-z_][a-z0-9_]*$/.test(platform.user)) {
+        throw new Error(
+          `Unusable role name "${platform.user}": use lowercase letters, digits and _`,
+        );
+      }
+
+      const platformExists = await owner.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [
+        platform.user,
+      ]);
+
+      if (platformExists.rowCount === 0) {
+        await ddl('CREATE ROLE %I LOGIN PASSWORD %L', [platform.user, platform.password]);
+        console.log(`  created role ${platform.user}`);
+      } else {
+        await ddl('ALTER ROLE %I LOGIN PASSWORD %L', [platform.user, platform.password]);
+        console.log(`  role ${platform.user} already existed; password set`);
+      }
+
+      await ddl('GRANT CONNECT ON DATABASE %I TO %I', [platform.database, platform.user]);
+
+      const { rows: platformRows } = await owner.query<{
+        is_superuser: boolean;
+        bypassrls: boolean;
+        owns_tables: boolean;
+      }>(
+        `SELECT r.rolsuper AS is_superuser,
+                r.rolbypassrls AS bypassrls,
+                EXISTS (
+                  SELECT 1 FROM pg_tables t
+                   WHERE t.schemaname = 'public' AND t.tableowner = $1
+                ) AS owns_tables
+           FROM pg_roles r
+          WHERE r.rolname = $1`,
+        [platform.user],
+      );
+
+      const platformRole = platformRows[0];
+      if (!platformRole) throw new Error(`Created ${platform.user} but could not read it back`);
+
+      const platformFaults: string[] = [];
+      if (platformRole.is_superuser) platformFaults.push('is a superuser');
+      if (platformRole.bypassrls) platformFaults.push('has BYPASSRLS');
+      if (platformRole.owns_tables) platformFaults.push('owns tables in public');
+
+      if (platformFaults.length > 0) {
+        throw new Error(
+          `Role ${platform.user} ${platformFaults.join(', ')}. The platform role must stay ` +
+            'read-only on the seven tables its policies name.',
+        );
+      }
+
+      console.log(
+        `  verified: ${platform.user} is not a superuser, has no BYPASSRLS, owns no tables`,
+      );
+    }
+
+    console.log('\nRoles are ready. Run migrations next: pnpm db:migrate');
   } finally {
     await owner.end();
   }

@@ -2921,5 +2921,43 @@
     "chaseNote": "Nota",
     "chaseNoteHint": "O que foi dito, ou o que a família respondeu. É a razão pela qual vale a pena registar um segundo contacto.",
     "notPayable": "Uma nota de crédito não é paga nem cobrada."
+  },
+  "admin": {
+    "mark": "Poolse · Plataforma",
+    "backToApp": "Voltar à aplicação",
+    "title": "Clientes",
+    "subtitle": "Todas as organizações no Poolse, o estado da subscrição e a utilização.",
+    "searchLabel": "Procurar cliente",
+    "searchPlaceholder": "Nome da organização",
+    "empty": "Ainda não há nenhuma organização.",
+    "noMatches": "Nenhuma organização corresponde a \"{term}\".",
+    "archived": "Eliminada",
+    "noPlan": "Sem plano",
+    "neverActive": "Sem atividade",
+    "activeAgo": "{ago}",
+    "trialEnds": "Termina a {date}",
+    "notConfigured": "A área de plataforma não está configurada.",
+    "notConfiguredHint": "Defina DATABASE_PLATFORM_URL e execute pnpm db:bootstrap. Ver docs/features/platform.md.",
+    "column": {
+      "tenant": "Organização",
+      "status": "Subscrição",
+      "plan": "Plano",
+      "seats": "Lugares de gestão",
+      "facilities": "Instalações",
+      "pools": "Tanques",
+      "created": "Criada",
+      "activity": "Última atividade"
+    },
+    "kind": {
+      "business": "Organização",
+      "personal": "Piscina particular"
+    },
+    "status": {
+      "trialing": "Período experimental",
+      "active": "Ativa",
+      "past_due": "Pagamento em atraso",
+      "canceled": "Cancelada",
+      "comped": "Oferecida"
+    }
   }
 }

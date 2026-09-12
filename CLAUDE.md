@@ -69,6 +69,20 @@ never be the only place a piece of information appears — anything the operator
 visible text. Tooltips open on keyboard focus as well as hover, because a control whose
 meaning is only available to a mouse is a control half the users cannot understand.
 
+**Platform administration is not a tenant role, and it has its own database login.** `member_role`
+says what somebody may do inside one club; `platform_admin` — keyed on the Clerk user id, no
+`organization_id` — says whether they may look at all of them. No role grants it, being owner of a
+demo tenant grants nothing, and `PlatformAdminGuard` reads `currentAuth()` rather than
+`currentTenant()` because an operator may belong to no organization at all (`platform/(.*)` is in
+`IDENTITY_ONLY_ROUTES`). Cross-tenant reads go through **`poolse_platform`**, a third login on its
+own pool (`DATABASE_PLATFORM_URL`), used by `PlatformModule` and nothing else. It does **not** carry
+`BYPASSRLS`: it is named in a `FOR SELECT TO poolse_platform USING (true)` policy on seven tables and
+holds no privilege on the rest of the schema, so a mistake leaks those seven rather than
+`student_sensitive` — and reaching an eighth is a reviewed line of SQL. `assertPlatformRoleIsNarrow`
+refuses to boot if it points at the owner. **Every request to `PlatformModule` writes one line to
+`platform_audit_log`, reads included** — the request, never the response; the guard writes its own
+refusals, because a guard runs before every interceptor. `docs/features/platform.md`.
+
 **Multi-tenancy is enforced by the database, not by the repository layer.** Every table
 holding tenant data carries `organization_id` — but that is only the raw material.
 Isolation is two structural mechanisms, both in place before any tenant data exists:

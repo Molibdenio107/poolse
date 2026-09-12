@@ -2921,5 +2921,43 @@
     "chaseNote": "Note",
     "chaseNoteHint": "What was said, or what the family answered. It is the reason a second contact is worth recording.",
     "notPayable": "A credit note is neither paid nor chased."
+  },
+  "admin": {
+    "mark": "Poolse · Platform",
+    "backToApp": "Back to the app",
+    "title": "Tenants",
+    "subtitle": "Every organization on Poolse, its subscription state and its usage.",
+    "searchLabel": "Search tenants",
+    "searchPlaceholder": "Organization name",
+    "empty": "There are no organizations yet.",
+    "noMatches": "No organization matches \"{term}\".",
+    "archived": "Deleted",
+    "noPlan": "No plan",
+    "neverActive": "No activity",
+    "activeAgo": "{ago}",
+    "trialEnds": "Ends {date}",
+    "notConfigured": "The platform area is not configured.",
+    "notConfiguredHint": "Set DATABASE_PLATFORM_URL and run pnpm db:bootstrap. See docs/features/platform.md.",
+    "column": {
+      "tenant": "Organization",
+      "status": "Subscription",
+      "plan": "Plan",
+      "seats": "Management seats",
+      "facilities": "Facilities",
+      "pools": "Pools",
+      "created": "Created",
+      "activity": "Last activity"
+    },
+    "kind": {
+      "business": "Organization",
+      "personal": "Personal pool"
+    },
+    "status": {
+      "trialing": "Trial",
+      "active": "Active",
+      "past_due": "Past due",
+      "canceled": "Cancelled",
+      "comped": "Comped"
+    }
   }
 }

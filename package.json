@@ -19,6 +19,7 @@
     "db:reset": "docker compose down -v && docker compose up -d --wait && pnpm db:migrate",
     "db:psql": "docker compose exec postgres psql -U postgres -d poolse_dev",
     "db:bootstrap": "pnpm --filter @poolse/db bootstrap",
+    "db:platform-admin": "pnpm --filter @poolse/db platform-admin",
     "db:migrate": "pnpm --filter @poolse/db migrate",
     "db:seed": "pnpm --filter @poolse/db seed",
     "db:test": "pnpm --filter @poolse/db test",

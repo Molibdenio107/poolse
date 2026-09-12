@@ -2885,3 +2885,41 @@ export interface InvoiceRun {
   alreadyChargedCount: number;
   committed: boolean;
 }
+
+/**
+ * The platform operator's side — `/admin`, not a tenant screen.
+ *
+ * Nothing here is scoped to an organization and nothing here sends
+ * `x-poolse-organization`: the API derives the caller's identity from the
+ * session and `PlatformAdminGuard` decides. A 403 with `not_platform_admin` is
+ * the whole authorisation answer, and it is distinct from `forbidden_role` on
+ * purpose — that one sends somebody to an admin, this one sends them nowhere.
+ */
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'comped';
+
+export interface PlatformTenant {
+  id: string;
+  name: string;
+  slug: string;
+  kind: OrganizationKind;
+  createdAt: string;
+  subscriptionStatus: SubscriptionStatus;
+  trialEndsAt: string | null;
+  /** Null until Stripe models one — phase 2.4. The cell says so rather than guessing. */
+  planTier: string | null;
+  /** Active management memberships plus invitations still outstanding. */
+  managementSeatsUsed: number;
+  /** Null is unlimited, never zero. */
+  maxManagementUsers: number | null;
+  facilityCount: number;
+  maxFacilities: number | null;
+  poolCount: number;
+  /** Last *recorded write*, not last login — see the API repository's note. */
+  lastActivityAt: string | null;
+  archivedAt: string | null;
+}

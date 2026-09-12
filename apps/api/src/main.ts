@@ -2,7 +2,7 @@ import './load-env.js';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { assertRlsApplies } from '@poolse/db';
+import { assertPlatformRoleIsNarrow, assertRlsApplies } from '@poolse/db';
 import { AppModule } from './app.module.js';
 import { BadInputFilter } from './tenant/bad-input.filter.js';
 
@@ -30,6 +30,14 @@ async function bootstrap(): Promise<void> {
   // misconfigured DATABASE_APP_URL disables tenant isolation without any visible
   // symptom, so it has to fail here rather than in production six weeks later.
   await assertRlsApplies();
+
+  /*
+   * And the mirror-image mistake, for the area that is *meant* to read across
+   * tenants: DATABASE_PLATFORM_URL pointed at the owner because "both can see
+   * everything". It would work perfectly and quietly give /admin write access to
+   * the whole schema. Silent when the area is not configured at all.
+   */
+  await assertPlatformRoleIsNarrow();
 
   // rawBody keeps the exact bytes of the request alongside the parsed body. The
   // Clerk webhook signature is computed over those bytes, and a re-serialised

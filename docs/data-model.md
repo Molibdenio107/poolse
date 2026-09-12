@@ -146,9 +146,12 @@ organization
   id, kind ('business'|'personal'), name, slug, locale ('pt-PT'|'en'), country,
   vat_number, invoice_series_prefix,
   stripe_customer_id,
-  subscription_status ('trialing'|'active'|'past_due'|'canceled'),
-  trial_ends_at, archived_at
+  subscription_status ('trialing'|'active'|'past_due'|'canceled'|'comped'),
+  trial_ends_at, archived_at,
+  max_facilities,                     -- licence: sites this subscription covers
+  max_management_users                -- soft seat quota; null = unlimited, never 0
   unique (slug) where archived_at is null
+  check max_management_users is null or max_management_users > 0
 
 app_user
   id, clerk_user_id (unique),
@@ -2619,3 +2622,62 @@ outlives the item being returned.
 **Both check constraints exist because the pairs are one fact written twice.** A status and
 its timestamp, and a notification and its subject. Neither is left to whichever code path
 happens to set them.
+
+### Platform administration — slice 1
+
+```
+platform_admin
+  id, clerk_user_id (unique), note,
+  created_at, updated_at, archived_at
+  check clerk_user_id <> ''
+  rls: enabled; one policy, `for select to poolse_platform using (true)`
+  grants: select to poolse_platform; nothing at all to poolse_app
+
+platform_audit_log
+  id, clerk_user_id, action, organization_id, detail jsonb, created_at
+  fk organization_id -> organization (id)     -- a reference, NOT a tenant key
+  check action <> ''
+  index (created_at desc), (clerk_user_id, created_at desc)
+  rls: enabled; one policy, `for all to poolse_platform`
+  grants: select, insert to poolse_platform; nothing at all to poolse_app
+
+organization
+  + max_management_users integer              -- null = unlimited, never 0
+
+subscription_status
+  + 'comped'                                  -- live, deliberately not billed
+```
+
+**Neither table is tenant-scoped, and that is the design.** `platform_admin` has no
+`organization_id` because an operator who had to belong to an organization to be an
+operator would be a tenant role by another name, and the first demo tenant would be a hole.
+`platform_audit_log.organization_id` is a plain reference: a row is *about* a tenant rather
+than belonging to one, and it is null for a request that named none.
+
+**Keyed on the Clerk user id, not on `app_user.id`.** The guard runs before any tenant is
+resolved and `currentAuth()` is all it has. It also means an operator who has never opened
+the tenant app — and so has no `app_user` row — is still an operator.
+
+**A third database login, and it does not bypass RLS.** `poolse_platform` reads across
+tenants through a `for select to poolse_platform using (true)` policy on seven tables —
+`organization`, `membership`, `membership_role`, `invitation`, `facility`, `pool`,
+`audit_log` — and holds no privilege on the rest of the schema. Postgres ORs permissive
+policies together and the `to` clause confines this one to that role, so `poolse_app` is
+untouched.
+
+`BYPASSRLS` was the alternative and was rejected twice over: granting it needs superuser at
+migrate time, which the owner role on a managed Postgres is not guaranteed to be, and it
+would hand the platform every table in the schema for ever — including `student_sensitive`.
+Reach is an allowlist, so widening it is a reviewed line of SQL rather than a consequence of
+existing. `packages/db/test/platform-admin.sql` asserts both directions.
+
+**`comped` rather than a sixth status meaning the same thing.** The free pilot is a live
+tenant that is deliberately not billed. As `active` it would look like revenue; as
+`trialing` it would look like it was about to lapse. The other four keep the spellings they
+were given in `1787803200000_organization-signup.sql` — `trialing` and `canceled` — because
+renaming them means rewriting three `SECURITY DEFINER` provisioning functions that insert
+the literal, for no behaviour.
+
+**`max_management_users` is reported, not enforced.** The column lands with the overview
+that reads it; the refusal at invitation time (`docs/decisions.md`, 2026-09-06) belongs with
+the ticket that can also tell an operator how to buy another seat.

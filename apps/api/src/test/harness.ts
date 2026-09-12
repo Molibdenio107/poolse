@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { pool, withOrg, withoutTenantScope, type Tx } from '@poolse/db';
+import { closePlatformPool, pool, withOrg, withoutTenantScope, type Tx } from '@poolse/db';
 import { authStorage } from '../auth/auth.context.js';
 import { tenantStorage } from '../tenant/tenant.context.js';
 import type { MemberRole } from '../tenant/roles.js';
@@ -63,6 +63,21 @@ const TENANT_TABLES = [
    * membership, and only a teardown has any business removing it.
    */
   'audit_log',
+  /*
+   * Not a tenant table — and here anyway, which is the exception worth
+   * explaining rather than leaving somebody to rediscover.
+   *
+   * `platform_audit_log` is the platform's own book: a row is *about* a tenant
+   * rather than belonging to one, it carries no RLS policy for poolse_app, and
+   * its `organization_id` is nullable and often null. But it is a real foreign
+   * key to `organization`, and nothing cascades it — so the first platform
+   * endpoint that names a tenant in its route (slice 2's
+   * `/platform/tenants/:id`) would leave a row pointing at a scratch tenant and
+   * fail teardown on the key, exactly as this list's comment promises a gap
+   * announces itself. Deleting by `organization_id` removes only the rows about
+   * this tenant and leaves the rest, which is the right answer both ways.
+   */
+  'platform_audit_log',
   // Bookings point at credits, credits point at the attendance row that minted
   // them, and attendance points at the session. Child first, all the way down.
   'reposicao_booking',
@@ -536,10 +551,16 @@ export async function expectStatus(fn: () => Promise<unknown>, status: number): 
   throw new Error(`Expected HTTP ${status}, but the call succeeded`);
 }
 
-/** Closes both pools so `node --test` can exit. */
+/**
+ * Closes every pool so `node --test` can exit.
+ *
+ * Three of them now: the application's, the owner's (teardown only) and the
+ * platform operator's, which is lazy and so is usually already closed.
+ */
 export async function closeHarness(): Promise<void> {
   await pool.end();
   await ownerPool?.end();
+  await closePlatformPool();
 }
 
 export { withoutTenantScope };

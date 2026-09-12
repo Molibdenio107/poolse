@@ -64,6 +64,7 @@ import {
   EnrollmentCategoryController,
   FeeCategoriesController,
 } from './billing/categories.controller.js';
+import { PlatformModule } from './platform/platform.module.js';
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
 import { VacationsController } from './vacations/vacations.controller.js';
 import { PlacesController, WeatherController } from './weather/weather.controller.js';
@@ -85,10 +86,34 @@ const PUBLIC_ROUTES = ['health', 'webhooks/(.*)'] as const;
  * This list should stay short and each addition should be arguable in one
  * sentence. Everything else in the API runs tenant-scoped.
  */
-const IDENTITY_ONLY_ROUTES = ['me', 'me/(.*)', 'organizations', 'join', 'join/(.*)'] as const;
+const IDENTITY_ONLY_ROUTES = [
+  'me',
+  'me/(.*)',
+  'organizations',
+  'join',
+  'join/(.*)',
+  /*
+   * The platform admin area. Authenticated — `ClerkAuthMiddleware` still runs,
+   * and `PlatformAdminGuard` reads the Clerk user id it establishes — but with
+   * no tenant to resolve, because an operator may belong to no organization at
+   * all. Under TenantMiddleware they would be refused with `no_organization`
+   * before the guard ever saw them, which is the ticket's own acceptance
+   * criterion turned inside out.
+   */
+  'platform/(.*)',
+] as const;
 
 @Module({
-  imports: [ThrottlerModule.forRoot(throttlerOptions)],
+  imports: [
+    ThrottlerModule.forRoot(throttlerOptions),
+    /*
+     * The one area of this API that is a module rather than a controller in the
+     * list below. Platform administration is orthogonal to tenancy — not a
+     * `member_role`, not reachable from any of them — and the module boundary is
+     * what `PlatformAdminGuard` is applied to. See platform/platform.module.ts.
+     */
+    PlatformModule,
+  ],
   controllers: [
     HealthController,
     MeController,
