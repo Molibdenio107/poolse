@@ -382,8 +382,8 @@ optional and off unless its own flag and `ANTHROPIC_API_KEY` are both set, sends
 document and nothing else about the tenant, and has everything it extracts confirmed by a
 person on the preview. `lib/analysis-report.ts` is the contract; `-agent.ts` is the model.
 
-**An importer is a `MatchSpec`, never a new pipeline.** There are five — the register, the
-store room, the wall timetable, the water log and parcerias. A new one is a field list, a
+**An importer is a `MatchSpec`, never a new pipeline.** There are six — the register, the
+store room, the wall timetable, the water log, parcerias and the pay list. A new one is a field list, a
 synonym list and `matchFields` in `lib/<thing>-sheet.ts`, plus a preview/commit pair on one
 API route with a `commit` flag. Never two routes: what the operator was shown and what gets
 written have to come from one code path. The file is read on the Next server and never
@@ -405,6 +405,23 @@ preview of stocktakes with nothing to update, and a commit that writes no rows. 
 cheapest end-to-end assertion an importer has, and it fails on a dropped field, on a value
 written in a shape the reader parses differently, and on the two sides disagreeing about
 what one row is. `partner-export.integration.test.ts` caught one of those.
+
+**A file of money is the one importer that commits whole or not at all, and its export
+carries the contract rather than the derived figures.** Salaries — POOLSE-59. The other five
+commit what they can and report the rest; a pay run's half-applied import is somebody's wage
+and nothing on screen says which half, so every included row goes in one transaction and a
+line the constraint refuses at the last moment rolls the lot back and names the line. The
+export writes what somebody *agreed* — type, gross amount, contracted hours, pay periods,
+start date — and never the monthly/hourly pair the screen shows, because one of those is
+always an estimate and re-importing an estimate as an amount turns a rounding into a pay
+rise. **One person twice refuses the whole file**; which row is their pay is not a guess.
+**Matching is by e-mail or checksum-valid NIF and a NIF column is claimed by its heading,
+never by its shape** — nine digits is also a Portuguese phone number, and a phone read as a
+NIF attaches a rate to the wrong person rather than to nobody. **`parseSheetCents` normalises
+a cell (symbol, thousands separator, either decimal mark; the *last* separator is the decimal
+one) and hands it to `parseCents`**, which is what the typed form uses — widening `parseCents`
+itself would make every price field accept "35 €", a refusal pinned by a test. The write goes
+through `applyNewRate`, the same function the form calls.
 
 **Capacity rules compose, they do not override.** An enrolment must fit its turma
 (`class_group.capacity`), the turmas sharing a slot must fit the tank (`pool.max_capacity`),

@@ -17,6 +17,14 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import {
+  exportSalaries,
+  runSalaryImport,
+  SalaryCommitError,
+  type SalaryExportRow,
+  type SalaryImportInput,
+  type SalaryImportResult,
+} from './salary-import.js';
+import {
   addRate,
   archiveRate,
   canSeeCompensation,
@@ -54,6 +62,8 @@ import {
 const MAX_NOTE = 500;
 const MAX_AMOUNT_CENTS = 100_000_000; // €1,000,000 a month. A typo guard, not a policy.
 const MAX_WEEKLY_HOURS = 80;
+/** A club has staff, not a mailing list. Past this the file is not a pay list. */
+const MAX_IMPORT_ROWS = 500;
 
 /** Owner sees everybody; an Admin sees everybody except the Owner. */
 function viewer(): Viewer {
@@ -102,6 +112,114 @@ export class SalariesController {
     const { organizationId } = currentTenant();
     return { summary: await salarySummary(organizationId, viewer()) };
   }
+
+  /**
+   * The pay list, for a file — POOLSE-59.
+   *
+   * The same rows the list shows and the same boundary: an Admin's export omits
+   * the Owner, because it is the same `viewer()` resolved in the same place. An
+   * export that took a wider view than the screen would be the permission model
+   * worked around by pressing Download.
+   *
+   * Everybody visible, including people with no rate: that makes the file a
+   * template as well as a record, and the importer reads a row with no amount as
+   * nothing to do.
+   */
+  @Get('export')
+  async export(): Promise<{ rows: SalaryExportRow[] }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    return { rows: await exportSalaries(organizationId, viewer()) };
+  }
+
+  /**
+   * Importing a pay list — POOLSE-59.
+   *
+   * Preview and commit are one route with a flag, as every other importer here
+   * is: two routes would be two places a row becomes a rate, and applying them
+   * differently is how an approved preview becomes a different set of writes.
+   *
+   * **Owner and admin**, and the Owner's own row is refused to an Admin by the
+   * same predicate as everywhere else. A file is not a way round a boundary.
+   *
+   * On a literal segment, so `/staff/salaries/import` can never be read as a
+   * staff member whose id is the word "import".
+   */
+  @Post('import')
+  async import(@Body() body: Record<string, unknown>): Promise<SalaryImportResult> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    try {
+      return await runSalaryImport(organizationId, viewer(), {
+        rows: readImportRows(body['rows']),
+        commit: body['commit'] === true,
+        include: readInclude(body['include']),
+      });
+    } catch (error) {
+      if (error instanceof SalaryCommitError) {
+        /*
+         * A 409 naming the line, and nothing was written — the whole commit
+         * rolled back. The operator needs to know which row to fix, not which
+         * half of the club was paid.
+         */
+        throw new ConflictException({
+          code: 'salary_import_refused',
+          message: 'A line could not be written; nothing was imported',
+          line: error.line,
+          problem: error.problem,
+        });
+      }
+      throw error;
+    }
+  }
+}
+
+/**
+ * The rows, rebuilt key by key.
+ *
+ * Never trusted whole: this arrives from a client, and a row carrying an
+ * unexpected key would reach the importer as a field nothing validates. Only the
+ * cents are a number — every other cell stays the text the spreadsheet held, so
+ * the reader that judges it is the same one for every route.
+ */
+function readImportRows(value: unknown): SalaryImportInput[] {
+  if (!Array.isArray(value)) {
+    throw new BadRequestException({ code: 'invalid_rows', field: 'rows' });
+  }
+  if (value.length > MAX_IMPORT_ROWS) {
+    throw new BadRequestException({ code: 'too_many_rows', field: 'rows' });
+  }
+
+  return value.map((raw) => {
+    const row = (raw ?? {}) as Record<string, unknown>;
+    const cell = (name: string): string | undefined =>
+      typeof row[name] === 'string' ? (row[name] as string).slice(0, 200) : undefined;
+
+    const cents = row['amountCents'];
+
+    return {
+      name: cell('name'),
+      email: cell('email'),
+      taxNumber: cell('taxNumber'),
+      kind: cell('kind'),
+      amountCents:
+        typeof cents === 'number' && Number.isInteger(cents) && cents >= 0 && cents <= MAX_AMOUNT_CENTS
+          ? cents
+          : null,
+      amount: cell('amount'),
+      weeklyHours: cell('weeklyHours'),
+      payPeriods: cell('payPeriods'),
+      effectiveFrom: cell('effectiveFrom'),
+      note: cell('note'),
+    };
+  });
+}
+
+/** Null means "everything the preview would have ticked" — the wizard's own default. */
+function readInclude(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.filter((entry): entry is number => typeof entry === 'number' && entry >= 0);
 }
 
 @Controller('staff')

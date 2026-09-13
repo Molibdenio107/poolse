@@ -131,7 +131,81 @@ another place it lives and another place it can leak.
 For the same reason no amount appears in a URL, in a query string, in an application log or
 in a toast. The toast says *Guardado*.
 
-## Not built yet
+## The file — export and import
 
-The Excel export and import — [POOLSE-59](../backlog/POOLSE-59-importing-and-exporting-salaries.md),
-next. Until then a rate is typed.
+[POOLSE-59](../backlog/POOLSE-59-importing-and-exporting-salaries.md). Both live at the
+bottom of the Salários page, below the list: what a club does here every week is read the
+figures, and importing a file is what it does in December.
+
+**Exportar (Excel)** and **Exportar (CSV)** hand over the pay list. The file holds the
+*contract* — name, e-mail, NIF, type, gross amount, contracted hours, pay periods, the date
+it started and the note — and **not** the derived monthly and hourly figures, because one of
+those is always an estimate and re-importing an estimate as an amount would turn a rounding
+into a pay rise. An Admin's file omits the Owner, by the same rule as the screen. Nothing is
+cached: a pay list is the most sensitive file this product hands out.
+
+**Everybody visible is in the file, including people with no rate**, whose line carries their
+name and keys and nothing else. That makes the export a template as well as a record: fill in
+the empty line and import it back.
+
+**Importing** is the same four steps as every other importer — upload, map, preview, commit —
+driven by `useImportWizard`. Dropping a file anywhere on the screen opens it with the upload
+step already done. The file is read on the Next server and never leaves it; no model is
+called.
+
+### What the header row is
+
+`salaries.field.*` from the translation catalogue — the very labels the mapping step shows —
+so a club exports, edits one column and imports again with nothing mapped by hand. Two values
+are written in a form that is the same in both languages: the type as its enum spelling
+(`monthly`, not "Mensal") and the date as ISO, because a file exported under `en` is
+re-imported under `pt-PT`. `salary-sheet.test.ts` proves the round trip against the real
+catalogues in both locales.
+
+### Who a row is about
+
+**E-mail or checksum-valid NIF, never the name.** Two people called Ana Silva is not an edge
+case in a club with forty staff. A NIF column is claimed by its heading and never by its
+shape, because nine digits is also a Portuguese telephone number.
+
+### What a row can be
+
+| State | What it means | Ticked by default |
+|---|---|---|
+| A change | The file says something different from the live rate | Yes |
+| Sem alterações | The file agrees with what is recorded | No — nothing to write |
+| Sem valor | The line has no amount at all | No |
+| Recusada | Something is wrong with the row, and it says what | Cannot be ticked |
+
+A refusal names itself: no key, an invalid NIF, matched nobody, *not staff* (different from
+*not found*, and a different thing to do about it), the Owner's row in an Admin's file, a
+missing or unreadable date, an amount that is not one, hours or pay periods out of range, or
+dates that collide with a rate already recorded.
+
+**One person twice refuses the whole file.** Which of the two rows is their pay is not
+something to guess, so the commit button shuts and says so.
+
+### What an import does, and does not
+
+It adds a **new effective-dated rate** through the same function the form uses — closing the
+open-ended rate it succeeds, exactly as typing one would. It never edits, never archives and
+never creates a person: an unknown e-mail is a rejected row, because a payroll file is the
+wrong place to learn who works here.
+
+**A payroll file commits whole or not at all.** Every included row is written in one
+transaction; a line the database refuses at the last moment rolls the whole import back and
+names the line. The other importers commit what they can and report the rest — a pay run is
+the one place where half-applied is worse than not applied, because the half that went
+through is somebody's wage.
+
+**A round trip changes nothing.** Exporting and importing straight back previews as nothing
+to do and writes no rows. It is the cheapest end-to-end assertion this importer has, and it
+is `salary-import.integration.test.ts`'s first test.
+
+### Amounts in a cell
+
+`parseSheetCents` normalises what a workbook actually carries — a currency symbol, a
+thousands separator, either decimal mark — and then hands the result to `parseCents`, the
+conversion the typed form uses. Where both a dot and a comma appear the *last* one is the
+decimal mark, which is what makes `1.234,56` and `1,234.56` the same amount. The form itself
+stays strict: a price field still refuses "35 €", and that refusal is pinned by a test.

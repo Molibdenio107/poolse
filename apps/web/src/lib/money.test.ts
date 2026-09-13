@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { centsToInput, formatCents, monthlyEquivalentCents, parseCents } from './money.ts';
+import {
+  centsToInput,
+  formatCents,
+  monthlyEquivalentCents,
+  parseCents,
+  parseSheetCents,
+} from './money.ts';
 
 /**
  * Money on screen — POOLSE-42, QA 42.12.
@@ -64,4 +70,40 @@ test('what is not an amount is refused rather than becoming NaN', () => {
 test('an input box round-trips', () => {
   assert.equal(centsToInput(3500), '35.00');
   assert.equal(parseCents(centsToInput(9975)), 9975);
+});
+
+test('a spreadsheet cell is normalised before it becomes cents — POOLSE-59', () => {
+  // The plain cases, unchanged by the normaliser.
+  assert.equal(parseSheetCents('1200.00'), 120_000);
+  assert.equal(parseSheetCents('1200,00'), 120_000);
+  assert.equal(parseSheetCents('7.15'), 715);
+
+  // A currency symbol, either side, and the spaces around it.
+  assert.equal(parseSheetCents('35 €'), 3500);
+  assert.equal(parseSheetCents('€35'), 3500);
+  assert.equal(parseSheetCents(' 1 200,00 EUR '), 120_000);
+
+  // The separator pair, resolved by position rather than by locale — this is
+  // what lets a file exported under `en` import under `pt-PT`.
+  assert.equal(parseSheetCents('1.234,56'), 123_456);
+  assert.equal(parseSheetCents('1,234.56'), 123_456);
+  assert.equal(parseSheetCents('1.234.567,89'), 123_456_789);
+
+  // A lone separator followed by three digits is a thousands group: three
+  // decimals is not a price, so 1234 is the only reading that is not an error.
+  assert.equal(parseSheetCents('1.234'), 123_400);
+  assert.equal(parseSheetCents('1,234'), 123_400);
+
+  // And what is still not an amount stays refused.
+  assert.equal(parseSheetCents(''), null);
+  assert.equal(parseSheetCents('   '), null);
+  assert.equal(parseSheetCents('mil e duzentos'), null);
+  assert.equal(parseSheetCents('-35'), null);
+});
+
+test('the form stays strict about its own units', () => {
+  // Pinned deliberately: widening `parseCents` would have been the easy way to
+  // make the importer work, and it would have made every price field accept a
+  // currency symbol it has no business rendering back.
+  assert.equal(parseCents('35 €'), null);
 });

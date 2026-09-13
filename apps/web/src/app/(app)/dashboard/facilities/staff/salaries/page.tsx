@@ -7,6 +7,7 @@ import { Pagination } from '@/components/pagination';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { formatCents } from '@/lib/money';
 import { SalaryTable } from './salary-table';
+import { SalaryFilePanel } from './salary-file-panel';
 
 /**
  * Salários — POOLSE-58.
@@ -158,6 +159,14 @@ export default async function SalariesPage({
           />
 
           <Pagination page={data.salaries} basePath="/dashboard/facilities/staff/salaries" />
+
+          {/*
+            * Below the list, deliberately. What a club does here every week is
+            * read the figures; importing a file is what it does in December, and
+            * putting a dropzone above the thing everybody came for would make the
+            * screen about the spreadsheet rather than about the pay.
+            */}
+          <SalaryFilePanel canEdit={data.canEdit} locale={locale} />
         </>
       )}
     </PageShell>

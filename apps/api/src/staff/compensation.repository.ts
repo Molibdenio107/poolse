@@ -99,7 +99,7 @@ export interface Viewer {
  * is away: the organization's oldest site, because a salary belongs to the
  * organization rather than to any one facility.
  */
-const CLUB_TODAY = `(now() AT TIME ZONE coalesce(
+export const CLUB_TODAY = `(now() AT TIME ZONE coalesce(
   (SELECT f.timezone FROM facility f
     WHERE f.organization_id = m.organization_id AND f.archived_at IS NULL
     ORDER BY f.created_at, f.id LIMIT 1), 'Europe/Lisbon'))::date`;
@@ -113,14 +113,14 @@ const CLUB_TODAY = `(now() AT TIME ZONE coalesce(
  * them as "sem valor definido" would put a to-do on the screen that nobody can
  * act on.
  */
-const HOLDS_A_STAFF_ROLE = `EXISTS (
+export const HOLDS_A_STAFF_ROLE = `EXISTS (
   SELECT 1 FROM membership_role r
    WHERE r.membership_id = m.id AND r.organization_id = m.organization_id
      AND r.archived_at IS NULL
      AND r.role IN ('owner', 'admin', 'instructor', 'maintenance')
 )`;
 
-const IS_THE_OWNER = `EXISTS (
+export const IS_THE_OWNER = `EXISTS (
   SELECT 1 FROM membership_role r
    WHERE r.membership_id = m.id AND r.organization_id = m.organization_id
      AND r.archived_at IS NULL AND r.role = 'owner'
@@ -133,12 +133,12 @@ const IS_THE_OWNER = `EXISTS (
  * the set entirely rather than blanked: a greyed row saying "hidden" tells them
  * what they were not meant to learn as surely as the figure would.
  */
-function visibleToViewer(param: string): string {
+export function visibleToViewer(param: string): string {
   return `(${param}::boolean OR NOT ${IS_THE_OWNER})`;
 }
 
 /** The rate covering the club's today, if there is one. */
-const LIVE_RATE = `(
+export const LIVE_RATE = `(
   SELECT to_jsonb(sc)
     FROM staff_compensation sc
    WHERE sc.staff_membership_id = m.id
@@ -149,7 +149,7 @@ const LIVE_RATE = `(
    LIMIT 1
 )`;
 
-interface RateRow {
+export interface RateRow {
   id: string;
   kind: CompensationKind;
   amount_cents: number;
@@ -166,13 +166,13 @@ interface RateRow {
  * loses a digit to a float — and every figure downstream is arithmetic. Parsed
  * once, here, rather than in each of the four places that read it.
  */
-function hours(value: string | number | null): number | null {
+export function hours(value: string | number | null): number | null {
   if (value === null) return null;
   const parsed = typeof value === 'number' ? value : Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function contract(row: RateRow): Compensation {
+export function contract(row: RateRow): Compensation {
   return {
     kind: row.kind,
     amountCents: row.amount_cents,
@@ -181,7 +181,7 @@ function contract(row: RateRow): Compensation {
   };
 }
 
-function toRate(row: RateRow): LiveRate {
+export function toRate(row: RateRow): LiveRate {
   const c = contract(row);
   const monthly = monthlyForRow(c);
   const hourly = hourlyForRow(c);
@@ -214,7 +214,7 @@ function toRate(row: RateRow): LiveRate {
  * a day early, and the overlap check compared the wrong two days. A date has no
  * timezone; reading one through an instant gives it somebody else's.
  */
-function day(value: string | Date): string {
+export function day(value: string | Date): string {
   if (!(value instanceof Date)) return String(value).slice(0, 10);
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const date = String(value.getDate()).padStart(2, '0');
@@ -423,78 +423,93 @@ export async function addRate(
   membershipId: string,
   input: RateInput,
 ): Promise<{ id: string }> {
-  return withOrg(organizationId, async (tx) => {
-    const overlaps = await lockAndFindOverlaps(tx, membershipId, input.effectiveFrom, null, null);
+  return withOrg(organizationId, (tx) => applyNewRate(tx, membershipId, input));
+}
 
-    /*
-     * **Only an open-ended rate is closed for the operator.**
-     *
-     * "Until further notice" is what an open end means, so a new rate starting
-     * after it is the notice and closing it the day before is exactly what was
-     * meant. A rate whose end somebody *typed* is different: a new one starting
-     * inside it contradicts a date a person chose, and rewriting that silently
-     * would be Poolse deciding when a contract ended. So is a rate starting
-     * before an existing one — history is not reordered on somebody's behalf.
-     *
-     * More than one overlap means a future rate is also in the way; the refusal
-     * names the later of them, because that is the one the operator has to move.
-     */
-    const previous = overlaps[0];
-    const closable =
-      overlaps.length === 1 &&
-      previous !== undefined &&
-      previous.effective_to === null &&
-      day(previous.effective_from) < input.effectiveFrom;
+/**
+ * The write itself, inside somebody else's transaction.
+ *
+ * Extracted so the form and the importer are one code path — POOLSE-59. An
+ * import that closed the previous rate its own way would be a second definition
+ * of what "a raise" means, and the two would agree until the day one of them was
+ * changed. The importer wraps a whole file in one transaction and calls this per
+ * row; the form calls it once, through `addRate` above.
+ */
+export async function applyNewRate(
+  tx: Tx,
+  membershipId: string,
+  input: RateInput,
+): Promise<{ id: string }> {
+  const overlaps = await lockAndFindOverlaps(tx, membershipId, input.effectiveFrom, null, null);
 
-    if (overlaps.length > 0 && !closable) {
-      const blocker = overlaps[overlaps.length - 1]!;
-      throw new RateOverlapError(
-        day(blocker.effective_from),
-        blocker.effective_to === null ? null : day(blocker.effective_to),
-      );
-    }
+  /*
+   * **Only an open-ended rate is closed for the operator.**
+   *
+   * "Until further notice" is what an open end means, so a new rate starting
+   * after it is the notice and closing it the day before is exactly what was
+   * meant. A rate whose end somebody *typed* is different: a new one starting
+   * inside it contradicts a date a person chose, and rewriting that silently
+   * would be Poolse deciding when a contract ended. So is a rate starting
+   * before an existing one — history is not reordered on somebody's behalf.
+   *
+   * More than one overlap means a future rate is also in the way; the refusal
+   * names the later of them, because that is the one the operator has to move.
+   */
+  const previous = overlaps[0];
+  const closable =
+    overlaps.length === 1 &&
+    previous !== undefined &&
+    previous.effective_to === null &&
+    day(previous.effective_from) < input.effectiveFrom;
 
-    if (closable) {
-      await tx.query(
-        `UPDATE staff_compensation
-            SET effective_to = $2::date - 1
-          WHERE id = $1`,
-        [previous!.id, input.effectiveFrom],
-      );
-    }
+  if (overlaps.length > 0 && !closable) {
+    const blocker = overlaps[overlaps.length - 1]!;
+    throw new RateOverlapError(
+      day(blocker.effective_from),
+      blocker.effective_to === null ? null : day(blocker.effective_to),
+    );
+  }
 
-    const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO staff_compensation
-         (organization_id, staff_membership_id, kind, amount_cents, weekly_hours,
-          pay_periods_per_year, effective_from, note, created_by_membership_id)
-       VALUES (current_organization_id(), $1, $2::compensation_kind, $3, $4, $5, $6::date, $7,
-               $8)
-       RETURNING id`,
-      [
-        membershipId,
-        input.kind,
-        input.amountCents,
-        input.weeklyHours,
-        input.payPeriodsPerYear,
-        input.effectiveFrom,
-        input.note,
-        actor(),
-      ],
-    ).catch(rethrowOverlap);
+  if (closable) {
+    await tx.query(
+      `UPDATE staff_compensation
+          SET effective_to = $2::date - 1
+        WHERE id = $1`,
+      [previous!.id, input.effectiveFrom],
+    );
+  }
 
-    const id = rows[0]!.id;
+  const { rows } = await tx.query<{ id: string }>(
+    `INSERT INTO staff_compensation
+       (organization_id, staff_membership_id, kind, amount_cents, weekly_hours,
+        pay_periods_per_year, effective_from, note, created_by_membership_id)
+     VALUES (current_organization_id(), $1, $2::compensation_kind, $3, $4, $5, $6::date, $7,
+             $8)
+     RETURNING id`,
+    [
+      membershipId,
+      input.kind,
+      input.amountCents,
+      input.weeklyHours,
+      input.payPeriodsPerYear,
+      input.effectiveFrom,
+      input.note,
+      actor(),
+    ],
+  ).catch(rethrowOverlap);
 
-    await recordAudit(tx, {
-      action: 'staff.compensation.created',
-      entityType: 'staff_compensation',
-      entityId: id,
-      // No amount. The table is the record of what was paid; the trail is the
-      // record of who touched it.
-      data: { staffMembershipId: membershipId, kind: input.kind, effectiveFrom: input.effectiveFrom },
-    });
+  const id = rows[0]!.id;
 
-    return { id };
+  await recordAudit(tx, {
+    action: 'staff.compensation.created',
+    entityType: 'staff_compensation',
+    entityId: id,
+    // No amount. The table is the record of what was paid; the trail is the
+    // record of who touched it.
+    data: { staffMembershipId: membershipId, kind: input.kind, effectiveFrom: input.effectiveFrom },
   });
+
+  return { id };
 }
 
 /** The rate itself, for the two paths that act on one by id. */

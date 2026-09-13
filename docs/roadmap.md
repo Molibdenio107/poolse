@@ -352,7 +352,7 @@ expensive mistake.
 | 2.3 | Invoice statuses, overdue view, chase action | ✅ **Em dívida** lists what is owed, oldest first; payments are child rows and the status is derived |
 | 2.4 | Operator pays Poolse — Stripe subscription on the organization | Poolse can take money |
 | 2.5 | **Staff salaries** — effective-dated pay per person, Owner/Admin only, roll-up | ✅ **Built 13 September 2026.** `staff_compensation`, effective-dated with one live rate per person by gist exclusion; Salários under Staff with the two monthly-cost figures; an Admin sees every staff member except the Owner, enforced in the repository and stated on the card |
-| 2.6 | Salary export and import | A club's pay list arrives as a spreadsheet and a round trip changes nothing |
+| 2.6 | Salary export and import | ✅ **Built 13 September 2026.** The sixth `MatchSpec`: export writes the contract (never the derived figures) with catalogue headers, import matches by e-mail or checksum-valid NIF and commits whole or not at all. A round trip previews as nothing to do and writes no rows |
 
 Do 2.1–2.3 before touching Stripe. Most of the value of billing is knowing who owes what;
 automated collection is an optimisation on top of that, and it is where the regulatory and

@@ -63,3 +63,53 @@ export function parseCents(input: string): number | null {
 export function centsToInput(cents: number): string {
   return (cents / 100).toFixed(2);
 }
+
+/**
+ * An amount out of a spreadsheet cell — POOLSE-59.
+ *
+ * **A normaliser, not a second parser.** The conversion to cents stays
+ * `parseCents` above, which is what the typed forms use; this only resolves the
+ * mess a spreadsheet arrives in first, so a club's own file and a typed box
+ * cannot disagree about what €1.234,56 is worth.
+ *
+ * It is deliberately *not* folded into `parseCents`. A form field labelled in
+ * euros refusing "35 €" is a form being strict about its own units, and that
+ * refusal is pinned by a test; a cell in somebody else's workbook has no such
+ * contract and arrives carrying whatever Excel put there.
+ *
+ * **The separator pair is resolved by position, not by locale.** Where both a
+ * dot and a comma appear, the *last* one is the decimal mark and the other is a
+ * thousands group — true of `1.234,56` and of `1,234.56` alike, which is what
+ * makes a file exported under `en` importable under `pt-PT`. Where only one
+ * appears and it is followed by exactly three digits, it is read as a thousands
+ * group: `1.234` cannot be an amount in cents, so 1234 is the only reading that
+ * is not an error.
+ */
+export function parseSheetCents(input: string): number | null {
+  const stripped = input
+    .replace(/eur/gi, '')
+    .replace(/[€$£]/g, '')
+    .replace(/\s/g, '')
+    .trim();
+  if (stripped === '') return null;
+
+  const lastComma = stripped.lastIndexOf(',');
+  const lastDot = stripped.lastIndexOf('.');
+
+  let text = stripped;
+  if (lastComma !== -1 && lastDot !== -1) {
+    const thousands = lastComma > lastDot ? '.' : ',';
+    text = stripped.split(thousands).join('');
+  } else {
+    const mark = lastComma !== -1 ? ',' : lastDot !== -1 ? '.' : null;
+    if (mark !== null) {
+      const parts = stripped.split(mark);
+      const tail = parts[parts.length - 1] ?? '';
+      // More than one of them can only be grouping; a lone one followed by three
+      // digits is grouping too, because three decimals is not a price.
+      if (parts.length > 2 || tail.length === 3) text = parts.join('');
+    }
+  }
+
+  return parseCents(text);
+}

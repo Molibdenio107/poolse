@@ -3073,3 +3073,86 @@ export interface Salaries {
   salaries: Paginated<SalaryRow>;
   canEdit: boolean;
 }
+
+/**
+ * Exporting and importing the pay list — POOLSE-59.
+ *
+ * Every exported value is a string, in the shape the file holds it: the type as
+ * its enum spelling and the date as ISO, so a file exported under `en` imports
+ * under `pt-PT`. The amount is a plain decimal; `parseSheetCents` reads it back
+ * along with whatever else a club's own workbook carries.
+ */
+export interface SalaryExportRow {
+  name: string;
+  email: string;
+  taxNumber: string;
+  kind: string;
+  amount: string;
+  weeklyHours: string;
+  payPeriods: string;
+  effectiveFrom: string;
+  note: string;
+}
+
+/** Machine keys. The catalogue owns the sentence, in both languages. */
+export type SalaryImportProblem =
+  | 'noKey'
+  | 'badNif'
+  | 'notFound'
+  | 'notStaff'
+  | 'ownerRefused'
+  | 'kindMissing'
+  | 'amountInvalid'
+  | 'hoursInvalid'
+  | 'periodsInvalid'
+  | 'dateMissing'
+  | 'dateInvalid'
+  | 'overlap'
+  | 'duplicateInFile';
+
+export interface SalaryImportRowResult {
+  index: number;
+  /** The spreadsheet line, counting the header as 1. */
+  line: number;
+  name: string;
+  email: string | null;
+  taxNumber: string | null;
+  membershipId: string | null;
+  /** What the club calls them, which may not be what the file does. */
+  matchedName: string | null;
+  roles: string[];
+  kind: 'monthly' | 'hourly' | null;
+  amountCents: number | null;
+  weeklyHours: number | null;
+  payPeriodsPerYear: number;
+  effectiveFrom: string | null;
+  note: string | null;
+  /** What they are on today, so the preview shows old → new. */
+  current: {
+    kind: 'monthly' | 'hourly';
+    amountCents: number;
+    weeklyHours: number | null;
+    effectiveFrom: string;
+  } | null;
+  unchanged: boolean;
+  /** No amount at all — an exported line for somebody with no rate yet. */
+  blank: boolean;
+  problems: SalaryImportProblem[];
+  repeatOfLine: number | null;
+  importable: boolean;
+}
+
+export interface SalaryImportResult {
+  rows: SalaryImportRowResult[];
+  summary: {
+    total: number;
+    importable: number;
+    unchanged: number;
+    blank: number;
+    rejected: number;
+  };
+  /** Set when the whole file is refused rather than individual rows. */
+  refusal: 'duplicatePerson' | null;
+  committed: boolean;
+  written: number;
+}
