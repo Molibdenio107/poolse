@@ -12,14 +12,15 @@ import {
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import {
-  anyPlanPriced,
+  anyPriceConfigured,
   appUrl,
-  isPlanKey,
-  PLAN_KEYS,
+  BILLING_INTERVALS,
+  isBillingInterval,
   priceIdFor,
   stripeClient,
   stripeEnabled,
-  type PlanKey,
+  yearlySavingPercent,
+  type BillingInterval,
 } from './stripe.js';
 import {
   readCustomerId,
@@ -54,19 +55,31 @@ import {
  * no reason to answer.
  */
 
-export interface PlanOffer {
-  key: PlanKey;
-  /** Null until somebody sets a price in Stripe — the page says so rather than guessing. */
+/**
+ * One of the two ways to pay for the one plan — POOLSE-60.
+ *
+ * An unpriced interval comes back with nulls rather than being left out: both
+ * are the product, and a page showing one because the dashboard was half
+ * finished would be a worse lie than an honest *valor por definir*.
+ */
+export interface IntervalOffer {
+  interval: BillingInterval;
   amountCents: number | null;
   currency: string | null;
-  /** 'month' | 'year', from the price. Null with the amount. */
-  interval: string | null;
 }
 
 export interface SubscriptionView {
   subscription: OrganizationSubscription;
-  plans: PlanOffer[];
-  /** Stripe is wired up *and* at least one plan has a price. */
+  intervals: IntervalOffer[];
+  /**
+   * What yearly saves against twelve monthly payments, as a whole percent.
+   *
+   * Computed on the API so *poupa 17%* is a sentence the page renders rather
+   * than a sum it does. Null unless both prices are known and yearly is
+   * actually cheaper.
+   */
+  yearlySavingPercent: number | null;
+  /** Stripe is wired up *and* at least one interval has a price. */
   configured: boolean;
   /**
    * Whether this caller may start or change it.
@@ -88,7 +101,7 @@ export interface SubscriptionView {
  * but is rate-limited on.
  */
 const PRICE_TTL_MS = 5 * 60 * 1000;
-let priceCache: { at: number; plans: PlanOffer[] } | null = null;
+let priceCache: { at: number; intervals: IntervalOffer[] } | null = null;
 
 export function resetPriceCache(): void {
   priceCache = null;
@@ -106,10 +119,16 @@ export class SubscriptionController {
     const subscription = await readSubscription(organizationId);
     if (subscription === null) throw new NotFoundException('No such organization');
 
+    const intervals = await offers(this.logger);
+
     return {
       subscription,
-      plans: await offers(this.logger),
-      configured: stripeEnabled() && anyPlanPriced(),
+      intervals,
+      yearlySavingPercent: yearlySavingPercent(
+        amountOf(intervals, 'monthly'),
+        amountOf(intervals, 'yearly'),
+      ),
+      configured: stripeEnabled() && anyPriceConfigured(),
       /*
        * Always true now that only the owner reaches this at all. Kept as a field
        * rather than removed: the screen asks it rather than assuming, so the day
@@ -134,8 +153,8 @@ export class SubscriptionController {
     requireRole('owner');
     const { organizationId } = currentTenant();
 
-    const plan = readPlan(body['plan']);
-    const priceId = priceIdFor(plan);
+    const interval = readInterval(body['interval']);
+    const priceId = priceIdFor(interval);
     if (!stripeEnabled() || priceId === null) {
       throw new ServiceUnavailableException({
         code: 'billing_not_configured',
@@ -243,57 +262,64 @@ async function customerFor(
 }
 
 /**
- * What each plan costs, from Stripe.
+ * What each interval costs, from Stripe.
  *
- * A plan with no price configured comes back with nulls rather than being
- * omitted: the three plans are the product, and a page that showed two of them
- * because somebody had not finished the dashboard would be a worse lie than an
- * honest "valor por definir" — which is what the marketing page has said all
- * along.
+ * An interval with no price configured comes back with nulls rather than being
+ * omitted: both are the product, and a page that showed one of them because
+ * somebody had not finished the dashboard would be a worse lie than an honest
+ * "valor por definir" — which is what the marketing page has said all along.
  *
  * A Stripe outage answers the same way. This screen exists to tell a club where
  * it stands; a 502 because a price lookup failed would take that away over a
  * figure they could also read on the public site.
  */
-async function offers(logger: Logger): Promise<PlanOffer[]> {
+async function offers(logger: Logger): Promise<IntervalOffer[]> {
   if (!stripeEnabled()) {
-    return PLAN_KEYS.map((key) => ({ key, amountCents: null, currency: null, interval: null }));
+    return BILLING_INTERVALS.map((interval) => ({
+      interval,
+      amountCents: null,
+      currency: null,
+    }));
   }
 
   const cached = priceCache;
-  if (cached !== null && Date.now() - cached.at < PRICE_TTL_MS) return cached.plans;
+  if (cached !== null && Date.now() - cached.at < PRICE_TTL_MS) return cached.intervals;
 
   const stripe = stripeClient();
-  const plans: PlanOffer[] = [];
+  const intervals: IntervalOffer[] = [];
 
-  for (const key of PLAN_KEYS) {
-    const priceId = priceIdFor(key);
+  for (const interval of BILLING_INTERVALS) {
+    const priceId = priceIdFor(interval);
     if (priceId === null) {
-      plans.push({ key, amountCents: null, currency: null, interval: null });
+      intervals.push({ interval, amountCents: null, currency: null });
       continue;
     }
 
     try {
       const price = await stripe.prices.retrieve(priceId);
-      plans.push({
-        key,
+      intervals.push({
+        interval,
         amountCents: price.unit_amount,
         currency: price.currency.toUpperCase(),
-        interval: price.recurring?.interval ?? null,
       });
     } catch (error) {
-      logger.warn(`Could not read the price for ${key}: ${String(error)}`);
-      plans.push({ key, amountCents: null, currency: null, interval: null });
+      logger.warn(`Could not read the ${interval} price: ${String(error)}`);
+      intervals.push({ interval, amountCents: null, currency: null });
     }
   }
 
-  priceCache = { at: Date.now(), plans };
-  return plans;
+  priceCache = { at: Date.now(), intervals };
+  return intervals;
 }
 
-function readPlan(value: unknown): PlanKey {
-  if (typeof value !== 'string' || !isPlanKey(value)) {
-    throw new BadRequestException({ code: 'invalid_plan', field: 'plan' });
+/** One offer's amount, for the saving. Null where it is not priced. */
+function amountOf(offers: readonly IntervalOffer[], interval: BillingInterval): number | null {
+  return offers.find((offer) => offer.interval === interval)?.amountCents ?? null;
+}
+
+function readInterval(value: unknown): BillingInterval {
+  if (typeof value !== 'string' || !isBillingInterval(value)) {
+    throw new BadRequestException({ code: 'invalid_interval', field: 'interval' });
   }
   return value;
 }

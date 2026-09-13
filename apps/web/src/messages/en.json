@@ -379,8 +379,6 @@
     "compedExplains": "This club is not billed. That is a decision Poolse made, and it does not expire on its own.",
     "notConfiguredTitle": "Payments are not set up yet",
     "notConfigured": "This installation of Poolse is not connected to Stripe, so there is nothing to subscribe to here. Nothing else in the app is affected.",
-    "choosePlan": "Choose a plan",
-    "currentPlan": "Current plan",
     "subscribe": "Subscribe",
     "cardHandledByStripe": "Payment happens on a page hosted by Stripe. Poolse never sees or stores card details.",
     "manage": "Manage subscription",
@@ -389,15 +387,21 @@
     "alreadySubscribed": "This club already has an active subscription.",
     "noCustomer": "This club has never subscribed.",
     "checkoutFailed": "The payment page could not be opened.",
-    "planInvalid": "Unknown plan.",
     "failed": "That could not be completed.",
     "interval": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
       "month": "month",
       "year": "year",
       "week": "week",
       "day": "day"
     },
-    "open": "View subscription"
+    "open": "View subscription",
+    "chooseInterval": "Choose how to pay",
+    "currentInterval": "Current billing",
+    "yearlySaving": "Saves {percent}% against paying monthly.",
+    "switchInterval": "To move between monthly and yearly, use Stripe's billing page.",
+    "intervalInvalid": "Unknown billing interval."
   },
   "transfer": {
     "title": "Transfer ownership",
@@ -2127,36 +2131,27 @@
       "subhead": "Three plans. The amounts are not settled yet — what they include is.",
       "amountPlaceholder": "—",
       "amountNote": "Amount to be decided",
-      "starter": {
-        "name": "Starter",
-        "who": "One pool, a small team."
-      },
-      "club": {
-        "name": "Club",
-        "who": "Several sites and student billing."
-      },
-      "network": {
-        "name": "Network",
-        "who": "Groups with energy and reporting."
-      },
       "questionsTitle": "No prices yet?",
       "questionsBody": "Not yet. The product is still being built, and announcing a price that has not been decided would be worse than leaving this blank.",
       "features": {
-        "sites1": "One site",
-        "students": "Students and class groups",
         "classes": "Schedules and attendance",
         "staff": "Staff and roles",
-        "email": "Email support",
-        "sitesMany": "Several sites",
         "studentsMore": "No student limit",
         "billing": "Fees and invoices",
         "maintenance": "Maintenance and readings",
-        "priority": "Priority support",
         "sitesUnlimited": "Unlimited sites",
         "energy": "Energy consumption",
         "dashboards": "Reporting",
-        "sso": "Organization sign-on",
         "support": "Dedicated support"
+      },
+      "planName": "Poolse",
+      "planWho": "Everything Poolse does, with no per-plan limits.",
+      "perMonth": "/ month",
+      "perYear": "/ year",
+      "yearlyHint": "Amount to be decided. Paid once, yearly.",
+      "interval": {
+        "monthly": "Monthly",
+        "yearly": "Yearly"
       }
     }
   },

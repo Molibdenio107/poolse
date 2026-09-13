@@ -2890,11 +2890,21 @@ stripe_event                                    -- the platform's book, not a te
   no updated_at, no archived_at
 ```
 
-**`plan` says what they bought, not what they may do.** Paying for Clube does not raise
+**`plan` says what they bought, not what they may do.** Paying does not raise
 `max_facilities`: the ceilings stay a hand-set operator decision in `/admin`, so there is
-exactly one place a limit is decided and no webhook can quietly widen a licence. A club on
-Clube whose site limit still says 1 is a real state, and `/admin` showing both is how it gets
-noticed.
+exactly one place a limit is decided and no webhook can quietly widen a licence. A paying club
+whose site limit still says 1 is a real state, and `/admin` showing both is how it gets noticed.
+
+**One plan and two intervals — POOLSE-60, 13 September 2026.** `plan_key` was `starter | club |
+network` for one day and is now the single value `poolse_full`; `billing_interval` (`monthly |
+yearly`) joins it, nullable and equally descriptive, written only by the webhook from the price
+the subscription carries. The retype was a retype rather than a backfill because **no live
+subscription existed** — no Stripe account, no key, no customer id outside a test fixture — and
+the migration header says so. `billing_interval` is the twelfth named column on the platform
+role's UPDATE grant, for the same reason `plan` is: the webhook is cross-tenant by nature and
+writes on that connection.
+
+What made the reversal cheap is the paragraph above it: nothing hung off the tiers.
 
 **The unique index on `stripe_customer_id` is load-bearing.** The webhook resolves an event to
 a club *through* it; a duplicate would apply somebody's payment to somebody else's club, and

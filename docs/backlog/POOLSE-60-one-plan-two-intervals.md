@@ -2,6 +2,8 @@
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
+**Status:** ✅ **Built 13 September 2026** — migration `1789034400000_one-plan-two-intervals.sql`.
+
 **Type:** Feature · **Area:** Billing / Subscription · **Priority:** High — it reverses a decision that shipped yesterday, and the longer it stands the more copies it grows · **Slice A** of the single-plan and trial-lifecycle ticket
 
 ### PO — why this exists

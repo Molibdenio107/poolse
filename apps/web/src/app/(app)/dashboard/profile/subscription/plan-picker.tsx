@@ -4,23 +4,28 @@ import { useTranslations } from 'next-intl';
 import { Check, ExternalLink } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { formatCents } from '@/lib/money';
-import type { PlanKey, PlanOffer } from '@/lib/api';
+import type { BillingInterval, IntervalOffer } from '@/lib/api';
 import { checkoutAction, portalAction } from './subscription.actions';
 import type { FormState } from '../../actions';
 
 /**
- * The three plans, and the one button that matters — slice 2.4.
+ * How to pay, and the one button that matters — POOLSE-60.
  *
- * **A club that already pays sees the portal, not the plans.** Changing a plan,
- * changing a card, reading a receipt and cancelling are all one page that Stripe
- * hosts and maintains; offering our own three cards on top of it would be a
- * second way to do something that already has a better one, and two checkouts
- * against one customer is two charges a month.
+ * **Three plan cards became two intervals.** There is one plan; what is left to
+ * choose is monthly or yearly, and nothing about the product changes either way.
+ * So this is two cards that differ in one number and a word, with the saving
+ * said out loud on the yearly one — computed on the API, because *poupa 17%* is
+ * a sentence a page renders rather than a sum it does.
  *
- * **A plan with no price still appears.** The three plans are the product, and a
- * page that showed two of them because somebody had not finished the Stripe
- * dashboard would be a worse lie than *valor por definir* — which is what the
- * public pricing page has said since it was written.
+ * **A club that already pays sees the portal, not the cards.** Changing the
+ * interval, changing a card, reading a receipt and cancelling are all one page
+ * that Stripe hosts and maintains; offering our own switch on top of it would be
+ * a second way to do something that already has a better one — and proration is
+ * a problem worth not solving twice.
+ *
+ * **An unpriced interval still appears.** Both are the product, and a page that
+ * showed one because the dashboard was half-finished would be a worse lie than
+ * *valor por definir*.
  */
 
 const EMPTY: FormState = { ok: false };
@@ -32,16 +37,18 @@ const BUTTON =
 
 export function PlanPicker({
   organizationId,
-  plans,
-  currentPlan,
+  intervals,
+  currentInterval,
+  yearlySavingPercent,
   hasSubscription,
   canManage,
   configured,
   locale,
 }: {
   organizationId: string;
-  plans: readonly PlanOffer[];
-  currentPlan: PlanKey | null;
+  intervals: readonly IntervalOffer[];
+  currentInterval: BillingInterval | null;
+  yearlySavingPercent: number | null;
   hasSubscription: boolean;
   canManage: boolean;
   configured: boolean;
@@ -58,6 +65,11 @@ export function PlanPicker({
           {t('subscription.manage')}
         </h2>
         <p className="mt-2 text-sm text-foreground-muted">{t('subscription.portalExplains')}</p>
+        {/*
+          Said here rather than offered as a control: switching interval is a
+          proration, and Stripe's page already does it correctly.
+        */}
+        <p className="mt-1 text-sm text-foreground-muted">{t('subscription.switchInterval')}</p>
 
         <form action={openPortal} className="mt-3">
           <input type="hidden" name="organizationId" value={organizationId} />
@@ -75,37 +87,34 @@ export function PlanPicker({
   return (
     <section className="space-y-4">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-        {t('subscription.choosePlan')}
+        {t('subscription.chooseInterval')}
       </h2>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {plans.map((plan) => {
-          const priced = plan.amountCents !== null;
+      <div className="grid gap-4 sm:grid-cols-2">
+        {intervals.map((offer) => {
+          const priced = offer.amountCents !== null;
 
           return (
             <form
-              key={plan.key}
+              key={offer.interval}
               action={startCheckout}
               className="flex flex-col rounded border border-border bg-surface p-5"
             >
               <input type="hidden" name="organizationId" value={organizationId} />
-              <input type="hidden" name="plan" value={plan.key} />
+              <input type="hidden" name="interval" value={offer.interval} />
 
-              <h3 className="font-medium">{t(`marketing.pricing.${plan.key}.name`)}</h3>
-              <p className="mt-1 text-sm text-foreground-muted">
-                {t(`marketing.pricing.${plan.key}.who`)}
-              </p>
+              <h3 className="font-medium">{t(`subscription.interval.${offer.interval}`)}</h3>
 
               <p className="mt-3 text-2xl font-semibold tabular-nums">
                 {priced ? (
                   <>
-                    {formatCents(locale, plan.amountCents!)}
-                    {plan.interval !== null && (
-                      <span className="text-sm font-normal text-foreground-muted">
-                        {' / '}
-                        {t(`subscription.interval.${plan.interval}`)}
-                      </span>
-                    )}
+                    {formatCents(locale, offer.amountCents!)}
+                    <span className="text-sm font-normal text-foreground-muted">
+                      {' '}
+                      {offer.interval === 'yearly'
+                        ? t('marketing.pricing.perYear')
+                        : t('marketing.pricing.perMonth')}
+                    </span>
                   </>
                 ) : (
                   <span className="text-base font-normal text-foreground-muted">
@@ -114,10 +123,21 @@ export function PlanPicker({
                 )}
               </p>
 
-              {currentPlan === plan.key && (
+              {/*
+                The saving appears only where it is a fact: both prices known and
+                yearly genuinely cheaper. The API returns null otherwise rather
+                than a nought, because "poupa 0%" is worse than silence.
+              */}
+              {offer.interval === 'yearly' && yearlySavingPercent !== null && (
+                <p className="mt-1 text-sm text-primary">
+                  {t('subscription.yearlySaving', { percent: yearlySavingPercent })}
+                </p>
+              )}
+
+              {currentInterval === offer.interval && (
                 <p className="mt-2 flex items-center gap-1.5 text-sm text-primary">
                   <Check aria-hidden className="size-4" />
-                  {t('subscription.currentPlan')}
+                  {t('subscription.currentInterval')}
                 </p>
               )}
 

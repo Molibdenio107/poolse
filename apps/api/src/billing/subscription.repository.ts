@@ -1,5 +1,5 @@
 import { withOrg, withPlatform } from '@poolse/db';
-import type { PlanKey } from './stripe.js';
+import type { BillingInterval, PlanKey } from './stripe.js';
 
 /**
  * The organization's own subscription — slice 2.4.
@@ -23,7 +23,10 @@ export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
 export interface OrganizationSubscription {
   organizationId: string;
   name: string;
+  /** `poolse_full`, or null where nobody has subscribed. Descriptive only. */
   plan: PlanKey | null;
+  /** How often they are billed. Null until they subscribe — POOLSE-60. */
+  interval: BillingInterval | null;
   status: SubscriptionStatus | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
@@ -43,6 +46,7 @@ export async function readSubscription(
       id: string;
       name: string;
       plan: PlanKey | null;
+      billing_interval: BillingInterval | null;
       subscription_status: SubscriptionStatus | null;
       trial_ends_at: Date | null;
       subscription_current_period_end: Date | null;
@@ -51,7 +55,7 @@ export async function readSubscription(
       stripe_subscription_id: string | null;
       suspended_at: Date | null;
     }>(
-      `SELECT id, name, plan, subscription_status, trial_ends_at,
+      `SELECT id, name, plan, billing_interval, subscription_status, trial_ends_at,
               subscription_current_period_end, subscription_cancel_at_period_end,
               stripe_customer_id, stripe_subscription_id, suspended_at
          FROM organization
@@ -66,6 +70,7 @@ export async function readSubscription(
       organizationId: row.id,
       name: row.name,
       plan: row.plan,
+      interval: row.billing_interval,
       status: row.subscription_status,
       trialEndsAt: row.trial_ends_at?.toISOString() ?? null,
       currentPeriodEnd: row.subscription_current_period_end?.toISOString() ?? null,
@@ -114,6 +119,7 @@ export async function rememberCustomer(
 /** What a Stripe event says about a club, already read out of the payload. */
 export interface SubscriptionChange {
   plan?: PlanKey | null | undefined;
+  interval?: BillingInterval | null | undefined;
   status?: SubscriptionStatus | undefined;
   subscriptionId?: string | null | undefined;
   currentPeriodEnd?: Date | null | undefined;
@@ -122,6 +128,7 @@ export interface SubscriptionChange {
 
 const COLUMNS: Record<keyof SubscriptionChange, string> = {
   plan: 'plan',
+  interval: 'billing_interval',
   status: 'subscription_status',
   subscriptionId: 'stripe_subscription_id',
   currentPeriodEnd: 'subscription_current_period_end',
@@ -131,6 +138,7 @@ const COLUMNS: Record<keyof SubscriptionChange, string> = {
 /** Read back for the trail. Never the Stripe payload — see the migration. */
 const AUDITED = [
   'plan',
+  'billing_interval',
   'subscription_status',
   'stripe_subscription_id',
   'subscription_current_period_end',

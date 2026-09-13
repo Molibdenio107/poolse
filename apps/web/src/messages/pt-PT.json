@@ -379,8 +379,6 @@
     "compedExplains": "Este clube não é faturado. É uma decisão do Poolse e não expira sozinha.",
     "notConfiguredTitle": "Pagamentos ainda não configurados",
     "notConfigured": "Esta instalação do Poolse ainda não está ligada ao Stripe, por isso não é possível subscrever aqui. Nada do resto da aplicação é afetado.",
-    "choosePlan": "Escolher plano",
-    "currentPlan": "Plano atual",
     "subscribe": "Subscrever",
     "cardHandledByStripe": "O pagamento é feito numa página do Stripe. O Poolse nunca vê nem guarda os dados do cartão.",
     "manage": "Gerir subscrição",
@@ -389,15 +387,21 @@
     "alreadySubscribed": "Este clube já tem uma subscrição ativa.",
     "noCustomer": "Este clube ainda não subscreveu.",
     "checkoutFailed": "Não foi possível abrir a página de pagamento.",
-    "planInvalid": "Plano desconhecido.",
     "failed": "Não foi possível completar a operação.",
     "interval": {
+      "monthly": "Mensal",
+      "yearly": "Anual",
       "month": "mês",
       "year": "ano",
       "week": "semana",
       "day": "dia"
     },
-    "open": "Ver subscrição"
+    "open": "Ver subscrição",
+    "chooseInterval": "Escolher pagamento",
+    "currentInterval": "Pagamento atual",
+    "yearlySaving": "Poupa {percent}% face ao pagamento mensal.",
+    "switchInterval": "Para mudar de mensal para anual (ou o contrário), use a página de faturação do Stripe.",
+    "intervalInvalid": "Periodicidade desconhecida."
   },
   "transfer": {
     "title": "Transferir propriedade",
@@ -2127,36 +2131,27 @@
       "subhead": "Três planos. Os valores ainda não estão fechados — as funcionalidades estão.",
       "amountPlaceholder": "—",
       "amountNote": "Valor por definir",
-      "starter": {
-        "name": "Início",
-        "who": "Uma piscina, uma equipa pequena."
-      },
-      "club": {
-        "name": "Clube",
-        "who": "Vários locais e faturação a alunos."
-      },
-      "network": {
-        "name": "Rede",
-        "who": "Grupos com energia e relatórios."
-      },
       "questionsTitle": "Ainda não há valores?",
       "questionsBody": "Ainda não. O produto está em construção, e anunciar um preço que ainda não foi decidido seria pior do que deixar este espaço em branco.",
       "features": {
-        "sites1": "Uma instalação",
-        "students": "Alunos e turmas",
         "classes": "Horários e presenças",
         "staff": "Equipa e funções",
-        "email": "Apoio por email",
-        "sitesMany": "Várias instalações",
         "studentsMore": "Sem limite de alunos",
         "billing": "Mensalidades e faturas",
         "maintenance": "Manutenção e leituras",
-        "priority": "Apoio prioritário",
         "sitesUnlimited": "Instalações sem limite",
         "energy": "Consumo de energia",
         "dashboards": "Relatórios",
-        "sso": "Autenticação da organização",
         "support": "Apoio dedicado"
+      },
+      "planName": "Poolse",
+      "planWho": "Tudo o que o Poolse faz, sem limites por plano.",
+      "perMonth": "/ mês",
+      "perYear": "/ ano",
+      "yearlyHint": "Valor por definir. Pago de uma vez, por ano.",
+      "interval": {
+        "monthly": "Mensal",
+        "yearly": "Anual"
       }
     }
   },

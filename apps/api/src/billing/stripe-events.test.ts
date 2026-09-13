@@ -21,8 +21,8 @@ import { resetStripeClient } from './stripe.js';
  *   trail is what Poolse did.
  */
 
-process.env['STRIPE_PRICE_CLUB'] = 'price_club_test';
-process.env['STRIPE_PRICE_STARTER'] = 'price_starter_test';
+process.env['STRIPE_PRICE_YEARLY'] = 'price_yearly_test';
+process.env['STRIPE_PRICE_MONTHLY'] = 'price_monthly_test';
 resetStripeClient();
 
 function subscriptionEvent(
@@ -41,20 +41,35 @@ const LIVE = {
   customer: 'cus_1',
   status: 'active',
   cancel_at_period_end: false,
-  items: { data: [{ price: { id: 'price_club_test' }, current_period_end: 1_800_000_000 }] },
+  items: { data: [{ price: { id: 'price_yearly_test' }, current_period_end: 1_800_000_000 }] },
 };
 
-test('2.4 — a live subscription carries its plan, its period and its status', () => {
+test('2.4 — a live subscription carries its interval, its period and its status', () => {
   const read = readChange(subscriptionEvent('customer.subscription.updated', LIVE));
 
   assert.equal(read?.customerId, 'cus_1');
   assert.deepEqual(read?.change, {
     status: 'active',
     subscriptionId: 'sub_1',
-    plan: 'club',
+    // One plan, so a live subscription is always on it — POOLSE-60. What the
+    // price tells us is how often they pay.
+    plan: 'poolse_full',
+    interval: 'yearly',
     currentPeriodEnd: new Date(1_800_000_000 * 1000),
     cancelAtPeriodEnd: false,
   });
+});
+
+test('2.4 — the monthly price reads back as the monthly interval', () => {
+  const read = readChange(
+    subscriptionEvent('customer.subscription.updated', {
+      ...LIVE,
+      items: { data: [{ price: { id: 'price_monthly_test' }, current_period_end: 1 }] },
+    }),
+  );
+
+  assert.equal(read?.change.interval, 'monthly');
+  assert.equal(read?.change.plan, 'poolse_full');
 });
 
 test('2.4 — a deletion clears the subscription rather than leaving a stale id', () => {
@@ -64,6 +79,7 @@ test('2.4 — a deletion clears the subscription rather than leaving a stale id'
     status: 'canceled',
     subscriptionId: null,
     plan: null,
+    interval: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
   });
@@ -106,7 +122,7 @@ test('2.4 — a failed payment is past_due and touches nothing else', () => {
   assert.equal(read?.customerId, 'cus_1');
 });
 
-test('2.4 — a price nobody configured leaves the plan null rather than guessing', () => {
+test('2.4 — a price nobody configured leaves the interval null rather than guessing', () => {
   const read = readChange(
     subscriptionEvent('customer.subscription.updated', {
       ...LIVE,
@@ -114,7 +130,8 @@ test('2.4 — a price nobody configured leaves the plan null rather than guessin
     }),
   );
 
-  assert.equal(read?.change.plan, null);
+  assert.equal(read?.change.interval, null);
+  assert.equal(read?.change.plan, 'poolse_full', 'they are still on the one plan');
   assert.equal(read?.change.status, 'active', 'and the rest of the event still applies');
 });
 

@@ -63,7 +63,10 @@ export default async function SubscriptionPage(): Promise<React.ReactElement> {
               {view.subscription.plan !== null && (
                 <span className="text-foreground-muted">
                   {' · '}
-                  {t(`marketing.pricing.${view.subscription.plan}.name`)}
+                  {t('marketing.pricing.planName')}
+                  {view.subscription.interval !== null && (
+                    <> · {t(`subscription.interval.${view.subscription.interval}`)}</>
+                  )}
                 </span>
               )}
             </p>
@@ -127,8 +130,9 @@ export default async function SubscriptionPage(): Promise<React.ReactElement> {
 
           <PlanPicker
             organizationId={view.subscription.organizationId}
-            plans={view.plans}
-            currentPlan={view.subscription.plan}
+            intervals={view.intervals}
+            currentInterval={view.subscription.interval}
+            yearlySavingPercent={view.yearlySavingPercent}
             hasSubscription={view.subscription.hasSubscription}
             canManage={view.canManage}
             configured={view.configured}

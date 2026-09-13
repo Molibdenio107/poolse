@@ -287,7 +287,7 @@ function tenantColumns(
         tenant.planTier === null ? (
           <span className="text-sm text-foreground-muted">{t('admin.noPlan')}</span>
         ) : (
-          t(`marketing.pricing.${tenant.planTier}.name`)
+          t('marketing.pricing.planName')
         ),
     },
     {

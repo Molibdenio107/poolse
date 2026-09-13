@@ -362,7 +362,7 @@ integration cost lives.
 MB WAY authorisation both require the payer to act, and the payer has no account and no
 app until phase 3. It is slice 3.5, below.
 
-**2.4 is reversed in part, 13 September 2026 — see POOLSE-60 to 64.** Three plans shipped and
+**2.4 is reversed in part, 13 September 2026 — POOLSE-60 is ✅ built; 61 to 64 are written.** Three plans shipped and
 became one the next day: an organization pays for Poolse and gets everything, or it does not pay
 and is on a trial, and the only axis left is monthly or yearly. Everything else about 2.4
 stands, including the part that made the reversal cheap — `plan` is descriptive and the ceilings

@@ -7,9 +7,10 @@
 --      payment to somebody else's club, and nothing on any screen would say so.
 --   2. **A tenant cannot see or write the billing trail.** `stripe_event` is
 --      the platform's book, like `platform_audit_log`.
---   3. **The platform role may write the five billing columns and nothing
---      else.** It could already write `subscription_status`; what it must still
---      not be able to touch is the club's name.
+--   3. **The platform role may write the billing columns and nothing else.** It
+--      could already write `subscription_status`; what it must still not be able
+--      to touch is the club's name. `billing_interval` joined the list with
+--      POOLSE-60 and is asserted here with the rest.
 --
 -- Run: pnpm db:test
 
@@ -115,7 +116,8 @@ DO $$
 DECLARE v_name text; ok boolean;
 BEGIN
   UPDATE organization
-     SET plan = 'club',
+     SET plan = 'poolse_full',
+         billing_interval = 'yearly',
          subscription_status = 'active',
          stripe_customer_id = 'cus_test_2',
          stripe_subscription_id = 'sub_test_2',
@@ -127,7 +129,7 @@ BEGIN
   -- accountable: there is no path to these columns that leaves no entry.
   INSERT INTO stripe_event (id, type, organization_id, changed)
   VALUES ('evt_test_2', 'customer.subscription.updated',
-          'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '{"plan": {"after": "club"}}'::jsonb);
+          'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '{"plan": {"after": "poolse_full"}}'::jsonb);
 
   ok := false;
   BEGIN

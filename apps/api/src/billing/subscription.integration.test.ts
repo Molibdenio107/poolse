@@ -48,7 +48,8 @@ const SECRET = 'whsec_test_poolse';
 
 process.env['STRIPE_SECRET_KEY'] = 'sk_test_poolse';
 process.env['STRIPE_WEBHOOK_SECRET'] = SECRET;
-process.env['STRIPE_PRICE_CLUB'] = 'price_club_test';
+process.env['STRIPE_PRICE_YEARLY'] = 'price_yearly_test';
+process.env['STRIPE_PRICE_MONTHLY'] = 'price_monthly_test';
 resetStripeClient();
 resetPriceCache();
 
@@ -118,7 +119,7 @@ function subscriptionEvent(
         status: 'active',
         cancel_at_period_end: false,
         items: {
-          data: [{ price: { id: 'price_club_test' }, current_period_end: 1_800_000_000 }],
+          data: [{ price: { id: 'price_yearly_test' }, current_period_end: 1_800_000_000 }],
         },
         ...extra,
       },
@@ -151,7 +152,8 @@ test('2.4 — a signed subscription event moves the club onto its plan', async (
 
     const subscription = await readSubscription(tenant.organizationId);
     assert.equal(subscription?.status, 'active');
-    assert.equal(subscription?.plan, 'club');
+    assert.equal(subscription?.plan, 'poolse_full');
+    assert.equal(subscription?.interval, 'yearly');
     assert.equal(subscription?.hasSubscription, true);
     assert.equal(subscription?.cancelAtPeriodEnd, false);
     assert.equal(
@@ -161,10 +163,13 @@ test('2.4 — a signed subscription event moves the club onto its plan', async (
 
     const [event] = await trail(evt('a1'));
     assert.equal(event?.outcome, 'applied');
-    assert.deepEqual(
-      Object.keys(event!.changed).sort(),
-      ['plan', 'stripe_subscription_id', 'subscription_current_period_end', 'subscription_status'],
-    );
+    assert.deepEqual(Object.keys(event!.changed).sort(), [
+      'billing_interval',
+      'plan',
+      'stripe_subscription_id',
+      'subscription_current_period_end',
+      'subscription_status',
+    ]);
   });
 });
 
@@ -332,7 +337,12 @@ test('2.4 — the owner reads the subscription, and nobody else does at all', as
       const view = await new SubscriptionController().read();
       assert.equal(view.canManage, true);
       assert.equal(view.subscription.organizationId, tenant.organizationId);
-      assert.equal(view.plans.length, 3, 'the three plans are the product');
+      assert.equal(view.intervals.length, 2, 'monthly and yearly are the product');
+      assert.deepEqual(
+        view.intervals.map((offer) => offer.interval),
+        ['yearly', 'monthly'],
+        'yearly first, as the pricing page offers it',
+      );
     });
 
     /*
@@ -346,7 +356,7 @@ test('2.4 — the owner reads the subscription, and nobody else does at all', as
       await actingAs(tenant, { membershipId: who, roles: [role] }, async () => {
         const controller = new SubscriptionController();
         await expectStatus(() => controller.read(), 403);
-        await expectStatus(() => controller.checkout({ plan: 'club' }), 403);
+        await expectStatus(() => controller.checkout({ interval: 'yearly' }), 403);
         await expectStatus(() => controller.portal(), 403);
       });
     }
@@ -355,26 +365,26 @@ test('2.4 — the owner reads the subscription, and nobody else does at all', as
 
 test('2.4 — with no price configured, checkout refuses rather than half-working', async () => {
   await withScratchTenant(async (tenant) => {
-    const had = process.env['STRIPE_PRICE_NETWORK'];
-    delete process.env['STRIPE_PRICE_NETWORK'];
+    const had = process.env['STRIPE_PRICE_YEARLY'];
+    delete process.env['STRIPE_PRICE_YEARLY'];
 
     try {
       await actingAs(tenant, { roles: ['owner'] }, async () => {
         // 503, not 500: the installation is not selling this plan today, which
         // is a true thing to say and a different one from a broken request.
-        await expectStatus(() => new SubscriptionController().checkout({ plan: 'network' }), 503);
+        await expectStatus(() => new SubscriptionController().checkout({ interval: 'yearly' }), 503);
       });
     } finally {
-      if (had !== undefined) process.env['STRIPE_PRICE_NETWORK'] = had;
+      if (had !== undefined) process.env['STRIPE_PRICE_YEARLY'] = had;
     }
   });
 });
 
-test('2.4 — a plan nobody sells is a 400, and the portal needs a customer', async () => {
+test('2.4 — an interval nobody sells is a 400, and the portal needs a customer', async () => {
   await withScratchTenant(async (tenant) => {
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       const controller = new SubscriptionController();
-      await expectStatus(() => controller.checkout({ plan: 'enterprise' }), 400);
+      await expectStatus(() => controller.checkout({ interval: 'weekly' }), 400);
       await expectStatus(() => controller.checkout({}), 400);
       // Never subscribed, so there is nothing to manage — the screen offers the
       // plans instead, which is what it already shows.

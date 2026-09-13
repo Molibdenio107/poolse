@@ -23,7 +23,7 @@ const REFUSALS: Record<string, string> = {
   already_subscribed: 'subscription.alreadySubscribed',
   no_customer: 'subscription.noCustomer',
   checkout_failed: 'subscription.checkoutFailed',
-  invalid_plan: 'subscription.planInvalid',
+  invalid_interval: 'subscription.intervalInvalid',
 };
 
 export async function checkoutAction(
@@ -31,13 +31,13 @@ export async function checkoutAction(
   formData: FormData,
 ): Promise<FormState> {
   const organizationId = String(formData.get('organizationId') ?? '');
-  const plan = String(formData.get('plan') ?? '');
+  const interval = String(formData.get('interval') ?? '');
 
   let url: string;
   try {
     const session = await apiPost<{ url: string }>(
       '/subscription/checkout',
-      { plan },
+      { interval },
       { organizationId },
     );
     url = session.url;

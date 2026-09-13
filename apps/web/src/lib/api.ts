@@ -2921,7 +2921,7 @@ export interface PlatformTenant {
   createdAt: string;
   subscriptionStatus: SubscriptionStatus;
   trialEndsAt: string | null;
-  /** Which plan they pay for, from Stripe — 2.4. Null where nobody has subscribed. */
+  /** Set once they pay — POOLSE-60 made it one plan, so it is a yes or a no. */
   planTier: PlanKey | null;
   /** Active management memberships plus invitations still outstanding. */
   managementSeatsUsed: number;
@@ -3193,6 +3193,8 @@ export interface OrganizationSubscription {
   organizationId: string;
   name: string;
   plan: PlanKey | null;
+  /** How often they are billed. Null until they subscribe. */
+  interval: BillingInterval | null;
   status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'comped' | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
@@ -3202,19 +3204,23 @@ export interface OrganizationSubscription {
   suspendedAt: string | null;
 }
 
-export type PlanKey = 'starter' | 'club' | 'network';
+/** One plan — POOLSE-60. It is what a club bought, never what it may do. */
+export type PlanKey = 'poolse_full';
 
-export interface PlanOffer {
-  key: PlanKey;
-  /** Null until somebody prices the plan in Stripe — the page says so. */
+export type BillingInterval = 'monthly' | 'yearly';
+
+export interface IntervalOffer {
+  interval: BillingInterval;
+  /** Null until somebody prices it in Stripe — the page says so. */
   amountCents: number | null;
   currency: string | null;
-  interval: string | null;
 }
 
 export interface SubscriptionView {
   subscription: OrganizationSubscription;
-  plans: PlanOffer[];
+  intervals: IntervalOffer[];
+  /** What yearly saves against twelve monthly payments. Null unless both are priced. */
+  yearlySavingPercent: number | null;
   configured: boolean;
   /** The owner, and nobody else. An admin reads this screen and cannot act on it. */
   canManage: boolean;

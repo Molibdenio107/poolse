@@ -52,18 +52,41 @@ it sees the notice instead.
 A subscription set to cancel says so and counts down to the period end. Until that date
 nothing changes.
 
+## One plan, two intervals
+
+**There is one plan, `poolse_full`** — POOLSE-60, which reversed the three tiers that shipped a
+day earlier. An organization either pays for Poolse and gets everything, or it does not pay and
+is on a trial. **No feature is gated by plan, ever.** What is left to choose is how often they
+pay: `billing_interval` is `monthly` or `yearly`, written only by the webhook from the price the
+subscription carries, and null until they subscribe.
+
+Both are descriptive. Neither decides anything — see *What a subscription does not change*.
+
+**Switching interval goes through the customer portal.** Proration is a solved problem on
+Stripe's own screen, and a second path to it here would be a worse copy of one that works.
+
 ## Prices
 
 **They live in Stripe and nowhere else.** The public pricing page has said *valor por definir*
 since it was written; hardcoding a figure would put a price in a deploy that belongs in a
-dashboard. Each plan names an environment variable carrying a Stripe **price id**, and the
-amount is read back for display and cached for five minutes.
+dashboard. Each interval names an environment variable carrying a Stripe **price id**
+(`STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`), and the amount is read back for display and
+cached for five minutes.
 
-A plan with no price still appears, unpriced and not buyable. The three plans are the product,
-and a page showing two of them because somebody had not finished the dashboard would be a
-worse lie than *valor por definir*. A Stripe outage answers the same way — this screen exists
-to tell a club where it stands, and losing that over a figure they could read on the public
-site would be the wrong trade.
+An interval with no price still appears, unpriced and not buyable. Both are the product, and a
+page showing one because somebody had not finished the dashboard would be a worse lie than
+*valor por definir*. A Stripe outage answers the same way — this screen exists to tell a club
+where it stands, and losing that over a figure they could read on the public site would be the
+wrong trade.
+
+**What yearly saves is computed on the API**, from the two prices, and appears only when both
+are known and yearly is genuinely cheaper. *Poupa 17%* is a sentence the page renders rather
+than a sum it does; *poupa 0%* is worse than silence.
+
+**The public pricing page cannot read those prices**, and that is not an oversight: the figures
+come from the API, which requires a session, and that page is open to the world. It shows one
+card, a Mensal/Anual toggle defaulting to Anual, and the placeholder. A small public endpoint is
+what closes that gap on the day the numbers are settled.
 
 ## Paying
 
@@ -92,8 +115,8 @@ Four event types are handled:
 
 | Event | What moves |
 |---|---|
-| `customer.subscription.created` / `.updated` | Plan, status, period end, cancel-at-period-end |
-| `customer.subscription.deleted` | Status `canceled`; the subscription, plan and period cleared |
+| `customer.subscription.created` / `.updated` | Plan, **interval**, status, period end, cancel-at-period-end |
+| `customer.subscription.deleted` | Status `canceled`; the subscription, plan, interval and period cleared |
 | `invoice.payment_failed` | Status `past_due`, and only that |
 
 `checkout.session.completed` is deliberately not among them: the subscription events carry
@@ -123,17 +146,20 @@ name and address, and a copy of those in a log is a second copy to protect.
 
 ## What a subscription does not change
 
-**Nothing about what the club may do.** Paying for Clube does not raise `max_facilities`. The
-ceilings stay a hand-set operator decision in `/admin`, so there is exactly one place a limit
-is decided and no webhook can quietly widen a licence. `plan` is descriptive: it names what
-they bought so the screen can say it and the operator can see it beside the ceilings — a club
-on Clube whose site limit still says 1 is a real state, and an operator seeing both figures is
-how that gets noticed.
+**Nothing about what the club may do.** Paying does not raise `max_facilities`. The ceilings
+stay a hand-set operator decision in `/admin`, so there is exactly one place a limit is decided
+and no webhook can quietly widen a licence. `plan` and `billing_interval` are descriptive: they
+name what the club bought and how often it pays, so the screen can say it and the operator can
+see it beside the ceilings — a paying club whose site limit still says 1 is a real state, and an
+operator seeing both figures is how that gets noticed.
+
+This is also what made reversing three plans into one cheap: there was nothing hanging off the
+tiers to unpick.
 
 ## Who may write what
 
 The webhook runs on `poolse_platform`, the same narrow cross-tenant login the operator's area
-uses: it holds `UPDATE` on eleven **named** columns of `organization` and SELECT on seven
+uses: it holds `UPDATE` on twelve **named** columns of `organization` and SELECT on seven
 tables, and cannot rename a club or delete a tenant. It is cross-tenant by nature — an event
 names a customer, not an organization — which the tenant role has no way to resolve.
 

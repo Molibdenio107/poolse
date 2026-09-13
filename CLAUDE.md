@@ -102,9 +102,15 @@ rather than `SentryGlobalFilter` — that filter is `@Catch()` and terminates, s
 means one never runs. `docs/features/observability.md`.
 
 **A subscription is Stripe's to know and the webhook's to write; a licence is the operator's.**
-Slice 2.4. **Owner only, under *O meu perfil*** — not a menu item and not an admin's business:
-the card, the renewal and the decision to cancel are the owner's own, the same reasoning that
-keeps the owner's salary from an admin. `STRIPE_SECRET_KEY` absent means the Subscrição page says so, plans come back
+Slice 2.4, narrowed by POOLSE-60. **Owner only, under *O meu perfil*** — not a menu item and
+not an admin's business: the card, the renewal and the decision to cancel are the owner's own,
+the same reasoning that keeps the owner's salary from an admin. **One plan (`poolse_full`) and
+two intervals (`monthly | yearly`)**, both *descriptive*: no feature, limit or ceiling is ever
+decided by either, which is exactly what made reversing three tiers into one cost a single
+column rewrite. The price map is keyed on the interval and the webhook's reverse lookup reads
+env vars rather than calling Stripe, so that path stays offline-testable; a price nobody
+configured leaves the interval null rather than guessed. Switching interval goes through the
+customer portal — proration is solved on Stripe's screen. `STRIPE_SECRET_KEY` absent means the Subscrição page says so, plans come back
 unpriced and `/webhooks/stripe` answers 503 — nothing else changes shape, which is the state of
 every dev machine and of the free pilot. **Prices live in Stripe** (an env var per plan names a
 *price* id) and are read back for display, because the amounts are still undecided and a price

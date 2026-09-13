@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { planForPrice } from './stripe.js';
+import { intervalForPrice, PLAN } from './stripe.js';
 import type { SubscriptionChange, SubscriptionStatus } from './subscription.repository.js';
 
 /**
@@ -47,7 +47,13 @@ export function readChange(event: Stripe.Event): EventChange | null {
           // Cleared on deletion: the club has no subscription any more, and a
           // stale id would make the screen offer a portal for something gone.
           subscriptionId: deleted ? null : subscription.id,
-          plan: deleted ? null : planOf(subscription),
+          /*
+           * One plan, so a live subscription is always on it — POOLSE-60. What
+           * the price actually tells us is the *interval*, and a price nobody
+           * has configured leaves that null rather than guessed.
+           */
+          plan: deleted ? null : PLAN,
+          interval: deleted ? null : intervalOf(subscription),
           currentPeriodEnd: deleted ? null : periodEnd(subscription),
           cancelAtPeriodEnd: deleted ? false : subscription.cancel_at_period_end,
         },
@@ -104,16 +110,16 @@ function statusFrom(status: Stripe.Subscription.Status): SubscriptionStatus {
 }
 
 /**
- * Which plan this subscription is on, from the price it carries.
+ * Which interval this subscription is billed on, from the price it carries.
  *
  * Read back through the same env mapping the checkout used, so a price nobody
- * has configured leaves `plan` null rather than guessing. A subscription with
- * several items — which this product does not sell — takes the first, and the
- * null it may produce is the honest answer for a shape we do not handle.
+ * has configured leaves the interval null rather than guessing. A subscription
+ * with several items — which this product does not sell — takes the first, and
+ * the null it may produce is the honest answer for a shape we do not handle.
  */
-function planOf(subscription: Stripe.Subscription): SubscriptionChange['plan'] {
+function intervalOf(subscription: Stripe.Subscription): SubscriptionChange['interval'] {
   const priceId = subscription.items.data[0]?.price?.id;
-  return priceId === undefined ? null : planForPrice(priceId);
+  return priceId === undefined ? null : intervalForPrice(priceId);
 }
 
 /**

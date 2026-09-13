@@ -47,6 +47,7 @@ const BRAZILIAN = [
  */
 const SAME_ON_PURPOSE = new Map([
   ['app.name', 'the product is called Poolse in every language'],
+  ['marketing.pricing.planName', 'the one plan is named after the product — POOLSE-60'],
   // A colour whose name is the same word in both languages, like "beige".
   // Renaming the pt-PT one to "fúcsia" purely to satisfy this check would be
   // choosing a different colour word to dodge a guard.
