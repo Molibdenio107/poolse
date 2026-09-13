@@ -79,12 +79,16 @@ Poolse's own revenue, it is `actual` by definition, and it is the second table t
 provenance column if one is added. Say so in the migration rather than leaving it to be
 noticed.
 
-**A contradiction to settle before writing SQL.** `subscription_status` already has a `comped`
-value and `billing_mode` will have one too. Two homes for one fact is how they drift. The
-recommendation is that **`billing_mode` owns it** and `subscription_status.comped` stops being
-written — a comped club becomes `billing_mode = 'comped'`, `subscription_status = 'active'`,
-which is also more honest, since a free pilot *is* active. That is a reversal of a settled
-decision and needs Rui's word; it is in `CONFLICTS.md`.
+**`billing_mode` owns `comped` — settled 13 September 2026.** `subscription_status` has carried
+the value since the platform slice; once `billing_mode` exists it would be two homes for one
+fact, which is how they drift. A comped club becomes `billing_mode = 'comped'`,
+`subscription_status = 'active'`, which is also the more honest pair: a free pilot *is* active,
+and what is unusual about it is how it pays, not whether it works.
+
+`subscription_status.comped` stops being written and is backfilled in the same migration. The
+value stays in the enum because removing one is a rebuild, and a value nothing writes costs
+nothing. Every screen reading the status for the word `comped` moves to the mode — grep before
+calling it done.
 
 ### QA — test scenarios
 
@@ -122,4 +126,5 @@ decision and needs Rui's word; it is in `CONFLICTS.md`.
    *record a payment* form.
 8. `/admin` has a renewals-due list for the next 30 days.
 9. Revenue is reported as three separate figures.
-10. The `comped` contradiction is settled in `CONFLICTS.md` before any SQL is written.
+10. `subscription_status.comped` is backfilled to `billing_mode` and nothing writes it again;
+    every screen that read the status for that word reads the mode instead.

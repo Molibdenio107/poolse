@@ -174,6 +174,28 @@ on sequences, and production is not somewhere to find out you were wrong about t
   (currently a copied link), overdue-invoice chasing in slice 2.3 and the whole of phase 3
   are waiting on this one.
 
+## The go-live checklist
+
+Things that are deliberately **not** done on a development instance and must be done before a
+real club depends on Poolse. Each one is here because doing it early breaks something today.
+
+- [ ] **A production Clerk instance**, separate from the development one. Everything below hangs
+      off it, and it is the reason none of them are done yet — noted 13 September 2026.
+- [ ] **MFA on the operator's own Clerk account**, then ship the `PlatformAdminGuard` MFA check
+      from [POOLSE-64](./backlog/POOLSE-64-hardening-admin.md). **Order matters**: enforcing it
+      first locks the only operator out of `/admin`, and there is no second operator to let them
+      back in.
+- [ ] **Stripe**: a live account, one price per interval, the webhook endpoint pointing at
+      `POST /webhooks/stripe`, and `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` /
+      `STRIPE_PRICE_*` set on the API only. Until then the product runs unsold, by design —
+      `docs/features/subscription.md`.
+- [ ] **A transactional email provider.** Invitation delivery, invoice chasing and the whole
+      trial lifecycle record what they owe and deliver nothing without one.
+- [ ] **`DATABASE_PLATFORM_URL` audited**: API environment only, never the web app's, never
+      `NEXT_PUBLIC_`, with a rotation procedure written down — POOLSE-64.
+- [ ] **A Sentry DSN**, if errors are to be seen at all. Off without one, by design.
+- [ ] **TimescaleDB confirmed** on the production database, or the fallback taken — see below.
+
 ## When something is wrong
 
 | Symptom | Almost always |

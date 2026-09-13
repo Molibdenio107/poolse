@@ -81,9 +81,16 @@ still pay for. One person, several organizations, is a shape this schema has alw
 **The machine actor.** `platform_audit_log.clerk_user_id` is `NOT NULL` and a cron has no
 person behind it. Writing `'system'` into a column named for a Clerk user would be a lie in the
 one place that exists to be believed, so — following the precedent `stripe_event` set — these
-transitions get their own book, `trial_event`, written in the same transaction as the change.
-**Propose it in one line and wait**: the alternative is making that column nullable and adding
-an `actor_kind`, which is a change to a shipped audit table.
+transitions get their own book, `trial_event`, written in the same transaction as the
+change. **Settled 13 September 2026** — Rui took the proposal. The alternative, making that
+column nullable and adding an `actor_kind`, changes a shipped audit table to accommodate a
+writer it was never about; a second book costs one migration and keeps
+`platform_audit_log.clerk_user_id` meaning exactly what its name says.
+
+`trial_event` is platform-scoped, like `stripe_event` and for the same reasons: a row is about a
+tenant rather than belonging to one, it is invisible to the tenant connection, and it is
+insert-only. It records the transition, the tenant, the dates it set and the reason — never an
+amount and never a person's name.
 
 **Emails are recorded, not sent** — decided 13 September 2026. There is no provider wired and
 phase 0 deferred the choice. Each due notice (days 10, 14, 15, 38, 45, 68) writes a row saying
@@ -95,6 +102,13 @@ when it is eventually sent, and the export pipeline already exists — do not bu
 **RGPD.** This data includes minors, guardians, health and mobility notes and payment records.
 The ladder above is the stated retention policy: write it into `docs/` in the same commit, in
 the words the privacy policy will use.
+
+**The pilot club keeps its 14 days.** The change applies to signups from here on: one club, one
+day, and a migration that rewrites a live trial date touches billing state for no benefit.
+
+**A `comped` tenant is never expired by the job.** The free pilot is live and unbilled and does
+not run out — that is what the word has meant since the platform slice, and the job's first
+filter is `subscription_status = 'trialing'`, which a comped club is not.
 
 ### QA — test scenarios
 
@@ -140,3 +154,5 @@ the words the privacy policy will use.
 11. Due notices are recorded and the screens say nothing has been delivered.
 12. The retention ladder is in `docs/` in the same commit, in privacy-policy words.
 13. Purge is **not** in this commit.
+14. An organization already mid-trial on 14 days is untouched by the migration.
+15. A `comped` tenant is never moved by the job, whatever its dates say.

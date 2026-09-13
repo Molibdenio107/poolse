@@ -68,9 +68,10 @@ the `/admin` column, the subscription screen's badge and the marketing page each
 name today. Grep for `marketing.pricing.` before calling this done — `check-messages.mjs` will
 catch a dead key but not a live one that nobody should still be reading.
 
-**Open:** what the single `plan_key` value is called. `poolse`, `standard` and `full` are all
-defensible; it appears in the database, in `/admin` and nowhere a customer reads. Ask before
-writing the migration — renaming an enum value later is the same dance again.
+**Settled 13 September 2026: the value is `poolse_full`.** Rui said *poolse-full*; enum values
+in this schema are English snake_case (`fee_kind`, `member_role`, `compensation_kind`), so the
+hyphen becomes an underscore and the word does not change. It appears in the database and in
+`/admin` and nowhere a customer reads — the pricing page renders its own label.
 
 ### QA — test scenarios
 

@@ -97,7 +97,7 @@ Two things POOLSE-24 can rely on rather than re-deriving:
   retroactively the moment somebody corrected a typo in the price list.
 
 
-## `comped` has two homes — raised 13 September 2026, unsettled
+## `comped` has two homes — raised and settled 13 September 2026
 
 `subscription_status` already carries `comped`, decided in `platform-admin.sql`: the free pilot
 is live and is not billed. [POOLSE-63](./POOLSE-63-paid-outside-stripe.md) adds
@@ -113,4 +113,6 @@ pair, since a free pilot *is* active. `subscription_status.comped` stops being w
 backfilled in the same migration; the value stays in the enum because removing one is a
 rebuild, and a value nothing writes costs nothing.
 
-**This reverses a settled decision and needs Rui's word before any SQL in POOLSE-63.**
+**Settled: Rui took the recommendation, 13 September 2026.** `billing_mode` owns it, the status
+is backfilled in POOLSE-63's own migration, and every screen that read the status for that word
+reads the mode instead.

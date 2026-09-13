@@ -36,7 +36,7 @@ Unique index on `normalized_email`. Partial unique index on `tax_number` where n
 | Signal | Response | Why |
 |---|---|---|
 | Repeated `normalized_email` | **Hard block at signup** | One person, one trial |
-| Repeated NIPC | **Hard block at facility creation** | The club is the same club |
+| Repeated NIPC | **Hard block when it is saved** in the club's settings | The club is the same club |
 | Repeated IP hash | **Soft flag** on `/admin` | Clubs share offices; NAT is real |
 | Repeated email domain | **Soft flag** | A municipality has many pools |
 | Known disposable domain | **Reject at signup** | The list lives in a data file, not in code |
@@ -44,8 +44,17 @@ Unique index on `normalized_email`. Partial unique index on `tax_number` where n
 **A block never says which lever was pulled.** The message points at signing in and at
 contacting us — *"já usou o seu período experimental"* tells an abuser exactly what to change.
 
-**The NIPC is not on the signup form and should not be.** It is captured at facility creation,
-where invoicing already needs it, and refused there.
+**The NIPC is not on the signup form and should not be** — and, as of 13 September 2026, it is
+not anywhere else either. `organization.vat_number` has existed since the first migration and
+**nothing reads or writes it**: no form, no endpoint. So this ticket has to ask for it before it
+can block on it.
+
+**It is asked for in the club's own settings, not at signup and not at facility creation**
+(settled 13 September 2026). Signup stays three fields and thirty seconds — a tax number is the
+most intrusive question you can put to somebody who has not decided yet, and the one they cannot
+answer from memory. A facility is a building; a NIPC belongs to the legal entity, which is also
+where invoicing will need it, since a fatura's issuer is the club. The check runs the moment the
+field is saved.
 
 **Every block is reversible by Rui in one click.** `/admin` gains *grant a fresh trial*, which
 clears the claim and sets `trial_ends_at` — built by **extending the trial action that already
@@ -66,13 +75,13 @@ The unique index is the enforcement, not the application check — the same reas
 other constraint in this schema. The application asks first so the message is a sentence rather
 than a constraint name, and the index is what holds when two signups race.
 
-**Open:** where the NIPC lives today. `organization.vat_number` exists and `facility` may not
-carry one; the check belongs wherever the form actually writes it, and that needs reading
-before the ticket is estimated.
+**An archived organization keeps its claim, for ever** (settled 13 September 2026). Releasing it
+would be the abuse path with extra steps — let the trial lapse, wait for the sweep, start again.
+A club that genuinely leaves and returns writes in, and *grant a fresh trial* is one click. The
+cost is a support message from an honest person; the alternative is no protection at all.
 
-**Open:** whether an organization archived by the lifecycle releases its claim. It probably
-should not — that would be the abuse path with extra steps — but it means a club that genuinely
-leaves and returns two years later needs the one-click reset. Ask.
+That makes the one-click override load-bearing rather than a convenience, and it is why the
+refusal message points at contacting us: the person reading it may be a real customer.
 
 ### QA — test scenarios
 
@@ -81,8 +90,8 @@ leaves and returns two years later needs the one-click reset. Ask.
    names neither the reason nor the first tenant.
 2. **Given** two signups racing on one address, **then** exactly one succeeds — the index.
 3. **Given** a refused signup, **then** no organization, no membership and no claim exist.
-4. **Given** a NIPC already claimed, **when** a facility is created with it, **then** refused
-   there, and the organization that already existed is untouched.
+4. **Given** a NIPC already claimed, **when** a club saves it in its settings, **then** refused
+   there, and the organization that already claimed it is untouched.
 5. **Given** a repeated IP hash, **then** the signup succeeds and `/admin` shows a flag.
 6. **Given** a disposable domain in the data file, **then** signup is refused; **given** one
    removed from the file, **then** it is allowed without a deploy of code.
@@ -96,8 +105,8 @@ leaves and returns two years later needs the one-click reset. Ask.
 
 1. `trial_claim` exists, platform-scoped, with the two unique indexes, and is written inside
    the provisioning transaction.
-2. A repeated normalized email is refused at signup; a repeated NIPC is refused at facility
-   creation.
+2. A repeated normalized email is refused at signup; a repeated NIPC is refused when the club
+   saves it in its own settings.
 3. Neither refusal reveals which signal fired or that a previous trial exists.
 4. IP and domain are soft flags shown in `/admin` and block nothing.
 5. Disposable domains come from a data file.
@@ -107,3 +116,6 @@ leaves and returns two years later needs the one-click reset. Ask.
 8. `/admin` filters by `trialing`, `expired` and pending-delete, shows the claim and the flags
    on the tenant detail, and counts trials started against trials converted.
 9. Tenant isolation still passes, with a new block for the table.
+10. `organization.vat_number` gains a form field in the club's settings, validated as a NIPC,
+    and the duplicate check runs when it is saved rather than at signup.
+11. A claim survives the archiving of the organization that made it, proven by test.

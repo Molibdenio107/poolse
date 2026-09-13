@@ -57,9 +57,12 @@ it and one that does not, and do not infer it from anything the client sends.
 **Rate limiting**: `UserThrottlerGuard` already exists and is registered globally. The
 `/platform` routes want their own, tighter, ceiling rather than a second mechanism.
 
-**Open:** whether MFA is enforced before Rui has it enabled on his own account. Turning this on
-without setting up MFA first locks the only operator out of `/admin`. The order matters and it
-is a five-minute job on Clerk's side — do it first, then ship the guard.
+**MFA waits for the production Clerk instance — settled 13 September 2026.** Rui's answer: yes,
+but it needs the production environment set up on Clerk first, which has not happened. Enforcing
+it against the development instance would lock the only operator out of `/admin` for no gain, so
+**this item is gated on go-live** and is written into `docs/deploy.md`'s go-live checklist rather
+than left in a ticket nobody re-reads. The other four changes in this slice do not depend on it
+and can ship whenever.
 
 ### QA — test scenarios
 
@@ -89,4 +92,6 @@ is a five-minute job on Clerk's side — do it first, then ship the guard.
 7. The shared-origin limitation is in `docs/` with a date and a plan.
 8. A test fails if a `NEXT_PUBLIC_` variable ever looks like a database URL.
 9. A rotation procedure for `DATABASE_PLATFORM_URL` is written down.
-10. MFA is enabled on the operator's own Clerk account **before** the guard ships.
+10. MFA is enabled on the operator's own Clerk account **before** the guard ships — and the
+    guard does not ship before the production Clerk instance exists. See the go-live checklist
+    in `docs/deploy.md`.
