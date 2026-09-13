@@ -350,7 +350,7 @@ expensive mistake.
 | 2.1 | Fee plans + student subscriptions (records only, no charging) | ✅ Who owes what is visible and correct |
 | 2.2 | Invoice generation with series, sequential numbering, lines and VAT | ✅ A sibling pair lands on one document, numbered `FT A/1` and never renumbered |
 | 2.3 | Invoice statuses, overdue view, chase action | ✅ **Em dívida** lists what is owed, oldest first; payments are child rows and the status is derived |
-| 2.4 | Operator pays Poolse — Stripe subscription on the organization | Poolse can take money |
+| 2.4 | Operator pays Poolse — Stripe subscription on the organization | ✅ **Built 13 September 2026.** Checkout and the customer portal on Stripe's own pages, a signature-verified webhook that is the only thing that writes billing state, and `stripe_event` as idempotency key and trail in one. Flag-gated: with no key the page says so and nothing else changes. **Never run against a live Stripe account** — no keys in this environment |
 | 2.5 | **Staff salaries** — effective-dated pay per person, Owner/Admin only, roll-up | ✅ **Built 13 September 2026.** `staff_compensation`, effective-dated with one live rate per person by gist exclusion; Salários under Staff with the two monthly-cost figures; an Admin sees every staff member except the Owner, enforced in the repository and stated on the card |
 | 2.6 | Salary export and import | ✅ **Built 13 September 2026.** The sixth `MatchSpec`: export writes the contract (never the derived figures) with catalogue headers, import matches by e-mail or checksum-valid NIF and commits whole or not at all. A round trip previews as nothing to do and writes no rows |
 

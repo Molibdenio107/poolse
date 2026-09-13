@@ -334,6 +334,48 @@
       }
     }
   },
+  "subscription": {
+    "title": "Subscrição",
+    "subtitle": "O que o clube paga ao Poolse.",
+    "notPermitted": "Só o proprietário e os administradores podem ver a subscrição.",
+    "ownerOnly": "Só o proprietário pode alterar a subscrição.",
+    "ownerOnlyHint": "Só o proprietário pode iniciar ou alterar a subscrição.",
+    "whereYouStand": "Situação atual",
+    "state": {
+      "trialing": "Em período experimental",
+      "active": "Subscrição ativa",
+      "past_due": "Pagamento em falta",
+      "canceled": "Subscrição terminada",
+      "comped": "Acesso oferecido",
+      "unknown": "Sem subscrição"
+    },
+    "trialEnds": "O período experimental termina a",
+    "renewsOn": "Renova a",
+    "endsOn": "Termina a",
+    "pastDueExplains": "O último pagamento não foi aceite. O clube continua a funcionar normalmente — atualize os dados do cartão para regularizar.",
+    "cancellingExplains": "A subscrição foi marcada para terminar. Até essa data fica tudo como está.",
+    "compedExplains": "Este clube não é faturado. É uma decisão do Poolse e não expira sozinha.",
+    "notConfiguredTitle": "Pagamentos ainda não configurados",
+    "notConfigured": "Esta instalação do Poolse ainda não está ligada ao Stripe, por isso não é possível subscrever aqui. Nada do resto da aplicação é afetado.",
+    "choosePlan": "Escolher plano",
+    "currentPlan": "Plano atual",
+    "subscribe": "Subscrever",
+    "cardHandledByStripe": "O pagamento é feito numa página do Stripe. O Poolse nunca vê nem guarda os dados do cartão.",
+    "manage": "Gerir subscrição",
+    "portalExplains": "Alterar o cartão, mudar de plano, ver os recibos ou cancelar — tudo na página do Stripe.",
+    "openPortal": "Abrir a página de faturação",
+    "alreadySubscribed": "Este clube já tem uma subscrição ativa.",
+    "noCustomer": "Este clube ainda não subscreveu.",
+    "checkoutFailed": "Não foi possível abrir a página de pagamento.",
+    "planInvalid": "Plano desconhecido.",
+    "failed": "Não foi possível completar a operação.",
+    "interval": {
+      "month": "mês",
+      "year": "ano",
+      "week": "semana",
+      "day": "dia"
+    }
+  },
   "transfer": {
     "title": "Transferir propriedade",
     "explain": "A organização tem um único proprietário. Pode passá-la a um administrador — por exemplo, se sair do clube.",

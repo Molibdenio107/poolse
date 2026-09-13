@@ -74,6 +74,8 @@ import { TenantMiddleware } from './tenant/tenant.middleware.js';
 import { VacationsController } from './vacations/vacations.controller.js';
 import { PlacesController, WeatherController } from './weather/weather.controller.js';
 import { ClerkWebhookController } from './webhooks/clerk-webhook.controller.js';
+import { StripeWebhookController } from './webhooks/stripe-webhook.controller.js';
+import { SubscriptionController } from './billing/subscription.controller.js';
 
 /** Public: no session token expected. Health is for the platform, webhooks authenticate by signature. */
 const PUBLIC_ROUTES = ['health', 'webhooks/(.*)'] as const;
@@ -124,6 +126,8 @@ const IDENTITY_ONLY_ROUTES = [
     MeController,
     SessionsController,
     ClerkWebhookController,
+    StripeWebhookController,
+    SubscriptionController,
     OrganizationsController,
     SettingsController,
     RedemptionController,

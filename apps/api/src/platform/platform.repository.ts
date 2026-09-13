@@ -52,11 +52,16 @@ export interface TenantRow {
   subscriptionStatus: SubscriptionStatus;
   trialEndsAt: string | null;
   /**
-   * Null, and deliberately so: plan tiers are indicative in `docs/decisions.md`
-   * and modelled nowhere. A column invented here to fill the cell would be a
-   * second answer to a question Stripe will answer in 2.4.
+   * Which plan they pay for, from Stripe — slice 2.4 filled this in.
+   *
+   * It was deliberately null until then: a column invented to fill the cell
+   * would have been a second answer to a question Stripe answers. Still
+   * *descriptive*, and deliberately beside the ceilings rather than deciding
+   * them — a club on Clube whose `maxFacilities` says 1 is a real state, reached
+   * by somebody buying a plan without the operator widening the licence, and an
+   * operator seeing both figures is how that gets noticed.
    */
-  planTier: string | null;
+  planTier: 'starter' | 'club' | 'network' | null;
   /** Active management memberships plus invitations still outstanding. */
   managementSeatsUsed: number;
   /** Null is unlimited, never zero. */
@@ -143,6 +148,7 @@ export async function listTenants(
       kind: TenantRow['kind'];
       created_at: Date;
       subscription_status: SubscriptionStatus;
+      plan: 'starter' | 'club' | 'network' | null;
       trial_ends_at: Date | null;
       management_seats_used: number;
       max_management_users: number | null;
@@ -166,6 +172,7 @@ export async function listTenants(
              o.kind::text                AS kind,
              o.created_at,
              o.subscription_status::text AS subscription_status,
+             o.plan::text AS plan,
              o.trial_ends_at,
              o.max_management_users,
              o.max_facilities,
@@ -287,7 +294,7 @@ export async function listTenants(
       createdAt: row.created_at.toISOString(),
       subscriptionStatus: row.subscription_status,
       trialEndsAt: row.trial_ends_at?.toISOString() ?? null,
-      planTier: null,
+      planTier: row.plan,
       // `count()` is bigint, which node-postgres hands back as a string; the two
       // halves of the seat sum arrive as one already-added string either way.
       managementSeatsUsed: Number(row.management_seats_used),

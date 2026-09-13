@@ -22,6 +22,7 @@ looks for it.
 | [billing.md](billing.md) | Price list, periodicities, what a student pays |
 | [invoicing.md](invoicing.md) | The documents a fee line becomes: numbering, runs, credit notes, payments and chasing |
 | [energy.md](energy.md) | Meters, what they read, the dial rule, and consumption by month |
+| [subscription.md](subscription.md) | What the club pays Poolse: the plans, Stripe checkout, the customer portal and the webhook that makes it true |
 | [platform.md](platform.md) | The operator's side: who may reach `/admin`, the narrow cross-tenant DB role, and the tenants table |
 | [observability.md](observability.md) | What Poolse records about itself: `/health`, per-tenant request stats, the health verdict, Sentry |
 

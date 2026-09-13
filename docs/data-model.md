@@ -2843,3 +2843,49 @@ explain it, and would leave the API unable to tell 403 from 404.
 
 **Archiving the live rate leaves no live rate.** The previous one stays closed and does not
 reopen: a closed rate coming back to life is a pay change nobody made.
+
+### The operator's subscription — slice 2.4, 13 September 2026
+
+```
+organization  (columns added)
+  plan plan_key,                                -- 'starter'|'club'|'network'; descriptive
+  stripe_customer_id text,                      -- since the core migration; first written now
+  stripe_subscription_id text,
+  subscription_current_period_end timestamptz,
+  subscription_cancel_at_period_end boolean not null default false
+  unique (stripe_customer_id)     where stripe_customer_id is not null
+  unique (stripe_subscription_id) where stripe_subscription_id is not null
+
+stripe_event                                    -- the platform's book, not a tenant's
+  id text primary key,                          -- Stripe's own `evt_...`
+  type, organization_id (nullable fk), changed jsonb, outcome, received_at
+  no updated_at, no archived_at
+```
+
+**`plan` says what they bought, not what they may do.** Paying for Clube does not raise
+`max_facilities`: the ceilings stay a hand-set operator decision in `/admin`, so there is
+exactly one place a limit is decided and no webhook can quietly widen a licence. A club on
+Clube whose site limit still says 1 is a real state, and `/admin` showing both is how it gets
+noticed.
+
+**The unique index on `stripe_customer_id` is load-bearing.** The webhook resolves an event to
+a club *through* it; a duplicate would apply somebody's payment to somebody else's club, and
+nothing on any screen would say so. Partial, because most rows are null and a plain constraint
+would let exactly one of them be so.
+
+**`stripe_event` is the idempotency key and the audit trail in one table**, because they are
+the same fact written down: this event arrived, this is what it did. Stripe retries any
+delivery it did not get a 2xx for, so the primary key *is* the protection — and because the
+insert commits with the change, a retry after a failure finds nothing and applies it properly.
+
+It is deliberately **not** `platform_audit_log`: that table's actor column is
+`clerk_user_id NOT NULL` and a webhook has no person behind it. So the two write paths to a
+tenant's billing state each keep their own book — an operator's through `changeTenant`,
+Stripe's through `applyStripeEvent` — and neither can write without leaving one. `changed`
+holds the columns that moved and never the Stripe payload, which carries the customer's name
+and address.
+
+**Five more named columns on the `poolse_platform` UPDATE grant**, joining the six from the
+platform slice. The reasoning is that slice's: a bare `GRANT UPDATE ON organization` would
+hand over the name, the slug and the VAT number. The webhook is cross-tenant by nature and
+runs on that role; `subscription.sql` asserts it still cannot rename a club or delete a tenant.

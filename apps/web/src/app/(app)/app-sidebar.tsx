@@ -238,6 +238,21 @@ const SECTIONS: Item[] = [
       { href: '/dashboard/classes/reposicoes', key: 'reposicao.title' },
     ],
   },
+  /*
+   * Subscrição — slice 2.4.
+   *
+   * Last, and its own item rather than a child of anything: it is the one screen
+   * whose subject is the bill *Poolse* sends, where every other section is about
+   * the club's own work. Owner and admin see it — an admin needs to know the
+   * trial ends on Friday — and only the owner can act on it, which the API
+   * enforces and the page says out loud.
+   */
+  {
+    href: '/dashboard/subscription',
+    key: 'subscription.title',
+    icon: 'invoice',
+    roles: ['owner', 'admin'],
+  },
 ];
 
 /**

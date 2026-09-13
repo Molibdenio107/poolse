@@ -1,0 +1,280 @@
+import {
+  BadRequestException,
+  Body,
+  ConflictException,
+  Controller,
+  Get,
+  Logger,
+  NotFoundException,
+  Post,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { currentTenant } from '../tenant/tenant.context.js';
+import { hasRole, requireRole } from '../tenant/roles.js';
+import {
+  anyPlanPriced,
+  appUrl,
+  isPlanKey,
+  PLAN_KEYS,
+  priceIdFor,
+  stripeClient,
+  stripeEnabled,
+  type PlanKey,
+} from './stripe.js';
+import {
+  readCustomerId,
+  readSubscription,
+  rememberCustomer,
+  type OrganizationSubscription,
+} from './subscription.repository.js';
+
+/**
+ * What the club pays Poolse — slice 2.4.
+ *
+ * **Owner and admin read it; only the owner starts or changes it.** An admin
+ * needs to know the trial ends on Friday; an admin committing the owner's card
+ * to a monthly charge is a different thing, and there is exactly one owner per
+ * tenant precisely so that "who pays" has an answer.
+ *
+ * **Everything works with Stripe absent.** No key means `configured: false`, the
+ * plans come back unpriced, and the screen says so — the free pilot and every
+ * development machine live there, and a module that threw at boot would make
+ * them a broken application rather than one that does not sell anything yet.
+ *
+ * **Poolse never holds a card.** Checkout and the customer portal are Stripe's
+ * own hosted pages; what crosses back is a URL to send somebody to. That is the
+ * whole reason to use them: a payment form on our side is a PCI question we have
+ * no reason to answer.
+ */
+
+export interface PlanOffer {
+  key: PlanKey;
+  /** Null until somebody sets a price in Stripe — the page says so rather than guessing. */
+  amountCents: number | null;
+  currency: string | null;
+  /** 'month' | 'year', from the price. Null with the amount. */
+  interval: string | null;
+}
+
+export interface SubscriptionView {
+  subscription: OrganizationSubscription;
+  plans: PlanOffer[];
+  /** Stripe is wired up *and* at least one plan has a price. */
+  configured: boolean;
+  /** Whether this caller may start or change it — the owner, and nobody else. */
+  canManage: boolean;
+}
+
+/**
+ * The prices, cached.
+ *
+ * A page view would otherwise be three calls to Stripe for figures that change
+ * about once a year. Five minutes is short enough that a correction in the
+ * dashboard shows up while somebody is still looking at the screen, and long
+ * enough that a club refreshing does not hammer an API Poolse pays nothing for
+ * but is rate-limited on.
+ */
+const PRICE_TTL_MS = 5 * 60 * 1000;
+let priceCache: { at: number; plans: PlanOffer[] } | null = null;
+
+export function resetPriceCache(): void {
+  priceCache = null;
+}
+
+@Controller('subscription')
+export class SubscriptionController {
+  private readonly logger = new Logger(SubscriptionController.name);
+
+  @Get()
+  async read(): Promise<SubscriptionView> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const subscription = await readSubscription(organizationId);
+    if (subscription === null) throw new NotFoundException('No such organization');
+
+    return {
+      subscription,
+      plans: await offers(this.logger),
+      configured: stripeEnabled() && anyPlanPriced(),
+      canManage: hasRole('owner'),
+    };
+  }
+
+  /**
+   * Start paying — a Stripe Checkout session, returned as a URL to go to.
+   *
+   * The customer is made once and remembered, so a club that abandons a checkout
+   * and comes back does not accumulate customers; `client_reference_id` carries
+   * the organization so an event can be traced back to a club even before the
+   * customer id lands, and the subscription metadata carries it for the same
+   * reason.
+   */
+  @Post('checkout')
+  async checkout(@Body() body: Record<string, unknown>): Promise<{ url: string }> {
+    requireRole('owner');
+    const { organizationId } = currentTenant();
+
+    const plan = readPlan(body['plan']);
+    const priceId = priceIdFor(plan);
+    if (!stripeEnabled() || priceId === null) {
+      throw new ServiceUnavailableException({
+        code: 'billing_not_configured',
+        message: 'Billing is not configured on this installation',
+      });
+    }
+
+    const subscription = await readSubscription(organizationId);
+    if (subscription === null) throw new NotFoundException('No such organization');
+
+    /*
+     * A club that already pays is sent to the portal instead, not through a
+     * second checkout. Two subscriptions against one customer is two charges a
+     * month and a support conversation nobody enjoys.
+     */
+    if (subscription.hasSubscription) {
+      throw new ConflictException({
+        code: 'already_subscribed',
+        message: 'This organization already has a subscription',
+      });
+    }
+
+    const stripe = stripeClient();
+    const customerId = await customerFor(organizationId, subscription);
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      client_reference_id: organizationId,
+      subscription_data: { metadata: { organization_id: organizationId } },
+      // Back to the same screen either way. The success page says nothing about
+      // what happened: the webhook is what makes a subscription true, and a page
+      // that claimed otherwise would be guessing ahead of it.
+      success_url: appUrl('/dashboard/subscription?checkout=done'),
+      cancel_url: appUrl('/dashboard/subscription?checkout=cancelled'),
+      locale: 'pt',
+      allow_promotion_codes: true,
+    });
+
+    if (session.url === null) {
+      throw new ServiceUnavailableException({
+        code: 'checkout_failed',
+        message: 'Stripe did not return a checkout URL',
+      });
+    }
+
+    return { url: session.url };
+  }
+
+  /**
+   * The customer portal — change the card, see the receipts, cancel.
+   *
+   * Stripe's page rather than ours, and that is most of the value of this slice:
+   * everything a club wants to do with a subscription after starting it is a
+   * screen somebody else maintains, in a flow that is already compliant.
+   */
+  @Post('portal')
+  async portal(): Promise<{ url: string }> {
+    requireRole('owner');
+    const { organizationId } = currentTenant();
+
+    if (!stripeEnabled()) {
+      throw new ServiceUnavailableException({
+        code: 'billing_not_configured',
+        message: 'Billing is not configured on this installation',
+      });
+    }
+
+    const customerId = await readCustomerId(organizationId);
+    if (customerId === null) {
+      // Nothing to manage: they have never checked out. The screen offers the
+      // plans instead, which is what it already shows.
+      throw new ConflictException({
+        code: 'no_customer',
+        message: 'This organization has never subscribed',
+      });
+    }
+
+    const session = await stripeClient().billingPortal.sessions.create({
+      customer: customerId,
+      return_url: appUrl('/dashboard/subscription'),
+      locale: 'pt',
+    });
+
+    return { url: session.url };
+  }
+}
+
+/** The customer for this club, made once and remembered. */
+async function customerFor(
+  organizationId: string,
+  subscription: OrganizationSubscription,
+): Promise<string> {
+  const existing = await readCustomerId(organizationId);
+  if (existing !== null) return existing;
+
+  const customer = await stripeClient().customers.create({
+    name: subscription.name,
+    metadata: { organization_id: organizationId },
+  });
+
+  await rememberCustomer(organizationId, customer.id);
+  return customer.id;
+}
+
+/**
+ * What each plan costs, from Stripe.
+ *
+ * A plan with no price configured comes back with nulls rather than being
+ * omitted: the three plans are the product, and a page that showed two of them
+ * because somebody had not finished the dashboard would be a worse lie than an
+ * honest "valor por definir" — which is what the marketing page has said all
+ * along.
+ *
+ * A Stripe outage answers the same way. This screen exists to tell a club where
+ * it stands; a 502 because a price lookup failed would take that away over a
+ * figure they could also read on the public site.
+ */
+async function offers(logger: Logger): Promise<PlanOffer[]> {
+  if (!stripeEnabled()) {
+    return PLAN_KEYS.map((key) => ({ key, amountCents: null, currency: null, interval: null }));
+  }
+
+  const cached = priceCache;
+  if (cached !== null && Date.now() - cached.at < PRICE_TTL_MS) return cached.plans;
+
+  const stripe = stripeClient();
+  const plans: PlanOffer[] = [];
+
+  for (const key of PLAN_KEYS) {
+    const priceId = priceIdFor(key);
+    if (priceId === null) {
+      plans.push({ key, amountCents: null, currency: null, interval: null });
+      continue;
+    }
+
+    try {
+      const price = await stripe.prices.retrieve(priceId);
+      plans.push({
+        key,
+        amountCents: price.unit_amount,
+        currency: price.currency.toUpperCase(),
+        interval: price.recurring?.interval ?? null,
+      });
+    } catch (error) {
+      logger.warn(`Could not read the price for ${key}: ${String(error)}`);
+      plans.push({ key, amountCents: null, currency: null, interval: null });
+    }
+  }
+
+  priceCache = { at: Date.now(), plans };
+  return plans;
+}
+
+function readPlan(value: unknown): PlanKey {
+  if (typeof value !== 'string' || !isPlanKey(value)) {
+    throw new BadRequestException({ code: 'invalid_plan', field: 'plan' });
+  }
+  return value;
+}

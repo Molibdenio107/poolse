@@ -2921,8 +2921,8 @@ export interface PlatformTenant {
   createdAt: string;
   subscriptionStatus: SubscriptionStatus;
   trialEndsAt: string | null;
-  /** Null until Stripe models one — phase 2.4. The cell says so rather than guessing. */
-  planTier: string | null;
+  /** Which plan they pay for, from Stripe — 2.4. Null where nobody has subscribed. */
+  planTier: PlanKey | null;
   /** Active management memberships plus invitations still outstanding. */
   managementSeatsUsed: number;
   /** Null is unlimited, never zero. */
@@ -3155,4 +3155,45 @@ export interface SalaryImportResult {
   refusal: 'duplicatePerson' | null;
   committed: boolean;
   written: number;
+}
+
+/**
+ * What the club pays Poolse — slice 2.4.
+ *
+ * `configured` is false on every installation with no Stripe key, which is every
+ * development machine and the free pilot. The screen says so; nothing else in
+ * the app changes shape.
+ *
+ * The Stripe ids never cross to the browser. A club has no use for them, and a
+ * customer id in a screenshot is one more thing to keep out of one.
+ */
+export interface OrganizationSubscription {
+  organizationId: string;
+  name: string;
+  plan: PlanKey | null;
+  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'comped' | null;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  hasCustomer: boolean;
+  hasSubscription: boolean;
+  suspendedAt: string | null;
+}
+
+export type PlanKey = 'starter' | 'club' | 'network';
+
+export interface PlanOffer {
+  key: PlanKey;
+  /** Null until somebody prices the plan in Stripe — the page says so. */
+  amountCents: number | null;
+  currency: string | null;
+  interval: string | null;
+}
+
+export interface SubscriptionView {
+  subscription: OrganizationSubscription;
+  plans: PlanOffer[];
+  configured: boolean;
+  /** The owner, and nobody else. An admin reads this screen and cannot act on it. */
+  canManage: boolean;
 }

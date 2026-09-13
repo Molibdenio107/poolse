@@ -101,6 +101,26 @@ name), keeps `sendDefaultPii: false` and `tracesSampleRate: 0`, and captures fro
 rather than `SentryGlobalFilter` — that filter is `@Catch()` and terminates, so two global filters
 means one never runs. `docs/features/observability.md`.
 
+**A subscription is Stripe's to know and the webhook's to write; a licence is the operator's.**
+Slice 2.4. `STRIPE_SECRET_KEY` absent means the Subscrição page says so, plans come back
+unpriced and `/webhooks/stripe` answers 503 — nothing else changes shape, which is the state of
+every dev machine and of the free pilot. **Prices live in Stripe** (an env var per plan names a
+*price* id) and are read back for display, because the amounts are still undecided and a price
+in a deploy belongs in a dashboard. **Paying changes no ceiling**: `plan` is descriptive and
+`max_facilities` stays a hand-set `/admin` decision, so a limit has exactly one author.
+**Checkout and the portal are Stripe's own pages** — Poolse never holds a card — and a club that
+already pays is sent to the portal, never offered a second checkout. **The signature check is the
+entire authentication** for the webhook, over the raw bytes, and a missing signing secret is a
+503 rather than a skipped check. **`stripe_event` is the idempotency key and the trail in one
+table**: Stripe's event id as the primary key, inserted in the same transaction as the change, so
+a retry finds the row and stops and an out-of-order redelivery cannot undo a later event. It is
+not `platform_audit_log` because that table's actor is `clerk_user_id NOT NULL` and a webhook has
+no person — two write paths to the billing columns, each leaving its own entry. The webhook
+answers **200 to almost everything** (unhandled type, unknown customer, redelivery): Stripe
+disables an endpoint that keeps failing. A failed payment sets `past_due` and **never**
+`suspended_at`, and nothing closes a club automatically — not even a trial running out.
+`docs/features/subscription.md`.
+
 **Platform administration is not a tenant role, and it has its own database login.** `member_role`
 says what somebody may do inside one club; `platform_admin` — keyed on the Clerk user id, no
 `organization_id` — says whether they may look at all of them. No role grants it, being owner of a

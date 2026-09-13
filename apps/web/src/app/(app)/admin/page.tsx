@@ -279,12 +279,15 @@ function tenantColumns(
       header: t('admin.column.plan'),
       render: (tenant) =>
         /*
-         * Null, and it says so in words rather than leaving a blank cell. Plan
-         * tiers are indicative in the decisions log and modelled nowhere; an
-         * empty cell would read as data that failed to load.
+         * The plan's own name from the pricing catalogue, so /admin and the
+         * public page call it the same thing. Null says so in words rather than
+         * leaving a blank cell, which would read as data that failed to load —
+         * and after 2.4 it means something precise: nobody has subscribed.
          */
-        tenant.planTier ?? (
+        tenant.planTier === null ? (
           <span className="text-sm text-foreground-muted">{t('admin.noPlan')}</span>
+        ) : (
+          t(`marketing.pricing.${tenant.planTier}.name`)
         ),
     },
     {

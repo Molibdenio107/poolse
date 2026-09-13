@@ -79,6 +79,14 @@ const TENANT_TABLES = [
    */
   'platform_audit_log',
   /*
+   * Stripe's own book — slice 2.4, and here for the same reason as the line
+   * above. A row is *about* a tenant rather than belonging to one, it carries no
+   * RLS policy for poolse_app, and its `organization_id` is nullable; it is also
+   * a real foreign key that nothing cascades, so a scratch tenant that received
+   * a webhook would fail teardown on the key.
+   */
+  'stripe_event',
+  /*
    * Telemetry about a tenant rather than a tenant's data — slice 2 — but it does
    * carry `organization_id` as a real foreign key, and the interceptor is
    * registered globally, so any integration test that lets a minute pass leaves

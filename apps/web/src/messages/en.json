@@ -334,6 +334,48 @@
       }
     }
   },
+  "subscription": {
+    "title": "Subscription",
+    "subtitle": "What the club pays Poolse.",
+    "notPermitted": "Only the owner and administrators can see the subscription.",
+    "ownerOnly": "Only the owner can change the subscription.",
+    "ownerOnlyHint": "Only the owner can start or change the subscription.",
+    "whereYouStand": "Where you stand",
+    "state": {
+      "trialing": "On trial",
+      "active": "Subscription active",
+      "past_due": "Payment outstanding",
+      "canceled": "Subscription ended",
+      "comped": "Access given free",
+      "unknown": "No subscription"
+    },
+    "trialEnds": "The trial ends on",
+    "renewsOn": "Renews on",
+    "endsOn": "Ends on",
+    "pastDueExplains": "The last payment was refused. The club carries on working as normal — update the card details to settle it.",
+    "cancellingExplains": "The subscription is set to end. Nothing changes until that date.",
+    "compedExplains": "This club is not billed. That is a decision Poolse made, and it does not expire on its own.",
+    "notConfiguredTitle": "Payments are not set up yet",
+    "notConfigured": "This installation of Poolse is not connected to Stripe, so there is nothing to subscribe to here. Nothing else in the app is affected.",
+    "choosePlan": "Choose a plan",
+    "currentPlan": "Current plan",
+    "subscribe": "Subscribe",
+    "cardHandledByStripe": "Payment happens on a page hosted by Stripe. Poolse never sees or stores card details.",
+    "manage": "Manage subscription",
+    "portalExplains": "Change the card, switch plan, read the receipts or cancel — all on Stripe's page.",
+    "openPortal": "Open the billing page",
+    "alreadySubscribed": "This club already has an active subscription.",
+    "noCustomer": "This club has never subscribed.",
+    "checkoutFailed": "The payment page could not be opened.",
+    "planInvalid": "Unknown plan.",
+    "failed": "That could not be completed.",
+    "interval": {
+      "month": "month",
+      "year": "year",
+      "week": "week",
+      "day": "day"
+    }
+  },
   "transfer": {
     "title": "Transfer ownership",
     "explain": "An organization has exactly one owner. You can pass it to an administrator — if you leave the club, for instance.",
