@@ -6,7 +6,7 @@ import { useSavedAction } from '@/lib/saved';
 import { formatCents } from '@/lib/money';
 import type { PlanKey, PlanOffer } from '@/lib/api';
 import { checkoutAction, portalAction } from './subscription.actions';
-import type { FormState } from '../actions';
+import type { FormState } from '../../actions';
 
 /**
  * The three plans, and the one button that matters — slice 2.4.

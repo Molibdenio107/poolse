@@ -29,12 +29,19 @@ import {
 } from './subscription.repository.js';
 
 /**
- * What the club pays Poolse — slice 2.4.
+ * What the club pays Poolse — slice 2.4, narrowed 13 September 2026.
  *
- * **Owner and admin read it; only the owner starts or changes it.** An admin
- * needs to know the trial ends on Friday; an admin committing the owner's card
- * to a monthly charge is a different thing, and there is exactly one owner per
- * tenant precisely so that "who pays" has an answer.
+ * **The owner, and nobody else.** The first version let an admin read it on the
+ * grounds that somebody has to know the trial ends on Friday; Rui reversed that
+ * the same day, and the narrower rule is the better one. What Poolse charges the
+ * club is the owner's own business — it is their card, their renewal and their
+ * decision to cancel — and an office manager who administers a club is not
+ * automatically entitled to it, for the same reason they are not entitled to the
+ * owner's salary. There is exactly one owner per tenant precisely so that "who
+ * pays" has an answer.
+ *
+ * It lives under **O meu perfil** rather than in the main menu for the same
+ * reason: it is a fact about the account rather than about the club's work.
  *
  * **Everything works with Stripe absent.** No key means `configured: false`, the
  * plans come back unpriced, and the screen says so — the free pilot and every
@@ -61,7 +68,13 @@ export interface SubscriptionView {
   plans: PlanOffer[];
   /** Stripe is wired up *and* at least one plan has a price. */
   configured: boolean;
-  /** Whether this caller may start or change it — the owner, and nobody else. */
+  /**
+   * Whether this caller may start or change it.
+   *
+   * True for everybody who can reach the endpoint at all, since that is now only
+   * the owner. It stays on the response because the screen reads it: a button
+   * offered on a guess rather than on an answer is how the two drift apart.
+   */
   canManage: boolean;
 }
 
@@ -87,7 +100,7 @@ export class SubscriptionController {
 
   @Get()
   async read(): Promise<SubscriptionView> {
-    requireRole('owner', 'admin');
+    requireRole('owner');
     const { organizationId } = currentTenant();
 
     const subscription = await readSubscription(organizationId);
@@ -97,6 +110,12 @@ export class SubscriptionController {
       subscription,
       plans: await offers(this.logger),
       configured: stripeEnabled() && anyPlanPriced(),
+      /*
+       * Always true now that only the owner reaches this at all. Kept as a field
+       * rather than removed: the screen asks it rather than assuming, so the day
+       * a second role is let in — a bookkeeper, say — the answer moves in one
+       * place instead of in every button.
+       */
       canManage: hasRole('owner'),
     };
   }
@@ -151,8 +170,8 @@ export class SubscriptionController {
       // Back to the same screen either way. The success page says nothing about
       // what happened: the webhook is what makes a subscription true, and a page
       // that claimed otherwise would be guessing ahead of it.
-      success_url: appUrl('/dashboard/subscription?checkout=done'),
-      cancel_url: appUrl('/dashboard/subscription?checkout=cancelled'),
+      success_url: appUrl('/dashboard/profile/subscription?checkout=done'),
+      cancel_url: appUrl('/dashboard/profile/subscription?checkout=cancelled'),
       locale: 'pt',
       allow_promotion_codes: true,
     });
@@ -198,7 +217,7 @@ export class SubscriptionController {
 
     const session = await stripeClient().billingPortal.sessions.create({
       customer: customerId,
-      return_url: appUrl('/dashboard/subscription'),
+      return_url: appUrl('/dashboard/profile/subscription'),
       locale: 'pt',
     });
 

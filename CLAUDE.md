@@ -102,7 +102,9 @@ rather than `SentryGlobalFilter` — that filter is `@Catch()` and terminates, s
 means one never runs. `docs/features/observability.md`.
 
 **A subscription is Stripe's to know and the webhook's to write; a licence is the operator's.**
-Slice 2.4. `STRIPE_SECRET_KEY` absent means the Subscrição page says so, plans come back
+Slice 2.4. **Owner only, under *O meu perfil*** — not a menu item and not an admin's business:
+the card, the renewal and the decision to cancel are the owner's own, the same reasoning that
+keeps the owner's salary from an admin. `STRIPE_SECRET_KEY` absent means the Subscrição page says so, plans come back
 unpriced and `/webhooks/stripe` answers 503 — nothing else changes shape, which is the state of
 every dev machine and of the free pilot. **Prices live in Stripe** (an env var per plan names a
 *price* id) and are read back for display, because the amounts are still undecided and a price

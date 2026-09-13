@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { apiFetch, type ActiveSession, type Me, type People } from '@/lib/api';
@@ -79,6 +80,13 @@ export default async function ProfilePage(): Promise<React.ReactElement> {
 
   const membership = me?.memberships[0] ?? null;
 
+  /*
+   * Exactly one owner per tenant, so this is a fact rather than a judgement.
+   * Read from the membership the API already resolved — never from a role the
+   * client could have asked for.
+   */
+  const isOwner = membership?.roles.includes('owner') === true;
+
   // Whole days remaining, rounded up, so the last day reads "1 day left" rather
   // than "0". Information only — nothing is enforced until phase 2.
   const trialDaysLeft =
@@ -119,6 +127,37 @@ export default async function ProfilePage(): Promise<React.ReactElement> {
               <ProfileForm me={me} />
             </div>
           </div>
+        </section>
+      )}
+
+      {/*
+        * Subscrição lives here — 13 September 2026.
+        *
+        * It was a menu item for half a day. What Poolse charges the club is the
+        * owner's own business, like their card and their renewal date, so it
+        * belongs with the account rather than in the menu of the club's work.
+        * **Owner only**, and the endpoint refuses everybody else regardless of
+        * how they arrived — this link is a courtesy, not the control.
+        *
+        * A link rather than the screen itself: this page is already the name,
+        * the photo, the organization, the trial, the devices and the transfer of
+        * ownership, and three price cards on the end of that would bury all of
+        * it.
+        */}
+      {isOwner && (
+        <section className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded border border-border bg-surface p-5">
+          <div>
+            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {t('subscription.title')}
+            </h2>
+            <p className="mt-1 text-sm text-foreground-muted">{t('subscription.subtitle')}</p>
+          </div>
+          <Link
+            href="/dashboard/profile/subscription"
+            className="shrink-0 rounded border border-border px-4 py-2 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('subscription.open')}
+          </Link>
         </section>
       )}
 

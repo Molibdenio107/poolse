@@ -96,3 +96,21 @@ Two things POOLSE-24 can rely on rather than re-deriving:
   A schedule must read the line, never the plan — reading the plan would re-price a family
   retroactively the moment somebody corrected a typo in the price list.
 
+
+## `comped` has two homes — raised 13 September 2026, unsettled
+
+`subscription_status` already carries `comped`, decided in `platform-admin.sql`: the free pilot
+is live and is not billed. [POOLSE-63](./POOLSE-63-paid-outside-stripe.md) adds
+`billing_mode AS ENUM ('stripe', 'manual', 'comped')`, which gives one fact two places to live.
+
+Two homes for one fact is how they drift, and the drift here is silent: a club could be
+`billing_mode = 'manual'` and `subscription_status = 'comped'`, which reads as "pays in cash"
+and "is not billed" at the same time.
+
+**Recommended resolution:** `billing_mode` owns it. A comped club becomes
+`billing_mode = 'comped'`, `subscription_status = 'active'` — which is also the more honest
+pair, since a free pilot *is* active. `subscription_status.comped` stops being written and is
+backfilled in the same migration; the value stays in the enum because removing one is a
+rebuild, and a value nothing writes costs nothing.
+
+**This reverses a settled decision and needs Rui's word before any SQL in POOLSE-63.**

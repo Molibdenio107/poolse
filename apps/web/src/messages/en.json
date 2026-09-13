@@ -396,7 +396,8 @@
       "year": "year",
       "week": "week",
       "day": "day"
-    }
+    },
+    "open": "View subscription"
   },
   "transfer": {
     "title": "Transfer ownership",

@@ -18,10 +18,17 @@ Everything needed is in `.env.example` under *Stripe*.
 
 ## Where it lives
 
-**Subscrição**, `/dashboard/subscription`, last in the menu. Owner and admin see it — an
-admin needs to know the trial ends on Friday — and **only the owner can act on it**. An admin
-committing the owner's card to a monthly charge is a different thing from reading a date, and
-there is exactly one owner per tenant precisely so "who pays" has an answer.
+**O meu perfil → Subscrição**, `/dashboard/profile/subscription`. Not in the main menu, and
+**owner only** — narrowed on 13 September 2026, the day after it shipped.
+
+Both halves of that are the same reasoning. What Poolse charges the club is the owner's own
+business: their card, their renewal date, their decision to cancel. So it sits with the account
+rather than in the menu of the club's work, and an admin is refused it outright — no more
+entitled to it than to the owner's salary. There is exactly one owner per tenant precisely so
+that "who pays" has an answer.
+
+The link on *O meu perfil* is a courtesy. The endpoint refuses everybody but the owner however
+they arrived.
 
 ## What the page says
 

@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { ApiError, apiPost } from '@/lib/api';
-import type { FormState } from '../actions';
+import type { FormState } from '../../actions';
 
 /**
  * Starting and managing what the club pays — slice 2.4.

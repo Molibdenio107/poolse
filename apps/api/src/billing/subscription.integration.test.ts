@@ -323,7 +323,7 @@ test('2.4 — an event type nobody handles leaves no trace', async () => {
   });
 });
 
-test('2.4 — owner and admin read the subscription; nobody else does', async () => {
+test('2.4 — the owner reads the subscription, and nobody else does at all', async () => {
   await withScratchTenant(async (tenant) => {
     const admin = await addMember(tenant, 'Sandra', 'Marques', ['admin']);
     const teacher = await addMember(tenant, 'Inês', 'Costa', ['instructor']);
@@ -335,33 +335,21 @@ test('2.4 — owner and admin read the subscription; nobody else does', async ()
       assert.equal(view.plans.length, 3, 'the three plans are the product');
     });
 
-    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
-      const view = await new SubscriptionController().read();
-      // An admin needs to know the trial ends on Friday; an admin committing the
-      // owner's card to a monthly charge is a different thing.
-      assert.equal(view.canManage, false);
-    });
-
-    for (const role of ['instructor', 'maintenance', 'student', 'guardian'] as const) {
-      await actingAs(tenant, { membershipId: teacher, roles: [role] }, async () => {
+    /*
+     * **An admin is refused outright** — narrowed on 13 September 2026. The
+     * first version let them read it; what Poolse charges the club is the
+     * owner's card, their renewal and their decision to cancel, and an office
+     * manager is no more entitled to that than to the owner's salary.
+     */
+    for (const role of ['admin', 'instructor', 'maintenance', 'student', 'guardian'] as const) {
+      const who = role === 'admin' ? admin : teacher;
+      await actingAs(tenant, { membershipId: who, roles: [role] }, async () => {
         const controller = new SubscriptionController();
         await expectStatus(() => controller.read(), 403);
         await expectStatus(() => controller.checkout({ plan: 'club' }), 403);
         await expectStatus(() => controller.portal(), 403);
       });
     }
-  });
-});
-
-test('2.4 — an admin cannot start or change a subscription', async () => {
-  await withScratchTenant(async (tenant) => {
-    const admin = await addMember(tenant, 'Sandra', 'Marques', ['admin']);
-
-    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
-      const controller = new SubscriptionController();
-      await expectStatus(() => controller.checkout({ plan: 'club' }), 403);
-      await expectStatus(() => controller.portal(), 403);
-    });
   });
 });
 

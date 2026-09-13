@@ -396,7 +396,8 @@
       "year": "ano",
       "week": "semana",
       "day": "dia"
-    }
+    },
+    "open": "Ver subscrição"
   },
   "transfer": {
     "title": "Transferir propriedade",

@@ -239,20 +239,15 @@ const SECTIONS: Item[] = [
     ],
   },
   /*
-   * Subscrição — slice 2.4.
+   * Subscrição is deliberately **not** here — 13 September 2026.
    *
-   * Last, and its own item rather than a child of anything: it is the one screen
-   * whose subject is the bill *Poolse* sends, where every other section is about
-   * the club's own work. Owner and admin see it — an admin needs to know the
-   * trial ends on Friday — and only the owner can act on it, which the API
-   * enforces and the page says out loud.
+   * It was a top-level item for half a day. What Poolse charges the club is the
+   * owner's own business, like their card and their renewal date, so it lives
+   * under *O meu perfil* — a fact about the account rather than about the club's
+   * work — and the endpoint refuses everybody but the owner besides. A menu
+   * entry for a screen one person in the club may open is a menu entry the other
+   * fifteen read as something missing.
    */
-  {
-    href: '/dashboard/subscription',
-    key: 'subscription.title',
-    icon: 'invoice',
-    roles: ['owner', 'admin'],
-  },
 ];
 
 /**

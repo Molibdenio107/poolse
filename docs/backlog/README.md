@@ -1,6 +1,6 @@
 # Poolse backlog
 
-59 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
+64 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
 exists, what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got
 wrong) and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance
 criteria, which are the contract.
@@ -19,7 +19,7 @@ QA section is your test list, already written.
 
 ## Index
 
-59 tickets · 27 at High priority · 52 open questions marked in the ticket files
+64 tickets · 30 at High priority · 58 open questions marked in the ticket files
 
 POOLSE-43 … 55 are one feature — lane-level scheduling and parcerias. Read
 [BUILD-ORDER.md](./BUILD-ORDER.md) before starting any of them: four decisions were taken
@@ -86,3 +86,8 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-57](./POOLSE-57-importing-the-wall-timetable.md) | Importing the wall timetable | Scheduling / Import | High | POOLSE-48, 51 | — |
 | [POOLSE-58](./POOLSE-58-staff-salaries.md) | Staff salaries | Staff / Payroll | High — the next slice | — | — |
 | [POOLSE-59](./POOLSE-59-importing-and-exporting-salaries.md) | Importing and exporting salaries | Staff / Payroll / Import | Medium | POOLSE-58 | — |
+| [POOLSE-60](./POOLSE-60-one-plan-two-intervals.md) | One plan, two billing intervals | Billing / Subscription | High | POOLSE-58, 59 built; reverses 2.4's three plans | 1 |
+| [POOLSE-61](./POOLSE-61-trial-lifecycle.md) | The trial lifecycle | Billing / Tenancy | High | POOLSE-60 | 1 |
+| [POOLSE-62](./POOLSE-62-trial-abuse.md) | Trial abuse | Signup / Platform | Medium | POOLSE-61 | 2 |
+| [POOLSE-63](./POOLSE-63-paid-outside-stripe.md) | Subscriptions paid outside Stripe | Platform / Billing | High | POOLSE-61 | 1 |
+| [POOLSE-64](./POOLSE-64-hardening-admin.md) | Hardening `/admin` | Platform / Security | Medium | — | 1 |

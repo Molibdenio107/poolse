@@ -10,6 +10,11 @@ import { PlanPicker } from './plan-picker';
  * The one screen in the product whose subject is the bill *we* send. Everything
  * else in phase 2 is money moving between a club and its families.
  *
+ * **Under O meu perfil, and owner-only** — narrowed on 13 September 2026. The
+ * card, the renewal date and the decision to cancel are the owner's own, so this
+ * sits with the account rather than in the menu of the club's work, and the
+ * endpoint refuses everybody else regardless of how they arrived.
+ *
  * **It says where the club stands before it offers anything.** A trial with four
  * days left, a card that was refused, a subscription set to stop at the end of
  * the month — each of those is a different sentence and a different thing to do,
