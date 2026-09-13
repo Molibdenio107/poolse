@@ -209,6 +209,23 @@ in a submit, nor may two guardians — checked in the controller, which is the o
 whole request is visible. An inline guardian whose NIF matches an existing person is still
 *attached* to them, because that is what stops a second sibling producing a second mother.
 
+**Every module that touches money obeys `docs/financials.md`, and `staff_compensation` is its
+reference implementation.** Read it before a migration, an endpoint or a screen that stores,
+sums or shows a monetary value; if a ticket conflicts with it, stop and ask rather than picking
+one. Four rules bite immediately. **Every stored amount carries a `money_provenance`** — one
+shared enum, `actual | contracted | estimated | assumed`, created once and reused — and a typed
+or imported figure is `contracted`, because `assumed` would cast doubt on every rate a club has
+entered and `actual` would claim it had been paid. **Never sum across provenances into one
+unlabelled figure**: a total is broken down or labelled with its weakest component, which is
+what `rollup()` returns as `provenance` and `byProvenance`. **Every aggregate reports its
+coverage** — "com base em 11 de 14 pessoas" — because an unqualified total over partial data is
+the same shape as a complete one and nothing on it says which. **An `estimated` or `assumed`
+figure may carry `amount_low_cents` / `amount_high_cents`**, either bound standing alone,
+stored from day one though nothing reads them yet: they are the input any later scenario needs
+and adding them afterwards means touching every money table. `financial_entry`, the projection
+surface, is **not built** — §10 says what exists and what does not, and the next money slice
+builds it rather than retrofitting provenance module by module with no reader.
+
 **Money amounts are integer minor units; unit prices are not.** `amount_cents` for
 invoices and fees. A per-kWh tariff in integer cents rounds €0.1548 to €0.15 and puts a
 3% error on the module whose entire purpose is cost accuracy — unit prices are

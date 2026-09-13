@@ -296,3 +296,33 @@ diverging from the prompt's own names.
 - **14 pay periods is the default**, 12 is the alternative, nothing else is accepted.
 - **Derivation is display-only.** A derived hourly rate is never stored, because a stored one is a
   second definition that drifts from the first the day somebody changes their hours.
+
+---
+
+## Revised 13 September 2026 — the financial rules
+
+A second version of this ticket arrived after the first was built, carrying
+[`docs/financials.md`](../financials.md) with it. What it added, and where it landed:
+
+| Asked for | State |
+|---|---|
+| `provenance`, `amount_low_cents`, `amount_high_cents` on `staff_compensation` | Built, in a **second** migration — the first was applied, and an applied migration is history |
+| `money_provenance`, the shared enum | Built, created once and reused by every money table after this one |
+| CHECK that a range contains the expected value | Built, and either bound may stand alone |
+| Roll-up labelled *contracted*, with coverage | Built — the card says "com base em 11 de 14 pessoas" and names its weakest provenance |
+| Test layers 1 and 2, adversarial | Built: 5 database assertions, 11 financial-rule integration tests, 18 on the importer, 14 on the arithmetic |
+| Test layer 3, Playwright | **Wired in** — `apps/web/playwright.config.ts`, `apps/web/e2e/`, `pnpm e2e`. The signed-out specs run; the signed-in walk-through is written and skips until `E2E_EMAIL` / `E2E_PASSWORD` name a Clerk test user |
+| Layer 4, the UAT checklist | Handed over in the session summary rather than committed — it is a script for one person on one afternoon |
+
+**Three deviations, each deliberate and each recorded in `docs/decisions.md`:**
+
+1. **`staff_membership_id`, not `staff_id`** — the original deviation, unchanged. `membership`
+   is the person in this schema.
+2. **`weekly_hours` is capped at 80, not 168.** The ticket says refuse above 168; 80 refuses
+   that and more. No lawful Portuguese contract reaches it, and a figure above it is a typo.
+3. **The sheet carries the provenance and not the range.** Without the column an export and
+   re-import would turn an owner's estimate into a contracted wage; the range belongs to a
+   figure nobody has pinned down and would be two columns of blanks on every export.
+
+**Not built, and named rather than assumed:** `financial_entry` — the projection surface —
+and provenance on every *other* money table. `financials.md` §10 says why the order matters.

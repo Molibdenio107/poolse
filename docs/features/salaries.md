@@ -131,6 +131,36 @@ another place it lives and another place it can leak.
 For the same reason no amount appears in a URL, in a query string, in an application log or
 in a toast. The toast says *Guardado*.
 
+## Where a figure came from
+
+`docs/financials.md` in practice — salaries is its reference implementation.
+
+Every rate carries a **proveniência**: *Contratado* by default, which is what a wage somebody
+typed or imported is — a known rate, not yet incurred. *Real* means it has been paid,
+*Estimado* comes from a documented model, *Suposto* is a guess. A rate that is not contracted
+is marked on the list, muted, with a tooltip saying what the word means.
+
+An estimate or a guess may carry a **three-point range**, and the form offers those two boxes
+only once the proveniência says it is one: asking a club for an optimistic bound on a contract
+they signed would be asking them to invent a doubt. Either bound may stand alone — "at least
+€900" is worth knowing — and neither may sit the wrong side of the expected value.
+
+### The roll-up says how much it knows
+
+Two things travel with the totals and both are on the card:
+
+- **Coverage.** *Com base em 11 de 14 pessoas do staff.* An unqualified figure over partial
+  data is the same shape as a complete one, and nothing on it says which.
+- **The weakest provenance it summed.** Where the totals include an estimate or a guess, the
+  card says so in words. Nothing sums across provenances into one unlabelled figure.
+
+The file carries the proveniência too, in the enum's own spelling, so an owner's estimate does
+not come back from a round trip as a contracted wage. The *range* is deliberately not in the
+file: it belongs to a figure nobody has pinned down, the sheet is a list of contracts, and two
+more columns of blanks on every export is noise. An unedited row is never rewritten, so a round
+trip still changes nothing; an edited one loses its bounds, which is written down here rather
+than discovered.
+
 ## The file — export and import
 
 [POOLSE-59](../backlog/POOLSE-59-importing-and-exporting-salaries.md). Both live at the

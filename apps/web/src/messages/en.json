@@ -268,7 +268,10 @@
       "hourly": "Hourly",
       "effectiveFrom": "Effective since",
       "effectiveTo": "Last day",
+      "provenance": "Provenance",
       "amount": "Gross amount",
+      "amountLow": "Low",
+      "amountHigh": "High",
       "payPeriods": "Pay periods per year",
       "note": "Note"
     },
@@ -332,6 +335,25 @@
         "overlap": "There is already a rate recorded for those dates.",
         "duplicateInFile": "This person already appears on line {line}."
       }
+    },
+    "coverage": "Based on {withRate} of {total} staff — the rest have no rate set.",
+    "coverageComplete": "Based on all {total} staff. Every one has a rate set.",
+    "mixedProvenance": "Careful: these totals include figures marked as “{provenance}”.",
+    "provenanceHint": "Where the figure comes from. A wage the club actually pays is “contracted”.",
+    "provenanceInvalid": "Unknown provenance.",
+    "rangeHint": "Optional. The pessimistic / optimistic bounds of an estimate.",
+    "rangeInverted": "The range has to contain the expected value.",
+    "provenance": {
+      "actual": "Actual",
+      "contracted": "Contracted",
+      "estimated": "Estimated",
+      "assumed": "Assumed"
+    },
+    "provenanceExplains": {
+      "actual": "It happened: paid or invoiced.",
+      "contracted": "An agreed figure, not yet paid.",
+      "estimated": "Worked out from other data, not agreed.",
+      "assumed": "A guess. Good for a sense of the shape, not for counting on."
     }
   },
   "subscription": {

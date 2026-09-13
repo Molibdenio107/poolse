@@ -2844,6 +2844,34 @@ explain it, and would leave the API unable to tell 403 from 404.
 **Archiving the live rate leaves no live rate.** The previous one stays closed and does not
 reopen: a closed rate coming back to life is a pay change nobody made.
 
+**It is the reference implementation for `docs/financials.md`** — 13 September 2026. Three
+columns arrived in `1788991200000_money-provenance.sql`, and every money table after this one
+copies them:
+
+```
+  provenance money_provenance NOT NULL DEFAULT 'contracted',
+  amount_low_cents  integer,
+  amount_high_cents integer,
+  CHECK (low >= 0 AND high >= 0 AND low <= amount_cents AND high >= amount_cents)   -- where present
+```
+
+`money_provenance` is `actual | contracted | estimated | assumed` and is deliberately **not**
+salary-specific: an energy bill and a wage answer "where did this figure come from" the same
+way, so the day `fee_plan` gets the column it gets this type rather than a second list that
+drifts. A typed or imported rate defaults to `contracted` — what a known rate not yet incurred
+*is* — because defaulting to `assumed` would cast doubt on every rate a club has ever entered
+and `actual` would claim it had been paid.
+
+**Either bound of the range may stand alone.** "At least €900" is a real thing to know about a
+cost nobody has pinned down, and requiring both would make somebody invent the other — which is
+the confident-looking fabrication these columns exist to avoid. The CHECK holds the order only
+where a bound is present.
+
+**Nothing sums across provenances into one unlabelled figure.** The roll-up carries
+`byProvenance` and is labelled with the weakest component it summed, and it reports its
+coverage — "based on 11 of 14 staff" — because an unqualified total over partial data is the
+same shape as a complete one and nothing on it says which.
+
 ### The operator's subscription — slice 2.4, 13 September 2026
 
 ```

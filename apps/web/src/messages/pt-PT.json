@@ -268,7 +268,10 @@
       "hourly": "Por hora",
       "effectiveFrom": "Em vigor desde",
       "effectiveTo": "Último dia",
+      "provenance": "Proveniência",
       "amount": "Valor bruto",
+      "amountLow": "Mínimo",
+      "amountHigh": "Máximo",
       "payPeriods": "Meses de vencimento",
       "note": "Nota"
     },
@@ -332,6 +335,25 @@
         "overlap": "Já existe um valor registado para essas datas.",
         "duplicateInFile": "Esta pessoa já aparece na linha {line}."
       }
+    },
+    "coverage": "Com base em {withRate} de {total} pessoas do staff — as restantes não têm valor definido.",
+    "coverageComplete": "Com base nas {total} pessoas do staff. Todas têm valor definido.",
+    "mixedProvenance": "Atenção: estes totais incluem valores marcados como «{provenance}».",
+    "provenanceHint": "De onde vem o valor. Um vencimento que o clube pratica é «contratado».",
+    "provenanceInvalid": "Proveniência desconhecida.",
+    "rangeHint": "Opcional. O intervalo pessimista/otimista de uma estimativa.",
+    "rangeInverted": "O intervalo tem de conter o valor esperado.",
+    "provenance": {
+      "actual": "Real",
+      "contracted": "Contratado",
+      "estimated": "Estimado",
+      "assumed": "Suposto"
+    },
+    "provenanceExplains": {
+      "actual": "Já aconteceu: foi pago ou faturado.",
+      "contracted": "Um valor acordado, ainda não pago.",
+      "estimated": "Calculado a partir de outros dados, não acordado.",
+      "assumed": "Um palpite. Serve para ter uma ideia, não para contar como certo."
     }
   },
   "subscription": {

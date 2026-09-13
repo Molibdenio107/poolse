@@ -176,6 +176,25 @@ export function RateSheet({
                               <dt>{t('salaries.field.payPeriods')}:</dt>
                               <dd className="text-foreground">{rate.payPeriodsPerYear}</dd>
                             </div>
+                            <div className="flex gap-1.5">
+                              <dt>{t('salaries.field.provenance')}:</dt>
+                              <dd className="text-foreground">
+                                {t(`salaries.provenance.${rate.provenance}`)}
+                                {rate.amountLowCents !== null || rate.amountHighCents !== null ? (
+                                  <span className="ml-1 text-foreground-muted">
+                                    (
+                                    {rate.amountLowCents === null
+                                      ? '—'
+                                      : money(rate.amountLowCents)}
+                                    {' – '}
+                                    {rate.amountHighCents === null
+                                      ? '—'
+                                      : money(rate.amountHighCents)}
+                                    )
+                                  </span>
+                                ) : null}
+                              </dd>
+                            </div>
                           </dl>
 
                           {rate.note !== null && <p className="mt-2 text-sm">{rate.note}</p>}
@@ -282,6 +301,14 @@ function RateForm({
     EMPTY,
   );
 
+  /*
+   * The range belongs to a figure nobody has pinned down, so it appears with
+   * one. Asking a club for an optimistic bound on a contract they signed would
+   * be asking them to invent a doubt — docs/financials.md §3.
+   */
+  const [provenance, setProvenance] = useState<string>(rate?.provenance ?? 'contracted');
+  const ranged = provenance === 'estimated' || provenance === 'assumed';
+
   // The list behind the sheet is revalidated by the action; the sheet's own
   // history is a separate fetch, so it reloads when the save comes back.
   useEffect(() => {
@@ -367,6 +394,41 @@ function RateForm({
           initial={rate.effectiveTo ?? ''}
           error={fieldError('effectiveTo')}
         />
+      )}
+
+      <SelectField
+        name="provenance"
+        label={t('salaries.field.provenance')}
+        hint={t('salaries.provenanceHint')}
+        initial={rate?.provenance ?? 'contracted'}
+        error={fieldError('provenance')}
+        onValueChange={setProvenance}
+        options={[
+          { value: 'contracted', label: t('salaries.provenance.contracted') },
+          { value: 'estimated', label: t('salaries.provenance.estimated') },
+          { value: 'assumed', label: t('salaries.provenance.assumed') },
+          { value: 'actual', label: t('salaries.provenance.actual') },
+        ]}
+      />
+
+      {ranged && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextField
+            name="amountLow"
+            label={t('salaries.field.amountLow')}
+            hint={t('salaries.rangeHint')}
+            inputMode="decimal"
+            initial={rate?.amountLowCents == null ? '' : centsToInput(rate.amountLowCents)}
+            error={fieldError('amountLow')}
+          />
+          <TextField
+            name="amountHigh"
+            label={t('salaries.field.amountHigh')}
+            inputMode="decimal"
+            initial={rate?.amountHighCents == null ? '' : centsToInput(rate.amountHighCents)}
+            error={fieldError('amountHigh')}
+          />
+        </div>
       )}
 
       <TextAreaField

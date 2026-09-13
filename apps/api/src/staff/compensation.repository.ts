@@ -5,6 +5,7 @@ import {
   rollup,
   type Compensation,
   type CompensationKind,
+  type MoneyProvenance,
   type Rollup,
 } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
@@ -49,6 +50,14 @@ export interface LiveRate {
   kind: CompensationKind;
   amountCents: number;
   currency: string;
+  /**
+   * Where this figure came from — `docs/financials.md` §2. A typed or imported
+   * rate is `contracted`; a guess says so and renders muted.
+   */
+  provenance: MoneyProvenance;
+  /** The optional three-point range. Null for a contracted rate — §3. */
+  amountLowCents: number | null;
+  amountHighCents: number | null;
   weeklyHours: number | null;
   payPeriodsPerYear: number;
   effectiveFrom: string;
@@ -154,6 +163,9 @@ export interface RateRow {
   kind: CompensationKind;
   amount_cents: number;
   currency: string;
+  provenance: MoneyProvenance;
+  amount_low_cents: number | null;
+  amount_high_cents: number | null;
   weekly_hours: string | number | null;
   pay_periods_per_year: number;
   effective_from: string;
@@ -178,6 +190,7 @@ export function contract(row: RateRow): Compensation {
     amountCents: row.amount_cents,
     weeklyHours: hours(row.weekly_hours),
     payPeriodsPerYear: row.pay_periods_per_year,
+    provenance: row.provenance,
   };
 }
 
@@ -191,6 +204,9 @@ export function toRate(row: RateRow): LiveRate {
     kind: row.kind,
     amountCents: row.amount_cents,
     currency: row.currency,
+    provenance: row.provenance,
+    amountLowCents: row.amount_low_cents,
+    amountHighCents: row.amount_high_cents,
     weeklyHours: c.weeklyHours,
     payPeriodsPerYear: row.pay_periods_per_year,
     // `date` comes back as a JS Date on a plain select and as an ISO string
@@ -352,6 +368,7 @@ export async function listHistory(
       }
     >(
       `SELECT sc.id, sc.kind, sc.amount_cents, sc.currency, sc.weekly_hours,
+              sc.provenance, sc.amount_low_cents, sc.amount_high_cents,
               sc.pay_periods_per_year, sc.effective_from, sc.effective_to, sc.note,
               ${personName('sc.created_by_membership_id')} AS created_by_name,
               sc.created_at, sc.archived_at,
@@ -384,6 +401,11 @@ export interface RateInput {
   payPeriodsPerYear: number;
   effectiveFrom: string;
   note: string | null;
+  /** `docs/financials.md` §2. Defaults to `contracted` — what a typed wage is. */
+  provenance: MoneyProvenance;
+  /** §3. Null on a contracted rate; either bound may stand alone. */
+  amountLowCents: number | null;
+  amountHighCents: number | null;
 }
 
 /**
@@ -394,6 +416,13 @@ export interface RateInput {
  * a 409 and the screen says "já existe um valor de 1 de setembro a 31 de
  * outubro" in whichever language the reader has.
  */
+export class RateArchivedError extends Error {
+  constructor() {
+    super('That rate has been archived');
+    this.name = 'RateArchivedError';
+  }
+}
+
 export class RateOverlapError extends Error {
   constructor(readonly from: string, readonly to: string | null) {
     super('That person already has a rate covering those dates');
@@ -480,11 +509,12 @@ export async function applyNewRate(
   }
 
   const { rows } = await tx.query<{ id: string }>(
-    `INSERT INTO staff_compensation
+      `INSERT INTO staff_compensation
        (organization_id, staff_membership_id, kind, amount_cents, weekly_hours,
-        pay_periods_per_year, effective_from, note, created_by_membership_id)
+        pay_periods_per_year, effective_from, note, created_by_membership_id,
+        provenance, amount_low_cents, amount_high_cents)
      VALUES (current_organization_id(), $1, $2::compensation_kind, $3, $4, $5, $6::date, $7,
-             $8)
+             $8, $9::money_provenance, $10, $11)
      RETURNING id`,
     [
       membershipId,
@@ -495,6 +525,9 @@ export async function applyNewRate(
       input.effectiveFrom,
       input.note,
       actor(),
+      input.provenance,
+      input.amountLowCents,
+      input.amountHighCents,
     ],
   ).catch(rethrowOverlap);
 
@@ -506,7 +539,15 @@ export async function applyNewRate(
     entityId: id,
     // No amount. The table is the record of what was paid; the trail is the
     // record of who touched it.
-    data: { staffMembershipId: membershipId, kind: input.kind, effectiveFrom: input.effectiveFrom },
+    data: {
+      staffMembershipId: membershipId,
+      kind: input.kind,
+      effectiveFrom: input.effectiveFrom,
+      // Not an amount, and the useful half of "who changed this number": a
+      // figure that entered the club's books as a guess should be traceable as
+      // one — docs/financials.md §2.
+      provenance: input.provenance,
+    },
   });
 
   return { id };
@@ -547,12 +588,20 @@ export async function updateRate(
   input: RateInput & { effectiveTo: string | null },
 ): Promise<void> {
   await withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ staff_membership_id: string }>(
-      `SELECT staff_membership_id FROM staff_compensation WHERE id = $1 FOR UPDATE`,
+    const { rows } = await tx.query<{ staff_membership_id: string; archived_at: Date | null }>(
+      `SELECT staff_membership_id, archived_at FROM staff_compensation WHERE id = $1 FOR UPDATE`,
       [id],
     );
-    const subject = rows[0]?.staff_membership_id;
-    if (subject === undefined) return;
+    const row = rows[0];
+    if (row === undefined) return;
+    /*
+     * An archived rate is history — `docs/financials.md` §4: financial history is
+     * never hard-deleted, and it is not quietly rewritten either. Correcting one
+     * would change what the club was paying in a period that has already been
+     * reported on, so it is refused rather than applied.
+     */
+    if (row.archived_at !== null) throw new RateArchivedError();
+    const subject = row.staff_membership_id;
 
     const [clash] = await lockAndFindOverlaps(
       tx,
@@ -577,7 +626,10 @@ export async function updateRate(
                 pay_periods_per_year = $5,
                 effective_from = $6::date,
                 effective_to = $7::date,
-                note = $8
+                note = $8,
+                provenance = $9::money_provenance,
+                amount_low_cents = $10,
+                amount_high_cents = $11
           WHERE id = $1`,
         [
           id,
@@ -588,6 +640,9 @@ export async function updateRate(
           input.effectiveFrom,
           input.effectiveTo,
           input.note,
+          input.provenance,
+          input.amountLowCents,
+          input.amountHighCents,
         ],
       )
       .catch(rethrowOverlap);
@@ -601,6 +656,7 @@ export async function updateRate(
         kind: input.kind,
         effectiveFrom: input.effectiveFrom,
         effectiveTo: input.effectiveTo,
+        provenance: input.provenance,
       },
     });
   });
@@ -625,7 +681,13 @@ export async function archiveRate(organizationId: string, id: string): Promise<v
     );
 
     const subject = rows[0]?.staff_membership_id;
-    if (subject === undefined) return;
+    /*
+     * Nothing moved. Either the id is not a rate — the controller has already
+     * ruled that out — or it was archived before, and a second Remover that
+     * answered "done" would tell somebody they had just changed something they
+     * had not.
+     */
+    if (subject === undefined) throw new RateArchivedError();
 
     await recordAudit(tx, {
       action: 'staff.compensation.archived',
@@ -652,7 +714,8 @@ async function lockAndFindOverlaps(
   excludeId: string | null,
 ): Promise<RateRow[]> {
   const { rows } = await tx.query<RateRow>(
-    `SELECT id, kind, amount_cents, currency, weekly_hours, pay_periods_per_year,
+    `SELECT id, kind, amount_cents, currency, weekly_hours, provenance,
+            amount_low_cents, amount_high_cents, pay_periods_per_year,
             effective_from, effective_to, note
        FROM staff_compensation
       WHERE staff_membership_id = $1

@@ -99,7 +99,22 @@ export function SalaryTable({
                     {live === null ? (
                       <span className="text-foreground-muted">{t('salaries.notSet')}</span>
                     ) : (
-                      t(`salaries.kind.${live.kind}`)
+                      <>
+                        {t(`salaries.kind.${live.kind}`)}
+                        {/*
+                          * A figure that is not a contract says so — financials
+                          * §9. Muted and named, never a colour alone, and the
+                          * tooltip explains what the word means rather than
+                          * carrying a fact that appears nowhere else.
+                          */}
+                        {live.provenance !== 'contracted' && (
+                          <Hint text={t(`salaries.provenanceExplains.${live.provenance}`)}>
+                            <span className="ml-2 rounded bg-surface-muted px-1.5 py-0.5 text-xs text-foreground-muted underline decoration-dotted underline-offset-4">
+                              {t(`salaries.provenance.${live.provenance}`)}
+                            </span>
+                          </Hint>
+                        )}
+                      </>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">

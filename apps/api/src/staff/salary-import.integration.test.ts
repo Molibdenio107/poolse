@@ -431,3 +431,207 @@ test('59 — a file longer than any club is refused outright', async () => {
     });
   });
 });
+
+test('59 — a preview writes nothing, however many rows it reports', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { teacher } = await seedClub(tenant);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const salaries = new SalariesController();
+      const { rows } = await salaries.export();
+
+      const edited = rows.map((row) =>
+        row.amount === ''
+          ? asImport(row)
+          : { ...asImport(row), amountCents: 999_00, effectiveFrom: '2026-09-01' },
+      );
+
+      const before = (await new CompensationController().history(teacher)).history.length;
+
+      // Three times, to be sure a preview is not accumulating anything either.
+      await salaries.import({ rows: edited, commit: false });
+      await salaries.import({ rows: edited, commit: false });
+      const preview = await salaries.import({ rows: edited, commit: false });
+
+      assert.equal(preview.committed, false);
+      assert.equal(preview.written, 0);
+      assert.equal(
+        (await new CompensationController().history(teacher)).history.length,
+        before,
+        'a dry run is a dry run',
+      );
+    });
+  });
+});
+
+test('59 — a file the size of a real payroll commits in one piece', async () => {
+  await withScratchTenant(async (tenant) => {
+    // Fifty, not five hundred: the cap is 500 and the assertion is about the
+    // commit being one transaction, which fifty rows prove in a tenth of the
+    // time. The cap itself has its own test above.
+    const people: string[] = [];
+    for (let i = 0; i < 50; i += 1) {
+      people.push(await addMember(tenant, `Prof${i}`, 'Silva', ['instructor']));
+    }
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const salaries = new SalariesController();
+      const { rows } = await salaries.export();
+
+      const priced = rows.map((row) => ({
+        ...asImport(row),
+        kind: 'monthly',
+        amount: '1000.00',
+        amountCents: 100_000,
+        weeklyHours: '40',
+        payPeriods: '14',
+        effectiveFrom: '2026-09-01',
+      }));
+
+      const committed = await salaries.import({ rows: priced, commit: true });
+      assert.equal(committed.written, 51, 'fifty instructors and the owner');
+
+      const { summary } = await salaries.summary();
+      assert.equal(summary.coverage.withRate, 51);
+      assert.equal(summary.complete, true);
+    });
+
+    void people;
+  });
+});
+
+test('59 — a row the database refuses at the last moment rolls the whole file back', async () => {
+  await withScratchTenant(async (tenant) => {
+    const first = await addMember(tenant, 'Ana', 'Ferreira', ['instructor']);
+    const second = await addMember(tenant, 'Rui', 'Tavares', ['maintenance']);
+
+    const emails = await tenant.sql<{ id: string; email: string }>(
+      `SELECT id, email::text AS email FROM membership WHERE id = ANY($1::uuid[])`,
+      [[first, second]],
+    );
+    const emailOf = (id: string): string => emails.find((row) => row.id === id)!.email;
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const comp = new CompensationController();
+      const salaries = new SalariesController();
+
+      // The second person already has a rate whose end somebody typed, so a new
+      // one landing inside it is refused — by the constraint, at commit.
+      const { id } = await comp.add(second, {
+        kind: 'monthly',
+        amountCents: 100_000,
+        effectiveFrom: '2026-01-01',
+      });
+      await comp.update(id, {
+        kind: 'monthly',
+        amountCents: 100_000,
+        effectiveFrom: '2026-01-01',
+        effectiveTo: '2026-12-31',
+      });
+
+      const rows = [
+        {
+          email: emailOf(first),
+          kind: 'monthly',
+          amount: '1200.00',
+          amountCents: 120_000,
+          effectiveFrom: '2026-09-01',
+        },
+        {
+          email: emailOf(second),
+          kind: 'monthly',
+          amount: '1300.00',
+          amountCents: 130_000,
+          effectiveFrom: '2026-06-01',
+        },
+      ];
+
+      // The preview says so first — this is the honest path, and the reason a
+      // commit-time refusal is rare rather than routine.
+      const seen = await salaries.import({ rows, commit: false });
+      assert.ok(seen.rows[1]?.problems.includes('overlap'));
+      assert.equal(seen.summary.importable, 1);
+
+      /*
+       * Now stage the race the whole-or-nothing rule exists for: somebody saves
+       * a rate between the preview and the commit, so a row that *was* importable
+       * is refused by the constraint on the way in.
+       */
+      const clean = [rows[0]!, { ...rows[1]!, effectiveFrom: '2027-06-01' }];
+      const ready = await salaries.import({ rows: clean, commit: false });
+      assert.equal(ready.summary.importable, 2, 'both rows are fine at preview');
+
+      // *After* the row in the file, so it cannot be auto-closed: a new rate
+      // may follow an open-ended one, and may not be slipped in before it.
+      await comp.add(second, {
+        kind: 'monthly',
+        amountCents: 111_000,
+        effectiveFrom: '2027-09-01',
+      });
+
+      await expectStatus(() => salaries.import({ rows: clean, commit: true }), 409);
+
+      assert.equal(
+        (await comp.history(first)).history.length,
+        0,
+        'a payroll file commits whole or not at all',
+      );
+    });
+  });
+});
+
+test('59 — an estimate survives the round trip as an estimate', async () => {
+  await withScratchTenant(async (tenant) => {
+    const teacher = await addMember(tenant, 'Ana', 'Ferreira', ['instructor']);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const salaries = new SalariesController();
+      await new CompensationController().add(teacher, {
+        kind: 'monthly',
+        amountCents: 100_000,
+        weeklyHours: 40,
+        effectiveFrom: '2026-01-01',
+        provenance: 'assumed',
+      });
+
+      const { rows } = await salaries.export();
+      const mine = rows.find((row) => row.amount !== '')!;
+      assert.equal(mine.provenance, 'assumed', 'the enum spelling, so en exports import under pt');
+
+      // Unchanged, and specifically *because* the provenance came back too: an
+      // export that dropped the column would re-import a guess as a contract.
+      const preview = await salaries.import({ rows: rows.map(asImport), commit: false });
+      assert.equal(preview.summary.unchanged, 1);
+      assert.equal(preview.summary.importable, 0);
+    });
+  });
+});
+
+test('59 — a provenance nobody recognises is a rejected row, not a silent contract', async () => {
+  await withScratchTenant(async (tenant) => {
+    const teacher = await addMember(tenant, 'Ana', 'Ferreira', ['instructor']);
+    const [email] = await tenant.sql<{ email: string }>(
+      'SELECT email::text AS email FROM membership WHERE id = $1',
+      [teacher],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await new SalariesController().import({
+        rows: [
+          {
+            email: email!.email,
+            kind: 'monthly',
+            amount: '1000.00',
+            amountCents: 100_000,
+            effectiveFrom: '2026-09-01',
+            provenance: 'mais ou menos',
+          },
+        ],
+        commit: true,
+      });
+
+      assert.deepEqual(result.rows[0]?.problems, ['provenanceInvalid']);
+      assert.equal(result.written, 0);
+    });
+  });
+});

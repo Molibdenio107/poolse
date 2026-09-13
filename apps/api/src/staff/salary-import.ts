@@ -1,5 +1,10 @@
 import { withOrg, type Tx } from '@poolse/db';
-import { isValidNif, type CompensationKind } from '@poolse/rules';
+import {
+  isMoneyProvenance,
+  isValidNif,
+  type CompensationKind,
+  type MoneyProvenance,
+} from '@poolse/rules';
 import { parseImportDate } from '../students/import.js';
 import {
   applyNewRate,
@@ -50,6 +55,7 @@ export type SalaryImportProblem =
   | 'notStaff'
   | 'ownerRefused'
   | 'kindMissing'
+  | 'provenanceInvalid'
   | 'amountInvalid'
   | 'hoursInvalid'
   | 'periodsInvalid'
@@ -76,6 +82,8 @@ export interface SalaryImportInput {
   weeklyHours?: string | undefined;
   payPeriods?: string | undefined;
   effectiveFrom?: string | undefined;
+  /** `docs/financials.md` §2. Absent means contracted — what a typed rate is. */
+  provenance?: string | undefined;
   note?: string | undefined;
 }
 
@@ -95,6 +103,7 @@ export interface SalaryImportRowResult {
   weeklyHours: number | null;
   payPeriodsPerYear: number;
   effectiveFrom: string | null;
+  provenance: MoneyProvenance;
   note: string | null;
   /** What they are on today, so the preview can show old → new. */
   current: {
@@ -248,6 +257,34 @@ function readKind(raw: string): CompensationKind | null {
 }
 
 /** A decimal written either way. `12,5` and `12.5` are the same number of hours. */
+/**
+ * The provenance column, in either language and in the enum's own spelling.
+ *
+ * An export writes the enum word so a file exported under `en` re-imports under
+ * `pt-PT`; a club typing "estimativa" by hand still works, which is what the
+ * rest of this list is for.
+ */
+function readProvenance(raw: string): MoneyProvenance | null {
+  const value = raw.toLowerCase();
+  if (value === '') return null;
+  if (isMoneyProvenance(value)) return value;
+
+  const words: Record<string, MoneyProvenance> = {
+    real: 'actual',
+    efetivo: 'actual',
+    contratado: 'contracted',
+    contrato: 'contracted',
+    estimado: 'estimated',
+    estimativa: 'estimated',
+    assumido: 'assumed',
+    suposto: 'assumed',
+    palpite: 'assumed',
+    guess: 'assumed',
+    estimate: 'estimated',
+  };
+  return words[value] ?? null;
+}
+
 function readNumber(raw: string): number | null {
   if (raw === '') return null;
   const parsed = Number.parseFloat(raw.replace(/\s/g, '').replace(',', '.'));
@@ -317,6 +354,15 @@ export async function runSalaryImport(
         problems.push('hoursInvalid');
       }
 
+      /*
+      * Where the figure came from. An unreadable word is a rejected row rather
+      * than a silent `contracted`: importing somebody's estimate as a contract
+      * is precisely the mislabelling the financial rules exist to prevent.
+      */
+      const rawProvenance = text(raw.provenance);
+      const provenance = readProvenance(rawProvenance);
+      if (rawProvenance !== '' && provenance === null) problems.push('provenanceInvalid');
+
       const rawPeriods = text(raw.payPeriods);
       const periods = rawPeriods === '' ? 14 : readNumber(rawPeriods);
       if (periods !== 12 && periods !== 14) problems.push('periodsInvalid');
@@ -358,6 +404,7 @@ export async function runSalaryImport(
         live !== null &&
         current !== null &&
         !blank &&
+        (provenance ?? 'contracted') === live.provenance &&
         kind === current.kind &&
         amountCents === current.amountCents &&
         (weeklyHours ?? null) === current.weeklyHours &&
@@ -413,6 +460,7 @@ export async function runSalaryImport(
         weeklyHours,
         payPeriodsPerYear: periods === 12 ? 12 : 14,
         effectiveFrom,
+        provenance: provenance ?? 'contracted',
         note: text(raw.note) === '' ? null : text(raw.note),
         current,
         unchanged,
@@ -461,6 +509,12 @@ export async function runSalaryImport(
           payPeriodsPerYear: row.payPeriodsPerYear,
           effectiveFrom: row.effectiveFrom!,
           note: row.note,
+          provenance: row.provenance,
+          // The sheet carries no range — see `SALARY_EXPORT_FIELDS`. An imported
+          // figure therefore has none, which is the honest answer for a row that
+          // arrived as a single number.
+          amountLowCents: null,
+          amountHighCents: null,
         });
         written += 1;
       } catch (error) {
@@ -488,6 +542,7 @@ export interface SalaryExportRow {
   weeklyHours: string;
   payPeriods: string;
   effectiveFrom: string;
+  provenance: string;
   note: string;
 }
 
@@ -526,6 +581,7 @@ export async function exportSalaries(
             weeklyHours: '',
             payPeriods: '',
             effectiveFrom: '',
+            provenance: '',
             note: '',
           };
         }
@@ -540,6 +596,7 @@ export async function exportSalaries(
           weeklyHours: c.weeklyHours === null ? '' : String(c.weeklyHours),
           payPeriods: String(live.pay_periods_per_year),
           effectiveFrom: day(live.effective_from),
+          provenance: live.provenance,
           note: live.note ?? '',
         };
       });

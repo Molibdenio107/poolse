@@ -39,6 +39,7 @@ export function rowFor(row: SalaryExportRow): string[] {
     weeklyHours: row.weeklyHours,
     payPeriods: row.payPeriods,
     effectiveFrom: row.effectiveFrom,
+    provenance: row.provenance,
     note: row.note,
   };
 

@@ -12,7 +12,13 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { DEFAULT_PAY_PERIODS, isPayPeriods, type CompensationKind } from '@poolse/rules';
+import {
+  DEFAULT_PAY_PERIODS,
+  isMoneyProvenance,
+  isPayPeriods,
+  type CompensationKind,
+  type MoneyProvenance,
+} from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
@@ -33,6 +39,7 @@ import {
   listSalaries,
   salarySummary,
   updateRate,
+  RateArchivedError,
   RateOverlapError,
   type RateInput,
   type RateRecord,
@@ -211,6 +218,7 @@ function readImportRows(value: unknown): SalaryImportInput[] {
       weeklyHours: cell('weeklyHours'),
       payPeriods: cell('payPeriods'),
       effectiveFrom: cell('effectiveFrom'),
+      provenance: cell('provenance'),
       note: cell('note'),
     };
   });
@@ -264,12 +272,13 @@ export class CompensationController {
     if (rate === null) throw new NotFoundException('No such rate');
     await mayTouch(organizationId, rate.staffMembershipId);
 
-    await refuseOverlap(() =>
-      updateRate(organizationId, id, {
-        ...readRate(body),
-        effectiveTo: optionalDate(body['effectiveTo'], 'effectiveTo'),
-      }),
-    );
+    const edit = readRate(body);
+    const effectiveTo = optionalDate(body['effectiveTo'], 'effectiveTo');
+    if (effectiveTo !== null && effectiveTo < edit.effectiveFrom) {
+      throw new BadRequestException({ code: 'invalid_range', field: 'effectiveTo' });
+    }
+
+    await refuseOverlap(() => updateRate(organizationId, id, { ...edit, effectiveTo }));
 
     return { ok: true };
   }
@@ -284,7 +293,7 @@ export class CompensationController {
     if (rate === null) throw new NotFoundException('No such rate');
     await mayTouch(organizationId, rate.staffMembershipId);
 
-    await archiveRate(organizationId, id);
+    await refuseOverlap(() => archiveRate(organizationId, id));
     return { ok: true };
   }
 }
@@ -329,6 +338,17 @@ async function refuseOverlap<T>(run: () => Promise<T>): Promise<T> {
         message: 'That person already has a rate covering those dates',
         from: error.from,
         to: error.to,
+      });
+    }
+    /*
+     * 409 rather than 404: the row is there and the caller may see it. What they
+     * may not do is rewrite it — an archived rate is what the club was paying in
+     * a period that has already been reported on (docs/financials.md §4).
+     */
+    if (error instanceof RateArchivedError) {
+      throw new ConflictException({
+        code: 'compensation_archived',
+        message: 'That rate has been archived and is history',
       });
     }
     throw error;
@@ -385,6 +405,42 @@ function readRate(body: Record<string, unknown>): RateInput {
   const note =
     typeof rawNote === 'string' && rawNote.trim() !== '' ? rawNote.trim().slice(0, MAX_NOTE) : null;
 
+  /*
+   * Where the figure came from — `docs/financials.md` §2.
+   *
+   * Absent means `contracted`, which is what a wage somebody typed in *is*: a
+   * known rate, not yet incurred. Defaulting to `assumed` would cast doubt on
+   * every rate a club has ever entered; defaulting to `actual` would claim it
+   * had been paid.
+   */
+  const rawProvenance = body['provenance'];
+  let provenance: MoneyProvenance = 'contracted';
+  if (rawProvenance !== undefined && rawProvenance !== null && rawProvenance !== '') {
+    if (typeof rawProvenance !== 'string' || !isMoneyProvenance(rawProvenance)) {
+      throw new BadRequestException({ code: 'invalid_provenance', field: 'provenance' });
+    }
+    provenance = rawProvenance;
+  }
+
+  /*
+   * The optional three-point range — §3.
+   *
+   * Either bound may stand alone: "at least €900" is a real thing to know about
+   * a cost nobody has pinned down, and requiring both would make somebody invent
+   * the other. The database says the same thing with a CHECK; this is here so a
+   * caller who inverted the two is told which field, rather than handed the 500
+   * a bare constraint violation would produce.
+   */
+  const amountLowCents = bound(body['amountLowCents'], 'amountLowCents');
+  const amountHighCents = bound(body['amountHighCents'], 'amountHighCents');
+
+  if (amountLowCents !== null && amountLowCents > amountCents) {
+    throw new BadRequestException({ code: 'invalid_range', field: 'amountLowCents' });
+  }
+  if (amountHighCents !== null && amountHighCents < amountCents) {
+    throw new BadRequestException({ code: 'invalid_range', field: 'amountHighCents' });
+  }
+
   return {
     kind: kind as CompensationKind,
     amountCents,
@@ -392,7 +448,25 @@ function readRate(body: Record<string, unknown>): RateInput {
     payPeriodsPerYear,
     effectiveFrom,
     note,
+    provenance,
+    amountLowCents,
+    amountHighCents,
   };
+}
+
+/** One end of a range, or nothing. Never negative, never above the typo ceiling. */
+function bound(value: unknown, field: string): number | null {
+  if (value === null || value === undefined || value === '') return null;
+
+  const parsed = typeof value === 'number' ? value : Number(String(value));
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < 0 ||
+    parsed > MAX_AMOUNT_CENTS
+  ) {
+    throw new BadRequestException({ code: 'invalid_range', field });
+  }
+  return parsed;
 }
 
 /**

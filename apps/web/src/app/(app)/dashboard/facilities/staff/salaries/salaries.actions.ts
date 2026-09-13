@@ -121,6 +121,9 @@ interface RateBody {
   payPeriodsPerYear: number;
   effectiveFrom: string;
   note: string | null;
+  provenance: string;
+  amountLowCents: number | null;
+  amountHighCents: number | null;
 }
 
 /**
@@ -169,6 +172,41 @@ function readRate(formData: FormData): RateBody | FormState {
 
   const note = String(formData.get('note') ?? '').trim();
 
+  /*
+   * Where the figure came from — docs/financials.md §2. Absent is `contracted`,
+   * which is what a rate somebody typed into this form is.
+   */
+  const provenance = String(formData.get('provenance') ?? 'contracted');
+  if (!['actual', 'contracted', 'estimated', 'assumed'].includes(provenance)) {
+    return { ok: false, fields: { provenance: 'salaries.provenanceInvalid' } };
+  }
+
+  /*
+   * The optional bounds, through the same parser as the amount itself so a form
+   * and a spreadsheet cannot disagree about what €1.234,56 is worth.
+   */
+  const bounds: Record<string, number | null> = {};
+  for (const [field, key] of [
+    ['amountLow', 'amountLowCents'],
+    ['amountHigh', 'amountHighCents'],
+  ] as const) {
+    const raw = String(formData.get(field) ?? '').trim();
+    if (raw === '') {
+      bounds[key] = null;
+      continue;
+    }
+    const parsed = parseCents(raw);
+    if (parsed === null) return { ok: false, fields: { [field]: 'salaries.amountInvalid' } };
+    bounds[key] = parsed;
+  }
+
+  if (bounds['amountLowCents'] !== null && bounds['amountLowCents']! > amountCents) {
+    return { ok: false, fields: { amountLow: 'salaries.rangeInverted' } };
+  }
+  if (bounds['amountHighCents'] !== null && bounds['amountHighCents']! < amountCents) {
+    return { ok: false, fields: { amountHigh: 'salaries.rangeInverted' } };
+  }
+
   return {
     kind,
     amountCents,
@@ -176,6 +214,9 @@ function readRate(formData: FormData): RateBody | FormState {
     payPeriodsPerYear,
     effectiveFrom,
     note: note === '' ? null : note,
+    provenance,
+    amountLowCents: bounds['amountLowCents'] ?? null,
+    amountHighCents: bounds['amountHighCents'] ?? null,
   };
 }
 

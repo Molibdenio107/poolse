@@ -22,6 +22,49 @@
 export type CompensationKind = 'monthly' | 'hourly';
 
 /**
+ * Where a monetary figure came from — `docs/financials.md` §2.
+ *
+ * Here rather than in the API because both apps have to be able to *say* it: the
+ * screen mutes a guess, and the roll-up labels a total with the weakest thing it
+ * summed. Mirrors the `money_provenance` enum, and is deliberately the shared
+ * list rather than a salary-specific one — an energy bill and a wage answer this
+ * question the same way.
+ */
+export type MoneyProvenance = 'actual' | 'contracted' | 'estimated' | 'assumed';
+
+/**
+ * Weakest last. The order *is* the rule: a total that mixes provenances is
+ * labelled with the weakest component it summed, and "weakest" is defined here
+ * so no screen has to decide for itself.
+ *
+ * `actual` happened, `contracted` is a known rate not yet incurred, `estimated`
+ * comes from a documented model, `assumed` is a guess.
+ */
+export const PROVENANCE_STRENGTH: readonly MoneyProvenance[] = [
+  'actual',
+  'contracted',
+  'estimated',
+  'assumed',
+];
+
+export function isMoneyProvenance(value: string): value is MoneyProvenance {
+  return (PROVENANCE_STRENGTH as readonly string[]).includes(value);
+}
+
+/** The weakest of a set, or `actual` for an empty one — nothing summed, nothing doubted. */
+export function weakestProvenance(
+  entries: readonly MoneyProvenance[],
+): MoneyProvenance {
+  let weakest: MoneyProvenance = 'actual';
+  for (const entry of entries) {
+    if (PROVENANCE_STRENGTH.indexOf(entry) > PROVENANCE_STRENGTH.indexOf(weakest)) {
+      weakest = entry;
+    }
+  }
+  return weakest;
+}
+
+/**
  * The Portuguese year is 14 pay periods — twelve months, subsídio de férias,
  * subsídio de Natal. A club paying duodécimos uses 12. Nothing else is accepted,
  * by CHECK, because every figure below is wrong for any other value.
@@ -52,6 +95,11 @@ export interface Compensation {
   /** Contracted hours per week. Null means not measured — never zero. */
   weeklyHours: number | null;
   payPeriodsPerYear: number;
+  /**
+   * Where the figure came from. Defaults to `contracted` for a caller that has
+   * not been taught about it yet — which is what a typed wage is.
+   */
+  provenance?: MoneyProvenance;
 }
 
 /**
@@ -156,6 +204,26 @@ export interface Rollup {
   hoursUnknownCount: number;
   /** Staff with no live rate at all. */
   noRateCount: number;
+
+  /**
+   * How much of the club this total is about — `docs/financials.md` §6.
+   *
+   * "Based on 11 of 14 staff", said out loud. An unqualified figure over partial
+   * data is worse than showing nothing: it is the same shape as a complete
+   * answer and nothing on it says which.
+   */
+  coverage: { withRate: number; total: number };
+  /** True only when every staff member has a live rate. */
+  complete: boolean;
+
+  /**
+   * The weakest provenance this total summed — §2.
+   *
+   * Never one unlabelled figure across provenances. The breakdown travels with
+   * it so a screen can show either the label or the split.
+   */
+  provenance: MoneyProvenance;
+  byProvenance: Record<MoneyProvenance, number>;
 }
 
 /**
@@ -181,6 +249,10 @@ export function rollup(live: readonly Compensation[], noRateCount: number): Roll
     hourlyContractCount: 0,
     hoursUnknownCount: 0,
     noRateCount,
+    coverage: { withRate: live.length, total: live.length + noRateCount },
+    complete: noRateCount === 0,
+    provenance: weakestProvenance(live.map((c) => c.provenance ?? 'contracted')),
+    byProvenance: { actual: 0, contracted: 0, estimated: 0, assumed: 0 },
   };
 
   for (const c of live) {
@@ -194,6 +266,14 @@ export function rollup(live: readonly Compensation[], noRateCount: number): Roll
       out.hoursUnknownCount += 1;
       continue;
     }
+
+    /*
+     * Split by where the figure came from, as well as added up.
+     *
+     * §2 forbids one unlabelled total across provenances; this is the half that
+     * makes obeying it possible without every screen re-deriving the split.
+     */
+    out.byProvenance[c.provenance ?? 'contracted'] += now;
 
     out.thisMonthCents += now;
     out.annualisedMonthlyCents += year;

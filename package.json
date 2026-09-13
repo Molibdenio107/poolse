@@ -25,6 +25,7 @@
     "db:test": "pnpm --filter @poolse/db test",
     "api:test": "pnpm --filter @poolse/api test",
     "web:test": "pnpm --filter @poolse/web test",
+    "e2e": "pnpm --filter @poolse/web e2e",
     "layout:check": "pnpm --filter @poolse/web layout:check",
     "sql:check": "pnpm --filter @poolse/api sql:check",
     "csv:check": "pnpm --filter @poolse/web csv:check",

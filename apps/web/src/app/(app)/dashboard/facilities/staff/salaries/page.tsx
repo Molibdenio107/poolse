@@ -135,6 +135,35 @@ export default async function SalariesPage({
             * with no rate at all is a gap the club can close. Both are said out
             * loud so neither reads as a euro figure of nought.
             */}
+          {/*
+            * Coverage, before the caveats — docs/financials.md §6.
+            *
+            * "Based on 11 of 14 staff", said out loud and next to the figures
+            * rather than below them. An unqualified total over partial data is
+            * the same shape as a complete one, and nothing on it says which.
+            */}
+          <p className="mt-3 border-t border-border pt-3 text-sm">
+            {summary.complete
+              ? t('salaries.coverageComplete', { total: summary.coverage.total })
+              : t('salaries.coverage', {
+                  withRate: summary.coverage.withRate,
+                  total: summary.coverage.total,
+                })}
+          </p>
+
+          {/*
+            * And what the figures are made of, where they are not all one thing.
+            * §2 forbids one unlabelled total across provenances: the weakest
+            * component names it, and the sentence says which.
+            */}
+          {summary.provenance !== 'contracted' && summary.provenance !== 'actual' && (
+            <p className="mt-1 text-sm text-warning">
+              {t('salaries.mixedProvenance', {
+                provenance: t(`salaries.provenance.${summary.provenance}`),
+              })}
+            </p>
+          )}
+
           <ul className="mt-3 space-y-1 text-sm text-foreground-muted">
             {summary.hoursUnknownCount > 0 && (
               <li>{t('salaries.hoursUnknown', { count: summary.hoursUnknownCount })}</li>

@@ -74,6 +74,7 @@ const FIELD_ORDER: SalaryField[] = [
   'weeklyHours',
   'payPeriods',
   'effectiveFrom',
+  'provenance',
   'note',
 ];
 

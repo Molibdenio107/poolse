@@ -53,16 +53,16 @@ for (const locale of ['pt-PT', 'en']) {
      * column claims `email` whatever it is called — so a test that skipped the
      * rows would be testing half the mechanism.
      *
-     * The shape the export actually writes: the type as its enum spelling, the
-     * date as ISO, the amount as a plain decimal, and one row with no hours at
-     * all because that is an ordinary contract.
+     * The shape the export actually writes: the type and the provenance as their
+     * enum spellings, the date as ISO, the amount as a plain decimal, and one row
+     * with no hours at all because that is an ordinary contract.
      */
     const sheet = parseCsv(
       [
         headers.join(';'),
-        'Ana Ferreira;ana@clube.pt;123456789;monthly;1200.00;40;14;2026-09-01;',
-        'Bruno Lopes;bruno@clube.pt;;hourly;7.15;12;14;2026-09-01;Part-time',
-        'Rita Nunes;rita@clube.pt;;hourly;8.00;;14;2026-01-15;',
+        'Ana Ferreira;ana@clube.pt;123456789;monthly;1200.00;40;14;2026-09-01;contracted;',
+        'Bruno Lopes;bruno@clube.pt;;hourly;7.15;12;14;2026-09-01;contracted;Part-time',
+        'Rita Nunes;rita@clube.pt;;hourly;8.00;;14;2026-01-15;assumed;',
       ].join('\n'),
     );
 

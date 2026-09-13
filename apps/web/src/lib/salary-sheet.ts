@@ -35,6 +35,7 @@ export const SALARY_FIELDS = [
   'weeklyHours',
   'payPeriods',
   'effectiveFrom',
+  'provenance',
   'note',
 ] as const;
 
@@ -51,6 +52,7 @@ export const EMPTY_SALARY_MAPPING: SalaryMapping = {
   weeklyHours: null,
   payPeriods: null,
   effectiveFrom: null,
+  provenance: null,
   note: null,
 };
 
@@ -165,6 +167,18 @@ const SYNONYMS: [SalaryField, string[]][] = [
       'date',
     ],
   ],
+  /*
+   * Where the figure came from — `docs/financials.md` §2.
+   *
+   * Rarely a column in a club's own sheet, and always one in ours: an export
+   * that dropped it would re-import an owner's estimate as a contracted wage,
+   * which is the one thing the financial rules exist to prevent. Absent means
+   * `contracted`, which is what a typed rate is.
+   */
+  [
+    'provenance',
+    ['proveniencia', 'proveniência', 'origem', 'fonte', 'provenance', 'source', 'origin'],
+  ],
   ['note', ['nota', 'notas', 'observacoes', 'observações', 'comentario', 'comentário', 'note', 'notes', 'comment', 'remarks']],
 ];
 
@@ -253,5 +267,14 @@ export const SALARY_EXPORT_FIELDS: SalaryField[] = [
   'weeklyHours',
   'payPeriods',
   'effectiveFrom',
+  /*
+   * Carried, so an estimate survives the journey. The three-point *range* is
+   * deliberately not: it belongs to a figure nobody has pinned down, the sheet
+   * is a list of contracts, and two more columns of blanks on every export is
+   * noise. A round trip still changes nothing — an unedited row is not rewritten
+   * — and an edited one loses its bounds, which is written down rather than
+   * discovered.
+   */
+  'provenance',
   'note',
 ];

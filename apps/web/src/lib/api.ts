@@ -3014,11 +3014,19 @@ export interface TenantRequests {
  * dash and contributes nothing to a total — never a zero, which would make
  * somebody look free.
  */
+/** Where a monetary figure came from — docs/financials.md §2. */
+export type MoneyProvenance = 'actual' | 'contracted' | 'estimated' | 'assumed';
+
 export interface StaffRate {
   id: string;
   kind: 'monthly' | 'hourly';
   amountCents: number;
   currency: string;
+  /** A typed or imported rate is `contracted`; a guess says so and renders muted. */
+  provenance: MoneyProvenance;
+  /** The optional three-point range — §3. Null on a contracted rate. */
+  amountLowCents: number | null;
+  amountHighCents: number | null;
   weeklyHours: number | null;
   payPeriodsPerYear: number;
   effectiveFrom: string;
@@ -3060,6 +3068,16 @@ export interface SalarySummary {
   hoursUnknownCount: number;
   noRateCount: number;
   /**
+   * How much of the club this total is about — docs/financials.md §6. Said out
+   * loud, because an unqualified figure over partial data is the same shape as a
+   * complete one and nothing on it says which.
+   */
+  coverage: { withRate: number; total: number };
+  complete: boolean;
+  /** The weakest provenance summed — §2. Never one unlabelled figure across them. */
+  provenance: MoneyProvenance;
+  byProvenance: Record<MoneyProvenance, number>;
+  /**
    * True for an Admin, always: the Owner's rate is not in these figures.
    *
    * Said on the card in words. An Admin's total is a different number from the
@@ -3091,6 +3109,8 @@ export interface SalaryExportRow {
   weeklyHours: string;
   payPeriods: string;
   effectiveFrom: string;
+  /** Where the figure came from — docs/financials.md §2. The enum's own spelling. */
+  provenance: string;
   note: string;
 }
 
@@ -3102,6 +3122,7 @@ export type SalaryImportProblem =
   | 'notStaff'
   | 'ownerRefused'
   | 'kindMissing'
+  | 'provenanceInvalid'
   | 'amountInvalid'
   | 'hoursInvalid'
   | 'periodsInvalid'
@@ -3126,6 +3147,7 @@ export interface SalaryImportRowResult {
   weeklyHours: number | null;
   payPeriodsPerYear: number;
   effectiveFrom: string | null;
+  provenance: MoneyProvenance;
   note: string | null;
   /** What they are on today, so the preview shows old → new. */
   current: {

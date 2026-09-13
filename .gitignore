@@ -23,3 +23,9 @@ pnpm-debug.log*
 
 # Real documents used to calibrate the import parsers — names, NIFs, CPEs inside. Never committed.
 apps/web/test-fixtures/**/private/
+
+# Playwright — browser tests (POOLSE-58 QA). Artefacts, never sources.
+test-results/
+playwright-report/
+blob-report/
+.playwright/

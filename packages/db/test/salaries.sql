@@ -141,4 +141,96 @@ BEGIN
    */
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 4 — provenance and the three-point range — docs/financials.md
+--
+-- The first table to follow the financial rules, so these assertions are the
+-- template for every money table after it: a provenance that defaults to the
+-- honest value, a range that may be absent, and a range that cannot be
+-- nonsense.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_o uuid := 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  v_m uuid; v_id uuid; v_p text; ok boolean;
+BEGIN
+  SELECT id INTO v_m FROM membership WHERE organization_id = v_o LIMIT 1;
+
+  -- A rate somebody typed is contracted, and nothing has to say so.
+  INSERT INTO staff_compensation
+    (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+  VALUES (v_o, v_m, 'monthly', 100000, DATE '2030-01-01', v_m)
+  RETURNING id INTO v_id;
+
+  SELECT provenance::text INTO v_p FROM staff_compensation WHERE id = v_id;
+  IF v_p <> 'contracted' THEN
+    RAISE EXCEPTION 'FAIL test 4a: a typed rate defaulted to %, not contracted', v_p;
+  END IF;
+
+  -- The range is optional and stays absent rather than becoming zero.
+  SELECT count(*) INTO ok FROM staff_compensation
+   WHERE id = v_id AND amount_low_cents IS NULL AND amount_high_cents IS NULL;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 4b: an absent range did not stay null'; END IF;
+
+  -- A guess may carry one, and the CHECK holds it in order.
+  UPDATE staff_compensation
+     SET provenance = 'assumed', amount_low_cents = 90000, amount_high_cents = 110000
+   WHERE id = v_id;
+
+  ok := false;
+  BEGIN
+    UPDATE staff_compensation SET amount_low_cents = 120000 WHERE id = v_id;
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 4c: a low above the expected value was accepted'; END IF;
+
+  ok := false;
+  BEGIN
+    UPDATE staff_compensation SET amount_high_cents = 90000 WHERE id = v_id;
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 4d: a high below the expected value was accepted'; END IF;
+
+  -- A negative bound is not a range either.
+  ok := false;
+  BEGIN
+    UPDATE staff_compensation SET amount_low_cents = -1 WHERE id = v_id;
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 4e: a negative low bound was accepted'; END IF;
+
+  -- One bound alone is allowed: "at least this much" is a real thing to know,
+  -- and requiring both would make somebody invent the other.
+  UPDATE staff_compensation SET amount_low_cents = 90000, amount_high_cents = NULL WHERE id = v_id;
+
+  RAISE NOTICE 'PASS test 4: provenance defaults to contracted and a range cannot be nonsense';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 5 — the overlap rule holds per person, not per club
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_o uuid := 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  v_a uuid; v_b uuid;
+BEGIN
+  INSERT INTO membership (organization_id, status, first_name, last_name)
+  VALUES (v_o, 'active', 'Carla', 'Dias') RETURNING id INTO v_a;
+  INSERT INTO membership (organization_id, status, first_name, last_name)
+  VALUES (v_o, 'active', 'Diogo', 'Melo') RETURNING id INTO v_b;
+
+  -- The same period for two different people is the ordinary case: a club pays
+  -- everybody from September. A constraint that refused it would be unusable.
+  INSERT INTO staff_compensation
+    (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+  VALUES (v_o, v_a, 'monthly', 100000, DATE '2031-09-01', v_a);
+  INSERT INTO staff_compensation
+    (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+  VALUES (v_o, v_b, 'monthly', 110000, DATE '2031-09-01', v_b);
+
+  RAISE NOTICE 'PASS test 5: two people may hold the same period';
+END $$;
+
 ROLLBACK;

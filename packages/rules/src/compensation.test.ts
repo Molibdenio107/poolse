@@ -5,8 +5,10 @@ import {
   hourlyCents,
   hourlyForRow,
   monthlyForRow,
+  isMoneyProvenance,
   rollup,
   thisMonthCents,
+  weakestProvenance,
   type Compensation,
 } from './compensation.js';
 
@@ -100,4 +102,56 @@ test('an empty club rolls up to zero rather than to NaN', () => {
   assert.equal(r.thisMonthCents, 0);
   assert.equal(r.annualisedMonthlyCents, 0);
   assert.equal(r.noRateCount, 7);
+});
+
+test('the roll-up reports coverage rather than treating nothing as zero', () => {
+  // docs/financials.md §6: an unqualified total over partial data is worse than
+  // showing nothing, because it is the same shape as a complete answer.
+  const r = rollup([monthly(100_000, 40), hourly(715, 20)], 3);
+
+  assert.deepEqual(r.coverage, { withRate: 2, total: 5 });
+  assert.equal(r.complete, false);
+  assert.equal(rollup([monthly(100_000, 40)], 0).complete, true);
+});
+
+test('a total is labelled with the weakest provenance it summed', () => {
+  // §2: never one unlabelled figure across provenances.
+  assert.equal(rollup([monthly(100_000, 40)], 0).provenance, 'contracted');
+
+  const mixed = rollup(
+    [monthly(100_000, 40), { ...monthly(80_000, 40), provenance: 'assumed' }],
+    0,
+  );
+  assert.equal(mixed.provenance, 'assumed');
+  assert.deepEqual(mixed.byProvenance, {
+    actual: 0,
+    contracted: 100_000,
+    estimated: 0,
+    assumed: 80_000,
+  });
+
+  // An empty club doubts nothing, and says so rather than claiming a guess.
+  assert.equal(rollup([], 4).provenance, 'actual');
+});
+
+test('a contract whose hours are unknown is in no provenance bucket', () => {
+  // It contributes to no total, so putting it in a bucket would make the split
+  // disagree with the figure it is splitting.
+  const r = rollup([{ ...hourly(715, null), provenance: 'assumed' }], 0);
+
+  assert.equal(r.thisMonthCents, 0);
+  assert.equal(r.byProvenance.assumed, 0);
+  assert.equal(r.hoursUnknownCount, 1);
+  // The label still says what it *would* have summed: the club has a guess on
+  // its books, and the reader should know before trusting the zero.
+  assert.equal(r.provenance, 'assumed');
+});
+
+test('the weakest of a set is found by strength, not by order', () => {
+  assert.equal(weakestProvenance(['assumed', 'actual']), 'assumed');
+  assert.equal(weakestProvenance(['actual', 'contracted']), 'contracted');
+  assert.equal(weakestProvenance(['estimated', 'assumed', 'contracted']), 'assumed');
+  assert.equal(weakestProvenance([]), 'actual');
+  assert.equal(isMoneyProvenance('assumed'), true);
+  assert.equal(isMoneyProvenance('guessed'), false);
 });

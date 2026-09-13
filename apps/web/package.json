@@ -9,6 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "i18n:check": "node scripts/check-messages.mjs && node scripts/check-formats.mjs",
     "test": "node --test \"src/**/*.test.ts\"",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install chromium",
     "layout:check": "node scripts/check-layout.mjs",
     "contrast:check": "node scripts/check-contrast.mjs",
     "pt:check": "node scripts/check-portuguese.mjs",
@@ -39,6 +41,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
