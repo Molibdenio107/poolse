@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
@@ -14,6 +14,7 @@ import {
   updateRateAction,
 } from './salaries.actions';
 import type { FormState } from '../../../actions';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * One person's pay, past and present — POOLSE-58.
@@ -64,7 +65,6 @@ export function RateSheet({
   onClose: () => void;
 }): React.ReactElement {
   const t = useTranslations();
-  const format = useFormatter();
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -88,7 +88,7 @@ export function RateSheet({
   // the client provider. Asking for one that was never configured is a
   // MISSING_FORMAT throw at render time, on whichever screen draws it first.
   const day = (value: string): string =>
-    format.dateTime(new Date(`${value}T00:00:00`), 'short');
+    formatDate(new Date(`${value}T00:00:00`));
 
   return (
     <Dialog

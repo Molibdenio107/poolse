@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useMemo, useState } from 'react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { AlertTriangle, Check, ShieldAlert, Upload } from 'lucide-react';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ import {
 } from '@/lib/salary-sheet';
 import type { MatchResult, NamedSheet, Sheet } from '@/lib/sheet';
 import { useImportWizard, type ImportStage } from '@/lib/use-import-wizard';
+import { formatDate } from '@/lib/date-format';
 import {
   matchSheetAction,
   readSheetAction,
@@ -575,11 +576,10 @@ function PreviewStep({
   onBack: () => void;
 }): React.ReactElement {
   const t = useTranslations();
-  const format = useFormatter();
   const sheetRows = useRows(sheet);
 
   const money = (cents: number): string => formatCents(locale, cents);
-  const day = (value: string): string => format.dateTime(new Date(`${value}T00:00:00`), 'short');
+  const day = (value: string): string => formatDate(new Date(`${value}T00:00:00`));
 
   const refused = state.refusal !== null && state.refusal !== undefined;
   const summary = state.summary;

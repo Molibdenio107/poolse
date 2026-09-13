@@ -1,8 +1,8 @@
-import { getFormatter } from 'next-intl/server';
 import { getTranslations } from 'next-intl/server';
 import type { RequestBucket } from '@/lib/api';
 import { ScrollX } from '@/components/page-shell';
 import { cn } from '@/lib/utils';
+import { formatDate, formatStamp } from '@/lib/date-format';
 
 /**
  * A week of hourly requests, as two stacks of bars.
@@ -37,7 +37,6 @@ export async function RequestCharts({
   windowDays: number;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
 
   /*
    * One column per hour of the window, filled from the rows.
@@ -72,7 +71,6 @@ export async function RequestCharts({
         columns={columns}
         peak={peakRequests}
         t={t}
-        format={format}
       />
       <Chart
         title={t('admin.chart.errors')}
@@ -81,7 +79,6 @@ export async function RequestCharts({
         columns={columns}
         peak={peakErrors}
         t={t}
-        format={format}
       />
     </div>
   );
@@ -99,7 +96,6 @@ async function Chart({
   columns,
   peak,
   t,
-  format,
 }: {
   title: string;
   caption: string;
@@ -107,7 +103,6 @@ async function Chart({
   columns: Column[];
   peak: number;
   t: Awaited<ReturnType<typeof getTranslations>>;
-  format: Awaited<ReturnType<typeof getFormatter>>;
 }): Promise<React.ReactElement> {
   return (
     <section className="rounded border border-border bg-surface p-4">
@@ -122,15 +117,15 @@ async function Chart({
       <ScrollX className="mt-3">
         <div className="flex h-32 min-w-[42rem] items-end gap-px">
           {columns.map((column) => (
-            <Bar key={column.at.toISOString()} column={column} series={series} peak={peak} t={t} format={format} />
+            <Bar key={column.at.toISOString()} column={column} series={series} peak={peak} t={t} />
           ))}
         </div>
       </ScrollX>
 
       {/* The axis: the day each midnight starts, so a week reads as a week. */}
       <div className="mt-2 flex justify-between text-xs text-foreground-muted">
-        <span>{format.dateTime(columns[0]!.at, 'short')}</span>
-        <span>{format.dateTime(columns[columns.length - 1]!.at, 'short')}</span>
+        <span>{formatDate(columns[0]!.at)}</span>
+        <span>{formatDate(columns[columns.length - 1]!.at)}</span>
       </div>
     </section>
   );
@@ -141,15 +136,13 @@ function Bar({
   series,
   peak,
   t,
-  format,
 }: {
   column: Column;
   series: Series;
   peak: number;
   t: Awaited<ReturnType<typeof getTranslations>>;
-  format: Awaited<ReturnType<typeof getFormatter>>;
 }): React.ReactElement {
-  const hour = format.dateTime(column.at, 'stamp');
+  const hour = formatStamp(column.at);
 
   // No row for this hour: a gap, deliberately, not a zero-height bar.
   if (column.bucket === undefined) {

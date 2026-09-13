@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Plus, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
@@ -15,6 +15,7 @@ import {
 import { centsToInput, formatCents } from '@/lib/money';
 import type { ChaseChannel, Invoice, PaymentSource } from '@/lib/api';
 import type { FormState } from '../../actions';
+import { formatDate } from '@/lib/date-format';
 import {
   archivePaymentAction,
   recordChaseAction,
@@ -62,7 +63,6 @@ export function SettlementPanel({
 }): React.ReactElement | null {
   const t = useTranslations();
   const locale = useLocale();
-  const format = useFormatter();
   const [paying, setPaying] = useState(false);
   const [chasing, setChasing] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -106,7 +106,7 @@ export function SettlementPanel({
                   </span>{' '}
                   <span className="text-foreground-muted">
                     {t(`invoices.source.${payment.source}`)} ·{' '}
-                    {format.dateTime(new Date(`${payment.paidOn}T12:00:00Z`), 'short')}
+                    {formatDate(new Date(`${payment.paidOn}T12:00:00Z`))}
                   </span>
                   {payment.reference !== null && (
                     <span className="block text-foreground-muted">{payment.reference}</span>
@@ -163,7 +163,7 @@ export function SettlementPanel({
               <li key={chase.id} className="py-2 text-sm first:pt-0">
                 <span className="font-medium">{t(`invoices.channel.${chase.channel}`)}</span>{' '}
                 <span className="text-foreground-muted">
-                  {format.dateTime(new Date(`${chase.chasedOn}T12:00:00Z`), 'short')}
+                  {formatDate(new Date(`${chase.chasedOn}T12:00:00Z`))}
                 </span>
                 {chase.note !== null && <span className="block">{chase.note}</span>}
                 {chase.recordedByName !== null && (

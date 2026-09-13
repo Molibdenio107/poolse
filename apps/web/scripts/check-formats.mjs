@@ -74,8 +74,10 @@ function configured(source) {
  * did, and a check that silently matches nothing is worse than no check: it
  * reports success.
  *
- * A quoted last argument is a named format. An object literal is inline options
- * and needs no configuration, so it is skipped.
+ * A quoted last argument is a named format. An object literal is inline options,
+ * which need no *configuration* — and, since 13 September 2026, are their own
+ * problem: a date's shape is `formatDate` / `formatStamp` from
+ * `lib/date-format.ts` and nothing else. See `inlineDateOptions` below.
  */
 function* namedFormats(source) {
   const call = /\.(dateTime|number|list)\(/g;
@@ -101,10 +103,45 @@ function* namedFormats(source) {
   }
 }
 
+/**
+ * Every `format.dateTime(…, { dateStyle: … })` — an inline date shape.
+ *
+ * These are the ones that got away. The convention has always been that a date's
+ * shape is defined once, and this check enforced it for *named* formats while
+ * twenty call sites quietly passed their own options object and rendered
+ * whatever the reader's locale felt like. When every date in the product became
+ * `dd-MM-yyyy` they were the twenty that would still have shown slashes.
+ *
+ * So they are now an error with a fix in the message. `timeStyle` counts too: a
+ * moment is `formatStamp`.
+ *
+ * A number or a list formatted inline is left alone — those are genuinely a call
+ * site's business, and the one shape this rule is about is the date.
+ */
+function* inlineDateOptions(source) {
+  const call = /\.dateTime\(/g;
+
+  for (const match of source.matchAll(call)) {
+    const from = match.index + match[0].length;
+
+    let depth = 1;
+    let i = from;
+    for (; i < source.length && depth > 0; i += 1) {
+      if (source[i] === '(') depth += 1;
+      else if (source[i] === ')') depth -= 1;
+    }
+    if (depth !== 0) continue;
+
+    const args = source.slice(from, i - 1);
+    if (/dateStyle|timeStyle/.test(args)) yield args.includes('timeStyle');
+  }
+}
+
 async function main() {
   const names = configured(await readFile(CONFIG, 'utf8'));
   const problems = [];
   let checked = 0;
+  let inline = 0;
 
   for (const file of await sources(SRC)) {
     const source = await readFile(file, 'utf8');
@@ -118,6 +155,15 @@ async function main() {
         );
       }
     }
+
+    for (const withTime of inlineDateOptions(source)) {
+      inline += 1;
+      problems.push(
+        `${relative(ROOT, file)}: format.dateTime(…, { dateStyle … }) — ` +
+          `every date is dd-MM-yyyy; use ${withTime ? 'formatStamp' : 'formatDate'}() ` +
+          `from lib/date-format.ts`,
+      );
+    }
   }
 
   if (problems.length > 0) {
@@ -129,8 +175,10 @@ async function main() {
 
   const total = Object.values(names).reduce((sum, set) => sum + set.size, 0);
   console.log(
-    `All ${checked} named format(s) resolve, against ${total} configured in i18n.ts.`,
+    `All ${checked} named format(s) resolve, against ${total} configured in i18n.ts, ` +
+      `and no date is formatted inline.`,
   );
+  void inline;
 }
 
 main().catch((error) => {

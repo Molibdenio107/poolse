@@ -1,6 +1,7 @@
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { Lock } from 'lucide-react';
 import { PageShell } from '@/components/page-shell';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * What a suspended club sees — slice 3.
@@ -48,7 +49,6 @@ export async function SuspendedNotice({
   suspendedAt: string;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
 
   return (
     <PageShell title={t('suspended.title')} subtitle={organizationName}>
@@ -66,7 +66,7 @@ export async function SuspendedNotice({
 
         <p className="text-sm text-foreground-muted">
           {t('suspended.since', {
-            date: format.dateTime(new Date(suspendedAt), 'long'),
+            date: formatDate(new Date(suspendedAt)),
           })}
         </p>
 

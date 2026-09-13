@@ -1,11 +1,12 @@
 'use client';
 
 import { startTransition, useActionState, useEffect, useRef, useState } from 'react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Copy, Plus } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { CONTROL_LINE } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
+import { formatDate, formatStamp } from '@/lib/date-format';
 import {
   readLessonPlanAction,
   saveLessonPlanAction,
@@ -89,7 +90,6 @@ export function LessonPlanPanel({
   teacher?: React.ReactNode;
 }): React.ReactElement {
   const t = useTranslations();
-  const format = useFormatter();
 
   const [loaded, load] = useActionState(readLessonPlanAction, EMPTY);
   const [saved, save, saving] = useActionState(saveLessonPlanAction, EMPTY);
@@ -162,7 +162,7 @@ export function LessonPlanPanel({
       title={t('calendar.plan.title')}
       {...(plan === undefined
         ? {}
-        : { description: format.dateTime(new Date(`${plan.onDate}T00:00:00`), 'long') })}
+        : { description: formatDate(new Date(`${plan.onDate}T00:00:00`)) })}
       closeLabel={t('common.close')}
     >
       {plan === undefined ? (
@@ -310,10 +310,7 @@ export function LessonPlanPanel({
                   >
                     <Copy aria-hidden className="size-3.5" />
                     {t('calendar.plan.copyPrevious', {
-                      date: format.dateTime(
-                        new Date(`${plan.previous.onDate}T00:00:00`),
-                        'short',
-                      ),
+                      date: formatDate(plan.previous.onDate),
                     })}
                   </button>
                 )}
@@ -343,7 +340,7 @@ export function LessonPlanPanel({
                 // A moment rather than a day: "guardado a 11/09/26, 21:04"
                 // without the clock is a sentence that answers the wrong
                 // question.
-                when: format.dateTime(new Date(plan.updatedAt), 'stamp'),
+                when: formatStamp(new Date(plan.updatedAt)),
               })}
             </p>
           )}

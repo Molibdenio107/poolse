@@ -1,3 +1,4 @@
+import { formatDate, formatStamp } from '@/lib/date-format';
 import { notFound } from 'next/navigation';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { PageShell } from '@/components/page-shell';
@@ -126,7 +127,7 @@ export default async function MeterPage({
                     )}
                   </span>
                   <span className="text-xs text-foreground-muted">
-                    {format.dateTime(new Date(reading.takenAt), 'stamp')}
+                    {formatStamp(new Date(reading.takenAt))}
                     {reading.recordedByName !== null && ` · ${reading.recordedByName}`}
                     {reading.note !== null && ` · ${reading.note}`}
                   </span>
@@ -179,7 +180,7 @@ export default async function MeterPage({
                           href={withFrom(`/dashboard/facilities/energy/${meter.id}/invoices/${bill.id}`, `/dashboard/facilities/energy/${meter.id}`)}
                           className="font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         >
-                          {format.dateTime(new Date(`${bill.periodStart}T00:00:00`), 'short')} – {format.dateTime(new Date(`${bill.periodEnd}T00:00:00`), 'short')}
+                          {formatDate(new Date(`${bill.periodStart}T00:00:00`))} – {formatDate(new Date(`${bill.periodEnd}T00:00:00`))}
                         </Link>
                         <span className="block text-xs text-foreground-muted">{t('energy.invoice.days', { days: bill.days })} · {bill.supplier}</span>
                       </td>

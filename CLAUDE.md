@@ -56,13 +56,20 @@ translation, not the other way round. Reviewers check for Brazilian forms — *u
 untranslated in the interface. `pnpm i18n:check` proves every key exists in both files; it
 cannot tell you the Portuguese is the right Portuguese, so that part is read by a person.
 
-**A date's shape is a named format in `i18n.ts`, never an options object at the call site.**
-`long`, `short` and `stamp` are defined once and passed to *both* `getRequestConfig` and
-`NextIntlClientProvider` — a client provider inherits the locale and timezone from the server
-but neither the messages nor the formats. next-intl has no built-in names, so asking for one
-that was never configured is a `MISSING_FORMAT` throw at render time, on whichever screen
-renders it first. `pnpm i18n:check` proves every named format resolves; `tsc` cannot, because
-the name is a string.
+**Every date in Poolse is `dd-MM-yyyy` — prose, tables and `/admin` alike — and it comes from
+`formatDate` / `formatStamp` in `lib/date-format.ts`.** One shape, one definition, 13 September
+2026. `Intl` cannot produce it: there is no separator option, `pt-PT` writes 13/09/2026 and
+`en-US` writes 09/13/2026, so the named `long`, `short` and `stamp` were **removed** from
+`i18n.ts` rather than left pointing at the old shape — asking for one now fails
+`pnpm i18n:check` loudly. **An options object at a call site fails the same check**, which is
+how twenty of them quietly rendered slashes for a year. What stays named in `i18n.ts` is
+`month` and `monthShort`, which are month *names* and properly the reader's language; they are
+still defined once and passed to *both* `getRequestConfig` and `NextIntlClientProvider`,
+because a client provider inherits the locale and timezone from the server but neither the
+messages nor the formats. The timezone is `APP_TIME_ZONE`, exported from the same file, so the
+formatter and next-intl cannot disagree — and a `YYYY-MM-DD` string is parsed as a *day*, never
+as a UTC instant, which is the off-by-one that made a rate effective on 1 October read as
+30 September.
 
 **Tooltips explain, they never inform.** A tooltip may clarify what a control does. It may
 never be the only place a piece of information appears — anything the operator needs is

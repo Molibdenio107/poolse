@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { backTarget } from '@/lib/back';
 import { getTask, listCompletions } from '../../maintenance.actions';
 import { CompleteForm, RemoveCompletion, TaskAdmin } from './task-forms';
+import { formatStamp } from '@/lib/date-format';
 
 /**
  * One maintenance task, and the record of every time it was done.
@@ -27,7 +28,6 @@ export default async function TaskPage({
   const { taskId } = await params;
   const { from, page } = await searchParams;
   const t = await getTranslations();
-  const format = await getFormatter();
 
   const requested = Number(page ?? '1');
   const [detail, history] = await Promise.all([
@@ -94,7 +94,7 @@ export default async function TaskPage({
             <dd className="text-sm">
               {task.nextDueAt === null
                 ? t('maintenance.neverDone')
-                : format.dateTime(new Date(task.nextDueAt), 'stamp')}
+                : formatStamp(new Date(task.nextDueAt))}
             </dd>
           </div>
         </dl>
@@ -129,7 +129,7 @@ export default async function TaskPage({
                     {/* A named format, never an options object — see i18n.ts. */}
                     {t('maintenance.doneBy', {
                       name: entry.performedByName ?? '—',
-                      when: format.dateTime(new Date(entry.performedAt), 'stamp'),
+                      when: formatStamp(new Date(entry.performedAt)),
                     })}
                   </span>
 

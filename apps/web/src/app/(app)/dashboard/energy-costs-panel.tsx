@@ -4,6 +4,7 @@ import type { EnergyCosts } from '@/lib/api';
 import { centsToText } from '@/lib/energy-invoice';
 import { ConsumptionBars } from '@/components/consumption-bars';
 import { withFrom } from '@/lib/back';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * What electricity costs — the dashboard's energy panel, slice 5.3.
@@ -57,8 +58,8 @@ export async function EnergyCostsPanel({ costs }: { costs: EnergyCosts }): Promi
           {t('energy.costs.latest', {
             supplier: latest.supplier,
             meter: latest.meterName,
-            from: format.dateTime(new Date(`${latest.periodStart}T00:00:00`), 'short'),
-            to: format.dateTime(new Date(`${latest.periodEnd}T00:00:00`), 'short'),
+            from: formatDate(new Date(`${latest.periodStart}T00:00:00`)),
+            to: formatDate(new Date(`${latest.periodEnd}T00:00:00`)),
             total: `${centsToText(latest.totalCents)} €`,
             perKwh: latest.kwh > 0 ? format.number(latest.totalCents / 100 / latest.kwh, { maximumFractionDigits: 3 }) : '—',
           })}

@@ -1,3 +1,4 @@
+import { formatStamp } from '@/lib/date-format';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ApiError, apiFetch, type PoolDetail } from '@/lib/api';
@@ -74,7 +75,7 @@ export default async function AnalysisReportPage({
         </p>
         <p className="mt-0.5 text-sm">
           {t('facilities.reportGenerated', {
-            date: format.dateTime(new Date(), { dateStyle: 'long', timeStyle: 'short' }),
+            date: formatStamp(new Date()),
           })}
         </p>
       </header>
@@ -110,10 +111,7 @@ export default async function AnalysisReportPage({
                 {analyses.map((analysis) => (
                   <tr key={analysis.id}>
                     <td className="whitespace-nowrap border border-black/30 px-2 py-1">
-                      {format.dateTime(new Date(analysis.takenAt), {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}
+                      {formatStamp(new Date(analysis.takenAt))}
                     </td>
                     {columns.map((metric) => {
                       const found = analysis.values.find((value) => value.metric === metric);

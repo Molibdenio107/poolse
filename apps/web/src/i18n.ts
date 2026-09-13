@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { getRequestConfig } from 'next-intl/server';
+import { APP_TIME_ZONE } from './lib/date-format';
 
 /** Duplicated from lib/preferences.ts to keep this module free of a cycle. */
 const LOCALE_COOKIE = 'poolse-locale';
@@ -38,12 +39,22 @@ export const defaultLocale: Locale = 'pt-PT';
  */
 export const formats = {
   dateTime: {
-    /** A date written out: "11 de setembro de 2026". */
-    long: { dateStyle: 'long' },
-    /** A date in digits, for a label with no room: "11/09/26". */
-    short: { dateStyle: 'short' },
-    /** A moment, not a day — "guardado a 11/09/26, 21:04". */
-    stamp: { dateStyle: 'short', timeStyle: 'short' },
+    /*
+     * `long`, `short` and `stamp` were here and are gone — 13 September 2026.
+     *
+     * Every date in Poolse is now `dd-MM-yyyy`, prose and `/admin` included, and
+     * `Intl` cannot produce that shape: it has no separator option, `pt-PT`
+     * writes 13/09/2026 and `en-US` writes 09/13/2026. So the single definition
+     * moved to `lib/date-format.ts`, which builds it from `formatToParts`.
+     *
+     * They are **removed rather than left pointing at the old shape**: asking
+     * for one now fails `check-formats.mjs` loudly, where leaving them would let
+     * a new call site render slashes among the hyphens and nobody notice until a
+     * screenshot.
+     *
+     * What stays is the two that are month *names* rather than dates, and those
+     * are properly the reader's own language.
+     */
     /**
      * A month, for a picker or a heading — "setembro de 2026" — F-17.
      *
@@ -73,7 +84,7 @@ export default getRequestConfig(async () => {
   return {
     locale: resolved,
     messages: (await import(`./messages/${resolved}.json`)).default,
-    timeZone: 'Europe/Lisbon',
+    timeZone: APP_TIME_ZONE,
     formats,
   };
 });

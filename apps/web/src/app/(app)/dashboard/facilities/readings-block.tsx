@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import type { BandMap, BandOverride, PoolAlert, PoolAnalysis, PoolMetric } from '@/lib/api';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { TrendChart } from '@/components/trend-chart';
@@ -7,6 +7,7 @@ import { excursions } from '@/lib/water';
 import { ExportAnalyses, UnsafeWaterNotice } from './water-actions';
 import { WaterImport } from './pools/[poolId]/water-import';
 import { AnalysisForm, ArchiveAnalysisButton, SafeRangesForm } from './analysis-forms';
+import { formatStamp } from '@/lib/date-format';
 
 /**
  * Water quality — round 4, built.
@@ -67,7 +68,6 @@ export async function ReadingsBlock({
   canManage: boolean;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
 
   const labelFor = (metric: PoolMetric): string => t(`facilities.metric.${metric}`);
 
@@ -187,10 +187,7 @@ export async function ReadingsBlock({
               <li key={analysis.id} className="flex flex-col gap-1 p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <span className="font-medium">
-                    {format.dateTime(new Date(analysis.takenAt), {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}
+                    {formatStamp(new Date(analysis.takenAt))}
                   </span>
                   <span className="flex items-center gap-3 text-sm text-foreground-muted">
                     {analysis.recordedByName}
@@ -294,7 +291,7 @@ export async function ReadingsBlock({
                 <span className="flex flex-wrap items-baseline gap-x-2">
                   {/* A named format, never an options object — see i18n.ts. */}
                   <span className="font-medium">
-                    {format.dateTime(new Date(alert.raisedAt), 'stamp')}
+                    {formatStamp(new Date(alert.raisedAt))}
                   </span>
                   <span className="text-foreground-muted">
                     {alert.metrics.map((metric) => labelFor(metric)).join(', ')}

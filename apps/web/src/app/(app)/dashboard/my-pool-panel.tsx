@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, CircleCheck } from 'lucide-react';
 import type { PoolDetail } from '@/lib/api';
 import { excursions } from '@/lib/water';
 import { excursionText } from '@/lib/excursion-text';
 import { timeAgo } from '@/lib/relative-time';
 import { withFrom } from '@/lib/back';
+import { formatStamp } from '@/lib/date-format';
 
 /**
  * "A minha piscina" — the personal tenant's dashboard, slice 4.5.
@@ -29,7 +30,6 @@ import { withFrom } from '@/lib/back';
 export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
-  const format = await getFormatter();
 
   const latest = pool.analyses[pool.analyses.length - 1];
   const bad = latest === undefined ? [] : excursions(latest.values, pool.bands);
@@ -45,7 +45,7 @@ export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React
         {latest !== undefined && (
           <p className="text-sm text-foreground-muted">
             {t('dashboard.lastAnalysis', {
-              when: format.dateTime(new Date(latest.takenAt), 'stamp'),
+              when: formatStamp(new Date(latest.takenAt)),
               ago: timeAgo(latest.takenAt, locale) ?? '',
             })}
           </p>

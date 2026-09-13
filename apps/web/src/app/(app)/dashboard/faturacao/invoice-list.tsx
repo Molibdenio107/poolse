@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { formatCents } from '@/lib/money';
 import type { Invoice } from '@/lib/api';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * What has been issued this month.
@@ -27,7 +28,6 @@ export function InvoiceList({
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
-  const format = useFormatter();
 
   return (
     <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
@@ -87,7 +87,7 @@ export function InvoiceList({
                   </td>
                   <td className="py-3">{invoice.payerName}</td>
                   <td className="py-3">
-                    {format.dateTime(new Date(`${invoice.issuedOn}T12:00:00Z`), 'short')}
+                    {formatDate(new Date(`${invoice.issuedOn}T12:00:00Z`))}
                   </td>
                   <td className="py-3 text-right tabular-nums">
                     {formatCents(locale, invoice.totalCents)}

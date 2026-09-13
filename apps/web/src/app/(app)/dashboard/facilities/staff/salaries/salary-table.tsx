@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { RoleBadges } from '@/components/role-badge';
 import { Hint } from '@/components/ui/tooltip';
 import { formatCents } from '@/lib/money';
 import type { SalaryRow } from '@/lib/api';
 import { RateSheet } from './rate-sheet';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * The salary list — POOLSE-58.
@@ -37,7 +38,6 @@ export function SalaryTable({
   const t = useTranslations();
   // The named `short` format from `i18n.ts`, never an options object here — a
   // date's shape is defined once for both sides of the boundary.
-  const format = useFormatter();
   const [open, setOpen] = useState<SalaryRow | null>(null);
 
   const money = (cents: number): string => formatCents(locale, cents);
@@ -138,7 +138,7 @@ export function SalaryTable({
                     {live === null ? (
                       <span className="text-foreground-muted">—</span>
                     ) : (
-                      format.dateTime(new Date(`${live.effectiveFrom}T00:00:00`), 'short')
+                      formatDate(new Date(`${live.effectiveFrom}T00:00:00`))
                     )}
                   </td>
                 </tr>

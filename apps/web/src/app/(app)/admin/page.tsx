@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Building2, User } from 'lucide-react';
 import Link from 'next/link';
 import { ApiError, apiFetch, type PlatformTenant } from '@/lib/api';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { HealthBadge } from './health-badge';
 import { StatusStrip } from './status-strip';
 import { SubscriptionBadge } from './subscription-badge';
+import { formatDate, formatStamp } from '@/lib/date-format';
 
 /**
  * Every tenant, one row each — platform admin, slice 1.
@@ -39,7 +40,6 @@ export default async function AdminPage({
   searchParams: Promise<{ page?: string; search?: string; sort?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
   const locale = await getLocale();
 
   const { page: pageParam, search = '', sort } = await searchParams;
@@ -83,7 +83,7 @@ export default async function AdminPage({
     );
   }
 
-  const columns = tenantColumns(t, format, locale);
+  const columns = tenantColumns(t, locale);
 
   /*
    * Sorted in the page, not the query — and this is the one list in the product
@@ -192,7 +192,6 @@ function Quota({ used, ceiling }: { used: number; ceiling: number | null }): Rea
  */
 function tenantColumns(
   t: Awaited<ReturnType<typeof getTranslations>>,
-  format: Awaited<ReturnType<typeof getFormatter>>,
   locale: string,
 ): Column<PlatformTenant>[] {
   return [
@@ -267,7 +266,7 @@ function tenantColumns(
           {tenant.trialEndsAt !== null && tenant.subscriptionStatus === 'trialing' && (
             <span className="text-xs text-foreground-muted">
               {t('admin.trialEnds', {
-                date: format.dateTime(new Date(tenant.trialEndsAt), 'short'),
+                date: formatDate(new Date(tenant.trialEndsAt)),
               })}
             </span>
           )}
@@ -313,7 +312,7 @@ function tenantColumns(
     {
       key: 'created',
       header: t('admin.column.created'),
-      render: (tenant) => format.dateTime(new Date(tenant.createdAt), 'short'),
+      render: (tenant) => formatDate(new Date(tenant.createdAt)),
     },
     {
       key: 'activity',
@@ -328,7 +327,7 @@ function tenantColumns(
             Portuguese string hard-coded into an interface that ships in two
             languages.
           */
-          <span title={format.dateTime(new Date(tenant.lastActivityAt), 'stamp')}>
+          <span title={formatStamp(new Date(tenant.lastActivityAt))}>
             {t('admin.activeAgo', { ago: timeAgo(tenant.lastActivityAt, locale) ?? '' })}
           </span>
         ),

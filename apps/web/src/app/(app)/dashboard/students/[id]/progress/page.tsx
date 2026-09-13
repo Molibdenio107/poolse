@@ -1,4 +1,4 @@
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import {
   ApiError,
@@ -13,6 +13,7 @@ import { Hint } from '@/components/ui/tooltip';
 import { AddRecordForm, ArchiveRecordButton, FavouriteStrokeForm } from './progress-forms';
 import { BackLink } from '@/components/back-link';
 import { PageError, PageShell } from '@/components/page-shell';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * Backlog story 6 — a student's performances over time.
@@ -27,7 +28,6 @@ export default async function ProgressPage({
   params: Promise<{ id: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
   const { id } = await params;
 
   let student: Student | null = null;
@@ -167,7 +167,7 @@ export default async function ProgressPage({
                       <span className="flex items-baseline gap-3">
                         <span className="font-mono text-lg">{formatTime(best.timeMs)}</span>
                         <span className="text-sm text-foreground-muted">
-                          {format.dateTime(new Date(best.swumOn), { dateStyle: 'medium' })}
+                          {formatDate(new Date(best.swumOn))}
                         </span>
                       </span>
                     </li>
@@ -197,7 +197,7 @@ export default async function ProgressPage({
                         </span>
                         <span className="text-sm text-foreground-muted">
                           {[
-                            format.dateTime(new Date(record.swumOn), { dateStyle: 'long' }),
+                            formatDate(new Date(record.swumOn)),
                             record.recordedByName,
                             record.note,
                           ]

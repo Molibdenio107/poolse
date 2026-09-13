@@ -1,10 +1,11 @@
 import { UserButton } from '@clerk/nextjs';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type InvitationPreview, type Me } from '../../../lib/api';
 import { PreferenceControls } from '../preference-controls';
 import { AcceptForm } from './accept-form';
 import { PageError, PageShell } from '@/components/page-shell';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * The invitee's side of slice 0.5.
@@ -24,7 +25,6 @@ export default async function JoinPage({
   searchParams: Promise<{ token?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
   const { token } = await searchParams;
 
   let preview: InvitationPreview | null = null;
@@ -111,7 +111,7 @@ export default async function JoinPage({
           {preview.expiresAt !== null && (
             <p className="text-sm text-foreground-muted">
               {t('invite.expiresOn', {
-                date: format.dateTime(new Date(preview.expiresAt), { dateStyle: 'long' }),
+                date: formatDate(new Date(preview.expiresAt)),
               })}
             </p>
           )}

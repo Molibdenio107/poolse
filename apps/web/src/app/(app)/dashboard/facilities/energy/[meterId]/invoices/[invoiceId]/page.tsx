@@ -5,6 +5,7 @@ import { backTarget } from '@/lib/back';
 import { centsToText } from '@/lib/energy-invoice';
 import { getInvoice } from '../../../invoice.actions';
 import { ArchiveInvoice } from './archive-invoice';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * One bill, as filed: header, what the dial said, what was charged.
@@ -31,7 +32,7 @@ export default async function InvoicePage({
 
   const back = backTarget(from, `/dashboard/facilities/energy/${meterId}`);
   const euros = (cents: number | null): string => (cents === null ? '—' : `${centsToText(cents)} €`);
-  const day = (iso: string | null): string => (iso === null ? '—' : format.dateTime(new Date(`${iso}T00:00:00`), 'short'));
+  const day = (iso: string | null): string => (iso === null ? '—' : formatDate(new Date(`${iso}T00:00:00`)));
 
   return (
     <PageShell

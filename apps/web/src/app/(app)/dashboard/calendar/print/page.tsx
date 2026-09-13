@@ -1,4 +1,4 @@
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ApiError, apiFetch, type FacilityGrid, type GridBooking } from '@/lib/api';
 import {
@@ -20,6 +20,7 @@ import {
   type PlacedCell,
 } from '@/lib/grid-layout';
 import { PrintButton } from '../../facilities/pools/[poolId]/report/print-button';
+import { formatStamp } from '@/lib/date-format';
 
 /**
  * The timetable, for the wall — POOLSE-54.
@@ -82,7 +83,6 @@ export default async function SchedulePrintPage({
   if (facilityId === '') notFound();
 
   const t = await getTranslations();
-  const format = await getFormatter();
 
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -309,7 +309,7 @@ export default async function SchedulePrintPage({
 
         <p className="mt-0.5 text-xs">
           {t('grid.export.generated', {
-            date: format.dateTime(new Date(), { dateStyle: 'long', timeStyle: 'short' }),
+            date: formatStamp(new Date()),
           })}
         </p>
       </header>

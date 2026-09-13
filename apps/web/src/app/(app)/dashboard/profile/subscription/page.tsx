@@ -1,8 +1,9 @@
-import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ApiError, apiFetch, type SubscriptionView } from '@/lib/api';
 import { PageError, PageShell } from '@/components/page-shell';
 import { PlanPicker } from './plan-picker';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * What the club pays Poolse — slice 2.4.
@@ -29,7 +30,6 @@ import { PlanPicker } from './plan-picker';
 export default async function SubscriptionPage(): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
-  const format = await getFormatter();
 
   let view: SubscriptionView | null = null;
   let failure: LoadFailure | null = null;
@@ -42,7 +42,7 @@ export default async function SubscriptionPage(): Promise<React.ReactElement> {
     else failure = describeLoad(error);
   }
 
-  const day = (value: string): string => format.dateTime(new Date(value), 'long');
+  const day = (value: string): string => formatDate(new Date(value));
 
   return (
     <PageShell title={t('subscription.title')} subtitle={t('subscription.subtitle')}>

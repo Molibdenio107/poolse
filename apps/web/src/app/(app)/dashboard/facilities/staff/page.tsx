@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type OrganizationMember, type People } from '../../../../../lib/api';
 import { DeliveryBadge } from '@/components/delivery-badge';
 import { PersonAvatar } from '@/components/person-avatar';
@@ -18,6 +18,7 @@ import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
 import { RevokeButton } from './revoke-button';
 import { PageError, PageShell } from '@/components/page-shell';
+import { formatStamp } from '@/lib/date-format';
 
 /**
  * Slice 0.5 made visible: who is in this organization, who has been asked, and
@@ -45,7 +46,6 @@ export default async function PeoplePage({
   searchParams: Promise<{ role?: string; page?: string; search?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
 
   /*
    * Filtered by the API, not in the page — changed by POOLSE-29.
@@ -380,10 +380,7 @@ export default async function PeoplePage({
                         {new Date(invitation.expiresAt).getTime() <= Date.now()
                           ? t('invite.expired')
                           : t('invite.expiresOn', {
-                              date: format.dateTime(new Date(invitation.expiresAt), {
-                                dateStyle: 'long',
-                                timeStyle: 'short',
-                              }),
+                              date: formatStamp(new Date(invitation.expiresAt)),
                             })}
                       </span>
                     </div>

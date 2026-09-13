@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type PlatformTenant, type TenantRequests } from '@/lib/api';
 import { DataTable, type Column } from '@/components/data-table';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
@@ -8,6 +8,7 @@ import { timeAgo } from '@/lib/relative-time';
 import { HealthBadge } from '../../health-badge';
 import { RequestCharts } from './request-charts';
 import { TenantActions } from './tenant-actions';
+import { formatStamp } from '@/lib/date-format';
 
 /**
  * One tenant's request health over the last week — platform admin, slice 2.
@@ -27,7 +28,6 @@ export default async function TenantRequestsPage({
   params: Promise<{ id: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
   const locale = await getLocale();
 
   const { id } = await params;
@@ -66,8 +66,8 @@ export default async function TenantRequestsPage({
       key: 'at',
       header: t('admin.error.when'),
       render: (row) => (
-        <span title={format.dateTime(new Date(row.at), 'stamp')}>
-          {timeAgo(row.at, locale) ?? format.dateTime(new Date(row.at), 'stamp')}
+        <span title={formatStamp(new Date(row.at))}>
+          {timeAgo(row.at, locale) ?? formatStamp(new Date(row.at))}
         </span>
       ),
     },

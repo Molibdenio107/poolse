@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { FileText } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
@@ -10,6 +10,7 @@ import type { InvoiceRun } from '@/lib/api';
 import type { FormState } from '../actions';
 import { issueRunAction } from './invoices.actions';
 import { LineLabel } from './line-label';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * What this month would issue, and the button that issues it.
@@ -50,7 +51,6 @@ export function InvoiceRunPanel({
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
-  const format = useFormatter();
   const [confirming, setConfirming] = useState(false);
 
   // Every draft starts selected. Absent from this set means "issue it".
@@ -84,7 +84,7 @@ export function InvoiceRunPanel({
         </h2>
         <span className="text-sm text-foreground-muted">
           {t('invoices.dueOn', {
-            date: format.dateTime(new Date(`${run.dueOn}T12:00:00Z`), 'long'),
+            date: formatDate(new Date(`${run.dueOn}T12:00:00Z`)),
           })}
         </span>
       </div>

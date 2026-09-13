@@ -1,9 +1,10 @@
 'use client';
 
-import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { formatCents } from '@/lib/money';
 import type { InvoiceLine } from '@/lib/api';
 import { LineLabel } from '../line-label';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * What is on the document.
@@ -20,7 +21,6 @@ import { LineLabel } from '../line-label';
 export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
-  const format = useFormatter();
 
   return (
     <section className="rounded border border-border bg-surface p-5">
@@ -61,7 +61,7 @@ export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactE
                   <LineLabel line={line} />
                 </td>
                 <td className="py-3">
-                  {format.dateTime(new Date(`${line.periodStart}T12:00:00Z`), 'short')}
+                  {formatDate(new Date(`${line.periodStart}T12:00:00Z`))}
                   {line.months > 1 && (
                     <span className="text-foreground-muted">
                       {' '}

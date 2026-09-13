@@ -1,3 +1,4 @@
+import { formatDate, formatStamp } from '@/lib/date-format';
 import Link from 'next/link';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { apiFetch, type Facilities } from '@/lib/api';
@@ -61,7 +62,7 @@ export default async function InvoicePage({
   }
 
   const day = (iso: string): string =>
-    format.dateTime(new Date(`${iso}T12:00:00Z`), 'long');
+    formatDate(new Date(`${iso}T12:00:00Z`));
 
   /*
    * An instant, or an em dash — F-04.
@@ -75,7 +76,7 @@ export default async function InvoicePage({
   const stamp = (value: string | null): string => {
     if (value === null) return '—';
     const at = new Date(value);
-    return Number.isNaN(at.getTime()) ? '—' : format.dateTime(at, 'stamp');
+    return Number.isNaN(at.getTime()) ? '—' : formatStamp(at);
   };
 
   return (

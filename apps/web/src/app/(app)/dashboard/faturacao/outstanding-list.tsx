@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { formatCents } from '@/lib/money';
 import type { Invoice } from '@/lib/api';
 import { StatusBadge } from './status-badge';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * Em dívida — the chase list.
@@ -30,7 +31,6 @@ export function OutstandingList({
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
-  const format = useFormatter();
 
   const totalCents = invoices.reduce((sum, invoice) => sum + invoice.outstandingCents, 0);
 
@@ -98,14 +98,14 @@ export function OutstandingList({
                     )}
                   </td>
                   <td className="py-3">
-                    {format.dateTime(new Date(`${invoice.dueOn}T12:00:00Z`), 'short')}
+                    {formatDate(new Date(`${invoice.dueOn}T12:00:00Z`))}
                   </td>
                   <td className="py-3">
                     {invoice.lastChasedOn === null ? (
                       <span className="text-foreground-muted">{t('invoices.neverChased')}</span>
                     ) : (
                       <>
-                        {format.dateTime(new Date(`${invoice.lastChasedOn}T12:00:00Z`), 'short')}
+                        {formatDate(new Date(`${invoice.lastChasedOn}T12:00:00Z`))}
                         <span className="block text-foreground-muted">
                           {t('invoices.chaseCount', { count: invoice.chaseCount })}
                         </span>

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { apiFetch, type ActiveSession, type Me, type People } from '@/lib/api';
 import { ProfileForm } from './profile-form';
@@ -7,6 +7,7 @@ import { TransferOwnership } from './transfer-ownership';
 import { Sessions } from '../sessions';
 import { PhotoUpload } from '@/components/photo-upload';
 import { PageError, PageShell } from '@/components/page-shell';
+import { formatStamp } from '@/lib/date-format';
 
 /**
  * "O meu perfil" — backlog round 3, story 1.
@@ -31,7 +32,6 @@ import { PageError, PageShell } from '@/components/page-shell';
  */
 export default async function ProfilePage(): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
 
   let me: Me | null = null;
   let failure: LoadFailure | null = null;
@@ -250,14 +250,8 @@ export default async function ProfilePage(): Promise<React.ReactElement> {
             sessions={sessions}
             formatted={sessions.map((session) => ({
               id: session.id,
-              started: format.dateTime(new Date(session.createdAt), {
-                dateStyle: 'medium',
-                timeStyle: 'short',
-              }),
-              lastActive: format.dateTime(new Date(session.lastActiveAt), {
-                dateStyle: 'medium',
-                timeStyle: 'short',
-              }),
+              started: formatStamp(new Date(session.createdAt)),
+              lastActive: formatStamp(new Date(session.lastActiveAt)),
             }))}
           />
         </section>

@@ -1,4 +1,4 @@
-import { getFormatter, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import {
   ApiError,
@@ -10,6 +10,7 @@ import { BackLink } from '@/components/back-link';
 import { ChevronRight } from 'lucide-react';
 import { MedicalLeavePanel } from './medical-leave';
 import { PageError, PageShell } from '@/components/page-shell';
+import { formatDate, formatStamp } from '@/lib/date-format';
 import {
   EmergencyContactForm,
   MedicalNotesForm,
@@ -33,7 +34,6 @@ export default async function SensitivePage({
   params: Promise<{ id: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const format = await getFormatter();
   const { id } = await params;
 
   let student: Student | null = null;
@@ -103,10 +103,7 @@ export default async function SensitivePage({
               <p className="mb-4 text-sm text-foreground-muted">
                 {t('sensitive.lastRecorded', {
                   who: record.notes.recordedByName ?? t('account.noName'),
-                  when: format.dateTime(new Date(record.notes.recordedAt), {
-                    dateStyle: 'long',
-                    timeStyle: 'short',
-                  }),
+                  when: formatStamp(new Date(record.notes.recordedAt)),
                 })}
               </p>
             )}
@@ -206,7 +203,7 @@ export default async function SensitivePage({
                       <span className="text-sm text-foreground-muted">
                         {t('sensitive.recordedBy', {
                           who: entry.grantedByName ?? t('account.noName'),
-                          when: format.dateTime(new Date(entry.grantedAt), { dateStyle: 'long' }),
+                          when: formatDate(new Date(entry.grantedAt)),
                         })}
                       </span>
                       {entry.evidenceNote !== null && (
@@ -285,11 +282,9 @@ export default async function SensitivePage({
                   <li key={entry.id}>
                     {t(`sensitive.kinds.${entry.kind}`)} —{' '}
                     {entry.granted ? t('sensitive.granted') : t('sensitive.refused')} ·{' '}
-                    {format.dateTime(new Date(entry.grantedAt), { dateStyle: 'medium' })} →{' '}
+                    {formatDate(new Date(entry.grantedAt))} →{' '}
                     {t('sensitive.withdrawnOn', {
-                      when: format.dateTime(new Date(entry.withdrawnAt as string), {
-                        dateStyle: 'medium',
-                      }),
+                      when: formatDate(new Date(entry.withdrawnAt as string)),
                       who: entry.withdrawnByName ?? t('account.noName'),
                     })}
                   </li>

@@ -1,10 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getFormatter } from 'next-intl/server';
 import { ApiError, apiDelete, apiFetch, apiPatch, apiPost, type StaffRateRecord } from '@/lib/api';
 import { parseCents } from '@/lib/money';
 import type { FormState } from '../../../actions';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * Salários — POOLSE-58.
@@ -265,8 +265,7 @@ async function refusal(error: unknown): Promise<FormState> {
 async function range(from?: string, to?: string | null): Promise<{ detail?: string }> {
   if (from === undefined || from === '') return {};
 
-  const format = await getFormatter();
-  const day = (value: string): string => format.dateTime(new Date(`${value}T00:00:00`), 'short');
+  const day = (value: string): string => formatDate(new Date(`${value}T00:00:00`));
 
   return { detail: to === null || to === undefined ? `${day(from)} —` : `${day(from)} – ${day(to)}` };
 }
