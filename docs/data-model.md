@@ -2779,3 +2779,67 @@ the one lookup every authenticated request already makes. It still *returns* the
 enforcing inside it would make a suspended club indistinguishable from somebody who belongs to
 no organization, and `/me` has to keep answering so the web app can say what happened. The
 refusal is `TenantMiddleware`'s, one layer up, where it can carry a code and the reason.
+
+### Staff compensation — POOLSE-58, 13 September 2026
+
+```
+staff_compensation
+  id, organization_id,
+  staff_membership_id,          -- the person; a membership holding a staff role
+  kind (compensation_kind: 'monthly' | 'hourly'),
+  amount_cents,                 -- gross; a monthly salary, or the rate for one hour
+  currency char(3) default 'EUR',
+  weekly_hours numeric(5,2),    -- contracted; null = not measured
+  pay_periods_per_year smallint default 14,
+  effective_from, effective_to, -- effective_to is the LAST DAY at this rate, inclusive
+  note, created_by_membership_id,
+  created_at, updated_at, archived_at
+  unique (organization_id, id)
+  fk (organization_id, staff_membership_id)      -> membership
+  fk (organization_id, created_by_membership_id) -> membership
+  check amount_cents > 0
+  check weekly_hours is null or weekly_hours > 0
+  check pay_periods_per_year in (12, 14)
+  check currency = 'EUR'
+  check effective_to is null or effective_to >= effective_from
+  exclude using gist (organization_id =, staff_membership_id =,
+                      daterange(effective_from, coalesce(effective_to + 1, 'infinity'), '[)') &&)
+    where archived_at is null
+```
+
+**`staff_membership_id`, not `staff_id`.** `membership` is the person — see "one person,
+many roles" — and every reference to one in this schema is `*_membership_id`. A `staff_id`
+would read as a key into a table that does not exist.
+
+**The `+ 1` in the exclusion is load-bearing.** `effective_to` is the last day at that rate,
+as an operator means it, so a rate ending 31 October covers the 31st and the next may start
+on 1 November. A bare `daterange(effective_from, effective_to)` is half-open at the top,
+which would read the closing date as exclusive and admit a second rate starting on the
+31st — two live rates for one person on one day, which is the one thing the constraint
+exists to prevent. Same shape as `student_medical_leave_no_overlap`, and asserted directly
+in `tenant-isolation.sql` test 16.
+
+**Nothing is derived into a column.** Monthly ↔ hourly is computed from the contract every
+time it is shown, once, in `packages/rules/src/compensation.ts`, called by the API for the
+per-row figures and for the roll-up alike. A stored hourly rate is a second definition that
+drifts from the first the day somebody changes their hours — the same reason there is no
+`is_overdue` and no `next_due_at`.
+
+**`weekly_hours` null means not measured**, like every other nullable ceiling here. It
+enforces nothing, it is never read as zero, and the derived figure becomes a dash: a total
+that treated unknown hours as free would be a total an owner acts on.
+
+**`currency` is EUR by CHECK, and the CHECK is a guard rather than a statement about the
+future.** The currency belongs to where the club is; until `organization` carries one there
+is no path by which a non-EUR row could be written deliberately, and a row no screen can
+render is worse than a migration. Removing it is one ALTER.
+
+**Who may read it is not in the schema, and cannot be.** An Admin may see every staff member
+except the Owner. RLS answers "which tenant" and not "which row within it"; the role test
+lives in `apps/api/src/staff/compensation.repository.ts`, resolved once and applied to the
+list, the history, the roll-up and every write, so those cannot disagree. Writing it into a
+policy would put an authorisation rule where no test reads it and no error message can
+explain it, and would leave the API unable to tell 403 from 404.
+
+**Archiving the live rate leaves no live rate.** The previous one stays closed and does not
+reopen: a closed rate coming back to life is a pay change nobody made.

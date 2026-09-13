@@ -336,6 +336,23 @@ responsible for this turma" cannot be written as a role, so the repository resol
 decides, and the controller turns a refusal into a 403 — while the read endpoint returns the
 same answer as `canEdit` so the screen and the guard cannot disagree. See `lesson-plans.repository.ts`.
 
+**An Admin sees every staff member's pay except the Owner's, and the card says so.** Salaries
+are the first table whose visibility differs *between* two management roles, and the rule is a
+question about a row, so it lives in `compensation.repository.ts` — one predicate feeding the
+list, the history, the roll-up and every write, never an RLS policy: RLS answers "which tenant"
+and a role test hidden in one would leave the API unable to tell 403 from 404. The Owner is
+**absent** from an Admin's list rather than blanked, and an Admin may not *write* that rate
+either — a POST whose result you cannot read is a way to overwrite what you may not see. An
+Admin's total is therefore a different number from the Owner's for the same club, which the
+roll-up states in visible text whether or not a rate is set: an unexplained absence reads as a
+zero. **Amounts stay out of paths, query strings, logs and the audit trail** — `audit_log`
+records who changed whose rate, and the effective-dated table is the record of the figure.
+**`effective_to` is the last day at that rate**, so the exclusion constraint ranges over
+`effective_to + 1`; a bare `daterange(from, to)` admits two live rates on the closing day.
+**Monthly ↔ hourly is derived at read time in `@poolse/rules`, never stored**, and unknown
+`weekly_hours` is a dash that contributes nothing — a total that reads unknown hours as free is
+one an owner would act on. `docs/features/salaries.md`.
+
 **A question asked in the middle of the page uses `components/ui/dialog.tsx`.** It portals
 to the body, so no ancestor's `overflow`, `transform` or `z-index` can clip it; it closes on
 Escape and on the backdrop, moves focus in and gives it back, and keeps Tab inside itself.

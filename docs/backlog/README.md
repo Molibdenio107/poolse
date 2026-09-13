@@ -1,6 +1,6 @@
 # Poolse backlog
 
-56 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
+59 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
 exists, what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got
 wrong) and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance
 criteria, which are the contract.
@@ -19,7 +19,7 @@ QA section is your test list, already written.
 
 ## Index
 
-56 tickets · 25 at High priority · 52 open questions marked in the ticket files
+59 tickets · 27 at High priority · 52 open questions marked in the ticket files
 
 POOLSE-43 … 55 are one feature — lane-level scheduling and parcerias. Read
 [BUILD-ORDER.md](./BUILD-ORDER.md) before starting any of them: four decisions were taken
@@ -83,3 +83,6 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-54](./POOLSE-54-exporting-the-grid.md) | Exporting the grid — PDF and Excel | Scheduling / Export | Medium | POOLSE-49, 52 | — |
 | [POOLSE-55](./POOLSE-55-reference-schedule-seed.md) | The reference schedule as seed, and the verification pass | Scheduling / Seed data | High | all of 43–54 | — |
 | [POOLSE-56](./POOLSE-56-a-full-slot-takes-no-more.md) | A full slot takes no more classes | Scheduling / Data integrity | High | POOLSE-51 | 1 |
+| [POOLSE-57](./POOLSE-57-importing-the-wall-timetable.md) | Importing the wall timetable | Scheduling / Import | High | POOLSE-48, 51 | — |
+| [POOLSE-58](./POOLSE-58-staff-salaries.md) | Staff salaries | Staff / Payroll | High — the next slice | — | — |
+| [POOLSE-59](./POOLSE-59-importing-and-exporting-salaries.md) | Importing and exporting salaries | Staff / Payroll / Import | Medium | POOLSE-58 | — |

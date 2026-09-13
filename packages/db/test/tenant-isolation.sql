@@ -908,4 +908,115 @@ BEGIN
   RAISE NOTICE 'PASS test 15: bills, registers and lines are isolated, and a CPE is one meter per tenant';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 16 — a salary cannot be filed against a foreign person, and one person
+--           cannot hold two live rates at once
+--
+-- POOLSE-58. The most sensitive table in the schema so far: the composite key is
+-- what stops org A recording a wage against org B's instructor, and the gist
+-- exclusion is what stops two live rates existing for one person on one day.
+-- The `+ 1` on `effective_to` is asserted directly, because getting that bound
+-- wrong is invisible until two rates overlap by exactly one day.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_mem_a uuid; v_mem_a2 uuid; v_mem_b uuid; v_seen integer; ok boolean;
+BEGIN
+  INSERT INTO membership (organization_id, status, first_name, last_name)
+  VALUES (v_a, 'active', 'Ana', 'Ferreira') RETURNING id INTO v_mem_a;
+  INSERT INTO membership (organization_id, status, first_name, last_name)
+  VALUES (v_a, 'active', 'Rita', 'Nunes') RETURNING id INTO v_mem_a2;
+  INSERT INTO membership (organization_id, status, first_name, last_name)
+  VALUES (v_b, 'active', 'Bruno', 'Lopes') RETURNING id INTO v_mem_b;
+
+  INSERT INTO staff_compensation
+    (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+  VALUES (v_a, v_mem_a, 'monthly', 120000, DATE '2026-09-01', v_mem_a);
+  INSERT INTO staff_compensation
+    (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+  VALUES (v_b, v_mem_b, 'hourly', 715, DATE '2026-09-01', v_mem_b);
+
+  -- A wage for the neighbour's instructor.
+  ok := false;
+  BEGIN
+    INSERT INTO staff_compensation
+      (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+    VALUES (v_a, v_mem_b, 'monthly', 999900, DATE '2026-10-01', v_mem_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 16a: org A paid org B staff'; END IF;
+
+  -- Signed by somebody in the neighbour's club. Against a person with no rate
+  -- yet: on `v_mem_a` the exclusion constraint would fire first and this would
+  -- pass without ever reaching the key it is about.
+  ok := false;
+  BEGIN
+    INSERT INTO staff_compensation
+      (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+    VALUES (v_a, v_mem_a2, 'monthly', 100000, DATE '2027-01-01', v_mem_b);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 16b: a foreign membership signed a pay change'; END IF;
+
+  -- Two live rates for one person.
+  ok := false;
+  BEGIN
+    INSERT INTO staff_compensation
+      (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+    VALUES (v_a, v_mem_a, 'monthly', 130000, DATE '2026-11-01', v_mem_a);
+  EXCEPTION WHEN exclusion_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 16c: one person held two live rates'; END IF;
+
+  -- Close the first on the 31st. A rate starting ON the 31st still overlaps it:
+  -- `effective_to` is the last day at that rate, which is exactly what the `+ 1`
+  -- in the exclusion says.
+  UPDATE staff_compensation SET effective_to = DATE '2026-10-31'
+   WHERE organization_id = v_a AND staff_membership_id = v_mem_a;
+
+  ok := false;
+  BEGIN
+    INSERT INTO staff_compensation
+      (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+    VALUES (v_a, v_mem_a, 'monthly', 130000, DATE '2026-10-31', v_mem_a);
+  EXCEPTION WHEN exclusion_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 16d: a new rate started on the old one''s last day'; END IF;
+
+  -- And the day after is fine.
+  INSERT INTO staff_compensation
+    (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+  VALUES (v_a, v_mem_a, 'monthly', 130000, DATE '2026-11-01', v_mem_a);
+
+  -- An archived rate is outside the constraint: a row archived in error and
+  -- re-entered must not collide with something nobody can see.
+  UPDATE staff_compensation SET archived_at = now()
+   WHERE organization_id = v_a AND staff_membership_id = v_mem_a AND effective_from = DATE '2026-11-01';
+  INSERT INTO staff_compensation
+    (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+  VALUES (v_a, v_mem_a, 'monthly', 135000, DATE '2026-11-01', v_mem_a);
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  -- Deliberately unscoped: the salary list written tired.
+  SELECT count(*) INTO v_seen FROM staff_compensation;
+  IF v_seen <> 1 THEN RAISE EXCEPTION 'FAIL test 16e: org B saw % salaries, not 1', v_seen; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO staff_compensation
+      (organization_id, staff_membership_id, kind, amount_cents, effective_from, created_by_membership_id)
+    VALUES (v_a, v_mem_a, 'monthly', 1, DATE '2028-01-01', v_mem_a);
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 16f: org B wrote a salary into org A'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 16: salaries are isolated, signed inside the tenant, and one person holds one live rate';
+END $$;
+
 ROLLBACK;

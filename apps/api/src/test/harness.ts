@@ -247,6 +247,11 @@ const TENANT_TABLES = [
   'facility_photo',
   'facility',
   'invitation',
+  /*
+   * Salaries — POOLSE-58. Before `membership`, which every row names twice: the
+   * person paid and the person who set it.
+   */
+  'staff_compensation',
   'membership_role',
   'membership',
 ] as const;

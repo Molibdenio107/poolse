@@ -119,6 +119,20 @@ Four calls were taken up front and are **not** to be re-opened while building:
 
 ---
 
+## Salários — POOLSE-58, then 59
+
+Two tickets, in that order, and they are the next thing built. POOLSE-58 is the schema, the API and
+the screen; POOLSE-59 is the Excel path on top of it. Splitting them was a decision on 2026-09-13:
+one evening ends with a working salary list rather than two evenings ending with an importer whose
+round-trip test was the part that got cut.
+
+They sit ahead of roadmap slice 2.4 (Stripe). The reasoning is in `docs/roadmap.md`, phase 2, and it
+is not re-opened here.
+
+Read the ticket before the migration. The two things most likely to be got wrong are in it: the
+overlap constraint's date bound, and the fact that an Admin may not see the Owner's pay — which is a
+repository answer and not a role.
+
 ## How one evening runs
 
 You have two or three hours after a full day. The scarce resource is momentum, not skill.

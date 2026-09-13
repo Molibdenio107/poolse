@@ -144,6 +144,14 @@ const SECTIONS: Item[] = [
         // The chain is Instalações → Staff → Férias.
         children: [
           { href: '/dashboard/facilities/staff/vacations', key: 'vacations.title' },
+          /*
+           * Salários — POOLSE-58. Owner and Admin, like its parent.
+           *
+           * The absence of a link is a shape, not a permission: every endpoint
+           * behind it refuses anybody else, and an Admin is refused the Owner's
+           * own rate specifically. Hiding a control was never the control.
+           */
+          { href: '/dashboard/facilities/staff/salaries', key: 'salaries.title' },
         ],
       },
     ],

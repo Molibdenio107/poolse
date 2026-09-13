@@ -351,6 +351,8 @@ expensive mistake.
 | 2.2 | Invoice generation with series, sequential numbering, lines and VAT | ✅ A sibling pair lands on one document, numbered `FT A/1` and never renumbered |
 | 2.3 | Invoice statuses, overdue view, chase action | ✅ **Em dívida** lists what is owed, oldest first; payments are child rows and the status is derived |
 | 2.4 | Operator pays Poolse — Stripe subscription on the organization | Poolse can take money |
+| 2.5 | **Staff salaries** — effective-dated pay per person, Owner/Admin only, roll-up | ✅ **Built 13 September 2026.** `staff_compensation`, effective-dated with one live rate per person by gist exclusion; Salários under Staff with the two monthly-cost figures; an Admin sees every staff member except the Owner, enforced in the repository and stated on the card |
+| 2.6 | Salary export and import | A club's pay list arrives as a spreadsheet and a round trip changes nothing |
 
 Do 2.1–2.3 before touching Stripe. Most of the value of billing is knowing who owes what;
 automated collection is an optimisation on top of that, and it is where the regulatory and
@@ -359,6 +361,22 @@ integration cost lives.
 **Student→operator automated collection is not in this phase.** A SEPA mandate and an
 MB WAY authorisation both require the payer to act, and the payer has no account and no
 app until phase 3. It is slice 3.5, below.
+
+**2.5 and 2.6 come before 2.4, decided 13 September 2026.** The numbers stay where they are —
+renumbering a roadmap costs more than reading one note. 2.4 takes money from an operator, and there
+is no operator to take it from: the first production tenant is a free pilot, and platform
+administration (P.3) already extends a trial, changes a plan and suspends a tenant by hand, which is
+the manual substitute for Stripe and is good enough for one club. Salaries is something the pilot
+club uses in the week it lands. 2.4 is next after 2.6, unchanged.
+
+**Staff pay is in phase 2 because it is money**, and putting it anywhere else would have meant
+inventing a phase for it. It is the other direction of the same arithmetic: 2.1–2.3 are what comes
+in, 2.5 is what goes out. It shares nothing with invoicing but the page shell — no `invoice`, no
+`fee_plan`, no Stripe — which is why it can be built at any point without waiting for 2.4.
+
+**It is the most sensitive data in the product so far**, and it is the first table whose visibility
+is not the same for an Owner and an Admin. The rule lives in the repository, not in `requireRole`,
+because it is a question about a row. See POOLSE-58.
 
 **2.3 took the fallback, deliberately.** Chasing needed either notifications (3.0) or
 something simpler, and with phase 3 moved to last the choice made itself: a chase is a

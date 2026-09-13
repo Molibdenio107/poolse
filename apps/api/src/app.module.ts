@@ -14,6 +14,10 @@ import {
 } from './students/students.controller.js';
 import { SkillsController } from './classes/skills.controller.js';
 import { StaffController } from './staff/staff.controller.js';
+import {
+  CompensationController,
+  SalariesController,
+} from './staff/compensation.controller.js';
 import { ClassesController, TimetableController } from './classes/classes.controller.js';
 import {
   CalendarController,
@@ -161,6 +165,15 @@ const IDENTITY_ONLY_ROUTES = [
     StudentPaidController,
     StudentSocioController,
     SkillsController,
+    /*
+     * Before `StaffController` — POOLSE-58. `/staff/salaries` is two segments
+     * and `/staff/:membershipId` is one, so they do not actually collide; the
+     * order is here anyway because the day somebody adds `@Get(':a/:b')` to the
+     * staff controller, the screen that quietly stops working is the one showing
+     * people's wages.
+     */
+    SalariesController,
+    CompensationController,
     StaffController,
     StudentCalendarController,
     StudentsController,

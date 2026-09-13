@@ -404,3 +404,4 @@ export function isValidNif(nif: string): boolean {
 // scroll past lane arithmetic to find it. Re-exported here so `@poolse/rules`
 // stays one entry point.
 export * from './water.js';
+export * from './compensation.js';

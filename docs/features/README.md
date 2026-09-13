@@ -15,6 +15,7 @@ looks for it.
 | [personal.md](personal.md) | One person and their own pool: the signup choice, and what the app hides |
 | [spaces.md](spaces.md) | Espaços, the cleaning log, maintenance requests |
 | [maintenance.md](maintenance.md) | Planned maintenance: recurring tasks, who they are for, and the record of every time one was done |
+| [salaries.md](salaries.md) | What the club pays its staff: effective-dated rates, the two monthly-cost figures, and who may see them |
 | [classes.md](classes.md) | Turmas, parcerias, the lane grid |
 | [parcerias.md](parcerias.md) | Partnerships, their groups, the import and the export |
 | [calendar.md](calendar.md) | The dated week, the hover card, cancelling a class |

@@ -3002,3 +3002,74 @@ export interface TenantRequests {
   /** Newest first, one per distinct route. */
   errors: RecentError[];
 }
+
+/**
+ * Staff salaries — POOLSE-58.
+ *
+ * Both figures on a rate arrive computed, with a flag saying which of the two
+ * was derived from the other: the arithmetic lives once, in `@poolse/rules`, and
+ * is run by the API. Nothing on this side multiplies a wage by anything.
+ *
+ * `cents: null` means the contracted hours are not recorded. It renders as a
+ * dash and contributes nothing to a total — never a zero, which would make
+ * somebody look free.
+ */
+export interface StaffRate {
+  id: string;
+  kind: 'monthly' | 'hourly';
+  amountCents: number;
+  currency: string;
+  weeklyHours: number | null;
+  payPeriodsPerYear: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  note: string | null;
+  monthlyCents: number | null;
+  monthlyDerived: boolean;
+  hourlyCents: number | null;
+  hourlyDerived: boolean;
+}
+
+export interface StaffRateRecord extends StaffRate {
+  createdByName: string | null;
+  createdAt: string;
+  archivedAt: string | null;
+  /** The rate covering today. At most one, by exclusion constraint. */
+  current: boolean;
+}
+
+export interface SalaryRow {
+  membershipId: string;
+  displayName: string | null;
+  shortName: string | null;
+  roles: string[];
+  /** Null for somebody with nothing recorded — "sem valor definido". */
+  live: StaffRate | null;
+}
+
+export interface SalarySummary {
+  /** What leaves the bank in an ordinary month. */
+  thisMonthCents: number;
+  /** What employing these people costs per month, subsídios spread. */
+  annualisedMonthlyCents: number;
+  monthlyContractCents: number;
+  hourlyContractCents: number;
+  monthlyContractCount: number;
+  hourlyContractCount: number;
+  /** Live rates whose contracted hours are unknown. Counted, never summed. */
+  hoursUnknownCount: number;
+  noRateCount: number;
+  /**
+   * True for an Admin, always: the Owner's rate is not in these figures.
+   *
+   * Said on the card in words. An Admin's total is a different number from the
+   * Owner's for the same club, and an absence nobody explains reads as a zero.
+   */
+  ownerExcluded: boolean;
+}
+
+export interface Salaries {
+  organizationId: string;
+  salaries: Paginated<SalaryRow>;
+  canEdit: boolean;
+}
