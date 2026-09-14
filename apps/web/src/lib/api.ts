@@ -1895,6 +1895,22 @@ export interface FeeCategory {
   discountCents: number | null;
   usedByGroups: number;
   usedByEnrollments: number;
+  /**
+   * What the concession costs, and over how much of its reach.
+   *
+   * `students` is everybody it reaches — a live enrolment resolving to it, or a
+   * live fee line carrying it. `chargedStudents` is how many of those are being
+   * billed under it. Both are printed, because a total over part of a list is
+   * only honest when it says which part (`docs/financials.md` §6).
+   *
+   * `forgoneMonthlyCents` is null when nothing is charged under it at all —
+   * "not set", which renders as a dash and never as 0,00 €. Zero is a different
+   * answer: lines exist and the category takes nothing off them, which is what a
+   * label does. Also null for a reader who may not see amounts.
+   */
+  students: number;
+  chargedStudents: number;
+  forgoneMonthlyCents: number | null;
 }
 
 export interface ClassOptions {

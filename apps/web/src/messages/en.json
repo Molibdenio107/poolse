@@ -1457,7 +1457,10 @@
     "percentRange": "Enter a percentage between 0 and 100.",
     "amountInvalid": "Enter an amount in euros, for example 7.50.",
     "oneDiscount": "A category takes a percentage or a fixed amount, not both.",
-    "archiveKeepsLines": "Fees already agreed keep the discount they were agreed at."
+    "archiveKeepsLines": "Fees already agreed keep the discount they were agreed at.",
+    "coverage": "Based on {charged} of {students} students",
+    "forgoneMonthly": "{amount}/month in discount",
+    "forgoneUnknown": "— nothing charged yet"
   },
   "insurance": {
     "title": "Insurance policy",

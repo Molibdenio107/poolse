@@ -158,6 +158,21 @@ live enrolment of the student resolves to, and nothing at all when two of them d
 is agreed, so a correction reaches lines agreed afterwards and none agreed before. Renaming
 still reaches everything at once, because the line holds the id rather than the word.
 
+**What a concession costs** is on its row: how many of the people it reaches are actually
+being billed under it, and what it takes off the club per month. The figure is
+`fee_total_cents` minus `fee_payable_cents` over live lines, divided by their months and
+summed — the same two functions a family's line uses, so the two cannot disagree. The
+club's **periodicity** discount is deliberately outside it: paying six months ahead is the
+club's own offer, not the concession's.
+
+Coverage is always stated — "Com base em 9 de 14 alunos" — because a student on a senior
+turma with no fee line agreed yet is ordinary and a total that quietly excluded them would
+be the confident figure over partial data §6 refuses. Nothing charged under a concession
+shows a dash, never 0,00 €; a *label* charged to somebody shows a real zero, which is a
+different answer. The reach is live: a concession nobody is on today shows no sentence at
+all rather than a historical count. What it costs is owner and admin, like every other
+amount; the counts are not amounts and an instructor keeps them.
+
 A category a turma or an enrolment still names cannot be archived, and the refusal counts
 both. Fee lines are not counted: they hold the figure rather than a live reference, so old
 lines read correctly and a category does not become unarchivable the first time it is used.

@@ -45,6 +45,30 @@ export interface FeeCategory {
   /** How many turmas and enrolments name it — what makes archiving a decision. */
   usedByGroups: number;
   usedByEnrollments: number;
+  /**
+   * What the concession is actually costing, and over how much of its reach.
+   *
+   * The counts above say who *names* the category; these say what it does. A
+   * club deciding whether to go on offering a concession is asking the second
+   * question, and until now nothing answered it.
+   *
+   * **Coverage is not optional** — `docs/financials.md` §6. `students` is
+   * everybody the concession reaches: a live enrolment resolving to it, or a
+   * live fee line carrying it. `chargedStudents` is how many of those are
+   * actually being billed under it. A student on a senior turma who has no fee
+   * line yet is ordinary, not an error, and a total that quietly excluded them
+   * would be the confident figure over partial data that section refuses.
+   *
+   * `forgoneMonthlyCents` is **null when nothing is charged under it at all** —
+   * "not set", which §9 says is a dash and never a zero. Zero is a real answer
+   * and means something different: lines exist and the category takes nothing
+   * off them, which is what a label does.
+   *
+   * Null for a reader who may not see amounts, alongside `canSeeValues`.
+   */
+  students: number;
+  chargedStudents: number;
+  forgoneMonthlyCents: number | null;
 }
 
 /**
@@ -71,8 +95,65 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
       discount_cents: number | null;
       used_by_groups: number;
       used_by_enrollments: number;
+      students: number;
+      charged_students: number;
+      forgone_monthly_cents: number | null;
     }>(
-      `SELECT c.id, c.name, c.sort_order, c.discount_percent, c.discount_cents,
+      /*
+       * What each concession costs, in the same statement that lists them.
+       *
+       * **The arithmetic is `fee_total_cents` minus `fee_payable_cents`** — the
+       * two functions the price list and the invoice run already use, so the
+       * figure here cannot disagree with the one on a family's line. Nothing is
+       * subtracted in TypeScript, for the reason every trigger refusal carries
+       * its own numbers: two implementations of one sum agree until they do not.
+       *
+       * The periodicity discount is deliberately *outside* it. It is a property
+       * of how often a family pays, not of the concession, and folding it in
+       * would bill "Sénior" for a club's own six-month offer.
+       *
+       * **Monthly-equivalent, rounded once at the end of the sum.** A trimestral
+       * line's forgone amount is divided by its three months as `numeric` and
+       * rounded only after every line is added — the same rule `fee_total_cents`
+       * follows, for the same cent that turns into a telephone call.
+       *
+       * `fee_period` is a LEFT JOIN and the months coalesce to 1: an inscrição
+       * is charged once and names no periodicity, and an inner join here would
+       * silently drop every one of them.
+       *
+       * `enrolment_fee_category` is called once per live enrolment in a CTE
+       * rather than once per enrolment *per category*, which is the same single
+       * definition of the precedence at a fraction of the calls.
+       *
+       * (No backticks in here: one would end the template literal.)
+       */
+      `WITH applies AS (
+         SELECT enrolment_fee_category(e.organization_id, e.id) AS category_id,
+                e.student_id
+           FROM enrollment e
+          WHERE e.status = 'active'
+       ),
+       charged AS (
+         SELECT sf.fee_category_id AS category_id,
+                sf.student_id,
+                (fee_total_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint,
+                                 sf.discount_percent)
+                 - fee_payable_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint,
+                                     sf.discount_percent, sf.manual_discount_percent,
+                                     sf.manual_discount_cents))::numeric
+                / coalesce(fp.months, 1) AS forgone_monthly
+           FROM student_fee sf
+           LEFT JOIN fee_period fp ON fp.id = sf.fee_period_id
+          WHERE sf.fee_category_id IS NOT NULL
+            AND sf.archived_at IS NULL
+            AND sf.ends_on IS NULL
+       ),
+       reach AS (
+         SELECT category_id, student_id FROM applies WHERE category_id IS NOT NULL
+          UNION
+         SELECT category_id, student_id FROM charged
+       )
+       SELECT c.id, c.name, c.sort_order, c.discount_percent, c.discount_cents,
               (SELECT count(*)::int FROM class_group cg
                 WHERE cg.fee_category_id = c.id
                   AND cg.organization_id = c.organization_id
@@ -80,7 +161,12 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
               (SELECT count(*)::int FROM enrollment e
                 WHERE e.fee_category_id = c.id
                   AND e.organization_id = c.organization_id
-                  AND e.ended_on IS NULL) AS used_by_enrollments
+                  AND e.ended_on IS NULL) AS used_by_enrollments,
+              (SELECT count(*)::int FROM reach r WHERE r.category_id = c.id) AS students,
+              (SELECT count(DISTINCT ch.student_id)::int FROM charged ch
+                WHERE ch.category_id = c.id) AS charged_students,
+              (SELECT round(sum(ch.forgone_monthly))::int FROM charged ch
+                WHERE ch.category_id = c.id) AS forgone_monthly_cents
          FROM fee_category c
         WHERE c.archived_at IS NULL
         -- The club's own order, then alphabetical: a list somebody arranged
@@ -99,6 +185,11 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
       discountCents: row.discount_cents,
       usedByGroups: row.used_by_groups,
       usedByEnrollments: row.used_by_enrollments,
+      students: row.students,
+      chargedStudents: row.charged_students,
+      // Null rather than zero when nothing is charged under it: `sum()` over no
+      // rows is null, and that is exactly the distinction §9 asks for.
+      forgoneMonthlyCents: row.forgone_monthly_cents,
     }));
   });
 }

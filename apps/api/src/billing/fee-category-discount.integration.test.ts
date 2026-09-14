@@ -340,6 +340,186 @@ test('an instructor reads the names of the concessions and none of the figures',
   });
 });
 
+test('what a concession costs is summed in SQL, over a coverage it states', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { mensal, plan } = await priceList(tenant);
+    const billed = await addStudent(tenant, 'Duarte');
+    const alsoBilled = await addStudent(tenant, 'Inês');
+    const notYet = await addStudent(tenant, 'Rita');
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const categories = new FeeCategoriesController();
+      const senior = (await categories.create({ name: 'Sénior', discountPercent: 20 })).id;
+
+      // Three people the concession reaches, two of them actually billed. The
+      // third is the ordinary case coverage exists for: on a senior turma, no
+      // fee line agreed yet.
+      await enrol(tenant, billed, 'Hidro A', senior);
+      await enrol(tenant, alsoBilled, 'Hidro B', senior);
+      await enrol(tenant, notYet, 'Hidro C', senior);
+
+      const fees = new StudentFeesController();
+      await fees.create(billed, { feePlanId: plan, feePeriodId: mensal, feeCategoryId: senior });
+      await fees.create(alsoBilled, {
+        feePlanId: plan,
+        feePeriodId: mensal,
+        feeCategoryId: senior,
+      });
+
+      const [row] = (await categories.list()).categories;
+      assert.equal(row?.students, 3, 'everybody the concession reaches');
+      assert.equal(row?.chargedStudents, 2, 'and the two being billed under it');
+      // 20% of 35,00 is 7,00 a month, twice.
+      assert.equal(row?.forgoneMonthlyCents, 1400);
+    });
+  });
+});
+
+test('a concession nobody is charged under is a dash, not a zero', async () => {
+  await withScratchTenant(async (tenant) => {
+    const student = await addStudent(tenant, 'Duarte');
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const categories = new FeeCategoriesController();
+      const senior = (await categories.create({ name: 'Sénior', discountPercent: 20 })).id;
+      await enrol(tenant, student, 'Hidro A', senior);
+
+      const [row] = (await categories.list()).categories;
+      assert.equal(row?.students, 1);
+      assert.equal(row?.chargedStudents, 0);
+      assert.equal(
+        row?.forgoneMonthlyCents,
+        null,
+        'nothing charged is "not set" — a dash, never 0,00 EUR',
+      );
+    });
+  });
+});
+
+test('a label costs zero, which is a different answer from not knowing', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { mensal, plan } = await priceList(tenant);
+    const student = await addStudent(tenant, 'Duarte');
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const categories = new FeeCategoriesController();
+      // A club keeping "Funcionário" to count them, worth nothing.
+      const label = (await categories.create({ name: 'Funcionário' })).id;
+
+      const fees = new StudentFeesController();
+      await fees.create(student, { feePlanId: plan, feePeriodId: mensal, feeCategoryId: label });
+
+      const [row] = (await categories.list()).categories;
+      assert.equal(row?.chargedStudents, 1);
+      assert.equal(row?.forgoneMonthlyCents, 0, 'a line exists and it takes nothing off');
+    });
+  });
+});
+
+test('the periodicity discount is not the concession, and a trimestral line is monthly-equivalent', async () => {
+  await withScratchTenant(async (tenant) => {
+    const student = await addStudent(tenant, 'Duarte');
+
+    const [level] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student_level (organization_id, name, sort_order)
+       VALUES ($1, 'Iniciação', 1) RETURNING id`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      // Trimestral at 5%: the club's own offer for paying ahead, and none of it
+      // belongs to the concession.
+      const trimestral = (
+        await new FeePeriodsController().create(tenant.facilityId, {
+          name: 'Trimestral',
+          months: 3,
+          discountPercent: 5,
+        })
+      ).id;
+      const plan = (
+        await new FeePlansController().create(tenant.facilityId, {
+          kind: 'mensalidade',
+          levelId: level!.id,
+          lessonsPerWeek: 2,
+          amountCents: 3500,
+        })
+      ).id;
+
+      const categories = new FeeCategoriesController();
+      const senior = (await categories.create({ name: 'Sénior', discountPercent: 20 })).id;
+
+      const fees = new StudentFeesController();
+      await fees.create(student, {
+        feePlanId: plan,
+        feePeriodId: trimestral,
+        feeCategoryId: senior,
+      });
+
+      const line = (await fees.list(student)).lines[0];
+      // 35,00 x 3 less 5% is 99,75; less 20% is 79,80.
+      assert.equal(line?.periodTotalCents, 9975);
+      assert.equal(line?.payableCents, 7980);
+
+      /*
+       * The concession accounts for 19,95 over the quarter — 6,65 a month — and
+       * the club's 5,25 periodicity discount is nobody's concession. Folding the
+       * two together would bill "Sénior" for the club's own offer.
+       */
+      const [row] = (await categories.list()).categories;
+      assert.equal(row?.forgoneMonthlyCents, 665);
+    });
+  });
+});
+
+test('an ended line stops costing, and an instructor is told nothing about the cost', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { mensal, plan } = await priceList(tenant);
+    const student = await addStudent(tenant, 'Duarte');
+    let senior = '';
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const categories = new FeeCategoriesController();
+      senior = (await categories.create({ name: 'Sénior', discountPercent: 20 })).id;
+
+      const fees = new StudentFeesController();
+      await fees.create(student, { feePlanId: plan, feePeriodId: mensal, feeCategoryId: senior });
+      assert.equal((await categories.list()).categories[0]?.forgoneMonthlyCents, 700);
+
+      /*
+       * Ended: history, not a cost the club is still carrying.
+       *
+       * Today rather than a fixed past date — `student_fee_dates_ordered`
+       * refuses an end before the start, and the line started today. Any
+       * `ends_on` at all means ended here, which is the same definition the
+       * student's own screen uses to split live lines from history.
+       */
+      const id = (await fees.list(student)).lines[0]!.id;
+      await fees.update(student, id, {
+        feePeriodId: mensal,
+        feeCategoryId: senior,
+        endsOn: new Date().toISOString().slice(0, 10),
+      });
+
+      const [row] = (await categories.list()).categories;
+      assert.equal(row?.forgoneMonthlyCents, null, 'nothing live is charged under it any more');
+    });
+
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      const [row] = (await new FeeCategoriesController().list()).categories;
+      assert.equal(row?.name, 'Sénior');
+      assert.equal(row?.forgoneMonthlyCents, null, 'what it costs is money — AC10');
+      /*
+       * Zero, and deliberately: this student was never in a turma, so once their
+       * line ended nothing live reaches the concession. The reach is a fact
+       * about today — a club that ran a senior programme two years ago is not
+       * still running one, and a count that said otherwise would make every
+       * retired concession look busy.
+       */
+      assert.equal(row?.students, 0, 'reach is live, not historical');
+    });
+  });
+});
+
 test('the order is dragged: a new category appends, and the list can be rewritten', async () => {
   await withScratchTenant(async (tenant) => {
     await actingAs(tenant, { roles: ['owner'] }, async () => {

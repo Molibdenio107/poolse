@@ -68,6 +68,10 @@ export class FeeCategoriesController {
             ...category,
             discountPercent: null,
             discountCents: null,
+            // The counts stay — how many people are on a concession is not an
+            // amount, and an instructor already sees the turma counts beside it.
+            // What it *costs* is money and goes with the rest.
+            forgoneMonthlyCents: null,
           })),
       canManage: hasRole('owner', 'admin'),
       canSeeValues,

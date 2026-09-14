@@ -113,6 +113,57 @@ function Worth({
   return <span className="text-sm text-foreground-muted">{t('categories.labelOnly')}</span>;
 }
 
+/**
+ * What the concession costs the club, and over how much of its reach.
+ *
+ * **Coverage first, then the figure** — `docs/financials.md` §6. "Com base em 9
+ * de 14 alunos" is not a footnote: a student on a senior turma who has no fee
+ * line yet is ordinary, and a confident total that quietly excluded them is the
+ * thing that section refuses. So the sentence is always printed, even when the
+ * two numbers agree.
+ *
+ * **A dash, never a zero, where nothing is charged** (§9). And a label-only
+ * category is not asked the question at all: "what does it cost" has no meaning
+ * for a category that takes nothing off, and printing 0,00 € beside "Sem
+ * desconto" would be saying the same thing twice in a way that reads as a
+ * measurement.
+ */
+function Cost({
+  category,
+  canSeeValues,
+}: {
+  category: FeeCategory;
+  canSeeValues: boolean;
+}): React.ReactElement | null {
+  const t = useTranslations();
+  const locale = useLocale();
+
+  // Nobody is on it and nothing is charged: there is no sentence to write, and
+  // the counts beside the name already say the category is unused.
+  if (category.students === 0 && category.chargedStudents === 0) return null;
+
+  const valued = category.discountPercent !== null || category.discountCents !== null;
+
+  return (
+    <p className="text-sm text-foreground-muted">
+      {t('categories.coverage', {
+        charged: category.chargedStudents,
+        students: category.students,
+      })}
+      {canSeeValues && valued && (
+        <>
+          {' · '}
+          {category.forgoneMonthlyCents === null
+            ? t('categories.forgoneUnknown')
+            : t('categories.forgoneMonthly', {
+                amount: formatCents(locale, category.forgoneMonthlyCents),
+              })}
+        </>
+      )}
+    </p>
+  );
+}
+
 export function CategoriesPanel({
   facilityId,
   categories,
@@ -304,6 +355,10 @@ function Row({
           )}
         </span>
       </div>
+
+      {/* What it is costing, under the name rather than beside it: it is a
+          sentence, and the row above is already two columns of chips. */}
+      <Cost category={category} canSeeValues={canSeeValues} />
 
       {canManage && editing && (
         <CategoryForm facilityId={facilityId} category={category} onDone={onEdit} />

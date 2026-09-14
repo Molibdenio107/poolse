@@ -1457,7 +1457,10 @@
     "percentRange": "Indique uma percentagem entre 0 e 100.",
     "amountInvalid": "Indique um valor em euros, por exemplo 7,50.",
     "oneDiscount": "Uma categoria tem percentagem ou valor fixo, não os dois.",
-    "archiveKeepsLines": "As mensalidades já acordadas mantêm o desconto com que foram acordadas."
+    "archiveKeepsLines": "As mensalidades já acordadas mantêm o desconto com que foram acordadas.",
+    "coverage": "Com base em {charged} de {students} alunos",
+    "forgoneMonthly": "{amount}/mês em desconto",
+    "forgoneUnknown": "— ainda sem cobranças"
   },
   "insurance": {
     "title": "Apólice de seguro",
