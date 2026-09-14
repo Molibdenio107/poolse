@@ -252,9 +252,10 @@ export async function archiveCategory(
  * Which category applies to one enrolment — its own, else its turma's, else none.
  *
  * Answered by `enrolment_fee_category` in SQL rather than by a `coalesce`
- * written here, so the pricing engine that reads this next cannot spell the
- * precedence differently. Null is "the club has said nothing", which is not a
- * category called "normal" and must never become one.
+ * written here, so the fee forms, the suggestion in `studentFees` and whatever
+ * reads this next cannot spell the precedence differently. Null is "the club has
+ * said nothing", which is not a category called "normal" and must never become
+ * one.
  */
 export async function categoryForEnrollment(
   organizationId: string,

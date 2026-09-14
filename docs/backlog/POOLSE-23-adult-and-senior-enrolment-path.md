@@ -2,6 +2,13 @@
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
+> **Amended 14 Sep** — built, and AC4's out-of-scope line has since been overtaken. A fee category now
+> **carries** the discount it is worth, and a fee line snapshots that figure when it is agreed; the
+> reasoning is in `docs/decisions.md`, 2026-09-14. AC4's own wording still holds — it is a category
+> *reference* and the arithmetic is not "computed in the UI", it is computed in SQL — but "this ticket
+> only requires that a fee category can be expressed" no longer describes the product. Do not read the
+> out-of-scope line below as a reason to take the value back off.
+
 **Type:** Feature · **Area:** Students / Enrolment · **Priority:** Medium
 **Borrowed from:** nobody — none of the five lesson platforms models an adult programme as anything other than a children's path with the guardian fields left blank.
 
@@ -17,7 +24,7 @@ An adult signing up for hidroginástica should not be walked through a form buil
 - The enrolment flow branches on that: no guardian block, no guardian-consent copy, no "which child are you enrolling?" step. Branch on the data, not on a checkbox the user ticks.
 - Adults self-sign consent and terms; the form presented is the one POOLSE-22 AC 3 selects.
 - Adult and senior student records carry **health and mobility notes** (free text, per-student, not per-enrolment) and an **emergency contact**. The emergency contact is either a Person link or free text and is explicitly not a guardian — it grants no role, no login, no access to the student's record, and does not appear in guardian lists.
-- A fee category is expressible on the turma or on the enrolment; the enrolment-level value wins where both exist. It is a category reference, not a discount percentage computed in the UI.
+- A fee category is expressible on the turma or on the enrolment; the enrolment-level value wins where both exist. It is a category reference, not a discount percentage computed in the UI. *(Still true as written. Since 14 Sep the reference also carries a percentage or a fixed amount, applied in SQL and snapshotted onto the fee line — never computed in the browser.)*
 - Senior levels sit in the same level ordering as everything else (POOLSE-05, POOLSE-16), so POOLSE-19's "next level" logic works across them without a parallel branch.
 - A Person who is both an adult student and an encarregado de educação has one record, one profile, with their enrolments and their guardianship as separate sections (POOLSE-17 AC 6, POOLSE-35 AC 6). They appear once in Alunos with both badges.
 - Communications routing: for a student at or above maioridade with no guardian edge, messages go to the student. Where a person is both an adult student and an EE, the two audiences are distinct — a message to guardians must not reach them in their student capacity and vice versa.

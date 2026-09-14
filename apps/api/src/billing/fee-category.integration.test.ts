@@ -26,8 +26,10 @@ import {
  * own category puts them back on the turma's rather than on nothing.
  *
  * The precedence lives in SQL — `enrolment_fee_category` — for the reason
- * `fee_total_cents` does: the pricing engine that reads this next must not spell
- * it differently.
+ * `fee_total_cents` does: everything that reads it must not spell it
+ * differently. Round 19 gave it a second caller, the suggestion on the fee
+ * forms; what a category is *worth* is covered by
+ * `fee-category-discount.integration.test.ts`.
  *
  * AC5 is here too because it is a claim about ordering that nothing else
  * asserts: a senior level sits in the same ladder as the children's ones, not in

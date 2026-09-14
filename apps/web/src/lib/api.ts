@@ -1862,15 +1862,21 @@ export interface ClassGroup {
 }
 
 /**
- * A fee category — POOLSE-23 AC4.
+ * A fee category — POOLSE-23 AC4, valued in round 19.
  *
  * The reason one person pays a different price from the person in the next lane:
  * Sénior, Estudante, Funcionário. A club invents its own.
  *
- * **A label, never a price.** What one is worth belongs to the pricing engine,
- * so there is deliberately no amount here. The two counts are what make
- * archiving a decision rather than a click — and they are the pair the refusal
- * comes back with if somebody archives one that is still in use.
+ * **It carries what it is worth**, which reverses the "a label, never a price"
+ * this comment used to hold. Nothing consulted the label, so the concession was
+ * typed into a fee line's free-text reason once per family. The value applies
+ * when a line is agreed and is snapshotted onto it — correcting a category never
+ * re-prices anybody.
+ *
+ * The two counts are what make archiving a decision rather than a click — and
+ * they are the pair the refusal comes back with if somebody archives one that is
+ * still in use. Fee lines are not among them: a line holds the figure rather
+ * than a live reference.
  */
 export interface FeeCategory {
   id: string;
@@ -1908,8 +1914,11 @@ export interface ClassOptions {
   /**
    * The club's fee categories — POOLSE-23 AC4.
    *
-   * A label, not a price: what one is worth belongs to the pricing engine. The
-   * turma's is the default for everybody in it, and an enrolment may override it.
+   * **Names only, deliberately.** This list exists to fill the turma form's
+   * picker, and the form is reachable by an instructor; what a category is worth
+   * is owner and admin, answered by `/fee-categories` with `canSeeValues` beside
+   * it. The turma's category is the default for everybody in it, and an
+   * enrolment may override it.
    */
   feeCategories: { id: string; name: string }[];
 }
