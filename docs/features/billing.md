@@ -9,9 +9,14 @@ What a site charges, and what one student pays. Schema in `docs/data-model.md`.
 | Read the price list, periodicities, billing settings | owner, admin |
 | Add, edit or archive a price or a periodicity | owner, admin |
 | Read or change what one student pays | owner, admin |
+| Read the **names** of the fee categories | owner, admin, instructor |
+| Read what a fee category is **worth** | owner, admin |
+| Add, edit or archive a fee category | owner, admin |
 
 An instructor, guardian or student is refused by the API, not merely shown a page without
-the controls.
+the controls. The one thing an instructor may read is a category's *name*, because it is
+printed beside a turma and on an enrolment; the value comes back null with `canSeeValues:
+false` beside it, so a blank is never mistaken for "no discount".
 
 ## Periodicities
 
@@ -119,11 +124,51 @@ Amounts stay stored gross; the discount is applied on display only. The total co
 price — so the price list and an agreement cannot round differently. A price naming no
 default periodicity has nothing to discount by and shows its monthly amount alone.
 
+## Concessions — the fee category
+
+Why one person pays less than the person in the next lane: **Sénior**, **Estudante**,
+**Funcionário**. The list is a panel on each site's page, under **Preços**, and it is the
+**club's** list — organization-scoped, the same categories at every site, which the panel
+says in visible text. A "Sénior" meaning one thing at one pool and another at the next is a
+concession nobody could report on.
+
+A category carries **a percentage or a fixed amount, or neither**. Neither is a label, which
+is a legitimate thing to keep — and it is not 0 %, which would be a decision somebody took.
+
+**One author, never two.** A line's discount comes from a category or from a person, never
+both. The control on every fee form is one select with three answers: no discount, one of
+the club's concessions with what it costs printed beside it, or a figure typed with a
+reason. A request carrying both is refused rather than resolved by precedence — stacking
+would put a family's total two multiplications deep with nothing on the invoice able to
+reconstruct it.
+
+All four kinds take one. A senior concession on the quota and a waived inscrição for staff
+are both ordinary.
+
+**Where it is set** is the turma or the enrolment, and the enrolment wins —
+`docs/features/students.md` has that half. Charging a fee **suggests** the category every
+live enrolment of the student resolves to, and nothing at all when two of them disagree.
+
+**Changing a category never re-prices anybody.** The figure is copied onto the line when it
+is agreed, so a correction reaches lines agreed afterwards and none agreed before. Renaming
+still reaches everything at once, because the line holds the id rather than the word.
+
+A category a turma or an enrolment still names cannot be archived, and the refusal counts
+both. Fee lines are not counted: they hold the figure rather than a live reference, so old
+lines read correctly and a category does not become unarchivable the first time it is used.
+
 ## What a student pays
 
-Creating a fee line **snapshots** the plan's amount and the period's discount. Editing the
-price list never rewrites an agreement somebody already made; the student's page marks a
-line whose plan has since changed and offers to update it, one line at a time, by a person.
+Creating a fee line **snapshots** the plan's amount, the period's discount and the
+concession's figure. Editing the price list — or a category — never rewrites an agreement
+somebody already made; the student's page marks a line whose plan has since changed and
+offers to update it, one line at a time, by a person.
+
+A discounted line says **why** it is discounted: the concession by name where a category
+authored it, the typed reason where a person did. Two sentences rather than one with a blank
+in it. The same word is printed on the invoice line, snapshotted there, because the amount is
+already net of the discount and a document without it says 28,00 where the price list says
+35,00 with nothing accounting for the rest.
 
 
 ## A student's fees screen

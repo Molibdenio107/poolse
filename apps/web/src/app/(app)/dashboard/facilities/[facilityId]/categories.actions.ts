@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPatch, apiPost, type FeeCategory } from '@/lib/api';
-import { parseCents } from '@/lib/money';
+import { isRefusal, parseCategoryDiscount } from '@/lib/fee-category';
 import type { FormState } from '../../actions';
 
 /**
@@ -73,10 +73,11 @@ export async function listCategories(): Promise<{
 /**
  * Saving a category, value and all.
  *
- * The amount is turned into integer cents **here**, by `parseCents`, which is
- * what every other money field on this page does — the API takes cents and
- * refuses anything else rather than rounding a stray "35,5 %" into something
- * plausible.
+ * The typed figure becomes the two columns in `lib/fee-category.ts` — one place,
+ * tested, the way `draftToBody` is the one place a printed amount becomes cents.
+ * What crosses to the API is already integer cents or a percentage in range, and
+ * the API refuses anything else rather than rounding a stray "35,5 %" into
+ * something plausible.
  */
 export async function saveCategoryAction(
   _previous: FormState,
@@ -91,32 +92,20 @@ export async function saveCategoryAction(
   // told the obvious.
   if (name === '') return { ok: false, fields: { name: 'categories.nameRequired' } };
 
-  const kind = String(formData.get('discountKind') ?? 'none');
-  const raw = String(formData.get('discountValue') ?? '').trim();
-
-  let discountPercent: number | null = null;
-  let discountCents: number | null = null;
-
-  if (kind === 'percent') {
-    // Either decimal mark, because a Portuguese keyboard writes 7,5 and the
-    // number input on a phone writes 7.5 — the same normalisation `parseCents`
-    // does for an amount.
-    const percent = Number(raw.replace(',', '.'));
-    if (raw === '' || !Number.isFinite(percent) || percent < 0 || percent > 100) {
-      return { ok: false, fields: { discountValue: 'categories.percentRange' } };
-    }
-    discountPercent = percent;
-  } else if (kind === 'amount') {
-    const cents = parseCents(raw);
-    if (cents === null) return { ok: false, fields: { discountValue: 'categories.amountInvalid' } };
-    discountCents = cents;
+  const discount = parseCategoryDiscount(
+    String(formData.get('discountKind') ?? 'none'),
+    String(formData.get('discountValue') ?? ''),
+  );
+  // Beside the box, not at the top of the form: a sentence up there cannot say
+  // which of the fields it meant.
+  if (isRefusal(discount)) {
+    return { ok: false, fields: { discountValue: discount.errorKey } };
   }
 
   const body = {
     name,
     sortOrder: Number.isInteger(sortOrder) ? sortOrder : 0,
-    discountPercent,
-    discountCents,
+    ...discount,
   };
 
   try {
