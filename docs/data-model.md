@@ -2349,6 +2349,20 @@ renaming them would touch the two repositories, `fee_payable_cents`'s call sites
 tests for no behaviour change. **Proposed** as a follow-up — `line_discount_*` — rather than
 done by reflex.)*
 
+**`enrolment_fee_category_all`** is the same precedence, sayable for a whole club at once —
+added 14 September 2026 after measuring. The scalar function called per row cost about 100 µs
+an enrolment: 17 ms on a demo club, **216 ms at two thousand enrolments**, on a page an office
+opens all day. The view is one join for the lot (6 ms at five thousand), and the function is
+now a *lookup against it*, so the `coalesce` still exists exactly once — copying it into the
+caller was the fix the original migration explicitly refused.
+
+It carries **`WITH (security_invoker = true)`**, and that is the whole safety of it: a view
+without it runs as its *owner*, so `poolse_app` reading it would see every tenant's enrolments
+and no policy would ever be consulted. That is this schema's isolation undone by the one
+construct that can undo it quietly, which is why it has its own assertion — test 17 in
+`tenant-isolation.sql`, proving org A sees one row, org B sees its own, and the turma
+precedence survives the move. Postgres 15 or later.
+
 **`invoice_line.fee_category_name`** is the concession as the document says it: the club's own
 word, snapshotted like the level's and the season's. The line's amount is already net of the
 discount, so without it a document says 28,00 where the price list says 35,00 and nothing

@@ -121,17 +121,20 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
        * is charged once and names no periodicity, and an inner join here would
        * silently drop every one of them.
        *
-       * `enrolment_fee_category` is called once per live enrolment in a CTE
-       * rather than once per enrolment *per category*, which is the same single
-       * definition of the precedence at a fraction of the calls.
+       * **The reach reads `enrolment_fee_category_all`, not the scalar function.**
+       * Calling the function per row cost about 100 microseconds an enrolment —
+       * 17 ms on the demo club, 210 ms at two thousand enrolments, on a page an
+       * office opens all day. The view holds the same single definition of the
+       * precedence (the function is now a lookup against it), so this is one
+       * join for the club rather than one call per person, and the two spellings
+       * cannot drift because there is only one.
        *
        * (No backticks in here: one would end the template literal.)
        */
       `WITH applies AS (
-         SELECT enrolment_fee_category(e.organization_id, e.id) AS category_id,
-                e.student_id
-           FROM enrollment e
-          WHERE e.status = 'active'
+         SELECT v.category_id, v.student_id
+           FROM enrolment_fee_category_all v
+          WHERE v.status = 'active'
        ),
        charged AS (
          SELECT sf.fee_category_id AS category_id,

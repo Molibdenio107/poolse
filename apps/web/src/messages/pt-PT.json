@@ -1427,7 +1427,7 @@
     "name": "Nome",
     "nameRequired": "Indique um nome para a categoria.",
     "nameTaken": "Já existe uma categoria com esse nome.",
-    "usedBy": "{groups} turmas · {enrollments} inscrições",
+    "usedBy": "Usada por {groups} turmas e {enrollments} inscrições",
     "inUse": "Esta categoria ainda é usada por {groups} turmas e {enrollments} inscrições. Retire-a de todas antes de a arquivar.",
     "archive": "Arquivar categoria",
     "onGroup": "Categoria da turma",
@@ -1458,7 +1458,7 @@
     "amountInvalid": "Indique um valor em euros, por exemplo 7,50.",
     "oneDiscount": "Uma categoria tem percentagem ou valor fixo, não os dois.",
     "archiveKeepsLines": "As mensalidades já acordadas mantêm o desconto com que foram acordadas.",
-    "coverage": "Com base em {charged} de {students} alunos",
+    "coverage": "Em todo o clube, {charged} de {students} alunos",
     "forgoneMonthly": "{amount}/mês em desconto",
     "forgoneUnknown": "— ainda sem cobranças"
   },

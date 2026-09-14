@@ -316,6 +316,9 @@ async function main(): Promise<void> {
       awayToday: 0,
       inventory: 0,
       slots: 0,
+      prices: 0,
+      categories: 0,
+      feeLines: 0,
     };
 
     // ---------------------------------------------------------------------
@@ -1267,6 +1270,239 @@ async function main(): Promise<void> {
     if (counts.inventory > 0) console.log(`  inventário: ${counts.inventory} artigos`);
 
     // ---------------------------------------------------------------------
+    // A price list, and the concessions on it — round 19.
+    //
+    // Nothing seeded a price before this, which meant Preços was empty on every
+    // developer's machine and every screen downstream of it — a student's fees,
+    // faturação, and what a concession costs — could only be judged by somebody
+    // who first typed a price list in by hand. A feature nobody can see is a
+    // feature nobody reviews.
+    //
+    // **Deterministic and additive**, like everything else here: prices derive
+    // from the level's own position in the ladder rather than from a random
+    // number, and every insert skips what already exists, so re-running the seed
+    // on a club somebody has been typing into adds nothing and overwrites less.
+    // ---------------------------------------------------------------------
+    for (const site of await many<{ id: string }>(
+      client,
+      `SELECT id FROM facility
+        WHERE organization_id = $1 AND archived_at IS NULL
+        ORDER BY created_at`,
+      [org.id],
+    )) {
+      /*
+       * Two periodicities, and only the second discounts.
+       *
+       * Mensal is what almost everybody is on; Trimestral at 5 % is the club's
+       * own offer for paying ahead, and it is here precisely so the screens have
+       * to keep it apart from a concession — they are different money and the
+       * roll-up says so.
+       */
+      for (const period of [
+        { name: 'Mensal', months: 1, discount: 0, isDefault: true },
+        { name: 'Trimestral', months: 3, discount: 5, isDefault: false },
+      ]) {
+        /*
+         * Guarded on the **months**, not the name — that is what
+         * `fee_period_months_uq` actually enforces, one periodicity per length
+         * per site. A club that already prices monthly under its own word for it
+         * ("Mês") keeps that row rather than colliding with a second one called
+         * "Mensal", which is what the first version of this did.
+         */
+        await client.query(
+          `INSERT INTO fee_period
+             (organization_id, facility_id, name, months, discount_percent, is_default)
+           SELECT $1, $2, $3, $4, $5, $6
+            WHERE NOT EXISTS (
+              SELECT 1 FROM fee_period
+               WHERE organization_id = $1 AND facility_id = $2
+                 AND months = $4 AND archived_at IS NULL)`,
+          [org.id, site.id, period.name, period.months, period.discount, period.isDefault],
+        );
+      }
+
+      const mensal = await one<{ id: string }>(
+        client,
+        `SELECT id FROM fee_period
+          WHERE organization_id = $1 AND facility_id = $2 AND months = 1
+            AND archived_at IS NULL
+          ORDER BY created_at LIMIT 1`,
+        [org.id, site.id],
+      );
+
+      /*
+       * A price per level, at one, two and three lessons a week.
+       *
+       * Three frequencies rather than one because the student page resolves a
+       * price from what the timetable actually says — a child in two turmas is
+       * on the twice-a-week price — and a list that only priced one frequency
+       * would show "sem preço para estas aulas" for most of the club.
+       *
+       * 28,00 € at the bottom of the ladder, two euros a rung, and roughly half
+       * again for each extra weekly lesson rather than double: that is how a
+       * pool actually prices it, and a linear multiple would make the second
+       * lesson look like a rip-off on screen.
+       */
+      const levels = await many<{ id: string; sort_order: number }>(
+        client,
+        `SELECT id, sort_order FROM student_level
+          WHERE organization_id = $1 AND archived_at IS NULL
+          ORDER BY sort_order`,
+        [org.id],
+      );
+
+      for (const level of levels) {
+        for (const perWeek of [1, 2, 3]) {
+          const base = 2800 + level.sort_order * 200;
+          const amount = Math.round((base * (1 + (perWeek - 1) * 0.6)) / 50) * 50;
+
+          const created = await one<{ id: string }>(
+            client,
+            `INSERT INTO fee_plan
+               (organization_id, facility_id, kind, level_id, lessons_per_week,
+                amount_cents, default_fee_period_id)
+             SELECT $1, $2, 'mensalidade', $3, $4, $5, $6
+              WHERE NOT EXISTS (
+                SELECT 1 FROM fee_plan
+                 WHERE organization_id = $1 AND facility_id = $2 AND kind = 'mensalidade'
+                   AND level_id = $3 AND lessons_per_week = $4 AND archived_at IS NULL)
+             RETURNING id`,
+            [org.id, site.id, level.id, perWeek, amount, mensal?.id ?? null],
+          );
+          if (created) counts.prices += 1;
+        }
+      }
+    }
+
+    /*
+     * The concessions — organization-scoped, so once for the club.
+     *
+     * One of each shape the schema allows, which is the point: a percentage, a
+     * fixed amount, and a category worth nothing at all. The third is not filler
+     * — "a label is not 0 %" is a rule the screens have to render differently,
+     * and it can only be checked against a club that has one.
+     */
+    for (const category of [
+      { name: 'Sénior', percent: 20, cents: null as number | null },
+      { name: 'Estudante', percent: 10, cents: null as number | null },
+      { name: 'Funcionário', percent: null as number | null, cents: 3500 },
+      { name: 'Federado', percent: null as number | null, cents: null as number | null },
+    ]) {
+      const created = await one<{ id: string }>(
+        client,
+        `INSERT INTO fee_category
+           (organization_id, name, sort_order, discount_percent, discount_cents)
+         SELECT $1, $2,
+                coalesce((SELECT max(sort_order) + 1 FROM fee_category
+                           WHERE organization_id = $1 AND archived_at IS NULL), 0),
+                $3, $4
+          WHERE NOT EXISTS (
+            SELECT 1 FROM fee_category
+             WHERE organization_id = $1
+               AND lower(strip_accents(name)) = lower(strip_accents($2::text))
+               AND archived_at IS NULL)
+         RETURNING id`,
+        [org.id, category.name, category.percent, category.cents],
+      );
+      if (created) counts.categories += 1;
+    }
+
+    /*
+     * Who is on one.
+     *
+     * The senior level's turmas carry Sénior, which is the case the feature was
+     * built for — a club puts the category on the turma so nobody types it forty
+     * times. A handful of individual enrolments carry Estudante on top, so the
+     * override that beats the turma is visible somewhere rather than only
+     * described in a doc.
+     */
+    await client.query(
+      `UPDATE class_group cg
+          SET fee_category_id = (SELECT id FROM fee_category
+                                  WHERE organization_id = $1 AND name = 'Sénior'
+                                    AND archived_at IS NULL)
+        FROM student_level l
+       WHERE cg.organization_id = $1 AND cg.level_id = l.id
+         AND cg.fee_category_id IS NULL AND cg.archived_at IS NULL
+         AND l.min_age_months >= 720`,
+      [org.id],
+    );
+
+    // Every seventh active enrolment, by creation order — deterministic, so two
+    // runs a week apart produce the same club.
+    await client.query(
+      `WITH numbered AS (
+         SELECT e.id, row_number() OVER (ORDER BY e.created_at, e.id) AS n
+           FROM enrollment e
+          WHERE e.organization_id = $1 AND e.status = 'active'
+       )
+       UPDATE enrollment e
+          SET fee_category_id = (SELECT id FROM fee_category
+                                  WHERE organization_id = $1 AND name = 'Estudante'
+                                    AND archived_at IS NULL)
+         FROM numbered
+        WHERE e.id = numbered.id AND numbered.n % 7 = 0
+          AND e.fee_category_id IS NULL`,
+      [org.id],
+    );
+
+    /*
+     * And what each of them is actually being charged.
+     *
+     * The snapshot is written here exactly as `createStudentFee` writes it — the
+     * plan's amount, the period's discount, and the *category's* figure copied
+     * onto the line with the category recorded beside it. Seeding a line that
+     * pointed at a category without copying its value would produce demo data
+     * that no code path could ever have created.
+     *
+     * The frequency comes from the turmas the student is actually in, which is
+     * the same question the student's own page asks; a student whose weekly
+     * count has no price simply gets no line, which is itself a state worth
+     * seeing on screen.
+     */
+    const billed = await client.query(
+      `WITH attending AS (
+         SELECT e.id AS enrollment_id, e.student_id, cg.facility_id, cg.level_id,
+                sum((SELECT count(*) FROM class_schedule cs
+                      WHERE cs.class_group_id = cg.id AND cs.archived_at IS NULL))::int
+                  AS per_week
+           FROM enrollment e
+           JOIN class_group cg ON cg.id = e.class_group_id
+          WHERE e.organization_id = $1 AND e.status = 'active' AND cg.archived_at IS NULL
+          GROUP BY e.id, e.student_id, cg.facility_id, cg.level_id
+       )
+       INSERT INTO student_fee
+         (organization_id, student_id, fee_plan_id, enrollment_id, fee_period_id,
+          amount_cents, discount_percent, manual_discount_percent, manual_discount_cents,
+          fee_category_id, starts_on)
+       SELECT $1, a.student_id, p.id, a.enrollment_id, fp.id,
+              p.amount_cents, coalesce(fp.discount_percent, 0),
+              fc.discount_percent, fc.discount_cents, fc.id,
+              current_date
+         FROM attending a
+         JOIN fee_plan p
+           ON p.organization_id = $1 AND p.facility_id = a.facility_id
+          AND p.kind = 'mensalidade' AND p.level_id = a.level_id
+          AND p.lessons_per_week = a.per_week AND p.archived_at IS NULL
+         JOIN fee_period fp
+           ON fp.organization_id = $1 AND fp.facility_id = a.facility_id
+          AND fp.months = 1 AND fp.archived_at IS NULL
+         LEFT JOIN fee_category fc ON fc.id = enrolment_fee_category($1, a.enrollment_id)
+        WHERE NOT EXISTS (
+          SELECT 1 FROM student_fee sf
+           WHERE sf.organization_id = $1 AND sf.student_id = a.student_id
+             AND sf.fee_plan_id = p.id AND sf.archived_at IS NULL)`,
+      [org.id],
+    );
+    counts.feeLines += billed.rowCount ?? 0;
+
+    if (counts.prices > 0) console.log(`  preços: ${counts.prices} mensalidades`);
+    if (counts.categories > 0) {
+      console.log(`  categorias de preço: ${counts.categories}`);
+    }
+    if (counts.feeLines > 0) console.log(`  mensalidades atribuídas: ${counts.feeLines}`);
+
+    // ---------------------------------------------------------------------
     // The grid the timetable sits on — POOLSE-44.
     //
     // The reference club's own hours (Ginásio Clube de Santo Tirso, 2025/2026),
@@ -1381,6 +1617,9 @@ async function main(): Promise<void> {
     console.log(`  baixas médicas     ${counts.medicalLeave}`);
     console.log(`  artigos no armazém ${counts.inventory}`);
     console.log(`  horários na grelha ${counts.slots}`);
+    console.log(`  preços no tarifário ${counts.prices}`);
+    console.log(`  categorias de preço ${counts.categories}`);
+    console.log(`  mensalidades        ${counts.feeLines}`);
     console.log(`  marcações de referência ${reference.bookings}`);
     console.log('');
     console.log('Done. Re-running only adds what is missing.');

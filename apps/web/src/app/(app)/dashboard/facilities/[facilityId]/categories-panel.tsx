@@ -8,6 +8,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Reorderable } from '@/components/reorderable';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextField } from '@/components/ui/field';
 import { centsToInput, formatCents } from '@/lib/money';
+import { describeCost } from '@/lib/fee-category';
 import { cn } from '@/lib/utils';
 import type { FeeCategory } from '@/lib/api';
 import type { FormState } from '../../actions';
@@ -116,17 +117,19 @@ function Worth({
 /**
  * What the concession costs the club, and over how much of its reach.
  *
- * **Coverage first, then the figure** — `docs/financials.md` §6. "Com base em 9
- * de 14 alunos" is not a footnote: a student on a senior turma who has no fee
- * line yet is ordinary, and a confident total that quietly excluded them is the
- * thing that section refuses. So the sentence is always printed, even when the
- * two numbers agree.
+ * **The frame is in the sentence, not in a hint.** "Em todo o clube, 9 de 14
+ * alunos" — because this panel sits on one *site's* page while the list and
+ * every figure on it are the club's. Without those three words a reader takes
+ * the amount for this pool's, which is the same shape of wrong as an unqualified
+ * total over partial data.
  *
- * **A dash, never a zero, where nothing is charged** (§9). And a label-only
- * category is not asked the question at all: "what does it cost" has no meaning
- * for a category that takes nothing off, and printing 0,00 € beside "Sem
- * desconto" would be saying the same thing twice in a way that reads as a
- * measurement.
+ * **Coverage always, then the figure** — `docs/financials.md` §6. A student on a
+ * senior turma with no fee line agreed yet is ordinary, and a confident total
+ * that quietly excluded them is what that section refuses. Printed even when the
+ * two numbers agree, so its absence never has to be interpreted.
+ *
+ * Which of the four things to say is `describeCost` in `lib/fee-category.ts`,
+ * tested there. This renders the answer and decides nothing.
  */
 function Cost({
   category,
@@ -138,26 +141,17 @@ function Cost({
   const t = useTranslations();
   const locale = useLocale();
 
-  // Nobody is on it and nothing is charged: there is no sentence to write, and
-  // the counts beside the name already say the category is unused.
-  if (category.students === 0 && category.chargedStudents === 0) return null;
-
-  const valued = category.discountPercent !== null || category.discountCents !== null;
+  const cost = describeCost(category, canSeeValues);
+  if (cost.kind === 'silent') return null;
 
   return (
     <p className="text-sm text-foreground-muted">
-      {t('categories.coverage', {
-        charged: category.chargedStudents,
-        students: category.students,
-      })}
-      {canSeeValues && valued && (
+      {t('categories.coverage', { charged: cost.charged, students: cost.students })}
+      {cost.kind === 'unbilled' && <>{' · '}{t('categories.forgoneUnknown')}</>}
+      {cost.kind === 'cost' && (
         <>
           {' · '}
-          {category.forgoneMonthlyCents === null
-            ? t('categories.forgoneUnknown')
-            : t('categories.forgoneMonthly', {
-                amount: formatCents(locale, category.forgoneMonthlyCents),
-              })}
+          {t('categories.forgoneMonthly', { amount: formatCents(locale, cost.cents) })}
         </>
       )}
     </p>

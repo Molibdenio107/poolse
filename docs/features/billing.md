@@ -159,7 +159,9 @@ is agreed, so a correction reaches lines agreed afterwards and none agreed befor
 still reaches everything at once, because the line holds the id rather than the word.
 
 **What a concession costs** is on its row: how many of the people it reaches are actually
-being billed under it, and what it takes off the club per month. The figure is
+being billed under it, and what it takes off the club per month. The sentence says **"em todo
+o clube"** — the list is organization-scoped and this panel sits on one site's page, so
+without those words a reader takes the figure for that pool's. The figure is
 `fee_total_cents` minus `fee_payable_cents` over live lines, divided by their months and
 summed — the same two functions a family's line uses, so the two cannot disagree. The
 club's **periodicity** discount is deliberately outside it: paying six months ahead is the

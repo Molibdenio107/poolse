@@ -1019,4 +1019,93 @@ BEGIN
   RAISE NOTICE 'PASS test 16: salaries are isolated, signed inside the tenant, and one person holds one live rate';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 17 — a view is the one construct that can bypass RLS, and this one does not
+-- ---------------------------------------------------------------------------
+--
+-- `enrolment_fee_category_all` exists so a club's whole register can be resolved
+-- in one join rather than one function call per person. A view without
+-- `security_invoker` runs as its **owner** — the migration role — so `poolse_app`
+-- selecting from it would read every tenant's enrolments and no policy would ever
+-- be consulted. That is the isolation guarantee undone by the single construct
+-- that can undo it quietly, which is exactly why it gets an assertion of its own
+-- rather than a comment in the migration.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_season_a uuid; v_season_b uuid;
+  v_group_a uuid; v_group_b uuid;
+  v_student_a uuid; v_student_b uuid;
+  v_cat_a uuid;
+  v_seen int;
+  v_resolved uuid;
+BEGIN
+  RESET ROLE;
+
+  -- `draft`, because an earlier test in this file has already published one for
+  -- each org and `season_one_published` allows exactly one. Nothing here is about
+  -- seasons; a turma just needs one to hang from.
+  INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+  VALUES (v_a, 'A 25/26', DATE '2025-09-01', DATE '2026-07-31', 'draft')
+  RETURNING id INTO v_season_a;
+  INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+  VALUES (v_b, 'B 25/26', DATE '2025-09-01', DATE '2026-07-31', 'draft')
+  RETURNING id INTO v_season_b;
+
+  -- A name no earlier test in this file has used: the unique is per organization
+  -- and folds accents, so "Sénior" is already taken by the fee fixtures above.
+  INSERT INTO fee_category (organization_id, name, discount_percent)
+  VALUES (v_a, 'Concessão da vista', 20) RETURNING id INTO v_cat_a;
+
+  INSERT INTO class_group (organization_id, season_id, facility_id, name, fee_category_id)
+  VALUES (v_a, v_season_a, 'a1111111-1111-1111-1111-111111111111', 'Turma A', v_cat_a)
+  RETURNING id INTO v_group_a;
+  INSERT INTO class_group (organization_id, season_id, facility_id, name)
+  VALUES (v_b, v_season_b, 'b1111111-1111-1111-1111-111111111111', 'Turma B')
+  RETURNING id INTO v_group_b;
+
+  INSERT INTO student (organization_id, first_name, last_name)
+  VALUES (v_a, 'Amélia', 'Neves') RETURNING id INTO v_student_a;
+  INSERT INTO student (organization_id, first_name, last_name)
+  VALUES (v_b, 'Bruno', 'Melo') RETURNING id INTO v_student_b;
+
+  INSERT INTO enrollment (organization_id, class_group_id, student_id, status)
+  VALUES (v_a, v_group_a, v_student_a, 'active');
+  INSERT INTO enrollment (organization_id, class_group_id, student_id, status)
+  VALUES (v_b, v_group_b, v_student_b, 'active');
+
+  -- Org A, reading the view with no WHERE clause at all.
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_a::text, true);
+
+  SELECT count(*) INTO v_seen FROM enrolment_fee_category_all;
+  IF v_seen <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 17a: the view showed % enrolments to org A, not 1', v_seen;
+  END IF;
+
+  -- And it resolves the turma's category, which is the rule it exists to hold.
+  SELECT category_id INTO v_resolved FROM enrolment_fee_category_all;
+  IF v_resolved IS DISTINCT FROM v_cat_a THEN
+    RAISE EXCEPTION 'FAIL test 17b: the view lost the turma precedence';
+  END IF;
+
+  -- Org B sees its own, and its enrolment is on no category at all.
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  SELECT count(*) INTO v_seen FROM enrolment_fee_category_all;
+  IF v_seen <> 1 THEN
+    RAISE EXCEPTION 'FAIL test 17c: the view showed % enrolments to org B, not 1', v_seen;
+  END IF;
+
+  SELECT category_id INTO v_resolved FROM enrolment_fee_category_all;
+  IF v_resolved IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL test 17d: org B resolved a category it does not own';
+  END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 17: the precedence view is security_invoker and stays inside its tenant';
+END $$;
+
 ROLLBACK;

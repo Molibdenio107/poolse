@@ -471,6 +471,78 @@ test('the periodicity discount is not the concession, and a trimestral line is m
   });
 });
 
+test('two periodicities are added as fractions and rounded once, at the end', async () => {
+  await withScratchTenant(async (tenant) => {
+    const monthly = await addStudent(tenant, 'Duarte');
+    const quarterly = await addStudent(tenant, 'Inês');
+
+    const [level] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student_level (organization_id, name, sort_order)
+       VALUES ($1, 'Iniciação', 1) RETURNING id`,
+      [tenant.organizationId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const periods = new FeePeriodsController();
+      const mensal = (
+        await periods.create(tenant.facilityId, { name: 'Mensal', months: 1, isDefault: true })
+      ).id;
+      const trimestral = (
+        await periods.create(tenant.facilityId, { name: 'Trimestral', months: 3 })
+      ).id;
+
+      /*
+       * 33,33 € is chosen to make the division ugly.
+       *
+       * The quarterly line's concession is 19,99 over three months — 6,66333…
+       * a month — and the monthly line's is 6,67 (round(3333 x 0.2) is 667).
+       * Rounded per line first: 666 + 667 = 13,33. Added as fractions and
+       * rounded once: 6,663333 + 6,666 = 13,3293… which is 1329.
+       *
+       * The two answers differ by a cent, and that cent is the telephone call
+       * `fee_total_cents` is rounded-once to avoid. This pins the aggregate to
+       * the same rule.
+       */
+      const plan = (
+        await new FeePlansController().create(tenant.facilityId, {
+          kind: 'mensalidade',
+          levelId: level!.id,
+          lessonsPerWeek: 2,
+          amountCents: 3333,
+        })
+      ).id;
+
+      const categories = new FeeCategoriesController();
+      const senior = (await categories.create({ name: 'Sénior', discountPercent: 20 })).id;
+
+      const fees = new StudentFeesController();
+      await fees.create(monthly, { feePlanId: plan, feePeriodId: mensal, feeCategoryId: senior });
+      await fees.create(quarterly, {
+        feePlanId: plan,
+        feePeriodId: trimestral,
+        feeCategoryId: senior,
+      });
+
+      const lines = [
+        (await fees.list(monthly)).lines[0],
+        (await fees.list(quarterly)).lines[0],
+      ];
+      assert.equal(lines[0]?.periodTotalCents, 3333);
+      assert.equal(lines[0]?.payableCents, 2666, '33,33 less 20% is 26,66');
+      assert.equal(lines[1]?.periodTotalCents, 9999, '33,33 x 3, no periodicity discount');
+      assert.equal(lines[1]?.payableCents, 7999, 'less 20% is 79,99');
+
+      /*
+       * (3333 - 2666) / 1 + (9999 - 7999) / 3 = 667 + 666.666… = 1333.666…,
+       * which rounds to 1334. Rounding each line first would have given 1333.
+       */
+      const [row] = (await categories.list()).categories;
+      assert.equal(row?.chargedStudents, 2);
+      assert.equal(row?.forgoneMonthlyCents, 1334, 'summed as fractions, rounded once');
+    });
+  });
+});
+
 test('an ended line stops costing, and an instructor is told nothing about the cost', async () => {
   await withScratchTenant(async (tenant) => {
     const { mensal, plan } = await priceList(tenant);

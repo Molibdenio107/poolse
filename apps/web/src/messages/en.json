@@ -1427,7 +1427,7 @@
     "name": "Name",
     "nameRequired": "Give the category a name.",
     "nameTaken": "A category with that name already exists.",
-    "usedBy": "{groups} class groups · {enrollments} enrolments",
+    "usedBy": "Used by {groups} class groups and {enrollments} enrolments",
     "inUse": "This category is still used by {groups} class groups and {enrollments} enrolments. Take it off all of them before archiving it.",
     "archive": "Archive category",
     "onGroup": "The class group's category",
@@ -1458,7 +1458,7 @@
     "amountInvalid": "Enter an amount in euros, for example 7.50.",
     "oneDiscount": "A category takes a percentage or a fixed amount, not both.",
     "archiveKeepsLines": "Fees already agreed keep the discount they were agreed at.",
-    "coverage": "Based on {charged} of {students} students",
+    "coverage": "Across the club, {charged} of {students} students",
     "forgoneMonthly": "{amount}/month in discount",
     "forgoneUnknown": "— nothing charged yet"
   },
