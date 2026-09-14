@@ -2,17 +2,21 @@
 
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPatch, apiPost, type FeeCategory } from '@/lib/api';
+import { parseCents } from '@/lib/money';
 import type { FormState } from '../../actions';
 
 /**
- * The club's fee categories — POOLSE-23 AC4.
+ * The club's fee categories — round 19, moved here from Alunos.
  *
- * A category is a *label*: the reason one person pays a different price from the
- * person in the next lane. What it is worth belongs to the pricing engine, which
- * is not built, so nothing here carries an amount.
+ * A category is the reason one person pays a different price from the person in
+ * the next lane, and since round 19 it carries what that is worth. It belongs
+ * beside the price list it modifies: the panel lives on each site's page, the
+ * list itself is the *club's* and is the same on every one of them.
+ *
+ * The endpoint is organization-scoped, so the facility id here is only the path
+ * to revalidate. That is deliberate — a "Sénior" meaning one thing at one pool
+ * and another at the next is a concession nobody could report on.
  */
-
-const PATH = '/dashboard/students/categories';
 
 function failure(error: unknown, errorKey: string): FormState {
   if (error instanceof ApiError) {
@@ -45,15 +49,35 @@ function failure(error: unknown, errorKey: string): FormState {
 export async function listCategories(): Promise<{
   categories: FeeCategory[];
   canManage: boolean;
+  /**
+   * Whether this reader may see what a category is worth.
+   *
+   * Its own answer rather than something inferred from null values, because
+   * "this category has no discount" and "you may not see amounts" are different
+   * facts and only a blank would make them look the same.
+   */
+  canSeeValues: boolean;
 } | null> {
   try {
-    return await apiFetch<{ categories: FeeCategory[]; canManage: boolean }>('/fee-categories');
+    return await apiFetch<{
+      categories: FeeCategory[];
+      canManage: boolean;
+      canSeeValues: boolean;
+    }>('/fee-categories');
   } catch {
     // Null for anybody the endpoint refuses, exactly as the price list does.
     return null;
   }
 }
 
+/**
+ * Saving a category, value and all.
+ *
+ * The amount is turned into integer cents **here**, by `parseCents`, which is
+ * what every other money field on this page does — the API takes cents and
+ * refuses anything else rather than rounding a stray "35,5 %" into something
+ * plausible.
+ */
 export async function saveCategoryAction(
   _previous: FormState,
   formData: FormData,
@@ -61,12 +85,39 @@ export async function saveCategoryAction(
   const id = String(formData.get('categoryId') ?? '').trim();
   const name = String(formData.get('name') ?? '').trim();
   const sortOrder = Number(formData.get('sortOrder') ?? 0);
+  const facilityId = String(formData.get('facilityId') ?? '').trim();
 
   // Checked here as well, so an empty name does not cost a round trip to be
   // told the obvious.
   if (name === '') return { ok: false, fields: { name: 'categories.nameRequired' } };
 
-  const body = { name, sortOrder: Number.isInteger(sortOrder) ? sortOrder : 0 };
+  const kind = String(formData.get('discountKind') ?? 'none');
+  const raw = String(formData.get('discountValue') ?? '').trim();
+
+  let discountPercent: number | null = null;
+  let discountCents: number | null = null;
+
+  if (kind === 'percent') {
+    // Either decimal mark, because a Portuguese keyboard writes 7,5 and the
+    // number input on a phone writes 7.5 — the same normalisation `parseCents`
+    // does for an amount.
+    const percent = Number(raw.replace(',', '.'));
+    if (raw === '' || !Number.isFinite(percent) || percent < 0 || percent > 100) {
+      return { ok: false, fields: { discountValue: 'categories.percentRange' } };
+    }
+    discountPercent = percent;
+  } else if (kind === 'amount') {
+    const cents = parseCents(raw);
+    if (cents === null) return { ok: false, fields: { discountValue: 'categories.amountInvalid' } };
+    discountCents = cents;
+  }
+
+  const body = {
+    name,
+    sortOrder: Number.isInteger(sortOrder) ? sortOrder : 0,
+    discountPercent,
+    discountCents,
+  };
 
   try {
     if (id === '') await apiPost('/fee-categories', body);
@@ -75,7 +126,7 @@ export async function saveCategoryAction(
     return failure(error, 'categories.saveFailed');
   }
 
-  revalidatePath(PATH);
+  revalidatePath(`/dashboard/facilities/${facilityId}`);
   return { ok: true };
 }
 
@@ -84,6 +135,7 @@ export async function archiveCategoryAction(
   formData: FormData,
 ): Promise<FormState> {
   const id = String(formData.get('categoryId') ?? '').trim();
+  const facilityId = String(formData.get('facilityId') ?? '').trim();
 
   try {
     await apiPost(`/fee-categories/${id}/archive`, {});
@@ -91,6 +143,6 @@ export async function archiveCategoryAction(
     return failure(error, 'categories.saveFailed');
   }
 
-  revalidatePath(PATH);
+  revalidatePath(`/dashboard/facilities/${facilityId}`);
   return { ok: true };
 }

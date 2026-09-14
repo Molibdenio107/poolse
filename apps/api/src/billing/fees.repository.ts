@@ -160,6 +160,21 @@ export interface StudentFeeLine {
   manualDiscountPercent: number | null;
   manualDiscountCents: number | null;
   discountReason: string | null;
+  /**
+   * The category that authored this line's discount — round 19.
+   *
+   * Set means the two figures above came from that category at the moment the
+   * line was agreed, and the name is what the screen and the document say
+   * instead of a typed reason. Null with a discount present means a person
+   * typed it, and `discountReason` is then not null by CHECK.
+   *
+   * The name is read through the reference rather than snapshotted *here*,
+   * because a rename is meant to reach every screen at once; the *figure* is
+   * snapshotted, which is what stops a corrected percentage re-pricing a family.
+   * A document is the exception and keeps its own copy of the word.
+   */
+  feeCategoryId: string | null;
+  feeCategoryName: string | null;
   /** Amount x months, with the period discount, rounded once. From SQL. */
   periodTotalCents: number;
   /** The same with this line's manual discount taken off. From SQL. */
@@ -319,6 +334,23 @@ export interface StudentFees {
   penalties: { mensalidadeCents: number; quotaCents: number };
   /** The two above, summed — what the outstanding line adds. */
   penaltyCents: number;
+  /**
+   * The club's concessions, and which one this student's classes imply.
+   *
+   * Sent with the lines rather than fetched separately, because every form on
+   * this page offers them and a second request would let the two disagree about
+   * what a category is worth. The endpoint is already closed to anybody who may
+   * not see amounts, so the figures travel in full.
+   *
+   * `suggestedCategoryId` is a **default, not a decision**: the category every
+   * one of the student's live enrolments resolves to, and null the moment two of
+   * them disagree — a child in a senior turma and a staff turma has no single
+   * answer, and guessing one would quietly discount the wrong line. The form
+   * pre-selects it and a person confirms it, the same shape as the renovação
+   * suggestion above.
+   */
+  categories: { id: string; name: string; discountPercent: number | null; discountCents: number | null }[];
+  suggestedCategoryId: string | null;
 }
 
 const PERIOD_COLUMNS = `
@@ -841,6 +873,8 @@ export async function studentFees(
       manual_discount_percent: string | null;
       manual_discount_cents: number | null;
       discount_reason: string | null;
+      fee_category_id: string | null;
+      fee_category_name: string | null;
       period_total_cents: number;
       payable_cents: number;
       starts_on: string;
@@ -871,6 +905,7 @@ export async function studentFees(
               to_char(sf.covers_to, 'YYYY-MM-DD') AS covers_to,
               sf.amount_cents, sf.discount_percent,
               sf.manual_discount_percent, sf.manual_discount_cents, sf.discount_reason,
+              sf.fee_category_id, fc.name AS fee_category_name,
               -- The one definition, in SQL. QA 42.3.
               -- Coalescing the months to 1 is what makes a line charged once
               -- come out at its own amount: a 12,00 EUR seguro filed against an
@@ -919,6 +954,10 @@ export async function studentFees(
                 ON l.id = p.level_id AND l.organization_id = p.organization_id
          LEFT JOIN enrollment e ON e.id = sf.enrollment_id
          LEFT JOIN class_group cg ON cg.id = e.class_group_id
+         -- Archived and all: a line agreed under a concession the club has since
+         -- retired still says which one, the same reasoning as the apólice above.
+         LEFT JOIN fee_category fc
+                ON fc.id = sf.fee_category_id AND fc.organization_id = sf.organization_id
          /*
           * One occurrence, or a walk through many.
           *
@@ -1246,7 +1285,48 @@ export async function studentFees(
       [studentId],
     );
 
+    /*
+     * The concessions, and the one this student's turmas imply.
+     *
+     * The suggestion is `enrolment_fee_category` over their live enrolments —
+     * the one definition of the turma/enrolment precedence, called rather than
+     * restated. Two different answers means no answer: a student in a senior
+     * turma and a staff turma is a person somebody has to choose for, and a
+     * `min()` over the set would pick one by alphabet and call it a decision.
+     */
+    const { rows: categoryRows } = await tx.query<{
+      id: string;
+      name: string;
+      discount_percent: string | null;
+      discount_cents: number | null;
+      suggested: boolean;
+    }>(
+      `WITH theirs AS (
+         SELECT DISTINCT enrolment_fee_category($2, e.id) AS id
+           FROM enrollment e
+          WHERE e.student_id = $1 AND e.status = 'active'
+            AND enrolment_fee_category($2, e.id) IS NOT NULL
+       ),
+       suggested AS (
+         SELECT CASE WHEN (SELECT count(*) FROM theirs) = 1
+                     THEN (SELECT id FROM theirs) END AS id
+       )
+       SELECT c.id, c.name, c.discount_percent, c.discount_cents,
+              (c.id IS NOT DISTINCT FROM (SELECT id FROM suggested)) AS suggested
+         FROM fee_category c
+        WHERE c.archived_at IS NULL
+        ORDER BY c.sort_order, lower(strip_accents(c.name))`,
+      [studentId, organizationId],
+    );
+
     return {
+      categories: categoryRows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        discountPercent: row.discount_percent === null ? null : Number(row.discount_percent),
+        discountCents: row.discount_cents,
+      })),
+      suggestedCategoryId: categoryRows.find((row) => row.suggested)?.id ?? null,
       currentPlans: planRows.map((row) => ({
         facilityId: row.facility_id,
         facilityName: row.facility_name,
@@ -1301,6 +1381,8 @@ export async function studentFees(
           row.manual_discount_percent === null ? null : Number(row.manual_discount_percent),
         manualDiscountCents: row.manual_discount_cents,
         discountReason: row.discount_reason,
+        feeCategoryId: row.fee_category_id,
+        feeCategoryName: row.fee_category_name,
         periodTotalCents: row.period_total_cents,
         payableCents: row.payable_cents,
         startsOn: row.starts_on,
@@ -1334,6 +1416,21 @@ export interface StudentFeeInput {
   /** Null on a line charged once — an inscrição or a seguro names no frequency. */
   feePeriodId: string | null;
   enrollmentId: string | null;
+  /**
+   * The concession this line is agreed under — round 19.
+   *
+   * When set, **the three fields below are ignored**: the figure comes from the
+   * category, read in the same statement that writes the line. A client that
+   * could send its own number alongside a category could agree a concession the
+   * club never offered, which is the reason the plan's amount is not passed in
+   * either.
+   *
+   * Null with a manual discount means a person authored it and said why. Null
+   * with no discount is the ordinary line. The two can never both be true — the
+   * form offers one control with three answers, and the CHECK is what makes that
+   * a rule rather than a habit.
+   */
+  feeCategoryId: string | null;
   manualDiscountPercent: number | null;
   manualDiscountCents: number | null;
   discountReason: string | null;
@@ -1400,12 +1497,18 @@ export async function createStudentFee(
        * student joining at the start of the season gets. A caller may narrow it,
        * and `pro_rata` then charges for the part of the policy they will use —
        * rounded once, at the end, like every other total here.
+       *
+       * The **concession** is the same rule as the amount: named by the caller,
+       * valued here. A category that does not exist, or has been archived, is a
+       * refusal rather than a line quietly charged at full price — the operator
+       * chose it from a list and is entitled to be told the list was stale.
        */
       `INSERT INTO student_fee (organization_id, student_id, fee_plan_id, enrollment_id,
                                 fee_period_id, amount_cents, discount_percent,
                                 manual_discount_percent, manual_discount_cents,
                                 discount_reason, starts_on, season_id,
-                                insurance_policy_id, covers_from, covers_to)
+                                insurance_policy_id, covers_from, covers_to,
+                                fee_category_id)
        SELECT $1, $2, p.id, $4, fp.id,
               CASE
                 WHEN $10::boolean AND ip.id IS NOT NULL AND ip.valid_to >= ip.valid_from
@@ -1417,20 +1520,30 @@ export async function createStudentFee(
                 ELSE p.amount_cents
               END,
               coalesce(fp.discount_percent, 0),
-              $5, $6, $7, coalesce($8::date, current_date),
+              -- The category authors the figure where there is one, and a person
+              -- authors it otherwise. Never both: one control, three answers.
+              CASE WHEN fc.id IS NOT NULL THEN fc.discount_percent ELSE $5 END,
+              CASE WHEN fc.id IS NOT NULL THEN fc.discount_cents   ELSE $6 END,
+              CASE WHEN fc.id IS NOT NULL THEN NULL                ELSE $7 END,
+              coalesce($8::date, current_date),
               p.season_id,
-              ip.id, cover.from_day, cover.to_day
+              ip.id, cover.from_day, cover.to_day,
+              fc.id
          FROM fee_plan p
          LEFT JOIN fee_period fp
                 ON fp.id = $9 AND fp.archived_at IS NULL AND fp.facility_id = p.facility_id
          LEFT JOIN insurance_policy ip
                 ON ip.id = $11 AND ip.organization_id = $1 AND ip.facility_id = p.facility_id
                 AND ip.archived_at IS NULL
+         LEFT JOIN fee_category fc
+                ON fc.id = $14 AND fc.organization_id = $1 AND fc.archived_at IS NULL
          CROSS JOIN LATERAL (
            SELECT coalesce($12::date, ip.valid_from) AS from_day,
                   coalesce($13::date, ip.valid_to)   AS to_day
          ) cover
         WHERE p.id = $3 AND p.archived_at IS NULL
+          -- A concession named and not found: refused, not ignored.
+          AND ($14::uuid IS NULL OR fc.id IS NOT NULL)
           -- A periodicity was asked for and is not this site's, or does not
           -- exist: refused rather than silently dropped, because a line with no
           -- period means something specific and this is not it.
@@ -1453,6 +1566,7 @@ export async function createStudentFee(
         input.insurancePolicyId,
         input.coversFrom,
         input.coversTo,
+        input.feeCategoryId,
       ],
       ));
     } catch (error) {
@@ -1477,7 +1591,12 @@ export async function createStudentFee(
       action: 'student_fee.created',
       entityType: 'student_fee',
       entityId: id,
-      data: { studentId, feePlanId: input.feePlanId, feePeriodId: input.feePeriodId },
+      data: {
+        studentId,
+        feePlanId: input.feePlanId,
+        feePeriodId: input.feePeriodId,
+        feeCategoryId: input.feeCategoryId,
+      },
     });
     return 'created';
   });
@@ -1485,6 +1604,9 @@ export async function createStudentFee(
 
 export interface StudentFeeChanges {
   feePeriodId: string;
+  /** As on creation: set means the category authors the figure, and the three
+   *  fields below are ignored. See `StudentFeeInput.feeCategoryId`. */
+  feeCategoryId: string | null;
   manualDiscountPercent: number | null;
   manualDiscountCents: number | null;
   discountReason: string | null;
@@ -1503,18 +1625,31 @@ export async function updateStudentFee(
      * discount is a property of the frequency. The amount is not touched: that
      * is the price agreed with this family and it survives everything except the
      * explicit "update to the current price" action below.
+     *
+     * Changing the **concession** re-reads it, which is the one place a category
+     * is allowed to move an existing line: somebody is standing in front of the
+     * line saying "this family is on Sénior now". It is still snapshotted — the
+     * figure is copied here and not looked up again — so a later correction to
+     * the category leaves this line where the operator put it.
      */
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE student_fee sf
           SET fee_period_id = fp.id,
               discount_percent = fp.discount_percent,
-              manual_discount_percent = $4,
-              manual_discount_cents = $5,
-              discount_reason = $6,
+              manual_discount_percent =
+                CASE WHEN fc.id IS NOT NULL THEN fc.discount_percent ELSE $4 END,
+              manual_discount_cents =
+                CASE WHEN fc.id IS NOT NULL THEN fc.discount_cents   ELSE $5 END,
+              discount_reason =
+                CASE WHEN fc.id IS NOT NULL THEN NULL                ELSE $6 END,
+              fee_category_id = fc.id,
               ends_on = $7::date
          FROM fee_period fp
+         LEFT JOIN fee_category fc
+                ON fc.id = $8 AND fc.archived_at IS NULL
         WHERE sf.id = $2 AND sf.student_id = $1 AND sf.archived_at IS NULL
           AND fp.id = $3 AND fp.archived_at IS NULL
+          AND ($8::uuid IS NULL OR fc.id IS NOT NULL)
       RETURNING sf.id`,
       [
         studentId,
@@ -1524,6 +1659,7 @@ export async function updateStudentFee(
         changes.manualDiscountCents,
         changes.discountReason,
         changes.endsOn,
+        changes.feeCategoryId,
       ],
     );
     if (rows[0] === undefined) return false;
@@ -1532,7 +1668,11 @@ export async function updateStudentFee(
       action: 'student_fee.updated',
       entityType: 'student_fee',
       entityId: feeId,
-      data: { studentId, feePeriodId: changes.feePeriodId },
+      data: {
+        studentId,
+        feePeriodId: changes.feePeriodId,
+        feeCategoryId: changes.feeCategoryId,
+      },
     });
     return true;
   });

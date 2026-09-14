@@ -9,10 +9,16 @@ import { recordAudit } from '../audit/audit.js';
  * own, which is why this is a table rather than an enum: a bombeiros discount
  * started in March should not wait for a deploy.
  *
- * **A reference, never a percentage.** What a category is *worth* belongs to the
- * pricing engine, which is explicitly not this ticket. A number typed into a
- * form here would be a discount nobody can report on and nobody can change in
- * one place — and it would sit beside `fee_plan` pretending to be a price.
+ * **It carries what it is worth** — round 19, reversing POOLSE-23's "a
+ * reference, never a percentage". Nothing consulted the reference, so the
+ * concession was typed by hand onto every line with the word "sénior" in a
+ * free-text box: forty authors for one decision, which is the failure the
+ * original rule was written to prevent. The category is now the single author,
+ * and `docs/decisions.md` carries the argument.
+ *
+ * **The value is read by the write, never by the reader.** A line snapshots the
+ * figure when it is agreed; correcting a percentage here reaches every line
+ * agreed *afterwards* and none agreed before, exactly as the price list does.
  *
  * **Set on the turma or on the enrolment, and the enrolment wins.** A senior
  * turma carries the category so nobody types it forty times; the one member of
@@ -23,9 +29,30 @@ export interface FeeCategory {
   id: string;
   name: string;
   sortOrder: number;
+  /**
+   * What it takes off — one or the other, and often neither.
+   *
+   * Both null is a category that is purely a label, which stays a legitimate
+   * thing to want: a club may keep "Funcionário" to count them. Null is not
+   * zero, and a screen must not print 0 % for it.
+   *
+   * Null for anybody who may not see the club's amounts, which is why the
+   * endpoint sends `canSeeValues` beside them rather than leaving a reader to
+   * read "no discount" off a blank.
+   */
+  discountPercent: number | null;
+  discountCents: number | null;
   /** How many turmas and enrolments name it — what makes archiving a decision. */
   usedByGroups: number;
   usedByEnrollments: number;
+}
+
+/** The writable half. Fee lines already agreed are never touched by an edit. */
+export interface FeeCategoryInput {
+  name: string;
+  sortOrder: number;
+  discountPercent: number | null;
+  discountCents: number | null;
 }
 
 export async function listCategories(organizationId: string): Promise<FeeCategory[]> {
@@ -34,10 +61,12 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
       id: string;
       name: string;
       sort_order: number;
+      discount_percent: string | null;
+      discount_cents: number | null;
       used_by_groups: number;
       used_by_enrollments: number;
     }>(
-      `SELECT c.id, c.name, c.sort_order,
+      `SELECT c.id, c.name, c.sort_order, c.discount_percent, c.discount_cents,
               (SELECT count(*)::int FROM class_group cg
                 WHERE cg.fee_category_id = c.id
                   AND cg.organization_id = c.organization_id
@@ -57,6 +86,11 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
       id: row.id,
       name: row.name,
       sortOrder: row.sort_order,
+      // `numeric` arrives as a string from pg, which refuses to lose digits for
+      // us. A rate this small is safe as a number; the amount beside it is an
+      // integer already, for the reason every amount here is.
+      discountPercent: row.discount_percent === null ? null : Number(row.discount_percent),
+      discountCents: row.discount_cents,
       usedByGroups: row.used_by_groups,
       usedByEnrollments: row.used_by_enrollments,
     }));
@@ -81,16 +115,17 @@ function duplicateFrom(error: unknown, name: string): unknown {
 
 export async function createCategory(
   organizationId: string,
-  name: string,
-  sortOrder: number,
+  input: FeeCategoryInput,
 ): Promise<string> {
+  const { name } = input;
   return withOrg(organizationId, async (tx) => {
     let rows: { id: string }[];
     try {
       ({ rows } = await tx.query<{ id: string }>(
-        `INSERT INTO fee_category (organization_id, name, sort_order)
-         VALUES ($1, $2, $3) RETURNING id`,
-        [organizationId, name, sortOrder],
+        `INSERT INTO fee_category (organization_id, name, sort_order,
+                                   discount_percent, discount_cents)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [organizationId, name, input.sortOrder, input.discountPercent, input.discountCents],
       ));
     } catch (error) {
       throw duplicateFrom(error, name);
@@ -103,7 +138,11 @@ export async function createCategory(
       action: 'fee_category.created',
       entityType: 'fee_category',
       entityId: id,
-      data: { name },
+      // The figure travels with it. A concession is a price the club decided,
+      // and `audit_log` is where "who decided this" is answered — the rule that
+      // keeps amounts out of the trail is the salaries one, and a person's pay
+      // is not what this is.
+      data: { name, discountPercent: input.discountPercent, discountCents: input.discountCents },
     });
     return id;
   });
@@ -112,17 +151,18 @@ export async function createCategory(
 export async function renameCategory(
   organizationId: string,
   categoryId: string,
-  name: string,
-  sortOrder: number,
+  input: FeeCategoryInput,
 ): Promise<boolean> {
+  const { name } = input;
   return withOrg(organizationId, async (tx) => {
     let rows: { id: string }[];
     try {
       ({ rows } = await tx.query<{ id: string }>(
-        `UPDATE fee_category SET name = $2, sort_order = $3
+        `UPDATE fee_category SET name = $2, sort_order = $3,
+                discount_percent = $4, discount_cents = $5
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
-        [categoryId, name, sortOrder],
+        [categoryId, name, input.sortOrder, input.discountPercent, input.discountCents],
       ));
     } catch (error) {
       throw duplicateFrom(error, name);
@@ -136,12 +176,19 @@ export async function renameCategory(
      * "Senior" to "Sénior" reaches every one of them without touching a row —
      * which is the whole reason this is a reference rather than a word copied
      * onto each enrolment.
+     *
+     * **Changing what it is worth does not re-price anything either**, and that
+     * is the more important half now. Every line already agreed keeps the figure
+     * it snapshotted; the new percentage applies to lines agreed from here on.
+     * A club correcting a typo would otherwise rewrite what forty families were
+     * told they owed — the failure `student_fee.amount_cents` is a snapshot to
+     * prevent, arriving by a second door.
      */
     await recordAudit(tx, {
       action: 'fee_category.renamed',
       entityType: 'fee_category',
       entityId: categoryId,
-      data: { name },
+      data: { name, discountPercent: input.discountPercent, discountCents: input.discountCents },
     });
     return true;
   });
@@ -164,9 +211,14 @@ export async function archiveCategory(
      *
      * Archiving it would leave turmas pointing at a category no list shows,
      * which reads on a screen as a concession that came from nowhere — and the
-     * pricing engine that arrives later would find a reference it cannot
-     * resolve. Refused with both numbers, so the operator knows the size of what
-     * they are about to undo rather than only that they may not.
+     * next fee agreed on one of those turmas would be discounted by something
+     * the operator can no longer see. Refused with both numbers, so they know
+     * the size of what they are about to undo rather than only that they may not.
+     *
+     * **Fee lines are deliberately not counted.** A line holds the figure it
+     * snapshotted, not a live reference, so an old line naming an archived
+     * category is history reading correctly — and counting them would make a
+     * category unarchivable for ever the first time it was used.
      */
     const { rows: used } = await tx.query<{ groups: number; enrollments: number }>(
       `SELECT (SELECT count(*)::int FROM class_group cg

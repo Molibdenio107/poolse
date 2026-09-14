@@ -30,6 +30,21 @@ export function LineLabel({ line }: { line: InvoiceLine }): React.ReactElement {
           {t('invoices.perWeek', { count: line.lessonsPerWeek })}
         </span>
       )}
+      {/*
+        The concession, where one applied — round 19.
+
+        The amount on this line is already net of the discount, so without this
+        the document says 28,00 where the price list says 35,00 and nothing on it
+        accounts for the rest. The club's own word, snapshotted onto the line
+        like every other name on a document, so renaming a category next season
+        does not rewrite this year's paperwork.
+      */}
+      {line.feeCategoryName !== null && (
+        <span className="text-foreground-muted">
+          {' '}
+          {t('invoices.underCategory', { name: line.feeCategoryName })}
+        </span>
+      )}
     </span>
   );
 }

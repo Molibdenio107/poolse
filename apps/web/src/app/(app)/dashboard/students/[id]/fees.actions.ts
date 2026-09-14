@@ -88,13 +88,39 @@ export async function loadFees(
   return { fees, plans, periods };
 }
 
+/**
+ * Where this line's discount comes from — a category, a person, or nowhere.
+ *
+ * **One author, never two.** The form is a single select, so only one of these
+ * branches can be reached; the API refuses a body carrying both anyway, because
+ * a client that sent one would have lost track of what the operator chose.
+ *
+ * A category sends only its id: the figure is read from the category by the
+ * statement that writes the line, exactly as the plan's amount is. Sending the
+ * number as well would be a way to agree a concession the club never offered.
+ *
+ * Every branch names every field, including the ones it is clearing. An edit
+ * that omitted `feeCategoryId` would leave the old category on a line somebody
+ * has just moved to a typed discount — the API takes what it is given.
+ */
 function discountFields(formData: FormData): Record<string, unknown> {
+  const categoryId = String(formData.get('feeCategoryId') ?? '').trim();
+  if (categoryId !== '') {
+    return {
+      feeCategoryId: categoryId,
+      manualDiscountPercent: null,
+      manualDiscountCents: null,
+      discountReason: null,
+    };
+  }
+
   const kind = String(formData.get('discountKind') ?? 'none');
   const value = String(formData.get('discountValue') ?? '').trim();
   const reason = String(formData.get('discountReason') ?? '').trim();
 
   if (kind === 'percent' && value !== '') {
     return {
+      feeCategoryId: null,
       manualDiscountPercent: Number(value.replace(',', '.')),
       discountReason: reason,
     };
@@ -102,11 +128,12 @@ function discountFields(formData: FormData): Record<string, unknown> {
   if (kind === 'amount' && value !== '') {
     // Sent as cents, like every other amount crossing this boundary.
     return {
+      feeCategoryId: null,
       manualDiscountCents: Math.round(Number(value.replace(',', '.')) * 100),
       discountReason: reason,
     };
   }
-  return {};
+  return { feeCategoryId: null, manualDiscountPercent: null, manualDiscountCents: null };
 }
 
 export async function addFeeAction(_previous: FormState, formData: FormData): Promise<FormState> {

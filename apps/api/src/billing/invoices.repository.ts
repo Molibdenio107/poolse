@@ -115,6 +115,16 @@ export interface InvoiceLine {
    */
   description: string | null;
   lessonsPerWeek: number | null;
+  /**
+   * The concession this line was charged under, in the club's own words.
+   *
+   * Null where none applied. Here for the same reason the level's name is: it is
+   * a word a club invented, not an enum, and the line's amount is already net of
+   * the discount — without it a document says 28,00 where the price list says
+   * 35,00 and nothing on it accounts for the difference. Snapshotted, so a
+   * category renamed next season does not rewrite this year's documents.
+   */
+  feeCategoryName: string | null;
   /** The first day of the occurrence being charged. */
   periodStart: string;
   months: number;
@@ -377,6 +387,7 @@ interface CandidateRow {
   student_tax_number: string | null;
   kind: FeeKind;
   description: string | null;
+  fee_category_name: string | null;
   lessons_per_week: number | null;
   period_start: string;
   months: number;
@@ -416,6 +427,10 @@ const CANDIDATE_SQL = `
          -- plan has no name of its own in this schema: its label is its kind,
          -- its level and its frequency, and only the level is the club's word.
          coalesce(l.name, se.name) AS description,
+         -- The concession, as the document will say it. Read through the line's
+         -- reference and copied onto the document here; the figure it was worth
+         -- is already inside amount_cents below.
+         fc.name AS fee_category_name,
          p.lessons_per_week,
          to_char(occ.period_start, 'YYYY-MM-DD') AS period_start,
          coalesce(fp.months, 1) AS months,
@@ -441,6 +456,8 @@ const CANDIDATE_SQL = `
          coalesce(person_email(pay.id), st.contact_email)::text AS payer_email
     FROM student_fee sf
     JOIN fee_plan p ON p.id = sf.fee_plan_id
+    LEFT JOIN fee_category fc
+           ON fc.id = sf.fee_category_id AND fc.organization_id = sf.organization_id
     -- Left, since a line charged once names no periodicity at all. An inner
     -- join here would drop every inscrição and every seguro from the run.
     LEFT JOIN fee_period fp ON fp.id = sf.fee_period_id
@@ -575,6 +592,7 @@ export async function runInvoices(
         studentFeeId: row.student_fee_id,
         kind: row.kind,
         description: row.description,
+        feeCategoryName: row.fee_category_name,
         lessonsPerWeek: row.lessons_per_week,
         periodStart: row.period_start,
         months: row.months,
@@ -663,9 +681,11 @@ async function issueDraft(
       await tx.query(
         `INSERT INTO invoice_line
            (organization_id, invoice_id, student_id, student_fee_id, student_name,
-            student_tax_number, kind, description, lessons_per_week, period_start,
-            months, amount_cents, vat_rate, vat_exempt, vat_exemption_reason, sort_order)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::fee_kind, $8, $9, $10::date, $11, $12, $13, $14, $15, $16)`,
+            student_tax_number, kind, description, fee_category_name, lessons_per_week,
+            period_start, months, amount_cents, vat_rate, vat_exempt, vat_exemption_reason,
+            sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::fee_kind, $8, $9, $10, $11::date, $12, $13, $14,
+                 $15, $16, $17)`,
         [
           organizationId,
           invoice.id,
@@ -675,6 +695,7 @@ async function issueDraft(
           line.studentTaxNumber,
           line.kind,
           line.description,
+          line.feeCategoryName,
           line.lessonsPerWeek,
           line.periodStart,
           line.months,
@@ -950,6 +971,7 @@ async function readLines(tx: Tx, invoiceId: string): Promise<InvoiceLine[]> {
     student_fee_id: string;
     kind: FeeKind;
     description: string | null;
+    fee_category_name: string | null;
     lessons_per_week: number | null;
     period_start: string;
     months: number;
@@ -961,7 +983,7 @@ async function readLines(tx: Tx, invoiceId: string): Promise<InvoiceLine[]> {
     credits_invoice_line_id: string | null;
   }>(
     `SELECT l.id, l.student_id, l.student_name, l.student_tax_number, l.student_fee_id,
-            l.kind, l.description, l.lessons_per_week,
+            l.kind, l.description, l.fee_category_name, l.lessons_per_week,
             to_char(l.period_start, 'YYYY-MM-DD') AS period_start,
             l.months, l.amount_cents, l.vat_rate, l.vat_exempt, l.vat_exemption_reason,
             invoice_vat_cents(l.amount_cents, l.vat_rate) AS vat_cents,
@@ -980,6 +1002,7 @@ async function readLines(tx: Tx, invoiceId: string): Promise<InvoiceLine[]> {
     studentFeeId: row.student_fee_id,
     kind: row.kind,
     description: row.description,
+    feeCategoryName: row.fee_category_name,
     lessonsPerWeek: row.lessons_per_week,
     periodStart: row.period_start,
     months: row.months,
@@ -1086,11 +1109,12 @@ export async function creditInvoice(
     await tx.query(
       `INSERT INTO invoice_line
          (organization_id, invoice_id, student_id, student_fee_id, credits_invoice_line_id,
-          student_name, student_tax_number, kind, description, lessons_per_week,
-          period_start, months, amount_cents, vat_rate, vat_exempt, vat_exemption_reason,
-          sort_order)
+          student_name, student_tax_number, kind, description, fee_category_name,
+          lessons_per_week, period_start, months, amount_cents, vat_rate, vat_exempt,
+          vat_exemption_reason, sort_order)
        SELECT l.organization_id, $2, l.student_id, l.student_fee_id, l.id,
               l.student_name, l.student_tax_number, l.kind, l.description,
+              l.fee_category_name,
               l.lessons_per_week, l.period_start, l.months, l.amount_cents, l.vat_rate,
               l.vat_exempt, l.vat_exemption_reason, l.sort_order
          FROM invoice_line l

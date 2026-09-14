@@ -1501,6 +1501,16 @@ export interface StudentFeeLine {
   manualDiscountPercent: number | null;
   manualDiscountCents: number | null;
   discountReason: string | null;
+  /**
+   * Who authored the discount above — a category, or a person.
+   *
+   * Set means the figure came from that concession when the line was agreed, and
+   * the name is what the screen says instead of a typed reason. Null with a
+   * discount present means somebody typed it and `discountReason` says why. The
+   * two are never both true.
+   */
+  feeCategoryId: string | null;
+  feeCategoryName: string | null;
   periodTotalCents: number;
   payableCents: number;
   startsOn: string;
@@ -1617,6 +1627,15 @@ export interface StudentFees {
    */
   penalties: { mensalidadeCents: number; quotaCents: number };
   penaltyCents: number;
+  /**
+   * The club's concessions, and the one this student's turmas imply.
+   *
+   * `suggestedCategoryId` is a default and not a decision: null the moment two
+   * of their live enrolments resolve to different categories, because a student
+   * in a senior turma and a staff turma is somebody a person has to choose for.
+   */
+  categories: { id: string; name: string; discountPercent: number | null; discountCents: number | null }[];
+  suggestedCategoryId: string | null;
 }
 
 export type ConsentKind = 'photo' | 'medical_data' | 'parent_sharing';
@@ -1857,6 +1876,17 @@ export interface FeeCategory {
   id: string;
   name: string;
   sortOrder: number;
+  /**
+   * What it takes off — one or the other, and often neither.
+   *
+   * Both null means the category carries no value: a label, which is still a
+   * legitimate thing to want. It is **not** zero, and nothing may print 0 % for
+   * it. Both null also for a reader the endpoint will not show amounts to,
+   * which is why `canSeeValues` travels beside the list rather than leaving a
+   * blank to be read as "no discount".
+   */
+  discountPercent: number | null;
+  discountCents: number | null;
   usedByGroups: number;
   usedByEnrollments: number;
 }
@@ -2812,6 +2842,14 @@ export interface InvoiceLine {
    * composed on screen rather than stored half-translated on the document.
    */
   description: string | null;
+  /**
+   * The concession this line was charged under, in the club's own words.
+   *
+   * Null where none applied. A snapshot like every other name on a document: the
+   * amount is already net of the discount, so without this the document says
+   * 28,00 where the price list says 35,00 and nothing accounts for the rest.
+   */
+  feeCategoryName: string | null;
   lessonsPerWeek: number | null;
   periodStart: string;
   months: number;

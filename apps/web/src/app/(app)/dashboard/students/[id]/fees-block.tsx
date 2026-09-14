@@ -151,10 +151,14 @@ function SeasonCharges({
   studentId,
   charges,
   returning,
+  categories,
+  suggestedCategoryId,
 }: {
   studentId: string;
   charges: SeasonCharge[];
   returning: boolean;
+  categories: StudentFees['categories'];
+  suggestedCategoryId: string | null;
 }): React.ReactElement | null {
   const t = useTranslations();
   const locale = useLocale();
@@ -217,6 +221,8 @@ function SeasonCharges({
               <ChargeSeasonForm
                 studentId={studentId}
                 charge={charge}
+                categories={categories}
+                suggestedCategoryId={suggestedCategoryId}
                 onDone={() => setCharging(null)}
               />
             )}
@@ -240,10 +246,14 @@ function SeasonCharges({
 function ChargeSeasonForm({
   studentId,
   charge,
+  categories,
+  suggestedCategoryId,
   onDone,
 }: {
   studentId: string;
   charge: SeasonCharge;
+  categories: StudentFees['categories'];
+  suggestedCategoryId: string | null;
   onDone: () => void;
 }): React.ReactElement {
   const t = useTranslations();
@@ -334,6 +344,20 @@ function ChargeSeasonForm({
           </div>
         </div>
       )}
+
+      {/*
+        A concession applies to all four kinds — an inscricao waived for staff
+        and a senior quota are both ordinary, and a rule restricting it to the
+        mensalidade would have no home in a schema that treats the four as one
+        price list.
+      */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <DiscountFields
+          idPrefix={`season-${charge.planId}`}
+          categories={categories}
+          suggestedCategoryId={suggestedCategoryId}
+        />
+      </div>
 
       {fields['feePlanId'] !== undefined && (
         <p role="alert" className="text-sm text-danger">
@@ -468,6 +492,8 @@ export function FeesBlock({
                 studentId={studentId}
                 plan={plan}
                 periods={periods[plan.facilityId] ?? []}
+                categories={fees.categories}
+                suggestedCategoryId={fees.suggestedCategoryId}
                 showSite={fees.currentPlans.some(
                   (other) => other.facilityId !== plan.facilityId,
                 )}
@@ -481,6 +507,8 @@ export function FeesBlock({
         studentId={studentId}
         charges={fees.seasonCharges}
         returning={fees.inscricao.returning}
+        categories={fees.categories}
+        suggestedCategoryId={fees.suggestedCategoryId}
       />
 
       {live.length === 0 && <p className="text-sm text-foreground-muted">{t('fees.noLines')}</p>}
@@ -506,6 +534,7 @@ export function FeesBlock({
                   studentId={studentId}
                   line={line}
                   periods={periods[line.facilityId] ?? []}
+                  categories={fees.categories}
                 />
               ))}
             </ul>
@@ -669,10 +698,13 @@ function FeeRow({
   studentId,
   line,
   periods,
+  categories,
 }: {
   studentId: string;
   line: StudentFeeLine;
   periods: FeePeriod[];
+  /** For the edit form. A line shows what it was agreed at, never a suggestion. */
+  categories: StudentFees['categories'];
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -745,7 +777,21 @@ function FeeRow({
           </span>
         )}
 
-        {discounted && (
+        {/*
+          Why this line is cheaper than the price list — and who said so.
+
+          A concession names itself; a negotiated one shows the reason somebody
+          typed. Two sentences rather than one with a blank in it: "Sénior" and
+          "irmão mais novo" are different kinds of fact, and a line that said
+          "Desconto: " with nothing after it was the old shape.
+        */}
+        {discounted && line.feeCategoryName !== null && (
+          <span className="rounded bg-primary/10 px-2 py-0.5 text-primary">
+            {t('fees.categoryDiscount', { name: line.feeCategoryName })}
+          </span>
+        )}
+
+        {discounted && line.feeCategoryName === null && (
           <span className="rounded bg-primary/10 px-2 py-0.5 text-primary">
             {t('fees.manualDiscount', { reason: line.discountReason ?? '' })}
           </span>
@@ -840,6 +886,7 @@ function FeeRow({
           studentId={studentId}
           line={line}
           periods={periods}
+          categories={categories}
           onDone={() => setEditing(false)}
         />
       )}
@@ -1057,44 +1104,153 @@ function PeriodPicker({
   );
 }
 
-/** The discount controls, shared by the add and edit forms so they cannot drift. */
+/**
+ * Where this line's discount comes from — the shared control, round 19.
+ *
+ * **One select with three kinds of answer**: no discount, one of the club's
+ * concessions, or a figure this person typed. A category and a typed discount
+ * cannot both be chosen, which is how "never stack" becomes a shape rather than
+ * a rule somebody has to remember — the API and a CHECK say it too, but a form
+ * that could express the refused state would only be a way to discover it.
+ *
+ * **The category's value is shown but never sent.** The figure is read from the
+ * category by the statement that writes the line, exactly as the plan's amount
+ * is; what is on screen here is the same number, for the operator, not for the
+ * wire.
+ *
+ * The suggestion is the server's — the category every one of this student's live
+ * enrolments resolves to, and nothing at all the moment two of them disagree. It
+ * pre-selects and a person confirms it, which is why it is offered on a new line
+ * and never applied to an existing one behind somebody's back.
+ *
+ * Shared by all three forms — the plan, the season charge and the edit — so an
+ * inscricao can carry a concession as readily as a mensalidade.
+ */
 function DiscountFields({
   idPrefix,
+  categories,
+  suggestedCategoryId,
   line,
 }: {
   idPrefix: string;
+  categories: StudentFees['categories'];
+  /** Pre-selected on a new line. Ignored on an edit, which shows what was agreed. */
+  suggestedCategoryId?: string | null;
   line?: StudentFeeLine;
 }): React.ReactElement {
   const t = useTranslations();
-  const [kind, setKind] = useState<'none' | 'percent' | 'amount'>(
+  const locale = useLocale();
+
+  /*
+   * Empty is no discount, `own` is a typed one, anything else is a category id.
+   *
+   * An existing line shows what it was actually agreed at, never the suggestion:
+   * re-suggesting on an edit would silently re-price a family the first time
+   * somebody opened the form to change an end date.
+   */
+  const [source, setSource] = useState<string>(
+    line !== undefined
+      ? (line.feeCategoryId ??
+        (line.manualDiscountPercent !== null || line.manualDiscountCents !== null ? 'own' : ''))
+      : (suggestedCategoryId ?? ''),
+  );
+
+  const lineKind =
     line?.manualDiscountPercent !== null && line?.manualDiscountPercent !== undefined
       ? 'percent'
       : line?.manualDiscountCents !== null && line?.manualDiscountCents !== undefined
         ? 'amount'
-        : 'none',
+        : 'none';
+  const [kind, setKind] = useState<'none' | 'percent' | 'amount'>(
+    lineKind === 'none' ? 'percent' : lineKind,
   );
+
+  const chosen = categories.find((category) => category.id === source);
+  const suggestionShown =
+    line === undefined &&
+    suggestedCategoryId !== null &&
+    suggestedCategoryId !== undefined &&
+    source === suggestedCategoryId;
 
   return (
     <>
       <div className={cn(FIELD_COLUMN, 'max-w-none')}>
-        <label htmlFor={`${idPrefix}-dkind`} className={FIELD_LABEL}>
-          {t('fees.discountKind')}
+        <label htmlFor={`${idPrefix}-dsource`} className={FIELD_LABEL}>
+          {t('fees.discount')}
         </label>
         <select
-          id={`${idPrefix}-dkind`}
-          name="discountKind"
-          value={kind}
-          onChange={(event) => setKind(event.target.value as 'none' | 'percent' | 'amount')}
+          id={`${idPrefix}-dsource`}
+          name="discountSource"
+          value={source}
+          onChange={(event) => setSource(event.target.value)}
           className={CONTROL_LINE}
         >
-          <option value="none">{t('fees.noDiscount')}</option>
-          <option value="percent">{t('fees.discountPercentKind')}</option>
-          <option value="amount">{t('fees.discountAmountKind')}</option>
+          <option value="">{t('fees.noDiscount')}</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {/*
+                The value in the option, so the choice is made on what it costs
+                rather than on a name somebody has to remember the meaning of.
+              */}
+              {category.discountPercent !== null
+                ? t('fees.categoryOptionPercent', {
+                    name: category.name,
+                    discount: category.discountPercent,
+                  })
+                : category.discountCents !== null
+                  ? t('fees.categoryOptionAmount', {
+                      name: category.name,
+                      amount: formatCents(locale, category.discountCents),
+                    })
+                  : t('fees.categoryOptionLabelOnly', { name: category.name })}
+            </option>
+          ))}
+          <option value="own">{t('fees.ownDiscount')}</option>
         </select>
+        {/* The id the API reads. Empty for a typed discount and for none, which
+            is what makes the fields below the ones that count. */}
+        <input type="hidden" name="feeCategoryId" value={chosen === undefined ? '' : chosen.id} />
+        {suggestionShown && (
+          <p className="text-sm text-foreground-muted">{t('fees.categorySuggested')}</p>
+        )}
       </div>
 
-      {kind !== 'none' && (
+      {chosen !== undefined && (
+        /*
+          What the concession is worth, in words, beside the control that chose
+          it — information, so visible text rather than a tooltip. A category
+          with no value says so: it is a label, and a line on it is charged in
+          full, which is a surprise worth spending a sentence on.
+        */
+        <p className="self-end text-sm text-foreground-muted">
+          {chosen.discountPercent !== null
+            ? t('fees.categoryWorthPercent', { discount: chosen.discountPercent })
+            : chosen.discountCents !== null
+              ? t('fees.categoryWorthAmount', {
+                  amount: formatCents(locale, chosen.discountCents),
+                })
+              : t('fees.categoryWorthNothing')}
+        </p>
+      )}
+
+      {source === 'own' && (
         <>
+          <div className={cn(FIELD_COLUMN, 'max-w-none')}>
+            <label htmlFor={`${idPrefix}-dkind`} className={FIELD_LABEL}>
+              {t('fees.discountKind')}
+            </label>
+            <select
+              id={`${idPrefix}-dkind`}
+              name="discountKind"
+              value={kind}
+              onChange={(event) => setKind(event.target.value as 'none' | 'percent' | 'amount')}
+              className={CONTROL_LINE}
+            >
+              <option value="percent">{t('fees.discountPercentKind')}</option>
+              <option value="amount">{t('fees.discountAmountKind')}</option>
+            </select>
+          </div>
+
           <div className={cn(FIELD_COLUMN, 'max-w-none')}>
             <label htmlFor={`${idPrefix}-dvalue`} className={FIELD_LABEL}>
               {kind === 'percent' ? t('fees.discountPercent') : t('fees.discountAmount')}
@@ -1149,11 +1305,15 @@ function CurrentPlanRow({
   plan,
   periods,
   showSite,
+  categories,
+  suggestedCategoryId,
 }: {
   studentId: string;
   plan: CurrentPlan;
   periods: FeePeriod[];
   showSite: boolean;
+  categories: StudentFees['categories'];
+  suggestedCategoryId: string | null;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -1215,6 +1375,8 @@ function CurrentPlanRow({
           planId={plan.planId}
           periods={periods}
           suggestedPeriodId={plan.defaultFeePeriodId}
+          categories={categories}
+          suggestedCategoryId={suggestedCategoryId}
           onDone={() => setCharging(false)}
         />
       )}
@@ -1233,12 +1395,16 @@ function ChargePlanForm({
   planId,
   periods,
   suggestedPeriodId,
+  categories,
+  suggestedCategoryId,
   onDone,
 }: {
   studentId: string;
   planId: string;
   periods: FeePeriod[];
   suggestedPeriodId: string | null;
+  categories: StudentFees['categories'];
+  suggestedCategoryId: string | null;
   onDone: () => void;
 }): React.ReactElement {
   const t = useTranslations();
@@ -1282,7 +1448,11 @@ function ChargePlanForm({
           </select>
         </div>
 
-        <DiscountFields idPrefix={`charge-${planId}`} />
+        <DiscountFields
+          idPrefix={`charge-${planId}`}
+          categories={categories}
+          suggestedCategoryId={suggestedCategoryId}
+        />
       </div>
 
       <Problem state={state} />
@@ -1303,11 +1473,13 @@ function EditFeeForm({
   studentId,
   line,
   periods,
+  categories,
   onDone,
 }: {
   studentId: string;
   line: StudentFeeLine;
   periods: FeePeriod[];
+  categories: StudentFees['categories'];
   onDone: () => void;
 }): React.ReactElement {
   const t = useTranslations();
@@ -1357,7 +1529,7 @@ function EditFeeForm({
           />
         </div>
 
-        <DiscountFields idPrefix={`edit-${line.id}`} line={line} />
+        <DiscountFields idPrefix={`edit-${line.id}`} categories={categories} line={line} />
       </div>
 
       <Problem state={state} />

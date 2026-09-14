@@ -2308,11 +2308,12 @@ Naming somebody grants them nothing, and that is a property of the shape: it tou
 `membership_role` nor `guardian_link`, so there is no path by which it could. Blank strings
 are refused, so "is there a contact" has one answer rather than two.
 
-### The fee category — POOLSE-23 AC4, 8 September 2026
+### The fee category — POOLSE-23 AC4, 8 September 2026; valued 14 September 2026
 
 ```
 fee_category
   id, organization_id, name, sort_order,
+  discount_percent, discount_cents,
   created_at, updated_at, archived_at
 ```
 
@@ -2325,13 +2326,37 @@ the dead row.
 `class_group.fee_category_id` and `enrollment.fee_category_id` both name one, both nullable,
 both composite-keyed to their own tenant. **The enrolment wins**, and
 `enrolment_fee_category(organization_id, enrollment_id)` is that precedence written once — the
-same reasoning as `fee_total_cents`, because the pricing engine that reads this next must not
-spell it differently. Null means the club has said nothing, which is not a category called
-"normal" and must never become one.
+same reasoning as `fee_total_cents`, because whatever reads this next must not spell it
+differently. Null means the club has said nothing, which is not a category called "normal" and
+must never become one.
 
-Neither reference is cascaded, so `fee_category` sits **after** `class_group` in
-`TENANT_TABLES`: deleting the categories first fails on the foreign key, which is the key
-doing its job.
+**The two discount columns reverse POOLSE-23's "a reference, never a percentage"** (decisions,
+2026-09-14). One or the other by CHECK, both nullable and often both null — a category with no
+value is a label, which is a legitimate thing to keep and is *not* 0 %. `discount_percent` is
+`numeric(5,2)` between 0 and 100; `discount_cents` is an integer of minor units, like every
+stored amount, and floors at zero on a line smaller than it.
+
+**`student_fee.fee_category_id` is the author of that line's discount**, composite-keyed like
+every other reference. The *figure* is snapshotted into the columns that already hold a line's
+own discount — `manual_discount_percent` / `manual_discount_cents` — so correcting a category
+reaches lines agreed afterwards and none agreed before, the same rule `amount_cents` follows.
+Set means the category authored it; null with a discount present means a person typed it, and
+`student_fee_discount_needs_reason` then demands a reason as it always did. The two are never
+both true: the API refuses a body carrying both rather than picking one.
+
+*(The column names are a wart. They read "manual" and now hold a category's figure as well;
+renaming them would touch the two repositories, `fee_payable_cents`'s call sites and a dozen
+tests for no behaviour change. **Proposed** as a follow-up — `line_discount_*` — rather than
+done by reflex.)*
+
+**`invoice_line.fee_category_name`** is the concession as the document says it: the club's own
+word, snapshotted like the level's and the season's. The line's amount is already net of the
+discount, so without it a document says 28,00 where the price list says 35,00 and nothing
+accounts for the rest.
+
+Neither reference from `class_group` or `enrollment` is cascaded, so `fee_category` sits
+**after** `class_group` in `TENANT_TABLES`: deleting the categories first fails on the foreign
+key, which is the key doing its job. `student_fee` is already ahead of it there.
 
 ### Invoicing — phase 2.2, 8 September 2026
 

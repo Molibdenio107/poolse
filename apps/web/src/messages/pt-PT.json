@@ -1406,7 +1406,18 @@
     "proRata": "Proporcional",
     "proRataLabel": "Cobrar só a parte do período",
     "proRataHint": "Para quem entra a meio da época. Sem esta opção, é cobrado o valor inteiro — que é o que muitos clubes fazem, porque foi o que a seguradora lhes cobrou.",
-    "quotaKept": "A quota não foi removida porque já está paga ou já consta de uma fatura. Deixou de ser sócio; a quota mantém-se no registo."
+    "quotaKept": "A quota não foi removida porque já está paga ou já consta de uma fatura. Deixou de ser sócio; a quota mantém-se no registo.",
+    "discount": "Desconto",
+    "ownDiscount": "Desconto próprio",
+    "categoryOptionPercent": "{name} (−{discount}%)",
+    "categoryOptionAmount": "{name} (−{amount})",
+    "categoryOptionLabelOnly": "{name} (sem desconto)",
+    "categorySuggested": "Sugerido a partir das turmas do aluno.",
+    "categoryWorthPercent": "Desconta {discount}% do total do período.",
+    "categoryWorthAmount": "Desconta {amount} do total do período.",
+    "categoryWorthNothing": "Esta categoria não tem desconto. A linha é cobrada por inteiro.",
+    "categoryDiscount": "Desconto: {name}",
+    "oneDiscountAuthor": "O desconto vem de uma categoria ou de uma decisão sua, não dos dois."
   },
   "categories": {
     "title": "Categorias de preço",
@@ -1430,11 +1441,25 @@
     "rename": "Editar categoria",
     "sortOrderHint": "Menor primeiro. Deixe a zero para ordem alfabética.",
     "archiveAsk": "Arquivar a categoria \"{name}\"? Deixa de aparecer nas listas, mas o histórico mantém-se.",
-    "notPermitted": "Sem acesso às categorias de preço.",
     "onGroupHint": "Aplica-se a todos os alunos da turma, salvo se a inscrição disser outra coisa.",
     "howTitle": "Como se aplica",
-    "howBody": "A categoria pode ser definida na turma — e vale para toda a gente que lá está — ou na inscrição de um aluno, que ganha à da turma. Retirar a categoria própria de um aluno devolve-o à da turma. Uma categoria é uma etiqueta: quanto vale fica para a faturação.",
-    "fromGroupIs": "Da turma ({name})"
+    "howBody": "A categoria pode ser definida na turma — e vale para toda a gente que lá está — ou na inscrição de um aluno, que ganha à da turma. Retirar a categoria própria de um aluno devolve-o à da turma. Ao lançar uma mensalidade, a categoria do aluno é sugerida e o desconto é copiado para a linha nesse momento.",
+    "fromGroupIs": "Da turma ({name})",
+    "panelHint": "Esta lista é do clube — as mesmas categorias aparecem em todas as instalações. Alterar o valor de uma categoria não altera nada já acordado: cada mensalidade guarda o desconto do momento em que foi acordada.",
+    "discountKind": "Desconto",
+    "kindPercent": "Percentagem",
+    "kindAmount": "Valor fixo",
+    "percentLabel": "Desconto (%)",
+    "amountLabel": "Desconto (€)",
+    "labelOnly": "Sem desconto",
+    "labelOnlyHint": "Categoria só para identificar e contar. Não altera nenhum preço.",
+    "offPercent": "−{discount}%",
+    "offAmount": "−{amount}",
+    "valueHidden": "Sem acesso aos valores.",
+    "percentRange": "Indique uma percentagem entre 0 e 100.",
+    "amountInvalid": "Indique um valor em euros, por exemplo 7,50.",
+    "oneDiscount": "Uma categoria tem percentagem ou valor fixo, não os dois.",
+    "archiveKeepsLines": "As mensalidades já acordadas mantêm o desconto com que foram acordadas."
   },
   "insurance": {
     "title": "Apólice de seguro",
@@ -3088,7 +3113,8 @@
     "chasedOn": "Data do contacto",
     "chaseNote": "Nota",
     "chaseNoteHint": "O que foi dito, ou o que a família respondeu. É a razão pela qual vale a pena registar um segundo contacto.",
-    "notPayable": "Uma nota de crédito não é paga nem cobrada."
+    "notPayable": "Uma nota de crédito não é paga nem cobrada.",
+    "underCategory": "· {name}"
   },
   "admin": {
     "mark": "Poolse · Plataforma",

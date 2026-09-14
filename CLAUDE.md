@@ -246,6 +246,22 @@ invoices and fees. A per-kWh tariff in integer cents rounds €0.1548 to €0.15
 3% error on the module whose entire purpose is cost accuracy — unit prices are
 `numeric(12,6)`.
 
+**A fee category authors the discount, and the line snapshots the figure.** This
+**reverses** POOLSE-23's "a reference, never a percentage", stated twice in that migration:
+nothing consulted the reference, so a club giving seniors 20 % off typed it into
+`discount_reason` once per family — one decision, forty authors, which is the failure that
+rule existed to prevent. `fee_category` now carries `discount_percent` **or** `discount_cents`
+(or **neither** — a label is still legitimate, and null is never 0 %), and the *figure* is
+copied onto `student_fee` when a line is agreed while `fee_category_id` records who authored
+it. Correcting a category reaches lines agreed afterwards and none agreed before, exactly as
+`amount_cents` does; renaming still reaches everything, because the line holds the id. **One
+author, never two**: a category or a person, refused rather than resolved by precedence, which
+the form makes a shape — one control, three answers. **The client never sends the figure**, the
+way it never sends the plan's amount. All four kinds. The list is **organization-scoped and
+shown as a panel under Preços on each site's page** — an instructor reads the names and not the
+values (`canSeeValues`), because the price list refuses them outright and a concession must not
+be the way round it. `docs/features/students.md`.
+
 **One price list, four `fee_kind`s — never a table per fee type.** `mensalidade`,
 `inscricao`, `seguro`, `quota`, all on `fee_plan`, each with its shape held by a CHECK: only
 a mensalidade is priced by a level and a frequency, only a quota is banded by age, and

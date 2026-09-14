@@ -19,6 +19,8 @@ import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
 import { InsurancePanel } from './insurance-panel';
 import { listPolicies } from './insurance.actions';
+import { CategoriesPanel } from './categories-panel';
+import { listCategories } from './categories.actions';
 import { PartnersPanel } from './partners-panel';
 import { listPartners } from './partners.actions';
 import { SpacesPanel } from '../spaces-panel';
@@ -128,6 +130,15 @@ export default async function FacilityPage({
   */
 
   const prices = await listPrices(facilityId);
+  /*
+   * Categorias de preço — round 19.
+   *
+   * The club's own list, shown beside the prices it modifies. Null when the
+   * endpoint refuses, like the price list above it; unlike the price list it is
+   * organization-scoped, so what is on the page is the same on every site and
+   * the panel says so.
+   */
+  const categories = await listCategories();
   // Null for anybody who may not read it, exactly as the price list is: what the
   // club pays its insurer is a commercial fact and the endpoint decides, not the
   // absence of a panel.
@@ -286,6 +297,21 @@ export default async function FacilityPage({
               billing={prices.billing}
               levels={register?.levels ?? []}
               canManage={register?.canManage ?? false}
+            />
+          )}
+
+          {/*
+            Directly under the price list, because a concession is the other half
+            of what somebody pays and the two are one conversation. Not gated on
+            `prices`: a reader may see the names without seeing the amounts, and
+            the endpoint decides which — `canSeeValues`, never an absent panel.
+          */}
+          {categories !== null && (
+            <CategoriesPanel
+              facilityId={facilityId}
+              categories={categories.categories}
+              canManage={categories.canManage}
+              canSeeValues={categories.canSeeValues}
             />
           )}
 

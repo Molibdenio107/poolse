@@ -1406,7 +1406,18 @@
     "proRata": "Pro rata",
     "proRataLabel": "Charge only the part of the period",
     "proRataHint": "For someone joining mid-season. Without it the whole premium is charged — which is what many clubs do, because it is what the insurer charged them.",
-    "quotaKept": "The membership fee was not removed because it is already paid or already on an invoice. They are no longer a member; the fee stays on the record."
+    "quotaKept": "The membership fee was not removed because it is already paid or already on an invoice. They are no longer a member; the fee stays on the record.",
+    "discount": "Discount",
+    "ownDiscount": "Own discount",
+    "categoryOptionPercent": "{name} (−{discount}%)",
+    "categoryOptionAmount": "{name} (−{amount})",
+    "categoryOptionLabelOnly": "{name} (no discount)",
+    "categorySuggested": "Suggested from the student's class groups.",
+    "categoryWorthPercent": "Takes {discount}% off the period total.",
+    "categoryWorthAmount": "Takes {amount} off the period total.",
+    "categoryWorthNothing": "This category carries no discount. The line is charged in full.",
+    "categoryDiscount": "Discount: {name}",
+    "oneDiscountAuthor": "A discount comes from a category or from your own decision, not both."
   },
   "categories": {
     "title": "Fee categories",
@@ -1430,11 +1441,25 @@
     "rename": "Edit category",
     "sortOrderHint": "Lowest first. Leave at zero for alphabetical order.",
     "archiveAsk": "Archive the category \"{name}\"? It stops appearing in lists, but the history stays.",
-    "notPermitted": "No access to the fee categories.",
     "onGroupHint": "Applies to everybody in the class group, unless their enrolment says otherwise.",
     "howTitle": "How it applies",
-    "howBody": "A category can be set on the class group — where it covers everybody in it — or on one student's enrolment, which beats the group's. Taking a student's own category off returns them to their group's. A category is a label: what it is worth is invoicing's business.",
-    "fromGroupIs": "From the class group ({name})"
+    "howBody": "A category can be set on the class group — where it covers everybody in it — or on one student's enrolment, which beats the group's. Taking a student's own category off returns them to their group's. When a fee is charged, the student's category is suggested and its discount is copied onto the line at that moment.",
+    "fromGroupIs": "From the class group ({name})",
+    "panelHint": "This list belongs to the club — the same categories appear at every facility. Changing what a category is worth changes nothing already agreed: each fee keeps the discount it was agreed at.",
+    "discountKind": "Discount",
+    "kindPercent": "Percentage",
+    "kindAmount": "Fixed amount",
+    "percentLabel": "Discount (%)",
+    "amountLabel": "Discount (€)",
+    "labelOnly": "No discount",
+    "labelOnlyHint": "A category only for identifying and counting. It changes no price.",
+    "offPercent": "−{discount}%",
+    "offAmount": "−{amount}",
+    "valueHidden": "No access to the amounts.",
+    "percentRange": "Enter a percentage between 0 and 100.",
+    "amountInvalid": "Enter an amount in euros, for example 7.50.",
+    "oneDiscount": "A category takes a percentage or a fixed amount, not both.",
+    "archiveKeepsLines": "Fees already agreed keep the discount they were agreed at."
   },
   "insurance": {
     "title": "Insurance policy",
@@ -3088,7 +3113,8 @@
     "chasedOn": "Contact date",
     "chaseNote": "Note",
     "chaseNoteHint": "What was said, or what the family answered. It is the reason a second contact is worth recording.",
-    "notPayable": "A credit note is neither paid nor chased."
+    "notPayable": "A credit note is neither paid nor chased.",
+    "underCategory": "· {name}"
   },
   "admin": {
     "mark": "Poolse · Platform",

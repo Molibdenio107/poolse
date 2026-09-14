@@ -289,6 +289,24 @@ const nextConfig = {
         destination: '/dashboard/facilities/staff/vacations/:path*',
         permanent: false,
       },
+      /*
+       * Categorias de preço moved onto the site's page — round 19.
+       *
+       * It sat under Alunos beside Níveis while a category was a label. It now
+       * carries what it is worth, which makes it part of the price list, so it
+       * is a panel under Preços on each site. The list itself is still the
+       * club's and organization-scoped; only where it is shown changed.
+       *
+       * It lands on the list of sites rather than on one of them: the panel is
+       * the same on every site, and picking one would be guessing which pool
+       * somebody meant. Temporary, like the Férias hops above — this is the
+       * first time the page has moved and a 308 is cached essentially for ever.
+       */
+      {
+        source: '/dashboard/students/categories',
+        destination: '/dashboard/facilities',
+        permanent: false,
+      },
     ];
   },
 };

@@ -254,7 +254,7 @@ export class StudentFeesController {
        */
       feePeriodId: optionalId(body['feePeriodId']),
       enrollmentId: optionalId(body['enrollmentId']),
-      ...readManualDiscount(body),
+      ...readDiscount(body),
       startsOn: optionalDate(body['startsOn'], 'startsOn'),
       insurancePolicyId: optionalId(body['insurancePolicyId']),
       coversFrom: optionalDate(body['coversFrom'], 'coversFrom'),
@@ -300,7 +300,7 @@ export class StudentFeesController {
 
     const changed = await updateStudentFee(organizationId, studentId, id, {
       feePeriodId: requiredId(body['feePeriodId'], 'feePeriodId'),
-      ...readManualDiscount(body),
+      ...readDiscount(body),
       endsOn: optionalDate(body['endsOn'], 'endsOn'),
     });
     if (!changed) throw new BadRequestException('No such fee line');
@@ -713,18 +713,32 @@ function readPenaltyKind(value: unknown, field: string): FeePenaltyKind {
 }
 
 /**
- * A manual discount is one kind or the other, and never without a reason.
+ * A line's discount has exactly one author, and one kind.
  *
- * The database says both of these too. They are said here as well so the
- * operator gets a sentence naming the field rather than a constraint name —
- * QA 42.9 asks for a field-level error, in both locales, which means the API has
- * to name the field.
+ * **A category or a person, never both** — round 19. The two would otherwise
+ * stack, and a family's total would be two multiplications deep with nothing on
+ * the invoice able to reconstruct it. Refused rather than resolved by
+ * precedence: a request carrying both is a client that has lost track of which
+ * answer the operator gave, and silently picking one would make the screen and
+ * the row disagree.
+ *
+ * Where a category authors it, **the figure is not read from the body at all**.
+ * The repository takes it from the category in the statement that writes the
+ * line, so a client cannot agree a concession the club never offered — the same
+ * rule as the plan's amount.
+ *
+ * The rest is unchanged: one kind or the other, and a *typed* discount never
+ * without a reason. The database says both too; they are said here as well so
+ * the operator gets a sentence naming the field rather than a constraint name —
+ * QA 42.9 asks for a field-level error, in both locales.
  */
-function readManualDiscount(body: Record<string, unknown>): {
+function readDiscount(body: Record<string, unknown>): {
+  feeCategoryId: string | null;
   manualDiscountPercent: number | null;
   manualDiscountCents: number | null;
   discountReason: string | null;
 } {
+  const categoryId = optionalId(body['feeCategoryId']);
   const percent = rate(body['manualDiscountPercent'], 'manualDiscountPercent');
   const raw = body['manualDiscountCents'];
   const amount = raw === undefined || raw === null || raw === ''
@@ -740,15 +754,36 @@ function readManualDiscount(body: Record<string, unknown>): {
   }
 
   const reason = optionalText(body['discountReason'], 'discountReason', MAX_REASON);
+
+  if (categoryId !== null) {
+    if (percent !== null || amount !== null) {
+      throw new BadRequestException({
+        code: 'one_discount_author',
+        message: 'A discount comes from a category or from a person, not both',
+        fields: { feeCategoryId: 'fees.oneDiscountAuthor' },
+      });
+    }
+    // The reason goes with the typed figure. The category *is* the reason, and
+    // storing a stale sentence beside it is how a line ends up explaining itself
+    // twice, differently.
+    return {
+      feeCategoryId: categoryId,
+      manualDiscountPercent: null,
+      manualDiscountCents: null,
+      discountReason: null,
+    };
+  }
+
   if ((percent !== null || amount !== null) && reason === null) {
     throw new BadRequestException({
       code: 'discount_needs_reason',
-      message: 'A manual discount needs a reason',
+      message: 'A typed discount needs a reason',
       fields: { discountReason: 'fees.discountReasonRequired' },
     });
   }
 
   return {
+    feeCategoryId: null,
     manualDiscountPercent: percent,
     manualDiscountCents: amount,
     discountReason: reason,

@@ -69,27 +69,64 @@ Why one person pays a different price from the person in the next lane: **Sénio
 **Estudante**, **Funcionário**. A club invents its own, so it is a list the club maintains
 rather than a fixed set.
 
-**A reference, never a percentage.** What a category is *worth* belongs to the pricing engine,
-which is not built. A number typed into a form here would be a discount nobody can report on
-and nobody can change in one place.
+**The category carries what it is worth** — a percentage or a fixed amount, one or the other
+or neither. This *reverses* POOLSE-23's "a reference, never a percentage": nothing consulted
+the reference, so a club giving seniors 20 % off typed −20 and the word "sénior" into a
+free-text reason once per family. One decision with forty authors is exactly what the original
+rule was written to prevent. `docs/decisions.md`, 2026-09-14.
+
+**A category with no value is still a category.** It is a label — a club may keep
+"Funcionário" to count them — and it is not 0 %, which would be a decision somebody took.
+Nothing is charged differently for it.
+
+**The figure is snapshotted onto the fee line.** Correcting what a category is worth reaches
+every line agreed *afterwards* and none agreed before, exactly as the price list does: a line
+that re-read its category would re-price a family the moment somebody fixed a typo. Renaming
+still reaches everything at once, because the line holds the id.
+
+**One author, never two.** A line's discount comes from a category or from a person, and the
+form is a single control with three answers — no discount, one of the club's concessions, or a
+figure typed with a reason. A request carrying both is refused rather than resolved by
+precedence. A typed discount still requires a reason; the category *is* the reason for the
+other kind.
+
+**All four fee kinds.** A senior concession on the quota and a waived inscrição for staff are
+both ordinary, and the schema treats the four as one price list.
 
 **Set on the turma or on the enrolment, and the enrolment wins.** A senior turma carries the
 category so nobody types it forty times; the one member of it who is staff carries their own.
 Clearing a person's own category puts them back on their turma's — *not* on none, which is why
 that clear is its own action rather than saving an empty value.
 
-Renaming a category reaches everything at once, because a turma holds its id rather than a
-copy of its name. A category a turma or an enrolment still names cannot be archived, and the
-refusal counts both.
+When a fee is charged, the student's category is **suggested** — the one every live enrolment
+of theirs resolves to, and nothing at all the moment two of them disagree, because a child in a
+senior turma and a staff turma is somebody a person has to choose for. A suggestion is
+pre-selected and confirmed, never applied behind somebody's back, and an *existing* line shows
+what it was agreed at rather than what would be suggested today.
 
-Reading the list is open to anyone who may see a turma — it is a label printed beside a name
-and says nothing about money. Writing is the owner and admins.
+A category a turma or an enrolment still names cannot be archived, and the refusal counts both.
+Fee lines are deliberately not counted: a line holds the figure it snapshotted rather than a
+live reference, so old lines naming an archived category read correctly, and counting them
+would make a category unarchivable for ever the first time it was used.
 
-**Where each is set.** The club's list lives at **Alunos → Categorias**. A turma's category is
-part of the turma's own form, beside its level and its pool — there is deliberately no separate
-endpoint for that one field, because a second write path is how two screens end up disagreeing
-about what was saved. A student's own category is set from their enrolment, which has no form
-of its own.
+Reading the **names** is open to anyone who may see a turma — the label is printed beside a
+turma and on an enrolment. Reading what a category is **worth** is not: the price list refuses
+an instructor outright, so the values come back null with `canSeeValues: false` beside them
+rather than as a blank that would read as "no discount". Writing is the owner and admins.
+
+**Where each is set.** The club's list is a panel on each site's page, under **Instalações →
+*site* → Preços**; the old **Alunos → Categorias** route redirects there. The list is still the
+club's and organization-scoped — the same categories on every site — and the panel says so,
+because a "Sénior" meaning one thing at one pool and another at the next is a concession nobody
+could report on. A turma's category is part of the turma's own form, beside its level and its
+pool — there is deliberately no separate endpoint for that one field, because a second write
+path is how two screens end up disagreeing about what was saved. A student's own category is
+set from their enrolment, which has no form of its own.
+
+On a document, the concession is printed by name beside the line: the amount is already net of
+the discount, so without it an invoice says 28,00 where the price list says 35,00 and nothing
+accounts for the rest. The name is snapshotted onto `invoice_line`, like every other name on a
+document.
 
 ## Both capacities, one record
 

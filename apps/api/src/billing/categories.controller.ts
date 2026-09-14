@@ -20,6 +20,7 @@ import {
   CategoryInUseError,
   DuplicateCategoryError,
   type FeeCategory,
+  type FeeCategoryInput,
 } from './categories.repository.js';
 
 const MAX_NAME = 60;
@@ -27,24 +28,48 @@ const MAX_NAME = 60;
 /**
  * The club's fee categories — POOLSE-23 AC4.
  *
- * **Reading is open to anyone who may see a turma**, because the category is
- * printed beside a turma's name and on an enrolment: it is a label, not an
- * amount, and nothing here says what anybody pays. Writing is owner and admin,
- * like every other list the club maintains.
+ * **Reading a category's name is open to anyone who may see a turma** — it is
+ * printed beside a turma's name and on an enrolment. **Reading what it is worth
+ * is not.** Since round 19 a category carries a discount, and the price list
+ * refuses an instructor outright (POOLSE-42 AC10, "no amounts at all"); the same
+ * answer has to hold here or a concession becomes the way round it.
+ *
+ * So the values come back null for an instructor, with `canSeeValues` beside
+ * them saying why. Null on its own would read as "no discount", which is a
+ * different fact and the one nobody should infer from a blank.
  *
  * Organization-scoped rather than per facility: a concession is the club's
  * policy, and a "Sénior" that meant one thing at one pool and another at the
- * next is a category nobody could report on.
+ * next is a category nobody could report on. It is *shown* on each site's page,
+ * beside the price list it modifies, which is where an operator is standing when
+ * they think about it — the panel says it is the club's own list.
  */
 @Controller('fee-categories')
 export class FeeCategoriesController {
   @Get()
-  async list(): Promise<{ categories: FeeCategory[]; canManage: boolean }> {
+  async list(): Promise<{
+    categories: FeeCategory[];
+    canManage: boolean;
+    canSeeValues: boolean;
+  }> {
     requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
+
+    const canSeeValues = hasRole('owner', 'admin');
+    const categories = await listCategories(organizationId);
+
     return {
-      categories: await listCategories(organizationId),
+      // Blanked here rather than left out of the query, so there is one shape of
+      // row and one place that decides who sees the figure.
+      categories: canSeeValues
+        ? categories
+        : categories.map((category) => ({
+            ...category,
+            discountPercent: null,
+            discountCents: null,
+          })),
       canManage: hasRole('owner', 'admin'),
+      canSeeValues,
     };
   }
 
@@ -54,9 +79,7 @@ export class FeeCategoriesController {
     const { organizationId } = currentTenant();
 
     try {
-      return {
-        id: await createCategory(organizationId, name(body['name']), order(body['sortOrder'])),
-      };
+      return { id: await createCategory(organizationId, input(body)) };
     } catch (error) {
       refuseDuplicate(error);
     }
@@ -71,12 +94,7 @@ export class FeeCategoriesController {
     const { organizationId } = currentTenant();
 
     try {
-      const renamed = await renameCategory(
-        organizationId,
-        id,
-        name(body['name']),
-        order(body['sortOrder']),
-      );
+      const renamed = await renameCategory(organizationId, id, input(body));
       if (!renamed) throw new BadRequestException('No such category');
     } catch (error) {
       refuseDuplicate(error);
@@ -189,6 +207,63 @@ function name(value: unknown): string {
 
 function order(value: unknown): number {
   return Number.isInteger(value) ? (value as number) : 0;
+}
+
+/**
+ * The whole writable category, refused as a whole.
+ *
+ * **One kind of discount or the other, never both**, which the CHECK says too —
+ * said here as well so the refusal names the box rather than arriving as a 500
+ * quoting a constraint. Absent means the category carries no value, which is a
+ * label and stays a legitimate thing to want; it is not zero, and a client that
+ * sends 0 is taken at its word.
+ *
+ * The amount is `parseCents`'s job everywhere else in this codebase and it is
+ * the client that calls it — what arrives here is already integer cents, and
+ * anything else is refused rather than rounded into something plausible.
+ */
+function input(body: Record<string, unknown>): FeeCategoryInput {
+  const percent = body['discountPercent'];
+  const cents = body['discountCents'];
+
+  if (percent !== null && percent !== undefined && cents !== null && cents !== undefined) {
+    throw new BadRequestException({
+      code: 'one_discount',
+      message: 'A category takes a percentage or an amount, not both',
+      fields: { discountValue: 'categories.oneDiscount' },
+    });
+  }
+
+  return {
+    name: name(body['name']),
+    sortOrder: order(body['sortOrder']),
+    discountPercent: percentage(percent),
+    discountCents: amount(cents),
+  };
+}
+
+function percentage(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 100) {
+    throw new BadRequestException({
+      code: 'discount_out_of_range',
+      message: 'A percentage discount is between 0 and 100',
+      fields: { discountValue: 'categories.percentRange' },
+    });
+  }
+  return value;
+}
+
+function amount(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  if (!Number.isInteger(value) || (value as number) < 0) {
+    throw new BadRequestException({
+      code: 'discount_not_an_amount',
+      message: 'A fixed discount is a whole number of cents, zero or more',
+      fields: { discountValue: 'categories.amountInvalid' },
+    });
+  }
+  return value as number;
 }
 
 function optionalId(value: unknown): string | null {
