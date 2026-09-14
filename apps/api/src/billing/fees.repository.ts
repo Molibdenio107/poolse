@@ -157,8 +157,8 @@ export interface StudentFeeLine {
   /** The agreed amount, per month. Never the plan's current one. */
   amountCents: number;
   discountPercent: number;
-  manualDiscountPercent: number | null;
-  manualDiscountCents: number | null;
+  lineDiscountPercent: number | null;
+  lineDiscountCents: number | null;
   discountReason: string | null;
   /**
    * The category that authored this line's discount — round 19.
@@ -177,7 +177,7 @@ export interface StudentFeeLine {
   feeCategoryName: string | null;
   /** Amount x months, with the period discount, rounded once. From SQL. */
   periodTotalCents: number;
-  /** The same with this line's manual discount taken off. From SQL. */
+  /** The same with this line's own discount taken off. From SQL. */
   payableCents: number;
   startsOn: string;
   endsOn: string | null;
@@ -870,8 +870,8 @@ export async function studentFees(
       months: number;
       amount_cents: number;
       discount_percent: string;
-      manual_discount_percent: string | null;
-      manual_discount_cents: number | null;
+      line_discount_percent: string | null;
+      line_discount_cents: number | null;
       discount_reason: string | null;
       fee_category_id: string | null;
       fee_category_name: string | null;
@@ -904,7 +904,7 @@ export async function studentFees(
               to_char(sf.covers_from, 'YYYY-MM-DD') AS covers_from,
               to_char(sf.covers_to, 'YYYY-MM-DD') AS covers_to,
               sf.amount_cents, sf.discount_percent,
-              sf.manual_discount_percent, sf.manual_discount_cents, sf.discount_reason,
+              sf.line_discount_percent, sf.line_discount_cents, sf.discount_reason,
               sf.fee_category_id, fc.name AS fee_category_name,
               -- The one definition, in SQL. QA 42.3.
               -- Coalescing the months to 1 is what makes a line charged once
@@ -914,7 +914,7 @@ export async function studentFees(
               fee_total_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint, sf.discount_percent)
                 AS period_total_cents,
               fee_payable_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint, sf.discount_percent,
-                                sf.manual_discount_percent, sf.manual_discount_cents)
+                                sf.line_discount_percent, sf.line_discount_cents)
                 AS payable_cents,
               to_char(sf.starts_on, 'YYYY-MM-DD') AS starts_on,
               to_char(sf.ends_on, 'YYYY-MM-DD') AS ends_on,
@@ -1043,7 +1043,7 @@ export async function studentFees(
       `WITH base AS (
          SELECT coalesce(sum(round(
                   fee_payable_cents(sf.amount_cents, fp.months, sf.discount_percent,
-                                    sf.manual_discount_percent, sf.manual_discount_cents)::numeric
+                                    sf.line_discount_percent, sf.line_discount_cents)::numeric
                   / fp.months)), 0)::int AS monthly
            FROM student_fee sf
            JOIN fee_plan p ON p.id = sf.fee_plan_id
@@ -1377,9 +1377,9 @@ export async function studentFees(
         months: row.months,
         amountCents: row.amount_cents,
         discountPercent: Number(row.discount_percent),
-        manualDiscountPercent:
-          row.manual_discount_percent === null ? null : Number(row.manual_discount_percent),
-        manualDiscountCents: row.manual_discount_cents,
+        lineDiscountPercent:
+          row.line_discount_percent === null ? null : Number(row.line_discount_percent),
+        lineDiscountCents: row.line_discount_cents,
         discountReason: row.discount_reason,
         feeCategoryId: row.fee_category_id,
         feeCategoryName: row.fee_category_name,
@@ -1425,14 +1425,14 @@ export interface StudentFeeInput {
    * club never offered, which is the reason the plan's amount is not passed in
    * either.
    *
-   * Null with a manual discount means a person authored it and said why. Null
+   * Null with a line's own discount means a person authored it and said why. Null
    * with no discount is the ordinary line. The two can never both be true — the
    * form offers one control with three answers, and the CHECK is what makes that
    * a rule rather than a habit.
    */
   feeCategoryId: string | null;
-  manualDiscountPercent: number | null;
-  manualDiscountCents: number | null;
+  lineDiscountPercent: number | null;
+  lineDiscountCents: number | null;
   discountReason: string | null;
   startsOn: string | null;
   /** The apólice a seguro line is bought under. Required on one, refused on the rest. */
@@ -1505,7 +1505,7 @@ export async function createStudentFee(
        */
       `INSERT INTO student_fee (organization_id, student_id, fee_plan_id, enrollment_id,
                                 fee_period_id, amount_cents, discount_percent,
-                                manual_discount_percent, manual_discount_cents,
+                                line_discount_percent, line_discount_cents,
                                 discount_reason, starts_on, season_id,
                                 insurance_policy_id, covers_from, covers_to,
                                 fee_category_id)
@@ -1557,8 +1557,8 @@ export async function createStudentFee(
         studentId,
         input.feePlanId,
         input.enrollmentId,
-        input.manualDiscountPercent,
-        input.manualDiscountCents,
+        input.lineDiscountPercent,
+        input.lineDiscountCents,
         input.discountReason,
         input.startsOn,
         input.feePeriodId,
@@ -1607,8 +1607,8 @@ export interface StudentFeeChanges {
   /** As on creation: set means the category authors the figure, and the three
    *  fields below are ignored. See `StudentFeeInput.feeCategoryId`. */
   feeCategoryId: string | null;
-  manualDiscountPercent: number | null;
-  manualDiscountCents: number | null;
+  lineDiscountPercent: number | null;
+  lineDiscountCents: number | null;
   discountReason: string | null;
   endsOn: string | null;
 }
@@ -1636,9 +1636,9 @@ export async function updateStudentFee(
       `UPDATE student_fee sf
           SET fee_period_id = fp.id,
               discount_percent = fp.discount_percent,
-              manual_discount_percent =
+              line_discount_percent =
                 CASE WHEN fc.id IS NOT NULL THEN fc.discount_percent ELSE $4 END,
-              manual_discount_cents =
+              line_discount_cents =
                 CASE WHEN fc.id IS NOT NULL THEN fc.discount_cents   ELSE $5 END,
               discount_reason =
                 CASE WHEN fc.id IS NOT NULL THEN NULL                ELSE $6 END,
@@ -1655,8 +1655,8 @@ export async function updateStudentFee(
         studentId,
         feeId,
         changes.feePeriodId,
-        changes.manualDiscountPercent,
-        changes.manualDiscountCents,
+        changes.lineDiscountPercent,
+        changes.lineDiscountCents,
         changes.discountReason,
         changes.endsOn,
         changes.feeCategoryId,

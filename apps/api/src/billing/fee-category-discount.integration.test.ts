@@ -214,7 +214,7 @@ test('a concession and a typed discount are never both applied', async () => {
             feePlanId: plan,
             feePeriodId: mensal,
             feeCategoryId: senior,
-            manualDiscountPercent: 50,
+            lineDiscountPercent: 50,
             discountReason: 'irmão mais novo',
           }),
         400,
@@ -247,7 +247,7 @@ test('a typed discount still needs a reason — the relaxed CHECK opened no hole
           fees.create(student, {
             feePlanId: plan,
             feePeriodId: mensal,
-            manualDiscountPercent: 50,
+            lineDiscountPercent: 50,
           }),
         400,
       );
@@ -280,7 +280,7 @@ test('an edit moves a line onto a concession, and off it again', async () => {
       // a line explaining itself twice, differently, is the shape to avoid.
       await fees.update(student, id, {
         feePeriodId: mensal,
-        manualDiscountCents: 500,
+        lineDiscountCents: 500,
         discountReason: 'irmão mais novo',
       });
       line = (await fees.list(student)).lines[0];

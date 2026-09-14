@@ -168,18 +168,40 @@ BEGIN
   END;
 
   /*
-   * Still refused after slice 3 widened the grant, and that is the assertion
-   * doing its job. The platform role gained UPDATE on six *named* columns; a
-   * bare `GRANT UPDATE ON organization` would have been one word shorter and
-   * would have handed over the name, the slug, the VAT number and archived_at
-   * with them. This block never moved and it still passes.
+   * Archiving is **allowed** since 14 September 2026, and this assertion moved
+   * rather than went — the boundary it guards moved with it.
+   *
+   * The grant was widened on purpose so the trial clock could close the ladder at
+   * day 75. What it bought is a soft delete: the row leaves every list and the
+   * same login can put it back. What it deliberately did *not* buy is below —
+   * `DELETE` is still refused, so nothing in the operator area can destroy a
+   * club, and `name` above is still refused, so the grant is still six columns
+   * plus two rather than the table.
    */
   BEGIN
     UPDATE organization SET archived_at = now()
      WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-    RAISE EXCEPTION 'FAIL test 5c: the platform role deleted a tenant';
+    RAISE NOTICE 'PASS test 5c: the platform role may archive a tenant — 14-09-2026';
   EXCEPTION WHEN insufficient_privilege THEN
-    RAISE NOTICE 'PASS test 5c: the platform role cannot archive a tenant';
+    RAISE EXCEPTION 'FAIL test 5c: the trial clock cannot close the ladder';
+  END;
+
+  -- Undone, so the rest of this file reads an unarchived tenant.
+  RESET ROLE;
+  UPDATE organization SET archived_at = NULL
+   WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  SET LOCAL ROLE poolse_platform;
+
+  /*
+   * And **destroying** one is still refused, which is the half of the old
+   * guarantee that survived. Archiving is reversible; this is not, and no grant
+   * anywhere gives the operator area a DELETE on a tenant.
+   */
+  BEGIN
+    DELETE FROM organization WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 5d: the platform role destroyed a tenant';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 5d: the platform role cannot delete a tenant';
   END;
 
   BEGIN

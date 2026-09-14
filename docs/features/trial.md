@@ -3,10 +3,10 @@
 What a club gets before it pays, what changes on the day the trial runs out, and how long
 its data is kept. Schema in `docs/data-model.md`; the argument in `docs/decisions.md`.
 
-**B1 and B2 are built: the states, the door, and the clock.** An hourly job moves a tenant
-down the ladder as far as "sign-in closed", and an operator can still do it by hand from
-`/admin`. **The last rung is not built and will not be by a job** — see *Where the ladder
-stops* below. Nothing in the product deletes anything.
+**B1 and B2 are built: the states, the door, and the clock.** An hourly job moves a tenant all
+the way down the ladder, and an operator can do it by hand from `/admin`. **Nothing in the
+product destroys anything** — the last rung files a club away, reversibly; the purge is its own
+ticket.
 
 ## What the trial is
 
@@ -27,7 +27,7 @@ already exists.
 | 15 | `expired` | **Read-only** | A banner: what ended, until when data is kept, and a way to pay |
 | 15–45 | `expired` | Read-only | The same, counting down |
 | 45 | `expired` | Login refused | Email only |
-| 75 | — | — | Not built: see below |
+| 75 | `expired`, archived | — | Gone from every list, and restorable |
 
 **Paying at any point before day 75 restores everything.** That is one status change,
 because nothing was ever moved: a trial tenant is an ordinary organization row with a
@@ -35,19 +35,21 @@ different status. There is no trial database, no copy step and no import.
 
 ## Where the ladder stops
 
-The clock does two things and then stops: it expires a trial into read-only, and thirty days
-later it closes sign-in through the suspension mechanism that already exists, with a
-machine-set reason.
+The clock expires a trial into read-only, closes sign-in thirty days later, and thirty days
+after that files the club away. Then it stops.
 
-**It does not archive and it does not delete**, and that is a deliberate departure from the
-ticket. `organization.archived_at` is not on the platform login's column grant, because
-*removing a tenant is not an operator action* — and an hourly job has a weaker claim to it
-than a person does. Widening that grant so a cron could remove clubs would trade a standing
-guarantee for one rung of a ladder. What happens on day 75 belongs to the purge ticket, where
-"may anything remove a tenant, and under whose hand" gets asked on purpose.
+**Archiving is not deleting.** Every row the club owns survives; the organization simply
+leaves every list, and the same login can put it back. What actually destroys data is the
+purge, which is its own ticket and is not built.
 
-So a club that never pays ends as: `expired`, read-only, signed out, and still entirely
-there. Restoring it is one operator action.
+**It archives only a club it closed itself.** `trial_event` is the proof it requires, so a club
+an operator suspended for a reason of their own is never filed away by the machine — that
+closure is about something the ladder knows nothing about.
+
+Letting the clock archive at all meant granting `poolse_platform` an `UPDATE` on
+`archived_at`, which reversed a settled rule that *removing a tenant is not an operator
+action*. It was taken knowingly on 14 September 2026, and what survives is the half that
+matters most: `DELETE` on an organization is refused for every login but the owner's.
 
 ## Two books, and why they are not the audit log
 
@@ -62,12 +64,13 @@ identical.
 the last day, the day it ended, a week before sign-in closes, the day it closes, and a week
 before the data is due to go.
 
-**Nothing is sent.** There is no email provider wired, so `delivered_at` is null on every
-row and the recipients are empty — an owner's address lives in `app_user`, which the
-platform login deliberately cannot read, and granting it an eighth table so a job that sends
-nothing could write an address down would widen the narrowest login in the system for no
-delivery. The slice that chooses a provider resolves recipients at send time, which is when
-"who was told" becomes a fact worth freezing, and stamps `delivered_at` in the same history.
+**Nothing is sent.** There is no email provider wired, so `delivered_at` is null on every row
+and the screens say so plainly. The **recipients are recorded** — the club's owners, resolved
+by role when the notice falls due, because only an owner can pay and because turnover must not
+orphan a notice. Reading an address meant putting `app_user` on the platform login's grant: the
+eighth table, two columns of it, decided on 14 September 2026. Empty stays legitimate and means
+nobody in the club has an address on file. The slice that chooses a provider stamps
+`delivered_at` into this same history.
 
 Both books are the platform's alone: invisible and unwritable from a tenant connection, for
 two independent reasons — no grant, and no policy naming the tenant login — and asserted in
@@ -121,10 +124,10 @@ records**.
   already offers.
 - A club may ask for its data to be deleted sooner, and may ask for a copy at any time.
 
-**Two of those rungs are policy rather than behaviour today.** The product closes sign-in on
-its own; the deletion at 60 days is done by a person, because nothing in Poolse may remove a
-tenant automatically — see *Where the ladder stops*. Nothing written above is untrue for a
-club, but a privacy policy quoting it should not imply the last step is a machine's.
+**The last step is still a person's.** The product closes sign-in and files the account away on
+its own; *permanently deleting* it is done by hand, because nothing in Poolse destroys a tenant
+automatically — see *Where the ladder stops*. Nothing written above is untrue for a club, but a
+privacy policy quoting it should not imply the deletion is a machine's.
 
 **Locking an account does not touch the person's login.** One person may belong to several
 clubs; closing one must never lock them out of another they still pay for.
@@ -148,8 +151,8 @@ Both go through the audited platform write path, so every change lands in
 
 ## Not built yet
 
-- **Delivery.** Notices are recorded and nothing leaves the building. Choosing a provider is
-  a small slice that writes into the same table.
-- **The last rung.** Archiving and deleting a tenant, on day 75 — the purge ticket's, and
-  deliberately not a cron's.
+- **Delivery.** Notices are recorded, with their recipients, and nothing leaves the building.
+  Choosing a provider is a small slice that stamps `delivered_at` into the same table.
+- **The purge.** Permanently destroying an archived tenant — its own ticket, and deliberately
+  not a cron's.
 - **The countdown in the app** from day 10, and a screen showing a club's own notices.

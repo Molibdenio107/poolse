@@ -342,9 +342,16 @@ test('the operator cannot reach a column the grant does not name', async () => {
 
     /*
      * The guarantee the whole slice rests on, asserted through the connection
-     * rather than through the API: `poolse_platform` holds UPDATE on six named
-     * columns, so a statement touching a seventh is refused by Postgres. There is
-     * no code path that renames a club and there is no way to write one.
+     * rather than through the API: `poolse_platform` holds UPDATE on *named*
+     * columns, so a statement touching one it does not name is refused by
+     * Postgres. There is no code path that renames a club and there is no way to
+     * write one.
+     *
+     * `archived_at` was on this list until 14 September 2026 and is now granted,
+     * deliberately, so the trial clock can close the ladder — see
+     * `docs/decisions.md`. What replaced it here is `DELETE`, which is the half
+     * of the old guarantee that survived: archiving is reversible and destroying
+     * a tenant is not something the operator area can do at all.
      */
     const platform = new pg.Pool({
       connectionString: process.env['DATABASE_PLATFORM_URL'],
@@ -360,11 +367,18 @@ test('the operator cannot reach a column the grant does not name', async () => {
       );
       await assert.rejects(
         () =>
-          platform.query('UPDATE organization SET archived_at = now() WHERE id = $1', [
-            tenant.organizationId,
-          ]),
+          platform.query('DELETE FROM organization WHERE id = $1', [tenant.organizationId]),
         (error: { code?: string }) => error.code === '42501',
       );
+
+      // And the one that was traded away, asserted as *allowed* rather than left
+      // untested — a capability nothing checks is a capability that rots.
+      await platform.query('UPDATE organization SET archived_at = now() WHERE id = $1', [
+        tenant.organizationId,
+      ]);
+      await platform.query('UPDATE organization SET archived_at = NULL WHERE id = $1', [
+        tenant.organizationId,
+      ]);
     } finally {
       await platform.end();
     }

@@ -305,7 +305,7 @@ test('42.8 — a sócio with no quota line is representable', async () => {
   });
 });
 
-test('42.9 — a manual discount with no reason is refused, and names its field', async () => {
+test('42.9 — a typed discount with no reason is refused, and names its field', async () => {
   await withScratchTenant(async (tenant) => {
     const { mensal, plan } = await priceList(tenant);
     const student = await addStudent(tenant, 'Duarte');
@@ -317,7 +317,7 @@ test('42.9 — a manual discount with no reason is refused, and names its field'
           fees.create(student, {
             feePlanId: plan,
             feePeriodId: mensal,
-            manualDiscountPercent: 10,
+            lineDiscountPercent: 10,
           }),
         400,
       );
@@ -328,8 +328,8 @@ test('42.9 — a manual discount with no reason is refused, and names its field'
           fees.create(student, {
             feePlanId: plan,
             feePeriodId: mensal,
-            manualDiscountPercent: 10,
-            manualDiscountCents: 500,
+            lineDiscountPercent: 10,
+            lineDiscountCents: 500,
             discountReason: 'irmãos',
           }),
         400,
@@ -339,7 +339,7 @@ test('42.9 — a manual discount with no reason is refused, and names its field'
       await fees.create(student, {
         feePlanId: plan,
         feePeriodId: mensal,
-        manualDiscountPercent: 10,
+        lineDiscountPercent: 10,
         discountReason: 'irmãos',
       });
 

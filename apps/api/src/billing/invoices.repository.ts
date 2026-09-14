@@ -438,13 +438,13 @@ const CANDIDATE_SQL = `
          -- line charged once comes out at its own amount rather than twelve
          -- times it.
          fee_payable_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint,
-                           sf.discount_percent, sf.manual_discount_percent,
-                           sf.manual_discount_cents) AS amount_cents,
+                           sf.discount_percent, sf.line_discount_percent,
+                           sf.line_discount_cents) AS amount_cents,
          p.vat_rate, p.vat_exempt,
          invoice_vat_cents(
            fee_payable_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint,
-                             sf.discount_percent, sf.manual_discount_percent,
-                             sf.manual_discount_cents),
+                             sf.discount_percent, sf.line_discount_percent,
+                             sf.line_discount_cents),
            p.vat_rate) AS vat_cents,
          pay.id AS payer_membership_id,
          -- The payer as the document will say it. A guardian where there is

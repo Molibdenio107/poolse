@@ -734,22 +734,22 @@ function readPenaltyKind(value: unknown, field: string): FeePenaltyKind {
  */
 function readDiscount(body: Record<string, unknown>): {
   feeCategoryId: string | null;
-  manualDiscountPercent: number | null;
-  manualDiscountCents: number | null;
+  lineDiscountPercent: number | null;
+  lineDiscountCents: number | null;
   discountReason: string | null;
 } {
   const categoryId = optionalId(body['feeCategoryId']);
-  const percent = rate(body['manualDiscountPercent'], 'manualDiscountPercent');
-  const raw = body['manualDiscountCents'];
+  const percent = rate(body['lineDiscountPercent'], 'lineDiscountPercent');
+  const raw = body['lineDiscountCents'];
   const amount = raw === undefined || raw === null || raw === ''
     ? null
-    : cents(raw, 'manualDiscountCents');
+    : cents(raw, 'lineDiscountCents');
 
   if (percent !== null && amount !== null) {
     throw new BadRequestException({
-      code: 'one_manual_discount',
+      code: 'one_line_discount',
       message: 'A discount is a percentage or an amount, not both',
-      fields: { manualDiscountCents: 'fees.oneDiscountOnly' },
+      fields: { lineDiscountCents: 'fees.oneDiscountOnly' },
     });
   }
 
@@ -768,8 +768,8 @@ function readDiscount(body: Record<string, unknown>): {
     // twice, differently.
     return {
       feeCategoryId: categoryId,
-      manualDiscountPercent: null,
-      manualDiscountCents: null,
+      lineDiscountPercent: null,
+      lineDiscountCents: null,
       discountReason: null,
     };
   }
@@ -784,8 +784,8 @@ function readDiscount(body: Record<string, unknown>): {
 
   return {
     feeCategoryId: null,
-    manualDiscountPercent: percent,
-    manualDiscountCents: amount,
+    lineDiscountPercent: percent,
+    lineDiscountCents: amount,
     discountReason: reason,
   };
 }

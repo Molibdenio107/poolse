@@ -79,9 +79,12 @@ meaning is only available to a mouse is a control half the users cannot understa
 **The platform writes through column grants, and a platform write records itself.**
 `poolse_platform` holds `UPDATE` on six *named* columns of `organization` — `trial_ends_at`,
 `subscription_status`, `max_facilities`, `max_management_users`, `suspended_at`,
-`suspension_reason` — and nothing else: no INSERT, no DELETE, and `archived_at` is not among
-them, so signup stays the only way a tenant comes into being and deleting one is not an
-operator action. A column grant rather than a second `SECURITY DEFINER` function, which the
+`suspension_reason` — plus `read_only_at`, `pending_delete_at` and, **since 14 September
+2026, `archived_at`**. No INSERT and **no DELETE**: signup stays the only way a tenant comes
+into being, and *destroying* one is not an operator action. Archiving one now is — that rule
+was reversed deliberately so the trial clock could close its ladder, it is a soft delete the
+same login can undo, and `platform-admin.sql` asserts both halves (the archive allowed, the
+delete refused). A column grant rather than a second `SECURITY DEFINER` function, which the
 migration checklist tells you to stop and reconsider before writing. **`PlatformAuditInterceptor`
 logs reads only**; a write is recorded by `changeTenant` inside the transaction that performed
 it, carrying the before-and-after of every column that moved — so a non-GET platform endpoint
@@ -157,16 +160,17 @@ is a status change back. The clock that sets all this is B2 and is **not built**
 sets it from `/admin` too. **The clock is B2 and is built**: an hourly Nest cron under
 `pg_try_advisory_xact_lock`, so a second Railway instance is a no-op rather than a double
 transition — idempotence is separate and comes from the state each step reads, not from a
-constraint. **It stops at "sign-in closed" and cannot archive**, which corrects the ticket:
-`archived_at` is not on the platform login's column grant because removing a tenant is not an
-operator action, and a cron has a weaker claim than a person; day 75 is the purge ticket's,
-and the *privilege* is asserted so a later widening does not hand the job the ability.
+constraint. **It archives on day 75, and only a club it closed itself** — `trial_event` is the proof it
+requires, so a club an operator suspended for a reason of their own is never filed away by the
+machine. That needed `archived_at` on the platform grant, which reversed a settled rule on
+14 September 2026; `DELETE` is still refused everywhere, so the archive is soft and the purge
+is still its own ticket.
 Transitions go to **`trial_event`**, never `platform_audit_log` — that table's actor is
 `clerk_user_id NOT NULL` and a machine is not a person — which is also what makes a
-machine-set suspension distinguishable from an operator's. **Notices are recorded with no
-recipients**: an owner's address is in `app_user`, which `poolse_platform` deliberately cannot
-read, and granting an eighth table so a job that sends nothing could write one down would
-widen the narrowest login in the system for no delivery. `docs/features/trial.md`.
+machine-set suspension distinguishable from an operator's. **Notices record the owners they were owed to and are
+never sent**: `delivered_at` stays null until an email provider exists, and reading the address
+took `app_user` onto the platform grant — the eighth table, two columns of it, decided the
+same day. `docs/features/trial.md`.
 
 **Platform administration is not a tenant role, and it has its own database login.** `member_role`
 says what somebody may do inside one club; `platform_admin` — keyed on the Clerk user id, no
@@ -175,9 +179,14 @@ demo tenant grants nothing, and `PlatformAdminGuard` reads `currentAuth()` rathe
 `currentTenant()` because an operator may belong to no organization at all (`platform/(.*)` is in
 `IDENTITY_ONLY_ROUTES`). Cross-tenant reads go through **`poolse_platform`**, a third login on its
 own pool (`DATABASE_PLATFORM_URL`), used by `PlatformModule` and nothing else. It does **not** carry
-`BYPASSRLS`: it is named in a `FOR SELECT TO poolse_platform USING (true)` policy on seven tables and
-holds no privilege on the rest of the schema, so a mistake leaks those seven rather than
-`student_sensitive` — and reaching an eighth is a reviewed line of SQL. `assertPlatformRoleIsNarrow`
+`BYPASSRLS`: it is named in a `FOR SELECT TO poolse_platform USING (true)` policy on eight tables and
+holds no privilege on the rest of the schema, so a mistake leaks those eight rather than
+`student_sensitive` — and reaching a ninth is a reviewed line of SQL. **The eighth is `app_user`,
+added 14 September 2026** so a trial notice can record the address it was owed to, and it is a
+*column* grant — `(id, cached_email)` and not the names or the avatar, because a notice needs an
+address and a name in a log is a second copy of something Clerk owns. That widening cost the
+guarantee that a mistake here leaks club data rather than every person's e-mail; it was taken
+knowingly, and `docs/decisions.md` says so. `assertPlatformRoleIsNarrow`
 refuses to boot if it points at the owner. **Every request to `PlatformModule` writes one line to
 `platform_audit_log`, reads included** — the request, never the response; the guard writes its own
 refusals, because a guard runs before every interceptor. `docs/features/platform.md`.
@@ -272,6 +281,14 @@ stored from day one though nothing reads them yet: they are the input any later 
 and adding them afterwards means touching every money table. `financial_entry`, the projection
 surface, is **not built** — §10 says what exists and what does not, and the next money slice
 builds it rather than retrofitting provenance module by module with no reader.
+
+**A fee line's discount is `line_discount_percent` / `line_discount_cents`, whoever authored
+it.** Renamed from `manual_discount_*` on 14 September 2026: the word was true when only a
+person could type one and stopped being true when a fee category gained a value, and the
+obvious reading — "a person decided this" — is wrong for every concession in the product.
+`fee_category_id` beside them says which author it was; null with a figure present means a
+person, and `discount_reason` then says why. The API fields, the form fields and the
+`fees.typedDiscount` message key match, and the refusal code is `one_line_discount`.
 
 **Money amounts are integer minor units; unit prices are not.** `amount_cents` for
 invoices and fees. A per-kWh tariff in integer cents rounds €0.1548 to €0.15 and puts a

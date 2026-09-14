@@ -142,8 +142,8 @@ export async function listCategories(organizationId: string): Promise<FeeCategor
                 (fee_total_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint,
                                  sf.discount_percent)
                  - fee_payable_cents(sf.amount_cents, coalesce(fp.months, 1)::smallint,
-                                     sf.discount_percent, sf.manual_discount_percent,
-                                     sf.manual_discount_cents))::numeric
+                                     sf.discount_percent, sf.line_discount_percent,
+                                     sf.line_discount_cents))::numeric
                 / coalesce(fp.months, 1) AS forgone_monthly
            FROM student_fee sf
            LEFT JOIN fee_period fp ON fp.id = sf.fee_period_id

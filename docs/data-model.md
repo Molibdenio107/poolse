@@ -2337,17 +2337,18 @@ value is a label, which is a legitimate thing to keep and is *not* 0 %. `discoun
 stored amount, and floors at zero on a line smaller than it.
 
 **`student_fee.fee_category_id` is the author of that line's discount**, composite-keyed like
-every other reference. The *figure* is snapshotted into the columns that already hold a line's
-own discount — `manual_discount_percent` / `manual_discount_cents` — so correcting a category
-reaches lines agreed afterwards and none agreed before, the same rule `amount_cents` follows.
-Set means the category authored it; null with a discount present means a person typed it, and
-`student_fee_discount_needs_reason` then demands a reason as it always did. The two are never
-both true: the API refuses a body carrying both rather than picking one.
+every other reference. The *figure* is snapshotted into `line_discount_percent` /
+`line_discount_cents`, so correcting a category reaches lines agreed afterwards and none agreed
+before, the same rule `amount_cents` follows. Set means the category authored it; null with a
+discount present means a person typed it, and `student_fee_discount_needs_reason` then demands
+a reason as it always did. The two are never both true: the API refuses a body carrying both
+rather than picking one.
 
-*(The column names are a wart. They read "manual" and now hold a category's figure as well;
-renaming them would touch the two repositories, `fee_payable_cents`'s call sites and a dozen
-tests for no behaviour change. **Proposed** as a follow-up — `line_discount_*` — rather than
-done by reflex.)*
+*(Those two columns were `manual_discount_*` until 14 September 2026. The word was true while
+only a person could type a discount and stopped being true when a category gained a value —
+"a person decided this" is the obvious reading and is wrong for every concession in the
+product. `RENAME COLUMN` moved no rows; the constraints, `fee_payable_cents`'s parameters, the
+API fields and the message key went with them.)*
 
 **`enrolment_fee_category_all`** is the same precedence, sayable for a whole club at once —
 added 14 September 2026 after measuring. The scalar function called per row cost about 100 µs
@@ -2438,15 +2439,17 @@ extends a trial and it runs out again — and turn a correct transition into a f
 `trial_notice`'s key is (tenant, kind, **due_on**) for the same reason: the day is in it so
 an extended trial can be owed the same notice again later.
 
-**`trial_transition` has no `archived` value**, and the clock cannot archive. `archived_at`
-is absent from the platform login's column grant because removing a tenant is not an
-operator action; an enum value nothing may ever write would be a promise the schema cannot
-keep. The purge ticket adds one if it decides to.
+**`trial_transition` gained `archived` on 14 September 2026**, with the grant that makes it
+writable: `UPDATE (archived_at) ON organization TO poolse_platform`. That reversed a settled
+rule — *removing a tenant is not an operator action* — so the clock could close its ladder.
+`DELETE` on `organization` is still refused for every login but the owner's, which is the half
+of the guarantee that survived: an archive is soft and the same login can undo it.
+`platform-admin.sql` asserts both halves.
 
-**`recipients` is empty on every row the clock writes.** An owner's address is in
-`app_user.cached_email` and the platform login holds no privilege on `app_user` — narrow on
-purpose, so a mistake leaks seven tables rather than every user in every club. The slice
-that wires an email provider resolves recipients at send time.
+**`recipients` holds the owners a notice was owed to**, resolved by role when it falls due.
+Reading an address meant `SELECT (id, cached_email) ON app_user` — the eighth table the
+platform login can reach, and a column grant rather than a table one, because a notice needs
+an address and a name in a log is a second copy of something Clerk owns.
 
 ### Invoicing — phase 2.2, 8 September 2026
 

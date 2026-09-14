@@ -276,7 +276,7 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- Test 6 — the shape of a fee line
 --
--- A quota is never attached to a turma; a manual discount is one kind or the
+-- A quota is never attached to a turma; a line's own discount is one kind or the
 -- other and never without a reason.
 -- ---------------------------------------------------------------------------
 
@@ -312,18 +312,18 @@ BEGIN
 
   BEGIN
     INSERT INTO student_fee (organization_id, student_id, fee_plan_id, fee_period_id,
-                             amount_cents, manual_discount_percent, manual_discount_cents,
+                             amount_cents, line_discount_percent, line_discount_cents,
                              discount_reason)
     VALUES (v_org, v_student, v_quota, v_period, 2500, 10, 500, 'irmãos');
-    RAISE EXCEPTION 'FAIL test 6b: both kinds of manual discount were allowed at once';
+    RAISE EXCEPTION 'FAIL test 6b: both kinds of line discount were allowed at once';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
 
   BEGIN
     INSERT INTO student_fee (organization_id, student_id, fee_plan_id, fee_period_id,
-                             amount_cents, manual_discount_percent)
+                             amount_cents, line_discount_percent)
     VALUES (v_org, v_student, v_quota, v_period, 2500, 10);
-    RAISE EXCEPTION 'FAIL test 6c: a manual discount was allowed with no reason';
+    RAISE EXCEPTION 'FAIL test 6c: a typed discount was allowed with no reason';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
 

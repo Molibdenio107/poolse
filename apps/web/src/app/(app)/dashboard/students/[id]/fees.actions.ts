@@ -22,7 +22,7 @@ import type { FormState } from '../../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
   if (error instanceof ApiError) {
-    // The API names the field for a manual discount without a reason — QA 42.9.
+    // The API names the field for a line's own discount without a reason — QA 42.9.
     if (Object.keys(error.fields).length > 0) return { ok: false, fields: error.fields };
     if (error.status < 500) return { ok: false, errorKey, detail: error.message };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
@@ -108,8 +108,8 @@ function discountFields(formData: FormData): Record<string, unknown> {
   if (categoryId !== '') {
     return {
       feeCategoryId: categoryId,
-      manualDiscountPercent: null,
-      manualDiscountCents: null,
+      lineDiscountPercent: null,
+      lineDiscountCents: null,
       discountReason: null,
     };
   }
@@ -121,7 +121,7 @@ function discountFields(formData: FormData): Record<string, unknown> {
   if (kind === 'percent' && value !== '') {
     return {
       feeCategoryId: null,
-      manualDiscountPercent: Number(value.replace(',', '.')),
+      lineDiscountPercent: Number(value.replace(',', '.')),
       discountReason: reason,
     };
   }
@@ -129,11 +129,11 @@ function discountFields(formData: FormData): Record<string, unknown> {
     // Sent as cents, like every other amount crossing this boundary.
     return {
       feeCategoryId: null,
-      manualDiscountCents: Math.round(Number(value.replace(',', '.')) * 100),
+      lineDiscountCents: Math.round(Number(value.replace(',', '.')) * 100),
       discountReason: reason,
     };
   }
-  return { feeCategoryId: null, manualDiscountPercent: null, manualDiscountCents: null };
+  return { feeCategoryId: null, lineDiscountPercent: null, lineDiscountCents: null };
 }
 
 export async function addFeeAction(_previous: FormState, formData: FormData): Promise<FormState> {

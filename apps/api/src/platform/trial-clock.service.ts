@@ -11,17 +11,20 @@ import { withPlatform } from '@poolse/db';
  *   1. a trial that has run out becomes `expired` and read-only, with a deletion
  *      date thirty days out;
  *   2. a read-only tenant past that date has sign-in closed, through the existing
- *      suspension mechanism with a machine-set reason.
+ *      suspension mechanism with a machine-set reason;
+ *   3. thirty days after that, the row is archived.
  *
- * **And it stops there, which corrects the ticket.** POOLSE-61 listed a third
- * step — "thirty days later, archive the row" — and the platform login cannot do
- * it: `archived_at` is deliberately absent from its column grant because
- * *deleting a tenant is not an operator action*, and a cron has an even weaker
- * claim to it than a person. Widening that grant so an hourly job could remove
- * clubs would trade a standing guarantee for one rung of a ladder. What happens
- * on day 75 belongs to the purge ticket, where "may anything remove a tenant, and
- * under whose hand" is asked deliberately. The clock still *counts* towards it —
- * the last notice it owes is the one warning that deletion is coming.
+ * **Step 3 needed a decision, and it was taken rather than assumed.** CLAUDE.md
+ * said `archived_at` was not on the platform login's grant *because removing a
+ * tenant is not an operator action* — so the clock could not close the ladder.
+ * Rui widened the grant on 14 September 2026, knowing what it costs: a mistake in
+ * the operator area can now file a club away. The narrowing that remains is real
+ * but small — a column grant rather than a table one, `UPDATE` and never
+ * `DELETE`, so archiving stays soft and reversible by the same login.
+ *
+ * **Archiving is still not the purge.** Every row the club owns survives; what
+ * changes is that the organization disappears from every list. What actually
+ * destroys data is its own ticket.
  *
  * **It never writes `platform_audit_log`.** That table's actor is
  * `clerk_user_id NOT NULL`, a cron has nobody behind it, and writing `'system'`
@@ -97,7 +100,13 @@ export class TrialClockService {
    */
   async run(organizationId?: string): Promise<TrialClockResult> {
     const only = organizationId ?? null;
-    const empty: TrialClockResult = { locked: false, expired: 0, closed: 0, notices: 0 };
+    const empty: TrialClockResult = {
+      locked: false,
+      expired: 0,
+      closed: 0,
+      archived: 0,
+      notices: 0,
+    };
 
     return withPlatform(async (tx) => {
       /*
@@ -115,15 +124,17 @@ export class TrialClockService {
 
       const expired = await this.expireTrials(tx, only);
       const closed = await this.closeAccess(tx, only);
+      const archived = await this.archiveClosed(tx, only);
       const notices = await this.recordNotices(tx, only);
 
-      if (expired + closed + notices > 0) {
+      if (expired + closed + archived + notices > 0) {
         this.log.log(
-          `Trial clock: ${expired} expired, ${closed} closed, ${notices} notices recorded`,
+          `Trial clock: ${expired} expired, ${closed} closed, ${archived} archived, ` +
+            `${notices} notices recorded`,
         );
       }
 
-      return { locked: true, expired, closed, notices };
+      return { locked: true, expired, closed, archived, notices };
     });
   }
 
@@ -193,6 +204,42 @@ export class TrialClockService {
   }
 
   /**
+   * Step 3 — the row is archived, thirty days after sign-in closed.
+   *
+   * **Only a tenant this job closed.** `trial_event` is the proof, so a club an
+   * operator suspended for a reason of their own is never swept up by the clock —
+   * their club is shut for something the ladder knows nothing about, and filing it
+   * away would be the machine acting on somebody else's decision.
+   *
+   * Archiving is a soft delete: every row the club owns survives, the
+   * organization simply leaves every list, and the same login can put it back.
+   * Nothing here destroys anything, and the purge is still its own ticket.
+   */
+  private async archiveClosed(tx: Tx, only: string | null): Promise<number> {
+    const { rows } = await tx.query<{ id: string }>(
+      `WITH moved AS (
+         UPDATE organization o
+            SET archived_at = now()
+          WHERE o.archived_at IS NULL
+            AND o.subscription_status = 'expired'
+            AND o.suspended_at IS NOT NULL
+            AND o.suspended_at < now() - trial_closed_period()
+            AND ($1::uuid IS NULL OR o.id = $1)
+            AND EXISTS (
+              SELECT 1 FROM trial_event e
+               WHERE e.organization_id = o.id AND e.transition = 'access_closed'
+            )
+        RETURNING id
+       )
+       INSERT INTO trial_event (organization_id, transition)
+       SELECT id, 'archived' FROM moved
+       RETURNING organization_id AS id`,
+      [only],
+    );
+    return rows.length;
+  }
+
+  /**
    * What somebody was owed, written down — never sent.
    *
    * There is no email provider wired; choosing one is a later slice that reads
@@ -200,14 +247,19 @@ export class TrialClockService {
    * says plainly that nothing has been delivered, which is the honesty the chase
    * list already owes about the same gap.
    *
-   * **Recipients are left empty, on purpose.** An owner's address lives in
-   * `app_user.cached_email`, not on their membership row, and `poolse_platform`
-   * holds no privilege on `app_user` — the platform login is narrow so that a
-   * mistake in it leaks seven tables rather than every user's name and e-mail in
-   * every club. Granting an eighth table so a job that sends nothing could write
-   * an address down would be paying that price for no delivery. The slice that
-   * wires a provider resolves them at send time, which is when "who was told"
-   * becomes a fact worth freezing.
+   * **The recipients are the club's owners**, resolved by role when the notice
+   * falls due and written onto the row. By role, so turnover cannot orphan a
+   * notice; written down, because "who was owed this" is not recoverable from the
+   * roles six months later — the person who left is in neither list. Only owners:
+   * nobody else can pay.
+   *
+   * Reading an address means reading `app_user`, which is the eighth table the
+   * platform login can reach and was a decision taken on 14 September 2026 rather
+   * than a grant that was always there. Two columns of it, and no name.
+   *
+   * **Empty stays legitimate** and means the club has nobody with an address on
+   * file — itself worth being able to see, and not the same fact as a notice that
+   * was never owed.
    *
    * `ON CONFLICT DO NOTHING` against the (tenant, kind, day) key is what makes an
    * hourly job write each notice once, and the day being in the key is what lets a
@@ -215,7 +267,18 @@ export class TrialClockService {
    */
   private async recordNotices(tx: Tx, only: string | null): Promise<number> {
     const { rowCount } = await tx.query(
-      `WITH scope AS (
+      `WITH owners AS (
+         SELECT m.organization_id,
+                array_remove(array_agg(DISTINCT u.cached_email), NULL) AS addresses
+           FROM membership m
+           JOIN membership_role r
+             ON r.organization_id = m.organization_id AND r.membership_id = m.id
+            AND r.role = 'owner' AND r.archived_at IS NULL
+           JOIN app_user u ON u.id = m.app_user_id
+          WHERE m.archived_at IS NULL AND m.status = 'active'
+          GROUP BY m.organization_id
+       ),
+       scope AS (
          SELECT o.* FROM organization o
           WHERE o.archived_at IS NULL AND ($1::uuid IS NULL OR o.id = $1)
        ),
@@ -262,8 +325,10 @@ export class TrialClockService {
             AND o.suspended_at IS NOT NULL
             AND now() >= o.suspended_at + trial_closed_period() - interval '7 days'
        )
-       INSERT INTO trial_notice (organization_id, kind, due_on)
-       SELECT due.id, due.kind, due.due_on FROM due
+       INSERT INTO trial_notice (organization_id, kind, due_on, recipients)
+       SELECT due.id, due.kind, due.due_on, coalesce(owners.addresses, '{}')
+         FROM due
+         LEFT JOIN owners ON owners.organization_id = due.id
        ON CONFLICT (organization_id, kind, due_on) DO NOTHING`,
       [only],
     );
@@ -276,6 +341,7 @@ export interface TrialClockResult {
   locked: boolean;
   expired: number;
   closed: number;
+  archived: number;
   notices: number;
 }
 

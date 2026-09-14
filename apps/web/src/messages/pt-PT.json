@@ -1317,7 +1317,7 @@
     "planAndPeriodRequired": "Escolha um plano e uma periodicidade.",
     "baseAmount": "Base {amount}/mês",
     "periodDiscount": "−{discount}% pela periodicidade",
-    "manualDiscount": "Desconto manual: {reason}",
+    "typedDiscount": "Desconto manual: {reason}",
     "outOfDate": "A tabela está agora em {amount}",
     "reprice": "Atualizar para o preço atual",
     "total": "Total do período",

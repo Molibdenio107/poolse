@@ -1515,8 +1515,8 @@ export interface StudentFeeLine {
   /** The agreed amount per month — the snapshot, never the plan's price today. */
   amountCents: number;
   discountPercent: number;
-  manualDiscountPercent: number | null;
-  manualDiscountCents: number | null;
+  lineDiscountPercent: number | null;
+  lineDiscountCents: number | null;
   discountReason: string | null;
   /**
    * Who authored the discount above — a category, or a person.

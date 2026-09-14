@@ -793,7 +793,7 @@ function FeeRow({
 
         {discounted && line.feeCategoryName === null && (
           <span className="rounded bg-primary/10 px-2 py-0.5 text-primary">
-            {t('fees.manualDiscount', { reason: line.discountReason ?? '' })}
+            {t('fees.typedDiscount', { reason: line.discountReason ?? '' })}
           </span>
         )}
 
@@ -1042,16 +1042,16 @@ function PeriodPicker({
   const [state, submit, pending] = useSavedAction(updateFeeAction, INITIAL);
 
   const discountKind =
-    line.manualDiscountPercent !== null
+    line.lineDiscountPercent !== null
       ? 'percent'
-      : line.manualDiscountCents !== null
+      : line.lineDiscountCents !== null
         ? 'amount'
         : 'none';
   const discountValue =
-    line.manualDiscountPercent !== null
-      ? String(line.manualDiscountPercent)
-      : line.manualDiscountCents !== null
-        ? (line.manualDiscountCents / 100).toFixed(2)
+    line.lineDiscountPercent !== null
+      ? String(line.lineDiscountPercent)
+      : line.lineDiscountCents !== null
+        ? (line.lineDiscountCents / 100).toFixed(2)
         : '';
 
   return (
@@ -1151,14 +1151,14 @@ function DiscountFields({
   const [source, setSource] = useState<string>(
     line !== undefined
       ? (line.feeCategoryId ??
-        (line.manualDiscountPercent !== null || line.manualDiscountCents !== null ? 'own' : ''))
+        (line.lineDiscountPercent !== null || line.lineDiscountCents !== null ? 'own' : ''))
       : (suggestedCategoryId ?? ''),
   );
 
   const lineKind =
-    line?.manualDiscountPercent !== null && line?.manualDiscountPercent !== undefined
+    line?.lineDiscountPercent !== null && line?.lineDiscountPercent !== undefined
       ? 'percent'
-      : line?.manualDiscountCents !== null && line?.manualDiscountCents !== undefined
+      : line?.lineDiscountCents !== null && line?.lineDiscountCents !== undefined
         ? 'amount'
         : 'none';
   const [kind, setKind] = useState<'none' | 'percent' | 'amount'>(
@@ -1260,10 +1260,10 @@ function DiscountFields({
               name="discountValue"
               inputMode="decimal"
               defaultValue={
-                line?.manualDiscountPercent !== null && line?.manualDiscountPercent !== undefined
-                  ? String(line.manualDiscountPercent)
-                  : line?.manualDiscountCents !== null && line?.manualDiscountCents !== undefined
-                    ? (line.manualDiscountCents / 100).toFixed(2)
+                line?.lineDiscountPercent !== null && line?.lineDiscountPercent !== undefined
+                  ? String(line.lineDiscountPercent)
+                  : line?.lineDiscountCents !== null && line?.lineDiscountCents !== undefined
+                    ? (line.lineDiscountCents / 100).toFixed(2)
                     : ''
               }
               className={CONTROL_LINE}

@@ -1473,7 +1473,7 @@ async function main(): Promise<void> {
        )
        INSERT INTO student_fee
          (organization_id, student_id, fee_plan_id, enrollment_id, fee_period_id,
-          amount_cents, discount_percent, manual_discount_percent, manual_discount_cents,
+          amount_cents, discount_percent, line_discount_percent, line_discount_cents,
           fee_category_id, starts_on)
        SELECT $1, a.student_id, p.id, a.enrollment_id, fp.id,
               p.amount_cents, coalesce(fp.discount_percent, 0),

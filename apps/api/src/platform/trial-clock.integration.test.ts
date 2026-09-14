@@ -34,10 +34,11 @@ import { TrialClockService } from './trial-clock.service.js';
  * **`platform_audit_log` is untouched.** A cron has no person behind it, and that
  * table's actor column is named for one.
  *
- * **And it cannot archive anybody**, which corrects the ticket's third step: the
- * platform login has no grant on `archived_at`, because removing a tenant is not
- * an operator action. Asserted, so that a future widening of the grant does not
- * quietly hand an hourly job the ability to delete clubs.
+ * **It archives on day 75, and only a tenant it closed itself.** That needed the
+ * platform login's grant widened — a decision taken on 14 September 2026 knowing
+ * what it costs — so the test that matters is not "can it" but "whose club": a
+ * tenant an operator suspended for a reason of their own is never filed away by
+ * the machine.
  *
  * Run: pnpm api:test   (needs pnpm db:up)
  */
@@ -237,40 +238,59 @@ test('61 — a tenant a person suspended keeps that person’s reason', async ()
   });
 });
 
-test('61.13 — the clock stops at the closed door and cannot remove a tenant', async () => {
+test('61 — the ladder ends in an archive, thirty days after the door shut', async () => {
   await withScratchTenant(async (tenant) => {
-    // Long past every rung the ticket named, including the one that said archive.
+    await state(tenant, {
+      subscription_status: 'expired',
+      read_only_at: new Date(Date.now() - 61 * 86_400_000).toISOString(),
+      pending_delete_at: new Date(Date.now() - 31 * 86_400_000).toISOString(),
+      suspended_at: null,
+      suspension_reason: null,
+    });
+
+    // The pass that closes the door writes the `access_closed` event the archive
+    // step requires as its proof.
+    await clock.run(tenant.organizationId);
+    await state(tenant, {
+      suspended_at: new Date(Date.now() - 31 * 86_400_000).toISOString(),
+    });
+    await clock.run(tenant.organizationId);
+
+    assert.ok((await read(tenant))['archived_at'], 'filed away');
+    assert.deepEqual(await events(tenant), ['access_closed', 'archived']);
+
+    /*
+     * Archiving is a soft delete and the club's rows all survive it. What changed
+     * on 14-09-2026 is that the operator login may do this at all — the purge,
+     * which actually destroys something, is still a separate ticket.
+     */
+    const { rows } = await owner.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM membership WHERE organization_id = $1`,
+      [tenant.organizationId],
+    );
+    assert.ok(Number(rows[0]!.n) > 0, 'nothing was destroyed');
+  });
+});
+
+test('61 — a club an operator shut is never filed away by the machine', async () => {
+  await withScratchTenant(async (tenant) => {
+    /*
+     * Suspended long enough ago to qualify on dates alone, and by a person. The
+     * clock requires its own `access_closed` event as proof, so this club's
+     * closure — which the ladder knows nothing about — is left entirely alone.
+     */
     await state(tenant, {
       subscription_status: 'expired',
       read_only_at: new Date(Date.now() - 200 * 86_400_000).toISOString(),
       pending_delete_at: new Date(Date.now() - 170 * 86_400_000).toISOString(),
       suspended_at: new Date(Date.now() - 170 * 86_400_000).toISOString(),
-      suspension_reason: TrialClockService.CLOSED_REASON,
+      suspension_reason: 'Fatura de setembro por regularizar.',
     });
 
     await clock.run(tenant.organizationId);
 
-    /*
-     * Nothing removed. `archived_at` is not on the platform login's column grant,
-     * because deleting a tenant is not an operator action and a cron has a weaker
-     * claim to it than a person — so the ladder stops at the closed door and day
-     * 75 belongs to the purge ticket.
-     *
-     * Asserted rather than left implicit: if somebody later widens that grant,
-     * this is what says an hourly job must still not be the thing that uses it.
-     */
     assert.equal((await read(tenant))['archived_at'], null);
-
-    const { rows } = await owner.query<{ n: string }>(
-      // UPDATE specifically. The platform login may *read* whether a tenant is
-      // archived — that is how /admin draws the list — and may not archive one.
-      `SELECT count(*)::text AS n
-         FROM information_schema.column_privileges
-        WHERE grantee = 'poolse_platform' AND table_name = 'organization'
-          AND column_name = 'archived_at' AND privilege_type = 'UPDATE'`,
-      [],
-    );
-    assert.equal(rows[0]!.n, '0', 'the platform login may not archive a tenant');
+    assert.deepEqual(await events(tenant), []);
   });
 });
 
@@ -306,6 +326,14 @@ test('61.10 — a notice is recorded, owed to the owner, and marked undelivered'
       trial_ends_at: new Date(Date.now() + 2 * 86_400_000).toISOString(),
     });
 
+    const { rows: who } = await owner.query<{ email: string }>(
+      `SELECT u.cached_email AS email FROM app_user u
+         JOIN membership m ON m.app_user_id = u.id
+        WHERE m.id = $1`,
+      [tenant.ownerMembershipId],
+    );
+    const ownerEmail = who[0]!.email;
+
     await clock.run(tenant.organizationId);
 
     const { rows } = await owner.query<{
@@ -327,16 +355,16 @@ test('61.10 — a notice is recorded, owed to the owner, and marked undelivered'
     );
 
     /*
-     * Empty, and deliberately: an owner's address is in `app_user.cached_email`
-     * and the platform login holds no privilege on that table. Granting an eighth
-     * table so a job that sends nothing could write an address down would widen
-     * the narrowest login in the system for no delivery. The provider slice
-     * resolves recipients at send time, which is when "who was told" is a fact.
-     *
-     * Asserted rather than left unsaid, so that filling this in later is a
-     * decision somebody takes on purpose.
+     * The club's owner, resolved by role and written onto the row. Reading the
+     * address means reading `app_user` — the eighth table the platform login can
+     * reach, and a decision taken on 14-09-2026 rather than a grant that was
+     * always there.
      */
-    assert.deepEqual(rows[0]?.recipients, []);
+    assert.deepEqual(
+      rows[0]?.recipients,
+      [ownerEmail],
+      'owed to the owner, because nobody else can pay',
+    );
 
     // Hourly, and owed once: the (tenant, kind, day) key is what makes that true.
     await clock.run(tenant.organizationId);
