@@ -16,6 +16,7 @@ import {
   createCategory,
   listCategories,
   renameCategory,
+  reorderCategories,
   setEnrollmentCategory,
   CategoryInUseError,
   DuplicateCategoryError,
@@ -100,6 +101,38 @@ export class FeeCategoriesController {
       refuseDuplicate(error);
     }
     return { updated: true };
+  }
+
+  /**
+   * The whole order at once — the same contract `POST /levels/reorder` has.
+   *
+   * One call rather than one per hop, because dragging a category from fourth to
+   * first is three moves and three chances to be left half applied. The
+   * optimistic list on the client is what makes it feel instant; this is what
+   * makes it true.
+   *
+   * Owner and admin, like every other write here. Reading the order is open to
+   * an instructor — it is which row is printed first, and says nothing about
+   * money.
+   */
+  @Post('reorder')
+  async reorder(@Body() body: Record<string, unknown>): Promise<{ reordered: true }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const raw = body['ids'];
+    if (!Array.isArray(raw)) throw new BadRequestException('ids must be a list of category ids');
+
+    const ids = raw.filter((id): id is string => typeof id === 'string' && id.trim() !== '');
+    if (ids.length !== raw.length) throw new BadRequestException('ids must all be strings');
+    if (new Set(ids).size !== ids.length) {
+      throw new BadRequestException('ids must not repeat');
+    }
+
+    if (!(await reorderCategories(organizationId, ids))) {
+      throw new BadRequestException('No such categories');
+    }
+    return { reordered: true };
   }
 
   @Post(':id/archive')
@@ -205,10 +238,6 @@ function name(value: unknown): string {
   return trimmed;
 }
 
-function order(value: unknown): number {
-  return Number.isInteger(value) ? (value as number) : 0;
-}
-
 /**
  * The whole writable category, refused as a whole.
  *
@@ -236,7 +265,6 @@ function input(body: Record<string, unknown>): FeeCategoryInput {
 
   return {
     name: name(body['name']),
-    sortOrder: order(body['sortOrder']),
     discountPercent: percentage(percent),
     discountCents: amount(cents),
   };

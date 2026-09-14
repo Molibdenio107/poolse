@@ -85,7 +85,6 @@ export async function saveCategoryAction(
 ): Promise<FormState> {
   const id = String(formData.get('categoryId') ?? '').trim();
   const name = String(formData.get('name') ?? '').trim();
-  const sortOrder = Number(formData.get('sortOrder') ?? 0);
   const facilityId = String(formData.get('facilityId') ?? '').trim();
 
   // Checked here as well, so an empty name does not cost a round trip to be
@@ -102,11 +101,11 @@ export async function saveCategoryAction(
     return { ok: false, fields: { discountValue: discount.errorKey } };
   }
 
-  const body = {
-    name,
-    sortOrder: Number.isInteger(sortOrder) ? sortOrder : 0,
-    ...discount,
-  };
+  // No order in the body. Where a category sits is dragged, not typed — see
+  // `reorderCategoriesAction` below; a number in a form beside the name would be
+  // a second way to say it, and the two disagree the moment somebody types 3
+  // twice. A new category lands at the end, which the API decides.
+  const body = { name, ...discount };
 
   try {
     if (id === '') await apiPost('/fee-categories', body);
@@ -117,6 +116,21 @@ export async function saveCategoryAction(
 
   revalidatePath(`/dashboard/facilities/${facilityId}`);
   return { ok: true };
+}
+
+/**
+ * The whole order, in one call — the same contract the levels list uses.
+ *
+ * `Reorderable` is optimistic and rolls its list back if this rejects, so the
+ * failure path is a thrown error rather than a `FormState`: there is no form
+ * here and no field to put a message beside.
+ */
+export async function reorderCategoriesAction(
+  facilityId: string,
+  ids: string[],
+): Promise<void> {
+  await apiPost('/fee-categories/reorder', { ids });
+  revalidatePath(`/dashboard/facilities/${facilityId}`);
 }
 
 export async function archiveCategoryAction(

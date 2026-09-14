@@ -115,7 +115,8 @@ an instructor outright, so the values come back null with `canSeeValues: false` 
 rather than as a blank that would read as "no discount". Writing is the owner and admins.
 
 **Where each is set.** The club's list is a panel on each site's page, under **Instalações →
-*site* → Preços**; the old **Alunos → Categorias** route redirects there. The list is still the
+*site* → Preços**, ordered by dragging rather than by a typed position — the same control the
+levels ladder uses, keyboard included. The old **Alunos → Categorias** route redirects there. The list is still the
 club's and organization-scoped — the same categories on every site — and the panel says so,
 because a "Sénior" meaning one thing at one pool and another at the next is a concession nobody
 could report on. A turma's category is part of the turma's own form, beside its level and its

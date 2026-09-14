@@ -340,6 +340,80 @@ test('an instructor reads the names of the concessions and none of the figures',
   });
 });
 
+test('the order is dragged: a new category appends, and the list can be rewritten', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const categories = new FeeCategoriesController();
+
+      /*
+       * Created in one order and read back in it. The form sends no position —
+       * appending is the only answer that needs no decision, and somebody who
+       * wants a category third drags it there.
+       */
+      const senior = (await categories.create({ name: 'Sénior' })).id;
+      const student = (await categories.create({ name: 'Estudante' })).id;
+      const staff = (await categories.create({ name: 'Funcionário' })).id;
+
+      const named = async (): Promise<string[]> =>
+        (await categories.list()).categories.map((category) => category.name);
+
+      assert.deepEqual(await named(), ['Sénior', 'Estudante', 'Funcionário']);
+
+      // Dragged to the top, which is three positions at once — the reason this
+      // is one call rather than a swap with a neighbour.
+      await categories.reorder({ ids: [staff, senior, student] });
+      assert.deepEqual(await named(), ['Funcionário', 'Sénior', 'Estudante']);
+
+      /*
+       * Editing a category does not put it back. A rename that also wrote the
+       * position would undo a drag every time somebody corrected a spelling —
+       * which is exactly what the typed Ordem box used to do.
+       */
+      await categories.rename(senior, { name: 'Terceira idade', discountPercent: 20 });
+      assert.deepEqual(await named(), ['Funcionário', 'Terceira idade', 'Estudante']);
+
+      // A category the caller left out keeps its place after the ones named,
+      // rather than the whole list being refused over a stale copy.
+      await categories.reorder({ ids: [student] });
+      assert.equal((await named())[0], 'Estudante');
+    });
+  });
+});
+
+test('a stale or malformed order is refused rather than half applied', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const categories = new FeeCategoriesController();
+      const senior = (await categories.create({ name: 'Sénior' })).id;
+
+      await expectStatus(() => categories.reorder({ ids: 'senior' }), 400);
+      await expectStatus(() => categories.reorder({ ids: [senior, senior] }), 400);
+      await expectStatus(
+        () => categories.reorder({ ids: ['00000000-0000-0000-0000-000000000000'] }),
+        400,
+      );
+    });
+  });
+});
+
+test('an instructor may read the order and not rewrite it', async () => {
+  await withScratchTenant(async (tenant) => {
+    let senior = '';
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      senior = (await new FeeCategoriesController().create({ name: 'Sénior' })).id;
+    });
+
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      // Which row is printed first says nothing about money, so reading is open.
+      assert.equal((await new FeeCategoriesController().list()).categories.length, 1);
+      await expectStatus(
+        () => new FeeCategoriesController().reorder({ ids: [senior] }),
+        403,
+      );
+    });
+  });
+});
+
 test('a category may still be worth nothing, and that is not zero', async () => {
   await withScratchTenant(async (tenant) => {
     const { mensal, plan } = await priceList(tenant);

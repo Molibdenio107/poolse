@@ -5,12 +5,17 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Pencil, Plus, Tag, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
+import { Reorderable } from '@/components/reorderable';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextField } from '@/components/ui/field';
 import { centsToInput, formatCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type { FeeCategory } from '@/lib/api';
 import type { FormState } from '../../actions';
-import { archiveCategoryAction, saveCategoryAction } from './categories.actions';
+import {
+  archiveCategoryAction,
+  reorderCategoriesAction,
+  saveCategoryAction,
+} from './categories.actions';
 
 /**
  * Categorias de preço — round 19, and the other half of the price list.
@@ -38,6 +43,13 @@ import { archiveCategoryAction, saveCategoryAction } from './categories.actions'
  * keeps the figure it snapshotted; the new value applies to lines agreed from
  * here on. Said on the screen, because it is the one thing an operator would
  * reasonably assume the other way round.
+ *
+ * **The order is dragged, not typed.** `Reorderable`, the same component the
+ * levels ladder uses — which brings the keyboard path with it, so the grip is a
+ * real button rather than a mouse-only affordance. The Ordem box that was here
+ * first was a second way to say the same thing, and two ways to say one thing
+ * disagree the moment somebody types 3 twice. A new category lands at the end
+ * and is dragged from there.
  */
 
 const INITIAL: FormState = { ok: false };
@@ -138,62 +150,52 @@ export function CategoriesPanel({
         <p className="text-sm text-foreground-muted">{t('categories.none')}</p>
       )}
 
-      {categories.length > 0 && (
-        <ul className="flex flex-col divide-y divide-border">
-          {categories.map((category) => (
-            <li key={category.id} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-medium">{category.name}</span>
-                  <Worth category={category} canSeeValues={canSeeValues} />
-                </span>
-                <span className="flex items-center gap-3">
-                  {/*
-                    Visible text, not a tooltip: this is the number that decides
-                    whether archiving is safe, and it is the same pair the
-                    refusal reports if somebody tries it anyway.
-                  */}
-                  <span className="text-sm text-foreground-muted">
-                    {t('categories.usedBy', {
-                      groups: category.usedByGroups,
-                      enrollments: category.usedByEnrollments,
-                    })}
-                  </span>
-                  {canManage && (
-                    <span className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditing(editing === category.id ? null : category.id)}
-                        aria-expanded={editing === category.id}
-                        aria-label={t('categories.rename')}
-                        className={BUTTON_QUIET}
-                      >
-                        <Pencil aria-hidden className="size-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDropping(category)}
-                        aria-label={t('categories.archive')}
-                        className={BUTTON_QUIET}
-                      >
-                        <Trash2 aria-hidden className="size-3.5" />
-                      </button>
-                    </span>
-                  )}
-                </span>
-              </div>
-
-              {canManage && editing === category.id && (
-                <CategoryForm
+{categories.length > 0 &&
+        (canManage ? (
+          <Reorderable
+            items={categories.map((category) => ({ ...category, label: category.name }))}
+            onReorder={async (ids) => {
+              await reorderCategoriesAction(facilityId, ids);
+            }}
+          >
+            {(category) => (
+              <Row
+                facilityId={facilityId}
+                category={category}
+                canManage
+                canSeeValues={canSeeValues}
+                editing={editing === category.id}
+                onEdit={() => setEditing(editing === category.id ? null : category.id)}
+                onDrop={() => setDropping(category)}
+              />
+            )}
+          </Reorderable>
+        ) : (
+          /*
+            A plain list for somebody who may not write. `Reorderable` is a
+            control, and rendering one that refuses every drag would be a worse
+            answer than not offering it — the same reasoning the levels ladder
+            uses for a reader.
+          */
+          <ul className="flex flex-col divide-y divide-border">
+            {categories.map((category) => (
+              <li
+                key={category.id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 first:pt-0 last:pb-0"
+              >
+                <Row
                   facilityId={facilityId}
                   category={category}
-                  onDone={() => setEditing(null)}
+                  canManage={false}
+                  canSeeValues={canSeeValues}
+                  editing={false}
+                  onEdit={() => undefined}
+                  onDrop={() => undefined}
                 />
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+              </li>
+            ))}
+          </ul>
+        ))}
 
       {canManage &&
         (adding ? (
@@ -233,7 +235,85 @@ export function CategoriesPanel({
 }
 
 /**
- * One category: a name, a place in an order, and what it is worth.
+ * One category's row, shared by the draggable list and the read-only one.
+ *
+ * Extracted so the two cannot drift: a reader and a writer see the same name,
+ * the same value and the same counts, and only the grip and the two buttons
+ * differ. The whole thing is one flex column inside the row, because the edit
+ * form opens *underneath* the name and would otherwise be laid out beside it —
+ * `Reorderable` gives its children a `flex flex-wrap items-center` row.
+ */
+function Row({
+  facilityId,
+  category,
+  canManage,
+  canSeeValues,
+  editing,
+  onEdit,
+  onDrop,
+}: {
+  facilityId: string;
+  category: FeeCategory;
+  canManage: boolean;
+  canSeeValues: boolean;
+  editing: boolean;
+  onEdit: () => void;
+  onDrop: () => void;
+}): React.ReactElement {
+  const t = useTranslations();
+
+  return (
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="font-medium">{category.name}</span>
+          <Worth category={category} canSeeValues={canSeeValues} />
+        </span>
+        <span className="flex items-center gap-3">
+          {/*
+            Visible text, not a tooltip: this is the number that decides whether
+            archiving is safe, and it is the same pair the refusal reports if
+            somebody tries it anyway.
+          */}
+          <span className="text-sm text-foreground-muted">
+            {t('categories.usedBy', {
+              groups: category.usedByGroups,
+              enrollments: category.usedByEnrollments,
+            })}
+          </span>
+          {canManage && (
+            <span className="flex gap-2">
+              <button
+                type="button"
+                onClick={onEdit}
+                aria-expanded={editing}
+                aria-label={t('categories.rename')}
+                className={BUTTON_QUIET}
+              >
+                <Pencil aria-hidden className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={onDrop}
+                aria-label={t('categories.archive')}
+                className={BUTTON_QUIET}
+              >
+                <Trash2 aria-hidden className="size-3.5" />
+              </button>
+            </span>
+          )}
+        </span>
+      </div>
+
+      {canManage && editing && (
+        <CategoryForm facilityId={facilityId} category={category} onDone={onEdit} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * One category: a name and what it is worth.
  *
  * The value is **one control with three answers** — none, a percentage, a fixed
  * amount — rather than two boxes and a rule about not filling both in. The
@@ -267,7 +347,7 @@ function CategoryForm({
       {category !== null && <input type="hidden" name="categoryId" value={category.id} />}
       <input type="hidden" name="facilityId" value={facilityId} />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <TextField
           name="name"
           label={t('categories.name')}
@@ -332,15 +412,6 @@ function CategoryForm({
             )}
           </div>
         )}
-
-        <TextField
-          name="sortOrder"
-          label={t('categories.sortOrder')}
-          initial={String(category?.sortOrder ?? 0)}
-          inputMode="numeric"
-          hint={t('categories.sortOrderHint')}
-          className="max-w-none"
-        />
       </div>
 
       {state.errorKey !== undefined && (

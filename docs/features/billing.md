@@ -135,6 +135,11 @@ concession nobody could report on.
 A category carries **a percentage or a fixed amount, or neither**. Neither is a label, which
 is a legitimate thing to keep — and it is not 0 %, which would be a decision somebody took.
 
+**The order is dragged**, with the same `Reorderable` the levels ladder uses — so the grip
+works by pointer, by finger and by keyboard. There is no Ordem box: a typed position is a
+second way to say the same thing, and the two disagree the moment somebody types 3 twice. A
+new category lands at the end and is dragged from there; editing one never moves it.
+
 **One author, never two.** A line's discount comes from a category or from a person, never
 both. The control on every fee form is one select with three answers: no discount, one of
 the club's concessions with what it costs printed beside it, or a figure typed with a

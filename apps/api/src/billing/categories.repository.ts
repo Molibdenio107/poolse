@@ -47,10 +47,16 @@ export interface FeeCategory {
   usedByEnrollments: number;
 }
 
-/** The writable half. Fee lines already agreed are never touched by an edit. */
+/**
+ * The writable half. Fee lines already agreed are never touched by an edit.
+ *
+ * **No `sortOrder`.** The order is dragged, not typed — `reorderCategories`
+ * below owns the column, the same division `student_level` has had since
+ * POOLSE-05. A number in a form beside a name is a second way to say the same
+ * thing, and the two disagree the moment somebody types 3 twice.
+ */
 export interface FeeCategoryInput {
   name: string;
-  sortOrder: number;
   discountPercent: number | null;
   discountCents: number | null;
 }
@@ -121,11 +127,24 @@ export async function createCategory(
   return withOrg(organizationId, async (tx) => {
     let rows: { id: string }[];
     try {
+      /*
+       * A new category lands at the end of the list.
+       *
+       * Computed in the insert rather than passed in: the caller has no business
+       * knowing how many categories exist, and reading the maximum first would
+       * be a race two operators could lose. Appending is also the only answer
+       * that needs no decision — somebody who wants it third drags it there.
+       */
       ({ rows } = await tx.query<{ id: string }>(
         `INSERT INTO fee_category (organization_id, name, sort_order,
                                    discount_percent, discount_cents)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [organizationId, name, input.sortOrder, input.discountPercent, input.discountCents],
+         SELECT $1, $2,
+                coalesce(max(c.sort_order) + 1, 0),
+                $3, $4
+           FROM fee_category c
+          WHERE c.organization_id = $1 AND c.archived_at IS NULL
+         RETURNING id`,
+        [organizationId, name, input.discountPercent, input.discountCents],
       ));
     } catch (error) {
       throw duplicateFrom(error, name);
@@ -158,11 +177,14 @@ export async function renameCategory(
     let rows: { id: string }[];
     try {
       ({ rows } = await tx.query<{ id: string }>(
-        `UPDATE fee_category SET name = $2, sort_order = $3,
-                discount_percent = $4, discount_cents = $5
+        // `sort_order` is deliberately absent: editing a category is not how it
+        // moves. Writing it here would put the old position back every time
+        // somebody corrected a name after dragging the row.
+        `UPDATE fee_category SET name = $2,
+                discount_percent = $3, discount_cents = $4
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
-        [categoryId, name, input.sortOrder, input.discountPercent, input.discountCents],
+        [categoryId, name, input.discountPercent, input.discountCents],
       ));
     } catch (error) {
       throw duplicateFrom(error, name);
@@ -190,6 +212,55 @@ export async function renameCategory(
       entityId: categoryId,
       data: { name, discountPercent: input.discountPercent, discountCents: input.discountCents },
     });
+    return true;
+  });
+}
+
+/**
+ * The whole list, reordered in one statement — the same shape as `reorderLevels`.
+ *
+ * Drag and drop moves a row past several others at once, so a swap-with-your-
+ * neighbour call cannot express it: dragging the fourth category to the top is
+ * three round trips and three chances to end up half applied. The client sends
+ * the order it wants and this writes it.
+ *
+ * Positions come from the array index rather than from arithmetic on the old
+ * values, so the sequence is always 0..n-1 with no gaps to drift. A category the
+ * caller left out keeps its place after the ones named — a list that raced with
+ * somebody else's insert is reordered as far as it can be rather than refused.
+ *
+ * Nothing about money moves here. The order is which row is printed first; what
+ * a category is worth is `renameCategory`'s, and a fee line already agreed is
+ * untouched by either.
+ */
+export async function reorderCategories(
+  organizationId: string,
+  ids: string[],
+): Promise<boolean> {
+  if (ids.length === 0) return true;
+
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE fee_category AS c
+          SET sort_order = ordered.position
+         FROM unnest($1::uuid[]) WITH ORDINALITY AS ordered(id, position)
+        WHERE c.id = ordered.id
+          AND c.archived_at IS NULL
+      RETURNING c.id`,
+      [ids],
+    );
+
+    // Nothing matched: every id was archived, or belonged to another tenant and
+    // RLS hid it. Either way the caller is working from a stale list.
+    if (rows.length === 0) return false;
+
+    await recordAudit(tx, {
+      action: 'fee_category.reordered',
+      entityType: 'fee_category',
+      entityId: null,
+      data: { order: ids },
+    });
+
     return true;
   });
 }
