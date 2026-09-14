@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Lock, LockOpen } from 'lucide-react';
+import { Eye, Lock, LockOpen, Pencil } from 'lucide-react';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import { Dialog } from '@/components/ui/dialog';
 import { useSavedAction } from '@/lib/saved';
@@ -11,6 +11,7 @@ import type { FormState } from '@/app/(app)/dashboard/actions';
 import { cn } from '@/lib/utils';
 import {
   setPlanAction,
+  setReadOnlyAction,
   setSubscriptionAction,
   setSuspensionAction,
   setTrialAction,
@@ -54,6 +55,7 @@ export function TenantActions({ tenant }: { tenant: PlatformTenant }): React.Rea
         <TrialCard tenant={tenant} />
         <SubscriptionCard tenant={tenant} />
         <PlanCard tenant={tenant} />
+        <ReadOnlyCard tenant={tenant} />
         <SuspensionCard tenant={tenant} />
       </div>
     </section>
@@ -222,6 +224,70 @@ function PlanCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
  * visual languages make an operator wonder whether they are being asked the same
  * thing. And never rendered in place of its own trigger.
  */
+/**
+ * Read-only — POOLSE-61, and the operator's hand on the state the clock will set.
+ *
+ * **Not a confirmation dialog, unlike suspension.** Shutting a club is
+ * destructive to their day and gets asked twice; putting one into read-only is
+ * what happens on its own the day a trial ends, and an operator doing it by hand
+ * is usually correcting something. Making it harder than the automatic path would
+ * be ceremony.
+ *
+ * **Lifting clears the deletion date**, said on the card rather than left to be
+ * discovered: a club writing normally with a deletion still scheduled is the
+ * worst of the two states and the one nobody thinks to check for.
+ *
+ * The date is optional. Thirty days is the ladder's number and B2's job will
+ * apply it; an operator setting this by hand may have a reason with no deletion
+ * attached at all, and a form that insisted would make them invent one.
+ */
+function ReadOnlyCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
+  const t = useTranslations();
+  const [state, dispatch, pending] = useSavedAction(setReadOnlyAction, INITIAL);
+
+  if (tenant.readOnlyAt !== null) {
+    return (
+      <Card
+        title={t('admin.action.readOnly')}
+        hint={t('admin.action.writeRestoreHint')}
+        action={dispatch}
+        tenantId={tenant.id}
+      >
+        <input type="hidden" name="readOnly" value="false" />
+        <Submit
+          label={t('admin.action.writeRestore')}
+          pending={pending}
+          icon={<Pencil className="size-4" aria-hidden />}
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <Card
+      title={t('admin.action.readOnly')}
+      hint={t('admin.action.readOnlyHint')}
+      action={dispatch}
+      tenantId={tenant.id}
+    >
+      <input type="hidden" name="readOnly" value="true" />
+      <TextField
+        name="dataKeptUntil"
+        label={t('admin.action.dataKeptUntil')}
+        type="date"
+        initial=""
+        error={state.fields?.['dataKeptUntil']}
+        hint={t('admin.action.dataKeptUntilHint')}
+      />
+      <Submit
+        label={t('admin.action.makeReadOnly')}
+        pending={pending}
+        icon={<Eye className="size-4" aria-hidden />}
+      />
+    </Card>
+  );
+}
+
 function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
   const t = useTranslations();
   const [state, dispatch, pending] = useSavedAction(setSuspensionAction, INITIAL);

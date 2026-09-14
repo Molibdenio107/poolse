@@ -48,6 +48,28 @@ export interface MembershipSummary {
   suspendedAt: string | null;
   /** Shown verbatim to the suspended tenant. Non-null exactly when suspended. */
   suspensionReason: string | null;
+  /**
+   * When this tenant stopped being able to write — POOLSE-61.
+   *
+   * A **third access state**, not a rename of suspension and not a degree of it:
+   * `suspended_at` beats this beats open. A read-only tenant signs in, reads
+   * everything it built, exports it and pays; it cannot change anything. Null is
+   * open.
+   *
+   * Carried here for the reason `suspendedAt` is: it arrives with the query
+   * every authenticated request already makes, and the refusal belongs one layer
+   * up where it can carry the dates a banner is built from.
+   */
+  readOnlyAt: string | null;
+  /**
+   * When the tenant is due to lose access entirely. A date, not an action.
+   *
+   * Nothing in this slice acts on it — the clock is B2 and the destructive path
+   * is its own ticket. It is here because the banner says "os seus dados ficam
+   * guardados até…", and that sentence needs the date rather than a guess made
+   * from thirty days of arithmetic in a browser.
+   */
+  pendingDeleteAt: string | null;
 }
 
 /**
@@ -121,6 +143,8 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       o_trial_ends_at: Date | null;
       o_suspended_at: Date | null;
       o_suspension_reason: string | null;
+      o_read_only_at: Date | null;
+      o_pending_delete_at: Date | null;
     }>('SELECT * FROM resolve_memberships($1)', [clerkUserId]);
 
     return rows.map((row) => ({
@@ -135,6 +159,8 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       trialEndsAt: row.o_trial_ends_at?.toISOString() ?? null,
       suspendedAt: row.o_suspended_at?.toISOString() ?? null,
       suspensionReason: row.o_suspension_reason,
+      readOnlyAt: row.o_read_only_at?.toISOString() ?? null,
+      pendingDeleteAt: row.o_pending_delete_at?.toISOString() ?? null,
     }));
   });
 }

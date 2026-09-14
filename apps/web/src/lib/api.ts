@@ -210,6 +210,23 @@ export interface Me {
     suspendedAt: string | null;
     /** The operator's own words, shown verbatim. */
     suspensionReason: string | null;
+    /**
+     * The trial ran out and the tenant may read but not write — POOLSE-61.
+     *
+     * A **third** access state: suspended beats read-only beats open. Null is
+     * open. The shell renders a banner *above* the app rather than instead of it,
+     * because everything the club built is still readable and still exportable —
+     * which is the entire point of the state.
+     */
+    readOnlyAt: string | null;
+    /**
+     * The day the data stops being kept, quoted in the banner.
+     *
+     * Null when no deletion is scheduled, which is what an operator putting a
+     * tenant into read-only by hand may well mean. The server's date, never
+     * thirty days of arithmetic done here.
+     */
+    pendingDeleteAt: string | null;
     membershipId: string;
     roles: string[];
     subscriptionStatus: 'trialing' | 'active' | 'past_due' | 'canceled';
@@ -3007,6 +3024,15 @@ export interface PlatformTenant {
    * deletion, and from `subscriptionStatus`, which is what they are paying.
    */
   suspendedAt: string | null;
+  /**
+   * Read-only, and until when the data is kept — POOLSE-61.
+   *
+   * Beside suspension rather than folded into it: a tenant can be read-only and
+   * open, suspended and not read-only, or both, and this screen has to be able to
+   * say which. `suspendedAt` beats `readOnlyAt` beats open.
+   */
+  readOnlyAt: string | null;
+  pendingDeleteAt: string | null;
   /** Non-null exactly when suspended. Shown to the club verbatim. */
   suspensionReason: string | null;
 

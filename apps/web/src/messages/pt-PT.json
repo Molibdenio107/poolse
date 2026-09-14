@@ -3222,7 +3222,8 @@
       "trialFailed": "Não foi possível alterar o período experimental.",
       "subscriptionFailed": "Não foi possível alterar a subscrição.",
       "planFailed": "Não foi possível alterar os limites do plano.",
-      "suspensionFailed": "Não foi possível alterar a suspensão."
+      "suspensionFailed": "Não foi possível alterar a suspensão.",
+      "readOnlyFailed": "Não foi possível alterar o estado de leitura."
     },
     "actions": "Ações",
     "suspended": "Suspensa",
@@ -3245,7 +3246,14 @@
       "suspendConfirmTitle": "Suspender esta organização?",
       "suspendConfirmBody": "Toda a gente na organização deixa de conseguir usar o Poolse — registos de presenças, horários, faturação, tudo. Verão apenas o motivo que escrever aqui. Nada é apagado e a suspensão é reversível.",
       "reason": "Motivo",
-      "reasonHint": "Mostrado ao cliente tal como o escrever. Até 500 caracteres."
+      "reasonHint": "Mostrado ao cliente tal como o escrever. Até 500 caracteres.",
+      "readOnly": "Apenas leitura",
+      "readOnlyHint": "O clube continua a consultar e a exportar tudo, mas não pode alterar nada. Pagar repõe o acesso.",
+      "makeReadOnly": "Passar a apenas leitura",
+      "writeRestore": "Repor a escrita",
+      "writeRestoreHint": "Devolve a escrita ao clube e cancela a data de eliminação.",
+      "dataKeptUntil": "Dados guardados até",
+      "dataKeptUntilHint": "Opcional. Em branco, não fica marcada nenhuma eliminação."
     }
   },
   "suspended": {
@@ -3254,5 +3262,12 @@
     "since": "Suspensa desde {date}.",
     "dataSafe": "Nada foi apagado. Assim que a situação for resolvida, tudo volta ao que estava.",
     "contact": "Para resolver, fale connosco:"
+  },
+  "readOnly": {
+    "title": "O período de avaliação terminou a {date}.",
+    "what": "Pode consultar e exportar tudo o que já criou. Para voltar a editar, é preciso ativar a subscrição.",
+    "kept": "Os seus dados ficam guardados até {date}.",
+    "askOwner": "Só o proprietário do clube pode ativar a subscrição.",
+    "pay": "Ativar subscrição"
   }
 }

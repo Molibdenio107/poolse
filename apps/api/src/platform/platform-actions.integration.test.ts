@@ -62,7 +62,8 @@ async function trail(clerkUserId: string): Promise<{ action: string; detail: unk
 async function organization(tenant: ScratchTenant): Promise<Record<string, unknown>> {
   const { rows } = await owner.query<Record<string, unknown>>(
     `SELECT subscription_status::text AS subscription_status, trial_ends_at,
-            max_facilities, max_management_users, suspended_at, suspension_reason, name
+            max_facilities, max_management_users, suspended_at, suspension_reason,
+            read_only_at, pending_delete_at, name
        FROM organization WHERE id = $1`,
     [tenant.organizationId],
   );
@@ -76,9 +77,23 @@ async function organization(tenant: ScratchTenant): Promise<Record<string, unkno
  * piece of code that decides, and a fake of it would prove nothing. Resolves to
  * `'passed'` when `next()` is reached.
  */
-async function resolveTenant(clerkUserId: string, organizationId: string): Promise<string> {
+/**
+ * Drive the real middleware, as a real request.
+ *
+ * `method` and `path` default to a plain read, which is what every caller before
+ * POOLSE-61 was asking about. Read-only is decided on exactly those two, so the
+ * tests that care pass them and nothing else changes.
+ */
+async function resolveTenant(
+  clerkUserId: string,
+  organizationId: string,
+  method = 'GET',
+  path = '/students',
+): Promise<string> {
   return authStorage.run({ clerkUserId, sessionId: 'sess' }, async () => {
     const request = {
+      method,
+      path,
       header: (name: string) =>
         name === 'x-poolse-organization' ? organizationId : undefined,
     } as never;
@@ -584,6 +599,246 @@ test('a change that changes nothing is recorded as changing nothing', async () =
       // second one says is that nothing moved.
       assert.equal(rows.length, 2);
       assert.deepEqual((rows[1]!.detail as { changed: unknown }).changed, {});
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Read-only — POOLSE-61 slice B1
+// ---------------------------------------------------------------------------
+
+/** What a read-only refusal has to carry for the banner to be buildable. */
+interface ReadOnlyRefusal {
+  status?: number;
+  response?: { code?: string; trialEndedAt?: string | null; dataKeptUntil?: string | null };
+}
+
+test('61.3 — a read-only tenant reads, and every unsafe method is refused with the dates', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_ro_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+    const club = await ownerClerkId(tenant);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        await controller.readOnly(tenant.organizationId, {
+          readOnly: true,
+          dataKeptUntil: '2026-12-31',
+        });
+      });
+
+      // Reads pass. So does every export in the product, because every export is
+      // a GET — which is what makes AC5 true without listing a single route.
+      assert.equal(await resolveTenant(club, tenant.organizationId, 'GET', '/students'), 'passed');
+      assert.equal(
+        await resolveTenant(club, tenant.organizationId, 'GET', '/students/export'),
+        'passed',
+        'a club that cannot get its own data out is the failure this state exists to avoid',
+      );
+      assert.equal(await resolveTenant(club, tenant.organizationId, 'HEAD', '/students'), 'passed');
+
+      for (const method of ['POST', 'PATCH', 'PUT', 'DELETE']) {
+        await assert.rejects(
+          () => resolveTenant(club, tenant.organizationId, method, '/students'),
+          (error: ReadOnlyRefusal) => {
+            assert.equal(error.status, 403);
+            assert.equal(error.response?.code, 'tenant_read_only');
+            // The banner is built from the refusal rather than from a second
+            // request asking why the first one failed.
+            assert.ok(error.response?.trialEndedAt, 'the refusal says when writing stopped');
+            assert.equal(error.response?.dataKeptUntil?.slice(0, 10), '2026-12-31');
+            return true;
+          },
+          `${method} should have been refused`,
+        );
+      }
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+test('61.5 — a read-only tenant can still reach the checkout and the portal', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_ropay_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+    const club = await ownerClerkId(tenant);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        await controller.readOnly(tenant.organizationId, { readOnly: true });
+      });
+
+      /*
+       * The whole design in one assertion: a read-only tenant that cannot pay is
+       * a read-only tenant for ever. These two are the only writes it may make.
+       */
+      for (const path of ['/subscription/checkout', '/subscription/portal']) {
+        assert.equal(
+          await resolveTenant(club, tenant.organizationId, 'POST', path),
+          'passed',
+          `${path} is the way back and must stay open`,
+        );
+      }
+
+      // And the allowlist is a prefix match, not a substring one: a route that
+      // merely mentions the word is not on it.
+      await assert.rejects(
+        () => resolveTenant(club, tenant.organizationId, 'POST', '/students/subscription/checkout'),
+        (error: ReadOnlyRefusal) => error.response?.code === 'tenant_read_only',
+      );
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+test('61.6 — lifting read-only restores writing and cancels the deletion', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_rolift_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+    const club = await ownerClerkId(tenant);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        await controller.readOnly(tenant.organizationId, {
+          readOnly: true,
+          dataKeptUntil: '2026-12-31',
+        });
+      });
+      await assert.rejects(() =>
+        resolveTenant(club, tenant.organizationId, 'POST', '/students'),
+      );
+
+      await asOperator(clerkUserId, async () => {
+        await controller.readOnly(tenant.organizationId, { readOnly: false });
+      });
+
+      assert.equal(
+        await resolveTenant(club, tenant.organizationId, 'POST', '/students'),
+        'passed',
+        'one status change and the club writes again — nothing was ever moved',
+      );
+
+      const org = await organization(tenant);
+      assert.equal(org['read_only_at'], null);
+      assert.equal(
+        org['pending_delete_at'],
+        null,
+        'the deletion goes with it — a club writing normally with one scheduled is the worst state',
+      );
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+test('61.7 — suspension beats read-only, and the refusal says which', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_roboth_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+    const club = await ownerClerkId(tenant);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        await controller.readOnly(tenant.organizationId, { readOnly: true });
+        await controller.suspension(tenant.organizationId, {
+          suspended: true,
+          reason: 'Fatura por regularizar.',
+        });
+      });
+
+      /*
+       * A club that is both is a club we have closed. Telling it "your trial ran
+       * out, pay here" would be the wrong sentence and the wrong call to action —
+       * so the precedence is a rule, not an accident of ordering, and it holds
+       * for a *read* as well, which read-only would have let through.
+       */
+      await assert.rejects(
+        () => resolveTenant(club, tenant.organizationId, 'GET', '/students'),
+        (error: ReadOnlyRefusal) => {
+          assert.equal(error.response?.code, 'tenant_suspended');
+          return true;
+        },
+      );
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+test('61.1 — a trial is fifteen days, from one definition', async () => {
+  const { rows } = await owner.query<{ days: number; matches: boolean }>(
+    `SELECT extract(day FROM trial_period())::int AS days,
+            (trial_period() = interval '15 days') AS matches`,
+  );
+  assert.equal(rows[0]?.days, 15);
+  assert.ok(rows[0]?.matches);
+
+  // And provisioning asks rather than knowing: the literal is gone from it.
+  const { rows: source } = await owner.query<{ body: string }>(
+    `SELECT prosrc AS body FROM pg_proc WHERE proname = 'provision_organization'`,
+  );
+  for (const fn of source) {
+    assert.ok(
+      !fn.body.includes("interval '14 days'"),
+      'a provisioning function still holds its own trial length',
+    );
+    assert.ok(fn.body.includes('trial_period()'), 'provisioning should call the definition');
+  }
+});
+
+test('61.2 — the operator moves both columns, and the change is on the trail', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_roaudit_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        const result = await controller.readOnly(tenant.organizationId, {
+          readOnly: true,
+          dataKeptUntil: '2026-12-31',
+        });
+        // Only what actually moved, before and after — the platform contract.
+        assert.ok('read_only_at' in result.changed);
+        assert.ok('pending_delete_at' in result.changed);
+      });
+
+      /*
+       * Through `changeTenant`, so it is audited by construction. A non-GET
+       * platform endpoint that bypassed that helper would not be audited at all,
+       * which is the standing rule this endpoint had to be written against.
+       */
+      const { rows } = await owner.query<{ action: string }>(
+        `SELECT action FROM platform_audit_log
+          WHERE organization_id = $1 AND action = 'tenant.read_only'`,
+        [tenant.organizationId],
+      );
+      assert.equal(rows.length, 1);
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+test('61 — a date that is not a date is refused rather than read as "no deletion"', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_robad_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        // The difference between a club with thirty days and a club with none.
+        for (const bad of ['31-12-2026', '2026-13-45', 'soon']) {
+          await assert.rejects(
+            () => controller.readOnly(tenant.organizationId, { readOnly: true, dataKeptUntil: bad }),
+            (error: { status?: number }) => error.status === 400,
+            `${bad} should be refused`,
+          );
+        }
+      });
     } finally {
       await cleanup(clerkUserId);
     }

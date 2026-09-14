@@ -118,3 +118,34 @@ export async function setSuspensionAction(
   revalidateAdmin(tenantId);
   return { ok: true };
 }
+
+/**
+ * Read-only, or writing again — POOLSE-61.
+ *
+ * One action for both directions, like suspension above. **Lifting clears the
+ * deletion date with it**: the two are set together and mean one thing between
+ * them, and a club writing normally with a deletion still scheduled is the worst
+ * of the two states and the one nobody would think to look for.
+ *
+ * The API decides what a blank `dataKeptUntil` means, not this — coercing on both
+ * sides is how the two come to disagree about an empty box.
+ */
+export async function setReadOnlyAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const tenantId = String(formData.get('tenantId') ?? '');
+  const readOnly = formData.get('readOnly') === 'true';
+
+  try {
+    await apiPost(`/platform/tenants/${tenantId}/read-only`, {
+      readOnly,
+      dataKeptUntil: readOnly ? String(formData.get('dataKeptUntil') ?? '') : null,
+    });
+  } catch (error) {
+    return describeFailure(error, 'admin.error.readOnlyFailed');
+  }
+
+  revalidateAdmin(tenantId);
+  return { ok: true };
+}

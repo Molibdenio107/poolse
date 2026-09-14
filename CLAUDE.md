@@ -136,6 +136,26 @@ disables an endpoint that keeps failing. A failed payment sets `past_due` and **
 `suspended_at`, and nothing closes a club automatically — not even a trial running out.
 `docs/features/subscription.md`.
 
+**A trial ends in read-only, which is a third access state.** POOLSE-61 slice B1.
+`suspended_at` **beats** `read_only_at` **beats open**, enforced in `TenantMiddleware` and
+asserted for a `GET` as well — a club that is both is a club we closed, and "your trial ran
+out, pay here" would be the wrong sentence. Read-only allows **every safe method** (`GET`,
+`HEAD`, `OPTIONS`) rather than an allowlist of safe routes, because a list is a list somebody
+forgets to add to — and it makes "you can still export everything" true for free, since every
+export here is a GET. Exactly **two writes stay open**, the checkout and the customer portal:
+*a read-only tenant that cannot pay is a read-only tenant for ever.* The Stripe webhook is
+**not** on that list and must not be added — it is public and this middleware never runs for
+it, so a line for it would look load-bearing and be dead. The refusal carries `trialEndedAt`
+and `dataKeptUntil` so a form explains itself where it failed, but the standing banner comes
+from `/me`: finding out you cannot write only at the moment you try is how somebody loses a
+page of typing. **Lifting read-only clears `pending_delete_at` with it** and neither control
+touches `subscription_status` — billing state and access state stay separate. `trial_period()`
+is the trial's one definition (15 days), replacing a literal copied into four provisioning
+functions; existing trials are untouched. **Nothing is ever copied or migrated** — a trial
+tenant is an ordinary `organization` row, so converting is a status change and restoring one
+is a status change back. The clock that sets all this is B2 and is **not built**; an operator
+sets it from `/admin` today. `docs/features/trial.md`.
+
 **Platform administration is not a tenant role, and it has its own database login.** `member_role`
 says what somebody may do inside one club; `platform_admin` — keyed on the Clerk user id, no
 `organization_id` — says whether they may look at all of them. No role grants it, being owner of a

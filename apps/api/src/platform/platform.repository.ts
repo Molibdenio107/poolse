@@ -94,6 +94,15 @@ export interface TenantRow {
    * deletion, and from `subscriptionStatus`, which is what they are paying.
    */
   suspendedAt: string | null;
+  /**
+   * Read-only, and how long the data is kept — POOLSE-61.
+   *
+   * Beside suspension rather than folded into it: a club can be read-only and
+   * open, suspended and not read-only, or both, and the operator's screen has to
+   * be able to say which. `suspended_at` beats `read_only_at` beats open.
+   */
+  readOnlyAt: string | null;
+  pendingDeleteAt: string | null;
   /** Non-null exactly when suspended. Shown to the club verbatim. */
   suspensionReason: string | null;
 
@@ -158,6 +167,8 @@ export async function listTenants(
       last_activity_at: Date | null;
       archived_at: Date | null;
       suspended_at: Date | null;
+      read_only_at: Date | null;
+      pending_delete_at: Date | null;
       suspension_reason: string | null;
       request_count_24h: number;
       count_4xx_24h: number;
@@ -178,6 +189,8 @@ export async function listTenants(
              o.max_facilities,
              o.archived_at,
              o.suspended_at,
+             o.read_only_at,
+             o.pending_delete_at,
              o.suspension_reason,
 
              /*
@@ -305,6 +318,8 @@ export async function listTenants(
       lastActivityAt: row.last_activity_at?.toISOString() ?? null,
       archivedAt: row.archived_at?.toISOString() ?? null,
       suspendedAt: row.suspended_at?.toISOString() ?? null,
+      readOnlyAt: row.read_only_at?.toISOString() ?? null,
+      pendingDeleteAt: row.pending_delete_at?.toISOString() ?? null,
       suspensionReason: row.suspension_reason,
 
       health: deriveHealth({
@@ -526,6 +541,8 @@ interface TenantChange {
   max_management_users?: number | null;
   suspended_at?: string | null;
   suspension_reason?: string | null;
+  read_only_at?: string | null;
+  pending_delete_at?: string | null;
 }
 
 /** The columns an audit entry is worth carrying. */
@@ -536,6 +553,8 @@ const AUDITED = [
   'max_management_users',
   'suspended_at',
   'suspension_reason',
+  'read_only_at',
+  'pending_delete_at',
 ] as const;
 
 export interface TenantChangeResult {
@@ -677,5 +696,39 @@ export async function setSuspension(
     suspension === null
       ? { suspended_at: null, suspension_reason: null }
       : { suspended_at: new Date().toISOString(), suspension_reason: suspension.reason },
+  );
+}
+
+/**
+ * Put a tenant into read-only, or let it write again — POOLSE-61.
+ *
+ * One handler for both directions, like suspension above and for the same
+ * reason: they write the same columns and must stay each other's exact inverse.
+ *
+ * **Lifting clears the delete date too.** They are set together by the clock and
+ * they mean one thing between them — "this club stopped paying, and here is how
+ * long we keep its data". Clearing the first and leaving the second would leave a
+ * club writing normally with a deletion still scheduled, which is the worst of
+ * the two states and the one nobody would think to check for.
+ *
+ * **It does not touch `subscription_status`.** Billing state and access state
+ * were separated on purpose in the platform slice, and an operator lifting
+ * read-only because a bank transfer arrived is making an access decision; the
+ * billing one is Stripe's to report or the operator's to make on the other
+ * screen. Merging them here would undo that distinction quietly.
+ */
+export async function setReadOnly(
+  organizationId: string,
+  readOnly: { dataKeptUntil: string | null } | null,
+): Promise<TenantChangeResult | null> {
+  return changeTenant(
+    organizationId,
+    readOnly === null ? 'tenant.write_restored' : 'tenant.read_only',
+    readOnly === null
+      ? { read_only_at: null, pending_delete_at: null }
+      : {
+          read_only_at: new Date().toISOString(),
+          pending_delete_at: readOnly.dataKeptUntil,
+        },
   );
 }

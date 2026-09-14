@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -16,6 +17,7 @@ import { PlatformAdminGuard } from './platform.guard.js';
 import {
   extendTrial,
   listTenants,
+  setReadOnly,
   readTenant,
   readTenantRequests,
   setPlanLimits,
@@ -164,6 +166,56 @@ export class PlatformController {
       await setSuspension(id, suspended ? { reason: readSuspensionReason(body.reason) } : null),
     );
   }
+
+  /**
+   * Read-only, or writing again — POOLSE-61.
+   *
+   * Its own endpoint beside suspension rather than a flag on it, because they
+   * are different states with different sentences: suspension is a door we shut,
+   * read-only is a trial that ran out. The precedence is the middleware's.
+   *
+   * **It exists before the clock does.** B2's job is what will normally set this;
+   * until then — and after then, when a bank transfer arrives on a Friday — an
+   * operator sets and lifts it by hand. A state only a cron can reach is a state
+   * nobody can undo.
+   *
+   * `dataKeptUntil` is optional and is the date the club's banner will quote. The
+   * server does not invent one: thirty days is the ladder's number and the job
+   * will apply it, but an operator putting a tenant into read-only by hand may be
+   * doing it for a reason that has no deletion attached at all.
+   */
+  @Post('tenants/:id/read-only')
+  async readOnly(
+    @Param('id') id: string,
+    @Body() body: { readOnly?: unknown; dataKeptUntil?: unknown },
+  ): Promise<TenantChangeResult> {
+    const readOnly = body.readOnly === true || body.readOnly === 'true';
+    return found(
+      await setReadOnly(
+        id,
+        readOnly ? { dataKeptUntil: readKeptUntil(body.dataKeptUntil) } : null,
+      ),
+    );
+  }
+}
+
+/**
+ * The date a read-only tenant's data is kept until, or none.
+ *
+ * A date, not a timestamp with a time on it: the banner says a day, and an
+ * operator typing one into `/admin` means the end of it. Anything unparseable is
+ * refused rather than silently becoming "no deletion scheduled" — that is the
+ * difference between a club with thirty days and a club with none.
+ */
+function readKeptUntil(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new BadRequestException('dataKeptUntil must be a YYYY-MM-DD date');
+  }
+  if (Number.isNaN(Date.parse(value))) {
+    throw new BadRequestException('dataKeptUntil is not a real date');
+  }
+  return value;
 }
 
 /**

@@ -4,6 +4,7 @@ import { AppSidebar } from '../app-sidebar';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { SuspendedNotice } from './suspended-notice';
+import { ReadOnlyNotice } from './read-only-notice';
 
 /**
  * The backoffice shell.
@@ -48,6 +49,14 @@ interface Viewer {
    * with no explanation among them.
    */
   suspended: { name: string; reason: string | null; at: string } | null;
+  /**
+   * The trial ran out — POOLSE-61.
+   *
+   * Unlike `suspended` this does **not** replace the page. The club reads
+   * everything it built, exports it and pays; the banner sits above the app
+   * saying so. Null for the ordinary case.
+   */
+  readOnly: { at: string; keptUntil: string | null; isOwner: boolean } | null;
 }
 
 async function currentViewer(): Promise<Viewer> {
@@ -71,6 +80,16 @@ async function currentViewer(): Promise<Viewer> {
     return {
       roles: membership?.roles ?? [],
       kind: membership?.organizationKind ?? 'business',
+      readOnly:
+        membership?.readOnlyAt != null
+          ? {
+              at: membership.readOnlyAt,
+              keptUntil: membership.pendingDeleteAt,
+              // Only the owner can pay; anybody else is told who to ask rather
+              // than sent to a screen that will refuse them.
+              isOwner: membership.roles.includes('owner'),
+            }
+          : null,
       suspended:
         membership?.suspendedAt != null
           ? {
@@ -90,7 +109,7 @@ async function currentViewer(): Promise<Viewer> {
      * paying club its account is closed when it is not, which is a telephone
      * call we would deserve.
      */
-    return { roles: [], kind: 'business', suspended: null };
+    return { roles: [], kind: 'business', suspended: null, readOnly: null };
   }
 }
 
@@ -99,7 +118,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const { roles, kind, suspended } = await currentViewer();
+  const { roles, kind, suspended, readOnly } = await currentViewer();
 
   /*
    * Instead of the shell, not inside it.
@@ -150,6 +169,20 @@ export default async function DashboardLayout({
             <UserMenu />
           </div>
         </header>
+
+        {/*
+          Above the page, below the app bar — a standing condition rather than
+          something that just happened, and it must not scroll away with the
+          content. Inside the shell, deliberately: unlike a suspension the
+          navigation still works and every screen behind it still reads.
+        */}
+        {readOnly !== null && (
+          <ReadOnlyNotice
+            readOnlyAt={readOnly.at}
+            dataKeptUntil={readOnly.keptUntil}
+            isOwner={readOnly.isOwner}
+          />
+        )}
 
         <div className="min-w-0 flex-1">{children}</div>
       </div>

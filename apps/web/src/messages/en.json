@@ -3222,7 +3222,8 @@
       "trialFailed": "Could not change the trial.",
       "subscriptionFailed": "Could not change the subscription.",
       "planFailed": "Could not change the plan limits.",
-      "suspensionFailed": "Could not change the suspension."
+      "suspensionFailed": "Could not change the suspension.",
+      "readOnlyFailed": "Could not change the read-only state."
     },
     "actions": "Actions",
     "suspended": "Suspended",
@@ -3245,7 +3246,14 @@
       "suspendConfirmTitle": "Suspend this organization?",
       "suspendConfirmBody": "Everybody in the organization stops being able to use Poolse — registers, timetables, invoicing, all of it. They will see only the reason you write here. Nothing is deleted and the suspension can be lifted at any time.",
       "reason": "Reason",
-      "reasonHint": "Shown to the tenant exactly as you write it. Up to 500 characters."
+      "reasonHint": "Shown to the tenant exactly as you write it. Up to 500 characters.",
+      "readOnly": "Read-only",
+      "readOnlyHint": "The club still reads and exports everything but cannot change anything. Paying restores access.",
+      "makeReadOnly": "Make read-only",
+      "writeRestore": "Restore writing",
+      "writeRestoreHint": "Gives writing back to the club and cancels the deletion date.",
+      "dataKeptUntil": "Data kept until",
+      "dataKeptUntilHint": "Optional. Left blank, no deletion is scheduled."
     }
   },
   "suspended": {
@@ -3254,5 +3262,12 @@
     "since": "Suspended since {date}.",
     "dataSafe": "Nothing has been deleted. As soon as this is resolved, everything comes back as it was.",
     "contact": "To sort this out, get in touch:"
+  },
+  "readOnly": {
+    "title": "The trial ended on {date}.",
+    "what": "You can still read and export everything you have created. To edit again, the subscription needs activating.",
+    "kept": "Your data is kept until {date}.",
+    "askOwner": "Only the club owner can activate the subscription.",
+    "pay": "Activate subscription"
   }
 }

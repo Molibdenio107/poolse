@@ -2372,6 +2372,43 @@ Neither reference from `class_group` or `enrollment` is cascaded, so `fee_catego
 **after** `class_group` in `TENANT_TABLES`: deleting the categories first fails on the foreign
 key, which is the key doing its job. `student_fee` is already ahead of it there.
 
+### The trial ladder — POOLSE-61 slice B1, 14 September 2026
+
+```
+organization
+  … read_only_at, pending_delete_at
+subscription_status  … + 'expired'
+trial_period() RETURNS interval   -- 15 days, the one definition
+```
+
+**`read_only_at` is a third access state**, not a rename of `suspended_at` and not a degree
+of it. The platform slice separated billing state (`subscription_status`) from access state
+(`suspended_at`) deliberately; this adds a degree to access state and keeps the two apart.
+The precedence — **suspended beats read-only beats open** — lives in `TenantMiddleware` and
+is asserted there, including for a `GET`, which read-only alone would have let through.
+
+**`pending_delete_at` is a date, not an action.** Nothing in this slice acts on it: the
+clock is B2 and the purge is its own ticket. It exists because the club's banner says "os
+seus dados ficam guardados até…", and that sentence needs the server's date rather than
+thirty days of arithmetic done in a browser.
+
+Both are on the `poolse_platform` column grant and both go through `changeTenant`, so an
+operator can lift a read-only state and pull a tenant back from pending-delete, and every
+such move lands in `platform_audit_log`. A state only a cron can set is a state nobody can
+undo on a Friday afternoon.
+
+**Nothing is ever copied or migrated.** A trial tenant is an ordinary `organization` row
+with a different status — no trial database, no copy step, no import — so converting is a
+status change and restoring one is a status change back. The migration header says so,
+because the first person to assume otherwise will be reading SQL.
+
+`resolve_memberships` carries both columns, so the refusal happens in the middleware where
+it can name a code and the two dates rather than in the function, where a tenant that
+stopped resolving would be indistinguishable from somebody who belongs to no organization.
+
+`trial_period()` replaces a `14 days` literal that had been copied into four provisioning
+functions. Existing trials are untouched: it changes what a new signup gets.
+
 ### Invoicing — phase 2.2, 8 September 2026
 
 ```

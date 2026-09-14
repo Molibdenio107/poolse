@@ -6,6 +6,45 @@ import { listMemberships } from '../identity/identity.repository.js';
 import { tenantStorage, type TenantContext } from './tenant.context.js';
 
 /**
+ * The methods a read-only tenant may still use — POOLSE-61 AC3.
+ *
+ * By method rather than by route, because the alternative is an allowlist of
+ * every safe endpoint in the product and the first one somebody forgets to add
+ * is a club that cannot read its own register. `GET`, `HEAD` and `OPTIONS` are
+ * the methods that do not change anything, by definition rather than by
+ * inspection, and **every export in this product is a GET** — which is what makes
+ * "you can still get your data out" true without listing a single route.
+ */
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/**
+ * The paths a read-only tenant may still *write* to — POOLSE-61 AC4.
+ *
+ * This is the conversion path, and it is the whole design: **a read-only tenant
+ * that cannot pay is a read-only tenant for ever.** Checkout opens Stripe's own
+ * page and the portal is where a card is fixed; close either and the club is
+ * stuck behind a door with the handle on our side.
+ *
+ * **The Stripe webhook is not on this list and must not be added.** It is in
+ * `PUBLIC_ROUTES`, so this middleware never runs for it at all — it authenticates
+ * by signature and has no session to resolve a tenant from. Listing it here would
+ * be a line that looks load-bearing and is dead, which is worse than absent: the
+ * next person to tidy the allowlist would have no way to tell which entries
+ * matter. AC4 holds for it by construction rather than by permission.
+ *
+ * Matched on the path prefix, and deliberately short: a longer list is a larger
+ * hole, and anything added here has to be justified against that first sentence.
+ */
+const BILLING_WRITE_PATHS = ['/subscription/checkout', '/subscription/portal'];
+
+/** Whether this request is one of the three, whatever it is mounted under. */
+function isBillingPath(path: string): boolean {
+  return BILLING_WRITE_PATHS.some(
+    (allowed) => path === allowed || path.startsWith(`${allowed}/`),
+  );
+}
+
+/**
  * Resolves the tenant for every request and installs it into AsyncLocalStorage.
  *
  * The important rule here: the organization is NOT taken from the request body,
@@ -72,6 +111,35 @@ export class TenantMiddleware implements NestMiddleware {
         reason: membership.suspensionReason,
         suspendedAt: membership.suspendedAt,
       });
+    }
+
+    /*
+     * Read-only — POOLSE-61, and deliberately *after* suspension.
+     *
+     * The precedence is the rule, not an accident of ordering: `suspended_at`
+     * beats `read_only_at` beats open. A club that is both is a club we have
+     * closed, and telling it "your trial ran out, pay here" would be the wrong
+     * sentence and the wrong call to action.
+     *
+     * **The refusal carries what the banner needs**, so the web app builds it
+     * from the error rather than making a second request to find out why the
+     * first one failed. `trialEndedAt` is when writing stopped and
+     * `dataKeptUntil` is the date in "os seus dados ficam guardados até" — the
+     * server's own, never thirty days of arithmetic done in a browser.
+     *
+     * A safe method passes. So do the three billing paths, which is what keeps
+     * paying possible; everything else is refused.
+     */
+    if (membership.readOnlyAt !== null) {
+      const method = req.method.toUpperCase();
+      if (!SAFE_METHODS.has(method) && !isBillingPath(req.path)) {
+        throw new ForbiddenException({
+          code: 'tenant_read_only',
+          message: 'This organization is read-only until its subscription is settled',
+          trialEndedAt: membership.readOnlyAt,
+          dataKeptUntil: membership.pendingDeleteAt,
+        });
+      }
     }
 
     const context: TenantContext = {
