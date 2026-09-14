@@ -80,10 +80,23 @@ export class TrialClockService {
   }
 
   /**
-   * One pass. Separated from `tick` so a test can run it twice, concurrently,
-   * and watch the second one do nothing.
+   * One pass, over every tenant or over one.
+   *
+   * `organizationId` narrows it, and the reason it exists is worth stating: the
+   * job is **global by design** — it sweeps the whole estate, which is right in
+   * production and hostile anywhere a database is shared. An integration suite
+   * runs its files concurrently against one database, so an unscoped pass reaches
+   * into another test's scratch tenant, expires it, and leaves it a transition
+   * that test never asked for. Scoping is what makes the clock's own tests
+   * deterministic rather than a race.
+   *
+   * It is not only a test seam. "Run the clock for this one tenant" is the shape
+   * an operator's *check this now* would take, and building the parameter into
+   * the query rather than around it means that button, when it arrives, is not a
+   * second implementation of the ladder.
    */
-  async run(): Promise<TrialClockResult> {
+  async run(organizationId?: string): Promise<TrialClockResult> {
+    const only = organizationId ?? null;
     const empty: TrialClockResult = { locked: false, expired: 0, closed: 0, notices: 0 };
 
     return withPlatform(async (tx) => {
@@ -100,9 +113,9 @@ export class TrialClockService {
       );
       if (lock[0]?.taken !== true) return empty;
 
-      const expired = await this.expireTrials(tx);
-      const closed = await this.closeAccess(tx);
-      const notices = await this.recordNotices(tx);
+      const expired = await this.expireTrials(tx, only);
+      const closed = await this.closeAccess(tx, only);
+      const notices = await this.recordNotices(tx, only);
 
       if (expired + closed + notices > 0) {
         this.log.log(
@@ -121,7 +134,7 @@ export class TrialClockService {
    * from the database's own clock and from `trial_read_only_period()`, so the
    * ladder's numbers live where `trial_period()` does rather than in this file.
    */
-  private async expireTrials(tx: Tx): Promise<number> {
+  private async expireTrials(tx: Tx, only: string | null): Promise<number> {
     const { rows } = await tx.query<{ id: string }>(
       `WITH moved AS (
          UPDATE organization
@@ -132,11 +145,13 @@ export class TrialClockService {
             AND trial_ends_at IS NOT NULL
             AND trial_ends_at < now()
             AND archived_at IS NULL
+            AND ($1::uuid IS NULL OR id = $1)
         RETURNING id, read_only_at, pending_delete_at
        )
        INSERT INTO trial_event (organization_id, transition, read_only_at, pending_delete_at)
        SELECT id, 'expired', read_only_at, pending_delete_at FROM moved
        RETURNING organization_id AS id`,
+      [only],
     );
     return rows.length;
   }
@@ -154,7 +169,7 @@ export class TrialClockService {
    * that should be on screen, and overwriting it would lose why the door was
    * really shut.
    */
-  private async closeAccess(tx: Tx): Promise<number> {
+  private async closeAccess(tx: Tx, only: string | null): Promise<number> {
     const { rows } = await tx.query<{ id: string }>(
       `WITH moved AS (
          UPDATE organization
@@ -165,13 +180,14 @@ export class TrialClockService {
             AND pending_delete_at < now()
             AND suspended_at IS NULL
             AND archived_at IS NULL
+            AND ($2::uuid IS NULL OR id = $2)
         RETURNING id, read_only_at, pending_delete_at
        )
        INSERT INTO trial_event
          (organization_id, transition, read_only_at, pending_delete_at, reason)
        SELECT id, 'access_closed', read_only_at, pending_delete_at, $1 FROM moved
        RETURNING organization_id AS id`,
-      [TrialClockService.CLOSED_REASON],
+      [TrialClockService.CLOSED_REASON, only],
     );
     return rows.length;
   }
@@ -197,54 +213,59 @@ export class TrialClockService {
    * hourly job write each notice once, and the day being in the key is what lets a
    * club whose trial was extended be owed the same notice again later.
    */
-  private async recordNotices(tx: Tx): Promise<number> {
+  private async recordNotices(tx: Tx, only: string | null): Promise<number> {
     const { rowCount } = await tx.query(
-      `WITH due AS (
+      `WITH scope AS (
+         SELECT o.* FROM organization o
+          WHERE o.archived_at IS NULL AND ($1::uuid IS NULL OR o.id = $1)
+       ),
+       due AS (
          -- Before the trial ends, counted from its end rather than from signup:
          -- an operator who extends a trial moves both of these with it.
          SELECT o.id, 'trial_ending_soon'::trial_notice_kind AS kind,
                 (o.trial_ends_at - interval '5 days')::date AS due_on
-           FROM organization o
-          WHERE o.subscription_status = 'trialing' AND o.archived_at IS NULL
+           FROM scope o
+          WHERE o.subscription_status = 'trialing'
             AND o.trial_ends_at IS NOT NULL
             AND now() >= o.trial_ends_at - interval '5 days'
             AND now() < o.trial_ends_at
           UNION ALL
          SELECT o.id, 'trial_last_day', (o.trial_ends_at - interval '1 day')::date
-           FROM organization o
-          WHERE o.subscription_status = 'trialing' AND o.archived_at IS NULL
+           FROM scope o
+          WHERE o.subscription_status = 'trialing'
             AND o.trial_ends_at IS NOT NULL
             AND now() >= o.trial_ends_at - interval '1 day'
             AND now() < o.trial_ends_at
           UNION ALL
          -- The day it actually ended, and the two that count down to the door.
          SELECT o.id, 'trial_ended', o.read_only_at::date
-           FROM organization o
-          WHERE o.subscription_status = 'expired' AND o.archived_at IS NULL
+           FROM scope o
+          WHERE o.subscription_status = 'expired'
             AND o.read_only_at IS NOT NULL
           UNION ALL
          SELECT o.id, 'access_closing_soon', (o.pending_delete_at - interval '7 days')::date
-           FROM organization o
-          WHERE o.subscription_status = 'expired' AND o.archived_at IS NULL
+           FROM scope o
+          WHERE o.subscription_status = 'expired'
             AND o.pending_delete_at IS NOT NULL
             AND now() >= o.pending_delete_at - interval '7 days'
             AND o.suspended_at IS NULL
           UNION ALL
          SELECT o.id, 'access_closed', o.suspended_at::date
-           FROM organization o
-          WHERE o.subscription_status = 'expired' AND o.archived_at IS NULL
+           FROM scope o
+          WHERE o.subscription_status = 'expired'
             AND o.suspended_at IS NOT NULL
           UNION ALL
          SELECT o.id, 'deletion_soon',
                 (o.suspended_at + trial_closed_period() - interval '7 days')::date
-           FROM organization o
-          WHERE o.subscription_status = 'expired' AND o.archived_at IS NULL
+           FROM scope o
+          WHERE o.subscription_status = 'expired'
             AND o.suspended_at IS NOT NULL
             AND now() >= o.suspended_at + trial_closed_period() - interval '7 days'
        )
        INSERT INTO trial_notice (organization_id, kind, due_on)
        SELECT due.id, due.kind, due.due_on FROM due
        ON CONFLICT (organization_id, kind, due_on) DO NOTHING`,
+      [only],
     );
     return rowCount ?? 0;
   }

@@ -7,9 +7,16 @@ import { TrialClockService } from './trial-clock.service.js';
 /**
  * The trial clock — POOLSE-61 slice B2, against a real database.
  *
- * The job is three UPDATEs and a set of notices, and every one of them is driven
- * by state rather than by a cursor. So the tests set a tenant's dates to where
- * the clock would have found them and run one pass.
+ * The job is two UPDATEs and a set of notices, and every one of them is driven by
+ * state rather than by a cursor. So the tests set a tenant's dates to where the
+ * clock would have found them and run one pass.
+ *
+ * **Every pass here is scoped to its own scratch tenant**, and that is not
+ * tidiness. The job is global by design — it sweeps the whole estate — and this
+ * suite runs its files concurrently against one database, so an unscoped pass
+ * reaches into another test's tenant, expires it, and leaves it a transition that
+ * test never asked for. Which is exactly how this was found: the whole suite went
+ * red on a teardown foreign key while every file passed on its own.
  *
  * Four claims carry the rest:
  *
@@ -84,7 +91,7 @@ test('61.1 — a trial that ran out becomes read-only, with a date thirty days o
       pending_delete_at: null,
     });
 
-    await clock.run();
+    await clock.run(tenant.organizationId);
 
     const org = await read(tenant);
     assert.equal(org['subscription_status'], 'expired');
@@ -105,9 +112,9 @@ test('61.2 — a second pass in the same hour changes nothing', async () => {
       trial_ends_at: new Date(Date.now() - 3_600_000).toISOString(),
     });
 
-    const first = await clock.run();
+    const first = await clock.run(tenant.organizationId);
     const after = await read(tenant);
-    const second = await clock.run();
+    const second = await clock.run(tenant.organizationId);
 
     assert.equal(first.expired, 1);
     assert.equal(second.expired, 0, 'a tenant already expired does not match');
@@ -142,7 +149,7 @@ test('61.2 — a second instance is a no-op, not a double transition', async () 
       );
       assert.equal(rows[0]?.taken, true, 'the fixture must actually hold the lock');
 
-      const result = await clock.run();
+      const result = await clock.run(tenant.organizationId);
       assert.equal(result.locked, false, 'the pass declined rather than duplicating work');
       assert.equal(result.expired, 0);
       assert.equal((await read(tenant))['subscription_status'], 'trialing');
@@ -153,7 +160,7 @@ test('61.2 — a second instance is a no-op, not a double transition', async () 
     }
 
     // Released: the next hour does the work the blocked one did not.
-    assert.equal((await clock.run()).expired, 1);
+    assert.equal((await clock.run(tenant.organizationId)).expired, 1);
   });
 });
 
@@ -165,7 +172,7 @@ test('61.15 — a comped tenant is never moved, whatever its dates say', async (
       trial_ends_at: new Date(Date.now() - 365 * 86_400_000).toISOString(),
     });
 
-    await clock.run();
+    await clock.run(tenant.organizationId);
 
     const org = await read(tenant);
     assert.equal(org['subscription_status'], 'comped');
@@ -184,7 +191,7 @@ test('61.8 — sign-in closes with the machine’s reason, and no Clerk account 
       suspension_reason: null,
     });
 
-    await clock.run();
+    await clock.run(tenant.organizationId);
 
     const org = await read(tenant);
     assert.ok(org['suspended_at'], 'the door is shut through the mechanism that exists');
@@ -218,7 +225,7 @@ test('61 — a tenant a person suspended keeps that person’s reason', async ()
       suspension_reason: 'Fatura de setembro por regularizar.',
     });
 
-    await clock.run();
+    await clock.run(tenant.organizationId);
 
     // Their sentence is the one that should be on screen; overwriting it would
     // lose why the door was really shut.
@@ -241,7 +248,7 @@ test('61.13 — the clock stops at the closed door and cannot remove a tenant', 
       suspension_reason: TrialClockService.CLOSED_REASON,
     });
 
-    await clock.run();
+    await clock.run(tenant.organizationId);
 
     /*
      * Nothing removed. `archived_at` is not on the platform login's column grant,
@@ -274,7 +281,7 @@ test('61.9 — the cron writes its own book and never the operators’ one', asy
       trial_ends_at: new Date(Date.now() - 3_600_000).toISOString(),
     });
 
-    await clock.run();
+    await clock.run(tenant.organizationId);
 
     assert.deepEqual(await events(tenant), ['expired']);
 
@@ -299,7 +306,7 @@ test('61.10 — a notice is recorded, owed to the owner, and marked undelivered'
       trial_ends_at: new Date(Date.now() + 2 * 86_400_000).toISOString(),
     });
 
-    await clock.run();
+    await clock.run(tenant.organizationId);
 
     const { rows } = await owner.query<{
       kind: string;
@@ -332,7 +339,7 @@ test('61.10 — a notice is recorded, owed to the owner, and marked undelivered'
     assert.deepEqual(rows[0]?.recipients, []);
 
     // Hourly, and owed once: the (tenant, kind, day) key is what makes that true.
-    await clock.run();
+    await clock.run(tenant.organizationId);
     const { rows: again } = await owner.query<{ n: string }>(
       `SELECT count(*)::text AS n FROM trial_notice WHERE organization_id = $1`,
       [tenant.organizationId],
