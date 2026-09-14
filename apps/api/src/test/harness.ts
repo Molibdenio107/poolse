@@ -87,6 +87,15 @@ const TENANT_TABLES = [
    */
   'stripe_event',
   /*
+   * The trial clock's own two books — POOLSE-61 slice B2, and here for exactly
+   * the reason the two above are. Neither belongs to a tenant, neither carries an
+   * RLS policy for poolse_app, and both are real foreign keys to `organization`
+   * that nothing cascades — so a scratch tenant the clock touched, or one that
+   * was merely owed a notice, would fail teardown on the key.
+   */
+  'trial_event',
+  'trial_notice',
+  /*
    * Telemetry about a tenant rather than a tenant's data — slice 2 — but it does
    * carry `organization_id` as a real foreign key, and the interceptor is
    * registered globally, so any integration test that lets a minute pass leaves

@@ -1108,4 +1108,59 @@ BEGIN
   RAISE NOTICE 'PASS test 17: the precedence view is security_invoker and stays inside its tenant';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 18 — the trial clock's books are invisible to a tenant
+-- ---------------------------------------------------------------------------
+--
+-- `trial_event` and `trial_notice` are about a tenant rather than a tenant's, like
+-- `platform_audit_log` and `stripe_event`. A club must not be able to read when
+-- its own trial was expired, who was owed a notice, or anybody else's — and must
+-- not be able to write itself a friendlier history. Two independent reasons say
+-- so: no grant, and no policy naming poolse_app. This asserts the pair, because
+-- `ALTER DEFAULT PRIVILEGES` hands poolse_app all four verbs on every new table
+-- and a migration that forgets the REVOKE looks exactly like one that does not.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_seen int;
+  ok boolean;
+BEGIN
+  RESET ROLE;
+  INSERT INTO trial_event (organization_id, transition) VALUES (v_a, 'expired');
+  INSERT INTO trial_notice (organization_id, kind, due_on)
+  VALUES (v_a, 'trial_ended', current_date);
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_a::text, true);
+
+  ok := false;
+  BEGIN
+    SELECT count(*) INTO v_seen FROM trial_event;
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'FAIL test 18a: a tenant read trial_event (% rows)', v_seen;
+  END IF;
+
+  ok := false;
+  BEGIN
+    SELECT count(*) INTO v_seen FROM trial_notice;
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'FAIL test 18b: a tenant read trial_notice (% rows)', v_seen;
+  END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO trial_event (organization_id, transition) VALUES (v_a, 'expired');
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 18c: a tenant wrote its own trial history'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 18: the trial clock''s books are the platform''s alone';
+END $$;
+
 ROLLBACK;

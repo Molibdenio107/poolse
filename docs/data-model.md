@@ -2409,6 +2409,45 @@ stopped resolving would be indistinguishable from somebody who belongs to no org
 `trial_period()` replaces a `14 days` literal that had been copied into four provisioning
 functions. Existing trials are untouched: it changes what a new signup gets.
 
+### The trial clock's two books — POOLSE-61 slice B2, 14 September 2026
+
+```
+trial_event   id, organization_id, transition, occurred_at,
+              read_only_at, pending_delete_at, reason
+trial_notice  id, organization_id, kind, due_on, recipients,
+              delivered_at, created_at, updated_at
+trial_read_only_period() / trial_closed_period()  -- 30 days each
+```
+
+**Platform-scoped, like `stripe_event`**: a row is *about* a tenant rather than belonging to
+one, it is invisible and unwritable from the tenant connection — no grant *and* no policy
+naming `poolse_app`, two independent reasons — and `trial_event` is insert-only.
+`trial_notice` alone carries UPDATE on the platform grant, because a notice is stamped
+`delivered_at` when it is eventually sent and a transition is never touched again. Both are
+in `TENANT_TABLES` for teardown, for the reason `platform_audit_log` is.
+
+**A machine is not a person.** `platform_audit_log.clerk_user_id` is `NOT NULL` and names a
+Clerk user; a cron has nobody behind it, so its transitions go here instead. It is also what
+makes a machine-set suspension distinguishable from an operator's six weeks later — on the
+`organization` row the two are identical, which is why `reason` is recorded here too.
+
+**No unique on (organization_id, transition).** Idempotence comes from the state the job
+reads, not from a constraint: a tenant already `expired` does not match the query that
+expires one. A unique would instead refuse the *legitimate* second event — an operator
+extends a trial and it runs out again — and turn a correct transition into a failed job.
+`trial_notice`'s key is (tenant, kind, **due_on**) for the same reason: the day is in it so
+an extended trial can be owed the same notice again later.
+
+**`trial_transition` has no `archived` value**, and the clock cannot archive. `archived_at`
+is absent from the platform login's column grant because removing a tenant is not an
+operator action; an enum value nothing may ever write would be a promise the schema cannot
+keep. The purge ticket adds one if it decides to.
+
+**`recipients` is empty on every row the clock writes.** An owner's address is in
+`app_user.cached_email` and the platform login holds no privilege on `app_user` — narrow on
+purpose, so a mistake leaks seven tables rather than every user in every club. The slice
+that wires an email provider resolves recipients at send time.
+
 ### Invoicing — phase 2.2, 8 September 2026
 
 ```

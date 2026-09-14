@@ -154,7 +154,19 @@ is the trial's one definition (15 days), replacing a literal copied into four pr
 functions; existing trials are untouched. **Nothing is ever copied or migrated** — a trial
 tenant is an ordinary `organization` row, so converting is a status change and restoring one
 is a status change back. The clock that sets all this is B2 and is **not built**; an operator
-sets it from `/admin` today. `docs/features/trial.md`.
+sets it from `/admin` too. **The clock is B2 and is built**: an hourly Nest cron under
+`pg_try_advisory_xact_lock`, so a second Railway instance is a no-op rather than a double
+transition — idempotence is separate and comes from the state each step reads, not from a
+constraint. **It stops at "sign-in closed" and cannot archive**, which corrects the ticket:
+`archived_at` is not on the platform login's column grant because removing a tenant is not an
+operator action, and a cron has a weaker claim than a person; day 75 is the purge ticket's,
+and the *privilege* is asserted so a later widening does not hand the job the ability.
+Transitions go to **`trial_event`**, never `platform_audit_log` — that table's actor is
+`clerk_user_id NOT NULL` and a machine is not a person — which is also what makes a
+machine-set suspension distinguishable from an operator's. **Notices are recorded with no
+recipients**: an owner's address is in `app_user`, which `poolse_platform` deliberately cannot
+read, and granting an eighth table so a job that sends nothing could write one down would
+widen the narrowest login in the system for no delivery. `docs/features/trial.md`.
 
 **Platform administration is not a tenant role, and it has its own database login.** `member_role`
 says what somebody may do inside one club; `platform_admin` — keyed on the Clerk user id, no
