@@ -1914,11 +1914,17 @@ export interface ClassOptions {
   /**
    * The club's fee categories — POOLSE-23 AC4.
    *
-   * **Names only, deliberately.** This list exists to fill the turma form's
-   * picker, and the form is reachable by an instructor; what a category is worth
-   * is owner and admin, answered by `/fee-categories` with `canSeeValues` beside
-   * it. The turma's category is the default for everybody in it, and an
-   * enrolment may override it.
+   * **Names only, deliberately.** This payload is the turmas list, which any
+   * member may read — an instructor needs to know what is in their lane on
+   * Tuesday — so putting a concession's value in it would hand an instructor the
+   * amounts the price list refuses them. What a category is worth comes from
+   * `/fee-categories`, with `canSeeValues` beside it.
+   *
+   * Writing a turma's category is owner and admin like every other field on it,
+   * so nobody can move a club's pricing from here; and the figure is shown where
+   * it is decided, on the fee form, rather than in a picker that is choosing a
+   * label for forty people at once. The turma's category is the default for
+   * everybody in it, and an enrolment may override it.
    */
   feeCategories: { id: string; name: string }[];
 }
