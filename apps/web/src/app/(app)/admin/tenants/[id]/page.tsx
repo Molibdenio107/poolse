@@ -5,6 +5,7 @@ import {
   apiFetch,
   type ManualPayment,
   type Paginated,
+  type TenantClaim,
   type PlatformTenant,
   type TenantRequests,
 } from '@/lib/api';
@@ -43,6 +44,7 @@ export default async function TenantRequestsPage({
   let requests: TenantRequests | null = null;
   let tenant: PlatformTenant | null = null;
   let payments: Paginated<ManualPayment> | null = null;
+  let claim: TenantClaim | null = null;
   let failure: LoadFailure | null = null;
 
   try {
@@ -52,10 +54,11 @@ export default async function TenantRequestsPage({
      * Both are audited, which is two lines in the trail for one page view — the
      * honest price of the screen showing two different things.
      */
-    [tenant, requests, payments] = await Promise.all([
+    [tenant, requests, payments, claim] = await Promise.all([
       apiFetch<PlatformTenant>(`/platform/tenants/${id}`),
       apiFetch<TenantRequests>(`/platform/tenants/${id}/requests`),
       apiFetch<Paginated<ManualPayment>>(`/platform/tenants/${id}/payments`),
+      apiFetch<TenantClaim | null>(`/platform/tenants/${id}/claim`),
     ]);
   } catch (error) {
     if (error instanceof ApiError && error.code === 'not_platform_admin') {
@@ -163,6 +166,61 @@ export default async function TenantRequestsPage({
         come to *do* something — the chip on the list told them which tenant —
         and the week's history is the evidence underneath rather than the point.
       */}
+      {/*
+        The trial this club claimed, above the actions that can free it —
+        POOLSE-62. An operator pressing *conceder novo período* should be able to
+        see what they are freeing; a one-click override on an invisible record is
+        a click nobody can check.
+      */}
+      {tenant !== null && (
+        <section className="flex flex-col gap-2 rounded border border-border bg-surface p-4">
+          <div>
+            <h2 className="text-sm font-medium">{t('admin.claim')}</h2>
+            <p className="text-sm text-foreground-muted">{t('admin.claimHint')}</p>
+          </div>
+
+          {claim === null ? (
+            <p className="text-sm text-foreground-muted">{t('admin.claimNone')}</p>
+          ) : (
+            <>
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col">
+                  <dt className="text-sm text-foreground-muted">{t('admin.claimAddress')}</dt>
+                  {/* The normalised address, which is what the ledger is keyed
+                      on — never the raw one the person typed. */}
+                  <dd className="break-all font-mono text-sm">{claim.normalizedEmail}</dd>
+                </div>
+                <div className="flex flex-col">
+                  <dt className="text-sm text-foreground-muted">{t('admin.claimedAt')}</dt>
+                  <dd className="text-sm">{formatDate(claim.claimedAt)}</dd>
+                </div>
+              </dl>
+
+              {claim.releasedAt !== null && (
+                <p className="text-sm">
+                  {t('admin.claimReleased', {
+                    date: formatDate(claim.releasedAt),
+                    who: claim.releasedByClerkUserId ?? '—',
+                  })}
+                </p>
+              )}
+
+              {/* Counts and a sentence saying they are not evidence. A flag that
+                  looks like a verdict is a flag that gets acted on as one. */}
+              <ul className="flex flex-col gap-1 text-sm text-foreground-muted">
+                <li>{t('admin.flagDomain', { count: claim.sameDomainCount })}</li>
+                <li>
+                  {claim.sameIpCount === null
+                    ? t('admin.flagIpUnknown')
+                    : t('admin.flagIp', { count: claim.sameIpCount })}
+                </li>
+              </ul>
+              <p className="text-sm text-foreground-muted">{t('admin.flagsHint')}</p>
+            </>
+          )}
+        </section>
+      )}
+
       {tenant !== null && <TenantActions tenant={tenant} />}
 
       {/*

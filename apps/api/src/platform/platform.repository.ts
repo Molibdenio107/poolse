@@ -731,18 +731,64 @@ function normalise(value: unknown): unknown {
 }
 
 /**
- * Move a tenant's trial end date.
+ * Move a tenant's trial end date, and optionally free the address behind it.
  *
  * A date in the past is allowed and is how a trial is ended early — an operator
  * who wants that should not have to find another screen for it. What is refused
  * is a date far enough out to be a typo; `2027` typed for `2026` is the mistake
  * this catches, and it is silent otherwise.
+ *
+ * **`releaseClaim` is *conceder novo período* — POOLSE-62.** One trial per
+ * address is a hard block with no appeal inside the product, so the override has
+ * to cost one click rather than a support thread: a club that genuinely left and
+ * came back is refused by exactly the same index as somebody on their fourth
+ * free fortnight, and only a person can tell those apart.
+ *
+ * **It extends the action that already exists rather than adding a second.**
+ * Granting a fresh trial is a new end date *and* a freed address; two buttons
+ * would mean an operator doing half of it and a club being let back in with a
+ * trial that ran out in March.
+ *
+ * The release is a row, not a DELETE: "this person was given a second trial, by
+ * whom, when" is exactly what somebody asks six months later. Both unique indexes
+ * are partial on `released_at`, so releasing genuinely frees the address.
  */
 export async function extendTrial(
   organizationId: string,
   endsAt: string,
+  releaseClaim = false,
 ): Promise<TenantChangeResult | null> {
-  return changeTenant(organizationId, 'tenant.trial.set', { trial_ends_at: endsAt });
+  if (!releaseClaim) {
+    return changeTenant(organizationId, 'tenant.trial.set', { trial_ends_at: endsAt });
+  }
+
+  return changeTenant(organizationId, 'tenant.trial.set', async (_before, tx) => {
+    const clerkUserId = currentAuth().clerkUserId;
+
+    /*
+     * Every live claim this tenant made, which in practice is one. Written in
+     * the same transaction as the date, so an operator never ends up with a
+     * freed address and an unmoved trial — or the reverse, which is worse: the
+     * club could sign up again and be refused by the date they were promised.
+     */
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE trial_claim
+          SET released_at = now(),
+              released_by_clerk_user_id = $2
+        WHERE organization_id = $1
+          AND released_at IS NULL
+        RETURNING id`,
+      [organizationId, clerkUserId],
+    );
+
+    return {
+      change: { trial_ends_at: endsAt },
+      // Zero is a real answer worth recording: a tenant created before the
+      // ledger existed has no claim to free, and the operator should be able to
+      // see that is why nothing happened.
+      detail: { claimsReleased: rows.length },
+    };
+  });
 }
 
 /**
@@ -1149,6 +1195,100 @@ export async function readBillingOverview(): Promise<BillingOverview> {
         readOnlyAt: row.read_only_at?.toISOString() ?? null,
       })),
       renewalsWindowDays: RENEWALS_WINDOW_DAYS,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// One person, one trial — POOLSE-62
+// ---------------------------------------------------------------------------
+
+export interface TenantClaim {
+  /** The address as the ledger keyed it: lowercased, +tags and gmail dots gone. */
+  normalizedEmail: string;
+  emailDomain: string;
+  claimedAt: string;
+  releasedAt: string | null;
+  releasedByClerkUserId: string | null;
+  /**
+   * **Soft flags, and they block nothing** — POOLSE-62.
+   *
+   * How many *other* live claims share this signup's domain, and its address
+   * hash. Clubs share offices and NAT is real, and a municipality has many
+   * pools: a hard block on either would catch real customers, so these are
+   * numbers on a screen for a person to weigh.
+   *
+   * Null for the address where no salt is configured, which is a different fact
+   * from zero: nothing was recorded rather than nothing matched.
+   */
+  sameDomainCount: number;
+  sameIpCount: number | null;
+}
+
+/**
+ * The claim this tenant made when it signed up, and what it shares with others.
+ *
+ * Null for a tenant provisioned before the ledger existed, which is a real state
+ * and says so on screen rather than looking like a failed read.
+ *
+ * **It never returns the raw address.** The ledger holds the normalised one, and
+ * the IP is a salted digest that this endpoint reports only as a count — an
+ * operator needs to know *that* two signups came from one address, never what it
+ * was.
+ */
+export async function readTenantClaim(organizationId: string): Promise<TenantClaim | null> {
+  return withPlatform(async (tx) => {
+    const { rows } = await tx.query<{
+      normalized_email: string;
+      email_domain: string;
+      created_at: Date;
+      released_at: Date | null;
+      released_by_clerk_user_id: string | null;
+      signup_ip_hash: string | null;
+      same_domain: string;
+      same_ip: string | null;
+    }>(
+      `SELECT c.normalized_email,
+              c.email_domain,
+              c.created_at,
+              c.released_at,
+              c.released_by_clerk_user_id,
+              c.signup_ip_hash,
+              (
+                SELECT count(*) FROM trial_claim other
+                 WHERE other.email_domain = c.email_domain
+                   AND other.organization_id <> c.organization_id
+                   AND other.released_at IS NULL
+              ) AS same_domain,
+              CASE WHEN c.signup_ip_hash IS NULL THEN NULL ELSE (
+                SELECT count(*) FROM trial_claim other
+                 WHERE other.signup_ip_hash = c.signup_ip_hash
+                   AND other.organization_id <> c.organization_id
+                   AND other.released_at IS NULL
+              ) END AS same_ip
+         FROM trial_claim c
+        WHERE c.organization_id = $1
+        /*
+         * The live one if there is one, else the most recent release — an
+         * operator looking at a club that was granted a fresh trial should see
+         * that it was, rather than an empty panel.
+         */
+        ORDER BY c.released_at NULLS FIRST, c.created_at DESC
+        LIMIT 1`,
+      [organizationId],
+    );
+
+    const row = rows[0];
+    if (row === undefined) return null;
+
+    return {
+      normalizedEmail: row.normalized_email,
+      emailDomain: row.email_domain,
+      claimedAt: row.created_at.toISOString(),
+      releasedAt: row.released_at?.toISOString() ?? null,
+      releasedByClerkUserId: row.released_by_clerk_user_id,
+      sameDomainCount: Number(row.same_domain),
+      sameIpCount: row.same_ip === null ? null : Number(row.same_ip),
     };
   });
 }

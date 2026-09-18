@@ -44,6 +44,9 @@ export async function setTrialAction(
      */
     await apiPost(`/platform/tenants/${tenantId}/trial`, {
       endsAt: `${endsAt}T23:59:59.000Z`,
+      // Conceder novo período — POOLSE-62. Absent means a plain date change;
+      // the API frees the address only when this says so.
+      releaseClaim: formData.get('releaseClaim') === 'true',
     });
   } catch (error) {
     return describeFailure(error, 'admin.error.trialFailed');

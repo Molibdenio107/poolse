@@ -1,4 +1,14 @@
-import { BadRequestException, Body, Controller, Get, Patch, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import { currentAuth } from '../auth/auth.context.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
@@ -8,8 +18,10 @@ import {
   provisionOrganization,
   reposicaoSettings,
   saveReposicaoSettings,
+  TrialAlreadyClaimedError,
   type ReposicaoSettings,
 } from './organizations.repository.js';
+import { clientIpFrom, hashSignupIp, isDisposableEmail } from './signup-claim.js';
 
 interface CreateOrganizationBody {
   name?: unknown;
@@ -43,7 +55,10 @@ const MAX_NAME_LENGTH = 120;
 @Controller('organizations')
 export class OrganizationsController {
   @Post()
-  async create(@Body() body: CreateOrganizationBody): Promise<CreateOrganizationResponse> {
+  async create(
+    @Body() body: CreateOrganizationBody,
+    @Req() req: Request,
+  ): Promise<CreateOrganizationResponse> {
     const { clerkUserId } = currentAuth();
 
     const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -76,9 +91,45 @@ export class OrganizationsController {
     const user = await ensureAppUser(clerkUserId);
     const locale = typeof body.locale === 'string' && body.locale ? body.locale : user.locale;
 
-    // Blank is allowed and means "same as the organization". An operator with one
-    // site should not have to type its name twice, and the function decides.
-    return provisionOrganization(clerkUserId, name, locale, facilityName || null, kind);
+    /*
+     * One person, one trial — POOLSE-62.
+     *
+     * The disposable-domain list is checked here and the *address* is not: that
+     * one is a unique index inside the provisioning transaction, because a
+     * question asked before the write is a question whose answer can change
+     * between the asking and the writing. Both refusals come back as the same
+     * code with the same sentence, so nothing on this path says which signal
+     * fired.
+     */
+    if (isDisposableEmail(user.email)) {
+      throw new ForbiddenException({
+        code: 'trial_not_available',
+        message: 'A trial cannot be started with this address',
+      });
+    }
+
+    const signupIpHash = hashSignupIp(clientIpFrom(req.headers['x-poolse-client-ip']));
+
+    try {
+      // Blank is allowed and means "same as the organization". An operator with one
+      // site should not have to type its name twice, and the function decides.
+      return await provisionOrganization(
+        clerkUserId,
+        name,
+        locale,
+        facilityName || null,
+        kind,
+        signupIpHash,
+      );
+    } catch (error) {
+      if (error instanceof TrialAlreadyClaimedError) {
+        throw new ForbiddenException({
+          code: 'trial_not_available',
+          message: 'A trial cannot be started with this address',
+        });
+      }
+      throw error;
+    }
   }
 }
 

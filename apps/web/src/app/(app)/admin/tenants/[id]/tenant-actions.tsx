@@ -150,6 +150,34 @@ function TrialCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
         error={state.fields?.['endsAt']}
         hint={t('admin.action.trialPastHint')}
       />
+
+      {/*
+        Conceder novo período — POOLSE-62, and the reason the hard block is
+        allowed to be hard. One trial per address has no appeal inside the
+        product, so a club that genuinely left and came back must cost one
+        click rather than a support thread.
+
+        On the date's own form rather than a second button: granting a fresh
+        trial *is* a new date plus a freed address, and two controls would let
+        somebody do half of it and let a club back in on a trial that ran out
+        in March. Unchecked by default — freeing an address is never what
+        "correct this date" means.
+      */}
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          name="releaseClaim"
+          value="true"
+          className="mt-1 size-4 shrink-0 accent-primary"
+        />
+        <span className="flex flex-col gap-1">
+          <span className="text-sm font-medium">{t('admin.action.releaseClaim')}</span>
+          <span className="text-sm text-foreground-muted">
+            {t('admin.action.releaseClaimHint')}
+          </span>
+        </span>
+      </label>
+
       <Submit label={t('common.save')} pending={pending} />
     </Card>
   );

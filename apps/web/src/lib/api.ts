@@ -82,6 +82,19 @@ interface RequestOptions {
   organizationId?: string;
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
+  /**
+   * The visitor's own address, forwarded to the API — POOLSE-62.
+   *
+   * Set by exactly one caller, the signup action, and read by exactly one
+   * endpoint, which hashes it and stores the digest as a soft flag. Without it
+   * the API would see this Next server on every signup, which is the same
+   * address for everybody and therefore no signal at all.
+   *
+   * It is not `x-forwarded-for`: that header is the proxy chain's and rewriting
+   * it would put our own hop in somebody else's audit. A name of our own says
+   * what it is.
+   */
+  clientIp?: string;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -98,6 +111,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   // treats this as a request, not a grant: it re-checks the membership.
   if (options.organizationId) {
     headers['x-poolse-organization'] = options.organizationId;
+  }
+
+  if (options.clientIp) {
+    headers['x-poolse-client-ip'] = options.clientIp;
   }
 
   if (options.body !== undefined) {
@@ -131,7 +148,7 @@ export async function apiFetch<T>(
 export async function apiPost<T>(
   path: string,
   body: unknown,
-  options: { organizationId?: string } = {},
+  options: { organizationId?: string; clientIp?: string } = {},
 ): Promise<T> {
   return request<T>(path, { ...options, method: 'POST', body });
 }
@@ -3030,6 +3047,25 @@ export interface ManualPayment {
   note: string | null;
   recordedByClerkUserId: string;
   createdAt: string;
+}
+
+/**
+ * The trial a club claimed when it signed up — POOLSE-62.
+ *
+ * The *normalised* address, never the raw one, and the IP only ever as a count:
+ * an operator needs to know that two signups came from one address, never what
+ * it was.
+ */
+export interface TenantClaim {
+  normalizedEmail: string;
+  emailDomain: string;
+  claimedAt: string;
+  releasedAt: string | null;
+  releasedByClerkUserId: string | null;
+  /** Soft flags. They block nothing — clubs share offices and NAT is real. */
+  sameDomainCount: number;
+  /** Null where no salt is configured: nothing recorded, not nothing matched. */
+  sameIpCount: number | null;
 }
 
 /** A manual subscription running out inside the window. Negative days are late. */

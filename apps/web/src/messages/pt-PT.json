@@ -116,7 +116,8 @@
     "kindPersonalHint": "Registar e acompanhar a água da sua piscina, com avisos quando algo sai do intervalo. Sem turmas nem faturação.",
     "nameLabelPersonal": "Nome da piscina",
     "namePlaceholderPersonal": "Ex.: Piscina de casa",
-    "personalHint": "Criamos já a piscina com este nome, pronta para a primeira análise. Pode mudar o nome e as dimensões depois."
+    "personalHint": "Criamos já a piscina com este nome, pronta para a primeira análise. Pode mudar o nome e as dimensões depois.",
+    "trialNotAvailable": "Não é possível iniciar um período experimental com este endereço. Se já tem conta, inicie sessão; se acha que é engano, fale connosco."
   },
   "profile": {
     "title": "O meu perfil",
@@ -3278,7 +3279,9 @@
       "coversTo": "Cobre até",
       "coversToHint": "O último dia pago. É esta data que passa a valer.",
       "paymentNote": "Nota",
-      "recordPayment": "Registar"
+      "recordPayment": "Registar",
+      "releaseClaim": "Conceder novo período experimental",
+      "releaseClaimHint": "Liberta o endereço de e-mail usado neste registo, para que a mesma pessoa possa voltar a criar uma organização. Fica registado quem o fez."
     },
     "billingMode": {
       "stripe": "Cartão (Stripe)",
@@ -3314,7 +3317,17 @@
     },
     "payments": "Pagamentos recebidos",
     "paymentsHint": "Fora do Stripe. Um pagamento não se edita nem se apaga — uma correção é outro registo.",
-    "noPayments": "Ainda não há nenhum pagamento registado."
+    "noPayments": "Ainda não há nenhum pagamento registado.",
+    "claim": "Período experimental",
+    "claimHint": "O endereço com que esta organização se registou, tal como o livro o guardou. O bloqueio é um por endereço.",
+    "claimAddress": "Endereço (normalizado)",
+    "claimedAt": "Registado a",
+    "claimReleased": "Libertado a {date} por {who}.",
+    "claimNone": "Esta organização é anterior ao livro de períodos experimentais — não tem registo.",
+    "flagDomain": "{count, plural, =0 {Nenhuma outra organização com este domínio} one {Mais # organização com este domínio} other {Mais # organizações com este domínio}}",
+    "flagIp": "{count, plural, =0 {Nenhuma outra organização com a mesma origem} one {Mais # organização com a mesma origem} other {Mais # organizações com a mesma origem}}",
+    "flagIpUnknown": "Origem não registada — não está configurado o sal.",
+    "flagsHint": "Sinais, não provas: clubes partilham escritórios e uma câmara tem várias piscinas. Não bloqueiam nada."
   },
   "suspended": {
     "title": "Conta suspensa",

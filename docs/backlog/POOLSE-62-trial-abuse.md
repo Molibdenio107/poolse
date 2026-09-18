@@ -83,6 +83,29 @@ cost is a support message from an honest person; the alternative is no protectio
 That makes the one-click override load-bearing rather than a convenience, and it is why the
 refusal message points at contacting us: the person reading it may be a real customer.
 
+### Where this was split — 18 September 2026
+
+Two evenings, as the estimate said. **The first is built**: `trial_claim`, the unique index that
+refuses a repeated address, the claim written inside `provision_organization`, the
+disposable-domain data file, the hashed origin, the soft flags, *conceder novo período* on the
+trial-date action, and the claim panel on the tenant page. QA 1, 2, 3, 5, 6, 7, 8 (the claim and
+the flags), 9 and 11 are covered by tests.
+
+**The second is not**, and it is one thing plus two small ones:
+
+- **The NIPC half** — QA 4, AC 2's second clause and AC 10. It needs
+  `organization.vat_number` to gain a form in the club's own settings first: the column has
+  existed since the first migration and nothing has ever read or written it. `tax_number` and
+  its partial unique index are already on `trial_claim`, so that slice is a write rather than a
+  migration. **The open question it must settle first:** the claim lives on the platform
+  connection and `vat_number` on the tenant one, so "check it, then save it" spans two
+  connections and is not atomic. Either the check becomes a unique index on `organization`
+  itself — no cross-tenant read needed, and the refusal is a `23505` like the address one — or
+  the settings endpoint claims first and releases if the save fails. The first is smaller and
+  is the recommendation.
+- **`/admin` filters** for `trialing`, `expired` and pending-delete — AC 8's first clause.
+- **Trials started against trials converted** — AC 8's last clause.
+
 ### QA — test scenarios
 
 1. **Given** an email that has claimed a trial, **when** somebody signs up with the same

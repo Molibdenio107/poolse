@@ -3125,3 +3125,48 @@ made for, and a stray event must never take a hand-managed club back over.
 `billing_mode` and `paid_through` join the `poolse_platform` UPDATE grant, bringing it to
 seventeen named columns. `manual-subscription.sql` asserts what that did *not* widen: the
 club's name is still unwritable and `DELETE` is still refused.
+
+### The trial ledger — POOLSE-62, 18 September 2026
+
+```
+normalize_signup_email(text) RETURNS text   -- IMMUTABLE, the one definition
+
+trial_claim  id, organization_id,
+             normalized_email, email_domain,
+             tax_number,            -- null until the NIPC half
+             signup_ip_hash,        -- salted digest, never an address
+             released_at, released_by_clerk_user_id,
+             created_at
+
+UNIQUE (normalized_email) WHERE released_at IS NULL
+UNIQUE (tax_number)       WHERE tax_number IS NOT NULL AND released_at IS NULL
+```
+
+**Platform-scoped**, like `stripe_event`, `trial_event`, `trial_notice` and `manual_payment`: a
+row is *about* a tenant rather than belonging to one, and the entire point is a cross-tenant
+lookup a tenant connection cannot do — and must not be able to do, since the table is a list of
+the e-mail address of everybody who has ever signed up. No grant and no policy naming
+`poolse_app`, two independent reasons, asserted in `tenant-isolation.sql` test 20.
+
+**The unique index is the enforcement.** `provision_organization` writes the claim last, inside
+the transaction that makes the tenant, so a refused signup leaves nothing behind and two racing
+signups end with one club. Nothing asks first: the API could not, and a question asked before a
+write is a question whose answer can change before the write lands.
+
+**UPDATE is on the platform grant** — unlike `trial_event`'s — because of the release. A release
+is a row rather than a DELETE, for the reason every book here is insert-only plus one: "this
+person was given a second trial, by whom, when" is exactly what somebody asks six months later.
+Both unique indexes are partial on `released_at`, which is what makes the override work at all.
+
+**A claim outlives its organization, archiving included.** Releasing it on archive would be the
+abuse path with extra steps, and the trial clock archives on day 75.
+
+**`signup_ip_hash` is a salted digest and the raw address is never stored** — an IP is personal
+data and this row is kept for ever. No salt configured means no hash at all rather than an
+unsalted one, which would be the address with extra steps.
+
+**The five-argument `provision_organization` is dropped before the six-argument one is created.**
+`CREATE OR REPLACE` matches on the argument list, so adding a parameter *overloads* rather than
+replaces — and the next caller passing four untyped arguments then fails with `function ... is
+not unique`, at runtime, from SQL, nowhere near the migration. The isolation suite caught it
+within a minute; a schema change that only breaks callers is exactly what that suite is for.

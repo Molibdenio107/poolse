@@ -19,6 +19,7 @@ import {
   listManualPayments,
   listTenants,
   readBillingOverview,
+  readTenantClaim,
   recordManualPayment,
   setBillingMode,
   setReadOnly,
@@ -29,6 +30,7 @@ import {
   setSuspension,
   type BillingOverview,
   type ManualPaymentRow,
+  type TenantClaim,
   type TenantChangeResult,
   type TenantRequests,
   type TenantRow,
@@ -129,6 +131,19 @@ export class PlatformController {
   }
 
   /**
+   * The trial this club claimed, and what it shares with others — POOLSE-62.
+   *
+   * A read, audited like every other. **Null is a real answer**: a tenant
+   * provisioned before the ledger existed has no claim, and the screen says so
+   * rather than looking like a read that failed.
+   */
+  @Get('tenants/:id/claim')
+  @PlatformAction('tenant.claim.read')
+  async claim(@Param('id') id: string): Promise<TenantClaim | null> {
+    return readTenantClaim(id);
+  }
+
+  /**
    * What this club has paid outside Stripe — POOLSE-63.
    *
    * A read, so it is audited by the interceptor like every other. An empty list
@@ -161,12 +176,20 @@ export class PlatformController {
    * no `@PlatformAction` on any of the four.
    */
 
+  /**
+   * Move a trial's end date — and, with `releaseClaim`, grant a fresh one.
+   *
+   * One endpoint for both because granting a fresh trial *is* a new date plus a
+   * freed address (POOLSE-62): two endpoints would let an operator do half of it
+   * and let a club back in on a trial that ran out in March.
+   */
   @Post('tenants/:id/trial')
   async trial(
     @Param('id') id: string,
-    @Body() body: { endsAt?: unknown },
+    @Body() body: { endsAt?: unknown; releaseClaim?: unknown },
   ): Promise<TenantChangeResult> {
-    return found(await extendTrial(id, readTrialEndsAt(body.endsAt)));
+    const releaseClaim = body.releaseClaim === true || body.releaseClaim === 'true';
+    return found(await extendTrial(id, readTrialEndsAt(body.endsAt), releaseClaim));
   }
 
   @Post('tenants/:id/subscription')

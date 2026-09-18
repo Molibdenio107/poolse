@@ -139,6 +139,24 @@ disables an endpoint that keeps failing. A failed payment sets `past_due` and **
 `suspended_at`, and nothing closes a club automatically — not even a trial running out.
 `docs/features/subscription.md`.
 
+**One person, one trial, blocked at the door rather than inside the trial.** POOLSE-62.
+**`trial_claim` is platform-scoped and the unique index on the normalised address is the whole
+enforcement** — written by `provision_organization` inside the transaction that makes the
+tenant, so a refused signup leaves no organization, no membership and no claim, and two racing
+signups end with exactly one club. Nothing asks first, because the API runs on the tenant login
+and could not, and because a question asked before a write is a question whose answer changes
+before it lands. **`normalize_signup_email()` is the one definition of "the same address"**:
+lowercased, `+tags` stripped everywhere, dots stripped *for gmail only*, googlemail folded into
+gmail. **A refusal never says which lever fired** — a used address and a disposable domain share
+one code (`trial_not_available`) and one sentence, because the person reading it may be a club
+coming back. **A claim outlives its organization, archiving included**, which is what makes the
+one-click override load-bearing: *conceder novo período* rides on the trial-date action, frees
+the address by writing `released_at` (a row, never a DELETE — both unique indexes are partial on
+it) and records how many it freed. **The origin is a flag and never a record**: a salted digest,
+and no `SIGNUP_IP_SALT` means no hash at all rather than an unsalted one. Soft flags — the
+domain and the origin — are counts on `/admin` that block nothing, because a municipality has
+several pools and clubs share offices. `docs/features/trial.md`.
+
 **A club may pay outside Stripe, and a manual subscription cannot be forgotten.** POOLSE-63.
 **`billing_mode` (`stripe | manual | comped`) says *how*, `subscription_status` says *whether*,
 `suspended_at` says whether the door is open** — three columns, three questions, still none of

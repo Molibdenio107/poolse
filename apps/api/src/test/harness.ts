@@ -104,6 +104,14 @@ const TENANT_TABLES = [
    */
   'manual_payment',
   /*
+   * The trial ledger — POOLSE-62. Fifth of the platform books here, same
+   * reasoning: it belongs to no tenant, carries no RLS policy for poolse_app,
+   * and is a real foreign key to `organization` that nothing cascades. Every
+   * scratch tenant that goes through `provision_organization` writes one, so a
+   * gap here would fail teardown on the very next signup test.
+   */
+  'trial_claim',
+  /*
    * Telemetry about a tenant rather than a tenant's data — slice 2 — but it does
    * carry `organization_id` as a real foreign key, and the interceptor is
    * registered globally, so any integration test that lets a minute pass leaves

@@ -156,3 +156,96 @@ Both go through the audited platform write path, so every change lands in
 - **The purge.** Permanently destroying an archived tenant — its own ticket, and deliberately
   not a cron's.
 - **The countdown in the app** from day 10, and a screen showing a club's own notices.
+
+## One person, one trial — POOLSE-62
+
+The trial is uncapped and takes no card, which is the right product decision and also means
+nothing stops one person running a club on a fresh organization every fifteen days. **The fix
+is at the door, not inside the trial**: every limit added to the trial would be paid for by
+every honest club evaluating the product, and a ledger at the door is paid for by nobody.
+
+### What is blocked, and what is only noticed
+
+| Signal | Response |
+|---|---|
+| The same normalised address | **Refused at signup** |
+| A known disposable domain | **Refused at signup** |
+| Another club on the same e-mail domain | A count on `/admin`. Blocks nothing |
+| Another signup from the same origin | A count on `/admin`. Blocks nothing |
+
+A municipality has several pools and a swimming club shares an office with three other clubs,
+so a hard block on a domain or an address would refuse real customers. Those two are numbers on
+a screen for a person to weigh, and the screen says so in words.
+
+### The same address, spelled differently
+
+`normalize_signup_email()` is the one definition, in SQL, because the ledger is written in SQL
+and a second implementation in TypeScript would agree until the day it did not. Lowercased;
+`+tags` stripped for every domain; dots stripped **for gmail only**, where they are genuinely
+ignored — everywhere else `j.silva@` and `jsilva@` are two people. Googlemail folds into gmail:
+the same mailbox spelled two ways.
+
+### How the block is made
+
+**The unique index is the enforcement and nothing asks first.** The claim is written by
+`provision_organization` itself, inside the one transaction that makes a tenant, so:
+
+- a refused signup leaves **no organization, no membership and no claim** — it is one
+  transaction and it rolls back whole;
+- two signups racing on one address end with **exactly one club**, because they both reach the
+  index;
+- there is no window between a check and a write for a second request to slip through.
+
+The API turns the `23505` into a 403 with the code `trial_not_available`.
+
+**The refusal never says which lever it was.** "Já usou o seu período experimental" tells an
+abuser exactly what to change. The message points at signing in and at writing to us, and the
+disposable-domain refusal is word-for-word the same one — because the person reading it may be
+a real customer whose club is coming back.
+
+### A claim outlives its club
+
+Including the archiving the trial clock does on day 75. Releasing it then would be the abuse
+path with extra steps — let the trial lapse, wait for the sweep, start again — so a club that
+genuinely leaves and returns writes in, and an operator frees the address in one click.
+
+That makes the override **load-bearing rather than a convenience**, which is why it shipped in
+the same slice as the block: a hard rule with no appeal inside the product needs a person who
+can say yes.
+
+### Conceder novo período
+
+On the trial card in `/admin`, as a checkbox on the date that is already there. One control,
+because granting a fresh trial *is* a new end date **and** a freed address: two would let an
+operator free the address and leave the club on a trial that ran out in March.
+
+A release is a row, never a deletion — `released_at` and who did it — and both unique indexes
+are partial on it, which is what actually frees the address. The count of claims freed goes onto
+the same `platform_audit_log` entry as the date.
+
+### The origin is a flag, never a record
+
+Hashed with `SIGNUP_IP_SALT` and stored as a digest; the address itself never reaches the
+database, a log line or an error. **No salt, no hash, no flag** — an unsalted digest of an IPv4
+address is the address with extra steps, so a deployment that has not configured one records
+nothing rather than pretending.
+
+The web app forwards the visitor's address on the signup call, because by the time the request
+reaches the API the only address it can see is the web server's, which every signup shares. It
+is forgeable by anybody holding a session token, and that is acceptable for a flag that blocks
+nothing: defeating it costs an abuser a proxy and gains them nothing the ledger was not already
+refusing.
+
+### Not built
+
+- **The NIPC half.** `organization.vat_number` has existed since the first migration and
+  nothing reads or writes it; blocking a repeated one means asking for it first, in the club's
+  own settings — not at signup, where a tax number is the most intrusive question you can put
+  to somebody who has not decided yet. `trial_claim.tax_number` and its partial unique index are
+  in place, so that slice is a write rather than a migration. **The open question it has to
+  settle**: the claim is written on the platform connection and `organization.vat_number` on the
+  tenant one, so "check and save" spans two connections — either the check moves to a unique
+  index on `organization`, or the settings endpoint writes the claim first and undoes it if the
+  save fails.
+- **`/admin` filters** for trialing, expired and pending-delete, and a count of trials started
+  against trials converted.

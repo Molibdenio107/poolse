@@ -1,0 +1,49 @@
+# Disposable e-mail domains refused at signup — POOLSE-62.
+#
+# Data, not code: nothing in the API names a domain, and this file is meant to be
+# edited by whoever notices one. One domain per line, lowercase, no @.
+# A line starting with # is a comment, so a domain can say why it is here.
+#
+# SIGNUP_DISPOSABLE_DOMAINS_FILE points somewhere else, which is how a domain is
+# added or removed on a running deployment without shipping a build.
+#
+# It is a nuisance filter and never the protection: the block that matters is one
+# trial per address, enforced by a unique index. Somebody determined will find a
+# provider that is not on this list, and the ledger will still refuse them the
+# second trial.
+
+# The long-standing throwaway services.
+mailinator.com
+guerrillamail.com
+guerrillamail.info
+guerrillamail.biz
+guerrillamail.de
+sharklasers.com
+grr.la
+10minutemail.com
+10minutemail.net
+tempmail.com
+temp-mail.org
+tempmailo.com
+throwawaymail.com
+trashmail.com
+trashmail.de
+dispostable.com
+yopmail.com
+yopmail.fr
+yopmail.net
+getnada.com
+maildrop.cc
+mailnesia.com
+mintemail.com
+spamgourmet.com
+fakeinbox.com
+mytemp.email
+moakt.com
+emailondeck.com
+tempr.email
+discard.email
+mailcatch.com
+inboxkitten.com
+tempmail.dev
+burnermail.io

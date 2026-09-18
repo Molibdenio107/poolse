@@ -116,7 +116,8 @@
     "kindPersonalHint": "Record and follow your pool's water, with a warning when something leaves its range. No classes, no invoicing.",
     "nameLabelPersonal": "Pool name",
     "namePlaceholderPersonal": "E.g. Home pool",
-    "personalHint": "We create the pool under this name straight away, ready for its first analysis. The name and the dimensions can be changed later."
+    "personalHint": "We create the pool under this name straight away, ready for its first analysis. The name and the dimensions can be changed later.",
+    "trialNotAvailable": "A trial cannot be started with this address. If you already have an account, sign in; if you think this is a mistake, get in touch."
   },
   "profile": {
     "title": "My profile",
@@ -3278,7 +3279,9 @@
       "coversTo": "Covers through",
       "coversToHint": "The last day paid for. This is the date that will apply.",
       "paymentNote": "Note",
-      "recordPayment": "Record"
+      "recordPayment": "Record",
+      "releaseClaim": "Grant a fresh trial",
+      "releaseClaimHint": "Frees the e-mail address used for this signup so the same person can create an organization again. Who did it is recorded."
     },
     "billingMode": {
       "stripe": "Card (Stripe)",
@@ -3314,7 +3317,17 @@
     },
     "payments": "Payments received",
     "paymentsHint": "Outside Stripe. A payment is never edited or deleted — a correction is another record.",
-    "noPayments": "No payment has been recorded yet."
+    "noPayments": "No payment has been recorded yet.",
+    "claim": "Trial",
+    "claimHint": "The address this organization signed up with, as the ledger keeps it. The block is one per address.",
+    "claimAddress": "Address (normalised)",
+    "claimedAt": "Claimed on",
+    "claimReleased": "Released on {date} by {who}.",
+    "claimNone": "This organization predates the trial ledger — it has no claim.",
+    "flagDomain": "{count, plural, =0 {No other organization on this domain} one {# other organization on this domain} other {# other organizations on this domain}}",
+    "flagIp": "{count, plural, =0 {No other organization from the same origin} one {# other organization from the same origin} other {# other organizations from the same origin}}",
+    "flagIpUnknown": "Origin not recorded — no salt is configured.",
+    "flagsHint": "Signals, not evidence: clubs share offices and a council has several pools. They block nothing."
   },
   "suspended": {
     "title": "Account suspended",

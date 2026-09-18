@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { ApiError, apiPost, type AcceptResult, type CreatedInvitation } from '../../../lib/api';
 
 /**
@@ -70,12 +71,36 @@ export async function createOrganizationAction(
   const kind = formData.get('kind') === 'personal' ? 'personal' : 'business';
 
   try {
-    await apiPost('/organizations', {
-      name,
-      kind,
-      facilityName: String(formData.get('facilityName') ?? '').trim(),
-    });
+    /*
+     * The visitor's own address travels with the signup — POOLSE-62.
+     *
+     * Read here rather than in the API because by the time the request reaches
+     * it, the only address it can see is this server's, which every signup
+     * shares. It is hashed on arrival and the raw value is never stored; it
+     * feeds a soft flag on `/admin` and blocks nobody.
+     */
+    const forwarded = (await headers()).get('x-forwarded-for');
+    const clientIp = forwarded?.split(',')[0]?.trim();
+
+    await apiPost(
+      '/organizations',
+      {
+        name,
+        kind,
+        facilityName: String(formData.get('facilityName') ?? '').trim(),
+      },
+      clientIp ? { clientIp } : {},
+    );
   } catch (error) {
+    /*
+     * One trial per address, and the refusal says nothing about which signal
+     * fired — POOLSE-62. It points at signing in and at writing to us, because
+     * the person reading it may be a club coming back rather than somebody on
+     * their fourth free fortnight, and only a person can tell those apart.
+     */
+    if (error instanceof ApiError && error.code === 'trial_not_available') {
+      return { ok: false, errorKey: 'organization.trialNotAvailable' };
+    }
     return failure(error, 'organization.createFailed');
   }
 

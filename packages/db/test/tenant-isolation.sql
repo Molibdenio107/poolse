@@ -1212,4 +1212,47 @@ BEGIN
   RAISE NOTICE 'PASS test 19: the operator''s revenue is the platform''s alone';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 20 — who has ever started a trial is nobody's tenant data
+-- ---------------------------------------------------------------------------
+--
+-- `trial_claim` is the fifth platform book — POOLSE-62 — and the most sensitive
+-- of them to read across: it is a list of the e-mail addresses of everybody who
+-- has ever signed up. A club must not be able to read it, and must not be able
+-- to write itself a release and start again.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_seen int;
+  ok boolean;
+BEGIN
+  RESET ROLE;
+  INSERT INTO trial_claim (organization_id, normalized_email, email_domain)
+  VALUES (v_a, 'isolation@example.test', 'example.test');
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_a::text, true);
+
+  ok := false;
+  BEGIN
+    SELECT count(*) INTO v_seen FROM trial_claim;
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'FAIL test 20a: a tenant read the trial ledger (% rows)', v_seen;
+  END IF;
+
+  ok := false;
+  BEGIN
+    UPDATE trial_claim SET released_at = now(), released_by_clerk_user_id = 'user_self'
+     WHERE organization_id = v_a;
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 20b: a tenant freed its own address'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 20: who has started a trial is the platform''s alone';
+END $$;
+
 ROLLBACK;

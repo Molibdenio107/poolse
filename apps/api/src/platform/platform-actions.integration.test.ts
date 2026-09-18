@@ -1168,3 +1168,87 @@ test('63 — a club that has never paid in cash has an empty history, not a 404'
     }
   });
 });
+
+/**
+ * *Conceder novo período* — POOLSE-62, and the reason the block is allowed to be
+ * hard.
+ *
+ * One trial per address has no appeal inside the product: a club that genuinely
+ * left and came back is refused by exactly the same index as somebody on their
+ * fourth free fortnight, and only a person can tell those apart. So the override
+ * has to cost one click, and it has to be on the action that already exists —
+ * two controls would let an operator free the address and leave the club on a
+ * trial that ran out in March.
+ */
+test('62.7 — granting a fresh trial frees the address, and says so on the trail', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_fresh_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      // The harness provisions through `provision_organization`, so this tenant
+      // has a real claim — the same one a signup writes.
+      const before = await owner.query<{ n: string }>(
+        `SELECT count(*) AS n FROM trial_claim
+          WHERE organization_id = $1 AND released_at IS NULL`,
+        [tenant.organizationId],
+      );
+      assert.equal(Number(before.rows[0]!.n), 1, 'the scratch tenant claimed its address');
+
+      const endsAt = new Date(Date.now() + 15 * 86_400_000).toISOString();
+
+      await asOperator(clerkUserId, async () => {
+        // A plain date change leaves the ledger alone: freeing an address is
+        // never what "correct this date" means.
+        await controller.trial(tenant.organizationId, { endsAt });
+      });
+
+      const untouched = await owner.query<{ n: string }>(
+        `SELECT count(*) AS n FROM trial_claim
+          WHERE organization_id = $1 AND released_at IS NULL`,
+        [tenant.organizationId],
+      );
+      assert.equal(Number(untouched.rows[0]!.n), 1, 'a date change is not a release');
+
+      await asOperator(clerkUserId, async () => {
+        await controller.trial(tenant.organizationId, { endsAt, releaseClaim: true });
+      });
+
+      const after = await owner.query<{
+        released_by_clerk_user_id: string | null;
+        released_at: Date | null;
+      }>(
+        `SELECT released_by_clerk_user_id, released_at FROM trial_claim
+          WHERE organization_id = $1`,
+        [tenant.organizationId],
+      );
+      assert.ok(after.rows[0]?.released_at, 'the claim was released');
+      // A release is a row and never a deletion: who did it survives.
+      assert.equal(after.rows[0]?.released_by_clerk_user_id, clerkUserId);
+
+      /*
+       * And the address is genuinely free — the unique index is partial on
+       * `released_at`, which is the whole mechanism. Proved by claiming it
+       * again rather than by reading the index definition.
+       */
+      const { rows: claimed } = await owner.query<{ normalized_email: string }>(
+        `SELECT normalized_email FROM trial_claim WHERE organization_id = $1`,
+        [tenant.organizationId],
+      );
+      await owner.query(
+        `INSERT INTO trial_claim (organization_id, normalized_email, email_domain)
+         VALUES ($1, $2, 'example.test')`,
+        [tenant.organizationId, claimed[0]!.normalized_email],
+      );
+
+      // Both halves on one entry, because they were one decision.
+      const entries = await trail(clerkUserId);
+      const granted = entries.filter((row) => row.action === 'tenant.trial.set');
+      assert.equal(granted.length, 2);
+      const detail = granted[1]!.detail as { claimsReleased?: number };
+      assert.equal(detail.claimsReleased, 1);
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
