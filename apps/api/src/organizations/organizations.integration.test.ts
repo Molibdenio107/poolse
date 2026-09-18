@@ -4,16 +4,18 @@ import { writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { withPlatform } from '@poolse/db';
-import { OrganizationsController } from './organizations.controller.js';
+import { OrganizationsController, SettingsController } from './organizations.controller.js';
 import { forgetDisposableDomains, hashSignupIp } from './signup-claim.js';
 import { listMemberships } from '../identity/identity.repository.js';
 import { authStorage } from '../auth/auth.context.js';
 import { withOrg } from '@poolse/db';
 import {
+  actingAs,
   closeHarness,
   expectStatus,
   removeAppUser,
   removeTenant,
+  withScratchTenant,
   withoutTenantScope,
 } from '../test/harness.js';
 
@@ -394,6 +396,19 @@ test('62.9 — the signup address is hashed, and no raw IP is ever stored', asyn
     assert.notEqual(claim.signup_ip_hash, '203.0.113.7');
     assert.doesNotMatch(claim.signup_ip_hash ?? '', /203\.0\.113\.7/);
     assert.equal(claim.signup_ip_hash, hashSignupIp('203.0.113.7'));
+
+    /*
+     * And with no salt, nothing at all — the honest failure rather than a
+     * silent downgrade, since an unsalted digest of an IPv4 address is the
+     * address with extra steps.
+     *
+     * **In this test rather than its own**, deliberately: two tests that each
+     * set and unset the same environment variable can interleave, and this one
+     * flaked twice in a full run before it was folded in. One test, one process
+     * variable, no window.
+     */
+    delete process.env['SIGNUP_IP_SALT'];
+    assert.equal(hashSignupIp('203.0.113.7'), null);
   } finally {
     if (organizationId) await removeTenant(organizationId, clerkUserId);
     await removeAppUser(clerkUserId);
@@ -403,35 +418,145 @@ test('62.9 — the signup address is hashed, and no raw IP is ever stored', asyn
   }
 });
 
+// ---------------------------------------------------------------------------
+// The club's own tax number — POOLSE-62, second half
+// ---------------------------------------------------------------------------
+
 /**
- * No salt, no hash, no flag.
+ * A NIPC nobody else in this database is using.
  *
- * The honest failure rather than a silent downgrade: an unsalted digest of an
- * IPv4 address is the address with extra steps, so a deployment that has not
- * configured a salt records nothing at all.
+ * Nine digits with a valid mod-11 check digit, built rather than hardcoded: the
+ * claim survives its organization, so a fixed number is a test that passes once
+ * and then refuses itself for ever. `isValidNif` is the judge either way.
  */
-test('62.9 — with no salt configured, nothing about the address is stored', async () => {
-  const previous = process.env['SIGNUP_IP_SALT'];
-  delete process.env['SIGNUP_IP_SALT'];
+function taxNumber(seed: number): string {
+  const base = String(500_000_000 + (seed % 99_999_999)).slice(0, 8);
 
-  const clerkUserId = await signedUpUser(mailbox('sem-sal'));
-  let organizationId: string | null = null;
-
-  try {
-    const created = await asSignedIn(clerkUserId, () =>
-      new OrganizationsController().create(
-        { name: 'Clube Sem Sal' },
-        signupRequest('203.0.113.9'),
-      ),
-    );
-    organizationId = created.organizationId;
-
-    const [claim] = await claims(mailbox('sem-sal'));
-    assert.equal(claim?.signup_ip_hash, null);
-  } finally {
-    if (organizationId) await removeTenant(organizationId, clerkUserId);
-    await removeAppUser(clerkUserId);
-
-    if (previous !== undefined) process.env['SIGNUP_IP_SALT'] = previous;
+  let sum = 0;
+  for (let index = 0; index < 8; index += 1) {
+    sum += Number(base[index]) * (9 - index);
   }
+  const remainder = sum % 11;
+  const check = remainder < 2 ? 0 : 11 - remainder;
+
+  return `${base}${check}`;
+}
+
+async function claimedTaxNumber(organizationId: string): Promise<string | null> {
+  return withPlatform(async (tx) => {
+    const { rows } = await tx.query<{ tax_number: string | null }>(
+      `SELECT tax_number FROM trial_claim
+        WHERE organization_id = $1 AND released_at IS NULL`,
+      [organizationId],
+    );
+    return rows[0]?.tax_number ?? null;
+  });
+}
+
+test('62.10 — saving the club’s NIPC claims it, and typing it loosely is fine', async () => {
+  await withScratchTenant(async (tenant) => {
+    const nipc = taxNumber(Math.floor(performance.now()));
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const settings = new SettingsController();
+
+      // Spaces and a country prefix are how a person actually types one.
+      const saved = await settings.saveTax({ taxNumber: `PT ${nipc.slice(0, 3)} ${nipc.slice(3)}` });
+      assert.equal(saved.taxNumber, nipc, 'stored as digits, one shape');
+
+      const read = await settings.tax();
+      assert.equal(read.taxNumber, nipc);
+    });
+
+    // And the ledger holds it, written by the trigger inside that same save.
+    assert.equal(await claimedTaxNumber(tenant.organizationId), nipc);
+  });
+});
+
+/**
+ * The same legal entity, signed up again under another address.
+ *
+ * A second e-mail costs nothing, so this is the block that actually bites — and
+ * the refusal says nothing about the other club, because a typo that happens to
+ * be somebody else's number looks identical from here.
+ */
+test('62.4 — a NIPC another club holds is refused, and that club is untouched', async () => {
+  await withScratchTenant(async (first) => {
+    await withScratchTenant(async (second) => {
+      const nipc = taxNumber(Math.floor(performance.now()) + 7);
+
+      await actingAs(first, { roles: ['owner'] }, async () => {
+        await new SettingsController().saveTax({ taxNumber: nipc });
+      });
+
+      await actingAs(second, { roles: ['owner'] }, async () => {
+        await assert.rejects(
+          () => new SettingsController().saveTax({ taxNumber: nipc }),
+          (error: { status?: number; response?: { fields?: Record<string, string> } }) =>
+            error.status === 409 &&
+            error.response?.fields?.['taxNumber'] === 'settings.error.taxNumberTaken',
+        );
+
+        // The refusal rolled its own save back: this club still has no number.
+        assert.equal((await new SettingsController().tax()).taxNumber, null);
+      });
+
+      // And the club that got there first is exactly as it was.
+      assert.equal(await claimedTaxNumber(first.organizationId), nipc);
+    });
+  });
+});
+
+test('62.10 — a number that cannot exist is refused before it reaches a column', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const settings = new SettingsController();
+
+      /*
+       * `500123450` fails the mod-11 check (the digit should be 4), `50012345`
+       * is eight digits, and letters normalise to nothing. Not `123456789`,
+       * which *looks* wrong and is a perfectly valid NIF — the first draft of
+       * this test used it and was refuted by the checksum it was testing.
+       */
+      for (const bad of ['500123450', '50012345', 'abcdefghi']) {
+        await assert.rejects(
+          () => settings.saveTax({ taxNumber: bad }),
+          (error: { status?: number; response?: { fields?: Record<string, string> } }) =>
+            error.status === 400 &&
+            error.response?.fields?.['taxNumber'] === 'settings.error.taxNumberInvalid',
+          `${bad} should be refused`,
+        );
+      }
+
+      // Blank is a real answer — a club that would rather not say yet.
+      const cleared = await settings.saveTax({ taxNumber: '  ' });
+      assert.equal(cleared.taxNumber, null);
+    });
+
+    assert.equal(await claimedTaxNumber(tenant.organizationId), null);
+  });
+});
+
+test('62 — the club’s tax details are the owner’s and the admin’s, nobody else’s', async () => {
+  await withScratchTenant(async (tenant) => {
+    for (const role of ['instructor', 'maintenance'] as const) {
+      await actingAs(tenant, { roles: [role] }, async () => {
+        await assert.rejects(
+          () => new SettingsController().tax(),
+          (error: { status?: number }) => error.status === 403,
+          `${role} should not read the club's fiscal identity`,
+        );
+        await assert.rejects(
+          () => new SettingsController().saveTax({ taxNumber: taxNumber(11) }),
+          (error: { status?: number }) => error.status === 403,
+          `${role} should not write it either`,
+        );
+      });
+    }
+
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const nipc = taxNumber(Math.floor(performance.now()) + 13);
+      assert.equal((await new SettingsController().saveTax({ taxNumber: nipc })).taxNumber, nipc);
+    });
+  });
 });

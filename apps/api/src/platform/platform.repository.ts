@@ -154,8 +154,21 @@ export interface TenantRow {
   lastErrorAt: string | null;
 }
 
+/**
+ * What an operator is looking for on the list — POOLSE-62.
+ *
+ * Three, and each one is a question somebody actually opens `/admin` to ask:
+ * who is still evaluating, whose trial ran out, and whose data is about to go.
+ * Anything else is the search box.
+ */
+export type TenantFilter = 'trialing' | 'expired' | 'pending_delete';
+
+export const TENANT_FILTERS: readonly TenantFilter[] = ['trialing', 'expired', 'pending_delete'];
+
 export interface TenantQuery {
   search: string | null;
+  /** Null is every tenant, which is what the page opens on. */
+  filter?: TenantFilter | null;
   /**
    * One tenant, by id — slice 3.
    *
@@ -170,7 +183,7 @@ export interface TenantQuery {
 /** One tenant, or null. Same row shape as the list, from the same statement. */
 export async function readTenant(organizationId: string): Promise<TenantRow | null> {
   const page = await listTenants(
-    { search: null, organizationId },
+    { search: null, organizationId, filter: null },
     { page: 1, limit: 1, offset: 0 },
   );
   return page.items[0] ?? null;
@@ -324,6 +337,15 @@ export async function listTenants(
         ) health ON true
 
        WHERE ($6::uuid IS NULL OR o.id = $6::uuid)
+         /*
+          * The filter, as three named states rather than a column name a caller
+          * passes in. Pending-delete is a date being set rather than a status,
+          * which is exactly why it cannot be expressed as one.
+          */
+         AND ($7::text IS NULL
+              OR ($7 = 'trialing'       AND o.subscription_status = 'trialing')
+              OR ($7 = 'expired'        AND o.subscription_status = 'expired')
+              OR ($7 = 'pending_delete' AND o.pending_delete_at IS NOT NULL))
          AND ${searchPredicate('o.name', '$2')}
        /*
         * Newest first. An operator opens this to see who signed up, and the
@@ -340,6 +362,7 @@ export async function listTenants(
       offset,
       HEALTH_WINDOW_HOURS,
       query.organizationId ?? null,
+      query.filter ?? null,
     ]);
 
     return windowed(page, run, (row) => ({
@@ -1105,6 +1128,22 @@ export interface BillingOverview {
   /** Live tenants per mode. Counts, never one summed figure. */
   tenantsByMode: Record<BillingMode, number>;
   /**
+   * Trials started against trials converted — POOLSE-62 AC 8.
+   *
+   * **Started is the ledger's count, not the count of clubs still here**, which
+   * is the point: a trial that lapsed and was archived still happened, and a
+   * conversion rate computed over survivors would flatter itself. Converted is a
+   * club that has ever left `trialing` for something that pays — active, past
+   * due or comped-by-mode — which is why it is counted off the organization
+   * rather than off the claim.
+   *
+   * It is what makes "is fifteen days the right number" an argument with
+   * evidence rather than an instinct.
+   */
+  trialsStarted: number;
+  trialsConverted: number;
+  trialsStillRunning: number;
+  /**
    * Money Poolse actually holds a record of, in cents.
    *
    * **Manual payments only, and the screen says so.** Nothing stores what a
@@ -1134,6 +1173,26 @@ export async function readBillingOverview(): Promise<BillingOverview> {
          FROM organization
         WHERE archived_at IS NULL
         GROUP BY billing_mode`,
+    );
+
+    /*
+     * Started, converted, still running. One statement over two tables, and the
+     * "converted" test is deliberately about where a club *is* rather than about
+     * a transition nobody recorded: `trial_event` only knows about trials that
+     * ran out, so counting conversions from it would count none of them.
+     */
+    const { rows: trials } = await tx.query<{
+      started: string;
+      converted: string;
+      running: string;
+    }>(
+      `SELECT (SELECT count(*) FROM trial_claim) AS started,
+              (SELECT count(*) FROM organization
+                WHERE billing_mode <> 'comped'
+                  AND subscription_status IN ('active', 'past_due')) AS converted,
+              (SELECT count(*) FROM organization
+                WHERE archived_at IS NULL
+                  AND subscription_status = 'trialing') AS running`,
     );
 
     const { rows: money } = await tx.query<{
@@ -1183,6 +1242,9 @@ export async function readBillingOverview(): Promise<BillingOverview> {
 
     return {
       tenantsByMode,
+      trialsStarted: Number(trials[0]?.started ?? 0),
+      trialsConverted: Number(trials[0]?.converted ?? 0),
+      trialsStillRunning: Number(trials[0]?.running ?? 0),
       manualCentsAllTime: Number(money[0]?.all_time ?? 0),
       manualCentsLast12Months: Number(money[0]?.last_year ?? 0),
       manualPaymentCount: Number(money[0]?.payments ?? 0),

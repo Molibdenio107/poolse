@@ -214,4 +214,134 @@ END $$;
 
 RESET ROLE;
 
+-- ---------------------------------------------------------------------------
+-- Test 7 — the same club under a different address — POOLSE-62, second half
+-- ---------------------------------------------------------------------------
+--
+-- A second e-mail costs nothing; the legal entity is the thing that does not
+-- change. Saving the club's own NIPC claims it through a trigger, so the check
+-- happens inside the club's own transaction rather than across two connections.
+--
+-- Its own two organizations, because the tests above deliberately leave claims
+-- released and a test that depends on the leftovers of another is a test that
+-- breaks when somebody reorders them.
+
+INSERT INTO organization (id, name, slug) VALUES
+  ('77770000-1111-2222-3333-888899990000', 'Clube Três', 'clube-tres'),
+  ('cccc0000-1111-2222-3333-dddd00001111', 'Clube Quatro', 'clube-quatro');
+
+INSERT INTO trial_claim (organization_id, normalized_email, email_domain) VALUES
+  ('77770000-1111-2222-3333-888899990000', 'tres@clube.pt', 'clube.pt'),
+  ('cccc0000-1111-2222-3333-dddd00001111', 'quatro@clube.pt', 'clube.pt');
+
+DO $$
+DECLARE ok boolean; v_claimed text;
+BEGIN
+  -- Clube Três saves its number. The claim picks it up.
+  UPDATE organization SET vat_number = '500123456'
+   WHERE id = '77770000-1111-2222-3333-888899990000';
+
+  SELECT tax_number INTO v_claimed FROM trial_claim
+   WHERE organization_id = '77770000-1111-2222-3333-888899990000'
+     AND released_at IS NULL;
+
+  /*
+   * `IS DISTINCT FROM`, not `<>`. A null compares to nothing: `NULL <> '500…'`
+   * is null, `IF null THEN` is false, and the assertion passes while saying
+   * nothing — which is exactly how the first draft of this test reported a pass
+   * for a tenant whose claim had never been written.
+   */
+  IF v_claimed IS DISTINCT FROM '500123456' THEN
+    RAISE EXCEPTION 'FAIL test 7a: saving a NIPC did not claim it (got %)', coalesce(v_claimed, 'nothing');
+  END IF;
+
+  -- The same entity, signed up again under another address, cannot claim it.
+  ok := false;
+  BEGIN
+    UPDATE organization SET vat_number = '500123456'
+     WHERE id = 'cccc0000-1111-2222-3333-dddd00001111';
+  EXCEPTION WHEN unique_violation THEN ok := true;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'FAIL test 7b: two clubs hold one NIPC';
+  END IF;
+
+  /*
+   * Clearing it releases the hold, which is the club's own to do: somebody
+   * correcting a typo should not have to write in. The *address* stays claimed
+   * either way — only an operator frees that.
+   */
+  UPDATE organization SET vat_number = NULL
+   WHERE id = '77770000-1111-2222-3333-888899990000';
+
+  UPDATE organization SET vat_number = '500123456'
+   WHERE id = 'cccc0000-1111-2222-3333-dddd00001111';
+
+  SELECT tax_number INTO v_claimed FROM trial_claim
+   WHERE organization_id = '77770000-1111-2222-3333-888899990000'
+     AND released_at IS NULL;
+  IF v_claimed IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL test 7c: clearing the number left it claimed';
+  END IF;
+
+  RAISE NOTICE 'PASS test 7: one NIPC is one club, and clearing it frees the number';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 7d — a tenant with no live claim is not protected, and says so
+-- ---------------------------------------------------------------------------
+--
+-- A claim needs a normalised address, and an organization created before the
+-- ledger existed has none; inventing one would put a row in the book that no
+-- signup ever wrote. **This is a documented gap over a closed set that only
+-- shrinks**, and it is asserted rather than left to be discovered — a future
+-- reader finding no protection here should find this test, not a surprise.
+
+DO $$
+DECLARE v_claims int;
+BEGIN
+  INSERT INTO organization (id, name, slug, vat_number)
+  VALUES ('0000aaaa-1111-bbbb-2222-cccc3333dddd', 'Clube Antigo', 'clube-antigo', '501442600');
+
+  SELECT count(*) INTO v_claims FROM trial_claim
+   WHERE organization_id = '0000aaaa-1111-bbbb-2222-cccc3333dddd';
+  IF v_claims <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 7d: a claim appeared for a tenant that never signed up';
+  END IF;
+
+  RAISE NOTICE 'PASS test 7d: a pre-ledger tenant claims nothing, by design';
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- Test 8 — a number is nine digits, and the shape is the schema's to say
+-- ---------------------------------------------------------------------------
+--
+-- The *checksum* is `isValidNif` in @poolse/rules — one definition, shared by the
+-- form and the API. What a constraint can say without a second implementation of
+-- the arithmetic is the shape, and it says it.
+
+DO $$
+DECLARE ok boolean;
+BEGIN
+  ok := false;
+  BEGIN
+    UPDATE organization SET vat_number = '500 123 456'
+     WHERE id = 'aaaa1111-bbbb-2222-cccc-333333333333';
+  EXCEPTION WHEN check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'FAIL test 8a: a number with spaces was stored unnormalised';
+  END IF;
+
+  IF normalize_tax_number('PT 500 123 456') <> '500123456' THEN
+    RAISE EXCEPTION 'FAIL test 8b: normalisation kept something that is not a digit';
+  END IF;
+
+  IF normalize_tax_number('   ') IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL test 8c: nothing normalised to something';
+  END IF;
+
+  RAISE NOTICE 'PASS test 8: a stored number is nine digits and one shape';
+END $$;
+
 ROLLBACK;

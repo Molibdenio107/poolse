@@ -374,11 +374,11 @@ five slices are in the backlog with their stories.
 others created: the clock runs hourly now, so a club paying by bank transfer that is left on a
 trial goes read-only on day 15 by machine. `billing_mode` gives that club an honest state, a
 CHECK makes a hand-paid subscription impossible to forget, and `manual_payment` is the
-insert-only record of what actually arrived — which Portugal will want a receipt for. **62 (trial abuse) is built bar its NIPC half** — the ledger, the block at signup, the
-disposable-domain file, the soft flags and the operator's one-click override are in; blocking a
-repeated NIPC waits on `organization.vat_number` gaining a form in the club's own settings, and
-the ticket says so. **64 (hardening `/admin`) is still open**, and its MFA item is gated on a
-production Clerk instance existing.
+insert-only record of what actually arrived — which Portugal will want a receipt for. **62 (trial abuse) is built**, in two slices: the ledger and the block at signup, then the
+club's NIPC — asked for under Faturação, claimed by a trigger so the cross-tenant check sits
+inside the club's own transaction. With it, `organization.vat_number` finally means something
+after existing unread since the first migration. **64 (hardening `/admin`) is the last one
+open**, and its MFA item is gated on a production Clerk instance existing.
 
 **2.5 and 2.6 come before 2.4, decided 13 September 2026.** The numbers stay where they are —
 renumbering a roadmap costs more than reading one note. 2.4 takes money from an operator, and there

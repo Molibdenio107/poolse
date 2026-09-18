@@ -155,7 +155,13 @@ the address by writing `released_at` (a row, never a DELETE — both unique inde
 it) and records how many it freed. **The origin is a flag and never a record**: a salted digest,
 and no `SIGNUP_IP_SALT` means no hash at all rather than an unsalted one. Soft flags — the
 domain and the origin — are counts on `/admin` that block nothing, because a municipality has
-several pools and clubs share offices. `docs/features/trial.md`.
+several pools and clubs share offices. **The second block is the club's NIPC**, asked for under
+Faturação (a fatura's issuer is the club) and claimed by a `SECURITY DEFINER` trigger so the
+cross-tenant check happens inside the club's own transaction — the alternatives, and why an
+index on `organization.vat_number` would have broken the override, are in that migration's
+header. `isValidNif` is the checksum and the schema enforces the shape; **an empty box clears
+the number and an unparseable one is refused**, because reading nonsense as "clear it" is how a
+form silently discards what somebody typed. `docs/features/trial.md`.
 
 **A club may pay outside Stripe, and a manual subscription cannot be forgotten.** POOLSE-63.
 **`billing_mode` (`stripe | manual | comped`) says *how*, `subscription_status` says *whether*,

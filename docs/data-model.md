@@ -3170,3 +3170,33 @@ unsalted one, which would be the address with extra steps.
 replaces — and the next caller passing four untyped arguments then fails with `function ... is
 not unique`, at runtime, from SQL, nowhere near the migration. The isolation suite caught it
 within a minute; a schema change that only breaks callers is exactly what that suite is for.
+
+### The tax-number claim — POOLSE-62, 18 September 2026
+
+```
+normalize_tax_number(text) RETURNS text     -- digits only, IMMUTABLE
+organization.vat_number   CHECK (nine digits or null)
+claim_tax_number()        -- SECURITY DEFINER trigger function
+organization_tax_number_claimed  AFTER INSERT OR UPDATE OF vat_number
+```
+
+`organization.vat_number` has existed since the core migration and **nothing had ever read or
+written it**. This gives it a meaning: a shape, and a claim.
+
+**A trigger, and the second `SECURITY DEFINER` function in the schema.** The check is
+cross-tenant — "does another club hold this number" — and the club's own save runs on
+`poolse_app`, which cannot read `trial_claim` and must not be able to. The two alternatives are
+written out in the migration header: a unique index on `organization` itself, which breaks the
+operator's override because `poolse_platform` cannot clear another club's number; and the API
+writing both sides on two connections, which is not atomic. The trigger is one transaction, one
+write path, and the same table the same ledger already writes from the other end.
+
+**The checksum is not in SQL.** `isValidNif` in `@poolse/rules` is the one definition, shared by
+the form and the API; the constraint enforces the *shape*, which is what SQL can say without a
+second implementation of the arithmetic.
+
+**Clearing the number releases the hold on it and not the claim.** A club correcting a typo
+should not have to write in; the address stays claimed, and only an operator frees that.
+
+**A tenant with no live claim is unprotected**, asserted in `trial-claim.sql` test 7d rather
+than left to be discovered. A claim needs a normalised address and a pre-ledger tenant has none.

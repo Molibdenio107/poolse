@@ -83,28 +83,31 @@ cost is a support message from an honest person; the alternative is no protectio
 That makes the one-click override load-bearing rather than a convenience, and it is why the
 refusal message points at contacting us: the person reading it may be a real customer.
 
-### Where this was split — 18 September 2026
+### Built — 18 September 2026, in two slices
 
-Two evenings, as the estimate said. **The first is built**: `trial_claim`, the unique index that
-refuses a repeated address, the claim written inside `provision_organization`, the
-disposable-domain data file, the hashed origin, the soft flags, *conceder novo período* on the
-trial-date action, and the claim panel on the tenant page. QA 1, 2, 3, 5, 6, 7, 8 (the claim and
-the flags), 9 and 11 are covered by tests.
+Two evenings, as the estimate said, and both are done.
 
-**The second is not**, and it is one thing plus two small ones:
+**The first**: `trial_claim`, the unique index that refuses a repeated normalised address, the
+claim written inside `provision_organization`, the disposable-domain data file, the hashed
+origin, the soft flags, *conceder novo período* on the trial-date action, and the claim panel.
 
-- **The NIPC half** — QA 4, AC 2's second clause and AC 10. It needs
-  `organization.vat_number` to gain a form in the club's own settings first: the column has
-  existed since the first migration and nothing has ever read or written it. `tax_number` and
-  its partial unique index are already on `trial_claim`, so that slice is a write rather than a
-  migration. **The open question it must settle first:** the claim lives on the platform
-  connection and `vat_number` on the tenant one, so "check it, then save it" spans two
-  connections and is not atomic. Either the check becomes a unique index on `organization`
-  itself — no cross-tenant read needed, and the refusal is a `23505` like the address one — or
-  the settings endpoint claims first and releases if the save fails. The first is smaller and
-  is the recommendation.
-- **`/admin` filters** for `trialing`, `expired` and pending-delete — AC 8's first clause.
-- **Trials started against trials converted** — AC 8's last clause.
+**The second**: the NIPC. `organization.vat_number` gains a shape, a form under Faturação and a
+`SECURITY DEFINER` trigger that keeps `trial_claim.tax_number` in step — so the cross-tenant
+check happens inside the club's own transaction rather than across two connections, which was
+the open question this half had to settle. The recommendation in the split note was a unique
+index on `organization` itself; it was **rejected on writing it**, because `poolse_platform`
+cannot clear another club's `vat_number`, so freeing a false positive would have meant asking
+the *other* club to edit theirs — exactly the support thread the PO section forbids. Plus the
+`/admin` filters and the started-against-converted count.
+
+**Every QA scenario is covered by a test** except the parts that were deliberately reshaped:
+
+- **QA 4** is covered, and the check runs when the club saves its NIPC under Faturação rather
+  than at facility creation — settled 13 September 2026 and unchanged.
+- **One gap is asserted rather than closed**: an organization created *before* the ledger has no
+  claim to attach a number to, so it gets no NIPC protection. A claim needs a normalised address
+  and a pre-ledger tenant has none; inventing one would put a row in the book that no signup
+  ever wrote. `trial-claim.sql` test 7d pins the behaviour, and the set only shrinks.
 
 ### QA — test scenarios
 

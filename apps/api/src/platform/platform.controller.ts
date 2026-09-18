@@ -28,7 +28,9 @@ import {
   setPlanLimits,
   setSubscriptionStatus,
   setSuspension,
+  TENANT_FILTERS,
   type BillingOverview,
+  type TenantFilter,
   type ManualPaymentRow,
   type TenantClaim,
   type TenantChangeResult,
@@ -73,11 +75,23 @@ export class PlatformController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
+    @Query('filter') filter?: string,
   ): Promise<Paginated<TenantRow>> {
     // The same two helpers every other list in the API uses. A broken `page`
     // gives page 1 rather than a 400, and a one-letter search is no search —
     // an operator's list should not behave differently from a club's.
-    return listTenants({ search: readSearch(search) }, readPageQuery(page, limit));
+    //
+    // An unknown filter is *no* filter rather than a 400: this one arrives from
+    // a link in a URL, and a mistyped one should show everything rather than an
+    // error page.
+    const named = TENANT_FILTERS.includes(filter as TenantFilter)
+      ? (filter as TenantFilter)
+      : null;
+
+    return listTenants(
+      { search: readSearch(search), filter: named },
+      readPageQuery(page, limit),
+    );
   }
 
   /**

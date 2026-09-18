@@ -3313,7 +3313,8 @@
       "paidThrough": "paid through {date}",
       "lateBy": "{days, plural, one {# day late} other {# days late}}",
       "dueIn": "{days, plural, =0 {Due today} one {# day left} other {# days left}}",
-      "readOnly": "read-only"
+      "readOnly": "read-only",
+      "trials": "{started} trials started · {converted} converted · {running} running now."
     },
     "payments": "Payments received",
     "paymentsHint": "Outside Stripe. A payment is never edited or deleted — a correction is another record.",
@@ -3327,7 +3328,14 @@
     "flagDomain": "{count, plural, =0 {No other organization on this domain} one {# other organization on this domain} other {# other organizations on this domain}}",
     "flagIp": "{count, plural, =0 {No other organization from the same origin} one {# other organization from the same origin} other {# other organizations from the same origin}}",
     "flagIpUnknown": "Origin not recorded — no salt is configured.",
-    "flagsHint": "Signals, not evidence: clubs share offices and a council has several pools. They block nothing."
+    "flagsHint": "Signals, not evidence: clubs share offices and a council has several pools. They block nothing.",
+    "filterLabel": "Show",
+    "filter": {
+      "all": "All",
+      "trialing": "On trial",
+      "expired": "Expired",
+      "pendingDelete": "Pending deletion"
+    }
   },
   "suspended": {
     "title": "Account suspended",
@@ -3342,5 +3350,18 @@
     "kept": "Your data is kept until {date}.",
     "askOwner": "Only the club owner can activate the subscription.",
     "pay": "Activate subscription"
+  },
+  "settings": {
+    "tax": {
+      "title": "Tax details",
+      "hint": "The club’s NIPC, as it appears on the invoices it issues. It is also how Poolse knows an organization is the same legal entity — so it can be refused if another organization already holds it.",
+      "number": "NIPC (tax number)",
+      "numberHint": "Nine digits. Leave blank if you would rather not say yet."
+    },
+    "error": {
+      "taxNumberInvalid": "Invalid NIPC — check the nine digits.",
+      "taxNumberTaken": "This NIPC already belongs to another organization. If that is a mistake, get in touch.",
+      "taxFailed": "Could not save the tax details."
+    }
   }
 }

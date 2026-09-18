@@ -54,6 +54,22 @@ export async function BillingPanel({
       </dl>
 
       {/*
+        Trials started against trials converted — POOLSE-62.
+
+        **Started counts the ledger, not the survivors**: a trial that lapsed
+        and was archived still happened, and a rate computed over the clubs
+        still here would flatter itself. This is what makes "is fifteen days the
+        right number" an argument with evidence rather than an instinct.
+      */}
+      <p className="text-sm text-foreground-muted">
+        {t('admin.billing.trials', {
+          started: overview.trialsStarted,
+          converted: overview.trialsConverted,
+          running: overview.trialsStillRunning,
+        })}
+      </p>
+
+      {/*
         Said in visible text rather than left to be assumed. An operator reading
         three counts and one euro figure would otherwise reasonably take the
         figure for revenue.

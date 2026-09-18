@@ -236,16 +236,48 @@ is forgeable by anybody holding a session token, and that is acceptable for a fl
 nothing: defeating it costs an abuser a proxy and gains them nothing the ledger was not already
 refusing.
 
-### Not built
+### The same club under a different address
 
-- **The NIPC half.** `organization.vat_number` has existed since the first migration and
-  nothing reads or writes it; blocking a repeated one means asking for it first, in the club's
-  own settings — not at signup, where a tax number is the most intrusive question you can put
-  to somebody who has not decided yet. `trial_claim.tax_number` and its partial unique index are
-  in place, so that slice is a write rather than a migration. **The open question it has to
-  settle**: the claim is written on the platform connection and `organization.vat_number` on the
-  tenant one, so "check and save" spans two connections — either the check moves to a unique
-  index on `organization`, or the settings endpoint writes the claim first and undoes it if the
-  save fails.
-- **`/admin` filters** for trialing, expired and pending-delete, and a count of trials started
-  against trials converted.
+A second e-mail costs nothing. The thing that does not change is the legal entity, so the
+second block is on the club's NIPC.
+
+**It is asked for under Faturação, not at signup.** Signup stays three fields and thirty
+seconds, and a tax number is the most intrusive question you can put to somebody who has not
+decided yet — and the one they cannot answer from memory. Under Faturação it is where it is
+already true: a fatura's issuer is the club, and its number is what the document carries. The
+panel says out loud that the number is also checked against other clubs, because a field that
+quietly does two things is a field somebody fills in wrongly.
+
+**Saving it claims it, through a trigger.** `claim_tax_number()` keeps `trial_claim.tax_number`
+in step with `organization.vat_number`, so the cross-tenant check happens inside the club's own
+transaction — one write path, and the partial unique index is the enforcement exactly as it is
+for the address. The alternatives were a unique index on `organization` itself, which would have
+broken the operator's override (freeing a false positive would mean asking the *other* club to
+clear their number), and the API writing both sides on two connections, which is not atomic. The
+argument is in the migration header.
+
+**`isValidNif` in `@poolse/rules` is the checksum**, shared by the form and the API so a screen
+cannot accept what the server refuses; the schema enforces the shape — nine digits, normalised,
+so `500 123 456` and `500123456` are one club.
+
+**An empty box clears it; a box full of nonsense does not.** Emptying the field is a club saying
+"we would rather not say yet" and releases the hold on the number — the address stays claimed,
+and only an operator frees that. Typing something unparseable is a mistake, and reading it as
+"clear it" would silently throw away the number that was there and report a save.
+
+**A tenant with no live claim gets no NIPC protection**, and that is stated rather than hidden:
+a claim needs a normalised address, and an organization created before the ledger has none.
+Every organization created since POOLSE-62 has one, so it is a closed set that only shrinks. The
+SQL suite asserts the gap so a future reader finds a test rather than a surprise.
+
+### What `/admin` shows
+
+- **Filters** — todas, em avaliação, terminadas, a caminho de eliminação. Links rather than
+  buttons, like the sort control beside them: a GET that survives a refresh and works before any
+  JavaScript. An unknown filter shows everything rather than an error page.
+- **Trials started against converted**, on the billing panel. **Started counts the ledger, not
+  the survivors** — a trial that lapsed and was archived still happened, and a rate computed
+  over the clubs still here would flatter itself. It is what makes "is fifteen days the right
+  number" an argument with evidence.
+- **The claim itself** on the tenant page: the normalised address, when it was claimed, whether
+  it has been released and by whom, and the two soft flags as counts.

@@ -3313,7 +3313,8 @@
       "paidThrough": "pago até {date}",
       "lateBy": "{days, plural, one {Em atraso há # dia} other {Em atraso há # dias}}",
       "dueIn": "{days, plural, =0 {Vence hoje} one {Falta # dia} other {Faltam # dias}}",
-      "readOnly": "em leitura"
+      "readOnly": "em leitura",
+      "trials": "{started} períodos experimentais começados · {converted} converteram · {running} a decorrer."
     },
     "payments": "Pagamentos recebidos",
     "paymentsHint": "Fora do Stripe. Um pagamento não se edita nem se apaga — uma correção é outro registo.",
@@ -3327,7 +3328,14 @@
     "flagDomain": "{count, plural, =0 {Nenhuma outra organização com este domínio} one {Mais # organização com este domínio} other {Mais # organizações com este domínio}}",
     "flagIp": "{count, plural, =0 {Nenhuma outra organização com a mesma origem} one {Mais # organização com a mesma origem} other {Mais # organizações com a mesma origem}}",
     "flagIpUnknown": "Origem não registada — não está configurado o sal.",
-    "flagsHint": "Sinais, não provas: clubes partilham escritórios e uma câmara tem várias piscinas. Não bloqueiam nada."
+    "flagsHint": "Sinais, não provas: clubes partilham escritórios e uma câmara tem várias piscinas. Não bloqueiam nada.",
+    "filterLabel": "Mostrar",
+    "filter": {
+      "all": "Todas",
+      "trialing": "Em avaliação",
+      "expired": "Terminadas",
+      "pendingDelete": "A caminho de eliminação"
+    }
   },
   "suspended": {
     "title": "Conta suspensa",
@@ -3342,5 +3350,18 @@
     "kept": "Os seus dados ficam guardados até {date}.",
     "askOwner": "Só o proprietário do clube pode ativar a subscrição.",
     "pay": "Ativar subscrição"
+  },
+  "settings": {
+    "tax": {
+      "title": "Dados fiscais",
+      "hint": "O NIPC do clube, tal como aparece nas faturas que emite. É também por este número que o Poolse sabe que uma organização é a mesma entidade — por isso pode ser recusado se outra organização já o tiver.",
+      "number": "NIPC",
+      "numberHint": "Nove dígitos. Em branco se ainda não quiser indicar."
+    },
+    "error": {
+      "taxNumberInvalid": "NIPC inválido — confirme os nove dígitos.",
+      "taxNumberTaken": "Este NIPC já está associado a outra organização. Se é engano, fale connosco.",
+      "taxFailed": "Não foi possível guardar os dados fiscais."
+    }
   }
 }

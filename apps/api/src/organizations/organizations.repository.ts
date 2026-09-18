@@ -205,3 +205,85 @@ export async function saveReposicaoSettings(
     return settings;
   });
 }
+
+// ---------------------------------------------------------------------------
+// The club's own tax number — POOLSE-62, second half
+// ---------------------------------------------------------------------------
+
+/**
+ * Raised when another club already holds this NIPC.
+ *
+ * Like the signup refusal, it carries **nothing about the other club** — not its
+ * name, not whether it is still running. The same entity signing up twice and a
+ * typo that happens to be somebody else's number look identical from here, and
+ * only a person can tell them apart.
+ */
+export class TaxNumberTakenError extends Error {
+  constructor() {
+    super('Another organization already holds this tax number');
+  }
+}
+
+/** What the club has told us about itself for invoicing. */
+export interface TaxSettings {
+  /** Nine digits, normalised, or null where nobody has filled it in. */
+  taxNumber: string | null;
+}
+
+export async function readTaxSettings(organizationId: string): Promise<TaxSettings> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ vat_number: string | null }>(
+      'SELECT vat_number FROM organization WHERE id = $1',
+      [organizationId],
+    );
+    return { taxNumber: rows[0]?.vat_number ?? null };
+  });
+}
+
+/**
+ * Save the club's NIPC, and claim it.
+ *
+ * **One write, and the claim rides on it.** A trigger keeps
+ * `trial_claim.tax_number` in step, so the check is inside the club's own
+ * transaction rather than spread across two connections — the argument is in the
+ * migration header. What reaches here is either a saved number or a refusal;
+ * there is no state where the number is claimed and not saved.
+ *
+ * **Null is a legitimate answer** and clears both. A club correcting a typo
+ * should not have to write in, and letting go of a number is not letting go of
+ * the trial claim — the address stays held either way.
+ *
+ * The checksum is `isValidNif`'s to judge and the controller's to ask; this
+ * takes digits and trusts them, so there is one definition of a valid number
+ * rather than one per layer.
+ */
+export async function saveTaxNumber(
+  organizationId: string,
+  taxNumber: string | null,
+): Promise<TaxSettings> {
+  try {
+    return await withOrg(organizationId, async (tx) => {
+      await tx.query('UPDATE organization SET vat_number = $2 WHERE id = $1', [
+        organizationId,
+        taxNumber,
+      ]);
+
+      await recordAudit(tx, {
+        action: 'organization.tax_number_changed',
+        entityType: 'organization',
+        entityId: organizationId,
+        // The number itself: it is the club's own, it is on every fatura it
+        // issues, and "what did this change to" is the question an audit answers.
+        data: { taxNumber },
+      });
+
+      return { taxNumber };
+    });
+  } catch (error) {
+    const { code, constraint } = error as { code?: string; constraint?: string };
+    if (code === '23505' && constraint === 'trial_claim_tax_number_uq') {
+      throw new TaxNumberTakenError();
+    }
+    throw error;
+  }
+}

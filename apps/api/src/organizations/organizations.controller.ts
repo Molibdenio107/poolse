@@ -1,11 +1,13 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   ForbiddenException,
   Get,
   Patch,
   Post,
+  Put,
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
@@ -14,12 +16,17 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import { ensureAppUser } from '../identity/identity.service.js';
 import type { OrganizationKind } from '../identity/identity.repository.js';
+import { isValidNif } from '@poolse/rules';
 import {
   provisionOrganization,
+  readTaxSettings,
   reposicaoSettings,
   saveReposicaoSettings,
+  saveTaxNumber,
+  TaxNumberTakenError,
   TrialAlreadyClaimedError,
   type ReposicaoSettings,
+  type TaxSettings,
 } from './organizations.repository.js';
 import { clientIpFrom, hashSignupIp, isDisposableEmail } from './signup-claim.js';
 
@@ -156,6 +163,72 @@ export class SettingsController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
     return reposicaoSettings(organizationId);
+  }
+
+  /**
+   * The club's fiscal identity — POOLSE-62, second half.
+   *
+   * Under Faturação because that is where it is needed and where it is true: a
+   * fatura's issuer is the club, and its NIPC is what the document carries.
+   * Owner and admin, like the numbering books beside it.
+   *
+   * It is also what stops the same legal entity starting a second trial under
+   * another address, and the screen says so — a field that quietly does two
+   * things is a field somebody fills in wrongly.
+   */
+  @Get('tax')
+  async tax(): Promise<TaxSettings> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    return readTaxSettings(organizationId);
+  }
+
+  @Put('tax')
+  async saveTax(@Body() body: { taxNumber?: unknown }): Promise<TaxSettings> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    /*
+     * Digits only, and the checksum from `@poolse/rules` — the one definition,
+     * shared with the form, so a screen cannot accept what the server refuses.
+     * An empty box means "we have not told you yet", which is a real answer and
+     * clears the claim on the number without touching the claim on the address.
+     */
+    const raw = typeof body.taxNumber === 'string' ? body.taxNumber.trim() : '';
+
+    /*
+     * **An empty box clears it; a box full of nonsense does not.**
+     *
+     * The two are a whole class of bug apart. Emptying the field is a club
+     * saying "we would rather not tell you yet", and the number should go.
+     * Typing `abcdefghi` is a mistake, and reading it as "clear it" would
+     * silently throw away the number that was there and report a save — the
+     * same shape as POOLSE-09 and POOLSE-10, where a form quietly discarded
+     * what somebody had typed. So only a genuinely blank box clears.
+     */
+    if (raw === '') {
+      return saveTaxNumber(organizationId, null);
+    }
+
+    const digits = raw.replace(/\D/g, '');
+
+    if (!isValidNif(digits)) {
+      throw new BadRequestException({ fields: { taxNumber: 'settings.error.taxNumberInvalid' } });
+    }
+
+    try {
+      return await saveTaxNumber(organizationId, digits);
+    } catch (error) {
+      /*
+       * Another club holds it. The refusal names the field and says nothing
+       * about who — the same entity signing up twice and a typo that happens to
+       * be somebody else's number look identical from here.
+       */
+      if (error instanceof TaxNumberTakenError) {
+        throw new ConflictException({ fields: { taxNumber: 'settings.error.taxNumberTaken' } });
+      }
+      throw error;
+    }
   }
 
   @Patch('reposicao')

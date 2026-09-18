@@ -38,12 +38,12 @@ import { formatDate, formatStamp } from '@/lib/date-format';
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; search?: string; sort?: string }>;
+  searchParams: Promise<{ page?: string; search?: string; sort?: string; filter?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
 
-  const { page: pageParam, search = '', sort } = await searchParams;
+  const { page: pageParam, search = '', sort, filter } = await searchParams;
   const page = readPage(pageParam);
   const term = search.trim();
 
@@ -63,6 +63,9 @@ export default async function AdminPage({
         `/platform/tenants?${new URLSearchParams({
           ...(term === '' ? {} : { search: term }),
           ...(page > 1 ? { page: String(page) } : {}),
+          // An unknown one is no filter, decided by the API — this is a link in
+          // a URL and a mistyped one should show everything, not an error page.
+          ...(filter === undefined || filter === '' ? {} : { filter }),
         })}`,
       ),
       apiFetch<BillingOverview>('/platform/billing'),
@@ -89,7 +92,11 @@ export default async function AdminPage({
 
   if (tenants !== null && isPastEnd(page, tenants.total, tenants.limit)) {
     redirect(
-      pageHref('/admin', { search: term }, lastPage(tenants.total, tenants.limit)),
+      pageHref(
+        '/admin',
+        { search: term, filter: filter || undefined },
+        lastPage(tenants.total, tenants.limit),
+      ),
     );
   }
 
@@ -128,6 +135,7 @@ export default async function AdminPage({
             filters are already a plain GET, so an anchor is linkable, survives a
             refresh and works before any JavaScript has loaded.
           */}
+          <FilterLinks current={filter} search={term} t={t} />
           <SortLinks current={sort} search={term} t={t} />
         </>
       }
@@ -167,7 +175,11 @@ export default async function AdminPage({
             }
           />
 
-          <Pagination page={tenants} basePath="/admin" query={{ search: term || undefined }} />
+          <Pagination
+            page={tenants}
+            basePath="/admin"
+            query={{ search: term || undefined, filter: filter || undefined }}
+          />
         </>
       )}
     </PageShell>
@@ -399,6 +411,67 @@ function byHealth(a: PlatformTenant, b: PlatformTenant): number {
  * button. Page 1 is the absence of the parameter, the same convention
  * `pageHref` uses, so the default view has one URL rather than two.
  */
+/**
+ * Who am I looking at — POOLSE-62.
+ *
+ * Three questions an operator opens `/admin` to ask: who is still evaluating,
+ * whose trial ran out, and whose data is about to go. Links rather than buttons,
+ * like the sort control beside them: this page's filters are a plain GET, so an
+ * anchor is linkable, survives a refresh and works before any JavaScript has
+ * loaded.
+ *
+ * The state is carried in the URL and the page is a server render, so "todos"
+ * is the absence of the parameter rather than a fourth value.
+ */
+function FilterLinks({
+  current,
+  search,
+  t,
+}: {
+  current: string | undefined;
+  search: string;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+}): React.ReactElement {
+  const href = (filter?: string): string => {
+    const query = new URLSearchParams();
+    if (search !== '') query.set('search', search);
+    if (filter !== undefined) query.set('filter', filter);
+    return query.size > 0 ? `/admin?${query}` : '/admin';
+  };
+
+  const link = (filter: string | undefined, label: string): React.ReactElement => {
+    const active = (current === '' ? undefined : current) === filter;
+    return (
+      <Link
+        key={label}
+        href={href(filter)}
+        aria-current={active ? 'true' : undefined}
+        className={cn(
+          'rounded border px-2.5 text-sm leading-[var(--control-h,2.25rem)] h-control inline-flex items-center',
+          active
+            ? 'border-primary font-medium text-primary'
+            : 'border-border-strong text-foreground-muted hover:text-foreground',
+          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+        )}
+      >
+        {label}
+      </Link>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm text-foreground-muted">{t('admin.filterLabel')}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        {link(undefined, t('admin.filter.all'))}
+        {link('trialing', t('admin.filter.trialing'))}
+        {link('expired', t('admin.filter.expired'))}
+        {link('pending_delete', t('admin.filter.pendingDelete'))}
+      </div>
+    </div>
+  );
+}
+
 function SortLinks({
   current,
   search,

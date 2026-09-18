@@ -3049,6 +3049,12 @@ export interface ManualPayment {
   createdAt: string;
 }
 
+/** The club's own fiscal identity — POOLSE-62, read under Faturação. */
+export interface TaxSettings {
+  /** Nine digits, normalised, or null where nobody has filled it in. */
+  taxNumber: string | null;
+}
+
 /**
  * The trial a club claimed when it signed up — POOLSE-62.
  *
@@ -3088,6 +3094,10 @@ export interface RenewalDue {
  */
 export interface BillingOverview {
   tenantsByMode: Record<BillingMode, number>;
+  /** Started counts the ledger, not the clubs still here — POOLSE-62. */
+  trialsStarted: number;
+  trialsConverted: number;
+  trialsStillRunning: number;
   manualCentsAllTime: number;
   manualCentsLast12Months: number;
   manualPaymentCount: number;

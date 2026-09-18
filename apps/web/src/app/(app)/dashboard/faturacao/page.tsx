@@ -7,7 +7,14 @@ import { InvoiceList } from './invoice-list';
 import { SeriesPanel } from './series-panel';
 import { OutstandingList } from './outstanding-list';
 import { ViewTabs } from './view-tabs';
-import { listInvoices, listOutstanding, listSeries, previewRun } from './invoices.actions';
+import { TaxPanel } from './tax-panel';
+import {
+  listInvoices,
+  listOutstanding,
+  listSeries,
+  previewRun,
+  readTaxSettings,
+} from './invoices.actions';
 
 /**
  * Faturação — phase 2.2.
@@ -74,11 +81,13 @@ export default async function InvoicingPage({
   const chosen =
     sites.facilities.find((site) => site.id === requested.trim())?.id ?? sites.facilities[0]!.id;
 
-  const [run, issued, outstanding, books] = await Promise.all([
+  const [run, issued, outstanding, books, tax] = await Promise.all([
     owing ? Promise.resolve(null) : previewRun(chosen, periodStart),
     owing ? Promise.resolve(null) : listInvoices(chosen, periodStart),
     owing ? listOutstanding(chosen) : Promise.resolve(null),
     listSeries(chosen),
+    // The club's own number rather than the site's — POOLSE-62.
+    readTaxSettings(),
   ]);
 
   if (run === null && issued === null && outstanding === null && books === null) {
@@ -122,6 +131,13 @@ export default async function InvoicingPage({
         )}
 
         <SeriesPanel facilityId={chosen} series={books?.series ?? []} />
+
+        {/*
+          The club's own number, under the books that carry it — POOLSE-62.
+          Absent for anybody the endpoint would refuse, rather than shown as an
+          empty field they cannot save.
+        */}
+        {tax !== null && <TaxPanel settings={tax} />}
       </div>
     </PageShell>
   );

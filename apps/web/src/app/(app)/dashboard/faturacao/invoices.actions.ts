@@ -6,9 +6,11 @@ import {
   apiFetch,
   apiPatch,
   apiPost,
+  apiPut,
   type Invoice,
   type InvoiceRun,
   type InvoiceSeries,
+  type TaxSettings,
 } from '@/lib/api';
 import { parseCents } from '@/lib/money';
 import type { FormState } from '../actions';
@@ -325,4 +327,42 @@ export async function listSeries(facilityId: string): Promise<{ series: InvoiceS
   } catch {
     return null;
   }
+}
+
+/**
+ * The club's own fiscal identity — POOLSE-62, second half.
+ *
+ * Read here rather than on the page's other fetches because it is the club's,
+ * not a site's: a fatura is issued by a building and the number belongs to the
+ * legal entity above it. Null on a refusal, so the panel simply does not appear
+ * for somebody the endpoint would not answer anyway.
+ */
+export async function readTaxSettings(): Promise<TaxSettings | null> {
+  try {
+    return await apiFetch<TaxSettings>('/settings/tax');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Save it, and with it the claim on the number.
+ *
+ * Blank clears it, which is a real answer — a club correcting a typo should not
+ * have to write in. A number another club already holds comes back as a field
+ * error saying so and nothing about whom: the same entity signing up twice and a
+ * typo that happens to be somebody else's number look identical from here.
+ */
+export async function saveTaxNumberAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  try {
+    await apiPut('/settings/tax', { taxNumber: String(formData.get('taxNumber') ?? '') });
+  } catch (error) {
+    return failure(error, 'settings.error.taxFailed');
+  }
+
+  revalidatePath(PATH);
+  return { ok: true };
 }
