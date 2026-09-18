@@ -1,6 +1,13 @@
 import { notFound, redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type PlatformTenant, type TenantRequests } from '@/lib/api';
+import {
+  ApiError,
+  apiFetch,
+  type ManualPayment,
+  type Paginated,
+  type PlatformTenant,
+  type TenantRequests,
+} from '@/lib/api';
 import { DataTable, type Column } from '@/components/data-table';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
@@ -8,7 +15,8 @@ import { timeAgo } from '@/lib/relative-time';
 import { HealthBadge } from '../../health-badge';
 import { RequestCharts } from './request-charts';
 import { TenantActions } from './tenant-actions';
-import { formatStamp } from '@/lib/date-format';
+import { formatDate, formatStamp } from '@/lib/date-format';
+import { formatCents } from '@/lib/money';
 
 /**
  * One tenant's request health over the last week — platform admin, slice 2.
@@ -34,6 +42,7 @@ export default async function TenantRequestsPage({
 
   let requests: TenantRequests | null = null;
   let tenant: PlatformTenant | null = null;
+  let payments: Paginated<ManualPayment> | null = null;
   let failure: LoadFailure | null = null;
 
   try {
@@ -43,9 +52,10 @@ export default async function TenantRequestsPage({
      * Both are audited, which is two lines in the trail for one page view — the
      * honest price of the screen showing two different things.
      */
-    [tenant, requests] = await Promise.all([
+    [tenant, requests, payments] = await Promise.all([
       apiFetch<PlatformTenant>(`/platform/tenants/${id}`),
       apiFetch<TenantRequests>(`/platform/tenants/${id}/requests`),
+      apiFetch<Paginated<ManualPayment>>(`/platform/tenants/${id}/payments`),
     ]);
   } catch (error) {
     if (error instanceof ApiError && error.code === 'not_platform_admin') {
@@ -60,6 +70,48 @@ export default async function TenantRequestsPage({
 
     failure = describeLoad(error);
   }
+
+  /**
+   * A payment, as a row — POOLSE-63.
+   *
+   * Dates are `dd-MM-yyyy` through `formatDate`, like every date in Poolse, and
+   * the amount goes through `formatCents` with the locale rather than having a
+   * symbol concatenated onto it: pt-PT writes `120,00 €` and en writes `€120.00`.
+   */
+  const paymentColumns: Column<ManualPayment>[] = [
+    {
+      key: 'receivedOn',
+      header: t('admin.payment.receivedOn'),
+      render: (row) => formatDate(row.receivedOn),
+    },
+    {
+      key: 'amount',
+      header: t('admin.payment.amount'),
+      render: (row) => formatCents(locale, row.amountCents),
+    },
+    {
+      key: 'method',
+      header: t('admin.payment.method'),
+      render: (row) => t(`admin.method.${row.method}`),
+    },
+    {
+      key: 'covers',
+      header: t('admin.payment.covers'),
+      render: (row) =>
+        row.coversFrom === null
+          ? t('admin.payment.coversUntil', { to: formatDate(row.coversTo) })
+          : t('admin.payment.coversRange', {
+              from: formatDate(row.coversFrom),
+              to: formatDate(row.coversTo),
+            }),
+    },
+    {
+      key: 'note',
+      header: t('admin.payment.note'),
+      render: (row) =>
+        row.note ?? <span className="text-foreground-muted">{t('admin.payment.noNote')}</span>,
+    },
+  ];
 
   const errorColumns: Column<TenantRequests['errors'][number]>[] = [
     {
@@ -112,6 +164,28 @@ export default async function TenantRequestsPage({
         and the week's history is the evidence underneath rather than the point.
       */}
       {tenant !== null && <TenantActions tenant={tenant} />}
+
+      {/*
+        What this club actually paid outside Stripe — POOLSE-63.
+
+        Under the actions and above the charts, because it is the evidence behind
+        the paid-through date on the card above it. **Insert-only, and it says
+        so**: there is no edit and no delete, for the reason an invoice has
+        neither. A correction is another row.
+      */}
+      {payments !== null && payments.items.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-medium">{t('admin.payments')}</h2>
+          <p className="text-sm text-foreground-muted">{t('admin.paymentsHint')}</p>
+
+          <DataTable
+            columns={paymentColumns}
+            rows={payments.items}
+            rowKey={(row) => row.id}
+            empty={<PageEmpty message={t('admin.noPayments')} />}
+          />
+        </section>
+      )}
 
       {requests !== null && (
         <>

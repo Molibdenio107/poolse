@@ -181,6 +181,7 @@ Stage 1 is **partly** built, and the gap is worth stating so nobody assumes othe
 | `money_provenance` enum | Built, in `1788991200000_money-provenance.sql` |
 | Provenance + three-point range on `staff_compensation` | Built — the reference implementation |
 | Coverage reporting on an aggregate | Built, on the salaries roll-up |
+| Provenance on `manual_payment` | Built — POOLSE-63, and `actual` by definition: money that arrived |
 | Provenance on **every other** money table | **Not built.** `fee_plan`, `invoice_line`, `energy_invoice_line`, `student_fee` and the rest carry amounts with no provenance column |
 | `financial_entry`, the projection surface | **Not built.** Nothing feeds it because it does not exist |
 | Any forecast | Not built, and deliberately not — §7 |
@@ -192,3 +193,19 @@ that before `financial_entry` exists would be work with no reader. Doing it afte
 the projection has to be written twice. **The next money slice builds `financial_entry`
 and backfills provenance behind it**, with salaries as the first feeder because it is
 already shaped for it.
+
+**One table deviates from §4 on purpose, and it is the only one that may.** `manual_payment`
+(POOLSE-63) records what a club paid *Poolse*, not what anybody paid a club — it is the
+operator's own revenue, platform-scoped like `stripe_event`, and no tenant can read it. So the
+money conventions hold (integer cents, `char(3)` currency, a provenance, who recorded it) and
+the *tenant* conventions do not: no RLS policy for `poolse_app`, no composite foreign key, no
+`archived_at`. Financial history is still never destroyed — here that is a grant with no DELETE
+rather than a soft-delete column, which is the same guarantee made by a missing privilege
+instead of by application code. Any future table about Poolse's own revenue follows it; every
+table about a *club's* money follows `staff_compensation`.
+
+**Rule 2 has its first cross-mode case.** `/admin` reports tenant counts per billing mode and
+euros only for the manual payments Poolse actually holds a record of. A Stripe subscription's
+amount is not in this database, so a single "revenue" figure would be a total over partial data
+that looks exactly like a complete one — which is the failure §6 exists to prevent. The panel
+says where the missing half lives instead of estimating it.

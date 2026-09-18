@@ -18,7 +18,19 @@ import type { BillingInterval, PlanKey } from './stripe.js';
  * the two are separate because their actors are — one is a person, one is not.
  */
 
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'comped';
+/**
+ * What a club is paying, as the club's own screen reads it.
+ *
+ * `expired` is the trial clock's (POOLSE-61). `comped` is readable and never
+ * written since POOLSE-63 moved the free pilot onto `billing_mode`.
+ */
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'canceled'
+  | 'expired'
+  | 'comped';
 
 export interface OrganizationSubscription {
   organizationId: string;
@@ -145,7 +157,16 @@ const AUDITED = [
   'subscription_cancel_at_period_end',
 ] as const;
 
-export type EventOutcome = 'applied' | 'duplicate' | 'unknown_customer' | 'ignored';
+export type EventOutcome =
+  | 'applied'
+  | 'duplicate'
+  | 'unknown_customer'
+  | 'ignored'
+  /**
+   * The club is hand-managed or comped, so Stripe does not get to speak for it
+   * — POOLSE-63.
+   */
+  | 'not_stripe_billed';
 
 export interface AppliedEvent {
   outcome: EventOutcome;
@@ -183,8 +204,9 @@ export async function applyStripeEvent(
     const found =
       customerId === null
         ? { rows: [] }
-        : await tx.query<{ id: string }>(
-            `SELECT id FROM organization WHERE stripe_customer_id = $1`,
+        : await tx.query<{ id: string; billing_mode: string }>(
+            `SELECT id, billing_mode::text AS billing_mode
+               FROM organization WHERE stripe_customer_id = $1`,
             [customerId],
           );
 
@@ -197,6 +219,31 @@ export async function applyStripeEvent(
         [eventId, eventType],
       );
       return { outcome: 'unknown_customer' as const, organizationId: null, changed: {} };
+    }
+
+    /*
+     * A club that does not pay through Stripe is not Stripe's to move — POOLSE-63.
+     *
+     * A customer id can outlive the arrangement it was made for: a club that
+     * subscribed by card, then asked to pay Rui by transfer instead, still has a
+     * `stripe_customer_id` and may still have a subscription object drifting
+     * towards `past_due` in Stripe's own records. Letting that event through
+     * would silently take a hand-managed club back over — and the club would
+     * discover it as a read-only banner.
+     *
+     * **Recorded, not raised.** The refusal goes into `stripe_event` with its own
+     * outcome, so there is a trail of exactly which event was turned away and
+     * when, and the endpoint still answers 200: Stripe disables an endpoint that
+     * keeps failing, which would take the real events down with the stray ones.
+     */
+    const mode = found.rows[0]!.billing_mode;
+    if (mode !== 'stripe') {
+      await tx.query(
+        `INSERT INTO stripe_event (id, type, organization_id, changed, outcome)
+              VALUES ($1, $2, $3, $4::jsonb, 'not_stripe_billed')`,
+        [eventId, eventType, organizationId, JSON.stringify({ billingMode: mode })],
+      );
+      return { outcome: 'not_stripe_billed' as const, organizationId, changed: {} };
     }
 
     const columns = (Object.keys(change) as (keyof SubscriptionChange)[]).filter(

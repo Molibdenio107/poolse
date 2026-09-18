@@ -116,3 +116,7 @@ rebuild, and a value nothing writes costs nothing.
 **Settled: Rui took the recommendation, 13 September 2026.** `billing_mode` owns it, the status
 is backfilled in POOLSE-63's own migration, and every screen that read the status for that word
 reads the mode instead.
+
+**Built 18 September 2026.** `readSubscriptionStatus` refuses `comped` on the way in, the
+`/admin` status control no longer offers it, and the badge still knows the word so a row written
+before the backfill renders rather than falling through as an unknown.

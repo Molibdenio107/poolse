@@ -2997,7 +2997,67 @@ export type SubscriptionStatus =
   | 'active'
   | 'past_due'
   | 'canceled'
+  /** Set by the trial clock when the trial runs out — POOLSE-61. */
+  | 'expired'
+  /**
+   * Readable, never written — POOLSE-63.
+   *
+   * The free pilot lives on `billingMode` now: `comped` there with an ordinary
+   * `active` status. The value stays so a row written before that still renders.
+   */
   | 'comped';
+
+/**
+ * How a club pays for Poolse — POOLSE-63.
+ *
+ * Beside the status, never inside it: the mode says *how*, the status says
+ * *whether*, and `suspendedAt` says whether the door is open.
+ */
+export type BillingMode = 'stripe' | 'manual' | 'comped';
+
+/** How money that never went through Stripe arrived. */
+export type PaymentMethod = 'cash' | 'bank_transfer' | 'other';
+
+/** One payment a club made outside Stripe. Insert-only, so there is no edit. */
+export interface ManualPayment {
+  id: string;
+  amountCents: number;
+  currency: string;
+  receivedOn: string;
+  method: PaymentMethod;
+  coversFrom: string | null;
+  coversTo: string;
+  note: string | null;
+  recordedByClerkUserId: string;
+  createdAt: string;
+}
+
+/** A manual subscription running out inside the window. Negative days are late. */
+export interface RenewalDue {
+  organizationId: string;
+  name: string;
+  paidThrough: string;
+  daysLeft: number;
+  subscriptionStatus: SubscriptionStatus;
+  readOnlyAt: string | null;
+}
+
+/**
+ * `/platform/billing` — the operator's own picture.
+ *
+ * Counts per mode, and euros only for what Poolse actually holds a record of.
+ * **There is no Stripe figure** and the screen says why: the prices live in
+ * Stripe, nothing here stores an amount, and a number this product guessed would
+ * be worse than a sentence pointing at the dashboard that knows.
+ */
+export interface BillingOverview {
+  tenantsByMode: Record<BillingMode, number>;
+  manualCentsAllTime: number;
+  manualCentsLast12Months: number;
+  manualPaymentCount: number;
+  renewals: RenewalDue[];
+  renewalsWindowDays: number;
+}
 
 export interface PlatformTenant {
   id: string;
@@ -3009,6 +3069,14 @@ export interface PlatformTenant {
   trialEndsAt: string | null;
   /** Set once they pay — POOLSE-60 made it one plan, so it is a yes or a no. */
   planTier: PlanKey | null;
+  /**
+   * How they pay, and the last day they are paid up to — POOLSE-63.
+   *
+   * `paidThrough` is a `YYYY-MM-DD` day, inclusive, and only ever moves because
+   * a payment was recorded. There is no control that types it.
+   */
+  billingMode: BillingMode;
+  paidThrough: string | null;
   /** Active management memberships plus invitations still outstanding. */
   managementSeatsUsed: number;
   /** Null is unlimited, never zero. */

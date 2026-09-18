@@ -2,14 +2,17 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Eye, Lock, LockOpen, Pencil } from 'lucide-react';
+import { Eye, Lock, LockOpen, Pencil, Receipt, Wallet } from 'lucide-react';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import { Dialog } from '@/components/ui/dialog';
 import { useSavedAction } from '@/lib/saved';
 import type { PlatformTenant } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
+import { formatDate } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import {
+  recordPaymentAction,
+  setBillingModeAction,
   setPlanAction,
   setReadOnlyAction,
   setSubscriptionAction,
@@ -54,6 +57,8 @@ export function TenantActions({ tenant }: { tenant: PlatformTenant }): React.Rea
       <div className="grid gap-4 md:grid-cols-2">
         <TrialCard tenant={tenant} />
         <SubscriptionCard tenant={tenant} />
+        <BillingModeCard tenant={tenant} />
+        <PaymentCard tenant={tenant} />
         <PlanCard tenant={tenant} />
         <ReadOnlyCard tenant={tenant} />
         <SuspensionCard tenant={tenant} />
@@ -166,7 +171,13 @@ function SubscriptionCard({ tenant }: { tenant: PlatformTenant }): React.ReactEl
         label={t('admin.column.status')}
         initial={tenant.subscriptionStatus}
         error={state.fields?.['status']}
-        options={(['trialing', 'active', 'past_due', 'canceled', 'comped'] as const).map(
+        /*
+          `comped` is deliberately absent — POOLSE-63. A free pilot is a *mode*
+          now, offered on the card below, because one fact with two homes is how
+          the two come to disagree. `expired` is here because the clock can set
+          it and an operator has to be able to correct it.
+        */
+        options={(['trialing', 'active', 'past_due', 'canceled', 'expired'] as const).map(
           (status) => ({ value: status, label: t(`admin.status.${status}`) }),
         )}
       />
@@ -394,4 +405,139 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
       </Dialog>
     </>
   );
+}
+
+/**
+ * How this club pays — POOLSE-63.
+ *
+ * Beside the subscription status rather than folded into it, because they answer
+ * different questions and move at different times. The paid-through date is
+ * shown here and **is not a field**: it moves only because a payment was
+ * recorded, since a date typed by hand is a date that disagrees with the money.
+ */
+function BillingModeCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
+  const t = useTranslations();
+  const [state, dispatch, pending] = useSavedAction(setBillingModeAction, INITIAL);
+
+  return (
+    <Card
+      title={t('admin.action.billingMode')}
+      hint={t('admin.action.billingModeHint')}
+      action={dispatch}
+      tenantId={tenant.id}
+    >
+      <SelectField
+        name="billingMode"
+        label={t('admin.action.billingMode')}
+        initial={tenant.billingMode}
+        error={state.fields?.['billingMode']}
+        options={(['stripe', 'manual', 'comped'] as const).map((mode) => ({
+          value: mode,
+          label: t(`admin.billingMode.${mode}`),
+        }))}
+      />
+
+      {/*
+        Visible text, never a tooltip: what a club is paid up to is something the
+        operator needs, and a tooltip may clarify a control but may never be the
+        only place a fact appears.
+      */}
+      <p className="text-sm text-foreground-muted">
+        {tenant.paidThrough === null
+          ? t('admin.action.paidThroughNone')
+          : t('admin.action.paidThrough', { date: formatDate(tenant.paidThrough) })}
+      </p>
+
+      <Submit label={t('common.save')} pending={pending} icon={<Wallet className="size-4" />} />
+    </Card>
+  );
+}
+
+/**
+ * Record what actually arrived — POOLSE-63.
+ *
+ * **This is the only thing that moves `paidThrough`**, and recording one also
+ * puts the club on manual, marks it active and lifts read-only. That is what the
+ * money means, and doing it in one action is what stops the date and the receipt
+ * disagreeing.
+ *
+ * The amount is typed the way every price in this product is typed — "120" or
+ * "120,50" — and becomes cents in the action. A payment cannot be edited
+ * afterwards: it is a claim about a moment, like a completion or an invoice, so
+ * a correction is another row rather than a rewrite of this one.
+ */
+function PaymentCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
+  const t = useTranslations();
+  const [state, dispatch, pending] = useSavedAction(recordPaymentAction, INITIAL);
+
+  return (
+    <Card
+      title={t('admin.action.payment')}
+      hint={t('admin.action.paymentHint')}
+      action={dispatch}
+      tenantId={tenant.id}
+    >
+      <TextField
+        name="amount"
+        label={t('admin.action.amount')}
+        inputMode="decimal"
+        initial=""
+        error={state.fields?.['amount'] ?? state.fields?.['amountCents']}
+        hint={t('admin.action.amountHint')}
+      />
+      <TextField
+        name="receivedOn"
+        type="date"
+        label={t('admin.action.receivedOn')}
+        initial={today()}
+        error={state.fields?.['receivedOn']}
+      />
+      <SelectField
+        name="method"
+        label={t('admin.action.method')}
+        initial="bank_transfer"
+        error={state.fields?.['method']}
+        options={(['cash', 'bank_transfer', 'other'] as const).map((method) => ({
+          value: method,
+          label: t(`admin.method.${method}`),
+        }))}
+      />
+      <TextField
+        name="coversFrom"
+        type="date"
+        label={t('admin.action.coversFrom')}
+        initial=""
+        error={state.fields?.['coversFrom']}
+        hint={t('admin.action.coversFromHint')}
+      />
+      <TextField
+        name="coversTo"
+        type="date"
+        label={t('admin.action.coversTo')}
+        initial=""
+        error={state.fields?.['coversTo']}
+        hint={t('admin.action.coversToHint')}
+      />
+      <TextAreaField
+        name="note"
+        label={t('admin.action.paymentNote')}
+        initial=""
+        error={state.fields?.['note']}
+        rows={2}
+      />
+      <Submit
+        label={t('admin.action.recordPayment')}
+        pending={pending}
+        icon={<Receipt className="size-4" />}
+      />
+    </Card>
+  );
+}
+
+/** Today as `YYYY-MM-DD`, which is what a date input speaks. */
+function today(): string {
+  const at = new Date();
+  const month = String(at.getMonth() + 1).padStart(2, '0');
+  const date = String(at.getDate()).padStart(2, '0');
+  return `${at.getFullYear()}-${month}-${date}`;
 }

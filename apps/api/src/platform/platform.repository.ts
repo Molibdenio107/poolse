@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { withPlatform } from '@poolse/db';
 import { currentAuth } from '../auth/auth.context.js';
 import {
@@ -18,8 +19,9 @@ import {
  *
  * Every query in this file runs on the platform connection, which is a different
  * login from the rest of the API: read-only, admitted by a `FOR SELECT TO
- * poolse_platform` policy on seven named tables, and blind to everything else in
- * the schema. There is no `withOrg` here and no GUC to set, which is the one
+ * poolse_platform` policy on eight named tables — the eighth is two columns of
+ * `app_user`, added 14 September 2026 — and blind to everything else in the
+ * schema. There is no `withOrg` here and no GUC to set, which is the one
  * place in this codebase where an unscoped SELECT is the intended thing rather
  * than the bug.
  *
@@ -41,7 +43,27 @@ export type SubscriptionStatus =
   | 'active'
   | 'past_due'
   | 'canceled'
+  /** Set by the trial clock when `trial_ends_at` passes — POOLSE-61. */
+  | 'expired'
+  /**
+   * Readable, never written — POOLSE-63.
+   *
+   * `billing_mode` owns comped since 18 September 2026: a free pilot is
+   * `billing_mode = 'comped'`, `subscription_status = 'active'`, which is the
+   * more honest pair. The value stays in the enum because removing one is a
+   * rebuild, and the type keeps it so a row written before the backfill still
+   * types rather than falling through a switch.
+   */
   | 'comped';
+
+/**
+ * How a club pays — POOLSE-63.
+ *
+ * Beside the status rather than inside it: the mode says *how*, the status says
+ * *whether*, and `suspended_at` says whether the door is open. Three facts that
+ * move at different times for different reasons.
+ */
+export type BillingMode = 'stripe' | 'manual' | 'comped';
 
 export interface TenantRow {
   id: string;
@@ -62,6 +84,16 @@ export interface TenantRow {
    * operator seeing both figures is how that gets noticed.
    */
   planTier: 'starter' | 'club' | 'network' | null;
+  /**
+   * How they pay, and what they are paid up to — POOLSE-63.
+   *
+   * `paidThrough` is a `YYYY-MM-DD` day and means the last day covered,
+   * inclusive. It is only ever moved by recording a payment, which is why there
+   * is no action that writes it on its own: a date typed by hand is a date that
+   * disagrees with the money.
+   */
+  billingMode: BillingMode;
+  paidThrough: string | null;
   /** Active management memberships plus invitations still outstanding. */
   managementSeatsUsed: number;
   /** Null is unlimited, never zero. */
@@ -158,6 +190,8 @@ export async function listTenants(
       created_at: Date;
       subscription_status: SubscriptionStatus;
       plan: 'starter' | 'club' | 'network' | null;
+      billing_mode: BillingMode;
+      paid_through: string | null;
       trial_ends_at: Date | null;
       management_seats_used: number;
       max_management_users: number | null;
@@ -184,6 +218,15 @@ export async function listTenants(
              o.created_at,
              o.subscription_status::text AS subscription_status,
              o.plan::text AS plan,
+             o.billing_mode::text AS billing_mode,
+             /*
+              * Cast to text, not the bare column. node-postgres parses a date
+              * into a Date at local midnight, and in Lisbon that is 23:00 UTC
+              * the day before for half the year — the off-by-one that day() in
+              * compensation.repository.ts was written to close. A day has no
+              * timezone; the string is the day.
+              */
+             o.paid_through::text AS paid_through,
              o.trial_ends_at,
              o.max_management_users,
              o.max_facilities,
@@ -308,6 +351,8 @@ export async function listTenants(
       subscriptionStatus: row.subscription_status,
       trialEndsAt: row.trial_ends_at?.toISOString() ?? null,
       planTier: row.plan,
+      billingMode: row.billing_mode,
+      paidThrough: row.paid_through,
       // `count()` is bigint, which node-postgres hands back as a string; the two
       // halves of the seat sum arrive as one already-added string either way.
       managementSeatsUsed: Number(row.management_seats_used),
@@ -533,7 +578,7 @@ function hourFloor(ms: number): number {
 // `archived_at` would be refused by Postgres rather than by a code review.
 // ---------------------------------------------------------------------------
 
-/** What an action may set. Every key is one of the six granted columns. */
+/** What an action may set. Every key is one of the granted columns. */
 interface TenantChange {
   trial_ends_at?: string | null;
   subscription_status?: SubscriptionStatus;
@@ -543,19 +588,58 @@ interface TenantChange {
   suspension_reason?: string | null;
   read_only_at?: string | null;
   pending_delete_at?: string | null;
+  billing_mode?: BillingMode;
+  paid_through?: string | null;
 }
 
-/** The columns an audit entry is worth carrying. */
-const AUDITED = [
-  'trial_ends_at',
-  'subscription_status',
-  'max_facilities',
-  'max_management_users',
-  'suspended_at',
-  'suspension_reason',
-  'read_only_at',
-  'pending_delete_at',
-] as const;
+/**
+ * The columns an audit entry is worth carrying, and how each is read.
+ *
+ * A map rather than a list because one of them needs a cast: `paid_through` is a
+ * `date`, and reading it as a Date and stamping it with `toISOString()` would
+ * record the day before for half the year. The key is the column name — which is
+ * what the trail is keyed on — and the value is the expression that reads it.
+ */
+const AUDITED: Record<string, string> = {
+  trial_ends_at: 'trial_ends_at',
+  subscription_status: 'subscription_status',
+  max_facilities: 'max_facilities',
+  max_management_users: 'max_management_users',
+  suspended_at: 'suspended_at',
+  suspension_reason: 'suspension_reason',
+  read_only_at: 'read_only_at',
+  pending_delete_at: 'pending_delete_at',
+  billing_mode: 'billing_mode',
+  paid_through: 'paid_through::text',
+};
+
+const AUDITED_KEYS = Object.keys(AUDITED);
+
+/** `a, b, c::text AS c` — usable in a SELECT and in a RETURNING alike. */
+const AUDITED_SELECT = AUDITED_KEYS.map((key) =>
+  AUDITED[key] === key ? key : `${AUDITED[key]} AS ${key}`,
+).join(', ');
+
+/** The row a change is decided against: every audited column, as it stands. */
+export type TenantBefore = Record<string, unknown>;
+
+/**
+ * A change that has to read the tenant before it can say what it is.
+ *
+ * Recording a payment is the case that needed it: `paid_through` becomes the
+ * *greater* of what is there and what the money buys, and the payment row itself
+ * has to be written in the same transaction as the columns it moves. Running it
+ * inside `changeTenant` is what keeps "there is exactly one write path, and it
+ * audits itself" true — the alternative was a second helper with its own
+ * transaction and its own audit insert, which is how two books come to disagree.
+ *
+ * Throwing from here rolls the whole thing back, so a guard that refuses a
+ * combination the CHECK would refuse anyway can do it in a sentence.
+ */
+type PrepareChange = (
+  before: TenantBefore,
+  tx: Tx,
+) => Promise<{ change: TenantChange; detail?: Record<string, unknown> }>;
 
 export interface TenantChangeResult {
   organizationId: string;
@@ -577,35 +661,44 @@ export interface TenantChangeResult {
 async function changeTenant(
   organizationId: string,
   action: string,
-  change: TenantChange,
+  plan: TenantChange | PrepareChange,
 ): Promise<TenantChangeResult | null> {
   const clerkUserId = currentAuth().clerkUserId;
 
-  const columns = Object.keys(change) as (keyof TenantChange)[];
-  if (columns.length === 0) {
-    throw new Error(`Platform action "${action}" asked to change nothing`);
-  }
-
   return withPlatform(async (tx) => {
-    const { rows: before } = await tx.query<Record<string, unknown>>(
-      `SELECT ${AUDITED.join(', ')} FROM organization WHERE id = $1`,
+    const { rows: before } = await tx.query<TenantBefore>(
+      `SELECT ${AUDITED_SELECT} FROM organization WHERE id = $1`,
       [organizationId],
     );
     if (before.length === 0) return null;
+
+    /*
+     * The change is decided inside the transaction that applies it, so a plan
+     * that reads the tenant reads the row it is about to write — not the row as
+     * it was when the screen was drawn.
+     */
+    const prepared =
+      typeof plan === 'function' ? await plan(before[0]!, tx) : { change: plan };
+
+    const change = prepared.change;
+    const columns = Object.keys(change) as (keyof TenantChange)[];
+    if (columns.length === 0) {
+      throw new Error(`Platform action "${action}" asked to change nothing`);
+    }
 
     // Built from a fixed key list, never from caller-supplied names: these
     // become identifiers, which cannot be parameterised.
     const assignments = columns.map((column, index) => `${column} = $${index + 2}`);
 
-    const { rows: after } = await tx.query<Record<string, unknown>>(
+    const { rows: after } = await tx.query<TenantBefore>(
       `UPDATE organization SET ${assignments.join(', ')}
         WHERE id = $1
-        RETURNING ${AUDITED.join(', ')}`,
+        RETURNING ${AUDITED_SELECT}`,
       [organizationId, ...columns.map((column) => change[column] ?? null)],
     );
 
     const changed: TenantChangeResult['changed'] = {};
-    for (const column of AUDITED) {
+    for (const column of AUDITED_KEYS) {
       const was = normalise(before[0]![column]);
       const now = normalise(after[0]![column]);
       if (was !== now) changed[column] = { before: was, after: now };
@@ -614,7 +707,12 @@ async function changeTenant(
     await tx.query(
       `INSERT INTO platform_audit_log (clerk_user_id, action, organization_id, detail)
             VALUES ($1, $2, $3, $4::jsonb)`,
-      [clerkUserId, action, organizationId, JSON.stringify({ changed })],
+      [
+        clerkUserId,
+        action,
+        organizationId,
+        JSON.stringify({ changed, ...(prepared.detail ?? {}) }),
+      ],
     );
 
     return { organizationId, changed };
@@ -647,7 +745,13 @@ export async function extendTrial(
   return changeTenant(organizationId, 'tenant.trial.set', { trial_ends_at: endsAt });
 }
 
-/** Set the subscription state. `comped` is the free pilot: live, not billed. */
+/**
+ * Set the subscription state — whether they are paying, never how.
+ *
+ * `comped` used to be settable here and is not since POOLSE-63: a free pilot is
+ * `billing_mode = 'comped'` with an ordinary `active` status, so the word has one
+ * home. `readSubscriptionStatus` refuses it on the way in.
+ */
 export async function setSubscriptionStatus(
   organizationId: string,
   status: SubscriptionStatus,
@@ -731,4 +835,320 @@ export async function setReadOnly(
           pending_delete_at: readOnly.dataKeptUntil,
         },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Paid outside Stripe — POOLSE-63
+//
+// Some clubs pay in cash, by transfer, on a handshake. Everything below is the
+// operator's half of that: what mode a club is on, what money actually arrived,
+// and what is falling due.
+//
+// **Recording a payment is the only thing that moves `paid_through`.** There is
+// no action that sets that date on its own, deliberately: the payment is the
+// fact and the date is derived from it, and a field somebody fills in by hand is
+// a field that disagrees with the money.
+// ---------------------------------------------------------------------------
+
+/** The transaction handle `withPlatform` hands out. */
+type Tx = Parameters<Parameters<typeof withPlatform>[0]>[0];
+
+export type PaymentMethod = 'cash' | 'bank_transfer' | 'other';
+
+export interface ManualPaymentInput {
+  amountCents: number;
+  /** The day the money arrived. */
+  receivedOn: string;
+  method: PaymentMethod;
+  /** Optional: an operator recording last month's cash may not know it. */
+  coversFrom: string | null;
+  /** Required — a payment that covers no period cannot extend one. */
+  coversTo: string;
+  note: string | null;
+}
+
+export interface ManualPaymentRow extends ManualPaymentInput {
+  id: string;
+  currency: string;
+  recordedByClerkUserId: string;
+  createdAt: string;
+}
+
+/**
+ * Turn a club's billing mode over.
+ *
+ * The guard is the CHECK said in a sentence: an *active manual* subscription
+ * must know what it is paid up to, and a club that has never paid outside Stripe
+ * has no such date. Refusing here rather than letting the constraint fire is
+ * what puts a message beside the field instead of a constraint name in a 500 —
+ * and the constraint still stands behind it, which is what makes this a courtesy
+ * rather than the enforcement.
+ *
+ * Nothing about the mode touches access or the status. A club moved to `manual`
+ * that has lapsed stays lapsed; a comped one is simply a club that does not pay.
+ */
+export async function setBillingMode(
+  organizationId: string,
+  mode: BillingMode,
+): Promise<TenantChangeResult | null> {
+  return changeTenant(organizationId, 'tenant.billing_mode.set', (before) => {
+    if (
+      mode === 'manual' &&
+      before['subscription_status'] === 'active' &&
+      before['paid_through'] === null
+    ) {
+      throw new BadRequestException({
+        fields: { billingMode: 'admin.error.manualNeedsPayment' },
+      });
+    }
+    return Promise.resolve({ change: { billing_mode: mode } });
+  });
+}
+
+/**
+ * Record money that arrived outside Stripe, and move what it paid for.
+ *
+ * One transaction: the `manual_payment` row, the columns it implies, and the
+ * audit entry commit together or none of them do. It goes through `changeTenant`
+ * rather than beside it so there stays exactly one write path to a tenant's
+ * billing state, and so nothing can move `paid_through` without leaving a trail.
+ *
+ * **Recording a payment is what makes a club hand-managed.** The mode goes to
+ * `manual` and the status to `active` in the same breath, because that is what
+ * the money means and because the CHECK refuses the alternative anyway — a club
+ * whose cash has arrived is not a club on a trial.
+ *
+ * **`paid_through` is the greater of what is there and what this buys**, so a
+ * payment recorded out of order extends cover and never shortens it. The
+ * comparison is between two `YYYY-MM-DD` strings, which sort as days precisely
+ * because they are days rather than instants.
+ *
+ * **It lifts read-only and clears any deletion date**, which is the point of the
+ * grace: the money that closed the door has arrived. It deliberately does *not*
+ * clear `suspended_at` — a suspension is an operator's own decision with a reason
+ * attached, and a payment is not an argument against it.
+ */
+export async function recordManualPayment(
+  organizationId: string,
+  payment: ManualPaymentInput,
+): Promise<TenantChangeResult | null> {
+  return changeTenant(organizationId, 'tenant.payment.recorded', async (before, tx) => {
+    const clerkUserId = currentAuth().clerkUserId;
+
+    const { rows } = await tx.query<{ id: string }>(
+      `INSERT INTO manual_payment (
+         organization_id, amount_cents, received_on, method,
+         covers_from, covers_to, note, recorded_by_clerk_user_id
+       ) VALUES ($1, $2, $3::date, $4, $5::date, $6::date, $7, $8)
+       RETURNING id`,
+      [
+        organizationId,
+        payment.amountCents,
+        payment.receivedOn,
+        payment.method,
+        payment.coversFrom,
+        payment.coversTo,
+        payment.note,
+        clerkUserId,
+      ],
+    );
+
+    const held = before['paid_through'];
+    const paidThrough =
+      typeof held === 'string' && held > payment.coversTo ? held : payment.coversTo;
+
+    return {
+      change: {
+        billing_mode: 'manual',
+        subscription_status: 'active',
+        paid_through: paidThrough,
+        read_only_at: null,
+        pending_delete_at: null,
+      },
+      /*
+       * The amount is in the trail and not in the path, the query string or a
+       * log line — the rule `docs/features/salaries.md` sets about money and
+       * URLs. `platform_audit_log` is exactly where a figure belongs.
+       */
+      detail: {
+        paymentId: rows[0]!.id,
+        amountCents: payment.amountCents,
+        method: payment.method,
+        receivedOn: payment.receivedOn,
+        coversTo: payment.coversTo,
+      },
+    };
+  });
+}
+
+/**
+ * What a club has actually paid, newest first.
+ *
+ * Paginated like every other list that grows with time — a club paying monthly
+ * writes twelve rows a year and an operator wants this year, not all of them.
+ */
+export async function listManualPayments(
+  organizationId: string,
+  page: PageQuery,
+): Promise<Paginated<ManualPaymentRow>> {
+  return withPlatform(async (tx) => {
+    const run = (limit: number, offset: number) =>
+      tx.query<{
+        total_count: number;
+        id: string;
+        amount_cents: number;
+        currency: string;
+        received_on: string;
+        method: PaymentMethod;
+        covers_from: string | null;
+        covers_to: string;
+        note: string | null;
+        recorded_by_clerk_user_id: string;
+        created_at: Date;
+      }>(
+        `SELECT ${TOTAL_COUNT},
+                id,
+                amount_cents,
+                currency,
+                -- Days as days. Every date column in this statement is read as
+                -- text for the reason paid_through is: a Date at local midnight
+                -- is the previous day in Lisbon for half the year.
+                received_on::text AS received_on,
+                method::text      AS method,
+                covers_from::text AS covers_from,
+                covers_to::text   AS covers_to,
+                note,
+                recorded_by_clerk_user_id,
+                created_at
+           FROM manual_payment
+          WHERE organization_id = $1
+          ORDER BY received_on DESC, created_at DESC, id
+          LIMIT $2 OFFSET $3`,
+        [organizationId, limit, offset],
+      );
+
+    return windowed(page, run, (row) => ({
+      id: row.id,
+      amountCents: row.amount_cents,
+      currency: row.currency,
+      receivedOn: row.received_on,
+      method: row.method,
+      coversFrom: row.covers_from,
+      coversTo: row.covers_to,
+      note: row.note,
+      recordedByClerkUserId: row.recorded_by_clerk_user_id,
+      createdAt: row.created_at.toISOString(),
+    }));
+  });
+}
+
+/** How far ahead the renewals list looks. */
+export const RENEWALS_WINDOW_DAYS = 30;
+
+export interface RenewalDue {
+  organizationId: string;
+  name: string;
+  paidThrough: string;
+  /** Negative once cover has run out, which is when it matters most. */
+  daysLeft: number;
+  subscriptionStatus: SubscriptionStatus;
+  readOnlyAt: string | null;
+}
+
+export interface BillingOverview {
+  /** Live tenants per mode. Counts, never one summed figure. */
+  tenantsByMode: Record<BillingMode, number>;
+  /**
+   * Money Poolse actually holds a record of, in cents.
+   *
+   * **Manual payments only, and the screen says so.** Nothing stores what a
+   * Stripe subscription is worth — the prices live in Stripe and are read back
+   * for display — so a "Stripe revenue" figure here would be this product
+   * guessing at its own income. Counts are honest; a made-up total is not.
+   */
+  manualCentsAllTime: number;
+  manualCentsLast12Months: number;
+  manualPaymentCount: number;
+  renewals: RenewalDue[];
+  renewalsWindowDays: number;
+}
+
+/**
+ * The operator's own billing picture — POOLSE-63.
+ *
+ * Three counts and one sum, never one number. `docs/financials.md` forbids
+ * summing across provenances into an unlabelled figure, and this is a stronger
+ * case than that: a comped tenant is worth nothing on purpose and a Stripe one is
+ * worth something nobody here knows.
+ */
+export async function readBillingOverview(): Promise<BillingOverview> {
+  return withPlatform(async (tx) => {
+    const { rows: modes } = await tx.query<{ billing_mode: BillingMode; tenants: string }>(
+      `SELECT billing_mode::text AS billing_mode, count(*) AS tenants
+         FROM organization
+        WHERE archived_at IS NULL
+        GROUP BY billing_mode`,
+    );
+
+    const { rows: money } = await tx.query<{
+      all_time: string | null;
+      last_year: string | null;
+      payments: string;
+    }>(
+      `SELECT sum(amount_cents)                       AS all_time,
+              sum(amount_cents) FILTER (
+                WHERE received_on >= current_date - interval '1 year'
+              )                                       AS last_year,
+              count(*)                                AS payments
+         FROM manual_payment`,
+    );
+
+    /*
+     * Everything manual that runs out inside the window — **and everything that
+     * already has**. A renewals list that hides the club whose cover lapsed last
+     * week is the screen failing at the one job it has; those sort first, because
+     * a negative number of days left is the most urgent row there is.
+     */
+    const { rows: renewals } = await tx.query<{
+      id: string;
+      name: string;
+      paid_through: string;
+      days_left: number;
+      subscription_status: SubscriptionStatus;
+      read_only_at: Date | null;
+    }>(
+      `SELECT o.id,
+              o.name,
+              o.paid_through::text AS paid_through,
+              (o.paid_through - current_date) AS days_left,
+              o.subscription_status::text AS subscription_status,
+              o.read_only_at
+         FROM organization o
+        WHERE o.archived_at IS NULL
+          AND o.billing_mode = 'manual'
+          AND o.paid_through IS NOT NULL
+          AND o.paid_through <= current_date + make_interval(days => $1)
+        ORDER BY o.paid_through, o.name`,
+      [RENEWALS_WINDOW_DAYS],
+    );
+
+    const tenantsByMode: Record<BillingMode, number> = { stripe: 0, manual: 0, comped: 0 };
+    for (const row of modes) tenantsByMode[row.billing_mode] = Number(row.tenants);
+
+    return {
+      tenantsByMode,
+      manualCentsAllTime: Number(money[0]?.all_time ?? 0),
+      manualCentsLast12Months: Number(money[0]?.last_year ?? 0),
+      manualPaymentCount: Number(money[0]?.payments ?? 0),
+      renewals: renewals.map((row) => ({
+        organizationId: row.id,
+        name: row.name,
+        paidThrough: row.paid_through,
+        daysLeft: Number(row.days_left),
+        subscriptionStatus: row.subscription_status,
+        readOnlyAt: row.read_only_at?.toISOString() ?? null,
+      })),
+      renewalsWindowDays: RENEWALS_WINDOW_DAYS,
+    };
+  });
 }

@@ -1,6 +1,6 @@
 # Poolse backlog
 
-64 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
+65 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
 exists, what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got
 wrong) and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance
 criteria, which are the contract.
@@ -19,7 +19,7 @@ QA section is your test list, already written.
 
 ## Index
 
-64 tickets · 30 at High priority · 58 open questions marked in the ticket files
+65 tickets · 30 at High priority · 58 open questions marked in the ticket files
 
 POOLSE-43 … 55 are one feature — lane-level scheduling and parcerias. Read
 [BUILD-ORDER.md](./BUILD-ORDER.md) before starting any of them: four decisions were taken
@@ -91,3 +91,4 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-62](./POOLSE-62-trial-abuse.md) | Trial abuse | Signup / Platform | Medium | POOLSE-61 | 2 |
 | [POOLSE-63](./POOLSE-63-paid-outside-stripe.md) | Subscriptions paid outside Stripe | Platform / Billing | High | POOLSE-61 | 1 |
 | [POOLSE-64](./POOLSE-64-hardening-admin.md) | Hardening `/admin` | Platform / Security | Medium | — | 1 |
+| [POOLSE-65](./POOLSE-65-resource-kind-path-and-audit.md) | The resource-kind path, and the audit that prices it | Installations / Data model | Low | — | — |

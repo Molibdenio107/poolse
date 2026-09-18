@@ -96,6 +96,14 @@ const TENANT_TABLES = [
   'trial_event',
   'trial_notice',
   /*
+   * The operator's own revenue — POOLSE-63 — and here for the fourth time for
+   * the third reason. It belongs to no tenant, carries no RLS policy for
+   * poolse_app, and is a real foreign key to `organization` that nothing
+   * cascades, so a scratch tenant that was recorded as having paid would fail
+   * teardown on the key.
+   */
+  'manual_payment',
+  /*
    * Telemetry about a tenant rather than a tenant's data — slice 2 — but it does
    * carry `organization_id` as a real foreign key, and the interceptor is
    * registered globally, so any integration test that lets a minute pass leaves

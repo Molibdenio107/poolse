@@ -1,5 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
-import type { SubscriptionStatus } from './platform.repository.js';
+import type {
+  BillingMode,
+  PaymentMethod,
+  SubscriptionStatus,
+} from './platform.repository.js';
 
 /**
  * What an operator may send, checked before it reaches a column — slice 3.
@@ -14,13 +18,30 @@ import type { SubscriptionStatus } from './platform.repository.js';
  * failure that ticket was written to remove.
  */
 
+/**
+ * What an operator may set a tenant's status to.
+ *
+ * **`comped` is not on it since POOLSE-63.** A free pilot carries the word on
+ * its billing mode, with an ordinary `active` status — one home for one fact —
+ * so it is refused here and offered on the billing-mode control instead. The
+ * value stays in the database enum, because removing one is a rebuild and a
+ * value nothing writes costs nothing.
+ *
+ * **`expired` is on it**, and it is the clock's own state. An operator does not
+ * normally type it, but a state a machine can reach and a person cannot correct
+ * is a state nobody can undo at four o'clock on a Friday.
+ */
 export const SUBSCRIPTION_STATUSES: readonly SubscriptionStatus[] = [
   'trialing',
   'active',
   'past_due',
   'canceled',
-  'comped',
+  'expired',
 ];
+
+export const BILLING_MODES: readonly BillingMode[] = ['stripe', 'manual', 'comped'];
+
+export const PAYMENT_METHODS: readonly PaymentMethod[] = ['cash', 'bank_transfer', 'other'];
 
 /**
  * How far ahead a trial may be set.
@@ -95,4 +116,110 @@ export function readSuspensionReason(raw: unknown): string {
   if (reason === '') refuse('reason', 'admin.error.reasonRequired');
   if (reason.length > MAX_REASON_LENGTH) refuse('reason', 'admin.error.reasonTooLong');
   return reason;
+}
+
+// ---------------------------------------------------------------------------
+// Paid outside Stripe — POOLSE-63
+// ---------------------------------------------------------------------------
+
+/** A ceiling on a note nobody but the operator reads. The column agrees. */
+const MAX_NOTE_LENGTH = 500;
+
+/**
+ * How far out of today a payment may be dated.
+ *
+ * Both directions, and the past is the wide one: recording last quarter's cash
+ * in arrears is ordinary, and a receipt dated next year is a typo. The same
+ * reasoning as the trial's two-year ceiling — a rule about typing, not about
+ * money.
+ */
+const MAX_PAYMENT_YEARS_BACK = 5;
+const MAX_PAYMENT_YEARS_AHEAD = 1;
+
+/** How far ahead a payment may say it covers. A decade is a slipped digit. */
+const MAX_COVER_YEARS_AHEAD = 5;
+
+export function readBillingMode(raw: unknown): BillingMode {
+  if (typeof raw !== 'string' || !BILLING_MODES.includes(raw as BillingMode)) {
+    refuse('billingMode', 'admin.error.billingModeInvalid');
+  }
+  return raw as BillingMode;
+}
+
+export function readPaymentMethod(raw: unknown): PaymentMethod {
+  if (typeof raw !== 'string' || !PAYMENT_METHODS.includes(raw as PaymentMethod)) {
+    refuse('method', 'admin.error.methodInvalid');
+  }
+  return raw as PaymentMethod;
+}
+
+/**
+ * A whole number of cents, above zero.
+ *
+ * Integer minor units all the way in, like every amount in this product: the
+ * decimal is parsed in the browser by `parseCents` and never re-parsed here, so
+ * there is one definition of what "35,50" means rather than two that agree until
+ * somebody types a thousands separator.
+ *
+ * Zero is refused as well as negative. A payment of nothing is not a payment,
+ * and recording one would move `paid_through` on the strength of no money.
+ */
+export function readAmountCents(raw: unknown): number {
+  const value = typeof raw === 'number' ? raw : Number.parseInt(String(raw ?? ''), 10);
+  if (!Number.isInteger(value) || value <= 0) refuse('amountCents', 'admin.error.amountInvalid');
+  return value;
+}
+
+/** A `YYYY-MM-DD` day, or a named refusal. Days are days — never instants. */
+function readDay(raw: unknown, field: string): string {
+  if (typeof raw !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) {
+    refuse(field, 'admin.error.dateInvalid');
+  }
+  const day = (raw as string).trim();
+  if (Number.isNaN(Date.parse(day))) refuse(field, 'admin.error.dateInvalid');
+  return day;
+}
+
+/** The day the money arrived, within the typo guard in both directions. */
+export function readReceivedOn(raw: unknown): string {
+  const day = readDay(raw, 'receivedOn');
+
+  const floor = new Date();
+  floor.setFullYear(floor.getFullYear() - MAX_PAYMENT_YEARS_BACK);
+  const ceiling = new Date();
+  ceiling.setFullYear(ceiling.getFullYear() + MAX_PAYMENT_YEARS_AHEAD);
+
+  const at = new Date(`${day}T12:00:00.000Z`);
+  if (at < floor || at > ceiling) refuse('receivedOn', 'admin.error.dateTooFar');
+  return day;
+}
+
+/**
+ * The last day this payment pays for — required, and the only thing that moves
+ * `paid_through`.
+ */
+export function readCoversTo(raw: unknown): string {
+  const day = readDay(raw, 'coversTo');
+
+  const ceiling = new Date();
+  ceiling.setFullYear(ceiling.getFullYear() + MAX_COVER_YEARS_AHEAD);
+  if (new Date(`${day}T12:00:00.000Z`) > ceiling) refuse('coversTo', 'admin.error.dateTooFar');
+  return day;
+}
+
+/** Optional, and never after the day it covers to. The CHECK says so too. */
+export function readCoversFrom(raw: unknown, coversTo: string): string | null {
+  if (raw === undefined || raw === null || String(raw).trim() === '') return null;
+
+  const day = readDay(raw, 'coversFrom');
+  if (day > coversTo) refuse('coversFrom', 'admin.error.periodReversed');
+  return day;
+}
+
+/** Whatever the operator wants to remember about it. Bounded, never required. */
+export function readPaymentNote(raw: unknown): string | null {
+  const note = typeof raw === 'string' ? raw.trim() : '';
+  if (note === '') return null;
+  if (note.length > MAX_NOTE_LENGTH) refuse('note', 'admin.error.noteTooLong');
+  return note;
 }

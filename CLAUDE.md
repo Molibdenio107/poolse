@@ -139,6 +139,29 @@ disables an endpoint that keeps failing. A failed payment sets `past_due` and **
 `suspended_at`, and nothing closes a club automatically — not even a trial running out.
 `docs/features/subscription.md`.
 
+**A club may pay outside Stripe, and a manual subscription cannot be forgotten.** POOLSE-63.
+**`billing_mode` (`stripe | manual | comped`) says *how*, `subscription_status` says *whether*,
+`suspended_at` says whether the door is open** — three columns, three questions, still none of
+them merged. **`comped` moved onto the mode** on 18 September 2026 and is no longer a settable
+status: one fact had two homes, and a club could read as "pays in cash" and "is not billed" at
+once. The rule that makes the slice worth having is a CHECK — an *active manual* club must have
+a `paid_through`, or an operator flips one to active, forgets, and they run free for two years.
+**`paid_through` is a `date`** (cover runs to the end of a day, and a `timestamptz` invites the
+UTC-instant off-by-one) **and only a payment moves it**, to the *greater* of the two dates, so a
+receipt recorded late extends cover and never shortens it. **`manual_payment` is insert-only and
+platform-scoped**: Poolse's own revenue, no tenant can read it, no UPDATE and no DELETE on the
+grant, and a correction is another row. `docs/financials.md` applies except its tenant-scoped
+conventions, which is written down there rather than left to be noticed. Recording one is a
+single `changeTenant` transaction that also sets the mode, the status and lifts read-only — and
+never `suspended_at`, which is somebody's decision with a reason attached. **The clock's manual
+ladder stops at read-only**: `past_due`, then read-only after `manual_grace_period()` (15 days),
+then nothing — no deletion date, no closed door, no archive, because a customer who is late is
+not a trial that never paid. **A Stripe event naming a non-`stripe` tenant is refused** and
+recorded as `not_stripe_billed`, still answering 200. **`/admin` reports counts per mode and
+euros only for manual payments**, because nothing here stores what a Stripe subscription is
+worth and a total over half the data looks exactly like a complete one.
+`docs/features/subscription.md`.
+
 **A trial ends in read-only, which is a third access state.** POOLSE-61 slice B1.
 `suspended_at` **beats** `read_only_at` **beats open**, enforced in `TenantMiddleware` and
 asserted for a `GET` as well — a club that is both is a club we closed, and "your trial ran

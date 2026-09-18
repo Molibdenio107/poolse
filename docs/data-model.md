@@ -2781,7 +2781,7 @@ resolved and `currentAuth()` is all it has. It also means an operator who has ne
 the tenant app — and so has no `app_user` row — is still an operator.
 
 **A third database login, and it does not bypass RLS.** `poolse_platform` reads across
-tenants through a `for select to poolse_platform using (true)` policy on seven tables —
+tenants through a `for select to poolse_platform using (true)` policy on eight tables —
 `organization`, `membership`, `membership_role`, `invitation`, `facility`, `pool`,
 `audit_log` — and holds no privilege on the rest of the schema. Postgres ORs permissive
 policies together and the `to` clause confines this one to that role, so `poolse_app` is
@@ -3042,6 +3042,86 @@ holds the columns that moved and never the Stripe payload, which carries the cus
 and address.
 
 **Five more named columns on the `poolse_platform` UPDATE grant**, joining the six from the
-platform slice. The reasoning is that slice's: a bare `GRANT UPDATE ON organization` would
+platform slice. (The list has since grown to seventeen — POOLSE-61 and POOLSE-63.) The reasoning is that slice's: a bare `GRANT UPDATE ON organization` would
 hand over the name, the slug and the VAT number. The webhook is cross-tenant by nature and
 runs on that role; `subscription.sql` asserts it still cannot rename a club or delete a tenant.
+
+### Paid outside Stripe — POOLSE-63, 18 September 2026
+
+```
+organization
+  … billing_mode billing_mode NOT NULL DEFAULT 'stripe'
+  … paid_through date
+  CHECK (billing_mode <> 'manual'
+         OR subscription_status <> 'active'
+         OR paid_through IS NOT NULL)
+
+billing_mode           ENUM ('stripe', 'manual', 'comped')
+manual_payment_method  ENUM ('cash', 'bank_transfer', 'other')
+
+manual_payment  id, organization_id, amount_cents, currency, provenance,
+                received_on, method, covers_from, covers_to, note,
+                recorded_by_clerk_user_id, created_at
+
+manual_grace_period() RETURNS interval   -- 15 days, the one definition
+```
+
+**Three columns, three questions.** `billing_mode` says *how* a club pays,
+`subscription_status` says *whether* they are paying, `suspended_at` says whether the door is
+open. The platform slice separated the last two on purpose and this keeps them apart.
+
+**`comped` moved home.** It was a `subscription_status` from the platform slice; once the mode
+existed that was one fact in two places, and a club could be `manual` and `comped` at once —
+"pays in cash" and "is not billed" in one breath. A free pilot is now `billing_mode = 'comped'`
+with an ordinary `active` status, backfilled in the same migration. The value stays in the
+status enum because removing one is a rebuild and a value nothing writes costs nothing.
+
+**The CHECK is the slice.** An *active manual* subscription must say what it is paid up to;
+without that an operator flips a club to active, forgets, and they run free for two years. It
+binds only an active one, so a club marked manual before the first money arrives, and one that
+has lapsed to `past_due`, are both real states.
+
+**`paid_through` is a `date`, deviating from the ticket's `timestamptz` deliberately.** Cover
+runs to the end of a day: the value is typed and shown as `dd-MM-yyyy`, and a timestamp would
+invite the `YYYY-MM-DD`-as-UTC-instant reading that made a rate effective on 1 October display
+as 30 September. There is no hour here to lose. Every read casts it `::text` for the same
+reason `day()` exists.
+
+**Only a payment moves it**, to the *greater* of what is there and what the payment buys — so a
+payment recorded out of order extends cover and never shortens it. There is no endpoint that
+sets the date on its own: the payment is the fact, and a field somebody fills in by hand is a
+field that disagrees with the money.
+
+**`manual_payment` is insert-only and platform-scoped**, like `stripe_event` and `trial_event`:
+a row is *about* a tenant rather than belonging to one, and this is Poolse's own revenue rather
+than a club's money. No grant and no policy naming `poolse_app`, two independent reasons; the
+platform grant is SELECT and INSERT, never UPDATE or DELETE, because a record that can be
+edited is not a record. A correction is another row. It is in `TENANT_TABLES` for teardown, for
+the reason `platform_audit_log` is.
+
+**`docs/financials.md` applies, with one stated exception.** Integer cents, `char(3)` currency,
+a `money_provenance` (`actual`, by definition — this is money that arrived), and `created_by`
+answerable through `recorded_by_clerk_user_id`. The tenant-scoped conventions in §4 do *not*
+apply: no RLS policy for the app role, no composite key, no `archived_at`. Financial history is
+still never destroyed — here that is a missing privilege rather than a soft-delete column.
+
+**Recording one is a single transaction** through `changeTenant`: the payment row, the mode,
+the status, `paid_through` and the lifting of `read_only_at`, plus the `platform_audit_log`
+entry carrying the amount. It leaves `suspended_at` alone — a suspension is an operator's
+decision with a reason attached, and a payment is not an argument against it.
+
+**The clock's two extra rungs stop at read-only.** `paid_through` passing makes a club
+`past_due` with the door open; `manual_grace_period()` later it goes read-only; and then
+nothing — no `pending_delete_at`, no closed door, no archive. A trial walks all the way down
+because nobody ever paid for it; a customer who is late is a customer. Both transitions go to
+`trial_event` (`payment_lapsed`, `payment_read_only`) and both are owed a `trial_notice`
+(`payment_overdue`, `payment_read_only`) — those two enum types have outgrown their names and
+renaming them is a proposal, not this ticket.
+
+**The Stripe webhook refuses a tenant whose mode is not `stripe`** and records it in
+`stripe_event` with outcome `not_stripe_billed`. A customer id outlives the arrangement it was
+made for, and a stray event must never take a hand-managed club back over.
+
+`billing_mode` and `paid_through` join the `poolse_platform` UPDATE grant, bringing it to
+seventeen named columns. `manual-subscription.sql` asserts what that did *not* widen: the
+club's name is still unwritable and `DELETE` is still refused.

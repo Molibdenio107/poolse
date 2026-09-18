@@ -16,20 +16,33 @@ import { PlatformAction, PlatformAuditInterceptor } from './platform-audit.inter
 import { PlatformAdminGuard } from './platform.guard.js';
 import {
   extendTrial,
+  listManualPayments,
   listTenants,
+  readBillingOverview,
+  recordManualPayment,
+  setBillingMode,
   setReadOnly,
   readTenant,
   readTenantRequests,
   setPlanLimits,
   setSubscriptionStatus,
   setSuspension,
+  type BillingOverview,
+  type ManualPaymentRow,
   type TenantChangeResult,
   type TenantRequests,
   type TenantRow,
 } from './platform.repository.js';
 import {
+  readAmountCents,
+  readBillingMode,
+  readCoversFrom,
+  readCoversTo,
   readMaxFacilities,
   readMaxManagementUsers,
+  readPaymentMethod,
+  readPaymentNote,
+  readReceivedOn,
   readSubscriptionStatus,
   readSuspensionReason,
   readTrialEndsAt,
@@ -66,6 +79,20 @@ export class PlatformController {
   }
 
   /**
+   * The operator's own billing picture — POOLSE-63.
+   *
+   * Counts per mode and the manual money actually received. **No Stripe
+   * figure**, because nothing in this database knows what a Stripe subscription
+   * is worth: the prices live in Stripe and are read back for display. The screen
+   * says that rather than showing a number this product guessed.
+   */
+  @Get('billing')
+  @PlatformAction('billing.read')
+  async billing(): Promise<BillingOverview> {
+    return readBillingOverview();
+  }
+
+  /**
    * One tenant, in the same shape as a row of the list — slice 3.
    *
    * The detail page needs the plan, the seat count and the suspension state to
@@ -99,6 +126,23 @@ export class PlatformController {
     const requests = await readTenantRequests(id);
     if (requests === null) throw new NotFoundException('No such tenant');
     return requests;
+  }
+
+  /**
+   * What this club has paid outside Stripe — POOLSE-63.
+   *
+   * A read, so it is audited by the interceptor like every other. An empty list
+   * is a 200: a club that has never paid in cash is not a club that does not
+   * exist.
+   */
+  @Get('tenants/:id/payments')
+  @PlatformAction('tenant.payments.read')
+  async payments(
+    @Param('id') id: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<Paginated<ManualPaymentRow>> {
+    return listManualPayments(id, readPageQuery(page, limit));
   }
 
   /*
@@ -195,6 +239,64 @@ export class PlatformController {
         id,
         readOnly ? { dataKeptUntil: readKeptUntil(body.dataKeptUntil) } : null,
       ),
+    );
+  }
+
+  /**
+   * How this club pays — POOLSE-63.
+   *
+   * Its own endpoint beside the subscription status rather than a field on it,
+   * for the reason those two are separate columns: one says *how* and the other
+   * says *whether*. An operator marking a club as paying in cash is not making a
+   * statement about whether they are up to date.
+   *
+   * Moving to `manual` while the club is `active` and has never paid is refused
+   * with a field error rather than by the CHECK — the constraint is still what
+   * makes it impossible, this is what makes it a sentence.
+   */
+  @Post('tenants/:id/billing-mode')
+  async billingMode(
+    @Param('id') id: string,
+    @Body() body: { billingMode?: unknown },
+  ): Promise<TenantChangeResult> {
+    return found(await setBillingMode(id, readBillingMode(body.billingMode)));
+  }
+
+  /**
+   * Record money that arrived outside Stripe — POOLSE-63.
+   *
+   * **The only thing that moves `paid_through`.** There is no endpoint that sets
+   * that date on its own: the payment is the fact and the date is derived from
+   * it, so the two cannot disagree. Recording one also puts the club on `manual`
+   * and `active` and lifts read-only, because that is what the money means.
+   *
+   * The amount arrives as integer cents — `parseCents` in the browser is the one
+   * place a typed "35,50" becomes a number, the same rule every price field in
+   * this product follows.
+   */
+  @Post('tenants/:id/payments')
+  async recordPayment(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      amountCents?: unknown;
+      receivedOn?: unknown;
+      method?: unknown;
+      coversFrom?: unknown;
+      coversTo?: unknown;
+      note?: unknown;
+    },
+  ): Promise<TenantChangeResult> {
+    const coversTo = readCoversTo(body.coversTo);
+    return found(
+      await recordManualPayment(id, {
+        amountCents: readAmountCents(body.amountCents),
+        receivedOn: readReceivedOn(body.receivedOn),
+        method: readPaymentMethod(body.method),
+        coversFrom: readCoversFrom(body.coversFrom, coversTo),
+        coversTo,
+        note: readPaymentNote(body.note),
+      }),
     );
   }
 }

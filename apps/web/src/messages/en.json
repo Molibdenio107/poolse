@@ -3153,7 +3153,8 @@
       "active": "Active",
       "past_due": "Past due",
       "canceled": "Cancelled",
-      "comped": "Comped"
+      "comped": "Comped",
+      "expired": "Expired"
     },
     "sortLabel": "Sort by",
     "sort": {
@@ -3223,7 +3224,15 @@
       "subscriptionFailed": "Could not change the subscription.",
       "planFailed": "Could not change the plan limits.",
       "suspensionFailed": "Could not change the suspension.",
-      "readOnlyFailed": "Could not change the read-only state."
+      "readOnlyFailed": "Could not change the read-only state.",
+      "billingModeInvalid": "Unknown billing mode.",
+      "methodInvalid": "Unknown payment method.",
+      "amountInvalid": "Enter an amount above zero.",
+      "periodReversed": "The start is after the end.",
+      "noteTooLong": "At most 500 characters.",
+      "billingModeFailed": "Could not change the billing mode.",
+      "paymentFailed": "Could not record the payment.",
+      "manualNeedsPayment": "Record a payment first: a hand-paid subscription has to say what it is paid up to."
     },
     "actions": "Actions",
     "suspended": "Suspended",
@@ -3253,8 +3262,59 @@
       "writeRestore": "Restore writing",
       "writeRestoreHint": "Gives writing back to the club and cancels the deletion date.",
       "dataKeptUntil": "Data kept until",
-      "dataKeptUntilHint": "Optional. Left blank, no deletion is scheduled."
-    }
+      "dataKeptUntilHint": "Optional. Left blank, no deletion is scheduled.",
+      "billingMode": "Billing mode",
+      "billingModeHint": "How this tenant’s money arrives. It decides nothing about what they may do.",
+      "paidThrough": "Paid through {date}.",
+      "paidThroughNone": "No payment has been recorded yet.",
+      "payment": "Record a payment",
+      "paymentHint": "What you received outside Stripe. This is what moves the cover date — and gives writing back if the club is read-only.",
+      "amount": "Amount",
+      "amountHint": "In euros. A comma works too: 120 or 120,50.",
+      "receivedOn": "Received on",
+      "method": "Method",
+      "coversFrom": "Covers from",
+      "coversFromHint": "Optional.",
+      "coversTo": "Covers through",
+      "coversToHint": "The last day paid for. This is the date that will apply.",
+      "paymentNote": "Note",
+      "recordPayment": "Record"
+    },
+    "billingMode": {
+      "stripe": "Card (Stripe)",
+      "manual": "Paid directly",
+      "comped": "Comped"
+    },
+    "method": {
+      "cash": "Cash",
+      "bank_transfer": "Bank transfer",
+      "other": "Other"
+    },
+    "payment": {
+      "receivedOn": "Received",
+      "amount": "Amount",
+      "method": "Method",
+      "covers": "Covers",
+      "coversUntil": "Through {to}",
+      "coversRange": "{from} to {to}",
+      "note": "Note",
+      "noNote": "No note"
+    },
+    "billing": {
+      "title": "Payments to Poolse",
+      "hint": "How many tenants pay by which route, and what is falling due.",
+      "manualReceived": "Received (12 months)",
+      "manualOnly": "{count, plural, =0 {No direct payments recorded yet.} one {Direct payments only: 1 record, {total} in total.} other {Direct payments only: # records, {total} in total.}} What comes in through Stripe lives in the Stripe dashboard — Poolse does not store those amounts.",
+      "renewals": "Due in the next {days} days",
+      "noRenewals": "Nothing is falling due.",
+      "paidThrough": "paid through {date}",
+      "lateBy": "{days, plural, one {# day late} other {# days late}}",
+      "dueIn": "{days, plural, =0 {Due today} one {# day left} other {# days left}}",
+      "readOnly": "read-only"
+    },
+    "payments": "Payments received",
+    "paymentsHint": "Outside Stripe. A payment is never edited or deleted — a correction is another record.",
+    "noPayments": "No payment has been recorded yet."
   },
   "suspended": {
     "title": "Account suspended",

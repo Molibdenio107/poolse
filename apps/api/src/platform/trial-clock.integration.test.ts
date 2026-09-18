@@ -67,7 +67,8 @@ async function state(
 async function read(tenant: ScratchTenant): Promise<Record<string, unknown>> {
   const { rows } = await owner.query<Record<string, unknown>>(
     `SELECT subscription_status::text AS subscription_status, read_only_at,
-            pending_delete_at, suspended_at, suspension_reason, archived_at
+            pending_delete_at, suspended_at, suspension_reason, archived_at,
+            billing_mode::text AS billing_mode, paid_through::text AS paid_through
        FROM organization WHERE id = $1`,
     [tenant.organizationId],
   );
@@ -165,18 +166,28 @@ test('61.2 — a second instance is a no-op, not a double transition', async () 
   });
 });
 
+/**
+ * The free pilot, which since POOLSE-63 is a *mode* rather than a status.
+ *
+ * A comped club is `billing_mode = 'comped'` and an ordinary `active` — so it
+ * matches neither the trial steps, which filter on `trialing`, nor the manual
+ * pair, which filter on `manual`. Structurally out of the clock's way rather
+ * than excluded by a line somebody has to remember to write.
+ */
 test('61.15 — a comped tenant is never moved, whatever its dates say', async () => {
   await withScratchTenant(async (tenant) => {
     await state(tenant, {
-      subscription_status: 'comped',
-      // A year ago. The free pilot is live and unbilled and does not run out.
+      billing_mode: 'comped',
+      subscription_status: 'active',
+      // A year ago, and paid through nothing. The free pilot does not run out.
       trial_ends_at: new Date(Date.now() - 365 * 86_400_000).toISOString(),
     });
 
     await clock.run(tenant.organizationId);
 
     const org = await read(tenant);
-    assert.equal(org['subscription_status'], 'comped');
+    assert.equal(org['subscription_status'], 'active');
+    assert.equal(org['billing_mode'], 'comped');
     assert.equal(org['read_only_at'], null);
     assert.deepEqual(await events(tenant), []);
   });
@@ -373,5 +384,163 @@ test('61.10 — a notice is recorded, owed to the owner, and marked undelivered'
       [tenant.organizationId],
     );
     assert.equal(again[0]!.n, '1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A subscription paid by hand — POOLSE-63
+//
+// The other ladder, and the point is where it stops. A trial walks all the way
+// down to an archive because nobody ever paid for it. A customer who is late is
+// a customer: past due, then read-only, and never a closed door.
+// ---------------------------------------------------------------------------
+
+/** A `YYYY-MM-DD` day, n days from today. A day has no timezone. */
+function day(offset: number): string {
+  const at = new Date();
+  at.setDate(at.getDate() + offset);
+  return at.toISOString().slice(0, 10);
+}
+
+test('63.1 — cover that ran out is past due, and the door stays open', async () => {
+  await withScratchTenant(async (tenant) => {
+    await state(tenant, {
+      billing_mode: 'manual',
+      subscription_status: 'active',
+      paid_through: day(-1),
+      read_only_at: null,
+    });
+
+    const result = await clock.run(tenant.organizationId);
+    assert.equal(result.lapsed, 1);
+
+    const org = await read(tenant);
+    assert.equal(org['subscription_status'], 'past_due');
+    /*
+     * The distinction the platform slice settled, holding here too: billing
+     * state moved and access state did not. A club mid-lesson with thirty
+     * children in the water does not lose its register because a transfer is
+     * late.
+     */
+    assert.equal(org['read_only_at'], null);
+    assert.equal(org['suspended_at'], null);
+    assert.deepEqual(await events(tenant), ['payment_lapsed']);
+  });
+});
+
+test('63.2 — the grace is fifteen days, and then writing stops', async () => {
+  await withScratchTenant(async (tenant) => {
+    // Cover ended a fortnight ago: inside the grace, still writing.
+    await state(tenant, {
+      billing_mode: 'manual',
+      subscription_status: 'past_due',
+      paid_through: day(-14),
+      read_only_at: null,
+    });
+
+    assert.equal((await clock.run(tenant.organizationId)).restricted, 0);
+    assert.equal((await read(tenant))['read_only_at'], null);
+
+    await state(tenant, { paid_through: day(-16) });
+
+    assert.equal((await clock.run(tenant.organizationId)).restricted, 1);
+
+    const org = await read(tenant);
+    assert.ok(org['read_only_at'], 'writing stopped');
+    /*
+     * **And the ladder stops here.** No deletion date, no closed door, no
+     * archive — a club that has paid before is not a trial that never did.
+     */
+    assert.equal(org['pending_delete_at'], null);
+    assert.equal(org['suspended_at'], null);
+    assert.equal(org['archived_at'], null);
+    assert.deepEqual(await events(tenant), ['payment_read_only']);
+  });
+});
+
+test('63.3 — a late club is never closed or archived, however long it stays late', async () => {
+  await withScratchTenant(async (tenant) => {
+    await state(tenant, {
+      billing_mode: 'manual',
+      subscription_status: 'past_due',
+      // Two years overdue. The trial ladder would have archived this club twice.
+      paid_through: day(-730),
+      read_only_at: new Date(Date.now() - 700 * 86_400_000).toISOString(),
+    });
+
+    await clock.run(tenant.organizationId);
+
+    const org = await read(tenant);
+    assert.equal(org['suspended_at'], null, 'the machine never shuts a customer out');
+    assert.equal(org['archived_at'], null, 'and never files one away');
+    assert.equal(org['pending_delete_at'], null);
+  });
+});
+
+test('63.4 — a second pass changes nothing, and each rung is written once', async () => {
+  await withScratchTenant(async (tenant) => {
+    await state(tenant, {
+      billing_mode: 'manual',
+      subscription_status: 'active',
+      paid_through: day(-20),
+      read_only_at: null,
+    });
+
+    // Both rungs in one pass: cover ran out and the grace has passed too.
+    const first = await clock.run(tenant.organizationId);
+    assert.equal(first.lapsed, 1);
+    assert.equal(first.restricted, 1);
+
+    const second = await clock.run(tenant.organizationId);
+    assert.equal(second.lapsed, 0);
+    assert.equal(second.restricted, 0);
+
+    /*
+     * Idempotent by the state it reads rather than by a constraint: a club
+     * already `past_due` does not match the query that lapses one.
+     */
+    assert.deepEqual(await events(tenant), ['payment_lapsed', 'payment_read_only']);
+  });
+});
+
+test('63.5 — a club whose cover is still good is not touched', async () => {
+  await withScratchTenant(async (tenant) => {
+    await state(tenant, {
+      billing_mode: 'manual',
+      subscription_status: 'active',
+      // Today is the last day covered, and the last day is included.
+      paid_through: day(0),
+      read_only_at: null,
+    });
+
+    const result = await clock.run(tenant.organizationId);
+    assert.equal(result.lapsed, 0);
+
+    assert.equal((await read(tenant))['subscription_status'], 'active');
+    assert.deepEqual(await events(tenant), []);
+  });
+});
+
+test('63.6 — a lapsed club is owed a notice, recorded and not sent', async () => {
+  await withScratchTenant(async (tenant) => {
+    await state(tenant, {
+      billing_mode: 'manual',
+      subscription_status: 'active',
+      paid_through: day(-1),
+      read_only_at: null,
+    });
+
+    await clock.run(tenant.organizationId);
+
+    const { rows } = await owner.query<{ kind: string; delivered_at: Date | null }>(
+      `SELECT kind::text AS kind, delivered_at FROM trial_notice
+        WHERE organization_id = $1`,
+      [tenant.organizationId],
+    );
+
+    const overdue = rows.find((row) => row.kind === 'payment_overdue');
+    assert.ok(overdue, 'the club is owed a word about the money');
+    // Null means recorded and nothing left the building. There is no provider.
+    assert.equal(overdue.delivered_at, null);
   });
 });

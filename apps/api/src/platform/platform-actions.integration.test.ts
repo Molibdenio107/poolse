@@ -63,7 +63,9 @@ async function organization(tenant: ScratchTenant): Promise<Record<string, unkno
   const { rows } = await owner.query<Record<string, unknown>>(
     `SELECT subscription_status::text AS subscription_status, trial_ends_at,
             max_facilities, max_management_users, suspended_at, suspension_reason,
-            read_only_at, pending_delete_at, name
+            read_only_at, pending_delete_at, name,
+            billing_mode::text AS billing_mode,
+            paid_through::text AS paid_through
        FROM organization WHERE id = $1`,
     [tenant.organizationId],
   );
@@ -232,25 +234,39 @@ test('a trial date two years out is refused, and one in the past is not', async 
   });
 });
 
-test('comped is settable, and an invented status is refused', async () => {
+/**
+ * `comped` is no longer a status — POOLSE-63.
+ *
+ * It moved to `billing_mode`, because two homes for one fact is how they drift:
+ * a club could be `manual` and `comped` at once, reading as "pays in cash" and
+ * "is not billed" in the same breath. The free pilot now carries the word on its
+ * billing mode, with an ordinary `active` status — the more honest pair.
+ */
+test('63 — comped is refused as a status and carried by the billing mode', async () => {
   await withScratchTenant(async (tenant) => {
     const clerkUserId = `user_sub_${Math.floor(performance.now())}`;
     await grantPlatformAccess(clerkUserId);
 
     try {
       await asOperator(clerkUserId, async () => {
-        await controller.subscription(tenant.organizationId, { status: 'comped' });
+        for (const status of ['comped', 'free_forever']) {
+          await assert.rejects(
+            () => controller.subscription(tenant.organizationId, { status }),
+            (error: { status?: number; response?: { fields?: Record<string, string> } }) =>
+              error.status === 400 &&
+              error.response?.fields?.['status'] === 'admin.error.statusInvalid',
+            `${status} should be refused as a subscription status`,
+          );
+        }
 
-        await assert.rejects(
-          () => controller.subscription(tenant.organizationId, { status: 'free_forever' }),
-          (error: { status?: number; response?: { fields?: Record<string, string> } }) =>
-            error.status === 400 &&
-            error.response?.fields?.['status'] === 'admin.error.statusInvalid',
-        );
+        await controller.billingMode(tenant.organizationId, { billingMode: 'comped' });
+        await controller.subscription(tenant.organizationId, { status: 'active' });
       });
 
       // The free pilot: live, and deliberately not billed.
-      assert.equal((await organization(tenant))['subscription_status'], 'comped');
+      const org = await organization(tenant);
+      assert.equal(org['billing_mode'], 'comped');
+      assert.equal(org['subscription_status'], 'active');
     } finally {
       await cleanup(clerkUserId);
     }
@@ -852,6 +868,300 @@ test('61 — a date that is not a date is refused rather than read as "no deleti
             `${bad} should be refused`,
           );
         }
+      });
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Paid outside Stripe — POOLSE-63
+// ---------------------------------------------------------------------------
+
+/** A `YYYY-MM-DD` day, n days from today. Days are days — never instants. */
+function day(offset: number): string {
+  const at = new Date();
+  at.setDate(at.getDate() + offset);
+  return at.toISOString().slice(0, 10);
+}
+
+async function payments(tenant: ScratchTenant): Promise<Record<string, unknown>[]> {
+  const { rows } = await owner.query<Record<string, unknown>>(
+    `SELECT amount_cents, currency, provenance::text AS provenance,
+            method::text AS method, received_on::text AS received_on,
+            covers_from::text AS covers_from, covers_to::text AS covers_to,
+            note, recorded_by_clerk_user_id
+       FROM manual_payment WHERE organization_id = $1 ORDER BY created_at`,
+    [tenant.organizationId],
+  );
+  return rows;
+}
+
+/**
+ * Recording a payment is the one thing that moves `paid_through`.
+ *
+ * And it moves everything the money means with it, in one transaction: the mode
+ * becomes `manual`, the status `active`, the read-only lifts. A club that pays
+ * Rui in cash on a Friday is writing again on the Friday.
+ */
+test('63 — a recorded payment moves the cover, the mode and the door together', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_pay_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      // A club the clock has already restricted: cover ran out, grace ran out.
+      await owner.query(
+        `UPDATE organization
+            SET billing_mode = 'manual', subscription_status = 'past_due',
+                paid_through = $2::date, read_only_at = now()
+          WHERE id = $1`,
+        [tenant.organizationId, day(-40)],
+      );
+
+      await asOperator(clerkUserId, async () => {
+        const result = await controller.recordPayment(tenant.organizationId, {
+          amountCents: 12_000,
+          receivedOn: day(0),
+          method: 'bank_transfer',
+          coversFrom: day(0),
+          coversTo: day(30),
+          note: 'Transferência — trimestre',
+        });
+
+        assert.equal(result.changed['subscription_status']!.after, 'active');
+        assert.equal(result.changed['paid_through']!.after, day(30));
+        assert.equal(result.changed['read_only_at']!.after, null);
+      });
+
+      const org = await organization(tenant);
+      assert.equal(org['billing_mode'], 'manual');
+      assert.equal(org['subscription_status'], 'active');
+      assert.equal(org['paid_through'], day(30));
+      assert.equal(org['read_only_at'], null);
+      assert.equal(org['pending_delete_at'], null);
+
+      const [recorded] = await payments(tenant);
+      assert.equal(recorded!['amount_cents'], 12_000);
+      assert.equal(recorded!['currency'], 'EUR');
+      // Money that arrived is `actual` by definition — docs/financials.md §2.
+      assert.equal(recorded!['provenance'], 'actual');
+      assert.equal(recorded!['method'], 'bank_transfer');
+      assert.equal(recorded!['covers_to'], day(30));
+      assert.equal(recorded!['recorded_by_clerk_user_id'], clerkUserId);
+
+      /*
+       * Audited by construction, through the same helper every other platform
+       * write goes through — and the figure is in the trail rather than in a
+       * path, a query string or a log line.
+       */
+      const entries = await trail(clerkUserId);
+      const entry = entries.find((row) => row.action === 'tenant.payment.recorded');
+      assert.ok(entry, 'the payment should be in platform_audit_log');
+      assert.equal((entry.detail as { amountCents?: number }).amountCents, 12_000);
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+/**
+ * A payment recorded out of order extends cover and never shortens it.
+ *
+ * The realistic way in: the treasurer pays for the year in January, then hands
+ * over a receipt in March for a month that is already covered. Taking the later
+ * figure would quietly move a club's cover backwards by nine months.
+ */
+test('63 — an out-of-order payment cannot shorten what is already paid for', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_order_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        await controller.recordPayment(tenant.organizationId, {
+          amountCents: 100_000,
+          receivedOn: day(-60),
+          method: 'bank_transfer',
+          coversTo: day(300),
+        });
+
+        await controller.recordPayment(tenant.organizationId, {
+          amountCents: 12_000,
+          receivedOn: day(0),
+          method: 'cash',
+          coversTo: day(30),
+        });
+      });
+
+      assert.equal((await organization(tenant))['paid_through'], day(300));
+      assert.equal((await payments(tenant)).length, 2);
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+/**
+ * The constraint said as a sentence.
+ *
+ * The CHECK is what makes an open-ended manual subscription impossible; this is
+ * what makes it a message beside the field instead of a constraint name in a 500.
+ */
+test('63 — a club cannot be marked manual and active with nothing paid', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_mode_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      await owner.query(
+        `UPDATE organization SET subscription_status = 'active' WHERE id = $1`,
+        [tenant.organizationId],
+      );
+
+      await asOperator(clerkUserId, async () => {
+        await assert.rejects(
+          () => controller.billingMode(tenant.organizationId, { billingMode: 'manual' }),
+          (error: { status?: number; response?: { fields?: Record<string, string> } }) =>
+            error.status === 400 &&
+            error.response?.fields?.['billingMode'] === 'admin.error.manualNeedsPayment',
+        );
+
+        // And the refusal rolled the whole thing back: still on Stripe.
+        await assert.rejects(
+          () => controller.billingMode(tenant.organizationId, { billingMode: 'monthly' }),
+          (error: { status?: number }) => error.status === 400,
+        );
+      });
+
+      assert.equal((await organization(tenant))['billing_mode'], 'stripe');
+      assert.equal((await payments(tenant)).length, 0);
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+/** Every refusal names its field, so the message lands beside the box. */
+test('63 — a payment that is not one is refused, field by field', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_bad_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    const base = {
+      amountCents: 5_000,
+      receivedOn: day(0),
+      method: 'cash',
+      coversTo: day(30),
+    };
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        const cases: [Record<string, unknown>, string][] = [
+          [{ amountCents: 0 }, 'amountCents'],
+          [{ amountCents: -1 }, 'amountCents'],
+          [{ amountCents: 12.5 }, 'amountCents'],
+          [{ method: 'bitcoin' }, 'method'],
+          // dd-MM-yyyy is what Poolse *shows*; what it accepts is a day.
+          [{ receivedOn: '31-12-2026' }, 'receivedOn'],
+          [{ coversTo: 'soon' }, 'coversTo'],
+          [{ coversFrom: day(60) }, 'coversFrom'],
+          [{ receivedOn: day(800) }, 'receivedOn'],
+        ];
+
+        for (const [override, field] of cases) {
+          await assert.rejects(
+            () => controller.recordPayment(tenant.organizationId, { ...base, ...override }),
+            (error: { status?: number; response?: { fields?: Record<string, string> } }) =>
+              error.status === 400 && error.response?.fields?.[field] !== undefined,
+            `${JSON.stringify(override)} should be refused, naming ${field}`,
+          );
+        }
+      });
+
+      // Nothing was written by any of them.
+      assert.equal((await payments(tenant)).length, 0);
+      assert.equal((await organization(tenant))['paid_through'], null);
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+/**
+ * The renewals list, which is the screen that stops a manual club being
+ * forgotten — and the billing figures beside it, which are counts and one real
+ * sum rather than a number this product guessed.
+ */
+test('63 — renewals due inside the window, and never a Stripe figure', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_renew_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        await controller.recordPayment(tenant.organizationId, {
+          amountCents: 7_500,
+          receivedOn: day(0),
+          method: 'cash',
+          coversTo: day(20),
+        });
+
+        const near = await controller.billing();
+        assert.ok(near.tenantsByMode.manual >= 1);
+        assert.ok(near.manualCentsAllTime >= 7_500);
+        assert.equal(near.renewalsWindowDays, 30);
+
+        const due = near.renewals.find((row) => row.organizationId === tenant.organizationId);
+        assert.ok(due, 'a club whose cover ends in 20 days is due');
+        assert.equal(due.paidThrough, day(20));
+        assert.equal(due.daysLeft, 20);
+
+        // Forty days out is not this month's problem.
+        await controller.recordPayment(tenant.organizationId, {
+          amountCents: 7_500,
+          receivedOn: day(0),
+          method: 'cash',
+          coversTo: day(40),
+        });
+
+        const far = await controller.billing();
+        assert.equal(
+          far.renewals.find((row) => row.organizationId === tenant.organizationId),
+          undefined,
+        );
+      });
+    } finally {
+      await cleanup(clerkUserId);
+    }
+  });
+});
+
+/** What a club actually paid, on its own page. */
+test('63 — a club that has never paid in cash has an empty history, not a 404', async () => {
+  await withScratchTenant(async (tenant) => {
+    const clerkUserId = `user_hist_${Math.floor(performance.now())}`;
+    await grantPlatformAccess(clerkUserId);
+
+    try {
+      await asOperator(clerkUserId, async () => {
+        const empty = await controller.payments(tenant.organizationId);
+        assert.equal(empty.items.length, 0);
+
+        await controller.recordPayment(tenant.organizationId, {
+          amountCents: 4_250,
+          receivedOn: day(-1),
+          method: 'other',
+          coversTo: day(29),
+          note: 'Acerto de contas',
+        });
+
+        const listed = await controller.payments(tenant.organizationId);
+        assert.equal(listed.items.length, 1);
+        assert.equal(listed.items[0]!.amountCents, 4_250);
+        assert.equal(listed.items[0]!.receivedOn, day(-1));
+        assert.equal(listed.items[0]!.note, 'Acerto de contas');
       });
     } finally {
       await cleanup(clerkUserId);

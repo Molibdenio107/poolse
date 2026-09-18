@@ -14,6 +14,16 @@ import { withPlatform } from '@poolse/db';
  *      suspension mechanism with a machine-set reason;
  *   3. thirty days after that, the row is archived.
  *
+ * **And two more for a club that pays by hand — POOLSE-63.** A manual
+ * subscription whose `paid_through` has passed goes `past_due`, and goes
+ * read-only once the grace has passed too.
+ *
+ * **That ladder stops there, and the difference is the point.** A trial walks all
+ * the way down to an archive because nobody ever paid for it. A customer who is
+ * late is a customer: no deletion date, no closed door, no archive — the machine
+ * never files away a club that has paid before. Recording their next payment
+ * lifts read-only in the same pass. Decided 18 September 2026.
+ *
  * **Step 3 needed a decision, and it was taken rather than assumed.** CLAUDE.md
  * said `archived_at` was not on the platform login's grant *because removing a
  * tenant is not an operator action* — so the clock could not close the ladder.
@@ -40,8 +50,11 @@ import { withPlatform } from '@poolse/db';
  *
  * **A `comped` tenant is never moved**, whatever its dates say. The free pilot is
  * live and unbilled and does not run out — that is what the word has meant since
- * the platform slice, and the first filter being `subscription_status =
- * 'trialing'` is what makes it true rather than a comment saying so.
+ * the platform slice. Since POOLSE-63 it lives on `billing_mode` rather than on
+ * the status, and it stays out of every step here for the same structural reason
+ * as before: the trial steps filter on `subscription_status = 'trialing'` and the
+ * two manual ones on `billing_mode = 'manual'`, so a comped club matches neither
+ * — which is what makes it true rather than a comment saying so.
  *
  * **Nothing here touches Clerk.** `TenantMiddleware` already refuses the request,
  * so somebody who cannot get past the door never counts as a monthly active user;
@@ -105,6 +118,8 @@ export class TrialClockService {
       expired: 0,
       closed: 0,
       archived: 0,
+      lapsed: 0,
+      restricted: 0,
       notices: 0,
     };
 
@@ -125,16 +140,23 @@ export class TrialClockService {
       const expired = await this.expireTrials(tx, only);
       const closed = await this.closeAccess(tx, only);
       const archived = await this.archiveClosed(tx, only);
+      /*
+       * The manual pair runs after the trial ladder and before the notices, so a
+       * club that lapsed this hour is owed its notice in the same pass rather
+       * than in the next one.
+       */
+      const lapsed = await this.lapseManual(tx, only);
+      const restricted = await this.restrictManual(tx, only);
       const notices = await this.recordNotices(tx, only);
 
-      if (expired + closed + archived + notices > 0) {
+      if (expired + closed + archived + lapsed + restricted + notices > 0) {
         this.log.log(
           `Trial clock: ${expired} expired, ${closed} closed, ${archived} archived, ` +
-            `${notices} notices recorded`,
+            `${lapsed} lapsed, ${restricted} restricted, ${notices} notices recorded`,
         );
       }
 
-      return { locked: true, expired, closed, archived, notices };
+      return { locked: true, expired, closed, archived, lapsed, restricted, notices };
     });
   }
 
@@ -240,6 +262,72 @@ export class TrialClockService {
   }
 
   /**
+   * Step 4 — a hand-paid subscription whose cover has run out — POOLSE-63.
+   *
+   * `past_due`, and nothing else. The same distinction the Stripe webhook makes
+   * when a card bounces: billing state moved, access state did not, and a club
+   * mid-lesson with thirty children in the water does not lose its register
+   * because a bank transfer is late.
+   *
+   * `paid_through` is the **last day covered**, so cover has run out once today
+   * is past it — a date comparison, with no hour in it to get wrong.
+   */
+  private async lapseManual(tx: Tx, only: string | null): Promise<number> {
+    const { rows } = await tx.query<{ id: string }>(
+      `WITH moved AS (
+         UPDATE organization
+            SET subscription_status = 'past_due'
+          WHERE billing_mode = 'manual'
+            AND subscription_status = 'active'
+            AND paid_through IS NOT NULL
+            AND paid_through < current_date
+            AND archived_at IS NULL
+            AND ($1::uuid IS NULL OR id = $1)
+        RETURNING id
+       )
+       INSERT INTO trial_event (organization_id, transition)
+       SELECT id, 'payment_lapsed' FROM moved
+       RETURNING organization_id AS id`,
+      [only],
+    );
+    return rows.length;
+  }
+
+  /**
+   * Step 5 — the grace has passed too, so writing stops — POOLSE-63.
+   *
+   * **`read_only_at` and deliberately not `pending_delete_at`.** The trial ladder
+   * sets both together because a trial that nobody ever paid for is on its way to
+   * being deleted. This is a customer who is late, and the ladder stops here:
+   * nothing schedules their deletion, nothing closes the door, nothing archives
+   * them. Recording their payment lifts it.
+   *
+   * The grace comes from `manual_grace_period()`, beside the trial's own periods,
+   * so the ladder's numbers stay in one place.
+   */
+  private async restrictManual(tx: Tx, only: string | null): Promise<number> {
+    const { rows } = await tx.query<{ id: string }>(
+      `WITH moved AS (
+         UPDATE organization
+            SET read_only_at = now()
+          WHERE billing_mode = 'manual'
+            AND subscription_status = 'past_due'
+            AND paid_through IS NOT NULL
+            AND (paid_through + manual_grace_period())::date < current_date
+            AND read_only_at IS NULL
+            AND archived_at IS NULL
+            AND ($1::uuid IS NULL OR id = $1)
+        RETURNING id, read_only_at
+       )
+       INSERT INTO trial_event (organization_id, transition, read_only_at)
+       SELECT id, 'payment_read_only', read_only_at FROM moved
+       RETURNING organization_id AS id`,
+      [only],
+    );
+    return rows.length;
+  }
+
+  /**
    * What somebody was owed, written down — never sent.
    *
    * There is no email provider wired; choosing one is a later slice that reads
@@ -324,6 +412,20 @@ export class TrialClockService {
           WHERE o.subscription_status = 'expired'
             AND o.suspended_at IS NOT NULL
             AND now() >= o.suspended_at + trial_closed_period() - interval '7 days'
+          UNION ALL
+         -- A hand-paid subscription that has run out, and one whose grace has
+         -- run out too — POOLSE-63. Owed to the same owners, for the same
+         -- reason, and never sent for the same reason: there is no provider.
+         SELECT o.id, 'payment_overdue', (o.paid_through + 1)::date
+           FROM scope o
+          WHERE o.billing_mode = 'manual'
+            AND o.subscription_status = 'past_due'
+            AND o.paid_through IS NOT NULL
+          UNION ALL
+         SELECT o.id, 'payment_read_only', o.read_only_at::date
+           FROM scope o
+          WHERE o.billing_mode = 'manual'
+            AND o.read_only_at IS NOT NULL
        )
        INSERT INTO trial_notice (organization_id, kind, due_on, recipients)
        SELECT due.id, due.kind, due.due_on, coalesce(owners.addresses, '{}')
@@ -342,6 +444,10 @@ export interface TrialClockResult {
   expired: number;
   closed: number;
   archived: number;
+  /** Manual subscriptions whose cover ran out this pass — POOLSE-63. */
+  lapsed: number;
+  /** Manual subscriptions whose grace ran out too, so writing stopped. */
+  restricted: number;
   notices: number;
 }
 

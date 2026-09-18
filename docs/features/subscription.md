@@ -159,7 +159,7 @@ tiers to unpick.
 ## Who may write what
 
 The webhook runs on `poolse_platform`, the same narrow cross-tenant login the operator's area
-uses: it holds `UPDATE` on twelve **named** columns of `organization` and SELECT on seven
+uses: it holds `UPDATE` on seventeen **named** columns of `organization` and SELECT on eight
 tables, and cannot rename a club or delete a tenant. It is cross-tenant by nature — an event
 names a customer, not an organization — which the tenant role has no way to resolve.
 
@@ -168,12 +168,97 @@ book**: an operator's through `changeTenant` into `platform_audit_log`, Stripe's
 `applyStripeEvent` into `stripe_event`. They are separate because their actors are — one is a
 person, and `platform_audit_log.clerk_user_id` is `NOT NULL`.
 
+## Paid outside Stripe — POOLSE-63
+
+Some clubs pay in cash, by transfer, on a handshake. `/admin` turns a subscription on for them
+with no Stripe customer existing at all.
+
+**`billing_mode` says *how* a club pays** — `stripe | manual | comped`, `NOT NULL`, default
+`stripe`. `subscription_status` goes on saying *whether* they are paying and `suspended_at`
+goes on saying whether the door is open: three columns, three questions, none of them merged.
+
+**`comped` lives there now.** It was a `subscription_status` from the platform slice until
+18 September 2026; once the mode existed that was one fact with two homes, and a club could be
+`manual` and `comped` at once — "pays in cash" and "is not billed" in the same breath. A free
+pilot is `billing_mode = 'comped'` with an ordinary `active` status, which is also the more
+honest pair: a pilot *is* active, and what is unusual is how it pays. The value stays in the
+status enum because removing one is a rebuild, and nothing writes it again.
+
+**A manual subscription cannot be forgotten.** A CHECK refuses an *active manual* club with no
+`paid_through`:
+
+```sql
+CHECK (billing_mode <> 'manual'
+       OR subscription_status <> 'active'
+       OR paid_through IS NOT NULL)
+```
+
+Without it an operator flips a club to active, forgets, and they run free for two years. It
+binds only an active one: a club marked manual before the first money arrives, or one that has
+lapsed to `past_due`, is a real state.
+
+**`paid_through` is a date, and only a payment moves it.** The last day covered, inclusive, in
+`dd-MM-yyyy` on every screen. There is no control that types it — the payment is the fact and
+the date is derived from it, because a field somebody fills in by hand is a field that
+disagrees with the money.
+
+**`manual_payment` is insert-only and platform-scoped**, like `stripe_event` and
+`platform_audit_log`: amount in integer cents with its currency and a `money_provenance` of
+`actual`, the day it arrived, how (`cash | bank_transfer | other`), what period it covers, an
+optional note, and who recorded it. No UPDATE and no DELETE on the grant — a record that can be
+edited is not a record, so a correction is another row. `docs/financials.md` applies, with one
+stated exception: this is Poolse's own revenue rather than a club's money, so it carries no RLS
+policy for `poolse_app`, no composite key and no `archived_at`.
+
+Recording one does everything the money means, in a single transaction: the payment row, the
+mode to `manual`, the status to `active`, `paid_through` to the **greater** of what is there and
+what this buys — so a payment recorded out of order extends cover and never shortens it — and
+read-only lifted. It does not clear `suspended_at`: a suspension is an operator's own decision
+with a reason attached, and a payment is not an argument against it.
+
+**A stray Stripe event never takes over a hand-managed club.** A customer id outlives the
+arrangement it was made for, and a subscription object can keep drifting towards `past_due` in
+Stripe's own records. The webhook refuses any tenant whose mode is not `stripe`, records the
+refusal in `stripe_event` with outcome `not_stripe_billed`, and still answers 200.
+
+### What the clock does to a late club
+
+The hourly job from POOLSE-61 gained two steps, and **where they stop is the point**:
+
+| | |
+|---|---|
+| `paid_through` passes | `past_due`. The door stays open — a club mid-lesson does not lose its register because a transfer is late |
+| plus `manual_grace_period()`, 15 days | `read_only_at`. Reads and exports still work, and so does paying |
+| after that | **nothing**. No deletion date, no closed door, no archive |
+
+A trial walks all the way down to an archive because nobody ever paid for it. A customer who is
+late is a customer, and the machine never files one away. Both transitions go to `trial_event`
+(`payment_lapsed`, `payment_read_only`) rather than `platform_audit_log`, because a cron is not
+a person — and both are owed a `trial_notice`, recorded and undelivered until an email provider
+exists.
+
+### What `/admin` shows
+
+- **On the index**: counts per mode, the manual money actually received over twelve months and
+  all time, and a **renewals-due** list for the next 30 days. A club whose cover has already
+  lapsed sorts first and is marked — a renewals list that hides the overdue one fails at the one
+  job it has.
+- **On the tenant page**: the mode, the paid-through date, a *record a payment* form, and the
+  payment history.
+
+**There is no Stripe revenue figure, and the panel says why.** Nothing in this database stores
+what a Stripe subscription is worth — the prices live in Stripe and are read back for display —
+so the counts are honest and the euros are only what Poolse actually holds a record of. The
+screen points at the Stripe dashboard rather than showing a number this product guessed.
+
 ## Not built
 
-- **Nothing happens automatically when a trial ends.** No worker, no auto-suspension. The page
-  says when it ends; closing a club is still an operator pressing a button, which is the only
-  place that decision has ever lived.
 - **No banner elsewhere in the app** counting the trial down. Worth adding when a real club is
   on a real trial.
 - **The `/admin` tenant page does not show the Stripe trail yet.** It shows the plan; the
   events are in `stripe_event` for an operator with a database client.
+- **Nothing is ever sent.** A `trial_notice` records what a club was owed and stays
+  `delivered_at` null; choosing an email provider is its own slice, and it writes into the same
+  history.
+- **Poolse does not invoice its own revenue.** `manual_payment` is the record that a receipt was
+  owed and for what — Portugal requires one for cash — and issuing it is a later ticket.

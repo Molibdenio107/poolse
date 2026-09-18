@@ -362,12 +362,21 @@ integration cost lives.
 MB WAY authorisation both require the payer to act, and the payer has no account and no
 app until phase 3. It is slice 3.5, below.
 
-**2.4 is reversed in part, 13 September 2026 — POOLSE-60 is ✅ built; 61 to 64 are written.** Three plans shipped and
+**2.4 is reversed in part, 13 September 2026 — POOLSE-60, 61 and 63 are ✅ built; 62 and 64 are written.** Three plans shipped and
 became one the next day: an organization pays for Poolse and gets everything, or it does not pay
 and is on a trial, and the only axis left is monthly or yearly. Everything else about 2.4
 stands, including the part that made the reversal cheap — `plan` is descriptive and the ceilings
 are the operator's. The same batch adds what 0.5 left undone: **what happens on day 16**. The
-five slices are in the backlog with their stories; nothing is built.
+five slices are in the backlog with their stories.
+
+**Built since: 60 (one plan, two intervals), 61 (the trial lifecycle, both slices) and 63
+(subscriptions paid outside Stripe, 18 September 2026).** 63 is the one with a deadline the
+others created: the clock runs hourly now, so a club paying by bank transfer that is left on a
+trial goes read-only on day 15 by machine. `billing_mode` gives that club an honest state, a
+CHECK makes a hand-paid subscription impossible to forget, and `manual_payment` is the
+insert-only record of what actually arrived — which Portugal will want a receipt for. **62
+(trial abuse) and 64 (hardening `/admin`) are still open**; 64's MFA item is gated on a
+production Clerk instance existing.
 
 **2.5 and 2.6 come before 2.4, decided 13 September 2026.** The numbers stay where they are —
 renumbering a roadmap costs more than reading one note. 2.4 takes money from an operator, and there

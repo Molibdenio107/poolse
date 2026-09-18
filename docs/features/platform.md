@@ -58,13 +58,13 @@ small pool (`DATABASE_PLATFORM_URL`), used by `PlatformModule` and nothing else.
 tenant-facing connection stays exactly as it was.
 
 It does **not** carry `BYPASSRLS`. Row-level security still applies to it; it is named in a
-`FOR SELECT TO poolse_platform USING (true)` policy on each of seven tables and has no
+`FOR SELECT TO poolse_platform USING (true)` policy on each of eight tables and has no
 privilege at all on the rest of the schema:
 
 `organization`, `membership`, `membership_role`, `invitation`, `facility`, `pool`,
 `audit_log`
 
-Two things follow, and both are the point. A mistake here leaks those seven tables rather
+Two things follow, and both are the point. A mistake here leaks those eight tables rather
 than the whole database — there is no grant that would let the platform read a student
 register, an invoice or a medical note. And widening its reach is a reviewed line of SQL
 rather than something that happens by default.
@@ -238,7 +238,31 @@ put it beside the box that caused it.
   unlimited, because a quota of nought is a tenant nobody can log into.
 - A suspension reason is required, trimmed, and at most 500 characters.
 
+### Billing by hand — POOLSE-63
+
+Two more actions and one more panel, and the reasoning lives in
+`docs/features/subscription.md`. In short:
+
+- **Billing mode** (`stripe | manual | comped`) beside the subscription status, because one
+  says *how* a club pays and the other says *whether*. Moving a club to `manual` while it is
+  `active` with nothing paid is refused with a field error — the CHECK behind it is what makes
+  it impossible, and the message is what makes it a sentence.
+- **Record a payment**, which is the only thing that moves `paid_through`. One transaction: the
+  `manual_payment` row, the mode, the status, the date and the lifting of read-only, all through
+  `changeTenant` so it lands in `platform_audit_log` with the amount. A payment is never edited
+  or deleted; a correction is another row.
+- **A billing panel on the index**: tenant counts per mode, the manual money received, and a
+  **renewals-due** list for the next 30 days with anything already lapsed sorted first and
+  marked. There is no Stripe revenue figure and the panel says why — nothing here stores what a
+  Stripe subscription is worth.
+
+The grant widened by exactly two columns, `billing_mode` and `paid_through`, bringing it to
+seventeen. `manual-subscription.sql` asserts what it did not widen: the club's name is still
+unwritable and `DELETE` is still refused.
+
 ## Not in this slice
 
 Per-tenant feature flags, support "view as", the Clerk MAU pull and cross-tenant analytics.
-Deleting a tenant is deliberately still impossible from here.
+**Deleting a tenant is deliberately still impossible from here** — `archived_at` was granted on
+14-09-2026 so the trial clock could close its ladder, which is a soft delete the same login can
+undo; `DELETE` is refused for every login but the owner's, and the purge is its own ticket.

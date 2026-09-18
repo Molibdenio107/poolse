@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { apiPost } from '@/lib/api';
 import { describeFailure } from '@/lib/form-failure';
+import { parseCents } from '@/lib/money';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 
 /**
@@ -144,6 +145,72 @@ export async function setReadOnlyAction(
     });
   } catch (error) {
     return describeFailure(error, 'admin.error.readOnlyFailed');
+  }
+
+  revalidateAdmin(tenantId);
+  return { ok: true };
+}
+
+/**
+ * How this club pays — POOLSE-63.
+ *
+ * Its own action beside the subscription status, because they are two facts: the
+ * mode says *how* and the status says *whether*. Marking a club as paying in
+ * cash is not a claim that they are up to date.
+ */
+export async function setBillingModeAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const tenantId = String(formData.get('tenantId') ?? '');
+
+  try {
+    await apiPost(`/platform/tenants/${tenantId}/billing-mode`, {
+      billingMode: String(formData.get('billingMode') ?? ''),
+    });
+  } catch (error) {
+    return describeFailure(error, 'admin.error.billingModeFailed');
+  }
+
+  revalidateAdmin(tenantId);
+  return { ok: true };
+}
+
+/**
+ * Record money that arrived outside Stripe — POOLSE-63.
+ *
+ * **The amount becomes cents here and nowhere else.** `parseCents` is the one
+ * place a typed "35,50" becomes a number in this product; the API takes integer
+ * minor units and refuses anything else, so there is one definition of what a
+ * comma means rather than two that agree until somebody types a thousands
+ * separator.
+ *
+ * A figure that is not a figure is refused before the request, with the same
+ * `fields` shape the API uses — so the message lands beside the box either way
+ * and the operator cannot tell which side caught it.
+ */
+export async function recordPaymentAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const tenantId = String(formData.get('tenantId') ?? '');
+
+  const amountCents = parseCents(String(formData.get('amount') ?? ''));
+  if (amountCents === null) {
+    return { ok: false, fields: { amount: 'admin.error.amountInvalid' } };
+  }
+
+  try {
+    await apiPost(`/platform/tenants/${tenantId}/payments`, {
+      amountCents,
+      receivedOn: String(formData.get('receivedOn') ?? ''),
+      method: String(formData.get('method') ?? ''),
+      coversFrom: String(formData.get('coversFrom') ?? ''),
+      coversTo: String(formData.get('coversTo') ?? ''),
+      note: String(formData.get('note') ?? ''),
+    });
+  } catch (error) {
+    return describeFailure(error, 'admin.error.paymentFailed');
   }
 
   revalidateAdmin(tenantId);

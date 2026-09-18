@@ -392,3 +392,47 @@ test('2.4 — an interval nobody sells is a 400, and the portal needs a customer
     });
   });
 });
+
+/**
+ * A club that pays by hand is not Stripe's to move — POOLSE-63.
+ *
+ * The realistic way in: a club subscribes by card, then asks to pay Rui by
+ * transfer instead. The Stripe customer id outlives the arrangement, and the
+ * subscription object keeps drifting towards `past_due` in Stripe's own records.
+ * Letting that event through would take a hand-managed club back over silently,
+ * and the club would find out as a read-only banner.
+ */
+test('63 — a stray event never takes over a club that pays by hand', async () => {
+  await withScratchTenant(async (tenant) => {
+    const customer = `cus_${tenant.organizationId.slice(0, 8)}`;
+    await giveCustomer(tenant, customer);
+
+    await tenant.sql(
+      `UPDATE organization
+          SET billing_mode = 'manual', subscription_status = 'active',
+              paid_through = current_date + 30
+        WHERE id = $1`,
+      [tenant.organizationId],
+    );
+
+    const webhook = new StripeWebhookController();
+    await webhook.handle(
+      delivery({
+        id: evt('m1'),
+        type: 'invoice.payment_failed',
+        data: { object: { customer } },
+      }),
+    );
+
+    // Recorded, with its own outcome and why — a refusal nobody can see is not
+    // a control.
+    const [event] = await trail(evt('m1'));
+    assert.equal(event?.outcome, 'not_stripe_billed');
+    assert.equal(event?.organization_id, tenant.organizationId);
+    assert.equal((event?.changed as { billingMode?: string }).billingMode, 'manual');
+
+    // And nothing on the club moved.
+    const subscription = await readSubscription(tenant.organizationId);
+    assert.equal(subscription?.status, 'active');
+  });
+});

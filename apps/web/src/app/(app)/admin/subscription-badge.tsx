@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Clock,
   Gift,
+  TimerOff,
   TriangleAlert,
   type LucideIcon,
 } from 'lucide-react';
@@ -18,8 +19,8 @@ import { cn } from '@/lib/utils';
  *
  * **An icon per state, not a colour per state.** The standing rule is that
  * colour never carries meaning alone, and this is the badge where it would be
- * most tempting to break it: five statuses, five hues, and an operator scanning
- * a column of them. The word is always rendered and the glyph differs for every
+ * most tempting to break it: six statuses, six hues, and an operator scanning a
+ * column of them. The word is always rendered and the glyph differs for every
  * value, so the column reads in greyscale, in a screenshot, and to somebody who
  * cannot separate the red from the green.
  *
@@ -38,6 +39,19 @@ const TONE: Record<SubscriptionStatus, { className: string; Icon: LucideIcon }> 
   active: { className: 'bg-success/15 text-success', Icon: CircleCheck },
   past_due: { className: 'bg-danger/15 text-danger', Icon: TriangleAlert },
   canceled: { className: 'bg-surface-muted text-foreground-muted', Icon: Ban },
+  /*
+   * A trial that ran out — POOLSE-61, and its own everything for the same reason
+   * `comped` had one: it is not `canceled`, which is somebody who chose to
+   * leave, and it is not `past_due`, which is a card that will probably work
+   * next week. It is a club in read-only waiting to be paid for.
+   */
+  expired: { className: 'bg-warning/15 text-warning', Icon: TimerOff },
+  /*
+   * Kept for a row written before POOLSE-63 moved the free pilot onto
+   * `billingMode`. Nothing writes it any more; the badge still knows the word,
+   * because a value that renders as a grey unknown is worse than one that does
+   * not exist.
+   */
   comped: { className: 'bg-primary/15 text-primary', Icon: Gift },
 };
 

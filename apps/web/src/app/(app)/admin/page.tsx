@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Building2, User } from 'lucide-react';
 import Link from 'next/link';
-import { ApiError, apiFetch, type PlatformTenant } from '@/lib/api';
+import { ApiError, apiFetch, type BillingOverview, type PlatformTenant } from '@/lib/api';
 import { DataTable, type Column } from '@/components/data-table';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
@@ -12,6 +12,7 @@ import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import type { Paginated } from '@/lib/pagination';
 import { timeAgo } from '@/lib/relative-time';
 import { cn } from '@/lib/utils';
+import { BillingPanel } from './billing-panel';
 import { HealthBadge } from './health-badge';
 import { StatusStrip } from './status-strip';
 import { SubscriptionBadge } from './subscription-badge';
@@ -47,16 +48,25 @@ export default async function AdminPage({
   const term = search.trim();
 
   let tenants: Paginated<PlatformTenant> | null = null;
+  let billing: BillingOverview | null = null;
   let failure: LoadFailure | null = null;
   let notConfigured = false;
 
   try {
-    tenants = await apiFetch<Paginated<PlatformTenant>>(
-      `/platform/tenants?${new URLSearchParams({
-        ...(term === '' ? {} : { search: term }),
-        ...(page > 1 ? { page: String(page) } : {}),
-      })}`,
-    );
+    /*
+     * In parallel: two independent reads, and neither needs the other. Two lines
+     * in `platform_audit_log` for one page view, which is the honest price of a
+     * screen that shows two different things.
+     */
+    [tenants, billing] = await Promise.all([
+      apiFetch<Paginated<PlatformTenant>>(
+        `/platform/tenants?${new URLSearchParams({
+          ...(term === '' ? {} : { search: term }),
+          ...(page > 1 ? { page: String(page) } : {}),
+        })}`,
+      ),
+      apiFetch<BillingOverview>('/platform/billing'),
+    ]);
   } catch (error) {
     if (error instanceof ApiError && error.code === 'not_platform_admin') {
       /*
@@ -128,6 +138,13 @@ export default async function AdminPage({
         while the API is the thing that is broken.
       */}
       <StatusStrip />
+
+      {/*
+        What is falling due, and what pays for what — POOLSE-63. Above the table
+        because a renewal that has already lapsed is the row an operator opened
+        this screen to find, and it is not one of the ten below.
+      */}
+      {billing !== null && <BillingPanel overview={billing} />}
 
       {notConfigured && (
         <PageError message={t('admin.notConfigured')} detail={t('admin.notConfiguredHint')} />
@@ -276,18 +293,37 @@ function tenantColumns(
     {
       key: 'plan',
       header: t('admin.column.plan'),
-      render: (tenant) =>
-        /*
-         * The plan's own name from the pricing catalogue, so /admin and the
-         * public page call it the same thing. Null says so in words rather than
-         * leaving a blank cell, which would read as data that failed to load —
-         * and after 2.4 it means something precise: nobody has subscribed.
-         */
-        tenant.planTier === null ? (
-          <span className="text-sm text-foreground-muted">{t('admin.noPlan')}</span>
-        ) : (
-          t('marketing.pricing.planName')
-        ),
+      render: (tenant) => (
+        <div className="flex flex-col">
+          {/*
+           * The plan's own name from the pricing catalogue, so /admin and the
+           * public page call it the same thing. Null says so in words rather than
+           * leaving a blank cell, which would read as data that failed to load —
+           * and after 2.4 it means something precise: nobody has subscribed.
+           */}
+          {tenant.planTier === null ? (
+            <span className="text-sm text-foreground-muted">{t('admin.noPlan')}</span>
+          ) : (
+            t('marketing.pricing.planName')
+          )}
+
+          {/*
+            How they pay, under what they pay for — POOLSE-63. Only where it is
+            not the default: every club is on Stripe until somebody says
+            otherwise, and a column repeating that ten times says nothing.
+            Manual carries its cover date, because a manual club with a date in
+            the past is the row worth finding.
+          */}
+          {tenant.billingMode !== 'stripe' && (
+            <span className="text-sm text-foreground-muted">
+              {t(`admin.billingMode.${tenant.billingMode}`)}
+              {tenant.billingMode === 'manual' && tenant.paidThrough !== null
+                ? ` · ${formatDate(tenant.paidThrough)}`
+                : ''}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: 'seats',

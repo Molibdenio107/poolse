@@ -32,9 +32,15 @@ Poolse is therefore an admin compromise. Its own subdomain and its own Vercel pr
 convenient; until then a strict CSP, with step-up auth as the thing standing in the way.
 **Write it into `docs/` as a known limitation with a date** rather than leaving it implicit.
 
-**4. The platform role must never gain `DELETE` or `archived_at`.** The purge job from
-POOLSE-61 runs offline, as its own role, unreachable from HTTP. If purge ever needs a button
-that is a separate ticket with its own argument — not a grant quietly added here.
+**4. The platform role must never gain `DELETE`.** The purge job from POOLSE-61 runs offline,
+as its own role, unreachable from HTTP. If purge ever needs a button that is a separate ticket
+with its own argument — not a grant quietly added here.
+
+**Corrected 18 September 2026: `archived_at` *is* on the grant, and this ticket may not take it
+back.** It was written here as untouchable and was granted on 14-09-2026 so the trial clock
+could close its ladder at day 75 — a decision taken knowing what it costs, in
+`docs/decisions.md`. Archiving is soft and reversible by the same login; `DELETE` is what
+survived, and `platform-admin.sql` asserts both halves. Do not "restore" the old rule.
 
 **5. Alert on every `platform.denied` and every platform write.** A trail nobody reads is not a
 control. Rate-limit the `/platform` routes while there.
@@ -86,7 +92,8 @@ and can ship whenever.
 1. `PlatformAdminGuard` refuses a session without MFA, with its own audited code.
 2. Every mutating platform action requires step-up reverification; reads do not.
 3. Irreversible actions require the tenant's name typed.
-4. The platform role still holds no `DELETE` and no `archived_at`, proven by test.
+4. The platform role still holds no `DELETE`, proven by test. `archived_at` stays granted —
+   see the correction above.
 5. Denials and writes raise an alert, recorded and marked undelivered until a provider exists.
 6. `/platform` has its own rate limit.
 7. The shared-origin limitation is in `docs/` with a date and a plan.

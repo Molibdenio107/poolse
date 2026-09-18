@@ -1163,4 +1163,53 @@ BEGIN
   RAISE NOTICE 'PASS test 18: the trial clock''s books are the platform''s alone';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 19 — what a club paid Poolse is nobody's tenant data
+-- ---------------------------------------------------------------------------
+--
+-- `manual_payment` is the operator's own revenue — POOLSE-63 — and it is about a
+-- tenant rather than a tenant's, exactly like the three books above. A club must
+-- not be able to read what it paid, what anybody else paid, or to write itself a
+-- receipt. Same pair of reasons, same reason for asserting it: `ALTER DEFAULT
+-- PRIVILEGES` grants poolse_app all four verbs on every new table, so a migration
+-- that forgets the REVOKE looks exactly like one that does not.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_seen int;
+  ok boolean;
+BEGIN
+  RESET ROLE;
+  INSERT INTO manual_payment (
+    organization_id, amount_cents, received_on, method, covers_to,
+    recorded_by_clerk_user_id
+  ) VALUES (v_a, 9900, current_date, 'cash', current_date + 30, 'user_operator');
+
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_a::text, true);
+
+  ok := false;
+  BEGIN
+    SELECT count(*) INTO v_seen FROM manual_payment;
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'FAIL test 19a: a tenant read manual_payment (% rows)', v_seen;
+  END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO manual_payment (
+      organization_id, amount_cents, received_on, method, covers_to,
+      recorded_by_clerk_user_id
+    ) VALUES (v_a, 1, current_date, 'cash', current_date + 3650, 'user_forged');
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 19b: a tenant wrote itself a receipt'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 19: the operator''s revenue is the platform''s alone';
+END $$;
+
 ROLLBACK;
