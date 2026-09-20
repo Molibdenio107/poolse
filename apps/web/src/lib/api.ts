@@ -809,6 +809,66 @@ export interface ConsumptionSeries {
 /** Never `actual` — the schema refuses it, and so does the API. */
 export type TariffProvenance = 'contracted' | 'estimated' | 'assumed';
 
+/**
+ * What a tank costs per hour taught in it — POOLSE-28, at the month grain.
+ *
+ * Every figure is a month divided by a month: a club types one meter reading a
+ * month, so there is no data from which a single Tuesday 07:00 class could be
+ * costed, and the panel says so rather than implying a precision it lacks.
+ */
+export interface CostMonth {
+  month: string;
+  kwh: number | null;
+  costCents: number | null;
+  taughtMinutes: number;
+  bathers: number;
+  /** Consumption with nothing taught to charge it to — August, a closure. */
+  unallocated: boolean;
+}
+
+/** A meter the report added up, named so a derived figure can be checked. */
+export interface CostSource {
+  id: string;
+  name: string;
+  fullyPriced: boolean;
+}
+
+/** One turma's share of its tank's heat — POOLSE-28 AC 6. */
+export interface GroupShare {
+  /** Null for a parceria: no turma, and its hours still count. */
+  groupId: string | null;
+  name: string | null;
+  taughtMinutes: number;
+  bathers: number;
+  shareCents: number | null;
+}
+
+/** What a turma's page asks: what did my hours in that water cost? */
+export interface GroupCost {
+  share: GroupShare | null;
+  poolName: string | null;
+  /** The tank's rate — every hour in it is charged the same. */
+  costPerHourCents: number | null;
+}
+
+export interface PoolCostReport {
+  poolId: string;
+  poolName: string;
+  months: CostMonth[];
+  /** Null is "not measured": the screen says which figure is missing and why. */
+  cubicMetres: number | null;
+  /** Empty means nothing meters this tank — the report says that, not zero. */
+  sources: CostSource[];
+  costCents: number | null;
+  kwh: number | null;
+  taughtMinutes: number;
+  bathers: number;
+  unallocatedCents: number | null;
+  monthsWithConsumption: number;
+  monthsPriced: number;
+  byGroup: GroupShare[];
+}
+
 /** What one unit off a meter costs, effective-dated — slice 5.3. */
 export interface Tariff {
   id: string;

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
-import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type ClassGroup, type Classes } from '@/lib/api';
+import { getFormatter, getTranslations } from 'next-intl/server';
+import { ApiError, apiFetch, type ClassGroup, type Classes, type GroupCost } from '@/lib/api';
+import { centsToText } from '@/lib/energy-invoice';
 import { PersonAvatar } from '@/components/person-avatar';
 import { PageError, PageShell } from '@/components/page-shell';
 import {
@@ -26,6 +27,7 @@ export default async function ClassPage({
   params: Promise<{ id: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const format = await getFormatter();
   const { id } = await params;
 
   let group: (ClassGroup & { canManage: boolean }) | null = null;
@@ -42,6 +44,21 @@ export default async function ClassPage({
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) missing = true;
     else failure = describeLoad(error);
   }
+
+  /*
+   * What this turma's hours in the water cost — POOLSE-28 AC 6, the number that
+   * belongs beside the occupancy because the two together are what decide
+   * whether a class is worth running.
+   *
+   * Null when the endpoint refuses: the report is owner and admin, narrower than
+   * this page, so an instructor gets the occupancy and no shell of a figure.
+   * Read off the tank's own report, never computed here — the turma's page and
+   * the pool's page must not disagree about what an hour in that water costs.
+   */
+  const energy: GroupCost | null =
+    group === null
+      ? null
+      : await apiFetch<GroupCost>(`/energy/class-groups/${id}/cost`).catch(() => null);
 
   const dayNames = Object.fromEntries(
     [1, 2, 3, 4, 5, 6, 7].map((day) => [day, t(`week.${day}`)]),
@@ -157,6 +174,26 @@ export default async function ClassPage({
                 ? t('classes.enrolledUnlimited', { count: active.length })
                 : t('classes.enrolledOf', { count: active.length, capacity: group.capacity })}
             </h2>
+
+            {/*
+              The cost of the water, under the heading that counts the people in
+              it. Absent entirely when the tank is unmetered or unpriced — there
+              is no figure to soften, and an empty row would read as free.
+            */}
+            {energy?.share != null && energy.share.shareCents !== null && (
+              <p className="text-sm text-foreground-muted">
+                {t('energy.perUse.groupShare', {
+                  amount: `${centsToText(energy.share.shareCents)} €`,
+                  hours: format.number(energy.share.taughtMinutes / 60, { maximumFractionDigits: 1 }),
+                  pool: energy.poolName ?? '',
+                  rate:
+                    energy.costPerHourCents === null
+                      ? '—'
+                      : `${centsToText(energy.costPerHourCents)} €`,
+                })}{' '}
+                {t('energy.perUse.groupCaveat')}
+              </p>
+            )}
 
             {active.length === 0 ? (
               <p className="text-foreground-muted">{t('classes.nobodyEnrolled')}</p>

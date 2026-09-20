@@ -171,10 +171,52 @@ signed the contract. The API refuses either way; hiding the control is never the
 plainly in the confirmation because it is the outcome an operator will not expect. The slot
 it held is then free, which is what makes archiving a way back rather than a trap.
 
+## Custo por utilização — what a tank costs per hour taught in it
+
+POOLSE-28, **at the month grain**. On the pool's own page, below the readings; owner and
+admin only. Every other energy product tells a club it used 14 000 kWh; this says the tank
+costs €25 an hour to heat, or €4 a bather — the figure that decides whether a class is worth
+running, and one only Poolse can compute because only Poolse holds both the meter and the
+timetable.
+
+**Three normalisations**, all over the same twelve-month window: per lesson hour, per bather,
+per m³. Each is null with a sentence when its denominator is missing — no lessons taught, no
+attendance recorded, no volume on the basin — never a blank and never a zero.
+
+**What counts.** The tank's cost is the sum of the meters whose `pool_id` names it; the
+site's "Geral" dial is deliberately *not* used, because its kWh also heat the changing rooms
+and light the car park, and splitting them would be a guess dressed as a measurement. A tank
+nothing meters reports that, and says attaching a meter is what would fix it. Taught minutes
+come from `class_session` excluding `cancelled`; a **parceria counts**, because a partner's
+hour in the water is an hour the tank was heated — `class_group` is left-joined, never
+inner-joined. Bathers are `attendance` rows with status `present`, which includes reposição
+guests and is therefore *not* the enrolled count; the panel says so.
+
+**A cancelled month is unallocated, not free.** Consumption in a month where nothing was
+taught keeps its euros and is reported separately rather than divided by zero or charged to
+the turmas that did teach.
+
+**A turma's own share** appears on its page under the enrolment heading — its hours × the
+tank's rate, pro rata, with the last share taking the rounding so the parts sum exactly to
+the whole. It is read off the tank's report rather than computed again, so the two pages
+cannot disagree.
+
+**It is an estimate and says so.** The cost comes from a tariff rather than a bill, and the
+grain is a month: a club types one reading a month, so there is no data from which a Tuesday
+07:00 class could be costed on its own.
+
 ## Not built
 
 - Comparison and correlation with temperature (5.4). Cost for billed meters is a fact from
   the bill, above; cost for a meter with no bill is the tariff, also above.
+- **POOLSE-28's finer grain**, and it is the ticket's own primary path: 15-minute continuous
+  aggregates, tariff bands (bi-horária / tri-horária) allocated by time of day, and the DST
+  arithmetic that goes with them. All three need interval data that does not exist —
+  `energy_reading` is not a hypertable and a club types one figure a month. When automated
+  feeds land, `cost-report.repository.ts` is where the finer grain goes and the API shape does
+  not change. Until then a club is told the month's rate, honestly labelled.
+- **Weather retained alongside consumption** (POOLSE-28 AC 7), so a cold week is explicable.
+  Nothing here stores weather yet.
 - A tariff that fills itself in from the site's latest fatura. The figure is already on
   screen (the bills table shows €/kWh all-in) and copying it across is one click nobody has
   built yet — proposed, not done.

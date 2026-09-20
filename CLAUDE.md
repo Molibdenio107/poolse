@@ -473,6 +473,23 @@ the day feeds arrive, and deliberately not a hypertable until then (decisions, 2
 A dial running backwards is a trigger refusal carrying the neighbour in DETAIL, like
 `pool_capacity`. `docs/features/energy.md`.
 
+**What a tank costs per hour taught in it is a month divided by a month, and the screen says
+so.** POOLSE-28, narrowed on 20 September 2026 — the ticket's 15-minute buckets, tariff bands
+and DST arithmetic all need interval readings, and a club types **one figure a meter a month**.
+`poolCostReport` in `cost-report.repository.ts` gives cost per lesson hour, per bather and per
+m³ over twelve months. **A tank's cost is the meters whose `pool_id` names it** — the site's
+"Geral" dial is never apportioned, because its kWh light the car park too, and a tank nothing
+meters says so rather than reporting a share. **Taught minutes exclude `cancelled`, and
+`class_group` is LEFT joined** — a parceria's hour heated the same water, and an inner join is
+how partnership hours have silently vanished three times here. **A bather is an `attendance`
+row with status `present`**; `late` was dropped by POOLSE-13 and a first draft that named it
+typechecked and failed at runtime. **A month with consumption and no lessons is `unallocated`**
+— not divided by zero, not dropped, and not redistributed onto the turmas that did teach. **A
+turma's share is pro rata by hours with the last share taking the rounding**, so the parts sum
+exactly to the whole, and its page reads that row rather than recomputing it. Owner and admin
+only: what the bomba cost is maintenance's business, whether a turma earns its heating is not.
+`docs/features/energy.md`.
+
 **A meter with no fatura is costed by a tariff, and what comes out is an estimate that never
 touches a billed euro.** 5.3's second half. `energy_tariff` is a €/unit rate **on the meter**
 — not a club-wide named rate, because a club on two contracts has two answers — effective-dated

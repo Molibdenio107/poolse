@@ -686,6 +686,24 @@
       "boundsReversed": "The low bound must be at or below the tariff, and the high bound at or above it.",
       "priceInvalid": "The price must be a number above zero.",
       "saveFailed": "The tariff could not be saved."
+    },
+    "perUse": {
+      "section": "Cost per use",
+      "noMeter": "No meter is attached to this basin, so there is no consumption that can be attributed to it. The site's general meter will not do: its energy also heats the changing rooms and lights the car park, and splitting it would be a guess. Attach a meter to this basin from the site's page.",
+      "basis": "From: {meters}.",
+      "noTariff": "This basin's meters have no tariff yet, so there are kWh but no euros. Record the price per unit on each meter's page.",
+      "perHour": "Per lesson hour",
+      "perBather": "Per bather",
+      "perCubicMetre": "Per m³",
+      "noHours": "No lessons taught in this period",
+      "noBathers": "No attendance recorded",
+      "noVolume": "Basin volume not recorded",
+      "coverage": "{cost} across {priced} of {total} months with consumption, over {hours} lesson hours and {bathers} bathers.",
+      "unallocated": "Includes {amount} in months with no lessons taught — the basin was heated all the same, but there is no lesson to charge it to.",
+      "unpriced": "No tariff for part of the period: {meters}. Those months are left out of the total.",
+      "caveat": "An estimate, by month: consumption is metered, the cost comes from a tariff rather than a bill, and a month cannot be split across individual lessons. Bathers are recorded attendances, make-up guests included — not the number enrolled.",
+      "groupShare": "This class group taught {hours} hours in {pool}, at {rate} an hour — {amount} of heating.",
+      "groupCaveat": "A monthly estimate, shared out by the hours taught in the basin."
     }
   },
   "maintenance": {

@@ -3,7 +3,51 @@
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
 **Type:** Feature · **Area:** Energy / Dashboards · **Priority:** Medium — the strongest argument for the four-module product
+**Status:** Built at the **month grain**, 20 September 2026. AC 1, 2, 3, 5 and 6 are met; **AC 4 (tariff bands) and AC 7 (weather) are not, and cannot be until interval data exists** — see the box below before writing any code against this ticket.
 **Borrowed from:** nobody. Every product that tracks pool energy reports kWh and euros; none normalises against a pool-specific denominator, because none of them holds the class schedule.
+
+### Built, and narrowed — read this first (20 September 2026)
+
+**The Dev section below describes a product that cannot be built from the data Poolse
+holds, and it is kept as written because it is right about the destination.** It assumes a
+TimescaleDB hypertable with continuous aggregates at a 15-minute grain, tariff bands
+allocated by time of day, and DST-boundary arithmetic. All three need interval readings.
+`energy_reading` is deliberately **not** a hypertable (`docs/decisions.md`, 2026-09-11) and a
+club types **one figure per meter per month**. There is therefore no data from which a
+Tuesday 07:00 class can be costed, and attributing a month's kWh to one lesson would be an
+invention presented as a measurement — which AC 5 exists to forbid.
+
+**What was built instead: the same three normalisations, over a month, labelled as an
+estimate.** Cost per lesson hour, per bather and per m³ on the pool's own page; a turma's own
+share on its page. `apps/api/src/energy/cost-report.repository.ts`,
+`docs/features/energy.md`.
+
+| AC | State |
+|---|---|
+| 1 — join the time-series to the schedule and the basin | ✅ at the month grain |
+| 2 — three normalisations | ✅ |
+| 3 — per basin, per turma, per period, comparable | ✅ per basin and per turma. **Per instructor slot is not built** — it needs the same interval data as AC 4 |
+| 4 — tariff bands so cost is correct | ❌ **not buildable yet.** One flat rate per meter (`energy_tariff`, slice 5.3); bands need time-of-day allocation over interval readings |
+| 5 — heating separable, or the derivation stated | ✅ the report names the meters it summed and says it is derived |
+| 6 — turma detail shows its cost beside occupancy | ✅ |
+| 7 — weather retained alongside consumption | ❌ nothing stores weather |
+
+**QA 28.5, 28.6, 28.7, 28.8 and 28.11 are therefore not testable** — they are all about
+15-minute buckets, bands and DST. The scenarios that were testable are written as integration
+tests in `cost-report.integration.test.ts`, plus four the ticket did not ask for: a parceria's
+hours must not be dropped, the shares must sum to the whole, a tank nothing meters must report
+nothing rather than a share of the site, and the report must be owner/admin.
+
+**When automated feeds land**, `cost-report.repository.ts` is where the finer grain goes and
+the API shape does not change. Do not start that work by re-reading the Dev section as though
+nothing exists.
+
+**One correction to the BA below.** It says the per-bather denominator is "recorded
+attendance". It is recorded attendance with status **`present`** — `attendance_status` is
+`present | absent | excused`, POOLSE-13 having dropped `late`, and somebody who was marked
+absent was not in the water to be heated. Reposição guests have ordinary attendance rows and
+are counted, which is the divergence from the enrolled count the BA asks to have stated; the
+panel states it.
 
 ### PO — why this exists
 

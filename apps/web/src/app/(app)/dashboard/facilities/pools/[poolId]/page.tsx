@@ -1,6 +1,6 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
-import { ApiError, apiFetch, type PoolDetail } from '@/lib/api';
+import { ApiError, apiFetch, type PoolCostReport, type PoolDetail } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
@@ -8,6 +8,7 @@ import { ArchiveButton } from '../../facility-forms';
 import { PoolForm } from '../../pool-form';
 import { ReadingsBlock } from '../../readings-block';
 import { PageError, PageShell } from '@/components/page-shell';
+import { CostPerUsePanel } from './cost-per-use-panel';
 
 /**
  * One pool: its details, editable, and its gallery.
@@ -52,6 +53,19 @@ export default async function PoolPage({
       failure = describeLoad(error);
     }
   }
+
+  /*
+   * What the tank costs per hour taught in it — POOLSE-28.
+   *
+   * Null when the endpoint refuses, so the panel is absent rather than empty:
+   * the report is owner and admin, narrower than the rest of this page, and a
+   * maintenance member should see no shell of a thing they cannot open. Same
+   * shape as every other optional panel here.
+   */
+  const costReport: PoolCostReport | null =
+    pool === null
+      ? null
+      : await apiFetch<PoolCostReport>(`/energy/pools/${poolId}/cost-report`).catch(() => null);
 
   return (
     <PageShell
@@ -184,6 +198,14 @@ export default async function PoolPage({
               canManage={pool.canManage}
             />
           </section>
+
+          {/*
+            Below the readings, because it is an answer about the tank rather
+            than a measurement of it, and the measurements are what a technician
+            opens this page for. Maintenance data belongs on the pool's own page
+            — this is the same argument, applied to the money the tank costs.
+          */}
+          {costReport !== null && <CostPerUsePanel report={costReport} />}
 
           <section className="rounded border border-border bg-surface p-5">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">

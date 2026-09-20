@@ -686,6 +686,24 @@
       "boundsReversed": "O valor mínimo tem de ser menor ou igual à tarifa, e o máximo maior ou igual.",
       "priceInvalid": "O preço tem de ser um número acima de zero.",
       "saveFailed": "Não foi possível guardar a tarifa."
+    },
+    "perUse": {
+      "section": "Custo por utilização",
+      "noMeter": "Nenhum contador está associado a este tanque, por isso não há consumo que lhe possa ser atribuído. O contador geral da instalação não serve: a energia dele também aquece os balneários e ilumina o parque, e reparti-la seria um palpite. Associe um contador a este tanque na página da instalação.",
+      "basis": "A partir de: {meters}.",
+      "noTariff": "Os contadores deste tanque ainda não têm tarifa, por isso há kWh mas não há euros. Registe o preço por unidade na página de cada contador.",
+      "perHour": "Por hora de turma",
+      "perBather": "Por banhista",
+      "perCubicMetre": "Por m³",
+      "noHours": "Sem aulas dadas neste período",
+      "noBathers": "Sem presenças registadas",
+      "noVolume": "Volume do tanque por preencher",
+      "coverage": "{cost} em {priced} de {total} meses com consumo, sobre {hours} horas de turma e {bathers} banhistas.",
+      "unallocated": "Inclui {amount} em meses sem aulas dadas — o tanque foi aquecido na mesma, mas não há aula a que imputar esse custo.",
+      "unpriced": "Sem tarifa em parte do período: {meters}. Esses meses ficam de fora do total.",
+      "caveat": "Estimativa, ao mês: o consumo é medido, o custo é calculado a partir da tarifa e não de uma fatura, e um mês não pode ser repartido por aula. Os banhistas são as presenças registadas, incluindo aulas de reposição — não é o número de inscritos.",
+      "groupShare": "Esta turma deu {hours} horas no {pool}, a {rate} por hora — {amount} de aquecimento.",
+      "groupCaveat": "Estimativa mensal, repartida pelas horas dadas no tanque."
     }
   },
   "maintenance": {

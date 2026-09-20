@@ -44,6 +44,13 @@ import {
   type TariffInput,
   type TariffProvenance,
 } from './tariffs.repository.js';
+import {
+  groupPool,
+  poolCostReport,
+  poolTimezone,
+  type GroupShare,
+  type PoolCostReport,
+} from './cost-report.repository.js';
 
 /**
  * Energy — slices 5.1 and 5.2.
@@ -230,6 +237,68 @@ export class EnergyController {
       throw asHttp(error);
     }
     return { recorded: true };
+  }
+
+  /**
+   * What a tank costs per hour taught in it — POOLSE-28.
+   *
+   * **Owner and admin only**, narrower than the rest of the module and than the
+   * costs on a meter's own page. What the bomba cost is a fact about the tank
+   * and is maintenance's business; whether a Tuesday 07:00 turma earns its
+   * heating is a management question about whether to keep running a class,
+   * which is `docs/financials.md` §9 and the ticket's own rule. An instructor
+   * reaches neither.
+   */
+  @Get('pools/:poolId/cost-report')
+  async costReport(@Param('poolId') poolId: string): Promise<PoolCostReport> {
+    requireRole(...CAN_PLAN);
+    const { organizationId } = currentTenant();
+
+    const timezone = (await poolTimezone(organizationId, poolId)) ?? 'Europe/Lisbon';
+    const report = await poolCostReport(organizationId, poolId, timezone);
+    // Another tenant's tank is indistinguishable from none, as everywhere here.
+    if (report === null) throw new NotFoundException('No such pool');
+
+    return report;
+  }
+
+  /**
+   * One turma's share of its tank's heat — POOLSE-28 AC 6, the number that sits
+   * beside its occupancy and decides whether the class is worth running.
+   *
+   * **Read off the tank's own report rather than computed again here**, so the
+   * turma's page and the pool's page cannot disagree about what an hour in that
+   * water costs. Same audience as the report it is a row of.
+   *
+   * A turma in no tank, or in one nothing meters, gets `null` — there is no
+   * figure, and the screen says so rather than showing a zero.
+   */
+  @Get('class-groups/:groupId/cost')
+  async groupCost(
+    @Param('groupId') groupId: string,
+  ): Promise<{ share: GroupShare | null; poolName: string | null; costPerHourCents: number | null }> {
+    requireRole(...CAN_PLAN);
+    const { organizationId } = currentTenant();
+
+    const poolId = await groupPool(organizationId, groupId);
+    if (poolId === null) return { share: null, poolName: null, costPerHourCents: null };
+
+    const timezone = (await poolTimezone(organizationId, poolId)) ?? 'Europe/Lisbon';
+    const report = await poolCostReport(organizationId, poolId, timezone);
+    if (report === null) return { share: null, poolName: null, costPerHourCents: null };
+
+    const share = report.byGroup.find((row) => row.groupId === groupId) ?? null;
+
+    // The tank's rate, not this turma's — every hour in the water is charged
+    // the same, because a month's kWh cannot be attributed to one lesson.
+    const allocatable =
+      report.costCents === null ? null : report.costCents - (report.unallocatedCents ?? 0);
+    const costPerHourCents =
+      allocatable !== null && report.taughtMinutes > 0
+        ? Math.round(allocatable / (report.taughtMinutes / 60))
+        : null;
+
+    return { share, poolName: report.poolName, costPerHourCents };
   }
 
   /**
