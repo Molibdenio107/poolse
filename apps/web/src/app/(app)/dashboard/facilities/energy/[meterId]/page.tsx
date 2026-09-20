@@ -10,6 +10,7 @@ import { centsToText } from '@/lib/energy-invoice';
 import { getMeter } from '../../energy.actions';
 import { listInvoices } from '../invoice.actions';
 import { MeterAdmin, ReadingForm, RemoveReading } from './meter-forms';
+import { TariffPanel } from './tariff-panel';
 
 /**
  * One meter: its consumption by month, the form for the next reading, and the
@@ -36,7 +37,7 @@ export default async function MeterPage({
   const detail = await getMeter(meterId);
   // Another tenant's meter is indistinguishable from none, deliberately.
   if (detail === null) notFound();
-  const { meter, readings, monthly, pools, canPlan, canRecord } = detail;
+  const { meter, readings, monthly, pools, tariffs, canPlan, canRecord, canPrice } = detail;
 
   // The bills on this meter — slice 5.3. Their own section, never merged with
   // the readings: billing periods are not reading dates and bills carry
@@ -76,9 +77,62 @@ export default async function MeterPage({
         {readings.length === 0 ? (
           <p className="text-sm text-foreground-muted">{t('energy.noReadingsHint')}</p>
         ) : (
-          <ConsumptionBars monthly={monthly} unit={meter.unit} locale={locale} />
+          <ConsumptionBars monthly={monthly.months} unit={meter.unit} locale={locale} />
         )}
       </section>
+
+      {/*
+        What that consumption cost, at the rates the club typed — slice 5.3.
+        Absent until something is actually priced: a chart of twelve dashes
+        teaches nothing, and the tariff panel below already says why.
+
+        **Its own section, never merged with the bills above.** A billed euro is
+        `actual` and this one is `estimated`, and docs/financials.md §2 forbids
+        summing across provenances into one unlabelled figure — so the heading
+        says estimate, the coverage says how much of the year it reached, and
+        the two totals never meet.
+      */}
+      {monthly.monthsPriced > 0 && (
+        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('energy.tariff.costSection')}
+          </h2>
+
+          <p className="text-sm">
+            <span className="text-lg font-medium tabular-nums">
+              {monthly.costCents === null ? '—' : `${centsToText(monthly.costCents)} €`}
+            </span>{' '}
+            <span className="text-foreground-muted">
+              {t('energy.tariff.costTotal')}
+              {' · '}
+              {/*
+                Coverage, in visible text and never only as a caveat elsewhere:
+                an unqualified total over partial data has the same shape as a
+                complete one — docs/financials.md §6.
+              */}
+              {t('energy.tariff.coverage', {
+                priced: monthly.monthsPriced,
+                total: monthly.monthsWithConsumption,
+              })}
+              {monthly.costProvenance !== null &&
+                ` · ${t(`energy.tariff.costProvenance.${monthly.costProvenance}`)}`}
+            </span>
+          </p>
+
+          <ConsumptionBars
+            monthly={monthly.months.map((m) => ({
+              month: m.month,
+              // The bars take euros, not cents — one scale, no second axis.
+              consumed: m.costCents === null ? null : m.costCents / 100,
+            }))}
+            unit="€"
+            locale={locale}
+            money
+            labelKey="energy.tariff.costChartLabel"
+            captionKey="energy.tariff.costChartCaption"
+          />
+        </section>
+      )}
 
       {canRecord && (
         <section className="rounded border border-border bg-surface p-5">
@@ -123,6 +177,21 @@ export default async function MeterPage({
                               value: format.number(reading.consumed, { maximumFractionDigits: 1 }),
                               unit: meter.unit,
                             })}
+                      </span>
+                    )}
+                    {/*
+                      What it cost, at the rate live that day — slice 5.3. A
+                      meter with no rate shows nothing here rather than a zero,
+                      and the estimate is marked as one beside the figure rather
+                      than only in the panel below.
+                    */}
+                    {reading.costCents !== null && (
+                      <span className="ml-2 text-foreground-muted">
+                        ·{' '}
+                        <span className="tabular-nums">{centsToText(reading.costCents)} €</span>{' '}
+                        <span className="text-xs">
+                          {t(`energy.tariff.costProvenance.${reading.costProvenance ?? 'estimated'}`)}
+                        </span>
                       </span>
                     )}
                   </span>
@@ -204,6 +273,14 @@ export default async function MeterPage({
           )}
         </section>
       )}
+
+      {/*
+        The rate, below the bills on purpose: a meter that has a fatura does not
+        need one, and a club reading down the page meets the fact before the
+        estimate. Visible to the whole module — a fatura already is — while
+        setting one stays owner and admin, which is `canPrice`.
+      */}
+      <TariffPanel meter={meter} tariffs={tariffs} canPrice={canPrice} />
 
       {canPlan && !meter.archived && (
         <section className="rounded border border-border bg-surface p-5">

@@ -772,12 +772,58 @@ export interface EnergyReading {
   note: string | null;
   /** Used since the reading before, derived by the API. Null when nothing to measure from. */
   consumed: number | null;
+  /**
+   * What that consumption cost at the rate live that day — slice 5.3. Null
+   * when the meter had no rate then, and rendered as a dash rather than a zero.
+   * Always an estimate: see `CostProvenance`.
+   */
+  costCents: number | null;
+  costProvenance: CostProvenance | null;
 }
+
+/**
+ * How much weight a derived cost carries — docs/financials.md §2.
+ *
+ * Never `actual`: a euro that happened is a fatura. A cost from a rate the club
+ * marked `assumed` is `assumed` too, and the screen says so beside the figure.
+ */
+export type CostProvenance = 'estimated' | 'assumed';
 
 export interface MonthlyConsumption {
   /** `YYYY-MM`, in the site's timezone. */
   month: string;
   consumed: number | null;
+  /** Null when any reading in the month went unpriced — never a partial bar. */
+  costCents: number | null;
+}
+
+/** The twelve months and how much of them the rates reached — slice 5.3. */
+export interface ConsumptionSeries {
+  months: MonthlyConsumption[];
+  monthsWithConsumption: number;
+  monthsPriced: number;
+  costCents: number | null;
+  costProvenance: CostProvenance | null;
+}
+
+/** Never `actual` — the schema refuses it, and so does the API. */
+export type TariffProvenance = 'contracted' | 'estimated' | 'assumed';
+
+/** What one unit off a meter costs, effective-dated — slice 5.3. */
+export interface Tariff {
+  id: string;
+  /** EUR per unit, gross. Not cents: EUR 0.1548/kWh is the point of the column. */
+  unitPrice: number;
+  unitPriceLow: number | null;
+  unitPriceHigh: number | null;
+  provenance: TariffProvenance;
+  /** `YYYY-MM-DD`. */
+  effectiveFrom: string;
+  /** The last day at this rate, inclusive. Null while it is the live one. */
+  effectiveTo: string | null;
+  live: boolean;
+  note: string | null;
+  createdByName: string | null;
 }
 
 // Faturas — slice 5.3. Shapes mirror `invoices.repository.ts`.
@@ -881,10 +927,13 @@ export interface MeterList {
 export interface MeterDetail {
   meter: EnergyMeter;
   readings: EnergyReading[];
-  monthly: MonthlyConsumption[];
+  monthly: ConsumptionSeries;
   pools: { id: string; name: string }[];
+  tariffs: Tariff[];
   canPlan: boolean;
   canRecord: boolean;
+  /** Setting a rate is owner and admin; reading the cost is the whole module. */
+  canPrice: boolean;
 }
 
 export interface TaskList {

@@ -30,9 +30,20 @@ import {
   type MeterInput,
   type MeterKind,
   type MeterReads,
-  type MonthlyConsumption,
+  type ConsumptionSeries,
   type Option,
 } from './energy.repository.js';
+import {
+  addTariff,
+  archiveTariff,
+  listTariffs,
+  updateTariff,
+  TariffOverlapError,
+  TARIFF_PROVENANCES,
+  type Tariff,
+  type TariffInput,
+  type TariffProvenance,
+} from './tariffs.repository.js';
 
 /**
  * Energy — slices 5.1 and 5.2.
@@ -55,6 +66,8 @@ const MAX_NOTES = 2000;
 const MAX_NOTE = 500;
 /** A dial has at most 14 digits before the point in the schema; this is well under. */
 const MAX_VALUE = 99_999_999_999;
+/** €/kWh. Well above any tariff and well inside `numeric(12,6)`. */
+const MAX_UNIT_PRICE = 1_000_000;
 
 const KINDS: readonly MeterKind[] = ['pump', 'heating', 'lighting', 'total', 'other'];
 const READS: readonly MeterReads[] = ['cumulative_index', 'interval_consumption'];
@@ -70,11 +83,21 @@ interface MeterListResponse {
 interface MeterResponse {
   meter: EnergyMeter;
   readings: EnergyReading[];
-  /** Twelve months ending this one, every month present. */
-  monthly: MonthlyConsumption[];
+  /** Twelve months ending this one, every month present, with their coverage. */
+  monthly: ConsumptionSeries;
   pools: Option[];
+  /** Every rate this meter has carried — slice 5.3. */
+  tariffs: Tariff[];
   canPlan: boolean;
   canRecord: boolean;
+  /**
+   * Setting a rate is owner and admin, like defining what the dial means and
+   * unlike recording a figure off it: a price decides every euro the module
+   * then reports, and the person at the meter cupboard is not the person who
+   * signed the contract. Reading one stays with the whole module, as a fatura
+   * already does.
+   */
+  canPrice: boolean;
 }
 
 @Controller('energy')
@@ -121,10 +144,12 @@ export class EnergyController {
 
     return {
       meter,
-      readings: await listReadings(organizationId, meterId),
+      readings: await listReadings(organizationId, meterId, timezone),
       monthly: await monthlyConsumption(organizationId, meterId, timezone),
       pools: canPlan ? await listPools(organizationId, meter.facilityId) : [],
+      tariffs: await listTariffs(organizationId, meterId),
       canPlan,
+      canPrice: canPlan,
       // An archived meter takes no more readings: its series ended when it was
       // swapped out or retired, and a figure typed against it would be a figure
       // on the wrong dial.
@@ -207,6 +232,68 @@ export class EnergyController {
     return { recorded: true };
   }
 
+  /**
+   * A rate for this meter — slice 5.3, the half that costs a sub-meter.
+   *
+   * A *new* rate is a new row, which is what makes "what did the bomba cost in
+   * March" answerable; correcting one that was typed wrong is the PATCH below.
+   * The overlap is the database's to refuse, not this method's to check: a
+   * read-then-write here would be a race, and the exclusion constraint is not.
+   */
+  @Post('meters/:meterId/tariffs')
+  async price(
+    @Param('meterId') meterId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ id: string }> {
+    requireRole(...CAN_PLAN);
+    const { organizationId, membershipId } = currentTenant();
+
+    if (membershipId === null) {
+      throw new BadRequestException('Only a member of this organization can set a tariff');
+    }
+
+    try {
+      return { id: await addTariff(organizationId, meterId, membershipId, readTariff(body)) };
+    } catch (error) {
+      throw asHttp(error);
+    }
+  }
+
+  /** A rate that was typed wrong. The figure and the dates, not who signed it. */
+  @Patch('meters/:meterId/tariffs/:tariffId')
+  async reprice(
+    @Param('meterId') meterId: string,
+    @Param('tariffId') tariffId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ updated: true }> {
+    requireRole(...CAN_PLAN);
+    const { organizationId } = currentTenant();
+
+    try {
+      if (!(await updateTariff(organizationId, meterId, tariffId, readTariff(body)))) {
+        throw new NotFoundException('No such tariff');
+      }
+      return { updated: true };
+    } catch (error) {
+      throw asHttp(error);
+    }
+  }
+
+  /** A rate that never applied. The months it priced become dashes again. */
+  @Post('meters/:meterId/tariffs/:tariffId/archive')
+  async unprice(
+    @Param('meterId') meterId: string,
+    @Param('tariffId') tariffId: string,
+  ): Promise<{ archived: true }> {
+    requireRole(...CAN_PLAN);
+    const { organizationId } = currentTenant();
+
+    if (!(await archiveTariff(organizationId, meterId, tariffId))) {
+      throw new NotFoundException('No such tariff');
+    }
+    return { archived: true };
+  }
+
   /** A reading that never happened. Same audience as recording one. */
   @Post('meters/:meterId/readings/archive')
   async unrecord(
@@ -280,6 +367,100 @@ function readMeter(body: Record<string, unknown>, facilityId: string): MeterInpu
 }
 
 /**
+ * What the tariff form posts, read once.
+ *
+ * **The price is a unit price, so it is not cents and is not rounded here.**
+ * €0.1548/kWh is the figure; putting it through `parseCents` would make it
+ * €0.15 and a 3% error, which is the whole reason the column is
+ * `numeric(12,6)`. Six decimal places is what the column holds, and more is
+ * refused rather than silently rounded by Postgres.
+ */
+function readTariff(body: Record<string, unknown>): TariffInput {
+  const unitPrice = price(body['unitPrice'], 'unitPrice');
+  if (unitPrice === null) {
+    throw new BadRequestException({ message: 'What does a unit cost?', field: 'unitPrice' });
+  }
+
+  const provenance = body['provenance'] === undefined ? 'contracted' : body['provenance'];
+  if (!TARIFF_PROVENANCES.includes(provenance as TariffProvenance)) {
+    // `actual` lands here too, and deliberately: a euro that happened is a
+    // fatura. The schema refuses it as well, so this is the readable half.
+    throw new BadRequestException({ message: 'Where did this rate come from?', field: 'provenance' });
+  }
+
+  const effectiveFrom = day(body['effectiveFrom'], 'effectiveFrom');
+  if (effectiveFrom === null) {
+    throw new BadRequestException({ message: 'From when does this rate apply?', field: 'effectiveFrom' });
+  }
+  const effectiveTo = day(body['effectiveTo'], 'effectiveTo');
+  if (effectiveTo !== null && effectiveTo < effectiveFrom) {
+    throw new BadRequestException({
+      message: 'The last day at this rate cannot be before the first',
+      field: 'effectiveTo',
+      fields: { effectiveTo: 'energy.tariff.datesReversed' },
+    });
+  }
+
+  const low = price(body['unitPriceLow'], 'unitPriceLow');
+  const high = price(body['unitPriceHigh'], 'unitPriceHigh');
+  if (low !== null && low > unitPrice) {
+    throw new BadRequestException({
+      message: 'The low bound cannot be above the rate',
+      field: 'unitPriceLow',
+      fields: { unitPriceLow: 'energy.tariff.boundsReversed' },
+    });
+  }
+  if (high !== null && high < unitPrice) {
+    throw new BadRequestException({
+      message: 'The high bound cannot be below the rate',
+      field: 'unitPriceHigh',
+      fields: { unitPriceHigh: 'energy.tariff.boundsReversed' },
+    });
+  }
+
+  return {
+    unitPrice,
+    unitPriceLow: low,
+    unitPriceHigh: high,
+    provenance: provenance as TariffProvenance,
+    effectiveFrom,
+    effectiveTo,
+    note: text(body['note'], MAX_NOTE, 'note'),
+  };
+}
+
+/** A unit price: positive, at most six decimal places, or null when absent. */
+function price(value: unknown, field: string): number | null {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > MAX_UNIT_PRICE) {
+    throw new BadRequestException({
+      message: 'The rate must be a number above zero',
+      field,
+      fields: { [field]: 'energy.tariff.priceInvalid' },
+    });
+  }
+  // Rounded rather than refused: a club pasting 0.15482857 from a spreadsheet
+  // means the rate, not a demand for nanocents, and the column holds six.
+  return Math.round(parsed * 1e6) / 1e6;
+}
+
+/** A calendar day as `YYYY-MM-DD`, or null when absent. Rubbish is a 400. */
+function day(value: unknown, field: string): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    throw new BadRequestException({ message: 'That is not a date', field });
+  }
+  const trimmed = value.trim();
+  // `new Date('2026-02-31')` is 3 March, not an error. Parse, then compare back.
+  const parsed = new Date(`${trimmed}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== trimmed) {
+    throw new BadRequestException({ message: 'That is not a date', field });
+  }
+  return trimmed;
+}
+
+/**
  * A CPE as the schema wants it — compact and upper-case. The bill prints
  * "PT 0002 000 042 466 003 BW"; a person types it with or without the spaces.
  */
@@ -348,6 +529,19 @@ function asHttp(error: unknown): unknown {
     return new BadRequestException({
       message: 'That pool or meter is not at this site',
       field: error.field,
+    });
+  }
+  if (error instanceof TariffOverlapError) {
+    /*
+     * The refusal names the field the operator can actually move. There are no
+     * figures to carry — unlike the reading trigger, the constraint's complaint
+     * is about a period and the period is already on screen, in the boxes they
+     * just filled in.
+     */
+    return new ConflictException({
+      code: 'tariff_overlap',
+      message: 'A rate already covers part of that period',
+      fields: { effectiveFrom: 'energy.tariff.overlaps' },
     });
   }
   if (error instanceof ReadingRefusedError) {

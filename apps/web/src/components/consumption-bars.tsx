@@ -1,5 +1,18 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
-import type { MonthlyConsumption } from '@/lib/api';
+
+/**
+ * One column: a month, and the figure it is drawn at.
+ *
+ * Deliberately narrower than `MonthlyConsumption` — the chart reads these two
+ * fields and nothing else, so a caller may hand it kWh, billed euros or an
+ * estimate without either side knowing which.
+ */
+export interface Column {
+  /** `YYYY-MM`. */
+  month: string;
+  /** Null is a labelled gap, never a zero-height bar. */
+  consumed: number | null;
+}
 
 /**
  * Consumption by month — slice 5.2.
@@ -26,8 +39,10 @@ export async function ConsumptionBars({
   unit,
   locale,
   money = false,
+  labelKey,
+  captionKey,
 }: {
-  monthly: MonthlyConsumption[];
+  monthly: Column[];
   /** The unit named in the caption and the table head — "kWh", or "€" for money. */
   unit: string;
   locale: string;
@@ -37,6 +52,17 @@ export async function ConsumptionBars({
    * only the formatting and the words change.
    */
   money?: boolean;
+  /**
+   * Override the two sentences the chart says about itself.
+   *
+   * `money` alone is not enough to name what a euro on this chart *is*: the
+   * dashboard's bars are billed totals and a meter's are an estimate from a
+   * tariff, and captioning the second as "the total of the bills" would be a
+   * plain untruth about a figure nobody can check from the chart. The default
+   * keys stay the billed ones, so no existing caller changes.
+   */
+  labelKey?: string;
+  captionKey?: string;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
@@ -45,6 +71,9 @@ export async function ConsumptionBars({
     money
       ? new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(value)
       : new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value);
+
+  const label_ = labelKey ?? (money ? 'energy.costChartLabel' : 'energy.chartLabel');
+  const caption_ = captionKey ?? (money ? 'energy.costChartCaption' : 'energy.chartCaption');
 
   const max = Math.max(0, ...monthly.map((m) => m.consumed ?? 0));
 
@@ -62,7 +91,7 @@ export async function ConsumptionBars({
         className="grid h-40 items-end gap-1.5"
         style={{ gridTemplateColumns: `repeat(${monthly.length}, minmax(0, 1fr))` }}
         role="img"
-        aria-label={t(money ? 'energy.costChartLabel' : 'energy.chartLabel', { unit })}
+        aria-label={t(label_, { unit })}
       >
         {monthly.map((m) => {
           const height = m.consumed === null || max === 0 ? 0 : (m.consumed / max) * 100;
@@ -98,12 +127,12 @@ export async function ConsumptionBars({
       </div>
 
       <figcaption className="text-sm text-foreground-muted">
-        {t(money ? 'energy.costChartCaption' : 'energy.chartCaption', { unit })}
+        {t(caption_, { unit })}
       </figcaption>
 
       {/* The record, always. */}
       <table className="w-full text-sm">
-        <caption className="sr-only">{t(money ? 'energy.costChartLabel' : 'energy.chartLabel', { unit })}</caption>
+        <caption className="sr-only">{t(label_, { unit })}</caption>
         <thead>
           <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">
             <th scope="col" className="py-1 font-medium">{t('energy.month')}</th>

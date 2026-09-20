@@ -1255,4 +1255,87 @@ BEGIN
   RAISE NOTICE 'PASS test 20: who has started a trial is the platform''s alone';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 21 — a tariff cannot price a foreign meter
+-- ---------------------------------------------------------------------------
+--
+-- `energy_tariff` is what turns another club's kWh into euros, so the composite
+-- key to `energy_meter` is the whole of what stops org A pricing org B's bomba.
+-- The author key is the second one: a rate is signed, and the signature is a
+-- membership that has to be this club's own.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid := 'a1111111-1111-1111-1111-111111111111';
+  v_fac_b uuid := 'b1111111-1111-1111-1111-111111111111';
+  v_meter_a uuid; v_meter_b uuid; v_mem_a uuid; v_mem_b uuid;
+  v_seen integer; ok boolean;
+BEGIN
+  RESET ROLE;
+  INSERT INTO energy_meter (organization_id, facility_id, name) VALUES (v_a, v_fac_a, 'Bomba A')
+  RETURNING id INTO v_meter_a;
+  INSERT INTO energy_meter (organization_id, facility_id, name) VALUES (v_b, v_fac_b, 'Bomba B')
+  RETURNING id INTO v_meter_b;
+
+  SELECT id INTO v_mem_a FROM membership WHERE organization_id = v_a LIMIT 1;
+  SELECT id INTO v_mem_b FROM membership WHERE organization_id = v_b LIMIT 1;
+
+  -- Closed, so the 2027 rate below is testing the author key and not tripping
+  -- over the overlap constraint on its way.
+  INSERT INTO energy_tariff
+    (organization_id, meter_id, unit_price, effective_from, effective_to, created_by_membership_id)
+  VALUES (v_a, v_meter_a, 0.1548, DATE '2026-01-01', DATE '2026-12-31', v_mem_a);
+
+  -- One live rate per meter: a second one covering a day the first covers is
+  -- refused, and `effective_to` is the last day AT that rate, so 31 December is
+  -- still the old rate and 1 January is free.
+  ok := false;
+  BEGIN
+    INSERT INTO energy_tariff
+      (organization_id, meter_id, unit_price, effective_from, created_by_membership_id)
+    VALUES (v_a, v_meter_a, 0.2, DATE '2026-12-31', v_mem_a);
+  EXCEPTION WHEN exclusion_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 21z: two live rates on one meter on one day'; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO energy_tariff
+      (organization_id, meter_id, unit_price, effective_from, created_by_membership_id)
+    VALUES (v_a, v_meter_b, 0.1548, DATE '2026-01-01', v_mem_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 21a: org A priced org B meter'; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO energy_tariff
+      (organization_id, meter_id, unit_price, effective_from, created_by_membership_id)
+    VALUES (v_a, v_meter_a, 0.1548, DATE '2027-01-01', v_mem_b);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 21b: org B member signed an org A rate'; END IF;
+
+  -- And the policy itself, from the app role.
+  SET LOCAL ROLE poolse_app;
+  PERFORM set_config('app.organization_id', v_b::text, true);
+
+  SELECT count(*) INTO v_seen FROM energy_tariff;
+  IF v_seen <> 0 THEN RAISE EXCEPTION 'FAIL test 21c: org B saw % of org A tariffs', v_seen; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO energy_tariff
+      (organization_id, meter_id, unit_price, effective_from, created_by_membership_id)
+    VALUES (v_a, v_meter_a, 0.9, DATE '2028-01-01', v_mem_a);
+  EXCEPTION WHEN insufficient_privilege THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 21d: org B wrote a tariff into org A'; END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'PASS test 21: a tariff cannot price, nor be signed across, a tenant boundary';
+END $$;
+
 ROLLBACK;

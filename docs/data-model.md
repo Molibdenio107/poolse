@@ -2634,8 +2634,10 @@ energy_reading  organization_id, meter_id, taken_at, value numeric(14,3), source
                 recorded_by, note, archived_at
                 primary key (organization_id, meter_id, taken_at)
                 -- hypertable-shaped: no surrogate id. Not yet a hypertable, see below
-tariff          id, organization_id, name, valid_from, valid_to,
-                price_per_unit numeric(12,6), currency, standing_charge_cents   -- 5.3, not built
+energy_tariff   id, organization_id, meter_id, unit_price numeric(12,6),
+                unit_price_low, unit_price_high, currency, provenance,
+                effective_from, effective_to, note, created_by_membership_id,
+                archived_at
 ```
 
 **Built in 5.1 + 5.2** (`1788508800000_energy.sql`), with `kind` gaining `other`, `unit`
@@ -2660,6 +2662,38 @@ discount | tax | other`), printed description, tariff period, date range, quanti
 `unit_price numeric(12,6)`, amount/discount/total cents, VAT rate. Lines and registers
 cascade from the bill. Billed kWh is a sum over the energy lines, never a column.
 `docs/features/energy.md`.
+
+**Tarifas — 5.3, second half** (`1789466400000_energy-tariff.sql`). What one unit off a
+meter costs, for the meter that has **no fatura**: a billed meter's euros are a fact from
+`energy_invoice`, and a sub-meter behind the club's one ponto de entrega never receives a
+bill. Effective-dated with one live rate per meter — `energy_tariff_no_overlap`, an `EXCLUDE
+USING gist` over `daterange(effective_from, coalesce(effective_to + 1, 'infinity'), '[)')`
+where live, the same `+ 1` as `staff_compensation` because `effective_to` is the **last day
+at that rate**, inclusive.
+
+Four things about it differ from the shape this document used to plan, each on purpose:
+
+- **Per meter, not a named club-wide rate.** A club on two contracts, or whose bomba de calor
+  sits behind a different CPE, has two answers and no way to say so with one shared row.
+  Pointing several meters at one shared rate later is a migration; splitting a shared row
+  that turned out to mean two things is a guess about history.
+- **No `standing_charge_cents`.** A potência contratada and a taxa DGEG are billed once for
+  the whole ponto de entrega; charging one again on each sub-meter behind it counts the same
+  euro three times. The standing part lives on the site's bill, where it happened.
+- **No `vat_rate`.** The gross-with-the-rate-inside rule exists so a *document* can be issued
+  from the figure, and nothing is issued from this one. The number a club can lay hands on is
+  the all-in €/kWh its own last bill prints. Add the column the day something invoices from
+  this — `docs/decisions.md`, 2026-09-20.
+- **`provenance` may never be `actual`**, by CHECK: a euro that happened is a fatura. The
+  *cost* derived from a rate is `estimated` whatever the rate is, or `assumed` when the rate
+  is — never stronger than its weakest part (`docs/financials.md` §2).
+
+`unit_price` is `numeric(12,6)` and not cents, for the reason the money conventions give:
+€0.1548/kWh rounded to the cent is a 3% error in the module whose purpose is cost accuracy.
+`unit_price_low` / `unit_price_high` are stored from day one though nothing reads them (§3).
+Cost is derived in SQL, never in TypeScript — `liveTariffJoin` in `tariffs.repository.ts` is
+the one definition of "the rate that applied that day", read by the reading list and the
+monthly rollup alike. `docs/features/energy.md`.
 
 **A dial does not run backwards** — `energy_index_monotonic`, BEFORE INSERT OR UPDATE,
 compares a cumulative reading to its live neighbours (and the initial index) and raises

@@ -123,9 +123,60 @@ until the first bill is filed; owner, admin and maintenance only.
 gitignored (names, NIFs, CPEs inside). The committed fixture in `energy-invoice.test.ts` is
 the first sample's structure with an invented identity.
 
+## Tarifas — what a meter with no bill costs
+
+**Why it exists.** A billed meter's euros are a fact: its fatura says what EDP charged and
+the meter page divides it out. Every *sub*-meter — the bomba de calor, the AQS, the
+iluminação, everything behind the club's one ponto de entrega — has kWh and nothing else,
+because nobody sends a sub-meter a bill. A tariff is the rate a club types so those kWh
+become euros.
+
+**What it is.** `unit_price` in €/unit (`numeric(12,6)`, so €0.1548/kWh survives),
+effective-dated, **one live rate per meter at a time**. `effective_to` is the last day *at*
+that rate, inclusive, so a reading taken on the closing day is priced at the old rate and
+the next day's at the new one. A new rate is a new row; correcting a figure that was typed
+wrong is an edit of the row that was wrong — the two are separate controls with separate
+words, because collapsing them is how a price change silently rewrites what last March cost.
+
+**Everything it produces is an estimate, and the screen says so in visible text.** The
+figure is `consumo × preço` and nothing else: no potência contratada, no taxas, no impostos,
+all of which the site's own fatura already carries. The panel says this in a sentence rather
+than a tooltip — a tooltip may clarify a control and may never be the only place a piece of
+information appears. `provenance` on the rate is `contracted | estimated | assumed` and
+never `actual`; the cost derived from it is `estimated`, or `assumed` when the rate was.
+
+**An estimated euro and a billed euro never meet.** The bills section and the *Custo
+estimado* section are separate, with separate totals, because `docs/financials.md` §2
+forbids summing across provenances into one unlabelled figure. For the same reason the
+dashboard's `/energy/costs` is untouched: it sums faturas and it keeps doing only that.
+
+**A month the rates only half reach is not half-costed.** If any reading in a month went
+unpriced the month's cost is null, not a partial figure — a bar built from half a month's
+consumption is drawn the same height as one built from all of it, and nothing on it says
+which. The panel then reports coverage: "com base em 9 de 12 meses". A month with no rate
+at all is a dash, never a zero.
+
+**Priced at the closing reading's date.** Consumption is attributed to the reading that
+closes the interval, so an interval straddling a price change is priced at the rate in force
+when it closed. With a club reading its dials monthly that is at most one interval per
+change; the alternative — splitting pro rata by day — would invent a distribution of energy
+across days the meter never measured.
+
+**Who.** Reading the rate and the costs is the whole module — owner, admin and maintenance,
+exactly as a fatura already is. *Setting* one is owner and admin: a price decides every euro
+the module reports, and the person at the meter cupboard with a torch is not the person who
+signed the contract. The API refuses either way; hiding the control is never the control.
+
+**Removing a rate takes its euros with it** — the months it priced go back to dashes, said
+plainly in the confirmation because it is the outcome an operator will not expect. The slot
+it held is then free, which is what makes archiving a way back rather than a trap.
+
 ## Not built
 
-- Tariffs and cost for meters without a bill, comparison and correlation with temperature
-  (5.4). Cost for billed meters is a fact from the bill, above.
+- Comparison and correlation with temperature (5.4). Cost for billed meters is a fact from
+  the bill, above; cost for a meter with no bill is the tariff, also above.
+- A tariff that fills itself in from the site's latest fatura. The figure is already on
+  screen (the bills table shows €/kWh all-in) and copying it across is one click nobody has
+  built yet — proposed, not done.
 - Seeding a new club's history from the twelve months of consumption printed on its first
   bill — page 4 of an EDP document has them.

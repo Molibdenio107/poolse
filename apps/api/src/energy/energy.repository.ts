@@ -1,5 +1,6 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { liveTariffJoin } from './tariffs.repository.js';
 
 /**
  * Energy — slices 5.1 and 5.2.
@@ -75,7 +76,27 @@ export interface EnergyReading {
    * measure it from, and the screen says so rather than showing a zero.
    */
   consumed: number | null;
+  /**
+   * What that consumption cost, at the tariff live on the day this reading was
+   * taken. Null when the meter had no rate then — a dash, never a zero.
+   *
+   * **An estimate, never a billed euro.** It is `consumed x unit_price` and
+   * nothing else: no standing charge, no potência contratada, no tax that the
+   * site's own fatura already carries. `costProvenance` says how weak it is.
+   */
+  costCents: number | null;
+  costProvenance: CostProvenance | null;
 }
+
+/**
+ * How much weight a derived cost carries — docs/financials.md §2.
+ *
+ * Never `actual` and never `contracted`: the kWh were metered and the euros
+ * were multiplied, so the strongest this can be is `estimated`. A rate the club
+ * marked `assumed` makes the cost `assumed` too, because a total is labelled
+ * with its weakest component.
+ */
+export type CostProvenance = 'estimated' | 'assumed';
 
 /** One calendar month in the facility's timezone. */
 export interface MonthlyConsumption {
@@ -83,6 +104,34 @@ export interface MonthlyConsumption {
   month: string;
   /** Null when no reading closed an interval in that month. */
   consumed: number | null;
+  /**
+   * The month's estimated cost, or null.
+   *
+   * **Null when any reading in the month had no rate**, not merely when they
+   * all lacked one: a bar built from half a month's consumption is drawn the
+   * same height as one built from all of it, and nothing on it says which. A
+   * partial answer here is worse than an absent one.
+   */
+  costCents: number | null;
+}
+
+/**
+ * The twelve months, and how much of them the tariffs actually reached.
+ *
+ * Coverage is not decoration — an unqualified total over partial data has the
+ * same shape as a complete one (docs/financials.md §6), so the panel says
+ * "9 de 12 meses" or it shows no total at all.
+ */
+export interface ConsumptionSeries {
+  months: MonthlyConsumption[];
+  /** Months in the window that had any consumption at all. */
+  monthsWithConsumption: number;
+  /** Of those, how many were fully priced. */
+  monthsPriced: number;
+  /** The sum of the priced months. Null when none were. */
+  costCents: number | null;
+  /** The weakest provenance among the rates used, or null when none were. */
+  costProvenance: CostProvenance | null;
 }
 
 /** A pool at the site, for the meter form's picker. */
@@ -385,8 +434,45 @@ const CONSUMED = `
     JOIN energy_meter m ON m.id = r.meter_id AND m.organization_id = r.organization_id
    WHERE r.organization_id = $1 AND r.meter_id = $2 AND r.archived_at IS NULL`;
 
+/*
+ * What a reading's consumption cost, from the rate live on the day it was
+ * taken — the second half of slice 5.3, and the one definition of it.
+ *
+ * **Priced at the closing reading's date**, because that is the date the
+ * consumption is attributed to: an interval that straddles a price change is
+ * priced at the rate in force when it closed. With a club reading its dials
+ * once a month that is at most one interval per change, and the alternative —
+ * splitting an interval across two rates pro rata by day — invents a
+ * distribution of energy across days that the meter never measured. Said here
+ * rather than discovered later from a figure that is out by a few euros.
+ *
+ * `$3` is the facility's timezone: a tariff runs by calendar day, and an
+ * instant does not know which day it is until somebody says where.
+ */
+const PRICED = (tz: string): string => `
+  SELECT c.*, tar.unit_price, tar.provenance AS tariff_provenance,
+         CASE WHEN c.consumed IS NULL OR tar.unit_price IS NULL THEN NULL
+              ELSE c.consumed * tar.unit_price END AS cost
+    FROM c
+    ${liveTariffJoin('c', `(c.taken_at AT TIME ZONE ${tz})::date`)}`;
+
+/**
+ * The weakest thing a cost derived from this rate can be called.
+ *
+ * A cost is never stronger than `estimated` — the euros were multiplied, not
+ * metered — and never stronger than the rate it came from.
+ */
+function costProvenanceOf(tariffProvenance: string | null): CostProvenance | null {
+  if (tariffProvenance === null) return null;
+  return tariffProvenance === 'assumed' ? 'assumed' : 'estimated';
+}
+
 /** Every live reading of one meter, newest first, with what each one consumed. */
-export async function listReadings(organizationId: string, meterId: string): Promise<EnergyReading[]> {
+export async function listReadings(
+  organizationId: string,
+  meterId: string,
+  timezone: string,
+): Promise<EnergyReading[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
       taken_at: Date;
@@ -395,16 +481,21 @@ export async function listReadings(organizationId: string, meterId: string): Pro
       recorded_by_name: string | null;
       note: string | null;
       consumed: number | null;
+      cost_cents: number | null;
+      tariff_provenance: string | null;
     }>(
-      `WITH c AS (${CONSUMED})
-       SELECT c.taken_at, c.value::float8 AS value, c.source::text AS source, c.note,
-              c.consumed::float8 AS consumed,
+      `WITH c AS (${CONSUMED}), p AS (${PRICED('$3')})
+       SELECT p.taken_at, p.value::float8 AS value, p.source::text AS source, p.note,
+              p.consumed::float8 AS consumed,
+              -- Rounded to the cent once, here, at the edge. Never in TypeScript.
+              round(p.cost * 100)::int AS cost_cents,
+              p.tariff_provenance,
               ${ACTOR_NAME('bm', 'bu')} AS recorded_by_name
-         FROM c
-         LEFT JOIN membership bm ON bm.id = c.recorded_by AND bm.organization_id = c.organization_id
+         FROM p
+         LEFT JOIN membership bm ON bm.id = p.recorded_by AND bm.organization_id = p.organization_id
          LEFT JOIN app_user bu   ON bu.id = bm.app_user_id
-        ORDER BY c.taken_at DESC`,
-      [organizationId, meterId],
+        ORDER BY p.taken_at DESC`,
+      [organizationId, meterId, timezone],
     );
 
     return rows.map((row) => ({
@@ -414,6 +505,8 @@ export async function listReadings(organizationId: string, meterId: string): Pro
       recordedByName: row.recorded_by_name,
       note: row.note,
       consumed: row.consumed,
+      costCents: row.cost_cents,
+      costProvenance: costProvenanceOf(row.tariff_provenance),
     }));
   });
 }
@@ -431,10 +524,16 @@ export async function monthlyConsumption(
   meterId: string,
   timezone: string,
   months = 12,
-): Promise<MonthlyConsumption[]> {
+): Promise<ConsumptionSeries> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ month: string; consumed: number | null }>(
-      `WITH c AS (${CONSUMED}),
+    const { rows } = await tx.query<{
+      month: string;
+      consumed: number | null;
+      cost_cents: number | null;
+      unpriced: number;
+      any_assumed: boolean | null;
+    }>(
+      `WITH c AS (${CONSUMED}), p AS (${PRICED('$3')}),
        months AS (
          SELECT to_char(
                   date_trunc('month', (now() AT TIME ZONE $3)) - (n || ' months')::interval,
@@ -442,15 +541,52 @@ export async function monthlyConsumption(
            FROM generate_series($4::int - 1, 0, -1) AS n
        )
        SELECT months.month,
-              sum(c.consumed)::float8 AS consumed
+              sum(p.consumed)::float8 AS consumed,
+              /*
+               * The month's cost, or nothing. A month with one priced reading
+               * and one unpriced one is *not* partly costed: it is uncosted,
+               * because a short bar and an incomplete bar look identical.
+               */
+              CASE WHEN count(p.consumed) > 0
+                    AND count(p.consumed) FILTER (WHERE p.unit_price IS NULL) = 0
+                   THEN round(sum(p.cost) * 100)
+                   ELSE NULL END::int AS cost_cents,
+              count(p.consumed) FILTER (WHERE p.unit_price IS NULL)::int AS unpriced,
+              bool_or(p.tariff_provenance = 'assumed') AS any_assumed
          FROM months
-         LEFT JOIN c ON to_char(c.taken_at AT TIME ZONE $3, 'YYYY-MM') = months.month
-                    AND c.consumed IS NOT NULL
+         LEFT JOIN p ON to_char(p.taken_at AT TIME ZONE $3, 'YYYY-MM') = months.month
+                    AND p.consumed IS NOT NULL
         GROUP BY months.month
         ORDER BY months.month`,
       [organizationId, meterId, timezone, months],
     );
-    return rows.map((row) => ({ month: row.month, consumed: row.consumed }));
+
+    const series = rows.map((row) => ({
+      month: row.month,
+      consumed: row.consumed,
+      costCents: row.cost_cents,
+    }));
+
+    const withConsumption = rows.filter((row) => row.consumed !== null);
+    const priced = withConsumption.filter((row) => row.cost_cents !== null);
+
+    return {
+      months: series,
+      monthsWithConsumption: withConsumption.length,
+      monthsPriced: priced.length,
+      // A total over none of them is not zero, it is nothing to say.
+      costCents:
+        priced.length === 0
+          ? null
+          : priced.reduce((total, row) => total + (row.cost_cents ?? 0), 0),
+      // Weakest component wins, and only the months actually in the total count.
+      costProvenance:
+        priced.length === 0
+          ? null
+          : priced.some((row) => row.any_assumed === true)
+            ? 'assumed'
+            : 'estimated',
+    };
   });
 }
 

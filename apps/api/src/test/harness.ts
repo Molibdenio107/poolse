@@ -264,6 +264,7 @@ const TENANT_TABLES = [
   'energy_invoice_line',
   'energy_invoice_register',
   'energy_invoice',
+  'energy_tariff',
   'energy_reading',
   'energy_meter',
   // A pool's own safe ranges, before the tank they belong to. Not cascaded, for

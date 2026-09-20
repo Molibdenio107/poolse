@@ -141,3 +141,79 @@ export async function removeReading(_previous: FormState, formData: FormData): P
   refresh(facilityId, meterId);
   return { ok: true };
 }
+
+/**
+ * What the tariff form posts — slice 5.3.
+ *
+ * **The price is not run through `parseCents`.** A unit price is
+ * `numeric(12,6)` precisely so €0.1548/kWh survives; reading it as cents would
+ * make it €0.15 and put a 3% error on the module whose purpose is cost
+ * accuracy. A comma is accepted as the decimal mark, because a Portuguese
+ * keyboard types one; the API validates the rest and names the field.
+ *
+ * An empty bound is null rather than zero — "not measured", as every optional
+ * figure in this schema is.
+ */
+function tariffBody(formData: FormData): Record<string, unknown> {
+  const decimal = (field: string): number | null => {
+    const raw = String(formData.get(field) ?? '').trim().replace(/\s/g, '').replace(',', '.');
+    return raw === '' ? null : Number(raw);
+  };
+
+  return {
+    unitPrice: decimal('unitPrice'),
+    unitPriceLow: decimal('unitPriceLow'),
+    unitPriceHigh: decimal('unitPriceHigh'),
+    provenance: String(formData.get('provenance') ?? 'contracted'),
+    effectiveFrom: String(formData.get('effectiveFrom') ?? '').trim(),
+    effectiveTo: String(formData.get('effectiveTo') ?? '').trim(),
+    note: String(formData.get('note') ?? '').trim(),
+  };
+}
+
+/** A new rate, from a day. The overlap is the database's to refuse. */
+export async function setTariff(_previous: FormState, formData: FormData): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const meterId = String(formData.get('meterId') ?? '');
+
+  try {
+    await apiPost(`/energy/meters/${meterId}/tariffs`, tariffBody(formData));
+  } catch (error) {
+    return describeFailure(error, 'energy.tariff.saveFailed');
+  }
+
+  refresh(facilityId, meterId);
+  return { ok: true };
+}
+
+/** A rate that was typed wrong. A rate that *changed* is a new row, not this. */
+export async function correctTariff(_previous: FormState, formData: FormData): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const meterId = String(formData.get('meterId') ?? '');
+  const tariffId = String(formData.get('tariffId') ?? '');
+
+  try {
+    await apiPatch(`/energy/meters/${meterId}/tariffs/${tariffId}`, tariffBody(formData));
+  } catch (error) {
+    return describeFailure(error, 'energy.tariff.saveFailed');
+  }
+
+  refresh(facilityId, meterId);
+  return { ok: true };
+}
+
+/** A rate that never applied. The months it priced go back to dashes. */
+export async function removeTariff(_previous: FormState, formData: FormData): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const meterId = String(formData.get('meterId') ?? '');
+  const tariffId = String(formData.get('tariffId') ?? '');
+
+  try {
+    await apiPost(`/energy/meters/${meterId}/tariffs/${tariffId}/archive`, {});
+  } catch (error) {
+    return describeFailure(error, 'energy.tariff.saveFailed');
+  }
+
+  refresh(facilityId, meterId);
+  return { ok: true };
+}

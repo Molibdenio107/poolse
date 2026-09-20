@@ -644,7 +644,49 @@
     "title": "Energia",
     "subtitle": "Os contadores de cada instalação e as suas leituras.",
     "noSites": "Ainda não há instalações. Crie uma em Instalações para poder adicionar contadores.",
-    "siteUnavailable": "Não foi possível carregar os contadores desta instalação."
+    "siteUnavailable": "Não foi possível carregar os contadores desta instalação.",
+    "tariff": {
+      "section": "Tarifa",
+      "add": "Nova tarifa",
+      "correct": "Corrigir tarifa",
+      "remove": "Remover tarifa",
+      "removeHint": "A tarifa sai do registo e os meses que valorizava voltam a ficar sem custo. Não é uma alteração de preço — para isso, registe uma nova tarifa a partir do dia em que passou a vigorar.",
+      "noneHint": "Este contador não tem tarifa, por isso o consumo não é convertido em euros. Registe o preço por unidade para ver uma estimativa do custo.",
+      "estimateHint": "O custo calculado a partir desta tarifa é uma estimativa: multiplica o consumo medido pelo preço por unidade. Não inclui potência contratada, taxas nem impostos — esses estão na fatura da instalação.",
+      "perUnit": "por {unit}",
+      "liveBadge": "Em vigor",
+      "fromOn": "Desde {from}",
+      "between": "De {from} a {to}",
+      "bounds": "entre {low} e {high}",
+      "price": "Preço por {unit}",
+      "priceHint": "Em euros, com impostos incluídos. Aceita casas decimais — por exemplo, 0,1548.",
+      "from": "A partir de",
+      "to": "Até (inclusive)",
+      "toHint": "Deixe em branco enquanto for a tarifa em vigor.",
+      "provenanceLabel": "Origem do valor",
+      "provenanceHint": "Uma tarifa nunca é um valor efetivo — isso é uma fatura.",
+      "provenance": {
+        "contracted": "Contratado",
+        "estimated": "Estimado",
+        "assumed": "Assumido"
+      },
+      "low": "Valor mínimo",
+      "high": "Valor máximo",
+      "costSection": "Custo estimado",
+      "costTotal": "nos últimos doze meses",
+      "coverage": "com base em {priced} de {total} meses",
+      "costProvenance": {
+        "estimated": "estimativa",
+        "assumed": "estimativa, a partir de um valor assumido"
+      },
+      "costChartLabel": "Custo estimado mensal em euros",
+      "costChartCaption": "Cada barra é o consumo desse mês valorizado à tarifa em vigor no dia da leitura. Um mês sem tarifa fica em branco — não é zero.",
+      "overlaps": "Já existe uma tarifa que abrange parte desse período.",
+      "datesReversed": "A data final não pode ser anterior à inicial.",
+      "boundsReversed": "O valor mínimo tem de ser menor ou igual à tarifa, e o máximo maior ou igual.",
+      "priceInvalid": "O preço tem de ser um número acima de zero.",
+      "saveFailed": "Não foi possível guardar a tarifa."
+    }
   },
   "maintenance": {
     "about": "Sobre",

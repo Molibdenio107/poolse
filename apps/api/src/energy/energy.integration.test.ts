@@ -74,8 +74,8 @@ test('5.2 — a dial yields the difference between readings, from the initial in
         'the first delta is measured from the initial index',
       );
 
-      assert.equal(monthly.length, 12, 'twelve months, whatever was logged');
-      const byMonth = new Map(monthly.map((m) => [m.month, m.consumed]));
+      assert.equal(monthly.months.length, 12, 'twelve months, whatever was logged');
+      const byMonth = new Map(monthly.months.map((m) => [m.month, m.consumed]));
       assert.equal(byMonth.get(monthKey(0)), 150);
       assert.equal(byMonth.get(monthKey(1)), 500);
       assert.equal(byMonth.get(monthKey(2)), 400);
@@ -99,7 +99,7 @@ test('5.2 — a dial with no initial index gives nothing for its first reading',
         [120, null],
         'nothing to measure the first reading from',
       );
-      const byMonth = new Map(monthly.map((m) => [m.month, m.consumed]));
+      const byMonth = new Map(monthly.months.map((m) => [m.month, m.consumed]));
       assert.equal(byMonth.get(monthKey(1)), null, 'and that month stays empty rather than zero');
     });
   });

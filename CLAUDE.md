@@ -473,6 +473,25 @@ the day feeds arrive, and deliberately not a hypertable until then (decisions, 2
 A dial running backwards is a trigger refusal carrying the neighbour in DETAIL, like
 `pool_capacity`. `docs/features/energy.md`.
 
+**A meter with no fatura is costed by a tariff, and what comes out is an estimate that never
+touches a billed euro.** 5.3's second half. `energy_tariff` is a €/unit rate **on the meter**
+— not a club-wide named rate, because a club on two contracts has two answers — effective-dated
+with one live rate at a time by the same gist exclusion as `staff_compensation`, `effective_to`
+being the last day *at* that rate. `unit_price` is `numeric(12,6)`: the tariff is the
+documented exception to integer minor units, and €0.1548 in cents is a 3% error in the module
+whose purpose is cost accuracy. **A tariff may never be `actual`, by CHECK** — a euro that
+happened is a fatura — so the derived cost is `estimated`, or `assumed` when the rate was.
+**It is gross with no `vat_rate` and no standing charge**: nothing is invoiced from this
+figure, and a potência contratada billed once for the whole ponto de entrega would be counted
+again on every sub-meter behind it. `liveTariffJoin` in `tariffs.repository.ts` is the one
+definition of "the rate that applied that day" and the cost is derived in SQL beside
+`CONSUMED`, never in TypeScript. **A month any reading went unpriced is null, not a partial
+sum** — a short bar and an incomplete bar look identical — and every aggregate reports its
+coverage. **The estimate stays out of `/energy/costs`**, which sums faturas and must go on
+summing only faturas; the two have separate sections and separate totals. Reading a cost is
+the whole module, as a fatura already is; *setting* a rate is owner and admin.
+`docs/features/energy.md`.
+
 **A bill is filed whole and never edited; its two ways in share one form and one check.**
 `energy_invoice` + registers + typed lines (5.3). `draftToBody` in `lib/energy-invoice.ts` is
 the one place a printed "15,41 €" becomes cents — the model's answer and a typed figure

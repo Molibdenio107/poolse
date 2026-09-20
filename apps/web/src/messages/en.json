@@ -644,7 +644,49 @@
     "title": "Energy",
     "subtitle": "Each site's meters and their readings.",
     "noSites": "No sites yet. Create one under Facilities to add meters.",
-    "siteUnavailable": "The meters for this site could not be loaded."
+    "siteUnavailable": "The meters for this site could not be loaded.",
+    "tariff": {
+      "section": "Tariff",
+      "add": "New tariff",
+      "correct": "Correct tariff",
+      "remove": "Remove tariff",
+      "removeHint": "The tariff leaves the record and the months it priced go back to having no cost. This is not a price change — for that, record a new tariff starting the day it took effect.",
+      "noneHint": "This meter has no tariff, so its consumption is not turned into euros. Record the price per unit to see an estimated cost.",
+      "estimateHint": "The cost from this tariff is an estimate: it multiplies the metered consumption by the price per unit. It does not include standing charges, levies or taxes — those are on the site's own bill.",
+      "perUnit": "per {unit}",
+      "liveBadge": "In force",
+      "fromOn": "From {from}",
+      "between": "From {from} to {to}",
+      "bounds": "between {low} and {high}",
+      "price": "Price per {unit}",
+      "priceHint": "In euros, taxes included. Decimals are accepted — for example, 0.1548.",
+      "from": "From",
+      "to": "Until (inclusive)",
+      "toHint": "Leave blank while this is the tariff in force.",
+      "provenanceLabel": "Where the figure comes from",
+      "provenanceHint": "A tariff is never an actual figure — that is a bill.",
+      "provenance": {
+        "contracted": "Contracted",
+        "estimated": "Estimated",
+        "assumed": "Assumed"
+      },
+      "low": "Low bound",
+      "high": "High bound",
+      "costSection": "Estimated cost",
+      "costTotal": "over the last twelve months",
+      "coverage": "based on {priced} of {total} months",
+      "costProvenance": {
+        "estimated": "estimate",
+        "assumed": "estimate, from an assumed figure"
+      },
+      "costChartLabel": "Estimated monthly cost in euros",
+      "costChartCaption": "Each bar is that month's consumption priced at the tariff in force on the day it was read. A month with no tariff is blank — not zero.",
+      "overlaps": "A tariff already covers part of that period.",
+      "datesReversed": "The end date cannot be before the start date.",
+      "boundsReversed": "The low bound must be at or below the tariff, and the high bound at or above it.",
+      "priceInvalid": "The price must be a number above zero.",
+      "saveFailed": "The tariff could not be saved."
+    }
   },
   "maintenance": {
     "about": "About",
