@@ -12,6 +12,15 @@ export interface Column {
   month: string;
   /** Null is a labelled gap, never a zero-height bar. */
   consumed: number | null;
+  /**
+   * The same month a year earlier — slice 5.4. Optional: a caller that is not
+   * comparing anything passes nothing and the chart draws one series.
+   *
+   * Null where there is no counterpart, which is drawn as nothing at all. A
+   * club in its first year must not be shown twelve bars of zero and left to
+   * read them as a collapse in consumption.
+   */
+  previous?: number | null;
 }
 
 /**
@@ -75,7 +84,13 @@ export async function ConsumptionBars({
   const label_ = labelKey ?? (money ? 'energy.costChartLabel' : 'energy.chartLabel');
   const caption_ = captionKey ?? (money ? 'energy.costChartCaption' : 'energy.chartCaption');
 
-  const max = Math.max(0, ...monthly.map((m) => m.consumed ?? 0));
+  // Both series share one scale, or the comparison is a lie told in pixels.
+  const comparing = monthly.some((m) => m.previous != null);
+  const max = Math.max(
+    0,
+    ...monthly.map((m) => m.consumed ?? 0),
+    ...monthly.map((m) => m.previous ?? 0),
+  );
 
   // "set." rather than "2026-09": a month is named in the reader's language,
   // and the year appears only where it changes, which is once a year.
@@ -95,8 +110,26 @@ export async function ConsumptionBars({
       >
         {monthly.map((m) => {
           const height = m.consumed === null || max === 0 ? 0 : (m.consumed / max) * 100;
+          const priorHeight =
+            m.previous == null || max === 0 ? null : (m.previous / max) * 100;
+
           return (
-            <div key={m.month} className="flex h-full flex-col justify-end">
+            <div key={m.month} className="relative flex h-full flex-col justify-end">
+              {/*
+                Last year, behind this year: outlined rather than filled, and at
+                its own height. **The two series differ in shape, not only in
+                colour** — an outline against a solid is legible to somebody who
+                cannot tell the two hues apart, which colour alone would not be.
+                Every figure is also in the table below.
+              */}
+              {priorHeight !== null && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 rounded-t border border-b-0 border-dashed border-chart-1"
+                  style={{ height: `${Math.max(priorHeight, 2)}%` }}
+                  aria-hidden="true"
+                />
+              )}
+
               {m.consumed === null ? (
                 // A labelled gap: a dashed floor the height of the axis rule.
                 <div
@@ -105,9 +138,14 @@ export async function ConsumptionBars({
                 />
               ) : (
                 <div
-                  className="rounded-t bg-chart-1"
+                  className="relative rounded-t bg-chart-1"
                   style={{ height: `${Math.max(height, 2)}%` }}
-                  title={`${label(m.month)}: ${number(m.consumed)}${money ? '' : ` ${unit}`}`}
+                  title={
+                    `${label(m.month)}: ${number(m.consumed)}${money ? '' : ` ${unit}`}` +
+                    (m.previous == null
+                      ? ''
+                      : ` · ${t('energy.lastYearShort')} ${number(m.previous)}${money ? '' : ` ${unit}`}`)
+                  }
                 />
               )}
             </div>
@@ -126,6 +164,27 @@ export async function ConsumptionBars({
         ))}
       </div>
 
+      {/*
+        The legend, only when there are two series to tell apart. Each swatch
+        carries the shape its bar has — solid and outlined — so it identifies
+        the series the same way the chart does.
+      */}
+      {comparing && (
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block size-3 rounded-sm bg-chart-1" aria-hidden="true" />
+            {t('energy.thisYear')}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="inline-block size-3 rounded-sm border border-dashed border-chart-1"
+              aria-hidden="true"
+            />
+            {t('energy.lastYear')}
+          </span>
+        </p>
+      )}
+
       <figcaption className="text-sm text-foreground-muted">
         {t(caption_, { unit })}
       </figcaption>
@@ -137,6 +196,9 @@ export async function ConsumptionBars({
           <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">
             <th scope="col" className="py-1 font-medium">{t('energy.month')}</th>
             <th scope="col" className="py-1 text-right font-medium">{unit}</th>
+            {comparing && (
+              <th scope="col" className="py-1 text-right font-medium">{t('energy.lastYear')}</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -148,6 +210,11 @@ export async function ConsumptionBars({
               <td className="py-1 text-right tabular-nums">
                 {m.consumed === null ? '—' : number(m.consumed)}
               </td>
+              {comparing && (
+                <td className="py-1 text-right tabular-nums text-foreground-muted">
+                  {m.previous == null ? '—' : number(m.previous)}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

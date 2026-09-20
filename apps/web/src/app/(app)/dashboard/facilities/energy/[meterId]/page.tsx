@@ -11,6 +11,7 @@ import { getMeter } from '../../energy.actions';
 import { listInvoices } from '../invoice.actions';
 import { MeterAdmin, ReadingForm, RemoveReading } from './meter-forms';
 import { TariffPanel } from './tariff-panel';
+import { YearOnYearPanel } from './year-on-year';
 
 /**
  * One meter: its consumption by month, the form for the next reading, and the
@@ -77,9 +78,24 @@ export default async function MeterPage({
         {readings.length === 0 ? (
           <p className="text-sm text-foreground-muted">{t('energy.noReadingsHint')}</p>
         ) : (
-          <ConsumptionBars monthly={monthly.months} unit={meter.unit} locale={locale} />
+          <ConsumptionBars
+            monthly={monthly.months.map((m) => ({
+              month: m.month,
+              consumed: m.consumed,
+              previous: m.previousConsumed,
+            }))}
+            unit={meter.unit}
+            locale={locale}
+          />
         )}
       </section>
+
+      {/*
+        This year against last — slice 5.4a. Directly under the chart it reads,
+        and absent entirely for a club with no counterpart months: a first-year
+        club gets no panel rather than a row of dashes.
+      */}
+      <YearOnYearPanel yearOnYear={monthly.yearOnYear} unit={meter.unit} />
 
       {/*
         What that consumption cost, at the rates the club typed — slice 5.3.
@@ -124,6 +140,7 @@ export default async function MeterPage({
               month: m.month,
               // The bars take euros, not cents — one scale, no second axis.
               consumed: m.costCents === null ? null : m.costCents / 100,
+              previous: m.previousCostCents === null ? null : m.previousCostCents / 100,
             }))}
             unit="€"
             locale={locale}

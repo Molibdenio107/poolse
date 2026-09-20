@@ -704,6 +704,19 @@
       "caveat": "Estimativa, ao mês: o consumo é medido, o custo é calculado a partir da tarifa e não de uma fatura, e um mês não pode ser repartido por aula. Os banhistas são as presenças registadas, incluindo aulas de reposição — não é o número de inscritos.",
       "groupShare": "Esta turma deu {hours} horas no {pool}, a {rate} por hora — {amount} de aquecimento.",
       "groupCaveat": "Estimativa mensal, repartida pelas horas dadas no tanque."
+    },
+    "thisYear": "Este ano",
+    "lastYear": "Ano anterior",
+    "lastYearShort": "ano anterior:",
+    "yoy": {
+      "section": "Comparação com o ano anterior",
+      "consumption": "Consumo",
+      "cost": "Custo",
+      "wasThen": "no ano anterior: {value}",
+      "rateUp": "O preço por {unit} subiu de {before} para {now}. Parte da diferença no custo vem da tarifa, não do consumo.",
+      "rateDown": "O preço por {unit} desceu de {before} para {now}. Parte da diferença no custo vem da tarifa, não do consumo.",
+      "coverage": "Compara os {months} meses que têm leituras nos dois anos — os restantes ficam de fora.",
+      "costNotComparable": "O custo não é comparável: num dos anos faltava tarifa."
     }
   },
   "maintenance": {

@@ -340,3 +340,178 @@ test('5.3 — an instructor sees no part of the module', async () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Slice 5.4a — this month against the same month a year earlier
+// ---------------------------------------------------------------------------
+
+test('5.4 — a month is compared with the same month a year earlier', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new EnergyController();
+      const { id } = await controller.create(tenant.facilityId, {
+        name: 'Geral',
+        kind: 'total',
+        initialIndex: 0,
+      });
+
+      /*
+       * A dial read across thirteen months, measured from an initial index of
+       * zero. Consumption lands on the reading that closes each interval, so
+       * month 13 consumed 100 and month 1 consumed 300 — a year apart and
+       * directly comparable.
+       *
+       * The series deliberately does NOT open with a reading at month 14: that
+       * would be a real consumption of zero rather than an absence, and month 2
+       * below would then have a counterpart. Nothing, and nothing-happened, are
+       * different facts here as everywhere else in this module.
+       */
+      await controller.record(id, { takenAt: firstOf(13), value: 100 });
+      await controller.record(id, { takenAt: firstOf(12), value: 150 });
+      await controller.record(id, { takenAt: firstOf(2), value: 900 });
+      await controller.record(id, { takenAt: firstOf(1), value: 1200 });
+
+      const { monthly } = await controller.one(id);
+
+      assert.equal(monthly.months.length, 12, 'the window reported is still twelve months');
+
+      const byMonth = new Map(monthly.months.map((m) => [m.month, m]));
+      const thisOne = byMonth.get(monthKey(1))!;
+      assert.equal(thisOne.consumed, 300, '900 to 1200');
+      assert.equal(thisOne.previousConsumed, 100, 'and 0 to 100 a year before');
+
+      // A month whose counterpart was never read says nothing rather than
+      // reporting a fall to zero.
+      const noCounterpart = byMonth.get(monthKey(2))!;
+      assert.equal(noCounterpart.consumed, 750, '150 to 900 — the long gap closes here');
+      // Month 14 was never read at all, which is not the same as reading zero.
+      assert.equal(noCounterpart.previousConsumed, null, 'nobody read the meter that month');
+    });
+  });
+});
+
+test('5.4 — the headline compares only the months that have both years', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new EnergyController();
+      const { id } = await controller.create(tenant.facilityId, {
+        name: 'Geral',
+        kind: 'total',
+        initialIndex: 0,
+      });
+
+      // Only month 13 and month 1 line up a year apart. Everything else in the
+      // window has no counterpart and must not drag the comparison with it.
+      await controller.record(id, { takenAt: firstOf(13), value: 100 });
+      await controller.record(id, { takenAt: firstOf(2), value: 500 });
+      await controller.record(id, { takenAt: firstOf(1), value: 620 });
+
+      const { monthly } = await controller.one(id);
+      const yoy = monthly.yearOnYear;
+
+      assert.equal(yoy.comparableMonths, 1, 'one month has both years');
+      assert.equal(yoy.consumed, 120, 'and only that month is in the figure');
+      assert.equal(yoy.previousConsumed, 100);
+      assert.notEqual(
+        yoy.consumed,
+        monthly.months.reduce((total, m) => total + (m.consumed ?? 0), 0),
+        'the comparison is not the window total — that would compare 12 months against 1',
+      );
+    });
+  });
+});
+
+test('5.4 — a club with no last year compares nothing, and does not report a rise', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new EnergyController();
+      const { id } = await controller.create(tenant.facilityId, {
+        name: 'Geral',
+        kind: 'total',
+        initialIndex: 0,
+      });
+
+      await controller.record(id, { takenAt: firstOf(2), value: 400 });
+      await controller.record(id, { takenAt: firstOf(1), value: 700 });
+
+      const { monthly } = await controller.one(id);
+
+      assert.equal(monthly.yearOnYear.comparableMonths, 0);
+      assert.equal(monthly.yearOnYear.consumed, null, 'nothing to say, and it is not zero');
+      assert.equal(monthly.yearOnYear.previousConsumed, null);
+      assert.equal(monthly.monthsWithConsumption, 2, 'while the window itself is unaffected');
+    });
+  });
+});
+
+test('5.4 — cost compares only where both years were priced', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new EnergyController();
+      const { id } = await controller.create(tenant.facilityId, {
+        name: 'Geral',
+        kind: 'total',
+        initialIndex: 0,
+      });
+
+      await controller.record(id, { takenAt: firstOf(13), value: 100 });
+      await controller.record(id, { takenAt: firstOf(2), value: 500 });
+      await controller.record(id, { takenAt: firstOf(1), value: 600 });
+
+      // A rate that only starts this year. Last year's kWh are unpriced, so
+      // there is a consumption comparison and no cost comparison — and the cost
+      // must not read as a rise from nothing.
+      await controller.price(id, { unitPrice: 0.2, effectiveFrom: firstDay(3) });
+
+      const { monthly } = await controller.one(id);
+      const yoy = monthly.yearOnYear;
+
+      assert.equal(yoy.comparableMonths, 1);
+      assert.equal(yoy.consumed, 100, 'this year that month used 100');
+      assert.equal(yoy.previousConsumed, 100, 'and so did last year');
+      assert.equal(yoy.costCents, null, 'but last year had no rate, so there is no comparison');
+      assert.equal(yoy.previousCostCents, null);
+    });
+  });
+});
+
+test('5.4 — a tariff rise is visible as a tariff rise, not as more energy', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new EnergyController();
+      const { id } = await controller.create(tenant.facilityId, {
+        name: 'Geral',
+        kind: 'total',
+        initialIndex: 0,
+      });
+
+      await controller.record(id, { takenAt: firstOf(13), value: 100 });
+      await controller.record(id, { takenAt: firstOf(2), value: 500 });
+      await controller.record(id, { takenAt: firstOf(1), value: 600 });
+
+      // The same 100 kWh in both years, at €0.10 and then €0.25.
+      await controller.price(id, {
+        unitPrice: 0.1,
+        effectiveFrom: firstDay(24),
+        effectiveTo: firstDay(7),
+      });
+      await controller.price(id, { unitPrice: 0.25, effectiveFrom: firstDay(6) });
+
+      const { monthly } = await controller.one(id);
+      const yoy = monthly.yearOnYear;
+
+      assert.equal(yoy.consumed, 100);
+      assert.equal(yoy.previousConsumed, 100, 'the pool used exactly the same');
+      assert.equal(yoy.costCents, 2500);
+      assert.equal(yoy.previousCostCents, 1000, 'and the bill went up two and a half times');
+
+      /*
+       * The implied unit price is what makes that sayable as a fact rather than
+       * inferred from the size of the gap: €0.10/kWh became €0.25/kWh. The
+       * screen divides these two pairs; nothing needs a threshold.
+       */
+      assert.equal(yoy.previousCostCents! / 100 / yoy.previousConsumed!, 0.1);
+      assert.equal(yoy.costCents! / 100 / yoy.consumed!, 0.25);
+    });
+  });
+});

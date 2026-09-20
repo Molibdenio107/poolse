@@ -473,6 +473,19 @@ the day feeds arrive, and deliberately not a hypertable until then (decisions, 2
 A dial running backwards is a trigger refusal carrying the neighbour in DETAIL, like
 `pool_capacity`. `docs/features/energy.md`.
 
+**A comparison compares only the months that have both years, and consumption and cost are
+never one sentence.** Slice 5.4a. `monthlyConsumption` queries twice its window and pairs each
+month with the row exactly `months` earlier — by index, never by recomputing a date, so there
+is one definition of "the same month last year". **`yearOnYear` is computed over months where
+both years have a figure** (and, for cost, where both were *priced*): a club with eighteen
+months of readings would otherwise be told it had halved its consumption, and a rate
+introduced this year would compare euros against nothing and call it a rise. A month with no
+counterpart draws nothing — a missing counterpart is not a saving. **Where the implied unit
+price moved** — each period's euros over its own kWh — the screen names both rates, so a
+higher bill on flat kWh reads as the tariff it is; no threshold, because either the rate moved
+or it did not. `ConsumptionBars` takes an optional `previous` per column and draws it
+**outlined behind the solid bar**, so the two series differ in shape and not only in colour.
+
 **What a tank costs per hour taught in it is a month divided by a month, and the screen says
 so.** POOLSE-28, narrowed on 20 September 2026 — the ticket's 15-minute buckets, tariff bands
 and DST arithmetic all need interval readings, and a club types **one figure a meter a month**.

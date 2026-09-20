@@ -113,6 +113,40 @@ export interface MonthlyConsumption {
    * partial answer here is worse than an absent one.
    */
   costCents: number | null;
+
+  /**
+   * The same month a year earlier — slice 5.4.
+   *
+   * Null means there was no reading then, which is ordinary for a club in its
+   * first eighteen months. It is drawn as a gap and said as "sem comparação",
+   * never as a fall to zero: a missing counterpart is not a saving.
+   */
+  previousConsumed: number | null;
+  previousCostCents: number | null;
+}
+
+/**
+ * This window against the same window a year earlier — slice 5.4.
+ *
+ * **Computed over the months where BOTH years have a figure, and nothing
+ * else.** A club with eighteen months of readings would otherwise compare
+ * twelve months against six and be told it had halved its consumption.
+ * `comparableMonths` sits on screen beside the figures, for the same reason
+ * every aggregate here reports its coverage.
+ *
+ * **Consumption and cost are never merged into one "energy went up".** A flat
+ * year of kWh with a bill forty per cent higher is a tariff change, not a pool,
+ * and those are different things to do something about. Dividing each period's
+ * cost by its own kWh makes that exact — an implied unit price per period —
+ * rather than a guess at what size of divergence is worth mentioning.
+ */
+export interface YearOnYear {
+  comparableMonths: number;
+  consumed: number | null;
+  previousConsumed: number | null;
+  /** Both null unless every comparable month carried a rate in both years. */
+  costCents: number | null;
+  previousCostCents: number | null;
 }
 
 /**
@@ -132,6 +166,8 @@ export interface ConsumptionSeries {
   costCents: number | null;
   /** The weakest provenance among the rates used, or null when none were. */
   costProvenance: CostProvenance | null;
+  /** The same window a year earlier, over the months that have both — 5.4. */
+  yearOnYear: YearOnYear;
 }
 
 /** A pool at the site, for the meter form's picker. */
@@ -558,16 +594,55 @@ export async function monthlyConsumption(
                     AND p.consumed IS NOT NULL
         GROUP BY months.month
         ORDER BY months.month`,
-      [organizationId, meterId, timezone, months],
+      // Twice the window: the months to report, preceded by the months they
+      // are compared against. One query rather than two, because the second
+      // would be the same query with a different offset and they would drift.
+      [organizationId, meterId, timezone, months * 2],
     );
 
-    const series = rows.map((row) => ({
+    /*
+     * `rows` is ordered by month ascending over `months * 2`, so the window to
+     * report is the tail and each month's counterpart sits exactly `months`
+     * rows earlier. Pairing by index rather than by recomputing a date avoids a
+     * second definition of "the same month last year" — and of what happens in
+     * a 13-month year, which is a thing no calendar has but a date arithmetic
+     * bug can invent.
+     */
+    const earlier = rows.slice(0, months);
+    const current = rows.slice(months);
+
+    const series: MonthlyConsumption[] = current.map((row, index) => ({
       month: row.month,
       consumed: row.consumed,
       costCents: row.cost_cents,
+      previousConsumed: earlier[index]?.consumed ?? null,
+      previousCostCents: earlier[index]?.cost_cents ?? null,
     }));
 
-    const withConsumption = rows.filter((row) => row.consumed !== null);
+    /*
+     * The headline, over the months that have both years and nothing else.
+     * Cost needs both to be *priced*, not merely present: a month costed this
+     * year and unpriced last year would otherwise compare a figure against
+     * nothing and call the difference a rise.
+     */
+    const comparable = series.filter(
+      (m) => m.consumed !== null && m.previousConsumed !== null,
+    );
+    const bothPriced = comparable.filter(
+      (m) => m.costCents !== null && m.previousCostCents !== null,
+    );
+    const total = (values: (number | null)[]): number | null =>
+      values.length === 0 ? null : values.reduce((sum: number, v) => sum + (v ?? 0), 0);
+
+    const yearOnYear: YearOnYear = {
+      comparableMonths: comparable.length,
+      consumed: total(comparable.map((m) => m.consumed)),
+      previousConsumed: total(comparable.map((m) => m.previousConsumed)),
+      costCents: total(bothPriced.map((m) => m.costCents)),
+      previousCostCents: total(bothPriced.map((m) => m.previousCostCents)),
+    };
+
+    const withConsumption = current.filter((row) => row.consumed !== null);
     const priced = withConsumption.filter((row) => row.cost_cents !== null);
 
     return {
@@ -586,6 +661,7 @@ export async function monthlyConsumption(
           : priced.some((row) => row.any_assumed === true)
             ? 'assumed'
             : 'estimated',
+      yearOnYear,
     };
   });
 }

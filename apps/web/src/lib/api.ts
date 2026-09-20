@@ -795,6 +795,28 @@ export interface MonthlyConsumption {
   consumed: number | null;
   /** Null when any reading in the month went unpriced — never a partial bar. */
   costCents: number | null;
+  /**
+   * The same month a year earlier — slice 5.4. Null means nobody read the
+   * meter then, which is drawn as nothing rather than as a fall to zero.
+   */
+  previousConsumed: number | null;
+  previousCostCents: number | null;
+}
+
+/**
+ * This window against the same window a year earlier — slice 5.4.
+ *
+ * Computed over the months that have **both** years, so a club with eighteen
+ * months of readings is not told it halved its consumption. Cost and
+ * consumption stay separate: a flat year of kWh with a bill forty per cent
+ * higher is a tariff change, not a pool.
+ */
+export interface YearOnYear {
+  comparableMonths: number;
+  consumed: number | null;
+  previousConsumed: number | null;
+  costCents: number | null;
+  previousCostCents: number | null;
 }
 
 /** The twelve months and how much of them the rates reached — slice 5.3. */
@@ -804,6 +826,7 @@ export interface ConsumptionSeries {
   monthsPriced: number;
   costCents: number | null;
   costProvenance: CostProvenance | null;
+  yearOnYear: YearOnYear;
 }
 
 /** Never `actual` — the schema refuses it, and so does the API. */

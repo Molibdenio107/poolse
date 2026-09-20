@@ -205,6 +205,32 @@ cannot disagree.
 grain is a month: a club types one reading a month, so there is no data from which a Tuesday
 07:00 class could be costed on its own.
 
+## Comparação com o ano anterior — slice 5.4a
+
+On a meter's page, under the consumption chart. **Each of the twelve months carries its
+counterpart from a year earlier**: an outlined bar behind the solid one, a second column in
+the table beneath, and a headline comparing the two periods in kWh and in euros.
+
+**The headline compares only the months that have both years**, and says how many those were.
+A club with eighteen months of readings would otherwise be comparing twelve months against
+six and be told it had halved its consumption. A club with no counterpart at all sees **no
+panel**, not a row of dashes.
+
+**Consumption and cost are two figures, never one.** A flat year of kWh with a bill forty per
+cent higher is a tariff change, not a pool, and those are different things to do something
+about. When the periods' **implied unit prices** differ — each period's own euros over its own
+kWh — the panel says so with both rates in it, so "the bill went up because the tariff went
+up" is checkable rather than asserted. No threshold and no heuristic: either the rate moved or
+it did not.
+
+**Cost is compared only where both years were priced.** A rate introduced this year would
+otherwise compare a figure against nothing and call the difference a rise; the panel says the
+cost is not comparable and compares the kWh anyway.
+
+**The two series differ in shape, not only in colour** — solid against outlined, with a legend
+carrying the same shapes, and every figure repeated in the table. A month with no counterpart
+is drawn as nothing rather than as a bar of zero.
+
 ## Not built
 
 - Comparison and correlation with temperature (5.4). Cost for billed meters is a fact from
@@ -215,8 +241,12 @@ grain is a month: a club types one reading a month, so there is no data from whi
   `energy_reading` is not a hypertable and a club types one figure a month. When automated
   feeds land, `cost-report.repository.ts` is where the finer grain goes and the API shape does
   not change. Until then a club is told the month's rate, honestly labelled.
-- **Weather retained alongside consumption** (POOLSE-28 AC 7), so a cold week is explicable.
-  Nothing here stores weather yet.
+- **Weather retained alongside consumption** (POOLSE-28 AC 7 and the temperature half of
+  roadmap 5.4), so a cold week is explicable. Nothing here stores it: `weather/open-meteo.ts`
+  is a **live forecast** for the site's panel and keeps no history, and water temperature from
+  `pool_analysis` is held at a setpoint all year and would correlate with nothing. Storing
+  monthly mean *air* temperature from Open-Meteo's archive endpoint is the real path, and it
+  needs a decision first — that file records that the free tier is non-commercial only.
 - A tariff that fills itself in from the site's latest fatura. The figure is already on
   screen (the bills table shows €/kWh all-in) and copying it across is one click nobody has
   built yet — proposed, not done.

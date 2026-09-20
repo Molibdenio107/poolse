@@ -704,6 +704,19 @@
       "caveat": "An estimate, by month: consumption is metered, the cost comes from a tariff rather than a bill, and a month cannot be split across individual lessons. Bathers are recorded attendances, make-up guests included — not the number enrolled.",
       "groupShare": "This class group taught {hours} hours in {pool}, at {rate} an hour — {amount} of heating.",
       "groupCaveat": "A monthly estimate, shared out by the hours taught in the basin."
+    },
+    "thisYear": "This year",
+    "lastYear": "Previous year",
+    "lastYearShort": "previous year:",
+    "yoy": {
+      "section": "Compared with the previous year",
+      "consumption": "Consumption",
+      "cost": "Cost",
+      "wasThen": "previous year: {value}",
+      "rateUp": "The price per {unit} rose from {before} to {now}. Part of the difference in cost comes from the tariff, not from consumption.",
+      "rateDown": "The price per {unit} fell from {before} to {now}. Part of the difference in cost comes from the tariff, not from consumption.",
+      "coverage": "Compares the {months} months with readings in both years — the rest are left out.",
+      "costNotComparable": "Cost is not comparable: one of the years had no tariff."
     }
   },
   "maintenance": {
