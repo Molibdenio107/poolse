@@ -21,6 +21,16 @@ export interface Column {
    * read them as a collapse in consumption.
    */
   previous?: number | null;
+  /**
+   * Mean outside air temperature that month — slice 5.4b.
+   *
+   * **It gets a table column, never a second axis.** A line drawn over these
+   * bars would need a scale of its own, and two scales on one picture is how a
+   * chart starts implying a correlation it has not measured. The figure sits in
+   * the record below, where the reader can put it beside the consumption
+   * themselves.
+   */
+  temperatureC?: number | null;
 }
 
 /**
@@ -86,6 +96,9 @@ export async function ConsumptionBars({
 
   // Both series share one scale, or the comparison is a lie told in pixels.
   const comparing = monthly.some((m) => m.previous != null);
+  const showingTemperature = monthly.some((m) => m.temperatureC != null);
+  const degrees = (value: number): string =>
+    `${new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value)} °C`;
   const max = Math.max(
     0,
     ...monthly.map((m) => m.consumed ?? 0),
@@ -199,6 +212,9 @@ export async function ConsumptionBars({
             {comparing && (
               <th scope="col" className="py-1 text-right font-medium">{t('energy.lastYear')}</th>
             )}
+            {showingTemperature && (
+              <th scope="col" className="py-1 text-right font-medium">{t('energy.outsideTemp')}</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -213,6 +229,11 @@ export async function ConsumptionBars({
               {comparing && (
                 <td className="py-1 text-right tabular-nums text-foreground-muted">
                   {m.previous == null ? '—' : number(m.previous)}
+                </td>
+              )}
+              {showingTemperature && (
+                <td className="py-1 text-right tabular-nums text-foreground-muted">
+                  {m.temperatureC == null ? '—' : degrees(m.temperatureC)}
                 </td>
               )}
             </tr>

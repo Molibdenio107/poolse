@@ -214,3 +214,100 @@ export async function fetchWeather(latitude: number, longitude: number): Promise
     days,
   };
 }
+
+// ---------------------------------------------------------------------------
+// The archive — roadmap 5.4b
+// ---------------------------------------------------------------------------
+
+/**
+ * Past weather, so a cold January is explicable — POOLSE-28 AC 7.
+ *
+ * **A different endpoint from the forecast, and a different licence posture.**
+ * The free archive is non-commercial, exactly as the forecast tier is; the base
+ * URL and the key are env vars here for the same reason they are above, so
+ * moving to the commercial endpoint stays a config change. The difference is
+ * that this one's answers are *stored*, so the obligation outlives the request
+ * — which is why it is behind its own flag and off unless a deployment turns it
+ * on. See `docs/deploy.md`'s go-live checklist.
+ */
+function archiveUrl(): string {
+  return process.env['OPEN_METEO_ARCHIVE_URL'] ?? 'https://archive-api.open-meteo.com/v1/archive';
+}
+
+/**
+ * Whether to reach the archive at all.
+ *
+ * Two conditions, the same shape as every metered call in this product: the
+ * deployment must want it, and the endpoint must be reachable. Off by default,
+ * so the free pilot makes no external call and a dev machine makes none either
+ * — `pnpm dev` with no flag behaves exactly as it did before this slice.
+ */
+export function climateHistoryEnabled(): boolean {
+  return (process.env['WEATHER_HISTORY_ENABLED'] ?? '').trim() === 'true';
+}
+
+/** One day of the archive: its date in local time, and its mean temperature. */
+export interface ClimateDay {
+  /** `YYYY-MM-DD` in the site's own clock — see `timezone=auto` below. */
+  date: string;
+  meanC: number;
+  minC: number | null;
+  maxC: number | null;
+}
+
+/**
+ * Daily means between two dates, for one point.
+ *
+ * `timezone=auto` for the reason the forecast gives and one more: these days are
+ * bucketed into calendar months, and a UTC day boundary would push the last day
+ * of every month into the next one for anywhere east of Greenwich. The months
+ * this produces have to line up with the months the consumption chart draws.
+ *
+ * **Returns null rather than throwing**, like everything else in this file. A
+ * pool does not stop running because an archive is down, and the panel that
+ * reads this says so.
+ */
+export async function fetchClimateHistory(
+  latitude: number,
+  longitude: number,
+  startDate: string,
+  endDate: string,
+): Promise<ClimateDay[] | null> {
+  if (!climateHistoryEnabled()) return null;
+
+  const url = new URL(archiveUrl());
+  url.searchParams.set('latitude', String(latitude));
+  url.searchParams.set('longitude', String(longitude));
+  url.searchParams.set('start_date', startDate);
+  url.searchParams.set('end_date', endDate);
+  url.searchParams.set(
+    'daily',
+    'temperature_2m_mean,temperature_2m_min,temperature_2m_max',
+  );
+  url.searchParams.set('timezone', 'auto');
+
+  const body = await getJson(url);
+  if (body === null || typeof body !== 'object') return null;
+
+  const daily = (body as { daily?: Record<string, unknown> }).daily ?? {};
+  const dates = Array.isArray(daily['time']) ? (daily['time'] as unknown[]) : [];
+  const means = Array.isArray(daily['temperature_2m_mean']) ? daily['temperature_2m_mean'] : [];
+  const mins = Array.isArray(daily['temperature_2m_min']) ? daily['temperature_2m_min'] : [];
+  const maxes = Array.isArray(daily['temperature_2m_max']) ? daily['temperature_2m_max'] : [];
+
+  return dates.flatMap((value, index): ClimateDay[] => {
+    const date = str(value);
+    const meanC = num((means as unknown[])[index]);
+    // A day the archive has no mean for is dropped rather than interpolated:
+    // `days_counted` then says the month is short, which is the honest shape.
+    if (date === null || meanC === null) return [];
+    return [
+      {
+        date,
+        meanC,
+        minC: num((mins as unknown[])[index]),
+        maxC: num((maxes as unknown[])[index]),
+      },
+    ];
+  });
+}

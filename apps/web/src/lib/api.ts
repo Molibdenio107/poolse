@@ -801,6 +801,13 @@ export interface MonthlyConsumption {
    */
   previousConsumed: number | null;
   previousCostCents: number | null;
+  /**
+   * Mean outside air temperature that month, and a year earlier — slice 5.4b.
+   * Null when the site is not on the map or the archive is switched off, which
+   * is the default. **Context, never a correction** to the figures beside it.
+   */
+  meanTempC: number | null;
+  previousMeanTempC: number | null;
 }
 
 /**
@@ -817,6 +824,9 @@ export interface YearOnYear {
   previousConsumed: number | null;
   costCents: number | null;
   previousCostCents: number | null;
+  /** Both null unless every comparable month has a temperature in both years. */
+  meanTempC: number | null;
+  previousMeanTempC: number | null;
 }
 
 /** The twelve months and how much of them the rates reached — slice 5.3. */

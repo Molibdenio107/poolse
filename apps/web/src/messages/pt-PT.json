@@ -716,8 +716,12 @@
       "rateUp": "O preço por {unit} subiu de {before} para {now}. Parte da diferença no custo vem da tarifa, não do consumo.",
       "rateDown": "O preço por {unit} desceu de {before} para {now}. Parte da diferença no custo vem da tarifa, não do consumo.",
       "coverage": "Compara os {months} meses que têm leituras nos dois anos — os restantes ficam de fora.",
-      "costNotComparable": "O custo não é comparável: num dos anos faltava tarifa."
-    }
+      "costNotComparable": "O custo não é comparável: num dos anos faltava tarifa.",
+      "tempColder": "O ar esteve em média a {temp}, {difference} mais frio do que no ano anterior ({before}). É contexto: nenhum dos valores acima foi corrigido pelo tempo.",
+      "tempWarmer": "O ar esteve em média a {temp}, {difference} mais quente do que no ano anterior ({before}). É contexto: nenhum dos valores acima foi corrigido pelo tempo.",
+      "tempSame": "O ar esteve em média a {temp}, praticamente igual ao ano anterior."
+    },
+    "outsideTemp": "Temp. exterior"
   },
   "maintenance": {
     "about": "Sobre",

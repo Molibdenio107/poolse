@@ -73,6 +73,7 @@ import { RequestStatsInterceptor } from './platform/request-stats.interceptor.js
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
 import { VacationsController } from './vacations/vacations.controller.js';
 import { PlacesController, WeatherController } from './weather/weather.controller.js';
+import { ClimateService } from './weather/climate.service.js';
 import { ClerkWebhookController } from './webhooks/clerk-webhook.controller.js';
 import { StripeWebhookController } from './webhooks/stripe-webhook.controller.js';
 import { SubscriptionController } from './billing/subscription.controller.js';
@@ -210,6 +211,17 @@ const IDENTITY_ONLY_ROUTES = [
      * a Map lookup and nothing else.
      */
     { provide: APP_INTERCEPTOR, useClass: RequestStatsInterceptor },
+
+    /*
+     * Fills each site's monthly air temperature — roadmap 5.4b.
+     *
+     * A provider rather than a controller, like `TrialClockService`: it is a
+     * daily cron and nothing calls it over HTTP. **Registering it costs nothing
+     * when the feature is off** — `WEATHER_HISTORY_ENABLED` is checked first
+     * thing in `run()`, so without it the job wakes, returns, and makes no
+     * external call at all.
+     */
+    ClimateService,
   ],
 })
 export class AppModule implements NestModule {

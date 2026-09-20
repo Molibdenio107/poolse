@@ -123,6 +123,17 @@ export interface MonthlyConsumption {
    */
   previousConsumed: number | null;
   previousCostCents: number | null;
+
+  /**
+   * Mean outside air temperature that month, and the same a year earlier —
+   * slice 5.4b. Null when the site is not on the map, the flag is off, or the
+   * archive has not been asked yet.
+   *
+   * **Context, never a correction.** Nothing is adjusted by it; the club is told
+   * how cold it was and draws its own conclusion.
+   */
+  meanTempC: number | null;
+  previousMeanTempC: number | null;
 }
 
 /**
@@ -147,6 +158,15 @@ export interface YearOnYear {
   /** Both null unless every comparable month carried a rate in both years. */
   costCents: number | null;
   previousCostCents: number | null;
+  /**
+   * Mean air temperature across the comparable months, each period its own.
+   *
+   * Both null unless **every** comparable month has a temperature in both
+   * years: a mean over nine months set against one over twelve would be the
+   * same partial-data trap as the figures it sits beside.
+   */
+  meanTempC: number | null;
+  previousMeanTempC: number | null;
 }
 
 /**
@@ -562,6 +582,24 @@ export async function monthlyConsumption(
   months = 12,
 ): Promise<ConsumptionSeries> {
   return withOrg(organizationId, async (tx) => {
+    /*
+     * How cold it was outside, by month — slice 5.4b, POOLSE-28 AC 7.
+     *
+     * Joined to the meter through its *site*, because weather belongs to a
+     * place rather than to a dial. An empty map is the ordinary answer: the
+     * table is filled by a flag-gated daily job, so with the flag off — which
+     * is every dev machine and the free pilot — every month here is null and
+     * nothing on screen changes.
+     */
+    const { rows: climate } = await tx.query<{ month: string; mean_temp_c: number }>(
+      `SELECT to_char(c.month, 'YYYY-MM') AS month, c.mean_temp_c::float8 AS mean_temp_c
+         FROM facility_climate_month c
+         JOIN energy_meter m
+           ON m.facility_id = c.facility_id AND m.organization_id = c.organization_id
+        WHERE c.organization_id = $1 AND m.id = $2`,
+      [organizationId, meterId],
+    );
+    const tempByMonth = new Map(climate.map((row) => [row.month, row.mean_temp_c]));
     const { rows } = await tx.query<{
       month: string;
       consumed: number | null;
@@ -617,6 +655,9 @@ export async function monthlyConsumption(
       costCents: row.cost_cents,
       previousConsumed: earlier[index]?.consumed ?? null,
       previousCostCents: earlier[index]?.cost_cents ?? null,
+      meanTempC: tempByMonth.get(row.month) ?? null,
+      previousMeanTempC:
+        earlier[index] === undefined ? null : tempByMonth.get(earlier[index]!.month) ?? null,
     }));
 
     /*
@@ -634,12 +675,31 @@ export async function monthlyConsumption(
     const total = (values: (number | null)[]): number | null =>
       values.length === 0 ? null : values.reduce((sum: number, v) => sum + (v ?? 0), 0);
 
+    /*
+     * The temperature of each period, over the comparable months — and only
+     * when *every* one of them has a figure on both sides. A mean over nine
+     * months set against a mean over twelve is the same partial-data trap as
+     * the consumption figure it would sit beside, and here it would be worse:
+     * it is the sentence that explains the other two.
+     */
+    const bothWarm = comparable.filter(
+      (m) => m.meanTempC !== null && m.previousMeanTempC !== null,
+    );
+    const mean = (values: (number | null)[]): number | null =>
+      values.length === 0
+        ? null
+        : Math.round((values.reduce((sum: number, v) => sum + (v ?? 0), 0) / values.length) * 10) / 10;
+
+    const allWarm = bothWarm.length === comparable.length && comparable.length > 0;
+
     const yearOnYear: YearOnYear = {
       comparableMonths: comparable.length,
       consumed: total(comparable.map((m) => m.consumed)),
       previousConsumed: total(comparable.map((m) => m.previousConsumed)),
       costCents: total(bothPriced.map((m) => m.costCents)),
       previousCostCents: total(bothPriced.map((m) => m.previousCostCents)),
+      meanTempC: allWarm ? mean(bothWarm.map((m) => m.meanTempC)) : null,
+      previousMeanTempC: allWarm ? mean(bothWarm.map((m) => m.previousMeanTempC)) : null,
     };
 
     const withConsumption = current.filter((row) => row.consumed !== null);

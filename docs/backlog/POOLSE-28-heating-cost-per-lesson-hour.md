@@ -3,7 +3,7 @@
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
 **Type:** Feature · **Area:** Energy / Dashboards · **Priority:** Medium — the strongest argument for the four-module product
-**Status:** Built at the **month grain**, 20 September 2026. AC 1, 2, 3, 5 and 6 are met; **AC 4 (tariff bands) and AC 7 (weather) are not, and cannot be until interval data exists** — see the box below before writing any code against this ticket.
+**Status:** Built at the **month grain**, 20 September 2026. AC 1, 2, 3, 5, 6 and 7 are met; **AC 4 (tariff bands) is not, and cannot be until interval data exists** — see the box below before writing any code against this ticket.
 **Borrowed from:** nobody. Every product that tracks pool energy reports kWh and euros; none normalises against a pool-specific denominator, because none of them holds the class schedule.
 
 ### Built, and narrowed — read this first (20 September 2026)
@@ -27,10 +27,10 @@ share on its page. `apps/api/src/energy/cost-report.repository.ts`,
 | 1 — join the time-series to the schedule and the basin | ✅ at the month grain |
 | 2 — three normalisations | ✅ |
 | 3 — per basin, per turma, per period, comparable | ✅ per basin and per turma. **Per instructor slot is not built** — it needs the same interval data as AC 4 |
-| 4 — tariff bands so cost is correct | ❌ **not buildable yet.** One flat rate per meter (`energy_tariff`, slice 5.3); bands need time-of-day allocation over interval readings |
+| 4 — tariff bands so cost is correct | ❌ **not buildable yet.** One flat rate per meter (`energy_tariff`, slice 5.3); bands need time-of-day allocation over interval readings. **The only one left** |
 | 5 — heating separable, or the derivation stated | ✅ the report names the meters it summed and says it is derived |
 | 6 — turma detail shows its cost beside occupancy | ✅ |
-| 7 — weather retained alongside consumption | ❌ nothing stores weather |
+| 7 — weather retained alongside consumption | ✅ **since 20 September 2026** — `facility_climate_month` caches monthly mean outside air temperature per site from Open-Meteo's archive, shown beside consumption as context and never as a correction. Flag-gated and off by default; the licence note is on `docs/deploy.md`'s go-live checklist |
 
 **QA 28.5, 28.6, 28.7, 28.8 and 28.11 are therefore not testable** — they are all about
 15-minute buckets, bands and DST. The scenarios that were testable are written as integration

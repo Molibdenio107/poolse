@@ -473,6 +473,23 @@ the day feeds arrive, and deliberately not a hypertable until then (decisions, 2
 A dial running backwards is a trigger refusal carrying the neighbour in DETAIL, like
 `pool_capacity`. `docs/features/energy.md`.
 
+**Outside air temperature is stored context, and it never corrects a figure.** Slice 5.4b,
+which closes POOLSE-28 AC 7. `facility_climate_month` caches the monthly mean per *site* — air
+and not the water in `pool_analysis`, which sits at a setpoint all year and would correlate
+with nothing. It is shown as a column in the chart's record and a sentence in the comparison
+panel; **nothing is weather-normalised**, because a normalised headline is a model with
+opinions wearing the clothes of a measurement. `heating_degree_days` is stored beside the mean
+**with the base it used** (15.5 °C), so changing that constant later cannot silently re-mean a
+year of history — nothing reads it yet, and it is stored because backfilling would mean
+refetching everything. **`WEATHER_HISTORY_ENABLED` gates every call and is off by default**:
+Open-Meteo's free tier is non-commercial, the URLs and key are env vars so the commercial move
+is configuration, and both are on `docs/deploy.md`'s go-live checklist. A **daily cron**, never
+a fetch on page load, one request per site for the whole window, upserted — the archive revises
+recent days and `days_counted` says when a month is short. **The sweep reads tenants from
+`poolse_platform` and facilities inside each tenant's own policy**; putting `facility` on the
+platform grant would have been one line and is the kind of widening taken out loud.
+`docs/features/energy.md`.
+
 **A comparison compares only the months that have both years, and consumption and cost are
 never one sentence.** Slice 5.4a. `monthlyConsumption` queries twice its window and pairs each
 month with the row exactly `months` earlier — by index, never by recomputing a date, so there

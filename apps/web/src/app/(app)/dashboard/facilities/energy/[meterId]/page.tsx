@@ -83,6 +83,8 @@ export default async function MeterPage({
               month: m.month,
               consumed: m.consumed,
               previous: m.previousConsumed,
+              // Context in the record, not a second axis — slice 5.4b.
+              temperatureC: m.meanTempC,
             }))}
             unit={meter.unit}
             locale={locale}

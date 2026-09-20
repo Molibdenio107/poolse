@@ -716,8 +716,12 @@
       "rateUp": "The price per {unit} rose from {before} to {now}. Part of the difference in cost comes from the tariff, not from consumption.",
       "rateDown": "The price per {unit} fell from {before} to {now}. Part of the difference in cost comes from the tariff, not from consumption.",
       "coverage": "Compares the {months} months with readings in both years — the rest are left out.",
-      "costNotComparable": "Cost is not comparable: one of the years had no tariff."
-    }
+      "costNotComparable": "Cost is not comparable: one of the years had no tariff.",
+      "tempColder": "The air averaged {temp}, {difference} colder than the previous year ({before}). This is context: none of the figures above has been adjusted for the weather.",
+      "tempWarmer": "The air averaged {temp}, {difference} warmer than the previous year ({before}). This is context: none of the figures above has been adjusted for the weather.",
+      "tempSame": "The air averaged {temp}, much the same as the previous year."
+    },
+    "outsideTemp": "Outside temp."
   },
   "maintenance": {
     "about": "About",

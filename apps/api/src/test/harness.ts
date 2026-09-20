@@ -264,6 +264,7 @@ const TENANT_TABLES = [
   'energy_invoice_line',
   'energy_invoice_register',
   'energy_invoice',
+  'facility_climate_month',
   'energy_tariff',
   'energy_reading',
   'energy_meter',

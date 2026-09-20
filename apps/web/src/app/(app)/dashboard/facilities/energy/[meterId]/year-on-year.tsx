@@ -31,7 +31,15 @@ export async function YearOnYearPanel({
   const t = await getTranslations();
   const format = await getFormatter();
 
-  const { comparableMonths, consumed, previousConsumed, costCents, previousCostCents } = yearOnYear;
+  const {
+    comparableMonths,
+    consumed,
+    previousConsumed,
+    costCents,
+    previousCostCents,
+    meanTempC,
+    previousMeanTempC,
+  } = yearOnYear;
 
   if (comparableMonths === 0 || consumed === null || previousConsumed === null) return null;
 
@@ -77,6 +85,9 @@ export async function YearOnYearPanel({
   const rateMoved =
     impliedNow !== null && impliedBefore !== null && impliedNow.toFixed(6) !== impliedBefore.toFixed(6);
 
+  const degrees = (fmt: typeof format, value: number): string =>
+    `${fmt.number(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C`;
+
   return (
     <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -118,6 +129,30 @@ export async function YearOnYearPanel({
           </div>
         )}
       </dl>
+
+      {/*
+        How cold it was — slice 5.4b, POOLSE-28 AC 7.
+
+        **Context, never a correction.** Nothing above has been adjusted for
+        the weather; this sentence exists so a club reading "consumption up
+        12%" can see that the year was also two degrees colder, and decide for
+        itself. A weather-normalised headline would be a model with opinions
+        wearing the clothes of a measurement.
+
+        Absent unless every comparable month has a figure on both sides, and
+        absent entirely with the archive switched off — which is the default.
+      */}
+      {meanTempC !== null && previousMeanTempC !== null && (
+        <p className="text-sm text-foreground-muted">
+          {meanTempC.toFixed(1) === previousMeanTempC.toFixed(1)
+            ? t('energy.yoy.tempSame', { temp: degrees(format, meanTempC) })
+            : t(meanTempC < previousMeanTempC ? 'energy.yoy.tempColder' : 'energy.yoy.tempWarmer', {
+                temp: degrees(format, meanTempC),
+                before: degrees(format, previousMeanTempC),
+                difference: degrees(format, Math.abs(meanTempC - previousMeanTempC)),
+              })}
+        </p>
+      )}
 
       {/*
         The sentence the panel exists for. Said only when the rate actually

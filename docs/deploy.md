@@ -194,6 +194,16 @@ real club depends on Poolse. Each one is here because doing it early breaks some
 - [ ] **`DATABASE_PLATFORM_URL` audited**: API environment only, never the web app's, never
       `NEXT_PUBLIC_`, with a rotation procedure written down — POOLSE-64.
 - [ ] **A Sentry DSN**, if errors are to be seen at all. Off without one, by design.
+- [ ] **Open-Meteo moved to the commercial endpoint, or the weather history left off.** The
+      free tier is **non-commercial use only**, which is fine while Poolse has no paying
+      customers and is not fine the day it does. Two features depend on it and they are not
+      equally exposed: the forecast panel on a site's page *displays* a response, while
+      `WEATHER_HISTORY_ENABLED` (roadmap 5.4b) **stores** one, so the obligation outlives the
+      request. Both read `OPEN_METEO_FORECAST_URL`, `OPEN_METEO_ARCHIVE_URL` and
+      `OPEN_METEO_API_KEY` from the environment, so switching is configuration rather than a
+      refactor — that is why those variables exist. Attribution is rendered wherever the data
+      is shown. The safe default is what ships today: the history flag **off**, and no archive
+      call at all.
 - [ ] **TimescaleDB confirmed** on the production database, or the fallback taken — see below.
 
 ## When something is wrong

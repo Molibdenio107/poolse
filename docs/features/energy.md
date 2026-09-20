@@ -231,6 +231,49 @@ cost is not comparable and compares the kWh anyway.
 carrying the same shapes, and every figure repeated in the table. A month with no counterpart
 is drawn as nothing rather than as a bar of zero.
 
+## Temperatura exterior — why a January was expensive
+
+Roadmap 5.4b and POOLSE-28 AC 7. Monthly mean outside air temperature for each site, stored in
+`facility_climate_month` and shown beside consumption: a column in the chart's table, and a
+sentence in the year-on-year panel naming how much colder or warmer the year was.
+
+**Air, not water.** Poolse already stores water temperature in `pool_analysis` and it is
+useless here — a heated tank sits at a setpoint all year, so plotting it against consumption
+gives a flat line that looks like insight and is none. What makes January expensive is how
+cold it was outside.
+
+**Context, never a correction.** No figure anywhere is adjusted for the weather. The club is
+told what it used, what it cost, and how cold it was, and draws its own conclusion; a
+"weather-normalised consumption" would be a model with opinions wearing the clothes of a
+measurement, which is what that ticket's AC 5 exists to forbid.
+
+**`heating_degree_days` beside the mean, with the base it used.** HDD is the sum over the
+month of how far each day fell below 15.5 °C, and it is what actually explains a heating bill
+— a steady 10 °C month and a mild month around one cold snap can share a mean and need
+different amounts of heating. The base is stored on every row so changing the constant later
+cannot silently re-mean a year of history. Nothing displays HDD yet; it is stored because it is
+the figure any later correlation needs and backfilling it would mean refetching everything.
+
+**Off unless a deployment turns it on.** `WEATHER_HISTORY_ENABLED` gates every call. Without
+it `ClimateService` wakes daily, returns immediately, and makes no request — which is the state
+of the free pilot and of every dev machine, and why nothing on these screens changes by
+default. Open-Meteo's free tier is non-commercial; see `docs/deploy.md`'s go-live checklist.
+
+**A daily job, not a fetch on page load.** Nothing a club looks at waits on somebody else's
+API. One request per site covers twenty-five months of daily means, folded into months in the
+site's own clock; the whole window is refetched each time because the archive revises recent
+days and the current month gets longer. `days_counted` travels with each row, so a month built
+from nine days is not mistaken for a full one.
+
+**A site with no coordinates is ordinary, not an error.** The location picker is optional, the
+job skips it, and every month reads null.
+
+**The sweep uses two logins and no new grant.** The list of tenants comes from
+`poolse_platform`, which already reads `organization`; the facilities are then read inside each
+tenant's own policy on the ordinary application login. Putting `facility` on the platform grant
+would have been one line and is exactly the widening that is taken out loud rather than slipped
+into a feature.
+
 ## Not built
 
 - Comparison and correlation with temperature (5.4). Cost for billed meters is a fact from
@@ -241,12 +284,12 @@ is drawn as nothing rather than as a bar of zero.
   `energy_reading` is not a hypertable and a club types one figure a month. When automated
   feeds land, `cost-report.repository.ts` is where the finer grain goes and the API shape does
   not change. Until then a club is told the month's rate, honestly labelled.
-- **Weather retained alongside consumption** (POOLSE-28 AC 7 and the temperature half of
-  roadmap 5.4), so a cold week is explicable. Nothing here stores it: `weather/open-meteo.ts`
-  is a **live forecast** for the site's panel and keeps no history, and water temperature from
-  `pool_analysis` is held at a setpoint all year and would correlate with nothing. Storing
-  monthly mean *air* temperature from Open-Meteo's archive endpoint is the real path, and it
-  needs a decision first — that file records that the free tier is non-commercial only.
+- **A correlation, as opposed to the context above.** The temperature sits beside the
+  consumption; nothing computes a coefficient, a weather-normalised figure or a regression.
+  That is deliberate for now — with one reading a month there are twelve points a year, and a
+  correlation over twelve points is a number that would be quoted and should not be. It becomes
+  honest when feeds arrive, alongside POOLSE-28's finer grain.
+- **Anything reading `heating_degree_days`.** Stored from the first row, displayed nowhere.
 - A tariff that fills itself in from the site's latest fatura. The figure is already on
   screen (the bills table shows €/kWh all-in) and copying it across is one click nobody has
   built yet — proposed, not done.
