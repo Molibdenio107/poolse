@@ -377,8 +377,15 @@ CHECK makes a hand-paid subscription impossible to forget, and `manual_payment` 
 insert-only record of what actually arrived — which Portugal will want a receipt for. **62 (trial abuse) is built**, in two slices: the ledger and the block at signup, then the
 club's NIPC — asked for under Faturação, claimed by a trigger so the cross-tenant check sits
 inside the club's own transaction. With it, `organization.vat_number` finally means something
-after existing unread since the first migration. **64 (hardening `/admin`) is the last one
-open**, and its MFA item is gated on a production Clerk instance existing.
+after existing unread since the first migration. **64 (hardening `/admin`) is built as slice
+E1, 22 September 2026**: an irreversible act — suspending, scheduling a deletion, archiving —
+refuses unless the operator types the club's name back, decided by the *columns* a change
+writes rather than by a list of endpoints; every platform write and every refusal raises a
+`platform_alert`, recorded inside the transaction and emailed after it; `/platform` carries a
+ceiling five times tighter than the API's; and the CSP, the `NEXT_PUBLIC_` leak and the
+platform role's missing `DELETE` are all asserted in tests. **Its MFA and step-up halves (E2)
+are gated on a production Clerk instance existing** and are on the go-live checklist, along
+with the shared-origin limitation, which now has a date and a plan.
 
 **2.5 and 2.6 come before 2.4, decided 13 September 2026.** The numbers stay where they are —
 renumbering a roadmap costs more than reading one note. 2.4 takes money from an operator, and there

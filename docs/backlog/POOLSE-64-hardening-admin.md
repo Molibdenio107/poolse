@@ -4,6 +4,18 @@
 
 **Type:** Hardening · **Area:** Platform / Security · **Priority:** Medium, rising with the second tenant · **Slice E**
 
+> **Built 22 September 2026 as slice E1 — AC 3, 4, 5, 6, 7, 8 and 9.** The typed club name on
+> irreversible acts, `platform_alert` on every write and every refusal, a 60/min ceiling on
+> `/platform`, the CSP and the `NEXT_PUBLIC_` leak asserted in tests, and the shared-origin
+> limitation and the rotation procedure written into `docs/deploy.md`.
+>
+> **AC 1, 2 and 10 are E2 and are gated on a production Clerk instance.** MFA enforcement and
+> step-up reverification would both lock the only operator out of `/admin` today. They are on
+> the go-live checklist. What stands in the way meanwhile is the typed name.
+>
+> Two things in this ticket are **out of date** and are corrected in place below: the Dev
+> section's "there is no email provider", and item 4's reading of `archived_at`.
+
 ### PO — why this exists
 
 The platform area is already better shaped than most: its own database login with **no
@@ -52,9 +64,13 @@ URL pattern** — cheap, and it catches the one paste that would matter.
 
 ### Dev — implementation notes
 
-**The alerting has the same problem POOLSE-61 has**: there is no email provider. Same answer —
-record the alert, say it is undelivered, and let the provider slice deliver it. Do not build a
-second notification path.
+~~**The alerting has the same problem POOLSE-61 has**: there is no email provider.~~ **Corrected
+22 September 2026: there is one.** `sendEmail` in `apps/api/src/notifications/notifier.ts` has
+carried invitation, vacation and — since 4.2 — water-alert mail, `console` by default and
+Resend when configured. So the alert rides that seam rather than starting a second path, which
+is what the original note was protecting. The rest of the instruction stands and is what
+happens on a machine with no provider: the row is written, `delivered_at` stays null, and the
+screens and logs say "recorded, not sent" rather than implying a message arrived.
 
 **The MFA claim's shape is Clerk's**, and reading the wrong field would produce a guard that
 passes everybody. Read it from the verified session claims, assert against a session that has

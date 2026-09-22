@@ -114,6 +114,13 @@ export async function setSuspensionAction(
     await apiPost(`/platform/tenants/${tenantId}/suspension`, {
       suspended,
       reason: suspended ? String(formData.get('reason') ?? '') : null,
+      /*
+       * The club's name, typed — POOLSE-64 AC 3. Passed straight through and
+       * never compared here: the API checks it against the row inside the
+       * transaction that would otherwise write, which is the only place the two
+       * cannot drift apart. Absent on a restore, which asks for nothing.
+       */
+      confirmName: suspended ? String(formData.get('confirmName') ?? '') : null,
     });
   } catch (error) {
     return describeFailure(error, 'admin.error.suspensionFailed');
@@ -145,6 +152,13 @@ export async function setReadOnlyAction(
     await apiPost(`/platform/tenants/${tenantId}/read-only`, {
       readOnly,
       dataKeptUntil: readOnly ? String(formData.get('dataKeptUntil') ?? '') : null,
+      /*
+       * Only a deletion date makes this one of the acts that needs the name —
+       * POOLSE-64 AC 3 — and it is the API that decides so, from the columns the
+       * change writes. Sent whenever it was typed; refused there if it is needed
+       * and wrong.
+       */
+      confirmName: readOnly ? String(formData.get('confirmName') ?? '') : null,
     });
   } catch (error) {
     return describeFailure(error, 'admin.error.readOnlyFailed');

@@ -10,7 +10,9 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
+import { PLATFORM } from '../common/throttle.js';
 import { readSearch } from '../common/search.js';
 import { PlatformAction, PlatformAuditInterceptor } from './platform-audit.interceptor.js';
 import { PlatformAdminGuard } from './platform.guard.js';
@@ -40,6 +42,7 @@ import {
 import {
   readAmountCents,
   readBillingMode,
+  readConfirmName,
   readCoversFrom,
   readCoversTo,
   readMaxFacilities,
@@ -66,6 +69,7 @@ import {
  * away with `no_organization` before the guard ever saw them.
  */
 @Controller('platform')
+@Throttle(PLATFORM)
 @UseGuards(PlatformAdminGuard)
 @UseInterceptors(PlatformAuditInterceptor)
 export class PlatformController {
@@ -240,11 +244,24 @@ export class PlatformController {
   @Post('tenants/:id/suspension')
   async suspension(
     @Param('id') id: string,
-    @Body() body: { suspended?: unknown; reason?: unknown },
+    @Body() body: { suspended?: unknown; reason?: unknown; confirmName?: unknown },
   ): Promise<TenantChangeResult> {
     const suspended = body.suspended === true || body.suspended === 'true';
     return found(
-      await setSuspension(id, suspended ? { reason: readSuspensionReason(body.reason) } : null),
+      await setSuspension(
+        id,
+        suspended
+          ? {
+              reason: readSuspensionReason(body.reason),
+              /*
+               * Typed back, and checked against the row — POOLSE-64 AC 3. The
+               * dialog is what makes somebody read the name; this is what makes
+               * it a control, because a dialog is the half a client can skip.
+               */
+              confirmName: readConfirmName(body.confirmName),
+            }
+          : null,
+      ),
     );
   }
 
@@ -268,13 +285,24 @@ export class PlatformController {
   @Post('tenants/:id/read-only')
   async readOnly(
     @Param('id') id: string,
-    @Body() body: { readOnly?: unknown; dataKeptUntil?: unknown },
+    @Body() body: { readOnly?: unknown; dataKeptUntil?: unknown; confirmName?: unknown },
   ): Promise<TenantChangeResult> {
     const readOnly = body.readOnly === true || body.readOnly === 'true';
     return found(
       await setReadOnly(
         id,
-        readOnly ? { dataKeptUntil: readKeptUntil(body.dataKeptUntil) } : null,
+        readOnly
+          ? {
+              dataKeptUntil: readKeptUntil(body.dataKeptUntil),
+              /*
+               * Needed only when a deletion date comes with it, and that is
+               * `changeTenant`'s decision rather than this one: the name is
+               * required by the columns a change writes, so read-only on its own
+               * asks for nothing.
+               */
+              confirmName: readConfirmName(body.confirmName),
+            }
+          : null,
       ),
     );
   }

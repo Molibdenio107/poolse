@@ -3310,7 +3310,8 @@
       "noteTooLong": "No máximo 500 caracteres.",
       "billingModeFailed": "Não foi possível alterar o modo de pagamento.",
       "paymentFailed": "Não foi possível registar o pagamento.",
-      "manualNeedsPayment": "Registe primeiro um pagamento: uma subscrição paga à mão tem de dizer até quando está paga."
+      "manualNeedsPayment": "Registe primeiro um pagamento: uma subscrição paga à mão tem de dizer até quando está paga.",
+      "nameMismatch": "O nome não corresponde. Escreva-o como aparece acima."
     },
     "actions": "Ações",
     "suspended": "Suspensa",
@@ -3341,6 +3342,8 @@
       "writeRestoreHint": "Devolve a escrita ao clube e cancela a data de eliminação.",
       "dataKeptUntil": "Dados guardados até",
       "dataKeptUntilHint": "Opcional. Em branco, não fica marcada nenhuma eliminação.",
+      "confirmName": "Escreva {name} para confirmar",
+      "confirmNameHint": "Maiúsculas e acentos não contam.",
       "billingMode": "Modo de pagamento",
       "billingModeHint": "Por onde entra o dinheiro deste cliente. Não decide o que pode fazer.",
       "paidThrough": "Pago até {date}.",

@@ -8,6 +8,7 @@ import {
   type PageQuery,
 } from '../common/pagination.js';
 import { searchPredicate } from '../common/search.js';
+import { deliverAlert, recordAlert } from './platform-alert.js';
 import {
   deriveHealth,
   HEALTH_WINDOW_HOURS,
@@ -613,6 +614,15 @@ interface TenantChange {
   pending_delete_at?: string | null;
   billing_mode?: BillingMode;
   paid_through?: string | null;
+  /*
+   * On the grant since 14 September 2026, and on this list since POOLSE-64 —
+   * although nothing here writes it yet. The trial clock archives a tenant on
+   * day 75 and does it in its own transaction, because it has no person and its
+   * transitions go to `trial_event`. What this entry buys is the day an operator
+   * can archive one from `/admin`: it arrives audited, and the typed-name gate
+   * below already names the column, rather than both being remembered.
+   */
+  archived_at?: string | null;
 }
 
 /**
@@ -634,6 +644,7 @@ const AUDITED: Record<string, string> = {
   pending_delete_at: 'pending_delete_at',
   billing_mode: 'billing_mode',
   paid_through: 'paid_through::text',
+  archived_at: 'archived_at',
 };
 
 const AUDITED_KEYS = Object.keys(AUDITED);
@@ -685,12 +696,13 @@ async function changeTenant(
   organizationId: string,
   action: string,
   plan: TenantChange | PrepareChange,
+  options: { confirmName?: string | undefined } = {},
 ): Promise<TenantChangeResult | null> {
   const clerkUserId = currentAuth().clerkUserId;
 
-  return withPlatform(async (tx) => {
+  const done = await withPlatform(async (tx) => {
     const { rows: before } = await tx.query<TenantBefore>(
-      `SELECT ${AUDITED_SELECT} FROM organization WHERE id = $1`,
+      `SELECT name, ${AUDITED_SELECT} FROM organization WHERE id = $1`,
       [organizationId],
     );
     if (before.length === 0) return null;
@@ -707,6 +719,32 @@ async function changeTenant(
     const columns = Object.keys(change) as (keyof TenantChange)[];
     if (columns.length === 0) {
       throw new Error(`Platform action "${action}" asked to change nothing`);
+    }
+
+    /*
+     * The name, typed — POOLSE-64 AC 3.
+     *
+     * **Decided by what the change writes, not by which function called.** A
+     * future endpoint that archives a club inherits this without anybody
+     * remembering to ask for it, which is the same instinct as the column grant
+     * behind it: a rule enforced by the shape of the thing cannot be forgotten by
+     * a code review. It is checked here rather than in the controller because
+     * this is where the change is finally known — a `PrepareChange` decides
+     * inside the transaction what columns it will move.
+     *
+     * Only *entering* one of these states is guarded. Restoring a club, letting
+     * it write again, un-archiving it — nothing is made safer by slowing down the
+     * direction that undoes harm, and a confirmation on everything is a
+     * confirmation nobody reads.
+     */
+    const irreversible = IRREVERSIBLE.filter(
+      (column) => column in change && change[column] !== null,
+    );
+
+    if (irreversible.length > 0 && !nameMatches(options.confirmName, before[0]!['name'])) {
+      throw new BadRequestException({
+        fields: { confirmName: 'admin.error.nameMismatch' },
+      });
     }
 
     // Built from a fixed key list, never from caller-supplied names: these
@@ -727,19 +765,85 @@ async function changeTenant(
       if (was !== now) changed[column] = { before: was, after: now };
     }
 
+    const detail = { changed, ...(prepared.detail ?? {}) };
+
     await tx.query(
       `INSERT INTO platform_audit_log (clerk_user_id, action, organization_id, detail)
             VALUES ($1, $2, $3, $4::jsonb)`,
-      [
-        clerkUserId,
-        action,
-        organizationId,
-        JSON.stringify({ changed, ...(prepared.detail ?? {}) }),
-      ],
+      [clerkUserId, action, organizationId, JSON.stringify(detail)],
     );
 
-    return { organizationId, changed };
+    /*
+     * And somebody is told — POOLSE-64 item 5.
+     *
+     * Every write, not a chosen few: there are a handful a day, and the one an
+     * operator would want to hear about is by definition the one nobody thought
+     * to put on a list. In this transaction, so an alert can never describe a
+     * change that rolled back; sent after it, so a mail server can never roll one
+     * back.
+     */
+    const alert = await recordAlert(tx, {
+      kind: 'write',
+      action,
+      clerkUserId,
+      organizationId,
+      organizationName: typeof before[0]!['name'] === 'string' ? before[0]!['name'] : null,
+      detail,
+    });
+
+    return { result: { organizationId, changed }, alert };
   });
+
+  if (done === null) return null;
+
+  await deliverAlert(done.alert);
+  return done.result;
+}
+
+/**
+ * The three columns whose *setting* is not something to do by accident.
+ *
+ * `suspended_at` shuts a club's door; `pending_delete_at` schedules the end of
+ * its data; `archived_at` files it away. Nothing else on this side of the
+ * product reaches that far — a trial date, a plan ceiling, a billing mode and a
+ * subscription status are all one click and one click back, and asking a person
+ * to type a club's name to extend a trial is how they learn to type it without
+ * reading.
+ *
+ * `archived_at` is on the list although no endpoint writes it yet: the trial
+ * clock does, and it runs with no person and no request, so it never reaches
+ * `changeTenant` at all. The entry is here for the day an operator can archive
+ * one from `/admin`, which POOLSE-61 left as the clock's own act.
+ */
+const IRREVERSIBLE = ['suspended_at', 'pending_delete_at', 'archived_at'] as const;
+
+/**
+ * "The same name", for somebody typing it under a dialog that shows it.
+ *
+ * Trimmed, inner whitespace collapsed, case-folded and stripped of accents. The
+ * friction that makes this worth having is *reading the name and typing it* —
+ * being sure which club is about to lose its morning — and none of that is
+ * weakened by accepting `clube nautico` for `Clube Náutico`. Refusing over a
+ * capital or a circumflex would only teach somebody to paste the name, which
+ * removes the reading; it would also refuse a keyboard that has no `á` on it.
+ *
+ * An unsupplied name never matches, which is what makes the check fail closed: a
+ * caller that forgets to ask gets a refusal naming the field, not a write.
+ */
+function nameMatches(typed: string | undefined, actual: unknown): boolean {
+  if (typed === undefined || typeof actual !== 'string') return false;
+
+  // NFD splits an accented letter into the letter and its mark, so the marks can
+  // be dropped by range rather than by a table of pairs somebody maintains.
+  const fold = (value: string): string =>
+    value
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toLocaleLowerCase('pt-PT');
+
+  return fold(typed) !== '' && fold(typed) === fold(actual);
 }
 
 /**
@@ -861,7 +965,7 @@ export async function setPlanLimits(
  */
 export async function setSuspension(
   organizationId: string,
-  suspension: { reason: string } | null,
+  suspension: { reason: string; confirmName: string | undefined } | null,
 ): Promise<TenantChangeResult | null> {
   return changeTenant(
     organizationId,
@@ -869,6 +973,10 @@ export async function setSuspension(
     suspension === null
       ? { suspended_at: null, suspension_reason: null }
       : { suspended_at: new Date().toISOString(), suspension_reason: suspension.reason },
+    // Typed only in the direction that shuts the door — POOLSE-64 AC 3. Passing
+    // it on a restore would be harmless and meaningless; `changeTenant` decides
+    // from the columns, not from here.
+    { ...(suspension === null ? {} : { confirmName: suspension.confirmName }) },
   );
 }
 
@@ -892,7 +1000,7 @@ export async function setSuspension(
  */
 export async function setReadOnly(
   organizationId: string,
-  readOnly: { dataKeptUntil: string | null } | null,
+  readOnly: { dataKeptUntil: string | null; confirmName: string | undefined } | null,
 ): Promise<TenantChangeResult | null> {
   return changeTenant(
     organizationId,
@@ -903,6 +1011,15 @@ export async function setReadOnly(
           read_only_at: new Date().toISOString(),
           pending_delete_at: readOnly.dataKeptUntil,
         },
+    /*
+     * **Read-only itself is one click; a deletion date is not** — POOLSE-64 AC 3,
+     * and Rui's call on which acts are irreversible. Putting a club into
+     * read-only is what happens on its own the day a trial ends, and an operator
+     * doing it by hand is usually correcting something. Scheduling the end of its
+     * data is the other kind of act, and `changeTenant` sees the difference in
+     * the columns without this function having to describe it.
+     */
+    { ...(readOnly === null ? {} : { confirmName: readOnly.confirmName }) },
   );
 }
 

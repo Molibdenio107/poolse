@@ -79,6 +79,15 @@ const TENANT_TABLES = [
    */
   'platform_audit_log',
   /*
+   * What the trail told somebody about — POOLSE-64, and here for exactly the
+   * reason the line above is. A row is about a tenant rather than a tenant's, it
+   * carries no RLS policy for poolse_app, and its nullable `organization_id` is a
+   * real foreign key that nothing cascades — so every platform write against a
+   * scratch tenant would fail teardown on the key. Immediately after the trail,
+   * because they are written in the same transaction.
+   */
+  'platform_alert',
+  /*
    * Stripe's own book — slice 2.4, and here for the same reason as the line
    * above. A row is *about* a tenant rather than belonging to one, it carries no
    * RLS policy for poolse_app, and its `organization_id` is nullable; it is also
@@ -293,6 +302,15 @@ const TENANT_TABLES = [
 
 export interface ScratchTenant {
   organizationId: string;
+  /**
+   * The club's name, as provisioning wrote it.
+   *
+   * Exposed for POOLSE-64: an irreversible platform action refuses unless the
+   * operator types the tenant's name back, so a test of one has to know it. A
+   * test that reads it from the row would pass against a bug that reads the
+   * *typed* name from the row too.
+   */
+  name: string;
   /** The owner's membership, created by `provision_organization`. */
   ownerMembershipId: string;
   facilityId: string;
@@ -393,6 +411,9 @@ export async function withScratchTenant<T>(fn: (tenant: ScratchTenant) => Promis
   scratchCount += 1;
   const stamp = `${process.pid}-${scratchCount}-${Math.floor(performance.now())}`;
   const clerkUserId = `user_test_${stamp}`;
+  // One definition: provisioning writes it and `ScratchTenant.name` reports it,
+  // so a test that has to type the club's name back cannot be typing a guess.
+  const name = `Clube de Teste ${stamp}`;
 
   /*
    * Provisioning happens outside any tenant scope, exactly as sign-up does: the
@@ -416,7 +437,7 @@ export async function withScratchTenant<T>(fn: (tenant: ScratchTenant) => Promis
       o_facility_id: string;
     }>(`SELECT * FROM provision_organization($1, $2, 'pt-PT', 'Piscina de Teste')`, [
       clerkUserId,
-      `Clube de Teste ${stamp}`,
+      name,
     ]);
     return rows[0]!;
   });
@@ -451,6 +472,7 @@ export async function withScratchTenant<T>(fn: (tenant: ScratchTenant) => Promis
 
     return await fn({
       organizationId,
+      name,
       ownerMembershipId: provisioned.o_membership_id,
       facilityId: provisioned.o_facility_id,
       seasonId: season!.id,

@@ -260,7 +260,77 @@ The grant widened by exactly two columns, `billing_mode` and `paid_through`, bri
 seventeen. `manual-subscription.sql` asserts what it did not widen: the club's name is still
 unwritable and `DELETE` is still refused.
 
+## Hardening — POOLSE-64, slice E1 (22 September 2026)
+
+The realistic risk on this side of the product was never somebody breaking the guard. It is
+somebody **becoming Rui**. Four changes, and what they cost an operator.
+
+### An irreversible action asks for the club's name
+
+Suspending a club, scheduling the end of its data, and archiving one all refuse unless the
+operator types the club's name back. Everything else — a trial date, a plan ceiling, a
+billing mode, a subscription status, read-only on its own — stays one click, because a
+confirmation on everything is a confirmation nobody reads.
+
+**Decided by the columns a change writes, not by which endpoint was called.**
+`changeTenant` requires the name when a change *sets* `suspended_at`, `pending_delete_at` or
+`archived_at`, so an endpoint added later inherits the rule without anybody remembering it,
+and only entering those states is guarded — restoring a club, letting it write again and
+lifting a deletion are all one click. Nothing is made safer by slowing down the direction
+that undoes harm.
+
+The comparison is trimmed, case-folded and accent-folded: `clube nautico` is accepted for
+`Clube Náutico`. The friction worth having is *reading the name and typing it*; refusing over
+a capital would only teach somebody to paste it. A missing name never matches, so a caller
+that forgets to ask is refused rather than obeyed — the refusal is a 400 naming
+`confirmName`, and it rolls the whole transaction back, so a refused attempt leaves no
+half-suspended club and no audit entry claiming one.
+
+### Every write and every refusal raises an alert
+
+`platform_alert`, written **inside** the transaction that produced it — so it can never
+describe a change that rolled back — and emailed **after** that transaction commits, so a
+mail server can never roll one back. The same division 4.2's water alert makes.
+
+- Recipients are `PLATFORM_ALERT_EMAIL` (comma-separated), an ops mailbox rather than a
+  person. Unset is a legitimate state: the row is written, `delivered_at` stays null, and
+  nothing pretends a message arrived.
+- **Every refusal is recorded**; only the *sending* is suppressed for repeats, fifteen
+  minutes per Clerk user, in memory. A stranger must not be able to thin the record of their
+  own attempts by making more of them — but an inbox full of identical warnings is how a
+  channel stops being read before it ever carries something urgent. `detail.delivery` says
+  when a send was suppressed.
+- Writes are never suppressed. An operator makes a handful of changes a day, and "these
+  three clubs were suspended in one minute" is exactly the sentence this exists for.
+- The message is in **Portuguese only** — the one place in the product where a single
+  language is right. Every other email here is written in the *organization's* language
+  because it is addressed to a club; this one is addressed to Poolse, and a refusal at the
+  door names no tenant whose locale could be read.
+
+### Its own ceiling
+
+`/platform` carries `@Throttle(PLATFORM)` — 60 requests a minute per Clerk user, a fifth of
+the API-wide 300. The global `UserThrottlerGuard` runs before this module's own guard, so
+that ceiling is also what bounds how many refusals — and how many alert rows — a stranger
+can produce before the suppression window takes over.
+
+### Still gated on a production Clerk instance
+
+**MFA enforcement in `PlatformAdminGuard`** (AC 1) and **step-up reverification before a
+mutating action** (AC 2) are not built. Both need a production Clerk instance, which does not
+exist; enforcing either against the development instance would lock the only operator out of
+`/admin` for no gain. Both are on `docs/deploy.md`'s go-live checklist, and the typed name is
+what stands in the way meanwhile.
+
+**`/admin` also still shares an origin and a cookie with the tenant app** — a known
+limitation with a date and a plan, in `docs/deploy.md`.
+
 ## Not in this slice
+
+**`platform_alert` has no screen, deliberately.** It is a channel, not a page: an alert that
+has to be looked for is the trail that already existed. What would earn a screen is a *read*
+somebody needs — "what has been undelivered since the provider broke" — and until an email
+provider exists there is nothing to have broken.
 
 Per-tenant feature flags, support "view as", the Clerk MAU pull and cross-tenant analytics.
 **Deleting a tenant is deliberately still impossible from here** — `archived_at` was granted on

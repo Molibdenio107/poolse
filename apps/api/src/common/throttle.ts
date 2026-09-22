@@ -64,6 +64,27 @@ export const DEFAULT_LIMIT = 300;
  */
 export const STRICT_LIMIT = 10;
 
+/**
+ * The platform ceiling: 60 requests a minute, for `/platform` — POOLSE-64 AC 6.
+ *
+ * A fifth of the ordinary limit, and sized the same way: the busiest screen on
+ * that side is a tenant's detail page, which fires five or six requests as it
+ * opens, and an operator moving between clubs quickly lands in the twenties. Sixty
+ * leaves room for that and refuses a script walking every tenant.
+ *
+ * **It is also what bounds the alerting.** Every refusal at
+ * `PlatformAdminGuard` now writes a row and sends a message, and the global
+ * guard runs before a controller-scoped one — so this is the number that decides
+ * how much noise a stranger can generate before the fifteen-minute suppression
+ * in `platform-alert.ts` takes over. Two mechanisms rather than one, because
+ * either alone has a gap: the ceiling does nothing about a slow trickle, and the
+ * suppression does nothing about the database writes.
+ */
+export const PLATFORM_LIMIT = 60;
+
+/** The platform ceiling, ready to hang on `PlatformController`. */
+export const PLATFORM = { default: { ttl: seconds(60), limit: PLATFORM_LIMIT } };
+
 export const throttlerOptions: ThrottlerModuleOptions = {
   throttlers: [{ name: 'default', ttl: seconds(60), limit: DEFAULT_LIMIT }],
 };

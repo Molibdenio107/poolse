@@ -565,4 +565,79 @@ BEGIN
   RAISE NOTICE 'PASS test 15: billing state and access state are two facts';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 16 — the alert table: written, stamped, and no further — POOLSE-64
+--
+-- The third platform book, and the first one the operator area *updates*. So the
+-- boundary worth asserting is narrower than "can it write": it may add a row and
+-- it may say whether the message went, and it may not touch what the row says
+-- happened. That is a column grant — `GRANT UPDATE (recipients, delivered_at)` —
+-- and a column grant is exactly the kind of thing that is easy to widen by
+-- accident while adding a migration, because nothing fails until it matters.
+--
+-- `DELETE` is refused here for the same reason it is refused on `organization`:
+-- an alert somebody can remove is an alert an attacker removes first.
+-- ---------------------------------------------------------------------------
+
+-- As the operator, which tests 14 and 15 above are not: they assert constraints
+-- rather than privileges, so the file resets the role before them.
+SET LOCAL ROLE poolse_platform;
+
+DO $$
+DECLARE v_id uuid;
+BEGIN
+  INSERT INTO platform_alert (kind, action, clerk_user_id, organization_id, detail)
+       VALUES ('write', 'tenant.suspended', 'user_test_operator',
+               'cccccccc-cccc-cccc-cccc-cccccccccccc', '{"changed": {}}'::jsonb)
+    RETURNING id INTO v_id;
+
+  -- The delivery stamp: the one thing about a recorded alert that changes.
+  UPDATE platform_alert
+     SET recipients = ARRAY['ops@example.test'], delivered_at = now()
+   WHERE id = v_id;
+
+  BEGIN
+    UPDATE platform_alert SET detail = '{}'::jsonb WHERE id = v_id;
+    RAISE EXCEPTION 'FAIL test 16a: the platform role rewrote what an alert says';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 16a: an alert''s detail cannot be rewritten';
+  END;
+
+  BEGIN
+    UPDATE platform_alert SET action = 'tenant.trial.set' WHERE id = v_id;
+    RAISE EXCEPTION 'FAIL test 16b: the platform role relabelled an alert';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 16b: an alert''s action cannot be rewritten';
+  END;
+
+  BEGIN
+    DELETE FROM platform_alert WHERE id = v_id;
+    RAISE EXCEPTION 'FAIL test 16c: the platform role deleted an alert';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 16c: the platform role cannot delete an alert';
+  END;
+
+  RAISE NOTICE 'PASS test 16: an alert is written and stamped, and nothing else';
+END $$;
+
+-- And no tenant may see any of it. Two independent reasons, as with the other
+-- two platform tables: the grant was revoked, and RLS is on with no policy
+-- naming poolse_app.
+RESET ROLE;
+SET LOCAL ROLE poolse_app;
+SELECT set_config('app.organization_id', 'cccccccc-cccc-cccc-cccc-cccccccccccc', true);
+
+DO $$
+DECLARE n int;
+BEGIN
+  BEGIN
+    SELECT count(*) INTO n FROM platform_alert;
+    RAISE EXCEPTION 'FAIL test 16d: the tenant role read platform_alert (% rows)', n;
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 16d: platform_alert is refused to the tenant role';
+  END;
+END $$;
+
+RESET ROLE;
+
 ROLLBACK;

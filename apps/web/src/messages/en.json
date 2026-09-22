@@ -3310,7 +3310,8 @@
       "noteTooLong": "At most 500 characters.",
       "billingModeFailed": "Could not change the billing mode.",
       "paymentFailed": "Could not record the payment.",
-      "manualNeedsPayment": "Record a payment first: a hand-paid subscription has to say what it is paid up to."
+      "manualNeedsPayment": "Record a payment first: a hand-paid subscription has to say what it is paid up to.",
+      "nameMismatch": "That is not this tenant's name. Type it as shown above."
     },
     "actions": "Actions",
     "suspended": "Suspended",
@@ -3341,6 +3342,8 @@
       "writeRestoreHint": "Gives writing back to the club and cancels the deletion date.",
       "dataKeptUntil": "Data kept until",
       "dataKeptUntilHint": "Optional. Left blank, no deletion is scheduled.",
+      "confirmName": "Type {name} to confirm",
+      "confirmNameHint": "Capitals and accents do not count.",
       "billingMode": "Billing mode",
       "billingModeHint": "How this tenant’s money arrives. It decides nothing about what they may do.",
       "paidThrough": "Paid through {date}.",

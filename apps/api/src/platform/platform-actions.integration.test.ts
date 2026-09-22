@@ -421,6 +421,7 @@ test('a suspended tenant is refused, with the operator’s own reason', async ()
         await controller.suspension(tenant.organizationId, {
           suspended: true,
           reason: 'Fatura de setembro por regularizar.',
+          confirmName: tenant.name,
         });
       });
 
@@ -457,6 +458,7 @@ test('a suspended tenant can still be told why: /me keeps answering', async () =
         await controller.suspension(tenant.organizationId, {
           suspended: true,
           reason: 'Suspensa a pedido do cliente.',
+          confirmName: tenant.name,
         });
       });
 
@@ -491,6 +493,7 @@ test('restoring is an exact inverse, and both columns move together', async () =
         await controller.suspension(tenant.organizationId, {
           suspended: true,
           reason: 'Temporária.',
+          confirmName: tenant.name,
         });
         await controller.suspension(tenant.organizationId, { suspended: false });
       });
@@ -523,7 +526,12 @@ test('suspending without a reason is refused before it reaches the column', asyn
       await asOperator(clerkUserId, async () => {
         for (const reason of [undefined, '', '   ']) {
           await assert.rejects(
-            () => controller.suspension(tenant.organizationId, { suspended: true, reason }),
+            () =>
+              controller.suspension(tenant.organizationId, {
+                suspended: true,
+                reason,
+                confirmName: tenant.name,
+              }),
             (error: { status?: number; response?: { fields?: Record<string, string> } }) =>
               error.status === 400 &&
               error.response?.fields?.['reason'] === 'admin.error.reasonRequired',
@@ -552,6 +560,7 @@ test('suspending one tenant leaves every other one open', async () => {
           await controller.suspension(suspended.organizationId, {
             suspended: true,
             reason: 'Uma só.',
+            confirmName: suspended.name,
           });
         });
 
@@ -580,6 +589,7 @@ test('an operator whose own tenant is suspended can still reach the platform are
         await controller.suspension(tenant.organizationId, {
           suspended: true,
           reason: 'Erro meu.',
+          confirmName: tenant.name,
         });
 
         /*
@@ -656,6 +666,7 @@ test('61.3 — a read-only tenant reads, and every unsafe method is refused with
         await controller.readOnly(tenant.organizationId, {
           readOnly: true,
           dataKeptUntil: '2026-12-31',
+          confirmName: tenant.name,
         });
       });
 
@@ -736,6 +747,7 @@ test('61.6 — lifting read-only restores writing and cancels the deletion', asy
         await controller.readOnly(tenant.organizationId, {
           readOnly: true,
           dataKeptUntil: '2026-12-31',
+          confirmName: tenant.name,
         });
       });
       await assert.rejects(() =>
@@ -777,6 +789,7 @@ test('61.7 — suspension beats read-only, and the refusal says which', async ()
         await controller.suspension(tenant.organizationId, {
           suspended: true,
           reason: 'Fatura por regularizar.',
+          confirmName: tenant.name,
         });
       });
 
@@ -830,6 +843,7 @@ test('61.2 — the operator moves both columns, and the change is on the trail',
         const result = await controller.readOnly(tenant.organizationId, {
           readOnly: true,
           dataKeptUntil: '2026-12-31',
+          confirmName: tenant.name,
         });
         // Only what actually moved, before and after — the platform contract.
         assert.ok('read_only_at' in result.changed);

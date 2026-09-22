@@ -118,6 +118,20 @@ export function readSuspensionReason(raw: unknown): string {
   return reason;
 }
 
+/**
+ * The club's name, typed back — POOLSE-64 AC 3.
+ *
+ * Read here and *not* checked here: the comparison belongs in `changeTenant`,
+ * beside the row it is about and inside the transaction that would otherwise
+ * write. This only turns "absent" and "blank" into the same `undefined`, so one
+ * refusal downstream covers both — somebody who typed nothing and somebody who
+ * typed the wrong thing are in the same position and deserve the same sentence.
+ */
+export function readConfirmName(raw: unknown): string | undefined {
+  const typed = typeof raw === 'string' ? raw.trim() : '';
+  return typed === '' ? undefined : typed;
+}
+
 // ---------------------------------------------------------------------------
 // Paid outside Stripe — POOLSE-63
 // ---------------------------------------------------------------------------

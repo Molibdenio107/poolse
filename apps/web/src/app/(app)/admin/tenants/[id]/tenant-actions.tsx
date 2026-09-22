@@ -283,6 +283,9 @@ function PlanCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
 function ReadOnlyCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
   const t = useTranslations();
   const [state, dispatch, pending] = useSavedAction(setReadOnlyAction, INITIAL);
+  // Whether a deletion date has been typed, which is what turns this card from
+  // one click into an act that asks for the club's name.
+  const [keptUntil, setKeptUntil] = useState('');
 
   if (tenant.readOnlyAt !== null) {
     return (
@@ -315,9 +318,35 @@ function ReadOnlyCard({ tenant }: { tenant: PlatformTenant }): React.ReactElemen
         label={t('admin.action.dataKeptUntil')}
         type="date"
         initial=""
+        onValueChange={setKeptUntil}
         error={state.fields?.['dataKeptUntil']}
         hint={t('admin.action.dataKeptUntilHint')}
       />
+
+      {/*
+        A deletion date is the irreversible half of this card, so it is the half
+        that asks for the name — POOLSE-64 AC 3, and Rui's call on which acts
+        count. Read-only on its own is what happens by itself the day a trial
+        ends and an operator setting it by hand is usually correcting something;
+        scheduling the end of a club's data is the other kind of act.
+
+        Appearing with the date rather than standing there empty is the point: a
+        field that is only sometimes required has to say when, and it says it by
+        arriving. The API decides the same thing from the columns, so a client
+        that never renders this is refused rather than obeyed.
+      */}
+      {keptUntil !== '' && (
+        <TextField
+          name="confirmName"
+          label={t('admin.action.confirmName', { name: tenant.name })}
+          initial=""
+          required
+          autoComplete="off"
+          error={state.fields?.['confirmName']}
+          hint={t('admin.action.confirmNameHint')}
+        />
+      )}
+
       <Submit
         label={t('admin.action.makeReadOnly')}
         pending={pending}
@@ -412,6 +441,28 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
             required
             error={state.fields?.['reason']}
             hint={t('admin.action.reasonHint')}
+          />
+
+          {/*
+            And the club's name, typed — POOLSE-64 AC 3.
+
+            The friction that matters is *reading the name and typing it*: being
+            sure, while doing it, which club is about to lose its morning. So the
+            name is on the dialog above this box, capitals and all, and the API
+            accepts it case-insensitively — refusing over a capital would only
+            teach somebody to paste it, which removes the reading.
+
+            The check is the API's, not this form's. A dialog is the half a
+            client can skip.
+          */}
+          <TextField
+            name="confirmName"
+            label={t('admin.action.confirmName', { name: tenant.name })}
+            initial=""
+            required
+            autoComplete="off"
+            error={state.fields?.['confirmName']}
+            hint={t('admin.action.confirmNameHint')}
           />
 
           <div className="flex items-center gap-2">

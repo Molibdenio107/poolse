@@ -2804,6 +2804,43 @@ subscription_status
   + 'comped'                                  -- live, deliberately not billed
 ```
 
+**And the third platform book — `platform_alert`, POOLSE-64 slice E1.**
+
+```
+platform_alert_kind  enum  'denied' | 'write'
+
+platform_alert
+  id, kind, clerk_user_id, organization_id, action,
+  detail jsonb, raised_at, recipients text[], delivered_at, created_at
+  fk organization_id -> organization (id)     -- a reference, NOT a tenant key; null at the door
+  check action <> ''
+  index (raised_at desc), (raised_at desc) where delivered_at is null
+  rls: enabled; one policy, `for all to poolse_platform`
+  grants: select, insert to poolse_platform
+          update (recipients, delivered_at) to poolse_platform   -- a COLUMN grant
+          nothing at all to poolse_app
+```
+
+**Why not a column on `platform_audit_log`.** That table is *every* request, reads included,
+so a `delivered_at` on it would be null on ten thousand rows and mean nothing. A delivery
+stamp is also an UPDATE, and the audit table holds no UPDATE grant at all — deliberately,
+because an entry that can be rewritten is not an audit entry. The two answer different
+questions: "what happened" is the log, "who was told, and did it arrive" is this.
+
+**The update is a column grant, like the six on `organization`.** What an alert says happened
+cannot be rewritten; only `recipients` and `delivered_at` move, and they move once, after the
+send. `delivered_at` null means recorded and nothing left the building — no provider, no
+address, a provider that refused, or a repeat suppressed inside its window, with
+`detail.delivery` saying which. **No DELETE**, here as everywhere on this role: an alert
+somebody can remove is an alert an attacker removes first.
+
+**Recipients come from `PLATFORM_ALERT_EMAIL`, not from `platform_admin`.** That table is keyed
+on the Clerk user id and the platform grant on `app_user` is `(id, cached_email)` with no
+`clerk_user_id` on it, so the join an operator's own address would need does not exist —
+and widening that grant to invent one is the ninth-table conversation rather than something
+taken inside a feature. An ops mailbox is also the right recipient: this is a control, not a
+personal notification.
+
 **Neither table is tenant-scoped, and that is the design.** `platform_admin` has no
 `organization_id` because an operator who had to belong to an organization to be an
 operator would be a tenant role by another name, and the first demo tenant would be a hole.
@@ -2817,7 +2854,9 @@ the tenant app — and so has no `app_user` row — is still an operator.
 **A third database login, and it does not bypass RLS.** `poolse_platform` reads across
 tenants through a `for select to poolse_platform using (true)` policy on eight tables —
 `organization`, `membership`, `membership_role`, `invitation`, `facility`, `pool`,
-`audit_log` — and holds no privilege on the rest of the schema. Postgres ORs permissive
+`audit_log`, and since 14 September 2026 `app_user`, as a *column* grant of
+`(id, cached_email)` so a trial notice can record the address it was owed to — and holds no
+privilege on the rest of the schema. Postgres ORs permissive
 policies together and the `to` clause confines this one to that role, so `poolse_app` is
 untouched.
 

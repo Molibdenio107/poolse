@@ -49,8 +49,9 @@ refuses to start if it detects otherwise — `assertRlsApplies` for the app role
 
 **The third role is optional and narrow.** Leave `DATABASE_PLATFORM_URL` unset and the whole
 product runs normally; `/admin` says it is not configured rather than failing in a way that
-looks like a permission problem. Set it and the role can read seven named tables and write
-six named columns of `organization` — not the schema. It does **not** carry `BYPASSRLS`, so
+looks like a permission problem. Set it and the role can read eight named tables — one of
+them, `app_user`, only two columns of — write a named list of columns on `organization`
+(never `name`, and no `DELETE` anywhere), and write its own two books. Not the schema. It does **not** carry `BYPASSRLS`, so
 pointing it at Railway's default connection string is the mirror-image of the mistake above
 and the boot check refuses it. See `docs/features/platform.md`.
 
@@ -120,7 +121,11 @@ development, staging and production instances.
    | `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/dashboard` |
 
    No `DATABASE_*` variables here, ever. The web app never talks to the database; it talks
-   to the API, which is the only thing holding credentials.
+   to the API, which is the only thing holding credentials. A `NEXT_PUBLIC_` variable is
+   **inlined into the browser bundle**, so a connection string pasted into one is published
+   rather than configured — `security-headers.test.ts` fails the build's test run if any
+   `NEXT_PUBLIC_*` value ever looks like a database URL, and if anything under `apps/web/src`
+   reads a `DATABASE_*` variable at all (POOLSE-64).
 
 3. Deploy, and go back and fill `CLERK_AUTHORIZED_PARTIES` and `WEB_ORIGIN` on Railway with
    the URL Vercel gave you. Without it the API rejects every session token, because a token
@@ -192,7 +197,15 @@ real club depends on Poolse. Each one is here because doing it early breaks some
 - [ ] **A transactional email provider.** Invitation delivery, invoice chasing and the whole
       trial lifecycle record what they owe and deliver nothing without one.
 - [ ] **`DATABASE_PLATFORM_URL` audited**: API environment only, never the web app's, never
-      `NEXT_PUBLIC_`, with a rotation procedure written down — POOLSE-64.
+      `NEXT_PUBLIC_`. The rotation procedure is below; a test now fails if a `NEXT_PUBLIC_`
+      variable ever looks like a database URL — POOLSE-64.
+- [ ] **`PLATFORM_ALERT_EMAIL` set on the API**, to a mailbox that is **not** reachable by
+      taking over the operator's Clerk account. Without it every platform write and refusal is
+      recorded and nothing is sent, which is honest and useless — POOLSE-64.
+- [ ] **Step-up reverification before a mutating platform action** (POOLSE-64 AC 2), which
+      needs the production Clerk instance for the same reason MFA does. Until both ship, the
+      typed club name is what stands in the way of an irreversible act.
+
 - [ ] **A Sentry DSN**, if errors are to be seen at all. Off without one, by design.
 - [ ] **Open-Meteo moved to the commercial endpoint, or the weather history left off.** The
       free tier is **non-commercial use only**, which is fine while Poolse has no paying
@@ -205,6 +218,40 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       is shown. The safe default is what ships today: the history flag **off**, and no archive
       call at all.
 - [ ] **TimescaleDB confirmed** on the production database, or the fallback taken — see below.
+
+## Known limitations, with dates
+
+Things that are true today, were decided rather than overlooked, and have a plan.
+
+- **`/admin` shares an origin and a cookie with the tenant app** — noted 22 September 2026,
+  POOLSE-64 item 3. One cross-site scripting bug anywhere in Poolse is therefore an admin
+  compromise, because the same session cookie reaches the platform area. *The plan:* its own
+  subdomain and its own Vercel project, pointing at the same API, when that is convenient —
+  the guard is already module-scoped and reads `currentAuth()`, so nothing about the split is
+  blocked by the code. *Until then:* the enforced CSP (asserted in `security-headers.test.ts`),
+  the typed club name on irreversible acts, an alert on every write and every refusal, and a
+  ceiling five times tighter than the rest of the API. Step-up auth is the piece that would
+  make it genuinely small, and it waits on the production Clerk instance.
+
+## Rotating `DATABASE_PLATFORM_URL`
+
+That credential reads every tenant in the product. Rotate it if it has been pasted anywhere
+it should not have been, if a machine holding it is lost, or once a year on principle.
+
+1. Generate a password and compose the new URL — same host, port and database, user
+   `poolse_platform`.
+2. `ALTER ROLE poolse_platform WITH PASSWORD '<new>';` as the owner, against that
+   environment's database. The role itself is untouched, so no grant or policy changes.
+3. Set `DATABASE_PLATFORM_URL` on the API service (Railway) for that environment **only**.
+   It appears in no other service.
+4. Redeploy the API. The pool is lazy, so in-flight requests finish on the old connection and
+   the next one opens with the new password; `assertPlatformRoleIsNarrow()` re-runs at boot
+   and refuses to start if the new URL points at the owner or a `BYPASSRLS` role.
+5. Open `/admin`. A tenant list that loads is the whole verification — and it leaves a
+   `platform_audit_log` row saying the rotation was tested and by whom.
+
+There is no second consumer to coordinate with, which is the property worth keeping: if this
+credential ever needs to be set in two places, that is the change to argue about.
 
 ## When something is wrong
 

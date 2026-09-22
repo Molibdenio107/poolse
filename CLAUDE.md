@@ -95,6 +95,28 @@ expired is `past_due` and still teaching, and only the first shuts a door — en
 has to keep answering so the club can be told why. A suspension always carries a reason, by
 CHECK. `docs/features/platform.md`.
 
+**An irreversible platform act asks for the club's name, and every platform write and
+refusal raises an alert.** POOLSE-64 slice E1. **Which acts are irreversible is decided by
+the columns a change writes** — `changeTenant` requires `confirmName` when a change *sets*
+`suspended_at`, `pending_delete_at` or `archived_at` — so an endpoint added later inherits
+the rule and a list nobody maintains does not decide it. Only *entering* those states is
+checked: restoring, letting a club write again and lifting a deletion date are one click,
+because nothing is made safer by slowing down the direction that undoes harm, and a
+confirmation on everything is one nobody reads. The name is matched case- and
+accent-folded — the friction is reading it, not reproducing a circumflex — and an
+unsupplied name never matches, so the check fails closed with `admin.error.nameMismatch`.
+**Read-only on its own is one click; read-only with a deletion date is not.**
+`platform_alert` is written *inside* the transaction that caused it and emailed *after* it
+commits, the same division 4.2's water alert makes, to `PLATFORM_ALERT_EMAIL` — an ops
+mailbox, because `platform_admin` is keyed on a Clerk id and the platform grant on
+`app_user` carries no `clerk_user_id` to join on. **Every refusal is recorded; only the
+sending is suppressed** (fifteen minutes per person, in memory), because a stranger must not
+be able to thin the record of their own attempts by making more of them. `/platform` carries
+its own ceiling, 60/min against the API's 300. **MFA and step-up reverification are not
+built and are gated on a production Clerk instance**; the shared origin with the tenant app
+is a dated known limitation in `docs/deploy.md`, which also holds the rotation procedure for
+`DATABASE_PLATFORM_URL`. `docs/features/platform.md`.
+
 **Telemetry is aggregated, never one row per request; and Sentry is off unless a DSN says
 otherwise.** `RequestStatsInterceptor` buffers in memory and flushes one row per tenant per hour
 into `tenant_request_stats` — a club at 100 req/min would otherwise write 144,000 rows a day for

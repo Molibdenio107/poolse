@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { platformConfigured, withPlatform } from '@poolse/db';
 import { currentAuth } from '../auth/auth.context.js';
+import { deliverAlert, recordAlert } from './platform-alert.js';
 
 /**
  * The only thing standing between a signed-in person and every tenant's numbers.
@@ -53,13 +54,13 @@ export class PlatformAdminGuard implements CanActivate {
 
     const { clerkUserId } = currentAuth();
 
-    const allowed = await withPlatform(async (tx) => {
+    const refusal = await withPlatform(async (tx) => {
       const { rows } = await tx.query<{ id: string }>(
         `SELECT id FROM platform_admin
           WHERE clerk_user_id = $1 AND archived_at IS NULL`,
         [clerkUserId],
       );
-      if (rows.length > 0) return true;
+      if (rows.length > 0) return null;
 
       /*
        * A refusal is recorded here rather than by the interceptor, because a
@@ -72,22 +73,41 @@ export class PlatformAdminGuard implements CanActivate {
        * is the outcome, so there is no clean response for a failed write to turn
        * into a 500.
        */
+      const detail = {
+        path: context.switchToHttp().getRequest<{ originalUrl?: string }>().originalUrl ?? null,
+      };
+
       await tx.query(
         `INSERT INTO platform_audit_log (clerk_user_id, action, detail)
               VALUES ($1, 'platform.denied', $2::jsonb)`,
-        [
-          clerkUserId,
-          JSON.stringify({
-            path: context.switchToHttp().getRequest<{ originalUrl?: string }>().originalUrl ?? null,
-          }),
-        ],
+        [clerkUserId, JSON.stringify(detail)],
       );
 
-      return false;
+      /*
+       * And somebody is told — POOLSE-64 item 5. In the same transaction as the
+       * trail entry, for the same reason the trail entry is in the same
+       * transaction as the check: two books that can disagree are two books.
+       *
+       * The *sending* is below, after this commits. A refusal must not depend on
+       * a mail server, and the person being refused must not learn anything from
+       * how long it took.
+       */
+      return recordAlert(tx, {
+        kind: 'denied',
+        action: 'platform.denied',
+        clerkUserId,
+        // A refusal at the door names no tenant: `TenantMiddleware` never runs
+        // for `platform/(.*)`, so there is no organization in play even when the
+        // path happens to contain an id.
+        organizationId: null,
+        organizationName: null,
+        detail,
+      });
     });
 
-    if (!allowed) {
+    if (refusal !== null) {
       this.logger.warn(`Refused platform access to ${clerkUserId}`);
+      await deliverAlert(refusal);
       /*
        * Its own code, distinct from `forbidden_role` and `no_organization`.
        * Those two send somebody somewhere — to an admin, or to create an
