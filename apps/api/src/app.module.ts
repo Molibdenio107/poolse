@@ -26,6 +26,7 @@ import {
   StudentCalendarController,
 } from './classes/sessions.controller.js';
 import { FacilitiesController } from './facilities/facilities.controller.js';
+import { DashboardController } from './dashboard/dashboard.controller.js';
 import { HealthController } from './health/health.controller.js';
 import { InventoryController } from './inventory/inventory.controller.js';
 import { SpacesController } from './spaces/spaces.controller.js';
@@ -125,6 +126,7 @@ const IDENTITY_ONLY_ROUTES = [
   controllers: [
     HealthController,
     MeController,
+    DashboardController,
     SessionsController,
     ClerkWebhookController,
     StripeWebhookController,

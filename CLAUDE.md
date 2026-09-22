@@ -95,6 +95,26 @@ expired is `past_due` and still teaching, and only the first shuts a door — en
 has to keep answering so the club can be told why. A suspension always carries a reason, by
 CHECK. `docs/features/platform.md`.
 
+**The dashboard is a union of role bands, and a widget is one declaration in a registry.**
+POOLSE-66. `BANDS` in `dashboard/widget-registry.ts` is the order — management, operational,
+personal — and it is **one array constant**; a band the reader holds no role in is *absent*,
+not empty. Ordering between roles is `MEMBER_ROLES`, which already existed: the ticket's
+numeric ranks are not written down a second time, and seniority orders, never permits.
+**`widgetsFor` applies `roles` before any resolver runs**, so a widget the reader may not see
+is absent from the payload — asserted on the raw JSON, because a blank-but-present widget
+passes a shape assertion and fails the promise. `kinds` is spelled as `app-sidebar.tsx` spells
+it, so a personal tenant needs no second architecture. **A resolver answers `null` for "nothing
+here" (→ `empty`) and throws for "that went wrong" (→ `error`)**; resolvers run in parallel with
+a 2s ceiling each and one failure costs one card, never the page — and the error card carries
+no message, because a resolver's text names columns. **Every allowed widget is resolved, then
+escalated, then capped at four per band**: "boost this when the trial is under five days" is a
+predicate on resolved data, and a cap decided in advance would cut the thing that was about to
+become urgent. **A club with no sites gets the onboarding checklist and nothing else; a club
+with sites never gets it** — one branch, both directions. **Aggregates are one grouped query
+each, never a loop over facilities**, and `assertRegistryIsSound` refuses the five registry
+mistakes that would otherwise render nothing at all rather than fail.
+`docs/features/dashboard.md`.
+
 **An irreversible platform act asks for the club's name, and every platform write and
 refusal raises an alert.** POOLSE-64 slice E1. **Which acts are irreversible is decided by
 the columns a change writes** — `changeTenant` requires `confirmName` when a change *sets*
