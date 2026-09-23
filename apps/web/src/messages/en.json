@@ -2176,7 +2176,42 @@
     "outOfRange": "{count, plural, one {# value outside the recommended range.} other {# values outside the recommended range.}}",
     "openPool": "Open the pool",
     "myPool": "My pool",
-    "poolUnavailable": "The pool could not be loaded. Try opening the facilities page."
+    "poolUnavailable": "The pool could not be loaded. Try opening the facilities page.",
+    "widgetFailed": "This card could not be loaded. The rest of the page is up to date.",
+    "band": {
+      "management": "Management",
+      "operational": "Operations",
+      "personal": "Personal"
+    },
+    "widget": {
+      "subscription": {
+        "empty": "There is nothing to say about the subscription yet.",
+        "trial": "{days} days left — the trial ends on {on}.",
+        "renews": "Renews on {on}.",
+        "ends": "Ends on {on}."
+      },
+      "tasks": {
+        "empty": "Nothing overdue and nothing scheduled for you.",
+        "open": "See every task"
+      },
+      "checklist": {
+        "title": "First steps",
+        "empty": "Nothing to do.",
+        "open": "Create the site",
+        "done": "done",
+        "todo": "to do",
+        "step": {
+          "facility": "Create the site",
+          "pools": "Add the pools",
+          "prices": "Set the prices",
+          "staff": "Invite the team",
+          "students": "Enrol the students"
+        }
+      },
+      "energy": {
+        "empty": "No bills yet. The cost appears here as soon as you record the first one."
+      }
+    }
   },
   "marketing": {
     "pricingLink": "Pricing",

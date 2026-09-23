@@ -839,3 +839,53 @@ file that dispatches a server action — POOLSE-09/10 still latent exactly as `f
 is. It is a mechanical conversion to `TextField` / `SelectField` and wants its own session; the
 two gates that would hold the line afterwards (a `check-fields.mjs`, and widening
 `check-formats.mjs` to see raw `Intl`) are proposed, not built.
+
+## 2026-09-23 — The dashboard renders itself (POOLSE-66, slice 2a)
+
+- **2026-09-23** — **Slice 2 is split: 2a is the card and the bands, 2b is the aggregates.**
+  Slice 1 left the server half built, tested and *invisible* — the page still composed four
+  panels of its own and nothing rendered the endpoint. Making it visible on data that already
+  exists is a slice that ends working; bundling it with six new grouped queries would have been
+  an evening of SQL with no screen at the end of it.
+
+- **2026-09-23** — **`mgmt.energy.costs` joins the catalogue, and is narrower than its own
+  endpoint.** It was a bespoke dashboard panel drawn outside the registry, which is the drift a
+  registry exists to end: a card nobody declared is a card no role check governs. `/energy/costs`
+  is owner, admin **and maintenance**; the card is owner and admin, because what the site costs
+  is readable on Energia by whoever runs it and the *management band* is not where they read it.
+  Asserted on the raw JSON, like every other gating promise here.
+
+- **2026-09-23** — **Its totals are summed in the resolver, not in the card.** The panel it
+  replaces reduced the months in the component. A figure derived in two places is a figure that
+  disagrees in one of them, and the standing rule is that a derived answer is derived once, on
+  the server.
+
+- **2026-09-23** — **The `empty` sentence belongs to the widget; the `error` sentence belongs to
+  the card.** "Ainda não há faturas" and "nada em atraso para si" are different facts and one
+  shared sentence for both makes the good news unreadable. A failure is the opposite: every card
+  says the same thing, because the only honest thing to say is that it did not load — the
+  resolver's own words name columns and belong in the log. The error card is drawn **muted, not
+  danger**: it is not a refusal and not the reader's doing, and spending the danger tone here
+  would make it mean less where it matters.
+
+- **2026-09-23** — **Band headings show even for a reader with one band.** The alternative was
+  to hide the heading when there is nothing to distinguish it from. A reader who sees *Operação*
+  learns that there is somewhere else the product lives, which is worth one line of chrome.
+
+- **2026-09-23** — **The facility selector is deferred to 2b, and AC 10 stays open.** The
+  payload has carried `scope` since slice 1, but every widget through 2a is tenant- or
+  self-scoped: a selector would have been a control that changes nothing, which is worse than no
+  control. It lands with the first facility-scoped aggregate.
+
+- **2026-09-23** — **Occupancy and the personal pool stay as bespoke panels below the bands.**
+  Their widgets exist in the catalogue and neither is buildable in 2a — one needs 2b's SQL, the
+  other is slice 5 behind a flag. Each carries a comment naming the card that replaces it. A
+  slice that ended by removing a figure an operator reads every morning would not have ended
+  well.
+
+- **2026-09-23** — **A widget id the client cannot draw renders nothing.** The registry and the
+  client ship in the same commit, so it is unreachable today; the one case that reaches it is a
+  cached bundle after a deploy, and drawing a card whose body nobody wrote is worse than drawing
+  none. **There is no React test harness in this repo**, so the three card states are proven by
+  the API's state assertions and by `next build` rather than by a render test. Adding one is its
+  own decision and is not taken here.

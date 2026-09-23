@@ -117,8 +117,16 @@ predicate on resolved data, and a cap decided in advance would cut the thing tha
 become urgent. **A club with no sites gets the onboarding checklist and nothing else; a club
 with sites never gets it** — one branch, both directions. **Aggregates are one grouped query
 each, never a loop over facilities**, and `assertRegistryIsSound` refuses the five registry
-mistakes that would otherwise render nothing at all rather than fail.
-`docs/features/dashboard.md`.
+mistakes that would otherwise render nothing at all rather than fail. **On the web a band is a
+heading and a grid, and a card is `WidgetCard` plus one case in `widgets.tsx`** — adding a
+widget is a registry declaration and that case, never a new fetch or a client-side role check.
+**The `empty` sentence is the widget's own and the `error` sentence is the card's**: "ainda não
+há faturas" and "nada em atraso" are different facts, while a failure can only honestly say it
+did not load — the resolver's words name columns and go to the log, and the error card is muted
+rather than danger, because it is not a refusal. **Every card links to its page in all three
+states.** A panel that predates the registry is a card no role check governs, which is what
+`mgmt.energy.costs` was before slice 2a; occupancy and `me.pool` are the two left, each
+carrying a comment naming the widget that replaces it. `docs/features/dashboard.md`.
 
 **An irreversible platform act asks for the club's name, and every platform write and
 refusal raises an alert.** POOLSE-64 slice E1. **Which acts are irreversible is decided by

@@ -2176,7 +2176,42 @@
     "outOfRange": "{count, plural, one {# valor fora do intervalo recomendado.} other {# valores fora do intervalo recomendado.}}",
     "openPool": "Abrir a piscina",
     "myPool": "A minha piscina",
-    "poolUnavailable": "Não foi possível carregar a piscina. Tente abrir a página das instalações."
+    "poolUnavailable": "Não foi possível carregar a piscina. Tente abrir a página das instalações.",
+    "widgetFailed": "Não foi possível carregar este cartão. O resto da página está atualizado.",
+    "band": {
+      "management": "Gestão",
+      "operational": "Operação",
+      "personal": "Pessoal"
+    },
+    "widget": {
+      "subscription": {
+        "empty": "Ainda não há nada a dizer sobre a subscrição.",
+        "trial": "Faltam {days} dias — o período experimental termina a {on}.",
+        "renews": "Renova a {on}.",
+        "ends": "Termina a {on}."
+      },
+      "tasks": {
+        "empty": "Nada em atraso nem agendado para si.",
+        "open": "Ver todas as tarefas"
+      },
+      "checklist": {
+        "title": "Primeiros passos",
+        "empty": "Nada por fazer.",
+        "open": "Criar a instalação",
+        "done": "feito",
+        "todo": "por fazer",
+        "step": {
+          "facility": "Criar a instalação",
+          "pools": "Adicionar as piscinas",
+          "prices": "Definir os preços",
+          "staff": "Convidar a equipa",
+          "students": "Inscrever os alunos"
+        }
+      },
+      "energy": {
+        "empty": "Ainda não há faturas. Assim que registar a primeira, o custo aparece aqui."
+      }
+    }
   },
   "marketing": {
     "pricingLink": "Preços",

@@ -4,8 +4,8 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ApiError,
   apiFetch,
+  type Dashboard,
   type Facilities,
-  type EnergyCosts,
   type Me,
   type Occupancy,
   type PoolDetail,
@@ -15,10 +15,8 @@ import { PreferenceSync } from './preference-sync';
 import { CreateOrganizationForm } from './create-organization-form';
 import { PageError, PageShell } from '@/components/page-shell';
 import { OccupancyPanel } from '@/components/occupancy-panel';
-import { MyTasksPanel } from './my-tasks-panel';
 import { MyPoolPanel } from './my-pool-panel';
-import { EnergyCostsPanel } from './energy-costs-panel';
-import { listMyTasks } from './facilities/maintenance.actions';
+import { Bands } from './bands';
 
 /**
  * The dashboard — and, for now, mostly a statement that it is not built yet.
@@ -130,25 +128,23 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
     }
   }
   /*
-   * What is mine — slice 4.3.
+   * The bands — POOLSE-66, slice 2a.
    *
-   * `listMyTasks` answers null for anybody the endpoint refuses, which is every
-   * student and encarregado. That is not a failure worth a banner: the panel
-   * simply is not there, exactly as the occupancy one is absent for a club with
-   * no bookings.
+   * One request for the whole page. Every card's gating, ordering, cap and
+   * failure state is decided on the server, so there is nothing to compute here
+   * and nothing to hide: a widget this reader may not see is absent from the
+   * payload rather than filtered out of a render.
+   *
+   * Best-effort like everything else on this page. A dashboard whose *band*
+   * endpoint is down still shows occupancy and the pools — and unlike the panels
+   * it replaces, an individual card that fails says so itself rather than
+   * vanishing, because `compose.ts` answers 200 with `state: 'error'` on that
+   * card alone.
    */
-  const myTasks = me === null ? null : await listMyTasks();
-
-  /*
-   * What electricity costs — slice 5.3. Owner, admin and maintenance; the
-   * endpoint refuses everybody else with a 403, which is not a failure worth a
-   * banner: the panel simply is not there, as the tasks panel is not for a
-   * student.
-   */
-  const energyCosts =
+  const dashboard =
     me === null || membership === null
       ? null
-      : await apiFetch<EnergyCosts>('/energy/costs').catch(() => null);
+      : await apiFetch<Dashboard>('/dashboard').catch(() => null);
 
   const name =
     me === null
@@ -174,6 +170,18 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
             activeTheme={activeTheme}
           />
 
+          {dashboard !== null && <Bands dashboard={dashboard} />}
+
+          {/*
+            Still bespoke, and each one waiting for its own widget.
+
+            `mgmt.occupancy.today` and `me.pool` are both in POOLSE-66's
+            catalogue — the first needs slice 2b's grouped SQL and the second is
+            the personal band in slice 5, behind its flag. They stay below the
+            bands until then, because a slice that ends by *removing* a figure an
+            operator reads every morning has not ended well. Delete each one when
+            its card lands; that is the whole of the migration.
+          */}
           {pools.map((pool) => (
             <MyPoolPanel key={pool.id} pool={pool} />
           ))}
@@ -181,10 +189,6 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
           {occupancy !== null && (
             <OccupancyPanel occupancy={occupancy} facilityId={occupancyFacilityId} />
           )}
-
-          {myTasks !== null && <MyTasksPanel list={myTasks} />}
-
-          {energyCosts !== null && <EnergyCostsPanel costs={energyCosts} />}
 
           {poolsFailed && (
             <section className="rounded border border-border bg-surface p-5">

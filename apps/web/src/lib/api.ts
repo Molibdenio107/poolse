@@ -3591,3 +3591,90 @@ export interface SubscriptionView {
   /** The owner, and nobody else. An admin reads this screen and cannot act on it. */
   canManage: boolean;
 }
+
+/* -------------------------------------------------------------------------- */
+/* The dashboard — POOLSE-66                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * What a card knows about itself.
+ *
+ * `empty` and `error` are **different states and render differently**: a club
+ * with nothing outstanding and a query that broke must not look the same. The
+ * server decides which — a resolver answering `null` is `empty`, a resolver that
+ * throws is `error` — and the client never infers one from missing data.
+ *
+ * An `error` card carries **no message**, deliberately: a resolver's own words
+ * name columns and constraints, and that is not a sentence for a club.
+ */
+export type WidgetState = 'ok' | 'empty' | 'error';
+
+export interface DashboardWidget {
+  id: string;
+  /** Column span in its band: 1, 2, or the full width. */
+  size: 1 | 2 | 3;
+  priority: number;
+  state: WidgetState;
+  /** Null for `empty` and `error`; the widget's own shape for `ok`. */
+  data: unknown;
+}
+
+export interface DashboardBand {
+  id: 'management' | 'operational' | 'personal';
+  order: number;
+  widgets: DashboardWidget[];
+}
+
+/**
+ * The facility selector's state — sent from slice 1, rendered from slice 2b.
+ *
+ * Every widget in 2a is tenant- or self-scoped, so a selector would change
+ * nothing on screen yet. It arrives with the first facility-scoped aggregate.
+ */
+export interface DashboardScope {
+  mode: 'all' | 'facility';
+  facilityId: string | null;
+  facilities: { id: string; name: string }[];
+}
+
+export interface Dashboard {
+  scope: DashboardScope;
+  bands: DashboardBand[];
+}
+
+/** `mgmt.subscription` — where the club stands with Poolse. Owner only. */
+export interface SubscriptionWidgetData {
+  status: SubscriptionStatus | null;
+  trialEndsAt: string | null;
+  trialDaysLeft: number | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  hasSubscription: boolean;
+}
+
+/** `maint.mytasks` — the jobs that are mine, plus the ones nobody has taken. */
+export interface TasksWidgetData {
+  total: number;
+  tasks: MaintenanceTask[];
+}
+
+/** `setup.checklist` — a club with no sites, and the only card it gets. */
+export interface ChecklistWidgetData {
+  steps: { id: 'facility' | 'pools' | 'prices' | 'staff' | 'students'; done: boolean }[];
+}
+
+/** `mgmt.energy.costs` — twelve months of bills, summed on the server. */
+export interface EnergyCostsWidgetData {
+  totalCents: number;
+  kwh: number;
+  billCount: number;
+  months: { month: string; totalCents: number | null; kwh: number | null }[];
+  latest: {
+    supplier: string;
+    meterName: string;
+    periodStart: string;
+    periodEnd: string;
+    totalCents: number;
+    kwh: number;
+  } | null;
+}

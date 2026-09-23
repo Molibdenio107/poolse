@@ -264,7 +264,19 @@ Three questions the codebase raised. All three took the recommended answer; none
    assert; the checklist's five counts are already one statement, and the counting helper the
    assertion needs arrives with the first real aggregate, in slice 2. No web change.
    `docs/features/dashboard.md`.
-2. **Shared widget card + the management band**, wired to existing data.
+2. **Shared widget card + the management band**, wired to existing data. **Split in two.**
+   - **2a ✅ Built 23 September 2026.** `WidgetCard` with its three states, the band layout, the
+     page reading `GET /dashboard`, and a fourth widget — `mgmt.energy.costs`, which was a
+     bespoke dashboard panel outside the registry. The `MyTasksPanel` and `EnergyCostsPanel`
+     components are deleted; occupancy and the personal pool stay below the bands until their
+     own widgets land, each with a comment naming it. 3 new API tests (769 total).
+     **Closes ACs 1, 2, 4, 5, 6, 7 and 12.** `docs/features/dashboard.md`.
+   - **2b.** The management band's six aggregates — `mgmt.money.period`,
+     `mgmt.occupancy.today`, `mgmt.maintenance.open`, `mgmt.waterquality.alerts`, `mgmt.people`,
+     `mgmt.staffcost` — one grouped query each, their indexes, and the query-count helper QA 11
+     needs. **AC 9 and AC 11 land here, and so does AC 10**: the facility selector is deferred
+     from 2a on purpose, because every widget before this one is tenant- or self-scoped and a
+     selector would have changed nothing on screen.
 3. **The instructor band.**
 4. **The maintenance band.**
 5. **The personal band**, behind the flag.

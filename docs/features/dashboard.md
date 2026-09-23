@@ -141,6 +141,7 @@ not ended:
 | `mgmt.subscription` | management | **owner** | `readSubscription`, the same function `/subscription` answers from |
 | `maint.mytasks` | operational | owner, admin, instructor, maintenance | `listMyTasks`, the same function `/maintenance/tasks/mine` uses |
 | `setup.checklist` | management | owner, admin | five counts in one query |
+| `mgmt.energy.costs` | management | owner, admin | `energyCosts`, the same function `/energy/costs` answers from — added in slice 2a |
 
 **`mgmt.subscription` is the owner's alone**, narrower than the ticket's catalogue, which filed
 it under owner and admin. POOLSE-60 settled that a subscription is the owner's own business
@@ -153,8 +154,45 @@ everybody.
 band model working rather than a mistake: a task is "my work today", and an owner who fixes the
 showers sees it under their own management figures.
 
-**Not built:** the web UI (the dashboard page still composes its four panels directly — slice
-2), the management, instructor and maintenance bands proper, the personal band behind
-`DASHBOARD_PERSONAL_BAND`, and the per-user persistence of the facility selector. Widget
-customisation is out of scope for the whole ticket; if it is ever wanted it is one
-`dashboard_widget_prefs` table keyed on the person, and the registry already makes that small.
+## The page — slice 2a, 23 September 2026
+
+The dashboard now **renders the payload** rather than composing panels of its own.
+
+**A band is a heading and a grid; a card is `WidgetCard` plus one case in `widgets.tsx`.**
+Adding a widget is a declaration in the registry and a case there, and nothing else — no new
+fetch, no new failure handling, no new role check on the client.
+
+**`empty` and `error` are drawn differently, and the sentence for `empty` is written per
+widget.** "No bills yet" and "nothing outstanding" are different facts, and one shared sentence
+for both would make good news unreadable. The `error` card carries **no message** — the
+resolver's own words name columns and go to the log — and is drawn in the muted tone rather
+than the danger one, because a card that could not load is not a refusal and spending the
+danger colour here would make it mean less where it matters.
+
+**Every card links to its page in all three states.** A card that failed is still the way to
+the thing it failed to summarise, and an empty one is usually exactly where somebody is going
+to add the first row.
+
+**Band headings are shown even when the reader has only one band.** A reader who sees
+*Operação* learns there is somewhere else the product lives.
+
+`mgmt.energy.costs` is **narrower than the endpoint it resolves through**: `/energy/costs` is
+owner, admin and maintenance, and the card is owner and admin. What the site costs is readable
+on Energia by whoever runs it; the management band is not where they read it. Asserted, because
+it is a decision rather than an oversight.
+
+**Two panels are still bespoke, below the bands**: occupancy and the personal tenant's pool.
+Their widgets are in the catalogue — `mgmt.occupancy.today` needs slice 2b's grouped SQL, and
+`me.pool` is the personal band in slice 5 — and each carries a comment naming the card that
+replaces it. A slice that ended by removing a figure an operator reads every morning would not
+have ended well.
+
+**Not built:** the management band's six aggregates (slice 2b), the instructor and maintenance
+bands proper, the personal band behind `DASHBOARD_PERSONAL_BAND`, and the facility selector —
+the payload has carried `scope` since slice 1, but every widget so far is tenant- or
+self-scoped, so a selector would change nothing on screen until the first facility-scoped
+aggregate. **AC 10 is open on purpose.** There is also **no React test harness in this repo**,
+so the card's three states are proven by the API's own state assertions and by the build rather
+than by a render test; adding one is its own decision. Widget customisation is out of scope for
+the whole ticket; if it is ever wanted it is one `dashboard_widget_prefs` table keyed on the
+person, and the registry already makes that small.

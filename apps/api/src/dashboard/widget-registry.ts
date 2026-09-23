@@ -1,6 +1,6 @@
 import type { MemberRole } from '../tenant/roles.js';
 import { MEMBER_ROLES } from '../tenant/roles.js';
-import { myTasks, setupChecklist, subscriptionState, trialIsClosing } from './resolvers.js';
+import { energySpend, myTasks, setupChecklist, subscriptionState, trialIsClosing } from './resolvers.js';
 
 /**
  * The dashboard, as one declaration per widget — POOLSE-66, slice 1.
@@ -188,6 +188,29 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     size: 2,
     priority: 30,
     resolver: myTasks,
+  },
+
+  /*
+   * What electricity costs — slice 2a.
+   *
+   * It was a bespoke panel on the dashboard, drawn outside the registry, which
+   * is the drift the registry exists to end: a card nobody declared is a card no
+   * role check governs. Owner and admin, which is narrower than `/energy/costs`
+   * itself — maintenance may read what the site costs on the Energia screen, and
+   * the *dashboard's* management band is not where they read it.
+   *
+   * Tenant scope, not facility: the figure is the club's electricity bill, and
+   * an owner with two sites wants the total on the home page. The per-site
+   * breakdown is Energia's job and the link goes there.
+   */
+  {
+    id: 'mgmt.energy.costs',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    scope: 'tenant',
+    size: 2,
+    priority: 20,
+    resolver: energySpend,
   },
 
   /*

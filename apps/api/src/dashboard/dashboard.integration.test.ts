@@ -3,7 +3,12 @@ import assert from 'node:assert/strict';
 import { actingAs, closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 import { DashboardController } from './dashboard.controller.js';
 import type { Dashboard } from './compose.js';
-import type { ChecklistWidget, SubscriptionWidget, TasksWidget } from './resolvers.js';
+import type {
+  ChecklistWidget,
+  EnergyCostsWidget,
+  SubscriptionWidget,
+  TasksWidget,
+} from './resolvers.js';
 
 /**
  * The dashboard endpoint, against a real club — POOLSE-66, slice 1.
@@ -215,5 +220,97 @@ test('66.7 — the selector: a stranger’s site is a 404, a mistyped one is ign
         );
       });
     });
+  });
+});
+
+/**
+ * Slice 2a's one new widget — `mgmt.energy.costs`.
+ *
+ * It arrives narrower than the endpoint it resolves through: `/energy/costs` is
+ * owner, admin **and maintenance**, and this card is owner and admin. That is a
+ * decision rather than an oversight, so it gets the assertion — a maintenance
+ * reader who can open Energia must still not find the club's bill on their home
+ * page.
+ */
+async function addBill(
+  tenant: ScratchTenant,
+  opts: { month: string; totalCents: number; kwh: number },
+): Promise<void> {
+  const meters = await tenant.sql<{ id: string }>(
+    `INSERT INTO energy_meter (organization_id, facility_id, name)
+          VALUES ($1, $2, 'Geral')
+       RETURNING id`,
+    [tenant.organizationId, tenant.facilityId],
+  );
+  const meterId = meters[0]!.id;
+
+  const invoice = await tenant.sql<{ id: string }>(
+    `INSERT INTO energy_invoice (organization_id, meter_id, supplier, invoice_number,
+                                 issued_on, period_start, period_end,
+                                 subtotal_cents, vat_cents, total_cents, document_total_cents)
+          VALUES ($1, $2, 'EDP', 'FT 2026/1',
+                  ($3 || '-28')::date, ($3 || '-01')::date, ($3 || '-28')::date,
+                  $4, 0, $4, $4)
+       RETURNING id`,
+    [tenant.organizationId, meterId, opts.month, opts.totalCents],
+  );
+
+  await tenant.sql(
+    `INSERT INTO energy_invoice_line (organization_id, invoice_id, position, kind, description,
+                                     quantity, unit, amount_cents, total_cents)
+          VALUES ($1, $2, 1, 'energy', 'Energia', $3, 'kWh', $4, $4)`,
+    [tenant.organizationId, invoice[0]!.id, opts.kwh, opts.totalCents],
+  );
+}
+
+test('66.8 — no bills is an empty card, not a missing one and not an error', async () => {
+  await withScratchTenant(async (tenant) => {
+    const page = await actingAs(tenant, { roles: ['owner'] }, () => controller.read());
+
+    const energy = card(page, 'mgmt.energy.costs');
+    assert.equal(energy?.state, 'empty', 'a club with no bills is told where bills go');
+    assert.equal(energy?.data, null);
+  });
+});
+
+test('66.9 — the totals are summed on the server, over this club’s bills only', async () => {
+  await withScratchTenant(async (tenant) => {
+    const month = new Date().toISOString().slice(0, 7);
+    await addBill(tenant, { month, totalCents: 15_041, kwh: 900 });
+
+    await withScratchTenant(async (other) => {
+      await addBill(other, { month, totalCents: 99_999, kwh: 5_000 });
+
+      const page = await actingAs(tenant, { roles: ['owner'] }, () => controller.read());
+      const energy = card(page, 'mgmt.energy.costs');
+
+      assert.equal(energy?.state, 'ok');
+      const data = energy?.data as EnergyCostsWidget;
+
+      /*
+       * The figure the card shows, derived once and here — the panel this
+       * replaces reduced the months in the component, which is two definitions
+       * of one total.
+       */
+      assert.equal(data.totalCents, 15_041, 'this club’s bill, and not the other club’s');
+      assert.equal(data.kwh, 900);
+      assert.equal(data.billCount, 1);
+      assert.equal(data.months.length, 12, 'every month present, an unbilled one null');
+      assert.equal(data.latest?.supplier, 'EDP');
+      assert.equal(data.latest?.meterName, 'Geral');
+    });
+  });
+});
+
+test('66.10 — maintenance may read Energia and still has no bill on their dashboard', async () => {
+  await withScratchTenant(async (tenant) => {
+    await addBill(tenant, { month: new Date().toISOString().slice(0, 7), totalCents: 15_041, kwh: 900 });
+
+    const page = await actingAs(tenant, { roles: ['maintenance'] }, () => controller.read());
+
+    assert.equal(card(page, 'mgmt.energy.costs'), undefined);
+    // On the raw JSON, like 66.2: absent from the payload is the promise.
+    assert.ok(!JSON.stringify(page).includes('mgmt.energy.costs'), 'it never reached the wire');
+    assert.ok(!JSON.stringify(page).includes('15041'), 'and neither did the figure');
   });
 });

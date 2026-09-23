@@ -1,4 +1,5 @@
 import { readSubscription } from '../billing/subscription.repository.js';
+import { energyCosts } from '../energy/invoices.repository.js';
 import { listMyTasks } from '../maintenance/maintenance.repository.js';
 import { readSetupProgress } from './dashboard.repository.js';
 import type { ResolverContext } from './widget-registry.js';
@@ -98,6 +99,63 @@ export async function myTasks(ctx: ResolverContext): Promise<TasksWidget | null>
   if (tasks.length === 0) return null;
 
   return { total: tasks.length, tasks: tasks.slice(0, TASKS_SHOWN) };
+}
+
+export interface EnergyCostsWidget {
+  /** Twelve months of bills, summed here rather than in the card. */
+  totalCents: number;
+  kwh: number;
+  billCount: number;
+  /** Every month present, an unbilled one null — the chart draws a gap. */
+  months: { month: string; totalCents: number | null; kwh: number | null }[];
+  latest: {
+    supplier: string;
+    meterName: string;
+    periodStart: string;
+    periodEnd: string;
+    totalCents: number;
+    kwh: number;
+  } | null;
+}
+
+/**
+ * What the club's electricity has cost — slice 2a.
+ *
+ * The one widget in this slice that was not in slice 1: it was a bespoke panel
+ * on the dashboard outside the registry, which is exactly the drift the registry
+ * exists to end. Same repository function `/energy/costs` answers from, so the
+ * card and the Energia screen cannot disagree about a euro.
+ *
+ * **The totals are summed here, not in the card.** The panel this replaces
+ * reduced the months in the component; a figure derived in two places is a
+ * figure that disagrees in one of them, and the rule is that a derived answer is
+ * derived once, on the server.
+ *
+ * `null` when the club has no bills at all, which is the panel's own behaviour —
+ * but as an `empty` card rather than as nothing, so a club with meters and no
+ * bill yet is told where bills go instead of being shown a blank page.
+ */
+export async function energySpend(ctx: ResolverContext): Promise<EnergyCostsWidget | null> {
+  const costs = await energyCosts(ctx.organizationId);
+  if (costs.billCount === 0) return null;
+
+  return {
+    totalCents: costs.months.reduce((sum, m) => sum + (m.totalCents ?? 0), 0),
+    kwh: costs.months.reduce((sum, m) => sum + (m.kwh ?? 0), 0),
+    billCount: costs.billCount,
+    months: costs.months.map((m) => ({ month: m.month, totalCents: m.totalCents, kwh: m.kwh })),
+    latest:
+      costs.latest === null
+        ? null
+        : {
+            supplier: costs.latest.supplier,
+            meterName: costs.latest.meterName,
+            periodStart: costs.latest.periodStart,
+            periodEnd: costs.latest.periodEnd,
+            totalCents: costs.latest.totalCents,
+            kwh: costs.latest.kwh,
+          },
+  };
 }
 
 export interface ChecklistStep {
