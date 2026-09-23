@@ -189,28 +189,56 @@ function RoleEditor({
         {staff.roles.length === 0 ? (
           <p className="text-sm text-foreground-muted">{t('staff.noRoles')}</p>
         ) : (
-          staff.roles.map((role) => (
+          staff.roles.map((role) => {
+            const mine = grantable.includes(role);
+            const says = mine
+              ? t('staff.removeRole', { role: t(`roles.${role}`) })
+              : t('staff.roleNotYours');
+
+            return (
             <form key={role} action={action} className="inline-flex">
               <input type="hidden" name="organizationId" value={organizationId} />
               <input type="hidden" name="membershipId" value={staff.membershipId} />
               <input type="hidden" name="role" value={role} />
               <input type="hidden" name="grant" value="false" />
+              {/*
+                The badge is the name, so the button has to say what it *does*.
+
+                Its only child is a `RoleBadge`, whose text is the role — so the
+                accessible name was "Admin" and nothing anywhere said that
+                pressing it takes the role away. The action lived in `title`,
+                which is hover-only, never shown on a touch screen, and on a
+                *disabled* button usually not shown at all: the one case where
+                the sentence explains why nothing happens was the one case
+                nobody could read it. `aria-label` carries the same sentence,
+                and the row below says it in visible text.
+              */}
               <button
                 type="submit"
-                disabled={pending || !grantable.includes(role)}
-                title={
-                  grantable.includes(role)
-                    ? t('staff.removeRole', { role: t(`roles.${role}`) })
-                    : t('staff.roleNotYours')
-                }
+                disabled={pending || !mine}
+                aria-label={says}
+                title={says}
                 className="rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
               >
                 <RoleBadge role={role} />
               </button>
             </form>
-          ))
+            );
+          })
         )}
       </div>
+
+      {/*
+        Why some of those chips do not respond, as text.
+
+        A greyed control whose reason is only in a tooltip is a greyed control
+        with no reason — and this is the tooltip a disabled button does not
+        fire. Shown once for the row rather than once per chip: the sentence is
+        the same for every one of them.
+      */}
+      {staff.roles.some((role) => !grantable.includes(role)) && (
+        <p className="text-sm text-foreground-muted">{t('staff.roleNotYours')}</p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <span className="text-sm text-foreground-muted">{t('staff.addRole')}</span>
