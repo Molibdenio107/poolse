@@ -164,6 +164,15 @@ nothing" are different facts. The error list is **one line per route**, newest f
 failing every minute for an hour writes itself into sixty buckets, and sixty identical lines
 would describe one problem while hiding every other.
 
+**Each chart carries its window in words**, above the bars: the totals, and the busiest or worst
+hour with its figures. Until 23-09-2026 every per-hour number lived only in a `title` attribute
+on a bare `div` — no keyboard, no touch screen and no screen reader ever reached it, and the
+file's own header wrongly said the figures were "in the table below" (that table is recent
+errors by *route*). Each bar now also names itself through `role="img"` and an `aria-label`.
+Not a tab stop per bar: 168 of them is a worse page than the one being fixed, and the summary is
+what a reader wants at a glance. The same rule as the badge above — a tooltip explains, it never
+informs.
+
 ## Not in this slice
 
 Alerting when a tenant goes red, uptime history beyond 30 days, per-route breakdowns, the Clerk

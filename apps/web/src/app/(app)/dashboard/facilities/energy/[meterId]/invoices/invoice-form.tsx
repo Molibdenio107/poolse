@@ -217,11 +217,56 @@ export function InvoiceForm({
   const fields: Record<string, string> = { ...(latest.fields ?? {}), ...(latest.check?.fields ?? {}) };
   const check = preview.check;
 
+  /*
+   * A verdict on row 3 stops being about row 3 the moment a row is removed.
+   *
+   * Every per-line refusal comes back keyed by *position* — `lines.3.total` —
+   * so deleting the first line slides the markers up onto lines the server
+   * never judged, and the form then points at the wrong line of somebody's
+   * bill. Nothing errors and the page looks entirely normal, which is what
+   * makes it worth suppressing rather than explaining.
+   *
+   * So: adding or removing a row retires the positional markers until the next
+   * preview re-judges the shape. The header's own fields are untouched — a
+   * refusal about `total` or `issuedOn` is still about `total` or `issuedOn`.
+   */
+  const [rowsMoved, setRowsMoved] = useState(false);
+  const judged = useRef(Math.max(commit.attempt, preview.attempt));
+  useEffect(() => {
+    const attempt = Math.max(commit.attempt, preview.attempt);
+    if (attempt === judged.current) return;
+    judged.current = attempt;
+    setRowsMoved(false);
+  }, [commit.attempt, preview.attempt]);
+
   const patch = (changes: Partial<InvoiceDraft>): void => setDraft((d) => ({ ...d, ...changes }));
   const patchRegister = (i: number, changes: Partial<RegisterDraft>): void =>
     setDraft((d) => ({ ...d, registers: d.registers.map((r, j) => (j === i ? { ...r, ...changes } : r)) }));
   const patchLine = (i: number, changes: Partial<LineDraft>): void =>
     setDraft((d) => ({ ...d, lines: d.lines.map((l, j) => (j === i ? { ...l, ...changes } : l)) }));
+
+  /*
+   * Adding and removing go through here, and not inline, so that no row can be
+   * added or taken away without `rowsMoved` being told. That is the whole guard
+   * against a stale `lines.N.*` marker, and a fifth handler written inline later
+   * would silently opt out of it.
+   */
+  const removeLine = (i: number): void => {
+    setRowsMoved(true);
+    setDraft((d) => ({ ...d, lines: d.lines.filter((_, j) => j !== i) }));
+  };
+  const addLine = (): void => {
+    setRowsMoved(true);
+    setDraft((d) => ({ ...d, lines: [...d.lines, emptyLine('energy')] }));
+  };
+  const removeRegister = (i: number): void => {
+    setRowsMoved(true);
+    setDraft((d) => ({ ...d, registers: d.registers.filter((_, j) => j !== i) }));
+  };
+  const addRegister = (name: RegisterDraft['register']): void => {
+    setRowsMoved(true);
+    setDraft((d) => ({ ...d, registers: [...d.registers, emptyRegister(name)] }));
+  };
 
   const hidden = (
     <>
@@ -234,7 +279,8 @@ export function InvoiceForm({
     </>
   );
 
-  const err = (field: string): string | undefined => fields[field];
+  const err = (field: string): string | undefined =>
+    rowsMoved && /^(lines|registers)\./.test(field) ? undefined : fields[field];
 
   return (
     <div className="flex flex-col gap-6">
@@ -440,7 +486,7 @@ export function InvoiceForm({
                     <input aria-label="kWh" className={cn(CELL, err(`registers.${i}.kwh`) && INVALID)} inputMode="decimal" value={r.kwh} onChange={(e) => patchRegister(i, { kwh: e.target.value })} />
                   </td>
                   <td className="py-1">
-                    <button type="button" aria-label={t('energy.invoice.removeRow')} title={t('energy.invoice.removeRow')} onClick={() => setDraft((d) => ({ ...d, registers: d.registers.filter((_, j) => j !== i) }))} className="text-foreground-muted hover:text-danger">
+                    <button type="button" aria-label={t('energy.invoice.removeRow')} title={t('energy.invoice.removeRow')} onClick={() => removeRegister(i)} className="text-foreground-muted hover:text-danger">
                       <Trash2 className="size-4" aria-hidden="true" />
                     </button>
                   </td>
@@ -454,7 +500,7 @@ export function InvoiceForm({
             type="button"
             onClick={() => {
               const next = REGISTERS.find((name) => !draft.registers.some((r) => r.register === name));
-              if (next !== undefined) setDraft((d) => ({ ...d, registers: [...d.registers, emptyRegister(next)] }));
+              if (next !== undefined) addRegister(next);
             }}
             className={cn(BUTTON, 'self-start')}
           >
@@ -518,7 +564,7 @@ export function InvoiceForm({
                   <td className="py-1 pr-2"><input aria-label={t('energy.invoice.lineTotal')} className={cn(CELL, 'w-24', err(`lines.${i}.total`) && INVALID)} inputMode="decimal" value={l.total} onChange={(e) => patchLine(i, { total: e.target.value })} /></td>
                   <td className="py-1 pr-2"><input aria-label="IVA %" className={cn(CELL, 'w-16', err(`lines.${i}.vatRate`) && INVALID)} inputMode="decimal" value={l.vatRate} onChange={(e) => patchLine(i, { vatRate: e.target.value })} /></td>
                   <td className="py-1">
-                    <button type="button" aria-label={t('energy.invoice.removeRow')} title={t('energy.invoice.removeRow')} onClick={() => setDraft((d) => ({ ...d, lines: d.lines.filter((_, j) => j !== i) }))} className="mt-2 text-foreground-muted hover:text-danger">
+                    <button type="button" aria-label={t('energy.invoice.removeRow')} title={t('energy.invoice.removeRow')} onClick={() => removeLine(i)} className="mt-2 text-foreground-muted hover:text-danger">
                       <Trash2 className="size-4" aria-hidden="true" />
                     </button>
                   </td>
@@ -527,7 +573,7 @@ export function InvoiceForm({
             </tbody>
           </table>
         </div>
-        <button type="button" onClick={() => setDraft((d) => ({ ...d, lines: [...d.lines, emptyLine('energy')] }))} className={cn(BUTTON, 'self-start')}>
+        <button type="button" onClick={() => addLine()} className={cn(BUTTON, 'self-start')}>
           <Plus className="size-4" aria-hidden="true" />
           {t('energy.invoice.addLine')}
         </button>

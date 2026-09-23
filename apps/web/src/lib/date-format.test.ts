@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatDate, formatStamp } from './date-format.ts';
+import { formatDate, formatStamp, formatTime } from './date-format.ts';
 
 /**
  * Every date in one shape — `dd-MM-yyyy`, decided 13 September 2026.
@@ -46,6 +46,22 @@ test('a stamp carries the time, on a 24-hour clock', () => {
 
 test('a Date is taken as it is', () => {
   assert.equal(formatDate(new Date('2026-12-31T23:00:00Z')), '31-12-2026');
+});
+
+test('the time half is the same clock as the stamp, in the club’s zone', () => {
+  // The pairing that matters: a sentence which needs the two apart must not
+  // disagree with the one that puts them together.
+  assert.equal(formatTime('2026-09-13T13:30:00Z'), '14:30');
+  assert.equal(formatStamp('2026-09-13T13:30:00Z'), '13-09-2026 14:30');
+
+  // Never am/pm. A call site asking next-intl for `{ hour, minute }` rendered
+  // `2:30 PM` under `en` while every stamp beside it said 24-hour; that is the
+  // drift this function exists to end.
+  assert.equal(formatTime('2026-01-13T20:05:00Z'), '20:05');
+  assert.equal(formatTime('2026-01-13T08:04:00Z'), '08:04');
+
+  assert.equal(formatTime(null), '');
+  assert.equal(formatTime('nope'), '');
 });
 
 test('what is not a date is nothing, never "Invalid Date" on a screen', () => {

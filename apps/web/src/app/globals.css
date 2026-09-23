@@ -123,6 +123,39 @@
     --level-none: 100 116 126;
 
     /*
+     * Who is away, on the vacation team map — six people, six fills.
+     *
+     * These were six hex literals inside `team-map.tsx`, which put them outside
+     * the token system and therefore outside `contrast:check` — and three of the
+     * six carried white text below AA while nothing could say so: amber at
+     * 2.86:1, green at 3.39:1, blue at 4.48:1. The cell prints a person's
+     * initial, so that is body text, not decoration.
+     *
+     * Same method as the level tints above: each is the *lightest* value at its
+     * original hue that still carries white text at 4.6:1, found by search. The
+     * hues are the ones that were there, so the screen looks as it did; only the
+     * three that failed moved appreciably.
+     *
+     * **Defined once, not twice.** The dark set is inherited deliberately rather
+     * than skipped: a solid fill dark enough for white text cannot also be
+     * lightened for a dark card without breaking the text, and at these values
+     * every fill still sits 3.7:1 against `--surface` in the dark theme —
+     * comfortably past the 3:1 that 1.4.11 asks of a shape. The level tints
+     * differ per theme because they are *washed* against the card; these are not.
+     *
+     * **Colour never carries meaning alone**: each day prints the person's
+     * initial, the legend names them, and a shared day says "shared".
+     */
+    --person-1: 58 124 159;
+    --person-2: 150 109 35;
+    --person-3: 62 130 89;
+    --person-4: 142 100 171;
+    --person-5: 195 80 71;
+    --person-6: 101 119 137;
+    /* The text on those six, and the reason each one is as dark as it is. */
+    --person-foreground: 255 255 255;
+
+    /*
      * Chart series — POOLSE-52's occupancy on the dashboard.
      *
      * **Not `--primary`, and that is measured rather than preferred.** The brand

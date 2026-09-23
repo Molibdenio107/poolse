@@ -246,7 +246,14 @@ export interface Me {
     pendingDeleteAt: string | null;
     membershipId: string;
     roles: string[];
-    subscriptionStatus: 'trialing' | 'active' | 'past_due' | 'canceled';
+    /**
+     * The shared union, not a copy of it.
+     *
+     * This was spelled out here as four of the six values, so `expired` and
+     * `comped` — both of which `/me` can genuinely carry — were type errors to
+     * compare against on the one screen that reads this.
+     */
+    subscriptionStatus: SubscriptionStatus;
     /** ISO date, or null once the organization is no longer trialing. */
     trialEndsAt: string | null;
   }[];
@@ -3546,7 +3553,15 @@ export interface OrganizationSubscription {
   plan: PlanKey | null;
   /** How often they are billed. Null until they subscribe. */
   interval: BillingInterval | null;
-  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'comped' | null;
+  /**
+   * The shared union, not a second copy of it.
+   *
+   * This listed five of the six and left out `expired`, which the API passes
+   * straight through from `organization.subscription_status` — so the one state
+   * that brings an owner to this page on purpose was a type error to test for,
+   * and the missing `subscription.state.expired` message hid behind that.
+   */
+  status: SubscriptionStatus | null;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;

@@ -42,7 +42,14 @@ cards would be selling to somebody who came to find out whether they were alread
 | Pagamento em falta | The last charge was refused. **The club carries on working** |
 | Subscrição terminada | Cancelled, and the period has run out |
 | Acesso oferecido | `comped` — the free pilot. An operator's word, and it does not expire |
+| Período experimental terminado | `expired`, set by the trial clock. Says what read-only still allows: everything can be read and exported, nothing recorded |
 | Sem subscrição | Never subscribed, and the trial is not running |
+
+`expired` had no row here and no name in either catalogue until 23-09-2026: POOLSE-61 added it
+to the enum and to `/admin`'s badge and not to this page, which rendered the raw key at the one
+moment a club opens the page on purpose. Its sentence leads with what is still possible,
+because "your trial ended" without "everything is still here" is the sentence that loses a
+customer.
 
 **Billing state is not access state.** *Past due* says the card failed; it does not say the
 club is shut, and nothing on this page or in the webhook shuts one. Only `suspended_at` does

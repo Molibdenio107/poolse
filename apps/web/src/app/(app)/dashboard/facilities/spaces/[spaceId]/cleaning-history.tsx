@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import type { Cleaning } from '@/lib/api';
+import { formatDate, formatTime } from '@/lib/date-format';
 import { Dialog } from '@/components/ui/dialog';
 import { archiveCleaning } from '../../spaces.actions';
 
@@ -15,8 +16,9 @@ import { archiveCleaning } from '../../spaces.actions';
  * is deleted — owner/admin only — and deleting it puts the space back to overdue
  * if it was the only cleaning, which is the honest outcome.
  *
- * The timestamp is rendered by `useFormatter`, so it is shown in the reader's
- * locale from the UTC the API sent. Class schedules are where the timezone rule
+ * The timestamp is `formatDate` / `formatTime` from `lib/date-format.ts`, which
+ * renders the UTC the API sent in `APP_TIME_ZONE` — not in the reader's, which
+ * is what this panel used to do. Class schedules are where the timezone rule
  * bites hardest, but a cleaning at 23:40 on the 5th must not read as the 6th
  * either.
  */
@@ -38,7 +40,6 @@ export function CleaningHistory({
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
-  const format = useFormatter();
   const [removing, setRemoving] = useState<Cleaning | null>(null);
   const [working, setWorking] = useState(false);
 
@@ -70,8 +71,8 @@ export function CleaningHistory({
                   */}
                   {t('spaces.cleanedBy', {
                     name: cleaning.performedBy ?? t('spaces.someone'),
-                    time: format.dateTime(at, { hour: '2-digit', minute: '2-digit' }),
-                    date: format.dateTime(at, { day: 'numeric', month: 'long', year: 'numeric' }),
+                    time: formatTime(at),
+                    date: formatDate(at),
                   })}
                 </p>
 

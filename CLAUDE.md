@@ -62,7 +62,12 @@ cannot tell you the Portuguese is the right Portuguese, so that part is read by 
 `en-US` writes 09/13/2026, so the named `long`, `short` and `stamp` were **removed** from
 `i18n.ts` rather than left pointing at the old shape — asking for one now fails
 `pnpm i18n:check` loudly. **An options object at a call site fails the same check**, which is
-how twenty of them quietly rendered slashes for a year. What stays named in `i18n.ts` is
+how twenty of them quietly rendered slashes for a year — but only where it is spelled
+`dateStyle` or `timeStyle`: **the check sees neither `{ day, month, year }` nor a bare
+`new Intl.DateTimeFormat`**, which is how four dates were still reading "13 de setembro de 2026"
+a fortnight later. Grep for both before trusting it. A sentence that needs the time on its own
+takes **`formatTime`** from the same file rather than asking next-intl for `{ hour, minute }`,
+which renders 14:30 in Portuguese and 2:30 PM in English. What stays named in `i18n.ts` is
 `month` and `monthShort`, which are month *names* and properly the reader's language; they are
 still defined once and passed to *both* `getRequestConfig` and `NextIntlClientProvider`,
 because a client provider inherits the locale and timezone from the server but neither the
@@ -833,6 +838,11 @@ once per frame, and every transition is off while a drag is live.
 hues washed at 15% sit ΔE 4.5 apart, which is about one just-noticeable difference and means
 the colour is doing no work. Solid they are ΔE 26.7 apart, white text is ≥4.6:1, and the dark
 set is solved against the dark card rather than being the light set at another opacity.
+**`--person-1…6` is the same idea for the vacation team map** and was six hex literals until
+23-09-2026, three of them carrying white text below AA — a hex literal in a component is the one
+thing `contrast:check` cannot see, because it reads the tokens. **A new fill earns a line in that
+script's `PAIRS`** in the same change; the finding there was never the three colours, it was that
+nothing was looking.
 
 **A derived answer is derived once, on the server.** Overdue cleaning is
 `now() - last cleaning > interval`, computed in SQL in `spaces.repository.ts` and shipped as a

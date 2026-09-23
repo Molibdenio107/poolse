@@ -81,6 +81,18 @@ export default {
           8: rgb('--level-8'),
           none: rgb('--level-none'),
         },
+        // Who is away, on the vacation team map. Six fills carrying white text,
+        // indexed by the order people were selected. See the note in globals.css
+        // for why they are tokens and not the six hex literals they used to be.
+        person: {
+          1: rgb('--person-1'),
+          2: rgb('--person-2'),
+          3: rgb('--person-3'),
+          4: rgb('--person-4'),
+          5: rgb('--person-5'),
+          6: rgb('--person-6'),
+          foreground: rgb('--person-foreground'),
+        },
         // Chart series slots. Validated for a data mark, which is a different
         // job from a brand fill — see the note in globals.css.
         chart: {

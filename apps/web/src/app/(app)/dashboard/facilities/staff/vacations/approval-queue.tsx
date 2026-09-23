@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { PendingVacations } from '@/lib/api';
+import { formatDate } from '@/lib/date-format';
 import { decideVacationAction } from './vacations.actions';
 import type { FormState } from '../../../actions';
 
@@ -50,16 +51,13 @@ function RequestCard({
   request: PendingVacations['requests']['items'][number];
 }): React.ReactElement {
   const t = useTranslations();
-  const locale = useLocale();
   const [state, decide, pending] = useSavedAction(decideVacationAction, INITIAL);
   const [rejecting, setRejecting] = useState(false);
 
-  const day = (value: string): string =>
-    new Intl.DateTimeFormat(locale, {
-      day: 'numeric',
-      month: 'short',
-      timeZone: 'UTC',
-    }).format(new Date(`${value}T00:00:00Z`));
+  // `formatDate`, like every other date in the product. This rendered "13 set."
+  // in the reader's locale, which the 13-09-2026 decision replaced everywhere
+  // that went through next-intl and missed everywhere that did not.
+  const day = (value: string): string => formatDate(value);
 
   return (
     <form action={decide} className="flex flex-col gap-3 rounded border border-border bg-surface p-5">

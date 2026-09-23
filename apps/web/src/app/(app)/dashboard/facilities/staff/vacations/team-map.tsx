@@ -25,14 +25,20 @@ import { YearGrid, type DayState } from '@/components/year-grid';
  * they differ in lightness as well as hue, so they survive being read as greys.
  * Six because a seventh selected person is past the point where any palette
  * helps; beyond that the initials and the tooltip carry it.
+ *
+ * **Tokens, not hex.** They were six literals here, which is the one thing
+ * `contrast:check` cannot see — and three of them carried the initial in white
+ * below AA (amber at 2.86:1) for as long as they were invisible to it. The
+ * values now live in `globals.css` beside the level tints, with the search that
+ * produced them written down.
  */
 const HUES = [
-  { dot: 'bg-[#3b7ea1]', cell: 'bg-[#3b7ea1] text-white' },
-  { dot: 'bg-[#c58f2e]', cell: 'bg-[#c58f2e] text-white' },
-  { dot: 'bg-[#4a9b6a]', cell: 'bg-[#4a9b6a] text-white' },
-  { dot: 'bg-[#8b5fa8]', cell: 'bg-[#8b5fa8] text-white' },
-  { dot: 'bg-[#be473e]', cell: 'bg-[#be473e] text-white' },
-  { dot: 'bg-[#4f5d6b]', cell: 'bg-[#4f5d6b] text-white' },
+  { dot: 'bg-person-1', cell: 'bg-person-1 text-person-foreground' },
+  { dot: 'bg-person-2', cell: 'bg-person-2 text-person-foreground' },
+  { dot: 'bg-person-3', cell: 'bg-person-3 text-person-foreground' },
+  { dot: 'bg-person-4', cell: 'bg-person-4 text-person-foreground' },
+  { dot: 'bg-person-5', cell: 'bg-person-5 text-person-foreground' },
+  { dot: 'bg-person-6', cell: 'bg-person-6 text-person-foreground' },
 ];
 
 function initialOf(name: string | null): string {

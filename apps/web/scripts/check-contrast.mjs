@@ -85,6 +85,21 @@ const PAIRS = [
   ['role-student', 'surface', 4.5, 'student badge'],
 
   /*
+   * The vacation team map's six fills, each carrying a person's initial.
+   *
+   * Listed because they were *not*: they lived as hex literals in the component,
+   * which is precisely the shape this script cannot see, and three of the six sat
+   * below AA for as long as that was true. A fill added to that palette without a
+   * line here is a fill nobody is checking.
+   */
+  ['person-foreground', 'person-1', 4.5, "a day painted in the first person's colour"],
+  ['person-foreground', 'person-2', 4.5, 'the second'],
+  ['person-foreground', 'person-3', 4.5, 'the third'],
+  ['person-foreground', 'person-4', 4.5, 'the fourth'],
+  ['person-foreground', 'person-5', 4.5, 'the fifth'],
+  ['person-foreground', 'person-6', 4.5, 'the sixth'],
+
+  /*
    * Shapes rather than words: 3:1 is the bar — but only where the shape is the
    * thing a reader has to find.
    *

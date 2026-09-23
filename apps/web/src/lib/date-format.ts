@@ -104,3 +104,23 @@ export function formatStamp(value: DateLike | null | undefined): string {
   const { hour, minute } = partsOf(TIME_PARTS, date);
   return `${formatDate(date)} ${hour}:${minute}`;
 }
+
+/**
+ * `14:30` — the time half, for a sentence that needs the two apart.
+ *
+ * "Limpo por X às {hora} do dia {data}" cannot use `formatStamp`, because the
+ * word order between the two is the translation's business and not this
+ * module's. The alternative was a call site asking next-intl for
+ * `{ hour, minute }` — which is how that panel came to render `14:30` in
+ * Portuguese and `2:30 PM` in English while `formatStamp` said 24-hour
+ * everywhere else. Same clock, same zone, one definition.
+ */
+export function formatTime(value: DateLike | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+
+  const date = asDate(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const { hour, minute } = partsOf(TIME_PARTS, date);
+  return `${hour}:${minute}`;
+}

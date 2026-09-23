@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import type { Issue } from '@/lib/api';
+import { formatDate } from '@/lib/date-format';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
@@ -51,7 +52,6 @@ function IssueRow({
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
-  const format = useFormatter();
   const [resolving, setResolving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [working, setWorking] = useState(false);
@@ -112,7 +112,7 @@ function IssueRow({
       <p className="text-sm text-foreground-muted">
         {t('spaces.reportedBy', {
           name: issue.reportedBy ?? t('spaces.someone'),
-          date: format.dateTime(reportedAt, { day: 'numeric', month: 'long', year: 'numeric' }),
+          date: formatDate(reportedAt),
         })}
       </p>
 
@@ -120,11 +120,7 @@ function IssueRow({
         <p className="text-sm text-foreground-muted">
           {t('spaces.resolvedBy', {
             name: issue.resolvedBy ?? t('spaces.someone'),
-            date: format.dateTime(new Date(issue.resolvedAt), {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            }),
+            date: formatDate(issue.resolvedAt),
           })}
           {issue.resolutionNote === null ? '' : ` — ${issue.resolutionNote}`}
         </p>

@@ -21,8 +21,12 @@ import { formatDate, formatStamp } from '@/lib/date-format';
  * hour simply has no bar and the axis still advances, because the columns are
  * one per hour of the window rather than one per row returned.
  *
- * **The figures are in the table below.** The chart summarises; the list is the
- * record, and a reader who sees no colour gets every number.
+ * **The figures are above the bars, not only inside them.** This said they were
+ * "in the table below", which was not true — the table below is recent errors by
+ * *route*, and every per-hour number lived only in a `title` attribute. A
+ * sentence over each chart now carries the window's totals and the hour that
+ * matters, and each bar names itself to the accessibility tree; a tooltip
+ * explains, it never informs.
  */
 
 /** How the two charts differ, so the layout is written once. */
@@ -62,11 +66,58 @@ export async function RequestCharts({
     ...columns.map((c) => (c.bucket?.count4xx ?? 0) + (c.bucket?.count5xx ?? 0)),
   );
 
+  /*
+   * The window in words, because a figure only a mouse can reach is a figure
+   * half this page's readers do not have.
+   *
+   * The busiest and the worst hour rather than an average: an operator opening
+   * this page is looking for the hour something happened, and a mean over 168
+   * of them is the one number that cannot point at it. Both are picked by
+   * `reduce` over the columns that have a row — a gap is not a quiet hour.
+   */
+  const recorded = columns.filter((c) => c.bucket !== undefined);
+  const totalRequests = recorded.reduce((sum, c) => sum + c.bucket!.requestCount, 0);
+  const total4xx = recorded.reduce((sum, c) => sum + c.bucket!.count4xx, 0);
+  const total5xx = recorded.reduce((sum, c) => sum + c.bucket!.count5xx, 0);
+
+  const busiest = recorded.reduce<Column | null>(
+    (best, c) => (best === null || c.bucket!.requestCount > best.bucket!.requestCount ? c : best),
+    null,
+  );
+  const errorsIn = (c: Column): number => c.bucket!.count4xx + c.bucket!.count5xx;
+  const worst = recorded.reduce<Column | null>(
+    (best, c) => (best === null || errorsIn(c) > errorsIn(best) ? c : best),
+    null,
+  );
+
+  const volumeSummary =
+    busiest === null || totalRequests === 0
+      ? t('admin.chart.volumeSummaryNone', { days: windowDays })
+      : t('admin.chart.volumeSummary', {
+          total: totalRequests,
+          days: windowDays,
+          hour: formatStamp(busiest.at),
+          requests: busiest.bucket!.requestCount,
+          ms: busiest.bucket!.p95LatencyMs,
+        });
+
+  const errorsSummary =
+    worst === null || total4xx + total5xx === 0
+      ? t('admin.chart.errorsSummaryNone', { days: windowDays })
+      : t('admin.chart.errorsSummary', {
+          count4xx: total4xx,
+          count5xx: total5xx,
+          days: windowDays,
+          hour: formatStamp(worst.at),
+          worst: errorsIn(worst),
+        });
+
   return (
     <div className="flex flex-col gap-page-gap">
       <Chart
         title={t('admin.chart.volume')}
         caption={t('admin.chart.volumeCaption', { days: windowDays })}
+        summary={volumeSummary}
         series="volume"
         columns={columns}
         peak={peakRequests}
@@ -75,6 +126,7 @@ export async function RequestCharts({
       <Chart
         title={t('admin.chart.errors')}
         caption={t('admin.chart.errorsCaption', { days: windowDays })}
+        summary={errorsSummary}
         series="errors"
         columns={columns}
         peak={peakErrors}
@@ -92,6 +144,7 @@ interface Column {
 async function Chart({
   title,
   caption,
+  summary,
   series,
   columns,
   peak,
@@ -99,6 +152,8 @@ async function Chart({
 }: {
   title: string;
   caption: string;
+  /** The window's figures as a sentence — see the note where it is rendered. */
+  summary: string;
   series: Series;
   columns: Column[];
   peak: number;
@@ -108,6 +163,22 @@ async function Chart({
     <section className="rounded border border-border bg-surface p-4">
       <h2 className="text-sm font-medium">{title}</h2>
       <p className="mt-0.5 text-sm text-foreground-muted">{caption}</p>
+
+      {/*
+        The week's figures as words, above the bars.
+
+        This header used to say the numbers were "in the table below", and they
+        were not: the table below is recent errors by *route*. Every per-hour
+        figure lived only in a `title` attribute — invisible to a keyboard, to a
+        touch screen and to a screen reader on a bare `div`, which is the exact
+        shape CLAUDE.md rules out. A tooltip may explain; it may not be the only
+        place a number appears.
+
+        A summary rather than 168 rows: the totals and the worst hour are what an
+        operator actually reads, and each bar now carries its own hour in the
+        accessibility tree for the rest.
+      */}
+      <p className="mt-1 text-sm">{summary}</p>
 
       {/*
         168 columns do not fit a phone and are not meant to: the table scrolls,
@@ -144,19 +215,34 @@ function Bar({
 }): React.ReactElement {
   const hour = formatStamp(column.at);
 
+  /*
+   * `role="img"` with the sentence as its name, beside the `title`.
+   *
+   * The `title` alone was the whole of it, which meant the hour's figures
+   * existed for a mouse and for nothing else: a bare `div` has no role to hang a
+   * name on, so a screen reader announces nothing, and a touch screen has no
+   * hover to give. The pair is deliberate — `title` is what a mouse expects, the
+   * role and the label are what everything else reads. Not `tabIndex`: 168 tab
+   * stops per chart is a worse page than the one being fixed, and the summary
+   * above carries what a keyboard reader needs at a glance.
+   */
   // No row for this hour: a gap, deliberately, not a zero-height bar.
   if (column.bucket === undefined) {
-    return <div className="h-full flex-1" title={t('admin.chart.noData', { hour })} />;
+    const label = t('admin.chart.noData', { hour });
+    return <div className="h-full flex-1" role="img" aria-label={label} title={label} />;
   }
 
   const { requestCount, count4xx, count5xx, p95LatencyMs } = column.bucket;
 
   if (series === 'volume') {
+    const label = t('admin.chart.volumeTip', {
+      hour,
+      requests: requestCount,
+      ms: p95LatencyMs,
+    });
+
     return (
-      <div
-        className="flex h-full flex-1 items-end"
-        title={t('admin.chart.volumeTip', { hour, requests: requestCount, ms: p95LatencyMs })}
-      >
+      <div className="flex h-full flex-1 items-end" role="img" aria-label={label} title={label}>
         <div
           className="w-full rounded-t-sm bg-chart-1"
           style={{ height: `${Math.max((requestCount / peak) * 100, requestCount > 0 ? 2 : 0)}%` }}
@@ -174,11 +260,14 @@ function Bar({
    * the one against the eye's baseline of "how bad".
    */
   const total = count4xx + count5xx;
+  const label = t('admin.chart.errorsTip', { hour, count4xx, count5xx });
 
   return (
     <div
       className="flex h-full flex-1 flex-col justify-end"
-      title={t('admin.chart.errorsTip', { hour, count4xx, count5xx })}
+      role="img"
+      aria-label={label}
+      title={label}
     >
       <div
         className={cn('w-full rounded-t-sm bg-danger', count5xx === 0 && 'hidden')}

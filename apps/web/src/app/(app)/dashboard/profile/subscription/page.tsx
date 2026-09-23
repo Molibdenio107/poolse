@@ -95,7 +95,7 @@ export default async function SubscriptionPage(): Promise<React.ReactElement> {
             {/*
               * Each state says the one thing to do about it, in the state's own
               * words. A generic "manage your subscription" would be true of all
-              * five and useful in none.
+              * six and useful in none.
               */}
             {view.subscription.status === 'past_due' && (
               <p className="mt-3 rounded border border-warning/40 bg-warning/10 p-3 text-sm">
@@ -112,6 +112,22 @@ export default async function SubscriptionPage(): Promise<React.ReactElement> {
             {view.subscription.status === 'comped' && (
               <p className="mt-3 rounded border border-border bg-surface-muted p-3 text-sm">
                 {t('subscription.compedExplains')}
+              </p>
+            )}
+
+            {/*
+              * The trial ran out — POOLSE-61 sets this from the clock.
+              *
+              * It had no sentence here and, worse, no *name*: `expired` was
+              * added to the enum and to `/admin`'s badge and never to
+              * `subscription.state`, so this page rendered the raw key at the
+              * one moment a club comes here on purpose. Its sentence says what
+              * read-only actually allows, because "your trial ended" without
+              * "everything is still here" is the sentence that loses a customer.
+              */}
+            {view.subscription.status === 'expired' && (
+              <p className="mt-3 rounded border border-warning/40 bg-warning/10 p-3 text-sm">
+                {t('subscription.expiredExplains')}
               </p>
             )}
           </section>

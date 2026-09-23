@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import type { MyVacations, VacationRequest } from '@/lib/api';
+import { formatDate } from '@/lib/date-format';
 import { YearGrid, type DayState } from '@/components/year-grid';
 import { requestVacationAction, withdrawVacationAction } from './vacations.actions';
 import type { FormState } from '../../../actions';
@@ -261,7 +262,6 @@ function Figure({
 /** The requests themselves, because a grid cannot show a rejection's reason. */
 function RequestList({ data }: { data: MyVacations }): React.ReactElement {
   const t = useTranslations();
-  const locale = useLocale();
   const [state, withdraw, pending] = useSavedAction(withdrawVacationAction, INITIAL);
 
   if (data.requests.length === 0) {
@@ -286,16 +286,9 @@ function RequestList({ data }: { data: MyVacations }): React.ReactElement {
               <span className="text-sm">
                 {t('vacations.dayCount', { count: request.days.length })}
               </span>
+              {/* `formatDate`, like every other date: this said "13 set." */}
               <span className="text-sm text-foreground-muted">
-                {request.days
-                  .map((day) =>
-                    new Intl.DateTimeFormat(locale, {
-                      day: 'numeric',
-                      month: 'short',
-                      timeZone: 'UTC',
-                    }).format(new Date(`${day}T00:00:00Z`)),
-                  )
-                  .join(', ')}
+                {request.days.map((day) => formatDate(day)).join(', ')}
               </span>
             </div>
 

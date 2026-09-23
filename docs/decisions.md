@@ -775,3 +775,67 @@ codebase raised while slice 1 was built.
 - **2026-09-22** — **Role seniority is not declared a second time.** The ticket arrived with a numeric rank (owner 100 … student 10); `MEMBER_ROLES` is already that order and already load-bearing for POOLSE-17 AC5 and POOLSE-18 AC3. Band order is its own array constant, ordering within a band is priority, and seniority governs ordering only — never permissions.
 - **2026-09-22** — **`mgmt.subscription` is the owner's alone**, narrower than the ticket's catalogue, which filed it under owner and admin. POOLSE-60 settled that a subscription is the owner's own business when it moved Subscrição under *O meu perfil* and out of the menu — the card, the renewal and the decision to cancel, on the same reasoning that keeps the owner's salary from an admin. An admin is not left uninformed: the standing trial and read-only banners come from `/me` and reach everyone.
 - **2026-09-22** — **A widget's priority may be escalated by a predicate on its resolved data, and every allowed widget is therefore resolved rather than only the four that would survive the cap.** "Boost the subscription widget when the trial is under five days" cannot be a number in a declaration, because a declaration cannot count days. The cost is a few aggregates a reader will not see, in parallel under one 2s ceiling; the alternative is a trial with three days left being cut by a priority set before anybody counted.
+
+## 2026-09-23 — A UI bug sweep, and the four gaps the gates could not see
+
+A static sweep of the 124 client components against the failure families this repo has already
+met. Every finding below was invisible to `i18n:check`, `layout:check`, `contrast:check` and
+`csv:check`, all of which were green throughout — which is the reason each fix comes with the
+gate that would have caught it, where a gate was cheap.
+
+- **2026-09-23** — **`subscription.state.expired` was missing, and a narrow type is why nobody
+  noticed.** The page asks for ``t(`subscription.state.${status}`)`` with no fallback, and
+  `expired` — set by POOLSE-61's trial clock and passed straight through by the API — had no key
+  in either catalogue. `check-messages` proves a computed key's *namespace* exists and cannot
+  reach the leaf, by design. What hid it was the web app holding **two** narrowed copies of
+  `SubscriptionStatus` (`/me`'s memberships at four values, the subscription view at five), so
+  testing for `expired` was a type error on the one screen that needed it. Both now use the
+  shared union. The lesson is the general one: a hand-narrowed copy of an enum does not just
+  mislead, it disables the check that would have found the missing half.
+
+- **2026-09-23** — **The vacation team map's six person colours are tokens, and three of them
+  were below AA.** They were hex literals inside the component, which is precisely the shape
+  `contrast:check` cannot see — it reads `globals.css`. The cell prints a person's initial in
+  white, so that is body text: amber sat at 2.86:1, green at 3.39:1, blue at 4.48:1. Now
+  `--person-1…6` with `--person-foreground`, each the *lightest* value at its original hue that
+  carries white text at 4.6:1, found by search as the level tints were. Defined once rather than
+  per theme — a solid fill dark enough for white text cannot also be lightened for a dark card,
+  and at these values every fill still sits 3.7:1 against the dark `--surface`. **Six pairs added
+  to `check-contrast.mjs`**, because the finding was not the three colours, it was that nothing
+  was looking.
+
+- **2026-09-23** — **A tooltip may explain; the `/admin` request charts were using one to
+  inform.** Every per-hour figure — request count, p95 latency, the 4xx/5xx split — existed only
+  in a native `title` on a non-focusable `div`, reachable by a mouse and by nothing else. The
+  file's header claimed they were "in the table below", and the table below is recent errors by
+  route. Fixed with a visible summary sentence per chart (totals, and the busiest or worst hour)
+  plus `role="img"` and an `aria-label` per bar. Deliberately **not** a tab stop per bar: 168 of
+  them would be a worse page than the one being fixed.
+
+- **2026-09-23** — **The `dd-MM-yyyy` migration missed every date that does not go through
+  `format.dateTime`.** `check-formats.mjs` flags `dateStyle`/`timeStyle` and nothing else, so an
+  options object spelled `{ day, month, year }` and a bare `new Intl.DateTimeFormat` both passed
+  it: four visible dates were still rendering "13 de setembro de 2026" or "13 set." on the space
+  and vacation screens. The three remaining raw `Intl` calls are month names, narrow weekdays
+  and `aria-label`s on a year grid — a spoken long date is right, and month names are properly
+  the reader's language.
+
+- **2026-09-23** — **`formatTime` joins `formatDate` and `formatStamp`.** A sentence whose word
+  order puts the time and the date apart ("às {hora} do dia {data}") cannot use `formatStamp`,
+  and the call site's answer had been to ask next-intl for `{ hour, minute }` — which rendered
+  `14:30` in Portuguese and `2:30 PM` in English while every stamp beside it said 24-hour. Same
+  clock, same zone, one definition.
+
+- **2026-09-23** — **A per-line refusal is retired when a row is added or removed.** The energy
+  invoice form's field errors come back keyed by *position*, so deleting a line slid every
+  `lines.N.*` marker onto a line the server never judged — pointing an operator at the wrong line
+  of somebody's bill, with nothing on screen saying so. Adding and removing now go through four
+  helpers that say a row moved, and the positional markers are suppressed until the next preview
+  re-judges the shape. The helpers exist so that a fifth handler written inline later cannot opt
+  out of the guard.
+
+**Found and deliberately not fixed:** 55 `defaultValue` fields across 19 forms, every one in a
+file that dispatches a server action — POOLSE-09/10 still latent exactly as `field.tsx` says it
+is. It is a mechanical conversion to `TextField` / `SelectField` and wants its own session; the
+two gates that would hold the line afterwards (a `check-fields.mjs`, and widening
+`check-formats.mjs` to see raw `Intl`) are proposed, not built.
