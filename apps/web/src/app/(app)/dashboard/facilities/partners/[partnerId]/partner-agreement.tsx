@@ -8,6 +8,7 @@ import { DocumentUpload } from '@/components/document-upload';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { saveAgreementAction } from '../../[facilityId]/partners.actions';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * What the partner pays — POOLSE-47, criteria 5 and 6.
@@ -225,10 +226,10 @@ export function PartnerAgreementPanel({
               <dt className="text-sm text-foreground-muted">{t('partners.term')}</dt>
               <dd className="mt-0.5">
                 {agreement.endDate === null
-                  ? t('partners.openEnded', { start: agreement.startDate })
+                  ? t('partners.openEnded', { start: formatDate(agreement.startDate) })
                   : t('partners.termRange', {
-                      start: agreement.startDate,
-                      end: agreement.endDate,
+                      start: formatDate(agreement.startDate),
+                      end: formatDate(agreement.endDate),
                     })}
               </dd>
             </div>

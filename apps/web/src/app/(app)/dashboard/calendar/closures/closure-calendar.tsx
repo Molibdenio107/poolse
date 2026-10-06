@@ -10,6 +10,7 @@ import { YearGrid, type DayState } from '@/components/year-grid';
 import { CONTROL_LINE, FIELD_LABEL, TextField } from '@/components/ui/field';
 import type { FormState } from '../../actions';
 import { createClosureAction, impactAction, removeClosureAction } from './closures.actions';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * Encerramentos as a year — POOLSE-31.
@@ -232,7 +233,7 @@ export function ClosureCalendar({
         <span className="text-sm">
           {anchor === null
             ? t('calendar.rangeStartHint')
-            : t('calendar.rangeAnchored', { day: anchor })}
+            : t('calendar.rangeAnchored', { day: formatDate(anchor) })}
         </span>
 
         {anchor !== null && (
@@ -495,7 +496,7 @@ function ClosureList({
           <span className="flex items-center gap-3 text-sm text-foreground-muted">
             {closure.startsOn === closure.endsOn
               ? closure.startsOn
-              : `${closure.startsOn} — ${closure.endsOn}`}
+              : `${formatDate(closure.startsOn)} — ${formatDate(closure.endsOn)}`}
             {canManage && (
               <RemoveClosure
                 organizationId={organizationId}

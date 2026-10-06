@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import type { RedemptionOption, ReposicaoCredit } from '@/lib/api';
 import { bookCreditAction, cancelBookingAction, optionsForCreditAction } from './credits.actions';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * Booking a reposição — POOLSE-21, criteria 3 and 6.
@@ -106,7 +107,7 @@ export function CreditBooking({
             >
               <span className="flex flex-col">
                 <span className="text-sm font-medium">
-                  {option.localDate} · {option.startTime}
+                  {formatDate(option.localDate)} · {option.startTime}
                 </span>
                 <span className="text-sm text-foreground-muted">
                   {[option.className, option.poolName].filter(Boolean).join(' · ')}

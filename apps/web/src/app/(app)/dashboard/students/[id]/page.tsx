@@ -23,6 +23,7 @@ import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageError, PageShell } from '@/components/page-shell';
 import { DetailPage } from '@/components/detail-page';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * One student's record.
@@ -231,7 +232,10 @@ export default async function StudentPage({
                         label={t('students.level')}
                         value={loaded.levelName ?? t('students.noLevel')}
                       />
-                      <Row label={t('students.birthDate')} value={loaded.birthDate} />
+                      <Row
+                        label={t('students.birthDate')}
+                        value={loaded.birthDate === null ? null : formatDate(loaded.birthDate)}
+                      />
                       <Row
                         label={t('students.gender')}
                         value={
@@ -389,12 +393,12 @@ export default async function StudentPage({
                     <span className="flex flex-col">
                       <span>
                         {t('reposicao.missedOn', {
-                          date: credit.issuedOn,
+                          date: formatDate(credit.issuedOn),
                           turma: credit.className ?? t('classes.noTurma'),
                         })}
                       </span>
                       <span className="text-sm text-foreground-muted">
-                        {t('reposicao.expiresOn', { date: credit.expiresOn })}
+                        {t('reposicao.expiresOn', { date: formatDate(credit.expiresOn) })}
                       </span>
                     </span>
 

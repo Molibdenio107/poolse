@@ -8,6 +8,7 @@ import type { MedicalLeave } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { addMedicalLeaveAction, removeMedicalLeaveAction } from './sensitive.actions';
+import { formatDate } from '@/lib/date-format';
 
 const INITIAL: FormState = { ok: false };
 
@@ -59,8 +60,11 @@ export function MedicalLeavePanel({
               <span className="flex flex-wrap items-baseline gap-2">
                 <span className="font-medium">
                   {period.endsOn === null
-                    ? t('sensitive.leaveFrom', { from: period.startsOn })
-                    : t('sensitive.leaveRange', { from: period.startsOn, to: period.endsOn })}
+                    ? t('sensitive.leaveFrom', { from: formatDate(period.startsOn) })
+                    : t('sensitive.leaveRange', {
+                        from: formatDate(period.startsOn),
+                        to: formatDate(period.endsOn),
+                      })}
                 </span>
 
                 {/*

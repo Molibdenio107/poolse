@@ -24,6 +24,7 @@ import {
   saveSocioAction,
   updateFeeAction,
 } from './fees.actions';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * What this student pays — POOLSE-42, AC3.
@@ -1009,8 +1010,8 @@ function PaidToggle({
             {choices.map((choice) => (
               <option key={choice} value={choice}>
                 {choice === line.currentPeriodStart
-                  ? t('fees.periodCurrent', { date: choice })
-                  : choice}
+                  ? t('fees.periodCurrent', { date: formatDate(choice) })
+                  : formatDate(choice)}
               </option>
             ))}
           </select>

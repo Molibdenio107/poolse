@@ -10,6 +10,7 @@ import { centsToInput, formatCents, parseCents } from '@/lib/money';
 import type { InsurancePolicy } from '@/lib/api';
 import type { FormState } from '../../actions';
 import { archivePolicyAction, savePolicyAction } from './insurance.actions';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * The apólices a club holds — the facility's half of the seguro.
@@ -71,7 +72,7 @@ function Expiry({ policy }: { policy: InsurancePolicy }): React.ReactElement {
 
   return (
     <span className="text-sm text-foreground-muted">
-      {t('insurance.validUntil', { date: policy.validTo })}
+      {t('insurance.validUntil', { date: formatDate(policy.validTo) })}
     </span>
   );
 }
@@ -117,7 +118,10 @@ export function InsurancePanel({
                     {t('insurance.numberIs', { number: policy.policyNumber })}
                   </p>
                   <p className="text-sm text-foreground-muted">
-                    {t('insurance.period', { from: policy.validFrom, to: policy.validTo })}
+                    {t('insurance.period', {
+                      from: formatDate(policy.validFrom),
+                      to: formatDate(policy.validTo),
+                    })}
                   </p>
                   {/* Visible text, not a tooltip: the operator needs both the
                       per-person cost and how many people are on it. */}

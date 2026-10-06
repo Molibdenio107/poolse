@@ -23,6 +23,7 @@ import {
   type WaterImportState,
   type WaterReadState,
 } from './water-import.actions';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * Importing a club's water log — round 5, ticket 5.
@@ -526,7 +527,8 @@ function Preview({
               <tr key={row.index} className="border-t border-border align-top">
                 <td className="p-2 tabular-nums text-foreground-muted">{row.line}</td>
                 <td className="p-2 tabular-nums">
-                  {row.takenOn}
+                  {/* The sheet's own text when it is not a day we can read. */}
+                  {formatDate(row.takenOn) || row.takenOn}
                   {row.takenTime !== null && ` ${row.takenTime}`}
                 </td>
                 <td className="p-2">
