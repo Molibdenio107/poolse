@@ -109,7 +109,10 @@ export function SalaryTable({
                           */}
                         {live.provenance !== 'contracted' && (
                           <Hint text={t(`salaries.provenanceExplains.${live.provenance}`)}>
-                            <span className="ml-2 rounded bg-surface-muted px-1.5 py-0.5 text-xs text-foreground-muted underline decoration-dotted underline-offset-4">
+                            <span
+                              tabIndex={0}
+                              className="ml-2 rounded bg-surface-muted px-1.5 py-0.5 text-xs text-foreground-muted underline decoration-dotted underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            >
                               {t(`salaries.provenance.${live.provenance}`)}
                             </span>
                           </Hint>
@@ -199,7 +202,12 @@ function Figure({
   return (
     <td className="px-4 py-3 text-right tabular-nums text-foreground-muted">
       <Hint text={t('salaries.derivedExplains')}>
-        <span className="underline decoration-dotted underline-offset-4">{money(cents)}</span>
+        <span
+          tabIndex={0}
+          className="rounded underline decoration-dotted underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {money(cents)}
+        </span>
       </Hint>{' '}
       <span className="text-xs">{t('salaries.estimate')}</span>
     </td>

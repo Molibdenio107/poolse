@@ -130,7 +130,10 @@ export default async function ProgressPage({
                       actually is rather than letting the label imply more.
                     */}
                     <Hint text={t('progress.fastestHint')}>
-                      <span className="cursor-help text-sm text-foreground-muted">
+                      <span
+                        tabIndex={0}
+                        className="cursor-help rounded text-sm text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
                         {t('progress.fastest')}
                       </span>
                     </Hint>

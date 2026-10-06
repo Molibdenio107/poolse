@@ -198,7 +198,10 @@ export default async function PeoplePage({
               */}
               <div className="flex flex-wrap items-center gap-2">
                 <Hint text={t('people.staffCountHint')}>
-                  <span className="cursor-help text-sm">
+                  <span
+                    tabIndex={0}
+                    className="cursor-help rounded text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
                     {t('people.staffTotal', { count: people.counts.total })}
                   </span>
                 </Hint>
@@ -295,7 +298,10 @@ export default async function PeoplePage({
                       // only explains what that means for the person, which is
                       // exactly the line CLAUDE.md draws.
                       <Hint text={t('people.pendingHint')}>
-                        <span className="cursor-help rounded bg-warning/15 px-2 py-0.5 text-sm text-warning">
+                        <span
+                          tabIndex={0}
+                          className="cursor-help rounded bg-warning/15 px-2 py-0.5 text-sm text-warning focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
                           {t('people.pending')}
                         </span>
                       </Hint>
