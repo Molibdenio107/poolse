@@ -918,3 +918,14 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   fetching would have written one per click — the log full of accidents that page exists to
   prevent. `DetailPage eager` uses `history.pushState`, which Next keeps in step with
   `useSearchParams`, so the URL, refresh and the back button behave exactly as elsewhere.
+
+- **2026-10-06** — **A `YYYY-MM-DD` day is parsed as noon UTC, not local midnight.** Local
+  midnight was right on a server in Lisbon and wrong in any browser east of it — 1 October
+  printed as 30-09-2026 in Madrid. Noon UTC is the same calendar day in every zone within twelve
+  hours of Greenwich, and every formatter still prints in `APP_TIME_ZONE`.
+
+- **2026-10-06** — **`longDate` and `mediumDate` are removed from `lib/dates.ts`.** They were a
+  second date system writing "24 de agosto de 2026", and six screens still used it a month after
+  every date became dd-MM-yyyy. Removed rather than left, as the named `long`/`short` formats
+  were. `shortDate` ("Ter · 25 ago") stays until Rui decides whether a day-column header is a
+  date under that rule.
