@@ -74,15 +74,18 @@ for (const path of await pages(ROOT)) {
   const source = await readFile(path, 'utf8');
   checked.push(shown);
 
-  if (!source.includes('PageShell')) {
+  // `DetailPage` renders `PageShell` itself — a tabbed record's page is on the
+  // shell by construction, and is held to the same rules from its own root.
+  const shell = source.includes('<PageShell') ? '<PageShell' : '<DetailPage';
+  if (!source.includes(shell)) {
     failures.push(`${shown}: does not use PageShell`);
     continue;
   }
 
   // Only the page's own root matters; a `max-w` inside the content is fine, and
   // is sometimes exactly right for a narrow form.
-  const root = source.slice(source.indexOf('<PageShell'));
-  const before = source.slice(0, source.indexOf('<PageShell'));
+  const root = source.slice(source.indexOf(shell));
+  const before = source.slice(0, source.indexOf(shell));
 
   if (OUTER.test(before.replace(/<[A-Z][^>]*>/g, ''))) {
     failures.push(`${shown}: sets outer layout before the shell`);
