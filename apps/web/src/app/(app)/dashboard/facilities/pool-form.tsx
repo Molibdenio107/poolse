@@ -378,9 +378,6 @@ export function PoolForm({
         </button>
       </div>
 
-      {state.ok && mode === 'edit' && (
-        <p className="text-sm text-success">{t('facilities.poolSaved')}</p>
-      )}
       {state.errorKey !== undefined && (
         <p className="text-sm text-danger">
           {t(state.errorKey)}

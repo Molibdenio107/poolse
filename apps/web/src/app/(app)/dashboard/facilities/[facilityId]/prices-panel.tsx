@@ -3,7 +3,7 @@
 import { Fragment, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
-import { Check, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
+import { Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { centsToInput, formatCents, parseCents } from '@/lib/money';
@@ -104,26 +104,6 @@ const BUTTON =
 const BUTTON_QUIET =
   'rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
-
-/**
- * Says the save happened.
- *
- * Every one of these forms saves values that are already on screen, so a
- * successful save looked exactly like a broken button — which is what it was
- * reported as. Nothing else in this app has that problem because everything else
- * either navigates or visibly changes.
- */
-function Saved({ state }: { state: FormState }): React.ReactElement | null {
-  const t = useTranslations();
-  if (!state.ok) return null;
-
-  return (
-    <p className="flex items-center gap-1.5 text-sm text-primary">
-      <Check aria-hidden className="size-4" />
-      {t('fees.saved')}
-    </p>
-  );
-}
 
 function Problem({ state }: { state: FormState }): React.ReactElement | null {
   const t = useTranslations();
@@ -675,7 +655,6 @@ function PeriodForm({
       </div>
 
       <Problem state={state} />
-      <Saved state={state} />
 
       <div className="flex gap-2">
         <button type="submit" disabled={pending} className={BUTTON}>
@@ -1190,7 +1169,6 @@ function BillingForm({
       </div>
 
       <Problem state={state} />
-      <Saved state={state} />
 
       <button type="submit" disabled={pending} className={cn(BUTTON, 'self-start')}>
         {t('fees.save')}

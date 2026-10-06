@@ -251,9 +251,6 @@ export function StudentForm({
         </button>
       </div>
 
-      {state.ok && mode === 'edit' && (
-        <p className="text-sm text-success">{t('students.saved')}</p>
-      )}
       <Problem state={state} />
     </form>
   );

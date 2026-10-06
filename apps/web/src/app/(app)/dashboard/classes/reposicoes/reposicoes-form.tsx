@@ -118,7 +118,6 @@ export function ReposicaoSettingsForm({
           {pending ? t('common.working') : t('common.save')}
         </button>
 
-        {state.ok && <span className="text-sm text-foreground-muted">{t('reposicao.saved')}</span>}
       </div>
     </form>
   );

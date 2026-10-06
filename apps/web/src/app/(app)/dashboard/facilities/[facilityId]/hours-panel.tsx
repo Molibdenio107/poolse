@@ -6,6 +6,7 @@ import type { FacilityDay } from '@/lib/api';
 import { CONTROL_LINE, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { saveHoursAction } from './facility.actions';
+import { useToast } from '@/components/ui/toast';
 
 /**
  * When this site is open — round 4.
@@ -53,7 +54,7 @@ export function HoursPanel({
    */
   const [days, setDays] = useState<FacilityDay[]>(hours);
   const [errorKey, setErrorKey] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const toast = useToast();
 
   /**
    * The weekday whose times were last typed into, or `null` before any were.
@@ -82,7 +83,6 @@ export function HoursPanel({
   });
 
   function edit(weekday: number, patch: Partial<FacilityDay>): void {
-    setSaved(false);
     setErrorKey(null);
     if (patch.opensAt !== undefined || patch.closesAt !== undefined) setLastEdited(weekday);
     setDays((current) =>
@@ -115,7 +115,6 @@ export function HoursPanel({
     const source = days.find((day) => day.weekday === from);
     if (source === undefined || !source.available) return;
 
-    setSaved(false);
     setErrorKey(null);
     setDays((current) =>
       current.map((day) =>
@@ -164,7 +163,8 @@ export function HoursPanel({
         })),
       });
 
-      if (result.ok) setSaved(true);
+      // The shared toast, as every other save says it — round 7's convention.
+      if (result.ok) toast.show('success', t('common.savedToast'));
       else setErrorKey(result.errorKey);
     });
   }
@@ -300,9 +300,6 @@ export function HoursPanel({
           */}
           <span aria-live="polite" className="text-sm">
             {errorKey !== null && <span className="text-danger">{t(errorKey)}</span>}
-            {errorKey === null && saved && (
-              <span className="text-foreground-muted">{t('facilities.hoursSaved')}</span>
-            )}
           </span>
         </div>
       )}

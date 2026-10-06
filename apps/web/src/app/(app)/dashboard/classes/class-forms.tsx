@@ -236,7 +236,6 @@ export function ClassForm({
         </button>
       </div>
 
-      {state.ok && mode === 'edit' && <p className="text-sm text-success">{t('classes.saved')}</p>}
       <Problem state={state} except={['name', 'lane', 'capacity']} />
     </form>
   );
