@@ -60,19 +60,19 @@ interface Look {
 }
 
 const LOOK: Record<WeatherKind, Look> = {
-  clear: { Icon: Sun, Night: Moon, colour: 'text-[#e0a32e] dark:text-[#f0bd52]' },
-  partlyCloudy: { Icon: CloudSun, Night: Cloud, colour: 'text-[#c58f2e] dark:text-[#deae54]' },
-  overcast: { Icon: Cloudy, colour: 'text-[#6b7a86] dark:text-[#94a2ac]' },
-  fog: { Icon: CloudFog, colour: 'text-[#8a93a0] dark:text-[#a8b1bc]' },
-  drizzle: { Icon: CloudDrizzle, colour: 'text-[#4f93b8] dark:text-[#79b6d6]' },
-  rain: { Icon: CloudRain, colour: 'text-[#2f6f9e] dark:text-[#5c9fca]' },
+  clear: { Icon: Sun, Night: Moon, colour: 'text-weather-clear' },
+  partlyCloudy: { Icon: CloudSun, Night: Cloud, colour: 'text-weather-partly-cloudy' },
+  overcast: { Icon: Cloudy, colour: 'text-weather-overcast' },
+  fog: { Icon: CloudFog, colour: 'text-weather-fog' },
+  drizzle: { Icon: CloudDrizzle, colour: 'text-weather-drizzle' },
+  rain: { Icon: CloudRain, colour: 'text-weather-rain' },
   // Darker and more saturated than plain rain, so the two are told apart by more
   // than the number of drops in the glyph.
-  heavyRain: { Icon: CloudRain, colour: 'text-[#1d4e73] dark:text-[#3f86b5]' },
-  snow: { Icon: CloudSnow, colour: 'text-[#7aa7c7] dark:text-[#a6cbe4]' },
-  showers: { Icon: CloudRain, colour: 'text-[#3d84ad] dark:text-[#69a9cd]' },
-  snowShowers: { Icon: CloudSnow, colour: 'text-[#8fb4cf] dark:text-[#b4d4e9]' },
-  thunderstorm: { Icon: CloudLightning, colour: 'text-[#7a5aa8] dark:text-[#a689cf]' },
+  heavyRain: { Icon: CloudRain, colour: 'text-weather-heavy-rain' },
+  snow: { Icon: CloudSnow, colour: 'text-weather-snow' },
+  showers: { Icon: CloudRain, colour: 'text-weather-showers' },
+  snowShowers: { Icon: CloudSnow, colour: 'text-weather-snow-showers' },
+  thunderstorm: { Icon: CloudLightning, colour: 'text-weather-thunderstorm' },
   unknown: { Icon: Cloud, colour: 'text-foreground-muted' },
 };
 
@@ -124,6 +124,6 @@ export function WeatherIcon({
 /** The wind flag, shown only when there is enough of it to matter. */
 export function WindIcon({ className }: { className?: string }): React.ReactElement {
   return (
-    <Wind aria-hidden className={cn('size-4 shrink-0 text-[#5a8f7b] dark:text-[#84b8a3]', className)} />
+    <Wind aria-hidden className={cn('size-4 shrink-0 text-weather-wind', className)} />
   );
 }

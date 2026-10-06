@@ -114,6 +114,23 @@ const PAIRS = [
    * A bordered *button* is in the same bucket: its text label identifies it, and
    * that text is checked above.
    */
+  /*
+   * The forecast's glyphs — shapes, so 3:1 against the card they sit on. They
+   * were hex literals in weather-icon.tsx until 6 October 2026.
+   */
+  ['weather-clear', 'surface', 3, 'the clear glyph'],
+  ['weather-partly-cloudy', 'surface', 3, 'the partly cloudy glyph'],
+  ['weather-overcast', 'surface', 3, 'the overcast glyph'],
+  ['weather-fog', 'surface', 3, 'the fog glyph'],
+  ['weather-drizzle', 'surface', 3, 'the drizzle glyph'],
+  ['weather-rain', 'surface', 3, 'the rain glyph'],
+  ['weather-heavy-rain', 'surface', 3, 'the heavy rain glyph'],
+  ['weather-snow', 'surface', 3, 'the snow glyph'],
+  ['weather-showers', 'surface', 3, 'the showers glyph'],
+  ['weather-snow-showers', 'surface', 3, 'the snow showers glyph'],
+  ['weather-thunderstorm', 'surface', 3, 'the thunderstorm glyph'],
+  ['weather-wind', 'surface', 3, 'the wind glyph'],
+
   ['border-strong', 'background', 3, 'a form control against the page'],
   ['border-strong', 'surface', 3, 'a form control on a card'],
   ['primary', 'background', 3, 'the focus ring'],

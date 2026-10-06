@@ -156,6 +156,29 @@
     --person-foreground: 255 255 255;
 
     /*
+     * Weather glyphs — the forecast on a site's page. Were hex literals in
+     * `weather-icon.tsx`, which `contrast:check` cannot see; as tokens they are
+     * held to 3:1 against the card, the bar for a shape (WCAG 1.4.11). The
+     * condition is always also written in words beside the glyph.
+     *
+     * Four light values were darkened when they moved here — the sun, partly
+     * cloudy, snow and snow showers sat between 2.2:1 and 2.9:1 on a white card
+     * as literals. Each pair is held apart in lightness so the two stay distinct.
+     */
+    --weather-clear: 191 135 28;
+    --weather-partly-cloudy: 174 126 41;
+    --weather-overcast: 107 122 134;
+    --weather-fog: 138 147 160;
+    --weather-drizzle: 79 147 184;
+    --weather-rain: 47 111 158;
+    --weather-heavy-rain: 29 78 115;
+    --weather-snow: 99 152 189;
+    --weather-showers: 61 132 173;
+    --weather-snow-showers: 82 139 181;
+    --weather-thunderstorm: 122 90 168;
+    --weather-wind: 90 143 123;
+
+    /*
      * Chart series — POOLSE-52's occupancy on the dashboard.
      *
      * **Not `--primary`, and that is measured rather than preferred.** The brand
@@ -264,6 +287,20 @@
     --role-maintenance: 158 173 189;
     --role-guardian: 124 194 146;
     --role-student: 116 175 230;
+
+    /* Weather glyphs, lifted for the dark card — see the light block. */
+    --weather-clear: 240 189 82;
+    --weather-partly-cloudy: 222 174 84;
+    --weather-overcast: 148 162 172;
+    --weather-fog: 168 177 188;
+    --weather-drizzle: 121 182 214;
+    --weather-rain: 92 159 202;
+    --weather-heavy-rain: 63 134 181;
+    --weather-snow: 166 203 228;
+    --weather-showers: 105 169 205;
+    --weather-snow-showers: 180 212 233;
+    --weather-thunderstorm: 166 137 207;
+    --weather-wind: 132 184 163;
 
     /* --- shadcn aliases --- */
     --card: 20 27 31;

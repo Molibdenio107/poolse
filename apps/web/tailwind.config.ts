@@ -93,6 +93,21 @@ export default {
           6: rgb('--person-6'),
           foreground: rgb('--person-foreground'),
         },
+        // Weather glyphs on the forecast — tokens, so contrast:check can see them.
+        weather: {
+          'clear': rgb('--weather-clear'),
+          'partly-cloudy': rgb('--weather-partly-cloudy'),
+          'overcast': rgb('--weather-overcast'),
+          'fog': rgb('--weather-fog'),
+          'drizzle': rgb('--weather-drizzle'),
+          'rain': rgb('--weather-rain'),
+          'heavy-rain': rgb('--weather-heavy-rain'),
+          'snow': rgb('--weather-snow'),
+          'showers': rgb('--weather-showers'),
+          'snow-showers': rgb('--weather-snow-showers'),
+          'thunderstorm': rgb('--weather-thunderstorm'),
+          'wind': rgb('--weather-wind'),
+        },
         // Chart series slots. Validated for a data mark, which is a different
         // job from a brand fill — see the note in globals.css.
         chart: {
