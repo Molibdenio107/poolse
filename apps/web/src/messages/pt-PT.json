@@ -3500,7 +3500,8 @@
       "maintenanceDue": "Há manutenção por fazer",
       "waterOutOfBand": "A última análise está fora dos limites",
       "spaceOverdue": "A limpeza está em atraso",
-      "reinvitePending": "Há uma mudança de endereço pendente"
+      "reinvitePending": "Há uma mudança de endereço pendente",
+      "taskDue": "Esta tarefa está por fazer"
     },
     "loadFailed": "Não foi possível carregar este separador.",
     "fees": "Mensalidades",

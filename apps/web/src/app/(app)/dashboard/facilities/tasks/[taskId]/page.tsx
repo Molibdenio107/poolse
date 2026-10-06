@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { PageShell } from '@/components/page-shell';
+import { DetailPage } from '@/components/detail-page';
 import { Pagination } from '@/components/pagination';
 import { backTarget } from '@/lib/back';
 import { getTask, listCompletions } from '../../maintenance.actions';
@@ -17,23 +17,22 @@ import { formatStamp } from '@/lib/date-format';
  * came for, the action, then the history. What is *not* here is an edit control
  * on a past entry — an entry is a claim about a moment, and editing one rewrites
  * what a colleague said they did. A mistake is deleted, which is owner/admin.
+ *
+ * **Tabs since the detail-tabs change**: General (the facts and the record
+ * form), Histórico — fetched when it opens — and Plano (owner and admin).
  */
 export default async function TaskPage({
   params,
   searchParams,
 }: {
   params: Promise<{ taskId: string }>;
-  searchParams: Promise<{ from?: string; page?: string }>;
+  searchParams: Promise<{ from?: string; page?: string; tab?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const { taskId } = await params;
-  const { from, page } = await searchParams;
+  const { from, page, tab } = await searchParams;
   const t = await getTranslations();
 
-  const requested = Number(page ?? '1');
-  const [detail, history] = await Promise.all([
-    getTask(taskId),
-    listCompletions(taskId, Number.isFinite(requested) && requested > 0 ? requested : 1),
-  ]);
+  const detail = await getTask(taskId);
 
   /*
    * A task belonging to another tenant is indistinguishable from one that does
@@ -49,124 +48,157 @@ export default async function TaskPage({
   const target = task.spaceName ?? task.poolName ?? task.inventoryItemName;
 
   return (
-    <PageShell
+    <DetailPage
       title={task.title}
       subtitle={t('maintenance.everyDays', { days: task.intervalDays })}
       back={{ href: back.href, label: t(back.labelKey) }}
-    >
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-        <dl className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-0.5">
-            <dt className="text-sm text-foreground-muted">{t('maintenance.about')}</dt>
-            <dd className="text-sm">{target ?? t('maintenance.aboutSite')}</dd>
-          </div>
+      requested={tab}
+      tabs={[
+        {
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          badge:
+            task.state === 'due'
+              ? { kind: 'dot', labelKey: 'detailTabs.badge.taskDue' }
+              : undefined,
+          content: () => (
+            <>
+              <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                <dl className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex flex-col gap-0.5">
+                    <dt className="text-sm text-foreground-muted">{t('maintenance.about')}</dt>
+                    <dd className="text-sm">{target ?? t('maintenance.aboutSite')}</dd>
+                  </div>
 
-          <div className="flex flex-col gap-0.5">
-            <dt className="text-sm text-foreground-muted">{t('maintenance.assignee')}</dt>
-            <dd className="text-sm">
-              {task.assignedToName === null
-                ? t('maintenance.unassigned')
-                : task.assigneeArchived
-                  ? t('maintenance.assigneeLeft', { name: task.assignedToName })
-                  : task.assignedToName}
-            </dd>
-          </div>
+                  <div className="flex flex-col gap-0.5">
+                    <dt className="text-sm text-foreground-muted">{t('maintenance.assignee')}</dt>
+                    <dd className="text-sm">
+                      {task.assignedToName === null
+                        ? t('maintenance.unassigned')
+                        : task.assigneeArchived
+                          ? t('maintenance.assigneeLeft', { name: task.assignedToName })
+                          : task.assignedToName}
+                    </dd>
+                  </div>
 
-          <div className="flex flex-col gap-0.5">
-            <dt className="text-sm text-foreground-muted">{t('maintenance.state')}</dt>
-            {/*
-              The state as words, computed by the server. Nothing here re-derives
-              it — there is one implementation of that rule and it is in SQL.
-            */}
-            <dd className="text-sm">
-              {task.state === 'paused'
-                ? t('maintenance.paused')
-                : task.state === 'due'
-                  ? task.daysOverdue > 0
-                    ? t('maintenance.dueBy', { days: task.daysOverdue })
-                    : t('maintenance.due')
-                  : t('maintenance.scheduled')}
-            </dd>
-          </div>
+                  <div className="flex flex-col gap-0.5">
+                    <dt className="text-sm text-foreground-muted">{t('maintenance.state')}</dt>
+                    {/*
+                      The state as words, computed by the server. Nothing here
+                      re-derives it — there is one implementation of that rule
+                      and it is in SQL.
+                    */}
+                    <dd className="text-sm">
+                      {task.state === 'paused'
+                        ? t('maintenance.paused')
+                        : task.state === 'due'
+                          ? task.daysOverdue > 0
+                            ? t('maintenance.dueBy', { days: task.daysOverdue })
+                            : t('maintenance.due')
+                          : t('maintenance.scheduled')}
+                    </dd>
+                  </div>
 
-          <div className="flex flex-col gap-0.5">
-            <dt className="text-sm text-foreground-muted">{t('maintenance.nextDue')}</dt>
-            <dd className="text-sm">
-              {task.nextDueAt === null
-                ? t('maintenance.neverDone')
-                : formatStamp(new Date(task.nextDueAt))}
-            </dd>
-          </div>
-        </dl>
+                  <div className="flex flex-col gap-0.5">
+                    <dt className="text-sm text-foreground-muted">{t('maintenance.nextDue')}</dt>
+                    <dd className="text-sm">
+                      {task.nextDueAt === null
+                        ? t('maintenance.neverDone')
+                        : formatStamp(new Date(task.nextDueAt))}
+                    </dd>
+                  </div>
+                </dl>
 
-        {task.description !== null && (
-          <p className="text-sm text-foreground-muted">{task.description}</p>
-        )}
-      </section>
-
-      {detail.canComplete && task.state !== 'paused' && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('maintenance.recordTitle')}
-          </h2>
-          <CompleteForm facilityId={task.facilityId} taskId={task.id} />
-        </section>
-      )}
-
-      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          {t('maintenance.history')}
-        </h2>
-
-        {history === null || history.items.length === 0 ? (
-          <p className="text-sm text-foreground-muted">{t('maintenance.neverDone')}</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-border rounded border border-border">
-            {history.items.map((entry) => (
-              <li key={entry.id} className="flex flex-col gap-1 p-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <span className="text-sm">
-                    {/* A named format, never an options object — see i18n.ts. */}
-                    {t('maintenance.doneBy', {
-                      name: entry.performedByName ?? '—',
-                      when: formatStamp(new Date(entry.performedAt)),
-                    })}
-                  </span>
-
-                  {detail.canPlan && (
-                    <RemoveCompletion
-                      facilityId={task.facilityId}
-                      taskId={task.id}
-                      completionId={entry.id}
-                    />
-                  )}
-                </div>
-
-                {entry.note !== null && (
-                  <span className="text-sm text-foreground-muted">{entry.note}</span>
+                {task.description !== null && (
+                  <p className="text-sm text-foreground-muted">{task.description}</p>
                 )}
-              </li>
-            ))}
-          </ul>
-        )}
+              </section>
 
-        {history !== null && history.items.length > 0 && (
-          <Pagination
-            page={history}
-            basePath={`/dashboard/facilities/tasks/${task.id}`}
-            query={{ ...(from === undefined ? {} : { from }) }}
-          />
-        )}
-      </section>
+              {detail.canComplete && task.state !== 'paused' && (
+                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('maintenance.recordTitle')}
+                  </h2>
+                  <CompleteForm facilityId={task.facilityId} taskId={task.id} />
+                </section>
+              )}
+            </>
+          ),
+        },
+        {
+          slug: 'history',
+          labelKey: 'maintenance.history',
+          content: async () => {
+            const requested = Number(page ?? '1');
+            const history = await listCompletions(
+              taskId,
+              Number.isFinite(requested) && requested > 0 ? requested : 1,
+            );
 
-      {detail.canPlan && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('maintenance.plan')}
-          </h2>
-          <TaskAdmin task={task} assignees={detail.assignees ?? []} />
-        </section>
-      )}
-    </PageShell>
+            return (
+              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('maintenance.history')}
+                </h2>
+
+                {history === null || history.items.length === 0 ? (
+                  <p className="text-sm text-foreground-muted">{t('maintenance.neverDone')}</p>
+                ) : (
+                  <ul className="flex flex-col divide-y divide-border rounded border border-border">
+                    {history.items.map((entry) => (
+                      <li key={entry.id} className="flex flex-col gap-1 p-3">
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                          <span className="text-sm">
+                            {/* A named format, never an options object — see i18n.ts. */}
+                            {t('maintenance.doneBy', {
+                              name: entry.performedByName ?? '—',
+                              when: formatStamp(new Date(entry.performedAt)),
+                            })}
+                          </span>
+
+                          {detail.canPlan && (
+                            <RemoveCompletion
+                              facilityId={task.facilityId}
+                              taskId={task.id}
+                              completionId={entry.id}
+                            />
+                          )}
+                        </div>
+
+                        {entry.note !== null && (
+                          <span className="text-sm text-foreground-muted">{entry.note}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* The tab rides along, or paging would land back on General. */}
+                {history !== null && history.items.length > 0 && (
+                  <Pagination
+                    page={history}
+                    basePath={`/dashboard/facilities/tasks/${task.id}`}
+                    query={{ ...(from === undefined ? {} : { from }), tab: 'history' }}
+                  />
+                )}
+              </section>
+            );
+          },
+        },
+        {
+          slug: 'plan',
+          labelKey: 'maintenance.plan',
+          visible: detail.canPlan,
+          content: () => (
+            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('maintenance.plan')}
+              </h2>
+              <TaskAdmin task={task} assignees={detail.assignees ?? []} />
+            </section>
+          ),
+        },
+      ]}
+    />
   );
 }

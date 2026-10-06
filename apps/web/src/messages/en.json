@@ -3500,7 +3500,8 @@
       "maintenanceDue": "Maintenance is due",
       "waterOutOfBand": "The latest analysis is out of range",
       "spaceOverdue": "Cleaning is overdue",
-      "reinvitePending": "A change of address is pending"
+      "reinvitePending": "A change of address is pending",
+      "taskDue": "This task is due"
     },
     "loadFailed": "This tab could not be loaded.",
     "fees": "Fees",
