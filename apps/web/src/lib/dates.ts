@@ -77,36 +77,12 @@ export function seasonOf(date: string): { from: string; to: string } {
   return { from: `${startYear}-09-01`, to: `${startYear + 1}-08-31` };
 }
 
-/**
- * `en` means British English here, not American.
- *
- * Intl resolves a bare `en` to `en-US`, which renders "August 24, 2026" — month
- * first, and a comma. Poolse is a Portuguese product whose English is for
- * European readers, and POOLSE-02 spells the expected form out: "24 August 2026".
- * Every date in the English interface was in the wrong order until this existed.
- *
- * Done here rather than by renaming the locale, because `en` is the message
- * catalogue's name and the URL's, and those are not worth churning for a date
- * format. `pt-PT` is already explicit and passes through untouched.
- */
-function forFormatting(locale: string): string {
-  return locale === 'en' ? 'en-GB' : locale;
-}
-
-/** Formatted in the reader's locale — "12 dez" in pt-PT, "12 Dec" in en. */
-export function shortDate(date: string, locale: string): string {
-  return new Intl.DateTimeFormat(forFormatting(locale), {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-  }).format(new Date(toDate(date)));
-}
-
 /*
- * `mediumDate` and `longDate` were here — "24 ago 2026", "24 de agosto de
- * 2026". Removed on 6 October 2026 rather than left for the next caller: every
- * date in Poolse is dd-MM-yyyy through `formatDate` in `date-format.ts`, and
- * these two were how the week header and the season still read in words a
- * month after that rule. The named `long` / `short` formats went from i18n.ts
- * for the same reason.
+ * `shortDate`, `mediumDate` and `longDate` were here — "24 ago", "24 ago 2026",
+ * "24 de agosto de 2026" — with a shim that turned `en` into `en-GB`. Removed on
+ * 6 October 2026 rather than left for the next caller: every date in Poolse is
+ * dd-MM-yyyy through `formatDate` in `date-format.ts`, day-column headers
+ * included, and these were how the week header, the season and the forecast
+ * still read in words a month after that rule. The named `long` / `short`
+ * formats went from i18n.ts for the same reason.
  */

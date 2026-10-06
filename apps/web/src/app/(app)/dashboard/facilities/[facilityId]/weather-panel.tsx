@@ -1,7 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type WeatherResponse } from '@/lib/api';
-import { shortDate } from '@/lib/dates';
 import { WeatherIcon, WindIcon, WINDY_KMH, weatherKind } from '@/components/weather-icon';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * Current conditions and a short forecast — backlog round 3, story 3.
@@ -126,7 +126,7 @@ export async function WeatherPanel({
                   key={day.date}
                   className="flex flex-col gap-0.5 rounded border border-border p-3"
                 >
-                  <span className="text-sm font-medium">{shortDate(day.date, locale)}</span>
+                  <span className="text-sm font-medium">{formatDate(day.date)}</span>
                   <span className="flex items-center gap-1.5 text-sm text-foreground-muted">
                     {/* Daily rows have no day/night: a forecast day is a day. */}
                     <WeatherIcon code={day.weatherCode} />

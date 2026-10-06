@@ -927,5 +927,5 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-10-06** — **`longDate` and `mediumDate` are removed from `lib/dates.ts`.** They were a
   second date system writing "24 de agosto de 2026", and six screens still used it a month after
   every date became dd-MM-yyyy. Removed rather than left, as the named `long`/`short` formats
-  were. `shortDate` ("Ter · 25 ago") stays until Rui decides whether a day-column header is a
-  date under that rule.
+  were. `shortDate` ("Ter · 25 ago") followed the same day, once Rui confirmed a day-column
+  header is a date under that rule.

@@ -6,7 +6,6 @@ import {
   isoWeekday,
   mondayOf,
   seasonOf,
-  shortDate,
   weekOf,
 } from './dates.ts';
 
@@ -97,12 +96,6 @@ test('weekOf returns seven consecutive days, Monday first', () => {
     '2026-09-12',
     '2026-09-13',
   ]);
-});
-
-test('English dates are British, not American — POOLSE-02', () => {
-  // Intl resolves a bare `en` to en-US, which renders "Aug 24". Poolse is a
-  // Portuguese product whose English is for European readers.
-  assert.equal(shortDate('2026-08-24', 'en'), '24 Aug');
 });
 
 test('isDate rejects what a query string can carry', () => {

@@ -75,7 +75,8 @@ messages nor the formats. The timezone is `APP_TIME_ZONE`, exported from the sam
 formatter and next-intl cannot disagree — and a `YYYY-MM-DD` string is parsed as a *day*, never
 as a UTC instant, which is the off-by-one that made a rate effective on 1 October read as
 30 September. `asDate` makes it noon UTC, so the browser's own zone cannot move it either, and
-`lib/dates.ts` no longer writes a date in words — `longDate` and `mediumDate` are gone.
+`lib/dates.ts` no longer writes a date at all — `shortDate`, `mediumDate` and `longDate` are gone,
+day-column headers included.
 
 **Tooltips explain, they never inform.** A tooltip may clarify what a control does. It may
 never be the only place a piece of information appears — anything the operator needs is

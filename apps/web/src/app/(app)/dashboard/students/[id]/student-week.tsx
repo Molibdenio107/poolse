@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
-import { addDays, mondayOf, shortDate, today } from '@/lib/dates';
+import { addDays, mondayOf, today } from '@/lib/dates';
 import type { CalendarSession, TimetableEntry } from '@/lib/api';
 import { studentWeekAction } from '../students.actions';
 import { laneLabel } from '@/lib/lanes';
@@ -155,7 +155,7 @@ export function StudentWeek({
         dayNames={Object.fromEntries(
           [0, 1, 2, 3, 4, 5, 6].map((offset) => [
             offset + 1,
-            `${t(`week.${offset + 1}`)} · ${shortDate(addDays(monday, offset), locale)}`,
+            `${t(`week.${offset + 1}`)} · ${formatDate(addDays(monday, offset))}`,
           ]),
         )}
         emptyLabel={t('students.noClassesThisWeek')}

@@ -17,7 +17,6 @@ import {
   isoWeekday,
   mondayOf,
   seasonOf,
-  shortDate,
   today,
 } from '@/lib/dates';
 import type { SessionControls } from '../classes/schedule-board';
@@ -161,7 +160,7 @@ export default async function CalendarPage({
   const dayNames = Object.fromEntries(
     [0, 1, 2, 3, 4, 5, 6].map((offset) => [
       offset + 1,
-      `${t(`week.${offset + 1}`)} · ${shortDate(addDays(monday, offset), locale)}`,
+      `${t(`week.${offset + 1}`)} · ${formatDate(addDays(monday, offset))}`,
     ]),
   );
 
