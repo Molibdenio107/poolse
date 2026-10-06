@@ -71,6 +71,7 @@ cards are one conversation they share a tab, and the page's header comment says 
 |---|---|
 | Site — `/dashboard/facilities/[id]` | Geral (pessoas, meteorologia, localização, horário) · Preços (tabela, categorias, seguro) · Parcerias · Piscinas · Espaços · Manutenção · Energia · Fotografias |
 | Tank — `/dashboard/facilities/pools/[id]` | Geral (detalhes, arquivar) · Qualidade da água (ponto quando a última análise está fora dos limites) · Custo por utilização (owner, admin; carregado ao abrir) · Fotografias |
+| Student — `/dashboard/students/[id]` | Geral (progresso e ficha médica, identificação) · Mensalidades (se as pode ver) · Documento (owner, admin) · Turmas (contagem; só se inscrito) · Semana (carregada ao abrir) · Reposições (contagem; só se houver) |
 
 
 ## Invitations

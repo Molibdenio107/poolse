@@ -22,6 +22,7 @@ import { FeesBlock } from './fees-block';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageError, PageShell } from '@/components/page-shell';
+import { DetailPage } from '@/components/detail-page';
 
 /**
  * One student's record.
@@ -30,18 +31,22 @@ import { PageError, PageShell } from '@/components/page-shell';
  * operator scans, and editing is a different job done with attention. It also
  * gives every student a URL, which the class-group and attendance screens will
  * want to link to from slice 1.4 onward.
+ *
+ * **Tabs since the detail-tabs change**: General (the progress and medical
+ * record buttons, then the identity form), Mensalidades, Documento, Turmas,
+ * Semana and Reposições. Progress and the medical record stay their own pages.
  */
 export default async function StudentPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; tab?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
   const { id } = await params;
-  const { week } = await searchParams;
+  const { week, tab } = await searchParams;
 
   const monday = mondayOf(isDate(week) ? week : today());
   const sunday = addDays(monday, 6);
@@ -53,30 +58,28 @@ export default async function StudentPage({
   let missing = false;
 
   let timetable: TimetableEntry[] = [];
-  let calendar: Calendar | null = null;
 
   try {
     // The register comes along for the level list and the write permission —
     // both belong to the organization rather than to this student.
     //
-    // Both the dated week and the recurring pattern are fetched, because the
-    // page needs to tell two empty weeks apart: "no classes this week" and "the
+    // Both the dated week and the recurring pattern are needed, because the
+    // page has to tell two empty weeks apart: "no classes this week" and "the
     // season has not been built yet" look identical from the calendar alone, and
-    // only one of them is something to act on.
-    const [studentResult, registerResult, timetableResult, calendarResult, creditsResult] =
+    // only one of them is something to act on. The pattern is fetched here; the
+    // dated week is the Semana tab's own fetch, made when that tab opens.
+    const [studentResult, registerResult, timetableResult, creditsResult] =
       await Promise.all([
         apiFetch<Student>(`/students/${id}`),
         // One row is enough: this only needs the levels, the permissions and the
         // maioridade off the register response, not a page of other students.
         apiFetch<Students>('/students?limit=1'),
         apiFetch<{ entries: TimetableEntry[] }>(`/students/${id}/timetable`),
-        apiFetch<Calendar>(`/students/${id}/calendar?from=${monday}&to=${sunday}`),
         apiFetch<{ credits: ReposicaoCredit[] }>(`/students/${id}/credits`),
       ]);
     student = studentResult;
     register = registerResult;
     timetable = timetableResult.entries;
-    calendar = calendarResult;
     credits = creditsResult.credits;
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
@@ -103,304 +106,333 @@ export default async function StudentPage({
 
   const billing = student === null ? null : await loadFees(id, facilities.map((f) => f.id));
 
-  return (
-    <PageShell
-      // A detail page shows the full legal name, every part — POOLSE-32
-      // criterion 3. Abbreviation is for lists.
-      title={student === null ? t('students.title') : student.displayName}
-      subtitle={student?.age === null || student === null
-              ? t('students.subtitle')
-              : t('students.years', { count: student.age })}
-      back={{ href: "/dashboard/students", label: t('students.backToRegister') }}
-      actions={student !== null && (
-            <PersonAvatar
-              id={student.id}
-              name={student.displayName}
-              photoUrl={photoUrlFor(student.photoStorageKey)}
-              size="lg"
-            />
-          )}
-    >
+  // A detail page shows the full legal name, every part — POOLSE-32
+  // criterion 3. Abbreviation is for lists.
+  const subtitle =
+    student?.age === null || student === null
+      ? t('students.subtitle')
+      : t('students.years', { count: student.age });
+  const back = { href: '/dashboard/students', label: t('students.backToRegister') };
 
+  if (student === null || register === null) {
+    return (
+      <PageShell title={t('students.title')} subtitle={subtitle} back={back}>
+        {missing && (
+          <section className="rounded border border-border bg-surface p-5">
+            <p>{t('students.notFound')}</p>
+          </section>
+        )}
 
-      {/*
-        The record's action area — backlog round 3, story 9.
-        
-        Separate from the back link, which is navigation rather than an action,
-        and rendered only once the student has loaded: two buttons offering to
-        open the record of somebody who is not there would be a worse answer than
-        nothing.
-
-        Both remain their own screen rather than a section here, and the hint
-        beside them says why: opening the medical record is written to the audit
-        log. Special-category data about a child should be reached deliberately,
-        not scrolled past while doing something else — which is exactly why
-        making it easier to find raises the stakes on the logging rather than
-        lowering them.
-      */}
-      {student !== null && (student.canViewProgress !== false || student.canViewSensitive !== false) && (
-        <div className="flex flex-wrap items-center gap-3">
-          {student.canViewProgress !== false && (
-            <ActionButton
-              href={`/dashboard/students/${id}/progress`}
-              icon="progress"
-              label={t('progress.open')}
-            />
-          )}
-          {student.canViewSensitive !== false && (
-            <>
-              <ActionButton
-                href={`/dashboard/students/${id}/sensitive`}
-                icon="medical"
-                tone="sensitive"
-                label={t('sensitive.open')}
-              />
-              <span className="text-sm text-foreground-muted">{t('sensitive.openHint')}</span>
-            </>
-          )}
-        </div>
-      )}
-
-      {missing && (
-        <section className="rounded border border-border bg-surface p-5">
-          <p>{t('students.notFound')}</p>
-        </section>
-      )}
-
-      {failure !== null && (
-        <PageError
-          message={t(failure.key)}
-          {...(failure.detail === '' ? {} : { detail: failure.detail })}
-        />
-      )}
-
-      {student !== null && register !== null && (
-        /*
-          First on the page, since round 4.
- 
-          Who this student is — the name, the level, the birth date — was at the
-          bottom, under the week, the register, the guardians and the uploads. It
-          is the reason somebody opens this screen and the thing they most often
-          came to correct, so it now leads. Everything below it is context about
-          a person you have already identified.
- 
-          The photograph sits inside this block rather than in a section of its
-          own: an ID photo belongs beside the name it identifies, and at 7rem
-          square it is furniture next to the form instead of a panel competing
-          with it.
-        */
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-          {register.canManage ? (
-            <div className="flex flex-wrap items-start gap-5">
-              <PhotoUpload
-                variant="id"
-                label={t('students.photoUpload')}
-                reason={
-                  student.photoConsent
-                    ? t('students.photoNoStorage')
-                    : t('students.photoNoConsent')
-                }
-              />
-              <div className="min-w-0 flex-1">
-            <StudentForm
-              organizationId={register.organizationId}
-              levels={register.levels}
-              student={student}
-              mode="edit"
-              ageOfMajority={register.ageOfMajority}
-            />
-              </div>
-            </div>
-          ) : (
-            <>
-              <p className="mb-4 text-sm text-foreground-muted">{t('students.readOnly')}</p>
-              <dl className="flex flex-col gap-3">
-                <Row label={t('students.level')} value={student.levelName ?? t('students.noLevel')} />
-                <Row label={t('students.birthDate')} value={student.birthDate} />
-                <Row
-                  label={t('students.gender')}
-                  value={
-                    student.gender === null
-                      ? null
-                      : student.gender === 'male'
-                        ? t('students.genderMale')
-                        : t('students.genderFemale')
-                  }
-                />
-                <Row label={t('students.contactEmail')} value={student.contactEmail} />
-                <Row label={t('students.contactPhone')} value={student.contactPhone} />
-                <Row label={t('students.taxNumber')} value={student.taxNumber} />
-                <Row label={t('students.notes')} value={student.notes} />
-              </dl>
-            </>
-          )}
-        </section>
-      )}
-
-      {student !== null && billing !== null && (
-        <FeesBlock studentId={student.id} fees={billing.fees} periods={billing.periods} />
-      )}
-
-      {student !== null && register?.canManage === true && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('students.document')}
-          </h2>
-          {/*
-            Its own slot beside the photograph, never mixed with it — POOLSE-11.
-            A Cartão de Cidadão rendered as an avatar would put a government
-            identity document on every list that shows a face.
-          */}
-          <DocumentUpload
-            label={t('students.documentUpload')}
-            reason={t('students.documentNoStorage')}
-            purpose={t('students.documentPurpose')}
+        {failure !== null && (
+          <PageError
+            message={t(failure.key)}
+            {...(failure.detail === '' ? {} : { detail: failure.detail })}
           />
-        </section>
-      )}
+        )}
+      </PageShell>
+    );
+  }
 
-      {/*
-        Which turmas this student is in — round 4 follow-up.
+  const loaded = student;
+  const reg = register;
+  // One row per turma, not per slot: a turma that meets on Tuesday and Thursday
+  // is one enrolment, and listing it twice would read as two.
+  const turmas = [...new Map(timetable.map((entry) => [entry.classGroupId, entry])).values()];
 
-        Above the week on purpose. The week answers "when does she swim"; this
-        answers "what is she enrolled in", and the second question is the one
-        somebody opening a student record is usually holding. It is also the
-        thing that explains an empty week: a student in no turma has nothing to
-        show, and a student in two whose week is blank means the season has not
-        been generated.
-
-        Read from the recurring pattern rather than from the dated week, so it
-        does not empty out when you page to a week the club was closed.
-      */}
-      {student !== null && timetable.length > 0 && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('students.turmas')}
-          </h2>
-
-          <ul className="flex flex-col divide-y divide-border">
-            {/*
-              One row per turma, not per slot: a turma that meets on Tuesday and
-              Thursday is one enrolment, and listing it twice would read as two.
-            */}
-            {[...new Map(timetable.map((entry) => [entry.classGroupId, entry])).values()].map(
-              (entry) => (
-                <li
-                  key={entry.classGroupId}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 first:pt-0 last:pb-0"
-                >
-                  <span className="flex flex-wrap items-baseline gap-x-2">
-                    <Link
-                      href={`/dashboard/classes/${entry.classGroupId}`}
-                      className="rounded font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    >
-                      {entry.className}
-                    </Link>
-                    {entry.status === 'waiting' && (
-                      <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-foreground-muted">
-                        {t('students.waiting')}
-                      </span>
-                    )}
-                  </span>
-
-                  <span className="text-sm text-foreground-muted">
-                    {[
-                      entry.levelName,
-                      entry.poolName,
-                      entry.instructorName,
-                      entry.lane === null ? null : t('classes.laneN', { lane: entry.lane }),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
-                </li>
-              ),
-            )}
-          </ul>
-        </section>
-      )}
-
-      {student !== null && (
-        <StudentWeek
-          studentId={id}
-          initialWeek={monday}
-          initialSessions={calendar?.sessions ?? []}
-          timetable={timetable}
+  return (
+    <DetailPage
+      title={loaded.displayName}
+      subtitle={subtitle}
+      back={back}
+      actions={
+        <PersonAvatar
+          id={loaded.id}
+          name={loaded.displayName}
+          photoUrl={photoUrlFor(loaded.photoStorageKey)}
+          size="lg"
         />
-      )}
+      }
+      requested={tab}
+      tabs={[
+        {
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          content: () => (
+            <>
+              {/*
+                The record's action area — backlog round 3, story 9.
 
-
-      {/*
-        What the club owes this family — POOLSE-21, criteria 2 and 5.
-
-        Rendered only when there is something to say. A club that has not turned
-        reposições on mints nothing, and an empty panel headed "Reposições" on
-        every student record would be a permanent question with no answer.
-
-        Oldest expiry first, as the server returns them: the perishable credits
-        are the ones somebody should spend.
-      */}
-      {student !== null && credits.length > 0 && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('reposicao.credits')}
-          </h2>
-
-          <ul className="flex flex-col divide-y divide-border">
-            {credits.map((credit) => (
-              <li
-                key={credit.id}
-                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0"
-              >
-                <span className="flex flex-col">
-                  <span>
-                    {t('reposicao.missedOn', {
-                      date: credit.issuedOn,
-                      turma: credit.className ?? t('classes.noTurma'),
-                    })}
-                  </span>
-                  <span className="text-sm text-foreground-muted">
-                    {t('reposicao.expiresOn', { date: credit.expiresOn })}
-                  </span>
-                </span>
-
-                {/*
-                  The state is a word, never a colour alone — the convention, and
-                  it matters more here because these four states have to stay
-                  visibly distinct from the attendance palette they sit near.
-                */}
-                <span className="flex items-baseline gap-2">
-                  {credit.daysLeft !== null && credit.daysLeft <= 14 && (
-                    <span className="rounded bg-warning/15 px-2 py-0.5 text-sm text-warning">
-                      {t('reposicao.daysLeft', { days: credit.daysLeft })}
-                    </span>
-                  )}
-                  <span className="rounded bg-surface-muted px-2 py-0.5 text-sm text-foreground-muted">
-                    {t(`reposicao.status.${credit.status}`)}
-                  </span>
-                </span>
-
-                {/*
-                  Booking sits on the credit rather than on a screen of its own:
-                  the question "when can we make this up?" only ever gets asked
-                  about a particular missed class — POOLSE-21 criterion 3.
-                */}
-                {register !== null && (
-                  <div className="w-full">
-                    <CreditBooking
-                      organizationId={register.organizationId}
-                      studentId={student.id}
-                      credit={credit}
+                Progress and the medical record remain their own screens rather
+                than tabs here, and the hint beside them says why: opening the
+                medical record is written to the audit log. Special-category
+                data about a child should be reached deliberately, not clicked
+                into while doing something else.
+              */}
+              {(loaded.canViewProgress !== false || loaded.canViewSensitive !== false) && (
+                <div className="flex flex-wrap items-center gap-3">
+                  {loaded.canViewProgress !== false && (
+                    <ActionButton
+                      href={`/dashboard/students/${id}/progress`}
+                      icon="progress"
+                      label={t('progress.open')}
                     />
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+                  )}
+                  {loaded.canViewSensitive !== false && (
+                    <>
+                      <ActionButton
+                        href={`/dashboard/students/${id}/sensitive`}
+                        icon="medical"
+                        tone="sensitive"
+                        label={t('sensitive.open')}
+                      />
+                      <span className="text-sm text-foreground-muted">
+                        {t('sensitive.openHint')}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
 
-    </PageShell>
+              {/*
+                Who this student is — the name, the level, the birth date. It is
+                the reason somebody opens this screen and the thing they most
+                often came to correct, so it leads.
+
+                The photograph sits inside this block rather than in a section of
+                its own: an ID photo belongs beside the name it identifies.
+              */}
+              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                {reg.canManage ? (
+                  <div className="flex flex-wrap items-start gap-5">
+                    <PhotoUpload
+                      variant="id"
+                      label={t('students.photoUpload')}
+                      reason={
+                        loaded.photoConsent
+                          ? t('students.photoNoStorage')
+                          : t('students.photoNoConsent')
+                      }
+                    />
+                    <div className="min-w-0 flex-1">
+                      <StudentForm
+                        organizationId={reg.organizationId}
+                        levels={reg.levels}
+                        student={loaded}
+                        mode="edit"
+                        ageOfMajority={reg.ageOfMajority}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="mb-4 text-sm text-foreground-muted">{t('students.readOnly')}</p>
+                    <dl className="flex flex-col gap-3">
+                      <Row
+                        label={t('students.level')}
+                        value={loaded.levelName ?? t('students.noLevel')}
+                      />
+                      <Row label={t('students.birthDate')} value={loaded.birthDate} />
+                      <Row
+                        label={t('students.gender')}
+                        value={
+                          loaded.gender === null
+                            ? null
+                            : loaded.gender === 'male'
+                              ? t('students.genderMale')
+                              : t('students.genderFemale')
+                        }
+                      />
+                      <Row label={t('students.contactEmail')} value={loaded.contactEmail} />
+                      <Row label={t('students.contactPhone')} value={loaded.contactPhone} />
+                      <Row label={t('students.taxNumber')} value={loaded.taxNumber} />
+                      <Row label={t('students.notes')} value={loaded.notes} />
+                    </dl>
+                  </>
+                )}
+              </section>
+            </>
+          ),
+        },
+        {
+          /*
+            What this student pays — POOLSE-42. Absent for an instructor: AC10
+            makes that a page without the tab, not a tab saying no.
+          */
+          slug: 'fees',
+          labelKey: 'detailTabs.fees',
+          visible: billing !== null,
+          content: () =>
+            billing !== null && (
+              <FeesBlock studentId={loaded.id} fees={billing.fees} periods={billing.periods} />
+            ),
+        },
+        {
+          slug: 'document',
+          labelKey: 'students.document',
+          visible: reg.canManage,
+          content: () => (
+            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('students.document')}
+              </h2>
+              {/*
+                Its own slot beside the photograph, never mixed with it —
+                POOLSE-11. A Cartão de Cidadão rendered as an avatar would put a
+                government identity document on every list that shows a face.
+              */}
+              <DocumentUpload
+                label={t('students.documentUpload')}
+                reason={t('students.documentNoStorage')}
+                purpose={t('students.documentPurpose')}
+              />
+            </section>
+          ),
+        },
+        {
+          /*
+            Which turmas this student is in — round 4 follow-up. Before the week
+            on purpose: "what is she enrolled in" is the question somebody
+            opening a student record is usually holding, and it explains an
+            empty week. Read from the recurring pattern rather than the dated
+            week, so it does not empty out on a week the club was closed.
+          */
+          slug: 'turmas',
+          labelKey: 'students.turmas',
+          visible: turmas.length > 0,
+          badge: { kind: 'count', value: turmas.length },
+          content: () => (
+            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('students.turmas')}
+              </h2>
+
+              <ul className="flex flex-col divide-y divide-border">
+                {turmas.map((entry) => (
+                  <li
+                    key={entry.classGroupId}
+                    className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 first:pt-0 last:pb-0"
+                  >
+                    <span className="flex flex-wrap items-baseline gap-x-2">
+                      <Link
+                        href={`/dashboard/classes/${entry.classGroupId}`}
+                        className="rounded font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        {entry.className}
+                      </Link>
+                      {entry.status === 'waiting' && (
+                        <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-foreground-muted">
+                          {t('students.waiting')}
+                        </span>
+                      )}
+                    </span>
+
+                    <span className="text-sm text-foreground-muted">
+                      {[
+                        entry.levelName,
+                        entry.poolName,
+                        entry.instructorName,
+                        entry.lane === null ? null : t('classes.laneN', { lane: entry.lane }),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ),
+        },
+        {
+          // The dated week — the only fetch on this page that waits for its tab.
+          slug: 'week',
+          labelKey: 'detailTabs.week',
+          content: async () => {
+            const calendar = await apiFetch<Calendar>(
+              `/students/${id}/calendar?from=${monday}&to=${sunday}`,
+            ).catch(() => null);
+            return calendar === null ? (
+              <PageError message={t('detailTabs.loadFailed')} />
+            ) : (
+              <StudentWeek
+                studentId={id}
+                initialWeek={monday}
+                initialSessions={calendar.sessions}
+                timetable={timetable}
+              />
+            );
+          },
+        },
+        {
+          /*
+            What the club owes this family — POOLSE-21, criteria 2 and 5. Only
+            when there is something to say: a club that has not turned
+            reposições on mints nothing, and an empty tab on every record would
+            be a permanent question with no answer. Oldest expiry first, as the
+            server returns them.
+          */
+          slug: 'credits',
+          labelKey: 'reposicao.credits',
+          visible: credits.length > 0,
+          badge: { kind: 'count', value: credits.length },
+          content: () => (
+            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('reposicao.credits')}
+              </h2>
+
+              <ul className="flex flex-col divide-y divide-border">
+                {credits.map((credit) => (
+                  <li
+                    key={credit.id}
+                    className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0"
+                  >
+                    <span className="flex flex-col">
+                      <span>
+                        {t('reposicao.missedOn', {
+                          date: credit.issuedOn,
+                          turma: credit.className ?? t('classes.noTurma'),
+                        })}
+                      </span>
+                      <span className="text-sm text-foreground-muted">
+                        {t('reposicao.expiresOn', { date: credit.expiresOn })}
+                      </span>
+                    </span>
+
+                    {/*
+                      The state is a word, never a colour alone — it has to stay
+                      visibly distinct from the attendance palette nearby.
+                    */}
+                    <span className="flex items-baseline gap-2">
+                      {credit.daysLeft !== null && credit.daysLeft <= 14 && (
+                        <span className="rounded bg-warning/15 px-2 py-0.5 text-sm text-warning">
+                          {t('reposicao.daysLeft', { days: credit.daysLeft })}
+                        </span>
+                      )}
+                      <span className="rounded bg-surface-muted px-2 py-0.5 text-sm text-foreground-muted">
+                        {t(`reposicao.status.${credit.status}`)}
+                      </span>
+                    </span>
+
+                    {/*
+                      Booking sits on the credit: "when can we make this up?" is
+                      only ever asked about a particular missed class —
+                      POOLSE-21 criterion 3.
+                    */}
+                    <div className="w-full">
+                      <CreditBooking
+                        organizationId={reg.organizationId}
+                        studentId={loaded.id}
+                        credit={credit}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ),
+        },
+      ]}
+    />
   );
 }
 

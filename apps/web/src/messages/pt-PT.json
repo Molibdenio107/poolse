@@ -3500,6 +3500,8 @@
       "maintenanceDue": "Há manutenção por fazer",
       "waterOutOfBand": "A última análise está fora dos limites"
     },
-    "loadFailed": "Não foi possível carregar este separador."
+    "loadFailed": "Não foi possível carregar este separador.",
+    "fees": "Mensalidades",
+    "week": "Semana"
   }
 }

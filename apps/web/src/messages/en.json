@@ -3500,6 +3500,8 @@
       "maintenanceDue": "Maintenance is due",
       "waterOutOfBand": "The latest analysis is out of range"
     },
-    "loadFailed": "This tab could not be loaded."
+    "loadFailed": "This tab could not be loaded.",
+    "fees": "Fees",
+    "week": "Week"
   }
 }
