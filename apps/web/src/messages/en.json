@@ -3502,6 +3502,7 @@
     },
     "loadFailed": "This tab could not be loaded.",
     "fees": "Fees",
-    "week": "Week"
+    "week": "Week",
+    "students": "Students"
   }
 }
