@@ -2,17 +2,21 @@ import type { Metadata } from 'next';
 import { enUS, ptPT } from '@clerk/localizations';
 import { ClerkProvider } from '@clerk/nextjs';
 import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages } from 'next-intl/server';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { formats } from '../../i18n';
 import { ToastProvider } from '../../components/ui/toast';
 import { readTheme } from '../../lib/preferences';
 import { ThemeScript } from '../../lib/theme-script';
 import '../globals.css';
 
-export const metadata: Metadata = {
-  title: 'Poolse',
-  description: 'Gestao de piscinas',
-};
+/**
+ * The tab title and description, in the signed-in person's language. Was a
+ * literal "Gestao de piscinas" — Portuguese for everybody, and missing its tilde.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations();
+  return { title: t('app.name'), description: t('app.tagline') };
+}
 
 /**
  * Root layout for everything behind authentication.

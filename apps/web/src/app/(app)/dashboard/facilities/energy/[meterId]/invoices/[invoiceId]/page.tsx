@@ -112,7 +112,7 @@ export default async function InvoicePage({
                 <th className="py-1 pr-2 text-right font-medium">{t('energy.invoice.amount')}</th>
                 <th className="py-1 pr-2 text-right font-medium">{t('energy.invoice.discount')}</th>
                 <th className="py-1 pr-2 text-right font-medium">{t('energy.invoice.lineTotal')}</th>
-                <th className="py-1 text-right font-medium">IVA</th>
+                <th className="py-1 text-right font-medium">{t('energy.invoice.vat')}</th>
               </tr>
             </thead>
             <tbody>

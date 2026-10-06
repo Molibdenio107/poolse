@@ -334,7 +334,8 @@
         "dateMissing": "Say what date it takes effect from.",
         "dateInvalid": "The date could not be read.",
         "overlap": "There is already a rate recorded for those dates.",
-        "duplicateInFile": "This person already appears on line {line}."
+        "duplicateInFile": "This person already appears on line {line}.",
+        "provenanceInvalid": "Unknown provenance — use contracted, estimated, assumed or actual."
       }
     },
     "coverage": "Based on {withRate} of {total} staff — the rest have no rate set.",

@@ -334,7 +334,8 @@
         "dateMissing": "Indique a partir de que data.",
         "dateInvalid": "Data que não se consegue ler.",
         "overlap": "Já existe um valor registado para essas datas.",
-        "duplicateInFile": "Esta pessoa já aparece na linha {line}."
+        "duplicateInFile": "Esta pessoa já aparece na linha {line}.",
+        "provenanceInvalid": "Origem do valor desconhecida — use contratado, estimado, assumido ou real."
       }
     },
     "coverage": "Com base em {withRate} de {total} pessoas do staff — as restantes não têm valor definido.",

@@ -533,7 +533,7 @@ export function InvoiceForm({
                 <th className="py-1 pr-2 font-medium">{t('energy.invoice.amount')}</th>
                 <th className="py-1 pr-2 font-medium">{t('energy.invoice.discount')}</th>
                 <th className="py-1 pr-2 font-medium">{t('energy.invoice.lineTotal')}</th>
-                <th className="py-1 pr-2 font-medium">IVA %</th>
+                <th className="py-1 pr-2 font-medium">{t('energy.invoice.vat')} %</th>
                 <th className="py-1"><span className="sr-only">{t('common.actions')}</span></th>
               </tr>
             </thead>
@@ -562,7 +562,7 @@ export function InvoiceForm({
                   <td className="py-1 pr-2"><input aria-label={t('energy.invoice.amount')} className={cn(CELL, 'w-24', err(`lines.${i}.amount`) && INVALID)} inputMode="decimal" value={l.amount} onChange={(e) => patchLine(i, { amount: e.target.value })} /></td>
                   <td className="py-1 pr-2"><input aria-label={t('energy.invoice.discount')} className={cn(CELL, 'w-20', err(`lines.${i}.discount`) && INVALID)} inputMode="decimal" value={l.discount} onChange={(e) => patchLine(i, { discount: e.target.value })} /></td>
                   <td className="py-1 pr-2"><input aria-label={t('energy.invoice.lineTotal')} className={cn(CELL, 'w-24', err(`lines.${i}.total`) && INVALID)} inputMode="decimal" value={l.total} onChange={(e) => patchLine(i, { total: e.target.value })} /></td>
-                  <td className="py-1 pr-2"><input aria-label="IVA %" className={cn(CELL, 'w-16', err(`lines.${i}.vatRate`) && INVALID)} inputMode="decimal" value={l.vatRate} onChange={(e) => patchLine(i, { vatRate: e.target.value })} /></td>
+                  <td className="py-1 pr-2"><input aria-label={`${t('energy.invoice.vat')} %`} className={cn(CELL, 'w-16', err(`lines.${i}.vatRate`) && INVALID)} inputMode="decimal" value={l.vatRate} onChange={(e) => patchLine(i, { vatRate: e.target.value })} /></td>
                   <td className="py-1">
                     <button type="button" aria-label={t('energy.invoice.removeRow')} title={t('energy.invoice.removeRow')} onClick={() => removeLine(i)} className="mt-2 text-foreground-muted hover:text-danger">
                       <Trash2 className="size-4" aria-hidden="true" />
