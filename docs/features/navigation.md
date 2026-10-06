@@ -65,6 +65,9 @@ cards are one conversation they share a tab, and the page's header comment says 
   while unsaved asks first. **The browser's own back button does not ask** — the App Router
   cannot intercept it.
 - **Badges** are a count or a dot, only from data the page already loads.
+- **An eager page renders every tab with the page** and switches in the browser, without
+  asking the server again. The medical record is one: each read of it is written to the audit
+  log, and a read per tab click would fill that log with accidents.
 - On a narrow screen the strip scrolls sideways and keeps the active tab in view.
 
 | Page | Tabs |
@@ -78,6 +81,7 @@ cards are one conversation they share a tab, and the page's header comment says 
 | Maintenance task — `/dashboard/facilities/tasks/[id]` | Geral (factos e registo; ponto quando por fazer) · Histórico (carregado ao abrir; a paginação mantém o separador) · Plano (owner, admin) |
 | Partnership — `/dashboard/facilities/partners/[id]` | Geral (identificação) · Contactos (contagem) · Acordo · Grupos (contagem) · Horário |
 | Meter — `/dashboard/facilities/energy/[id]` | Geral (consumo, ano a ano, custo estimado) · Leituras (registo e histórico; contagem) · Faturas (carregadas ao abrir) · Tarifário · Detalhes (owner, admin) |
+| Medical record — `/dashboard/students/[id]/sensitive` | Geral (notas) · Contacto de emergência · Consentimentos · Baixa médica (ponto quando ativa; continua dobrada) · Histórico (só se houver) — *eager*: uma leitura auditada, mudar de separador não regista outra |
 
 
 ## Invitations

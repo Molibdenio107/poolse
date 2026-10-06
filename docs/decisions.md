@@ -912,3 +912,9 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   a tab a role may not use is hidden rather than disabled, and badges come only from data the
   page already loads.** The active pill is a primary tint with a ring rather than a solid
   fill, because white on the brand primary is one of `contrast:check`'s known failures.
+
+- **2026-10-06** — **The medical record's tabs are eager: rendered with the page, switched in
+  the browser.** Every read of `/students/:id/sensitive` writes an audit entry, and per-tab
+  fetching would have written one per click — the log full of accidents that page exists to
+  prevent. `DetailPage eager` uses `history.pushState`, which Next keeps in step with
+  `useSearchParams`, so the URL, refresh and the back button behave exactly as elsewhere.

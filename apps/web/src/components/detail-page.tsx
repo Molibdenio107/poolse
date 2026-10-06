@@ -21,6 +21,11 @@ import { resolveTab, visibleTabs, type TabSpec } from '@/lib/detail-tabs';
  * **A tab somebody may not use is absent, not disabled** — from the strip and
  * from the URL. `visible` carries the page's existing answer (a `can*` flag, or
  * a list that came back null because the endpoint refused); this adds no rule.
+ *
+ * **`eager` renders every tab with the page** and switches in the browser
+ * without asking the server again. For a page whose read has a side effect —
+ * the medical record writes an audit entry on every read — where refetching
+ * per tab would write one per click.
  */
 
 export interface DetailPageTab extends TabSpec {
@@ -34,6 +39,7 @@ export async function DetailPage({
   actions,
   tabs,
   requested,
+  eager = false,
 }: {
   title: string;
   subtitle?: string | undefined;
@@ -42,9 +48,17 @@ export async function DetailPage({
   tabs: DetailPageTab[];
   /** `searchParams.tab`, as the page received it. */
   requested: string | string[] | undefined;
+  eager?: boolean;
 }): Promise<React.ReactElement> {
   const active = resolveTab(tabs, requested);
-  const content = active === null ? null : await active.content();
+  const content = active === null || eager ? null : await active.content();
+  const panels = eager
+    ? Object.fromEntries(
+        await Promise.all(
+          visibleTabs(tabs).map(async (tab) => [tab.slug, await tab.content()] as const),
+        ),
+      )
+    : undefined;
   const strip = visibleTabs(tabs).map(({ slug, labelKey, badge }) => ({
     slug,
     labelKey,
@@ -52,7 +66,7 @@ export async function DetailPage({
   }));
 
   return (
-    <DetailTabs tabs={strip} active={active?.slug ?? ''}>
+    <DetailTabs tabs={strip} active={active?.slug ?? ''} panels={panels}>
       <PageShell
         title={title}
         subtitle={subtitle}

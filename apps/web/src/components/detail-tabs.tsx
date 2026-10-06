@@ -13,7 +13,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { tabHref, type TabBadge } from '@/lib/detail-tabs';
+import { resolveTab, tabHref, type TabBadge } from '@/lib/detail-tabs';
 import { cn } from '@/lib/utils';
 
 /**
@@ -33,6 +33,11 @@ import { cn } from '@/lib/utils';
  *   closing the window.
  * - **Cancel discards.** The panel's content is remounted, which re-seeds every
  *   controlled field from what the server last sent. No form has to know.
+ *
+ * **Eager pages** (`panels` set) are the exception to the first point: every
+ * tab arrived with the page, and switching is `history.pushState`, which Next
+ * keeps in step with `useSearchParams` without asking the server for anything.
+ * The URL, refresh and the back button behave the same; nothing is refetched.
  */
 
 export interface DetailTab {
@@ -50,6 +55,7 @@ interface TabsState {
   resetKey: number;
   discard: () => void;
   choose: (slug: string) => void;
+  panels: Record<string, React.ReactNode> | undefined;
 }
 
 const TabsContext = createContext<TabsState | null>(null);
@@ -62,11 +68,15 @@ function useTabs(): TabsState {
 
 export function DetailTabs({
   tabs,
-  active,
+  active: rendered,
+  panels,
   children,
 }: {
   tabs: DetailTab[];
+  /** The tab the server rendered. */
   active: string;
+  /** Every tab's content, for an eager page; absent when only `active` was rendered. */
+  panels?: Record<string, React.ReactNode> | undefined;
   children: React.ReactNode;
 }): React.ReactElement {
   const t = useTranslations();
@@ -74,10 +84,17 @@ export function DetailTabs({
   const pathname = usePathname();
   const search = useSearchParams();
   const [pending, startTransition] = useTransition();
-  const [chosen, setChosen] = useState(active);
+  const [chosen, setChosen] = useState(rendered);
   const [dirty, setDirty] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [leaving, setLeaving] = useState<(() => void) | null>(null);
+
+  // An eager page reads the tab from the URL itself — the server rendered them
+  // all and is not asked again, so `rendered` stops changing after the load.
+  const active =
+    panels === undefined
+      ? rendered
+      : (resolveTab(tabs, search.get('tab') ?? undefined)?.slug ?? rendered);
 
   // The strip moves on the click; the content follows when the server answers.
   // Without the first half a slow tab reads as a click that did nothing.
@@ -113,13 +130,18 @@ export function DetailTabs({
     (slug: string) => {
       if (slug === value) return;
       guard(() => {
+        const href = tabHref(pathname, search.toString(), slug);
+        if (panels !== undefined) {
+          window.history.pushState(null, '', href);
+          return;
+        }
         setChosen(slug);
         startTransition(() => {
-          router.push(tabHref(pathname, search.toString(), slug), { scroll: false });
+          router.push(href, { scroll: false });
         });
       });
     },
-    [guard, pathname, router, search, value],
+    [guard, panels, pathname, router, search, value],
   );
 
   /*
@@ -163,7 +185,7 @@ export function DetailTabs({
 
   return (
     <TabsContext.Provider
-      value={{ tabs, value, pending, dirty, setDirty, resetKey, discard, choose }}
+      value={{ tabs, value, pending, dirty, setDirty, resetKey, discard, choose, panels }}
     >
       <Tabs value={value} onValueChange={choose} activationMode="manual">
         {children}
@@ -251,15 +273,16 @@ export function DetailTabStrip(): React.ReactElement {
  */
 export function DetailTabPanel({ children }: { children: React.ReactNode }): React.ReactElement {
   const t = useTranslations();
-  const { value, pending, dirty, setDirty, resetKey, discard } = useTabs();
+  const { value, pending, dirty, setDirty, resetKey, discard, panels } = useTabs();
+  const content = panels === undefined ? children : panels[value];
   const ref = useRef<HTMLDivElement>(null);
 
   // A new payload from the server is a save that landed (or a tab that
-  // changed). `children` keeps its identity across our own re-renders, so this
-  // fires for those and nothing else.
+  // changed). The content keeps its identity across our own re-renders, so
+  // this fires for those and nothing else.
   useEffect(() => {
     setDirty(false);
-  }, [children, setDirty]);
+  }, [content, setDirty]);
 
   useEffect(() => {
     const node = ref.current;
@@ -293,7 +316,7 @@ export function DetailTabPanel({ children }: { children: React.ReactNode }): Rea
       className={cn('flex flex-col gap-page-gap transition-opacity', pending && 'opacity-60')}
     >
       <div key={resetKey} className="contents">
-        {children}
+        {content}
       </div>
 
       {dirty && (

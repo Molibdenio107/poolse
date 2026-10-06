@@ -6,7 +6,7 @@ import {
   type SensitiveRecord,
   type Student,
 } from '../../../../../../lib/api';
-import { BackLink } from '@/components/back-link';
+import { DetailPage } from '@/components/detail-page';
 import { ChevronRight } from 'lucide-react';
 import { MedicalLeavePanel } from './medical-leave';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -27,14 +27,21 @@ import {
  * the student record, opening the page to correct a phone number would write
  * "read medical notes" to the log, and a log full of accidents is a log nobody
  * can answer a parent's question with.
+ *
+ * **Tabs since the detail-tabs change**: General (the notes), Contacto de
+ * emergência, Consentimentos, Baixa médica and Histórico — all rendered from the
+ * one audited read, so switching tabs logs nothing more.
  */
 export default async function SensitivePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { id } = await params;
+  const { tab } = await searchParams;
 
   let student: Student | null = null;
   let record: SensitiveRecord | null = null;
@@ -56,222 +63,256 @@ export default async function SensitivePage({
   const live = record?.consent.filter((entry) => entry.withdrawnAt === null) ?? [];
   const past = record?.consent.filter((entry) => entry.withdrawnAt !== null) ?? [];
 
+  const back = { href: `/dashboard/students/${id}`, label: t('sensitive.backToStudent') };
+
+  if (record === null) {
+    return (
+      <PageShell title={t('sensitive.title')} back={back}>
+        {notPermitted && (
+          <section className="rounded border border-border bg-surface p-5">
+            <p>{t('sensitive.notPermitted')}</p>
+          </section>
+        )}
+
+        {missing && (
+          <section className="rounded border border-border bg-surface p-5">
+            <p>{t('students.notFound')}</p>
+          </section>
+        )}
+
+        {failure !== null && (
+          <PageError
+            message={t(failure.key)}
+            {...(failure.detail === '' ? {} : { detail: failure.detail })}
+          />
+        )}
+      </PageShell>
+    );
+  }
+
+  const loaded = record;
+
   return (
-    <PageShell
+    <DetailPage
       // The full legal name — a detail page, not a list (POOLSE-32 criterion 3).
       title={student === null ? t('sensitive.title') : student.displayName}
       subtitle={t('sensitive.title')}
-    >
-
-      <BackLink href={`/dashboard/students/${id}`} label={t('sensitive.backToStudent')} />
-
-      {notPermitted && (
-        <section className="rounded border border-border bg-surface p-5">
-          <p>{t('sensitive.notPermitted')}</p>
-        </section>
-      )}
-
-      {missing && (
-        <section className="rounded border border-border bg-surface p-5">
-          <p>{t('students.notFound')}</p>
-        </section>
-      )}
-
-      {failure !== null && (
-        <PageError
-          message={t(failure.key)}
-          {...(failure.detail === '' ? {} : { detail: failure.detail })}
-        />
-      )}
-
-      {record !== null && (
-        <>
-          {/*
-            Said out loud, on the screen where it happens. Somebody whose access
-            is logged should know it is logged — that is what makes the trail
-            fair as well as useful.
-          */}
-          <p className="rounded border border-warning/40 bg-warning/10 px-4 py-3 text-sm">
-            {t('sensitive.accessLogged')}
-          </p>
-
-          <section className="rounded border border-border bg-surface p-5">
-            <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('sensitive.medicalNotes')}
-            </h2>
-            {record.notes.recordedAt !== null && (
-              <p className="mb-4 text-sm text-foreground-muted">
-                {t('sensitive.lastRecorded', {
-                  who: record.notes.recordedByName ?? t('account.noName'),
-                  when: formatStamp(new Date(record.notes.recordedAt)),
-                })}
+      back={back}
+      requested={tab}
+      /*
+        Eager: every read of this record writes an audit entry, so the tabs all
+        arrive with the one read the page makes and switching between them asks
+        the server for nothing. Per-tab fetching would log a read per click.
+      */
+      eager
+      tabs={[
+        {
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          content: () => (
+            <>
+              {/*
+                Said out loud, on the screen where it happens. Somebody whose
+                access is logged should know it is logged — that is what makes
+                the trail fair as well as useful.
+              */}
+              <p className="rounded border border-warning/40 bg-warning/10 px-4 py-3 text-sm">
+                {t('sensitive.accessLogged')}
               </p>
-            )}
 
-            {record.canManage ? (
-              <MedicalNotesForm
-                organizationId={record.organizationId}
-                studentId={id}
-                notes={record.notes.medicalNotes}
-                mobilityNotes={record.notes.mobilityNotes}
-              />
-            ) : (
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h3 className="text-sm font-medium">{t('sensitive.medicalLabel')}</h3>
-                  <p className="mt-1 whitespace-pre-wrap">
-                    {record.notes.medicalNotes ?? t('sensitive.noNotes')}
+              <section className="rounded border border-border bg-surface p-5">
+                <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('sensitive.medicalNotes')}
+                </h2>
+                {loaded.notes.recordedAt !== null && (
+                  <p className="mb-4 text-sm text-foreground-muted">
+                    {t('sensitive.lastRecorded', {
+                      who: loaded.notes.recordedByName ?? t('account.noName'),
+                      when: formatStamp(new Date(loaded.notes.recordedAt)),
+                    })}
                   </p>
-                </div>
-                {/*
-                  Read by the same people as the medical notes, and shown to them
-                  the same way — an instructor who may read one and not the other
-                  would be a distinction nobody could explain at a poolside.
-                */}
-                <div>
-                  <h3 className="text-sm font-medium">{t('sensitive.mobilityLabel')}</h3>
-                  <p className="mt-1 whitespace-pre-wrap">
-                    {record.notes.mobilityNotes ?? t('sensitive.noMobilityNotes')}
-                  </p>
-                </div>
-                <p className="text-sm text-foreground-muted">{t('sensitive.readOnly')}</p>
-              </div>
-            )}
-          </section>
+                )}
 
-          {/*
-            Who to call — POOLSE-23 AC3.
-
-            Its own section rather than a field inside the notes, because it is
-            not a note: it is a person, and on the adult path it is the only
-            contact the record has. Read by whoever may read the notes above —
-            an emergency contact only the office can see is one nobody can use.
-          */}
-          <section className="rounded border border-border bg-surface p-5">
-            <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('sensitive.emergencyTitle')}
-            </h2>
-            <p className="mb-4 text-sm text-foreground-muted">
-              {record.enrolment?.adultPath === true
-                ? t('sensitive.emergencyHintAdult')
-                : t('sensitive.emergencyHint')}
-            </p>
-
-            {record.canManage ? (
-              <EmergencyContactForm
-                organizationId={record.organizationId}
-                studentId={id}
-                contact={record.emergencyContact}
-                people={record.contactCandidates}
-              />
-            ) : record.emergencyContact?.name === null ? (
-              <p className="text-foreground-muted">{t('sensitive.emergencyNone')}</p>
-            ) : (
-              <p>
-                {record.emergencyContact?.name}
-                {record.emergencyContact?.relationship === null
-                  ? ''
-                  : ` · ${record.emergencyContact?.relationship}`}
-                {record.emergencyContact?.phone === null
-                  ? ''
-                  : ` · ${record.emergencyContact?.phone}`}
-              </p>
-            )}
-          </section>
-
-          <section className="rounded border border-border bg-surface p-5">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('sensitive.consent')}
-            </h2>
-
-            {live.length === 0 ? (
-              <p className="text-foreground-muted">{t('sensitive.noConsent')}</p>
-            ) : (
-              <ul className="flex flex-col divide-y divide-border">
-                {live.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-3 first:pt-0"
-                  >
-                    <div className="flex min-w-0 flex-col">
-                      <span>
-                        {t(`sensitive.kinds.${entry.kind}`)} —{' '}
-                        <span className={entry.granted ? 'text-success' : 'text-danger'}>
-                          {entry.granted ? t('sensitive.granted') : t('sensitive.refused')}
-                        </span>
-                      </span>
-                      <span className="text-sm text-foreground-muted">
-                        {t('sensitive.recordedBy', {
-                          who: entry.grantedByName ?? t('account.noName'),
-                          when: formatDate(new Date(entry.grantedAt)),
-                        })}
-                      </span>
-                      {entry.evidenceNote !== null && (
-                        <span className="text-sm text-foreground-muted">
-                          {t('sensitive.evidence')}: {entry.evidenceNote}
-                        </span>
-                      )}
+                {loaded.canManage ? (
+                  <MedicalNotesForm
+                    organizationId={loaded.organizationId}
+                    studentId={id}
+                    notes={loaded.notes.medicalNotes}
+                    mobilityNotes={loaded.notes.mobilityNotes}
+                  />
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <h3 className="text-sm font-medium">{t('sensitive.medicalLabel')}</h3>
+                      <p className="mt-1 whitespace-pre-wrap">
+                        {loaded.notes.medicalNotes ?? t('sensitive.noNotes')}
+                      </p>
                     </div>
-                    {record.canManage && (
-                      <WithdrawConsentButton
-                        organizationId={record.organizationId}
-                        studentId={id}
-                        consentId={entry.id}
-                      />
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+                    {/*
+                      Read by the same people as the medical notes, and shown to
+                      them the same way — an instructor who may read one and not
+                      the other would be a distinction nobody could explain at a
+                      poolside.
+                    */}
+                    <div>
+                      <h3 className="text-sm font-medium">{t('sensitive.mobilityLabel')}</h3>
+                      <p className="mt-1 whitespace-pre-wrap">
+                        {loaded.notes.mobilityNotes ?? t('sensitive.noMobilityNotes')}
+                      </p>
+                    </div>
+                    <p className="text-sm text-foreground-muted">{t('sensitive.readOnly')}</p>
+                  </div>
+                )}
+              </section>
+            </>
+          ),
+        },
+        {
+          /*
+            Who to call — POOLSE-23 AC3. Its own tab rather than a field inside
+            the notes, because it is not a note: it is a person, and on the adult
+            path it is the only contact the record has.
+          */
+          slug: 'emergency',
+          labelKey: 'sensitive.emergencyTitle',
+          content: () => (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('sensitive.emergencyTitle')}
+              </h2>
+              <p className="mb-4 text-sm text-foreground-muted">
+                {loaded.enrolment?.adultPath === true
+                  ? t('sensitive.emergencyHintAdult')
+                  : t('sensitive.emergencyHint')}
+              </p>
 
-            {record.canManage && (
-              <div className="mt-5 border-t border-border pt-5">
-                <h3 className="mb-3 text-sm text-foreground-muted">{t('sensitive.record')}</h3>
-                <RecordConsentForm
-                  organizationId={record.organizationId}
+              {loaded.canManage ? (
+                <EmergencyContactForm
+                  organizationId={loaded.organizationId}
                   studentId={id}
-                  kinds={record.kinds}
+                  contact={loaded.emergencyContact}
+                  people={loaded.contactCandidates}
+                />
+              ) : loaded.emergencyContact?.name === null ? (
+                <p className="text-foreground-muted">{t('sensitive.emergencyNone')}</p>
+              ) : (
+                <p>
+                  {loaded.emergencyContact?.name}
+                  {loaded.emergencyContact?.relationship === null
+                    ? ''
+                    : ` · ${loaded.emergencyContact?.relationship}`}
+                  {loaded.emergencyContact?.phone === null
+                    ? ''
+                    : ` · ${loaded.emergencyContact?.phone}`}
+                </p>
+              )}
+            </section>
+          ),
+        },
+        {
+          slug: 'consent',
+          labelKey: 'sensitive.consent',
+          content: () => (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('sensitive.consent')}
+              </h2>
+
+              {live.length === 0 ? (
+                <p className="text-foreground-muted">{t('sensitive.noConsent')}</p>
+              ) : (
+                <ul className="flex flex-col divide-y divide-border">
+                  {live.map((entry) => (
+                    <li
+                      key={entry.id}
+                      className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-3 first:pt-0"
+                    >
+                      <div className="flex min-w-0 flex-col">
+                        <span>
+                          {t(`sensitive.kinds.${entry.kind}`)} —{' '}
+                          <span className={entry.granted ? 'text-success' : 'text-danger'}>
+                            {entry.granted ? t('sensitive.granted') : t('sensitive.refused')}
+                          </span>
+                        </span>
+                        <span className="text-sm text-foreground-muted">
+                          {t('sensitive.recordedBy', {
+                            who: entry.grantedByName ?? t('account.noName'),
+                            when: formatDate(new Date(entry.grantedAt)),
+                          })}
+                        </span>
+                        {entry.evidenceNote !== null && (
+                          <span className="text-sm text-foreground-muted">
+                            {t('sensitive.evidence')}: {entry.evidenceNote}
+                          </span>
+                        )}
+                      </div>
+                      {loaded.canManage && (
+                        <WithdrawConsentButton
+                          organizationId={loaded.organizationId}
+                          studentId={id}
+                          consentId={entry.id}
+                        />
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {loaded.canManage && (
+                <div className="mt-5 border-t border-border pt-5">
+                  <h3 className="mb-3 text-sm text-foreground-muted">{t('sensitive.record')}</h3>
+                  <RecordConsentForm
+                    organizationId={loaded.organizationId}
+                    studentId={id}
+                    kinds={loaded.kinds}
+                  />
+                </div>
+              )}
+            </section>
+          ),
+        },
+        {
+          /*
+            Its own tab — round 5. A leave is not a consent and not a medical
+            note: it is an operational fact about the next six weeks of
+            registers. Still folded inside its tab, as it was on the page:
+            most students have no leave and never will.
+          */
+          slug: 'leave',
+          labelKey: 'sensitive.leave',
+          badge: loaded.medicalLeave.some((period) => period.active)
+            ? { kind: 'dot', labelKey: 'sensitive.leaveActive' }
+            : undefined,
+          content: () => (
+            <details className="group rounded border border-border bg-surface">
+              <summary className="flex cursor-pointer list-none items-center gap-2 p-5 text-sm font-medium uppercase tracking-wider text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                <ChevronRight
+                  aria-hidden
+                  className="size-4 transition-transform group-open:rotate-90"
+                />
+                {t('sensitive.leave')}
+                {loaded.medicalLeave.some((period) => period.active) && (
+                  <span className="rounded bg-warning/20 px-2 py-0.5 text-xs font-medium normal-case tracking-normal text-warning">
+                    {t('sensitive.leaveActive')}
+                  </span>
+                )}
+              </summary>
+              <div className="border-t border-border p-5">
+                <MedicalLeavePanel
+                  organizationId={loaded.organizationId}
+                  studentId={id}
+                  leave={loaded.medicalLeave}
+                  canManage={loaded.canManage}
                 />
               </div>
-            )}
-          </section>
-
-          {/*
-            Its own card, below consent — round 5. A leave is not a consent and
-            not a medical note: it is an operational fact about the next six
-            weeks of registers, and it belongs where somebody looking for "why is
-            this child not in the water" would look.
-          */}
-          {/*
-            Folded — round 5. Most students have no leave and never will, so an
-            open panel of date fields on every medical page is a permanent
-            question with no answer. It opens on demand and stays open while it
-            is being used.
-          */}
-          <details className="group rounded border border-border bg-surface">
-            <summary className="flex cursor-pointer list-none items-center gap-2 p-5 text-sm font-medium uppercase tracking-wider text-foreground-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-              <ChevronRight
-                aria-hidden
-                className="size-4 transition-transform group-open:rotate-90"
-              />
-              {t('sensitive.leave')}
-              {record.medicalLeave.some((period) => period.active) && (
-                <span className="rounded bg-warning/20 px-2 py-0.5 text-xs font-medium normal-case tracking-normal text-warning">
-                  {t('sensitive.leaveActive')}
-                </span>
-              )}
-            </summary>
-            <div className="border-t border-border p-5">
-            <MedicalLeavePanel
-              organizationId={record.organizationId}
-              studentId={id}
-              leave={record.medicalLeave}
-              canManage={record.canManage}
-            />
-            </div>
-          </details>
-
-          {past.length > 0 && (
+            </details>
+          ),
+        },
+        {
+          slug: 'history',
+          labelKey: 'sensitive.history',
+          visible: past.length > 0,
+          content: () => (
             <section className="rounded border border-border bg-surface p-5">
               <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('sensitive.history')}
@@ -291,9 +332,9 @@ export default async function SensitivePage({
                 ))}
               </ul>
             </section>
-          )}
-        </>
-      )}
-    </PageShell>
+          ),
+        },
+      ]}
+    />
   );
 }
