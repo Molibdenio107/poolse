@@ -37,7 +37,9 @@ export function CreditBooking({
     setFailure(null);
     start(async () => {
       const result = await optionsForCreditAction(organizationId, credit.id);
-      setOptions(result);
+      // A failed load keeps the button, so trying again is one click away.
+      if (result === null) setFailure('reposicao.optionsFailed');
+      else setOptions(result);
     });
   }
 
@@ -58,10 +60,14 @@ export function CreditBooking({
   }
 
   if (credit.status === 'booked' && credit.bookingId !== null) {
+    const bookingId = credit.bookingId;
     return (
       <form
+        className="flex flex-col items-start gap-2"
         action={async () => {
-          await cancelBookingAction(organizationId, studentId, credit.bookingId!);
+          setFailure(null);
+          const result = await cancelBookingAction(organizationId, studentId, bookingId);
+          if (!result.ok) setFailure(result.errorKey);
         }}
       >
         <button
@@ -70,6 +76,7 @@ export function CreditBooking({
         >
           {t('reposicao.cancelBooking')}
         </button>
+        {failure !== null && <p className="text-sm text-danger">{t(failure)}</p>}
       </form>
     );
   }

@@ -1182,7 +1182,9 @@
     "noOptionsHint": "Só entram aulas do escalão do aluno, dentro da idade, com vaga e antes de a reposição expirar.",
     "placeGone": "Essa vaga já foi ocupada. Escolha outra aula.",
     "notYours": "Não pode marcar reposições para este aluno.",
-    "bookFailed": "Não foi possível marcar a reposição."
+    "bookFailed": "Não foi possível marcar a reposição.",
+    "optionsFailed": "Não foi possível carregar as aulas disponíveis. Tente outra vez.",
+    "cancelFailed": "Não foi possível desmarcar a reposição."
   },
   "skills": {
     "title": "Competências",

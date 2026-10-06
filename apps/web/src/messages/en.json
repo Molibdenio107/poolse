@@ -1182,7 +1182,9 @@
     "noOptionsHint": "Only classes at the student's level, within the age range, with a place, and before the make-up expires.",
     "placeGone": "That place has been taken. Choose another class.",
     "notYours": "You may not book make-up classes for this student.",
-    "bookFailed": "The make-up could not be booked."
+    "bookFailed": "The make-up could not be booked.",
+    "optionsFailed": "The available classes could not be loaded. Try again.",
+    "cancelFailed": "The make-up class could not be cancelled."
   },
   "skills": {
     "title": "Skills",

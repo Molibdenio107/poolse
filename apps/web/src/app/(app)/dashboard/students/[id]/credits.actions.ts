@@ -18,14 +18,15 @@ import { ApiError, apiFetch, apiPost, type RedemptionOption } from '../../../../
  * eligibility queries on every load of a record most people open to read a phone
  * number.
  *
- * An empty list on failure rather than a thrown error: the caller renders "no
- * classes available", which is what an operator can act on, and the alternative
- * is an error boundary swallowing the whole student record over a list.
+ * Null on failure rather than a thrown error, so an error boundary does not
+ * swallow the whole student record over a list — and null rather than an empty
+ * list, because the caller renders an empty list as "no classes available".
+ * That is a confident answer, and a request that failed has not earned one.
  */
 export async function optionsForCreditAction(
   organizationId: string,
   creditId: string,
-): Promise<RedemptionOption[]> {
+): Promise<RedemptionOption[] | null> {
   try {
     const result = await apiFetch<{ options: RedemptionOption[] }>(
       `/credits/${creditId}/options`,
@@ -33,7 +34,7 @@ export async function optionsForCreditAction(
     );
     return result.options;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -74,17 +75,20 @@ export async function bookCreditAction(
  *
  * The credit returns to available with its **original expiry**, which the API
  * guarantees — a family cannot stretch a credit by booking and cancelling.
+ *
+ * A failure is said, not swallowed: the booking still being there afterwards
+ * is the truth, but on its own it reads as a button that did nothing.
  */
 export async function cancelBookingAction(
   organizationId: string,
   studentId: string,
   bookingId: string,
-): Promise<void> {
+): Promise<BookResult> {
   try {
     await apiPost(`/bookings/${bookingId}/cancel`, {}, { organizationId });
   } catch {
-    // The list re-reads either way; a cancel that failed shows the booking still
-    // there, which is the truth.
+    return { ok: false, errorKey: 'reposicao.cancelFailed' };
   }
   revalidatePath(`/dashboard/students/${studentId}`);
+  return { ok: true };
 }
