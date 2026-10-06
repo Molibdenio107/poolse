@@ -32,22 +32,20 @@ const INITIAL: FormState = { ok: false };
  * Fields are controlled and re-seed only when the server's value changes, so a
  * validation failure keeps what was typed — the standing rule from POOLSE-09,
  * and AC9 restates it.
+ *
+ * The roles and the change of address used to render under this form; since
+ * the detail-tabs change they are tabs of their own on the page, and exported
+ * from here as `RoleEditor` and `Reinvite`.
  */
 export function StaffForm({
   organizationId,
   staff,
   canManage,
-  isOwner,
-  grantable,
 }: {
   organizationId: string;
   staff: StaffRecord;
-  /** Owner or admin: may edit anybody, write notes, and change roles. */
+  /** Owner or admin: may edit anybody and write notes. */
   canManage: boolean;
-  /** Only the owner may move somebody to a new address. */
-  isOwner: boolean;
-  /** The roles this person may hand out, from the POOLSE-01 matrix. */
-  grantable: string[];
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, saving] = useSavedAction(saveStaffAction, INITIAL);
@@ -60,76 +58,64 @@ export function StaffForm({
   };
 
   return (
-    <div className="flex flex-col gap-page-gap">
-      <form
-        ref={formRef}
-        action={action}
-        className="flex flex-col gap-4 rounded border border-border bg-surface p-5"
-      >
-        <input type="hidden" name="organizationId" value={organizationId} />
-        <input type="hidden" name="membershipId" value={staff.membershipId} />
+    <form
+      ref={formRef}
+      action={action}
+      className="flex flex-col gap-4 rounded border border-border bg-surface p-5"
+    >
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="membershipId" value={staff.membershipId} />
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <TextField
-            name="firstName"
-            label={t('staff.firstName')}
-            initial={staff.firstName ?? ''}
-            error={error('firstName')}
-            autoComplete="given-name"
-            maxLength={120}
-          />
-          <TextField
-            name="lastName"
-            label={t('staff.lastName')}
-            initial={staff.lastName ?? ''}
-            error={error('lastName')}
-            autoComplete="family-name"
-            maxLength={120}
-          />
-          <TextField
-            name="phone"
-            type="tel"
-            label={t('staff.phone')}
-            initial={staff.phone ?? ''}
-            error={error('phone')}
-            autoComplete="tel"
-            maxLength={40}
-          />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <TextField
+          name="firstName"
+          label={t('staff.firstName')}
+          initial={staff.firstName ?? ''}
+          error={error('firstName')}
+          autoComplete="given-name"
+          maxLength={120}
+        />
+        <TextField
+          name="lastName"
+          label={t('staff.lastName')}
+          initial={staff.lastName ?? ''}
+          error={error('lastName')}
+          autoComplete="family-name"
+          maxLength={120}
+        />
+        <TextField
+          name="phone"
+          type="tel"
+          label={t('staff.phone')}
+          initial={staff.phone ?? ''}
+          error={error('phone')}
+          autoComplete="tel"
+          maxLength={40}
+        />
 
-          <ReadOnlyEmail email={staff.email} />
-        </div>
-
-        {canManage && (
-          <TextAreaField
-            name="notes"
-            label={t('staff.notes')}
-            initial={staff.notes ?? ''}
-            hint={t('staff.notesHint')}
-            maxLength={2000}
-          />
-        )}
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-60"
-          >
-            {saving ? t('common.working') : t('staff.save')}
-          </button>
-        </div>
-      </form>
+        <ReadOnlyEmail email={staff.email} />
+      </div>
 
       {canManage && (
-        <RoleEditor
-          organizationId={organizationId}
-          staff={staff}
-          grantable={grantable}
+        <TextAreaField
+          name="notes"
+          label={t('staff.notes')}
+          initial={staff.notes ?? ''}
+          hint={t('staff.notesHint')}
+          maxLength={2000}
         />
       )}
 
-      {isOwner && <Reinvite organizationId={organizationId} staff={staff} />}
-    </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-60"
+        >
+          {saving ? t('common.working') : t('staff.save')}
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -167,7 +153,7 @@ function ReadOnlyEmail({ email }: { email: string | null }): React.ReactElement 
  * individually and a batch that half-succeeded would need a story nobody has
  * written.
  */
-function RoleEditor({
+export function RoleEditor({
   organizationId,
   staff,
   grantable,
@@ -272,7 +258,7 @@ function RoleEditor({
  * login keeps working until the new address is accepted, which is the sentence
  * that makes this safe to press.
  */
-function Reinvite({
+export function Reinvite({
   organizationId,
   staff,
 }: {

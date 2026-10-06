@@ -3499,11 +3499,13 @@
       "spacesOverdue": "A space is overdue for cleaning",
       "maintenanceDue": "Maintenance is due",
       "waterOutOfBand": "The latest analysis is out of range",
-      "spaceOverdue": "Cleaning is overdue"
+      "spaceOverdue": "Cleaning is overdue",
+      "reinvitePending": "A change of address is pending"
     },
     "loadFailed": "This tab could not be loaded.",
     "fees": "Fees",
     "week": "Week",
-    "students": "Students"
+    "students": "Students",
+    "access": "Access"
   }
 }

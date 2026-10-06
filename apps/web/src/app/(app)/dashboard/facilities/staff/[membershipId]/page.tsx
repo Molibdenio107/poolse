@@ -5,7 +5,8 @@ import { ApiError, apiFetch, type People, type StaffRecord } from '@/lib/api';
 import { PageShell, PageError } from '@/components/page-shell';
 import { PhotoUpload } from '@/components/photo-upload';
 import { RoleBadges } from '@/components/role-badge';
-import { StaffForm } from './staff-form';
+import { DetailPage } from '@/components/detail-page';
+import { Reinvite, RoleEditor, StaffForm } from './staff-form';
 
 /**
  * One staff member — POOLSE-39.
@@ -17,14 +18,20 @@ import { StaffForm } from './staff-form';
  *
  * Where this Person is also a student, the two are sections of one record and
  * this links across — AC7, and POOLSE-17's whole point.
+ *
+ * **Tabs since the detail-tabs change**: General (the record), Funções (owner
+ * and admin) and Acesso — the change of address, owner only.
  */
 export default async function StaffMemberPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ membershipId: string }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { membershipId } = await params;
+  const { tab } = await searchParams;
 
   let staff: StaffRecord | null = null;
   let people: People | null = null;
@@ -46,68 +53,106 @@ export default async function StaffMemberPage({
   // The full legal name: this is a record, not a row — POOLSE-32 criterion 3.
   const name = staff?.displayName ?? '';
 
+  const back = { href: '/dashboard/facilities/staff', label: t('staff.backToStaff') };
+
+  if (staff === null || people === null) {
+    return (
+      <PageShell title={t('staff.title')} back={back}>
+        {notPermitted && (
+          <section className="rounded border border-border bg-surface p-5">
+            <p>{t('staff.recordRestricted')}</p>
+          </section>
+        )}
+
+        {failure !== null && <PageError message={t(failure.key)} detail={failure.detail} />}
+      </PageShell>
+    );
+  }
+
+  const record = staff;
+  const viewer = people;
+
   return (
-    <PageShell
+    <DetailPage
       title={name === '' ? t('staff.title') : name}
-      subtitle={staff?.email ?? undefined}
-      back={{ href: '/dashboard/facilities/staff', label: t('staff.backToStaff') }}
-      actions={staff === null ? undefined : <RoleBadges roles={staff.roles} />}
-    >
-      {notPermitted && (
-        <section className="rounded border border-border bg-surface p-5">
-          <p>{t('staff.recordRestricted')}</p>
-        </section>
-      )}
+      subtitle={record.email ?? undefined}
+      back={back}
+      actions={<RoleBadges roles={record.roles} />}
+      requested={tab}
+      /*
+        `canArchive` is owner-or-admin and `canTransferOwnership` is owner alone
+        — both already computed server-side by the same helpers the API guards
+        with. Deriving either from the grantable list would be a second rule
+        that agrees today and drifts later. They decide the two tabs after
+        General exactly as they decided the two sections before.
+      */
+      tabs={[
+        {
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          content: () => (
+            <>
+              {/*
+                One Person, two sections — AC7. A phone number corrected here is
+                the number Alunos shows, because it is the same row.
+              */}
+              {record.studentId !== null && (
+                <p className="text-sm text-foreground-muted">
+                  {t('staff.alsoAStudent')}{' '}
+                  <Link
+                    href={`/dashboard/students/${record.studentId}`}
+                    className="text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('staff.openStudentRecord')}
+                  </Link>
+                </p>
+              )}
 
-      {failure !== null && <PageError message={t(failure.key)} detail={failure.detail} />}
-
-      {staff !== null && people !== null && (
-        <>
-          {/*
-            One Person, two sections — AC7. A phone number corrected here is the
-            number Alunos shows, because it is the same row.
-          */}
-          {staff.studentId !== null && (
-            <p className="text-sm text-foreground-muted">
-              {t('staff.alsoAStudent')}{' '}
-              <Link
-                href={`/dashboard/students/${staff.studentId}`}
-                className="text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                {t('staff.openStudentRecord')}
-              </Link>
-            </p>
-          )}
-
-          {/*
-            `canArchive` is owner-or-admin and `canTransferOwnership` is owner
-            alone — both already computed server-side by the same helpers the API
-            guards with. Deriving either from the grantable list would be a
-            second rule that agrees today and drifts later.
-          */}
-          {/*
-            The same ID square the student record has — round 5. Disabled for the
-            same reason and saying the same thing, because a photograph of a
-            member of staff waits on exactly the storage a student's does.
-          */}
-          <div className="flex flex-wrap items-start gap-5">
-            <PhotoUpload
-              variant="id"
-              label={t('students.photoUpload')}
-              reason={t('students.photoNoStorage')}
+              {/*
+                The same ID square the student record has — round 5. Disabled for
+                the same reason and saying the same thing, because a photograph
+                of a member of staff waits on exactly the storage a student's does.
+              */}
+              <div className="flex flex-wrap items-start gap-5">
+                <PhotoUpload
+                  variant="id"
+                  label={t('students.photoUpload')}
+                  reason={t('students.photoNoStorage')}
+                />
+                <div className="min-w-0 flex-1">
+                  <StaffForm
+                    organizationId={viewer.organizationId}
+                    staff={record}
+                    canManage={viewer.canArchive}
+                  />
+                </div>
+              </div>
+            </>
+          ),
+        },
+        {
+          slug: 'roles',
+          labelKey: 'staff.roles',
+          visible: viewer.canArchive,
+          content: () => (
+            <RoleEditor
+              organizationId={viewer.organizationId}
+              staff={record}
+              grantable={[...viewer.grantableRoles]}
             />
-            <div className="min-w-0 flex-1">
-          <StaffForm
-            organizationId={people.organizationId}
-            staff={staff}
-            canManage={people.canArchive}
-            isOwner={people.canTransferOwnership}
-            grantable={[...people.grantableRoles]}
-          />
-            </div>
-          </div>
-        </>
-      )}
-    </PageShell>
+          ),
+        },
+        {
+          slug: 'access',
+          labelKey: 'detailTabs.access',
+          visible: viewer.canTransferOwnership,
+          badge:
+            record.pendingInvite !== null
+              ? { kind: 'dot', labelKey: 'detailTabs.badge.reinvitePending' }
+              : undefined,
+          content: () => <Reinvite organizationId={viewer.organizationId} staff={record} />,
+        },
+      ]}
+    />
   );
 }
