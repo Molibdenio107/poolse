@@ -7,6 +7,7 @@ import { TransferOwnership } from './transfer-ownership';
 import { Sessions } from '../sessions';
 import { PhotoUpload } from '@/components/photo-upload';
 import { PageError, PageShell } from '@/components/page-shell';
+import { DetailPage } from '@/components/detail-page';
 import { formatStamp } from '@/lib/date-format';
 
 /**
@@ -29,9 +30,18 @@ import { formatStamp } from '@/lib/date-format';
  * identity card that sat above them on the dashboard did not come with them —
  * `ProfileForm` is already the name and the email, editable, and showing them a
  * second time read-only on the same page would be two versions of one fact.
+ *
+ * **Tabs since the detail-tabs change**: General (the profile, the
+ * subscription link, the trial and this organization), Organizações (only with
+ * more than one), Sessões and Transferência (owner).
  */
-export default async function ProfilePage(): Promise<React.ReactElement> {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string | string[] }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { tab } = await searchParams;
 
   let me: Me | null = null;
   let failure: LoadFailure | null = null;
@@ -94,168 +104,194 @@ export default async function ProfilePage(): Promise<React.ReactElement> {
       ? null
       : Math.ceil((new Date(membership.trialEndsAt).getTime() - Date.now()) / 86_400_000);
 
+  const back = { href: '/dashboard', label: t('common.backToDashboard') };
+
+  if (me === null) {
+    return (
+      <PageShell title={t('profile.title')} subtitle={t('profile.subtitle')} back={back}>
+        {failure !== null && (
+          <PageError
+            message={t(failure.key)}
+            {...(failure.detail === '' ? {} : { detail: failure.detail })}
+          />
+        )}
+      </PageShell>
+    );
+  }
+
+  const account = me;
+
   return (
-    <PageShell
+    <DetailPage
       title={t('profile.title')}
       subtitle={t('profile.subtitle')}
-      back={{ href: "/dashboard", label: t('common.backToDashboard') }}
-    >
+      back={back}
+      requested={tab}
+      tabs={[
+        {
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          content: () => (
+            <>
+              <section className="rounded border border-border bg-surface p-5">
+                {/*
+                  The same ID square as the student and staff records — round 5.
+                  Clerk holds an avatar for anybody who signed in with one, and
+                  this is where a person would replace it; it waits on the same
+                  object storage everything else does, and says so.
+                */}
+                <div className="flex flex-wrap items-start gap-5">
+                  <PhotoUpload
+                    variant="id"
+                    label={t('students.photoUpload')}
+                    reason={t('students.photoNoStorage')}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <ProfileForm me={account} />
+                  </div>
+                </div>
+              </section>
 
+              {/*
+                Subscrição lives here — 13 September 2026. What Poolse charges
+                the club is the owner's own business, like their card and their
+                renewal date. **Owner only**, and the endpoint refuses everybody
+                else regardless of how they arrived — this link is a courtesy,
+                not the control. A link rather than the screen itself, so three
+                price cards do not bury the rest.
+              */}
+              {isOwner && (
+                <section className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded border border-border bg-surface p-5">
+                  <div>
+                    <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                      {t('subscription.title')}
+                    </h2>
+                    <p className="mt-1 text-sm text-foreground-muted">{t('subscription.subtitle')}</p>
+                  </div>
+                  <Link
+                    href="/dashboard/profile/subscription"
+                    className="shrink-0 rounded border border-border px-4 py-2 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('subscription.open')}
+                  </Link>
+                </section>
+              )}
 
-      {failure !== null && (
-        <PageError
-          message={t(failure.key)}
-          {...(failure.detail === '' ? {} : { detail: failure.detail })}
-        />
-      )}
-
-      {me !== null && (
-        <section className="rounded border border-border bg-surface p-5">
-          {/*
-            The same ID square as the student and staff records — round 5.
-            Clerk holds an avatar for anybody who signed in with one, and this is
-            where a person would replace it; it waits on the same object storage
-            everything else does, and says so.
-          */}
-          <div className="flex flex-wrap items-start gap-5">
-            <PhotoUpload
-              variant="id"
-              label={t('students.photoUpload')}
-              reason={t('students.photoNoStorage')}
-            />
-            <div className="min-w-0 flex-1">
-              <ProfileForm me={me} />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/*
-        * Subscrição lives here — 13 September 2026.
-        *
-        * It was a menu item for half a day. What Poolse charges the club is the
-        * owner's own business, like their card and their renewal date, so it
-        * belongs with the account rather than in the menu of the club's work.
-        * **Owner only**, and the endpoint refuses everybody else regardless of
-        * how they arrived — this link is a courtesy, not the control.
-        *
-        * A link rather than the screen itself: this page is already the name,
-        * the photo, the organization, the trial, the devices and the transfer of
-        * ownership, and three price cards on the end of that would bury all of
-        * it.
-        */}
-      {isOwner && (
-        <section className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded border border-border bg-surface p-5">
-          <div>
-            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('subscription.title')}
-            </h2>
-            <p className="mt-1 text-sm text-foreground-muted">{t('subscription.subtitle')}</p>
-          </div>
-          <Link
-            href="/dashboard/profile/subscription"
-            className="shrink-0 rounded border border-border px-4 py-2 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            {t('subscription.open')}
-          </Link>
-        </section>
-      )}
-
-      {membership !== null && membership.subscriptionStatus === 'trialing' && trialDaysLeft !== null && (
-        <section className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded border border-border bg-surface-muted px-5 py-3">
-          <span className="text-sm font-medium">
-            {t('dashboard.trial')} —{' '}
-            {trialDaysLeft > 0
-              ? t('dashboard.trialDaysLeft', { days: trialDaysLeft })
-              : t('dashboard.trialEnded')}
-          </span>
-          <span className="text-sm text-foreground-muted">{t('dashboard.trialNoCard')}</span>
-        </section>
-      )}
-
-      {membership !== null && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('account.title')}
-          </h2>
-
-          <dl className="flex flex-wrap gap-x-10 gap-y-4">
-            <div className="flex flex-col">
-              <dt className="text-sm text-foreground-muted">{t('dashboard.organization')}</dt>
-              <dd className="mt-1 font-medium">{membership.organizationName}</dd>
-            </div>
-            <div className="flex flex-col">
-              <dt className="text-sm text-foreground-muted">{t('dashboard.yourRoles')}</dt>
-              <dd className="mt-1 flex flex-wrap gap-1">
-                {membership.roles.length === 0 ? (
-                  <span className="text-sm text-foreground-muted">{t('account.noRoles')}</span>
-                ) : (
-                  membership.roles.map((role) => (
-                    <span
-                      key={role}
-                      className="rounded bg-primary/15 px-2 py-0.5 text-sm text-primary"
-                    >
-                      {t(`roles.${role}`)}
+              {membership !== null &&
+                membership.subscriptionStatus === 'trialing' &&
+                trialDaysLeft !== null && (
+                  <section className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded border border-border bg-surface-muted px-5 py-3">
+                    <span className="text-sm font-medium">
+                      {t('dashboard.trial')} —{' '}
+                      {trialDaysLeft > 0
+                        ? t('dashboard.trialDaysLeft', { days: trialDaysLeft })
+                        : t('dashboard.trialEnded')}
                     </span>
-                  ))
+                    <span className="text-sm text-foreground-muted">{t('dashboard.trialNoCard')}</span>
+                  </section>
                 )}
-              </dd>
-            </div>
-          </dl>
-        </section>
-      )}
 
-      {me !== null && me.memberships.length > 1 && (
-        <section className="rounded border border-border bg-surface p-5">
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('account.organizations')}
-          </h2>
-          <ul className="flex flex-col gap-2">
-            {me.memberships.map((other) => (
-              <li key={other.membershipId} className="text-sm">
-                {other.organizationName}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-sm text-foreground-muted">
-            {t('dashboard.multipleOrganizations')}
-          </p>
-        </section>
-      )}
+              {membership !== null && (
+                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('account.title')}
+                  </h2>
 
-      {people !== null && people.canTransferOwnership && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('transfer.title')}
-          </h2>
-          <p className="text-sm text-foreground-muted">{t('transfer.explain')}</p>
-          {/*
-            Every admin, from its own query — not from a page of the members
-            list. Filtering a page would have offered only the admins who
-            happened to land on page 1, and told the owner their colleague was
-            not an admin — POOLSE-29.
-          */}
-          <TransferOwnership
-            organizationId={people.organizationId}
-            candidates={people.transferCandidates}
-          />
-        </section>
-      )}
-      {sessions.length > 0 && (
-        <section className="rounded border border-border bg-surface p-5">
-          <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('sessions.title')}
-          </h2>
-          <Sessions
-            sessions={sessions}
-            formatted={sessions.map((session) => ({
-              id: session.id,
-              started: formatStamp(new Date(session.createdAt)),
-              lastActive: formatStamp(new Date(session.lastActiveAt)),
-            }))}
-          />
-        </section>
-      )}
-    </PageShell>
+                  <dl className="flex flex-wrap gap-x-10 gap-y-4">
+                    <div className="flex flex-col">
+                      <dt className="text-sm text-foreground-muted">{t('dashboard.organization')}</dt>
+                      <dd className="mt-1 font-medium">{membership.organizationName}</dd>
+                    </div>
+                    <div className="flex flex-col">
+                      <dt className="text-sm text-foreground-muted">{t('dashboard.yourRoles')}</dt>
+                      <dd className="mt-1 flex flex-wrap gap-1">
+                        {membership.roles.length === 0 ? (
+                          <span className="text-sm text-foreground-muted">{t('account.noRoles')}</span>
+                        ) : (
+                          membership.roles.map((role) => (
+                            <span
+                              key={role}
+                              className="rounded bg-primary/15 px-2 py-0.5 text-sm text-primary"
+                            >
+                              {t(`roles.${role}`)}
+                            </span>
+                          ))
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+              )}
+            </>
+          ),
+        },
+        {
+          slug: 'organizations',
+          labelKey: 'account.organizations',
+          visible: account.memberships.length > 1,
+          badge: { kind: 'count', value: account.memberships.length },
+          content: () => (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('account.organizations')}
+              </h2>
+              <ul className="flex flex-col gap-2">
+                {account.memberships.map((other) => (
+                  <li key={other.membershipId} className="text-sm">
+                    {other.organizationName}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-sm text-foreground-muted">
+                {t('dashboard.multipleOrganizations')}
+              </p>
+            </section>
+          ),
+        },
+        {
+          slug: 'sessions',
+          labelKey: 'sessions.title',
+          visible: sessions.length > 0,
+          content: () => (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('sessions.title')}
+              </h2>
+              <Sessions
+                sessions={sessions}
+                formatted={sessions.map((session) => ({
+                  id: session.id,
+                  started: formatStamp(new Date(session.createdAt)),
+                  lastActive: formatStamp(new Date(session.lastActiveAt)),
+                }))}
+              />
+            </section>
+          ),
+        },
+        {
+          slug: 'transfer',
+          labelKey: 'transfer.title',
+          visible: people !== null && people.canTransferOwnership,
+          content: () =>
+            people !== null && (
+              <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('transfer.title')}
+                </h2>
+                <p className="text-sm text-foreground-muted">{t('transfer.explain')}</p>
+                {/*
+                  Every admin, from its own query — not from a page of the
+                  members list, which would have offered only the admins who
+                  happened to land on page 1 — POOLSE-29.
+                */}
+                <TransferOwnership
+                  organizationId={people.organizationId}
+                  candidates={people.transferCandidates}
+                />
+              </section>
+            ),
+        },
+      ]}
+    />
   );
 }
