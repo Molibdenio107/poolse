@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import {
@@ -19,6 +19,7 @@ import {
   saveNotesAction,
   withdrawConsentAction,
 } from './sensitive.actions';
+import { Dialog } from '@/components/ui/dialog';
 
 const INITIAL: FormState = { ok: false };
 
@@ -199,9 +200,12 @@ export function WithdrawConsentButton({
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
   const [state, action, pending] = useSavedAction(withdrawConsentAction, INITIAL);
+  useEffect(() => {
+    if (state.ok) setConfirming(false);
+  }, [state]);
 
-  if (!confirming) {
-    return (
+  return (
+    <>
       <button
         type="button"
         onClick={() => setConfirming(true)}
@@ -209,30 +213,37 @@ export function WithdrawConsentButton({
       >
         {t('sensitive.withdraw')}
       </button>
-    );
-  }
 
-  return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="studentId" value={studentId} />
-      <input type="hidden" name="consentId" value={consentId} />
-      <span className="text-sm text-foreground-muted">{t('sensitive.confirmWithdraw')}</span>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-danger/50 px-2 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t('sensitive.withdraw')}
+        closeLabel={t('common.close')}
       >
-        {pending ? t('common.working') : t('facilities.confirmArchive')}
-      </button>
-      <button
-        type="button"
-        onClick={() => setConfirming(false)}
-        className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:bg-surface-muted"
-      >
-        {t('common.cancel')}
-      </button>
-    </form>
+        <form action={action} className="flex flex-col gap-4">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          <input type="hidden" name="studentId" value={studentId} />
+          <input type="hidden" name="consentId" value={consentId} />
+          <p className="text-sm">{t('sensitive.confirmWithdraw')}</p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:bg-surface-muted"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded border border-danger/50 px-2 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+            >
+              {pending ? t('common.working') : t('sensitive.withdraw')}
+            </button>
+          </div>
+        </form>
+      </Dialog>
+    </>
   );
 }
 

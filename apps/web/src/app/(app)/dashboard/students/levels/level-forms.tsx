@@ -15,6 +15,7 @@ import {
   createLevelAction,
   renameLevelAction,
 } from '../students.actions';
+import { Dialog } from '@/components/ui/dialog';
 
 const INITIAL: FormState = { ok: false };
 
@@ -540,9 +541,12 @@ export function ArchiveLevelButton({
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
   const [state, action, pending] = useSavedAction(archiveLevelAction, INITIAL);
+  useEffect(() => {
+    if (state.ok) setConfirming(false);
+  }, [state]);
 
-  if (!confirming) {
-    return (
+  return (
+    <>
       <button
         type="button"
         onClick={() => setConfirming(true)}
@@ -550,32 +554,39 @@ export function ArchiveLevelButton({
       >
         {t('students.archive')}
       </button>
-    );
-  }
 
-  return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="levelId" value={levelId} />
-      <span className="text-sm text-foreground-muted">
-        {studentCount > 0
-          ? t('students.confirmArchiveLevel', { name, count: studentCount })
-          : t('students.confirmArchiveEmptyLevel', { name })}
-      </span>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-danger/50 px-2 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t('students.archive')}
+        closeLabel={t('common.close')}
       >
-        {pending ? t('common.working') : t('facilities.confirmArchive')}
-      </button>
-      <button
-        type="button"
-        onClick={() => setConfirming(false)}
-        className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:bg-surface-muted"
-      >
-        {t('common.cancel')}
-      </button>
-    </form>
+        <form action={action} className="flex flex-col gap-4">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          <input type="hidden" name="levelId" value={levelId} />
+          <p className="text-sm">
+            {studentCount > 0
+              ? t('students.confirmArchiveLevel', { name, count: studentCount })
+              : t('students.confirmArchiveEmptyLevel', { name })}
+          </p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:bg-surface-muted"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded border border-danger/50 px-2 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+            >
+              {pending ? t('common.working') : t('facilities.confirmArchive')}
+            </button>
+          </div>
+        </form>
+      </Dialog>
+    </>
   );
 }

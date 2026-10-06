@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
@@ -12,6 +12,7 @@ import {
   createFacilityAction,
   createPoolAction,
 } from './facilities.actions';
+import { Dialog } from '@/components/ui/dialog';
 
 const INITIAL: FormState = { ok: false };
 
@@ -134,9 +135,12 @@ export function ArchiveButton({
     isFacility ? archiveFacilityAction : archivePoolAction,
     INITIAL,
   );
+  useEffect(() => {
+    if (state.ok) setConfirming(false);
+  }, [state]);
 
-  if (!confirming) {
-    return (
+  return (
+    <>
       <button
         type="button"
         onClick={() => setConfirming(true)}
@@ -144,37 +148,43 @@ export function ArchiveButton({
       >
         {t('facilities.archive')}
       </button>
-    );
-  }
 
-  return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
-      <input type="hidden" name="organizationId" value={organizationId} />
-      {facilityId !== undefined && <input type="hidden" name="facilityId" value={facilityId} />}
-      {poolId !== undefined && <input type="hidden" name="poolId" value={poolId} />}
-
-      <span className="text-sm text-foreground-muted">
-        {isFacility
-          ? poolCount > 0
-            ? t('facilities.confirmArchiveSite', { count: poolCount })
-            : t('facilities.confirmArchiveEmptySite')
-          : t('facilities.confirmArchivePool')}
-      </span>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-danger/50 px-2 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t('facilities.archive')}
+        closeLabel={t('common.close')}
       >
-        {pending ? t('common.working') : t('facilities.confirmArchive')}
-      </button>
-      <button
-        type="button"
-        onClick={() => setConfirming(false)}
-        className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:bg-surface-muted"
-      >
-        {t('common.cancel')}
-      </button>
+        <form action={action} className="flex flex-col gap-4">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          {facilityId !== undefined && <input type="hidden" name="facilityId" value={facilityId} />}
+          {poolId !== undefined && <input type="hidden" name="poolId" value={poolId} />}
 
-    </form>
+          <p className="text-sm">
+            {isFacility
+              ? poolCount > 0
+                ? t('facilities.confirmArchiveSite', { count: poolCount })
+                : t('facilities.confirmArchiveEmptySite')
+              : t('facilities.confirmArchivePool')}
+          </p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:bg-surface-muted"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded border border-danger/50 px-2 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+            >
+              {pending ? t('common.working') : t('facilities.confirmArchive')}
+            </button>
+          </div>
+        </form>
+      </Dialog>
+    </>
   );
 }

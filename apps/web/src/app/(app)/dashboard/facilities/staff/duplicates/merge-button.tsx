@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { FormState } from '../../../actions';
 import { mergeAction } from './duplicates.actions';
+import { Dialog } from '@/components/ui/dialog';
 
 const INITIAL: FormState = { ok: false };
 
@@ -30,9 +31,12 @@ export function MergeButton({
   const t = useTranslations();
   const [confirming, setConfirming] = useState(false);
   const [state, action, pending] = useSavedAction(mergeAction, INITIAL);
+  useEffect(() => {
+    if (state.ok) setConfirming(false);
+  }, [state]);
 
-  if (!confirming) {
-    return (
+  return (
+    <>
       <div className="flex flex-col gap-1">
         <button
           type="button"
@@ -42,30 +46,37 @@ export function MergeButton({
           {label}
         </button>
       </div>
-    );
-  }
 
-  return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="keepId" value={keepId} />
-      <input type="hidden" name="absorbId" value={absorbId} />
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={label}
+        closeLabel={t('common.close')}
+      >
+        <form action={action} className="flex flex-col gap-4">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          <input type="hidden" name="keepId" value={keepId} />
+          <input type="hidden" name="absorbId" value={absorbId} />
 
-      <span className="text-sm">{t('people.mergeConfirm')}</span>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-danger px-4 py-2 text-sm text-white disabled:opacity-60"
-      >
-        {pending ? t('common.working') : t('people.mergeYes')}
-      </button>
-      <button
-        type="button"
-        onClick={() => setConfirming(false)}
-        className="rounded border border-border px-4 py-2 text-sm"
-      >
-        {t('common.cancel')}
-      </button>
-    </form>
+          <p className="text-sm">{t('people.mergeConfirm')}</p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="rounded border border-border px-4 py-2 text-sm"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded bg-danger px-4 py-2 text-sm text-white disabled:opacity-60"
+            >
+              {pending ? t('common.working') : t('people.mergeYes')}
+            </button>
+          </div>
+        </form>
+      </Dialog>
+    </>
   );
 }
