@@ -202,6 +202,7 @@ export function TimetableImport({
             <input
               type="file"
               name="file"
+              aria-label={t('timetableImport.title')}
               accept={ACCEPTED.join(',')}
               required
               className="text-sm file:mr-3 file:rounded file:border file:border-border file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm"

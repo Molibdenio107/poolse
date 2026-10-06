@@ -1943,13 +1943,19 @@ export function ScheduleBoard({
                 const target = undoTarget.current;
                 if (target === null) return;
                 startPending(async () => {
-                  await moveSlotAction(
+                  const result = await moveSlotAction(
                     organizationId,
                     undo.groupId,
                     undo.scheduleId,
                     target.weekday,
                     target.startTime,
                   );
+                  // A refused undo keeps its button and says why, the way a
+                  // refused move does — it used to vanish as if it had worked.
+                  if (!result.ok) {
+                    say('error', result.errorKey);
+                    return;
+                  }
                   setUndo(null);
                 });
               }}

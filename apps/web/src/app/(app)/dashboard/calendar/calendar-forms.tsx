@@ -395,6 +395,7 @@ export function CancelSessionDialog({
           <input
             name="reason"
             maxLength={200}
+            aria-label={t('calendar.cancelReason')}
             placeholder={t('calendar.cancelReason')}
             className={CONTROL_LINE}
           />

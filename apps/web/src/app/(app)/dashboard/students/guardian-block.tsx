@@ -449,11 +449,18 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
     setSearching(true);
 
     const timer = setTimeout(() => {
-      void searchPeopleAction(term).then((people) => {
-        if (attempt !== latest.current) return;
-        setResults(people);
-        setSearching(false);
-      });
+      void searchPeopleAction(term)
+        .then((people) => {
+          if (attempt !== latest.current) return;
+          setResults(people);
+          setSearching(false);
+        })
+        // A rejected call used to leave "A processar…" on screen for good.
+        .catch(() => {
+          if (attempt !== latest.current) return;
+          setResults([]);
+          setSearching(false);
+        });
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
