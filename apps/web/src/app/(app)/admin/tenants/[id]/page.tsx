@@ -11,6 +11,7 @@ import {
 } from '@/lib/api';
 import { DataTable, type Column } from '@/components/data-table';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
+import { DetailPage } from '@/components/detail-page';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { timeAgo } from '@/lib/relative-time';
 import { HealthBadge } from '../../health-badge';
@@ -30,16 +31,23 @@ import { formatCents } from '@/lib/money';
  * same reason it does on `/admin` — the page already asks the API a question
  * only an operator may ask, so one round trip answers both and leaves one line
  * in `platform_audit_log` rather than two that could disagree.
+ *
+ * **Tabs since the detail-tabs change**: General (the trial claim), Ações,
+ * Pagamentos (only when there are some) and Pedidos e erros — eager, so the
+ * audit trail still records one view per page and not one per tab.
  */
 export default async function TenantRequestsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
 
   const { id } = await params;
+  const { tab } = await searchParams;
 
   let requests: TenantRequests | null = null;
   let tenant: PlatformTenant | null = null;
@@ -143,138 +151,169 @@ export default async function TenantRequestsPage({
     },
   ];
 
+  const subtitle = t('admin.tenantRequestsSubtitle', { days: requests?.windowDays ?? 7 });
+  const back = { href: '/admin', label: t('admin.backToTenants') };
+
+  if (tenant === null || requests === null) {
+    return (
+      <PageShell title={t('admin.tenantRequests')} subtitle={subtitle} back={back}>
+        {failure !== null && <PageError message={t(failure.key)} detail={failure.detail} />}
+      </PageShell>
+    );
+  }
+
+  const club = tenant;
+  const week = requests;
+
   return (
-    <PageShell
-      title={tenant?.name ?? requests?.name ?? t('admin.tenantRequests')}
-      subtitle={t('admin.tenantRequestsSubtitle', { days: requests?.windowDays ?? 7 })}
-      back={{ href: '/admin', label: t('admin.backToTenants') }}
+    <DetailPage
+      title={club.name}
+      subtitle={subtitle}
+      back={back}
       actions={
-        requests !== null ? (
-          <HealthBadge
-            health={requests.health}
-            requests={requests.requestCount24h}
-            count4xx={requests.count4xx24h}
-            count5xx={requests.count5xx24h}
-          />
-        ) : undefined
+        <HealthBadge
+          health={week.health}
+          requests={week.requestCount24h}
+          count4xx={week.count4xx24h}
+          count5xx={week.count5xx24h}
+        />
       }
-    >
-      {failure !== null && <PageError message={t(failure.key)} detail={failure.detail} />}
+      requested={tab}
+      /*
+        Eager: every request to PlatformModule writes a line to
+        `platform_audit_log`, so the tabs all come from the page's one set of
+        reads and switching between them asks the API for nothing more.
+      */
+      eager
+      tabs={[
+        {
+          /*
+            The trial this club claimed — POOLSE-62. First, because an operator
+            pressing *conceder novo período* should be able to see what they are
+            freeing; a one-click override on an invisible record is a click
+            nobody can check.
+          */
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          content: () => (
+            <section className="flex flex-col gap-2 rounded border border-border bg-surface p-4">
+              <div>
+                <h2 className="text-sm font-medium">{t('admin.claim')}</h2>
+                <p className="text-sm text-foreground-muted">{t('admin.claimHint')}</p>
+              </div>
 
-      {/*
-        The actions above the charts. An operator opening this page has usually
-        come to *do* something — the chip on the list told them which tenant —
-        and the week's history is the evidence underneath rather than the point.
-      */}
-      {/*
-        The trial this club claimed, above the actions that can free it —
-        POOLSE-62. An operator pressing *conceder novo período* should be able to
-        see what they are freeing; a one-click override on an invisible record is
-        a click nobody can check.
-      */}
-      {tenant !== null && (
-        <section className="flex flex-col gap-2 rounded border border-border bg-surface p-4">
-          <div>
-            <h2 className="text-sm font-medium">{t('admin.claim')}</h2>
-            <p className="text-sm text-foreground-muted">{t('admin.claimHint')}</p>
-          </div>
+              {claim === null ? (
+                <p className="text-sm text-foreground-muted">{t('admin.claimNone')}</p>
+              ) : (
+                <>
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    <div className="flex flex-col">
+                      <dt className="text-sm text-foreground-muted">{t('admin.claimAddress')}</dt>
+                      {/* The normalised address, which is what the ledger is keyed
+                          on — never the raw one the person typed. */}
+                      <dd className="break-all font-mono text-sm">{claim.normalizedEmail}</dd>
+                    </div>
+                    <div className="flex flex-col">
+                      <dt className="text-sm text-foreground-muted">{t('admin.claimedAt')}</dt>
+                      <dd className="text-sm">{formatDate(claim.claimedAt)}</dd>
+                    </div>
+                  </dl>
 
-          {claim === null ? (
-            <p className="text-sm text-foreground-muted">{t('admin.claimNone')}</p>
-          ) : (
+                  {claim.releasedAt !== null && (
+                    <p className="text-sm">
+                      {t('admin.claimReleased', {
+                        date: formatDate(claim.releasedAt),
+                        who: claim.releasedByClerkUserId ?? '—',
+                      })}
+                    </p>
+                  )}
+
+                  {/* Counts and a sentence saying they are not evidence. A flag
+                      that looks like a verdict is a flag that gets acted on as one. */}
+                  <ul className="flex flex-col gap-1 text-sm text-foreground-muted">
+                    <li>{t('admin.flagDomain', { count: claim.sameDomainCount })}</li>
+                    <li>
+                      {claim.sameIpCount === null
+                        ? t('admin.flagIpUnknown')
+                        : t('admin.flagIp', { count: claim.sameIpCount })}
+                    </li>
+                  </ul>
+                  <p className="text-sm text-foreground-muted">{t('admin.flagsHint')}</p>
+                </>
+              )}
+            </section>
+          ),
+        },
+        {
+          slug: 'actions',
+          labelKey: 'detailTabs.actions',
+          content: () => <TenantActions tenant={club} />,
+        },
+        {
+          /*
+            What this club actually paid outside Stripe — POOLSE-63. The
+            evidence behind the paid-through date. **Insert-only, and it says
+            so**: a correction is another row.
+          */
+          slug: 'payments',
+          labelKey: 'admin.payments',
+          visible: payments !== null && payments.items.length > 0,
+          badge:
+            payments === null ? undefined : { kind: 'count', value: payments.items.length },
+          content: () =>
+            payments !== null && (
+              <section className="flex flex-col gap-2">
+                <h2 className="text-sm font-medium">{t('admin.payments')}</h2>
+                <p className="text-sm text-foreground-muted">{t('admin.paymentsHint')}</p>
+
+                <DataTable
+                  columns={paymentColumns}
+                  rows={payments.items}
+                  rowKey={(row) => row.id}
+                  empty={<PageEmpty message={t('admin.noPayments')} />}
+                />
+              </section>
+            ),
+        },
+        {
+          slug: 'requests',
+          labelKey: 'detailTabs.requests',
+          badge:
+            week.health === 'amber' || week.health === 'red'
+              ? { kind: 'dot', labelKey: 'detailTabs.badge.tenantUnhealthy' }
+              : undefined,
+          content: () => (
             <>
-              <dl className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col">
-                  <dt className="text-sm text-foreground-muted">{t('admin.claimAddress')}</dt>
-                  {/* The normalised address, which is what the ledger is keyed
-                      on — never the raw one the person typed. */}
-                  <dd className="break-all font-mono text-sm">{claim.normalizedEmail}</dd>
-                </div>
-                <div className="flex flex-col">
-                  <dt className="text-sm text-foreground-muted">{t('admin.claimedAt')}</dt>
-                  <dd className="text-sm">{formatDate(claim.claimedAt)}</dd>
-                </div>
-              </dl>
-
-              {claim.releasedAt !== null && (
-                <p className="text-sm">
-                  {t('admin.claimReleased', {
-                    date: formatDate(claim.releasedAt),
-                    who: claim.releasedByClerkUserId ?? '—',
-                  })}
-                </p>
+              {week.buckets.length === 0 ? (
+                <PageEmpty
+                  message={t('admin.noRequests')}
+                  hint={t('admin.noRequestsHint', { days: week.windowDays })}
+                />
+              ) : (
+                <RequestCharts buckets={week.buckets} windowDays={week.windowDays} />
               )}
 
-              {/* Counts and a sentence saying they are not evidence. A flag that
-                  looks like a verdict is a flag that gets acted on as one. */}
-              <ul className="flex flex-col gap-1 text-sm text-foreground-muted">
-                <li>{t('admin.flagDomain', { count: claim.sameDomainCount })}</li>
-                <li>
-                  {claim.sameIpCount === null
-                    ? t('admin.flagIpUnknown')
-                    : t('admin.flagIp', { count: claim.sameIpCount })}
-                </li>
-              </ul>
-              <p className="text-sm text-foreground-muted">{t('admin.flagsHint')}</p>
+              <section className="flex flex-col gap-2">
+                <h2 className="text-sm font-medium">{t('admin.recentErrors')}</h2>
+                {/*
+                  One line per *route*, newest first — not one per row. A route
+                  failing every minute for an hour writes itself into sixty
+                  buckets, and sixty identical lines describe one problem while
+                  hiding every other.
+                */}
+                <p className="text-sm text-foreground-muted">{t('admin.recentErrorsHint')}</p>
+
+                <DataTable
+                  columns={errorColumns}
+                  rows={week.errors}
+                  rowKey={(row) => `${row.route}|${row.at}`}
+                  empty={<PageEmpty message={t('admin.noErrors')} />}
+                />
+              </section>
             </>
-          )}
-        </section>
-      )}
-
-      {tenant !== null && <TenantActions tenant={tenant} />}
-
-      {/*
-        What this club actually paid outside Stripe — POOLSE-63.
-
-        Under the actions and above the charts, because it is the evidence behind
-        the paid-through date on the card above it. **Insert-only, and it says
-        so**: there is no edit and no delete, for the reason an invoice has
-        neither. A correction is another row.
-      */}
-      {payments !== null && payments.items.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium">{t('admin.payments')}</h2>
-          <p className="text-sm text-foreground-muted">{t('admin.paymentsHint')}</p>
-
-          <DataTable
-            columns={paymentColumns}
-            rows={payments.items}
-            rowKey={(row) => row.id}
-            empty={<PageEmpty message={t('admin.noPayments')} />}
-          />
-        </section>
-      )}
-
-      {requests !== null && (
-        <>
-          {requests.buckets.length === 0 ? (
-            <PageEmpty
-              message={t('admin.noRequests')}
-              hint={t('admin.noRequestsHint', { days: requests.windowDays })}
-            />
-          ) : (
-            <RequestCharts buckets={requests.buckets} windowDays={requests.windowDays} />
-          )}
-
-          <section className="flex flex-col gap-2">
-            <h2 className="text-sm font-medium">{t('admin.recentErrors')}</h2>
-            {/*
-              One line per *route*, newest first — not one per row. A route
-              failing every minute for an hour writes itself into sixty buckets,
-              and a list of sixty identical lines describes one problem while
-              hiding every other.
-            */}
-            <p className="text-sm text-foreground-muted">{t('admin.recentErrorsHint')}</p>
-
-            <DataTable
-              columns={errorColumns}
-              rows={requests.errors}
-              rowKey={(row) => `${row.route}|${row.at}`}
-              empty={<PageEmpty message={t('admin.noErrors')} />}
-            />
-          </section>
-        </>
-      )}
-    </PageShell>
+          ),
+        },
+      ]}
+    />
   );
 }

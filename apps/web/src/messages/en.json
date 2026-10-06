@@ -3501,12 +3501,15 @@
       "waterOutOfBand": "The latest analysis is out of range",
       "spaceOverdue": "Cleaning is overdue",
       "reinvitePending": "A change of address is pending",
-      "taskDue": "This task is due"
+      "taskDue": "This task is due",
+      "tenantUnhealthy": "There are errors in the last 24 hours"
     },
     "loadFailed": "This tab could not be loaded.",
     "fees": "Fees",
     "week": "Week",
     "students": "Students",
-    "access": "Access"
+    "access": "Access",
+    "actions": "Actions",
+    "requests": "Requests and errors"
   }
 }

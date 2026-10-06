@@ -84,6 +84,7 @@ cards are one conversation they share a tab, and the page's header comment says 
 | Medical record — `/dashboard/students/[id]/sensitive` | Geral (notas) · Contacto de emergência · Consentimentos · Baixa médica (ponto quando ativa; continua dobrada) · Histórico (só se houver) — *eager*: uma leitura auditada, mudar de separador não regista outra |
 | Progress — `/dashboard/students/[id]/progress` | Geral (mais rápido, favorito, gráfico) · Recordes · Histórico (contagem) — ambos só com registos · Registar (quem pode registar) |
 | My profile — `/dashboard/profile` | Geral (perfil, subscrição para o owner, período experimental, organização e funções) · Organizações (só com mais de uma) · Sessões · Transferência (owner) |
+| Tenant (platform) — `/admin/tenants/[id]` | Geral (período experimental reclamado) · Ações · Pagamentos (contagem; só se houver) · Pedidos e erros (ponto quando âmbar ou vermelho) — *eager*: cada leitura é auditada |
 
 
 ## Invitations

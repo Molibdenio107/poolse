@@ -3501,12 +3501,15 @@
       "waterOutOfBand": "A última análise está fora dos limites",
       "spaceOverdue": "A limpeza está em atraso",
       "reinvitePending": "Há uma mudança de endereço pendente",
-      "taskDue": "Esta tarefa está por fazer"
+      "taskDue": "Esta tarefa está por fazer",
+      "tenantUnhealthy": "Há erros nas últimas 24 horas"
     },
     "loadFailed": "Não foi possível carregar este separador.",
     "fees": "Mensalidades",
     "week": "Semana",
     "students": "Alunos",
-    "access": "Acesso"
+    "access": "Acesso",
+    "actions": "Ações",
+    "requests": "Pedidos e erros"
   }
 }
