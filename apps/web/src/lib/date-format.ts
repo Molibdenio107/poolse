@@ -68,13 +68,18 @@ export type DateLike = Date | string | number;
  *
  * `new Date('2026-10-01')` is parsed as UTC midnight, which in a zone behind UTC
  * is the previous day — the exact off-by-one that made a rate effective on 1
- * October display as 30 September. Appending a local midnight makes it the day
- * it says it is.
+ * October display as 30 September.
+ *
+ * **Noon UTC, not local midnight.** Local midnight was right on a server in
+ * Lisbon and wrong in a browser east of it: midnight in Madrid is 23:00 the day
+ * before in `APP_TIME_ZONE`, which is the zone every formatter here prints in.
+ * Noon UTC is the same calendar day in every zone within twelve hours of
+ * Greenwich, whatever clock the code happens to run on.
  */
 function asDate(value: DateLike): Date {
   if (value instanceof Date) return value;
   if (typeof value === 'number') return new Date(value);
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : new Date(value);
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00Z`) : new Date(value);
 }
 
 function partsOf(formatter: Intl.DateTimeFormat, value: Date): Record<string, string> {

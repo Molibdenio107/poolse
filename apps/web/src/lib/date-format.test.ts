@@ -80,3 +80,13 @@ test('the day is always two digits, and the year always four', () => {
   assert.match(formatDate('2026-03-07'), /^\d{2}-\d{2}-\d{4}$/);
   assert.match(formatStamp('2026-03-07T08:04:00Z'), /^\d{2}-\d{2}-\d{4} \d{2}:\d{2}$/);
 });
+
+test('a day is the same day whatever clock the code runs on', () => {
+  // Local midnight was right in Lisbon and wrong east of it — 1 October read as
+  // 30 September in a browser in Madrid. These pass in this process's zone;
+  // set process.env.TZ = 'Europe/Madrid' before importing to see the old parse
+  // fail (a TZ= prefix is ignored by Git Bash on Windows).
+  assert.equal(formatDate('2026-10-01'), '01-10-2026');
+  assert.equal(formatDate('2026-03-29'), '29-03-2026'); // the spring-forward Sunday
+  assert.equal(formatDate('2026-10-25'), '25-10-2026'); // and the fall-back one
+});
