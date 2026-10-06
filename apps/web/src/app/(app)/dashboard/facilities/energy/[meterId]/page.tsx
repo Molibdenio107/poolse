@@ -1,7 +1,8 @@
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { notFound } from 'next/navigation';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
-import { PageShell } from '@/components/page-shell';
+import { PageError } from '@/components/page-shell';
+import { DetailPage } from '@/components/detail-page';
 import { ConsumptionBars } from '@/components/consumption-bars';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
@@ -21,16 +22,20 @@ import { YearOnYearPanel } from './year-on-year';
  * next because it is what the page is opened *to do*; the record last because
  * it is the thing the other two are made from. Every figure on this page was
  * derived by the API from the meter's `reads` flag — nothing here subtracts.
+ *
+ * **Tabs since the detail-tabs change**: General (consumption, year on year and
+ * the estimated cost), Leituras (the form and the record), Faturas — fetched
+ * when it opens — Tarifário, and Detalhes (owner and admin).
  */
 export default async function MeterPage({
   params,
   searchParams,
 }: {
   params: Promise<{ meterId: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; tab?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const { meterId } = await params;
-  const { from } = await searchParams;
+  const { from, tab } = await searchParams;
   const t = await getTranslations();
   const locale = await getLocale();
   const format = await getFormatter();
@@ -39,11 +44,6 @@ export default async function MeterPage({
   // Another tenant's meter is indistinguishable from none, deliberately.
   if (detail === null) notFound();
   const { meter, readings, monthly, pools, tariffs, canPlan, canRecord, canPrice } = detail;
-
-  // The bills on this meter — slice 5.3. Their own section, never merged with
-  // the readings: billing periods are not reading dates and bills carry
-  // estimates. Absent when the endpoint refuses.
-  const bills = await listInvoices(meterId);
 
   const back = backTarget(from, `/dashboard/facilities/${meter.facilityId}`);
 
@@ -54,261 +54,316 @@ export default async function MeterPage({
   ].join(' · ');
 
   return (
-    <PageShell
+    <DetailPage
       title={meter.name}
       subtitle={subtitle}
       back={{ href: back.href, label: t(back.labelKey) }}
-    >
-      {meter.archived && (
-        <section className="rounded border border-border bg-surface-muted p-4 text-sm text-foreground-muted">
-          {t('energy.retired')}
-        </section>
-      )}
+      requested={tab}
+      tabs={[
+        {
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          content: () => (
+            <>
+              {meter.archived && (
+                <section className="rounded border border-border bg-surface-muted p-4 text-sm text-foreground-muted">
+                  {t('energy.retired')}
+                </section>
+              )}
 
-      {meter.replacedMeterName !== null && (
-        <p className="text-sm text-foreground-muted">
-          {t('energy.replaced', { name: meter.replacedMeterName })}
-        </p>
-      )}
+              {meter.replacedMeterName !== null && (
+                <p className="text-sm text-foreground-muted">
+                  {t('energy.replaced', { name: meter.replacedMeterName })}
+                </p>
+              )}
 
-      <section className="rounded border border-border bg-surface p-5">
-        <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          {t('energy.consumption')}
-        </h2>
-        {readings.length === 0 ? (
-          <p className="text-sm text-foreground-muted">{t('energy.noReadingsHint')}</p>
-        ) : (
-          <ConsumptionBars
-            monthly={monthly.months.map((m) => ({
-              month: m.month,
-              consumed: m.consumed,
-              previous: m.previousConsumed,
-              // Context in the record, not a second axis — slice 5.4b.
-              temperatureC: m.meanTempC,
-            }))}
-            unit={meter.unit}
-            locale={locale}
-          />
-        )}
-      </section>
+              <section className="rounded border border-border bg-surface p-5">
+                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('energy.consumption')}
+                </h2>
+                {readings.length === 0 ? (
+                  <p className="text-sm text-foreground-muted">{t('energy.noReadingsHint')}</p>
+                ) : (
+                  <ConsumptionBars
+                    monthly={monthly.months.map((m) => ({
+                      month: m.month,
+                      consumed: m.consumed,
+                      previous: m.previousConsumed,
+                      // Context in the record, not a second axis — slice 5.4b.
+                      temperatureC: m.meanTempC,
+                    }))}
+                    unit={meter.unit}
+                    locale={locale}
+                  />
+                )}
+              </section>
 
-      {/*
-        This year against last — slice 5.4a. Directly under the chart it reads,
-        and absent entirely for a club with no counterpart months: a first-year
-        club gets no panel rather than a row of dashes.
-      */}
-      <YearOnYearPanel yearOnYear={monthly.yearOnYear} unit={meter.unit} />
-
-      {/*
-        What that consumption cost, at the rates the club typed — slice 5.3.
-        Absent until something is actually priced: a chart of twelve dashes
-        teaches nothing, and the tariff panel below already says why.
-
-        **Its own section, never merged with the bills above.** A billed euro is
-        `actual` and this one is `estimated`, and docs/financials.md §2 forbids
-        summing across provenances into one unlabelled figure — so the heading
-        says estimate, the coverage says how much of the year it reached, and
-        the two totals never meet.
-      */}
-      {monthly.monthsPriced > 0 && (
-        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('energy.tariff.costSection')}
-          </h2>
-
-          <p className="text-sm">
-            <span className="text-lg font-medium tabular-nums">
-              {monthly.costCents === null ? '—' : `${centsToText(monthly.costCents)} €`}
-            </span>{' '}
-            <span className="text-foreground-muted">
-              {t('energy.tariff.costTotal')}
-              {' · '}
               {/*
-                Coverage, in visible text and never only as a caveat elsewhere:
-                an unqualified total over partial data has the same shape as a
-                complete one — docs/financials.md §6.
+                This year against last — slice 5.4a. Directly under the chart it
+                reads, and absent entirely for a club with no counterpart months.
               */}
-              {t('energy.tariff.coverage', {
-                priced: monthly.monthsPriced,
-                total: monthly.monthsWithConsumption,
-              })}
-              {monthly.costProvenance !== null &&
-                ` · ${t(`energy.tariff.costProvenance.${monthly.costProvenance}`)}`}
-            </span>
-          </p>
+              <YearOnYearPanel yearOnYear={monthly.yearOnYear} unit={meter.unit} />
 
-          <ConsumptionBars
-            monthly={monthly.months.map((m) => ({
-              month: m.month,
-              // The bars take euros, not cents — one scale, no second axis.
-              consumed: m.costCents === null ? null : m.costCents / 100,
-              previous: m.previousCostCents === null ? null : m.previousCostCents / 100,
-            }))}
-            unit="€"
-            locale={locale}
-            money
-            labelKey="energy.tariff.costChartLabel"
-            captionKey="energy.tariff.costChartCaption"
-          />
-        </section>
-      )}
+              {/*
+                What that consumption cost, at the rates the club typed — slice
+                5.3. Absent until something is actually priced.
 
-      {canRecord && (
-        <section className="rounded border border-border bg-surface p-5">
-          <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('energy.recordTitle')}
-          </h2>
-          <ReadingForm meter={meter} />
-        </section>
-      )}
+                **Its own section, never merged with the bills.** A billed euro
+                is `actual` and this one is `estimated`, and docs/financials.md
+                §2 forbids summing across provenances into one unlabelled figure
+                — so the heading says estimate, the coverage says how much of
+                the year it reached, and the two totals never meet.
+              */}
+              {monthly.monthsPriced > 0 && (
+                <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('energy.tariff.costSection')}
+                  </h2>
 
-      <section className="rounded border border-border bg-surface p-5">
-        <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          {t('energy.history')}
-        </h2>
-
-        {readings.length === 0 ? (
-          <p className="text-sm text-foreground-muted">{t('energy.noReadings')}</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-border rounded border border-border">
-            {readings.map((reading) => (
-              <li
-                key={reading.takenAt}
-                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-3 text-sm"
-              >
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span>
-                    <span className="font-medium tabular-nums">
-                      {format.number(reading.value, { maximumFractionDigits: 3 })}
+                  <p className="text-sm">
+                    <span className="text-lg font-medium tabular-nums">
+                      {monthly.costCents === null ? '—' : `${centsToText(monthly.costCents)} €`}
                     </span>{' '}
-                    <span className="text-foreground-muted">{meter.unit}</span>
-                    {/*
-                      What this reading says was used since the one before it.
-                      Said beside the figure rather than only on the chart, so a
-                      dial reading — which means nothing on its own — is legible
-                      as a consumption in the same glance.
-                    */}
-                    {meter.reads === 'cumulative_index' && (
-                      <span className="ml-2 text-foreground-muted">
-                        {reading.consumed === null
-                          ? t('energy.firstReading')
-                          : t('energy.sinceLast', {
-                              value: format.number(reading.consumed, { maximumFractionDigits: 1 }),
-                              unit: meter.unit,
-                            })}
-                      </span>
-                    )}
-                    {/*
-                      What it cost, at the rate live that day — slice 5.3. A
-                      meter with no rate shows nothing here rather than a zero,
-                      and the estimate is marked as one beside the figure rather
-                      than only in the panel below.
-                    */}
-                    {reading.costCents !== null && (
-                      <span className="ml-2 text-foreground-muted">
-                        ·{' '}
-                        <span className="tabular-nums">{centsToText(reading.costCents)} €</span>{' '}
-                        <span className="text-xs">
-                          {t(`energy.tariff.costProvenance.${reading.costProvenance ?? 'estimated'}`)}
-                        </span>
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-xs text-foreground-muted">
-                    {formatStamp(new Date(reading.takenAt))}
-                    {reading.recordedByName !== null && ` · ${reading.recordedByName}`}
-                    {reading.note !== null && ` · ${reading.note}`}
-                  </span>
-                </span>
-
-                {canRecord && <RemoveReading meter={meter} takenAt={reading.takenAt} />}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {bills !== null && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('energy.invoice.section')}
-            </h2>
-            {bills.canRecord && !meter.archived && (
-              <Link
-                href={withFrom(`/dashboard/facilities/energy/${meter.id}/invoices/new`, `/dashboard/facilities/energy/${meter.id}`)}
-                className="inline-flex h-control items-center gap-1.5 rounded border border-border-strong px-3 text-sm transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                {t('energy.invoice.add')}
-              </Link>
-            )}
-          </div>
-
-          {bills.invoices.length === 0 ? (
-            <p className="text-sm text-foreground-muted">{t('energy.invoice.none')}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[40rem] text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">
-                    <th className="py-1 pr-2 font-medium">{t('energy.invoice.period')}</th>
-                    <th className="py-1 pr-2 font-medium">{t('energy.invoice.number')}</th>
-                    <th className="py-1 pr-2 text-right font-medium">kWh</th>
-                    <th className="py-1 pr-2 text-right font-medium">{t('energy.invoice.subtotalShort')}</th>
-                    <th className="py-1 pr-2 text-right font-medium">{t('energy.invoice.totalShort')}</th>
-                    <th className="py-1 text-right font-medium">{t('energy.invoice.perKwh')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bills.invoices.map((bill) => (
-                    <tr key={bill.id} className="border-t border-border">
-                      <td className="py-1.5 pr-2">
-                        <Link
-                          href={withFrom(`/dashboard/facilities/energy/${meter.id}/invoices/${bill.id}`, `/dashboard/facilities/energy/${meter.id}`)}
-                          className="font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                        >
-                          {formatDate(new Date(`${bill.periodStart}T00:00:00`))} – {formatDate(new Date(`${bill.periodEnd}T00:00:00`))}
-                        </Link>
-                        <span className="block text-xs text-foreground-muted">{t('energy.invoice.days', { days: bill.days })} · {bill.supplier}</span>
-                      </td>
-                      <td className="py-1.5 pr-2 text-foreground-muted">{bill.invoiceNumber}</td>
-                      <td className="py-1.5 pr-2 text-right tabular-nums">{format.number(bill.kwh, { maximumFractionDigits: 0 })}</td>
-                      <td className="py-1.5 pr-2 text-right tabular-nums">{centsToText(bill.subtotalCents)} €</td>
-                      <td className="py-1.5 pr-2 text-right font-medium tabular-nums">{centsToText(bill.totalCents)} €</td>
+                    <span className="text-foreground-muted">
+                      {t('energy.tariff.costTotal')}
+                      {' · '}
                       {/*
-                        Cost per kWh, all in — the figure a club compares
-                        suppliers on. Derived here from two figures the API
-                        sent, which is arithmetic rather than a rule.
+                        Coverage, in visible text and never only as a caveat
+                        elsewhere — docs/financials.md §6.
                       */}
-                      <td className="py-1.5 text-right tabular-nums">
-                        {bill.kwh > 0 ? `${format.number(bill.totalCents / 100 / bill.kwh, { maximumFractionDigits: 3 })} €` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      )}
+                      {t('energy.tariff.coverage', {
+                        priced: monthly.monthsPriced,
+                        total: monthly.monthsWithConsumption,
+                      })}
+                      {monthly.costProvenance !== null &&
+                        ` · ${t(`energy.tariff.costProvenance.${monthly.costProvenance}`)}`}
+                    </span>
+                  </p>
 
-      {/*
-        The rate, below the bills on purpose: a meter that has a fatura does not
-        need one, and a club reading down the page meets the fact before the
-        estimate. Visible to the whole module — a fatura already is — while
-        setting one stays owner and admin, which is `canPrice`.
-      */}
-      <TariffPanel meter={meter} tariffs={tariffs} canPrice={canPrice} />
+                  <ConsumptionBars
+                    monthly={monthly.months.map((m) => ({
+                      month: m.month,
+                      // The bars take euros, not cents — one scale, no second axis.
+                      consumed: m.costCents === null ? null : m.costCents / 100,
+                      previous: m.previousCostCents === null ? null : m.previousCostCents / 100,
+                    }))}
+                    unit="€"
+                    locale={locale}
+                    money
+                    labelKey="energy.tariff.costChartLabel"
+                    captionKey="energy.tariff.costChartCaption"
+                  />
+                </section>
+              )}
+            </>
+          ),
+        },
+        {
+          slug: 'readings',
+          labelKey: 'energy.history',
+          badge: { kind: 'count', value: readings.length },
+          content: () => (
+            <>
+              {canRecord && (
+                <section className="rounded border border-border bg-surface p-5">
+                  <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('energy.recordTitle')}
+                  </h2>
+                  <ReadingForm meter={meter} />
+                </section>
+              )}
 
-      {canPlan && !meter.archived && (
-        <section className="rounded border border-border bg-surface p-5">
-          <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('energy.details')}
-          </h2>
-          <MeterAdmin meter={meter} pools={pools} />
-        </section>
-      )}
-    </PageShell>
+              <section className="rounded border border-border bg-surface p-5">
+                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('energy.history')}
+                </h2>
+
+                {readings.length === 0 ? (
+                  <p className="text-sm text-foreground-muted">{t('energy.noReadings')}</p>
+                ) : (
+                  <ul className="flex flex-col divide-y divide-border rounded border border-border">
+                    {readings.map((reading) => (
+                      <li
+                        key={reading.takenAt}
+                        className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-3 text-sm"
+                      >
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span>
+                            <span className="font-medium tabular-nums">
+                              {format.number(reading.value, { maximumFractionDigits: 3 })}
+                            </span>{' '}
+                            <span className="text-foreground-muted">{meter.unit}</span>
+                            {/*
+                              What this reading says was used since the one
+                              before it, beside the figure — a dial reading means
+                              nothing on its own.
+                            */}
+                            {meter.reads === 'cumulative_index' && (
+                              <span className="ml-2 text-foreground-muted">
+                                {reading.consumed === null
+                                  ? t('energy.firstReading')
+                                  : t('energy.sinceLast', {
+                                      value: format.number(reading.consumed, {
+                                        maximumFractionDigits: 1,
+                                      }),
+                                      unit: meter.unit,
+                                    })}
+                              </span>
+                            )}
+                            {/*
+                              What it cost, at the rate live that day — slice
+                              5.3. A meter with no rate shows nothing here rather
+                              than a zero, and the estimate is marked as one.
+                            */}
+                            {reading.costCents !== null && (
+                              <span className="ml-2 text-foreground-muted">
+                                ·{' '}
+                                <span className="tabular-nums">
+                                  {centsToText(reading.costCents)} €
+                                </span>{' '}
+                                <span className="text-xs">
+                                  {t(
+                                    `energy.tariff.costProvenance.${reading.costProvenance ?? 'estimated'}`,
+                                  )}
+                                </span>
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-xs text-foreground-muted">
+                            {formatStamp(new Date(reading.takenAt))}
+                            {reading.recordedByName !== null && ` · ${reading.recordedByName}`}
+                            {reading.note !== null && ` · ${reading.note}`}
+                          </span>
+                        </span>
+
+                        {canRecord && <RemoveReading meter={meter} takenAt={reading.takenAt} />}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </>
+          ),
+        },
+        {
+          /*
+            The bills on this meter — slice 5.3. Their own tab, never merged with
+            the readings: billing periods are not reading dates and bills carry
+            estimates. The list answers to the same roles as this page, so the
+            tab is always there and the list is fetched when it opens.
+          */
+          slug: 'invoices',
+          labelKey: 'energy.invoice.section',
+          content: async () => {
+            const bills = await listInvoices(meterId);
+            if (bills === null) return <PageError message={t('detailTabs.loadFailed')} />;
+
+            const here = `/dashboard/facilities/energy/${meter.id}`;
+            return (
+              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('energy.invoice.section')}
+                  </h2>
+                  {bills.canRecord && !meter.archived && (
+                    <Link
+                      href={withFrom(`${here}/invoices/new`, `${here}?tab=invoices`)}
+                      className="inline-flex h-control items-center gap-1.5 rounded border border-border-strong px-3 text-sm transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <Plus className="size-4" aria-hidden="true" />
+                      {t('energy.invoice.add')}
+                    </Link>
+                  )}
+                </div>
+
+                {bills.invoices.length === 0 ? (
+                  <p className="text-sm text-foreground-muted">{t('energy.invoice.none')}</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[40rem] text-sm">
+                      <thead>
+                        <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">
+                          <th className="py-1 pr-2 font-medium">{t('energy.invoice.period')}</th>
+                          <th className="py-1 pr-2 font-medium">{t('energy.invoice.number')}</th>
+                          <th className="py-1 pr-2 text-right font-medium">kWh</th>
+                          <th className="py-1 pr-2 text-right font-medium">
+                            {t('energy.invoice.subtotalShort')}
+                          </th>
+                          <th className="py-1 pr-2 text-right font-medium">
+                            {t('energy.invoice.totalShort')}
+                          </th>
+                          <th className="py-1 text-right font-medium">{t('energy.invoice.perKwh')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bills.invoices.map((bill) => (
+                          <tr key={bill.id} className="border-t border-border">
+                            <td className="py-1.5 pr-2">
+                              <Link
+                                href={withFrom(`${here}/invoices/${bill.id}`, `${here}?tab=invoices`)}
+                                className="font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                              >
+                                {formatDate(new Date(`${bill.periodStart}T00:00:00`))} –{' '}
+                                {formatDate(new Date(`${bill.periodEnd}T00:00:00`))}
+                              </Link>
+                              <span className="block text-xs text-foreground-muted">
+                                {t('energy.invoice.days', { days: bill.days })} · {bill.supplier}
+                              </span>
+                            </td>
+                            <td className="py-1.5 pr-2 text-foreground-muted">{bill.invoiceNumber}</td>
+                            <td className="py-1.5 pr-2 text-right tabular-nums">
+                              {format.number(bill.kwh, { maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="py-1.5 pr-2 text-right tabular-nums">
+                              {centsToText(bill.subtotalCents)} €
+                            </td>
+                            <td className="py-1.5 pr-2 text-right font-medium tabular-nums">
+                              {centsToText(bill.totalCents)} €
+                            </td>
+                            {/*
+                              Cost per kWh, all in — the figure a club compares
+                              suppliers on. Arithmetic on two figures the API
+                              sent, rather than a rule.
+                            */}
+                            <td className="py-1.5 text-right tabular-nums">
+                              {bill.kwh > 0
+                                ? `${format.number(bill.totalCents / 100 / bill.kwh, { maximumFractionDigits: 3 })} €`
+                                : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            );
+          },
+        },
+        {
+          /*
+            The rate, after the bills on purpose: a meter that has a fatura does
+            not need one. Visible to the whole module — a fatura already is —
+            while setting one stays owner and admin, which is `canPrice`.
+          */
+          slug: 'tariff',
+          labelKey: 'energy.tariff.section',
+          content: () => <TariffPanel meter={meter} tariffs={tariffs} canPrice={canPrice} />,
+        },
+        {
+          slug: 'details',
+          labelKey: 'energy.details',
+          visible: canPlan && !meter.archived,
+          content: () => (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('energy.details')}
+              </h2>
+              <MeterAdmin meter={meter} pools={pools} />
+            </section>
+          ),
+        },
+      ]}
+    />
   );
 }

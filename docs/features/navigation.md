@@ -77,6 +77,7 @@ cards are one conversation they share a tab, and the page's header comment says 
 | Staff member — `/dashboard/facilities/staff/[id]` | Geral (ficha) · Funções (owner, admin) · Acesso (mudança de endereço; owner; ponto quando pendente) |
 | Maintenance task — `/dashboard/facilities/tasks/[id]` | Geral (factos e registo; ponto quando por fazer) · Histórico (carregado ao abrir; a paginação mantém o separador) · Plano (owner, admin) |
 | Partnership — `/dashboard/facilities/partners/[id]` | Geral (identificação) · Contactos (contagem) · Acordo · Grupos (contagem) · Horário |
+| Meter — `/dashboard/facilities/energy/[id]` | Geral (consumo, ano a ano, custo estimado) · Leituras (registo e histórico; contagem) · Faturas (carregadas ao abrir) · Tarifário · Detalhes (owner, admin) |
 
 
 ## Invitations
