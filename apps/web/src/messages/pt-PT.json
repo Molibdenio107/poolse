@@ -3498,7 +3498,8 @@
     "badge": {
       "spacesOverdue": "Há espaços com limpeza em atraso",
       "maintenanceDue": "Há manutenção por fazer",
-      "waterOutOfBand": "A última análise está fora dos limites"
+      "waterOutOfBand": "A última análise está fora dos limites",
+      "spaceOverdue": "A limpeza está em atraso"
     },
     "loadFailed": "Não foi possível carregar este separador.",
     "fees": "Mensalidades",

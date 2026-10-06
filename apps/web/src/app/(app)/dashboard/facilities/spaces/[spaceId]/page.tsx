@@ -5,6 +5,7 @@ import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { Pagination } from '@/components/pagination';
 import { PageError, PageShell } from '@/components/page-shell';
+import { DetailPage } from '@/components/detail-page';
 import { SpaceHeader } from './space-header';
 import { CleanAction } from './clean-action';
 import { CleaningHistory } from './cleaning-history';
@@ -18,6 +19,11 @@ import { IssuesPanel } from './issues-panel';
  * under it, because for most visits that is the whole errand. Then the history,
  * then the issues.
  *
+ * **Tabs since the detail-tabs change**: General (the state and Marcar como
+ * limpo), Histórico de limpezas and Ocorrências. All three come from one
+ * request, so there is nothing to defer; the history's page number rides in the
+ * URL beside the tab.
+ *
  * Reachable by any member; every control on it is gated by what the API says
  * this person may do, and the API enforces the same answer again on the way in.
  */
@@ -26,11 +32,11 @@ export default async function SpacePage({
   searchParams,
 }: {
   params: Promise<{ spaceId: string }>;
-  searchParams: Promise<{ from?: string; page?: string }>;
+  searchParams: Promise<{ from?: string; page?: string; tab?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { spaceId } = await params;
-  const { from, page } = await searchParams;
+  const { from, page, tab } = await searchParams;
 
   // Reached from the site page, and one day from a QR code on the door — both
   // need somewhere to go back to. `lib/back.ts`.
@@ -59,63 +65,96 @@ export default async function SpacePage({
     }
   }
 
+  if (detail === null) {
+    return (
+      <PageShell
+        title={t('spaces.title')}
+        back={{ href: back.href, label: t(back.labelKey) }}
+      >
+        {missing && (
+          <section className="rounded border border-border bg-surface p-5">
+            <p>{t('spaces.notFound')}</p>
+          </section>
+        )}
+
+        {failure !== null && (
+          <PageError
+            message={t(failure.key)}
+            {...(failure.detail === '' ? {} : { detail: failure.detail })}
+          />
+        )}
+      </PageShell>
+    );
+  }
+
+  const loaded = detail;
+  const open = loaded.issues.filter((issue) => issue.status === 'open').length;
+
   return (
-    <PageShell
-      title={detail?.space.name ?? t('spaces.title')}
-      subtitle={detail === null ? undefined : t(`spaces.type.${detail.space.type}`)}
+    <DetailPage
+      title={loaded.space.name}
+      subtitle={t(`spaces.type.${loaded.space.type}`)}
       back={{ href: back.href, label: t(back.labelKey) }}
       actions={<EntityIcon kind="facility" className="size-6 text-primary" />}
-    >
-      {missing && (
-        <section className="rounded border border-border bg-surface p-5">
-          <p>{t('spaces.notFound')}</p>
-        </section>
-      )}
+      requested={tab}
+      tabs={[
+        {
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          badge: loaded.space.overdue
+            ? { kind: 'dot', labelKey: 'detailTabs.badge.spaceOverdue' }
+            : undefined,
+          content: () => (
+            <>
+              <SpaceHeader space={loaded.space} canManage={loaded.canManage} />
 
-      {failure !== null && (
-        <PageError
-          message={t(failure.key)}
-          {...(failure.detail === '' ? {} : { detail: failure.detail })}
-        />
-      )}
+              {loaded.canLog && (
+                <CleanAction spaceId={loaded.space.id} facilityId={loaded.facilityId} />
+              )}
+            </>
+          ),
+        },
+        {
+          slug: 'history',
+          labelKey: 'spaces.history',
+          content: () => (
+            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('spaces.history')}
+              </h2>
 
-      {detail !== null && (
-        <>
-          <SpaceHeader space={detail.space} canManage={detail.canManage} />
+              <CleaningHistory
+                spaceId={loaded.space.id}
+                facilityId={loaded.facilityId}
+                cleanings={loaded.cleanings.items}
+                canManage={loaded.canManage}
+              />
 
-          {detail.canLog && (
-            <CleanAction spaceId={detail.space.id} facilityId={detail.facilityId} />
-          )}
-
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('spaces.history')}
-            </h2>
-
-            <CleaningHistory
-              spaceId={detail.space.id}
-              facilityId={detail.facilityId}
-              cleanings={detail.cleanings.items}
-              canManage={detail.canManage}
+              {/* The tab rides along, or paging would land back on General. */}
+              <Pagination
+                page={loaded.cleanings}
+                basePath={`/dashboard/facilities/spaces/${loaded.space.id}`}
+                query={{ ...(from === undefined ? {} : { from }), tab: 'history' }}
+              />
+            </section>
+          ),
+        },
+        {
+          slug: 'issues',
+          labelKey: 'spaces.issues',
+          badge: open > 0 ? { kind: 'count', value: open } : undefined,
+          content: () => (
+            <IssuesPanel
+              spaceId={loaded.space.id}
+              facilityId={loaded.facilityId}
+              issues={loaded.issues}
+              canLog={loaded.canLog}
+              canResolve={loaded.canResolve}
+              canManage={loaded.canManage}
             />
-
-            <Pagination
-              page={detail.cleanings}
-              basePath={`/dashboard/facilities/spaces/${detail.space.id}`}
-              query={{ ...(from === undefined ? {} : { from }) }}
-            />
-          </section>
-
-          <IssuesPanel
-            spaceId={detail.space.id}
-            facilityId={detail.facilityId}
-            issues={detail.issues}
-            canLog={detail.canLog}
-            canResolve={detail.canResolve}
-            canManage={detail.canManage}
-          />
-        </>
-      )}
-    </PageShell>
+          ),
+        },
+      ]}
+    />
   );
 }

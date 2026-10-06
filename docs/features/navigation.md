@@ -73,6 +73,7 @@ cards are one conversation they share a tab, and the page's header comment says 
 | Tank — `/dashboard/facilities/pools/[id]` | Geral (detalhes, arquivar) · Qualidade da água (ponto quando a última análise está fora dos limites) · Custo por utilização (owner, admin; carregado ao abrir) · Fotografias |
 | Student — `/dashboard/students/[id]` | Geral (progresso e ficha médica, identificação) · Mensalidades (se as pode ver) · Documento (owner, admin) · Turmas (contagem; só se inscrito) · Semana (carregada ao abrir) · Reposições (contagem; só se houver) |
 | Turma — `/dashboard/classes/[id]` | Geral (formulário, arquivar) · Horário (contagem) · Alunos (contagem de inscritos; custo da água carregado ao abrir) |
+| Espaço — `/dashboard/facilities/spaces/[id]` | Geral (estado e "Marcar como limpo"; ponto quando em atraso) · Histórico de limpezas (a paginação mantém o separador) · Ocorrências (contagem das abertas) |
 
 
 ## Invitations

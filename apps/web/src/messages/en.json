@@ -3498,7 +3498,8 @@
     "badge": {
       "spacesOverdue": "A space is overdue for cleaning",
       "maintenanceDue": "Maintenance is due",
-      "waterOutOfBand": "The latest analysis is out of range"
+      "waterOutOfBand": "The latest analysis is out of range",
+      "spaceOverdue": "Cleaning is overdue"
     },
     "loadFailed": "This tab could not be loaded.",
     "fees": "Fees",
