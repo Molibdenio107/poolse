@@ -149,6 +149,7 @@ export default async function FacilityPage({
     listPolicies(facilityId),
   ]);
 
+  // A record opened from a tab is sent back to that tab, not to General.
   const path = `/dashboard/facilities/${facilityId}`;
   const loaded = site;
 
@@ -250,7 +251,7 @@ export default async function FacilityPage({
                   {loaded.pools.map((pool) => (
                     <li key={pool.id} className="py-3 first:pt-0 last:pb-0">
                       <Link
-                        href={withFrom(`/dashboard/facilities/pools/${pool.id}`, path)}
+                        href={withFrom(`/dashboard/facilities/pools/${pool.id}`, `${path}?tab=pools`)}
                         className="flex items-center gap-3 rounded hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         <EntityIcon kind="pool" />
@@ -286,7 +287,7 @@ export default async function FacilityPage({
                 facilityId={facilityId}
                 spaces={spaces.items}
                 canManage={spaces.canManage}
-                backTo={path}
+                backTo={`${path}?tab=spaces`}
               />
             ),
         },
@@ -325,7 +326,11 @@ export default async function FacilityPage({
                 <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                   {t('energy.section')}
                 </h2>
-                <EnergyPanel facilityId={facilityId} list={meters} />
+                <EnergyPanel
+                  facilityId={facilityId}
+                  list={meters}
+                  backTo={`${path}?tab=energy`}
+                />
               </section>
             ),
         },
