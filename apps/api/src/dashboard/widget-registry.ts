@@ -1,6 +1,20 @@
 import type { MemberRole } from '../tenant/roles.js';
 import { MEMBER_ROLES } from '../tenant/roles.js';
-import { energySpend, myTasks, setupChecklist, subscriptionState, trialIsClosing } from './resolvers.js';
+import {
+  energySpend,
+  maintenanceNeedsSomebody,
+  maintenanceOpen,
+  moneyPeriod,
+  myTasks,
+  occupancyToday,
+  people,
+  setupChecklist,
+  staffCost,
+  subscriptionState,
+  trialIsClosing,
+  waterIsOutOfRange,
+  waterQuality,
+} from './resolvers.js';
 
 /**
  * The dashboard, as one declaration per widget — POOLSE-66, slice 1.
@@ -211,6 +225,84 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     size: 2,
     priority: 20,
     resolver: energySpend,
+  },
+
+  /*
+   * The management band's aggregates — slice 2b. Each is one grouped statement
+   * in `management.repository.ts`, and the priorities decide which four a band
+   * keeps: money and today's classes are what an owner opens the app for;
+   * water and maintenance lift themselves when something needs a person; people
+   * and staff cost are the slow-moving figures, read on their own pages more
+   * often than here.
+   *
+   * The four site-scoped ones follow the selector. People and staff cost are
+   * the club's — a membership, an invitation and a salary belong to the club,
+   * never to a site — and their cards say so.
+   */
+  {
+    id: 'mgmt.money.period',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'facility',
+    size: 2,
+    priority: 50,
+    resolver: moneyPeriod,
+  },
+  {
+    id: 'mgmt.occupancy.today',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'facility',
+    size: 2,
+    priority: 45,
+    resolver: occupancyToday,
+  },
+  {
+    id: 'mgmt.waterquality.alerts',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    scope: 'facility',
+    size: 1,
+    priority: 30,
+    // A tank out of range is the thing on the page somebody must act on today.
+    escalate: waterIsOutOfRange,
+    escalatedPriority: 80,
+    resolver: waterQuality,
+  },
+  {
+    id: 'mgmt.maintenance.open',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    scope: 'facility',
+    size: 1,
+    priority: 25,
+    escalate: maintenanceNeedsSomebody,
+    escalatedPriority: 60,
+    resolver: maintenanceOpen,
+  },
+  {
+    id: 'mgmt.people',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'tenant',
+    size: 1,
+    priority: 15,
+    resolver: people,
+  },
+  {
+    // Owner and admin — and an admin's figure leaves the owner's pay out, which
+    // `salarySummary` decides and the card states. `docs/features/salaries.md`.
+    id: 'mgmt.staffcost',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'tenant',
+    size: 1,
+    priority: 10,
+    resolver: staffCost,
   },
 
   /*

@@ -41,6 +41,17 @@ export function isSpaceType(value: string): value is SpaceType {
   return (SPACE_TYPES as readonly string[]).includes(value);
 }
 
+/**
+ * How badly a request needs somebody — POOLSE-66 slice 2b. A closed scale only a
+ * developer changes, so an enum; every request that predates it is `normal`.
+ */
+export const SEVERITIES = ['low', 'normal', 'high'] as const;
+export type Severity = (typeof SEVERITIES)[number];
+
+export function isSeverity(value: string): value is Severity {
+  return (SEVERITIES as readonly string[]).includes(value);
+}
+
 export function isRequestType(value: string): value is RequestType {
   return (REQUEST_TYPES as readonly string[]).includes(value);
 }
@@ -91,6 +102,7 @@ export interface Cleaning {
 export interface Issue {
   id: string;
   type: RequestType;
+  severity: Severity;
   description: string;
   reportedAt: string;
   reportedBy: string | null;
@@ -134,7 +146,7 @@ const ACTOR_NAME = (alias: string, user: string) =>
  *     hide precisely the spaces this feature exists to surface.
  *   - otherwise       → time since the last cleaning against the interval.
  */
-const OVERDUE = `
+export const OVERDUE = `
   CASE
     WHEN NOT s.active THEN false
     WHEN s.expected_cleaning_interval_hours IS NULL THEN false
@@ -152,7 +164,7 @@ const OVERDUE = `
  * answer — the alternative leaves a room looking clean because somebody
  * corrected a mistake.
  */
-const SPACE_JOINS = `
+export const SPACE_JOINS = `
   LEFT JOIN LATERAL (
     SELECT max(cl.performed_at) AS last_cleaned_at
       FROM cleaning_log cl
@@ -288,6 +300,7 @@ export async function getSpace(
     const issues = await tx.query<{
       id: string;
       type: RequestType;
+      severity: Severity;
       description: string;
       reported_at: Date;
       reported_by: string | null;
@@ -296,7 +309,7 @@ export async function getSpace(
       resolved_by: string | null;
       resolution_note: string | null;
     }>(
-      `SELECT mr.id, mr.type, mr.description, mr.reported_at, mr.status,
+      `SELECT mr.id, mr.type, mr.severity, mr.description, mr.reported_at, mr.status,
               mr.resolved_at, mr.resolution_note,
               ${ACTOR_NAME('rep', 'ru')} AS reported_by,
               ${ACTOR_NAME('res', 'su')} AS resolved_by
@@ -316,6 +329,7 @@ export async function getSpace(
       issues: issues.rows.map((row) => ({
         id: row.id,
         type: row.type,
+        severity: row.severity,
         description: row.description,
         reportedAt: row.reported_at.toISOString(),
         reportedBy: row.reported_by,
@@ -510,6 +524,7 @@ export async function reportIssue(
   membershipId: string,
   type: RequestType,
   description: string,
+  severity: Severity = 'normal',
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const space = await tx.query<{ facility_id: string }>(
@@ -525,16 +540,16 @@ export async function reportIssue(
      */
     await tx.query(
       `INSERT INTO maintenance_request
-         (organization_id, facility_id, space_id, type, description, reported_by)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [organizationId, space.rows[0]!.facility_id, spaceId, type, description, membershipId],
+         (organization_id, facility_id, space_id, type, severity, description, reported_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [organizationId, space.rows[0]!.facility_id, spaceId, type, severity, description, membershipId],
     );
 
     await recordAudit(tx, {
       action: 'space.issue.reported',
       entityType: 'space',
       entityId: spaceId,
-      data: { facilityId: space.rows[0]!.facility_id, type },
+      data: { facilityId: space.rows[0]!.facility_id, type, severity },
     });
     return true;
   });
@@ -597,6 +612,38 @@ export async function archiveIssue(
       entityType: 'space',
       entityId: spaceId,
       data: { requestId },
+    });
+    return true;
+  });
+}
+
+/**
+ * Re-grades an open request. False when there is no such live request on this
+ * space — which is also the answer for another club's id, RLS having hidden it.
+ * A resolved request keeps the severity it was resolved at: re-grading history
+ * would rewrite why somebody was sent.
+ */
+export async function setIssueSeverity(
+  organizationId: string,
+  spaceId: string,
+  requestId: string,
+  severity: Severity,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const updated = await tx.query<{ facility_id: string }>(
+      `UPDATE maintenance_request
+          SET severity = $3
+        WHERE id = $1 AND space_id = $2 AND status = 'open' AND archived_at IS NULL
+        RETURNING facility_id`,
+      [requestId, spaceId, severity],
+    );
+    if (updated.rowCount === 0) return false;
+
+    await recordAudit(tx, {
+      action: 'space.issue.severity',
+      entityType: 'space',
+      entityId: spaceId,
+      data: { facilityId: updated.rows[0]!.facility_id, requestId, severity },
     });
     return true;
   });

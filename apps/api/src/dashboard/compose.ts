@@ -190,9 +190,25 @@ export async function composeDashboard(
   for (const [order, band] of BANDS.entries()) {
     const widgets = composed
       .filter(({ widget }) => widget.band === band)
-      // Highest first; ties break on id so the page does not quietly reorder
-      // itself between two requests.
-      .sort((a, b) => b.card.priority - a.card.priority || a.card.id.localeCompare(b.card.id))
+      /*
+       * A card with something to say before an empty one, then highest priority
+       * first, ties broken on id so the page does not quietly reorder itself
+       * between two requests.
+       *
+       * The first key arrived with slice 2b, when the band grew to eight
+       * widgets for four places: on priority alone, a new club's empty
+       * mensalidades card outranked an energy card with a year of bills behind
+       * it. An empty card is still shown when there is room — "nada em atraso"
+       * is a fact — but it never takes the place of one that has figures. An
+       * error counts as something to say: hiding the card that failed would
+       * hide that anything did.
+       */
+      .sort(
+        (a, b) =>
+          Number(a.card.state === 'empty') - Number(b.card.state === 'empty') ||
+          b.card.priority - a.card.priority ||
+          a.card.id.localeCompare(b.card.id),
+      )
       .slice(0, BAND_CAP)
       .map(({ card }) => card);
 

@@ -73,7 +73,13 @@ export interface PeopleCounts {
   guardian: number;
 }
 
-export interface FacilityDetail extends Facility, Place {}
+export interface FacilityDetail extends Facility, Place {
+  /**
+   * How old a tank's latest water analysis may be, in hours, before the
+   * dashboard calls it due. Null is not measured and enforces nothing.
+   */
+  waterAnalysisMaxAgeHours: number | null;
+}
 
 /**
  * Ordinary tenant-scoped SQL, all of it. Nothing here needs a `SECURITY DEFINER`
@@ -278,6 +284,7 @@ export async function findFacility(
       country_code: string | null;
       latitude: number | null;
       longitude: number | null;
+      water_analysis_max_age_hours: number | null;
       pools: Pool[] | null;
       photos: Photo[] | null;
     }>(
@@ -293,6 +300,7 @@ export async function findFacility(
              -- decimal places survive float8 exactly.
              f.latitude::float8  AS latitude,
              f.longitude::float8 AS longitude,
+             f.water_analysis_max_age_hours,
              (
                SELECT coalesce(
                         json_agg(
@@ -350,6 +358,7 @@ export async function findFacility(
       countryCode: row.country_code,
       latitude: row.latitude,
       longitude: row.longitude,
+      waterAnalysisMaxAgeHours: row.water_analysis_max_age_hours,
       pools: row.pools ?? [],
       photos: row.photos ?? [],
     };
@@ -1023,3 +1032,31 @@ export async function setFacilityHours(
   });
 }
 
+
+/**
+ * Sets how old a site's latest water analysis may be. Null clears it — "not
+ * measured", which enforces nothing. False for a site that is not this club's
+ * or no longer live.
+ */
+export async function setWaterThreshold(
+  organizationId: string,
+  facilityId: string,
+  hours: number | null,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const updated = await tx.query(
+      `UPDATE facility SET water_analysis_max_age_hours = $2
+        WHERE id = $1 AND archived_at IS NULL`,
+      [facilityId, hours],
+    );
+    if (updated.rowCount === 0) return false;
+
+    await recordAudit(tx, {
+      action: 'facility.water_threshold',
+      entityType: 'facility',
+      entityId: facilityId,
+      data: { hours },
+    });
+    return true;
+  });
+}

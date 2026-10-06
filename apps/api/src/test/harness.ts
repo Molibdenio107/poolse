@@ -498,6 +498,12 @@ export async function removeTenant(organizationId: string, clerkUserId: string):
   const client = await owner().connect();
   try {
     await client.query('BEGIN');
+    // A remembered dashboard site (POOLSE-66 slice 2b) points from membership at
+    // facility, so it goes first — whatever order the tables are deleted in.
+    await client.query(
+      'UPDATE membership SET dashboard_facility_id = NULL WHERE organization_id = $1',
+      [organizationId],
+    );
     for (const table of TENANT_TABLES) {
       await client.query(`DELETE FROM ${table} WHERE organization_id = $1`, [organizationId]);
     }
@@ -633,3 +639,54 @@ export async function closeHarness(): Promise<void> {
 }
 
 export { withoutTenantScope };
+
+/*
+ * Counting statements — POOLSE-66 QA 11.
+ *
+ * "The aggregate widgets' query count does not scale with the number of
+ * facilities" is only assertable if something counts, and nothing did. Every
+ * repository query goes through `withOrg`, which takes a client from `pool`, so
+ * the count hooks in there: each client handed out while counting is wrapped
+ * once, and pushes the text of every statement it runs into the active list.
+ *
+ * `withOrg`'s own bookkeeping — BEGIN, the tenant GUC, COMMIT or ROLLBACK — is
+ * left out, so the number is the statements a feature chose to run. A wrapped
+ * client returned to the pool keeps its wrapper, which is harmless: it records
+ * only while a count is active.
+ */
+let counting: string[] | null = null;
+const wrapped = new WeakSet<object>();
+const BOOKKEEPING = /^\s*(BEGIN|COMMIT|ROLLBACK|SELECT set_config\()/i;
+
+export async function countStatements<T>(
+  fn: () => Promise<T>,
+): Promise<{ result: T; statements: string[] }> {
+  const seen: string[] = [];
+  const connect = pool.connect.bind(pool) as () => Promise<pg.PoolClient>;
+  const patched = pool as unknown as { connect: () => Promise<pg.PoolClient> };
+
+  patched.connect = async () => {
+    const client = await connect();
+    if (!wrapped.has(client)) {
+      wrapped.add(client);
+      const query = client.query.bind(client) as (...args: unknown[]) => unknown;
+      (client as unknown as { query: (...args: unknown[]) => unknown }).query = (
+        ...args: unknown[]
+      ) => {
+        const first = args[0];
+        const text = typeof first === 'string' ? first : (first as { text?: string })?.text ?? '';
+        if (counting !== null && !BOOKKEEPING.test(text)) counting.push(text);
+        return query(...args);
+      };
+    }
+    return client;
+  };
+
+  counting = seen;
+  try {
+    return { result: await fn(), statements: seen };
+  } finally {
+    counting = null;
+    patched.connect = connect;
+  }
+}

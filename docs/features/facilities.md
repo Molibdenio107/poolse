@@ -83,6 +83,7 @@ Readings live on the tank's own page: `/dashboard/facilities/pools/<id>`.
 | Import a water log or an analysis report | owner, admin |
 | Archive an analysis | owner, admin |
 | Set this pool's own safe ranges | owner, admin |
+| Set how old a site's latest analysis may be | owner, admin |
 
 Nine metrics — pH, temperature, free and combined chlorine, total alkalinity,
 calcium hardness, cyanuric acid, turbidity, salt. The **unit is the server's**, from
@@ -94,6 +95,11 @@ notice, which offers and never acts.
 
 The bands and the metric list live in `@poolse/rules`, so the screen and the API judge a
 reading by the same numbers. **A pool may set its own** — see below.
+
+**How old an analysis may be** is a site's own number of hours, set on the site's General tab
+(POOLSE-66 slice 2b). Empty means not measured and flags nothing. Once set, a tank whose latest
+analysis is older — or that has none — is "due", which the dashboard's water card says beside
+the tanks that are out of range. POOLSE-26's missing-reading alert can read the same column.
 
 ### This pool's ranges
 

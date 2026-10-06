@@ -96,8 +96,11 @@ classes" to somebody who teaches four.
 
 ## Density, and the two rules that come with it
 
-**At most four widgets per band**, chosen by priority, ties broken on the id so the page does
-not quietly reorder itself between two requests. Every card carries a link to the real page:
+**At most four widgets per band**: a card with something to say (data, or an error) before an
+empty one, then by priority, ties broken on the id so the page does not quietly reorder itself
+between two requests. The first key arrived with slice 2b, when the management band grew to eight
+widgets for four places and a new club's empty mensalidades card outranked an energy card with a
+year of bills. Every card carries a link to the real page:
 the dashboard is a launcher, not a replacement for the pages.
 
 **`escalate` runs after the resolvers and before the cap.** "Boost the subscription widget when
@@ -187,11 +190,39 @@ Their widgets are in the catalogue — `mgmt.occupancy.today` needs slice 2b's g
 replaces it. A slice that ended by removing a figure an operator reads every morning would not
 have ended well.
 
-**Not built:** the management band's six aggregates (slice 2b), the instructor and maintenance
-bands proper, the personal band behind `DASHBOARD_PERSONAL_BAND`, and the facility selector —
-the payload has carried `scope` since slice 1, but every widget so far is tenant- or
-self-scoped, so a selector would change nothing on screen until the first facility-scoped
-aggregate. **AC 10 is open on purpose.** There is also **no React test harness in this repo**,
+## The management band — slice 2b, 6 October 2026
+
+Six aggregates, **one SQL statement each whatever the number of sites**
+(`management.repository.ts`), every one borrowing the rule its page already uses:
+
+| id | priority | scope | what it says | the rule it reads |
+|---|---|---|---|---|
+| `mgmt.money.period` | 50 | site | mensalidades this period: paid, to pay, overdue | `current_period_start`, `fee_payable_cents`, `fee_due_on` — the per-student rule, summed |
+| `mgmt.occupancy.today` | 45 | site | classes today, swimmers expected, classes *sem professor*, the busiest tank against its `max_capacity` | `class_session` (never the pattern), the booking's `instructor_status` |
+| `mgmt.waterquality.alerts` | 30 → 80 out of range | site | tanks out of range, or due for an analysis | `excursions` / `resolveBands`, and `facility.water_analysis_max_age_hours` |
+| `mgmt.maintenance.open` | 25 → 60 with a fault or overdue room | site | open avarias and reposições by severity, rooms overdue for cleaning | `OVERDUE` from `spaces.repository.ts` |
+| `mgmt.people` | 15 | club | students, staff by role, invitations lapsing within 24 h | `countPeople`'s headcount rules |
+| `mgmt.staffcost` | 10 | club | the monthly staff cost with coverage | `salarySummary` — an admin's excludes the owner's pay, and says so |
+
+**Money is mensalidades only**, and the late-payment penalty is not in it: it is charged once per
+student, not per line, and the student's page decides it. **Today is each site's own date.** A
+partnership's session counts through a LEFT join. **Sem professor** is `to_define` or `uncovered`
+where nothing resolves for that one session; `external` never counts. **A tank is due** only where
+the site set a threshold — null enforces nothing — and then a tank never analysed is due.
+**People and staff cost are the club's**, because a membership, an invitation and a salary belong
+to the club; their cards say so rather than following the selector.
+
+**The selector is remembered per person and per club** on `membership.dashboard_facility_id`,
+written by `PUT /dashboard/scope` (`{ facilityId }`, a uuid or null; owner and admin; an unknown
+uuid is 404, anything else not a uuid is 400). A `?facility=` in the URL wins over the remembered
+site, so a shared link shows what it says; a remembered site since archived reads as every site.
+
+**QA 10 and 11 are asserted**: "every site" equals the sum of each site, and the number of
+statements a page runs does not change between one site and five — `countStatements` in
+`test/harness.ts` counts them, leaving `withOrg`'s own BEGIN, GUC and COMMIT out.
+
+**Not built:** the instructor and maintenance bands proper, and the personal band behind
+`DASHBOARD_PERSONAL_BAND`. There is also **no React test harness in this repo**,
 so the card's three states are proven by the API's own state assertions and by the build rather
 than by a render test; adding one is its own decision. Widget customisation is out of scope for
 the whole ticket; if it is ever wanted it is one `dashboard_widget_prefs` table keyed on the

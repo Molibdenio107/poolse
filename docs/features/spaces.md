@@ -82,6 +82,12 @@ resolved it, when, and the resolution note if there is one.
 Resolving an issue somebody else has already resolved is refused rather than silently
 re-stamped — the second person is told, instead of quietly overwriting who fixed it.
 
+**Severity — low, normal or high** (POOLSE-66 slice 2b). The person reporting chooses it, and
+it defaults to normal — so does every issue that predates it. It is written as a word beside the
+issue, never as a colour alone. An owner or admin may re-grade an **open** issue; a resolved one
+keeps the severity it was resolved at. The dashboard's maintenance card counts open issues by
+type and severity.
+
 ## Who can do what
 
 | Action | Owner | Admin | Instructor | Maintenance | Student / Encarregado |
@@ -90,6 +96,7 @@ re-stamped — the second person is told, instead of quietly overwriting who fix
 | Log a cleaning | ✓ | ✓ | ✓ | ✓ | — |
 | Report an issue | ✓ | ✓ | ✓ | ✓ | — |
 | Resolve an issue | ✓ | ✓ | — | ✓ | — |
+| Re-grade an open issue's severity | ✓ | ✓ | — | — | — |
 | Add or edit a space | ✓ | ✓ | — | — | — |
 | Delete a space, cleaning or issue | ✓ | ✓ | — | — | — |
 

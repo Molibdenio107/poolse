@@ -2,6 +2,19 @@ import { readSubscription } from '../billing/subscription.repository.js';
 import { energyCosts } from '../energy/invoices.repository.js';
 import { listMyTasks } from '../maintenance/maintenance.repository.js';
 import { readSetupProgress } from './dashboard.repository.js';
+import { excursions, resolveBands, type PoolMetric } from '@poolse/rules';
+import { salarySummary, type SalarySummary } from '../staff/compensation.repository.js';
+import {
+  readMaintenanceOpen,
+  readMoneyPeriod,
+  readOccupancyToday,
+  readPeopleSummary,
+  readPoolWater,
+  type MaintenanceOpen,
+  type MoneyPeriod,
+  type OccupancyToday,
+  type PeopleSummary,
+} from './management.repository.js';
 import type { ResolverContext } from './widget-registry.js';
 
 /**
@@ -190,4 +203,102 @@ export async function setupChecklist(ctx: ResolverContext): Promise<ChecklistWid
       { id: 'students', done: progress.students > 0 },
     ],
   };
+}
+
+/* -------------------------------------------------------------------------- */
+/* The management band's aggregates — slice 2b                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Mensalidades in their current period. Empty when no line is current — a club
+ * that has not priced anything yet has nothing to sum, and "0,00 €" would read
+ * as a month nobody paid.
+ */
+export async function moneyPeriod(ctx: ResolverContext): Promise<MoneyPeriod | null> {
+  const money = await readMoneyPeriod(ctx.organizationId, ctx.facilityIds);
+  return money.lines === 0 ? null : money;
+}
+
+/** Today's classes. Empty on a day nothing is scheduled — a Sunday, a closure. */
+export async function occupancyToday(ctx: ResolverContext): Promise<OccupancyToday | null> {
+  const today = await readOccupancyToday(ctx.organizationId, ctx.facilityIds);
+  return today.classes === 0 ? null : today;
+}
+
+/** Open requests and overdue rooms. Empty is good news: nothing outstanding. */
+export async function maintenanceOpen(ctx: ResolverContext): Promise<MaintenanceOpen | null> {
+  const open = await readMaintenanceOpen(ctx.organizationId, ctx.facilityIds);
+  return open.open.length === 0 && open.overdueCleanings === 0 ? null : open;
+}
+
+export function maintenanceNeedsSomebody(data: unknown): boolean {
+  const open = data as MaintenanceOpen | null;
+  if (open === null) return false;
+  return open.overdueCleanings > 0 || open.open.some((group) => group.type === 'fault');
+}
+
+export interface WaterQualityWidget {
+  /** Live tanks in scope, so "2 of 5" can be said. */
+  tanks: number;
+  /** Tanks out of range, due, or both — the ones somebody should look at. */
+  flagged: {
+    poolId: string;
+    poolName: string;
+    takenAt: string | null;
+    outOfRange: PoolMetric[];
+    due: boolean;
+  }[];
+}
+
+/**
+ * Tanks whose latest analysis is out of range, or overdue for one.
+ *
+ * The verdict is `excursions` against `resolveBands` — the one definition the
+ * pool page and the alert email share — over the latest live analysis that one
+ * SQL statement fetched for every tank at once. Empty when there are no tanks,
+ * and when every tank is in range and on time: that is the sentence a club
+ * wants to read, and it is not an error.
+ */
+export async function waterQuality(ctx: ResolverContext): Promise<WaterQualityWidget | null> {
+  const pools = await readPoolWater(ctx.organizationId, ctx.facilityIds);
+  if (pools.length === 0) return null;
+
+  const flagged = pools.flatMap((pool) => {
+    const bad = excursions(pool.values, resolveBands(pool.overrides));
+    if (bad.length === 0 && !pool.due) return [];
+    return [
+      {
+        poolId: pool.poolId,
+        poolName: pool.poolName,
+        takenAt: pool.takenAt,
+        outOfRange: bad.map((excursion) => excursion.metric),
+        due: pool.due,
+      },
+    ];
+  });
+
+  return flagged.length === 0 ? null : { tanks: pools.length, flagged };
+}
+
+export function waterIsOutOfRange(data: unknown): boolean {
+  const water = data as WaterQualityWidget | null;
+  return water?.flagged.some((pool) => pool.outOfRange.length > 0) ?? false;
+}
+
+/** The club's people. Never empty: a club has at least the person reading this. */
+export async function people(ctx: ResolverContext): Promise<PeopleSummary> {
+  return readPeopleSummary(ctx.organizationId);
+}
+
+/**
+ * What the club's staff cost a month — `salarySummary`, the function Salários
+ * answers from, so an Admin's figure excludes the Owner's pay by the same SQL
+ * predicate and the card says so in words (`ownerExcluded`). Empty when the
+ * club has no staff to cost.
+ */
+export async function staffCost(ctx: ResolverContext): Promise<SalarySummary | null> {
+  const summary = await salarySummary(ctx.organizationId, {
+    isOwner: ctx.roles.includes('owner'),
+  });
+  return summary.coverage.total === 0 ? null : summary;
 }

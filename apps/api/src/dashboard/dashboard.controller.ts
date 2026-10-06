@@ -1,8 +1,17 @@
-import { Controller, Get, NotFoundException, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole } from '../tenant/roles.js';
+import { hasRole, requireRole } from '../tenant/roles.js';
 import { composeDashboard, type Dashboard } from './compose.js';
-import { readDashboardShape } from './dashboard.repository.js';
+import { readDashboardShape, rememberDashboardFacility } from './dashboard.repository.js';
 import { ROLES_WITH_DERIVED_FACILITIES } from './widget-registry.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -39,7 +48,13 @@ export class DashboardController {
      * with "here is everything instead" would quietly widen what was asked for.
      */
     const asked = (facility ?? '').trim();
-    const named = UUID.test(asked) ? asked : null;
+    /*
+     * Asked for in the URL, or remembered — AC 10. A link that names a site wins
+     * over the remembered one, so a shared link shows what it says; with no
+     * site asked for, the reader's last choice applies, and a remembered site
+     * that has since been archived has already been read as "every site".
+     */
+    const named = UUID.test(asked) ? asked : shape.rememberedFacilityId;
 
     if (named !== null && !shape.facilities.some((site) => site.id === named)) {
       throw new NotFoundException('No such facility');
@@ -77,5 +92,35 @@ export class DashboardController {
         selector: manages ? shape.facilities : [],
       },
     );
+  }
+
+  /**
+   * `PUT /dashboard/scope` — remember the selector's choice. `{ facilityId }`,
+   * a uuid or null for every site.
+   *
+   * Owner and admin, because the selector is the management band's control and
+   * nobody else is offered it. The site must be one of this club's live ones:
+   * an unknown uuid is a 404 for the reason the GET gives one, and anything that
+   * is not a uuid or null is a 400 rather than a quiet "every site".
+   */
+  @Put('scope')
+  @HttpCode(204)
+  async rememberScope(@Body() body: Record<string, unknown>): Promise<void> {
+    requireRole(...ROLES_WITH_DERIVED_FACILITIES);
+    const { organizationId, membershipId } = currentTenant();
+
+    const value = body['facilityId'];
+    if (value !== null && (typeof value !== 'string' || !UUID.test(value))) {
+      throw new BadRequestException({ message: 'facilityId must be a uuid or null' });
+    }
+
+    if (value !== null) {
+      const shape = await readDashboardShape(organizationId, membershipId);
+      if (!shape.facilities.some((site) => site.id === value)) {
+        throw new NotFoundException('No such facility');
+      }
+    }
+
+    await rememberDashboardFacility(organizationId, membershipId, value);
   }
 }

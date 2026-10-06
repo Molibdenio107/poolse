@@ -219,3 +219,26 @@ test('the scope travels back with the page', async () => {
 
   assert.deepEqual(page.scope, { mode: 'facility', facilityId: one.id, facilities: SITE });
 });
+
+test('an empty card never takes the place of one with something to say', async () => {
+  /*
+   * Slice 2b: eight management widgets for four places. On priority alone a
+   * new club's empty mensalidades card outranked an energy card with a year of
+   * bills — so a card with figures, or one that failed, comes first, and an
+   * empty one fills whatever room is left.
+   */
+  const registry = [
+    ...[1, 2, 3, 4].map((n) =>
+      widget({ id: `mgmt.empty${n}`, priority: 90, resolver: () => Promise.resolve(null) }),
+    ),
+    widget({ id: 'mgmt.figures', priority: 5 }),
+    widget({ id: 'mgmt.broken', priority: 1, resolver: () => Promise.reject(new Error('x')) }),
+  ];
+
+  const page = await compose(registry);
+  const ids = page.bands[0]!.widgets.map((one) => one.id);
+
+  assert.deepEqual(ids.slice(0, 2), ['mgmt.figures', 'mgmt.broken'], 'data and errors first');
+  assert.equal(ids.length, 4, 'and the empty ones take the room that is left, by priority');
+  assert.deepEqual(ids.slice(2), ['mgmt.empty1', 'mgmt.empty2']);
+});

@@ -55,6 +55,7 @@ import {
   findPool,
   listFacilities,
   setFacilityHours,
+  setWaterThreshold,
   updateFacility,
   updatePool,
   type Facility,
@@ -433,6 +434,37 @@ export class FacilitiesController {
    * trigger for that, which is what makes the rule true for the seeder, the API
    * and psql alike rather than only for requests that came through here.
    */
+  /**
+   * How old a tank's latest analysis may be before it is due — POOLSE-66
+   * slice 2b. `{ hours }`: a whole number of hours from 1 to a year, or null
+   * for "not measured", which enforces nothing. Owner and admin, like every
+   * other standing rule of a site.
+   */
+  @Put(':facilityId/water-threshold')
+  async waterThreshold(
+    @Param('facilityId') facilityId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ updated: true }> {
+    requireRole('owner', 'admin');
+
+    const hours = body['hours'];
+    if (
+      hours !== null &&
+      (typeof hours !== 'number' || !Number.isInteger(hours) || hours < 1 || hours > 8760)
+    ) {
+      throw new BadRequestException({
+        message: 'hours must be a whole number from 1 to 8760, or null',
+        fields: { hours: 'facilities.waterThresholdInvalid' },
+      });
+    }
+
+    const { organizationId } = currentTenant();
+    if (!(await setWaterThreshold(organizationId, facilityId, hours))) {
+      throw new NotFoundException('No such site');
+    }
+    return { updated: true };
+  }
+
   @Put(':facilityId/hours')
   async replaceHours(
     @Param('facilityId') facilityId: string,

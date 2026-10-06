@@ -18,6 +18,12 @@ export interface DashboardShape {
   /** The reader's own language, falling back to the club's. */
   locale: string;
   facilities: FacilityOption[];
+  /**
+   * The site this reader's dashboard was last scoped to — POOLSE-66 AC 10.
+   * Null is "every site", and so is a remembered site that has since been
+   * archived: it is filtered against the live list rather than trusted.
+   */
+  rememberedFacilityId: string | null;
 }
 
 /**
@@ -38,9 +44,10 @@ export async function readDashboardShape(
   membershipId: string,
 ): Promise<DashboardShape> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ kind: string; locale: string }>(
+    const { rows } = await tx.query<{ kind: string; locale: string; remembered: string | null }>(
       `SELECT o.kind::text AS kind,
-              coalesce(u.locale, o.locale) AS locale
+              coalesce(u.locale, o.locale) AS locale,
+              m.dashboard_facility_id AS remembered
          FROM organization o
          LEFT JOIN membership m ON m.id = $2 AND m.organization_id = o.id
          LEFT JOIN app_user   u ON u.id = m.app_user_id
@@ -62,6 +69,9 @@ export async function readDashboardShape(
       kind: row?.kind === 'personal' ? 'personal' : 'business',
       locale: row?.locale ?? 'pt-PT',
       facilities,
+      rememberedFacilityId: facilities.some((site) => site.id === row?.remembered)
+        ? (row?.remembered ?? null)
+        : null,
     };
   });
 }
@@ -118,5 +128,27 @@ export async function readSetupProgress(organizationId: string): Promise<SetupPr
       staff: Number(row.staff),
       students: Number(row.students),
     };
+  });
+}
+
+/**
+ * Remembers which site this person's dashboard shows. Null is every site.
+ *
+ * Written to the reader's own membership and nobody else's — the id comes from
+ * the request context, never from the body. The composite key on the column is
+ * what refuses another club's site, and `tenant-isolation.sql` test 22 asserts
+ * it; the caller has already checked the site is one of this club's live ones,
+ * so a refusal here is a race, not a request.
+ */
+export async function rememberDashboardFacility(
+  organizationId: string,
+  membershipId: string,
+  facilityId: string | null,
+): Promise<void> {
+  await withOrg(organizationId, async (tx) => {
+    await tx.query(`UPDATE membership SET dashboard_facility_id = $2 WHERE id = $1`, [
+      membershipId,
+      facilityId,
+    ]);
   });
 }

@@ -21,6 +21,8 @@ import {
   DuplicateNameError,
   getSpace,
   isRequestType,
+  isSeverity,
+  setIssueSeverity,
   isSpaceType,
   listSpaces,
   logCleaning,
@@ -292,9 +294,19 @@ export class SpacesController {
   @Post(':id/issues')
   async report(
     @Param('id') id: string,
-    @Body() body: { type?: unknown; description?: unknown },
+    @Body() body: { type?: unknown; description?: unknown; severity?: unknown },
   ): Promise<{ ok: true }> {
     requireRole(...MANAGEMENT);
+
+    // Optional, and `normal` when absent: every form that predates it keeps
+    // working. Present and unreadable is refused rather than read as normal.
+    const severity = body?.severity === undefined ? 'normal' : body.severity;
+    if (typeof severity !== 'string' || !isSeverity(severity)) {
+      throw new BadRequestException({
+        message: 'severity must be low, normal or high',
+        fields: { severity: 'spaces.severityInvalid' },
+      });
+    }
 
     const type = typeof body?.type === 'string' ? body.type : '';
     if (!isRequestType(type)) {
@@ -313,7 +325,7 @@ export class SpacesController {
     }
 
     const { organizationId, membershipId } = currentTenant();
-    const reported = await reportIssue(organizationId, id, membershipId, type, description);
+    const reported = await reportIssue(organizationId, id, membershipId, type, description, severity);
     if (!reported) throw new NotFoundException({ message: 'spaceNotFound' });
     return { ok: true };
   }
@@ -344,6 +356,34 @@ export class SpacesController {
     // must not silently rewrite who resolved it and when.
     if (result === 'already') {
       throw new ConflictException({ message: 'spaces.issueAlreadyResolved' });
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Changes how severe an open request is. Owner and admin: the reporter
+   * chooses it when filing, and re-grading somebody else's report is triage,
+   * which is a manager's call.
+   */
+  @Post(':id/issues/:issueId/severity')
+  async severity(
+    @Param('id') id: string,
+    @Param('issueId') issueId: string,
+    @Body() body: { severity?: unknown },
+  ): Promise<{ ok: true }> {
+    requireRole('owner', 'admin');
+
+    const severity = body?.severity;
+    if (typeof severity !== 'string' || !isSeverity(severity)) {
+      throw new BadRequestException({
+        message: 'severity must be low, normal or high',
+        fields: { severity: 'spaces.severityInvalid' },
+      });
+    }
+
+    const { organizationId } = currentTenant();
+    if (!(await setIssueSeverity(organizationId, id, issueId, severity))) {
+      throw new NotFoundException({ message: 'issueNotFound' });
     }
     return { ok: true };
   }

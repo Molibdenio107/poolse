@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { actingAs, closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 import { DashboardController } from './dashboard.controller.js';
 import type { Dashboard } from './compose.js';
+import { energySpend } from './resolvers.js';
 import type {
   ChecklistWidget,
   EnergyCostsWidget,
@@ -263,13 +264,24 @@ async function addBill(
   );
 }
 
-test('66.8 — no bills is an empty card, not a missing one and not an error', async () => {
+test('66.8 — no bills is an empty answer, not an error', async () => {
   await withScratchTenant(async (tenant) => {
-    const page = await actingAs(tenant, { roles: ['owner'] }, () => controller.read());
-
-    const energy = card(page, 'mgmt.energy.costs');
-    assert.equal(energy?.state, 'empty', 'a club with no bills is told where bills go');
-    assert.equal(energy?.data, null);
+    /*
+     * Through the resolver since slice 2b. A new club's management band now has
+     * eight candidates for four places, and an empty energy card is entitled to
+     * lose its place to the others — so whether it is on the page says nothing
+     * about this rule. What does: the resolver answers null, which `compose`
+     * draws as `empty` (`compose.test.ts`), and does not throw.
+     */
+    const data = await energySpend({
+      organizationId: tenant.organizationId,
+      membershipId: tenant.ownerMembershipId,
+      roles: ['owner'],
+      facilityIds: [tenant.facilityId],
+      scope: { mode: 'all', facilityId: null },
+      locale: 'pt-PT',
+    });
+    assert.equal(data, null, 'a club with no bills is told where bills go');
   });
 });
 
