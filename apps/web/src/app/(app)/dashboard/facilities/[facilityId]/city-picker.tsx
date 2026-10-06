@@ -7,6 +7,7 @@ import type { PlaceSuggestion } from '@/lib/api';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { searchPlacesAction, setPlaceAction } from './facility.actions';
 import { DEBOUNCE_MS, MIN_SEARCH_LENGTH } from '@/components/search-input';
+import { useToast } from '@/components/ui/toast';
 
 /**
  * The city autocomplete — backlog round 3, story 3.
@@ -40,6 +41,14 @@ export function CityPicker({
   const [searching, setSearching] = useState(false);
   const [failed, setFailed] = useState(false);
   const [saving, startSaving] = useTransition();
+  const toast = useToast();
+
+  // The shared toast either way — a place picked from a list otherwise looks
+  // the same whether it was saved or refused.
+  function report(result: { ok: boolean }): void {
+    if (result.ok) toast.show('success', t('common.savedToast'));
+    else toast.show('danger', t('common.notSaved'));
+  }
 
   // Guards against an out-of-order response overwriting a newer one: type
   // "Aveiro" quickly and the answer for "Ave" can land after the answer for
@@ -81,7 +90,7 @@ export function CityPicker({
 
   function choose(place: PlaceSuggestion): void {
     startSaving(async () => {
-      await setPlaceAction({
+      const result = await setPlaceAction({
         organizationId,
         facilityId,
         city: place.city,
@@ -89,6 +98,7 @@ export function CityPicker({
         latitude: place.latitude,
         longitude: place.longitude,
       });
+      report(result);
       setQuery('');
       setSuggestions([]);
     });
@@ -96,7 +106,7 @@ export function CityPicker({
 
   function clear(): void {
     startSaving(async () => {
-      await setPlaceAction({
+      const result = await setPlaceAction({
         organizationId,
         facilityId,
         city: null,
@@ -104,6 +114,7 @@ export function CityPicker({
         latitude: null,
         longitude: null,
       });
+      report(result);
     });
   }
 

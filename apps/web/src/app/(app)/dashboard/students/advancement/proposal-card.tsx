@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import type { TransferProposal } from '@/lib/api';
 import { confirmAdvancementAction, dismissAdvancementAction } from './advancement.actions';
+import { useToast } from '@/components/ui/toast';
 
 /**
  * One student who has finished their level — POOLSE-19, criteria 3, 5 and 6.
@@ -22,6 +23,7 @@ export function ProposalCard({
   proposal: TransferProposal;
 }): React.ReactElement {
   const t = useTranslations();
+  const toast = useToast();
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -118,7 +120,8 @@ export function ProposalCard({
       <div className="flex flex-wrap items-center gap-3">
         <form
           action={async () => {
-            await dismissAdvancementAction(organizationId, proposal.id);
+            const result = await dismissAdvancementAction(organizationId, proposal.id);
+            if (!result.ok) toast.show('danger', t('common.notSaved'));
           }}
         >
           <button

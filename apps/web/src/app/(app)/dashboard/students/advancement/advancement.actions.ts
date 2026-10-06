@@ -40,12 +40,14 @@ export async function confirmAdvancementAction(
 export async function dismissAdvancementAction(
   organizationId: string,
   proposalId: string,
-): Promise<void> {
+): Promise<{ ok: boolean }> {
   try {
     await apiPost(`/transfer-proposals/${proposalId}/dismiss`, {}, { organizationId });
   } catch {
-    // The queue re-reads either way; a dismissal that failed leaves the row
-    // there, which is the truth.
+    // A dismissal that failed leaves the row there, which is the truth — and is
+    // also a button that did nothing, unless the card says so.
+    return { ok: false };
   }
   revalidatePath('/dashboard/students/advancement');
+  return { ok: true };
 }

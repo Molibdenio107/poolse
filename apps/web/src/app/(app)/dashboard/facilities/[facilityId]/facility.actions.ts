@@ -41,13 +41,22 @@ export interface PlaceInput {
  * weather on the screen under the right town's name, which is worse than no
  * weather at all.
  */
-export async function setPlaceAction(input: PlaceInput): Promise<void> {
+/**
+ * Answers rather than throws: a failed save inside the picker's transition
+ * would otherwise reach the error boundary and take the whole site page with it.
+ */
+export async function setPlaceAction(input: PlaceInput): Promise<{ ok: boolean }> {
   const { organizationId, facilityId, ...place } = input;
 
-  await apiPatch(`/facilities/${facilityId}`, place, { organizationId });
+  try {
+    await apiPatch(`/facilities/${facilityId}`, place, { organizationId });
+  } catch {
+    return { ok: false };
+  }
 
   revalidatePath(`/dashboard/facilities/${facilityId}`);
   revalidatePath('/dashboard/facilities');
+  return { ok: true };
 }
 
 export interface HoursInput {
