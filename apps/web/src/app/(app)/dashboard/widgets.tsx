@@ -114,11 +114,24 @@ async function TasksCard({ widget }: { widget: DashboardWidget }): Promise<React
   const data = widget.data as TasksWidgetData | null;
   const due = data?.tasks.filter((task) => task.state === 'due') ?? [];
 
+  /*
+    There is no list of every task — a task belongs to a site, and the site's
+    Manutenção tab is that list. So the card opens the one site its tasks are on,
+    which is every club on a one-site licence, and the sites otherwise. It used
+    to point at /dashboard/facilities/tasks, a page that does not exist.
+  */
+  const sites = new Set(data?.tasks.map((task) => task.facilityId) ?? []);
+  const [only] = sites;
+  const href =
+    sites.size === 1 && only !== undefined
+      ? `/dashboard/facilities/${only}?tab=maintenance`
+      : '/dashboard/facilities';
+
   return (
     <WidgetCard
       widget={widget}
       title={t('maintenance.mine')}
-      href="/dashboard/facilities/tasks"
+      href={href}
       linkLabel={t('dashboard.widget.tasks.open')}
       emptyMessage={t('dashboard.widget.tasks.empty')}
     >
