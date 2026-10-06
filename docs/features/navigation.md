@@ -82,6 +82,7 @@ cards are one conversation they share a tab, and the page's header comment says 
 | Partnership — `/dashboard/facilities/partners/[id]` | Geral (identificação) · Contactos (contagem) · Acordo · Grupos (contagem) · Horário |
 | Meter — `/dashboard/facilities/energy/[id]` | Geral (consumo, ano a ano, custo estimado) · Leituras (registo e histórico; contagem) · Faturas (carregadas ao abrir) · Tarifário · Detalhes (owner, admin) |
 | Medical record — `/dashboard/students/[id]/sensitive` | Geral (notas) · Contacto de emergência · Consentimentos · Baixa médica (ponto quando ativa; continua dobrada) · Histórico (só se houver) — *eager*: uma leitura auditada, mudar de separador não regista outra |
+| Progress — `/dashboard/students/[id]/progress` | Geral (mais rápido, favorito, gráfico) · Recordes · Histórico (contagem) — ambos só com registos · Registar (quem pode registar) |
 
 
 ## Invitations
