@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useCallback, useEffect, useState } from 'react';
+import { useActionState, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, FileSpreadsheet, Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ import {
   type ReadState,
   type TimetableRow,
 } from './import.actions';
+import { Dialog } from '@/components/ui/dialog';
 
 /**
  * Importing the wall timetable — POOLSE-57, the interface.
@@ -66,6 +67,7 @@ export function TimetableImport({
   const [open, setOpen] = useState(false);
   /** The dropped file waiting for a yes or a no. */
   const [pending, setPending] = useState<File | null>(null);
+  const readButton = useRef<HTMLButtonElement | null>(null);
 
   const onFile = useCallback((file: File) => setPending(file), []);
   const { dragging } = useFileDrop(onFile);
@@ -136,19 +138,20 @@ export function TimetableImport({
         The confirmation a drop gets before anything is read — the same rule the
         register's importer set. Files are dragged by accident.
       */}
-      {pending !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="drop-title"
-            className="flex w-full max-w-md flex-col gap-4 rounded-lg border border-border bg-surface p-6 shadow-lg"
-          >
-            <h2 id="drop-title" className="flex items-center gap-2 text-lg font-medium">
-              <FileSpreadsheet aria-hidden className="size-5" />
-              {t('timetableImport.confirmTitle')}
-            </h2>
-            <p className="break-all text-sm text-foreground-muted">{pending.name}</p>
+      <Dialog
+        open={pending !== null}
+        onClose={() => setPending(null)}
+        title={t('timetableImport.confirmTitle')}
+        closeLabel={t('common.close')}
+        initialFocus={readButton}
+        className="max-w-md"
+      >
+        {pending !== null && (
+          <div className="flex flex-col gap-4">
+            <p className="flex items-start gap-2 break-all text-sm text-foreground-muted">
+              <FileSpreadsheet aria-hidden className="mt-0.5 size-4 shrink-0" />
+              {pending.name}
+            </p>
 
             {!isAccepted(pending) ? (
               <>
@@ -166,7 +169,7 @@ export function TimetableImport({
                 }}
                 className="flex flex-wrap gap-3"
               >
-                <button type="submit" className={BUTTON}>
+                <button ref={readButton} type="submit" className={BUTTON}>
                   {t('timetableImport.confirmRead')}
                 </button>
                 <button type="button" onClick={() => setPending(null)} className={BUTTON_QUIET}>
@@ -175,8 +178,8 @@ export function TimetableImport({
               </form>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </Dialog>
 
       {open && (
         <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
@@ -403,18 +406,18 @@ function ConflictDialog({
   const clock = (minutes: number): string =>
     `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
+  // The shared Dialog: Escape, the focus trap and returning focus come with it.
+  // Wider than a question, because each row carries both sides of its clash.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="clash-title"
-        className="flex max-h-[80vh] w-full max-w-2xl flex-col gap-4 overflow-auto rounded-lg border border-border bg-surface p-6 shadow-lg"
-      >
-        <h2 id="clash-title" className="text-lg font-medium">
-          {t('timetableImport.conflictsTitle', { count: rows.length })}
-        </h2>
-        <p className="text-sm text-foreground-muted">{t('timetableImport.conflictsHint')}</p>
+    <Dialog
+      open
+      onClose={onClose}
+      title={t('timetableImport.conflictsTitle', { count: rows.length })}
+      description={t('timetableImport.conflictsHint')}
+      closeLabel={t('common.close')}
+      className="max-w-2xl"
+    >
+      <div className="flex flex-col gap-4">
 
         <ul className="flex flex-col gap-3">
           {rows.map((row) => {
@@ -494,6 +497,6 @@ function ConflictDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   );
 }

@@ -7,6 +7,7 @@ import { FileSpreadsheet, Upload, X } from 'lucide-react';
 import type { StudentLevel } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { ImportWizard } from './import/import-wizard';
+import { Dialog } from '@/components/ui/dialog';
 
 /**
  * The import, on the register itself.
@@ -165,19 +166,6 @@ export function StudentActions({
 
   const dismiss = useCallback(() => setPending(null), []);
 
-  // Escape closes the question, which is what every other dialog on the web
-  // does and what somebody who dropped the wrong file reaches for first.
-  useEffect(() => {
-    if (pending === null) return;
-
-    confirmButton.current?.focus();
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') dismiss();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [pending, dismiss]);
-
   const reveal = (): void => {
     // A long register scrolls; the panel opens at the top of it, so say where
     // it went rather than leaving somebody looking at row forty wondering
@@ -283,18 +271,20 @@ export function StudentActions({
         </div>
       )}
 
-      {pending !== null && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="import-drop-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4"
-        >
-          <div className="flex w-full max-w-md flex-col gap-4 rounded border border-border bg-surface p-5 shadow-lg">
-            <h2 id="import-drop-title" className="text-base font-medium">
-              {usable ? t('students.import.confirmTitle') : t('students.import.confirmRefused')}
-            </h2>
-
+      {/*
+        The shared Dialog — Escape, the focus trap and giving focus back come
+        with it. It starts on the primary answer, so Enter reads the file.
+      */}
+      <Dialog
+        open={pending !== null}
+        onClose={dismiss}
+        title={usable ? t('students.import.confirmTitle') : t('students.import.confirmRefused')}
+        closeLabel={t('common.close')}
+        initialFocus={confirmButton}
+        className="max-w-md"
+      >
+        {pending !== null && (
+          <div className="flex flex-col gap-4">
             <p className="flex items-start gap-2 text-sm">
               <FileSpreadsheet aria-hidden className="mt-0.5 size-4 shrink-0 text-foreground-muted" />
               <span className="break-all font-medium">{pending.name}</span>
@@ -323,8 +313,8 @@ export function StudentActions({
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Dialog>
 
       {open && (
         <section

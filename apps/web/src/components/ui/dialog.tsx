@@ -65,6 +65,7 @@ export function Dialog({
   children,
   className,
   placement = 'centre',
+  initialFocus,
 }: {
   open: boolean;
   onClose: () => void;
@@ -87,6 +88,14 @@ export function Dialog({
    * instructor writing Tuesday's plan is looking at Tuesday.
    */
   placement?: 'centre' | 'side';
+  /**
+   * The control to start on, when it is not the first one.
+   *
+   * The first focusable control is the close button, which is right for a
+   * form and wrong for a question whose answer is one key — a dropped file's
+   * "read it", where Enter should accept rather than dismiss.
+   */
+  initialFocus?: React.RefObject<HTMLElement | null> | undefined;
 }): React.ReactElement | null {
   const panel = useRef<HTMLDivElement>(null);
   const returnTo = useRef<HTMLElement | null>(null);
@@ -146,6 +155,10 @@ export function Dialog({
 
     // After paint, so the panel exists to be searched.
     const focusFirst = requestAnimationFrame(() => {
+      if (initialFocus?.current) {
+        initialFocus.current.focus();
+        return;
+      }
       const focusable = panel.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
       (focusable?.[0] ?? panel.current)?.focus();
     });
@@ -156,7 +169,7 @@ export function Dialog({
       cancelAnimationFrame(focusFirst);
       returnTo.current?.focus();
     };
-  }, [open, close]);
+  }, [open, close, initialFocus]);
 
   if (!open || !mounted) return null;
 

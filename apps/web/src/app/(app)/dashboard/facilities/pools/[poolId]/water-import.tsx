@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Check, Info, Upload, X } from 'lucide-react';
+import { AlertTriangle, Check, Info, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
@@ -24,6 +24,7 @@ import {
   type WaterReadState,
 } from './water-import.actions';
 import { formatDate } from '@/lib/date-format';
+import { Dialog } from '@/components/ui/dialog';
 
 /**
  * Importing a club's water log — round 5, ticket 5.
@@ -212,32 +213,23 @@ export function WaterImport({
         />
       </form>
 
-      {step !== 'closed' && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('facilities.waterImport.action')}
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-8"
-        >
-          <div className="w-full max-w-4xl rounded-lg border border-border bg-surface p-5 shadow-lg">
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-medium">{t('facilities.waterImport.action')}</h2>
-                <p className="text-sm text-foreground-muted">
-                  {read.fileName === undefined || read.fileName === ''
-                    ? t('facilities.waterImport.hint')
-                    : read.fileName}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStep('closed')}
-                aria-label={t('common.close')}
-                className="rounded p-1 hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                <X aria-hidden className="size-4" />
-              </button>
-            </div>
+      {/*
+        The shared Dialog, wide — the preview is a table. Its header, close
+        button, Escape and focus trap replace the ones this used to draw itself.
+      */}
+      <Dialog
+        open={step !== 'closed'}
+        onClose={() => setStep('closed')}
+        title={t('facilities.waterImport.action')}
+        description={
+          read.fileName === undefined || read.fileName === ''
+            ? t('facilities.waterImport.hint')
+            : read.fileName
+        }
+        closeLabel={t('common.close')}
+        className="max-w-4xl"
+      >
+          <div>
 
             {read.errorKey !== undefined && (
               <p className="mb-4 flex items-center gap-2 rounded border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
@@ -380,8 +372,7 @@ export function WaterImport({
               )}
             </div>
           </div>
-        </div>
-      )}
+      </Dialog>
     </>
   );
 }

@@ -646,7 +646,9 @@ Escape and on the backdrop, moves focus in and gives it back, and keeps Tab insi
 Never render a confirmation in place of its own trigger — round 5's did, which put a form
 inside a calendar cell one seventh of a column wide. Never `window.confirm` either: two
 confirmations in two visual languages make an operator wonder whether they are being asked
-the same thing.
+the same thing. `initialFocus` starts it on the primary answer where Enter should accept (a
+dropped file's "read it"); the calendar's move-scope chooser is the one exception, a popover
+anchored to the block it asks about.
 
 **A refusal that needs numbers carries them as structure, never as prose.** A rule enforced
 by a trigger raises with a machine-readable `DETAIL` (`pool_capacity|40|32|12`); the API

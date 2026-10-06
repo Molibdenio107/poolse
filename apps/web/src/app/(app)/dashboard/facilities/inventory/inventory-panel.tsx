@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import { addItemAction, archiveItemAction, updateItemAction } from './inventory.actions';
 import { InventoryImportWizard } from './import-wizard';
+import { Dialog } from '@/components/ui/dialog';
 
 /**
  * What the club owns, at one site — round 6.
@@ -187,19 +188,6 @@ export function InventoryPanel({
   }, [formats]);
 
   const dismiss = useCallback(() => setPending(null), []);
-
-  // Escape closes the question, which is what every other dialog on the web does
-  // and what somebody who dropped the wrong file reaches for first.
-  useEffect(() => {
-    if (pending === null) return;
-
-    confirmButton.current?.focus();
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') dismiss();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [pending, dismiss]);
 
   const reveal = (): void => {
     requestAnimationFrame(() =>
@@ -412,18 +400,20 @@ export function InventoryPanel({
         twenty — and a screen that begins reading a file nobody meant to give it
         is a screen people stop dragging onto.
       */}
-      {pending !== null && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="inventory-drop-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4"
-        >
-          <div className="flex w-full max-w-md flex-col gap-4 rounded border border-border bg-surface p-5 shadow-lg">
-            <h2 id="inventory-drop-title" className="text-base font-medium">
-              {usable ? t('inventory.import.confirmTitle') : t('students.import.confirmRefused')}
-            </h2>
-
+      {/*
+        The shared Dialog — Escape, the focus trap and giving focus back come
+        with it. It starts on the primary answer, so Enter reads the file.
+      */}
+      <Dialog
+        open={pending !== null}
+        onClose={dismiss}
+        title={usable ? t('inventory.import.confirmTitle') : t('students.import.confirmRefused')}
+        closeLabel={t('common.close')}
+        initialFocus={confirmButton}
+        className="max-w-md"
+      >
+        {pending !== null && (
+          <div className="flex flex-col gap-4">
             <p className="flex items-start gap-2 text-sm">
               <FileSpreadsheet
                 aria-hidden
@@ -457,8 +447,8 @@ export function InventoryPanel({
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Dialog>
 
       {open && (
         <section ref={panel} className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
