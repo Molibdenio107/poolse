@@ -2144,7 +2144,8 @@ cleaning_log
 maintenance_request
   id, organization_id, facility_id,
   space_id, pool_id, inventory_item_id,          -- all nullable: Módulo 2's room to grow
-  type maintenance_request_type, description, reported_by, reported_at,
+  type maintenance_request_type, severity maintenance_severity default 'normal',
+  description, reported_by, reported_at,
   status maintenance_request_status default 'open',
   resolved_by, resolved_at, resolution_note,
   created_at, updated_at, archived_at
@@ -2164,6 +2165,7 @@ maintenance_request
 
 maintenance_request_type   = fault | restock
 maintenance_request_status = open | resolved
+maintenance_severity       = low | normal | high   -- POOLSE-66 slice 2b
 
 inventory_item
   + space_id uuid                       -- nullable; fk (organization_id, facility_id, space_id)
@@ -3273,3 +3275,36 @@ should not have to write in; the address stays claimed, and only an operator fre
 
 **A tenant with no live claim is unprotected**, asserted in `trial-claim.sql` test 7d rather
 than left to be discovered. A claim needs a normalised address and a pre-ledger tenant has none.
+
+### The management band's columns — POOLSE-66 slice 2b, 6 October 2026
+
+```
+membership
+  + dashboard_facility_id uuid      -- null = every site
+    fk (organization_id, dashboard_facility_id) -> facility
+
+maintenance_request
+  + severity maintenance_severity not null default 'normal'
+
+facility
+  + water_analysis_max_age_hours integer   -- null = not measured; check > 0
+
+index student_fee (organization_id, fee_plan_id) where archived_at is null
+index class_session (organization_id, pool_id, starts_at)
+```
+
+**The dashboard's site is remembered on `membership`, not `app_user`**: a site belongs to one
+club and a person can belong to several. Sites are archived and never deleted, so the key has
+no ON DELETE; an archived site still remembered is read as "every site" by the API.
+`tenant-isolation.sql` test 22 asserts the composite key.
+
+**Severity is an enum because only a developer changes the scale.** Every request that
+predates the column is `normal`, and so is every form that does not send it.
+
+**A null analysis age enforces nothing**, as every ceiling and interval here: a site that never
+set one has no tank "due". A tank is due when its latest live analysis is older than the
+threshold, or it has none at all.
+
+**The two indexes are the aggregates' index check.** The money widget reaches a site through
+`fee_plan`, and nothing indexed `student_fee` by plan; today's classes at a site are a range on
+`starts_at` behind a pool, which `(organization_id, starts_at)` alone cannot narrow.

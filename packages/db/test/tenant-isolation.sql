@@ -1338,4 +1338,34 @@ BEGIN
   RAISE NOTICE 'PASS test 21: a tariff cannot price, nor be signed across, a tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 22 — a dashboard cannot be scoped to another club's site
+-- ---------------------------------------------------------------------------
+--
+-- `membership.dashboard_facility_id` (POOLSE-66 slice 2b) remembers which site
+-- a person's dashboard shows. Both rows pass their own policies, so only the
+-- composite key stops a member of club A naming club B's site.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_fac_a uuid := 'a1111111-1111-1111-1111-111111111111';
+  v_fac_b uuid := 'b1111111-1111-1111-1111-111111111111';
+  v_mem_a uuid; ok boolean;
+BEGIN
+  RESET ROLE;
+  SELECT id INTO v_mem_a FROM membership WHERE organization_id = v_a LIMIT 1;
+
+  UPDATE membership SET dashboard_facility_id = v_fac_a WHERE id = v_mem_a;
+
+  ok := false;
+  BEGIN
+    UPDATE membership SET dashboard_facility_id = v_fac_b WHERE id = v_mem_a;
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 22: org A scoped a dashboard to org B''s site'; END IF;
+
+  RAISE NOTICE 'PASS test 22: a dashboard scope cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;
