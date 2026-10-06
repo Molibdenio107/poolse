@@ -3497,7 +3497,9 @@
     "keepEditing": "Keep editing",
     "badge": {
       "spacesOverdue": "A space is overdue for cleaning",
-      "maintenanceDue": "Maintenance is due"
-    }
+      "maintenanceDue": "Maintenance is due",
+      "waterOutOfBand": "The latest analysis is out of range"
+    },
+    "loadFailed": "This tab could not be loaded."
   }
 }

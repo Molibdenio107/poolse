@@ -70,6 +70,7 @@ cards are one conversation they share a tab, and the page's header comment says 
 | Page | Tabs |
 |---|---|
 | Site — `/dashboard/facilities/[id]` | Geral (pessoas, meteorologia, localização, horário) · Preços (tabela, categorias, seguro) · Parcerias · Piscinas · Espaços · Manutenção · Energia · Fotografias |
+| Tank — `/dashboard/facilities/pools/[id]` | Geral (detalhes, arquivar) · Qualidade da água (ponto quando a última análise está fora dos limites) · Custo por utilização (owner, admin; carregado ao abrir) · Fotografias |
 
 
 ## Invitations

@@ -8,6 +8,8 @@ import { ArchiveButton } from '../../facility-forms';
 import { PoolForm } from '../../pool-form';
 import { ReadingsBlock } from '../../readings-block';
 import { PageError, PageShell } from '@/components/page-shell';
+import { DetailPage } from '@/components/detail-page';
+import { excursions } from '@/lib/water';
 import { CostPerUsePanel } from './cost-per-use-panel';
 
 /**
@@ -21,18 +23,21 @@ import { CostPerUsePanel } from './cost-per-use-panel';
  * Read-only for anyone who cannot manage facilities: an instructor should be able
  * to look up which pool has six lanes without being offered a save button that
  * the API would refuse.
+ *
+ * **Tabs since the detail-tabs change**: General (the details, with Arquivar at
+ * its foot), Qualidade da água, Custo por utilização and Fotografias.
  */
 export default async function PoolPage({
   params,
   searchParams,
 }: {
   params: Promise<{ poolId: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; tab?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
   const { poolId } = await params;
-  const { from } = await searchParams;
+  const { from, tab } = await searchParams;
 
   /*
    * A pool is reached from the site list and from the site itself, and those are
@@ -54,187 +59,207 @@ export default async function PoolPage({
     }
   }
 
-  /*
-   * What the tank costs per hour taught in it — POOLSE-28.
-   *
-   * Null when the endpoint refuses, so the panel is absent rather than empty:
-   * the report is owner and admin, narrower than the rest of this page, and a
-   * maintenance member should see no shell of a thing they cannot open. Same
-   * shape as every other optional panel here.
-   */
-  const costReport: PoolCostReport | null =
-    pool === null
-      ? null
-      : await apiFetch<PoolCostReport>(`/energy/pools/${poolId}/cost-report`).catch(() => null);
+  if (pool === null) {
+    return (
+      <PageShell
+        title={t('facilities.editPool')}
+        back={{ href: back.href, label: t(back.labelKey) }}
+      >
+        {missing && (
+          <section className="rounded border border-border bg-surface p-5">
+            <p>{t('facilities.poolNotFound')}</p>
+          </section>
+        )}
+
+        {failure !== null && (
+          <PageError
+            message={t(failure.key)}
+            {...(failure.detail === '' ? {} : { detail: failure.detail })}
+          />
+        )}
+      </PageShell>
+    );
+  }
+
+  const loaded = pool;
+  const latest = loaded.analyses[loaded.analyses.length - 1];
+  // The same judgement the readings block and the alert email make — never a
+  // second one: `excursions` against the API's resolved bands.
+  const outOfBand = latest !== undefined && excursions(latest.values, loaded.bands).length > 0;
 
   return (
-    <PageShell
-      title={pool?.name ?? t('facilities.editPool')}
-      subtitle={pool?.facilityName ?? ''}
+    <DetailPage
+      title={loaded.name}
+      subtitle={loaded.facilityName}
       back={{ href: back.href, label: t(back.labelKey) }}
       /*
-        The import is not here — round 6, ticket 1, reversing round 5.
-
-        Round 5 moved it up from a text link inside the readings card, on the
-        grounds that nobody scrolled to it. Right problem, wrong destination: a
-        page header is about the page, and this is about the readings. It now
-        sits in the Water quality card directly under "Record an analysis",
-        beside the form it is the alternative to.
+        The import is not here — round 6, ticket 1, reversing round 5. A page
+        header is about the page, and this is about the readings: it sits in the
+        Water quality tab directly under "Record an analysis".
       */
       actions={<EntityIcon kind="pool" className="size-6 text-primary" />}
-    >
+      requested={tab}
+      tabs={[
+        {
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          content: () => (
+            <>
+              <section className="rounded border border-border bg-surface p-5">
+                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('facilities.details')}
+                </h2>
 
-      {missing && (
-        <section className="rounded border border-border bg-surface p-5">
-          <p>{t('facilities.poolNotFound')}</p>
-        </section>
-      )}
+                {loaded.canManage ? (
+                  <PoolForm
+                    organizationId={loaded.organizationId}
+                    facilityId={loaded.facilityId}
+                    pool={loaded}
+                    mode="edit"
+                  />
+                ) : (
+                  <dl className="grid gap-4 sm:grid-cols-2">
+                    <Detail
+                      label={t('facilities.kindLabel')}
+                      value={t(`facilities.kind.${loaded.kind}`)}
+                    />
+                    <Detail
+                      label={t('facilities.lengthLabel')}
+                      value={loaded.lengthM === null ? null : `${loaded.lengthM}`}
+                    />
+                    <Detail
+                      label={t('facilities.widthLabel')}
+                      value={loaded.widthM === null ? null : `${loaded.widthM}`}
+                    />
+                    <Detail
+                      label={t('facilities.minDepthLabel')}
+                      value={loaded.minDepthM === null ? null : `${loaded.minDepthM}`}
+                    />
+                    <Detail
+                      label={t('facilities.depthLabel')}
+                      value={loaded.maxDepthM === null ? null : `${loaded.maxDepthM}`}
+                    />
+                    <Detail
+                      label={t('facilities.lanesLabel')}
+                      value={loaded.laneCount === null ? null : `${loaded.laneCount}`}
+                    />
+                    {/*
+                      The tank's ceiling — round 5, 4.2. Unset says so in words:
+                      what an operator needs to know is that no limit is being
+                      enforced on this tank, not that a field is blank.
+                    */}
+                    <Detail
+                      label={t('facilities.maxCapacityLabel')}
+                      value={
+                        loaded.maxCapacity === null
+                          ? t('facilities.maxCapacityUnlimited')
+                          : `${loaded.maxCapacity}`
+                      }
+                    />
+                    {/*
+                      Grouped and in both units — round 4. A pool is quoted in m3
+                      as often as in litres.
+                    */}
+                    <Detail
+                      label={t('facilities.volumeLabel')}
+                      value={
+                        loaded.volumeLitres === null
+                          ? null
+                          : `${format.number(loaded.volumeLitres, { maximumFractionDigits: 2 })} L · ${format.number(loaded.volumeLitres / 1000, { maximumFractionDigits: 2 })} m³`
+                      }
+                    />
+                  </dl>
+                )}
+              </section>
 
-      {failure !== null && (
-        <PageError
-          message={t(failure.key)}
-          {...(failure.detail === '' ? {} : { detail: failure.detail })}
-        />
-      )}
-
-      {pool !== null && (
-        <>
-          <section className="rounded border border-border bg-surface p-5">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('facilities.details')}
-            </h2>
-
-            {pool.canManage ? (
-              <PoolForm
-                organizationId={pool.organizationId}
-                facilityId={pool.facilityId}
-                pool={pool}
-                mode="edit"
+              {loaded.canManage && (
+                <section className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-5">
+                  <span className="text-sm text-foreground-muted">
+                    {t('facilities.archivePoolHint')}
+                  </span>
+                  {/*
+                    Archiving belongs beside the thing it archives — at the foot
+                    of the details it would retire.
+                  */}
+                  <ArchiveButton organizationId={loaded.organizationId} poolId={loaded.id} />
+                </section>
+              )}
+            </>
+          ),
+        },
+        {
+          /*
+            Water quality, as a tab of its own rather than more rows on the
+            details form — round 4. Deliberately not on the create form either:
+            somebody adding a pool is describing a tank, and its readings are
+            what accumulates afterwards. The kit is not here at all — Inventário
+            is a screen under Instalações.
+          */
+          slug: 'water',
+          labelKey: 'facilities.readings',
+          badge: outOfBand ? { kind: 'dot', labelKey: 'detailTabs.badge.waterOutOfBand' } : undefined,
+          content: () => (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('facilities.readings')}
+              </h2>
+              <ReadingsBlock
+                organizationId={loaded.organizationId}
+                poolId={loaded.id}
+                poolName={loaded.name}
+                analyses={loaded.analyses}
+                alerts={loaded.alerts}
+                bands={loaded.bands}
+                bandOverrides={loaded.bandOverrides}
+                emailConfigured={loaded.emailConfigured}
+                canManage={loaded.canManage}
               />
-            ) : (
-              <dl className="grid gap-4 sm:grid-cols-2">
-                <Detail
-                  label={t('facilities.kindLabel')}
-                  value={t(`facilities.kind.${pool.kind}`)}
-                />
-                <Detail
-                  label={t('facilities.lengthLabel')}
-                  value={pool.lengthM === null ? null : `${pool.lengthM}`}
-                />
-                <Detail
-                  label={t('facilities.widthLabel')}
-                  value={pool.widthM === null ? null : `${pool.widthM}`}
-                />
-                <Detail
-                  label={t('facilities.minDepthLabel')}
-                  value={pool.minDepthM === null ? null : `${pool.minDepthM}`}
-                />
-                <Detail
-                  label={t('facilities.depthLabel')}
-                  value={pool.maxDepthM === null ? null : `${pool.maxDepthM}`}
-                />
-                <Detail
-                  label={t('facilities.lanesLabel')}
-                  value={pool.laneCount === null ? null : `${pool.laneCount}`}
-                />
-                {/*
-                  The tank's ceiling — round 5, 4.2.
-
-                  Unset says so in words rather than showing a dash. A dash reads
-                  as "not filled in yet"; what an operator needs to know is that
-                  no limit is being enforced on this tank, which is a different
-                  and more consequential fact.
-                */}
-                <Detail
-                  label={t('facilities.maxCapacityLabel')}
-                  value={
-                    pool.maxCapacity === null
-                      ? t('facilities.maxCapacityUnlimited')
-                      : `${pool.maxCapacity}`
-                  }
-                />
-                {/*
-                  Grouped and in both units — round 4. A bare 106500 is a number
-                  somebody has to count the digits of, and a pool is quoted in m3
-                  as often as in litres.
-                */}
-                <Detail
-                  label={t('facilities.volumeLabel')}
-                  value={
-                    pool.volumeLitres === null
-                      ? null
-                      : `${format.number(pool.volumeLitres, { maximumFractionDigits: 2 })} L · ${format.number(pool.volumeLitres / 1000, { maximumFractionDigits: 2 })} m³`
-                  }
-                />
-              </dl>
-            )}
-          </section>
-
-          {/*
-            Water quality, as a block of its own rather than more rows on the
-            details form — round 4.
-
-            Deliberately not on the create form either. Somebody adding a pool is
-            describing a tank; its readings are what accumulates afterwards, and
-            putting them in the creation flow would ask for answers nobody has
-            yet at the one moment they are least likely to have them.
-
-            The kit is not here at all — Inventário is a screen under Instalações,
-            because an item belongs to a site and serves whichever tanks need it.
-          */}
-          <section className="rounded border border-border bg-surface p-5">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('facilities.readings')}
-            </h2>
-            <ReadingsBlock
-              organizationId={pool.organizationId}
-              poolId={pool.id}
-              poolName={pool.name}
-              analyses={pool.analyses}
-              alerts={pool.alerts}
-              bands={pool.bands}
-              bandOverrides={pool.bandOverrides}
-              emailConfigured={pool.emailConfigured}
-              canManage={pool.canManage}
-            />
-          </section>
-
-          {/*
-            Below the readings, because it is an answer about the tank rather
-            than a measurement of it, and the measurements are what a technician
-            opens this page for. Maintenance data belongs on the pool's own page
-            — this is the same argument, applied to the money the tank costs.
-          */}
-          {costReport !== null && <CostPerUsePanel report={costReport} />}
-
-          <section className="rounded border border-border bg-surface p-5">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('facilities.photos')}
-            </h2>
-            <PhotoGallery
-              photos={pool.photos}
-              canManage={pool.canManage}
-              emptyLabel={t('facilities.noPhotos')}
-              uploadLabel={t('facilities.uploadPoolPhoto')}
-              uploadReason={t('students.photoNoStorage')}
-            />
-          </section>
-
-          {pool.canManage && (
-            <section className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-5">
-              <span className="text-sm text-foreground-muted">
-                {t('facilities.archivePoolHint')}
-              </span>
-              {/*
-                Moved here from the list. Archiving belongs beside the thing it
-                archives, not on a row somebody is scanning past.
-              */}
-              <ArchiveButton organizationId={pool.organizationId} poolId={pool.id} />
             </section>
-          )}
-        </>
-      )}
-    </PageShell>
+          ),
+        },
+        {
+          /*
+            What the tank costs per hour taught in it — POOLSE-28.
+
+            The report is owner and admin, narrower than the rest of this page —
+            the same two roles as `canManage`, so the tab is decided without
+            asking for the report, which is fetched only when the tab opens. A
+            maintenance member sees no tab for a thing they cannot open.
+          */
+          slug: 'cost',
+          labelKey: 'energy.perUse.section',
+          visible: loaded.canManage,
+          content: async () => {
+            const report = await apiFetch<PoolCostReport>(
+              `/energy/pools/${poolId}/cost-report`,
+            ).catch(() => null);
+            return report === null ? (
+              <PageError message={t('detailTabs.loadFailed')} />
+            ) : (
+              <CostPerUsePanel report={report} />
+            );
+          },
+        },
+        {
+          slug: 'photos',
+          labelKey: 'facilities.photos',
+          content: () => (
+            <section className="rounded border border-border bg-surface p-5">
+              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('facilities.photos')}
+              </h2>
+              <PhotoGallery
+                photos={loaded.photos}
+                canManage={loaded.canManage}
+                emptyLabel={t('facilities.noPhotos')}
+                uploadLabel={t('facilities.uploadPoolPhoto')}
+                uploadReason={t('students.photoNoStorage')}
+              />
+            </section>
+          ),
+        },
+      ]}
+    />
   );
 }
 
