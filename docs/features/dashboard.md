@@ -221,6 +221,12 @@ site, so a shared link shows what it says; a remembered site since archived read
 statements a page runs does not change between one site and five — `countStatements` in
 `test/harness.ts` counts them, leaving `withOrg`'s own BEGIN, GUC and COMMIT out.
 
+**On the page**, the selector sits in the shell's filter row, only where the API sent a list of
+more than one site — one site is no choice. Choosing saves through a server action and the page
+re-renders on the new scope. The season-occupancy panel that sat below the bands went with this
+slice: today's figures are the occupancy card, and the season summary is each site's **Ocupação**
+tab, loaded when it opens.
+
 **Not built:** the instructor and maintenance bands proper, and the personal band behind
 `DASHBOARD_PERSONAL_BAND`. There is also **no React test harness in this repo**,
 so the card's three states are proven by the API's own state assertions and by the build rather

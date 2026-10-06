@@ -204,6 +204,7 @@ export async function reportIssue(
   try {
     await apiPost(`/spaces/${spaceId}/issues`, {
       type: String(form.get('type') ?? ''),
+      severity: String(form.get('severity') ?? 'normal'),
       description: String(form.get('description') ?? '').trim(),
     });
     refreshSpace(spaceId);
@@ -212,6 +213,26 @@ export async function reportIssue(
   } catch (error) {
     return failure(error, 'spaces.reportFailed');
   }
+}
+
+/**
+ * Re-grades an open issue — owner and admin. Answers rather than throws, so a
+ * refusal is a toast and never the error page.
+ */
+export async function setIssueSeverity(
+  spaceId: string,
+  facilityId: string,
+  issueId: string,
+  severity: string,
+): Promise<{ ok: boolean }> {
+  try {
+    await apiPost(`/spaces/${spaceId}/issues/${issueId}/severity`, { severity });
+  } catch {
+    return { ok: false };
+  }
+  refreshSpace(spaceId);
+  refreshFacility(facilityId);
+  return { ok: true };
 }
 
 export async function resolveIssue(

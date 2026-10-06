@@ -1012,7 +1012,16 @@
         "turbidity": "Turvação",
         "salt": "Sal"
       }
-    }
+    },
+    "waterThreshold": {
+      "title": "Análises da água",
+      "label": "Idade máxima da última análise (horas)",
+      "hint": "Vazio: não é verificado. Um tanque sem análise mais recente aparece no painel.",
+      "notSet": "Não é verificada a idade das análises nesta instalação.",
+      "value": "Um tanque precisa de análise ao fim de {hours} horas."
+    },
+    "waterThresholdInvalid": "Um número inteiro de horas, de 1 a 8760.",
+    "waterThresholdFailed": "Não foi possível guardar o limite."
   },
   "classes": {
     "colour": "Cor da turma",
@@ -2213,7 +2222,57 @@
       },
       "energy": {
         "empty": "Ainda não há faturas. Assim que registar a primeira, o custo aparece aqui."
+      },
+      "clubWide": "Todo o clube, em qualquer instalação.",
+      "money": {
+        "title": "Mensalidades deste período",
+        "paid": "Pago",
+        "due": "Por pagar",
+        "overdue": "Em atraso",
+        "students": "{students, plural, one {# aluno} other {# alunos}}, {overdue, plural, =0 {nenhum em atraso} other {# em atraso}}",
+        "empty": "Ainda não há mensalidades neste período.",
+        "open": "Ver faturação"
+      },
+      "today": {
+        "title": "Hoje",
+        "classes": "{classes, plural, one {# aula} other {# aulas}} · {swimmers, plural, one {# pessoa na água} other {# pessoas na água}}",
+        "withoutInstructor": "{count, plural, one {# aula sem professor} other {# aulas sem professor}}",
+        "peak": "Mais cheio: {pool}, {swimmers} de {capacity} pessoas",
+        "peakUnlimited": "Mais cheio: {pool}, {swimmers} pessoas (sem limite definido)",
+        "empty": "Não há aulas hoje.",
+        "open": "Ver calendário"
+      },
+      "water": {
+        "summary": "{flagged, plural, one {# tanque precisa} other {# tanques precisam}} de atenção, de {tanks}",
+        "outOfRange": "Fora dos limites: {metrics}",
+        "due": "Última análise a {on}",
+        "never": "Nunca analisado",
+        "empty": "Todos os tanques dentro dos limites e em dia.",
+        "open": "Ver instalações"
+      },
+      "maintenance": {
+        "fault": "{count, plural, one {# avaria aberta} other {# avarias abertas}}",
+        "restock": "{count, plural, one {# reposição pendente} other {# reposições pendentes}}",
+        "split": "{count} {severity}",
+        "overdue": "{count, plural, one {# espaço com limpeza em atraso} other {# espaços com limpeza em atraso}}",
+        "empty": "Nada em aberto.",
+        "open": "Ver espaços"
+      },
+      "people": {
+        "summary": "{students, plural, one {# aluno} other {# alunos}} · {staff} no staff",
+        "expiring": "{count, plural, one {# convite expira nas próximas 24 horas} other {# convites expiram nas próximas 24 horas}}",
+        "empty": "Ainda não há ninguém.",
+        "open": "Ver staff"
+      },
+      "staffcost": {
+        "title": "Custo com pessoal",
+        "empty": "Ainda não há staff.",
+        "open": "Ver salários"
       }
+    },
+    "scope": {
+      "label": "Instalação",
+      "all": "Todas as instalações"
     }
   },
   "marketing": {
@@ -3046,7 +3105,15 @@
     "reportFailed": "Não foi possível registar o problema.",
     "resolveFailed": "Não foi possível resolver o problema.",
     "count": "{count, plural, one {1 espaço} other {# espaços}}",
-    "overdueCount": "{count, plural, one {1 em atraso} other {# em atraso}}"
+    "overdueCount": "{count, plural, one {1 em atraso} other {# em atraso}}",
+    "severity": {
+      "label": "Gravidade",
+      "chip": "Gravidade: {severity}",
+      "low": "baixa",
+      "normal": "normal",
+      "high": "alta"
+    },
+    "severityInvalid": "Escolha baixa, normal ou alta."
   },
   "partnerImport": {
     "open": "Importar parcerias",
@@ -3513,6 +3580,7 @@
     "students": "Alunos",
     "access": "Acesso",
     "actions": "Ações",
-    "requests": "Pedidos e erros"
+    "requests": "Pedidos e erros",
+    "occupancy": "Ocupação"
   }
 }

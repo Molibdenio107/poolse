@@ -929,3 +929,21 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   every date became dd-MM-yyyy. Removed rather than left, as the named `long`/`short` formats
   were. `shortDate` ("Ter · 25 ago") followed the same day, once Rui confirmed a day-column
   header is a date under that rule.
+
+- **2026-10-06** — **POOLSE-66 slice 2b's four answers, taken before code.** The selector is
+  remembered on `membership.dashboard_facility_id` (per person per club, across devices), not a
+  cookie. The two missing indexes were added rather than proposed. The season-occupancy panel
+  moved from the dashboard to a site's Ocupação tab. And the two catalogue items with no data
+  under them got their data: **severity** on `maintenance_request` (low / normal / high, chosen
+  at report, default normal, re-graded by owner or admin) and a **per-site water-analysis age
+  threshold** in hours, null for not measured.
+
+- **2026-10-06** — **The band cap ranks a card with something to say before an empty one.**
+  Taken while building 2b, without asking: eight management widgets for four places meant a new
+  club's empty mensalidades card outranked an energy card with a year of bills. Data and errors
+  first, then priority; an empty card still shows when there is room. One sort key, easy to
+  reverse.
+
+- **2026-10-06** — **Money on the dashboard is mensalidades only, without the late penalty**,
+  which is charged once per student and decided on the student's page; **people and staff cost
+  are club-wide** and say so, because no site owns a membership, an invitation or a salary.

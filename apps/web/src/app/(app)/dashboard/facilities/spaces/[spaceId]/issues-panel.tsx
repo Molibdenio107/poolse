@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
-import type { Issue } from '@/lib/api';
+import type { Issue, Severity } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 import { formatDate } from '@/lib/date-format';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
-import { archiveIssue, reportIssue, resolveIssue } from '../../spaces.actions';
+import { archiveIssue, reportIssue, resolveIssue, setIssueSeverity } from '../../spaces.actions';
+
+const SEVERITIES: readonly Severity[] = ['high', 'normal', 'low'];
 
 /**
  * What is broken here, and what was.
@@ -84,6 +87,24 @@ function IssueRow({
           <span className="rounded bg-foreground/5 px-1.5 py-0.5 text-xs text-foreground-muted">
             {t(`spaces.status.${issue.status}`)}
           </span>
+
+          {/*
+            Severity as a word, always — POOLSE-66 slice 2b. An owner or admin
+            re-grades an open one in place; a resolved one keeps the severity it
+            was resolved at, so it is only ever a label.
+          */}
+          {canManage && issue.status === 'open' ? (
+            <SeverityPicker
+              spaceId={spaceId}
+              facilityId={facilityId}
+              issueId={issue.id}
+              severity={issue.severity}
+            />
+          ) : (
+            <span className="rounded bg-foreground/5 px-1.5 py-0.5 text-xs text-foreground-muted">
+              {t('spaces.severity.chip', { severity: t(`spaces.severity.${issue.severity}`) })}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -295,6 +316,17 @@ export function IssuesPanel({
             {...(state.fields?.type === undefined ? {} : { error: t(state.fields.type) })}
           />
 
+          <SelectField
+            name="severity"
+            label={t('spaces.severity.label')}
+            initial="normal"
+            options={SEVERITIES.map((severity) => ({
+              value: severity,
+              label: t(`spaces.severity.${severity}`),
+            }))}
+            {...(state.fields?.severity === undefined ? {} : { error: t(state.fields.severity) })}
+          />
+
           <TextAreaField
             name="description"
             label={t('spaces.issueDescription')}
@@ -317,5 +349,50 @@ export function IssuesPanel({
         </form>
       </Dialog>
     </section>
+  );
+}
+
+/**
+ * Re-grading an open issue, in place — owner and admin. Saved on change, and
+ * reported through the shared toast either way; the API refuses anybody else.
+ */
+function SeverityPicker({
+  spaceId,
+  facilityId,
+  issueId,
+  severity,
+}: {
+  spaceId: string;
+  facilityId: string;
+  issueId: string;
+  severity: Severity;
+}): React.ReactElement {
+  const t = useTranslations();
+  const toast = useToast();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <select
+      aria-label={t('spaces.severity.label')}
+      value={severity}
+      disabled={pending}
+      onChange={(event) => {
+        const next = event.target.value;
+        startTransition(async () => {
+          const result = await setIssueSeverity(spaceId, facilityId, issueId, next);
+          toast.show(
+            result.ok ? 'success' : 'danger',
+            t(result.ok ? 'common.savedToast' : 'common.notSaved'),
+          );
+        });
+      }}
+      className="h-7 rounded border border-border-strong bg-background px-1.5 text-xs disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      {SEVERITIES.map((option) => (
+        <option key={option} value={option}>
+          {t('spaces.severity.chip', { severity: t(`spaces.severity.${option}`) })}
+        </option>
+      ))}
+    </select>
   );
 }

@@ -6,6 +6,7 @@ import {
   ApiError,
   apiFetch,
   type FacilityDetail,
+  type Occupancy,
   type PeopleCounts,
   type Students,
 } from '@/lib/api';
@@ -31,6 +32,8 @@ import { listTasks } from '../maintenance.actions';
 import { EnergyPanel } from '../energy-panel';
 import { listMeters } from '../energy.actions';
 import { PageError, PageShell } from '@/components/page-shell';
+import { OccupancyPanel } from '@/components/occupancy-panel';
+import { WaterThresholdForm } from './water-threshold-form';
 
 /**
  * One site, in detail — backlog round 3, stories 2 and 3.
@@ -269,6 +272,27 @@ export default async function FacilityPage({
         },
         {
           /*
+            The season in figures — POOLSE-52. It sat on the dashboard until
+            POOLSE-66 slice 2b, which answers today's question there and moved
+            this one home: it is one site's season, so it belongs on the site.
+            Readable by everybody who may see the site; the money columns are the
+            endpoint's to withhold. Fetched when the tab opens.
+          */
+          slug: 'occupancy',
+          labelKey: 'detailTabs.occupancy',
+          content: async () => {
+            const occupancy = await apiFetch<Occupancy>(
+              `/facilities/${facilityId}/occupancy`,
+            ).catch(() => null);
+            return occupancy === null ? (
+              <PageError message={t('occupancy.unavailable')} />
+            ) : (
+              <OccupancyPanel occupancy={occupancy} facilityId={facilityId} />
+            );
+          },
+        },
+        {
+          /*
             Espaços, directly after Piscinas — round 6, and the same component
             Instalações draws inside each site card. The tanks are what a
             swimming pool is; the balneários, the sala de máquinas and the
@@ -471,6 +495,22 @@ async function GeneralTab({
           Turmas board, the printed sheet and the XLSX export. If a club ever
           needs to change them again, this is where it comes back.
         */}
+      </section>
+
+      {/*
+        How old a tank's latest analysis may be — POOLSE-66 slice 2b. A standing
+        rule of the site, beside its opening hours; the dashboard's water card
+        calls a tank "due" past it, and an empty box flags nothing.
+      */}
+      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {t('facilities.waterThreshold.title')}
+        </h2>
+        <WaterThresholdForm
+          facilityId={site.id}
+          hours={site.waterAnalysisMaxAgeHours}
+          canManage={site.canManage}
+        />
       </section>
     </>
   );

@@ -3,11 +3,20 @@ import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, CalendarClock, Check, Circle } from 'lucide-react';
 import type {
   ChecklistWidgetData,
+  DashboardScope,
   DashboardWidget,
   EnergyCostsWidgetData,
+  MaintenanceWidgetData,
+  MoneyWidgetData,
+  OccupancyTodayWidgetData,
+  PeopleWidgetData,
+  StaffCostWidgetData,
   SubscriptionWidgetData,
   TasksWidgetData,
+  WaterWidgetData,
 } from '@/lib/api';
+import { formatCents } from '@/lib/money';
+import { cn } from '@/lib/utils';
 import { ConsumptionBars } from '@/components/consumption-bars';
 import { centsToText } from '@/lib/energy-invoice';
 import { formatDate } from '@/lib/date-format';
@@ -29,8 +38,23 @@ import { WidgetCard } from './widget-card';
  */
 
 /** Every widget the client can draw. An id not here renders nothing — see below. */
-export async function renderWidget(widget: DashboardWidget): Promise<React.ReactElement | null> {
+export async function renderWidget(
+  widget: DashboardWidget,
+  scope: DashboardScope,
+): Promise<React.ReactElement | null> {
   switch (widget.id) {
+    case 'mgmt.money.period':
+      return <MoneyCard widget={widget} />;
+    case 'mgmt.occupancy.today':
+      return <OccupancyTodayCard widget={widget} />;
+    case 'mgmt.waterquality.alerts':
+      return <WaterCard widget={widget} scope={scope} />;
+    case 'mgmt.maintenance.open':
+      return <MaintenanceCard widget={widget} scope={scope} />;
+    case 'mgmt.people':
+      return <PeopleCard widget={widget} />;
+    case 'mgmt.staffcost':
+      return <StaffCostCard widget={widget} />;
     case 'mgmt.subscription':
       return <SubscriptionCard widget={widget} />;
     case 'mgmt.energy.costs':
@@ -307,6 +331,329 @@ async function EnergyCostsCard({ widget }: { widget: DashboardWidget }): Promise
               })}
             </p>
           )}
+        </>
+      )}
+    </WidgetCard>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* The management band's aggregates — slice 2b                                */
+/* -------------------------------------------------------------------------- */
+
+/** The selected site's own page, or every site — where a site-scoped card links. */
+function siteHref(scope: DashboardScope, tab?: string): string {
+  if (scope.mode === 'facility' && scope.facilityId !== null) {
+    return `/dashboard/facilities/${scope.facilityId}${tab === undefined ? '' : `?tab=${tab}`}`;
+  }
+  return '/dashboard/facilities';
+}
+
+/**
+ * Mensalidades in their current period. The figure that matters is in bold:
+ * what is overdue when anything is, otherwise what is still to pay.
+ */
+async function MoneyCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const locale = await getLocale();
+  const data = widget.data as MoneyWidgetData | null;
+  const late = (data?.overdueCents ?? 0) > 0;
+
+  const row = (label: string, cents: number, strong: boolean): React.ReactElement => (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-sm text-foreground-muted">{label}</dt>
+      <dd className={cn('tabular-nums', strong ? 'text-lg font-semibold' : 'text-sm')}>
+        {formatCents(locale, cents)}
+      </dd>
+    </div>
+  );
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={t('dashboard.widget.money.title')}
+      href="/dashboard/faturacao"
+      linkLabel={t('dashboard.widget.money.open')}
+      emptyMessage={t('dashboard.widget.money.empty')}
+    >
+      {data !== null && (
+        <>
+          <dl className="flex flex-col gap-1">
+            {row(t('dashboard.widget.money.paid'), data.paidCents, false)}
+            {row(t('dashboard.widget.money.due'), data.dueCents, !late)}
+            {row(t('dashboard.widget.money.overdue'), data.overdueCents, late)}
+          </dl>
+          <p className="text-sm text-foreground-muted">
+            {t('dashboard.widget.money.students', {
+              students: data.students,
+              overdue: data.studentsOverdue,
+            })}
+          </p>
+        </>
+      )}
+    </WidgetCard>
+  );
+}
+
+/** Today's classes, who is in them, and what nobody is teaching. */
+async function OccupancyTodayCard({
+  widget,
+}: {
+  widget: DashboardWidget;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const data = widget.data as OccupancyTodayWidgetData | null;
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={t('dashboard.widget.today.title')}
+      href="/dashboard/calendar"
+      linkLabel={t('dashboard.widget.today.open')}
+      emptyMessage={t('dashboard.widget.today.empty')}
+    >
+      {data !== null && (
+        <>
+          <p className="text-lg font-medium">
+            {t('dashboard.widget.today.classes', {
+              classes: data.classes,
+              swimmers: data.swimmers,
+            })}
+          </p>
+
+          {/* An icon and the words, never the colour alone. */}
+          {data.withoutInstructor > 0 && (
+            <p className="flex items-center gap-1.5 text-sm text-warning">
+              <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+              {t('dashboard.widget.today.withoutInstructor', { count: data.withoutInstructor })}
+            </p>
+          )}
+
+          {data.peak !== null && (
+            <p className="text-sm text-foreground-muted">
+              {data.peak.capacity === null
+                ? t('dashboard.widget.today.peakUnlimited', {
+                    pool: data.peak.poolName,
+                    swimmers: data.peak.swimmers,
+                  })
+                : t('dashboard.widget.today.peak', {
+                    pool: data.peak.poolName,
+                    swimmers: data.peak.swimmers,
+                    capacity: data.peak.capacity,
+                  })}
+            </p>
+          )}
+        </>
+      )}
+    </WidgetCard>
+  );
+}
+
+/** Tanks out of range or due an analysis — each named, each a link. */
+async function WaterCard({
+  widget,
+  scope,
+}: {
+  widget: DashboardWidget;
+  scope: DashboardScope;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const data = widget.data as WaterWidgetData | null;
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={t('facilities.readings')}
+      href={siteHref(scope)}
+      linkLabel={t('dashboard.widget.water.open')}
+      emptyMessage={t('dashboard.widget.water.empty')}
+    >
+      {data !== null && (
+        <>
+          <p className="text-sm text-foreground-muted">
+            {t('dashboard.widget.water.summary', {
+              flagged: data.flagged.length,
+              tanks: data.tanks,
+            })}
+          </p>
+          <ul className="flex flex-col gap-2">
+            {data.flagged.map((pool) => (
+              <li key={pool.poolId} className="flex flex-col gap-0.5 text-sm">
+                <Link
+                  href={withFrom(`/dashboard/facilities/pools/${pool.poolId}?tab=water`, '/dashboard')}
+                  className="font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {pool.poolName}
+                </Link>
+                {pool.outOfRange.length > 0 && (
+                  <span className="flex items-center gap-1.5 text-danger">
+                    <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+                    {t('dashboard.widget.water.outOfRange', {
+                      metrics: pool.outOfRange
+                        .map((metric) => t(`facilities.metric.${metric}`))
+                        .join(', '),
+                    })}
+                  </span>
+                )}
+                {pool.due && (
+                  <span className="flex items-center gap-1.5 text-warning">
+                    <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
+                    {pool.takenAt === null
+                      ? t('dashboard.widget.water.never')
+                      : t('dashboard.widget.water.due', { on: formatDate(pool.takenAt) })}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </WidgetCard>
+  );
+}
+
+/** Open avarias and reposições by severity, and rooms overdue for cleaning. */
+async function MaintenanceCard({
+  widget,
+  scope,
+}: {
+  widget: DashboardWidget;
+  scope: DashboardScope;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const data = widget.data as MaintenanceWidgetData | null;
+
+  const kinds = (['fault', 'restock'] as const).map((type) => {
+    const groups = data?.open.filter((group) => group.type === type) ?? [];
+    return {
+      type,
+      total: groups.reduce((sum, group) => sum + group.count, 0),
+      // Highest severity first, each said as a word.
+      split: (['high', 'normal', 'low'] as const)
+        .map((severity) => ({
+          severity,
+          count: groups.find((group) => group.severity === severity)?.count ?? 0,
+        }))
+        .filter((part) => part.count > 0),
+    };
+  });
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={t('maintenance.section')}
+      href={siteHref(scope, 'spaces')}
+      linkLabel={t('dashboard.widget.maintenance.open')}
+      emptyMessage={t('dashboard.widget.maintenance.empty')}
+    >
+      {data !== null && (
+        <ul className="flex flex-col gap-1.5 text-sm">
+          {kinds
+            .filter((kind) => kind.total > 0)
+            .map((kind) => (
+              <li key={kind.type}>
+                <span className="font-medium">
+                  {t(`dashboard.widget.maintenance.${kind.type}`, { count: kind.total })}
+                </span>{' '}
+                <span className="text-foreground-muted">
+                  (
+                  {kind.split
+                    .map((part) =>
+                      t('dashboard.widget.maintenance.split', {
+                        count: part.count,
+                        severity: t(`spaces.severity.${part.severity}`),
+                      }),
+                    )
+                    .join(', ')}
+                  )
+                </span>
+              </li>
+            ))}
+          {data.overdueCleanings > 0 && (
+            <li className="flex items-center gap-1.5 text-warning">
+              <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+              {t('dashboard.widget.maintenance.overdue', { count: data.overdueCleanings })}
+            </li>
+          )}
+        </ul>
+      )}
+    </WidgetCard>
+  );
+}
+
+/** The club's people. Club-wide, and the card says so. */
+async function PeopleCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const data = widget.data as PeopleWidgetData | null;
+  const roles = ['owner', 'admin', 'instructor', 'maintenance', 'guardian'] as const;
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={t('facilities.people')}
+      href="/dashboard/facilities/staff"
+      linkLabel={t('dashboard.widget.people.open')}
+      emptyMessage={t('dashboard.widget.people.empty')}
+    >
+      {data !== null && (
+        <>
+          <p className="text-lg font-medium">
+            {t('dashboard.widget.people.summary', { students: data.students, staff: data.staff })}
+          </p>
+          <p className="text-sm text-foreground-muted">
+            {roles
+              .filter((role) => data.byRole[role] > 0)
+              .map((role) => `${t(`roles.${role}`)} ${data.byRole[role]}`)
+              .join(' · ')}
+          </p>
+          {data.expiringInvitations > 0 && (
+            <p className="flex items-center gap-1.5 text-sm text-warning">
+              <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
+              {t('dashboard.widget.people.expiring', { count: data.expiringInvitations })}
+            </p>
+          )}
+          <p className="text-xs text-foreground-muted">{t('dashboard.widget.clubWide')}</p>
+        </>
+      )}
+    </WidgetCard>
+  );
+}
+
+/** What the staff cost a month — Salários' figure, with its coverage said. */
+async function StaffCostCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const locale = await getLocale();
+  const data = widget.data as StaffCostWidgetData | null;
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={t('dashboard.widget.staffcost.title')}
+      href="/dashboard/facilities/staff/salaries"
+      linkLabel={t('dashboard.widget.staffcost.open')}
+      emptyMessage={t('dashboard.widget.staffcost.empty')}
+    >
+      {data !== null && (
+        <>
+          <p>
+            <span className="text-lg font-semibold tabular-nums">
+              {formatCents(locale, data.thisMonthCents)}
+            </span>{' '}
+            <span className="text-sm text-foreground-muted">{t('salaries.thisMonth')}</span>
+          </p>
+          {/* Coverage in words — an unqualified total over partial data looks complete. */}
+          <p className="text-sm text-foreground-muted">
+            {data.complete
+              ? t('salaries.coverageComplete', { total: data.coverage.total })
+              : t('salaries.coverage', {
+                  withRate: data.coverage.withRate,
+                  total: data.coverage.total,
+                })}
+          </p>
+          {data.ownerExcluded && (
+            <p className="text-sm text-foreground-muted">{t('salaries.ownerExcluded')}</p>
+          )}
+          <p className="text-xs text-foreground-muted">{t('dashboard.widget.clubWide')}</p>
         </>
       )}
     </WidgetCard>

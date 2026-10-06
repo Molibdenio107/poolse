@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPatch, apiPut, type PlaceSuggestion } from '../../../../../lib/api';
+import { describeFailure } from '../../../../../lib/form-failure';
+import type { FormState } from '../../actions';
 
 /**
  * City lookup, proxied through the server.
@@ -94,5 +96,38 @@ export async function saveHoursAction(
   revalidatePath(`/dashboard/facilities/${facilityId}`);
   revalidatePath('/dashboard/calendar');
 
+  return { ok: true };
+}
+
+/**
+ * How old a site's latest water analysis may be — POOLSE-66 slice 2b.
+ *
+ * An empty box clears it ("not measured", which flags nothing); anything that
+ * is not a whole number of hours is refused beside the field rather than read
+ * as empty — reading nonsense as "clear it" is how a form silently discards
+ * what somebody typed.
+ */
+export async function saveWaterThresholdAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '');
+  const raw = String(formData.get('hours') ?? '').trim();
+
+  let hours: number | null = null;
+  if (raw !== '') {
+    if (!/^\d+$/.test(raw)) {
+      return { ok: false, fields: { hours: 'facilities.waterThresholdInvalid' } };
+    }
+    hours = Number(raw);
+  }
+
+  try {
+    await apiPut(`/facilities/${facilityId}/water-threshold`, { hours });
+  } catch (error) {
+    return describeFailure(error, 'facilities.waterThresholdFailed');
+  }
+
+  revalidatePath(`/dashboard/facilities/${facilityId}`);
   return { ok: true };
 }

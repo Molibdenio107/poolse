@@ -52,6 +52,8 @@ const SAME_ON_PURPOSE = new Map([
   // Renaming the pt-PT one to "fúcsia" purely to satisfy this check would be
   // choosing a different colour word to dodge a guard.
   ['classes.colours.magenta', 'the same colour name in both languages'],
+  // A request's middle severity — POOLSE-66 slice 2b. "Normal" is the word in both.
+  ['spaces.severity.normal', 'the same word in both languages'],
   ['health.api', 'an initialism'],
   ['account.email', '"email" is the ordinary pt-PT word too'],
   ['profile.email', 'as above'],

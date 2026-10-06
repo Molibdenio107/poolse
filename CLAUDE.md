@@ -127,8 +127,11 @@ há faturas" and "nada em atraso" are different facts, while a failure can only 
 did not load — the resolver's words name columns and go to the log, and the error card is muted
 rather than danger, because it is not a refusal. **Every card links to its page in all three
 states.** A panel that predates the registry is a card no role check governs, which is what
-`mgmt.energy.costs` was before slice 2a; occupancy and `me.pool` are the two left, each
-carrying a comment naming the widget that replaces it. `docs/features/dashboard.md`.
+`mgmt.energy.costs` was before slice 2a; `me.pool` is the one left, carrying a comment naming the
+widget that replaces it. **Slice 2b's aggregates are one statement each whatever the number of
+sites** (`management.repository.ts`, proved by `countStatements` in the test harness), the
+selector is remembered on `membership.dashboard_facility_id`, and **the cap ranks a card with
+something to say before an empty one**. `docs/features/dashboard.md`.
 
 **An irreversible platform act asks for the club's name, and every platform write and
 refusal raises an alert.** POOLSE-64 slice E1. **Which acts are irreversible is decided by

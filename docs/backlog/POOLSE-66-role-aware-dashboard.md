@@ -271,7 +271,13 @@ Three questions the codebase raised. All three took the recommended answer; none
      components are deleted; occupancy and the personal pool stay below the bands until their
      own widgets land, each with a comment naming it. 3 new API tests (769 total).
      **Closes ACs 1, 2, 4, 5, 6, 7 and 12.** `docs/features/dashboard.md`.
-   - **2b.** The management band's six aggregates — `mgmt.money.period`,
+   - **2b ✅ Built 6 October 2026.** Six aggregates, one statement each; the selector
+     remembered on `membership`; severity on requests and a per-site water-analysis threshold
+     (both asked for in the slice, so the two catalogue items had data to stand on); the season
+     summary moved to the site's Ocupação tab; and the cap ranks a card with something to say
+     before an empty one. **Closes AC 9, AC 10 and QA 10, QA 11.** `docs/features/dashboard.md`.
+     The ticket's original note follows.
+   - **2b (as filed).** The management band's six aggregates — `mgmt.money.period`,
      `mgmt.occupancy.today`, `mgmt.maintenance.open`, `mgmt.waterquality.alerts`, `mgmt.people`,
      `mgmt.staffcost` — one grouped query each, their indexes, and the query-count helper QA 11
      needs. **AC 9 and AC 11 land here, and so does AC 10**: the facility selector is deferred

@@ -7,16 +7,15 @@ import {
   type Dashboard,
   type Facilities,
   type Me,
-  type Occupancy,
   type PoolDetail,
 } from '../../../lib/api';
 import { readTheme } from '../../../lib/preferences';
 import { PreferenceSync } from './preference-sync';
 import { CreateOrganizationForm } from './create-organization-form';
 import { PageError, PageShell } from '@/components/page-shell';
-import { OccupancyPanel } from '@/components/occupancy-panel';
 import { MyPoolPanel } from './my-pool-panel';
 import { Bands } from './bands';
+import { ScopeSelector } from './scope-selector';
 
 /**
  * The dashboard — and, for now, mostly a statement that it is not built yet.
@@ -27,11 +26,12 @@ import { Bands } from './bands';
  * meant the first page after signing in was about the reader rather than about
  * the pool. A dashboard is for the operation.
  *
- * **Occupancy is the first real thing on it** — moved here from the facility
- * page, because how much of the water is sold is the question a manager opens
- * Poolse with, and POOLSE-52 had it filed under a site's own settings. It moved
- * rather than being copied: two of the same panel would be two answers to one
- * question the day somebody edited one.
+ * **Occupancy was the first real thing on it** — POOLSE-52's season summary,
+ * moved here from the facility page. Slice 2b of POOLSE-66 moved it back, to the
+ * site's Ocupação tab: the management band now answers today's question
+ * (`mgmt.occupancy.today`), and a per-site, per-season figure belongs on the
+ * site. Moved again rather than copied, for the same reason as the first time:
+ * two of one panel are two answers to one question.
  *
  * The "coming soon" panel that used to sit under it is **gone**, at Rui's
  * request. It earned its place while the page was empty — an operator landing on
@@ -81,10 +81,6 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
    * best-effort: a dashboard that fails to load because a figure would not
    * compute is worse than a dashboard without the figure.
    */
-  let occupancy: Occupancy | null = null;
-  let occupancyFacilityId: string | null = null;
-  let occupancyFailed = false;
-
   /*
    * The personal tenant's pools, each with its record — one round trip per tank,
    * which for the tenant this is built for is one. Best-effort like the rest:
@@ -104,28 +100,9 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
         ),
       )
     ).filter((pool): pool is PoolDetail => pool !== null);
-    // Best-effort, but not silent — the same rule as occupancy below. A
+    // Best-effort, but not silent. A
     // dashboard with no card is indistinguishable from a tenant with no pool.
     poolsFailed = sites === null || pools.length < listed.length;
-  } else if (me !== null && membership !== null) {
-    /*
-     * `/facilities` answers with an object, not an array — `{ organizationId,
-     * facilities, canManage, timezones }`. The first version of this typed it as
-     * `Facility[]`, so `sites[0]` was always undefined and the panel silently
-     * never rendered: `.catch(() => null)` and a `!== null` guard between them
-     * turned a wrong type into no error and no output, which is the hardest
-     * shape of bug to see.
-     */
-    const sites = await apiFetch<Facilities>('/facilities').catch(() => null);
-    const first = sites?.facilities[0]?.id;
-
-    if (first !== undefined) {
-      occupancy = await apiFetch<Occupancy>(`/facilities/${first}/occupancy`).catch(() => null);
-      occupancyFacilityId = first;
-      // Best-effort, but not silent: a dashboard that simply omits its main
-      // panel is indistinguishable from one that has not been built.
-      occupancyFailed = occupancy === null;
-    }
   }
   /*
    * The bands — POOLSE-66, slice 2a.
@@ -136,7 +113,7 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
    * payload rather than filtered out of a render.
    *
    * Best-effort like everything else on this page. A dashboard whose *band*
-   * endpoint is down still shows occupancy and the pools — and unlike the panels
+   * endpoint is down still shows the personal pools — and unlike the panels
    * it replaces, an individual card that fails says so itself rather than
    * vanishing, because `compose.ts` answers 200 with `state: 'error'` on that
    * card alone.
@@ -152,7 +129,17 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
       : [me.user.firstName, me.user.lastName].filter(Boolean).join(' ') || me.user.email;
 
   return (
-    <PageShell title={name ?? t('nav.dashboard')} subtitle={t('dashboard.subtitle')}>
+    <PageShell
+      title={name ?? t('nav.dashboard')}
+      subtitle={t('dashboard.subtitle')}
+      filters={
+        // The selector, where there is a choice: the API sends the list only to
+        // the management band's readers, and one site is no choice at all.
+        dashboard !== null && dashboard.scope.facilities.length > 1 ? (
+          <ScopeSelector sites={dashboard.scope.facilities} value={dashboard.scope.facilityId} />
+        ) : undefined
+      }
+    >
 
       {failure !== null && (
         <PageError
@@ -173,22 +160,17 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
           {dashboard !== null && <Bands dashboard={dashboard} />}
 
           {/*
-            Still bespoke, and each one waiting for its own widget.
+            Still bespoke, and waiting for its own widget.
 
-            `mgmt.occupancy.today` and `me.pool` are both in POOLSE-66's
-            catalogue — the first needs slice 2b's grouped SQL and the second is
-            the personal band in slice 5, behind its flag. They stay below the
-            bands until then, because a slice that ends by *removing* a figure an
-            operator reads every morning has not ended well. Delete each one when
-            its card lands; that is the whole of the migration.
+            `me.pool` is the personal band in slice 5, behind its flag, and stays
+            below the bands until then. The season-occupancy panel that sat here
+            too went in slice 2b: today's figures are `mgmt.occupancy.today`, and
+            the season summary moved to each site's Ocupação tab, which is where a
+            per-site, per-season figure belongs.
           */}
           {pools.map((pool) => (
             <MyPoolPanel key={pool.id} pool={pool} />
           ))}
-
-          {occupancy !== null && (
-            <OccupancyPanel occupancy={occupancy} facilityId={occupancyFacilityId} />
-          )}
 
           {poolsFailed && (
             <section className="rounded border border-border bg-surface p-5">
@@ -199,14 +181,6 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
             </section>
           )}
 
-          {occupancyFailed && (
-            <section className="rounded border border-border bg-surface p-5">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('occupancy.title')}
-              </h2>
-              <p className="mt-1 text-sm text-foreground-muted">{t('occupancy.unavailable')}</p>
-            </section>
-          )}
 
           {membership === null && (
             <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">

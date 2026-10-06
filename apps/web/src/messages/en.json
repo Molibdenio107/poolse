@@ -1012,7 +1012,16 @@
         "turbidity": "Turbidity",
         "salt": "Salt"
       }
-    }
+    },
+    "waterThreshold": {
+      "title": "Water analyses",
+      "label": "Maximum age of the latest analysis (hours)",
+      "hint": "Empty: not checked. A tank with no more recent analysis shows on the dashboard.",
+      "notSet": "The age of analyses is not checked at this site.",
+      "value": "A tank needs an analysis after {hours} hours."
+    },
+    "waterThresholdInvalid": "A whole number of hours, from 1 to 8760.",
+    "waterThresholdFailed": "The limit could not be saved."
   },
   "classes": {
     "colour": "Class colour",
@@ -2213,7 +2222,57 @@
       },
       "energy": {
         "empty": "No bills yet. The cost appears here as soon as you record the first one."
+      },
+      "clubWide": "The whole club, at every site.",
+      "money": {
+        "title": "This period's fees",
+        "paid": "Paid",
+        "due": "To pay",
+        "overdue": "Overdue",
+        "students": "{students, plural, one {# student} other {# students}}, {overdue, plural, =0 {none overdue} other {# overdue}}",
+        "empty": "No fees in this period yet.",
+        "open": "Open invoicing"
+      },
+      "today": {
+        "title": "Today",
+        "classes": "{classes, plural, one {# class} other {# classes}} · {swimmers, plural, one {# person in the water} other {# people in the water}}",
+        "withoutInstructor": "{count, plural, one {# class without an instructor} other {# classes without an instructor}}",
+        "peak": "Busiest: {pool}, {swimmers} of {capacity} people",
+        "peakUnlimited": "Busiest: {pool}, {swimmers} people (no limit set)",
+        "empty": "No classes today.",
+        "open": "Open the calendar"
+      },
+      "water": {
+        "summary": "{flagged, plural, one {# tank needs} other {# tanks need}} attention, of {tanks}",
+        "outOfRange": "Out of range: {metrics}",
+        "due": "Last analysed {on}",
+        "never": "Never analysed",
+        "empty": "Every tank is in range and up to date.",
+        "open": "Open sites"
+      },
+      "maintenance": {
+        "fault": "{count, plural, one {# open fault} other {# open faults}}",
+        "restock": "{count, plural, one {# restock pending} other {# restocks pending}}",
+        "split": "{count} {severity}",
+        "overdue": "{count, plural, one {# space overdue for cleaning} other {# spaces overdue for cleaning}}",
+        "empty": "Nothing open.",
+        "open": "Open spaces"
+      },
+      "people": {
+        "summary": "{students, plural, one {# student} other {# students}} · {staff} staff",
+        "expiring": "{count, plural, one {# invitation expires in the next 24 hours} other {# invitations expire in the next 24 hours}}",
+        "empty": "Nobody here yet.",
+        "open": "Open staff"
+      },
+      "staffcost": {
+        "title": "Staff cost",
+        "empty": "No staff yet.",
+        "open": "Open salaries"
       }
+    },
+    "scope": {
+      "label": "Site",
+      "all": "All sites"
     }
   },
   "marketing": {
@@ -3046,7 +3105,15 @@
     "reportFailed": "The issue could not be recorded.",
     "resolveFailed": "The issue could not be resolved.",
     "count": "{count, plural, one {1 space} other {# spaces}}",
-    "overdueCount": "{count, plural, one {1 overdue} other {# overdue}}"
+    "overdueCount": "{count, plural, one {1 overdue} other {# overdue}}",
+    "severity": {
+      "label": "Severity",
+      "chip": "Severity: {severity}",
+      "low": "low",
+      "normal": "normal",
+      "high": "high"
+    },
+    "severityInvalid": "Choose low, normal or high."
   },
   "partnerImport": {
     "open": "Import partnerships",
@@ -3513,6 +3580,7 @@
     "students": "Students",
     "access": "Access",
     "actions": "Actions",
-    "requests": "Requests and errors"
+    "requests": "Requests and errors",
+    "occupancy": "Occupancy"
   }
 }

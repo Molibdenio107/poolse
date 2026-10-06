@@ -610,6 +610,11 @@ export interface FacilityDetail extends Facility, Place {
   counts?: PeopleCounts;
   /** Always seven, ascending. Readable by anyone who may see the site. */
   hours: FacilityDay[];
+  /**
+   * How old a tank's latest water analysis may be, in hours, before the
+   * dashboard calls it due. Null is not measured and flags nothing.
+   */
+  waterAnalysisMaxAgeHours: number | null;
 }
 
 /**
@@ -653,9 +658,14 @@ export interface Cleaning {
   note: string | null;
 }
 
+/** How badly a request needs somebody — POOLSE-66 slice 2b. */
+export type Severity = 'low' | 'normal' | 'high';
+
 export interface Issue {
   id: string;
   type: IssueType;
+  /** Chosen when it is reported; `normal` for everything older. */
+  severity: Severity;
   description: string;
   reportedAt: string;
   reportedBy: string | null;
@@ -3659,6 +3669,60 @@ export interface TasksWidgetData {
 }
 
 /** `setup.checklist` — a club with no sites, and the only card it gets. */
+/** `mgmt.money.period` — mensalidades in their current period. Cents. */
+export interface MoneyWidgetData {
+  paidCents: number;
+  dueCents: number;
+  overdueCents: number;
+  lines: number;
+  students: number;
+  studentsOverdue: number;
+}
+
+/** `mgmt.occupancy.today` — today's classes at each site's own date. */
+export interface OccupancyTodayWidgetData {
+  classes: number;
+  swimmers: number;
+  withoutInstructor: number;
+  /** The busiest moment in one tank. `capacity` null is "not measured". */
+  peak: { poolId: string; poolName: string; swimmers: number; capacity: number | null } | null;
+}
+
+/** `mgmt.waterquality.alerts` — tanks out of range or due an analysis. */
+export interface WaterWidgetData {
+  tanks: number;
+  flagged: {
+    poolId: string;
+    poolName: string;
+    takenAt: string | null;
+    outOfRange: PoolMetric[];
+    due: boolean;
+  }[];
+}
+
+/** `mgmt.maintenance.open` — open requests by kind and severity, and overdue rooms. */
+export interface MaintenanceWidgetData {
+  open: { type: IssueType; severity: Severity; count: number }[];
+  overdueCleanings: number;
+}
+
+/** `mgmt.people` — the club's people. Club-wide: no site owns a person. */
+export interface PeopleWidgetData {
+  students: number;
+  staff: number;
+  byRole: { owner: number; admin: number; instructor: number; maintenance: number; guardian: number };
+  pendingInvitations: number;
+  expiringInvitations: number;
+}
+
+/** `mgmt.staffcost` — `salarySummary`, the figure Salários shows. */
+export interface StaffCostWidgetData {
+  thisMonthCents: number;
+  coverage: { withRate: number; total: number };
+  complete: boolean;
+  ownerExcluded: boolean;
+}
+
 export interface ChecklistWidgetData {
   steps: { id: 'facility' | 'pools' | 'prices' | 'staff' | 'students'; done: boolean }[];
 }

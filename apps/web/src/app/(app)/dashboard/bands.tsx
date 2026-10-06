@@ -36,7 +36,7 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
       cards: await Promise.all(
         band.widgets.map(async (widget) => ({
           id: widget.id,
-          element: await renderWidget(widget),
+          element: await renderWidget(widget, dashboard.scope),
         })),
       ),
     })),
