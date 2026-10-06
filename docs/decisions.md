@@ -889,3 +889,26 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   none. **There is no React test harness in this repo**, so the three card states are proven by
   the API's state assertions and by `next build` rather than by a render test. Adding one is its
   own decision and is not taken here.
+
+- **2026-10-06** — **A record's page is tabs, not stacked cards — app-wide.** One card is one
+  tab and the first is General; `DetailPage` is the one implementation. Cards that are one
+  conversation may share a tab: the site page is eight tabs rather than thirteen, General
+  holding people, weather, location and hours, and Preços the price list with its categories
+  and insurance.
+
+- **2026-10-06** — **The active tab lives in `?tab=`, and a tab is fetched by the server when
+  it opens.** Chosen over a client cache that would skip refetching a revisited tab: every
+  panel's save already ends in `revalidatePath`, which a client cache would not see. A list
+  whose refusal *is* the permission check still runs with the page, because the strip cannot
+  be drawn without knowing which tabs exist.
+
+- **2026-10-06** — **Each card keeps its own save; leaving a tab with unsaved typing asks
+  first.** No page had one form spanning several cards, so nothing was split. A tab-level
+  "Cancelar alterações" discards by remounting the tab, and the guard covers other tabs, in-app
+  links and closing the window — not the browser's back button, which the App Router cannot
+  intercept.
+
+- **2026-10-06** — **The title and tab strip are sticky, the strip scrolls sideways on a phone,
+  a tab a role may not use is hidden rather than disabled, and badges come only from data the
+  page already loads.** The active pill is a primary tint with a ring rather than a solid
+  fill, because white on the brand primary is one of `contrast:check`'s known failures.

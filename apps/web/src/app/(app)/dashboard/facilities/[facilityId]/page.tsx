@@ -12,6 +12,7 @@ import {
 import { withFrom } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { DetailPage } from '@/components/detail-page';
 import { CityPicker } from './city-picker';
 import { WeatherPanel } from './weather-panel';
 import { HoursPanel } from './hours-panel';
@@ -38,6 +39,11 @@ import { PageError, PageShell } from '@/components/page-shell';
  * operation" and "what is the weather doing there" are both things an operator
  * asks while looking at a site, and splitting them would have meant two pages
  * that each carried the site's name and address.
+ *
+ * **Tabs since the detail-tabs change.** Thirteen stacked sections became eight
+ * tabs: General holds what the site *is* (its people, weather, location and
+ * hours), Preços holds the price list with the two cards that modify it, and
+ * every other section is a tab of its own, in the order they were stacked.
  */
 
 /**
@@ -68,11 +74,14 @@ const GROUPS: { key: keyof PeopleCounts; label: string; href: string }[] = [
 
 export default async function FacilityPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ facilityId: string }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { facilityId } = await params;
+  const { tab } = await searchParams;
 
   let site: FacilityDetail | null = null;
   let failure: LoadFailure | null = null;
@@ -84,358 +93,380 @@ export default async function FacilityPage({
     failure = describeLoad(error);
   }
 
-  /*
-   * The price list — POOLSE-42.
-   *
-   * `listPrices` answers null when the endpoint refuses, which is what an
-   * instructor gets: AC10 says they see no amounts at all, so the block is
-   * simply absent rather than rendered empty or rendered with a refusal in it.
-   * The levels come from the register, for the optional level a plan suggests.
-   */
-  /*
-   * Parcerias — POOLSE-47.
-   *
-   * Best-effort like the grid above it: a club that sells no water in blocks has
-   * an empty panel, and an endpoint that refuses must not cost the site page.
-   * The page number rides in the query string so the list is linkable.
-   */
-  const partners = await listPartners(facilityId, 1);
+  if (site === null) {
+    return (
+      <PageShell
+        title={t('facilities.title')}
+        back={{ href: '/dashboard/facilities', label: t('facilities.backToSites') }}
+      >
+        {failure !== null && (
+          <PageError
+            message={t(failure.key)}
+            {...(failure.detail === '' ? {} : { detail: failure.detail })}
+          />
+        )}
+      </PageShell>
+    );
+  }
 
   /*
-   * Espaços — round 6. Best-effort like the panels around it: a site whose
-   * spaces cannot be read loses that block rather than the whole page.
-   */
-  const spaces = await listSpaces(facilityId);
+    What decides which tabs exist.
 
-  /*
-   * Planned maintenance — slice 4.3.
-   *
-   * Best-effort like the blocks around it: null means the endpoint refused or
-   * was unreachable, and an absent panel costs nothing, where a panel rendered
-   * empty would say this site has no maintenance plan when in fact nobody
-   * knows.
-   */
-  const tasks = await listTasks(facilityId);
+    Each of these lists answers null when its endpoint refuses, and that refusal
+    *is* the permission check — so they run before the strip can be drawn, in
+    parallel rather than one after another as the stacked page did. Three of
+    them also feed a badge. What a tab needs beyond its own list (the register,
+    for the price list's levels) waits until that tab is opened.
 
-  // The meters, same terms — slice 5.1. Absent when the endpoint refuses.
-  const meters = await listMeters(facilityId);
-
-  /*
-    The season in figures — POOLSE-52.
-
-    Best-effort like the blocks around it. A draft season is refused outright by
-    the endpoint (it has no dated sessions to measure), and a club with no grid
-    yet has nothing to divide by — both come back as an absent panel rather than
-    a screen full of dashes.
+    Every one stays best-effort, as before: a list that cannot be read costs its
+    tab, never the page.
   */
+  const [partners, spaces, tasks, meters, prices, categories, policies] = await Promise.all([
+    // Parcerias — POOLSE-47. Page 1; the panel pages itself.
+    listPartners(facilityId, 1),
+    // Espaços — round 6.
+    listSpaces(facilityId),
+    /*
+     * Planned maintenance — slice 4.3. Null means the endpoint refused or was
+     * unreachable, and an absent tab costs nothing, where a tab rendered empty
+     * would say this site has no maintenance plan when in fact nobody knows.
+     */
+    listTasks(facilityId),
+    // The meters, same terms — slice 5.1.
+    listMeters(facilityId),
+    /*
+     * The price list — POOLSE-42. Null for an instructor: AC10 says they see no
+     * amounts at all.
+     */
+    listPrices(facilityId),
+    /*
+     * Categorias de preço — round 19. Organization-scoped, so what is on the
+     * page is the same on every site and the panel says so. A reader may see
+     * the names without the amounts — `canSeeValues`, decided by the endpoint.
+     */
+    listCategories(),
+    // What the club pays its insurer is a commercial fact; the endpoint decides.
+    listPolicies(facilityId),
+  ]);
 
-  const prices = await listPrices(facilityId);
-  /*
-   * Categorias de preço — round 19.
-   *
-   * The club's own list, shown beside the prices it modifies. Null when the
-   * endpoint refuses, like the price list above it; unlike the price list it is
-   * organization-scoped, so what is on the page is the same on every site and
-   * the panel says so.
-   */
-  const categories = await listCategories();
-  // Null for anybody who may not read it, exactly as the price list is: what the
-  // club pays its insurer is a commercial fact and the endpoint decides, not the
-  // absence of a panel.
-  const policies = await listPolicies(facilityId);
-  const register =
-    prices === null ? null : await apiFetch<Students>('/students').catch(() => null);
+  const path = `/dashboard/facilities/${facilityId}`;
+  const loaded = site;
 
   return (
-    <PageShell
-      title={site?.name ?? t('facilities.title')}
-      subtitle={
-        site === null
-          ? undefined
-          : [site.address, site.city, site.timezone].filter(Boolean).join(' · ')
-      }
-      back={{ href: "/dashboard/facilities", label: t('facilities.backToSites') }}
+    <DetailPage
+      title={loaded.name}
+      subtitle={[loaded.address, loaded.city, loaded.timezone].filter(Boolean).join(' · ')}
+      back={{ href: '/dashboard/facilities', label: t('facilities.backToSites') }}
       actions={<EntityIcon kind="facility" className="mt-1.5 size-6 text-primary" />}
-    >
+      requested={tab}
+      tabs={[
+        {
+          slug: 'general',
+          labelKey: 'detailTabs.general',
+          content: () => <GeneralTab site={loaded} path={path} />,
+        },
+        {
+          slug: 'prices',
+          labelKey: 'detailTabs.prices',
+          visible: prices !== null || categories !== null || policies !== null,
+          content: async () => {
+            const register =
+              prices === null ? null : await apiFetch<Students>('/students').catch(() => null);
+            return (
+              <>
+                {prices !== null && (
+                  <PricesPanel
+                    facilityId={facilityId}
+                    plans={prices.plans}
+                    periods={prices.periods}
+                    seasons={prices.seasons}
+                    billing={prices.billing}
+                    levels={register?.levels ?? []}
+                    canManage={register?.canManage ?? false}
+                  />
+                )}
 
-      {failure !== null && (
-        <PageError
-          message={t(failure.key)}
-          {...(failure.detail === '' ? {} : { detail: failure.detail })}
-        />
-      )}
-
-      {site !== null && (
-        <>
-
-          {/*
-            Counts first, because "how big is this" is the question story 2 says
-            the screen exists to answer. Absent entirely for anybody who is not
-            an owner or an admin — the API does not send them, so there is
-            nothing here to hide badly.
-          */}
-          {site.counts !== undefined && (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-              <div>
-                <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                  {t('facilities.people')}
-                </h2>
                 {/*
-                  Said out loud rather than left to be discovered. Students and
-                  staff belong to the organization, not to a site, so a club with
-                  two buildings sees the same numbers on both — and an operator
-                  who assumed otherwise would be reading them wrongly.
+                  Directly under the price list, because a concession is the
+                  other half of what somebody pays and the two are one
+                  conversation. Not gated on `prices`: a reader may see the
+                  names without seeing the amounts.
                 */}
-                <p className="mt-1 text-sm text-foreground-muted">
-                  {t('facilities.peopleHint')}
-                </p>
-              </div>
+                {categories !== null && (
+                  <CategoriesPanel
+                    facilityId={facilityId}
+                    categories={categories.categories}
+                    canManage={categories.canManage}
+                    canSeeValues={categories.canSeeValues}
+                  />
+                )}
 
-              <ul className="grid gap-3 sm:grid-cols-3">
-                {GROUPS.map((group) => (
-                  <li key={group.key}>
-                    <Link
-                      href={withFrom(group.href, `/dashboard/facilities/${facilityId}`)}
-                      className="flex flex-col gap-0.5 rounded border border-border p-3 transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    >
-                      {/*
-                        Zero renders as 0, never as an absence. "No instructors
-                        yet" and "this screen forgot to load" look identical when
-                        the row simply is not there.
-                      */}
-                      <span className="text-2xl font-semibold">
-                        {site.counts?.[group.key] ?? 0}
-                      </span>
-                      <span className="text-sm text-foreground-muted">{t(group.label)}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                {/*
+                  The apólice sits beside the price list because the two halves
+                  of the seguro are one conversation: what the club is covered
+                  by, and what it charges a family for being on it.
+                */}
+                {policies !== null && (
+                  <InsurancePanel
+                    facilityId={facilityId}
+                    policies={policies}
+                    canManage={register?.canManage ?? false}
+                  />
+                )}
+              </>
+            );
+          },
+        },
+        {
+          slug: 'partners',
+          labelKey: 'partners.title',
+          visible: partners !== null,
+          badge: partners === null ? undefined : { kind: 'count', value: partners.total },
+          content: () =>
+            partners !== null && (
+              <PartnersPanel
+                facilityId={facilityId}
+                facilityName={loaded.name}
+                partners={partners.items}
+                total={partners.total}
+                canManage={partners.canManage}
+              />
+            ),
+        },
+        {
+          slug: 'pools',
+          labelKey: 'facilities.pools',
+          badge: { kind: 'count', value: loaded.pools.length },
+          content: () => (
+            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('facilities.pools')}
+              </h2>
+
+              {loaded.pools.length === 0 ? (
+                <p className="text-sm text-foreground-muted">{t('facilities.noPools')}</p>
+              ) : (
+                <ul className="flex flex-col divide-y divide-border">
+                  {loaded.pools.map((pool) => (
+                    <li key={pool.id} className="py-3 first:pt-0 last:pb-0">
+                      <Link
+                        href={withFrom(`/dashboard/facilities/pools/${pool.id}`, path)}
+                        className="flex items-center gap-3 rounded hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        <EntityIcon kind="pool" />
+                        <span className="font-medium">{pool.name}</span>
+                        <span className="text-sm text-foreground-muted">
+                          {t(`facilities.kind.${pool.kind}`)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
-          )}
-
-          <WeatherPanel
-            city={site.city}
-            latitude={site.latitude}
-            longitude={site.longitude}
-          />
-
-          {site.canManage && (
+          ),
+        },
+        {
+          /*
+            Espaços, directly after Piscinas — round 6, and the same component
+            Instalações draws inside each site card. The tanks are what a
+            swimming pool is; the balneários, the sala de máquinas and the
+            arrecadação are the rest of the building round them.
+          */
+          slug: 'spaces',
+          labelKey: 'spaces.title',
+          visible: spaces !== null,
+          badge:
+            spaces !== null && spaces.items.some((space) => space.overdue)
+              ? { kind: 'dot', labelKey: 'detailTabs.badge.spacesOverdue' }
+              : undefined,
+          content: () =>
+            spaces !== null && (
+              <SpacesPanel
+                facilityId={facilityId}
+                spaces={spaces.items}
+                canManage={spaces.canManage}
+                backTo={path}
+              />
+            ),
+        },
+        {
+          /*
+            Manutenção — about the future, what has to happen again, where the
+            tabs before it are about what the site *is*. A task may be about a
+            tank, a room or the building itself, which is why it is a section of
+            the site rather than part of Espaços or Piscinas.
+          */
+          slug: 'maintenance',
+          labelKey: 'maintenance.section',
+          visible: tasks !== null,
+          badge:
+            tasks !== null && tasks.tasks.some((task) => task.state === 'due')
+              ? { kind: 'dot', labelKey: 'detailTabs.badge.maintenanceDue' }
+              : undefined,
+          content: () =>
+            tasks !== null && (
+              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('maintenance.section')}
+                </h2>
+                <MaintenancePanel facilityId={facilityId} list={tasks} />
+              </section>
+            ),
+        },
+        {
+          // Energy — slice 5.1: what running the site costs.
+          slug: 'energy',
+          labelKey: 'energy.section',
+          visible: meters !== null,
+          content: () =>
+            meters !== null && (
+              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('energy.section')}
+                </h2>
+                <EnergyPanel facilityId={facilityId} list={meters} />
+              </section>
+            ),
+        },
+        {
+          slug: 'photos',
+          labelKey: 'facilities.photos',
+          content: () => (
             <section className="rounded border border-border bg-surface p-5">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('facilities.location')}
-              </h2>
-              <CityPicker
-                organizationId={site.organizationId}
-                facilityId={site.id}
-                city={site.city}
-                countryCode={site.countryCode}
-              />
-            </section>
-          )}
-
-          {/*
-            The site's standing rules — round 4.
-
-            Below the location and above the pools because that is the order the
-            questions are asked in: where is it, when is it open, what is in it.
-            Readable by anyone who may see the site — "we do not open on Sundays"
-            is what makes the calendar's gaps explicable — and writable only by
-            an owner or admin, which the API enforces rather than this.
-          */}
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('facilities.hours')}
+                {t('facilities.sitePhotos')}
               </h2>
               {/*
-                Closures live in the calendar and stay there. A site's closed
-                dates are the same table the holidays and the vacation calendar
-                already read, and a second place to enter them would be a second
-                place for them to disagree — so this links rather than repeats.
+                The upload control is present, styled and visibly inert, exactly
+                as it is for pool and student photographs. One storage decision
+                unblocks all three; until then a control that opened a picker and
+                then lost the file would be worse than one that says so.
               */}
-              <Link
-                href={withFrom('/dashboard/calendar/closures', `/dashboard/facilities/${facilityId}`)}
-                className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                {t('facilities.manageClosures')}
-              </Link>
-            </div>
+              <PhotoGallery
+                photos={loaded.photos}
+                canManage={loaded.canManage}
+                emptyLabel={t('facilities.noSitePhotos')}
+                uploadLabel={t('facilities.uploadSitePhoto')}
+                uploadReason={t('students.photoNoStorage')}
+              />
+            </section>
+          ),
+        },
+      ]}
+    />
+  );
+}
 
-            <HoursPanel
-              organizationId={site.organizationId}
-              facilityId={site.id}
-              hours={site.hours}
-              canManage={site.canManage}
-            />
+/**
+ * General: what the site is — its people, its weather, where it is and when it
+ * opens, in the order those questions are asked.
+ */
+async function GeneralTab({
+  site,
+  path,
+}: {
+  site: FacilityDetail;
+  path: string;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
 
-            {/*
-              The schedule grid used to be here, and is not any more — round 6.
-
-              It answered "which rows may a class sit in", which mattered while
-              the board drew a slot as a table row. The calendar now places a
-              class from its own minutes, so the rows are no longer a thing an
-              operator arranges the timetable *with*; they are a thing the drag
-              quietly lands on.
-
-              **The rows themselves are untouched.** They still exist, the
-              calendar still snaps to them — 06:30 stays 06:30 rather than
-              rounding to the quarter — and the Turmas board, the printed sheet
-              and the XLSX export all still read them. What went is the editor,
-              because a grid nobody has to maintain by hand is a page nobody
-              should have to read. If a club ever needs to change those rows
-              again, this is where it comes back.
-            */}
-          </section>
-
-          {prices !== null && (
-            <PricesPanel
-              facilityId={facilityId}
-              plans={prices.plans}
-              periods={prices.periods}
-              seasons={prices.seasons}
-              billing={prices.billing}
-              levels={register?.levels ?? []}
-              canManage={register?.canManage ?? false}
-            />
-          )}
-
-          {/*
-            Directly under the price list, because a concession is the other half
-            of what somebody pays and the two are one conversation. Not gated on
-            `prices`: a reader may see the names without seeing the amounts, and
-            the endpoint decides which — `canSeeValues`, never an absent panel.
-          */}
-          {categories !== null && (
-            <CategoriesPanel
-              facilityId={facilityId}
-              categories={categories.categories}
-              canManage={categories.canManage}
-              canSeeValues={categories.canSeeValues}
-            />
-          )}
-
-          {/*
-            The apólice sits beside the price list because the two halves of the
-            seguro are one conversation: what the club is covered by, and what it
-            charges a family for being on it.
-          */}
-          {policies !== null && (
-            <InsurancePanel
-              facilityId={facilityId}
-              policies={policies}
-              canManage={register?.canManage ?? false}
-            />
-          )}
-
-
-          {partners !== null && (
-            <PartnersPanel
-              facilityId={facilityId}
-              facilityName={site.name}
-              partners={partners.items}
-              total={partners.total}
-              canManage={partners.canManage}
-            />
-          )}
-
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+  return (
+    <>
+      {/*
+        Counts first, because "how big is this" is the question story 2 says the
+        screen exists to answer. Absent entirely for anybody who is not an owner
+        or an admin — the API does not send them, so there is nothing here to
+        hide badly.
+      */}
+      {site.counts !== undefined && (
+        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+          <div>
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('facilities.pools')}
-            </h2>
-
-            {site.pools.length === 0 ? (
-              <p className="text-sm text-foreground-muted">{t('facilities.noPools')}</p>
-            ) : (
-              <ul className="flex flex-col divide-y divide-border">
-                {site.pools.map((pool) => (
-                  <li key={pool.id} className="py-3 first:pt-0 last:pb-0">
-                    <Link
-                      href={withFrom(
-                        `/dashboard/facilities/pools/${pool.id}`,
-                        `/dashboard/facilities/${facilityId}`,
-                      )}
-                      className="flex items-center gap-3 rounded hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    >
-                      <EntityIcon kind="pool" />
-                      <span className="font-medium">{pool.name}</span>
-                      <span className="text-sm text-foreground-muted">
-                        {t(`facilities.kind.${pool.kind}`)}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {/*
-            Espaços, directly below Piscinas — round 6, and the same component
-            Instalações draws inside each site card. The order is deliberate: the
-            tanks are what a swimming pool is, and the balneários, the sala de
-            máquinas and the arrecadação are the rest of the building round them.
-          */}
-          {spaces !== null && (
-            <SpacesPanel
-              facilityId={facilityId}
-              spaces={spaces.items}
-              canManage={spaces.canManage}
-              backTo={`/dashboard/facilities/${facilityId}`}
-            />
-          )}
-
-          {/*
-            Manutenção, after the rooms and before the photographs.
-
-            It comes last of the operational blocks because it is about the
-            future — what has to happen again — where everything above it is
-            about what the site *is*. A task may be about a tank, a room, a piece
-            of kit or the building itself, which is why it is a section of the
-            site rather than a block inside Espaços or Piscinas.
-          */}
-          {tasks !== null && (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('maintenance.section')}
-              </h2>
-              <MaintenancePanel facilityId={facilityId} list={tasks} />
-            </section>
-          )}
-
-          {/*
-            Energy — slice 5.1. Below maintenance because it is the same shape
-            of question about the site — what does running it cost — and above
-            the photographs because it is a record and they are a description.
-          */}
-          {meters !== null && (
-            <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('energy.section')}
-              </h2>
-              <EnergyPanel facilityId={facilityId} list={meters} />
-            </section>
-          )}
-
-          <section className="rounded border border-border bg-surface p-5">
-            <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-              {t('facilities.sitePhotos')}
+              {t('facilities.people')}
             </h2>
             {/*
-              The upload control is present, styled and visibly inert, exactly as
-              it is for pool and student photographs. One storage decision
-              unblocks all three; until then a control that opened a picker and
-              then lost the file would be worse than one that says so.
+              Said out loud rather than left to be discovered. Students and staff
+              belong to the organization, not to a site, so a club with two
+              buildings sees the same numbers on both.
             */}
-            <PhotoGallery
-              photos={site.photos}
-              canManage={site.canManage}
-              emptyLabel={t('facilities.noSitePhotos')}
-              uploadLabel={t('facilities.uploadSitePhoto')}
-              uploadReason={t('students.photoNoStorage')}
-            />
-          </section>
-        </>
+            <p className="mt-1 text-sm text-foreground-muted">{t('facilities.peopleHint')}</p>
+          </div>
+
+          <ul className="grid gap-3 sm:grid-cols-3">
+            {GROUPS.map((group) => (
+              <li key={group.key}>
+                <Link
+                  href={withFrom(group.href, path)}
+                  className="flex flex-col gap-0.5 rounded border border-border p-3 transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {/*
+                    Zero renders as 0, never as an absence. "No instructors yet"
+                    and "this screen forgot to load" look identical when the row
+                    simply is not there.
+                  */}
+                  <span className="text-2xl font-semibold">{site.counts?.[group.key] ?? 0}</span>
+                  <span className="text-sm text-foreground-muted">{t(group.label)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
-    </PageShell>
+
+      <WeatherPanel city={site.city} latitude={site.latitude} longitude={site.longitude} />
+
+      {site.canManage && (
+        <section className="rounded border border-border bg-surface p-5">
+          <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('facilities.location')}
+          </h2>
+          <CityPicker
+            organizationId={site.organizationId}
+            facilityId={site.id}
+            city={site.city}
+            countryCode={site.countryCode}
+          />
+        </section>
+      )}
+
+      {/*
+        The site's standing rules — round 4. Readable by anyone who may see the
+        site — "we do not open on Sundays" is what makes the calendar's gaps
+        explicable — and writable only by an owner or admin, which the API
+        enforces rather than this.
+      */}
+      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('facilities.hours')}
+          </h2>
+          {/*
+            Closures live in the calendar and stay there: a second place to enter
+            them would be a second place for them to disagree.
+          */}
+          <Link
+            href={withFrom('/dashboard/calendar/closures', path)}
+            className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('facilities.manageClosures')}
+          </Link>
+        </div>
+
+        <HoursPanel
+          organizationId={site.organizationId}
+          facilityId={site.id}
+          hours={site.hours}
+          canManage={site.canManage}
+        />
+
+        {/*
+          The schedule grid's editor used to be here and was removed in round 6;
+          the rows themselves are untouched and still read by the calendar, the
+          Turmas board, the printed sheet and the XLSX export. If a club ever
+          needs to change them again, this is where it comes back.
+        */}
+      </section>
+    </>
   );
 }

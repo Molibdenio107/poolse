@@ -44,6 +44,33 @@ it** — content passes under an opaque background while scrolling, without a di
 Three pages render a `BackLink` in their body rather than through the shell's prop; those
 never had one either.
 
+## Detail pages are tabs
+
+A record's page — a site, a tank, a student, a turma — renders through `DetailPage`
+(`components/detail-page.tsx`): a sticky block of back link, title and a pill tab strip, then
+the active tab's content. One former card is one tab; the first is always **General**. Where
+cards are one conversation they share a tab, and the page's header comment says which.
+
+- **The tab is in the URL** as `?tab=<slug>`. Refresh, a shared link and the back button land
+  on it. A missing, unknown or hidden slug shows the first visible tab. Switching tab drops
+  `page` and keeps every other parameter, `from` included.
+- **Only the active tab is fetched.** A list whose refusal decides whether its tab exists, or
+  which feeds a badge, runs with the page; everything else runs when its tab opens. Coming
+  back to a tab fetches it again.
+- **A tab a role may not use is absent** from the strip and from the URL. It reuses the
+  page's existing answer — a `can*` flag, or a list that came back null.
+- **Each card still saves itself.** Typing into a form on a tab marks it unsaved; the save's
+  fresh payload marks it clean. "Cancelar alterações" appears under the tab while it is
+  unsaved and puts every field back. Leaving the tab, following a link or closing the window
+  while unsaved asks first. **The browser's own back button does not ask** — the App Router
+  cannot intercept it.
+- **Badges** are a count or a dot, only from data the page already loads.
+- On a narrow screen the strip scrolls sideways and keeps the active tab in view.
+
+| Page | Tabs |
+|---|---|
+| Site — `/dashboard/facilities/[id]` | Geral (pessoas, meteorologia, localização, horário) · Preços (tabela, categorias, seguro) · Parcerias · Piscinas · Espaços · Manutenção · Energia · Fotografias |
+
 
 ## Invitations
 

@@ -726,6 +726,13 @@ in `numeric` with an explicit unit column — pH, °C, ppm and kWh do not share 
 **Times are stored UTC, displayed in the facility's timezone.** Class schedules are the
 place this bites; get it right once in the scheduling layer.
 
+**A record's page uses `DetailPage`; one card is one tab, and the first is General.** The tab
+is `?tab=<slug>`; each tab's `content` is a function and only the active one is called, so a
+tab nobody opens costs nothing — except a list whose null-on-refusal decides whether its tab
+exists, which runs with the page. Hide a tab with `visible` from an existing `can*` flag or
+refusal, never a new role list. Cards keep their own saves; `DetailTabs` notices typing in a
+posting form and asks before it is lost. `docs/features/navigation.md`.
+
 **One content width, and the calendar is the single exception.** `PageShell` caps every page
 at `max-w-page`; `width="wide"` exists for a screen whose content is a grid rather than prose,
 and the calendar is meant to stay its only caller. A second caller is a decision to take out

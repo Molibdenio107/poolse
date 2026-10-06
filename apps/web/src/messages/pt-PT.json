@@ -3484,5 +3484,20 @@
       "taxNumberTaken": "Este NIPC já está associado a outra organização. Se é engano, fale connosco.",
       "taxFailed": "Não foi possível guardar os dados fiscais."
     }
+  },
+  "detailTabs": {
+    "label": "Secções",
+    "general": "Geral",
+    "prices": "Preços",
+    "unsaved": "Tem alterações por guardar.",
+    "cancel": "Cancelar alterações",
+    "discardTitle": "Descartar alterações?",
+    "discardBody": "O que escreveu neste separador ainda não foi guardado e perde-se se sair.",
+    "discard": "Descartar",
+    "keepEditing": "Continuar a editar",
+    "badge": {
+      "spacesOverdue": "Há espaços com limpeza em atraso",
+      "maintenanceDue": "Há manutenção por fazer"
+    }
   }
 }

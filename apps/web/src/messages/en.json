@@ -3484,5 +3484,20 @@
       "taxNumberTaken": "This NIPC already belongs to another organization. If that is a mistake, get in touch.",
       "taxFailed": "Could not save the tax details."
     }
+  },
+  "detailTabs": {
+    "label": "Sections",
+    "general": "General",
+    "prices": "Prices",
+    "unsaved": "You have unsaved changes.",
+    "cancel": "Cancel changes",
+    "discardTitle": "Discard changes?",
+    "discardBody": "What you typed on this tab has not been saved and is lost if you leave.",
+    "discard": "Discard",
+    "keepEditing": "Keep editing",
+    "badge": {
+      "spacesOverdue": "A space is overdue for cleaning",
+      "maintenanceDue": "Maintenance is due"
+    }
   }
 }

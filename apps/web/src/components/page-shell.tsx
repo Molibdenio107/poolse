@@ -44,6 +44,7 @@ export function PageShell({
   back,
   actions,
   filters,
+  tabs,
   children,
   className,
   width = 'default',
@@ -56,6 +57,14 @@ export function PageShell({
   actions?: React.ReactNode;
   /** A search or filter row, between the header and the content. */
   filters?: React.ReactNode;
+  /**
+   * A detail page's tab strip — `DetailPage` passes it, nothing else should.
+   *
+   * With it, the back link, the title and the strip stick together under the
+   * app bar as one block: the point of tabs is that the way to the next section
+   * is always on screen, and a strip that scrolled away would undo it.
+   */
+  tabs?: React.ReactNode;
   children: React.ReactNode;
   /** For the content column only. Never for outer padding. */
   className?: string;
@@ -98,29 +107,22 @@ export function PageShell({
           `bg-background` while scrolling, now without a rule marking the edge.
           Nothing depended on the 1px for spacing.
         */}
-        {back !== undefined && (
-          <div className="sticky top-app-bar z-10 -mx-page -mt-2 bg-background px-page py-2">
-            <BackLink href={back.href} label={back.label} />
+        {tabs === undefined ? (
+          <>
+            {back !== undefined && (
+              <div className="sticky top-app-bar z-10 -mx-page -mt-2 bg-background px-page py-2">
+                <BackLink href={back.href} label={back.label} />
+              </div>
+            )}
+            <Header title={title} subtitle={subtitle} actions={actions} />
+          </>
+        ) : (
+          <div className="sticky top-app-bar z-10 -mx-page -mt-2 flex flex-col gap-2 bg-background px-page py-2">
+            {back !== undefined && <BackLink href={back.href} label={back.label} />}
+            <Header title={title} subtitle={subtitle} actions={actions} />
+            {tabs}
           </div>
         )}
-
-        <header className="flex min-h-page-header items-start justify-between gap-4">
-          <div className="min-w-0">
-            {/*
-              Clamped, not wrapped without limit — 41.10. A long translated title
-              has to be allowed to be long without making this page taller than the
-              one beside it.
-            */}
-            <h1 className="line-clamp-2 text-2xl font-semibold tracking-tight">{title}</h1>
-            {subtitle !== undefined && (
-              <p className="line-clamp-2 text-sm text-foreground-muted">{subtitle}</p>
-            )}
-          </div>
-
-          {actions !== undefined && (
-            <div className="flex shrink-0 items-center gap-2">{actions}</div>
-          )}
-        </header>
 
         {filters !== undefined && (
           <div className="flex flex-wrap items-end gap-3">{filters}</div>
@@ -129,6 +131,36 @@ export function PageShell({
         <div className={cn('flex flex-col gap-page-gap', className)}>{children}</div>
       </div>
     </main>
+  );
+}
+
+function Header({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string;
+  subtitle?: string | undefined;
+  actions?: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <header className="flex min-h-page-header items-start justify-between gap-4">
+      <div className="min-w-0">
+        {/*
+          Clamped, not wrapped without limit — 41.10. A long translated title
+          has to be allowed to be long without making this page taller than the
+          one beside it.
+        */}
+        <h1 className="line-clamp-2 text-2xl font-semibold tracking-tight">{title}</h1>
+        {subtitle !== undefined && (
+          <p className="line-clamp-2 text-sm text-foreground-muted">{subtitle}</p>
+        )}
+      </div>
+
+      {actions !== undefined && (
+        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+      )}
+    </header>
   );
 }
 
