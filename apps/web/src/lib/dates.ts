@@ -102,28 +102,11 @@ export function shortDate(date: string, locale: string): string {
   }).format(new Date(toDate(date)));
 }
 
-/**
- * "24 ago 2026" — the narrow-screen form, keeping the year.
- *
- * POOLSE-02 asks the week header to shorten rather than wrap on a phone. It
- * keeps the year because the header's whole job is saying *which* week, and a
- * range with no year is ambiguous the moment somebody is looking at January from
- * December.
+/*
+ * `mediumDate` and `longDate` were here — "24 ago 2026", "24 de agosto de
+ * 2026". Removed on 6 October 2026 rather than left for the next caller: every
+ * date in Poolse is dd-MM-yyyy through `formatDate` in `date-format.ts`, and
+ * these two were how the week header and the season still read in words a
+ * month after that rule. The named `long` / `short` formats went from i18n.ts
+ * for the same reason.
  */
-export function mediumDate(date: string, locale: string): string {
-  return new Intl.DateTimeFormat(forFormatting(locale), {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(toDate(date)));
-}
-
-export function longDate(date: string, locale: string): string {
-  return new Intl.DateTimeFormat(forFormatting(locale), {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(toDate(date)));
-}

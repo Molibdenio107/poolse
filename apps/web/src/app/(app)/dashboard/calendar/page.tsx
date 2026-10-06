@@ -15,8 +15,6 @@ import {
   addDays,
   isDate,
   isoWeekday,
-  longDate,
-  mediumDate,
   mondayOf,
   seasonOf,
   shortDate,
@@ -28,6 +26,7 @@ import { bookingKey, slotKey } from '@/lib/slot-key';
 import { GenerateSeason } from './calendar-forms';
 import { PageError, PageShell } from '@/components/page-shell';
 import { TimetableImport } from './import/import-panel';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * The dated calendar — slices 1.5 and 1.6.
@@ -221,7 +220,7 @@ export default async function CalendarPage({
             calendar?.canManage === true && !cancelled
               ? {
                   className: session.className,
-                  when: `${longDate(session.localDate, locale)}, ${session.localTime}`,
+                  when: `${formatDate(session.localDate)}, ${session.localTime}`,
                 }
               : undefined,
           cancelled,
@@ -363,20 +362,14 @@ export default async function CalendarPage({
               {/*
                 Always dated, and never wrapped. "Esta semana" alone cannot say
                 which week once you have moved off it, which is the moment the
-                label matters most — so the narrow form shortens the month rather
-                than breaking across two lines.
+                label matters most. dd-MM-yyyy is short enough to need no narrow
+                form, which the month-in-words version did.
               */}
               <p className="text-center text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                <span className="hidden sm:inline">
+                <span className="whitespace-nowrap">
                   {t('calendar.range', {
-                    from: longDate(monday, locale),
-                    to: longDate(sunday, locale),
-                  })}
-                </span>
-                <span className="whitespace-nowrap sm:hidden">
-                  {t('calendar.range', {
-                    from: mediumDate(monday, locale),
-                    to: mediumDate(sunday, locale),
+                    from: formatDate(monday),
+                    to: formatDate(sunday),
                   })}
                 </span>
               </p>
@@ -447,8 +440,8 @@ export default async function CalendarPage({
               className="text-center text-sm font-medium text-foreground-muted"
             >
               {t('calendar.range', {
-                from: longDate(monday, locale),
-                to: longDate(sunday, locale),
+                from: formatDate(monday),
+                to: formatDate(sunday),
               })}
             </p>
 
@@ -471,8 +464,8 @@ export default async function CalendarPage({
                 </h2>
                 <p className="mt-1 text-sm text-foreground-muted">
                   {t('calendar.seasonHint', {
-                    from: longDate(season.from, locale),
-                    to: longDate(season.to, locale),
+                    from: formatDate(season.from),
+                    to: formatDate(season.to),
                   })}
                 </p>
               </div>

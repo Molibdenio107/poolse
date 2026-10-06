@@ -4,10 +4,11 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
-import { addDays, longDate, mondayOf, shortDate, today } from '@/lib/dates';
+import { addDays, mondayOf, shortDate, today } from '@/lib/dates';
 import type { CalendarSession, TimetableEntry } from '@/lib/api';
 import { studentWeekAction } from '../students.actions';
 import { laneLabel } from '@/lib/lanes';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * "This student's week", stepping without reloading the page — round 6.
@@ -91,7 +92,7 @@ export function StudentWeek({
           {t('students.week')}
         </h2>
         <p className="text-sm text-foreground-muted">
-          {t('calendar.range', { from: longDate(monday, locale), to: longDate(sunday, locale) })}
+          {t('calendar.range', { from: formatDate(monday), to: formatDate(sunday) })}
         </p>
       </div>
 

@@ -197,7 +197,7 @@ export function TeamMap({ data }: { data: TeamVacations }): React.ReactElement {
                         appears in the grid — two cues for the same person. */}
                     <span
                       aria-hidden
-                      className={`inline-flex size-4 items-center justify-center rounded text-[0.6rem] font-semibold text-white ${hue.dot}`}
+                      className={`inline-flex size-4 items-center justify-center rounded text-[0.6rem] font-semibold text-person-foreground ${hue.dot}`}
                     >
                       {initialOf(member.name)}
                     </span>

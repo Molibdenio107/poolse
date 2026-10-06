@@ -2,10 +2,10 @@ import { notFound } from 'next/navigation';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Register } from '@/lib/api';
-import { longDate } from '@/lib/dates';
 import { RegisterForm } from './register-form';
 import { PageError, PageShell } from '@/components/page-shell';
 import { laneLabel } from '@/lib/lanes';
+import { formatDate } from '@/lib/date-format';
 
 type RegisterResponse = Register & { organizationId: string; canRecord: boolean };
 
@@ -53,7 +53,7 @@ export default async function AttendancePage({
         register === null
           ? undefined
           : [
-              longDate(register.localDate, locale),
+              formatDate(register.localDate),
               register.localTime,
               register.poolName,
               laneLabel(register.lanes, t),

@@ -1,11 +1,11 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ApiError, apiFetch, type Seasons } from '../../../../../lib/api';
-import { mediumDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { SeasonReset } from './season-reset';
 import { SeasonDrafts } from './season-drafts';
 import { PageError, PageShell } from '@/components/page-shell';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * Seasons — POOLSE-07.
@@ -79,7 +79,7 @@ export default async function SeasonsPage(): Promise<React.ReactElement> {
                         </span>
                       </span>
                       <span className="text-sm text-foreground-muted">
-                        {mediumDate(season.startsOn, locale)} — {mediumDate(season.endsOn, locale)}
+                        {formatDate(season.startsOn)} — {formatDate(season.endsOn)}
                       </span>
                     </div>
                     <span className="text-sm text-foreground-muted">
