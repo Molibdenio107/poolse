@@ -404,7 +404,7 @@ export function CancelSessionDialog({
             <button
               type="submit"
               disabled={pending}
-              className="rounded bg-danger px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-60"
+              className="rounded bg-destructive px-3 py-1.5 text-sm text-destructive-foreground disabled:opacity-60"
             >
               {t('calendar.confirmCancel')}
             </button>

@@ -70,7 +70,7 @@ export function MergeButton({
             <button
               type="submit"
               disabled={pending}
-              className="rounded bg-danger px-4 py-2 text-sm text-white disabled:opacity-60"
+              className="rounded bg-destructive px-4 py-2 text-sm text-destructive-foreground disabled:opacity-60"
             >
               {pending ? t('common.working') : t('people.mergeYes')}
             </button>

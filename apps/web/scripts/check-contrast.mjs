@@ -68,6 +68,7 @@ const PAIRS = [
   ['primary', 'background', 4.5, 'links on the page'],
   ['primary', 'surface', 4.5, 'links on a card'],
   ['primary-foreground', 'primary', 4.5, 'text on a primary button'],
+  ['destructive-foreground', 'destructive', 4.5, 'text on a destructive button — every confirm-to-delete'],
 
   // Status colours. These carry meaning, so they are paired with words
   // everywhere — but the words themselves still have to be readable.

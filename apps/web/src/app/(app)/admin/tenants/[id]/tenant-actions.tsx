@@ -116,7 +116,7 @@ function Submit({
         'inline-flex h-control items-center gap-2 self-start rounded px-3 text-sm font-medium disabled:opacity-60',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
         tone === 'danger'
-          ? 'bg-danger text-white outline-danger hover:bg-danger/90'
+          ? 'bg-destructive text-destructive-foreground outline-danger hover:bg-destructive/90'
           : 'bg-primary text-primary-foreground outline-primary hover:bg-primary/90',
       )}
     >

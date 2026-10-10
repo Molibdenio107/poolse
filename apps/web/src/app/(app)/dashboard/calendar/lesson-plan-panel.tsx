@@ -299,20 +299,30 @@ export function LessonPlanPanel({
                   nothing, so it cannot silently overwrite five minutes of work.
                 */}
                 {plan.previous !== null && (
-                  <button
-                    type="button"
-                    disabled={body.trim() !== ''}
-                    onClick={() => setBody(plan.previous?.body ?? '')}
-                    title={
-                      body.trim() === '' ? undefined : t('calendar.plan.copyBlockedHint')
-                    }
-                    className={BUTTON_QUIET}
-                  >
-                    <Copy aria-hidden className="size-3.5" />
-                    {t('calendar.plan.copyPrevious', {
-                      date: formatDate(plan.previous.onDate),
-                    })}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled={body.trim() !== ''}
+                      onClick={() => setBody(plan.previous?.body ?? '')}
+                      aria-describedby={body.trim() === '' ? undefined : 'plan-copy-blocked'}
+                      className={BUTTON_QUIET}
+                    >
+                      <Copy aria-hidden className="size-3.5" />
+                      {t('calendar.plan.copyPrevious', {
+                        date: formatDate(plan.previous.onDate),
+                      })}
+                    </button>
+                    {/*
+                      Visible, not a `title`: a disabled button's tooltip never
+                      opens on touch or by keyboard, so the reason it is greyed
+                      out has to be on the page — staff-form.tsx learnt this first.
+                    */}
+                    {body.trim() !== '' && (
+                      <span id="plan-copy-blocked" className="text-xs text-foreground-muted">
+                        {t('calendar.plan.copyBlockedHint')}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             </>

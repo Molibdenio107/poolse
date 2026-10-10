@@ -311,7 +311,7 @@ function ConfirmArchive({
           <button
             type="submit"
             disabled={pending}
-            className="h-control rounded bg-danger px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="h-control rounded bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('maintenance.remove')}
           </button>

@@ -129,9 +129,12 @@ export default async function TenantRequestsPage({
       key: 'at',
       header: t('admin.error.when'),
       render: (row) => (
-        <span title={formatStamp(new Date(row.at))}>
-          {timeAgo(row.at, locale) ?? formatStamp(new Date(row.at))}
-        </span>
+        // The exact moment as text beside the phrase, not only in a `title`:
+        // somebody investigating an error needs it, on any device.
+        <time dateTime={row.at} className="flex flex-col">
+          <span>{timeAgo(row.at, locale) ?? formatStamp(row.at)}</span>
+          <span className="text-xs text-foreground-muted">{formatStamp(row.at)}</span>
+        </time>
       ),
     },
     {

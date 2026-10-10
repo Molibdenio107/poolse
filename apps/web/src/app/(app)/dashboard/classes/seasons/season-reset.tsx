@@ -128,7 +128,7 @@ export function SeasonReset({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-danger px-4 py-2 text-white disabled:opacity-60"
+          className="rounded bg-destructive px-4 py-2 text-destructive-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('seasons.confirmButton')}
         </button>

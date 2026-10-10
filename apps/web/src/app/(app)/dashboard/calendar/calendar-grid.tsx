@@ -44,6 +44,7 @@ import { toMinutes } from '@/lib/grid-layout';
 import { cn } from '@/lib/utils';
 import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
 import { useToast } from '@/components/ui/toast';
+import { inkFor } from '@/lib/ink';
 
 /**
  * The dated week, drawn on a pixel scale — round 6.
@@ -1540,7 +1541,10 @@ function Block({
       data-booking={booking.id}
       className={cn(
         'pointer-events-auto absolute overflow-hidden rounded px-1.5 py-1 text-left text-white',
-        'ring-1 ring-black/10',
+        'ring-1 ring-border',
+        // A keyboard tab stop (dnd-kit's attributes make it one), so it shows
+        // where focus is before Space picks it up.
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
         tint,
         // Nothing on a block is clickable now, so a read-only one says so
         // rather than offering a pointer that does nothing.
@@ -1555,9 +1559,19 @@ function Block({
         width: width - 3,
         top,
         height,
+        /*
+          The partnership's own colour, and text that reads on it. White on
+          every partner hex put a pale yellow school at 1.3:1; `inkFor` picks
+          white or near-black by contrast with whatever the club chose.
+        */
         ...(booking.partnerColour === null || booking.subjectType !== 'parceria'
           ? {}
-          : { backgroundColor: booking.partnerColour }),
+          : {
+              backgroundColor: booking.partnerColour,
+              ...(inkFor(booking.partnerColour) === null
+                ? {}
+                : { color: inkFor(booking.partnerColour)! }),
+            }),
         // Transform only. Nothing here reads or writes a layout property, so a
         // drag never costs a reflow.
         transform:
@@ -1602,8 +1616,7 @@ function Block({
       {movable && (
         <>
           <span
-            role="presentation"
-            aria-label={t('calendar.resize')}
+            aria-hidden="true"
             onPointerDown={(event) => {
               event.stopPropagation();
               event.preventDefault();
@@ -1612,8 +1625,7 @@ function Block({
             className="absolute inset-x-2 bottom-0 h-2 cursor-ns-resize"
           />
           <span
-            role="presentation"
-            aria-label={t('calendar.resizeLanes')}
+            aria-hidden="true"
             onPointerDown={(event) => {
               event.stopPropagation();
               event.preventDefault();
@@ -1622,8 +1634,7 @@ function Block({
             className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize"
           />
           <span
-            role="presentation"
-            aria-label={t('calendar.resizeLanes')}
+            aria-hidden="true"
             onPointerDown={(event) => {
               event.stopPropagation();
               event.preventDefault();

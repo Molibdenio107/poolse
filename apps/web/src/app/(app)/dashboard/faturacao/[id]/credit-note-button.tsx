@@ -29,7 +29,7 @@ const BUTTON_QUIET =
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const BUTTON_DANGER =
-  'rounded bg-danger px-4 py-2 text-sm text-primary-foreground disabled:opacity-50 ' +
+  'rounded bg-destructive px-4 py-2 text-sm text-destructive-foreground disabled:opacity-50 ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger';
 
 export function CreditNoteButton({

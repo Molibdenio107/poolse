@@ -214,7 +214,7 @@ export function DetailTabs({
               discard();
               go?.();
             }}
-            className="h-control rounded bg-danger px-3 text-sm font-medium text-white hover:bg-danger/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+            className="h-control rounded bg-destructive px-3 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
           >
             {t('detailTabs.discard')}
           </button>

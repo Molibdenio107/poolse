@@ -375,9 +375,12 @@ function tenantColumns(
             Portuguese string hard-coded into an interface that ships in two
             languages.
           */
-          <span title={formatStamp(new Date(tenant.lastActivityAt))}>
-            {t('admin.activeAgo', { ago: timeAgo(tenant.lastActivityAt, locale) ?? '' })}
-          </span>
+          <time dateTime={tenant.lastActivityAt} className="flex flex-col">
+            <span>{t('admin.activeAgo', { ago: timeAgo(tenant.lastActivityAt, locale) ?? '' })}</span>
+            <span className="text-xs text-foreground-muted">
+              {formatStamp(tenant.lastActivityAt)}
+            </span>
+          </time>
         ),
     },
   ];

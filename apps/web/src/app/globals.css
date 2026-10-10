@@ -360,4 +360,20 @@
   input[type='search']::-webkit-search-cancel-button {
     -webkit-appearance: none;
   }
+
+  /*
+   * A focus ring every interactive element gets, whether or not its classes
+   * remember to ask for one — October 2026 sweep.
+   *
+   * About 130 buttons and links across 60 files carried no `focus-visible:`
+   * class and fell back to the browser's own ring, which is faint on a card and
+   * nearly invisible on a `bg-primary` fill. `:where()` gives this zero
+   * specificity, so every component that styles its own focus keeps it; this is
+   * only what a component that forgot gets. The brand colour at 2px is the ring
+   * the shared button classes already draw, measured at 3:1 in check-contrast.
+   */
+  :where(a, button, summary, select, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: 2px solid rgb(var(--primary));
+    outline-offset: 2px;
+  }
 }
