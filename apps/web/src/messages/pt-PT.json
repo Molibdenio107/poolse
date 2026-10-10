@@ -742,7 +742,7 @@
     "done": "Feito",
     "doneBy": "{name} — {when}",
     "due": "Em atraso",
-    "dueBy": "Em atraso há {days} dias",
+    "dueBy": "Em atraso há {days, plural, one {# dia} other {# dias}}",
     "empty": "Ainda não há tarefas de manutenção.",
     "emptyHint": "Contralavagem semanal, revisão trimestral da bomba, verificação mensal das luzes de emergência.",
     "every": "De quantos em quantos dias",
@@ -1584,8 +1584,8 @@
     "notes": "Notas",
     "notesHint": "Coberturas, exclusões, o que for preciso lembrar na renovação.",
     "validUntil": "Válida até {date}",
-    "renewalDue": "Termina daqui a {days} dias",
-    "expired": "Terminou há {days} dias",
+    "renewalDue": "{days, plural, =0 {Termina hoje} one {Termina amanhã} other {Termina daqui a # dias}}",
+    "expired": "{days, plural, =0 {Terminou hoje} one {Terminou há # dia} other {Terminou há # dias}}",
     "inUse": "Esta apólice ainda cobre {count} alunos. Termine essas coberturas antes de a arquivar.",
     "saveFailed": "Não foi possível guardar a apólice."
   },
@@ -2198,7 +2198,7 @@
     "widget": {
       "subscription": {
         "empty": "Ainda não há nada a dizer sobre a subscrição.",
-        "trial": "Faltam {days} dias — o período experimental termina a {on}.",
+        "trial": "{days, plural, =0 {O período experimental termina hoje} one {Falta 1 dia — o período experimental termina a {on}} other {Faltam # dias — o período experimental termina a {on}}}.",
         "renews": "Renova a {on}.",
         "ends": "Termina a {on}."
       },

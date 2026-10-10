@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { BandMap, BandOverride, PoolAlert, PoolAnalysis, PoolMetric } from '@/lib/api';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { TrendChart } from '@/components/trend-chart';
@@ -8,6 +8,7 @@ import { ExportAnalyses, UnsafeWaterNotice } from './water-actions';
 import { WaterImport } from './pools/[poolId]/water-import';
 import { AnalysisForm, ArchiveAnalysisButton, SafeRangesForm } from './analysis-forms';
 import { formatStamp } from '@/lib/date-format';
+import { formatReading } from '@/lib/pool-metrics';
 
 /**
  * Water quality — round 4, built.
@@ -71,6 +72,7 @@ export async function ReadingsBlock({
   canRecord: boolean;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const locale = await getLocale();
 
   const labelFor = (metric: PoolMetric): string => t(`facilities.metric.${metric}`);
 
@@ -130,7 +132,7 @@ export async function ReadingsBlock({
               >
                 <dt className="text-sm text-foreground-muted">{labelFor(value.metric)}</dt>
                 <dd className="text-lg font-medium">
-                  {value.value}{' '}
+                  {formatReading(value.value, locale)}{' '}
                   <span className="text-sm font-normal text-foreground-muted">{value.unit}</span>
                 </dd>
               </div>
@@ -163,6 +165,7 @@ export async function ReadingsBlock({
                 return (
                   <TrendChart
                     key={metric}
+                    locale={locale}
                     points={points}
                     label={labelFor(metric)}
                     unit={
@@ -208,7 +211,7 @@ export async function ReadingsBlock({
                   {analysis.values.map((value) => (
                     <span key={value.metric}>
                       <span className="text-foreground-muted">{labelFor(value.metric)}: </span>
-                      {value.value} {value.unit}
+                      {formatReading(value.value, locale)} {value.unit}
                     </span>
                   ))}
                 </span>

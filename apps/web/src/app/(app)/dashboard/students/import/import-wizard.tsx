@@ -18,6 +18,7 @@ import {
   type Sheet,
 } from '@/lib/sheet';
 import { useImportWizard, type ImportStage } from '@/lib/use-import-wizard';
+import { formatDate } from '@/lib/date-format';
 import {
   matchSheetAction,
   readSheetAction,
@@ -852,7 +853,7 @@ function PreviewRow({
           `${row.firstName} ${row.lastName}`
         )}
       </td>
-      <td className="px-3 py-2 tabular-nums">{row.birthDate ?? '—'}</td>
+      <td className="px-3 py-2 tabular-nums">{formatDate(row.birthDate) || row.birthDate || '—'}</td>
       <td className="px-3 py-2">{row.levelName ?? '—'}</td>
       <td className="px-3 py-2">
         {row.guardian === null ? '—' : `${row.guardian.name} (${row.guardian.relationship})`}

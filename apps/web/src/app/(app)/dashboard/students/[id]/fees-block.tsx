@@ -117,9 +117,9 @@ function CoverBadge({ cover }: { cover: StudentFees['cover'] }): React.ReactElem
       <p className="flex items-center gap-1.5 text-sm text-foreground-muted">
         <ShieldCheck aria-hidden className="size-4 shrink-0 text-primary" />
         {cover.insurerName === null
-          ? t('fees.coverUntil', { date: cover.coversTo ?? '' })
+          ? t('fees.coverUntil', { date: formatDate(cover.coversTo) })
           : t('fees.coverUntilBy', {
-              date: cover.coversTo ?? '',
+              date: formatDate(cover.coversTo),
               insurer: cover.insurerName,
             })}
       </p>
@@ -130,7 +130,7 @@ function CoverBadge({ cover }: { cover: StudentFees['cover'] }): React.ReactElem
     <p className="flex items-center gap-1.5 text-sm text-warning">
       <AlertTriangle aria-hidden className="size-4 shrink-0" />
       {cover.lapsed
-        ? t('fees.coverLapsed', { date: cover.coversTo ?? '' })
+        ? t('fees.coverLapsed', { date: formatDate(cover.coversTo) })
         : t('fees.coverNone')}
     </p>
   );
@@ -577,7 +577,7 @@ export function FeesBlock({
               >
                 <span>{lineLabel(line, t)}</span>
                 <span className="tabular-nums">{formatCents(locale, line.payableCents)}</span>
-                <span>{t('fees.endedOn', { date: line.endsOn ?? '' })}</span>
+                <span>{t('fees.endedOn', { date: formatDate(line.endsOn) })}</span>
               </li>
             ))}
           </ul>
@@ -977,12 +977,12 @@ function PaidToggle({
           </span>
           {showingPaid
             ? onCurrent
-              ? t('fees.paidOn', { date: line.paidOn ?? '' })
+              ? t('fees.paidOn', { date: formatDate(line.paidOn) })
               : t('fees.paidLabel')
             : onCurrent && line.isOverdue
-              ? t('fees.overdueSince', { date: line.dueOn ?? '' })
+              ? t('fees.overdueSince', { date: formatDate(line.dueOn) })
               : onCurrent
-                ? t('fees.dueBy', { date: line.dueOn ?? '' })
+                ? t('fees.dueBy', { date: formatDate(line.dueOn) })
                 : t('fees.notPaid')}
         </button>
       </span>

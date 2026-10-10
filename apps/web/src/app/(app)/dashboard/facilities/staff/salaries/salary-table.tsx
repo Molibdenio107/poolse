@@ -141,7 +141,7 @@ export function SalaryTable({
                     {live === null ? (
                       <span className="text-foreground-muted">—</span>
                     ) : (
-                      formatDate(new Date(`${live.effectiveFrom}T00:00:00`))
+                      formatDate(live.effectiveFrom)
                     )}
                   </td>
                 </tr>

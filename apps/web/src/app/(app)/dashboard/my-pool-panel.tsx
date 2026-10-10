@@ -7,6 +7,7 @@ import { excursionText } from '@/lib/excursion-text';
 import { timeAgo } from '@/lib/relative-time';
 import { withFrom } from '@/lib/back';
 import { formatStamp } from '@/lib/date-format';
+import { formatReading } from '@/lib/pool-metrics';
 
 /**
  * "A minha piscina" — the personal tenant's dashboard, slice 4.5.
@@ -75,7 +76,7 @@ export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React
                     {t(`facilities.metric.${value.metric}`)}
                   </dt>
                   <dd className="text-lg font-medium">
-                    {value.value}{' '}
+                    {formatReading(value.value, locale)}{' '}
                     <span className="text-sm font-normal text-foreground-muted">{value.unit}</span>
                   </dd>
                   {excursion !== undefined && text !== null ? (

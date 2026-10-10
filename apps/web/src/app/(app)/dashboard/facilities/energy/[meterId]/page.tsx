@@ -303,8 +303,8 @@ export default async function MeterPage({
                                 href={withFrom(`${here}/invoices/${bill.id}`, `${here}?tab=invoices`)}
                                 className="font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                               >
-                                {formatDate(new Date(`${bill.periodStart}T00:00:00`))} –{' '}
-                                {formatDate(new Date(`${bill.periodEnd}T00:00:00`))}
+                                {formatDate(bill.periodStart)} –{' '}
+                                {formatDate(bill.periodEnd)}
                               </Link>
                               <span className="block text-xs text-foreground-muted">
                                 {t('energy.invoice.days', { days: bill.days })} · {bill.supplier}

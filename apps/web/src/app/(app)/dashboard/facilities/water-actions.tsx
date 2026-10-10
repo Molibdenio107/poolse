@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle } from 'lucide-react';
 import type { PoolAnalysis } from '@/lib/api';
 import type { Excursion } from '@/lib/water';
 import { excursionText } from '@/lib/excursion-text';
 import { toCsv } from '@/lib/csv';
+import { formatReading } from '@/lib/pool-metrics';
 
 /**
  * "This water is out of range — do you want to shut the pool?"
@@ -44,6 +45,7 @@ export function UnsafeWaterNotice({
   excursions: Excursion[];
 }): React.ReactElement | null {
   const t = useTranslations();
+  const locale = useLocale();
 
   if (excursions.length === 0) return null;
 
@@ -79,7 +81,7 @@ export function UnsafeWaterNotice({
               const text = excursionText(excursion);
               return (
                 <li key={excursion.metric}>
-                  {t(`facilities.metric.${excursion.metric}`)}: {excursion.value}{' '}
+                  {t(`facilities.metric.${excursion.metric}`)}: {formatReading(excursion.value, locale)}{' '}
                   {excursion.unit} — {t(text.key, text.values)}
                 </li>
               );

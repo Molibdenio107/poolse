@@ -360,7 +360,7 @@ function ClosureForm({
       <input type="hidden" name="endsOn" value={range[1]} />
 
       <h2 className="font-medium">
-        {t('calendar.closeFrom', { from: range[0], to: range[1] })}
+        {t('calendar.closeFrom', { from: formatDate(range[0]), to: formatDate(range[1]) })}
       </h2>
 
       {/*

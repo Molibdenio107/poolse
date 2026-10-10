@@ -162,7 +162,7 @@ export function LessonPlanPanel({
       title={t('calendar.plan.title')}
       {...(plan === undefined
         ? {}
-        : { description: formatDate(new Date(`${plan.onDate}T00:00:00`)) })}
+        : { description: formatDate(plan.onDate) })}
       closeLabel={t('common.close')}
     >
       {plan === undefined ? (

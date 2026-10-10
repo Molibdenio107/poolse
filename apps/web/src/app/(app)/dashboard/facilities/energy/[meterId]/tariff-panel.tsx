@@ -135,11 +135,11 @@ export function TariffPanel({
                 <span className="text-xs text-foreground-muted">
                   {tariff.effectiveTo === null
                     ? t('energy.tariff.fromOn', {
-                        from: formatDate(new Date(`${tariff.effectiveFrom}T00:00:00`)),
+                        from: formatDate(tariff.effectiveFrom),
                       })
                     : t('energy.tariff.between', {
-                        from: formatDate(new Date(`${tariff.effectiveFrom}T00:00:00`)),
-                        to: formatDate(new Date(`${tariff.effectiveTo}T00:00:00`)),
+                        from: formatDate(tariff.effectiveFrom),
+                        to: formatDate(tariff.effectiveTo),
                       })}
                   {' · '}
                   {t(`energy.tariff.provenance.${tariff.provenance}`)}

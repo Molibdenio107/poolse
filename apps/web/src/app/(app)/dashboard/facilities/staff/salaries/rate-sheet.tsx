@@ -88,7 +88,7 @@ export function RateSheet({
   // the client provider. Asking for one that was never configured is a
   // MISSING_FORMAT throw at render time, on whichever screen draws it first.
   const day = (value: string): string =>
-    formatDate(new Date(`${value}T00:00:00`));
+    formatDate(value);
 
   return (
     <Dialog
@@ -201,10 +201,10 @@ export function RateSheet({
 
                           <p className="mt-2 text-xs text-foreground-muted">
                             {rate.createdByName === null
-                              ? t('salaries.recordedAt', { date: day(rate.createdAt.slice(0, 10)) })
+                              ? t('salaries.recordedAt', { date: formatDate(rate.createdAt) })
                               : t('salaries.recordedBy', {
                                   name: rate.createdByName,
-                                  date: day(rate.createdAt.slice(0, 10)),
+                                  date: formatDate(rate.createdAt),
                                 })}
                           </p>
 

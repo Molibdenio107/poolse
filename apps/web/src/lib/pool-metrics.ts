@@ -17,3 +17,13 @@
  * client as this file ever was, and there is now one list rather than two.
  */
 export { POOL_METRICS, type PoolMetric } from '@poolse/rules';
+
+/**
+ * A water reading as the reader writes numbers — "7,4" in Portuguese, "7.4" in
+ * English. A bare `{value}` renders JavaScript's own "7.4" in both, which reads
+ * as a typo to a Portuguese club. Up to three decimals: chlorine is read to
+ * hundredths and a lab report to thousandths, and none of them is rounded here.
+ */
+export function formatReading(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }).format(value);
+}

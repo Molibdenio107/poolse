@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { formatReading } from '@/lib/pool-metrics';
 
 export interface TrendPoint {
   /** ISO instant. Only used for the accessible table and the tooltip. */
@@ -33,6 +34,7 @@ export function TrendChart({
   unit,
   band,
   className,
+  locale = 'pt-PT',
 }: {
   /** Oldest first. A single point is drawn as a dot rather than hidden. */
   points: TrendPoint[];
@@ -41,6 +43,8 @@ export function TrendChart({
   /** The healthy range, if this metric has one. */
   band?: { from: number; to: number } | undefined;
   className?: string;
+  /** The reader's locale, so the caption writes 7,4 rather than 7.4. */
+  locale?: string;
 }): React.ReactElement | null {
   // One reading draws a dot, not nothing — round 4 follow-up.
   //
@@ -135,8 +139,8 @@ export function TrendChart({
         */}
         <span className="text-foreground-muted">
           {values.length === 1
-            ? values[0]
-            : `${values[0]} → ${values[values.length - 1]}`}
+            ? formatReading(values[0]!, locale)
+            : `${formatReading(values[0]!, locale)} → ${formatReading(values[values.length - 1]!, locale)}`}
         </span>
       </figcaption>
     </figure>

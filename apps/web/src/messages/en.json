@@ -742,7 +742,7 @@
     "done": "Done",
     "doneBy": "{name} — {when}",
     "due": "Overdue",
-    "dueBy": "{days} days overdue",
+    "dueBy": "{days, plural, one {# day} other {# days}} overdue",
     "empty": "No maintenance tasks yet.",
     "emptyHint": "Weekly backwash, quarterly pump service, monthly emergency-lighting check.",
     "every": "How many days between",
@@ -1584,8 +1584,8 @@
     "notes": "Notes",
     "notesHint": "Cover, exclusions, whatever is worth remembering at renewal.",
     "validUntil": "Valid until {date}",
-    "renewalDue": "Ends in {days} days",
-    "expired": "Ended {days} days ago",
+    "renewalDue": "{days, plural, =0 {Ends today} one {Ends tomorrow} other {Ends in # days}}",
+    "expired": "{days, plural, =0 {Ended today} one {Ended # day ago} other {Ended # days ago}}",
     "inUse": "This policy still covers {count} students. End that cover before archiving it.",
     "saveFailed": "The policy could not be saved."
   },
@@ -2198,7 +2198,7 @@
     "widget": {
       "subscription": {
         "empty": "There is nothing to say about the subscription yet.",
-        "trial": "{days} days left — the trial ends on {on}.",
+        "trial": "{days, plural, =0 {The trial ends today} one {1 day left — the trial ends on {on}} other {# days left — the trial ends on {on}}}.",
         "renews": "Renews on {on}.",
         "ends": "Ends on {on}."
       },

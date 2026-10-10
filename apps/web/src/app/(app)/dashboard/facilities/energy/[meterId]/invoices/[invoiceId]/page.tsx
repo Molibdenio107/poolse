@@ -32,7 +32,7 @@ export default async function InvoicePage({
 
   const back = backTarget(from, `/dashboard/facilities/energy/${meterId}`);
   const euros = (cents: number | null): string => (cents === null ? '—' : `${centsToText(cents)} €`);
-  const day = (iso: string | null): string => (iso === null ? '—' : formatDate(new Date(`${iso}T00:00:00`)));
+  const day = (iso: string | null): string => (iso === null ? '—' : formatDate(iso));
 
   return (
     <PageShell

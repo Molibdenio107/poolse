@@ -109,7 +109,8 @@ export async function ConsumptionBars({
   // and the year appears only where it changes, which is once a year.
   const label = (month: string): string => {
     const [year, mm] = month.split('-');
-    const date = new Date(Number(year), Number(mm) - 1, 1);
+    // Noon UTC, so no browser's own zone can move it into the month before.
+    const date = new Date(Date.UTC(Number(year), Number(mm) - 1, 1, 12));
     return format.dateTime(date, 'monthShort');
   };
 
@@ -221,7 +222,7 @@ export async function ConsumptionBars({
           {[...monthly].reverse().map((m) => (
             <tr key={m.month} className="border-t border-border">
               <td className="py-1">
-                {format.dateTime(new Date(`${m.month}-01T00:00:00`), 'month')}
+                {format.dateTime(new Date(`${m.month}-01T12:00:00Z`), 'month')}
               </td>
               <td className="py-1 text-right tabular-nums">
                 {m.consumed === null ? '—' : number(m.consumed)}

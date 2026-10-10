@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useRef, useState, startTransition } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Check, Info, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
@@ -25,6 +25,7 @@ import {
 } from './water-import.actions';
 import { formatDate } from '@/lib/date-format';
 import { Dialog } from '@/components/ui/dialog';
+import { formatReading } from '@/lib/pool-metrics';
 
 /**
  * Importing a club's water log — round 5, ticket 5.
@@ -477,6 +478,7 @@ function Preview({
   onToggle: (index: number) => void;
 }): React.ReactElement {
   const t = useTranslations();
+  const locale = useLocale();
 
   return (
     <div className="flex flex-col gap-3">
@@ -528,7 +530,7 @@ function Preview({
                     : row.values
                         .map(
                           (value) =>
-                            `${t(`facilities.metric.${value.metric}`)} ${value.value}`,
+                            `${t(`facilities.metric.${value.metric}`)} ${formatReading(value.value, locale)}`,
                         )
                         .join(' · ')}
                 </td>

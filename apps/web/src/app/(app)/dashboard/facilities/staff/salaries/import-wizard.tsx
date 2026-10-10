@@ -579,7 +579,7 @@ function PreviewStep({
   const sheetRows = useRows(sheet);
 
   const money = (cents: number): string => formatCents(locale, cents);
-  const day = (value: string): string => formatDate(new Date(`${value}T00:00:00`));
+  const day = (value: string): string => formatDate(value);
 
   const refused = state.refusal !== null && state.refusal !== undefined;
   const summary = state.summary;
