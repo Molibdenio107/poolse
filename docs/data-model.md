@@ -1882,7 +1882,16 @@ class_session_instructor_free
                         pool_id <>, tstzrange(starts_at, ends_at) &&)
     WHERE status <> 'cancelled' AND resolved_instructor_id IS NOT NULL
                                 AND pool_id IS NOT NULL
+
+class_session_instructor_when_idx            -- POOLSE-66 slice 3
+    ON class_session (organization_id, resolved_instructor_id, starts_at)
+    WHERE resolved_instructor_id IS NOT NULL
 ```
+
+`resolved_instructor_id` is also what the dashboard's instructor band reads as "my class", and
+the btree above serves its "next one after now" and "this week" ranges. The copy it is built from
+is re-stamped from today forward when a turma changes instructor and — since slice 3 — when a
+booking's override does (`assignInstructor`).
 
 **The spike's answer: `btree_gist` does supply `<>` for uuid.** BUILD-ORDER flagged this as the
 riskiest unknown in the feature — whether an exclusion constraint could express "same
