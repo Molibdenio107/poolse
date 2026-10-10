@@ -288,7 +288,12 @@ Three questions the codebase raised. All three took the recommended answer; none
    unnecessary — plus the copy-the-previous-plan action, a `?plan=` deep link into the calendar's
    sheet, and a fix found on the way: staffing a booking now re-stamps its generated weeks.
    14 integration tests. **Closes AC 8 and QA 4, 5, 6, 7 and 15.** `docs/features/dashboard.md`.
-4. **The maintenance band.**
+4. ✅ **The maintenance band. Built 10 October 2026.** Avarias (all open, the reader's own
+   marked — there is no assignee), overdue rooms with an inline clean, water due over the reader's
+   sites, and the store room with this week's lost property. `ownFacilityIds` on the resolver
+   context is how the operational band ignores the selector; maintenance was given every site and
+   may now record one water analysis. 7 integration tests. **Closes AC 10 for the operational
+   band.** `docs/features/dashboard.md`.
 5. **The personal band**, behind the flag.
 
 **User stories with acceptance criteria are written out and shown to Rui before any code, per

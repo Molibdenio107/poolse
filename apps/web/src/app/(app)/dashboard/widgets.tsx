@@ -23,6 +23,12 @@ import { formatDate } from '@/lib/date-format';
 import { withFrom } from '@/lib/back';
 import { WidgetCard } from './widget-card';
 import { MyTurmasCard, NextClassCard, TrainingPlanCard, WeekCard } from './instructor-widgets';
+import {
+  FaultsCard,
+  InventoryWatchCard,
+  OverdueCleaningsCard,
+  WaterDueCard,
+} from './maintenance-widgets';
 
 /**
  * What each card draws — POOLSE-66, slice 2a.
@@ -70,6 +76,14 @@ export async function renderWidget(
       return <TrainingPlanCard widget={widget} />;
     case 'inst.myturmas':
       return <MyTurmasCard widget={widget} />;
+    case 'maint.requests':
+      return <FaultsCard widget={widget} />;
+    case 'maint.cleanings.overdue':
+      return <OverdueCleaningsCard widget={widget} />;
+    case 'maint.waterquality.due':
+      return <WaterDueCard widget={widget} />;
+    case 'maint.inventory':
+      return <InventoryWatchCard widget={widget} />;
     case 'setup.checklist':
       return <ChecklistCard widget={widget} />;
     /*

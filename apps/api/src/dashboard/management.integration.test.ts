@@ -44,6 +44,7 @@ function context(tenant: ScratchTenant, roles: string[]): ResolverContext {
     membershipId: tenant.ownerMembershipId,
     roles,
     facilityIds: [tenant.facilityId],
+    ownFacilityIds: [tenant.facilityId],
     scope: { mode: 'all', facilityId: null },
     locale: 'pt-PT',
   };

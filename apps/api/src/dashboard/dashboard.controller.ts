@@ -12,7 +12,7 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { composeDashboard, type Dashboard } from './compose.js';
 import { readDashboardShape, rememberDashboardFacility } from './dashboard.repository.js';
-import { ROLES_WITH_DERIVED_FACILITIES } from './widget-registry.js';
+import { ROLES_WITH_DERIVED_FACILITIES, SELECTOR_ROLES } from './widget-registry.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -63,16 +63,20 @@ export class DashboardController {
     /*
      * The reader's own sites.
      *
-     * For an owner or an admin that is every site in the club. For everybody
-     * else it is empty for now, and that is enforced rather than hoped:
+     * For an owner, an admin or maintenance that is every site in the club —
+     * maintenance is assigned to no site in this schema (slice 4). For
+     * everybody else it is empty, and that is enforced rather than hoped:
      * `assertRegistryIsSound` refuses to register a facility-scoped widget for a
-     * role whose sites are not derived yet. The instructor band (slice 3) is
-     * self-scoped and needed none; a band that does adds its derivation here
-     * and to `ROLES_WITH_DERIVED_FACILITIES` in one change, or its widgets do
-     * not exist.
+     * role whose sites are not derived. The instructor band (slice 3) is
+     * self-scoped and needed none.
+     *
+     * Two lists leave here: `facilityIds` follows the selector and is what the
+     * management band reads; `ownFacilityIds` does not, and is what the
+     * operational band reads (AC 10). The selector itself is owner and admin.
      */
-    const manages = hasRole(...ROLES_WITH_DERIVED_FACILITIES);
-    const own = manages ? shape.facilities.map((site) => site.id) : [];
+    const derived = hasRole(...ROLES_WITH_DERIVED_FACILITIES);
+    const manages = hasRole(...SELECTOR_ROLES);
+    const own = derived ? shape.facilities.map((site) => site.id) : [];
 
     return composeDashboard(
       {
@@ -80,6 +84,7 @@ export class DashboardController {
         membershipId,
         roles,
         facilityIds: named === null ? own : own.filter((id) => id === named),
+        ownFacilityIds: own,
         scope: named === null ? { mode: 'all', facilityId: null } : { mode: 'facility', facilityId: named },
         locale: shape.locale,
       },
@@ -107,7 +112,7 @@ export class DashboardController {
   @Put('scope')
   @HttpCode(204)
   async rememberScope(@Body() body: Record<string, unknown>): Promise<void> {
-    requireRole(...ROLES_WITH_DERIVED_FACILITIES);
+    requireRole(...SELECTOR_ROLES);
     const { organizationId, membershipId } = currentTenant();
 
     const value = body['facilityId'];

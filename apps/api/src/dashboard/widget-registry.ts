@@ -5,8 +5,13 @@ import {
   maintenanceNeedsSomebody,
   maintenanceOpen,
   moneyPeriod,
+  inventoryWatch,
+  maintenanceFaults,
   myTasks,
   myTurmas,
+  overdueCleanings,
+  ownWaterQuality,
+  faultNeedsSomebody,
   myWeek,
   nextClass,
   nextTrainingPlan,
@@ -73,6 +78,12 @@ export interface ResolverContext {
   membershipId: string;
   roles: readonly string[];
   facilityIds: readonly string[];
+  /**
+   * The reader's own sites **ignoring the selector** — what the operational
+   * band reads, because AC 10 says it does not follow the management control.
+   * Equal to `facilityIds` whenever the selector is on every site.
+   */
+  ownFacilityIds: readonly string[];
   /** The selector: every site, or the one that was asked for. */
   scope: { mode: 'all' | 'facility'; facilityId: string | null };
   locale: string;
@@ -146,9 +157,10 @@ export const BAND_CAP = 4;
  * The roles whose `facilityIds` are genuinely derived today.
  *
  * Slice 1 resolves a manager's sites — every site in the club. Slice 3 needed
- * no instructor derivation after all: its widgets are about the sessions a
- * person teaches and are `scope: 'self'`. The maintenance band (slice 4) is
- * where this may still grow, with `maintenance_task.assigned_to` as the answer. Until then an instructor's `facilityIds` is empty, and an empty
+ * no instructor derivation: its widgets are about the sessions a person
+ * teaches and are `scope: 'self'`. Slice 4 adds **maintenance**, whose sites
+ * are likewise every site: the schema assigns maintenance staff to none, so
+ * the whole club is the honest answer rather than an empty list. Until then an instructor's `facilityIds` is empty, and an empty
  * list is exactly the input that makes a facility-scoped query return nothing
  * while looking like it worked.
  *
@@ -157,7 +169,14 @@ export const BAND_CAP = 4;
  * here is added to the controller's derivation in the same change, or its
  * widgets do not register.
  */
-export const ROLES_WITH_DERIVED_FACILITIES: readonly MemberRole[] = ['owner', 'admin'];
+export const ROLES_WITH_DERIVED_FACILITIES: readonly MemberRole[] = ['owner', 'admin', 'maintenance'];
+
+/**
+ * Who is offered the site selector and may remember a choice. The management
+ * band's control, so owner and admin — narrower than the roles above, because
+ * maintenance has sites but no management band for the selector to narrow.
+ */
+export const SELECTOR_ROLES: readonly MemberRole[] = ['owner', 'admin'];
 
 /**
  * Every widget, in one place.
@@ -370,6 +389,55 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     size: 1,
     priority: 20,
     resolver: myTurmas,
+  },
+
+  /*
+   * The maintenance band — slice 4. Maintenance only, every site they work at
+   * and never the selector (`ownFacilityIds`, AC 10). With `maint.mytasks`
+   * there are five candidates for four places: avarias first, lifted when one
+   * is high severity; rooms overdue; water due, lifted when a tank is out of
+   * range; then the store room and lost property.
+   */
+  {
+    id: 'maint.requests',
+    band: 'operational',
+    roles: ['maintenance'],
+    scope: 'facility',
+    size: 2,
+    priority: 45,
+    escalate: faultNeedsSomebody,
+    escalatedPriority: 75,
+    resolver: maintenanceFaults,
+  },
+  {
+    id: 'maint.cleanings.overdue',
+    band: 'operational',
+    roles: ['maintenance'],
+    scope: 'facility',
+    size: 1,
+    priority: 40,
+    resolver: overdueCleanings,
+  },
+  {
+    // The owner's water card, read over every site the reader works at.
+    id: 'maint.waterquality.due',
+    band: 'operational',
+    roles: ['maintenance'],
+    scope: 'facility',
+    size: 1,
+    priority: 35,
+    escalate: waterIsOutOfRange,
+    escalatedPriority: 80,
+    resolver: ownWaterQuality,
+  },
+  {
+    id: 'maint.inventory',
+    band: 'operational',
+    roles: ['maintenance'],
+    scope: 'facility',
+    size: 1,
+    priority: 20,
+    resolver: inventoryWatch,
   },
 
   /*

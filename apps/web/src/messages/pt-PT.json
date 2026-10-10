@@ -2314,6 +2314,34 @@
         "studentsOf": "{students} de {capacity}",
         "more": "{count, plural, one {e mais # turma} other {e mais # turmas}}",
         "open": "Ver turmas"
+      },
+      "more": "{count, plural, one {e mais #} other {e mais #}}",
+      "faults": {
+        "title": "Avarias em aberto",
+        "empty": "Não há avarias em aberto.",
+        "summary": "{total, plural, one {# avaria em aberto} other {# avarias em aberto}}{high, plural, =0 {} other {, # de gravidade alta}}",
+        "mine": "reportada por si",
+        "open": "Ver instalações"
+      },
+      "cleanings": {
+        "title": "Limpezas em atraso",
+        "empty": "Todos os espaços estão limpos dentro do prazo.",
+        "never": "Nunca foi limpo",
+        "mark": "Registar limpeza",
+        "markNamed": "Registar limpeza: {name}",
+        "open": "Ver espaços"
+      },
+      "waterDue": {
+        "title": "Água por analisar",
+        "record": "Registar análise",
+        "open": "Ver piscinas"
+      },
+      "store": {
+        "title": "Arrecadação e perdidos",
+        "empty": "Não há reposições pedidas nem objetos achados esta semana.",
+        "restocks": "{count, plural, one {# reposição pedida} other {# reposições pedidas}}",
+        "lost": "{count, plural, one {# objeto achado esta semana} other {# objetos achados esta semana}}",
+        "open": "Ver inventário"
       }
     },
     "scope": {

@@ -3795,6 +3795,56 @@ export interface MyTurmasWidgetData {
   }[];
 }
 
+/** `maint.requests` — POOLSE-66 slice 4. Avarias only; "mine" is the reporter. */
+export interface FaultsWidgetData {
+  total: number;
+  high: number;
+  faults: {
+    id: string;
+    description: string;
+    severity: 'low' | 'normal' | 'high';
+    reportedAt: string;
+    mine: boolean;
+    facilityName: string;
+    spaceId: string | null;
+    spaceName: string | null;
+    poolId: string | null;
+    poolName: string | null;
+  }[];
+}
+
+/** `maint.cleanings.overdue`. */
+export interface OverdueSpacesWidgetData {
+  total: number;
+  spaces: {
+    id: string;
+    facilityId: string;
+    name: string;
+    lastCleanedAt: string | null;
+    intervalHours: number;
+  }[];
+}
+
+/** `maint.inventory`. */
+export interface InventoryWatchWidgetData {
+  restockTotal: number;
+  restocks: {
+    id: string;
+    description: string;
+    severity: 'low' | 'normal' | 'high';
+    itemName: string | null;
+    facilityId: string;
+  }[];
+  lostTotal: number;
+  lost: {
+    id: string;
+    description: string;
+    foundOn: string;
+    locationFound: string | null;
+    facilityId: string;
+  }[];
+}
+
 export interface ChecklistWidgetData {
   steps: { id: 'facility' | 'pools' | 'prices' | 'staff' | 'students'; done: boolean }[];
 }

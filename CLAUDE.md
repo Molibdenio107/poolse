@@ -131,7 +131,10 @@ states.** A panel that predates the registry is a card no role check governs, wh
 widget that replaces it. **The instructor band (slice 3) is `scope: 'self'` on
 `class_session.resolved_instructor_id`** — the stand-in sees the class, the regular instructor does
 not — and the next class holds on to one whose register is still owed; a card that copies a plan
-sends the session id and never the text. **Slice 2b's aggregates are one statement each whatever the number of
+sends the session id and never the text. **The maintenance band (slice 4) reads
+`ResolverContext.ownFacilityIds`** — every site the reader works at, before the selector narrows
+it — so an operational card never follows the management control; the selector is `SELECTOR_ROLES`.
+Maintenance may record one water analysis and nothing else on a pool. **Slice 2b's aggregates are one statement each whatever the number of
 sites** (`management.repository.ts`, proved by `countStatements` in the test harness), the
 selector is remembered on `membership.dashboard_facility_id`, and **the cap ranks a card with
 something to say before an empty one**. `docs/features/dashboard.md`.

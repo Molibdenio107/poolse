@@ -288,6 +288,7 @@ test('66.8 — no bills is an empty answer, not an error', async () => {
       membershipId: tenant.ownerMembershipId,
       roles: ['owner'],
       facilityIds: [tenant.facilityId],
+      ownFacilityIds: [tenant.facilityId],
       scope: { mode: 'all', facilityId: null },
       locale: 'pt-PT',
     });

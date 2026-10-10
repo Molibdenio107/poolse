@@ -2314,6 +2314,34 @@
         "studentsOf": "{students} of {capacity}",
         "more": "{count, plural, one {and # more class group} other {and # more class groups}}",
         "open": "Open class groups"
+      },
+      "more": "{count, plural, one {and # more} other {and # more}}",
+      "faults": {
+        "title": "Open faults",
+        "empty": "There are no open faults.",
+        "summary": "{total, plural, one {# open fault} other {# open faults}}{high, plural, =0 {} other {, # high severity}}",
+        "mine": "reported by you",
+        "open": "Open facilities"
+      },
+      "cleanings": {
+        "title": "Overdue cleaning",
+        "empty": "Every space has been cleaned on schedule.",
+        "never": "Never cleaned",
+        "mark": "Log cleaning",
+        "markNamed": "Log cleaning: {name}",
+        "open": "Open spaces"
+      },
+      "waterDue": {
+        "title": "Water due a test",
+        "record": "Record an analysis",
+        "open": "Open pools"
+      },
+      "store": {
+        "title": "Store room and lost property",
+        "empty": "No restock requests and nothing found this week.",
+        "restocks": "{count, plural, one {# restock requested} other {# restocks requested}}",
+        "lost": "{count, plural, one {# item found this week} other {# items found this week}}",
+        "open": "Open inventory"
       }
     },
     "scope": {

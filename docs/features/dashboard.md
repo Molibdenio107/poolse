@@ -267,8 +267,31 @@ uncancelled, unregistered weeks that still carry the pattern's previous instruct
 each, and reports `weeksUpdated` and `weeksBlocked` — a week where the person already teaches in
 another building is left alone and counted.
 
-**Not built:** the maintenance band proper, and the personal band behind
-`DASHBOARD_PERSONAL_BAND`. There is also **no React test harness in this repo**,
+## The maintenance band — slice 4, 10 October 2026
+
+Four widgets, maintenance role only, reading **every site the reader works at and never the
+selector**: maintenance is assigned to no site in this schema, so it joined
+`ROLES_WITH_DERIVED_FACILITIES` with the whole club, and the resolvers read
+`ResolverContext.ownFacilityIds` — the reader's sites before the selector narrows them — which is
+how the operational band ignores the management control (AC 10). The selector itself is now
+`SELECTOR_ROLES`, owner and admin. Reads are `maintenance-band.repository.ts`, one statement each.
+
+| id | priority | what it says |
+|---|---|---|
+| `maint.requests` | 45 → 75 with a high-severity avaria | open avarias, worst first and oldest within that, where each is and how long ago it was reported; those the reader reported are marked |
+| `maint.cleanings.overdue` | 40 | espaços past their interval by `OVERDUE`, never-cleaned first, each with **Registar limpeza** — the space page's own action, one press |
+| `maint.waterquality.due` | 35 → 80 with a tank out of range | the owner's water card over the reader's sites, each tank linking to its water tab to **Registar análise** |
+| `maint.inventory` | 20 | open reposições, and lost property found in the last 7 days and not returned |
+
+**Avarias have no assignee** (decided 10-10-2026): the card lists every open one with the
+reporter's marked, rather than inventing a column. **A reposição is listed once**, on the store
+room card, not with the avarias. **Maintenance may now record one water analysis** — the
+endpoint and the form; importing a file, archiving an analysis and setting bands stay owner and
+admin (`canRecordAnalysis` beside `canManage` on the pool). With `maint.mytasks` there are five
+candidates for four places. No money anywhere in the band, asserted on the raw payload, and no
+selector is sent to a maintenance reader even at a club with two sites.
+
+**Not built:** the personal band behind `DASHBOARD_PERSONAL_BAND`. There is also **no React test harness in this repo**,
 so the card's three states are proven by the API's own state assertions and by the build rather
 than by a render test; adding one is its own decision. Widget customisation is out of scope for
 the whole ticket; if it is ever wanted it is one `dashboard_widget_prefs` table keyed on the

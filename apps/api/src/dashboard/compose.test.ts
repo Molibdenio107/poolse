@@ -19,6 +19,7 @@ const CTX: ResolverContext = {
   membershipId: '00000000-0000-0000-0000-0000000000bb',
   roles: ['owner'],
   facilityIds: [],
+  ownFacilityIds: [],
   scope: { mode: 'all', facilityId: null },
   locale: 'pt-PT',
 };

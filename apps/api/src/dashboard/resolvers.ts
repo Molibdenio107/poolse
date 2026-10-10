@@ -24,6 +24,14 @@ import {
   type WeekClass,
 } from './instructor.repository.js';
 import { readLessonPlan } from '../classes/lesson-plans.repository.js';
+import {
+  readInventoryWatch,
+  readOpenFaults,
+  readOverdueSpaces,
+  type InventoryWatch,
+  type OpenFaults,
+  type OverdueSpaces,
+} from './maintenance-band.repository.js';
 import type { ResolverContext } from './widget-registry.js';
 
 /**
@@ -425,4 +433,45 @@ export async function myTurmas(ctx: ResolverContext): Promise<MyTurmasWidget | n
   const turmas = await readMyTurmas(ctx.organizationId, ctx.membershipId);
   if (turmas.length === 0) return null;
   return { total: turmas.length, turmas: turmas.slice(0, TURMAS_SHOWN) };
+}
+
+/* -------------------------------------------------------------------------- */
+/* The maintenance band — slice 4                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Every one of these reads `ownFacilityIds` — the sites the reader works at,
+ * whatever the management selector says (AC 10).
+ */
+
+/** Open avarias, worst first. Empty is good news: nothing broken. */
+export async function maintenanceFaults(ctx: ResolverContext): Promise<OpenFaults | null> {
+  const faults = await readOpenFaults(ctx.organizationId, ctx.membershipId, ctx.ownFacilityIds);
+  return faults.total === 0 ? null : faults;
+}
+
+/** A high-severity avaria belongs at the top of the band. */
+export function faultNeedsSomebody(data: unknown): boolean {
+  const faults = data as OpenFaults | null;
+  return faults !== null && faults.high > 0;
+}
+
+/** Rooms past their cleaning interval. Empty when every room is on time. */
+export async function overdueCleanings(ctx: ResolverContext): Promise<OverdueSpaces | null> {
+  const overdue = await readOverdueSpaces(ctx.organizationId, ctx.ownFacilityIds);
+  return overdue.total === 0 ? null : overdue;
+}
+
+/**
+ * The owner's water card, over every site the reader works at — the same
+ * function, so the two cards cannot disagree about whether a tank is due.
+ */
+export async function ownWaterQuality(ctx: ResolverContext): Promise<WaterQualityWidget | null> {
+  return waterQuality({ ...ctx, facilityIds: ctx.ownFacilityIds });
+}
+
+/** Open reposições and this week's lost property. Empty when both are. */
+export async function inventoryWatch(ctx: ResolverContext): Promise<InventoryWatch | null> {
+  const watch = await readInventoryWatch(ctx.organizationId, ctx.ownFacilityIds);
+  return watch.restockTotal === 0 && watch.lostTotal === 0 ? null : watch;
 }
