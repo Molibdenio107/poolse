@@ -58,10 +58,10 @@ export async function FaultsCard({ widget }: { widget: DashboardWidget }): Promi
               const where = fault.spaceName ?? fault.poolName ?? fault.facilityName;
               const href =
                 fault.spaceId !== null
-                  ? `/dashboard/facilities/spaces/${fault.spaceId}`
+                  ? `/dashboard/facilities/spaces/${fault.spaceId}?tab=issues`
                   : fault.poolId !== null
                     ? `/dashboard/facilities/pools/${fault.poolId}`
-                    : '/dashboard/facilities';
+                    : `/dashboard/facilities/${fault.facilityId}?tab=spaces`;
               return (
                 <li key={fault.id} className="flex flex-col gap-1 p-3 text-sm">
                   <span className="flex flex-wrap items-center gap-2">

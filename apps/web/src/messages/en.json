@@ -518,7 +518,7 @@
       "headerTitle": "Bill",
       "supplier": "Supplier",
       "number": "Electricity bill number",
-      "numberHint": "The electricity fatura's own number, not the document that bundles it.",
+      "numberHint": "The electricity bill's own number, not the document that bundles it.",
       "documentReference": "Document reference",
       "documentReferenceHint": "When the bill arrives in a document with others (TV licence, services).",
       "issuedOn": "Issued on",
@@ -640,7 +640,7 @@
       "dropLabel": "Drop the bill to read it",
       "typeInstead": "Type it in",
       "newMeter": "Create a meter from this bill",
-      "newMeterHint": "No meter carries this bill's CPE. A “Geral” meter with this CPE is created when you file.",
+      "newMeterHint": "No meter carries this bill's CPE. A “Whole site” meter with this CPE is created when you file.",
       "newMeterSite": "Site for the new meter",
       "newMeterNoPreview": "The full check happens on filing, once the meter exists."
     },
@@ -1354,7 +1354,7 @@
     "penaltyKind": "How it is charged",
     "penaltyAmount": "Penalty amount",
     "penaltyRate": "Percentage (%)",
-    "penaltyRateHint": "Of the student's monthly mensalidade. A member who pays only a subscription has none, so the penalty comes to nothing.",
+    "penaltyRateHint": "Of the student's monthly fee. A member who pays only a subscription has none, so the penalty comes to nothing.",
     "penaltyMensalidadeLabel": "Late monthly fee",
     "penaltyMensalidadeHint": "Charged once per student, however many months are outstanding.",
     "penaltyQuotaLabel": "Late subscription",
@@ -1440,7 +1440,7 @@
     "quotaUnavailable": "This site has no membership subscription defined, so none was attached. Add a plan of type Membership subscription to the price list.",
     "socioHint": "Marking somebody a member attaches this site's subscription automatically. You can remove it afterwards and they stay a member — a waived subscription is a real case.",
     "membershipTitle": "Membership",
-    "membershipHint": "Whether this student is a sócio, and since when.",
+    "membershipHint": "Whether this student is a club member, and since when.",
     "periodTotalTitle": "Period total",
     "periodSwitcher": "Which period",
     "periodCurrent": "{date} (current)",
@@ -1509,7 +1509,9 @@
     "categoryWorthAmount": "Takes {amount} off the period total.",
     "categoryWorthNothing": "This category carries no discount. The line is charged in full.",
     "categoryDiscount": "Discount: {name}",
-    "oneDiscountAuthor": "A discount comes from a category or from your own decision, not both."
+    "oneDiscountAuthor": "A discount comes from a category or from your own decision, not both.",
+    "nameRequired": "Give the period a name.",
+    "alreadyChargedThisSeason": "This student has already been charged this for the season."
   },
   "categories": {
     "title": "Fee categories",
@@ -2609,7 +2611,8 @@
       "evento": "Events",
       "manutencao": "Maintenance"
     },
-    "lanesOccupied": "Lanes occupied"
+    "lanesOccupied": "Lanes occupied",
+    "restoreFailedConflict": "This class was cancelled by a closure. To bring it back, remove the closure."
   },
   "inventory": {
     "title": "Inventory",
@@ -2693,7 +2696,7 @@
     "noMatches": "No item matches \"{term}\".",
     "actions": "Actions",
     "locationLabel": "Location",
-    "locationHint": "Where it belongs — a balneário, the office, a cupboard.",
+    "locationHint": "Where it belongs — a changing room, the office, a cupboard.",
     "lostAndFound": {
       "title": "Lost and found",
       "outstanding": "{count, plural, one {# waiting} other {# waiting}}",
@@ -2761,7 +2764,7 @@
     "managedLessonsHint": "This partnership’s blocks on the calendar get a training plan and can be cancelled. They do not get a register: a partnership group has a number of participants rather than a list of students.",
     "managedLessonsOn": "Yes — with a plan and cancelling",
     "managedLessonsOff": "No — the partner brings their own teacher",
-    "colorHint": "Tints this partnership cells on the lane grid. The group name is always shown as text as well.",
+    "colorHint": "Tints this partnership's cells on the lane grid. The group name is always shown as text as well.",
     "address": "Address",
     "notes": "Notes",
     "status": "Status",
@@ -3374,7 +3377,11 @@
     "chaseNote": "Note",
     "chaseNoteHint": "What was said, or what the family answered. It is the reason a second contact is worth recording.",
     "notPayable": "A credit note is neither paid nor chased.",
-    "underCategory": "· {name}"
+    "underCategory": "· {name}",
+    "paidOnRequired": "Enter the payment date.",
+    "chasedOnRequired": "Enter the date of the contact.",
+    "periodStartRequired": "Enter the start of the period.",
+    "dueOnRequired": "Enter the due date."
   },
   "admin": {
     "mark": "Poolse · Platform",

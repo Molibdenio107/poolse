@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useEffect, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { Feedback, type FeedbackMessage } from '@/components/feedback';
 import { Dialog } from '@/components/ui/dialog';
@@ -294,6 +295,7 @@ export function CancelSessionDialog({
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(cancelSessionAction, INITIAL);
   const [restoreState, restore] = useActionState(restoreSessionAction, INITIAL);
+  const router = useRouter();
 
   const [toast, setToast] = useState<FeedbackMessage | null>(null);
   const attempt = useRef(0);
@@ -326,6 +328,20 @@ export function CancelSessionDialog({
       },
     });
   }, [state, sessionId, organizationId, restore, onClose, t]);
+
+  /*
+   * A successful undo has to redraw the week — October 2026 sweep. The action
+   * revalidates the route, but the router keeps the payload it already has,
+   * so the class went on being drawn as cancelled after it had been restored:
+   * the bug `useSavedAction` exists for, on the one action here not using it.
+   * The success toast stays this component's own, with its Undo already gone.
+   */
+  useEffect(() => {
+    if (restoreState.ok) {
+      setToast(null);
+      router.refresh();
+    }
+  }, [restoreState, router]);
 
   // A refused undo is worth saying — the commonest reason is a closure, which
   // the operator can act on by removing the closure.

@@ -12,6 +12,7 @@ import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { archiveSpace, updateSpace } from '../../spaces.actions';
 import { SPACE_TYPES } from '../../spaces-panel';
+import { useToast } from '@/components/ui/toast';
 
 /**
  * The header: what this space is, and whether it needs attention.
@@ -37,6 +38,7 @@ export function SpaceHeader({
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
+  const toast = useToast();
   const locale = useLocale();
   const router = useRouter();
 
@@ -207,8 +209,9 @@ export function SpaceHeader({
               void archiveSpace(space.id, space.facilityId).then((result) => {
                 setDeleting(false);
                 setConfirmingDelete(false);
-                // Back to the site: the page this was on no longer exists.
-                if (result.ok) router.push(`/dashboard/facilities/${space.facilityId}`);
+                // Back to the site's rooms: the page this was on no longer exists.
+                if (result.ok) router.push(`/dashboard/facilities/${space.facilityId}?tab=spaces`);
+                else toast.show('danger', t((result.errorKey ?? 'common.notSaved') as never));
               });
             }}
             className={BUTTON}

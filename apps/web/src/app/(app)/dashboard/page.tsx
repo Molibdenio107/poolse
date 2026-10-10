@@ -160,6 +160,15 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
           {dashboard !== null && <Bands dashboard={dashboard} />}
 
           {/*
+            The bands failing is said, the way a pool that would not load is
+            below — a home page with nothing under the name reads as a club with
+            nothing in it. October 2026 sweep.
+          */}
+          {dashboard === null && membership !== null && (
+            <PageError message={t('detailTabs.loadFailed')} />
+          )}
+
+          {/*
             Still bespoke, and waiting for its own widget.
 
             `me.pool` is the personal band in slice 5, behind its flag, and stays

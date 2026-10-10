@@ -32,7 +32,7 @@ export function ArchiveInvoice({
   const [state, action, pending] = useSavedAction(archiveInvoiceAction, INITIAL);
 
   useEffect(() => {
-    if (state.ok) router.push(`/dashboard/facilities/energy/${meterId}`);
+    if (state.ok) router.push(`/dashboard/facilities/energy/${meterId}?tab=invoices`);
   }, [state.ok, meterId, router]);
 
   return (

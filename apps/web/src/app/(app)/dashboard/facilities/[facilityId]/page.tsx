@@ -71,7 +71,9 @@ const GROUPS: { key: keyof PeopleCounts; label: string; href: string }[] = [
   { key: 'instructor', label: 'roles.instructor', href: '/dashboard/facilities/staff?role=instructor' },
   { key: 'admin', label: 'roles.admin', href: '/dashboard/facilities/staff?role=admin' },
   { key: 'maintenance', label: 'roles.maintenance', href: '/dashboard/facilities/staff?role=maintenance' },
-  { key: 'guardian', label: 'roles.guardian', href: '/dashboard/facilities/staff?role=guardian' },
+  // Encarregados are families, not staff — the staff list has no guardian
+  // filter and showed everybody but them.
+  { key: 'guardian', label: 'roles.guardian', href: '/dashboard/students/guardians' },
   { key: 'owner', label: 'roles.owner', href: '/dashboard/facilities/staff?role=owner' },
 ];
 

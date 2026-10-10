@@ -3805,6 +3805,7 @@ export interface FaultsWidgetData {
     severity: 'low' | 'normal' | 'high';
     reportedAt: string;
     mine: boolean;
+    facilityId: string;
     facilityName: string;
     spaceId: string | null;
     spaceName: string | null;

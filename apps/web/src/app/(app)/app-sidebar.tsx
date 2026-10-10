@@ -230,6 +230,16 @@ const SECTIONS: Item[] = [
       { href: '/dashboard/students/guardians', key: 'students.guardiansTitle' },
       { href: '/dashboard/students/levels', key: 'students.levels' },
       /*
+       * The advancement queue — POOLSE-19. It shipped on 28 August with no way
+       * in: nothing linked to it, so a proposal waited for somebody to type the
+       * URL. The roles are the endpoint's own (owner, admin, instructor).
+       */
+      {
+        href: '/dashboard/students/advancement',
+        key: 'advancement.title',
+        roles: ['owner', 'admin', 'instructor'],
+      },
+      /*
        * Categorias is **not** here any more — round 19.
        *
        * It sat beside Níveis while a category was a label, on the reasoning that

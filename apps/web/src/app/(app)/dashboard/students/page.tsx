@@ -116,7 +116,9 @@ export default async function StudentsPage({
     redirect(
       pageHref(
         '/dashboard/students',
-        { search, levelId },
+        // The filter and the way back travel too: settling the last debtor on
+        // the last page must not land somebody on the whole register.
+        { search, levelId, sort: overdueOnly ? 'overdue' : undefined, from },
         lastPage(data.students.total, data.students.limit),
       ),
     );

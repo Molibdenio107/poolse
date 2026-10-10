@@ -6,6 +6,7 @@ import { draftToBody, reportMediaType, type InvoiceDraft } from '@/lib/energy-in
 import { energyInvoiceParser } from '@/lib/energy-invoice-agent';
 import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../../actions';
+import { getTranslations } from 'next-intl/server';
 
 /**
  * Faturas — slice 5.3. Two ways in, one pipeline.
@@ -118,8 +119,12 @@ async function send(
       cpe,
       serial: body['meterSerial'] ?? '',
     };
+    // Named in the reader's language — a meter called "Geral" in an English
+    // club is Portuguese saved as data. Renamed on the meter page like any other.
+    const t = await getTranslations();
+    const name = t('energy.kind.total');
     try {
-      meterId = (await apiPost<{ id: string }>(`/energy/facilities/${newMeterFacilityId}/meters`, { ...meter, name: 'Geral' })).id;
+      meterId = (await apiPost<{ id: string }>(`/energy/facilities/${newMeterFacilityId}/meters`, { ...meter, name })).id;
     } catch (error) {
       if (!(error instanceof ApiError && error.fields['name'] !== undefined)) {
         return { ...describeFailure(error, 'energy.invoice.saveFailed'), attempt };
@@ -127,7 +132,7 @@ async function send(
       try {
         meterId = (await apiPost<{ id: string }>(`/energy/facilities/${newMeterFacilityId}/meters`, {
           ...meter,
-          name: `Geral ${cpe.slice(-6)}`,
+          name: `${name} ${cpe.slice(-6)}`,
         })).id;
       } catch (again) {
         return { ...describeFailure(again, 'energy.invoice.saveFailed'), attempt };

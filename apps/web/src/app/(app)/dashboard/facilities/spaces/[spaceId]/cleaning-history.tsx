@@ -7,6 +7,7 @@ import type { Cleaning } from '@/lib/api';
 import { formatDate, formatTime } from '@/lib/date-format';
 import { Dialog } from '@/components/ui/dialog';
 import { archiveCleaning } from '../../spaces.actions';
+import { useToast } from '@/components/ui/toast';
 
 /**
  * Who cleaned this, and when. Reverse-chronological.
@@ -40,6 +41,7 @@ export function CleaningHistory({
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
+  const toast = useToast();
   const [removing, setRemoving] = useState<Cleaning | null>(null);
   const [working, setWorking] = useState(false);
 
@@ -118,9 +120,14 @@ export function CleaningHistory({
               const target = removing;
               if (target === null) return;
               setWorking(true);
-              void archiveCleaning(spaceId, facilityId, target.id).then(() => {
+              void archiveCleaning(spaceId, facilityId, target.id).then((result) => {
                 setWorking(false);
                 setRemoving(null);
+                if (!result.ok) {
+                  // The dialog closes either way; the row staying put is not an
+                  // explanation, so the refusal is said.
+                  toast.show('danger', t((result.errorKey ?? 'common.notSaved') as never));
+                }
               });
             }}
             className="inline-flex h-control items-center rounded border border-border-strong px-3 text-sm hover:border-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"

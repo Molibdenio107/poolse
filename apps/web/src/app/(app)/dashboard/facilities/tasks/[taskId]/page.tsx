@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { DetailPage } from '@/components/detail-page';
+import { PageError } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { backTarget } from '@/lib/back';
 import { getTask, listCompletions } from '../../maintenance.actions';
@@ -43,7 +44,7 @@ export default async function TaskPage({
   const { task } = detail;
 
   // Reached from the site's own page, which is where Voltar should land.
-  const back = backTarget(from, `/dashboard/facilities/${task.facilityId}`);
+  const back = backTarget(from, `/dashboard/facilities/${task.facilityId}?tab=maintenance`);
 
   const target = task.spaceName ?? task.poolName ?? task.inventoryItemName;
 
@@ -141,7 +142,10 @@ export default async function TaskPage({
                   {t('maintenance.history')}
                 </h2>
 
-                {history === null || history.items.length === 0 ? (
+                {/* A failed load is not a task nobody ever did. */}
+                {history === null ? (
+                  <PageError message={t('detailTabs.loadFailed')} />
+                ) : history.items.length === 0 ? (
                   <p className="text-sm text-foreground-muted">{t('maintenance.neverDone')}</p>
                 ) : (
                   <ul className="flex flex-col divide-y divide-border rounded border border-border">

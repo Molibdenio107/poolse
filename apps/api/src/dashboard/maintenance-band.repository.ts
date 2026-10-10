@@ -29,6 +29,7 @@ export interface OpenFault {
   reportedAt: string;
   /** Reported by the reader — "mine" in a schema with no assignee. */
   mine: boolean;
+  facilityId: string;
   facilityName: string;
   spaceId: string | null;
   spaceName: string | null;
@@ -66,6 +67,7 @@ export async function readOpenFaults(
         severity: Severity;
         reported_at: string;
         mine: boolean;
+        facility_id: string;
         facility_name: string;
         space_id: string | null;
         space_name: string | null;
@@ -76,7 +78,7 @@ export async function readOpenFaults(
       `WITH open AS (
          SELECT mr.id, mr.description, mr.severity, mr.reported_at,
                 (mr.reported_by = $2) AS mine,
-                f.name AS facility_name,
+                f.id AS facility_id, f.name AS facility_name,
                 s.id AS space_id, s.name AS space_name,
                 p.id AS pool_id, p.name AS pool_name
            FROM maintenance_request mr
@@ -113,6 +115,7 @@ export async function readOpenFaults(
         // json_agg renders a timestamptz as text; normalise it to ISO.
         reportedAt: new Date(f.reported_at).toISOString(),
         mine: f.mine,
+        facilityId: f.facility_id,
         facilityName: f.facility_name,
         spaceId: f.space_id,
         spaceName: f.space_name,

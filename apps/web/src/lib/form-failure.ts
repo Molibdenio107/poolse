@@ -1,4 +1,5 @@
 import { ApiError } from './api';
+import catalogue from '../messages/pt-PT.json';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 
 /**
@@ -58,7 +59,19 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
 
     // Two people wanting the same name, or the same slot. The caller owns this
     // sentence because only it knows what "already exists" means here.
-    if (error.status === 409) return { ok: false, errorKey: `${fallbackKey}Conflict` };
+    if (error.status === 409) {
+      /*
+       * Only where the caller wrote that sentence — October 2026 sweep. Four
+       * callers have a `…Conflict` key and nineteen do not, and a key with no
+       * leaf rendered raw ("calendar.restoreFailedConflict") on exactly the
+       * refusal somebody most needed explained. Read from the source catalogue,
+       * which `i18n:check` keeps identical in shape to `en`.
+       */
+      const conflictKey = `${fallbackKey}Conflict`;
+      return hasKey(conflictKey)
+        ? { ok: false, errorKey: conflictKey }
+        : { ok: false, errorKey: fallbackKey, detail: error.message };
+    }
 
     if (error.status === 404) return { ok: false, errorKey: 'common.notFound' };
 
@@ -143,4 +156,14 @@ function refusalValues(error: ApiError): { values?: Record<string, number> } {
 function log(where: string, code: string | null, message: string): void {
   // eslint-disable-next-line no-console -- the server log is the point.
   console.error(`[form] ${where}${code === null ? '' : ` (${code})`} — ${message}`);
+}
+
+/** Whether a dotted key has a leaf in the catalogue. */
+function hasKey(key: string): boolean {
+  let node: unknown = catalogue;
+  for (const part of key.split('.')) {
+    if (typeof node !== 'object' || node === null || !(part in node)) return false;
+    node = (node as Record<string, unknown>)[part];
+  }
+  return typeof node === 'string';
 }

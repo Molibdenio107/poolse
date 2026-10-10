@@ -595,9 +595,9 @@ export async function setInstructorStatusAction(
     );
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) {
-      return { ok: false, errorKey: 'notAllowed' };
+      return { ok: false, errorKey: 'grid.notAllowed' };
     }
-    return { ok: false, errorKey: 'dropRefused' };
+    return { ok: false, errorKey: 'grid.dropRefused' };
   }
 
   revalidatePath('/dashboard/calendar');

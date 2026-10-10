@@ -114,8 +114,18 @@ export default async function InvoicingPage({
 
         <ViewTabs owing={owing} />
 
+        {/*
+          Each list's own failure, said in its own place — October 2026 sweep.
+          A null here used to become an empty list, and an empty chase list
+          reads "nothing owed": the most reassuring sentence on the screen, on
+          exactly the day it was not true.
+        */}
         {owing ? (
-          <OutstandingList facilityId={chosen} invoices={outstanding?.invoices ?? []} />
+          outstanding === null ? (
+            <PageError message={t('detailTabs.loadFailed')} />
+          ) : (
+            <OutstandingList facilityId={chosen} invoices={outstanding.invoices} />
+          )
         ) : (
           <>
             <InvoiceFilters
@@ -126,11 +136,19 @@ export default async function InvoicingPage({
 
             <InvoiceRunPanel facilityId={chosen} month={month} run={run} />
 
-            <InvoiceList facilityId={chosen} invoices={issued?.invoices ?? []} month={month} />
+            {issued === null ? (
+              <PageError message={t('detailTabs.loadFailed')} />
+            ) : (
+              <InvoiceList facilityId={chosen} invoices={issued.invoices} month={month} />
+            )}
           </>
         )}
 
-        <SeriesPanel facilityId={chosen} series={books?.series ?? []} />
+        {books === null ? (
+          <PageError message={t('detailTabs.loadFailed')} />
+        ) : (
+          <SeriesPanel facilityId={chosen} series={books.series} />
+        )}
 
         {/*
           The club's own number, under the books that carry it — POOLSE-62.

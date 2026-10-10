@@ -55,6 +55,7 @@ function IssueRow({
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
+  const toast = useToast();
   const [resolving, setResolving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [working, setWorking] = useState(false);
@@ -189,9 +190,14 @@ function IssueRow({
             disabled={working}
             onClick={() => {
               setWorking(true);
-              void archiveIssue(spaceId, facilityId, issue.id).then(() => {
+              void archiveIssue(spaceId, facilityId, issue.id).then((result) => {
                 setWorking(false);
                 setRemoving(false);
+                if (!result.ok) {
+                  // The dialog closes either way; the row staying put is not an
+                  // explanation, so the refusal is said.
+                  toast.show('danger', t((result.errorKey ?? 'common.notSaved') as never));
+                }
               });
             }}
             className={BUTTON}
