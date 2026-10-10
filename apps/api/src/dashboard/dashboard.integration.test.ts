@@ -105,7 +105,17 @@ test('66.2 — an instructor’s payload contains no mgmt key whatsoever', async
       ['operational'],
       'and the operational band is at the top, because it is the only one',
     );
-    assert.deepEqual(ids(page), ['maint.mytasks']);
+    /*
+     * Slice 3 gave the instructor a band of their own. A club with no classes
+     * leaves its four cards empty, so the task that has something to say goes
+     * first and the cap of four cuts the lowest-priority empty one (the turmas).
+     */
+    assert.deepEqual(ids(page), [
+      'maint.mytasks',
+      'inst.nextclass',
+      'inst.trainingplan.next',
+      'inst.week',
+    ]);
 
     // The selector is the management band's control, so its list is not sent.
     assert.deepEqual(page.scope.facilities, []);

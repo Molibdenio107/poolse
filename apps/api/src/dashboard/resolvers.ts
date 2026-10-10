@@ -15,6 +15,15 @@ import {
   type OccupancyToday,
   type PeopleSummary,
 } from './management.repository.js';
+import {
+  readMyTurmas,
+  readMyWeek,
+  readNextClass,
+  type MyTurma,
+  type NextClass,
+  type WeekClass,
+} from './instructor.repository.js';
+import { readLessonPlan } from '../classes/lesson-plans.repository.js';
 import type { ResolverContext } from './widget-registry.js';
 
 /**
@@ -301,4 +310,119 @@ export async function staffCost(ctx: ResolverContext): Promise<SalarySummary | n
     isOwner: ctx.roles.includes('owner'),
   });
   return summary.coverage.total === 0 ? null : summary;
+}
+
+/* -------------------------------------------------------------------------- */
+/* The instructor band — slice 3                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The reader's next class. Empty when they teach nothing from now on — an
+ * instructor between seasons, or one who has just been invited — which is a
+ * sentence, not a failure (QA 6).
+ */
+export async function nextClass(ctx: ResolverContext): Promise<NextClass | null> {
+  return readNextClass(ctx.organizationId, ctx.membershipId);
+}
+
+/** The register is open and nobody has taken it — that card belongs on top. */
+export function registerIsOwed(data: unknown): boolean {
+  const next = data as NextClass | null;
+  return next !== null && next.registerOpen && !next.registerTaken;
+}
+
+export interface WeekWidget {
+  classes: WeekClass[];
+  /** Of those, how many are still to come and not cancelled. */
+  remaining: number;
+}
+
+/** This week's classes. Empty on a week with none, cancelled ones included. */
+export async function myWeek(ctx: ResolverContext): Promise<WeekWidget | null> {
+  const classes = await readMyWeek(ctx.organizationId, ctx.membershipId);
+  if (classes.length === 0) return null;
+  return {
+    classes,
+    remaining: classes.filter((one) => !one.cancelled && !one.past).length,
+  };
+}
+
+export interface TrainingPlanWidget {
+  next: Pick<
+    NextClass,
+    'sessionId' | 'className' | 'localDate' | 'localTime' | 'dayOffset' | 'weekday'
+  >;
+  written: boolean;
+  /** The first line of what is written, so the card says what Tuesday holds. */
+  excerpt: string | null;
+  updatedBy: string | null;
+  /** When the same turma's last plan was for — the copy button needs one. */
+  previousOn: string | null;
+  canEdit: boolean;
+}
+
+/** How much of a plan the card quotes. */
+const EXCERPT_CHARS = 140;
+
+/**
+ * The next plannable lesson's plan — written, or missing.
+ *
+ * Read through `readLessonPlan`, the function the calendar's sheet answers
+ * from, so "is there a plan" and "may I write it" are the same answers here as
+ * there. The previous lesson's **body is not sent** — the card copies it with a
+ * server action that re-reads it, so a stale browser cannot paste last month's
+ * drills over a plan somebody wrote a minute ago.
+ */
+export async function nextTrainingPlan(ctx: ResolverContext): Promise<TrainingPlanWidget | null> {
+  const next = await readNextClass(ctx.organizationId, ctx.membershipId, { plannable: true });
+  if (next === null) return null;
+
+  const plan = await readLessonPlan(ctx.organizationId, next.sessionId, ctx.roles, ctx.membershipId);
+  // The session was there a statement ago; gone now is a race, not an absence.
+  if (plan === null) throw new Error('The next lesson vanished between two reads');
+
+  const body = plan.body.trim();
+  const firstLine = body.split('\n')[0]?.trim() ?? '';
+
+  return {
+    next: {
+      sessionId: next.sessionId,
+      className: next.className,
+      localDate: next.localDate,
+      localTime: next.localTime,
+      dayOffset: next.dayOffset,
+      weekday: next.weekday,
+    },
+    written: body !== '',
+    excerpt:
+      body === ''
+        ? null
+        : firstLine.length > EXCERPT_CHARS
+          ? `${firstLine.slice(0, EXCERPT_CHARS - 1)}…`
+          : firstLine,
+    updatedBy: plan.updatedBy,
+    previousOn: plan.previous?.onDate ?? null,
+    canEdit: plan.canEdit,
+  };
+}
+
+/** A lesson inside two days with no plan is worth saying first. */
+export function planIsMissingSoon(data: unknown): boolean {
+  const plan = data as TrainingPlanWidget | null;
+  return plan !== null && !plan.written && plan.next.dayOffset <= 1;
+}
+
+export interface MyTurmasWidget {
+  total: number;
+  turmas: MyTurma[];
+}
+
+/** How many turmas a card lists before the link takes over. */
+const TURMAS_SHOWN = 6;
+
+/** The turmas I am responsible for. Empty for a stand-in who owns none. */
+export async function myTurmas(ctx: ResolverContext): Promise<MyTurmasWidget | null> {
+  const turmas = await readMyTurmas(ctx.organizationId, ctx.membershipId);
+  if (turmas.length === 0) return null;
+  return { total: turmas.length, turmas: turmas.slice(0, TURMAS_SHOWN) };
 }

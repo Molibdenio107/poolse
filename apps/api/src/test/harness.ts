@@ -371,6 +371,12 @@ async function sweepStaleScratchTenants(): Promise<void> {
 
       for (const { id } of rows) {
         await client.query('BEGIN');
+        // The remembered dashboard site points at a facility — clear it first,
+        // as `removeTenant` does, or every stale tenant refuses to be swept.
+        await client.query(
+          'UPDATE membership SET dashboard_facility_id = NULL WHERE organization_id = $1',
+          [id],
+        );
         for (const table of TENANT_TABLES) {
           await client.query(`DELETE FROM ${table} WHERE organization_id = $1`, [id]);
         }

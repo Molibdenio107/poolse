@@ -6,7 +6,13 @@ import {
   maintenanceOpen,
   moneyPeriod,
   myTasks,
+  myTurmas,
+  myWeek,
+  nextClass,
+  nextTrainingPlan,
   occupancyToday,
+  planIsMissingSoon,
+  registerIsOwed,
   people,
   setupChecklist,
   staffCost,
@@ -139,17 +145,17 @@ export const BAND_CAP = 4;
 /**
  * The roles whose `facilityIds` are genuinely derived today.
  *
- * Slice 1 resolves a manager's sites — every site in the club — and leaves the
- * instructor and maintenance derivations to the bands that need them (slices 3
- * and 4), where `assignment.ts` and `maintenance_task.assigned_to` are already
- * the answer. Until then an instructor's `facilityIds` is empty, and an empty
+ * Slice 1 resolves a manager's sites — every site in the club. Slice 3 needed
+ * no instructor derivation after all: its widgets are about the sessions a
+ * person teaches and are `scope: 'self'`. The maintenance band (slice 4) is
+ * where this may still grow, with `maintenance_task.assigned_to` as the answer. Until then an instructor's `facilityIds` is empty, and an empty
  * list is exactly the input that makes a facility-scoped query return nothing
  * while looking like it worked.
  *
  * So the gap is asserted rather than remembered: `assertRegistryIsSound` refuses
- * a `scope: 'facility'` widget offered to a role not on this list. Slice 3 adds
- * `instructor` here and to `readFacilityIds`, in the same change, or its widgets
- * do not register.
+ * a `scope: 'facility'` widget offered to a role not on this list. A role added
+ * here is added to the controller's derivation in the same change, or its
+ * widgets do not register.
  */
 export const ROLES_WITH_DERIVED_FACILITIES: readonly MemberRole[] = ['owner', 'admin'];
 
@@ -303,6 +309,67 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     size: 1,
     priority: 10,
     resolver: staffCost,
+  },
+
+  /*
+   * The instructor band — slice 3. **Self-scoped, all four**: they are about
+   * the sessions this person teaches (`resolved_instructor_id`), so they need
+   * no list of sites, ignore the management selector by construction — AC 10
+   * asks exactly that of the operational band — and leave
+   * `ROLES_WITH_DERIVED_FACILITIES` as it was.
+   *
+   * Instructor only. An owner who teaches holds the role as well, or is not
+   * the person on the deck. **No money in any of them** (AC 8), asserted on
+   * the raw payload in `instructor.integration.test.ts`.
+   *
+   * Five candidates for four places once `maint.mytasks` is counted, and the
+   * priorities decide: the next class first, lifted further while its register
+   * is owed; the plan, lifted when a lesson inside two days has none; the
+   * week; then my tasks; then the turmas, which change once a season.
+   */
+  {
+    id: 'inst.nextclass',
+    band: 'operational',
+    roles: ['instructor'],
+    kinds: ['business'],
+    scope: 'self',
+    size: 2,
+    priority: 50,
+    escalate: registerIsOwed,
+    escalatedPriority: 85,
+    resolver: nextClass,
+  },
+  {
+    id: 'inst.trainingplan.next',
+    band: 'operational',
+    roles: ['instructor'],
+    kinds: ['business'],
+    scope: 'self',
+    size: 1,
+    priority: 40,
+    escalate: planIsMissingSoon,
+    escalatedPriority: 70,
+    resolver: nextTrainingPlan,
+  },
+  {
+    id: 'inst.week',
+    band: 'operational',
+    roles: ['instructor'],
+    kinds: ['business'],
+    scope: 'self',
+    size: 3,
+    priority: 35,
+    resolver: myWeek,
+  },
+  {
+    id: 'inst.myturmas',
+    band: 'operational',
+    roles: ['instructor'],
+    kinds: ['business'],
+    scope: 'self',
+    size: 1,
+    priority: 20,
+    resolver: myTurmas,
   },
 
   /*

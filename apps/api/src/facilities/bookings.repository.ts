@@ -801,11 +801,20 @@ export async function setInstructorStatus(
  * instructor — or, where there is none, to `to_define` by POOLSE-53's trigger.
  * The status is never written here: it is the database's, and it follows.
  */
+export interface AssignedInstructor {
+  status: string;
+  instructorName: string | null;
+  /** Generated weeks that now carry the new instructor. */
+  weeksUpdated: number;
+  /** Weeks left as they were because the person teaches elsewhere then. */
+  weeksBlocked: number;
+}
+
 export async function assignInstructor(
   organizationId: string,
   scheduleId: string,
   membershipId: string | null,
-): Promise<{ status: string; instructorName: string | null } | null> {
+): Promise<AssignedInstructor | null> {
   return withOrg(organizationId, async (tx) => {
     if (membershipId !== null) {
       /*
@@ -826,6 +835,21 @@ export async function assignInstructor(
       );
       if (rowCount === 0) return null;
     }
+
+    /*
+     * Who the pattern said before this write — the instructor a week still
+     * carries if nobody has changed that week on its own. Read first, because
+     * the UPDATE below is what changes it.
+     */
+    const before = await tx.query<{ instructor: string | null }>(
+      `SELECT coalesce(cs.instructor_membership_id, cg.instructor_membership_id) AS instructor
+         FROM class_schedule cs
+         LEFT JOIN class_group cg
+                ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
+        WHERE cs.id = $1 AND cs.archived_at IS NULL`,
+      [scheduleId],
+    );
+    const previous = before.rows[0]?.instructor ?? null;
 
     const { rows } = await tx.query<{
       instructor_status: string;
@@ -861,6 +885,61 @@ export async function assignInstructor(
     const updated = rows[0];
     if (updated === undefined) return null;
 
+    /*
+     * The weeks already generated follow — POOLSE-66 slice 3.
+     *
+     * `class_session.instructor_membership_id` is a copy made at generation,
+     * and `resolved_instructor_id` is built from it. Without this a parceria
+     * staffed here showed its instructor on the calendar (which coalesces the
+     * booking in) while every session behind it still said nobody: the
+     * one-building exclusion could not see them, and neither could the
+     * instructor's own dashboard. The turma's save already re-stamps its weeks;
+     * this is the same rule for the booking's override.
+     *
+     * From now on, never cancelled, never a taken register, and only a week that
+     * still carries what the pattern said before — a week somebody changed on
+     * its own keeps that answer. A week where the person is already teaching in
+     * another building is **left alone and counted**, one savepoint each, which
+     * is the series move's rule: one clash on one Wednesday must not refuse the
+     * whole assignment.
+     */
+    const weeks = await tx.query<{ id: string; next: string | null }>(
+      `SELECT s.id,
+              coalesce($2::uuid, cg.instructor_membership_id) AS next
+         FROM class_session s
+         JOIN class_schedule sch
+           ON sch.id = s.schedule_id AND sch.organization_id = s.organization_id
+         LEFT JOIN class_group cg
+                ON cg.id = sch.class_group_id AND cg.organization_id = sch.organization_id
+        WHERE s.schedule_id = $1
+          AND s.starts_at >= now()
+          AND s.status <> 'cancelled'
+          AND s.instructor_membership_id IS NOT DISTINCT FROM $3::uuid
+          AND s.instructor_membership_id IS DISTINCT FROM coalesce($2::uuid, cg.instructor_membership_id)
+          AND NOT EXISTS (
+            SELECT 1 FROM attendance a
+             WHERE a.class_session_id = s.id AND a.organization_id = s.organization_id
+          )
+        ORDER BY s.starts_at`,
+      [scheduleId, membershipId, previous],
+    );
+
+    let weeksBlocked = 0;
+    for (const week of weeks.rows) {
+      await tx.query('SAVEPOINT restamp');
+      try {
+        await tx.query(`UPDATE class_session SET instructor_membership_id = $2 WHERE id = $1`, [
+          week.id,
+          week.next,
+        ]);
+        await tx.query('RELEASE SAVEPOINT restamp');
+      } catch (error) {
+        if ((error as { code?: string }).code !== '23P01') throw error;
+        await tx.query('ROLLBACK TO SAVEPOINT restamp');
+        weeksBlocked += 1;
+      }
+    }
+
     await recordAudit(tx, {
       action: 'booking.instructor_assigned',
       entityType: 'class_schedule',
@@ -869,10 +948,17 @@ export async function assignInstructor(
         name: updated.subject,
         instructor: updated.name,
         status: updated.instructor_status,
+        weeksUpdated: weeks.rows.length - weeksBlocked,
+        weeksBlocked,
       },
     });
 
-    return { status: updated.instructor_status, instructorName: updated.name };
+    return {
+      status: updated.instructor_status,
+      instructorName: updated.name,
+      weeksUpdated: weeks.rows.length - weeksBlocked,
+      weeksBlocked,
+    };
   });
 }
 

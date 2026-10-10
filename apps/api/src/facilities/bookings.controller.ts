@@ -17,6 +17,7 @@ import {
   moveBooking,
   NonContiguousLanesError,
   assignInstructor,
+  type AssignedInstructor,
   runTimetableImport,
   setInstructorStatus,
   type BookingTarget,
@@ -159,7 +160,7 @@ export class BookingsController {
   async assign(
     @Param('scheduleId') scheduleId: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ status: string; instructorName: string | null }> {
+  ): Promise<AssignedInstructor> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 

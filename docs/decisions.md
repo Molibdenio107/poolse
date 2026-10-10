@@ -947,3 +947,12 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-10-06** — **Money on the dashboard is mensalidades only, without the late penalty**,
   which is charged once per student and decided on the student's page; **people and staff cost
   are club-wide** and say so, because no site owns a membership, an invitation or a salary.
+
+- **2026-10-10** — **The instructor band is self-scoped, not facility-scoped**: its four widgets
+  are about the sessions a person teaches (`resolved_instructor_id`), so the instructor facility
+  derivation slice 3 was meant to add is not built and `ROLES_WITH_DERIVED_FACILITIES` stays
+  owner and admin. The ticket's "co-instructors" is read as **the stand-in**: there is no
+  co-instructor in the schema, a turma has one instructor and a week may have a stand-in.
+  **The next class holds on to an owed register** for 90 minutes after its start. **Staffing a
+  booking re-stamps its future weeks**, with a week that clashes left alone and counted, as a
+  series move does.

@@ -66,9 +66,10 @@ export class DashboardController {
      * For an owner or an admin that is every site in the club. For everybody
      * else it is empty for now, and that is enforced rather than hoped:
      * `assertRegistryIsSound` refuses to register a facility-scoped widget for a
-     * role whose sites are not derived yet, so slice 3 adds the instructor
-     * derivation here and to `ROLES_WITH_DERIVED_FACILITIES` in one change, or
-     * its widgets do not exist.
+     * role whose sites are not derived yet. The instructor band (slice 3) is
+     * self-scoped and needed none; a band that does adds its derivation here
+     * and to `ROLES_WITH_DERIVED_FACILITIES` in one change, or its widgets do
+     * not exist.
      */
     const manages = hasRole(...ROLES_WITH_DERIVED_FACILITIES);
     const own = manages ? shape.facilities.map((site) => site.id) : [];
