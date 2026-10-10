@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { DetailPage } from '@/components/detail-page';
-import { PageError } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { backTarget } from '@/lib/back';
 import { getTask, listCompletions } from '../../maintenance.actions';
@@ -33,14 +33,27 @@ export default async function TaskPage({
   const { from, page, tab } = await searchParams;
   const t = await getTranslations();
 
-  const detail = await getTask(taskId);
+  const loaded = await getTask(taskId);
 
   /*
    * A task belonging to another tenant is indistinguishable from one that does
    * not exist, deliberately — the difference is itself an answer about who else
    * uses this product. The space page folds 403 into 404 for the same reason.
    */
-  if (detail === null) notFound();
+  /*
+   * A refusal or a true 404 is "no such record", as before — another club's
+   * is indistinguishable from none. Anything else is said: a timeout used to
+   * read as a deleted record (October 2026).
+   */
+  if (loaded.state === 'failed' && loaded.status !== 404) {
+    return (
+      <PageShell title={t('maintenance.section')}>
+        <PageError message={t(loaded.failure.key)} />
+      </PageShell>
+    );
+  }
+  if (loaded.state !== 'ok') notFound();
+  const detail = loaded.data;
   const { task } = detail;
 
   // Reached from the site's own page, which is where Voltar should land.

@@ -12,6 +12,7 @@ import {
   type TaskList,
 } from '@/lib/api';
 import type { FormState } from '../actions';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * Planned maintenance — slice 4.3.
@@ -52,8 +53,9 @@ function refresh(facilityId: string, taskId?: string): void {
   if (taskId !== undefined) revalidatePath(`/dashboard/facilities/tasks/${taskId}`);
 }
 
-export async function listTasks(facilityId: string): Promise<TaskList | null> {
-  return apiFetch<TaskList>(`/maintenance/facilities/${facilityId}/tasks`).catch(() => null);
+// Refused, loaded or failed — never one null for all three. `lib/load-failure.ts`.
+export async function listTasks(facilityId: string): Promise<Outcome<TaskList>> {
+  return outcome(apiFetch<TaskList>(`/maintenance/facilities/${facilityId}/tasks`));
 }
 
 export async function listMyTasks(): Promise<TaskList | null> {
@@ -63,8 +65,8 @@ export async function listMyTasks(): Promise<TaskList | null> {
   return apiFetch<TaskList>('/maintenance/tasks/mine').catch(() => null);
 }
 
-export async function getTask(taskId: string): Promise<TaskDetail | null> {
-  return apiFetch<TaskDetail>(`/maintenance/tasks/${taskId}`).catch(() => null);
+export async function getTask(taskId: string): Promise<Outcome<TaskDetail>> {
+  return outcome(apiFetch<TaskDetail>(`/maintenance/tasks/${taskId}`));
 }
 
 export async function listCompletions(

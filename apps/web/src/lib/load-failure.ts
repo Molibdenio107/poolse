@@ -50,3 +50,47 @@ export function describeLoad(error: unknown): LoadFailure {
   // case where "could not reach" is true.
   return { key: 'account.unavailable', detail: String(error) };
 }
+
+/**
+ * What a best-effort load came back with — October 2026.
+ *
+ * Every list on a record page used to be `.catch(() => null)`, and null meant
+ * two things at once: "this endpoint refused you" (a 403 — the tab is not this
+ * reader's, and hiding it is right) and "it broke" (a 500, a timeout — the tab
+ * is theirs and something went wrong). A null drove `visible:`, so on a bad
+ * night the Manutenção tab simply vanished from an owner's site, and a link to
+ * `?tab=maintenance` fell back to General without a word. A detail page did the
+ * same thing with `notFound()`: a timeout read as a deleted record.
+ *
+ * - `ok`       the data.
+ * - `refused`  a 403. The one answer that means "not yours"; callers hide.
+ * - `failed`   anything else, with the sentence `describeLoad` chooses and the
+ *              status (404 among them) so a detail page can still 404 a 404.
+ */
+export type Outcome<T> =
+  | { state: 'ok'; data: T }
+  | { state: 'refused' }
+  | { state: 'failed'; failure: LoadFailure; status: number | null };
+
+export async function outcome<T>(request: Promise<T>): Promise<Outcome<T>> {
+  try {
+    return { state: 'ok', data: await request };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) return { state: 'refused' };
+    return {
+      state: 'failed',
+      failure: describeLoad(error),
+      status: error instanceof ApiError ? error.status : null,
+    };
+  }
+}
+
+/** The data, or null for either kind of absence — for a caller that only reads. */
+export function dataOf<T>(loaded: Outcome<T>): T | null {
+  return loaded.state === 'ok' ? loaded.data : null;
+}
+
+/** Whether a detail page should answer with its 404: refused, or truly missing. */
+export function isMissing(loaded: Outcome<unknown>): boolean {
+  return loaded.state === 'refused' || (loaded.state === 'failed' && loaded.status === 404);
+}

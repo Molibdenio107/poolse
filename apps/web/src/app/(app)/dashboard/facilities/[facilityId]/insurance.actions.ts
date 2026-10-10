@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPatch, apiPost, type InsurancePolicy } from '@/lib/api';
 import type { FormState } from '../../actions';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * The apólices a facility holds.
@@ -42,21 +43,17 @@ function refresh(facilityId: string): void {
   revalidatePath(`/dashboard/facilities/${facilityId}`);
 }
 
-export async function listPolicies(facilityId: string): Promise<InsurancePolicy[] | null> {
-  try {
-    const { policies } = await apiFetch<{ policies: InsurancePolicy[] }>(
-      `/facilities/${facilityId}/insurance-policies`,
-    );
-    return policies;
-  } catch {
-    /*
-     * Null rather than a thrown error, for the reason the price list gives: the
-     * commonest cause is a 403 — an instructor opening a site they work at —
-     * and what the club pays its insurer is not theirs to read. The section
-     * simply is not there, and the page renders everything else.
-     */
-    return null;
-  }
+export async function listPolicies(facilityId: string): Promise<Outcome<InsurancePolicy[]>> {
+  /*
+   * The commonest refusal is a 403 — an instructor opening a site they work at —
+   * and what the club pays its insurer is not theirs to read, so `refused`
+   * hides the section. Anything else is `failed`, and said.
+   */
+  return outcome(
+    apiFetch<{ policies: InsurancePolicy[] }>(`/facilities/${facilityId}/insurance-policies`).then(
+      (answer) => answer.policies,
+    ),
+  );
 }
 
 interface PolicyFields {

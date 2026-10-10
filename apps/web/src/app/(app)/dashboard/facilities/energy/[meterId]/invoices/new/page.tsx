@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { backTarget } from '@/lib/back';
 import { getMeter } from '../../../../energy.actions';
 import { invoiceImportAvailable } from '../../../invoice.actions';
@@ -25,9 +25,22 @@ export default async function NewInvoicePage({
   const { from } = await searchParams;
   const t = await getTranslations();
 
-  const detail = await getMeter(meterId);
-  if (detail === null || !detail.canRecord) notFound();
-  const { meter } = detail;
+  const loaded = await getMeter(meterId);
+  /*
+   * A refusal or a true 404 is "no such record", as before — another club's
+   * is indistinguishable from none. Anything else is said: a timeout used to
+   * read as a deleted record (October 2026).
+   */
+  if (loaded.state === 'failed' && loaded.status !== 404) {
+    return (
+      <PageShell title={t('energy.title')}>
+        <PageError message={t(loaded.failure.key)} />
+      </PageShell>
+    );
+  }
+  if (loaded.state !== 'ok') notFound();
+  if (!loaded.data.canRecord) notFound();
+  const { meter } = loaded.data;
 
   const back = backTarget(from, `/dashboard/facilities/energy/${meterId}`);
   const importAvailable = await invoiceImportAvailable();

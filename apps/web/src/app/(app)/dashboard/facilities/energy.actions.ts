@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { apiFetch, apiPatch, apiPost, type MeterDetail, type MeterList } from '@/lib/api';
 import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../actions';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * Energy — slices 5.1 and 5.2.
@@ -24,12 +25,13 @@ function refresh(facilityId: string, meterId?: string): void {
   if (meterId !== undefined) revalidatePath(`/dashboard/facilities/energy/${meterId}`);
 }
 
-export async function listMeters(facilityId: string): Promise<MeterList | null> {
-  return apiFetch<MeterList>(`/energy/facilities/${facilityId}/meters`).catch(() => null);
+// Refused, loaded or failed — never one null for all three. `lib/load-failure.ts`.
+export async function listMeters(facilityId: string): Promise<Outcome<MeterList>> {
+  return outcome(apiFetch<MeterList>(`/energy/facilities/${facilityId}/meters`));
 }
 
-export async function getMeter(meterId: string): Promise<MeterDetail | null> {
-  return apiFetch<MeterDetail>(`/energy/meters/${meterId}`).catch(() => null);
+export async function getMeter(meterId: string): Promise<Outcome<MeterDetail>> {
+  return outcome(apiFetch<MeterDetail>(`/energy/meters/${meterId}`));
 }
 
 /**

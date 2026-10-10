@@ -46,7 +46,7 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
    * state of every site behind the request that draws the page, and lose the
    * property that a site whose spaces fail to load still renders.
    *
-   * `listSpaces` returns null on a refusal, so a failed block is simply absent.
+   * A refused block is absent; a failed one says so in its place (`Outcome`).
    */
   const spacesBySite = new Map(
     await Promise.all(
@@ -195,15 +195,22 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                   and the balneários, the sala de máquinas and the arrecadação
                   are the rest of the building around them.
                 */}
-                {spacesBySite.get(facility.id) != null && (
-                  <SpacesPanel
-                    facilityId={facility.id}
-                    spaces={spacesBySite.get(facility.id)!.items}
-                    canManage={spacesBySite.get(facility.id)!.canManage}
-                    variant="block"
-                    backTo="/dashboard/facilities"
-                  />
-                )}
+                {(() => {
+                  const spaces = spacesBySite.get(facility.id);
+                  if (spaces === undefined || spaces.state === 'refused') return null;
+                  if (spaces.state === 'failed') {
+                    return <PageError message={t(spaces.failure.key)} />;
+                  }
+                  return (
+                    <SpacesPanel
+                      facilityId={facility.id}
+                      spaces={spaces.data.items}
+                      canManage={spaces.data.canManage}
+                      variant="block"
+                      backTo="/dashboard/facilities"
+                    />
+                  );
+                })()}
 
                 <div className="border-t border-border pt-4">
                   <h3 className="mb-3 text-sm text-foreground-muted">

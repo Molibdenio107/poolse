@@ -9,6 +9,7 @@ import {
   type SpaceList,
 } from '@/lib/api';
 import type { FormState } from '../actions';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * Espaços — round 6.
@@ -64,10 +65,9 @@ function refreshSpace(spaceId: string): void {
  * Null when the endpoint refuses — the panel is then simply not there, the same
  * way `listPartners` and `listPrices` behave next door.
  */
-export async function listSpaces(facilityId: string): Promise<SpaceList | null> {
-  return apiFetch<SpaceList>(
-    `/spaces?facilityId=${encodeURIComponent(facilityId)}`,
-  ).catch(() => null);
+// Refused, loaded or failed — never one null for all three. `lib/load-failure.ts`.
+export async function listSpaces(facilityId: string): Promise<Outcome<SpaceList>> {
+  return outcome(apiFetch<SpaceList>(`/spaces?facilityId=${encodeURIComponent(facilityId)}`));
 }
 
 /**

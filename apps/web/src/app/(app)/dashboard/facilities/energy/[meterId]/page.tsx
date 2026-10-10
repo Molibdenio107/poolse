@@ -1,7 +1,7 @@
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { notFound } from 'next/navigation';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
-import { PageError } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { DetailPage } from '@/components/detail-page';
 import { ConsumptionBars } from '@/components/consumption-bars';
 import Link from 'next/link';
@@ -40,10 +40,21 @@ export default async function MeterPage({
   const locale = await getLocale();
   const format = await getFormatter();
 
-  const detail = await getMeter(meterId);
-  // Another tenant's meter is indistinguishable from none, deliberately.
-  if (detail === null) notFound();
-  const { meter, readings, monthly, pools, tariffs, canPlan, canRecord, canPrice } = detail;
+  const loaded = await getMeter(meterId);
+  /*
+   * A refusal or a true 404 is "no such record", as before — another club's
+   * is indistinguishable from none. Anything else is said: a timeout used to
+   * read as a deleted record (October 2026).
+   */
+  if (loaded.state === 'failed' && loaded.status !== 404) {
+    return (
+      <PageShell title={t('energy.title')}>
+        <PageError message={t(loaded.failure.key)} />
+      </PageShell>
+    );
+  }
+  if (loaded.state !== 'ok') notFound();
+  const { meter, readings, monthly, pools, tariffs, canPlan, canRecord, canPrice } = loaded.data;
 
   const back = backTarget(from, `/dashboard/facilities/${meter.facilityId}`);
 

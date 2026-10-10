@@ -123,8 +123,11 @@ export default async function FacilityPage({
     them also feed a badge. What a tab needs beyond its own list (the register,
     for the price list's levels) waits until that tab is opened.
 
-    Every one stays best-effort, as before: a list that cannot be read costs its
-    tab, never the page.
+    Every one stays best-effort, and each answers one of three things
+    (`Outcome`, `lib/load-failure.ts`): **refused** hides its tab, because a 403
+    is the permission check; **failed** keeps the tab and says so inside it,
+    because a 500 is not a permission — it used to be the same null, and on a
+    bad night an owner's Manutenção tab simply was not there.
   */
   const [partners, spaces, tasks, meters, prices, categories, policies] = await Promise.all([
     // Parcerias — POOLSE-47. Page 1; the panel pages itself.
@@ -174,22 +177,36 @@ export default async function FacilityPage({
         {
           slug: 'prices',
           labelKey: 'detailTabs.prices',
-          visible: prices !== null || categories !== null || policies !== null,
+          visible:
+            prices.state !== 'refused' ||
+            categories.state !== 'refused' ||
+            policies.state !== 'refused',
           content: async () => {
             const register =
-              prices === null ? null : await apiFetch<Students>('/students').catch(() => null);
+              prices.state === 'ok'
+                ? await apiFetch<Students>('/students').catch(() => null)
+                : null;
             return (
               <>
-                {prices !== null && (
-                  <PricesPanel
-                    facilityId={facilityId}
-                    plans={prices.plans}
-                    periods={prices.periods}
-                    seasons={prices.seasons}
-                    billing={prices.billing}
-                    levels={register?.levels ?? []}
-                    canManage={register?.canManage ?? false}
-                  />
+                {prices.state === 'failed' && <PageError message={t(prices.failure.key)} />}
+                {prices.state === 'ok' && (
+                  <>
+                    {/*
+                      The register supplies the levels and whether the reader may
+                      edit. Without it an owner got a read-only list and no word
+                      why; now the list is still shown, and the reason with it.
+                    */}
+                    {register === null && <PageError message={t('detailTabs.loadFailed')} />}
+                    <PricesPanel
+                      facilityId={facilityId}
+                      plans={prices.data.plans}
+                      periods={prices.data.periods}
+                      seasons={prices.data.seasons}
+                      billing={prices.data.billing}
+                      levels={register?.levels ?? []}
+                      canManage={register?.canManage ?? false}
+                    />
+                  </>
                 )}
 
                 {/*
@@ -198,12 +215,15 @@ export default async function FacilityPage({
                   conversation. Not gated on `prices`: a reader may see the
                   names without seeing the amounts.
                 */}
-                {categories !== null && (
+                {categories.state === 'failed' && (
+                  <PageError message={t(categories.failure.key)} />
+                )}
+                {categories.state === 'ok' && (
                   <CategoriesPanel
                     facilityId={facilityId}
-                    categories={categories.categories}
-                    canManage={categories.canManage}
-                    canSeeValues={categories.canSeeValues}
+                    categories={categories.data.categories}
+                    canManage={categories.data.canManage}
+                    canSeeValues={categories.data.canSeeValues}
                   />
                 )}
 
@@ -212,10 +232,11 @@ export default async function FacilityPage({
                   of the seguro are one conversation: what the club is covered
                   by, and what it charges a family for being on it.
                 */}
-                {policies !== null && (
+                {policies.state === 'failed' && <PageError message={t(policies.failure.key)} />}
+                {policies.state === 'ok' && (
                   <InsurancePanel
                     facilityId={facilityId}
-                    policies={policies}
+                    policies={policies.data}
                     canManage={register?.canManage ?? false}
                   />
                 )}
@@ -226,17 +247,22 @@ export default async function FacilityPage({
         {
           slug: 'partners',
           labelKey: 'partners.title',
-          visible: partners !== null,
-          badge: partners === null ? undefined : { kind: 'count', value: partners.total },
+          visible: partners.state !== 'refused',
+          badge:
+            partners.state === 'ok' ? { kind: 'count', value: partners.data.total } : undefined,
           content: () =>
-            partners !== null && (
-              <PartnersPanel
-                facilityId={facilityId}
-                facilityName={loaded.name}
-                partners={partners.items}
-                total={partners.total}
-                canManage={partners.canManage}
-              />
+            partners.state === 'failed' ? (
+              <PageError message={t(partners.failure.key)} />
+            ) : (
+              partners.state === 'ok' && (
+                <PartnersPanel
+                  facilityId={facilityId}
+                  facilityName={loaded.name}
+                  partners={partners.data.items}
+                  total={partners.data.total}
+                  canManage={partners.data.canManage}
+                />
+              )
             ),
         },
         {
@@ -302,19 +328,23 @@ export default async function FacilityPage({
           */
           slug: 'spaces',
           labelKey: 'spaces.title',
-          visible: spaces !== null,
+          visible: spaces.state !== 'refused',
           badge:
-            spaces !== null && spaces.items.some((space) => space.overdue)
+            spaces.state === 'ok' && spaces.data.items.some((space) => space.overdue)
               ? { kind: 'dot', labelKey: 'detailTabs.badge.spacesOverdue' }
               : undefined,
           content: () =>
-            spaces !== null && (
-              <SpacesPanel
-                facilityId={facilityId}
-                spaces={spaces.items}
-                canManage={spaces.canManage}
-                backTo={`${path}?tab=spaces`}
-              />
+            spaces.state === 'failed' ? (
+              <PageError message={t(spaces.failure.key)} />
+            ) : (
+              spaces.state === 'ok' && (
+                <SpacesPanel
+                  facilityId={facilityId}
+                  spaces={spaces.data.items}
+                  canManage={spaces.data.canManage}
+                  backTo={`${path}?tab=spaces`}
+                />
+              )
             ),
         },
         {
@@ -326,38 +356,46 @@ export default async function FacilityPage({
           */
           slug: 'maintenance',
           labelKey: 'maintenance.section',
-          visible: tasks !== null,
+          visible: tasks.state !== 'refused',
           badge:
-            tasks !== null && tasks.tasks.some((task) => task.state === 'due')
+            tasks.state === 'ok' && tasks.data.tasks.some((task) => task.state === 'due')
               ? { kind: 'dot', labelKey: 'detailTabs.badge.maintenanceDue' }
               : undefined,
           content: () =>
-            tasks !== null && (
-              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-                <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                  {t('maintenance.section')}
-                </h2>
-                <MaintenancePanel facilityId={facilityId} list={tasks} />
-              </section>
+            tasks.state === 'failed' ? (
+              <PageError message={t(tasks.failure.key)} />
+            ) : (
+              tasks.state === 'ok' && (
+                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('maintenance.section')}
+                  </h2>
+                  <MaintenancePanel facilityId={facilityId} list={tasks.data} />
+                </section>
+              )
             ),
         },
         {
           // Energy — slice 5.1: what running the site costs.
           slug: 'energy',
           labelKey: 'energy.section',
-          visible: meters !== null,
+          visible: meters.state !== 'refused',
           content: () =>
-            meters !== null && (
-              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-                <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                  {t('energy.section')}
-                </h2>
-                <EnergyPanel
-                  facilityId={facilityId}
-                  list={meters}
-                  backTo={`${path}?tab=energy`}
-                />
-              </section>
+            meters.state === 'failed' ? (
+              <PageError message={t(meters.failure.key)} />
+            ) : (
+              meters.state === 'ok' && (
+                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('energy.section')}
+                  </h2>
+                  <EnergyPanel
+                    facilityId={facilityId}
+                    list={meters.data}
+                    backTo={`${path}?tab=energy`}
+                  />
+                </section>
+              )
             ),
         },
         {

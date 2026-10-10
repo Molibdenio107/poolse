@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { PageShell } from '@/components/page-shell';
+import { PageError, PageShell } from '@/components/page-shell';
 import { backTarget } from '@/lib/back';
 import { centsToText } from '@/lib/energy-invoice';
 import { getInvoice } from '../../../invoice.actions';
@@ -26,9 +26,22 @@ export default async function InvoicePage({
   const t = await getTranslations();
   const format = await getFormatter();
 
-  const detail = await getInvoice(invoiceId);
-  if (detail === null || detail.invoice.meterId !== meterId) notFound();
-  const { invoice, canArchive } = detail;
+  const loaded = await getInvoice(invoiceId);
+  /*
+   * A refusal or a true 404 is "no such record", as before — another club's
+   * is indistinguishable from none. Anything else is said: a timeout used to
+   * read as a deleted record (October 2026).
+   */
+  if (loaded.state === 'failed' && loaded.status !== 404) {
+    return (
+      <PageShell title={t('energy.title')}>
+        <PageError message={t(loaded.failure.key)} />
+      </PageShell>
+    );
+  }
+  if (loaded.state !== 'ok') notFound();
+  if (loaded.data.invoice.meterId !== meterId) notFound();
+  const { invoice, canArchive } = loaded.data;
 
   const back = backTarget(from, `/dashboard/facilities/energy/${meterId}`);
   const euros = (cents: number | null): string => (cents === null ? '—' : `${centsToText(cents)} €`);

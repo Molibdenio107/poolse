@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPatch, apiPost, type FeeCategory } from '@/lib/api';
 import { isRefusal, parseCategoryDiscount } from '@/lib/fee-category';
 import type { FormState } from '../../actions';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * The club's fee categories — round 19, moved here from Alunos.
@@ -46,7 +47,7 @@ function failure(error: unknown, errorKey: string): FormState {
   return { ok: false, errorKey, detail: String(error) };
 }
 
-export async function listCategories(): Promise<{
+export async function listCategories(): Promise<Outcome<{
   categories: FeeCategory[];
   canManage: boolean;
   /**
@@ -57,17 +58,16 @@ export async function listCategories(): Promise<{
    * facts and only a blank would make them look the same.
    */
   canSeeValues: boolean;
-} | null> {
-  try {
-    return await apiFetch<{
+}>> {
+  // Refused for anybody the endpoint refuses, exactly as the price list is;
+  // failed is said on the tab rather than taking the panel away.
+  return outcome(
+    apiFetch<{
       categories: FeeCategory[];
       canManage: boolean;
       canSeeValues: boolean;
-    }>('/fee-categories');
-  } catch {
-    // Null for anybody the endpoint refuses, exactly as the price list does.
-    return null;
-  }
+    }>('/fee-categories'),
+  );
 }
 
 /**

@@ -781,7 +781,10 @@ is untested SQL** — the whole stand-in feature shipped dead this way, and the 
 
 **A fetch that answers `null` for both "not yet" and "it failed" produces a control that is
 disabled with no explanation.** Keep `loaded` as its own state, and say what went wrong with a
-way to retry. `stand-in-picker.tsx` is the shape.
+way to retry. `stand-in-picker.tsx` is the shape. **On a server page, a best-effort load returns `Outcome<T>`**
+(`outcome()` in `lib/load-failure.ts`): `refused` (a 403) hides a tab, `failed` keeps it and shows
+`PageError`, and a detail page 404s only on a refusal or a real 404 — never `.catch(() => null)`
+driving `visible:`, which is how a 500 made an owner's tab vanish.
 
 **A column of a custom enum array is read `::text[]`, never bare.** node-postgres has a parser
 for `text[]` and none for `pool_metric[]`, so a bare select hands JavaScript the string

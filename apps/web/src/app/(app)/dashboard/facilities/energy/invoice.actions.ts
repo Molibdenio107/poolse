@@ -7,6 +7,7 @@ import { energyInvoiceParser } from '@/lib/energy-invoice-agent';
 import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../../actions';
 import { getTranslations } from 'next-intl/server';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * Faturas — slice 5.3. Two ways in, one pipeline.
@@ -176,8 +177,12 @@ export async function listInvoices(meterId: string): Promise<EnergyInvoiceList |
   return apiFetch<EnergyInvoiceList>(`/energy/meters/${meterId}/invoices`).catch(() => null);
 }
 
-export async function getInvoice(invoiceId: string): Promise<{ invoice: EnergyInvoiceDetail; canArchive: boolean } | null> {
-  return apiFetch<{ invoice: EnergyInvoiceDetail; canArchive: boolean }>(`/energy/invoices/${invoiceId}`).catch(() => null);
+export async function getInvoice(
+  invoiceId: string,
+): Promise<Outcome<{ invoice: EnergyInvoiceDetail; canArchive: boolean }>> {
+  return outcome(
+    apiFetch<{ invoice: EnergyInvoiceDetail; canArchive: boolean }>(`/energy/invoices/${invoiceId}`),
+  );
 }
 
 export async function archiveInvoiceAction(_previous: FormState, formData: FormData): Promise<FormState> {

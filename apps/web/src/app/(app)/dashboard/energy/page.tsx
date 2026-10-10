@@ -13,6 +13,7 @@ import {
   type FacilityOption,
   type MeterOption,
 } from '../facilities/energy/[meterId]/invoices/invoice-form';
+import { dataOf } from '@/lib/load-failure';
 
 /**
  * Energia — the module's own front door, at Rui's ask.
@@ -48,7 +49,12 @@ export default async function EnergyPage(): Promise<React.ReactElement> {
     sites === null
       ? []
       : await Promise.all(
-          sites.facilities.map(async (site) => ({ site, list: await listMeters(site.id) })),
+          // `dataOf`: a refused or a failed site both draw this page's own
+          // per-site "unavailable" line, which already says so.
+          sites.facilities.map(async (site) => ({
+            site,
+            list: dataOf(await listMeters(site.id)),
+          })),
         );
 
   // Everything a dropped bill may land on, across the club.

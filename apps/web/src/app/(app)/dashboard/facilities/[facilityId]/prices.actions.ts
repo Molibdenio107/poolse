@@ -17,6 +17,7 @@ import {
   type Seasons,
 } from '@/lib/api';
 import type { FormState } from '../../actions';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * The facility's price list — POOLSE-42.
@@ -50,13 +51,13 @@ function refresh(facilityId: string): void {
   revalidatePath(`/dashboard/facilities/${facilityId}`);
 }
 
-export async function listPrices(facilityId: string): Promise<{
+export async function listPrices(facilityId: string): Promise<Outcome<{
   plans: FeePlan[];
   periods: FeePeriod[];
   billing: BillingSettings;
   seasons: Season[];
-} | null> {
-  try {
+}>> {
+  return outcome((async () => {
     /*
      * The seasons come along because an inscrição and a seguro belong to one.
      *
@@ -78,15 +79,12 @@ export async function listPrices(facilityId: string): Promise<{
       billing,
       seasons: seasons.seasons.filter((season) => season.status !== 'archived'),
     };
-  } catch {
-    /*
-     * Null rather than a thrown error, because the commonest cause is a 403: an
-     * instructor opening a site they work at. AC10 says they see no amounts at
-     * all, so the block simply is not there for them — the endpoint refused, and
-     * the page carries on rendering everything else.
-     */
-    return null;
-  }
+  })());
+  /*
+   * The commonest refusal is a 403: an instructor opening a site they work at.
+   * AC10 says they see no amounts at all, so `refused` hides the block for them.
+   * Anything else is `failed` and said — it used to be the same null.
+   */
 }
 
 interface PeriodFields {

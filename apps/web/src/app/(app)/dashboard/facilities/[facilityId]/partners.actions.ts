@@ -10,6 +10,7 @@ import {
   type PartnerList,
 } from '@/lib/api';
 import type { FormState } from '../../actions';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * Parcerias — POOLSE-47.
@@ -58,14 +59,12 @@ function refreshPartner(partnerId: string): void {
 export async function listPartners(
   facilityId: string,
   page: number,
-): Promise<PartnerList | null> {
-  try {
-    return await apiFetch<PartnerList>(
+): Promise<Outcome<PartnerList>> {
+  return outcome(
+    apiFetch<PartnerList>(
       `/facilities/${facilityId}/partners?page=${encodeURIComponent(String(page))}`,
-    );
-  } catch {
-    return null;
-  }
+    ),
+  );
 }
 
 /** Empty means absent, which is what every optional text field on the API means. */
