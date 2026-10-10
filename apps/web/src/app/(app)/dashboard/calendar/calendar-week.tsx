@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -48,6 +48,7 @@ export function CalendarWeek({
   groups,
   controls,
   canManage,
+  openPlanFor,
 }: {
   organizationId: string;
   weekStart: string;
@@ -63,6 +64,13 @@ export function CalendarWeek({
   groups: ClassGroup[];
   controls: Record<string, SessionControls>;
   canManage: boolean;
+  /**
+   * A session whose plan sheet opens on arrival — `?plan=` from the dashboard's
+   * plan card (POOLSE-66 slice 3). Matched to the block drawn for it, so the
+   * sheet carries the same title and facts as when opened from the hover card;
+   * a session not on this week's grid opens nothing.
+   */
+  openPlanFor?: string | undefined;
 }): React.ReactElement {
   const t = useTranslations();
   const { show } = useToast();
@@ -105,6 +113,14 @@ export function CalendarWeek({
           controls[slotKey(booking.classGroupId, booking.weekday, booking.startTime)]),
     [controls],
   );
+
+  // Once, on arrival. A refresh after a save re-renders without remounting, so
+  // closing the sheet keeps it closed.
+  useEffect(() => {
+    if (openPlanFor === undefined) return;
+    const booking = bookings.find((one) => controlsFor(one)?.sessionId === openPlanFor);
+    if (booking !== undefined) setPlanning({ sessionId: openPlanFor, booking });
+  }, []);
 
   /**
    * Who is teaching this one lesson, built once and placed twice.

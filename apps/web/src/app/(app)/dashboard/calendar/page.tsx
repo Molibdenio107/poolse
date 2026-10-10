@@ -43,11 +43,11 @@ import { formatDate } from '@/lib/date-format';
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; plan?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
-  const { week } = await searchParams;
+  const { week, plan } = await searchParams;
 
   // Whatever lands in the query string, the grid gets a Monday. Someone pasting
   // a link to a Thursday should see that Thursday's week, not a week starting
@@ -413,6 +413,10 @@ export default async function CalendarPage({
                 groups={classes.groups}
                 controls={controls}
                 canManage={calendar.canManage}
+                // The dashboard's plan card links here with the lesson to open.
+                openPlanFor={
+                  typeof plan === 'string' && /^[0-9a-f-]{36}$/i.test(plan) ? plan : undefined
+                }
               />
             ) : (
               // The turmas would not load. The week is still worth showing, and

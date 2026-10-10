@@ -2268,6 +2268,52 @@
         "title": "Custo com pessoal",
         "empty": "Ainda não há staff.",
         "open": "Ver salários"
+      },
+      "day": {
+        "today": "Hoje",
+        "tomorrow": "Amanhã",
+        "other": "{weekday}, {date}"
+      },
+      "next": {
+        "title": "A minha próxima aula",
+        "empty": "Não tem aulas marcadas a partir de agora.",
+        "when": "{day} às {time} · {minutes} min",
+        "headcount": "{enrolled} de {capacity} alunos",
+        "headcountUnlimited": "{enrolled, plural, one {# aluno} other {# alunos}} (sem limite definido)",
+        "partnerHeadcount": "{count, plural, one {# participante} other {# participantes}}, segundo a parceria",
+        "covering": "Está a substituir {name}.",
+        "registerTaken": "Presenças marcadas",
+        "openTurma": "Ver turma",
+        "openCalendar": "Ver no calendário"
+      },
+      "week": {
+        "title": "A minha semana",
+        "empty": "Não tem aulas esta semana.",
+        "summary": "{total, plural, one {# aula} other {# aulas}} esta semana, {remaining, plural, =0 {nenhuma por dar} other {# por dar}}",
+        "cancelled": "Cancelada",
+        "registerMissing": "Presenças por marcar",
+        "open": "Ver calendário"
+      },
+      "plan": {
+        "title": "Plano da próxima aula",
+        "empty": "Não há nenhuma aula para planear a partir de agora.",
+        "for": "{name} — {day} às {time}",
+        "missing": "Ainda não há plano para esta aula.",
+        "writtenBy": "Escrito por {name}",
+        "copy": "Copiar o plano de {date}",
+        "readOnly": "Só o professor desta aula, o proprietário ou um administrador pode escrever o plano.",
+        "alreadyWritten": "Entretanto alguém escreveu o plano desta aula — nada foi copiado.",
+        "noPrevious": "A aula anterior não tem plano para copiar.",
+        "write": "Escrever o plano",
+        "open": "Abrir o plano"
+      },
+      "turmas": {
+        "title": "As minhas turmas",
+        "empty": "Não é responsável por nenhuma turma.",
+        "students": "{students, plural, one {# aluno} other {# alunos}}",
+        "studentsOf": "{students} de {capacity}",
+        "more": "{count, plural, one {e mais # turma} other {e mais # turmas}}",
+        "open": "Ver turmas"
       }
     },
     "scope": {

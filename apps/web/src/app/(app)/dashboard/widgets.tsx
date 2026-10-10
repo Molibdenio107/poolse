@@ -22,6 +22,7 @@ import { centsToText } from '@/lib/energy-invoice';
 import { formatDate } from '@/lib/date-format';
 import { withFrom } from '@/lib/back';
 import { WidgetCard } from './widget-card';
+import { MyTurmasCard, NextClassCard, TrainingPlanCard, WeekCard } from './instructor-widgets';
 
 /**
  * What each card draws — POOLSE-66, slice 2a.
@@ -61,6 +62,14 @@ export async function renderWidget(
       return <EnergyCostsCard widget={widget} />;
     case 'maint.mytasks':
       return <TasksCard widget={widget} />;
+    case 'inst.nextclass':
+      return <NextClassCard widget={widget} />;
+    case 'inst.week':
+      return <WeekCard widget={widget} />;
+    case 'inst.trainingplan.next':
+      return <TrainingPlanCard widget={widget} />;
+    case 'inst.myturmas':
+      return <MyTurmasCard widget={widget} />;
     case 'setup.checklist':
       return <ChecklistCard widget={widget} />;
     /*

@@ -227,7 +227,47 @@ re-renders on the new scope. The season-occupancy panel that sat below the bands
 slice: today's figures are the occupancy card, and the season summary is each site's **Ocupação**
 tab, loaded when it opens.
 
-**Not built:** the instructor and maintenance bands proper, and the personal band behind
+## The instructor band — slice 3, 10 October 2026
+
+Four widgets, instructor role only, **all `scope: 'self'`**: they are about the sessions this
+person teaches, so they need no list of sites and ignore the management selector by
+construction (AC 10). Reads are `instructor.repository.ts`, one statement each.
+
+| id | priority | what it says |
+|---|---|---|
+| `inst.nextclass` | 50 → 85 while its register is owed | when (hoje / amanhã / weekday and date, on the site's clock), tank and pistas, turma and level, enrolled against capacity — or the school's headcount for a parceria — and, for a stand-in, whose class it is. **Marcar presenças** from 30 min before the start to 90 min after; otherwise the card links to the turma |
+| `inst.trainingplan.next` | 40 → 70 when a lesson inside two days has none | the next *plannable* lesson's plan: its first line and author, or "no plan yet" with **Copiar o plano de dd-MM-yyyy** |
+| `inst.week` | 35 | this Monday-to-Sunday, my classes only, cancelled ones kept and said, a past turma class with no register flagged |
+| `inst.myturmas` | 20 | the turmas I am responsible for, with active enrolments against capacity |
+
+**"Mine" is `class_session.resolved_instructor_id`** — the generated stand-in-or-instructor
+column the one-building exclusion already compares — so a stand-in sees the class they cover and
+the regular instructor does not see it that week. **"Next" holds on to a class whose register is
+still owed**: upcoming, in progress, or finished within 90 minutes with no register taken. A
+cancelled class gives way to the following one (QA 5); a week moved by hand is read at its moved
+`starts_at` (QA 7). **A parceria is on every card through LEFT joins**, never takes a register,
+and is plannable only when the club runs its lessons (`managed_lessons`). **Responsible for a
+turma** is `myTurmaIds`' union — its own instructor, or named on one of its bookings; a one-week
+stand-in is not.
+
+**The copy button sends only the session id.** The server action re-reads the plan, copies the
+previous lesson's body only if nothing has been written since the page was drawn, and writes
+through the sheet's own `PUT /sessions/:id/plan`, so the row-level rule is the API's. The card's
+*Escrever o plano* opens `/dashboard/calendar?week=…&plan=<session>`, which opens that lesson's
+sheet on arrival.
+
+**No money anywhere in the band** (AC 8), asserted on the raw payload with a search for
+`cents`. With `maint.mytasks` an instructor has five candidates for four places; the cap's
+ordering decides, and an instructor at a club with no classes sees four empty cards.
+
+**Staffing a booking now re-stamps its generated weeks.** `assignInstructor` used to write the
+booking's override and leave every session behind it on the old instructor, so the calendar
+(which coalesces the booking in) and `resolved_instructor_id` disagreed. It now re-stamps future,
+uncancelled, unregistered weeks that still carry the pattern's previous instructor, one savepoint
+each, and reports `weeksUpdated` and `weeksBlocked` — a week where the person already teaches in
+another building is left alone and counted.
+
+**Not built:** the maintenance band proper, and the personal band behind
 `DASHBOARD_PERSONAL_BAND`. There is also **no React test harness in this repo**,
 so the card's three states are proven by the API's own state assertions and by the build rather
 than by a render test; adding one is its own decision. Widget customisation is out of scope for

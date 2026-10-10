@@ -3723,6 +3723,78 @@ export interface StaffCostWidgetData {
   ownerExcluded: boolean;
 }
 
+/** `inst.nextclass` — POOLSE-66 slice 3. Days and times are the site's. */
+export interface NextClassWidgetData {
+  sessionId: string;
+  classGroupId: string | null;
+  partner: boolean;
+  className: string;
+  levelName: string | null;
+  poolName: string | null;
+  lanes: number[];
+  startsAt: string;
+  localDate: string;
+  localTime: string;
+  durationMinutes: number;
+  /** 0 today, 1 tomorrow — computed on the site's clock, by the server. */
+  dayOffset: number;
+  weekday: number;
+  enrolled: number;
+  capacity: number | null;
+  registerOpen: boolean;
+  registerTaken: boolean;
+  coveringFor: string | null;
+}
+
+/** `inst.week`. Cancelled classes included, flagged. */
+export interface WeekWidgetData {
+  remaining: number;
+  classes: {
+    sessionId: string;
+    classGroupId: string | null;
+    partner: boolean;
+    className: string;
+    poolName: string | null;
+    localDate: string;
+    localTime: string;
+    weekday: number;
+    dayOffset: number;
+    durationMinutes: number;
+    cancelled: boolean;
+    registerTaken: boolean;
+    past: boolean;
+  }[];
+}
+
+/** `inst.trainingplan.next`. The previous lesson's text is never sent. */
+export interface TrainingPlanWidgetData {
+  next: {
+    sessionId: string;
+    className: string;
+    localDate: string;
+    localTime: string;
+    dayOffset: number;
+    weekday: number;
+  };
+  written: boolean;
+  excerpt: string | null;
+  updatedBy: string | null;
+  previousOn: string | null;
+  canEdit: boolean;
+}
+
+/** `inst.myturmas`. */
+export interface MyTurmasWidgetData {
+  total: number;
+  turmas: {
+    id: string;
+    name: string;
+    levelName: string | null;
+    students: number;
+    capacity: number | null;
+  }[];
+}
+
 export interface ChecklistWidgetData {
   steps: { id: 'facility' | 'pools' | 'prices' | 'staff' | 'students'; done: boolean }[];
 }

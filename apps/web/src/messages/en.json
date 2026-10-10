@@ -2268,6 +2268,52 @@
         "title": "Staff cost",
         "empty": "No staff yet.",
         "open": "Open salaries"
+      },
+      "day": {
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "other": "{weekday}, {date}"
+      },
+      "next": {
+        "title": "My next class",
+        "empty": "You have no classes from now on.",
+        "when": "{day} at {time} · {minutes} min",
+        "headcount": "{enrolled} of {capacity} students",
+        "headcountUnlimited": "{enrolled, plural, one {# student} other {# students}} (no limit set)",
+        "partnerHeadcount": "{count, plural, one {# participant} other {# participants}}, as the partner reported",
+        "covering": "You are covering for {name}.",
+        "registerTaken": "Register taken",
+        "openTurma": "Open class group",
+        "openCalendar": "Open in the calendar"
+      },
+      "week": {
+        "title": "My week",
+        "empty": "You have no classes this week.",
+        "summary": "{total, plural, one {# class} other {# classes}} this week, {remaining, plural, =0 {none left to teach} other {# left to teach}}",
+        "cancelled": "Cancelled",
+        "registerMissing": "Register not taken",
+        "open": "Open calendar"
+      },
+      "plan": {
+        "title": "Next lesson plan",
+        "empty": "There is no lesson to plan from now on.",
+        "for": "{name} — {day} at {time}",
+        "missing": "There is no plan for this lesson yet.",
+        "writtenBy": "Written by {name}",
+        "copy": "Copy the plan from {date}",
+        "readOnly": "Only this lesson's instructor, the owner or an admin can write the plan.",
+        "alreadyWritten": "Somebody has written this lesson’s plan in the meantime — nothing was copied.",
+        "noPrevious": "The previous lesson has no plan to copy.",
+        "write": "Write the plan",
+        "open": "Open the plan"
+      },
+      "turmas": {
+        "title": "My class groups",
+        "empty": "You are not responsible for any class group.",
+        "students": "{students, plural, one {# student} other {# students}}",
+        "studentsOf": "{students} of {capacity}",
+        "more": "{count, plural, one {and # more class group} other {and # more class groups}}",
+        "open": "Open class groups"
       }
     },
     "scope": {

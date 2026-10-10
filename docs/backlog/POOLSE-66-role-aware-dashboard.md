@@ -283,7 +283,11 @@ Three questions the codebase raised. All three took the recommended answer; none
      needs. **AC 9 and AC 11 land here, and so does AC 10**: the facility selector is deferred
      from 2a on purpose, because every widget before this one is tenant- or self-scoped and a
      selector would have changed nothing on screen.
-3. **The instructor band.**
+3. ✅ **The instructor band. Built 10 October 2026.** Four widgets, all self-scoped on
+   `resolved_instructor_id` — so the facility derivation this slice was meant to add turned out
+   unnecessary — plus the copy-the-previous-plan action, a `?plan=` deep link into the calendar's
+   sheet, and a fix found on the way: staffing a booking now re-stamps its generated weeks.
+   14 integration tests. **Closes AC 8 and QA 4, 5, 6, 7 and 15.** `docs/features/dashboard.md`.
 4. **The maintenance band.**
 5. **The personal band**, behind the flag.
 

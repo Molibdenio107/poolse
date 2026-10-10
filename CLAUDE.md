@@ -128,7 +128,10 @@ did not load — the resolver's words name columns and go to the log, and the er
 rather than danger, because it is not a refusal. **Every card links to its page in all three
 states.** A panel that predates the registry is a card no role check governs, which is what
 `mgmt.energy.costs` was before slice 2a; `me.pool` is the one left, carrying a comment naming the
-widget that replaces it. **Slice 2b's aggregates are one statement each whatever the number of
+widget that replaces it. **The instructor band (slice 3) is `scope: 'self'` on
+`class_session.resolved_instructor_id`** — the stand-in sees the class, the regular instructor does
+not — and the next class holds on to one whose register is still owed; a card that copies a plan
+sends the session id and never the text. **Slice 2b's aggregates are one statement each whatever the number of
 sites** (`management.repository.ts`, proved by `countStatements` in the test harness), the
 selector is remembered on `membership.dashboard_facility_id`, and **the cap ranks a card with
 something to say before an empty one**. `docs/features/dashboard.md`.
