@@ -44,6 +44,7 @@ export async function ReadingsBlock({
   bandOverrides,
   emailConfigured,
   canManage,
+  canRecord,
 }: {
   organizationId: string;
   poolId: string;
@@ -66,6 +67,8 @@ export async function ReadingsBlock({
   /** Whether an alert would actually be sent from this environment. */
   emailConfigured: boolean;
   canManage: boolean;
+  /** The record-one-analysis form: owner, admin and maintenance. */
+  canRecord: boolean;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
 
@@ -319,7 +322,7 @@ export async function ReadingsBlock({
         browser's own disclosure is keyboard-operable, announced as one, and
         works before any JavaScript arrives.
       */}
-      {canManage && (
+      {canRecord && (
         <details className="group rounded border border-border">
           <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <ChevronRight

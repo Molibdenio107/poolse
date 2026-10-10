@@ -79,7 +79,7 @@ Readings live on the tank's own page: `/dashboard/facilities/pools/<id>`.
 | Action | Roles |
 |---|---|
 | Read the analyses and the trend | everybody |
-| Record one analysis by hand | owner, admin |
+| Record one analysis by hand | owner, admin, maintenance (since 10-10-2026, POOLSE-66 slice 4) |
 | Import a water log or an analysis report | owner, admin |
 | Archive an analysis | owner, admin |
 | Set this pool's own safe ranges | owner, admin |

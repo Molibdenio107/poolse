@@ -45,12 +45,14 @@ export default async function PoolPage({
    */
   const back = backTarget(from, '/dashboard/facilities');
 
-  let pool: (PoolDetail & { canManage: boolean }) | null = null;
+  let pool: (PoolDetail & { canManage: boolean; canRecordAnalysis: boolean }) | null = null;
   let failure: LoadFailure | null = null;
   let missing = false;
 
   try {
-    pool = await apiFetch<PoolDetail & { canManage: boolean }>(`/facilities/pools/${poolId}`);
+    pool = await apiFetch<PoolDetail & { canManage: boolean; canRecordAnalysis: boolean }>(
+      `/facilities/pools/${poolId}`,
+    );
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) {
       missing = true;
@@ -213,6 +215,7 @@ export default async function PoolPage({
                 bandOverrides={loaded.bandOverrides}
                 emailConfigured={loaded.emailConfigured}
                 canManage={loaded.canManage}
+                canRecord={loaded.canRecordAnalysis}
               />
             </section>
           ),

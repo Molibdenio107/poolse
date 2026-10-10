@@ -956,3 +956,10 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   **The next class holds on to an owed register** for 90 minutes after its start. **Staffing a
   booking re-stamps its future weeks**, with a week that clashes left alone and counted, as a
   series move does.
+
+- **2026-10-10** — **Maintenance may record a water analysis** (`POST /pools/:id/analyses` and the
+  form), reversing round 4's "deliberately not added on a guess"; the import, the archive and the
+  band overrides stay owner and admin. **Avarias stay unassigned**: the dashboard lists every open
+  one with the reporter's marked rather than adding `maintenance_request.assigned_to`. Both
+  answered by Rui for POOLSE-66 slice 4. Maintenance's sites are every site, because the schema
+  assigns them to none.

@@ -123,6 +123,9 @@ interface FacilitiesResponse {
  * for the same reason — the people who run the organization decide what it
  * contains.
  */
+/** Who may record one water analysis — the form, not the importer. */
+const CAN_RECORD_ANALYSIS = ['owner', 'admin', 'maintenance'] as const;
+
 @Controller('facilities')
 export class FacilitiesController {
   private readonly logger = new Logger(FacilitiesController.name);
@@ -151,6 +154,7 @@ export class FacilitiesController {
     PoolDetail & {
       organizationId: string;
       canManage: boolean;
+      canRecordAnalysis: boolean;
       analyses: PoolAnalysis[];
       alerts: PoolAlertRecord[];
       /**
@@ -196,6 +200,10 @@ export class FacilitiesController {
       ...detail,
       organizationId,
       canManage: hasRole('owner', 'admin'),
+      // Recording one analysis is maintenance's job too — POOLSE-66 slice 4.
+      // Importing a file, deleting an analysis and setting bands stay with
+      // `canManage`.
+      canRecordAnalysis: hasRole(...CAN_RECORD_ANALYSIS),
       // The analyses travel with the pool rather than behind their own
       // request: small, always shown, and a second round trip would put a
       // spinner on a panel of four rows. The alerts ride along for the same
@@ -211,17 +219,17 @@ export class FacilitiesController {
   /**
    * Record a water analysis - round 4.
    *
-   * `owner` and `admin` as everywhere else that writes to a pool. Maintenance
-   * staff are the obvious future addition here and are deliberately not added
-   * on a guess: the role exists, nothing else grants it write access yet, and
-   * widening permissions is not something to slip into a UI ticket.
+   * Owner, admin **and maintenance** since POOLSE-66 slice 4 (decided by Rui,
+   * 10-10-2026): taking the reading is usually the maintenance person's job,
+   * and the dashboard's "Registar leitura" is for them. Only this write was
+   * widened — the import, the archive and the band overrides stay owner/admin.
    */
   @Post('pools/:poolId/analyses')
   async recordAnalysis(
     @Param('poolId') poolId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<{ id: string }> {
-    requireRole('owner', 'admin');
+    requireRole(...CAN_RECORD_ANALYSIS);
     const { organizationId, membershipId } = currentTenant();
 
     const detail = await findPool(organizationId, poolId);
