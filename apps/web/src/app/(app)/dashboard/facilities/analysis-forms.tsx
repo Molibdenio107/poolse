@@ -108,7 +108,7 @@ export function AnalysisForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('facilities.saveAnalysis')}
         </button>
@@ -314,7 +314,7 @@ export function SafeRangesForm({
         <button
           type="submit"
           disabled={pending}
-          className="h-control rounded bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('facilities.saveRanges')}
         </button>

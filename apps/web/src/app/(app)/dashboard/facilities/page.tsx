@@ -84,7 +84,7 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
           {data.canManage && (
             <Link
               href="/dashboard/facilities/new"
-              className="self-start rounded bg-primary px-4 py-2 text-sm text-primary-foreground"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground"
             >
               {t('facilities.addSite')}
             </Link>
@@ -228,7 +228,7 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                 {data.canManage && (
                   <Link
                     href={`/dashboard/facilities/pools/new?facilityId=${facility.id}`}
-                    className="self-start rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted"
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:bg-surface-muted"
                   >
                     {t('facilities.addPool')}
                   </Link>

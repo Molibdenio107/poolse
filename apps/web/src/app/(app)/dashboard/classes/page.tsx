@@ -324,7 +324,7 @@ export default async function ClassesPage({
                     href={option === 'all' ? '/dashboard/classes' : '/dashboard/classes?scope=mine'}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'rounded border px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                      'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                       current
                         ? 'border-primary bg-primary/10 font-medium text-primary'
                         : 'border-border text-foreground-muted hover:border-border-strong hover:text-foreground',
@@ -349,7 +349,7 @@ export default async function ClassesPage({
           {data.canManage && (
             <Link
               href="/dashboard/classes/new"
-              className="self-start rounded bg-primary px-4 py-2 text-sm text-primary-foreground"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground"
             >
               {t('classes.create')}
             </Link>

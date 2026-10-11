@@ -48,7 +48,7 @@ export function EnrollmentCategoryPicker({
         defaultValue={own ?? ''}
         disabled={pending}
         onChange={(event) => event.currentTarget.form?.requestSubmit()}
-        className={cn(CONTROL_LINE, 'h-auto w-auto py-0.5 text-sm')}
+        className={cn(CONTROL_LINE, 'w-auto')}
       >
         {/*
           The empty answer names the turma's category where there is one, so the

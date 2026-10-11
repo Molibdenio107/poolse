@@ -28,9 +28,7 @@ import { SalaryImportWizard } from './import-wizard';
 const ACCEPTED = ['.xlsx', '.csv'];
 
 const BUTTON_QUIET =
-  'inline-flex items-center gap-2 rounded border border-border px-3 py-2 text-sm ' +
-  'hover:border-primary/50 hover:text-primary ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function isAccepted(file: File): boolean {
   const name = file.name.toLowerCase();

@@ -78,14 +78,14 @@ export function RegisterForm({ register }: { register: Register & { organization
         <button
           type="button"
           onClick={() => setAll('present')}
-          className="rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary"
         >
           {t('attendance.allPresent')}
         </button>
         <button
           type="button"
           onClick={() => setAll('')}
-          className="rounded px-2 py-1.5 text-sm text-foreground-muted hover:text-foreground"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded text-foreground-muted hover:text-foreground"
         >
           {t('attendance.clearAll')}
         </button>
@@ -100,7 +100,7 @@ export function RegisterForm({ register }: { register: Register & { organization
         <button
           type="submit"
           disabled={pending}
-          className="ml-auto rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 ml-auto rounded bg-primary text-primary-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('attendance.save')}
         </button>
@@ -171,7 +171,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                   <label
                     key={status}
                     className={cn(
-                      'flex cursor-pointer items-center gap-1.5 rounded border px-3 py-1.5 text-sm transition-colors',
+                      'inline-flex h-control items-center justify-center px-4 text-control cursor-pointer gap-1.5 rounded border transition-colors',
                       // The label and the glyph render whether or not the state
                       // is chosen, so colour is never the only thing carrying it.
                       marks[entry.studentId] === status
@@ -209,7 +209,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                 maxLength={200}
                 placeholder={t('attendance.notePlaceholder')}
                 aria-label={t('attendance.noteFor', { name: entry.displayName })}
-                className="rounded border border-border-strong bg-background px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="h-control rounded border border-border-strong bg-background px-3 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               />
             )}
 

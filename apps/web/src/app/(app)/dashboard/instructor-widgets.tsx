@@ -58,7 +58,7 @@ const LINK =
   'font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const ACTION_BUTTON =
-  'inline-flex items-center gap-1.5 self-start rounded bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 self-start rounded bg-primary font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /** My next class — and, while its register is owed, the button to take it. */
 export async function NextClassCard({

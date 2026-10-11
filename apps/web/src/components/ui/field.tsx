@@ -34,7 +34,7 @@ import { cn } from '@/lib/utils';
  * one of them here.
  */
 export const CONTROL_BASE =
-  'w-full rounded border border-border-strong bg-background px-2.5 text-sm ' +
+  'w-full rounded border border-border-strong bg-background px-2.5 text-control ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**

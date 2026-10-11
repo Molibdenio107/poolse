@@ -130,14 +130,14 @@ export function CleaningHistory({
                 }
               });
             }}
-            className="inline-flex h-control items-center rounded border border-border-strong px-3 text-sm hover:border-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border-strong hover:border-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {working ? t('common.working') : t('common.remove')}
           </button>
           <button
             type="button"
             onClick={() => setRemoving(null)}
-            className="inline-flex h-control items-center rounded border border-border-strong px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('common.cancel')}
           </button>

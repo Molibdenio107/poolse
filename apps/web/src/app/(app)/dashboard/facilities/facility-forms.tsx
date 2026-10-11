@@ -95,7 +95,7 @@ export function CreateFacilityForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('facilities.create')}
         </button>
@@ -144,7 +144,7 @@ export function ArchiveButton({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:border-danger/50 hover:text-danger"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:border-danger/50 hover:text-danger"
       >
         {t('facilities.archive')}
       </button>
@@ -171,14 +171,14 @@ export function ArchiveButton({
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:bg-surface-muted"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:bg-surface-muted"
             >
               {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="rounded border border-danger/50 px-2 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-danger/50 text-danger hover:bg-danger/10 disabled:opacity-60"
             >
               {pending ? t('common.working') : t('facilities.confirmArchive')}
             </button>

@@ -44,7 +44,7 @@ export function ScopeSelector({
         disabled={pending}
         aria-busy={pending}
         onChange={(event) => choose(event.target.value)}
-        className="h-control rounded border border-border-strong bg-background px-2.5 text-sm disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="h-control rounded border border-border-strong bg-background px-2.5 text-control disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <option value="">{t('dashboard.scope.all')}</option>
         {sites.map((site) => (

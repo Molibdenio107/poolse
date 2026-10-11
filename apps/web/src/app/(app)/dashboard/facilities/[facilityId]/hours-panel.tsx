@@ -256,7 +256,7 @@ export function HoursPanel({
                         type="button"
                         onClick={() => matchWeek(day.weekday)}
                         aria-label={t('facilities.matchWeekFrom', { day: t(`week.${day.weekday}`) })}
-                        className="mb-1 shrink-0 self-end rounded border border-border px-2 py-1 text-xs transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mb-1 shrink-0 self-end rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         {t('facilities.matchWeek')}
                       </button>
@@ -288,7 +288,7 @@ export function HoursPanel({
             type="button"
             onClick={save}
             disabled={pending || !dirty}
-            className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
           >
             {pending ? t('common.working') : t('common.save')}
           </button>

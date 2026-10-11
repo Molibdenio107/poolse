@@ -54,7 +54,7 @@ export function SeasonReset({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="self-start rounded border border-border px-4 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('seasons.startNew')}
         </button>
@@ -128,14 +128,14 @@ export function SeasonReset({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-destructive px-4 py-2 text-destructive-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-destructive text-destructive-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('seasons.confirmButton')}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded border border-border px-4 py-2"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border"
         >
           {t('common.cancel')}
         </button>

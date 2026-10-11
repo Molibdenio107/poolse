@@ -21,7 +21,7 @@ function EndSession({ sessionId }: { sessionId: string }): React.ReactElement {
       <button
         type="submit"
         disabled={pending}
-        className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
       >
         {pending ? t('common.working') : t('sessions.end')}
       </button>

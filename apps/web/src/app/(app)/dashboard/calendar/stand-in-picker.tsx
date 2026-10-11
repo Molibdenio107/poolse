@@ -114,7 +114,7 @@ export function StandInPicker({
         // choose, and the sentence underneath is what says why.
         disabled={saving || loading || failed}
         onChange={(event) => choose(event.target.value)}
-        className={cn(CONTROL_LINE, compact && 'h-8 text-sm', (loading || failed) && 'opacity-60')}
+        className={cn(CONTROL_LINE, (loading || failed) && 'opacity-60')}
       >
         {/* Clearing puts the turma's own instructor back, because they were
             never replaced. */}

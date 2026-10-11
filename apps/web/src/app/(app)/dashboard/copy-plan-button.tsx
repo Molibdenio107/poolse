@@ -33,7 +33,7 @@ export function CopyPlanButton({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex items-center gap-1.5 rounded border border-primary/40 px-2 py-1 text-sm font-medium text-primary hover:bg-primary/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-primary/40 font-medium text-primary hover:bg-primary/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
       >
         <Copy className="size-4" aria-hidden="true" />
         {t('dashboard.widget.plan.copy', { date: formatDate(previousOn) })}

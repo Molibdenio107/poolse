@@ -31,9 +31,7 @@ import type { FormState } from '../../actions';
 const EMPTY: FormState = { ok: false };
 
 const BUTTON =
-  'inline-flex items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-sm font-medium ' +
-  'text-primary-foreground hover:bg-primary/90 disabled:opacity-50 ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export function PlanPicker({
   organizationId,

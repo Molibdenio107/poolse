@@ -149,7 +149,7 @@ export function MedicalLeavePanel({
         <div>
           <Link
             href="/dashboard/classes/reposicoes"
-            className="inline-block rounded border border-complementary/60 bg-complementary/25 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-complementary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-complementary/60 bg-complementary/25 font-medium text-foreground transition-colors hover:bg-complementary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('sensitive.leaveToReposicoes')}
           </Link>
@@ -227,14 +227,14 @@ export function MedicalLeavePanel({
             <button
               type="button"
               disabled
-              className="cursor-not-allowed rounded border border-border px-2 py-1 text-xs text-foreground-muted opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 cursor-not-allowed rounded border border-border text-foreground-muted opacity-60"
             >
               {t('sensitive.atestadoImport')}
             </button>
             <button
               type="button"
               disabled
-              className="cursor-not-allowed rounded border border-border px-2 py-1 text-xs text-foreground-muted opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 cursor-not-allowed rounded border border-border text-foreground-muted opacity-60"
             >
               {t('sensitive.atestadoExport')}
             </button>
@@ -247,7 +247,7 @@ export function MedicalLeavePanel({
             <button
               type="submit"
               disabled={pending}
-              className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
             >
               {pending ? t('common.working') : t('sensitive.saveLeave')}
             </button>

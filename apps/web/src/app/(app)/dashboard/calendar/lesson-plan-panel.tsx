@@ -35,14 +35,10 @@ import {
 const EMPTY: PlanState = { ok: false, attempt: 0 };
 
 const BUTTON =
-  'inline-flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-sm font-medium ' +
-  'text-primary-foreground hover:bg-primary/90 disabled:opacity-60 ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const BUTTON_QUIET =
-  'inline-flex items-center gap-1.5 rounded border border-border px-3 py-1.5 text-sm ' +
-  'hover:bg-surface-muted disabled:opacity-60 focus-visible:outline focus-visible:outline-2 ' +
-  'focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border hover:bg-surface-muted disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export function LessonPlanPanel({
   sessionId,
@@ -225,7 +221,7 @@ export function LessonPlanPanel({
                         <button
                           type="button"
                           onClick={() => append(skill)}
-                          className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-sm hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                          className="inline-flex h-control items-center justify-center px-4 text-control gap-1 rounded-full border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         >
                           <Plus aria-hidden className="size-3" />
                           {skill}

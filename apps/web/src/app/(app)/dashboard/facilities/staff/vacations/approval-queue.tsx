@@ -95,7 +95,7 @@ function RequestCard({
           name="decision"
           value="approve"
           disabled={pending}
-          className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
         >
           {t('vacations.approve')}
         </button>
@@ -139,7 +139,7 @@ function RequestCard({
               name="decision"
               value="reject"
               disabled={pending}
-              className="rounded bg-destructive px-3 py-1.5 text-sm text-destructive-foreground disabled:opacity-60"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-destructive text-destructive-foreground disabled:opacity-60"
             >
               {t('vacations.confirmReject')}
             </button>

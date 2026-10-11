@@ -1068,7 +1068,7 @@ function Toolbar({
               <select
                 value={poolId}
                 onChange={(event) => onPool(event.target.value)}
-                className="h-control rounded border-2 border-primary/60 bg-background px-2 text-sm font-medium text-foreground hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="h-control rounded border-2 border-primary/60 bg-background px-2 text-control font-medium text-foreground hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {pools.map((pool) => (
                   <option key={pool.id} value={pool.id}>
@@ -1088,7 +1088,7 @@ function Toolbar({
           type="button"
           onClick={onShowAll}
           disabled={hidden.size === 0}
-          className="rounded border border-border-strong px-2.5 py-1 text-sm hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border-strong hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
         >
           {t('calendar.showAll')}
         </button>
@@ -1799,21 +1799,21 @@ function ScopePopover({
           <button
             type="button"
             onClick={() => onScope('week')}
-            className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('calendar.thisWeekOnly')}
           </button>
           <button
             type="button"
             onClick={() => onScope('series')}
-            className="rounded border border-border-strong px-3 py-1.5 text-sm hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border-strong hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('calendar.wholeSeries')}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="rounded px-3 py-1.5 text-sm text-foreground-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded text-foreground-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('common.cancel')}
           </button>

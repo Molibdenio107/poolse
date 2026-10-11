@@ -210,7 +210,7 @@ export default async function StudentsPage({
             {filtering && (
               <Link
                 href="/dashboard/students"
-                className="rounded border border-border px-4 py-2 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('students.clear')}
               </Link>
@@ -258,7 +258,7 @@ export default async function StudentsPage({
                     <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
                     <Link
                       href={levelId.trim() === '' ? '/dashboard/students' : `/dashboard/students?levelId=${levelId.trim()}`}
-                      className="mt-2 rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       {t('search.clearSearch')}
                     </Link>

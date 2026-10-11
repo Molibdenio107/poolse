@@ -26,9 +26,7 @@ import { logCleaning } from '../../spaces.actions';
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-  'inline-flex h-control items-center gap-1.5 rounded border border-border-strong px-3 text-sm ' +
-  'transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 ' +
-  'focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export function CleanAction({
   spaceId,
@@ -57,7 +55,7 @@ export function CleanAction({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-control items-center gap-2 rounded bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
           >
             <Check className="size-4" aria-hidden="true" />
             {pending ? t('common.working') : t('spaces.markClean')}

@@ -66,7 +66,7 @@ export async function ReadOnlyNotice({
       {isOwner && (
         <Link
           href="/dashboard/profile/subscription"
-          className="shrink-0 rounded bg-primary px-4 py-2 text-sm text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('readOnly.pay')}
         </Link>

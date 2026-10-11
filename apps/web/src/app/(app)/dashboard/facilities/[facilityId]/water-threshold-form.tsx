@@ -55,7 +55,7 @@ export function WaterThresholdForm({
       <button
         type="submit"
         disabled={pending}
-        className="h-control rounded bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {pending ? t('common.working') : t('common.save')}
       </button>

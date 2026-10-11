@@ -190,7 +190,7 @@ export function Feedback({
                 <Link
                   href={message.link.href}
                   onClick={onDismiss}
-                  className="rounded px-2 py-1 text-sm font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
                 >
                   {message.link.label}
                 </Link>
@@ -202,7 +202,7 @@ export function Feedback({
                     message.action?.onAct();
                     onDismiss();
                   }}
-                  className="rounded px-2 py-1 text-sm font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
                 >
                   {message.action.label}
                 </button>

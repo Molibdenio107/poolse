@@ -143,7 +143,7 @@ export default async function ClosuresPage({
                   href={`/dashboard/calendar/closures?year=${option}`}
                   aria-current={option === year ? 'page' : undefined}
                   className={cn(
-                    'rounded border px-3 py-1.5 text-sm transition-colors',
+                    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border transition-colors',
                     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                     option === year
                       ? 'border-primary bg-primary/15 font-medium text-primary'

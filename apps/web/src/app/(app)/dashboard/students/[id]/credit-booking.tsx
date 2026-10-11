@@ -72,7 +72,7 @@ export function CreditBooking({
       >
         <button
           type="submit"
-          className="rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('reposicao.cancelBooking')}
         </button>
@@ -91,7 +91,7 @@ export function CreditBooking({
           onClick={load}
           disabled={pending}
           aria-busy={pending}
-          className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('reposicao.findClass')}
         </button>
@@ -136,7 +136,7 @@ export function CreditBooking({
                   type="button"
                   onClick={() => book(option.sessionId)}
                   disabled={pending}
-                  className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
                 >
                   {t('reposicao.book')}
                 </button>

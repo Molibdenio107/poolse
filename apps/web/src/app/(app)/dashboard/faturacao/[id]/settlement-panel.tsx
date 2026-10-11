@@ -39,12 +39,10 @@ import {
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-  'rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50 ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const BUTTON_QUIET =
-  'rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const SOURCES: PaymentSource[] = ['manual', 'mbway', 'sepa'];
 const CHANNELS: ChaseChannel[] = ['email', 'phone', 'message', 'in_person', 'letter'];

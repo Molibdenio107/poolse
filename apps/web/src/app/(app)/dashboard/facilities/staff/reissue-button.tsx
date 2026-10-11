@@ -35,7 +35,7 @@ export function ReissueButton({
           type="submit"
           disabled={pending}
           title={t('invite.reissueHint')}
-          className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:border-primary/50 hover:text-primary disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:border-primary/50 hover:text-primary disabled:opacity-60"
         >
           {pending ? t('common.working') : t('invite.reissue')}
         </button>

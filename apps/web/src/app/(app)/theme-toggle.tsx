@@ -40,7 +40,7 @@ export function ThemeToggle({ label, theme }: { label: string; theme: Theme }): 
         onClick={() => applyTheme(next)}
         aria-label={`${label}: ${t(`theme.${theme}`)}`}
         title={t(`theme.${theme}`)}
-        className="rounded border border-border bg-surface px-3 py-1.5 text-sm text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border bg-surface text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {GLYPH[theme]}
       </button>

@@ -91,7 +91,7 @@ export function InviteForm({
           <button
             type="submit"
             disabled={pending}
-            className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
           >
             {pending ? t('common.working') : t('invite.submit')}
           </button>

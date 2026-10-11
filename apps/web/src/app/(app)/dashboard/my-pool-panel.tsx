@@ -108,7 +108,7 @@ export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React
       <div className="flex flex-wrap gap-3">
         <Link
           href={href}
-          className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {latest === undefined
             ? t('facilities.recordAnalysisTitle')

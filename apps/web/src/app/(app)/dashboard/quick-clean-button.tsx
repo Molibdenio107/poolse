@@ -40,7 +40,7 @@ export function QuickCleanButton({
         // The room's name is in the label, so a list of identical buttons is
         // still a list a screen reader can tell apart.
         aria-label={t('dashboard.widget.cleanings.markNamed', { name })}
-        className="inline-flex items-center gap-1 rounded border border-primary/40 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-1 rounded border border-primary/40 font-medium text-primary hover:bg-primary/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
       >
         <Check className="size-3.5" aria-hidden="true" />
         {pending ? t('common.working') : t('dashboard.widget.cleanings.mark')}

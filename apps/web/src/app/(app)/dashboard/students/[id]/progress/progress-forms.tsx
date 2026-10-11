@@ -148,7 +148,7 @@ export function AddRecordForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
         >
           {pending ? t('common.working') : t('progress.add')}
         </button>
@@ -215,7 +215,7 @@ export function FavouriteStrokeForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded border border-border px-3 py-2 text-sm hover:bg-surface-muted disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted disabled:opacity-60"
       >
         {pending ? t('common.working') : t('common.save')}
       </button>
@@ -244,7 +244,7 @@ export function ArchiveRecordButton({
       <button
         type="submit"
         disabled={pending}
-        className="rounded border border-border px-2 py-1 text-sm text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
       >
         {pending ? t('common.working') : t('progress.remove')}
       </button>

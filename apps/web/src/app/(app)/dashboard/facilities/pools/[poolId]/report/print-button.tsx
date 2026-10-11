@@ -13,7 +13,7 @@ export function PrintButton({ label }: { label: string }): React.ReactElement {
     <button
       type="button"
       onClick={() => window.print()}
-      className="rounded border border-black/40 px-4 py-2 text-sm text-black"
+      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-black/40 text-black"
     >
       {label}
     </button>

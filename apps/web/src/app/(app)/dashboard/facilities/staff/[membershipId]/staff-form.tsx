@@ -110,7 +110,7 @@ export function StaffForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
         >
           {saving ? t('common.working') : t('staff.save')}
         </button>
@@ -239,7 +239,7 @@ export function RoleEditor({
               <button
                 type="submit"
                 disabled={pending}
-                className="rounded border border-dashed border-border px-2 py-0.5 text-sm text-foreground-muted hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-dashed border-border text-foreground-muted hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
               >
                 + {t(`roles.${role}`)}
               </button>
@@ -284,7 +284,7 @@ export function Reinvite({
           <button
             type="submit"
             disabled={cancelling}
-            className="rounded border border-border px-4 py-2 text-sm disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border disabled:opacity-60"
           >
             {cancelling ? t('common.working') : t('staff.reinviteCancel')}
           </button>
@@ -303,7 +303,7 @@ export function Reinvite({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="self-start rounded border border-border px-4 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('staff.reinvite')}
         </button>
@@ -335,14 +335,14 @@ export function Reinvite({
         <button
           type="submit"
           disabled={sending}
-          className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
         >
           {sending ? t('common.working') : t('staff.reinviteSend')}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded border border-border px-4 py-2"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border"
         >
           {t('common.cancel')}
         </button>

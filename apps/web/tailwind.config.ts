@@ -12,6 +12,15 @@ export default {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      /*
+       * One text size for every control — October 2026. Inputs, selects and every
+       * button share `text-control` (15px) as they share `h-control` (36px): one
+       * step above the 14px they were, which read small, and still dense enough
+       * for the calendar and the lists. Rui's call, 11 October 2026.
+       */
+      fontSize: {
+        control: ['0.9375rem', { lineHeight: '1.375rem' }],
+      },
       colors: {
         primary: {
           DEFAULT: rgb('--primary'),

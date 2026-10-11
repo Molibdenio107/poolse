@@ -358,6 +358,8 @@ for a refusal, and `w-auto` up to `max-w-md` so the box hugs its words. A satura
 offered and declined twice — these appear dozens of times an afternoon. **The calendar's move
 refusals go here too**, rather than into a bar above a grid that is taller than the window.
 
+**Every button and every form control is one size: `h-control` (36px) and `text-control` (15px).** Rui's call, 11 October 2026 — inputs, selects, tab pills and every button, row actions included, `inline-flex h-control items-center justify-center px-4 text-control`; colour and border vary, size does not. Field labels stay `text-sm`. The only exceptions are icon-only buttons (a close X, the calendar block's ⋯), which are small squares because they sit inside tight spaces. A new button that invents `px-2 py-1 text-xs` is the drift this rule was written to undo.
+
 **Form fields are controlled, never `defaultValue`.** React 19 resets a form as soon
 as a function `action` returns — *including when it returns a validation error*. An
 uncontrolled input therefore wipes what somebody just typed at the exact moment they are

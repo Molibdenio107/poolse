@@ -401,7 +401,7 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="inline-flex h-control items-center gap-2 self-start rounded border border-danger/40 bg-danger/10 px-3 text-sm font-medium text-danger hover:border-danger/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-danger/40 bg-danger/10 font-medium text-danger hover:border-danger/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
         >
           <Lock className="size-4" aria-hidden />
           {t('admin.action.suspend')}
@@ -475,7 +475,7 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="h-control rounded border border-border-strong px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {t('common.cancel')}
             </button>

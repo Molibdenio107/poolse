@@ -92,7 +92,7 @@ export function UnsafeWaterNotice({
 
       <Link
         href={target}
-        className="self-start rounded border border-warning/60 px-3 py-1.5 text-sm transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-warning/60 transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {t('facilities.closePool')}
       </Link>
@@ -165,7 +165,7 @@ export function ExportAnalyses({
     <button
       type="button"
       onClick={download}
-      className="rounded border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {headers.export}
     </button>

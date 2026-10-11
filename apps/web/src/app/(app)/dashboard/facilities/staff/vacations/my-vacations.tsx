@@ -185,7 +185,7 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
               name="kind"
               value={kind}
               onChange={(event) => setKind(event.target.value)}
-              className="h-control rounded border border-border-strong bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="h-control rounded border border-border-strong bg-background px-2 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <option value="vacation">{t('vacations.kinds.vacation')}</option>
               <option value="medical">{t('vacations.kinds.medical')}</option>
@@ -200,13 +200,13 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
               maxLength={200}
               placeholder={t('vacations.leaveReasonPlaceholder')}
               aria-label={t('vacations.reason')}
-              className="h-control min-w-48 flex-1 rounded border border-border-strong bg-background px-2.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="h-control min-w-48 flex-1 rounded border border-border-strong bg-background px-2.5 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             />
           )}
           <button
             type="submit"
             disabled={pending || chosen.length === 0}
-            className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
           >
             {pending ? t('common.working') : t('vacations.submit')}
           </button>

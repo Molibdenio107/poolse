@@ -32,9 +32,7 @@ const SEVERITIES: readonly Severity[] = ['high', 'normal', 'low'];
 const INITIAL: FormState = { ok: false };
 
 const BUTTON =
-  'inline-flex h-control items-center gap-1.5 rounded border border-border-strong px-3 text-sm ' +
-  'transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 ' +
-  'focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const ICON_BUTTON =
   'inline-flex items-center gap-1 rounded p-1 text-foreground-muted transition-colors ' +
@@ -392,7 +390,7 @@ function SeverityPicker({
           );
         });
       }}
-      className="h-7 rounded border border-border-strong bg-background px-1.5 text-xs disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="h-control rounded border border-border-strong bg-background px-1.5 text-control disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {SEVERITIES.map((option) => (
         <option key={option} value={option}>

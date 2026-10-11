@@ -988,3 +988,6 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   covers the turma's and a booking's instructor, never a stand-in** (POOLSE-27). "No record" is not
   proof somebody holds a TPTD, so it shows as *em falta* beside vermelho — but the block is about an
   expired record, and refusing cover on the night is worse than the gap it guards.
+- **2026-10-11** — **One size for every button and form control: 36px tall, 15px text** (`h-control`,
+  `text-control`). There were about ten button sizes and two text sizes; small row actions now
+  match the rest. Icon-only buttons keep a small square. Labels stay 14px.

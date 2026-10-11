@@ -66,7 +66,7 @@ export function InvitePanel({
           setOpening((count) => count + 1);
           setOpen(true);
         }}
-        className="self-start rounded bg-primary px-4 py-2 text-sm text-primary-foreground"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground"
       >
         {t('invite.open')}
       </button>
@@ -91,7 +91,7 @@ export function InvitePanel({
         <button
           type="button"
           onClick={close}
-          className="rounded px-2 py-1 text-sm text-foreground-muted hover:text-foreground"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded text-foreground-muted hover:text-foreground"
         >
           {t('common.cancel')}
         </button>

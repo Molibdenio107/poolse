@@ -45,7 +45,7 @@ export const TabsTrigger = forwardRef<
     <TabsPrimitive.Trigger
       ref={ref}
       className={cn(
-        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm text-foreground-muted transition-colors',
+        'inline-flex h-control shrink-0 items-center gap-1.5 rounded-full px-4 text-control text-foreground-muted transition-colors',
         'hover:bg-surface-muted hover:text-foreground',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
         'data-[state=active]:bg-primary/15 data-[state=active]:font-medium data-[state=active]:text-foreground',

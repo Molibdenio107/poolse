@@ -53,7 +53,7 @@ export default async function MessagesPage({
         data?.canSend ? (
           <Link
             href="/dashboard/students/messages/new"
-            className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground"
           >
             {t('messages.new')}
           </Link>

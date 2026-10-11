@@ -37,14 +37,10 @@ import { formatDate } from '@/lib/date-format';
 const EMPTY: FormState = { ok: false };
 
 const BUTTON =
-  'inline-flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-sm font-medium ' +
-  'text-primary-foreground hover:bg-primary/90 disabled:opacity-60 ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded bg-primary font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const QUIET =
-  'inline-flex items-center gap-1.5 rounded border border-border px-3 py-1.5 text-sm ' +
-  'hover:border-primary/50 hover:text-primary ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 type Loaded =
   | { state: 'loading' }
@@ -495,7 +491,7 @@ function ArchiveButton({
       <button
         type="submit"
         disabled={pending}
-        className="rounded border border-danger/40 bg-danger/10 px-2 py-0.5 text-sm text-danger hover:border-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-danger/40 bg-danger/10 text-danger hover:border-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {t('salaries.confirmRemove')}
       </button>

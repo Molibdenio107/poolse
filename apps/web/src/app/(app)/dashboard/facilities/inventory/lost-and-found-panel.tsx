@@ -35,9 +35,7 @@ import {
 const INITIAL: FormState = { ok: true };
 
 const BUTTON =
-  'inline-flex h-control items-center gap-2 rounded bg-primary px-4 text-sm ' +
-  'text-primary-foreground disabled:opacity-60 focus-visible:outline ' +
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const LINK =
   'rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 ' +
@@ -318,7 +316,7 @@ function AddFound({
         <button
           type="button"
           onClick={onDone}
-          className="h-control rounded border border-border px-4 text-sm hover:bg-surface-muted"
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted"
         >
           {t('common.cancel')}
         </button>

@@ -80,7 +80,7 @@ export function ProposalCard({
               type="date"
               value={effectiveOn}
               onChange={(event) => setEffectiveOn(event.target.value)}
-              className="rounded border border-border-strong bg-background px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="rounded border border-border-strong bg-background px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary text-control"
             />
           </label>
 
@@ -107,7 +107,7 @@ export function ProposalCard({
                   type="button"
                   onClick={() => confirm(candidate.classGroupId)}
                   disabled={pending}
-                  className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
                 >
                   {t('advancement.confirm')}
                 </button>
@@ -126,7 +126,7 @@ export function ProposalCard({
         >
           <button
             type="submit"
-            className="rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('advancement.dismiss')}
           </button>
