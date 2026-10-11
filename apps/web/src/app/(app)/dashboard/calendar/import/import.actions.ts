@@ -36,6 +36,12 @@ export interface ReadState {
   fileName?: string;
   errorKey?: string;
   attempt: number;
+  /**
+   * For a switched sheet: the file read it came from — October 2026 sweep.
+   * Without it, switching sheets on file A and then uploading file B went on
+   * showing A's sheet, because the switched reading outranked the new file.
+   */
+  fromFile?: number;
 }
 
 const READ_ERRORS: Record<ReadFailure, string> = {
@@ -78,14 +84,22 @@ export async function readOtherSheetAction(
 ): Promise<ReadState> {
   const attempt = previous.attempt + 1;
   const raw = String(formData.get('sheet') ?? '');
+  const fromFile = Number(formData.get('fileAttempt') ?? '0');
+  // Said, not silent: a switch that could not be read used to change nothing.
+  const refused: ReadState = {
+    ok: false,
+    attempt,
+    fromFile,
+    errorKey: 'students.import.errorFileUnreadable',
+  };
 
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (parsed === null || typeof parsed !== 'object') return { ok: false, attempt };
+    if (parsed === null || typeof parsed !== 'object') return refused;
 
     const record = parsed as { headers?: unknown; rows?: unknown };
     if (!Array.isArray(record.headers) || !Array.isArray(record.rows)) {
-      return { ok: false, attempt };
+      return refused;
     }
 
     return {
@@ -95,9 +109,10 @@ export async function readOtherSheetAction(
         rows: record.rows as string[][],
       }),
       attempt,
+      fromFile,
     };
   } catch {
-    return { ok: false, attempt };
+    return refused;
   }
 }
 

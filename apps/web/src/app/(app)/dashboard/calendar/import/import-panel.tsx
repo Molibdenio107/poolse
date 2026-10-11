@@ -14,6 +14,7 @@ import {
   type TimetableRow,
 } from './import.actions';
 import { Dialog } from '@/components/ui/dialog';
+import { SelectField } from '@/components/ui/field';
 
 /**
  * Importing the wall timetable — POOLSE-57, the interface.
@@ -83,7 +84,9 @@ export function TimetableImport({
   const [dropped, setDropped] = useState<number[]>([]);
   const [showConflicts, setShowConflicts] = useState(false);
 
-  const reading = (other.ok ? other.reading : undefined) ?? read.reading;
+  // A switched sheet counts only for the file it was switched on.
+  const otherIsCurrent = other.fromFile === read.attempt;
+  const reading = (other.ok && otherIsCurrent ? other.reading : undefined) ?? read.reading;
   const candidates = reading?.candidates ?? [];
   const result = run.result;
 
@@ -224,23 +227,28 @@ export function TimetableImport({
           {/* A workbook with a tab per tank — pick the one that holds the grid. */}
           {read.sheets !== undefined && read.sheets.length > 1 && (
             <form action={otherAction} className="flex flex-wrap items-end gap-3">
-              <label className="flex flex-col gap-1 text-sm">
-                {t('timetableImport.sheet')}
-                <select
-                  name="sheet"
-                  className="h-control rounded border border-border-strong bg-background px-2.5 text-sm"
-                >
-                  {read.sheets.map((sheet) => (
-                    <option key={sheet.name} value={JSON.stringify(sheet)}>
-                      {sheet.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <input type="hidden" name="fileAttempt" value={read.attempt} />
+              {/* Controlled, and remounted per file so it starts on that file's first tab. */}
+              <SelectField
+                key={read.attempt}
+                name="sheet"
+                label={t('timetableImport.sheet')}
+                initial={read.sheets[0] === undefined ? '' : JSON.stringify(read.sheets[0])}
+                options={read.sheets.map((sheet) => ({
+                  value: JSON.stringify(sheet),
+                  label: sheet.name,
+                }))}
+              />
               <button type="submit" className={BUTTON_QUIET}>
                 {t('timetableImport.readSheet')}
               </button>
             </form>
+          )}
+
+          {otherIsCurrent && other.errorKey !== undefined && (
+            <p role="alert" className="text-sm text-danger">
+              {t(other.errorKey)}
+            </p>
           )}
 
           {/* Step two — what the reader made of the layout. */}

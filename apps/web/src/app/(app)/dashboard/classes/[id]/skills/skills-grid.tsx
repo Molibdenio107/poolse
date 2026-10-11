@@ -226,7 +226,11 @@ export function SkillsGrid({ data }: { data: TurmaSkills }): React.ReactElement 
                   <button
                     type="button"
                     onClick={() => tapColumn(skill.id)}
-                    title={thresholdHint(skill, t)}
+                    // The rule is in visible text under the table — a title is
+                    // invisible to touch and keyboard. October 2026 sweep.
+                    {...(thresholdHint(skill, t) === undefined
+                      ? {}
+                      : { 'aria-describedby': `skill-rule-${skill.id}` })}
                     className="flex h-32 w-12 items-end justify-center rounded p-1 hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
                   >
                     {/*
@@ -288,6 +292,24 @@ export function SkillsGrid({ data }: { data: TurmaSkills }): React.ReactElement 
           </tbody>
         </table>
       </div>
+
+      {/*
+        Each skill's minimum, said where everybody can read it. It used to live
+        only in the column's tooltip, so an instructor marked a column, was
+        refused and asked for a reason without ever seeing the rule.
+      */}
+      {data.skills.some((skill) => thresholdHint(skill, t) !== undefined) && (
+        <ul className="flex flex-col gap-0.5 text-sm text-foreground-muted">
+          {data.skills.map((skill) => {
+            const hint = thresholdHint(skill, t);
+            return hint === undefined ? null : (
+              <li key={skill.id} id={`skill-rule-${skill.id}`}>
+                <span className="font-medium text-foreground">{skill.name}</span>: {hint}
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {asking !== null && (
         <OverrideDialog
