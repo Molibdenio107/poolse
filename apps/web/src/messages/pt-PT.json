@@ -2624,7 +2624,8 @@
       "grid": "Não foi possível carregar as pistas e os horários da instalação. As aulas podem não aparecer nas suas pistas.",
       "closures": "Não foi possível carregar os encerramentos. Os dias fechados não estão assinalados nem bloqueados nesta semana."
     },
-    "impactUnknown": "Não foi possível verificar que aulas este encerramento afeta. Pode criá-lo na mesma; confirme no calendário se havia presenças marcadas."
+    "impactUnknown": "Não foi possível verificar que aulas este encerramento afeta. Pode criá-lo na mesma; confirme no calendário se havia presenças marcadas.",
+    "blockActions": "Ações de {name}"
   },
   "inventory": {
     "title": "Inventário",

@@ -824,8 +824,9 @@ laptop, which is how a Save nobody can see gets reported as a save that does not
 **A draggable block carries no click.** Every drag and every resize ends with the browser
 firing a click on whatever is underneath, so a block that both moves and opens something will
 open it by accident. Timers that suppress the trailing click narrow the window without closing
-it. Put the action on the hover card beside the others — which is also where a keyboard can
-reach it, since the card opens on focus.
+it. Put the action on the hover card beside the others. A hover card closes when focus leaves its
+trigger and never opens for touch, so a block also carries `TurmaCardButton` — a small Ações
+button that opens the same card as a `Dialog` — which is how a keyboard or a finger reaches it.
 
 **The calendar draws the pattern, overlaid with the week's own sessions.** `readGrid` returns
 `class_schedule`; the page re-times each booking to its `class_session` for that week before

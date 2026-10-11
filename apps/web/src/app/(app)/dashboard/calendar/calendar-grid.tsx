@@ -42,7 +42,7 @@ import {
 } from '@/lib/calendar-scale';
 import { toMinutes } from '@/lib/grid-layout';
 import { cn } from '@/lib/utils';
-import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
+import { TurmaCardButton, TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
 import { useToast } from '@/components/ui/toast';
 import { inkFor } from '@/lib/ink';
 
@@ -1536,11 +1536,12 @@ function Block({
 
         The plan is reached from a button on the hover card now, beside Take the
         register and Cancel — where somebody already looks for what they can do
-        with a class, and where a keyboard reaches it too.
+        with a class. A keyboard or a finger reaches the same card through the
+        Ações button in the block's corner (`TurmaCardButton`).
       */
       data-booking={booking.id}
       className={cn(
-        'pointer-events-auto absolute overflow-hidden rounded px-1.5 py-1 text-left text-white',
+        'group/block pointer-events-auto absolute overflow-hidden rounded px-1.5 py-1 text-left text-white',
         'ring-1 ring-border',
         // A keyboard tab stop (dnd-kit's attributes make it one), so it shows
         // where focus is before Space picks it up.
@@ -1581,7 +1582,22 @@ function Block({
         willChange: isDragging ? 'transform' : undefined,
       }}
     >
-      <p className="truncate text-[0.75rem] font-medium leading-tight">{booking.name}</p>
+      <p className="truncate pr-6 text-[0.75rem] font-medium leading-tight">{booking.name}</p>
+
+      {/*
+        The card for a keyboard or a finger. Hidden until the block is hovered
+        or focused, always shown where there is no hover (a tablet at the
+        poolside), and never while a drag is live.
+      */}
+      {!anyDrag && !isResizing && (
+        <TurmaCardButton
+          title={card.title}
+          detail={card.detail}
+          {...(card.actions === undefined ? {} : { actions: card.actions })}
+          label={t('calendar.blockActions', { name: booking.name })}
+          className="absolute right-0.5 top-0.5 opacity-0 focus-visible:opacity-100 group-hover/block:opacity-100 group-focus-within/block:opacity-100 [@media(hover:none)]:opacity-100"
+        />
+      )}
 
       {/*
         The time, live while the block is moving — the thing a calendar drag is

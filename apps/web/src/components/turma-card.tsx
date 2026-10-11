@@ -1,7 +1,10 @@
 'use client';
 
 import * as HoverCardPrimitive from '@radix-ui/react-hover-card';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { MoreHorizontal } from 'lucide-react';
+import { Dialog } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 /**
@@ -139,66 +142,166 @@ export function TurmaHoverCard({
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
           )}
         >
-          <p className="font-medium">{title}</p>
-
-          {detail.occupancy !== undefined && (
-            <p className="mt-0.5 text-sm text-foreground-muted">
-              {t('classes.occupancy', { occupancy: detail.occupancy })}
-            </p>
-          )}
-
-          {detail.facts.length > 0 && (
-            <dl className="mt-3 flex flex-col gap-1 text-sm">
-              {detail.facts.map((fact) => (
-                <div key={fact.label} className="flex gap-2">
-                  <dt className="shrink-0 text-foreground-muted">{fact.label}</dt>
-                  <dd className="break-words">{fact.value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-
-          <div className="mt-3 border-t border-border pt-3">
-            {detail.people.length === 0 ? (
-              <p className="text-sm text-foreground-muted">
-                {detail.peopleEmpty ?? t('classes.noStudents')}
-              </p>
-            ) : (
-              <>
-                <p className="mb-1 text-sm font-medium text-foreground-muted">
-                  {t('classes.enrolled')}
-                </p>
-                {/*
-                  The whole list, uncut. The grid's "+12 mais" exists because a
-                  column is narrow; this panel is not, and cutting here would
-                  leave the twelve unreachable without opening the turma — which
-                  is the problem the ticket is about.
-                */}
-                <ul className="flex list-inside list-disc flex-col gap-0.5 text-sm">
-                  {detail.people.map((person) => (
-                    <li key={person} className="break-words">
-                      {person}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
-
-          {/*
-            The actions, last and under a rule — round 6, ticket 4.0.
-
-            At the foot because the card answers "what is this" before it offers
-            "what would you like to do to it", and because a destructive control
-            under the cursor's entry point is a control people press by accident.
-          */}
-          {actions !== undefined && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-              {actions}
-            </div>
-          )}
+          <TurmaCardBody title={title} detail={detail} actions={actions} />
         </HoverCardPrimitive.Content>
       </HoverCardPrimitive.Portal>
     </HoverCardPrimitive.Root>
+  );
+}
+
+
+/** What the card says, shared by the hover card and the actions dialog. */
+function TurmaCardBody({
+  title,
+  detail,
+  actions,
+  hideTitle = false,
+}: {
+  title: string;
+  detail: TurmaDetail;
+  actions?: React.ReactNode;
+  hideTitle?: boolean;
+}): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <>
+      {!hideTitle && <p className="font-medium">{title}</p>}
+
+      {detail.occupancy !== undefined && (
+        <p className="mt-0.5 text-sm text-foreground-muted">
+          {t('classes.occupancy', { occupancy: detail.occupancy })}
+        </p>
+      )}
+
+      {detail.facts.length > 0 && (
+        <dl className="mt-3 flex flex-col gap-1 text-sm">
+          {detail.facts.map((fact) => (
+            <div key={fact.label} className="flex gap-2">
+              <dt className="shrink-0 text-foreground-muted">{fact.label}</dt>
+              <dd className="break-words">{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      <div className="mt-3 border-t border-border pt-3">
+        {detail.people.length === 0 ? (
+          <p className="text-sm text-foreground-muted">
+            {detail.peopleEmpty ?? t('classes.noStudents')}
+          </p>
+        ) : (
+          <>
+            <p className="mb-1 text-sm font-medium text-foreground-muted">
+              {t('classes.enrolled')}
+            </p>
+            {/*
+              The whole list, uncut. The grid's "+12 mais" exists because a
+              column is narrow; this panel is not, and cutting here would
+              leave the twelve unreachable without opening the turma — which
+              is the problem the ticket is about.
+            */}
+            <ul className="flex list-inside list-disc flex-col gap-0.5 text-sm">
+              {detail.people.map((person) => (
+                <li key={person} className="break-words">
+                  {person}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+
+      {/*
+        The actions, last and under a rule — round 6, ticket 4.0.
+
+        At the foot because the card answers "what is this" before it offers
+        "what would you like to do to it", and because a destructive control
+        under the cursor's entry point is a control people press by accident.
+      */}
+      {actions !== undefined && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+          {actions}
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * The same card for a keyboard or a finger — October 2026 sweep.
+ *
+ * A hover card opens on pointer hover and on focus, but its content is portalled
+ * and closes the moment focus leaves the trigger, so Tab from a calendar block
+ * went to the next block and never into Cancelar aula, Marcar presenças, the
+ * plan or the stand-in picker; and a hover card does not open for touch at all.
+ * This is a small button inside the block that opens the card as a `Dialog` —
+ * focus moves in, Escape closes it, focus comes back.
+ *
+ * Pressing one of the card's actions closes the dialog first, so a confirmation
+ * the action opens is not stacked on top of it.
+ *
+ * Pointer-down and key-down stop at the button, so tapping it or pressing Enter
+ * on it never starts a drag of the block it sits in.
+ */
+export function TurmaCardButton({
+  title,
+  detail,
+  actions,
+  label,
+  className,
+}: {
+  title: string;
+  detail: TurmaDetail;
+  actions?: React.ReactNode;
+  /** The accessible name, translated by the caller. */
+  label: string;
+  className?: string;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={label}
+        aria-haspopup="dialog"
+        onPointerDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen(true);
+        }}
+        className={cn(
+          'inline-flex size-6 items-center justify-center rounded bg-black/25 text-current',
+          'hover:bg-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
+          className,
+        )}
+      >
+        <MoreHorizontal className="size-4" aria-hidden />
+      </button>
+      {/*
+        The dialog is portalled to the body, but React still bubbles its events
+        through this component — and so into the calendar block's drag sensors.
+        They stop here: a press inside the card must never pick the block up.
+        The dialog's own Escape and Tab handling listens on the document in the
+        capture phase, so it is untouched by this.
+      */}
+      <span
+        className="contents"
+        onPointerDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <Dialog open={open} onClose={() => setOpen(false)} title={title} closeLabel={t('common.close')}>
+          <div
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest('a, button') !== null) setOpen(false);
+            }}
+          >
+            <TurmaCardBody title={title} detail={detail} actions={actions} hideTitle />
+          </div>
+        </Dialog>
+      </span>
+    </>
   );
 }
