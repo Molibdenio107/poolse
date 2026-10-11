@@ -3387,7 +3387,7 @@
     "chasedOnRequired": "Enter the date of the contact.",
     "periodStartRequired": "Enter the start of the period.",
     "dueOnRequired": "Enter the due date.",
-    "noSites": "There are no sites yet. Create the first under Sites to start invoicing."
+    "noSites": "There are no sites yet. Create the first under Facilities to start invoicing."
   },
   "admin": {
     "mark": "Poolse · Platform",
@@ -3759,7 +3759,8 @@
       "noRecipients": "Nobody in this group has an email address on file.",
       "quotaMessages": "The club has already sent {used} of {limit} messages today. Send again tomorrow.",
       "quotaAddresses": "{used} of {limit} addresses have been written to today and this message needs {requested}; {left} remain. Send again tomorrow or choose a smaller group."
-    }
+    },
+    "sentToast": "Message sent."
   },
   "publicWater": {
     "subtitle": "Water quality — latest readings",
@@ -3808,7 +3809,9 @@
       "replaced": "New link made. Print the new QR code.",
       "turnedOff": "Public page turned off.",
       "error": "Could not change the public page."
-    }
+    },
+    "unavailable": "The readings are not available right now.",
+    "unavailableHint": "Please try again in a few minutes."
   },
   "qualifications": {
     "title": "Qualifications",
@@ -3877,6 +3880,7 @@
       "expiresBeforeIssued": "The expiry cannot be before the issue date.",
       "saveFailed": "Could not save.",
       "archiveFailed": "Could not archive."
-    }
+    },
+    "historyLineNoExpiry": "Issued {issued} · does not expire"
   }
 }

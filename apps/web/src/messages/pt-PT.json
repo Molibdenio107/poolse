@@ -3759,7 +3759,8 @@
       "noRecipients": "Ninguém neste grupo tem um endereço de email registado.",
       "quotaMessages": "O clube já enviou {used} de {limit} mensagens hoje. Volte a enviar amanhã.",
       "quotaAddresses": "Hoje já se escreveu a {used} de {limit} endereços e esta mensagem precisa de {requested}; restam {left}. Volte a enviar amanhã ou escolha um grupo mais pequeno."
-    }
+    },
+    "sentToast": "Mensagem enviada."
   },
   "publicWater": {
     "subtitle": "Qualidade da água — últimas medições",
@@ -3808,7 +3809,9 @@
       "replaced": "Novo link criado. Imprima o novo código QR.",
       "turnedOff": "Página pública desligada.",
       "error": "Não foi possível alterar a página pública."
-    }
+    },
+    "unavailable": "As medições não estão disponíveis neste momento.",
+    "unavailableHint": "Tente novamente dentro de alguns minutos."
   },
   "qualifications": {
     "title": "Qualificações",
@@ -3844,7 +3847,7 @@
       "amber": "Expira a {date}",
       "red": "Expirou a {date}",
       "missing": "Em falta",
-      "noExpiry": "Sem validade"
+      "noExpiry": "Sem data de validade"
     },
     "field": {
       "type": "Tipo",
@@ -3877,6 +3880,7 @@
       "expiresBeforeIssued": "A validade não pode ser anterior à emissão.",
       "saveFailed": "Não foi possível guardar.",
       "archiveFailed": "Não foi possível arquivar."
-    }
+    },
+    "historyLineNoExpiry": "Emitida a {issued} · sem data de validade"
   }
 }

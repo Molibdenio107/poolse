@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
@@ -32,15 +32,24 @@ const PRIMARY = 'rounded bg-primary px-4 py-2 text-sm text-primary-foreground di
 function TypeForm({
   organizationId,
   type,
+  onSaved,
 }: {
   organizationId: string;
   type: QualificationType | null;
+  /** Called once per successful save: empties the create form, closes an edit. */
+  onSaved: () => void;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, dispatch, saving] = useSavedAction<FormState, FormData>(
     saveTypeAction.bind(null, organizationId, type?.id ?? null),
     { ok: false },
   );
+  const seen = useRef(state);
+  useEffect(() => {
+    if (seen.current === state) return;
+    seen.current = state;
+    if (state.ok) onSaved();
+  }, [state, onSaved]);
   const [required, setRequired] = useState(type?.requiredToTeach ?? false);
   const [blocks, setBlocks] = useState(type?.blocksAssignment ?? false);
 
@@ -132,6 +141,8 @@ export function TypesPanel({
   const router = useRouter();
   const toast = useToast();
   const [editing, setEditing] = useState<string | null>(null);
+  // Bumped on a successful create, so the form remounts empty.
+  const [createKey, setCreateKey] = useState(0);
   // Archiving a type takes every record of it off every standing, so it asks.
   const [archiving, setArchiving] = useState<QualificationType | null>(null);
   const confirm = useRef<HTMLButtonElement>(null);
@@ -214,7 +225,9 @@ export function TypesPanel({
                 </button>
               </span>
             </div>
-            {editing === type.id && <TypeForm organizationId={organizationId} type={type} />}
+            {editing === type.id && (
+              <TypeForm organizationId={organizationId} type={type} onSaved={() => setEditing(null)} />
+            )}
           </li>
         ))}
       </ul>
@@ -245,7 +258,12 @@ export function TypesPanel({
 
       <div className="flex flex-col gap-3 border-t border-border pt-4">
         <h3 className="text-sm font-medium">{t('qualifications.addType')}</h3>
-        <TypeForm organizationId={organizationId} type={null} />
+        <TypeForm
+          key={createKey}
+          organizationId={organizationId}
+          type={null}
+          onSaved={() => setCreateKey((key) => key + 1)}
+        />
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { DocumentUpload } from '@/components/document-upload';
@@ -35,7 +35,10 @@ import {
 function suggestExpiry(issuedOn: string, months: number | null): string {
   if (months === null || !/^\d{4}-\d{2}-\d{2}$/.test(issuedOn)) return '';
   const [y, m, d] = issuedOn.split('-').map(Number) as [number, number, number];
-  const date = new Date(Date.UTC(y, m - 1 + months, d));
+  // Clamped to the target month's last day: 31-08 plus six months is 28-02,
+  // not 03-03, and 29-02 plus a year is 28-02.
+  const last = new Date(Date.UTC(y, m - 1 + months + 1, 0)).getUTCDate();
+  const date = new Date(Date.UTC(y, m - 1 + months, Math.min(d, last)));
   return date.toISOString().slice(0, 10);
 }
 
@@ -63,6 +66,23 @@ export function QualificationsPanel({
 
   const [typeId, setTypeId] = useState(types[0]?.id ?? '');
   const [issuedOn, setIssuedOn] = useState('');
+
+  /*
+   * A saved record empties the form — October 2026 sweep. The fields are
+   * controlled and their `initial` never changes, so they kept what was typed
+   * after "Guardado", and a second click filed the same certificate twice.
+   */
+  const [formKey, setFormKey] = useState(0);
+  const seen = useRef(state);
+  useEffect(() => {
+    if (seen.current === state) return;
+    seen.current = state;
+    if (state.ok) {
+      setFormKey((key) => key + 1);
+      setTypeId(types[0]?.id ?? '');
+      setIssuedOn('');
+    }
+  }, [state, types]);
   const validity = types.find((type) => type.id === typeId)?.defaultValidityMonths ?? null;
   const suggested = suggestExpiry(issuedOn, validity);
 
@@ -115,7 +135,7 @@ export function QualificationsPanel({
           {types.length === 0 ? (
             <p className="text-sm text-foreground-muted">{t('qualifications.noTypes')}</p>
           ) : (
-            <form action={dispatch} className="flex flex-col gap-4">
+            <form key={formKey} action={dispatch} className="flex flex-col gap-4">
               <div className="flex flex-wrap gap-4">
                 <SelectField
                   name="typeId"
@@ -187,13 +207,14 @@ export function QualificationsPanel({
                     {record.issuingBody !== null && ` · ${record.issuingBody}`}
                   </span>
                   <span className="text-foreground-muted">
-                    {t('qualifications.historyLine', {
-                      issued: record.issuedOn === null ? '—' : formatDate(record.issuedOn),
-                      expires:
-                        record.expiresOn === null
-                          ? t('qualifications.status.noExpiry')
-                          : formatDate(record.expiresOn),
-                    })}
+                    {record.expiresOn === null
+                      ? t('qualifications.historyLineNoExpiry', {
+                          issued: record.issuedOn === null ? '—' : formatDate(record.issuedOn),
+                        })
+                      : t('qualifications.historyLine', {
+                          issued: record.issuedOn === null ? '—' : formatDate(record.issuedOn),
+                          expires: formatDate(record.expiresOn),
+                        })}
                     {record.archived && ` · ${t('qualifications.archivedLabel')}`}
                   </span>
                 </span>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
-import { useSavedAction } from '@/lib/saved';
+import { useToast } from '@/components/ui/toast';
 import type { AudienceOptions, MessageAudience } from '@/lib/api';
 import {
   previewMessageAction,
@@ -76,10 +76,20 @@ export function MessageComposer({
     previewMessageAction.bind(null, organizationId),
     { ok: false },
   );
-  const [sendState, send, sending] = useSavedAction<SendState, FormData>(
+  /*
+   * `useActionState`, not `useSavedAction` — October 2026 sweep. The shared hook
+   * says "Guardado" and refreshes the page, and this one navigates away on
+   * success: the person who pressed Enviar was told something was *saved*, and
+   * `/new` re-fetched itself while leaving. The outcome is reported here instead.
+   */
+  const [sendState, send, sending] = useActionState<SendState, FormData>(
     sendMessageAction.bind(null, organizationId),
     { ok: false },
   );
+  const toast = useToast();
+  // Which answer the fields belong to: a refused send's errors must not stay
+  // beside a field the person has since corrected and previewed again.
+  const lastAttempt = useRef<'preview' | 'send'>('preview');
 
   const [open, setOpen] = useState(false);
 
@@ -98,8 +108,21 @@ export function MessageComposer({
     if (seenSend.current === sendState) return;
     seenSend.current = sendState;
     setOpen(false);
-    if (sendState.ok && sendState.id) router.push(`/dashboard/students/messages/${sendState.id}`);
-  }, [sendState, router]);
+    if (sendState.ok && sendState.id) {
+      toast.show('success', t('messages.sentToast'));
+      router.push(`/dashboard/students/messages/${sendState.id}`);
+      return;
+    }
+    // A refusal that named a field is drawn beside it; anything else is said
+    // here, with its figures (the daily ceiling's sentence has three).
+    if (!sendState.ok && sendState.errorKey !== undefined) {
+      try {
+        toast.show('danger', t(sendState.errorKey as never, sendState.values as never));
+      } catch {
+        toast.show('danger', t('messages.error.sendFailed'));
+      }
+    }
+  }, [sendState, router, toast, t]);
 
   if (audiences.length === 0) {
     return (
@@ -111,7 +134,7 @@ export function MessageComposer({
   }
 
   const fieldError = (name: string): string | undefined => {
-    const key = sendState.fields?.[name] ?? previewState.fields?.[name];
+    const key = (lastAttempt.current === 'send' ? sendState : previewState).fields?.[name];
     return key === undefined ? undefined : t(key as never);
   };
 
@@ -119,7 +142,15 @@ export function MessageComposer({
 
   return (
     <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-      <form id={formId} ref={form} action={preview} className="flex flex-col gap-4">
+      <form
+        id={formId}
+        ref={form}
+        action={(data) => {
+          lastAttempt.current = 'preview';
+          preview(data);
+        }}
+        className="flex flex-col gap-4"
+      >
         <div className="flex flex-wrap gap-4">
           <SelectField
             name="audience"
@@ -238,6 +269,7 @@ export function MessageComposer({
                   onClick={() => {
                     if (form.current === null) return;
                     const data = new FormData(form.current);
+                    lastAttempt.current = 'send';
                     startTransition(() => send(data));
                   }}
                   className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-60"

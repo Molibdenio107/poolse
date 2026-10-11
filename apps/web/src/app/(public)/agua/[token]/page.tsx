@@ -45,7 +45,27 @@ export default async function PublicWaterPage({
   const lobby = screen === '1';
   const t = createTranslator({ locale, messages: locale === 'en' ? en : pt });
 
-  const page = await fetchPublicWater(token);
+  /*
+   * A blip is not a missing page — October 2026 sweep. A 5xx, a throttle or an
+   * unreachable API used to throw to Next's error page, which has no refresh: a
+   * lobby screen that hit one stayed on "Application error" until somebody
+   * walked up to it. It now says so and, on a screen, tries again on its own.
+   */
+  let page: Awaited<ReturnType<typeof fetchPublicWater>>;
+  try {
+    page = await fetchPublicWater(token);
+  } catch {
+    return (
+      <main
+        lang={locale}
+        className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-2 bg-background px-4 py-16 text-foreground"
+      >
+        {lobby && <meta httpEquiv="refresh" content={String(REFRESH_SECONDS)} />}
+        <h1 className="text-xl font-semibold">{t('publicWater.unavailable')}</h1>
+        <p className="text-foreground-muted">{t('publicWater.unavailableHint')}</p>
+      </main>
+    );
+  }
   if (page === null) notFound();
 
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 });

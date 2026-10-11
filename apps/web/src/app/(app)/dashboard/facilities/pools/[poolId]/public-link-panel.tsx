@@ -64,7 +64,12 @@ export function PublicLinkPanel({
     });
   };
 
-  const file = poolName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'piscina';
+  // "Piscina Olímpica" → piscina-olimpica, not piscina-ol-mpica.
+  const file = poolName
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'piscina';
 
   return (
     <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">

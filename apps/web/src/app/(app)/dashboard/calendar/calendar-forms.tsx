@@ -297,7 +297,13 @@ export function CancelSessionDialog({
   onClose: () => void;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, pending] = useSavedAction(cancelSessionAction, INITIAL);
+  /*
+   * `useActionState`, not `useSavedAction` — October 2026 sweep. The success is
+   * reported once, by the Feedback card below that carries Desfazer and Avisar as
+   * famílias; the shared "Guardado" toast sat on top of it for four seconds and
+   * took the clicks meant for those two. A refusal still shows in the dialog.
+   */
+  const [state, action, pending] = useActionState(cancelSessionAction, INITIAL);
   const [restoreState, restore] = useActionState(restoreSessionAction, INITIAL);
   const router = useRouter();
 
@@ -329,6 +335,7 @@ export function CancelSessionDialog({
 
     settled.current = sessionId;
     onClose();
+    router.refresh();
     attempt.current += 1;
 
     setToast({
@@ -346,7 +353,7 @@ export function CancelSessionDialog({
         },
       },
     });
-  }, [state, sessionId, notifyHref, organizationId, restore, onClose, t]);
+  }, [state, sessionId, notifyHref, organizationId, restore, onClose, router, t]);
 
   /*
    * A successful undo has to redraw the week — October 2026 sweep. The action

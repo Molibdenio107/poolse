@@ -176,36 +176,40 @@ export function Feedback({
           {message.detail !== null && message.detail !== undefined && message.detail !== '' && (
             <p className="mt-0.5 text-sm opacity-90">{message.detail}</p>
           )}
+
+          {/*
+            The offers, under the sentence and wrapping — October 2026 sweep. On
+            one row beside it, a cancelled class's Avisar as famílias and
+            Desfazer squeezed the sentence to a word a line on a phone. A link
+            goes somewhere, a button does something; both sit inside the live
+            region so a screen reader hears them as part of the announcement.
+          */}
+          {(message.link !== undefined || message.action !== undefined) && (
+            <div className="-ml-2 mt-1 flex flex-wrap gap-x-1 gap-y-1">
+              {message.link !== undefined && (
+                <Link
+                  href={message.link.href}
+                  onClick={onDismiss}
+                  className="rounded px-2 py-1 text-sm font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+                >
+                  {message.link.label}
+                </Link>
+              )}
+              {message.action !== undefined && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    message.action?.onAct();
+                    onDismiss();
+                  }}
+                  className="rounded px-2 py-1 text-sm font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+                >
+                  {message.action.label}
+                </button>
+              )}
+            </div>
+          )}
         </div>
-
-        {/*
-          The offer, before the close — G2. A button rather than a link: it does
-          something rather than going somewhere, and it is inside the live region
-          so a screen reader hearing "Class cancelled" hears that there is an
-          undo as part of the same announcement.
-        */}
-        {message.link !== undefined && (
-          <Link
-            href={message.link.href}
-            onClick={onDismiss}
-            className="shrink-0 rounded px-2 py-1 text-sm font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
-          >
-            {message.link.label}
-          </Link>
-        )}
-
-        {message.action !== undefined && (
-          <button
-            type="button"
-            onClick={() => {
-              message.action?.onAct();
-              onDismiss();
-            }}
-            className="shrink-0 rounded px-2 py-1 text-sm font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
-          >
-            {message.action.label}
-          </button>
-        )}
 
         <button
           type="button"
