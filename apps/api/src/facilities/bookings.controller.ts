@@ -26,6 +26,7 @@ import {
 } from './bookings.repository.js';
 import { MAX_TIMETABLE_ROWS, type RawTimetableRow } from './timetable-import.js';
 import { qualificationRefusal } from '../staff/qualification-refusal.js';
+import { syncSeasonLessons, type LessonSync } from '../classes/lesson-sync.js';
 
 /**
  * What a drag on the lane grid writes — POOLSE-50.
@@ -56,6 +57,8 @@ export class BookingsController {
     weeksFollowed: number;
     weeksBlocked: number;
     weeksKept: number;
+    /** The season's lessons, topped up after the pattern moved — `lesson-sync.ts`. */
+    lessons: LessonSync;
   }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
@@ -87,6 +90,7 @@ export class BookingsController {
       weeksFollowed: moved.followed,
       weeksBlocked: moved.blocked,
       weeksKept: moved.kept,
+      lessons: await syncSeasonLessons(organizationId),
     };
   }
 
@@ -94,7 +98,7 @@ export class BookingsController {
   async duplicate(
     @Param('scheduleId') scheduleId: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ id: string }> {
+  ): Promise<{ id: string; lessons: LessonSync }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
@@ -106,7 +110,7 @@ export class BookingsController {
     }
 
     if (copy === null) throw new NotFoundException('No such booking');
-    return copy;
+    return { ...copy, lessons: await syncSeasonLessons(organizationId) };
   }
 
   /**
@@ -141,6 +145,8 @@ export class BookingsController {
     // this caller can act on differently, and a draft season has no timetable
     // for a file to join.
     if (result === null) throw new NotFoundException('No such site, or no published season');
+    // A committed timetable is seventy patterns at once; their lessons follow.
+    if (body['commit'] === true) await syncSeasonLessons(organizationId);
     return result;
   }
 

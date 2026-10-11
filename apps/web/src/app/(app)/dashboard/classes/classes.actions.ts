@@ -229,9 +229,10 @@ export async function placeSlotAction(
   weekday: number,
   startTime: string,
   durationMinutes: number,
-): Promise<{ ok: true } | { ok: false; errorKey: string }> {
+): Promise<{ ok: true; lessonClash: boolean } | { ok: false; errorKey: string }> {
+  let added: { lessons?: { clashes?: unknown[] } | null };
   try {
-    await apiPost(
+    added = await apiPost(
       `/class-groups/${groupId}/schedules`,
       { weekday: String(weekday), startTime, durationMinutes: String(durationMinutes) },
       { organizationId },
@@ -249,7 +250,9 @@ export async function placeSlotAction(
   revalidatePath('/dashboard/classes');
   revalidatePath('/dashboard/calendar');
   revalidatePath(`/dashboard/classes/${groupId}`);
-  return { ok: true };
+  // Placed, but two turmas share an instructor at one hour, so the season's
+  // lessons could not be created — said by the calendar, not hidden.
+  return { ok: true, lessonClash: (added.lessons?.clashes?.length ?? 0) > 0 };
 }
 
 /** Move a slot already on the grid. Same refusals, same reasons. */
@@ -407,15 +410,21 @@ export async function moveBookingAction(
     fromDate?: string | null;
   },
 ): Promise<
-  | { ok: true; weeksBlocked: number; weeksKept: number }
+  | { ok: true; weeksBlocked: number; weeksKept: number; lessonClash: boolean }
   | { ok: false; errorKey: string; detail?: string }
 > {
-  let result: { weeksFollowed?: number; weeksBlocked?: number; weeksKept?: number };
+  let result: {
+    weeksFollowed?: number;
+    weeksBlocked?: number;
+    weeksKept?: number;
+    lessons?: { clashes?: unknown[] } | null;
+  };
   try {
     result = await apiPost<{
       weeksFollowed: number;
       weeksBlocked: number;
       weeksKept: number;
+      lessons: { clashes?: unknown[] } | null;
     }>(`/bookings/${scheduleId}/move`, target, { organizationId });
   } catch (error) {
     return await bookingFailure(error);
@@ -435,6 +444,7 @@ export async function moveBookingAction(
     ok: true,
     weeksBlocked: result.weeksBlocked ?? 0,
     weeksKept: result.weeksKept ?? 0,
+    lessonClash: (result.lessons?.clashes?.length ?? 0) > 0,
   };
 }
 

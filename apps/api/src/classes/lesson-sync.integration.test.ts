@@ -1,0 +1,79 @@
+import { after, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { ClassesController } from './classes.controller.js';
+import { actingAs, closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
+
+/**
+ * A turma's lessons follow its weekly pattern — 11 October 2026.
+ *
+ * Before this, lessons existed only after somebody pressed *Gerar a época*, so a
+ * turma placed on the calendar later had no lesson and its card lost the plan,
+ * the register and Cancelar aula. Every pattern write now tops the season up.
+ * What must hold: the lessons appear at once, never in the past, and a removed
+ * slot's future lessons go with it.
+ *
+ * Run: pnpm api:test   (needs pnpm db:up)
+ */
+
+after(closeHarness);
+
+async function aTurma(tenant: ScratchTenant): Promise<string> {
+  const [row] = await tenant.sql<{ id: string }>(
+    `INSERT INTO class_group (organization_id, facility_id, season_id, name)
+     VALUES ($1, $2, $3, 'Golfinhos') RETURNING id`,
+    [tenant.organizationId, tenant.facilityId, tenant.seasonId],
+  );
+  return row!.id;
+}
+
+async function lessons(
+  tenant: ScratchTenant,
+  groupId: string,
+): Promise<{ total: number; past: number; live: number; first: string | null }> {
+  const [row] = await tenant.sql<{ total: number; past: number; live: number; first: string | null }>(
+    `SELECT count(*)::int AS total,
+            count(*) FILTER (WHERE occurs_on < club_today())::int AS past,
+            count(*) FILTER (WHERE status <> 'cancelled')::int AS live,
+            min(occurs_on)::text AS first
+       FROM class_session WHERE class_group_id = $1`,
+    [groupId],
+  );
+  return row!;
+}
+
+test('placing a turma creates its lessons to the end of the season, none in the past', async () => {
+  await withScratchTenant(async (tenant) => {
+    const groupId = await aTurma(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const added = await new ClassesController().schedule(groupId, {
+        weekday: '3',
+        startTime: '10:00',
+        durationMinutes: '45',
+      });
+      assert.ok(added.lessons !== null && 'created' in added.lessons);
+      assert.ok(added.lessons.created > 0, 'lessons exist without pressing Gerar');
+    });
+
+    const after = await lessons(tenant, groupId);
+    assert.ok(after.total > 0);
+    assert.equal(after.past, 0, 'a turma placed today owes no register for the past');
+  });
+});
+
+test('removing the slot takes its future lessons with it', async () => {
+  await withScratchTenant(async (tenant) => {
+    const groupId = await aTurma(tenant);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new ClassesController();
+      await controller.schedule(groupId, { weekday: '3', startTime: '10:00', durationMinutes: '45' });
+      const [slot] = await tenant.sql<{ id: string }>(
+        'SELECT id FROM class_schedule WHERE class_group_id = $1 AND archived_at IS NULL',
+        [groupId],
+      );
+      await controller.unschedule(groupId, slot!.id);
+    });
+
+    const after = await lessons(tenant, groupId);
+    assert.equal(after.live, 0, 'no lesson left standing for a slot that is gone');
+  });
+});

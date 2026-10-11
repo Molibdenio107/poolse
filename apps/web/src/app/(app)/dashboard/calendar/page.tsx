@@ -417,7 +417,6 @@ export default async function CalendarPage({
               */
               <CalendarWeek
                 organizationId={classes.organizationId}
-                season={season}
                 weekStart={monday}
                 dayNames={dayNames}
                 todayWeekday={todayWeekday}

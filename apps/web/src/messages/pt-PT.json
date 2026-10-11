@@ -2625,9 +2625,7 @@
       "closures": "Não foi possível carregar os encerramentos. Os dias fechados não estão assinalados nem bloqueados nesta semana."
     },
     "impactUnknown": "Não foi possível verificar que aulas este encerramento afeta. Pode criá-lo na mesma; confirme no calendário se havia presenças marcadas.",
-    "blockActions": "Ações de {name}",
-    "generateLessons": "Gerar as aulas da época",
-    "noLessonYet": "Esta semana ainda não tem aula gerada para esta turma, por isso não há plano de treino, presenças nem cancelamento. Gere as aulas da época para os ter."
+    "blockActions": "Ações de {name}"
   },
   "inventory": {
     "title": "Inventário",
@@ -3031,7 +3029,8 @@
     "offGridFix": "Ajustar a grelha horária",
     "beforeSeason": "Antes do início da época",
     "afterSeason": "Depois do fim da época",
-    "filledCellSuspended": "{day}, {time}, {lane}: {what} — não decorre ({why})"
+    "filledCellSuspended": "{day}, {time}, {lane}: {what} — não decorre ({why})",
+    "lessonsClash": "Guardado, mas as aulas desta época não foram criadas: há duas turmas com o mesmo professor à mesma hora. Corrija o conflito em Turmas e as aulas aparecem."
   },
   "partnerClasses": {
     "title": "Parcerias",

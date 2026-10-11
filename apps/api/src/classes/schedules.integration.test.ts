@@ -120,7 +120,7 @@ test('a time before the pool opens is refused against the time, and one inside i
         startTime: '10:00',
         durationMinutes: '45',
       });
-      assert.deepEqual(added, { added: true });
+      assert.equal(added.added, true);
     });
   });
 });

@@ -899,11 +899,29 @@ export async function removeSchedule(
     );
     if (!rows[0]) return false;
 
+    /*
+     * Its future lessons go with it — October 2026. Lessons are now created as
+     * soon as a pattern is written (`lesson-sync.ts`), so a slot removed today
+     * would otherwise leave a season of lessons standing for a class that no
+     * longer runs: still on the instructor's week and owing registers. They are
+     * cancelled, never deleted, and only from today on; a lesson somebody
+     * already took the register for is a record and is left exactly as it is.
+     */
+    const cancelled = await tx.query(
+      `UPDATE class_session s
+          SET status = 'cancelled'
+        WHERE s.schedule_id = $1
+          AND s.status <> 'cancelled'
+          AND s.occurs_on >= club_today()
+          AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.class_session_id = s.id)`,
+      [scheduleId],
+    );
+
     await recordAudit(tx, {
       action: 'class_schedule.removed',
       entityType: 'class_group',
       entityId: groupId,
-      data: { scheduleId },
+      data: { scheduleId, lessonsCancelled: cancelled.rowCount ?? 0 },
     });
     return true;
   });

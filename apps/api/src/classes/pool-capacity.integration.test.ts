@@ -128,7 +128,7 @@ test('4.2 — a tank with no ceiling refuses nothing', async () => {
 
       // Null is "not measured", and a club that has not measured it goes on
       // timetabling exactly as it did before this ticket existed.
-      assert.deepEqual(added, { added: true });
+      assert.equal(added.added, true);
     });
   });
 });

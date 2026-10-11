@@ -45,6 +45,7 @@ import {
   type TimetableEntry,
 } from './classes.repository.js';
 import { qualificationRefusal } from '../staff/qualification-refusal.js';
+import { syncSeasonLessons, type LessonSync } from './lesson-sync.js';
 
 interface Choice {
   id: string;
@@ -240,7 +241,7 @@ export class ClassesController {
   async schedule(
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ added: true }> {
+  ): Promise<{ added: true; lessons: LessonSync }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
@@ -265,7 +266,7 @@ export class ClassesController {
       throw new ConflictException('That class group already runs at that time on that day');
     }
     refuseIfClosed(outcome);
-    return { added: true };
+    return { added: true, lessons: await syncSeasonLessons(organizationId) };
   }
 
   /**
@@ -281,7 +282,7 @@ export class ClassesController {
     @Param('id') id: string,
     @Param('scheduleId') scheduleId: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<{ moved: true }> {
+  ): Promise<{ moved: true; lessons: LessonSync }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
@@ -305,21 +306,22 @@ export class ClassesController {
       throw new ConflictException('That class group already runs at that time on that day');
     }
     refuseIfClosed(outcome);
-    return { moved: true };
+    return { moved: true, lessons: await syncSeasonLessons(organizationId) };
   }
 
   @Post(':id/schedules/:scheduleId/remove')
   async unschedule(
     @Param('id') id: string,
     @Param('scheduleId') scheduleId: string,
-  ): Promise<{ removed: true }> {
+  ): Promise<{ removed: true; lessons: LessonSync }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
     if (!(await removeSchedule(organizationId, id, scheduleId))) {
       throw new NotFoundException('No such slot');
     }
-    return { removed: true };
+    // The slot's future lessons go with it, the way the button would cancel them.
+    return { removed: true, lessons: await syncSeasonLessons(organizationId) };
   }
 
   @Post(':id/enrollments')

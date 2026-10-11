@@ -525,6 +525,15 @@ test('another tenant cannot move this booking', async () => {
  * `moveOccurrence` is the other side of this and stays as it is — a session
  * moved by hand is an exception the timetable must not overwrite.
  */
+/*
+ * The weeks a test seeded with `session()` — October 2026. A pattern write now
+ * tops up the season's lessons on its own (`lesson-sync.ts`), so a booking ends
+ * up with a lesson for every week to the end of the season. These tests are
+ * about how a move re-times the weeks they set up, so they read those and
+ * leave the topped-up ones to the lesson-sync test.
+ */
+const seeded = new Set<string>();
+
 async function sessionsOf(
   tenant: ScratchTenant,
   scheduleId: string,
@@ -537,8 +546,9 @@ async function sessionsOf(
               WHERE csl.session_id = s.id) AS lanes
        FROM class_session s
       WHERE s.schedule_id = $1
+        AND s.id = ANY($2::uuid[])
       ORDER BY s.occurs_on`,
-    [scheduleId],
+    [scheduleId, [...seeded]],
   );
 }
 
@@ -569,6 +579,7 @@ async function session(
        FROM class_session s WHERE s.id = $2`,
     [tenant.organizationId, row!.id, laneIds],
   );
+  seeded.add(row!.id);
   return row!.id;
 }
 

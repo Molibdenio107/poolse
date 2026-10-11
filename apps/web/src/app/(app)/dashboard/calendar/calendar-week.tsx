@@ -13,7 +13,7 @@ import { slotsFor, toMinutes } from '@/lib/grid-layout';
 import { Dialog } from '@/components/ui/dialog';
 import { CalendarGrid, SEP, type CalendarLevel } from './calendar-grid';
 import { StandInPicker } from './stand-in-picker';
-import { CancelSessionDialog, GenerateLessonsButton, type CancelTarget } from './calendar-forms';
+import { CancelSessionDialog, type CancelTarget } from './calendar-forms';
 import { LessonPlanPanel } from './lesson-plan-panel';
 import type { SessionControls } from '../classes/schedule-board';
 import {
@@ -49,7 +49,6 @@ export function CalendarWeek({
   controls,
   canManage,
   openPlanFor,
-  season,
 }: {
   organizationId: string;
   weekStart: string;
@@ -65,8 +64,6 @@ export function CalendarWeek({
   groups: ClassGroup[];
   controls: Record<string, SessionControls>;
   canManage: boolean;
-  /** The season's window, for generating a turma's missing lessons from its card. */
-  season?: { from: string; to: string } | undefined;
   /**
    * A session whose plan sheet opens on arrival — `?plan=` from the dashboard's
    * plan card (POOLSE-66 slice 3). Matched to the block drawn for it, so the
@@ -259,23 +256,8 @@ export function CalendarWeek({
         facts.push({ label: t('calendar.registerLabel'), value: t('calendar.registerTaken') });
       }
 
-      /*
-        No lesson this week — the turma was placed after its season was
-        generated. Said in the card, with the way to fix it, rather than a card
-        whose plan, register and cancel buttons have silently gone.
-      */
-      const missingLesson =
-        session === undefined && booking.subjectType === 'turma' ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-foreground-muted">{t('calendar.noLessonYet')}</p>
-            {canManage && season !== undefined && (
-              <GenerateLessonsButton organizationId={organizationId} from={season.from} to={season.to} />
-            )}
-          </div>
-        ) : undefined;
-
       const actions =
-        session === undefined ? missingLesson : (
+        session === undefined ? undefined : (
           <div className="flex flex-col gap-2">
             {/*
               Who is teaching this one lesson. In the card and in the plan sheet,
@@ -296,7 +278,7 @@ export function CalendarWeek({
         ...(actions === undefined ? {} : { actions }),
       };
     },
-    [controlsFor, sessionButtons, teacherFor, t, canManage, season, organizationId],
+    [controlsFor, sessionButtons, teacherFor, t],
   );
 
   /*
@@ -356,6 +338,7 @@ export function CalendarWeek({
       return;
     }
     setPlacing(null);
+    if (result.lessonClash) show('warning', t('grid.lessonsClash'));
     router.refresh();
   }
 
@@ -462,6 +445,7 @@ export function CalendarWeek({
        * as a warning here rather than returned as a failure, which would send
        * the block home from a move that did in fact happen.
        */
+      if (result.lessonClash) show('warning', t('grid.lessonsClash'));
       if (result.weeksBlocked > 0) {
         show('warning', t('grid.weeksBlocked', { count: result.weeksBlocked }));
       } else if (result.weeksKept > 0) {

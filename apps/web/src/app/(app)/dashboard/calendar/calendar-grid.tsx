@@ -306,6 +306,23 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
    * once more on the way home.
    */
   const [pending, setPending] = useState<Map<string, Pending>>(new Map());
+
+  /*
+   * Saved moves waiting for the server's own week — see `settle`. When fresh
+   * bookings arrive their overrides are dropped, and the block is then drawn
+   * from data that already says what the override said: no frame in between.
+   */
+  const landed = useRef(new Set<string>());
+  useEffect(() => {
+    if (landed.current.size === 0) return;
+    const done = new Set(landed.current);
+    landed.current.clear();
+    setPending((current) => {
+      const next = new Map(current);
+      for (const id of done) next.delete(id);
+      return next;
+    });
+  }, [bookings]);
   const [ask, setAsk] = useState<ScopeAsk | null>(null);
   const [, startWrite] = useTransition();
 
@@ -360,20 +377,34 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   }, []);
 
   /*
-   * How many blocks each key accounts for, counted before the filter.
+   * How many blocks each key accounts for in the chosen tank, counted before the
+   * show/hide filter.
    *
-   * So a row that is switched off still says how much it is hiding, and a level
-   * with nothing on this week says zero rather than vanishing — a checkbox that
-   * disappears when you use it is a checkbox you cannot undo.
+   * **The tank, yes; the checkboxes, no** — October 2026. Counted only over the
+   * classes in the pool on screen, so a level that has nothing in this tank is
+   * not offered (Rui's call: the checkboxes follow the pool selector, and a tank
+   * with no classes shows none). Still before the show/hide filter, so a row
+   * that is switched off keeps its count and stays there to be switched back on —
+   * a checkbox that disappears when you use it is a checkbox you cannot undo.
+   *
+   * A class in no pista is in no tank, and is drawn whichever tank is chosen,
+   * so it counts in every one.
    */
   const counts = useMemo(() => {
+    const lanePool = new Map(lanes.map((lane) => [lane.id, lane.poolId]));
+    const inPool = (booking: GridBooking): boolean =>
+      pools.length <= 1 ||
+      booking.laneIds.length === 0 ||
+      booking.laneIds.some((id) => lanePool.get(id) === poolId);
+
     const tally = new Map<string, number>();
     for (const booking of bookings) {
+      if (!inPool(booking)) continue;
       const key = keyOf(booking);
       tally.set(key, (tally.get(key) ?? 0) + 1);
     }
     return tally;
-  }, [bookings, keyOf]);
+  }, [bookings, keyOf, lanes, pools.length, poolId]);
 
   const shown = useMemo(
     () =>
@@ -763,15 +794,26 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         scope,
       );
 
-      // Either way the override goes: on success the server's own data now says
-      // the same thing, and on failure the block has to go home or the week
-      // would keep showing a move that was never saved.
-      setPending((current) => {
-        const next = new Map(current);
-        next.delete(asked.booking.id);
-        return next;
-      });
-      if (failure !== null) refuse(failure);
+      /*
+        On failure the block goes home at once — the week must not keep
+        showing a move that was never saved.
+
+        On success it stays where it is until the refreshed week has arrived —
+        October 2026. Dropping the override the moment the save returned drew
+        the block at its old place for the beat before the router's refresh
+        landed, so after "esta semana" or "todas as semanas" it jumped back and
+        then forward again. `landed` hands it over when `bookings` changes.
+      */
+      if (failure !== null) {
+        setPending((current) => {
+          const next = new Map(current);
+          next.delete(asked.booking.id);
+          return next;
+        });
+        refuse(failure);
+      } else {
+        landed.current.add(asked.booking.id);
+      }
     });
   }
 
@@ -1040,6 +1082,9 @@ function Toolbar({
 }): React.ReactElement {
   const t = useTranslations();
 
+  // A tank with no classes this week offers no checkboxes at all.
+  const anything = [...counts.values()].some((count) => count > 0);
+
   /** One row: a checkbox, its colour, its name and how much it accounts for. */
   const row = (key: string, label: string, tint: number | null, icon?: React.ReactNode) => {
     const count = counts.get(key) ?? 0;
@@ -1060,10 +1105,9 @@ function Toolbar({
           )}
           <span className="truncate">{label}</span>
           {/*
-            Counted before the filter, so a row that is off still says what it is
-            hiding and a level with nothing this week says zero rather than
-            disappearing — a checkbox that vanishes when you use it cannot be
-            undone.
+            Counted before the show/hide filter, so a row that is off still says
+            what it is hiding and stays there to be switched back on. Rows with
+            nothing in the chosen tank are not offered at all.
           */}
           <span className="ml-auto shrink-0 tabular-nums text-foreground-muted">{count}</span>
         </label>
@@ -1101,11 +1145,14 @@ function Toolbar({
             </label>
           )}
 
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('calendar.show')}
-          </h2>
+          {anything && (
+            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {t('calendar.show')}
+            </h2>
+          )}
         </div>
 
+        {anything && (
         <button
           type="button"
           onClick={onShowAll}
@@ -1114,6 +1161,7 @@ function Toolbar({
         >
           {t('calendar.showAll')}
         </button>
+        )}
       </div>
 
       {/*
@@ -1121,8 +1169,9 @@ function Toolbar({
         mid-row at every window width and the names never lined up, so the eye
         had to search each one out instead of running down a column.
       */}
+      {anything && (
       <ul className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {levels.map((level) =>
+        {levels.filter((level) => (counts.get(level.id) ?? 0) > 0).map((level) =>
           row(
             level.id,
             level.name,
@@ -1144,6 +1193,7 @@ function Toolbar({
           ),
         )}
       </ul>
+      )}
     </div>
   );
 }
