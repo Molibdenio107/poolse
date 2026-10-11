@@ -997,3 +997,7 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   lesson, and a turma placed after generation had none, so they vanished without a word. The button
   stays. A removed slot's future lessons are cancelled with it. The calendar's level checkboxes follow
   the pool selector, and a moved block holds its place until the refreshed week arrives.
+- **2026-10-11** — **A clash leaves out only the turmas in it** (Rui's call): automatic lesson
+  generation skips them and names them, so one clash no longer empties the club's calendar. On the
+  calendar a click or tap pins a class's card open (the ⋯ shows only for keyboard focus), a block
+  resizes from its top edge too, and toasts are solid with the tone as a tint over the surface.

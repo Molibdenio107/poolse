@@ -1,7 +1,13 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ClassesController } from './classes.controller.js';
-import { actingAs, closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
+import {
+  actingAs,
+  addMember,
+  closeHarness,
+  withScratchTenant,
+  type ScratchTenant,
+} from '../test/harness.js';
 
 /**
  * A turma's lessons follow its weekly pattern — 11 October 2026.
@@ -17,11 +23,15 @@ import { actingAs, closeHarness, withScratchTenant, type ScratchTenant } from '.
 
 after(closeHarness);
 
-async function aTurma(tenant: ScratchTenant): Promise<string> {
+async function aTurma(
+  tenant: ScratchTenant,
+  name = 'Golfinhos',
+  instructor: string | null = null,
+): Promise<string> {
   const [row] = await tenant.sql<{ id: string }>(
-    `INSERT INTO class_group (organization_id, facility_id, season_id, name)
-     VALUES ($1, $2, $3, 'Golfinhos') RETURNING id`,
-    [tenant.organizationId, tenant.facilityId, tenant.seasonId],
+    `INSERT INTO class_group (organization_id, facility_id, season_id, name, instructor_membership_id)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [tenant.organizationId, tenant.facilityId, tenant.seasonId, name, instructor],
   );
   return row!.id;
 }
@@ -50,7 +60,7 @@ test('placing a turma creates its lessons to the end of the season, none in the 
         startTime: '10:00',
         durationMinutes: '45',
       });
-      assert.ok(added.lessons !== null && 'created' in added.lessons);
+      assert.ok(added.lessons !== null);
       assert.ok(added.lessons.created > 0, 'lessons exist without pressing Gerar');
     });
 
@@ -75,5 +85,34 @@ test('removing the slot takes its future lessons with it', async () => {
 
     const after = await lessons(tenant, groupId);
     assert.equal(after.live, 0, 'no lesson left standing for a slot that is gone');
+  });
+});
+
+test('a clash leaves out only the turmas in it, and names them', async () => {
+  await withScratchTenant(async (tenant) => {
+    const teacher = await addMember(tenant, 'Prof', 'Dobrado', ['instructor']);
+    const first = await aTurma(tenant, 'Bebés', teacher);
+    const second = await aTurma(tenant, 'Aperfeiçoamento', teacher);
+    const other = await aTurma(tenant, 'Cadetes');
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new ClassesController();
+      // Same instructor, same Monday hour: a clash.
+      await controller.schedule(first, { weekday: '1', startTime: '12:45', durationMinutes: '45' });
+      await controller.schedule(second, { weekday: '1', startTime: '12:45', durationMinutes: '45' });
+      const added = await controller.schedule(other, {
+        weekday: '3',
+        startTime: '10:00',
+        durationMinutes: '45',
+      });
+      assert.ok(added.lessons !== null);
+      assert.equal(added.lessons.clashes.length, 1, 'the clash is named');
+    });
+
+    // The first was placed before any clash existed and keeps its lessons; the
+    // one whose placement made the clash gets none until it is fixed.
+    assert.ok((await lessons(tenant, first)).total > 0);
+    assert.equal((await lessons(tenant, second)).total, 0);
+    assert.ok((await lessons(tenant, other)).total > 0, 'one clash does not empty the calendar');
   });
 });

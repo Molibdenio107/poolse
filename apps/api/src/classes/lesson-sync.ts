@@ -18,18 +18,18 @@ import { findScheduleClashes, generateSeason, type ScheduleClash } from './sessi
  * lessons alone and applies the closures — so calling it after every pattern
  * write is the same as pressing the button, which stays for after a closure.
  *
- * **A clash is said, not generated around.** Two turmas sharing an instructor at
- * one hour make generation refuse, exactly as the button does; the caller gets
- * the clashes to name, and the write that triggered this still stands.
+ * **A clash leaves out only the two turmas in it** (Rui's call, 11 October 2026).
+ * Two turmas sharing an instructor at one hour would make the instructor
+ * exclusion refuse the whole run, so one clash used to empty the calendar for the
+ * whole club. Now those two are skipped and returned to be named, and every other
+ * turma gets its season. The *Gerar a época* button keeps refusing on a clash —
+ * it is the operator's deliberate run, and it names them.
  *
  * Never throws: the pattern write already committed, and a lesson top-up that
  * failed is logged rather than turned into a failure of the save.
  */
 
-export type LessonSync =
-  | { created: number }
-  | { clashes: ScheduleClash[] }
-  | null;
+export type LessonSync = { created: number; clashes: ScheduleClash[] } | null;
 
 const logger = new Logger('LessonSync');
 
@@ -49,10 +49,10 @@ export async function syncSeasonLessons(organizationId: string): Promise<LessonS
     if (window === null) return null;
 
     const clashes = await findScheduleClashes(organizationId);
-    if (clashes.length > 0) return { clashes };
+    const skip = [...new Set(clashes.flatMap((clash) => [clash.firstGroupId, clash.secondGroupId]))];
 
-    const result = await generateSeason(organizationId, window.from, window.to);
-    return { created: result.created };
+    const result = await generateSeason(organizationId, window.from, window.to, skip);
+    return { created: result.created, clashes };
   } catch (error) {
     logger.warn(`Could not top up lessons for ${organizationId}: ${String(error)}`);
     return null;

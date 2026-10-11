@@ -1,7 +1,7 @@
 'use client';
 
 import * as HoverCardPrimitive from '@radix-ui/react-hover-card';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { MoreHorizontal } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
@@ -69,6 +69,7 @@ export function TurmaHoverCard({
   side = 'right',
   suppressed = false,
   closeDelay = CLOSE_DELAY,
+  pinnable = false,
 }: {
   title: string;
   detail: TurmaDetail;
@@ -107,26 +108,89 @@ export function TurmaHoverCard({
    * the round-6 ticket moved in here.
    */
   suppressed?: boolean;
+  /** A click pins the card open — the calendar's blocks. See `pinned` below. */
+  pinnable?: boolean;
   /** The calendar asks for 0 — see the note on CLOSE_DELAY. */
   closeDelay?: number;
 }): React.ReactElement {
   const t = useTranslations();
 
+  /*
+   * Pinned by a click — October 2026, the calendar's blocks (`pinnable`).
+   *
+   * Hover still opens the card. A click keeps it open, so the training plan,
+   * Marcar presenças and Cancelar aula can be reached without the pointer having
+   * to travel and on a tablet, where there is no hover at all. It closes on a
+   * click outside or Escape. A click that ends a drag or a resize is not a click
+   * on the block — the browser fires one under the pointer every time — so one
+   * that travelled more than a few pixels, or began on a resize edge, is ignored.
+   */
+  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const downAt = useRef<{ x: number; y: number } | null>(null);
+
+  // A drag or resize starting (the card is suppressed) unpins it.
+  useEffect(() => {
+    if (suppressed) setPinned(false);
+  }, [suppressed]);
+
   if (suppressed) return <>{children}</>;
 
+  const pinProps = pinnable
+    ? {
+        onPointerDown: (event: React.PointerEvent) => {
+          downAt.current = { x: event.clientX, y: event.clientY };
+        },
+        onClick: (event: React.MouseEvent) => {
+          const start = downAt.current;
+          downAt.current = null;
+          const target = event.target as HTMLElement;
+          if (target.closest('[data-resize], button, a') !== null) return;
+          if (
+            start !== null &&
+            Math.hypot(event.clientX - start.x, event.clientY - start.y) > 4
+          ) {
+            return;
+          }
+          setPinned(true);
+        },
+      }
+    : {};
+
   return (
-    <HoverCardPrimitive.Root openDelay={OPEN_DELAY} closeDelay={closeDelay}>
+    <HoverCardPrimitive.Root
+      openDelay={OPEN_DELAY}
+      closeDelay={closeDelay}
+      open={hovered || pinned}
+      onOpenChange={setHovered}
+    >
       {/*
         `asChild` so the trigger stays the slot's own element — an anchor stays an
         anchor and keeps its href, rather than being wrapped in a button that
         would swallow the click and break keyboard navigation to the turma.
       */}
-      <HoverCardPrimitive.Trigger asChild onTouchStart={(event) => event.preventDefault()}>
+      <HoverCardPrimitive.Trigger
+        asChild
+        onTouchStart={(event) => {
+          // A tap pins instead (the click handler); without `pinnable` the
+          // card stays out of a finger's way, as before.
+          if (!pinnable) event.preventDefault();
+        }}
+        {...pinProps}
+      >
         {children}
       </HoverCardPrimitive.Trigger>
 
       <HoverCardPrimitive.Portal>
         <HoverCardPrimitive.Content
+          onEscapeKeyDown={() => {
+            setPinned(false);
+            setHovered(false);
+          }}
+          onPointerDownOutside={() => {
+            setPinned(false);
+            setHovered(false);
+          }}
           side={side}
           align="start"
           sideOffset={8}

@@ -382,3 +382,8 @@ The **Mostrar** checkboxes count only the classes in the selected pool, and a le
 is not offered; classes with no pista appear in every pool. After a drag or resize, answering *só esta
 semana* or *todas as semanas* leaves the block where it was dropped until the refreshed week arrives,
 and a drop slides into its slot rather than jumping.
+
+**The card.** Hovering a class shows its card; a click or tap pins it open until Escape or a click
+elsewhere, and the click that ends a drag or resize never does. A class can be resized from all four
+edges — the top changes the start and keeps the end. If two turmas clash, only those two are left
+without lessons and the calendar names the clash after the save.

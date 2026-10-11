@@ -3030,7 +3030,7 @@
     "beforeSeason": "Before the season starts",
     "afterSeason": "After the season ends",
     "filledCellSuspended": "{day}, {time}, {lane}: {what} — not running ({why})",
-    "lessonsClash": "Saved, but this season's lessons were not created: two class groups share an instructor at the same hour. Fix the clash under Class groups and the lessons appear."
+    "lessonsClash": "Saved. Two class groups share an instructor at the same hour: those two have no lessons until the clash is fixed under Class groups. Every other class has its full season."
   },
   "partnerClasses": {
     "title": "Partnerships",

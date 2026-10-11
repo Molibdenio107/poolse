@@ -386,6 +386,8 @@ export async function generateSeason(
   organizationId: string,
   from: string,
   to: string,
+  /** Turmas to leave out — the two in each clash (`lesson-sync.ts`). */
+  skipGroups: readonly string[] = [],
 ): Promise<GenerationResult> {
   return withOrg(organizationId, async (tx) => {
     // The operator chose to have Poolse close on national holidays without
@@ -411,7 +413,12 @@ export async function generateSeason(
       o_created: number;
       o_cancelled: number;
       o_restored: number;
-    }>('SELECT * FROM generate_sessions($1, $2::date, $3::date)', [organizationId, from, to]);
+    }>('SELECT * FROM generate_sessions($1, $2::date, $3::date, $4::uuid[])', [
+      organizationId,
+      from,
+      to,
+      [...skipGroups],
+    ]);
 
     const result = rows[0];
     if (!result) throw new Error('generate_sessions returned nothing');
@@ -1080,6 +1087,9 @@ export function isExclusionViolation(error: unknown): boolean {
 export interface ScheduleClash {
   firstClass: string;
   secondClass: string;
+  /** The two turmas' ids, so automatic generation can leave exactly them out. */
+  firstGroupId: string;
+  secondGroupId: string;
   weekday: number;
   /**
    * Each turma's own hours — F-07.
@@ -1107,6 +1117,8 @@ export async function findScheduleClashes(organizationId: string): Promise<Sched
     const { rows } = await tx.query<{
       first_class: string;
       second_class: string;
+      first_group_id: string;
+      second_group_id: string;
       weekday: number;
       first_from: string;
       first_to: string;
@@ -1132,6 +1144,8 @@ export async function findScheduleClashes(organizationId: string): Promise<Sched
       )
       SELECT a.name              AS first_class,
              b.name              AS second_class,
+             a.group_id          AS first_group_id,
+             b.group_id          AS second_group_id,
              a.weekday,
              to_char(a.start_time, 'HH24:MI') AS first_from,
              to_char(a.end_time,   'HH24:MI') AS first_to,
@@ -1157,6 +1171,8 @@ export async function findScheduleClashes(organizationId: string): Promise<Sched
     return rows.map((row) => ({
       firstClass: row.first_class,
       secondClass: row.second_class,
+      firstGroupId: row.first_group_id,
+      secondGroupId: row.second_group_id,
       weekday: row.weekday,
       firstFrom: row.first_from,
       firstTo: row.first_to,

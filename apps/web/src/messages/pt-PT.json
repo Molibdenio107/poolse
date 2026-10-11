@@ -3030,7 +3030,7 @@
     "beforeSeason": "Antes do início da época",
     "afterSeason": "Depois do fim da época",
     "filledCellSuspended": "{day}, {time}, {lane}: {what} — não decorre ({why})",
-    "lessonsClash": "Guardado, mas as aulas desta época não foram criadas: há duas turmas com o mesmo professor à mesma hora. Corrija o conflito em Turmas e as aulas aparecem."
+    "lessonsClash": "Guardado. Há duas turmas com o mesmo professor à mesma hora: essas duas ficam sem aulas até o conflito ser corrigido em Turmas. Todas as outras têm a época completa."
   },
   "partnerClasses": {
     "title": "Parcerias",

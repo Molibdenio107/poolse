@@ -120,19 +120,26 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
   );
 }
 
+/*
+ * The tint is a layer *over* the surface, never a fill instead of it — October
+ * 2026. It used to be `bg-success/5` beside `bg-surface`; tailwind-merge reads
+ * the two as the same property and keeps the last, so the surface was dropped
+ * and every toast was 95% see-through over whatever it covered. A background
+ * image does not compete with the background colour, so the card stays solid.
+ */
 const TONE = {
   success: {
-    box: 'border-success/40 bg-success/5',
+    box: 'border-success/40 [background-image:linear-gradient(rgb(var(--success)/0.07),rgb(var(--success)/0.07))]',
     icon: 'text-success',
     Icon: CircleCheck,
   },
   warning: {
-    box: 'border-warning/40 bg-warning/5',
+    box: 'border-warning/40 [background-image:linear-gradient(rgb(var(--warning)/0.07),rgb(var(--warning)/0.07))]',
     icon: 'text-warning',
     Icon: TriangleAlert,
   },
   danger: {
-    box: 'border-danger/40 bg-danger/5',
+    box: 'border-danger/40 [background-image:linear-gradient(rgb(var(--danger)/0.07),rgb(var(--danger)/0.07))]',
     icon: 'text-danger',
     Icon: CircleAlert,
   },

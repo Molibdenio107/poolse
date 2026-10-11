@@ -633,7 +633,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   /** Which edge is being dragged, and where the pointer started. */
   const resizing = useRef<{
     booking: GridBooking;
-    edge: 'bottom' | 'left' | 'right';
+    edge: 'top' | 'bottom' | 'left' | 'right';
     from: number;
   } | null>(null);
 
@@ -644,7 +644,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   ghostRef.current = ghost;
 
   const onResizeStart = useCallback(
-    (booking: GridBooking, edge: 'bottom' | 'left' | 'right', from: number) => {
+    (booking: GridBooking, edge: 'top' | 'bottom' | 'left' | 'right', from: number) => {
       resizing.current = { booking, edge, from };
     },
     [],
@@ -668,7 +668,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
        * left edge moves the start, both clamped inside the lanes on screen. One
        * lane is the floor: a class in no lanes is not a class.
        */
-      if (edge !== 'bottom') {
+      if (edge === 'left' || edge === 'right') {
         /*
          * A block in no pista has no run of lanes to widen — round 8.
          *
@@ -714,6 +714,34 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         return;
       }
 
+      /*
+       * The top edge — October 2026. The class starts earlier or later and ends
+       * where it did: the start snaps like a move, never past the end less one
+       * step, never above the top of the day.
+       */
+      if (edge === 'top') {
+        const end = startMinutes + booking.durationMinutes;
+        const start = Math.min(
+          Math.max(
+            range.startMinutes,
+            snapStart(startMinutes + pxToMinutes(event.clientY - from), booking.weekday, slots, step),
+          ),
+          end - step,
+        );
+        setGhost((current) =>
+          current !== null && current.startMinutes === start
+            ? current
+            : {
+                bookingId: booking.id,
+                weekday: booking.weekday,
+                laneIds: booking.laneIds,
+                startMinutes: start,
+                durationMinutes: end - start,
+              },
+        );
+        return;
+      }
+
       const durationMinutes = snapDuration(
         startMinutes,
         startMinutes + booking.durationMinutes + pxToMinutes(event.clientY - from),
@@ -742,10 +770,11 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       setGhost(null);
       if (state === null || target === null) return;
 
-      const sideways = state.edge !== 'bottom';
+      const sideways = state.edge === 'left' || state.edge === 'right';
       const unchanged = sideways
         ? target.laneIds.join() === state.booking.laneIds.join()
-        : target.durationMinutes === state.booking.durationMinutes;
+        : target.durationMinutes === state.booking.durationMinutes &&
+          target.startMinutes === toMinutes(state.booking.startTime);
       if (unchanged) return;
 
       setPending((current) => new Map(current).set(state.booking.id, target));
@@ -773,7 +802,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
     };
-  }, [canManage, slots, step, laneIndex, shownLanes]);
+  }, [canManage, slots, step, laneIndex, shownLanes, range.startMinutes]);
 
   // ------------------------------------------------------------ the decision
 
@@ -1468,7 +1497,7 @@ interface LayerProps {
   renderDetail: CalendarGridProps['renderDetail'];
   onResizeStart: (
     booking: GridBooking,
-    edge: 'bottom' | 'left' | 'right',
+    edge: 'top' | 'bottom' | 'left' | 'right',
     from: number,
   ) => void;
   /** Faded: a holiday, a day the pool is shut, or a day already gone. */
@@ -1704,9 +1733,10 @@ function Block({
       <p className="truncate pr-6 text-[0.75rem] font-medium leading-tight">{booking.name}</p>
 
       {/*
-        The card for a keyboard or a finger. Hidden until the block is hovered
-        or focused, always shown where there is no hover (a tablet at the
-        poolside), and never while a drag is live.
+        The card for a keyboard. Invisible to a mouse or a finger — hovering
+        shows the card and a click or tap pins it (`pinnable` below) — and shown
+        only when the block or the button has keyboard focus, because a hover
+        card cannot be tabbed into. Never while a drag is live.
       */}
       {!anyDrag && !isResizing && (
         <TurmaCardButton
@@ -1714,7 +1744,7 @@ function Block({
           detail={card.detail}
           {...(card.actions === undefined ? {} : { actions: card.actions })}
           label={t('calendar.blockActions', { name: booking.name })}
-          className="absolute right-0.5 top-0.5 opacity-0 focus-visible:opacity-100 group-hover/block:opacity-100 group-focus-within/block:opacity-100 [@media(hover:none)]:opacity-100"
+          className="absolute right-0.5 top-0.5 opacity-0 focus-visible:opacity-100 group-focus-visible/block:opacity-100"
         />
       )}
 
@@ -1744,14 +1774,27 @@ function Block({
       )}
 
       {/*
-        Three edges. The bottom changes how long the class runs; the left and
-        right change how many pistas it takes. `stopPropagation` keeps the drag
-        sensor out of it, so grabbing an edge never also starts a move.
+        Four edges. The top moves the start and keeps the end — October 2026;
+        the bottom changes how long the class runs; the left and right change how
+        many pistas it takes. `stopPropagation` keeps the drag sensor out of it,
+        so grabbing an edge never also starts a move. `data-resize` lets the
+        click that ends a resize be told from a click on the block.
       */}
       {movable && (
         <>
           <span
             aria-hidden="true"
+            data-resize=""
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              onResizeStart(booking, 'top', event.clientY);
+            }}
+            className="absolute inset-x-2 top-0 h-2 cursor-ns-resize"
+          />
+          <span
+            aria-hidden="true"
+            data-resize=""
             onPointerDown={(event) => {
               event.stopPropagation();
               event.preventDefault();
@@ -1761,6 +1804,7 @@ function Block({
           />
           <span
             aria-hidden="true"
+            data-resize=""
             onPointerDown={(event) => {
               event.stopPropagation();
               event.preventDefault();
@@ -1770,6 +1814,7 @@ function Block({
           />
           <span
             aria-hidden="true"
+            data-resize=""
             onPointerDown={(event) => {
               event.stopPropagation();
               event.preventDefault();
@@ -1800,6 +1845,7 @@ function Block({
       // Shut for a resize as well as a drag: a card opening over an edge being
       // dragged is the same interruption, and it covers the block being sized.
       suppressed={anyDrag || isResizing}
+      pinnable
       {...(card.actions === undefined ? {} : { actions: card.actions })}
     >
       {block}
