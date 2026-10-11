@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { apiFetch, type Facilities } from '@/lib/api';
+import { outcome, type Outcome } from '@/lib/load-failure';
 import { PageError, PageShell } from '@/components/page-shell';
 import { InvoiceFilters } from './invoice-filters';
 import { InvoiceRunPanel } from './invoice-run-panel';
@@ -57,46 +58,64 @@ export default async function InvoicingPage({
   const month = /^\d{4}-\d{2}$/.test(monthParam ?? '') ? monthParam! : thisMonth();
   const periodStart = `${month}-01`;
 
-  let sites: Facilities | null = null;
-  try {
-    sites = await apiFetch<Facilities>('/facilities');
-  } catch {
-    sites = null;
-  }
-
-  if (sites === null || sites.facilities.length === 0) {
-    /*
-     * Two different failures, and only one of them is the operator's to fix.
-     * A club with no site has nothing to bill from; somebody the endpoint
-     * refuses is told so rather than shown an empty page that reads as "there
-     * are no invoices".
-     */
+  /*
+   * Three answers, three sentences — October 2026 sweep. A refusal is "not
+   * yours", a failure is "did not load", and a club with no site yet has
+   * nothing to bill from. All three used to read "Não tem permissão", which
+   * told a new club's owner they were not allowed into their own billing.
+   */
+  const loadedSites = await outcome(apiFetch<Facilities>('/facilities'));
+  if (loadedSites.state !== 'ok' || loadedSites.data.facilities.length === 0) {
     return (
       <PageShell title={t('invoices.title')}>
-        <PageError message={t('invoices.notPermitted')} />
+        <PageError
+          message={t(
+            loadedSites.state === 'refused'
+              ? 'invoices.notPermitted'
+              : loadedSites.state === 'failed'
+                ? loadedSites.failure.key
+                : 'invoices.noSites',
+          )}
+        />
       </PageShell>
     );
   }
+  const sites = loadedSites.data;
 
   const chosen =
     sites.facilities.find((site) => site.id === requested.trim())?.id ?? sites.facilities[0]!.id;
 
-  const [run, issued, outstanding, books, tax] = await Promise.all([
-    owing ? Promise.resolve(null) : previewRun(chosen, periodStart),
-    owing ? Promise.resolve(null) : listInvoices(chosen, periodStart),
-    owing ? listOutstanding(chosen) : Promise.resolve(null),
+  const skipped = Promise.resolve(null);
+  const [runLoad, issuedLoad, outstandingLoad, booksLoad, taxLoad] = await Promise.all([
+    owing ? skipped : previewRun(chosen, periodStart),
+    owing ? skipped : listInvoices(chosen, periodStart),
+    owing ? listOutstanding(chosen) : skipped,
     listSeries(chosen),
     // The club's own number rather than the site's — POOLSE-62.
     readTaxSettings(),
   ]);
 
-  if (run === null && issued === null && outstanding === null && books === null) {
+  // "Not yours" only when every load that ran was refused; a failure is said
+  // in its own place below, never as a permission.
+  const ran: Outcome<unknown>[] = [];
+  for (const one of [runLoad, issuedLoad, outstandingLoad, booksLoad]) {
+    if (one !== null) ran.push(one as Outcome<unknown>);
+  }
+  if (ran.every((one) => one.state === 'refused')) {
     return (
       <PageShell title={t('invoices.title')}>
         <PageError message={t('invoices.notPermitted')} />
       </PageShell>
     );
   }
+
+  const failedKey = (one: Outcome<unknown> | null): string =>
+    one !== null && one.state === 'failed' ? one.failure.key : 'detailTabs.loadFailed';
+  const run = runLoad?.state === 'ok' ? runLoad.data : null;
+  const issued = issuedLoad?.state === 'ok' ? issuedLoad.data : null;
+  const outstanding = outstandingLoad?.state === 'ok' ? outstandingLoad.data : null;
+  const books = booksLoad.state === 'ok' ? booksLoad.data : null;
+  const tax = taxLoad.state === 'ok' ? taxLoad.data : null;
 
   return (
     <PageShell title={t('invoices.title')} subtitle={t('invoices.hint')}>
@@ -122,7 +141,7 @@ export default async function InvoicingPage({
         */}
         {owing ? (
           outstanding === null ? (
-            <PageError message={t('detailTabs.loadFailed')} />
+            <PageError message={t(failedKey(outstandingLoad))} />
           ) : (
             <OutstandingList facilityId={chosen} invoices={outstanding.invoices} />
           )
@@ -136,8 +155,10 @@ export default async function InvoicingPage({
 
             <InvoiceRunPanel facilityId={chosen} month={month} run={run} />
 
+            {runLoad?.state === 'failed' && <PageError message={t(runLoad.failure.key)} />}
+
             {issued === null ? (
-              <PageError message={t('detailTabs.loadFailed')} />
+              <PageError message={t(failedKey(issuedLoad))} />
             ) : (
               <InvoiceList facilityId={chosen} invoices={issued.invoices} month={month} />
             )}
@@ -145,7 +166,7 @@ export default async function InvoicingPage({
         )}
 
         {books === null ? (
-          <PageError message={t('detailTabs.loadFailed')} />
+          <PageError message={t(failedKey(booksLoad))} />
         ) : (
           <SeriesPanel facilityId={chosen} series={books.series} />
         )}
@@ -156,6 +177,7 @@ export default async function InvoicingPage({
           empty field they cannot save.
         */}
         {tax !== null && <TaxPanel settings={tax} />}
+        {taxLoad.state === 'failed' && <PageError message={t(taxLoad.failure.key)} />}
       </div>
     </PageShell>
   );

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { describeLoad, outcome, type LoadFailure, type Outcome } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Inventory, type LostAndFound } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
@@ -51,7 +51,7 @@ export default async function InventoryPage({
   if (page > 1) query.set('page', String(page));
 
   let data: Inventory | null = null;
-  let lost: LostAndFound | null = null;
+  let lost: Outcome<LostAndFound> | null = null;
   let failure: LoadFailure | null = null;
   let noOrganization = false;
 
@@ -74,9 +74,13 @@ export default async function InventoryPage({
      * default: a store room that fails to load because the lost-property list
      * did would be the tail wagging the dog.
      */
-    lost = await apiFetch<LostAndFound>(
-      `/inventory/lost-and-found${requested.trim() ? `?facilityId=${encodeURIComponent(requested.trim())}` : ''}`,
-    ).catch(() => null);
+    // Refused hides the card; failed says so — a store room with the panel
+    // silently gone reads as a club with no lost property. October 2026 sweep.
+    lost = await outcome(
+      apiFetch<LostAndFound>(
+        `/inventory/lost-and-found${requested.trim() ? `?facilityId=${encodeURIComponent(requested.trim())}` : ''}`,
+      ),
+    );
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) noOrganization = true;
     else failure = describeLoad(error);
@@ -136,13 +140,14 @@ export default async function InventoryPage({
           )}
 
 
-          {lost !== null && data.facilityId !== null && (
+          {lost?.state === 'failed' && <PageError message={t(lost.failure.key)} />}
+          {lost?.state === 'ok' && data.facilityId !== null && (
             <LostAndFoundPanel
               facilityId={data.facilityId}
-              items={lost.items}
-              students={lost.students}
+              items={lost.data.items}
+              students={lost.data.students}
               locations={data.locations}
-              canManage={lost.canManage}
+              canManage={lost.data.canManage}
             />
           )}
 

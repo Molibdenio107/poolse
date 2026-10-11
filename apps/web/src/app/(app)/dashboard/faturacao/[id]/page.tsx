@@ -51,15 +51,24 @@ export default async function InvoicePage({
     sites?.facilities[0]?.id ??
     '';
 
-  const invoice = facilityId === '' ? null : await readInvoice(facilityId, id);
+  const loaded = facilityId === '' ? null : await readInvoice(facilityId, id);
 
-  if (invoice === null) {
+  // A missing document and a refusal are "not found"; a failure says it failed,
+  // rather than telling somebody a document they can see in the list is gone.
+  if (loaded === null || loaded.state !== 'ok') {
     return (
       <PageShell title={t('invoices.title')}>
-        <PageError message={t('invoices.notFound')} />
+        <PageError
+          message={t(
+            loaded?.state === 'failed' && loaded.status !== 404
+              ? loaded.failure.key
+              : 'invoices.notFound',
+          )}
+        />
       </PageShell>
     );
   }
+  const invoice = loaded.data;
 
   const day = (iso: string): string =>
     formatDate(new Date(`${iso}T12:00:00Z`));

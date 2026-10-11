@@ -3386,7 +3386,8 @@
     "paidOnRequired": "Indique a data do pagamento.",
     "chasedOnRequired": "Indique a data do contacto.",
     "periodStartRequired": "Indique o início do período.",
-    "dueOnRequired": "Indique a data de vencimento."
+    "dueOnRequired": "Indique a data de vencimento.",
+    "noSites": "Ainda não há instalações. Crie a primeira em Instalações para poder faturar."
   },
   "admin": {
     "mark": "Poolse · Plataforma",

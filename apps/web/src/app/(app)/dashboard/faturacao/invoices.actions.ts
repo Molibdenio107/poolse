@@ -14,6 +14,7 @@ import {
 } from '@/lib/api';
 import { parseCents } from '@/lib/money';
 import type { FormState } from '../actions';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * Invoicing — phase 2.2.
@@ -91,27 +92,21 @@ export async function previewRun(
   facilityId: string,
   periodStart: string,
   studentIds?: string[],
-): Promise<InvoiceRun | null> {
-  try {
-    return await apiPost<InvoiceRun>(`/facilities/${facilityId}/invoices/preview`, {
+): Promise<Outcome<InvoiceRun>> {
+  return outcome(
+    apiPost<InvoiceRun>(`/facilities/${facilityId}/invoices/preview`, {
       periodStart,
       ...(studentIds === undefined ? {} : { studentIds }),
-    });
-  } catch {
-    return null;
-  }
+    }),
+  );
 }
 
 export async function listInvoices(
   facilityId: string,
   month?: string,
-): Promise<{ invoices: Invoice[] } | null> {
+): Promise<Outcome<{ invoices: Invoice[] }>> {
   const query = month === undefined ? '' : `?month=${encodeURIComponent(month)}`;
-  try {
-    return await apiFetch<{ invoices: Invoice[] }>(`/facilities/${facilityId}/invoices${query}`);
-  } catch {
-    return null;
-  }
+  return outcome(apiFetch<{ invoices: Invoice[] }>(`/facilities/${facilityId}/invoices${query}`));
 }
 
 /**
@@ -124,22 +119,12 @@ export async function listInvoices(
  */
 export async function listOutstanding(
   facilityId: string,
-): Promise<{ invoices: Invoice[] } | null> {
-  try {
-    return await apiFetch<{ invoices: Invoice[] }>(
-      `/facilities/${facilityId}/invoices?outstanding=1`,
-    );
-  } catch {
-    return null;
-  }
+): Promise<Outcome<{ invoices: Invoice[] }>> {
+  return outcome(apiFetch<{ invoices: Invoice[] }>(`/facilities/${facilityId}/invoices?outstanding=1`));
 }
 
-export async function readInvoice(facilityId: string, id: string): Promise<Invoice | null> {
-  try {
-    return await apiFetch<Invoice>(`/facilities/${facilityId}/invoices/${id}`);
-  } catch {
-    return null;
-  }
+export async function readInvoice(facilityId: string, id: string): Promise<Outcome<Invoice>> {
+  return outcome(apiFetch<Invoice>(`/facilities/${facilityId}/invoices/${id}`));
 }
 
 /**
@@ -319,14 +304,10 @@ export async function saveSeriesAction(
   return { ok: true };
 }
 
-export async function listSeries(facilityId: string): Promise<{ series: InvoiceSeries[] } | null> {
-  try {
-    return await apiFetch<{ series: InvoiceSeries[] }>(
-      `/facilities/${facilityId}/invoice-series`,
-    );
-  } catch {
-    return null;
-  }
+export async function listSeries(
+  facilityId: string,
+): Promise<Outcome<{ series: InvoiceSeries[] }>> {
+  return outcome(apiFetch<{ series: InvoiceSeries[] }>(`/facilities/${facilityId}/invoice-series`));
 }
 
 /**
@@ -337,12 +318,8 @@ export async function listSeries(facilityId: string): Promise<{ series: InvoiceS
  * legal entity above it. Null on a refusal, so the panel simply does not appear
  * for somebody the endpoint would not answer anyway.
  */
-export async function readTaxSettings(): Promise<TaxSettings | null> {
-  try {
-    return await apiFetch<TaxSettings>('/settings/tax');
-  } catch {
-    return null;
-  }
+export async function readTaxSettings(): Promise<Outcome<TaxSettings>> {
+  return outcome(apiFetch<TaxSettings>('/settings/tax'));
 }
 
 /**

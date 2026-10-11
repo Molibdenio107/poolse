@@ -3386,7 +3386,8 @@
     "paidOnRequired": "Enter the payment date.",
     "chasedOnRequired": "Enter the date of the contact.",
     "periodStartRequired": "Enter the start of the period.",
-    "dueOnRequired": "Enter the due date."
+    "dueOnRequired": "Enter the due date.",
+    "noSites": "There are no sites yet. Create the first under Sites to start invoicing."
   },
   "admin": {
     "mark": "Poolse · Platform",
