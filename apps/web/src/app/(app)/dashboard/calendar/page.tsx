@@ -417,6 +417,7 @@ export default async function CalendarPage({
               */
               <CalendarWeek
                 organizationId={classes.organizationId}
+                season={season}
                 weekStart={monday}
                 dayNames={dayNames}
                 todayWeekday={todayWeekday}
@@ -558,7 +559,7 @@ function WeekArrow({
     <Link
       href={`/dashboard/calendar?week=${week}`}
       aria-label={label}
-      className="rounded border border-border p-1.5 transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="inline-flex size-9 items-center justify-center rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       <Arrow className="size-5" aria-hidden />
     </Link>

@@ -31,7 +31,7 @@ export function ViewTabs({ owing }: { owing: boolean }): React.ReactElement {
   }
 
   const TAB =
-    'rounded px-3 py-1.5 text-sm transition-colors focus-visible:outline ' +
+    'inline-flex h-control items-center justify-center gap-2 rounded px-4 text-control transition-colors focus-visible:outline ' +
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
   return (

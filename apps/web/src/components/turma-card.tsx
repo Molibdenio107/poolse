@@ -295,7 +295,10 @@ export function TurmaCardButton({
         <Dialog open={open} onClose={() => setOpen(false)} title={title} closeLabel={t('common.close')}>
           <div
             onClick={(event) => {
-              if ((event.target as HTMLElement).closest('a, button') !== null) setOpen(false);
+              // A submit stays: closing would unmount its form before it is sent.
+              if ((event.target as HTMLElement).closest('a, button:not([type="submit"])') !== null) {
+                setOpen(false);
+              }
             }}
           >
             <TurmaCardBody title={title} detail={detail} actions={actions} hideTitle />

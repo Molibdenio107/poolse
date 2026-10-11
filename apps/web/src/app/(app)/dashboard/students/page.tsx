@@ -189,7 +189,7 @@ export default async function StudentsPage({
               role="checkbox"
               aria-checked={overdueOnly}
               className={cn(
-                'flex items-center gap-2 rounded border px-4 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                'flex h-control items-center gap-2 rounded border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 overdueOnly
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border hover:bg-surface-muted',

@@ -2625,7 +2625,9 @@
       "closures": "Closures could not be loaded. Closed days are not marked or locked this week."
     },
     "impactUnknown": "Could not check which classes this closure affects. You can still create it; check the calendar for registers already taken.",
-    "blockActions": "Actions for {name}"
+    "blockActions": "Actions for {name}",
+    "generateLessons": "Generate the season's lessons",
+    "noLessonYet": "This class group has no lesson generated for this week yet, so there is no training plan, register or cancellation. Generate the season's lessons to get them."
   },
   "inventory": {
     "title": "Inventory",

@@ -1881,6 +1881,9 @@ export function ScheduleBoard({
 
   return (
     <DndContext
+      // A fixed id: dnd-kit numbers its aria ids with a counter that differs
+      // between the server render and the browser, which is a hydration mismatch.
+      id="schedule-board"
       sensors={sensors}
       collisionDetection={collisionDetection}
       onDragStart={onDragStart}

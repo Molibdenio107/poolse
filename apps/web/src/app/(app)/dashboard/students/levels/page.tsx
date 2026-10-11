@@ -113,7 +113,7 @@ export default async function LevelsPage({
                 href="/dashboard/students/levels"
                 aria-current={byAgeOrder ? undefined : 'true'}
                 className={cn(
-                  'rounded border px-4 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  'inline-flex h-control items-center justify-center gap-2 rounded border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                   byAgeOrder
                     ? 'border-border hover:bg-surface-muted'
                     : 'border-primary bg-primary/10 text-primary',
@@ -125,7 +125,7 @@ export default async function LevelsPage({
                 href="/dashboard/students/levels?sort=age"
                 aria-current={byAgeOrder ? 'true' : undefined}
                 className={cn(
-                  'rounded border px-4 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  'inline-flex h-control items-center justify-center gap-2 rounded border px-4 text-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                   byAgeOrder
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border hover:bg-surface-muted',

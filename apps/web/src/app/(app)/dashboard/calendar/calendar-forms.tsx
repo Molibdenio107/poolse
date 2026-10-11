@@ -35,6 +35,42 @@ function Problem({ state }: { state: FormState }): React.ReactElement | null {
 }
 
 /**
+ * The same generation, as one button inside a class's card — October 2026.
+ *
+ * A turma placed on the calendar after its season was generated has no lesson
+ * this week, so its card had no plan, no register and no Cancelar aula, and
+ * said nothing about why. The card now says so and offers this. Generation is
+ * idempotent: it creates what is missing and leaves every existing lesson alone.
+ */
+export function GenerateLessonsButton({
+  organizationId,
+  from,
+  to,
+}: {
+  organizationId: string;
+  from: string;
+  to: string;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [state, action, pending] = useSavedAction(generateSeasonAction, INITIAL_GENERATE);
+  return (
+    <form action={action} className="flex flex-col gap-1">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="from" value={from} />
+      <input type="hidden" name="to" value={to} />
+      <button
+        type="submit"
+        disabled={pending}
+        className="inline-flex h-control items-center justify-center gap-2 self-start rounded bg-primary px-4 text-control text-primary-foreground disabled:opacity-60"
+      >
+        {pending ? t('calendar.generating') : t('calendar.generateLessons')}
+      </button>
+      <Problem state={state} />
+    </form>
+  );
+}
+
+/**
  * Builds the season.
  *
  * Reports what it did rather than saying "done", because the numbers are the

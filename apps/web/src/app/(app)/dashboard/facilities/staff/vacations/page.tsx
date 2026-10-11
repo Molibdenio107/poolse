@@ -201,7 +201,7 @@ function TabLink({
       href={`/dashboard/facilities/staff/vacations?tab=${tab}&year=${year}`}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'rounded px-3 py-2 text-sm transition-colors',
+        'inline-flex h-control items-center justify-center gap-2 rounded px-4 text-control transition-colors',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
         active
           ? 'bg-primary/15 font-medium text-primary'

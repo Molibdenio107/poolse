@@ -1,6 +1,15 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import { useTranslations } from 'next-intl';
 import {
   DndContext,
@@ -406,6 +415,13 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
     [shown],
   );
 
+  /*
+   * Where each block was let go, on screen — October 2026. The block's own
+   * layout effect reads it once to slide from there into its slot (or back
+   * home), instead of being redrawn at the slot in one jump.
+   */
+  const drops = useRef(new Map<string, { left: number; top: number }>());
+
   function onDragStart(event: DragStartEvent): void {
     setDragging(String(event.active.id));
   }
@@ -546,6 +562,8 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
 
   function onDragEnd(event: DragEndEvent): void {
     const active = String(event.active.id);
+    const released = event.active.rect.current.translated;
+    if (released !== null) drops.current.set(active, { left: released.left, top: released.top });
     setDragging(null);
     setGhost(null);
 
@@ -846,6 +864,9 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
       )}
 
       <DndContext
+        // A fixed id: dnd-kit numbers its aria ids with a counter that differs
+        // between the server render and the browser, which is a hydration mismatch.
+        id="calendar-grid"
         sensors={sensors}
         collisionDetection={pointerWithin}
         onDragStart={onDragStart}
@@ -963,6 +984,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                 dimmed={dimmed}
                 renderDetail={props.renderDetail}
                 onResizeStart={onResizeStart}
+                drops={drops}
               />
             </div>
           </div>
@@ -1401,6 +1423,8 @@ interface LayerProps {
   ) => void;
   /** Faded: a holiday, a day the pool is shut, or a day already gone. */
   dimmed: (weekday: number) => boolean;
+  /** Where blocks were let go, for the settle — see `drops` in the grid. */
+  drops: React.MutableRefObject<Map<string, { left: number; top: number }>>;
 }
 
 function BlockLayer(props: LayerProps): React.ReactElement {
@@ -1473,8 +1497,10 @@ function Block({
   onResizeStart,
   dimmed,
   ghost,
+  drops,
 }: LayerProps & { booking: GridBooking; left: number; width: number }): React.ReactElement {
   const t = useTranslations();
+  const element = useRef<HTMLDivElement | null>(null);
 
   /*
    * Faded, and still draggable — round 6, reversing round 5's 9.1.
@@ -1520,9 +1546,52 @@ function Block({
 
   const card = renderDetail(booking);
 
+  // dnd-kit's node and our own, one stable callback so neither is re-attached
+  // on every render of a moving block.
+  const setRefs = useCallback(
+    (node: HTMLDivElement | null) => {
+      setNodeRef(node);
+      element.current = node;
+    },
+    [setNodeRef],
+  );
+
+  /*
+   * The settle — October 2026. During a drag the block follows the pointer
+   * freely; on release it used to be redrawn at its snapped slot in the same
+   * frame, so it visibly jumped the last few pixels, or all the way home when a
+   * drop was refused. Now it starts where it was let go and slides into place:
+   * a FLIP on the element itself, so nothing re-renders for the animation, and
+   * none at all for somebody who has asked their system for less motion.
+   */
+  useLayoutEffect(() => {
+    const released = drops.current.get(booking.id);
+    const node = element.current;
+    if (released === undefined || node === null || isDragging) return;
+    drops.current.delete(booking.id);
+
+    const landed = node.getBoundingClientRect();
+    const dx = released.left - landed.left;
+    const dy = released.top - landed.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    node.style.transition = 'none';
+    node.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+    // Commit the starting point before animating away from it.
+    void node.offsetWidth;
+    node.style.transition = 'transform 160ms cubic-bezier(0.2, 0, 0, 1)';
+    node.style.transform = '';
+    const done = (): void => {
+      node.style.transition = '';
+      node.removeEventListener('transitionend', done);
+    };
+    node.addEventListener('transitionend', done);
+  });
+
   const block = (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       {...listeners}
       {...attributes}
       /*
