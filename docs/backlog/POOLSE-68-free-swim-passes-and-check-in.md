@@ -40,11 +40,11 @@ default stay) plus the turmas running now, against `pool.max_capacity`. Capacity
 free swim and concurrent turmas share the tank. A check-in that would exceed it is refused as a
 409 carrying `{ capacity, occupied, requested }`. A null ceiling enforces nothing.
 
-**Open:** may a free-swim period be defined as a booking on the lane grid, or is it whole-tank
+**Open — answered 11-10-2026: a booking on the lane grid.** May a free-swim period be defined as a booking on the lane grid, or is it whole-tank
 only in v1? *Recommend:* a booking with subject type `free_swim`, so the grid stays the one
 picture of the pool and the lane exclusion already prevents a turma landing on a public lane.
 
-**Open:** check-out — record it, or derive "in the water" from a default stay? *Recommend:* derive
+**Open — answered 11-10-2026: a default stay per site.** Check-out — record it, or derive "in the water" from a default stay? *Recommend:* derive
 from a per-facility default stay (90 min) in v1, and let reception check somebody out early.
 
 ### Dev — schema, API, where it goes
