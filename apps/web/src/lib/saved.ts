@@ -76,7 +76,12 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
      * it reached the server. A toast saying something went wrong when nothing
      * was attempted is worse than silence.
      */
-    const failed = state as { errorKey?: string; detail?: string; fields?: unknown };
+    const failed = state as {
+      errorKey?: string;
+      detail?: string;
+      fields?: unknown;
+      values?: Record<string, string | number>;
+    };
     if (state.ok !== false) return;
     if (failed.errorKey === undefined && failed.fields === undefined) return;
 
@@ -93,7 +98,9 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
       message =
         failed.errorKey === undefined
           ? t('common.checkTheFields')
-          : t(failed.errorKey as never);
+          : // With the refusal's own figures — a key with placeholders and no
+            // values throws, and fell through to the generic sentence below.
+            t(failed.errorKey as never, failed.values as never);
     } catch {
       message = t('common.notSaved');
     }
