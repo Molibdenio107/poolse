@@ -5,6 +5,15 @@
 **Type:** Feature · **Area:** People / Staff · **Priority:** Medium
 **Borrowed from:** OpsPal — green / amber / red staff qualification tracking with a 90-day amber window.
 
+> **Revised 11-10-2026 — brought forward as roadmap 7b.2.** Five changes, each marked *(7b.2)* below:
+> the Portuguese types are seeded on every business tenant; AC 6's assignment rule is
+> **warn by default** with an opt-in per-type block, because CLAUDE.md says a warning about a
+> person never gates what a club does with them (**Open**, below); the document upload is a
+> present, visibly disabled control until file storage lands, so AC 1 is met minus the upload;
+> notifications are written as records in the transaction and emailed after commit by a daily
+> cron (the 4.2 pattern); and the amber/red list is also a management-band dashboard widget.
+> 7.4's lifeguard roster depends on this ticket.
+
 ### PO — why this exists
 
 A lapsed lifeguard certificate is not an administrative detail; without a valid one the pool cannot open. Tracking qualifications as a status alone tells you the day it is too late. An amber window turns it into something the office can act on with three months' notice. Owners and Admins benefit, and the staff member gets warned about their own certificate. Medium priority, shipping with the People work.
@@ -23,12 +32,37 @@ A lapsed lifeguard certificate is not an administrative detail; without a valid 
 - That assignment block interacts with POOLSE-19: a transfer proposal must not rank a turma whose instructor is blocked — or if it does, the confirmation must surface the flag rather than fail opaquely.
 - Notifications fire at the amber threshold (once, on crossing) and again on expiry, to the Person and to Owner/Admin. Crossing is evaluated daily; a window change that puts someone newly into amber notifies them on the next evaluation.
 - Qualification types are tenant-configurable — the list differs by country and by role. Types are tenant data, so type names are never translated; only the status words and UI chrome are.
+- *(7b.2)* **Seeded Portuguese types**, on every business tenant (existing and new), as ordinary
+  editable tenant rows: **TPTD — Título Profissional de Treinador de Desporto** (default
+  validity 5 years; Lei 40/2012 — it lapses without training inside five years),
+  **Nadador-salvador (ISN)**, and **SBV — Suporte Básico de Vida** (Lei 61/2017's alternative
+  to a lifeguard). A type's default validity pre-fills the expiry from the issue date and can be
+  overwritten. Seeding is idempotent and **never re-creates a type a club archived** — a seed
+  marker on the organization, not a name match.
+- *(7b.2)* **The assignment rule is a warning by default.** An instructor whose qualification of
+  a type marked *required to teach* is vermelho is **flagged** on the turma, the staff record and
+  the dashboard — never refused. A per-type switch, off unless Owner/Admin turns it on, makes it
+  a block on **new** assignments only; existing ones are flagged, never severed.
+  **Open:** confirm warn-by-default with the opt-in block. *Recommend:* yes — an instructor at the
+  poolside cannot fix a certificate, and a club that wants the hard rule can switch it on per type.
+- *(7b.2)* **The document upload is deferred**: the control is present, styled and visibly
+  disabled until file storage lands — the settled rule for the logo, the photos and the CC. AC 1
+  is met minus the upload, and 27.7–27.8 wait for it.
 
 ### Dev — implementation notes
 
 - Migration: `qualification_type` (tenant-configurable, with optional per-type amber window), `qualification` (tenant, person, type, issuing_body, issue_date, expiry_date, document_ref), tenant amber-window setting. Tenant key on all; index on (tenant_id, expiry_date) for the amber/red report.
 - Status derivation lives in one shared function taking (expiry, today, window) and is used by the report, the Person page, the assignment check and the notification job. Never compute it inline in a query in one place and in TypeScript in another.
 - The daily evaluation job is idempotent and records which notifications it has already sent per (qualification, threshold), so a re-run does not re-notify.
+- *(7b.2)* **Notifications are records first** — the 4.2 pattern. A daily Nest cron under
+  `pg_try_advisory_xact_lock` writes one `qualification_alert` row per (qualification, threshold)
+  inside its transaction, a unique index making the crossing the idempotence, and emails the
+  person and the Owner/Admin through `notifier.ts` **after** commit, stamping `delivered_at`.
+  A crossing is evaluated, not a date: a window widened from 90 to 120 days notifies the people
+  newly inside it once.
+- *(7b.2)* **A dashboard widget in the management band** — `mgmt.qualifications`, everyone amber
+  or red, worst first, linking to the list under Staff. A registry declaration and one case, as
+  every widget.
 - API: `GET /qualifications/expiring?status=amber,red` sorted by expiry, paginated at 15 (POOLSE-29). Write access is Owner/Admin; a Person may read their own qualifications. Instructor reading another Person's qualification documents gets `403`.
 - The assignment block is enforced on the turma-assignment endpoint server-side, and its result is exposed to POOLSE-19's proposal ranking through the same helper rather than duplicated.
 - Document access: signed links only, generated per request with a short expiry, and every access written to the audit log with actor, person, timestamp — identical handling to POOLSE-11, ideally the same storage service call.

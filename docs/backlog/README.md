@@ -1,6 +1,6 @@
 # Poolse backlog
 
-70 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
+71 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
 exists, what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got
 wrong) and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance
 criteria, which are the contract.
@@ -19,7 +19,7 @@ QA section is your test list, already written.
 
 ## Index
 
-70 tickets · 34 at High priority · 63 open questions marked in the ticket files
+71 tickets · 36 at High priority · 66 open questions marked in the ticket files
 
 POOLSE-43 … 55 are one feature — lane-level scheduling and parcerias. Read
 [BUILD-ORDER.md](./BUILD-ORDER.md) before starting any of them: four decisions were taken
@@ -53,7 +53,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-24](./POOLSE-24-mensalidade-plan-visible-at-the-price.md) | Mensalidade plan visible at the price | Billing / Enrolment | Medium | — | 1 |
 | [POOLSE-25](./POOLSE-25-self-cure-for-failed-debito-direto.md) | Self-cure for failed débito direto | Billing | High once collections go live | — | 1 |
 | [POOLSE-26](./POOLSE-26-missing-reading-alert.md) | Missing-reading alert | Maintenance | Medium | — | — |
-| [POOLSE-27](./POOLSE-27-certification-expiry-with-amber-window.md) | Certification expiry with amber window | People / Staff | Medium | — | — |
+| [POOLSE-27](./POOLSE-27-certification-expiry-with-amber-window.md) | Certification expiry with amber window — brought forward as 7b.2 | People / Staff | High | — | 1 |
 | [POOLSE-28](./POOLSE-28-heating-cost-per-lesson-hour.md) | Heating cost per lesson hour | Energy / Dashboards | Medium — the strongest argument for the four-module product | — | 1 |
 | [POOLSE-29](./POOLSE-29-paginate-lists-at-15-per-page.md) | Paginate lists at 15 per page | Global | Medium | — | 1 |
 | [POOLSE-30](./POOLSE-30-search-filters-as-you-type.md) | Search filters as you type | Global | Medium | POOLSE-29 (search resets pagination to page 1) | 2 |
@@ -97,3 +97,4 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-68](./POOLSE-68-free-swim-passes-and-check-in.md) | Free swim, entry passes and reception check-in | Reception / Billing | High | 2.2 invoicing, POOLSE-46 | 2 |
 | [POOLSE-69](./POOLSE-69-online-pre-registration.md) | Online pre-registration and trial lessons | Students / Public | Medium | POOLSE-17 | 2 |
 | [POOLSE-70](./POOLSE-70-incident-log-and-duty-roster.md) | Bather incident log and lifeguard on duty | Safety / Compliance | High | POOLSE-27 (7b.2), slice 1.3 | 1 |
+| [POOLSE-71](./POOLSE-71-public-water-quality-page.md) | A public water-quality page per tank | Maintenance / Public | High | slice 4.2 | 2 |
