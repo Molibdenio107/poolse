@@ -1511,7 +1511,8 @@
     "categoryDiscount": "Discount: {name}",
     "oneDiscountAuthor": "A discount comes from a category or from your own decision, not both.",
     "nameRequired": "Give the period a name.",
-    "alreadyChargedThisSeason": "This student has already been charged this for the season."
+    "alreadyChargedThisSeason": "This student has already been charged this for the season.",
+    "pricesUnread": "The price lists of every site could not be read, so not every fee can be assigned right now. Reopen the page to try again."
   },
   "categories": {
     "title": "Fee categories",
@@ -2617,7 +2618,13 @@
       "manutencao": "Maintenance"
     },
     "lanesOccupied": "Lanes occupied",
-    "restoreFailedConflict": "This class was cancelled by a closure. To bring it back, remove the closure."
+    "restoreFailedConflict": "This class was cancelled by a closure. To bring it back, remove the closure.",
+    "unread": {
+      "classes": "This week's class groups could not be loaded. The grid below is empty for that reason, not because there are no classes.",
+      "grid": "The site's lanes and slots could not be loaded. Classes may not appear in their lanes.",
+      "closures": "Closures could not be loaded. Closed days are not marked or locked this week."
+    },
+    "impactUnknown": "Could not check which classes this closure affects. You can still create it; check the calendar for registers already taken."
   },
   "inventory": {
     "title": "Inventory",

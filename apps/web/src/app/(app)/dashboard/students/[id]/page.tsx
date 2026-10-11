@@ -98,12 +98,18 @@ export default async function StudentPage({
    * answers null when the endpoint refuses, which is what an instructor gets.
    * AC10 makes that a page without the block, not a block saying no.
    */
+  let sitesUnread = false;
   const facilities =
     student === null
       ? []
       : await apiFetch<{ facilities: { id: string; name: string }[] }>('/facilities')
           .then((response) => response.facilities.map((f) => ({ id: f.id, name: f.name })))
-          .catch(() => []);
+          .catch(() => {
+            // Still the lines the student has; but a new fee at another site
+            // cannot be offered, and the tab says so.
+            sitesUnread = true;
+            return [];
+          });
 
   const billing = student === null ? null : await loadFees(id, facilities.map((f) => f.id));
 
@@ -264,10 +270,23 @@ export default async function StudentPage({
           */
           slug: 'fees',
           labelKey: 'detailTabs.fees',
-          visible: billing !== null,
+          visible: billing !== null && billing.state !== 'refused',
           content: () =>
-            billing !== null && (
-              <FeesBlock studentId={loaded.id} fees={billing.fees} periods={billing.periods} />
+            billing?.state === 'failed' ? (
+              <PageError message={t(billing.failure.key)} />
+            ) : (
+              billing?.state === 'ok' && (
+                <>
+                  {(sitesUnread || billing.data.sitesFailed > 0) && (
+                    <p className="text-sm text-warning">{t('fees.pricesUnread')}</p>
+                  )}
+                  <FeesBlock
+                    studentId={loaded.id}
+                    fees={billing.data.fees}
+                    periods={billing.data.periods}
+                  />
+                </>
+              )
             ),
         },
         {

@@ -11,6 +11,7 @@ import {
   type StudentFees,
 } from '@/lib/api';
 import type { FormState } from '../../actions';
+import { outcome, type Outcome } from '@/lib/load-failure';
 
 /**
  * What one student pays — POOLSE-42, the student half.
@@ -37,24 +38,26 @@ function refresh(studentId: string): void {
 /**
  * The lines, and the price lists they can be chosen from.
  *
- * Null when the endpoint refuses — an instructor, or a family. AC10 makes that a
- * blank space on the page rather than an empty block, so the caller renders
- * nothing at all.
+ * `refused` when the endpoint refuses — an instructor, or a family: AC10 makes
+ * that a page without the tab. `failed` is anything else, and keeps the tab so
+ * it can say so — October 2026 sweep; a 500 used to remove the tab as if it
+ * were a permission. `sitesFailed` counts the sites whose price list could not
+ * be read, so an empty "add a fee" picker can say why.
  */
 export async function loadFees(
   studentId: string,
   facilityIds: string[],
-): Promise<{
-  fees: StudentFees;
-  plans: Record<string, FeePlan[]>;
-  periods: Record<string, FeePeriod[]>;
-} | null> {
-  let fees: StudentFees;
-  try {
-    fees = await apiFetch<StudentFees>(`/students/${studentId}/fees`);
-  } catch {
-    return null;
-  }
+): Promise<
+  Outcome<{
+    fees: StudentFees;
+    plans: Record<string, FeePlan[]>;
+    periods: Record<string, FeePeriod[]>;
+    sitesFailed: number;
+  }>
+> {
+  const loaded = await outcome(apiFetch<StudentFees>(`/students/${studentId}/fees`));
+  if (loaded.state !== 'ok') return loaded;
+  const fees = loaded.data;
 
   /*
    * Every site the student already has a line at, plus every site the club has.
@@ -67,6 +70,7 @@ export async function loadFees(
 
   const plans: Record<string, FeePlan[]> = {};
   const periods: Record<string, FeePeriod[]> = {};
+  let sitesFailed = 0;
 
   await Promise.all(
     sites.map(async (facilityId) => {
@@ -78,14 +82,16 @@ export async function loadFees(
         plans[facilityId] = plan.plans;
         periods[facilityId] = period.periods;
       } catch {
-        // A site whose list cannot be read simply offers nothing to assign.
+        // A site whose list cannot be read offers nothing to assign — and the
+        // tab says so, rather than leaving an empty picker unexplained.
+        sitesFailed += 1;
         plans[facilityId] = [];
         periods[facilityId] = [];
       }
     }),
   );
 
-  return { fees, plans, periods };
+  return { state: 'ok', data: { fees, plans, periods, sitesFailed } };
 }
 
 /**

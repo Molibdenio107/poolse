@@ -1511,7 +1511,8 @@
     "categoryDiscount": "Desconto: {name}",
     "oneDiscountAuthor": "O desconto vem de uma categoria ou de uma decisão sua, não dos dois.",
     "nameRequired": "Indique o nome do período.",
-    "alreadyChargedThisSeason": "Este aluno já foi cobrado por isto nesta época."
+    "alreadyChargedThisSeason": "Este aluno já foi cobrado por isto nesta época.",
+    "pricesUnread": "Não foi possível ler os preços de todas as instalações, por isso nem todas as mensalidades podem ser atribuídas agora. Volte a abrir a página para tentar outra vez."
   },
   "categories": {
     "title": "Categorias de preço",
@@ -2617,7 +2618,13 @@
       "manutencao": "Manutenção"
     },
     "lanesOccupied": "Pistas ocupadas",
-    "restoreFailedConflict": "Esta aula foi cancelada por um encerramento. Para a repor, retire o encerramento."
+    "restoreFailedConflict": "Esta aula foi cancelada por um encerramento. Para a repor, retire o encerramento.",
+    "unread": {
+      "classes": "Não foi possível carregar as turmas desta semana. A grelha abaixo está vazia por isso, não por não haver aulas.",
+      "grid": "Não foi possível carregar as pistas e os horários da instalação. As aulas podem não aparecer nas suas pistas.",
+      "closures": "Não foi possível carregar os encerramentos. Os dias fechados não estão assinalados nem bloqueados nesta semana."
+    },
+    "impactUnknown": "Não foi possível verificar que aulas este encerramento afeta. Pode criá-lo na mesma; confirme no calendário se havia presenças marcadas."
   },
   "inventory": {
     "title": "Inventário",

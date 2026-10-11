@@ -1,7 +1,7 @@
 'use client';
 
 import { today } from '@/lib/dates';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, X } from 'lucide-react';
@@ -338,17 +338,33 @@ function ClosureForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, saving] = useSavedAction(createClosureAction, INITIAL);
-  const [impact, setImpact] = useState<{ sessions: number; marked: number } | null>(null);
-  const [asked, setAsked] = useState(false);
+  /*
+   * Loading, failed or answered — three states, not one null for two —
+   * October 2026 sweep. A check that failed rendered exactly like one still
+   * running, and an operator closed a week over registers already taken
+   * believing nothing was affected. The form stays submittable either way.
+   */
+  const [impact, setImpact] = useState<
+    'loading' | 'failed' | { sessions: number; marked: number }
+  >('loading');
 
-  if (!asked) {
-    setAsked(true);
-    void impactAction(organizationId, range[0], range[1]).then(setImpact);
-  }
+  useEffect(() => {
+    let live = true;
+    void impactAction(organizationId, range[0], range[1])
+      .then((answer) => live && setImpact(answer ?? 'failed'))
+      .catch(() => live && setImpact('failed'));
+    return () => {
+      live = false;
+    };
+  }, [organizationId, range[0], range[1]]);
 
-  if (state.ok) {
-    onDone();
-  }
+  // After the render, not during it: closing this form updates the parent.
+  const seen = useRef(state);
+  useEffect(() => {
+    if (seen.current === state) return;
+    seen.current = state;
+    if (state.ok) onDone();
+  }, [state, onDone]);
 
   return (
     <form
@@ -368,14 +384,18 @@ function ClosureForm({
         poolside and wrote it down; they are told before the closure is made, not
         after.
       */}
-      {impact !== null && impact.marked > 0 && (
+      {impact === 'failed' && (
+        <p className="text-sm text-warning">{t('calendar.impactUnknown')}</p>
+      )}
+
+      {typeof impact === 'object' && impact.marked > 0 && (
         <p className="flex items-start gap-2 rounded border border-warning/40 bg-warning/10 p-3 text-sm">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
           {t('calendar.impactMarked', { marked: impact.marked, sessions: impact.sessions })}
         </p>
       )}
 
-      {impact !== null && impact.marked === 0 && impact.sessions > 0 && (
+      {typeof impact === 'object' && impact.marked === 0 && impact.sessions > 0 && (
         <p className="text-sm text-foreground-muted">
           {t('calendar.impactSessions', { count: impact.sessions })}
         </p>

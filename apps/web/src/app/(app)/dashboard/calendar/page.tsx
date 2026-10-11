@@ -90,11 +90,21 @@ export default async function CalendarPage({
     season is regenerated.
   */
   let classes: Classes | null = null;
+  /*
+    What failed to load, said above the week — October 2026 sweep. Each of
+    these used to fail into an empty value, and an empty week with no pistas,
+    no classes and no closed days is indistinguishable from a quiet one — or,
+    for the closures, from a holiday nobody can drop a class onto.
+  */
+  const unread: string[] = [];
+  const failedNot403 = (error: unknown): boolean =>
+    !(error instanceof ApiError && error.status === 403);
   if (calendar !== null) {
     try {
       classes = await apiFetch<Classes>('/class-groups');
-    } catch {
+    } catch (error) {
       classes = null;
+      if (failedNot403(error)) unread.push('calendar.unread.classes');
     }
   }
 
@@ -113,7 +123,10 @@ export default async function CalendarPage({
   if (classes !== null) {
     const first = classes.facilities[0]?.id;
     if (first !== undefined) {
-      grid = await apiFetch<FacilityGrid>(`/facilities/${first}/grid`).catch(() => null);
+      grid = await apiFetch<FacilityGrid>(`/facilities/${first}/grid`).catch((error: unknown) => {
+        if (failedNot403(error)) unread.push('calendar.unread.grid');
+        return null;
+      });
     }
   }
 
@@ -148,9 +161,12 @@ export default async function CalendarPage({
 
         return hit === undefined ? [] : [{ weekday: offset + 1, reason: hit.reason }];
       });
-    } catch {
-      // A closure list that will not load costs the locks, not the calendar.
+    } catch (error) {
+      // A closure list that will not load costs the locks, not the calendar —
+      // and the page says so, because the locks are what stop a drop onto a
+      // closed day.
       closedDays = [];
+      if (failedNot403(error)) unread.push('calendar.unread.closures');
     }
   }
 
@@ -327,6 +343,10 @@ export default async function CalendarPage({
         />
       )}
 
+      {unread.map((key) => (
+        <PageError key={key} message={t(key as never)} />
+      ))}
+
       {calendar !== null && (
         <>
           <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
@@ -426,7 +446,9 @@ export default async function CalendarPage({
               <WeekGrid
                 entries={[]}
                 dayNames={dayNames}
-                emptyLabel={t('calendar.emptyWeek')}
+                // Not "nothing this week" when the classes did not load — the
+                // error above says what happened.
+                emptyLabel={unread.length > 0 ? '' : t('calendar.emptyWeek')}
                 todayWeekday={todayWeekday}
               />
             )}
