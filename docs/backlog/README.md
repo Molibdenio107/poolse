@@ -1,6 +1,6 @@
 # Poolse backlog
 
-66 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
+70 tickets, one file each. Every ticket carries four views of the same work — **PO** (why it
 exists, what is out of scope), **BA** (rules, data, edge cases), **Dev** (schema, API, what gets got
 wrong) and **QA** (numbered Given/When/Then scenarios) — followed by the original acceptance
 criteria, which are the contract.
@@ -19,7 +19,7 @@ QA section is your test list, already written.
 
 ## Index
 
-66 tickets · 31 at High priority · 58 open questions marked in the ticket files
+70 tickets · 34 at High priority · 63 open questions marked in the ticket files
 
 POOLSE-43 … 55 are one feature — lane-level scheduling and parcerias. Read
 [BUILD-ORDER.md](./BUILD-ORDER.md) before starting any of them: four decisions were taken
@@ -93,3 +93,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-64](./POOLSE-64-hardening-admin.md) | Hardening `/admin` | Platform / Security | Medium | — | 1 |
 | [POOLSE-65](./POOLSE-65-resource-kind-path-and-audit.md) | The resource-kind path, and the audit that prices it | Installations / Data model | Low | — | — |
 | [POOLSE-66](./POOLSE-66-role-aware-dashboard.md) | Role-aware dashboard — a banded widget registry | Dashboard / Global | High | POOLSE-17 (one Person, many roles), POOLSE-52, 58 | — |
+| [POOLSE-67](./POOLSE-67-messages-to-families.md) | Messages to a turma, a level, a site or the whole club | Communication | High | — (reuses notifier.ts, assignment.ts) | — |
+| [POOLSE-68](./POOLSE-68-free-swim-passes-and-check-in.md) | Free swim, entry passes and reception check-in | Reception / Billing | High | 2.2 invoicing, POOLSE-46 | 2 |
+| [POOLSE-69](./POOLSE-69-online-pre-registration.md) | Online pre-registration and trial lessons | Students / Public | Medium | POOLSE-17 | 2 |
+| [POOLSE-70](./POOLSE-70-incident-log-and-duty-roster.md) | Bather incident log and lifeguard on duty | Safety / Compliance | High | POOLSE-27 (7b.2), slice 1.3 | 1 |

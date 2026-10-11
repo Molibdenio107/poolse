@@ -963,3 +963,12 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   one with the reporter's marked rather than adding `maintenance_request.assigned_to`. Both
   answered by Rui for POOLSE-66 slice 4. Maintenance's sites are every site, because the schema
   assigns them to none.
+- **2026-10-10** — **Phase 7 added (POOLSE-67…70)**: club messaging by email ahead of phase 3,
+  free swim and passes, public pre-registration, and an incident log with a duty roster. Phase 7b
+  (the Portuguese compliance layer, POOLSE-71…77) added the same day. Both found by reading the
+  product against a real pool's week rather than by extending a module.
+- **2026-10-11** — **A club may send 20 messages or write to 2,000 addresses a day, whichever comes
+  first** (POOLSE-67). A constant, not a setting, enforced in the database and refused with its
+  numbers, so one wrong "whole club" pressed twice cannot spend the email provider's free tier.
+  Recipients are live guardians, else the student — the invoice payer's order — deduplicated on
+  the address.
