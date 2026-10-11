@@ -972,3 +972,14 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   numbers, so one wrong "whole club" pressed twice cannot spend the email provider's free tier.
   Recipients are live guardians, else the student — the invoice payer's order — deduplicated on
   the address.
+- **2026-10-11** — **POOLSE-71's public water page judges a reading against the pool's resolved
+  band**, the club's own override where there is one — the answer the pool's page and the alert
+  email give. **Its token is stored retrievable, not hashed**, reversing the 7b brief: it is
+  printed at the entrance by design and grants only public readings, and a hash would make every
+  lost printout a regenerate that kills the QR already on the wall. Revocation is the protection.
+  **The lab result's date and grade wait for POOLSE-72**: nothing yet tells a lab analysis from a
+  poolside one.
+- **2026-10-11** — **An expired qualification warns; it blocks only where a club asks** (POOLSE-27
+  AC 6, 7b.2). Flagged on the turma, the staff record and the dashboard by default; a per-type
+  "required to teach" switch, off unless Owner/Admin turns it on, refuses new assignments only.
+  The ticket's hard rule contradicted "a warning about a person never gates what a club does".

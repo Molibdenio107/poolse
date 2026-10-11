@@ -43,7 +43,7 @@ A lapsed lifeguard certificate is not an administrative detail; without a valid 
   a type marked *required to teach* is vermelho is **flagged** on the turma, the staff record and
   the dashboard — never refused. A per-type switch, off unless Owner/Admin turns it on, makes it
   a block on **new** assignments only; existing ones are flagged, never severed.
-  **Open:** confirm warn-by-default with the opt-in block. *Recommend:* yes — an instructor at the
+  **Open — answered 11-10-2026: warn by default, opt-in block per type.** Confirm warn-by-default with the opt-in block. *Recommend:* yes — an instructor at the
   poolside cannot fix a certificate, and a club that wants the hard rule can switch it on per type.
 - *(7b.2)* **The document upload is deferred**: the control is present, styled and visibly
   disabled until file storage lands — the settled rule for the logo, the photos and the CC. AC 1

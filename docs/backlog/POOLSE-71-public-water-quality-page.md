@@ -17,7 +17,7 @@ across the tenant boundary matters more than what it shows.
 **Not in scope:** lab PDFs on the page, history charts, the complaints-book link and the
 operating regulation (POOLSE-73), and **a lab result's classification** — Poolse does not yet
 tell a lab analysis from a poolside one, and *conforme / não conforme* is POOLSE-72's
-(7b.3, gated on checking the values against a primary source). Until then the page shows the
+(7b.3, gated on checking the values against a primary source) — *deferred there, 11-10-2026*. Until then the page shows the
 latest reading of each metric, whichever way it was recorded.
 
 ### BA — rules and data
@@ -27,8 +27,8 @@ turn it on, turn it off and regenerate it. Regenerating kills the old link — a
 QR — at once; turning it off does the same. Turning it on again issues a new link, never the old
 one back.
 
-**The token is unguessable**: at least 128 bits from a CSPRNG, URL-safe. **Open:** stored hashed
-(as the brief asked) or retrievable — see below.
+**The token is unguessable**: 256 bits from a CSPRNG, URL-safe, and **stored retrievable** so
+the tab can show the link and the QR again at any time (Open 2).
 
 **The page** at `/[locale]/agua/[token]`, no login, both locales:
 
@@ -53,12 +53,12 @@ minutes, light and dark by the screen's own preference.
 QR as PNG and SVG to download for printing, the link with a copy button, and *Gerar novo link*
 behind a `Dialog` that says the printed QR will stop working.
 
-**Open — 1:** does the page judge a reading against the club's own overridden band, or always
+**Open — 1, answered 11-10-2026: the resolved band.** Does the page judge a reading against the club's own overridden band, or always
 the published reference? *Recommend:* the **resolved** band — the answer the pool's own page and
 the alert email already give. A hotel tank kept at 30 °C would otherwise read "fora dos valores"
 every day of its life on the wall of its own lobby.
 
-**Open — 2:** the brief asks for the token to be **stored hashed**. A hash means the link can be
+**Open — 2, answered 11-10-2026: stored retrievable.** The brief asked for the token to be **stored hashed**. A hash means the link can be
 shown once, at the moment it is made, and never again: lose the printout and the only way to a
 new QR is to regenerate, which kills every copy already on a wall. *Recommend:* **store it
 retrievable** — it is printed at the entrance by design, it grants read access to public
@@ -69,7 +69,7 @@ readings and nothing else, and the protection that matters is revocation, which 
 ```
 pool_public_link (
   id, organization_id, pool_id        -- composite fk to pool
-  token text NOT NULL                 -- or token_hash bytea, per Open 2
+  token text NOT NULL                 -- retrievable, per Open 2
   created_by_membership_id, created_at
   revoked_at timestamptz              -- null = live
 )
