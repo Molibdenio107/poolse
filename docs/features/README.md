@@ -19,6 +19,7 @@ looks for it.
 | [classes.md](classes.md) | Turmas, parcerias, the lane grid |
 | [parcerias.md](parcerias.md) | Partnerships, their groups, the import and the export |
 | [calendar.md](calendar.md) | The dated week, the hover card, cancelling a class |
+| [staff.md](staff.md) | Qualifications with expiry: verde, âmbar, vermelho, em falta, and the opt-in block |
 | [messages.md](messages.md) | Writing to families: who a message reaches, the daily ceiling, and the record of who was told |
 | [billing.md](billing.md) | Price list, periodicities, what a student pays |
 | [invoicing.md](invoicing.md) | The documents a fee line becomes: numbering, runs, credit notes, payments and chasing |

@@ -2344,6 +2344,11 @@
         "restocks": "{count, plural, one {# restock requested} other {# restocks requested}}",
         "lost": "{count, plural, one {# item found this week} other {# items found this week}}",
         "open": "Open inventory"
+      },
+      "qualifications": {
+        "open": "See qualifications",
+        "empty": "Everything is current.",
+        "summary": "{red} expired · {amber} expiring · {missing} missing"
       }
     },
     "scope": {
@@ -3802,6 +3807,75 @@
       "replaced": "New link made. Print the new QR code.",
       "turnedOff": "Public page turned off.",
       "error": "Could not change the public page."
+    }
+  },
+  "qualifications": {
+    "title": "Qualifications",
+    "subtitle": "Who holds which qualifications, and until when. Green is current, amber expires soon, red has expired.",
+    "badge": "Qualifications need attention",
+    "unnamed": "No name",
+    "standing": "Standing",
+    "noneOnFile": "No qualifications have been recorded for this person yet.",
+    "add": "Record a qualification",
+    "noTypes": "The club has no qualification types yet. Create them under Staff → Qualifications.",
+    "save": "Save",
+    "archive": "Archive",
+    "archived": "Archived.",
+    "archivedLabel": "archived",
+    "edit": "Edit",
+    "history": "History",
+    "historyLine": "Issued {issued} · valid until {expires}",
+    "document": "Certificate",
+    "documentPurpose": "A copy of the certificate, to show at an inspection. It is kept with the record.",
+    "attention": "Needs attention",
+    "allGreen": "Everything is current: nobody has a qualification expiring, expired or missing.",
+    "types": "Qualification types",
+    "typesHint": "The names are the club's own and are not translated. A type required to teach is flagged as missing for anybody who teaches without one on file.",
+    "addType": "Create type",
+    "validityMonths": "usually valid for {months} months",
+    "requiredLabel": "required to teach",
+    "blocksLabel": "blocks new assignments",
+    "archiveTypeTitle": "Archive “{name}”?",
+    "archiveTypeHint": "Records of this type stop counting towards each person's standing. They stay in the history.",
+    "blockedAssignment": "This instructor holds an expired required qualification, and the club blocks new assignments for it.",
+    "status": {
+      "green": "Valid until {date}",
+      "amber": "Expires on {date}",
+      "red": "Expired on {date}",
+      "missing": "Missing",
+      "noExpiry": "Does not expire"
+    },
+    "field": {
+      "type": "Type",
+      "issuingBody": "Issuing body",
+      "issuedOn": "Issue date",
+      "expiresOn": "Valid until",
+      "expiresHint": "Leave blank if it does not expire.",
+      "expiresSuggested": "Suggested from the issue date ({months} months). You can change it.",
+      "name": "Name",
+      "validity": "Usual validity (months)",
+      "validityHint": "Optional. Suggests the expiry date when recording one.",
+      "typeWindow": "Amber warning (days)",
+      "typeWindowHint": "Optional. Blank uses the club's warning.",
+      "window": "The club's amber warning (days before expiry)",
+      "required": "Required to teach",
+      "requiredHint": "Anybody who teaches without a record of this type shows as “missing”.",
+      "blocks": "Block new assignments",
+      "blocksHint": "With the qualification expired, the instructor cannot be put on a new class group or a new booking. It never removes them from class groups they already have, and a one-week stand-in is still possible."
+    },
+    "error": {
+      "nameRequired": "Write a name.",
+      "nameTooLong": "The name may be up to 120 characters.",
+      "duplicateType": "A type with this name already exists.",
+      "validity": "Enter a number of months from 1 to 600.",
+      "window": "Enter a number of days from 1 to 365.",
+      "blockNeedsRequired": "Only a type required to teach can block assignments.",
+      "typeRequired": "Choose the type.",
+      "issuerTooLong": "The issuing body may be up to 200 characters.",
+      "date": "Enter a valid date.",
+      "expiresBeforeIssued": "The expiry cannot be before the issue date.",
+      "saveFailed": "Could not save.",
+      "archiveFailed": "Could not archive."
     }
   }
 }

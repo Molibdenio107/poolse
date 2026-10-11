@@ -3926,3 +3926,61 @@ export interface AudienceOptions {
   levels: AudienceOption[];
   facilities: AudienceOption[];
 }
+
+/* ---------------------------------------------------------------------------
+ * Qualifications with expiry — POOLSE-27, 7b.2
+ * ------------------------------------------------------------------------- */
+
+export type QualificationStanding = 'green' | 'amber' | 'red' | 'missing';
+
+export interface QualificationType {
+  id: string;
+  name: string;
+  defaultValidityMonths: number | null;
+  amberDays: number | null;
+  requiredToTeach: boolean;
+  blocksAssignment: boolean;
+}
+
+export interface QualificationTypes {
+  types: QualificationType[];
+  amberDays: number;
+}
+
+export interface Standing {
+  typeId: string;
+  typeName: string;
+  status: QualificationStanding;
+  qualificationId: string | null;
+  expiresOn: string | null;
+  issuingBody: string | null;
+}
+
+export interface QualificationRecord {
+  id: string;
+  typeId: string;
+  typeName: string;
+  issuingBody: string | null;
+  issuedOn: string | null;
+  expiresOn: string | null;
+  archived: boolean;
+  createdAt: string;
+}
+
+export interface PersonQualifications {
+  standings: Standing[];
+  history: QualificationRecord[];
+  canManage: boolean;
+}
+
+export interface ExpiringQualification extends Standing {
+  membershipId: string;
+  personName: string | null;
+}
+
+export interface QualificationsWidgetData {
+  red: number;
+  amber: number;
+  missing: number;
+  top: ExpiringQualification[];
+}

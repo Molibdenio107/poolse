@@ -138,6 +138,10 @@ export function ClassForm({
           name="instructorMembershipId"
           label={t('classes.instructor')}
           initial={group?.instructorMembershipId ?? ''}
+          // An expired qualification of a type the club blocks — POOLSE-27.
+          {...(state.fields?.['instructorMembershipId'] === undefined
+            ? {}
+            : { error: t(state.fields['instructorMembershipId']) })}
           options={[
             { value: '', label: t('classes.noInstructor') },
             ...options.instructors.map((one) => ({ value: one.id, label: one.name })),
@@ -237,7 +241,7 @@ export function ClassForm({
         </button>
       </div>
 
-      <Problem state={state} except={['name', 'lane', 'capacity']} />
+      <Problem state={state} except={['name', 'lane', 'capacity', 'instructorMembershipId']} />
     </form>
   );
 }

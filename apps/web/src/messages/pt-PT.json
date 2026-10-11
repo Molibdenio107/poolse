@@ -2344,6 +2344,11 @@
         "restocks": "{count, plural, one {# reposição pedida} other {# reposições pedidas}}",
         "lost": "{count, plural, one {# objeto achado esta semana} other {# objetos achados esta semana}}",
         "open": "Ver inventário"
+      },
+      "qualifications": {
+        "open": "Ver qualificações",
+        "empty": "Está tudo em dia.",
+        "summary": "{red, plural, one {# expirada} other {# expiradas}} · {amber} a expirar · {missing} em falta"
       }
     },
     "scope": {
@@ -3802,6 +3807,75 @@
       "replaced": "Novo link criado. Imprima o novo código QR.",
       "turnedOff": "Página pública desligada.",
       "error": "Não foi possível alterar a página pública."
+    }
+  },
+  "qualifications": {
+    "title": "Qualificações",
+    "subtitle": "Quem tem que qualificações e até quando. Verde está em dia, âmbar expira em breve, vermelho expirou.",
+    "badge": "Há qualificações a tratar",
+    "unnamed": "Sem nome",
+    "standing": "Situação",
+    "noneOnFile": "Ainda não há qualificações registadas para esta pessoa.",
+    "add": "Registar qualificação",
+    "noTypes": "O clube ainda não tem tipos de qualificação. Crie-os em Equipa → Qualificações.",
+    "save": "Guardar",
+    "archive": "Arquivar",
+    "archived": "Arquivado.",
+    "archivedLabel": "arquivada",
+    "edit": "Editar",
+    "history": "Histórico",
+    "historyLine": "Emitida a {issued} · válida até {expires}",
+    "document": "Certificado",
+    "documentPurpose": "Uma cópia do certificado, para mostrar numa inspeção. Fica guardada com o registo.",
+    "attention": "A tratar",
+    "allGreen": "Está tudo em dia: ninguém tem qualificações a expirar, expiradas ou em falta.",
+    "types": "Tipos de qualificação",
+    "typesHint": "Os nomes são os do clube e não são traduzidos. Um tipo exigido para dar aulas é assinalado como em falta a quem dá aulas sem o ter registado.",
+    "addType": "Criar tipo",
+    "validityMonths": "validade habitual de {months} meses",
+    "requiredLabel": "exigida para dar aulas",
+    "blocksLabel": "bloqueia novas atribuições",
+    "archiveTypeTitle": "Arquivar «{name}»?",
+    "archiveTypeHint": "Os registos deste tipo deixam de contar para a situação de cada pessoa. Ficam no histórico.",
+    "blockedAssignment": "Este professor tem uma qualificação obrigatória expirada e o clube bloqueia novas atribuições para ela.",
+    "status": {
+      "green": "Válida até {date}",
+      "amber": "Expira a {date}",
+      "red": "Expirou a {date}",
+      "missing": "Em falta",
+      "noExpiry": "Sem validade"
+    },
+    "field": {
+      "type": "Tipo",
+      "issuingBody": "Entidade emissora",
+      "issuedOn": "Data de emissão",
+      "expiresOn": "Válida até",
+      "expiresHint": "Deixe em branco se não expira.",
+      "expiresSuggested": "Sugerida a partir da emissão ({months} meses). Pode alterá-la.",
+      "name": "Nome",
+      "validity": "Validade habitual (meses)",
+      "validityHint": "Opcional. Sugere a data de validade no registo.",
+      "typeWindow": "Aviso âmbar (dias)",
+      "typeWindowHint": "Opcional. Em branco, usa o aviso do clube.",
+      "window": "Aviso âmbar do clube (dias antes de expirar)",
+      "required": "Exigida para dar aulas",
+      "requiredHint": "Quem dá aulas sem um registo deste tipo aparece como «em falta».",
+      "blocks": "Bloquear novas atribuições",
+      "blocksHint": "Com a qualificação expirada, o professor não pode ser posto numa turma nova nem numa marcação nova. Nunca o retira das turmas que já tem, e uma substituição de uma semana continua possível."
+    },
+    "error": {
+      "nameRequired": "Escreva um nome.",
+      "nameTooLong": "O nome pode ter até 120 caracteres.",
+      "duplicateType": "Já existe um tipo com este nome.",
+      "validity": "Indique um número de meses entre 1 e 600.",
+      "window": "Indique um número de dias entre 1 e 365.",
+      "blockNeedsRequired": "Só um tipo exigido para dar aulas pode bloquear atribuições.",
+      "typeRequired": "Escolha o tipo.",
+      "issuerTooLong": "A entidade pode ter até 200 caracteres.",
+      "date": "Indique uma data válida.",
+      "expiresBeforeIssued": "A validade não pode ser anterior à emissão.",
+      "saveFailed": "Não foi possível guardar.",
+      "archiveFailed": "Não foi possível arquivar."
     }
   }
 }

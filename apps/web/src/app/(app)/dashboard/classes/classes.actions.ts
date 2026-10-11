@@ -597,6 +597,10 @@ export async function setInstructorStatusAction(
     if (error instanceof ApiError && error.status === 403) {
       return { ok: false, errorKey: 'grid.notAllowed' };
     }
+    // An expired qualification the club blocks on — POOLSE-27, said as such.
+    if (error instanceof ApiError && error.code === 'qualification_blocked') {
+      return { ok: false, errorKey: 'qualifications.blockedAssignment' };
+    }
     return { ok: false, errorKey: 'grid.dropRefused' };
   }
 

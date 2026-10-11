@@ -1,7 +1,16 @@
 import Link from 'next/link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type People, type StaffRecord } from '@/lib/api';
+import {
+  ApiError,
+  apiFetch,
+  type People,
+  type PersonQualifications,
+  type QualificationTypes,
+  type StaffRecord,
+} from '@/lib/api';
+import { outcome } from '@/lib/load-failure';
+import { QualificationsPanel } from './qualifications-panel';
 import { PageShell, PageError } from '@/components/page-shell';
 import { PhotoUpload } from '@/components/photo-upload';
 import { RoleBadges } from '@/components/role-badge';
@@ -72,6 +81,15 @@ export default async function StaffMemberPage({
   const record = staff;
   const viewer = people;
 
+  /*
+    Qualificações — POOLSE-27. Owner and admin see anybody's; a person sees
+    their own; anybody else is refused, and a refusal is what hides the tab, so
+    it is asked with the page rather than when the tab opens.
+  */
+  const qualifications = await outcome(
+    apiFetch<PersonQualifications>(`/staff/${membershipId}/qualifications`),
+  );
+
   return (
     <DetailPage
       title={name === '' ? t('staff.title') : name}
@@ -129,6 +147,39 @@ export default async function StaffMemberPage({
               </div>
             </>
           ),
+        },
+        {
+          slug: 'qualifications',
+          labelKey: 'qualifications.title',
+          visible: qualifications.state !== 'refused',
+          badge:
+            qualifications.state === 'ok' &&
+            qualifications.data.standings.some((s) => s.status !== 'green')
+              ? { kind: 'dot', labelKey: 'qualifications.badge' }
+              : undefined,
+          content: async () => {
+            if (qualifications.state !== 'ok') {
+              return qualifications.state === 'failed' ? (
+                <PageError message={t(qualifications.failure.key)} />
+              ) : null;
+            }
+            // The form's options. A failure says so rather than reading as "no
+            // types", which would send somebody to create one that exists.
+            const types = qualifications.data.canManage
+              ? await outcome(apiFetch<QualificationTypes>('/qualification-types'))
+              : null;
+            if (types !== null && types.state === 'failed') {
+              return <PageError message={t(types.failure.key)} />;
+            }
+            return (
+              <QualificationsPanel
+                organizationId={viewer.organizationId}
+                membershipId={membershipId}
+                data={qualifications.data}
+                types={types !== null && types.state === 'ok' ? types.data.types : []}
+              />
+            );
+          },
         },
         {
           slug: 'roles',

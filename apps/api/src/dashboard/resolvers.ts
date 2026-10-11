@@ -5,6 +5,10 @@ import { readSetupProgress } from './dashboard.repository.js';
 import { excursions, resolveBands, type PoolMetric } from '@poolse/rules';
 import { salarySummary, type SalarySummary } from '../staff/compensation.repository.js';
 import {
+  readQualificationsWidget,
+  type QualificationsWidget,
+} from '../staff/qualifications.repository.js';
+import {
   readMaintenanceOpen,
   readMoneyPeriod,
   readOccupancyToday,
@@ -318,6 +322,20 @@ export async function staffCost(ctx: ResolverContext): Promise<SalarySummary | n
     isOwner: ctx.roles.includes('owner'),
   });
   return summary.coverage.total === 0 ? null : summary;
+}
+
+/**
+ * Qualifications âmbar, vermelho or em falta — POOLSE-27, 7b.2. Empty when
+ * everybody is verde; the list is the five most urgent, worst first.
+ */
+export async function qualifications(ctx: ResolverContext): Promise<QualificationsWidget | null> {
+  const widget = await readQualificationsWidget(ctx.organizationId);
+  return widget.red + widget.amber + widget.missing === 0 ? null : widget;
+}
+
+/** An expired qualification is something somebody must act on this week. */
+export function qualificationHasLapsed(data: unknown): boolean {
+  return ((data as QualificationsWidget | null)?.red ?? 0) > 0;
 }
 
 /* -------------------------------------------------------------------------- */

@@ -44,6 +44,7 @@ import {
   type ClassGroupInput,
   type TimetableEntry,
 } from './classes.repository.js';
+import { qualificationRefusal } from '../staff/qualification-refusal.js';
 
 interface Choice {
   id: string;
@@ -470,6 +471,10 @@ function asHttp(error: unknown): unknown {
 
   const full = poolCapacityRefusal(error);
   if (full !== null) return full;
+
+  // An expired qualification of a type the club made blocking — POOLSE-27.
+  const blocked = qualificationRefusal(error);
+  if (blocked !== null) return blocked;
 
   return error;
 }

@@ -13,6 +13,12 @@
 > notifications are written as records in the transaction and emailed after commit by a daily
 > cron (the 4.2 pattern); and the amber/red list is also a management-band dashboard widget.
 > 7.4's lifeguard roster depends on this ticket.
+>
+> **Built 11-10-2026.** Two further answers: an instructor with **no record** of a required type is
+> flagged *em falta* and never blocked; the opt-in block covers the **turma's and a booking's**
+> instructor, never a one-week stand-in. **27.6 is superseded** — with warn-by-default nothing about
+> a turma fails, so a transfer proposal has no block to surface. **27.7–27.8 wait for file storage**,
+> with the upload.
 
 ### PO — why this exists
 

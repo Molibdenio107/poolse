@@ -14,6 +14,7 @@ import type {
   SubscriptionWidgetData,
   TasksWidgetData,
   WaterWidgetData,
+  QualificationsWidgetData,
 } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ import { centsToText } from '@/lib/energy-invoice';
 import { formatDate } from '@/lib/date-format';
 import { withFrom } from '@/lib/back';
 import { WidgetCard } from './widget-card';
+import { QualificationStatus } from '@/components/qualification-status';
 import { MyTurmasCard, NextClassCard, TrainingPlanCard, WeekCard } from './instructor-widgets';
 import {
   FaultsCard,
@@ -62,6 +64,8 @@ export async function renderWidget(
       return <PeopleCard widget={widget} />;
     case 'mgmt.staffcost':
       return <StaffCostCard widget={widget} />;
+    case 'mgmt.qualifications':
+      return <QualificationsCard widget={widget} />;
     case 'mgmt.subscription':
       return <SubscriptionCard widget={widget} />;
     case 'mgmt.energy.costs':
@@ -636,6 +640,54 @@ async function PeopleCard({ widget }: { widget: DashboardWidget }): Promise<Reac
             </p>
           )}
           <p className="text-xs text-foreground-muted">{t('dashboard.widget.clubWide')}</p>
+        </>
+      )}
+    </WidgetCard>
+  );
+}
+
+/**
+ * Qualifications âmbar, vermelho or em falta — POOLSE-27, 7b.2. The counts in
+ * words, then the most urgent few, each with its own status and date.
+ */
+async function QualificationsCard({
+  widget,
+}: {
+  widget: DashboardWidget;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const data = widget.data as QualificationsWidgetData | null;
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={t('qualifications.title')}
+      href="/dashboard/facilities/staff/qualifications"
+      linkLabel={t('dashboard.widget.qualifications.open')}
+      emptyMessage={t('dashboard.widget.qualifications.empty')}
+    >
+      {data !== null && (
+        <>
+          <p className="text-sm">
+            {t('dashboard.widget.qualifications.summary', {
+              red: data.red,
+              amber: data.amber,
+              missing: data.missing,
+            })}
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {data.top.map((row) => (
+              <li
+                key={`${row.membershipId}-${row.typeId}`}
+                className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm"
+              >
+                <span className="min-w-0 truncate">
+                  {row.personName ?? t('qualifications.unnamed')} · {row.typeName}
+                </span>
+                <QualificationStatus status={row.status} expiresOn={row.expiresOn} />
+              </li>
+            ))}
+          </ul>
         </>
       )}
     </WidgetCard>

@@ -203,6 +203,7 @@ Six aggregates, **one SQL statement each whatever the number of sites**
 | `mgmt.maintenance.open` | 25 → 60 with a fault or overdue room | site | open avarias and reposições by severity, rooms overdue for cleaning | `OVERDUE` from `spaces.repository.ts` |
 | `mgmt.people` | 15 | club | students, staff by role, invitations lapsing within 24 h | `countPeople`'s headcount rules |
 | `mgmt.staffcost` | 10 | club | the monthly staff cost with coverage | `salarySummary` — an admin's excludes the owner's pay, and says so |
+| `mgmt.qualifications` | 12, 55 when one has lapsed | club | qualifications vermelho, âmbar and em falta, the worst five | `qualification_current` — POOLSE-27, `staff.md` |
 
 **Money is mensalidades only**, and the late-payment penalty is not in it: it is charged once per
 student, not per line, and the student's page decides it. **Today is each site's own date.** A

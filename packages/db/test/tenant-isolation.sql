@@ -1424,4 +1424,33 @@ BEGIN
   RAISE NOTICE 'PASS test 24: a public link cannot cross the tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 25 — a qualification cannot be filed against another club's person
+-- ---------------------------------------------------------------------------
+--
+-- `qualification.membership_id` (POOLSE-27). The status view and the assignment
+-- block both trust a record's person and type to be its own club's.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_type_a uuid; v_mem_b uuid; ok boolean;
+BEGIN
+  RESET ROLE;
+  INSERT INTO qualification_type (organization_id, name) VALUES (v_a, 'Teste 25')
+  RETURNING id INTO v_type_a;
+  SELECT id INTO v_mem_b FROM membership WHERE organization_id = v_b LIMIT 1;
+
+  ok := false;
+  BEGIN
+    INSERT INTO qualification (organization_id, membership_id, qualification_type_id)
+    VALUES (v_a, v_mem_b, v_type_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 25: org A filed a qualification for org B''s person'; END IF;
+
+  RAISE NOTICE 'PASS test 25: a qualification cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;

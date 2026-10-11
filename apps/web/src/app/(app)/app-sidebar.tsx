@@ -152,6 +152,8 @@ const SECTIONS: Item[] = [
            * own rate specifically. Hiding a control was never the control.
            */
           { href: '/dashboard/facilities/staff/salaries', key: 'salaries.title' },
+          // Qualificações — POOLSE-27, 7b.2. Owner and admin, like its parent.
+          { href: '/dashboard/facilities/staff/qualifications', key: 'qualifications.title' },
         ],
       },
     ],

@@ -25,6 +25,7 @@ import {
   type TimetableImportResult,
 } from './bookings.repository.js';
 import { MAX_TIMETABLE_ROWS, type RawTimetableRow } from './timetable-import.js';
+import { qualificationRefusal } from '../staff/qualification-refusal.js';
 
 /**
  * What a drag on the lane grid writes — POOLSE-50.
@@ -324,6 +325,10 @@ function asHttp(error: unknown): unknown {
       closesAt: error.closesAt,
     });
   }
+
+  // An expired qualification of a type the club made blocking — POOLSE-27.
+  const blocked = qualificationRefusal(error);
+  if (blocked !== null) return blocked;
 
   return error;
 }

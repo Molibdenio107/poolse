@@ -19,6 +19,8 @@ import {
   planIsMissingSoon,
   registerIsOwed,
   people,
+  qualificationHasLapsed,
+  qualifications,
   setupChecklist,
   staffCost,
   subscriptionState,
@@ -328,6 +330,20 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     size: 1,
     priority: 10,
     resolver: staffCost,
+  },
+  {
+    // POOLSE-27, 7b.2: everybody âmbar, vermelho or em falta. Lifts itself when
+    // a certificate has actually lapsed.
+    id: 'mgmt.qualifications',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'tenant',
+    size: 1,
+    priority: 12,
+    escalate: qualificationHasLapsed,
+    escalatedPriority: 55,
+    resolver: qualifications,
   },
 
   /*

@@ -32,6 +32,8 @@ import { InventoryController } from './inventory/inventory.controller.js';
 import { SpacesController } from './spaces/spaces.controller.js';
 import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { MessagesController } from './messages/messages.controller.js';
+import { QualificationsController } from './staff/qualifications.controller.js';
+import { QualificationAlertService } from './staff/qualification-alerts.js';
 import {
   PoolPublicLinkController,
   PublicWaterController,
@@ -137,6 +139,7 @@ const IDENTITY_ONLY_ROUTES = [
     MeController,
     DashboardController,
     MessagesController,
+    QualificationsController,
     PoolPublicLinkController,
     PublicWaterController,
     SessionsController,
@@ -236,6 +239,7 @@ const IDENTITY_ONLY_ROUTES = [
      * external call at all.
      */
     ClimateService,
+    QualificationAlertService,
   ],
 })
 export class AppModule implements NestModule {

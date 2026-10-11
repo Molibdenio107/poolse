@@ -983,3 +983,8 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   AC 6, 7b.2). Flagged on the turma, the staff record and the dashboard by default; a per-type
   "required to teach" switch, off unless Owner/Admin turns it on, refuses new assignments only.
   The ticket's hard rule contradicted "a warning about a person never gates what a club does".
+
+- **2026-10-11** — **A missing required qualification is flagged, never blocked; the opt-in block
+  covers the turma's and a booking's instructor, never a stand-in** (POOLSE-27). "No record" is not
+  proof somebody holds a TPTD, so it shows as *em falta* beside vermelho — but the block is about an
+  expired record, and refusing cover on the night is worse than the gap it guards.

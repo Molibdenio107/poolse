@@ -3379,3 +3379,37 @@ the only read of tenant data with no tenant context**: given a live token on a l
 live site of a club neither suspended nor archived, it returns `facilityName`, `poolName`,
 `timezone`, the latest live reading per metric and the pool's band overrides — and null for
 anything else. `tenant-isolation.sql` test 24 asserts the composite key.
+
+### Qualifications — POOLSE-27 (7b.2), 11 October 2026
+
+```
+organization
+  + qualification_amber_days integer not null default 90   -- 1..365
+
+qualification_type
+  id, organization_id, name (club's words, unique live per club, case-folded)
+  default_validity_months, amber_days                      -- nullable; amber_days overrides the club's
+  required_to_teach boolean, blocks_assignment boolean     -- CHECK blocks => required
+  archived_at ...
+
+qualification                                               -- on the person (membership)
+  id, organization_id, membership_id, qualification_type_id
+  issuing_body, issued_on date, expires_on date             -- null expiry = never expires
+  created_by_membership_id, archived_at ...                 -- archived, never edited (column grant)
+
+qualification_alert                                         -- one per (record, threshold), no DELETE
+  id, organization_id, qualification_id, threshold ('amber'|'red'),
+  raised_at, recipients text[], delivered_at
+
+function qualification_status(expires_on, amber_days, today) -> 'green'|'amber'|'red'
+function club_today() -> the Lisbon date
+view qualification_current (security_invoker)  -- latest live record per person and type, with status
+trigger qualification_assignment_allowed on class_group, class_schedule (instructor_membership_id)
+trigger organization_qualification_types (AFTER INSERT, business) -> seed_qualification_types()
+```
+
+**The status is the function and nothing else**; the view, the list, the dashboard, the alert job
+and the block all read it. **The block is a BEFORE trigger on a new instructor value only**, for a
+type with `blocks_assignment`, raising `qualification_blocked|<type>|<expired on>` in DETAIL.
+**Seeding is a trigger on the organization insert**, so `provision_organization` was not rewritten,
+and it never re-runs. `tenant-isolation.sql` test 25 asserts the person's composite key.

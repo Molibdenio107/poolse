@@ -68,6 +68,11 @@ const TENANT_TABLES = [
   // every one of those is still there when these go.
   'message_recipient',
   'message',
+  // POOLSE-27. An alert points at a record, a record at its type and its
+  // person's membership; every business tenant is seeded with types.
+  'qualification_alert',
+  'qualification',
+  'qualification_type',
   /*
    * Not a tenant table — and here anyway, which is the exception worth
    * explaining rather than leaving somebody to rediscover.
