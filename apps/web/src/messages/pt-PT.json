@@ -3754,5 +3754,54 @@
       "quotaMessages": "O clube já enviou {used} de {limit} mensagens hoje. Volte a enviar amanhã.",
       "quotaAddresses": "Hoje já se escreveu a {used} de {limit} endereços e esta mensagem precisa de {requested}; restam {left}. Volte a enviar amanhã ou escolha um grupo mais pequeno."
     }
+  },
+  "publicWater": {
+    "subtitle": "Qualidade da água — últimas medições",
+    "noReadings": "Ainda não há medições registadas para esta piscina.",
+    "state": {
+      "inside": "Dentro dos valores",
+      "low": "Abaixo dos valores",
+      "high": "Acima dos valores",
+      "unjudged": "Sem valor de referência"
+    },
+    "takenAt": "Medido a {date} às {time}",
+    "stale": "Mais de 24 horas sem nova medição ({ago})",
+    "band": {
+      "range": "Referência: {from} a {to}",
+      "max": "Referência: até {to}",
+      "min": "Referência: a partir de {from}"
+    },
+    "footer": "Valores registados pelo clube no Poolse.",
+    "otherLanguage": "English",
+    "notFound": {
+      "title": "Esta página não está disponível.",
+      "hint": "O link pode ter sido substituído. Peça o código atual na receção."
+    },
+    "manage": {
+      "tab": "Página pública",
+      "title": "Página pública da qualidade da água",
+      "explain": "Uma página sem login com as últimas medições desta piscina, para um código QR à entrada ou um ecrã na receção. Mostra apenas o nome da instalação, o da piscina e as medições.",
+      "off": "A página pública está desligada.",
+      "turnOn": "Ligar a página pública",
+      "turnedOn": "Página pública ligada.",
+      "on": "Ligada desde {since}.",
+      "qrAlt": "Código QR da página pública de {pool}",
+      "link": "Link",
+      "copy": "Copiar link",
+      "copied": "Link copiado.",
+      "copyFailed": "Não foi possível copiar. Selecione o link e copie-o à mão.",
+      "open": "Abrir a página",
+      "openScreen": "Abrir versão para ecrã",
+      "downloadPng": "Descarregar QR (PNG)",
+      "downloadSvg": "Descarregar QR (SVG)",
+      "replace": "Gerar novo link",
+      "replaceTitle": "Gerar um novo link?",
+      "turnOff": "Desligar a página pública",
+      "turnOffTitle": "Desligar a página pública?",
+      "killsQr": "O link atual e todos os códigos QR já impressos deixam de funcionar de imediato.",
+      "replaced": "Novo link criado. Imprima o novo código QR.",
+      "turnedOff": "Página pública desligada.",
+      "error": "Não foi possível alterar a página pública."
+    }
   }
 }

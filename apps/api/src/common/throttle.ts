@@ -85,6 +85,16 @@ export const PLATFORM_LIMIT = 60;
 /** The platform ceiling, ready to hang on `PlatformController`. */
 export const PLATFORM = { default: { ttl: seconds(60), limit: PLATFORM_LIMIT } };
 
+/**
+ * The public water page — POOLSE-71. Per token, not per address: the page is
+ * rendered by the Next server, so every bather arrives from the same address and
+ * an IP bucket would let one busy pool throttle every other club's. A minute's
+ * worth for one tank is far beyond a lobby screen and a queue at the door, and
+ * flooding a token learns nothing the page does not already show.
+ */
+export const PUBLIC_WATER_LIMIT = 60;
+export const PUBLIC_WATER = { default: { ttl: seconds(60), limit: PUBLIC_WATER_LIMIT } };
+
 export const throttlerOptions: ThrottlerModuleOptions = {
   throttlers: [{ name: 'default', ttl: seconds(60), limit: DEFAULT_LIMIT }],
 };
@@ -128,6 +138,10 @@ export class UserThrottlerGuard extends ThrottlerGuard {
     const clerkUserId = authStorage.getStore()?.clerkUserId;
     if (clerkUserId) return `user:${clerkUserId}`;
 
+    // The public water page counts per tank — see PUBLIC_WATER.
+    const water = publicWaterTracker(request.path);
+    if (water !== null) return water;
+
     // Public routes only: health, and the Clerk webhook. The webhook is verified
     // by signature rather than by session, so an unsigned flood is refused
     // before it reaches anything expensive — but it still gets a bucket.
@@ -146,4 +160,10 @@ export class UserThrottlerGuard extends ThrottlerGuard {
     const request = context.switchToHttp().getRequest<Request>();
     return request.path === '/health' || request.path === '/health/';
   }
+}
+
+/** `water:<token>` for the public water page, null for any other path. */
+export function publicWaterTracker(path: string): string | null {
+  const match = /^\/public\/water\/([^/]+)\/?$/.exec(path);
+  return match === null ? null : `water:${match[1]}`;
 }

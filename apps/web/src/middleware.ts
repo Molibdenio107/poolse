@@ -15,6 +15,9 @@ const isPublicRoute = createRouteMatcher([
   '/en(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
+  // POOLSE-71's public water page, opened from a QR at the entrance by people
+  // who have no account. It reads one token and nothing else.
+  '/agua(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

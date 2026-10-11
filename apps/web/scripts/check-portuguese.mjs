@@ -57,6 +57,7 @@ const SAME_ON_PURPOSE = new Map([
   ['health.api', 'an initialism'],
   ['account.email', '"email" is the ordinary pt-PT word too'],
   ['profile.email', 'as above'],
+  ['publicWater.manage.link', '"link" is the ordinary pt-PT word too'],
   ['students.guardianEmail', 'as above'],
   // The Portuguese acronym for the tax number, and the one an English-speaking
   // operator of a Portuguese pool will also be looking at on the paperwork.

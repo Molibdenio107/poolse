@@ -107,3 +107,31 @@ about today. Maintenance is refused the plan for the same reason.
 - Moving a task from one target to another after it is created — re-create it instead.
 - A task that repeats on a weekday ("every Monday") rather than on an interval ("every 7
   days"). The interval is honest about what it measures: time since the work was last done.
+
+## The public water page
+
+POOLSE-71, roadmap 7b.1. A tank's latest readings on a page anybody can open, with no login:
+for a QR at the entrance, or a screen at reception.
+
+**Where.** The pool's page, tab **Página pública** (Owner, Admin, Maintenance — the people who
+record analyses). Off until somebody turns it on. When on, the tab shows the link with a copy
+button, the QR as PNG and SVG to download, and links to the page and to its screen version.
+
+**What a visitor sees** at `/agua/<token>`: the site and the tank, then for each metric its
+latest reading, when it was taken, and whether it is **dentro / acima / abaixo dos valores** —
+in words and with an icon. The band is the pool's own (the club's override where it set one),
+the same answer the pool's page gives; a metric the pool is not judged on shows its value with
+*sem valor de referência*. A reading more than 24 hours old says so. Nothing else about the
+club is shown: no staff, no notes, no students, no other tanks. `?lang=en` for English;
+`?screen=1` for the lobby version, in large type, refreshing itself every five minutes.
+
+**Rules.**
+- One live link per tank. **Gerar novo link** and **Desligar** both kill the current link — and
+  every printed QR — at once, and both ask first. Turning the page on again makes a new link.
+- The link is kept and shown again on the tab, so a lost printout is reprinted rather than
+  replaced (decisions, 11-10-2026).
+- An unknown, replaced or switched-off link, an archived tank and a closed club all show the
+  same "not available" page.
+- The page is limited to 60 requests a minute per link.
+- Not on the page yet: the lab result's date and grade (POOLSE-72), the complaints book and the
+  operating regulation (POOLSE-73).

@@ -32,6 +32,10 @@ import { InventoryController } from './inventory/inventory.controller.js';
 import { SpacesController } from './spaces/spaces.controller.js';
 import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { MessagesController } from './messages/messages.controller.js';
+import {
+  PoolPublicLinkController,
+  PublicWaterController,
+} from './facilities/public-link.controller.js';
 import { EnergyController } from './energy/energy.controller.js';
 import { EnergyInvoicesController } from './energy/invoices.controller.js';
 import { SlotsController } from './facilities/slots.controller.js';
@@ -80,8 +84,12 @@ import { ClerkWebhookController } from './webhooks/clerk-webhook.controller.js';
 import { StripeWebhookController } from './webhooks/stripe-webhook.controller.js';
 import { SubscriptionController } from './billing/subscription.controller.js';
 
-/** Public: no session token expected. Health is for the platform, webhooks authenticate by signature. */
-const PUBLIC_ROUTES = ['health', 'webhooks/(.*)'] as const;
+/**
+ * Public: no session token expected. Health is for the platform, webhooks
+ * authenticate by signature, and `public/(.*)` is POOLSE-71's water page, which
+ * reads through one SECURITY DEFINER function and nothing else.
+ */
+const PUBLIC_ROUTES = ['health', 'webhooks/(.*)', 'public/(.*)'] as const;
 
 /**
  * Authenticated, but with no tenant to resolve — every one of these answers a
@@ -129,6 +137,8 @@ const IDENTITY_ONLY_ROUTES = [
     MeController,
     DashboardController,
     MessagesController,
+    PoolPublicLinkController,
+    PublicWaterController,
     SessionsController,
     ClerkWebhookController,
     StripeWebhookController,

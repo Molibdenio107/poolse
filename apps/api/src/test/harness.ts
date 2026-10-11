@@ -270,6 +270,8 @@ const TENANT_TABLES = [
    * owner.
    */
   'pool_analysis_alert',
+  // POOLSE-71. Points at a pool and its creator's membership.
+  'pool_public_link',
   'pool_analysis',
   // Readings before their meter, and meters before the pool one may serve —
   // slice 5.1. A meter can also point at the meter it replaced, which is a

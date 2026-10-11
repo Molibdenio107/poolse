@@ -3754,5 +3754,54 @@
       "quotaMessages": "The club has already sent {used} of {limit} messages today. Send again tomorrow.",
       "quotaAddresses": "{used} of {limit} addresses have been written to today and this message needs {requested}; {left} remain. Send again tomorrow or choose a smaller group."
     }
+  },
+  "publicWater": {
+    "subtitle": "Water quality — latest readings",
+    "noReadings": "No readings have been recorded for this pool yet.",
+    "state": {
+      "inside": "Within range",
+      "low": "Below range",
+      "high": "Above range",
+      "unjudged": "No reference value"
+    },
+    "takenAt": "Measured on {date} at {time}",
+    "stale": "No new reading for over 24 hours ({ago})",
+    "band": {
+      "range": "Reference: {from} to {to}",
+      "max": "Reference: up to {to}",
+      "min": "Reference: from {from}"
+    },
+    "footer": "Values recorded by the club in Poolse.",
+    "otherLanguage": "Português",
+    "notFound": {
+      "title": "This page is not available.",
+      "hint": "The link may have been replaced. Ask at reception for the current code."
+    },
+    "manage": {
+      "tab": "Public page",
+      "title": "Public water-quality page",
+      "explain": "A page with no login showing this pool's latest readings, for a QR code at the entrance or a screen at reception. It shows only the site's name, the pool's name and the readings.",
+      "off": "The public page is off.",
+      "turnOn": "Turn on the public page",
+      "turnedOn": "Public page turned on.",
+      "on": "On since {since}.",
+      "qrAlt": "QR code for the public page of {pool}",
+      "link": "Link",
+      "copy": "Copy link",
+      "copied": "Link copied.",
+      "copyFailed": "Could not copy. Select the link and copy it by hand.",
+      "open": "Open the page",
+      "openScreen": "Open the screen version",
+      "downloadPng": "Download QR (PNG)",
+      "downloadSvg": "Download QR (SVG)",
+      "replace": "Make a new link",
+      "replaceTitle": "Make a new link?",
+      "turnOff": "Turn off the public page",
+      "turnOffTitle": "Turn off the public page?",
+      "killsQr": "The current link and every QR code already printed stop working at once.",
+      "replaced": "New link made. Print the new QR code.",
+      "turnedOff": "Public page turned off.",
+      "error": "Could not change the public page."
+    }
   }
 }

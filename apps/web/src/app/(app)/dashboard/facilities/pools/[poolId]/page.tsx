@@ -11,6 +11,9 @@ import { PageError, PageShell } from '@/components/page-shell';
 import { DetailPage } from '@/components/detail-page';
 import { excursions } from '@/lib/water';
 import { CostPerUsePanel } from './cost-per-use-panel';
+import { PublicLinkPanel } from './public-link-panel';
+import { outcome } from '@/lib/load-failure';
+import { publicLinkView } from '@/lib/public-water-link';
 
 /**
  * One pool: its details, editable, and its gallery.
@@ -240,6 +243,35 @@ export default async function PoolPage({
               <PageError message={t('detailTabs.loadFailed')} />
             ) : (
               <CostPerUsePanel report={report} />
+            );
+          },
+        },
+        {
+          /*
+            The public water page — POOLSE-71. The roles that record an
+            analysis decide whether the readings go on the wall, so the tab
+            follows `canRecordAnalysis` rather than a list of its own.
+          */
+          slug: 'public',
+          labelKey: 'publicWater.manage.tab',
+          visible: loaded.canRecordAnalysis,
+          content: async () => {
+            const link = await outcome(
+              apiFetch<{ token: string | null; createdAt: string | null }>(
+                `/pools/${poolId}/public-link`,
+              ),
+            );
+            if (link.state !== 'ok') {
+              return <PageError message={t('detailTabs.loadFailed')} />;
+            }
+            const view = await publicLinkView(link.data.token);
+            return (
+              <PublicLinkPanel
+                organizationId={loaded.organizationId}
+                poolId={loaded.id}
+                poolName={loaded.name}
+                link={{ ...view, createdAt: link.data.createdAt }}
+              />
             );
           },
         },

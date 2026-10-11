@@ -3357,3 +3357,25 @@ constraint trigger checks `address_count` against the recipient rows at commit.
 **Neither table is ever deleted from, and almost nothing is updated**: `poolse_app` holds
 `UPDATE (archived_at)` on `message` and `UPDATE (delivered_at)` on `message_recipient`, by
 column grant. `tenant-isolation.sql` test 23 asserts the audience's composite key.
+
+### The public water link — POOLSE-71, 11 October 2026
+
+```
+pool_public_link
+  id, organization_id, pool_id            -- composite fk to pool
+  token text not null                     -- 256-bit base64url; CHECK ^[A-Za-z0-9_-]{32,}$
+  created_by_membership_id, created_at
+  revoked_at timestamptz                  -- null = live
+unique (organization_id, pool_id) where revoked_at is null
+unique (token)                            -- every tenant, revoked rows included
+
+function public_water_page(p_token text) returns jsonb   -- SECURITY DEFINER
+```
+
+**The token is stored retrievable** — printed at the entrance by design and granting only
+public readings; revocation is the protection (decisions, 11-10-2026). `poolse_app` holds
+`UPDATE (revoked_at)` and no DELETE, so a link is never re-pointed. **`public_water_page()` is
+the only read of tenant data with no tenant context**: given a live token on a live tank at a
+live site of a club neither suspended nor archived, it returns `facilityName`, `poolName`,
+`timezone`, the latest live reading per metric and the pool's band overrides — and null for
+anything else. `tenant-isolation.sql` test 24 asserts the composite key.

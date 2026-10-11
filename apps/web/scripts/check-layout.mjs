@@ -34,6 +34,9 @@ const EXEMPT = [
   'sign-up',
   '(marketing)',
   '(marketing-en)',
+  // POOLSE-71's public water page: read by bathers and lobby screens, not by
+  // users of the product, so it carries no app shell and no navigation.
+  '(public)',
   // POOLSE-37's landing resolver. It renders nothing at all — it decides where
   // somebody goes and redirects — so there is no layout for it to share.
   'dashboard/start',

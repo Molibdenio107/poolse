@@ -1396,4 +1396,32 @@ BEGIN
   RAISE NOTICE 'PASS test 23: a message audience cannot cross the tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 24 — a public water link cannot name another club's tank
+-- ---------------------------------------------------------------------------
+--
+-- `pool_public_link.pool_id` (POOLSE-71). The public read trusts the link's
+-- organization and pool to agree, so the composite key is what makes that true.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_pool_b uuid; ok boolean;
+BEGIN
+  RESET ROLE;
+  SELECT id INTO v_pool_b FROM pool WHERE organization_id = v_b LIMIT 1;
+  IF v_pool_b IS NULL THEN RAISE EXCEPTION 'FAIL test 24: fixture has no pool for org B'; END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO pool_public_link (organization_id, pool_id, token)
+    VALUES (v_a, v_pool_b, 'abcdefghijklmnopqrstuvwxyzABCDEF0123456789');
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 24: org A issued a public link for org B''s tank'; END IF;
+
+  RAISE NOTICE 'PASS test 24: a public link cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;
