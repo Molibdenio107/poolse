@@ -34,6 +34,7 @@ import { listMeters } from '../energy.actions';
 import { PageError, PageShell } from '@/components/page-shell';
 import { OccupancyPanel } from '@/components/occupancy-panel';
 import { WaterThresholdForm } from './water-threshold-form';
+import { backLabelKey, readFrom } from '@/lib/back';
 
 /**
  * One site, in detail — backlog round 3, stories 2 and 3.
@@ -82,11 +83,19 @@ export default async function FacilityPage({
   searchParams,
 }: {
   params: Promise<{ facilityId: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { facilityId } = await params;
-  const { tab } = await searchParams;
+  const { tab, from } = await searchParams;
+  // Back to where the link was followed from, when it says — the `withFrom`
+  // links from the dashboard, Energia and Turmas. October 2026 sweep.
+  const origin = readFrom(from);
+  const back =
+    origin === null
+      ? { href: '/dashboard/facilities', label: t('facilities.backToSites') }
+      : { href: origin, label: t(backLabelKey(origin) as never) };
+
 
   let site: FacilityDetail | null = null;
   let failure: LoadFailure | null = null;
@@ -102,7 +111,7 @@ export default async function FacilityPage({
     return (
       <PageShell
         title={t('facilities.title')}
-        back={{ href: '/dashboard/facilities', label: t('facilities.backToSites') }}
+        back={back}
       >
         {failure !== null && (
           <PageError
@@ -165,7 +174,7 @@ export default async function FacilityPage({
     <DetailPage
       title={loaded.name}
       subtitle={[loaded.address, loaded.city, loaded.timezone].filter(Boolean).join(' · ')}
-      back={{ href: '/dashboard/facilities', label: t('facilities.backToSites') }}
+      back={back}
       actions={<EntityIcon kind="facility" className="mt-1.5 size-6 text-primary" />}
       requested={tab}
       tabs={[

@@ -8,6 +8,7 @@ import { SearchInput, SearchStatus } from '@/components/search-input';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { RoleBadge } from '@/components/role-badge';
 import { PageError, PageShell } from '@/components/page-shell';
+import { backLabelKey, readFrom } from '@/lib/back';
 
 /**
  * Encarregados de educação — POOLSE-35.
@@ -27,10 +28,12 @@ import { PageError, PageShell } from '@/components/page-shell';
 export default async function GuardiansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; search?: string }>;
+  searchParams: Promise<{ page?: string; search?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { page: pageParam, search = '' } = await searchParams;
+  const { page: pageParam, search = '', from } = await searchParams;
+  // Back to the site page when the People card sent us here.
+  const origin = readFrom(from);
   const page = readPage(pageParam);
   const term = search.trim();
 
@@ -64,7 +67,11 @@ export default async function GuardiansPage({
     <PageShell
       title={t('students.guardiansTitle')}
       subtitle={t('students.guardiansSubtitle')}
-      back={{ href: "/dashboard/students", label: t('students.backToRegister') }}
+      back={
+        origin === null
+          ? { href: '/dashboard/students', label: t('students.backToRegister') }
+          : { href: origin, label: t(backLabelKey(origin) as never) }
+      }
     >
 
 

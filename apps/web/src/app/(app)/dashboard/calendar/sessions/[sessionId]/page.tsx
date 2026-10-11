@@ -6,6 +6,7 @@ import { RegisterForm } from './register-form';
 import { PageError, PageShell } from '@/components/page-shell';
 import { laneLabel } from '@/lib/lanes';
 import { formatDate } from '@/lib/date-format';
+import { backLabelKey, readFrom } from '@/lib/back';
 
 type RegisterResponse = Register & { organizationId: string; canRecord: boolean };
 
@@ -22,12 +23,12 @@ export default async function AttendancePage({
   searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
   const { sessionId } = await params;
-  const { week } = await searchParams;
+  const { week, from } = await searchParams;
 
   let register: RegisterResponse | null = null;
   let failure: LoadFailure | null = null;
@@ -44,7 +45,9 @@ export default async function AttendancePage({
   // Back to the week the instructor came from, not to today's. Marking last
   // Tuesday and being returned to this week is the kind of thing that makes
   // somebody give up halfway through a backlog of registers.
-  const back = week === undefined ? '/dashboard/calendar' : `/dashboard/calendar?week=${week}`;
+  const calendarWeek = week === undefined ? '/dashboard/calendar' : `/dashboard/calendar?week=${week}`;
+  // The dashboard's next-class card sends `from`; the calendar sends `week`.
+  const origin = readFrom(from);
 
   return (
     <PageShell
@@ -62,7 +65,11 @@ export default async function AttendancePage({
               .filter(Boolean)
               .join(' · ')
       }
-      back={{ href: back, label: t('calendar.backToCalendar') }}
+      back={
+        origin === null
+          ? { href: calendarWeek, label: t('calendar.backToCalendar') }
+          : { href: origin, label: t(backLabelKey(origin) as never) }
+      }
     >
 
       {notPermitted && (

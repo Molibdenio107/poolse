@@ -8,6 +8,7 @@ import { PartnerContacts } from './partner-contacts';
 import { PartnerAgreementPanel } from './partner-agreement';
 import { PartnerGroups } from './partner-groups';
 import { PartnerSchedule } from './partner-schedule';
+import { backLabelKey, readFrom } from '@/lib/back';
 
 /**
  * One partnership, in detail — POOLSE-47, criterion 9.
@@ -29,11 +30,12 @@ export default async function PartnerPage({
   searchParams,
 }: {
   params: Promise<{ partnerId: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { partnerId } = await params;
-  const { tab } = await searchParams;
+  const { tab, from } = await searchParams;
+  const origin = readFrom(from);
 
   let partner: PartnerDetail;
   try {
@@ -50,10 +52,12 @@ export default async function PartnerPage({
         t(`partners.kind.${partner.type}`),
         t(`partners.state.${partner.status}`),
       ].join(' · ')}
-      back={{
-        href: `/dashboard/facilities/${partner.facilityId}`,
-        label: t('partners.backToSite'),
-      }}
+      back={
+        // Back to Turmas when that is where the link came from.
+        origin === null
+          ? { href: `/dashboard/facilities/${partner.facilityId}`, label: t('partners.backToSite') }
+          : { href: origin, label: t(backLabelKey(origin) as never) }
+      }
       actions={<EntityIcon kind="facility" className="mt-1.5 size-6 text-primary" />}
       requested={tab}
       tabs={[

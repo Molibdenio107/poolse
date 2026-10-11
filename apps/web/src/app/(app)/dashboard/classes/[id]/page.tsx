@@ -15,6 +15,7 @@ import {
   RemoveSlotButton,
 } from '../class-forms';
 import { EnrollmentCategoryPicker } from './enrollment-category';
+import { backLabelKey, readFrom } from '@/lib/back';
 
 /**
  * One turma: what it is, when it runs, and who is in it.
@@ -30,12 +31,12 @@ export default async function ClassPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
   const { id } = await params;
-  const { tab } = await searchParams;
+  const { tab, from } = await searchParams;
 
   let group: (ClassGroup & { canManage: boolean }) | null = null;
   let all: Classes | null = null;
@@ -67,7 +68,13 @@ export default async function ClassPage({
     (student) => !enrolledIds.has(student.id),
   );
 
-  const back = { href: '/dashboard/classes', label: t('classes.backToClasses') };
+  // Back to where the link was followed from, when it says — the `withFrom`
+  // links from the dashboard, Energia and Turmas. October 2026 sweep.
+  const origin = readFrom(from);
+  const back =
+    origin === null
+      ? { href: '/dashboard/classes', label: t('classes.backToClasses') }
+      : { href: origin, label: t(backLabelKey(origin) as never) };
 
   if (group === null || all === null) {
     return (
