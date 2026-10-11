@@ -991,3 +991,9 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-10-11** — **One size for every button and form control: 36px tall, 15px text** (`h-control`,
   `text-control`). There were about ten button sizes and two text sizes; small row actions now
   match the rest. Icon-only buttons keep a small square. Labels stay 14px.
+- **2026-10-11** — **A turma's lessons are created automatically whenever its weekly pattern is
+  written**, from today to the end of the published season (Rui's call). Reverses "a single button
+  rather than a nightly job" for this case: the calendar's plan, register and Cancelar aula hang off a
+  lesson, and a turma placed after generation had none, so they vanished without a word. The button
+  stays. A removed slot's future lessons are cancelled with it. The calendar's level checkboxes follow
+  the pool selector, and a moved block holds its place until the refreshed week arrives.

@@ -370,3 +370,15 @@ translation key.
 
 **The opening hours are not rewritten.** The grid is validated to sit inside them; a slot
 editor that could widen a building's hours would have the relationship the wrong way round.
+
+## Lessons follow the pattern — 11 October 2026
+
+A turma's lessons are created as soon as it is placed on the calendar or its weekly pattern changes,
+from today to the end of the season, so every block has its training plan, register and Cancelar
+aula without pressing *Gerar a época*. Removing a slot cancels its future lessons. If two turmas share
+an instructor at the same hour nothing is generated and the calendar says so after the save.
+
+The **Mostrar** checkboxes count only the classes in the selected pool, and a level with nothing there
+is not offered; classes with no pista appear in every pool. After a drag or resize, answering *só esta
+semana* or *todas as semanas* leaves the block where it was dropped until the refreshed week arrives,
+and a drop slides into its slot rather than jumping.

@@ -843,6 +843,8 @@ now, so the two halves stop agreeing the moment anybody moves one week, and ever
 the card silently vanishes from the classes that were rearranged. A lookup that returns
 `undefined` renders nothing and reports nothing: prefer a key that cannot drift.
 
+**A turma's lessons follow its pattern on their own.** 11 October 2026, Rui's call. Every write that changes a weekly pattern — placing, a series move, duplicating, a timetable import, adding or removing a slot — tops up the season's lessons through `syncSeasonLessons` (`classes/lesson-sync.ts`), **from today to the end of the published season, never the past**, so a turma placed today owes no register for September. It is `generate_sessions`, idempotent, so the *Gerar a época* button stays for after a closure. **A clash (two turmas, one instructor, one hour) refuses generation for the whole club**, as the button does: the write still stands and the calendar says so (`grid.lessonsClash`). Removing a slot cancels its future, untaught lessons — never deletes them, never touches one with a register.
+
 **A taught class is a record, not a plan.** One row in `attendance` for a session means it
 happened, so it does not move and it is not cancelled. `Session.registerTaken` carries the
 fact to the screen; the move endpoint asks the same question itself. The block stays
