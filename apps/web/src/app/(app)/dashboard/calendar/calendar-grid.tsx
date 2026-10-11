@@ -1056,6 +1056,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                 renderDetail={props.renderDetail}
                 onResizeStart={onResizeStart}
                 drops={drops}
+                asking={ask !== null}
               />
             </div>
           </div>
@@ -1504,6 +1505,8 @@ interface LayerProps {
   dimmed: (weekday: number) => boolean;
   /** Where blocks were let go, for the settle — see `drops` in the grid. */
   drops: React.MutableRefObject<Map<string, { left: number; top: number }>>;
+  /** The "this week or every week" question is on screen. */
+  asking: boolean;
 }
 
 function BlockLayer(props: LayerProps): React.ReactElement {
@@ -1577,6 +1580,7 @@ function Block({
   dimmed,
   ghost,
   drops,
+  asking,
 }: LayerProps & { booking: GridBooking; left: number; width: number }): React.ReactElement {
   const t = useTranslations();
   const element = useRef<HTMLDivElement | null>(null);
@@ -1844,7 +1848,14 @@ function Block({
       closeDelay={220}
       // Shut for a resize as well as a drag: a card opening over an edge being
       // dragged is the same interruption, and it covers the block being sized.
-      suppressed={anyDrag || isResizing}
+      /*
+        Shut while the scope question is open, too — October 2026. The pointer
+        is still over the block it just dropped, so its card opened on top of
+        "Só esta semana / Todas as semanas"; the click meant for them landed on
+        the card, the question read it as a click outside and cancelled, and the
+        block went home with no word.
+      */
+      suppressed={anyDrag || isResizing || asking}
       pinnable
       {...(card.actions === undefined ? {} : { actions: card.actions })}
     >

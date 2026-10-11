@@ -287,7 +287,14 @@ export default async function CalendarPage({
        * booking whose lanes were never copied onto its sessions would otherwise
        * lose them the moment this overlay touched it.
        */
-      laneIds: session.laneIds.length > 0 ? session.laneIds : booking.laneIds,
+      /*
+       * Except a week moved by hand — October 2026. Dragged into "s/ pista"
+       * with "Só esta semana", a week is deliberately in no pista; falling back
+       * to the pattern drew it straight back in its old pistas, so the move was
+       * saved and looked as if nothing had happened.
+       */
+      laneIds:
+        session.laneIds.length > 0 || session.moved === true ? session.laneIds : booking.laneIds,
       /*
        * And the person actually teaching it this week.
        *

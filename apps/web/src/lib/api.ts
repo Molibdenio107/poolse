@@ -2219,6 +2219,8 @@ export interface CalendarSession {
   localDate: string;
   /** Local wall-clock, "HH:MM". */
   localTime: string;
+  /** Moved by hand this week — see the API's `Session.moved`. */
+  moved?: boolean;
   weekday: number;
   durationMinutes: number;
   status: 'scheduled' | 'cancelled' | 'completed';

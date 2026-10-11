@@ -33,6 +33,12 @@ export interface Session {
    * pistas, and a position cannot be matched back to a column.
    */
   laneIds: string[];
+  /**
+   * This week was moved by hand (`moved_at`) — October 2026. Lets the calendar
+   * tell "deliberately in no pista this week" from a lesson whose pistas were
+   * never copied onto it, which it otherwise draws at the pattern's pistas.
+   */
+  moved: boolean;
   instructorName: string | null;
   substituteName: string | null;
   /** ISO instant. The facility's local date and time are derived below. */
@@ -469,6 +475,7 @@ const SESSION_COLUMNS = `
       JOIN lane ln ON ln.id = csl.lane_id
      WHERE csl.session_id = cs.id
   ), '{}') AS lane_ids,
+  cs.moved_at IS NOT NULL AS moved,
   short_name(iu.cached_first_name, iu.cached_last_name) AS instructor_name,
   short_name(su.cached_first_name, su.cached_last_name) AS substitute_name,
   cs.starts_at,
@@ -558,6 +565,7 @@ interface SessionRow {
   pool_name: string | null;
   lanes: number[] | null;
   lane_ids: string[] | null;
+  moved: boolean;
   instructor_name: string | null;
   substitute_name: string | null;
   starts_at: Date;
@@ -583,6 +591,7 @@ function toSession(row: SessionRow): Session {
     poolName: row.pool_name,
     lanes: row.lanes ?? [],
     laneIds: row.lane_ids ?? [],
+    moved: row.moved,
     instructorName: row.instructor_name,
     substituteName: row.substitute_name,
     startsAt: row.starts_at.toISOString(),
