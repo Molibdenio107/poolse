@@ -115,7 +115,7 @@ export function InvoiceRunPanel({
             student name pushes the whole page sideways, which is the rule the
             shell's `min-w-0` exists to hold up.
           */}
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[52rem] text-sm">
               <caption className="sr-only">{t('invoices.runTitle')}</caption>
               <thead>

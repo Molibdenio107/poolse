@@ -107,7 +107,7 @@ export function PartnerAgreementPanel({
         <form action={save} className="flex flex-col gap-4">
           <input type="hidden" name="partnerId" value={partnerId} />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField
               name="billingModel"
               label={t('partners.billingModel')}
@@ -187,7 +187,7 @@ export function PartnerAgreementPanel({
         (agreement === null ? (
           <p className="text-sm text-foreground-muted">{t('partners.noAgreement')}</p>
         ) : (
-          <dl className="grid gap-4 sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-sm text-foreground-muted">{t('partners.billingModel')}</dt>
               <dd className="mt-0.5">{t(`partners.billing.${agreement.billingModel}`)}</dd>

@@ -50,7 +50,7 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
             {t(`dashboard.band.${band.id}`)}
           </h2>
 
-          <div className="grid gap-page-gap lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-3">
             {band.cards.map((card) => (
               <Fragment key={card.id}>{card.element}</Fragment>
             ))}

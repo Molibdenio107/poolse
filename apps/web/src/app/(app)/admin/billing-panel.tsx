@@ -37,7 +37,7 @@ export async function BillingPanel({
         <p className="text-sm text-foreground-muted">{t('admin.billing.hint')}</p>
       </div>
 
-      <dl className="grid gap-3 sm:grid-cols-4">
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         {(['stripe', 'manual', 'comped'] as const).map((mode) => (
           <div key={mode} className="flex flex-col">
             <dt className="text-sm text-foreground-muted">{t(`admin.billingMode.${mode}`)}</dt>

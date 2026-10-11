@@ -1200,7 +1200,7 @@ function Toolbar({
         had to search each one out instead of running down a column.
       */}
       {anything && (
-      <ul className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <ul className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {levels.filter((level) => (counts.get(level.id) ?? 0) > 0).map((level) =>
           row(
             level.id,

@@ -495,7 +495,7 @@ function MappingStep({
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {questions.map((column) => (
               <ColumnQuestion
                 key={column}
@@ -523,7 +523,7 @@ function MappingStep({
       </div>
 
       {showAll && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FIELD_ORDER.map((field) => (
             <div key={field} className={cn(FIELD_COLUMN, 'max-w-none')}>
               <label htmlFor={`map-${field}`} className={FIELD_LABEL}>

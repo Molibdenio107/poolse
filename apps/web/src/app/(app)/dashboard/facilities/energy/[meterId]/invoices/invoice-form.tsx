@@ -327,7 +327,7 @@ export function InvoiceForm({
 
       {/* ---- Contador ------------------------------------------------------ */}
       {meters !== undefined && (
-        <section className="grid gap-4 sm:grid-cols-2">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
             label={t('energy.invoice.meterLabel')}
             hint={
@@ -371,7 +371,7 @@ export function InvoiceForm({
         <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('energy.invoice.headerTitle')}
         </h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label={t('energy.invoice.supplier')} error={err('supplier')} required>
             {(id, cls) => <input id={id} className={cls} value={draft.supplier} onChange={(e) => patch({ supplier: e.target.value })} />}
           </Field>
@@ -441,7 +441,7 @@ export function InvoiceForm({
           </h3>
           <p className="text-sm text-foreground-muted">{t('energy.invoice.registersHint')}</p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[32rem] text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">
@@ -514,7 +514,7 @@ export function InvoiceForm({
           </h3>
           <p className="text-sm text-foreground-muted">{t('energy.invoice.linesHint')}</p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[64rem] text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">
@@ -580,7 +580,7 @@ export function InvoiceForm({
         <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('energy.invoice.totalsTitle')}
         </h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label={t('energy.invoice.subtotal')} hint={t('energy.invoice.subtotalHint')} error={err('subtotal') ?? err('subtotalCents')} required>
             {(id, cls) => <input id={id} className={cls} inputMode="decimal" value={draft.subtotal} onChange={(e) => patch({ subtotal: e.target.value })} />}
           </Field>

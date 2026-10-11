@@ -78,7 +78,7 @@ export default async function TaskPage({
           content: () => (
             <>
               <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-                <dl className="grid gap-3 sm:grid-cols-2">
+                <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="flex flex-col gap-0.5">
                     <dt className="text-sm text-foreground-muted">{t('maintenance.about')}</dt>
                     <dd className="text-sm">{target ?? t('maintenance.aboutSite')}</dd>

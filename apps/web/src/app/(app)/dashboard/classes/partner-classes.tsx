@@ -423,7 +423,7 @@ function PartnerCard({
 
       {canManage ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <div className={FIELD_COLUMN}>
               <label htmlFor={`day-${booking.id}`} className={FIELD_LABEL}>
                 {t('partnerClasses.day')}

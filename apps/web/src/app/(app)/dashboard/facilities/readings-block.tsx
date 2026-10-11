@@ -124,7 +124,7 @@ export async function ReadingsBlock({
             opened for nine times out of ten — "what is it right now" — and it
             should not require reading a chart.
           */}
-          <dl className="grid gap-3 sm:grid-cols-3">
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {latest?.values.map((value) => (
               <div
                 key={value.metric}
@@ -150,7 +150,7 @@ export async function ReadingsBlock({
           />
 
           {measured.length > 0 && (
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               {measured.map((metric) => {
                 const points = analyses
                   .filter((analysis) =>

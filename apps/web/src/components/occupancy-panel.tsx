@@ -71,7 +71,7 @@ export async function OccupancyPanel({
       </div>
 
       {/* The three headline figures. */}
-      <dl className="grid gap-3 sm:grid-cols-3">
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Figure
           label={t('occupancy.sold')}
           value={t('occupancy.laneHours', { hours: hours(occupancy.total.soldLaneHours) })}
@@ -127,7 +127,7 @@ export async function OccupancyPanel({
       {/* Turmas against parcerias — the split the ticket exists to expose. */}
       <div className="flex flex-col gap-2 border-t border-border pt-4">
         <h3 className="text-sm font-medium">{t('occupancy.split')}</h3>
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[26rem] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-foreground-muted">
@@ -167,7 +167,7 @@ export async function OccupancyPanel({
       {/* By time band. Three fixed bands — nobody has asked to move them. */}
       <div className="flex flex-col gap-2 border-t border-border pt-4">
         <h3 className="text-sm font-medium">{t('occupancy.byBand')}</h3>
-        <ul className="grid gap-2 sm:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {BANDS.map((band) => {
             const slice = occupancy.byBand.find((entry) => entry.band === band);
             return (

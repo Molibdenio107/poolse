@@ -290,7 +290,7 @@ export default async function MeterPage({
                 {bills.invoices.length === 0 ? (
                   <p className="text-sm text-foreground-muted">{t('energy.invoice.none')}</p>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="relative overflow-x-auto">
                     <table className="w-full min-w-[40rem] text-sm">
                       <thead>
                         <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">

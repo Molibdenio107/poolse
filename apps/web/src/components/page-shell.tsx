@@ -219,5 +219,8 @@ export function ScrollX({
   children: React.ReactNode;
   className?: string | undefined;
 }): React.ReactElement {
-  return <div className={cn('overflow-x-auto', className)}>{children}</div>;
+  // `relative`, so a screen-reader-only label inside the table (`sr-only` is
+  // absolutely positioned) is contained by the scroll box instead of escaping
+  // it and widening the whole page on a phone — October 2026.
+  return <div className={cn('relative overflow-x-auto', className)}>{children}</div>;
 }

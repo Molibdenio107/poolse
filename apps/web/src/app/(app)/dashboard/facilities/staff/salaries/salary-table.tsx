@@ -44,7 +44,7 @@ export function SalaryTable({
 
   return (
     <section className="rounded border border-border bg-surface">
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-foreground-muted">

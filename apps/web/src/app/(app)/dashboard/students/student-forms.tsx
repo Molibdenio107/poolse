@@ -115,7 +115,7 @@ export function StudentForm({
         which is what lets each server rejection land under the box it is about
         rather than as a sentence at the top of the page.
       */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextField
           name="firstName"
           label={t('students.firstName')}

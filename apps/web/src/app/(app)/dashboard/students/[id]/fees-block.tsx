@@ -279,7 +279,7 @@ function ChargeSeasonForm({
       <input type="hidden" name="feePeriodId" value="" />
 
       {charge.kind === 'seguro' && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className={cn(FIELD_COLUMN, 'max-w-none')}>
             <label htmlFor={`policy-${charge.planId}`} className={FIELD_LABEL}>
               {t('fees.policy')}
@@ -350,7 +350,7 @@ function ChargeSeasonForm({
         mensalidade would have no home in a schema that treats the four as one
         price list.
       */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <DiscountFields
           idPrefix={`season-${charge.planId}`}
           categories={categories}
@@ -1426,7 +1426,7 @@ function ChargePlanForm({
       <input type="hidden" name="studentId" value={studentId} />
       <input type="hidden" name="feePlanId" value={planId} />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className={cn(FIELD_COLUMN, 'max-w-none')}>
           <label htmlFor={`charge-${planId}-period`} className={FIELD_LABEL}>
             {t('fees.period')}
@@ -1496,7 +1496,7 @@ function EditFeeForm({
       <input type="hidden" name="studentId" value={studentId} />
       <input type="hidden" name="feeId" value={line.id} />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className={cn(FIELD_COLUMN, 'max-w-none')}>
           <label htmlFor={`edit-period-${line.id}`} className={FIELD_LABEL}>
             {t('fees.period')}
@@ -1589,7 +1589,7 @@ function SocioForm({
       </label>
 
       {isSocio && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className={cn(FIELD_COLUMN, 'max-w-none')}>
             <label htmlFor="socio-number" className={FIELD_LABEL}>
               {t('fees.socioNumber')}

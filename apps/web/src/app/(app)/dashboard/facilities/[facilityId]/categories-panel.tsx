@@ -394,7 +394,7 @@ function CategoryForm({
       {category !== null && <input type="hidden" name="categoryId" value={category.id} />}
       <input type="hidden" name="facilityId" value={facilityId} />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <TextField
           name="name"
           label={t('categories.name')}

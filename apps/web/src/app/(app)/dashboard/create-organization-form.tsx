@@ -36,7 +36,7 @@ export function CreateOrganizationForm(): React.ReactElement {
     <form action={action} className="flex flex-col gap-3">
       <fieldset className="flex flex-col gap-2">
         <legend className={FIELD_LABEL}>{t('organization.kindLabel')}</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <KindOption
             value="business"
             current={kind}

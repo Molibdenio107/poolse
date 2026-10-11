@@ -211,7 +211,7 @@ export function SkillsGrid({ data }: { data: TurmaSkills }): React.ReactElement 
         cards would lose the column — which is the whole gesture. The scroll is
         inside its own container so the page itself never scrolls sideways.
       */}
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead>
             <tr>

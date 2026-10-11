@@ -209,7 +209,7 @@ export default async function TenantRequestsPage({
                 <p className="text-sm text-foreground-muted">{t('admin.claimNone')}</p>
               ) : (
                 <>
-                  <dl className="grid gap-3 sm:grid-cols-2">
+                  <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="flex flex-col">
                       <dt className="text-sm text-foreground-muted">{t('admin.claimAddress')}</dt>
                       {/* The normalised address, which is what the ledger is keyed

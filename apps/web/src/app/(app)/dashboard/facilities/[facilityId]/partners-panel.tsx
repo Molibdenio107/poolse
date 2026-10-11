@@ -184,7 +184,7 @@ export function PartnersPanel({
         >
           <input type="hidden" name="facilityId" value={facilityId} />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextField
               name="name"
               label={t('partners.name')}
@@ -245,7 +245,7 @@ export function PartnersPanel({
           scroll sideways — five numeric columns do not fit a narrow window and
           shrinking them to fit would make the figures unreadable.
         */
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[46rem] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-foreground-muted">

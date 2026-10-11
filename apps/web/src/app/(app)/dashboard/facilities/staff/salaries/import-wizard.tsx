@@ -433,7 +433,7 @@ function MappingStep({
             <p className="mt-1 text-sm text-foreground-muted">{t('students.import.questionsHint')}</p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {questions.map((column) => (
               <div key={column} className={cn(FIELD_COLUMN, 'max-w-none')}>
                 <label htmlFor={`salary-col-${column}`} className={FIELD_LABEL}>
@@ -483,7 +483,7 @@ function MappingStep({
       </div>
 
       {showAll && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FIELD_ORDER.map((field) => (
             <div key={field} className={cn(FIELD_COLUMN, 'max-w-none')}>
               <label htmlFor={`salary-map-${field}`} className={FIELD_LABEL}>
@@ -616,7 +616,7 @@ function PreviewStep({
         </p>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border text-left text-foreground-muted">

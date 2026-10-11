@@ -29,7 +29,8 @@ export const TabsList = forwardRef<
       className={cn(
         // Scrolls sideways rather than wrapping: a strip that wraps on a phone
         // changes height between pages, and the sticky header jumps with it.
-        'flex items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:thin]',
+        // `relative`: a badge's sr-only label is anchored here, not to the page.
+        'relative flex items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:thin]',
         className,
       )}
       {...props}

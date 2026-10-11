@@ -67,7 +67,7 @@ export function PartnerIdentity({
           <input type="hidden" name="facilityId" value={partner.facilityId} />
           <input type="hidden" name="partnerId" value={partner.id} />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextField
               name="name"
               label={t('partners.name')}
@@ -170,7 +170,7 @@ export function PartnerIdentity({
           </div>
         </form>
       ) : (
-        <dl className="grid gap-4 sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Fact label={t('partners.type')} value={t(`partners.kind.${partner.type}`)} />
           <Fact label={t('partners.nif')} value={partner.nif} />
           <Fact label={t('partners.address')} value={partner.address} />

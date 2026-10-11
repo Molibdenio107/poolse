@@ -51,7 +51,7 @@ export function OutstandingList({
       {invoices.length === 0 ? (
         <p className="text-sm text-foreground-muted">{t('invoices.nothingOwed')}</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[52rem] text-sm">
             <caption className="sr-only">{t('invoices.owingTitle')}</caption>
             <thead>

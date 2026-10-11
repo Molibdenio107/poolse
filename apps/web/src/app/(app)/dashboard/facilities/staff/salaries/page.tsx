@@ -78,7 +78,7 @@ export default async function SalariesPage({
         <section className="rounded border border-border bg-surface p-5">
           <h2 className="text-sm font-medium text-foreground-muted">{t('salaries.rollup')}</h2>
 
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <figure className="m-0">
               <figcaption className="text-sm text-foreground-muted">
                 {t('salaries.thisMonth')}
@@ -104,7 +104,7 @@ export default async function SalariesPage({
             </figure>
           </div>
 
-          <dl className="mt-4 grid gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
+          <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 border-t border-border pt-4 text-sm sm:grid-cols-2">
             <div className="flex justify-between gap-4">
               <dt className="text-foreground-muted">
                 {t('salaries.monthlyContracts', { count: summary.monthlyContractCount })}

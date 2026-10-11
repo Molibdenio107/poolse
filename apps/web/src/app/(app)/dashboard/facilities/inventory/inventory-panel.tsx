@@ -511,7 +511,7 @@ export function InventoryPanel({
             The table scrolls inside its own container; the page never scrolls
             sideways.
           */
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[36rem] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-foreground-muted">

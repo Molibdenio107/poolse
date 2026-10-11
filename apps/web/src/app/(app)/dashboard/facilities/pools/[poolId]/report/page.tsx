@@ -40,7 +40,8 @@ export default async function AnalysisReportPage({
 
   let pool: PoolDetail & { organizationId: string; analyses: PoolAnalysisRow[] };
   try {
-    pool = await apiFetch(`/pools/${poolId}`);
+    // The pool detail lives under /facilities — this asked /pools and 404ed.
+    pool = await apiFetch(`/facilities/pools/${poolId}`);
   } catch (error) {
     // A 404 is a pool that is not this tenant's, which is the same answer.
     if (error instanceof ApiError && (error.status === 404 || error.status === 403)) notFound();
@@ -88,7 +89,7 @@ export default async function AnalysisReportPage({
             A real table, because that is what a report is. `overflow-x-auto`
             for the screen; on paper it simply fits or the browser scales it.
           */}
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <caption className="sr-only">{t('facilities.reportTitle')}</caption>
               <thead>
@@ -123,7 +124,7 @@ export default async function AnalysisReportPage({
                             of nothing, and on a compliance report the difference
                             matters.
                           */}
-                          {found === undefined ? '—' : found.value}
+                          {found === undefined ? '—' : format.number(Number(found.value), { maximumFractionDigits: 3 })}
                         </td>
                       );
                     })}

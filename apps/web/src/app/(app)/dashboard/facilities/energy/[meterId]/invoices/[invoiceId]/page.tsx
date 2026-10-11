@@ -54,7 +54,7 @@ export default async function InvoicePage({
       back={{ href: back.href, label: t(back.labelKey) }}
     >
       <section className="rounded border border-border bg-surface p-5">
-        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Item label={t('energy.invoice.period')} value={`${day(invoice.periodStart)} – ${day(invoice.periodEnd)} · ${t('energy.invoice.days', { days: invoice.days })}`} />
           <Item label={t('energy.invoice.issuedOn')} value={day(invoice.issuedOn)} />
           <Item label={t('energy.invoice.dueOn')} value={day(invoice.dueOn)} />
@@ -114,7 +114,7 @@ export default async function InvoicePage({
         <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-foreground-muted">
           {t('energy.invoice.linesTitle')}
         </h2>
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[48rem] text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-foreground-muted">

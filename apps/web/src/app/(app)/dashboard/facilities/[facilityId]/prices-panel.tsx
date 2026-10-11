@@ -181,7 +181,7 @@ export function PricesPanel({
            * it as prose meant three facts per line with nothing lining up. Scrolls
            * inside itself on a narrow screen rather than widening the page.
            */
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[32rem] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-foreground-muted">
@@ -597,7 +597,7 @@ function PeriodForm({
       <input type="hidden" name="facilityId" value={facilityId} />
       {period !== null && <input type="hidden" name="periodId" value={period.id} />}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className={cn(FIELD_COLUMN, 'max-w-none')}>
           <label htmlFor={`p-name-${id}`} className={FIELD_LABEL}>
             {t('fees.periodName')}
@@ -857,7 +857,7 @@ function PlanForm({
       {plan !== null && <input type="hidden" name="planId" value={plan.id} />}
       <input type="hidden" name="amountCents" value={cents === null ? '' : String(cents)} />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {kind === 'quota' && (
           <div className={cn(FIELD_COLUMN, 'max-w-none')}>
             <label htmlFor={`f-band-${id}`} className={FIELD_LABEL}>
@@ -1145,7 +1145,7 @@ function BillingForm({
         <p className="text-sm text-foreground-muted">{t('fees.dueDayHint')}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <PenaltyFields
           idPrefix="late"
           namePrefix="latePenalty"

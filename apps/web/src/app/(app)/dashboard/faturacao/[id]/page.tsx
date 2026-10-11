@@ -127,7 +127,7 @@ export default async function InvoicePage({
           </p>
         )}
 
-        <section className="grid gap-6 rounded border border-border bg-surface p-5 sm:grid-cols-2">
+        <section className="grid grid-cols-1 gap-6 rounded border border-border bg-surface p-5 sm:grid-cols-2">
           <div>
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('invoices.payer')}

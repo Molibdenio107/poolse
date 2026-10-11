@@ -289,7 +289,7 @@ function GuardianRow({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/*
           Always editable, whoever they are: it belongs to this pairing rather
           than to the person. The same woman is "avó" to one child and "tutora
@@ -400,11 +400,11 @@ function ReadOnlyPerson({ draft }: { draft: Draft }): React.ReactElement {
   }
 
   return (
-    <dl className="flex flex-col gap-1 text-sm">
+    <dl className="flex min-w-0 flex-col gap-1 text-sm [overflow-wrap:anywhere]">
       {rows.map((row) => (
         <div key={row.label} className="flex gap-2">
           <dt className="shrink-0 text-foreground-muted">{row.label}</dt>
-          <dd className="break-words">{row.value}</dd>
+          <dd className="min-w-0 [overflow-wrap:anywhere]">{row.value}</dd>
         </div>
       ))}
     </dl>

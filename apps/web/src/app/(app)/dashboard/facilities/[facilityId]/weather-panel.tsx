@@ -120,7 +120,7 @@ export async function WeatherPanel({
           </div>
 
           {weather.days.length > 0 && (
-            <ul className="grid gap-3 sm:grid-cols-4">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-4">
               {weather.days.map((day) => (
                 <li
                   key={day.date}

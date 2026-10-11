@@ -34,7 +34,7 @@ import { cn } from '@/lib/utils';
  * one of them here.
  */
 export const CONTROL_BASE =
-  'w-full rounded border border-border-strong bg-background px-2.5 text-control ' +
+  'w-full min-w-0 rounded border border-border-strong bg-background px-2.5 text-control ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
@@ -71,7 +71,9 @@ export const FIELD_LABEL = 'text-sm text-foreground-muted';
  * width. Both merge correctly — `cn` is tailwind-merge, so the later max-width
  * wins rather than the two fighting.
  */
-export const FIELD_COLUMN = 'flex w-full max-w-field flex-col gap-1.5';
+// `min-w-0`: a field in a row may shrink below its input's natural width
+// rather than pushing the page wider than a phone — October 2026.
+export const FIELD_COLUMN = 'flex w-full min-w-0 max-w-field flex-col gap-1.5';
 
 /**
  * How wide the field's column is allowed to get.

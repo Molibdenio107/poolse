@@ -59,7 +59,7 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
 
   return (
     <form action={action} className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field
           name="firstName"
           label={t('profile.firstName')}
@@ -115,7 +115,7 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
         <p className="text-sm text-foreground-muted">{t('profile.emailHint')}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Choice
           name="locale"
           label={t('profile.locale')}

@@ -38,7 +38,7 @@ export function InvoiceList({
       {invoices.length === 0 ? (
         <p className="text-sm text-foreground-muted">{t('invoices.noneIssued', { month })}</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
             <caption className="sr-only">{t('invoices.issuedTitle')}</caption>
             <thead>

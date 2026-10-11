@@ -100,7 +100,7 @@ function PoolDimensions({ pool }: { pool?: PoolFormValues | undefined }): React.
 
   return (
     <>
-      <fieldset className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <fieldset className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <legend className="mb-2 text-sm font-medium">{t('facilities.measurements')}</legend>
 
         {(
@@ -330,7 +330,7 @@ export function PoolForm({
       <input type="hidden" name="facilityId" value={facilityId} />
       {pool?.id !== undefined && <input type="hidden" name="poolId" value={pool.id} />}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className={`${FIELD_COLUMN} sm:col-span-2`}>
           <label htmlFor="pool-name" className={FIELD_LABEL}>
             {t('facilities.poolNameLabel')}

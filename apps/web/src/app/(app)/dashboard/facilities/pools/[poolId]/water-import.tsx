@@ -422,7 +422,7 @@ function Mapping({
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {WATER_FIELDS.map((field) => (
           <div key={field} className={FIELD_COLUMN}>
             <label htmlFor={`map-${field}`} className={FIELD_LABEL}>

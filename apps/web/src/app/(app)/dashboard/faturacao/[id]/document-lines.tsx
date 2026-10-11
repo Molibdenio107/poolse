@@ -24,7 +24,7 @@ export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactE
 
   return (
     <section className="rounded border border-border bg-surface p-5">
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[48rem] text-sm">
           <caption className="sr-only">{t('invoices.lines')}</caption>
           <thead>

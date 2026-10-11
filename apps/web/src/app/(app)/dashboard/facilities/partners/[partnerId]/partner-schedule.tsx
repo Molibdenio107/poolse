@@ -44,7 +44,7 @@ export async function PartnerSchedule({
       {bookings.length === 0 ? (
         <p className="text-sm text-foreground-muted">{t('partners.noBookings')}</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[32rem] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-foreground-muted">

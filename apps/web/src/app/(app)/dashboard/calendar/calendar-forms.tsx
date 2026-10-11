@@ -135,7 +135,7 @@ export function ClosureForm({
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className={FIELD_COLUMN}>
           <label htmlFor="closure-start" className={FIELD_LABEL}>
             {t('calendar.startsOn')}

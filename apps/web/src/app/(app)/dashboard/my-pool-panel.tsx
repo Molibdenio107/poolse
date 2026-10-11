@@ -62,7 +62,7 @@ export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React
             reader to remember the band; the pool page's tiles do exactly that,
             and this card exists to save the click.
           */}
-          <dl className="grid gap-3 sm:grid-cols-3">
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {latest.values.map((value) => {
               const excursion = badFor(value.metric);
               const text = excursion === undefined ? null : excursionText(excursion);

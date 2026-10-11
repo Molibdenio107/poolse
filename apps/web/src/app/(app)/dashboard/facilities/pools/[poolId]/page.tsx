@@ -123,7 +123,7 @@ export default async function PoolPage({
                     mode="edit"
                   />
                 ) : (
-                  <dl className="grid gap-4 sm:grid-cols-2">
+                  <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Detail
                       label={t('facilities.kindLabel')}
                       value={t(`facilities.kind.${loaded.kind}`)}
