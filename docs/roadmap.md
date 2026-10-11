@@ -532,6 +532,62 @@ the extension is present, so settling that question costs nothing here.
 one tenant, and a feature flag with nothing to gate is a column to keep in step. Both become
 worth building the day a second tenant wants something the first does not.
 
+## Phase 7 — what a club needs that has no home yet *(added 10 October 2026)*
+
+Found by reading the product against how a real pool runs its week, not by extending a module.
+Each item is a gap a pilot club meets in its first month; none of them reshapes an existing
+table. Tickets POOLSE-67 … 70. Order is by cost against value, and 7.1 is the next slice.
+
+| # | Slice | Done when |
+|---|---|---|
+| 7.1 | **Messages to a turma, a level or the whole club** — POOLSE-67. Composed in the backoffice, sent by transactional email through the existing `notifier.ts`, recipients resolved at send time (guardians for a minor, the student on the adult path, deduplicated), the addresses snapshotted on the row | Tomorrow's 18:00 class is cancelled and every family in it has an email within a minute, with a record of who was told. **Does not wait for phase 3** — 3.0 later adds preferences and push to the same record, as it does for 4.2's alerts |
+| 7.2 | **Free swim, entry passes and reception check-in** — POOLSE-68. Single entries, packs of N and time-boxed passes as products on the facility; a check-in decrements or validates them; live occupancy per tank against `pool.max_capacity` | A non-student pays at reception, swims, and appears in the day's count. Money follows `docs/financials.md`; the pass sale is a document line through 2.2's invoicing |
+| 7.3 | **Online pre-registration and trial lessons** — POOLSE-69. A public, no-login form per club that feeds the existing waiting list or books an *aula experimental* into a session with room; staff convert to an enrolment in one action | A parent signs a child up from the club's page in September and reception never retypes it. Rate-limited and spam-guarded — the first public write path after signup |
+| 7.4 | **Bather incident log and lifeguard on duty** — POOLSE-70. An incident (what, where, when, first aid, who was on duty) recorded against a person and a tank, linked to the apólice; a duty roster per open hour, checked against POOLSE-27's certification state | An accident on Saturday has a dated record an insurer will accept, naming the lifeguard on duty and that their licence was valid. Health detail goes through the sensitive-fields path of 1.3 — encrypted, every read logged |
+
+**7.1 comes first because it is the cheapest and the pilot needs it on day one.** Email already
+leaves the system for invitations, vacations and water alerts, so the slice is a composer, a
+recipient query and a record — no new provider.
+
+**7.2 is the largest and opens a revenue stream Poolse does not touch today.** Turmas are the
+whole product so far; many municipal pools earn as much from free swimming. It also gives 6.1
+real attendance data that is not a register.
+
+**7.4 stores the most sensitive thing in the product after medical notes**, and must not be
+built as an ordinary table with a notes column.
+
+## Phase 7b — the Portuguese compliance layer *(added 10 October 2026)*
+
+From the competitor and regulation research of 10 October 2026 (report in the Poolse project,
+`claude/poolse-competitor-feature-gaps.md`). Competitors already sell what phases 3 and 7 plan;
+what none of them was found to offer is the layer a Portuguese inspector, accountant or parent
+asks about. Most of it assembles records Poolse already keeps. **Not legal advice** — several
+sources were secondary summaries, and the items marked *gated* wait on an answer from outside.
+
+| # | Slice | Gated on | Done when |
+|---|---|---|---|
+| 7b.1 | **Public water-quality page per tank** — POOLSE-71. An unguessable, revocable token per pool; opened by a QR at the entrance or shown on a lobby screen; latest reading per metric with its time, the latest lab result, both locales, no login, nothing else about the tenant | — | A bather scans the QR at the door and sees this morning's pH, chlorine and temperature. Meets the duty to post readings to users |
+| 7b.2 | **Qualifications with expiry — POOLSE-27 brought forward**, seeded with the Portuguese types: TPTD (Lei 40/2012, lapses without training within 5 years), ISN nadador-salvador, SBV (Lei 61/2017's alternative) | — | Everyone amber or red is listed by expiry; an instructor with a lapsed TPTD on a turma is flagged. Must exist before 7.4's roster |
+| 7b.3 | **Published DGS/PVSP bands and lab classification** — POOLSE-72. The reference values `resolveBands` falls back to, one new band shape (free chlorine depends on pH), lab results graded *conforme / conforme condicionada / não conforme* with sample point | Values checked against a primary source | A lab import shows its grade and a reading is judged by the national reference, not only a club's own range |
+| 7b.4 | **Complaints-book link and versioned operating regulation** — POOLSE-73. A livroreclamacoes.pt link and the facility's *Regulamento de Funcionamento* (Portaria 454/2023 art. 46.º) on every public page | 7b.1 or 7.3 public pages | A public page carries both, and the regulation has a dated history |
+| 7b.5 | **Facility accident insurance, VAT exemption reason, club CAE** — POOLSE-74. The DL 10/2009 policy on the facility with its capitals checked against the minimums; an exemption reason beside `vat_exempt`; the CAE on the organization, with a warning when it does not allow the parents' IRS deduction (art. 78.º-F n.º 8) | The pilot club's CAE (for the warning text only) | The settings say plainly whether the club's invoices are IRS-deductible and whether its policy meets the minimum |
+| 7b.6 | **Printable sanitary register** — POOLSE-75. One day per page: readings, lab results, maintenance and cleaning completions, bather counts (7.2), incidents (7.4), meter and backwash entries; a "not measured since opening / 4 hours overdue" signal | A photo of the pilot club's current register and what their inspector asks for | An inspector is handed a register for any date range, printed from Poolse |
+| 7b.7 | **Certified invoicing through a provider's API** — POOLSE-76. Poolse stays uncertified; the provider issues the legal fatura and returns ATCUD/QR/number into the reserved columns | Which software the pilot uses, and the accountant's answer on the 2026 PDF-signature rule | An invoice run produces faturas the club can legally send. **Blocks a POS and any paid tenant** |
+| 7b.8 | **Retention and anonymisation** — POOLSE-77. A stated retention end per kind of personal data (medical notes first), a nightly anonymise job, an access log for medical notes (Lei 58/2019 art. 21.º) | Rui's retention decision, logged in `docs/decisions.md` | A student gone past the retention period no longer has readable health data, and the decision is written down |
+
+**7b.1 and 7b.2 are ungated and go first.** Neither needs an answer from the club, both reuse
+tables that exist, and 7b.2 is a prerequisite of 7.4. 7b.7 is the one heavy item and the one
+that decides when Poolse can charge a club: choose the provider early, build it when the
+answers are in.
+
+**7b.8 softens "history is never destroyed"** for personal data that has served its purpose.
+That is a reversal of a standing rule and is taken out loud, not as a refactor.
+
+**After 7b, differentiators the research found cheap** (not yet ticketed): automatic level
+certificates on advancement; opening, closing and rescue-kit checklists as `maintenance_task`
+templates; a dosing/LSI calculator drawing chemicals from inventory. A POS and cash desk waits
+on 7b.7.
+
 ## Deferred, with their trigger
 
 | Item | Build it when |
