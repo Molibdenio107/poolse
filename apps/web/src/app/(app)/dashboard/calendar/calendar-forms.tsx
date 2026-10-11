@@ -259,6 +259,10 @@ export interface CancelTarget {
   className: string;
   /** Date and time, already formatted in the reader's locale. */
   when: string;
+  /** The turma, or null for a parceria — which has no families to tell. */
+  classGroupId?: string | null;
+  /** The day alone, already formatted, for a message's subject. */
+  date?: string;
 }
 
 /**
@@ -302,6 +306,20 @@ export function CancelSessionDialog({
   const settled = useRef<string | null>(null);
 
   const sessionId = target?.sessionId ?? null;
+  /*
+   * Avisar as famílias — POOLSE-67. A cancelled turma offers to open the
+   * composer pointed at it, the date already in the subject; a parceria has no
+   * families on record and offers nothing. Read here, while the target is still
+   * set, because the success effect closes the dialog.
+   */
+  const notifyHref =
+    target?.classGroupId === null || target?.classGroupId === undefined
+      ? null
+      : `/dashboard/students/messages/new?${new URLSearchParams({
+          audience: 'class_group',
+          targetId: target.classGroupId,
+          subject: t('messages.cancelSubject', { date: target.date ?? '' }),
+        })}`;
 
   useEffect(() => {
     // Only on the transition into success, and only once per submission: this
@@ -317,6 +335,7 @@ export function CancelSessionDialog({
       kind: 'success',
       text: t('calendar.cancelled'),
       attempt: attempt.current,
+      ...(notifyHref === null ? {} : { link: { label: t('messages.notifyFamilies'), href: notifyHref } }),
       action: {
         label: t('common.undo'),
         onAct: () => {
@@ -327,7 +346,7 @@ export function CancelSessionDialog({
         },
       },
     });
-  }, [state, sessionId, organizationId, restore, onClose, t]);
+  }, [state, sessionId, notifyHref, organizationId, restore, onClose, t]);
 
   /*
    * A successful undo has to redraw the week — October 2026 sweep. The action

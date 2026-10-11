@@ -228,6 +228,13 @@ const SECTIONS: Item[] = [
       // Encarregados de educação belong with the families, not with the staff —
       // POOLSE-35.
       { href: '/dashboard/students/guardians', key: 'students.guardiansTitle' },
+      // Mensagens sit with the families they are written to — POOLSE-67. The
+      // roles are the endpoint's own; an instructor writes to their own turmas.
+      {
+        href: '/dashboard/students/messages',
+        key: 'messages.title',
+        roles: ['owner', 'admin', 'instructor'],
+      },
       { href: '/dashboard/students/levels', key: 'students.levels' },
       /*
        * The advancement queue — POOLSE-19. It shipped on 28 August with no way

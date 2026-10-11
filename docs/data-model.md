@@ -3317,3 +3317,43 @@ threshold, or it has none at all.
 **The two indexes are the aggregates' index check.** The money widget reaches a site through
 `fee_plan`, and nothing indexed `student_fee` by plan; today's classes at a site are a range on
 `starts_at` behind a pool, which `(organization_id, starts_at)` alone cannot narrow.
+
+### Messages to families — POOLSE-67, 11 October 2026
+
+```
+enum message_audience: class_group | level | facility | organization
+
+message
+  id, organization_id
+  audience message_audience not null
+  class_group_id, level_id, facility_id   -- composite fks; CHECK: exactly the one audience names
+  subject text not null (1..200), body text not null (1..10000)
+  sent_by_membership_id not null          -- fk membership
+  sent_at timestamptz not null default now()
+  address_count integer not null          -- distinct addresses; checked against recipients at commit
+  archived_at, created_at, updated_at
+
+message_recipient                          -- one row per student × address, snapshotted
+  id, organization_id, message_id
+  student_id not null, guardian_membership_id   -- null guardian = the student themselves
+  student_name text, name text, email citext    -- null email = nobody to write to
+  delivered_at timestamptz                      -- null = recorded, not sent
+  CHECK (delivered_at is null or email is not null)
+
+function message_recipients(org, audience, class_group, level, facility)
+function message_daily_limit() = 20, message_daily_address_limit() = 2000
+function message_day_start(timestamptz)   -- the Lisbon day
+```
+
+**Who a message reaches is `message_recipients()`**, read by the preview and the send alike:
+students with an `active` enrolment in a live turma whose season is not archived, matched on
+the turma (or the turma's level, or its site); for each, every live guardian, else the student
+at `person_email(student.membership_id)` falling back to `contact_email`.
+
+**The ceiling is a BEFORE INSERT trigger on `message`** under a per-tenant advisory lock,
+raising `message_quota|<messages|addresses>|limit|used|requested` in DETAIL. A deferred
+constraint trigger checks `address_count` against the recipient rows at commit.
+
+**Neither table is ever deleted from, and almost nothing is updated**: `poolse_app` holds
+`UPDATE (archived_at)` on `message` and `UPDATE (delivered_at)` on `message_recipient`, by
+column grant. `tenant-isolation.sql` test 23 asserts the audience's composite key.

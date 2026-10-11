@@ -284,7 +284,19 @@ export interface SessionControls {
    * The session id is `sessionId` above — this is only what a person has to read
    * to be sure which Tuesday they are about to call off.
    */
-  cancel?: { className: string; when: string } | undefined;
+  cancel?:
+    | {
+        className: string;
+        when: string;
+        /**
+         * The turma, so a cancelled class can offer to tell its families —
+         * POOLSE-67. Null for a parceria, which has no families on record.
+         */
+        classGroupId?: string | null;
+        /** The day alone, for the message's subject. */
+        date?: string;
+      }
+    | undefined;
   /** Whether this week's occurrence is cancelled, and why. */
   cancelled?: boolean;
   /** Cancelled by a closure rather than by a person — undone by removing it. */

@@ -3663,5 +3663,96 @@
     "actions": "Ações",
     "requests": "Pedidos e erros",
     "occupancy": "Ocupação"
+  },
+  "messages": {
+    "title": "Mensagens",
+    "subtitle": "Escreva às famílias de uma turma, de um nível, de uma instalação ou de todo o clube, e fique com o registo de quem foi avisado.",
+    "new": "Nova mensagem",
+    "backToList": "Mensagens",
+    "notPermitted": "Não tem acesso às mensagens.",
+    "notPermittedHint": "As mensagens às famílias são escritas pela direção do clube e pelos professores, para as suas turmas.",
+    "empty": "Ainda não foi enviada nenhuma mensagem.",
+    "emptyHint": "Quando uma aula for cancelada ou houver um aviso a dar, escreva-o aqui: as famílias recebem-no por email e o registo fica nesta lista.",
+    "sentBy": "por {name}",
+    "sentAt": "Enviada",
+    "deliveryLabel": "Entrega",
+    "recipients": "Destinatários",
+    "unreachableCount": "{count, plural, one {# aluno sem contacto} other {# alunos sem contacto}}",
+    "theStudent": "O próprio aluno",
+    "noAddress": "Sem endereço",
+    "archive": "Arquivar",
+    "archiveTitle": "Arquivar esta mensagem?",
+    "archiveHint": "Deixa de aparecer na lista. O texto e o registo de quem a recebeu ficam guardados.",
+    "archived": "Mensagem arquivada.",
+    "notifyFamilies": "Avisar as famílias",
+    "cancelSubject": "Aula cancelada — {date}",
+    "to": {
+      "class_group": "Turma: {name}",
+      "level": "Nível: {name}",
+      "facility": "Instalação: {name}",
+      "organization": "Todo o clube"
+    },
+    "audience": {
+      "class_group": "Uma turma",
+      "level": "Um nível",
+      "facility": "Uma instalação",
+      "organization": "Todo o clube"
+    },
+    "field": {
+      "audience": "Para",
+      "target": {
+        "class_group": "Turma",
+        "level": "Nível",
+        "facility": "Instalação"
+      },
+      "subject": "Assunto",
+      "body": "Mensagem",
+      "bodyHint": "As famílias recebem exatamente este texto por email, com uma linha a dizer que vem do clube. As respostas não chegam ao Poolse."
+    },
+    "compose": {
+      "subtitle": "Recebem a mensagem os encarregados de educação de cada aluno inscrito ou, sem encarregado, o próprio aluno. Cada endereço recebe um só email.",
+      "review": "Rever destinatários",
+      "checking": "A verificar…",
+      "nothingToAddress": "Não há a quem escrever.",
+      "nothingToAddressHint": "As mensagens são para as turmas que tem atribuídas. Quando lhe for atribuída uma turma, aparece aqui."
+    },
+    "confirm": {
+      "title": "Enviar esta mensagem?",
+      "reach": "Chega a {addresses, plural, one {# endereço} other {# endereços}}, de {students, plural, one {# aluno} other {# alunos}}.",
+      "unreachable": "{count, plural, one {# aluno sem contacto não vai receber:} other {# alunos sem contacto não vão receber:}}",
+      "notConfigured": "O envio de email ainda não está configurado: a mensagem fica registada, mas não sai nenhum email.",
+      "send": "Enviar para {addresses, plural, one {# endereço} other {# endereços}}",
+      "sending": "A enviar…"
+    },
+    "delivery": {
+      "all": "Enviada para {count, plural, one {# endereço} other {os # endereços}}",
+      "none": "Registada — ainda não saiu nenhum email",
+      "partial": "Enviada para {delivered} de {count} endereços"
+    },
+    "column": {
+      "student": "Aluno",
+      "writtenTo": "Destinatário",
+      "address": "Endereço",
+      "state": "Estado"
+    },
+    "state": {
+      "unreachable": "Sem contacto — não enviada",
+      "notSent": "Registada, não enviada",
+      "sent": "Enviada {at}"
+    },
+    "error": {
+      "audienceRequired": "Escolha a quem escrever.",
+      "targetRequired": "Escolha a turma, o nível ou a instalação.",
+      "subjectRequired": "Escreva um assunto.",
+      "subjectTooLong": "O assunto pode ter até 200 caracteres.",
+      "bodyRequired": "Escreva a mensagem.",
+      "bodyTooLong": "A mensagem pode ter até 10 000 caracteres.",
+      "previewFailed": "Não foi possível ver os destinatários.",
+      "sendFailed": "Não foi possível enviar a mensagem.",
+      "archiveFailed": "Não foi possível arquivar a mensagem.",
+      "noRecipients": "Ninguém neste grupo tem um endereço de email registado.",
+      "quotaMessages": "O clube já enviou {used} de {limit} mensagens hoje. Volte a enviar amanhã.",
+      "quotaAddresses": "Hoje já se escreveu a {used} de {limit} endereços e esta mensagem precisa de {requested}; restam {left}. Volte a enviar amanhã ou escolha um grupo mais pequeno."
+    }
   }
 }

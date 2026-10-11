@@ -721,6 +721,8 @@ one) and hands it to `parseCents`**, which is what the typed form uses — widen
 itself would make every price field accept "35 €", a refusal pinned by a test. The write goes
 through `applyNewRate`, the same function the form calls.
 
+**A message to families is a record first and an email second.** POOLSE-67. `message_recipients()` is the one definition of who a message reaches — active enrolment in a live turma, live guardians else the student — read by the preview and the send alike, and the send is **one statement**, so the count confirmed and the rows written share a snapshot. Names and addresses are snapshots; `delivered_at` null is said in words; email leaves after the commit (`deliverMessage`, never awaited by the request). **20 messages / 2,000 addresses per club per Lisbon day**, a trigger under an advisory lock with its figures in DETAIL. A message is archived, never edited — column grants, as on `invoice`. An instructor writes to `myTurmaIds` only. `docs/features/messages.md`.
+
 **Capacity rules compose, they do not override.** An enrolment must fit its turma
 (`class_group.capacity`), the turmas sharing a slot must fit the tank (`pool.max_capacity`),
 and `lane_level_capacity` is a separate teaching judgement. A null ceiling means "not

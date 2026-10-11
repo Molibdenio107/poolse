@@ -1368,4 +1368,32 @@ BEGIN
   RAISE NOTICE 'PASS test 22: a dashboard scope cannot cross the tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 23 — a message cannot be addressed to another club's site
+-- ---------------------------------------------------------------------------
+--
+-- `message.facility_id` (POOLSE-67). Both rows pass their own policies, so only
+-- the composite key stops club A writing to "everybody at club B's pool".
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_fac_b uuid := 'b1111111-1111-1111-1111-111111111111';
+  v_mem_a uuid; ok boolean;
+BEGIN
+  RESET ROLE;
+  SELECT id INTO v_mem_a FROM membership WHERE organization_id = v_a LIMIT 1;
+
+  ok := false;
+  BEGIN
+    INSERT INTO message (organization_id, audience, facility_id, subject, body,
+                         sent_by_membership_id, address_count)
+    VALUES (v_a, 'facility', v_fac_b, 'x', 'x', v_mem_a, 0);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 23: org A addressed a message to org B''s site'; END IF;
+
+  RAISE NOTICE 'PASS test 23: a message audience cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;

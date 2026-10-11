@@ -198,6 +198,8 @@ export function CalendarWeek({
                     sessionId: session.sessionId!,
                     className: session.cancel!.className,
                     when: session.cancel!.when,
+                    classGroupId: session.cancel!.classGroupId ?? null,
+                    date: session.cancel!.date ?? '',
                   })
                 }
                 className="inline-flex items-center gap-1.5 rounded border border-border-strong px-2 py-1 text-sm hover:border-danger hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"

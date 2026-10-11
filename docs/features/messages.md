@@ -1,0 +1,55 @@
+# Messages to families
+
+POOLSE-67, roadmap 7.1. **Alunos → Mensagens** (`/dashboard/students/messages`).
+
+## What it does
+
+A club writes to the families of **one turma, one level, one site, or the whole club**, by
+email, and keeps a record of who was told.
+
+- **Who receives it** is worked out when it is sent: every student with an *active* enrolment in
+  a live turma of the audience (a season that has ended does not count; the waiting list and
+  students who left are not in the turma). A level means the students in that level's turmas.
+- For each student: **their live guardians**, or — with none — **the student themselves**, at
+  the address on their record. The same order the invoice payer uses.
+- **One email per address.** A parent of two siblings gets one.
+- **Nobody is dropped silently.** A student with no address anywhere is named in the
+  confirmation before sending and recorded as *sem contacto* afterwards.
+- The site audience is offered only to a club with more than one site; with one, it is the
+  whole club.
+
+## Sending
+
+*Rever destinatários* asks the server who the message reaches and opens a confirmation with the
+count, the students who cannot be reached, and — where no email provider is configured — a
+sentence saying the message will be recorded and not sent. Only *Enviar* in that dialog writes.
+
+The message and every address are recorded first; the emails go afterwards, one per address,
+and each is stamped as it leaves. A message whose emails have not left (no provider, or the
+provider refused) says *Registada — ainda não saiu nenhum email* rather than implying a family
+was told. The text arrives exactly as typed, with one line from Poolse naming the club and
+saying replies do not reach it.
+
+After **Cancelar aula** on the calendar, the success message offers **Avisar as famílias**,
+opening the composer on that turma with the date in the subject. A parceria offers nothing.
+
+## Who can do it
+
+| | Owner | Admin | Instructor | Others |
+|---|---|---|---|---|
+| Write to any audience | ✓ | ✓ | — | — |
+| Write to their own turmas (turma's instructor or a booking's) | ✓ | ✓ | ✓ | — |
+| Read the history | every message | every message | messages to their turmas, the office's included | — |
+| Archive a message | ✓ | ✓ | — | — |
+
+Enforced by the API; the menu entry and the composer's options only follow it.
+
+## Rules
+
+- **A daily ceiling: 20 messages or 2,000 addresses per club**, per Lisbon day, whichever comes
+  first. A send that would cross it is refused with the figures ("já enviou 20 de 20 mensagens
+  hoje"). Enforced in the database, so two sends at once cannot both squeeze in.
+- **Nothing is edited or deleted.** A message can be archived, which hides it from the list;
+  its words and the record of who received it stay. Recipient names and addresses are as they
+  were when sent, so a guardian unlinked since still shows as told.
+- **Not built** (phase 3.0): push, SMS, replies, scheduling, attachments, per-person preferences.

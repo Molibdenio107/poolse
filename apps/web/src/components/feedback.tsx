@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +64,12 @@ export interface FeedbackMessage {
    * The label is translated by the caller. This component composes no sentences.
    */
   action?: { label: string; onAct: () => void };
+  /**
+   * Somewhere to go about it — POOLSE-67's *Avisar as famílias* after a class is
+   * cancelled. A link rather than a second `action`: it goes somewhere rather
+   * than doing something, and it keeps working with a middle click.
+   */
+  link?: { label: string; href: string };
 }
 
 const TONE: Record<FeedbackKind, { box: string; icon: typeof Info }> = {
@@ -122,7 +129,9 @@ export function Feedback({
     if (kind === 'success' || kind === 'info') {
       timer.current = setTimeout(
         onDismiss,
-        message.action === undefined ? DISMISS_AFTER : DISMISS_WITH_ACTION,
+        message.action === undefined && message.link === undefined
+          ? DISMISS_AFTER
+          : DISMISS_WITH_ACTION,
       );
     }
 
@@ -175,6 +184,16 @@ export function Feedback({
           so a screen reader hearing "Class cancelled" hears that there is an
           undo as part of the same announcement.
         */}
+        {message.link !== undefined && (
+          <Link
+            href={message.link.href}
+            onClick={onDismiss}
+            className="shrink-0 rounded px-2 py-1 text-sm font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
+          >
+            {message.link.label}
+          </Link>
+        )}
+
         {message.action !== undefined && (
           <button
             type="button"

@@ -220,6 +220,8 @@ export default async function CalendarPage({
               ? {
                   className: session.className,
                   when: `${formatDate(session.localDate)}, ${session.localTime}`,
+                  classGroupId: session.classGroupId ?? null,
+                  date: formatDate(session.localDate),
                 }
               : undefined,
           cancelled,

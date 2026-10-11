@@ -31,6 +31,7 @@ import { HealthController } from './health/health.controller.js';
 import { InventoryController } from './inventory/inventory.controller.js';
 import { SpacesController } from './spaces/spaces.controller.js';
 import { MaintenanceController } from './maintenance/maintenance.controller.js';
+import { MessagesController } from './messages/messages.controller.js';
 import { EnergyController } from './energy/energy.controller.js';
 import { EnergyInvoicesController } from './energy/invoices.controller.js';
 import { SlotsController } from './facilities/slots.controller.js';
@@ -127,6 +128,7 @@ const IDENTITY_ONLY_ROUTES = [
     HealthController,
     MeController,
     DashboardController,
+    MessagesController,
     SessionsController,
     ClerkWebhookController,
     StripeWebhookController,

@@ -63,6 +63,11 @@ const TENANT_TABLES = [
    * membership, and only a teardown has any business removing it.
    */
   'audit_log',
+  // POOLSE-67. A recipient points at its message, a student and a guardian's
+  // membership; a message at its turma, level, site and sender. First, so
+  // every one of those is still there when these go.
+  'message_recipient',
+  'message',
   /*
    * Not a tenant table — and here anyway, which is the exception worth
    * explaining rather than leaving somebody to rediscover.

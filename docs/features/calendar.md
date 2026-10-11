@@ -249,6 +249,10 @@ narrow, recoverable choice selected. The past is never affected either way.
 Cancelling raises a toast with **Undo**, which restores the session. A class taken down by a
 *closure* refuses the undo and says so: that one is undone by removing the closure.
 
+For a turma the same toast also offers **Avisar as famílias**, which opens the message composer
+on that turma with the date in the subject (POOLSE-67, `messages.md`). A parceria has no
+families on record and offers nothing.
+
 The session row survives cancellation. Attendance history, invoicing and any later "was
 there a class that Tuesday?" all rest on it.
 

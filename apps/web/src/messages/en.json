@@ -3663,5 +3663,96 @@
     "actions": "Actions",
     "requests": "Requests and errors",
     "occupancy": "Occupancy"
+  },
+  "messages": {
+    "title": "Messages",
+    "subtitle": "Write to the families of a class group, a level, a site or the whole club, and keep a record of who was told.",
+    "new": "New message",
+    "backToList": "Messages",
+    "notPermitted": "You do not have access to messages.",
+    "notPermittedHint": "Messages to families are written by the club's management, and by instructors for their own class groups.",
+    "empty": "No message has been sent yet.",
+    "emptyHint": "When a class is cancelled or there is news to share, write it here: families receive it by email and the record stays on this list.",
+    "sentBy": "by {name}",
+    "sentAt": "Sent",
+    "deliveryLabel": "Delivery",
+    "recipients": "Recipients",
+    "unreachableCount": "{count, plural, one {# student with no contact} other {# students with no contact}}",
+    "theStudent": "The student themselves",
+    "noAddress": "No address",
+    "archive": "Archive",
+    "archiveTitle": "Archive this message?",
+    "archiveHint": "It stops appearing on the list. The text and the record of who received it are kept.",
+    "archived": "Message archived.",
+    "notifyFamilies": "Tell the families",
+    "cancelSubject": "Class cancelled — {date}",
+    "to": {
+      "class_group": "Class group: {name}",
+      "level": "Level: {name}",
+      "facility": "Site: {name}",
+      "organization": "The whole club"
+    },
+    "audience": {
+      "class_group": "A class group",
+      "level": "A level",
+      "facility": "A site",
+      "organization": "The whole club"
+    },
+    "field": {
+      "audience": "To",
+      "target": {
+        "class_group": "Class group",
+        "level": "Level",
+        "facility": "Site"
+      },
+      "subject": "Subject",
+      "body": "Message",
+      "bodyHint": "Families receive exactly this text by email, with one line saying it comes from the club. Replies do not reach Poolse."
+    },
+    "compose": {
+      "subtitle": "Each enrolled student's guardians receive it or, with no guardian, the student themselves. Each address gets a single email.",
+      "review": "Review recipients",
+      "checking": "Checking…",
+      "nothingToAddress": "There is nobody to write to.",
+      "nothingToAddressHint": "Messages go to the class groups assigned to you. When you are given one, it appears here."
+    },
+    "confirm": {
+      "title": "Send this message?",
+      "reach": "It reaches {addresses, plural, one {# address} other {# addresses}}, for {students, plural, one {# student} other {# students}}.",
+      "unreachable": "{count, plural, one {# student with no contact will not receive it:} other {# students with no contact will not receive it:}}",
+      "notConfigured": "Email sending is not configured yet: the message is recorded, but no email leaves.",
+      "send": "Send to {addresses, plural, one {# address} other {# addresses}}",
+      "sending": "Sending…"
+    },
+    "delivery": {
+      "all": "Sent to {count, plural, one {# address} other {all # addresses}}",
+      "none": "Recorded — no email has left yet",
+      "partial": "Sent to {delivered} of {count} addresses"
+    },
+    "column": {
+      "student": "Student",
+      "writtenTo": "Recipient",
+      "address": "Address",
+      "state": "State"
+    },
+    "state": {
+      "unreachable": "No contact — not sent",
+      "notSent": "Recorded, not sent",
+      "sent": "Sent {at}"
+    },
+    "error": {
+      "audienceRequired": "Choose who to write to.",
+      "targetRequired": "Choose the class group, level or site.",
+      "subjectRequired": "Write a subject.",
+      "subjectTooLong": "The subject may be up to 200 characters.",
+      "bodyRequired": "Write the message.",
+      "bodyTooLong": "The message may be up to 10,000 characters.",
+      "previewFailed": "Could not look up the recipients.",
+      "sendFailed": "Could not send the message.",
+      "archiveFailed": "Could not archive the message.",
+      "noRecipients": "Nobody in this group has an email address on file.",
+      "quotaMessages": "The club has already sent {used} of {limit} messages today. Send again tomorrow.",
+      "quotaAddresses": "{used} of {limit} addresses have been written to today and this message needs {requested}; {left} remain. Send again tomorrow or choose a smaller group."
+    }
   }
 }

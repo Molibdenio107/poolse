@@ -3865,3 +3865,64 @@ export interface EnergyCostsWidgetData {
     kwh: number;
   } | null;
 }
+
+/* ---------------------------------------------------------------------------
+ * Messages to families — POOLSE-67
+ * ------------------------------------------------------------------------- */
+
+export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization';
+
+export interface MessagePreview {
+  studentCount: number;
+  /** Distinct addresses: what will be sent, and what the daily ceiling counts. */
+  addressCount: number;
+  /** Students nobody can be written to for — named, never only counted. */
+  unreachable: { studentId: string; name: string }[];
+  /** False where no email provider is configured: recorded, not sent. */
+  emailConfigured: boolean;
+  /** Present once the message has been written. */
+  id?: string;
+}
+
+export interface MessageSummary {
+  id: string;
+  audience: MessageAudience;
+  targetId: string | null;
+  targetName: string | null;
+  subject: string;
+  sentAt: string;
+  sentByName: string | null;
+  addressCount: number;
+  deliveredCount: number;
+  unreachableCount: number;
+}
+
+export interface MessageList extends Paginated<MessageSummary> {
+  canSend: boolean;
+}
+
+export interface MessageRecipient {
+  studentName: string;
+  name: string;
+  isGuardian: boolean;
+  email: string | null;
+  deliveredAt: string | null;
+}
+
+export interface MessageDetail extends MessageSummary {
+  body: string;
+  recipients: MessageRecipient[];
+  canArchive: boolean;
+}
+
+export interface AudienceOption {
+  id: string;
+  name: string;
+  detail: string | null;
+}
+
+export interface AudienceOptions {
+  classGroups: AudienceOption[];
+  levels: AudienceOption[];
+  facilities: AudienceOption[];
+}
