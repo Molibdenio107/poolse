@@ -1001,3 +1001,7 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   generation skips them and names them, so one clash no longer empties the club's calendar. On the
   calendar a click or tap pins a class's card open (the ⋯ shows only for keyboard focus), a block
   resizes from its top edge too, and toasts are solid with the tone as a tint over the surface.
+- **2026-10-11** — **POOLSE-68: free swim is a booking on the lane grid** (a subject type of its own,
+  so the calendar stays the one picture of the pool and the lane rules keep turmas off public
+  lanes), **and "in the water" is a default stay per site** (90 minutes unless the club changes it,
+  with an early check-out at reception) rather than a check-out nobody remembers to record.
