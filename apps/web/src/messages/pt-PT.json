@@ -4149,5 +4149,20 @@
   },
   "import": {
     "pdfDisabled": "A leitura de PDF não está ativa nesta instalação. Abra o documento no programa de origem e exporte para Excel ou CSV — ou peça para ativar a leitura de PDF."
+  },
+  "export": {
+    "pdf": {
+      "option": "PDF",
+      "exportAction": "Exportar em PDF",
+      "printLabel": "Imprimir ou guardar como PDF",
+      "printedOn": "Impresso a {date}",
+      "empty": "Não há nada para mostrar.",
+      "count": "{count, plural, =0 {Sem linhas} one {# linha} other {# linhas}}",
+      "capped": "Os primeiros {shown} de {total}",
+      "search": "Pesquisa: «{term}»",
+      "level": "Nível: {name}",
+      "site": "Instalação: {name}",
+      "analysesTitle": "Análises da água — {pool}"
+    }
   }
 }

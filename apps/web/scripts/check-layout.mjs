@@ -52,6 +52,9 @@ const EXEMPT = [
   // shell could express. The shell's chrome is hidden at print time rather than
   // absent, so this stays an ordinary authenticated page.
   'calendar/print',
+  // One invoice, printed — 12 October 2026. A document like the two above:
+  // black on white on A4, the shell's chrome hidden on paper.
+  'faturacao/[id]/print',
 ];
 
 /** Outer-layout classes on a page root — the thing the shell now owns. */

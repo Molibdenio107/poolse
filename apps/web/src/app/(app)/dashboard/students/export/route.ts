@@ -1,7 +1,9 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Student } from '@/lib/api';
 import { EXPORT_FIELDS } from '@/lib/sheet';
-import { studentsCsv, studentsWorkbook } from './write-sheet';
+import { formatDate } from '@/lib/date-format';
+import { printableResponse } from '@/lib/print-table';
+import { rowFor, studentsCsv, studentsWorkbook } from './write-sheet';
 
 /**
  * Slice 1.11 — the download itself.
@@ -29,11 +31,14 @@ interface ExportResponse {
 /**
  * The formats the register can leave in.
  *
- * Two, and only two. `.xlsx` because that is what a club works in, and `.csv`
- * because it is the one format every other system on earth reads — a committee
- * asking for the list, an accountant's software, a mail-merge. A PDF roster
- * would be a *document* rather than data, which is a different feature with a
- * different page; `docs/product.md` is where that belongs if it is ever wanted.
+ * Two files. `.xlsx` because that is what a club works in, and `.csv` because it
+ * is the one format every other system on earth reads — a committee asking for
+ * the list, an accountant's software, a mail-merge.
+ *
+ * And, since 12 October 2026, `format=pdf`: not a file at all but a page laid
+ * out for A4 that opens the print dialog, built from the same header and the
+ * same `rowFor` — `lib/print-table.ts`. It is not a `Format` because nothing
+ * about it is a download.
  */
 type Format = 'xlsx' | 'csv';
 
@@ -92,6 +97,35 @@ export async function GET(request: Request): Promise<Response> {
    * catalogue, in both locales.
    */
   const headers = EXPORT_FIELDS.map((field) => t(`students.import.field.${field}`));
+
+  if (url.searchParams.get('format') === 'pdf') {
+    /*
+     * What was filtered, said on the paper — there is no toolbar on a printout
+     * to show it. The level's name is read off the rows, which all carry it
+     * when the list was filtered by one.
+     */
+    const levelName = levelId === '' ? null : (data.students[0]?.levelName ?? null);
+    const subtitle = [
+      search === '' ? null : t('export.pdf.search', { term: search }),
+      levelName === null ? null : t('export.pdf.level', { name: levelName }),
+      data.capped
+        ? t('export.pdf.capped', { shown: data.students.length, total: data.total })
+        : t('export.pdf.count', { count: data.students.length }),
+    ]
+      .filter((part) => part !== null)
+      .join(' · ');
+
+    return printableResponse({
+      locale,
+      title: t('students.title'),
+      subtitle,
+      headers,
+      rows: data.students.map(rowFor),
+      printedOn: t('export.pdf.printedOn', { date: formatDate(new Date()) }),
+      printLabel: t('export.pdf.printLabel'),
+      emptyLabel: t('export.pdf.empty'),
+    });
+  }
 
   const body =
     format === 'csv'

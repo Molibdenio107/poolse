@@ -1,7 +1,9 @@
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type InventoryExport } from '@/lib/api';
+import { ApiError, apiFetch, type Facilities, type InventoryExport } from '@/lib/api';
 import { INVENTORY_EXPORT_FIELDS } from '@/lib/inventory-sheet';
-import { inventoryCsv, inventoryWorkbook } from './write-sheet';
+import { formatDate } from '@/lib/date-format';
+import { printableResponse } from '@/lib/print-table';
+import { inventoryCsv, inventoryWorkbook, rowFor } from './write-sheet';
 
 /**
  * The store room, downloaded — round 6.
@@ -27,6 +29,9 @@ import { inventoryCsv, inventoryWorkbook } from './write-sheet';
  * Two, and only two. `.xlsx` because that is what a club works in, and `.csv`
  * because it is the one format every other system on earth reads — a supplier's
  * order form, an accountant's software, a committee asking what the club owns.
+ *
+ * `format=pdf` is the same rows as a page to print — `lib/print-table.ts` — and
+ * is not a `Format` because nothing about it is a download.
  */
 type Format = 'xlsx' | 'csv';
 
@@ -90,6 +95,45 @@ export async function GET(request: Request): Promise<Response> {
    * maps itself when it comes back.
    */
   const headers = INVENTORY_EXPORT_FIELDS.map((field) => t(`inventory.field.${field}`));
+
+  if (url.searchParams.get('format') === 'pdf') {
+    /*
+     * Which site, said on the paper: a stocktake sheet with no building on it is
+     * one nobody can file. Best effort — a list of sites that will not load
+     * costs the line, never the printout.
+     */
+    const siteName =
+      facilityId === ''
+        ? null
+        : await apiFetch<Facilities>('/facilities')
+            .then((sites) => sites.facilities.find((site) => site.id === facilityId)?.name ?? null)
+            .catch(() => null);
+    const subtitle = [
+      siteName === null ? null : t('export.pdf.site', { name: siteName }),
+      search === '' ? null : t('export.pdf.search', { term: search }),
+      t('export.pdf.count', { count: data.items.length }),
+    ]
+      .filter((part) => part !== null)
+      .join(' · ');
+
+    return printableResponse({
+      locale,
+      title: t('inventory.title'),
+      subtitle,
+      headers,
+      // The file writes `all` and a blank so it re-imports in either language;
+      // paper is read by a person, so the scope is said in their words.
+      rows: data.items.map((item) => {
+        const row = rowFor(item);
+        const at = INVENTORY_EXPORT_FIELDS.indexOf('pools');
+        if (at >= 0 && item.scope !== 'pools') row[at] = t(`inventory.scope.${item.scope}`);
+        return row;
+      }),
+      printedOn: t('export.pdf.printedOn', { date: formatDate(new Date()) }),
+      printLabel: t('export.pdf.printLabel'),
+      emptyLabel: t('export.pdf.empty'),
+    });
+  }
 
   const body =
     format === 'csv'

@@ -1,14 +1,14 @@
 import { formatDate, formatStamp } from '@/lib/date-format';
 import Link from 'next/link';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
-import { apiFetch, type Facilities } from '@/lib/api';
+import { Printer } from 'lucide-react';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
 import { DocumentLines } from './document-lines';
 import { SettlementPanel } from './settlement-panel';
 import { StatusBadge } from '../status-badge';
 import { CreditNoteButton } from './credit-note-button';
-import { readInvoice } from '../invoices.actions';
+import { loadInvoice } from './load-invoice';
 
 /**
  * One document.
@@ -39,19 +39,7 @@ export default async function InvoicePage({
   const { id } = await params;
   const { facilityId: requested = '' } = await searchParams;
 
-  let sites: Facilities | null = null;
-  try {
-    sites = await apiFetch<Facilities>('/facilities');
-  } catch {
-    sites = null;
-  }
-
-  const facilityId =
-    sites?.facilities.find((site) => site.id === requested.trim())?.id ??
-    sites?.facilities[0]?.id ??
-    '';
-
-  const loaded = facilityId === '' ? null : await readInvoice(facilityId, id);
+  const { facilityId, loaded } = await loadInvoice(id, requested);
 
   // A missing document and a refusal are "not found"; a failure says it failed,
   // rather than telling somebody a document they can see in the list is gone.
@@ -194,6 +182,21 @@ export default async function InvoicePage({
           >
             {t('invoices.backToList')}
           </Link>
+
+          {/*
+            The document on paper — the browser's "Guardar como PDF", no PDF
+            library (12 October 2026). A page rather than a file, so its own tab;
+            a plain anchor, because `Link` would prefetch it.
+          */}
+          <a
+            href={`/dashboard/faturacao/${invoice.id}/print?facilityId=${facilityId}`}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <Printer aria-hidden className="size-4" />
+            {t('export.pdf.option')}
+          </a>
 
           {/*
             The only control on the page, and only on a document that is an

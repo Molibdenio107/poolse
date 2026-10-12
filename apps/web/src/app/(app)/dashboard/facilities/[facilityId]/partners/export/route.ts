@@ -1,7 +1,9 @@
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type PartnerExport } from '@/lib/api';
+import { ApiError, apiFetch, type Facilities, type PartnerExport } from '@/lib/api';
 import { PARTNER_EXPORT_FIELDS } from '@/lib/partner-sheet';
-import { partnerCsv, partnerWorkbook } from './write-sheet';
+import { formatDate } from '@/lib/date-format';
+import { printableResponse } from '@/lib/print-table';
+import { partnerCsv, partnerWorkbook, rowFor } from './write-sheet';
 
 /**
  * The partner list, downloaded — POOLSE-48, criterion 10.
@@ -22,6 +24,9 @@ import { partnerCsv, partnerWorkbook } from './write-sheet';
  * Two, and only two. `.xlsx` because that is what a club works in, and `.csv`
  * because it is the one format every other system reads — a school's own
  * secretariat, an accountant's software, a câmara asking who uses the pool.
+ *
+ * `format=pdf` is the same rows as a page to print — `lib/print-table.ts` — and
+ * is not a `Format` because nothing about it is a download.
  */
 type Format = 'xlsx' | 'csv';
 
@@ -79,6 +84,31 @@ export async function GET(
    * itself when it comes back.
    */
   const headers = PARTNER_EXPORT_FIELDS.map((field) => t(`partners.field.${field}`));
+
+  if (url.searchParams.get('format') === 'pdf') {
+    // Which site, said on the paper — partnerships are per site. Best effort: a
+    // list of sites that will not load costs the line, never the printout.
+    const siteName = await apiFetch<Facilities>('/facilities')
+      .then((sites) => sites.facilities.find((site) => site.id === facilityId)?.name ?? null)
+      .catch(() => null);
+    const subtitle = [
+      siteName === null ? null : t('export.pdf.site', { name: siteName }),
+      t('export.pdf.count', { count: data.rows.length }),
+    ]
+      .filter((part) => part !== null)
+      .join(' · ');
+
+    return printableResponse({
+      locale,
+      title: t('partners.title'),
+      subtitle,
+      headers,
+      rows: data.rows.map(rowFor),
+      printedOn: t('export.pdf.printedOn', { date: formatDate(new Date()) }),
+      printLabel: t('export.pdf.printLabel'),
+      emptyLabel: t('export.pdf.empty'),
+    });
+  }
 
   const body =
     format === 'csv'

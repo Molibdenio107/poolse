@@ -1,7 +1,9 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type SalaryExportRow } from '@/lib/api';
 import { SALARY_EXPORT_FIELDS } from '@/lib/salary-sheet';
-import { salaryCsv, salaryWorkbook } from './write-sheet';
+import { formatDate } from '@/lib/date-format';
+import { printableResponse } from '@/lib/print-table';
+import { rowFor, salaryCsv, salaryWorkbook } from './write-sheet';
 
 /**
  * The pay list, downloaded — POOLSE-59.
@@ -27,6 +29,10 @@ import { salaryCsv, salaryWorkbook } from './write-sheet';
  *
  * Two, and only two. `.xlsx` because that is what a club works in, and `.csv`
  * because it is what an accountant's software reads.
+ *
+ * `format=pdf` is the same rows as a page to print — `lib/print-table.ts` — and
+ * is not a `Format` because nothing about it is a download. It answers with the
+ * same `no-store, private`: a pay list on paper is no less a pay list.
  */
 type Format = 'xlsx' | 'csv';
 
@@ -72,6 +78,21 @@ export async function GET(request: Request): Promise<Response> {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
 
   const headers = SALARY_EXPORT_FIELDS.map((field) => t(`salaries.field.${field}`));
+
+  if (url.searchParams.get('format') === 'pdf') {
+    const page = printableResponse({
+      locale,
+      title: t('salaries.title'),
+      subtitle: t('export.pdf.count', { count: data.rows.length }),
+      headers,
+      rows: data.rows.map(rowFor),
+      printedOn: t('export.pdf.printedOn', { date: formatDate(new Date()) }),
+      printLabel: t('export.pdf.printLabel'),
+      emptyLabel: t('export.pdf.empty'),
+    });
+    page.headers.set('cache-control', 'no-store, private');
+    return page;
+  }
 
   const body =
     format === 'csv'

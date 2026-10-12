@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronRight, Download, Upload } from 'lucide-react';
+import { ChevronRight, Download, Printer, Upload } from 'lucide-react';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { SalaryImportWizard } from './import-wizard';
 
@@ -93,6 +93,16 @@ export function SalaryFilePanel({
         <a href="/dashboard/facilities/staff/salaries/export?format=csv" className={BUTTON_QUIET}>
           <Download aria-hidden className="size-4" />
           {t('salaries.exportCsv')}
+        </a>
+        {/* A page rather than a file, so its own tab. */}
+        <a
+          href="/dashboard/facilities/staff/salaries/export?format=pdf"
+          target="_blank"
+          rel="noopener"
+          className={BUTTON_QUIET}
+        >
+          <Printer aria-hidden className="size-4" />
+          {t('export.pdf.option')}
         </a>
 
         {canEdit && (

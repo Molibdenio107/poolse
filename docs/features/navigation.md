@@ -159,3 +159,11 @@ Not split, on purpose: the dashboard (an overview read at a glance), the calenda
 export are folded into a disclosure instead). On Instalações each site card shows its tanks only;
 Espaços and Fotografias are links to the site's own tabs. A turma's roster puts *Inscrever aluno*
 first, folded.
+
+## PDF of a list — 12 October 2026
+
+Every list export (alunos, inventário, salários, parcerias, análises da água) offers **PDF** beside
+Excel and CSV. It opens the same rows as the file, filtered the same way, as an A4 page in a new
+tab, and brings up the print dialog (*Guardar como PDF*). One layout, `lib/print-table.ts`, and
+no PDF library. On paper a date reads dd-MM-yyyy and a value the file writes in a form meant for
+re-import (inventory's `all`) is said in words.

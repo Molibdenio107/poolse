@@ -7,6 +7,8 @@ import type { PoolAnalysis } from '@/lib/api';
 import type { Excursion } from '@/lib/water';
 import { excursionText } from '@/lib/excursion-text';
 import { toCsv } from '@/lib/csv';
+import { formatDate, formatStamp } from '@/lib/date-format';
+import { printableTable } from '@/lib/print-table';
 import { formatReading } from '@/lib/pool-metrics';
 
 /**
@@ -114,6 +116,9 @@ export function UnsafeWaterNotice({
  * The PDF report is for sending to the câmara; this is for the person who wants
  * the numbers in Excel. Same CSV conventions as the inventory export — a BOM so
  * Excel reads UTF-8, semicolons because the decimal separator here is a comma.
+ *
+ * Beside it, the same rows as a page to print or save as PDF (12 October 2026):
+ * the list as it stands, where the report above is the document for the câmara.
  */
 export function ExportAnalyses({
   analyses,
@@ -127,26 +132,44 @@ export function ExportAnalyses({
   metrics: { key: string; label: string; unit: string }[];
   headers: { takenAt: string; notes: string; export: string };
 }): React.ReactElement {
-  const download = (): void => {
-    const rows: (string | number | null)[][] = [
-      [
-        headers.takenAt,
-        ...metrics.map((metric) => `${metric.label} (${metric.unit})`),
-        headers.notes,
-      ],
-      ...analyses.map((analysis) => [
-        analysis.takenAt,
-        ...metrics.map(
-          (metric) =>
-            analysis.values.find((value) => value.metric === metric.key)?.value ?? '',
-        ),
-        analysis.notes ?? '',
-      ]),
-    ];
+  const t = useTranslations();
+  const locale = useLocale();
 
+  const head = [
+    headers.takenAt,
+    ...metrics.map((metric) => `${metric.label} (${metric.unit})`),
+    headers.notes,
+  ];
+
+  /*
+   * The one row builder, for both shapes. What differs is how an instant and a
+   * reading are *written*: the CSV keeps the raw ISO instant and the raw number
+   * so a spreadsheet can sort and sum them, and the printed page writes them for
+   * a person — `dd-MM-yyyy HH:mm` and the reader's decimal mark.
+   */
+  const rowsFor = (
+    when: (iso: string) => string,
+    reading: (value: number) => string,
+  ): string[][] =>
+    analyses.map((analysis) => [
+      when(analysis.takenAt),
+      ...metrics.map((metric) => {
+        const found = analysis.values.find((value) => value.metric === metric.key);
+        return found === undefined ? '' : reading(found.value);
+      }),
+      analysis.notes ?? '',
+    ]);
+
+  const download = (): void => {
     // `toCsv` carries the byte-order mark, the semicolons and the CRLF, and is
     // the only thing in the app allowed to write a CSV cell — see `lib/csv.ts`.
-    const csv = toCsv(rows.map((row) => row.map((value) => String(value ?? ''))));
+    const csv = toCsv([
+      head,
+      ...rowsFor(
+        (iso) => iso,
+        (value) => String(value),
+      ),
+    ]);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
 
@@ -161,13 +184,46 @@ export function ExportAnalyses({
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
+  /*
+   * The same rows as a page to print — `lib/print-table.ts`, the helper every
+   * list export's `format=pdf` uses. Built here rather than by a route because
+   * the rows already are here: the readings are on the page, and a route would
+   * be a second way of fetching them.
+   *
+   * Opened from a blob in a new tab. Not `noopener`: a blob URL belongs to the
+   * page that made it, and the page it holds is ours. Revoked after a minute,
+   * which is long after the tab has read it.
+   */
+  const print = (): void => {
+    const html = printableTable({
+      locale,
+      title: t('export.pdf.analysesTitle', { pool: poolName }),
+      subtitle: t('export.pdf.count', { count: analyses.length }),
+      headers: head,
+      rows: rowsFor(
+        (iso) => formatStamp(iso),
+        (value) => formatReading(value, locale),
+      ),
+      printedOn: t('export.pdf.printedOn', { date: formatDate(new Date()) }),
+      printLabel: t('export.pdf.printLabel'),
+      emptyLabel: t('export.pdf.empty'),
+    });
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
+  const button =
+    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+
   return (
-    <button
-      type="button"
-      onClick={download}
-      className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-    >
-      {headers.export}
-    </button>
+    <>
+      <button type="button" onClick={download} className={button}>
+        {headers.export}
+      </button>
+      <button type="button" onClick={print} className={button}>
+        {t('export.pdf.exportAction')}
+      </button>
+    </>
   );
 }

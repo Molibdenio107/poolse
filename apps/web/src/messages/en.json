@@ -4149,5 +4149,20 @@
   },
   "import": {
     "pdfDisabled": "Reading PDFs is not switched on here. Export the document to Excel or CSV from the program it came from — or ask for PDF reading to be switched on."
+  },
+  "export": {
+    "pdf": {
+      "option": "PDF",
+      "exportAction": "Export as PDF",
+      "printLabel": "Print or save as PDF",
+      "printedOn": "Printed on {date}",
+      "empty": "There is nothing to show.",
+      "count": "{count, plural, =0 {No rows} one {# row} other {# rows}}",
+      "capped": "The first {shown} of {total}",
+      "search": "Search: “{term}”",
+      "level": "Level: {name}",
+      "site": "Facility: {name}",
+      "analysesTitle": "Water analyses — {pool}"
+    }
   }
 }

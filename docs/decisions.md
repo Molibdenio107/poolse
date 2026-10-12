@@ -1028,3 +1028,10 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   it is an overview), and so does the calendar. **Site cards on Instalações show tanks only** (Rui's
   call): Espaços and Fotografias live on the site's own tabs. The unsafe-water warning is drawn
   above the tank's pills, because a safety warning must not depend on which section is open.
+- **2026-10-12** — **Four calls from Rui.** (1) **With several tanks, no tank is chosen by default**
+  on the calendar or at reception; one tank is taken. (2) **A closure may warn the families it
+  affects**: only those with a lesson it cancelled, through an optional tick box and a confirmed
+  count, recorded in Mensagens (`closure` audience). (3) **PDF of a list or a document is a print
+  page** saved from the browser, not a generated file: one layout, no library. (4) **List importers
+  take a PDF** (alunos, horário, parcerias, salários, inventário) through one AI table reader
+  that turns it into spreadsheet rows. It is off by default and metered.

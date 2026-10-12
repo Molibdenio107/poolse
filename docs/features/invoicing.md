@@ -170,3 +170,9 @@ the payer has no account until the student app. `student_fee_payment` is still w
 *fee period* is marked, separately from a document; joining the two is work nobody has asked
 for yet. The ATCUD, the QR code and the SAF-T export arrive with certification, if it is ever
 pursued.
+
+## PDF — 12 October 2026
+
+A document's page has a **PDF** link. It opens the document laid out for A4 in a new tab and
+brings up the print dialog, where *Guardar como PDF* saves it. The printout shows what the
+screen shows, including the notice that it is an internal record and not a legal fatura.

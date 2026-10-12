@@ -358,17 +358,21 @@ export function InventoryPanel({
                 aria-label={t('students.export.formatLabel')}
                 className="absolute left-0 top-full z-20 mt-1 flex min-w-full flex-col rounded border border-border bg-surface py-1 shadow-lg"
               >
-                {(['xlsx', 'csv'] as const).map((choice) => (
+                {/* The PDF is a page rather than a file, so it opens in its own tab. */}
+                {(['xlsx', 'csv', 'pdf'] as const).map((choice) => (
                   <a
                     key={choice}
                     role="menuitem"
                     href={`${exportHref}&format=${choice}`}
+                    {...(choice === 'pdf' ? { target: '_blank', rel: 'noopener' } : {})}
                     onClick={() => setFormats(false)}
                     className="whitespace-nowrap px-4 py-2 text-left text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {choice === 'xlsx'
                       ? t('students.export.formatXlsx')
-                      : t('students.export.formatCsv')}
+                      : choice === 'csv'
+                        ? t('students.export.formatCsv')
+                        : t('export.pdf.option')}
                   </a>
                 ))}
               </div>

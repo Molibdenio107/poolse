@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
-import { Download, Plus, Upload } from 'lucide-react';
+import { Download, Plus, Printer, Upload } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { formatCents } from '@/lib/money';
 import type { PartnerRow, PartnerType } from '@/lib/api';
@@ -135,6 +135,16 @@ export function PartnersPanel({
               >
                 <Download className="size-4" aria-hidden />
                 {t('partnerImport.exportCsv')}
+              </a>
+              {/* A page rather than a file, so its own tab. */}
+              <a
+                href={`/dashboard/facilities/${facilityId}/partners/export?format=pdf`}
+                target="_blank"
+                rel="noopener"
+                className={BUTTON_QUIET}
+              >
+                <Printer className="size-4" aria-hidden />
+                {t('export.pdf.option')}
               </a>
             </>
           )}
