@@ -53,3 +53,9 @@ Enforced by the API; the menu entry and the composer's options only follow it.
   its words and the record of who received it stay. Recipient names and addresses are as they
   were when sent, so a guardian unlinked since still shows as told.
 - **Not built** (phase 3.0): push, SMS, replies, scheduling, attachments, per-person preferences.
+
+## Written from a closure — 12 October 2026
+
+A closure can send its own message (`closure` audience, `message.closure_id`). It reaches the
+families of turmas with a lesson that closure cancelled. It is never offered in the composer;
+it is sent from the closure dialog in Encerramentos (`calendar.md`).

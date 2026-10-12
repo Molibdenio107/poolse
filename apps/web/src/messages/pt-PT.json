@@ -2696,7 +2696,27 @@
     "freeSwimTitleRequired": "Indique um nome com até 60 caracteres.",
     "freeSwimDraftSeason": "Natação livre só se reserva na época publicada.",
     "choosePool": "Escolha uma piscina",
-    "choosePoolHint": "Escolha uma piscina acima para ver a semana."
+    "choosePoolHint": "Escolha uma piscina acima para ver a semana.",
+    "warn": {
+      "subjectDefault": "Piscina encerrada de {from} a {to}",
+      "bodyDefault": "Caras famílias,\n\nInformamos que a piscina estará encerrada de {from} a {to} ({reason}). As aulas destes dias não se realizam.\n\nPedimos desculpa pelo incómodo.",
+      "label": "Avisar as famílias por email",
+      "hint": "Só as famílias das turmas que perdem uma aula com este encerramento. Antes de enviar, mostramos quantas são.",
+      "subject": "Assunto",
+      "body": "Mensagem",
+      "saveAndCount": "Guardar e ver quem recebe",
+      "closureSaved": "O encerramento está guardado e as aulas destes dias foram canceladas.",
+      "counting": "A contar as famílias afetadas…",
+      "countFailed": "Não foi possível saber quem recebe o aviso. O encerramento ficou guardado; pode escrever às famílias em Alunos → Mensagens.",
+      "nobody": "Nenhuma turma com alunos perdeu uma aula com este encerramento — não há famílias a avisar.",
+      "reaches": "O aviso chega a {addresses, plural, one {1 endereço} other {# endereços}} de {students, plural, one {1 aluno} other {# alunos}}.",
+      "unreachable": "{count, plural, one {1 aluno não tem} other {# alunos não têm}} email registado: {names}.",
+      "notSent": "Ainda não há envio de email configurado: a mensagem fica registada em Mensagens, mas não sai.",
+      "send": "Enviar aviso",
+      "dontSend": "Não enviar",
+      "sent": "Aviso registado em Mensagens.",
+      "wordsRequired": "Escreva o assunto e a mensagem."
+    }
   },
   "inventory": {
     "title": "Inventário",
@@ -3941,7 +3961,8 @@
       "class_group": "Uma turma",
       "level": "Um nível",
       "facility": "Uma instalação",
-      "organization": "Todo o clube"
+      "organization": "Todo o clube",
+      "closure": "Encerramento"
     },
     "field": {
       "audience": "Para",

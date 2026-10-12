@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MessagesController } from './messages.controller.js';
+import { ClosuresController } from '../classes/sessions.controller.js';
 import { deliverMessage } from './delivery.js';
 import {
   actingAs,
@@ -612,6 +613,53 @@ test("67 — another club's turma and messages are out of reach", async () => {
         await expectStatus(() => controller.archive(bMessage), 404);
         assert.equal((await controller.list()).total, 0);
       });
+    });
+  });
+});
+
+test('a closure writes to the families of the turmas it took a lesson from, and nobody else', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const tuesday = await turma(tenant, 'Terça');
+      const saturday = await turma(tenant, 'Sábado');
+      await student(tenant, 'Ana', { groupId: tuesday, email: 'ana.fecho@example.test' });
+      await student(tenant, 'Rui', { groupId: saturday, email: 'rui.fecho@example.test' });
+
+      // One lesson each, ten and thirteen days out; the closure covers only the first.
+      for (const [group, days] of [[tuesday, 10], [saturday, 13]] as const) {
+        await tenant.sql(
+          `INSERT INTO class_session
+             (organization_id, class_group_id, starts_at, duration_minutes, occurs_on)
+           VALUES ($1, $2, (current_date + $3::int) + time '10:00', 45, current_date + $3::int)`,
+          [tenant.organizationId, group, days],
+        );
+      }
+      const [day] = await tenant.sql<{ d: string }>(
+        `SELECT to_char(current_date + 10, 'YYYY-MM-DD') AS d`,
+      );
+      const { id: closureId } = await new ClosuresController().create({
+        startsOn: day!.d,
+        endsOn: day!.d,
+        reason: 'Avaria na caldeira',
+      });
+
+      const messages = new MessagesController();
+      const preview = await messages.send({ audience: 'closure', targetId: closureId });
+      assert.equal(preview.studentCount, 1, 'only the turma whose lesson was cancelled');
+      assert.equal(preview.addressCount, 1);
+
+      const sent = await messages.send({
+        audience: 'closure',
+        targetId: closureId,
+        subject: 'Piscina encerrada',
+        body: 'A aula desta semana não se realiza.',
+        commit: true,
+      });
+      const [row] = await tenant.sql<{ email: string }>(
+        `SELECT email::text FROM message_recipient WHERE message_id = $1`,
+        [sent.id],
+      );
+      assert.equal(row?.email, 'ana.fecho@example.test');
     });
   });
 });

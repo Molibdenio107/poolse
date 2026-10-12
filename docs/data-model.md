@@ -3480,3 +3480,12 @@ dashboard's classes and *sem professor*. Its `instructor_status` stays `to_defin
 shows it. Pass revenue is `freeSwimMonth` in `passes.repository.ts`: sale lines on invoices issued
 since the first of the club's month and not since credited. It is `actual` and is never summed
 with the mensalidades.
+
+### A closure's warning — 12 October 2026
+
+`message_audience` gains `closure`; `message.closure_id` (composite FK to `closure`, which gained
+`UNIQUE (organization_id, id)` for it) is set exactly for that audience, by
+`message_audience_target`. `message_recipients()` takes a sixth parameter, `p_closure_id` (default
+null). The closure branch is the students actively enrolled in a turma with a `class_session`
+whose `closure_id` is this closure. `apply_closure` stamps that when it cancels the session, so
+the recipients are exactly the lessons the closure took.

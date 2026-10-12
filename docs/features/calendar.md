@@ -401,3 +401,15 @@ are counted by check-in at reception, never by the block. The **Mostrar** list s
 *Natação livre*. It is offered only on the published season and only on that site's lanes,
 because a block with no turma takes its lessons from the published season whatever season it
 was drawn on.
+
+## Encerramentos: the dialog and the warning — 12 October 2026
+
+Drawing a range on the year grid opens a **dialog** (it used to be a card below the twelve months).
+It asks for the reason and the scope (whole site or one tank) and shows what the closure cancels.
+**Avisar as famílias por email** is an optional tick box with an editable subject and message,
+prefilled with the dates and the reason. On save the closure is created, which cancels its lessons.
+If the box was ticked, the dialog then says who the warning reaches: addresses, students, and
+anyone with no email, by name. It sends only on *Enviar aviso*. The recipients are the families
+(live guardians, else the adult student) of turmas that lost a lesson to this closure, and
+nobody else. Parcerias are never written to. The message is recorded in Alunos → Mensagens like
+any other, counts against the daily limit, and says plainly when email sending is not configured.

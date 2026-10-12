@@ -1,8 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiFetch, apiPost } from '../../../../../lib/api';
+import { ApiError, apiFetch, apiPost, type MessagePreview } from '../../../../../lib/api';
 import type { FormState } from '../../actions';
+
+/** A saved closure hands back its id, so the dialog can warn its families. */
+export interface ClosureState extends FormState {
+  closureId?: string;
+}
 
 /**
  * Encerramentos — POOLSE-31.
@@ -11,17 +16,18 @@ import type { FormState } from '../../actions';
  * shows a class has to be revalidated, not only this page.
  */
 export async function createClosureAction(
-  _previous: FormState,
+  _previous: ClosureState,
   formData: FormData,
-): Promise<FormState> {
+): Promise<ClosureState> {
   const organizationId = String(formData.get('organizationId') ?? '');
   const text = (field: string): string => String(formData.get(field) ?? '').trim();
 
   const reason = text('reason');
   if (reason === '') return { ok: false, fields: { reason: 'calendar.reasonRequired' } };
 
+  let created: { id: string };
   try {
-    await apiPost(
+    created = await apiPost<{ id: string }>(
       '/closures',
       {
         startsOn: text('startsOn'),
@@ -60,6 +66,67 @@ export async function createClosureAction(
   }
 
   revalidateEverythingShowingClasses();
+  return { ok: true, closureId: created.id };
+}
+
+/**
+ * Who a closure's warning would reach — the families of turmas it took a lesson
+ * from. The same `/messages` preview the composer uses, with the `closure`
+ * audience, so the count confirmed is the count the send resolves. Null when
+ * the count could not be had, which the dialog says.
+ */
+export async function previewClosureWarning(
+  organizationId: string,
+  closureId: string,
+): Promise<MessagePreview | null> {
+  try {
+    return await apiPost<MessagePreview>(
+      '/messages',
+      { audience: 'closure', targetId: closureId },
+      { organizationId },
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function sendClosureWarning(
+  organizationId: string,
+  closureId: string,
+  subject: string,
+  body: string,
+): Promise<{ ok: true } | { ok: false; errorKey: string; values?: Record<string, number> }> {
+  try {
+    await apiPost(
+      '/messages',
+      { audience: 'closure', targetId: closureId, subject, body, commit: true },
+      { organizationId },
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'message_quota') {
+      const quota = (error.details as { messageQuota?: Record<string, unknown> } | null)
+        ?.messageQuota;
+      const limit = Number(quota?.['limit']);
+      const used = Number(quota?.['used']);
+      const requested = Number(quota?.['requested']);
+      return {
+        ok: false,
+        errorKey:
+          quota?.['kind'] === 'addresses'
+            ? 'messages.error.quotaAddresses'
+            : 'messages.error.quotaMessages',
+        values: { limit, used, requested, left: Math.max(limit - used, 0) },
+      };
+    }
+    if (error instanceof ApiError && error.code === 'no_recipients') {
+      return { ok: false, errorKey: 'messages.error.noRecipients' };
+    }
+    if (error instanceof ApiError && error.status === 400) {
+      return { ok: false, errorKey: 'calendar.warn.wordsRequired' };
+    }
+    return { ok: false, errorKey: 'messages.error.sendFailed' };
+  }
+  revalidatePath('/dashboard/students/messages');
   return { ok: true };
 }
 

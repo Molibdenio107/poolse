@@ -224,11 +224,14 @@ export function TextAreaField({
   placeholder,
   maxLength,
   className,
+  onValueChange,
 }: Common & {
   initial?: string;
   rows?: number;
   placeholder?: string;
   maxLength?: number;
+  /** Told about every change, for a form that must read the text before submit. */
+  onValueChange?: (value: string) => void;
 }): React.ReactElement {
   const id = useId();
   const [value, setValue] = useSeeded(initial);
@@ -247,7 +250,10 @@ export function TextAreaField({
         name={name}
         rows={rows}
         value={value}
-        onChange={(event) => setValue(event.target.value)}
+        onChange={(event) => {
+          setValue(event.target.value);
+          onValueChange?.(event.target.value);
+        }}
         required={required}
         placeholder={placeholder}
         maxLength={maxLength}

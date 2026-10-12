@@ -5,11 +5,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, X } from 'lucide-react';
-import type { Closure } from '@/lib/api';
+import { Dialog } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/toast';
+import type { Closure, MessagePreview } from '@/lib/api';
 import { YearGrid, type DayState } from '@/components/year-grid';
-import { CONTROL_LINE, FIELD_LABEL, TextField } from '@/components/ui/field';
+import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../../actions';
-import { createClosureAction, impactAction, removeClosureAction } from './closures.actions';
+import {
+  createClosureAction,
+  impactAction,
+  previewClosureWarning,
+  removeClosureAction,
+  sendClosureWarning,
+  type ClosureState,
+} from './closures.actions';
 import { formatDate } from '@/lib/date-format';
 
 /**
@@ -37,6 +46,7 @@ import { formatDate } from '@/lib/date-format';
  */
 
 const INITIAL: FormState = { ok: false };
+const INITIAL_CLOSURE: ClosureState = { ok: false };
 
 /** Inclusive, and tolerant of the two clicks arriving in either order. */
 function rangeOf(a: string, b: string): [string, string] {
@@ -317,10 +327,20 @@ function Legend(): React.ReactElement {
 }
 
 /**
- * Naming the range, and saying what it will cost.
+ * Naming the range, saying what it will cost, and — if asked — telling the
+ * families. A dialog since 12 October 2026 (Rui): the card under the year grid
+ * sat below the fold of a twelve-month calendar, so the range was drawn in one
+ * place and named somewhere you had to scroll to.
  *
- * The impact is fetched when the form opens rather than as the range is drawn:
- * one request per confirmed range instead of one per day hovered.
+ * **Two steps when the families are warned.** The closure is saved first: it
+ * is what cancels the lessons, and the warning is addressed to exactly the
+ * turmas it cancelled (the `closure` message audience). Then the dialog asks
+ * the server who that reaches and sends only on a second, explicit press — the
+ * same count-then-confirm the Mensagens composer uses, through the same
+ * endpoint, so it lands in Mensagens as a record of who was told.
+ *
+ * The impact is fetched when the dialog opens rather than as the range is
+ * drawn: one request per confirmed range instead of one per day hovered.
  */
 function ClosureForm({
   organizationId,
@@ -337,7 +357,8 @@ function ClosureForm({
   onDone: () => void;
 }): React.ReactElement {
   const t = useTranslations();
-  const [state, action, saving] = useSavedAction(createClosureAction, INITIAL);
+  const { show } = useToast();
+  const [state, action, saving] = useSavedAction(createClosureAction, INITIAL_CLOSURE);
   /*
    * Loading, failed or answered — three states, not one null for two —
    * October 2026 sweep. A check that failed rendered exactly like one still
@@ -347,6 +368,29 @@ function ClosureForm({
   const [impact, setImpact] = useState<
     'loading' | 'failed' | { sessions: number; marked: number }
   >('loading');
+
+  // Controlled, like every field here — an uncontrolled select reverts after
+  // the action returns (POOLSE-09/10).
+  const [poolId, setPoolId] = useState(prefill?.poolId ?? '');
+  const [reason, setReason] = useState(prefill?.reason ?? '');
+  const [warn, setWarn] = useState(false);
+  const from = formatDate(range[0]);
+  const to = formatDate(range[1]);
+  const [subject, setSubject] = useState(() => t('calendar.warn.subjectDefault', { from, to }));
+  const [body, setBody] = useState('');
+
+  // The second step: who the warning reaches, then the send.
+  const [warning, setWarning] = useState<
+    | { step: 'counting'; closureId: string }
+    | { step: 'failed'; closureId: string }
+    | { step: 'confirm'; closureId: string; preview: MessagePreview }
+    | null
+  >(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<{
+    key: string;
+    values?: Record<string, number>;
+  } | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -358,107 +402,240 @@ function ClosureForm({
     };
   }, [organizationId, range[0], range[1]]);
 
+  // The body is written from the reason when the box is ticked, and is then the
+  // operator's own to change — never rewritten under them afterwards.
+  function toggleWarn(on: boolean): void {
+    setWarn(on);
+    if (on && body === '') {
+      setBody(t('calendar.warn.bodyDefault', { from, to, reason: reason.trim() }));
+    }
+  }
+
   // After the render, not during it: closing this form updates the parent.
   const seen = useRef(state);
   useEffect(() => {
     if (seen.current === state) return;
     seen.current = state;
-    if (state.ok) onDone();
-  }, [state, onDone]);
+    if (!state.ok) return;
+    if (!warn || state.closureId === undefined) {
+      onDone();
+      return;
+    }
+    const closureId = state.closureId;
+    setWarning({ step: 'counting', closureId });
+    void previewClosureWarning(organizationId, closureId).then((preview) =>
+      setWarning(
+        preview === null
+          ? { step: 'failed', closureId }
+          : { step: 'confirm', closureId, preview },
+      ),
+    );
+  }, [state, onDone, warn, organizationId]);
+
+  async function send(closureId: string): Promise<void> {
+    setSending(true);
+    setSendError(null);
+    const result = await sendClosureWarning(organizationId, closureId, subject, body);
+    setSending(false);
+    if (!result.ok) {
+      setSendError({
+        key: result.errorKey,
+        ...(result.values === undefined ? {} : { values: result.values }),
+      });
+      return;
+    }
+    show('success', t('calendar.warn.sent'));
+    onDone();
+  }
+
+  const BUTTON =
+    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60';
+  const BUTTON_QUIET =
+    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border';
+  const sendable = warning?.step === 'confirm' && warning.preview.addressCount > 0;
 
   return (
-    <form
-      action={action}
-      className="flex flex-col gap-4 rounded border border-primary/40 bg-surface p-5"
+    <Dialog
+      open
+      onClose={onDone}
+      title={t('calendar.closeFrom', { from, to })}
+      closeLabel={t('common.cancel')}
     >
-      <input type="hidden" name="organizationId" value={organizationId} />
-      <input type="hidden" name="startsOn" value={range[0]} />
-      <input type="hidden" name="endsOn" value={range[1]} />
+      {warning === null ? (
+        <form action={action} className="flex flex-col gap-4">
+          <input type="hidden" name="organizationId" value={organizationId} />
+          <input type="hidden" name="startsOn" value={range[0]} />
+          <input type="hidden" name="endsOn" value={range[1]} />
+          <input type="hidden" name="poolId" value={poolId} />
 
-      <h2 className="font-medium">
-        {t('calendar.closeFrom', { from: formatDate(range[0]), to: formatDate(range[1]) })}
-      </h2>
+          {/*
+            Criterion 10. A register already taken means somebody stood at the
+            poolside and wrote it down; they are told before the closure is made,
+            not after.
+          */}
+          {impact === 'failed' && (
+            <p className="text-sm text-warning">{t('calendar.impactUnknown')}</p>
+          )}
+          {typeof impact === 'object' && impact.marked > 0 && (
+            <p className="flex items-start gap-2 rounded border border-warning/40 bg-warning/10 p-3 text-sm">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+              {t('calendar.impactMarked', { marked: impact.marked, sessions: impact.sessions })}
+            </p>
+          )}
+          {typeof impact === 'object' && impact.marked === 0 && impact.sessions > 0 && (
+            <p className="text-sm text-foreground-muted">
+              {t('calendar.impactSessions', { count: impact.sessions })}
+            </p>
+          )}
 
-      {/*
-        Criterion 10. A register already taken means somebody stood at the
-        poolside and wrote it down; they are told before the closure is made, not
-        after.
-      */}
-      {impact === 'failed' && (
-        <p className="text-sm text-warning">{t('calendar.impactUnknown')}</p>
-      )}
+          {/*
+            Seeded, not fixed. An operator arriving from a water warning gets the
+            sentence about the failed reading already written, and can rewrite
+            every word of it — they are the one who knows why the pool is shut.
+          */}
+          <TextField
+            name="reason"
+            label={t('calendar.closureReason')}
+            placeholder={t('calendar.closureReasonPlaceholder')}
+            initial={reason}
+            onValueChange={setReason}
+            required
+            maxLength={200}
+            error={state.fields?.['reason'] === undefined ? undefined : t(state.fields['reason'])}
+            className="max-w-none"
+          />
 
-      {typeof impact === 'object' && impact.marked > 0 && (
-        <p className="flex items-start gap-2 rounded border border-warning/40 bg-warning/10 p-3 text-sm">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
-          {t('calendar.impactMarked', { marked: impact.marked, sessions: impact.sessions })}
-        </p>
-      )}
+          {pools.length > 0 && (
+            <SelectField
+              name="poolChoice"
+              label={t('calendar.closureScope')}
+              initial={poolId}
+              onValueChange={setPoolId}
+              options={[
+                { value: '', label: t('calendar.wholeSite') },
+                ...pools.map((pool) => ({ value: pool.id, label: pool.name })),
+              ]}
+              className="max-w-none"
+            />
+          )}
 
-      {typeof impact === 'object' && impact.marked === 0 && impact.sessions > 0 && (
-        <p className="text-sm text-foreground-muted">
-          {t('calendar.impactSessions', { count: impact.sessions })}
-        </p>
-      )}
+          <p className="text-sm text-foreground-muted">{t('calendar.closureEffect')}</p>
 
-      <div className="flex flex-wrap gap-3">
-        {/*
-          Seeded, not fixed. An operator arriving from a water warning gets the
-          sentence about the failed reading already written — it is what makes
-          the calendar still explain itself in six months — and can rewrite every
-          word of it, because they are the one who knows why the pool is shut.
-        */}
-        <TextField
-          name="reason"
-          label={t('calendar.closureReason')}
-          placeholder={t('calendar.closureReasonPlaceholder')}
-          initial={prefill?.reason ?? ''}
-          required
-          maxLength={200}
-          error={state.fields?.['reason'] === undefined ? undefined : t(state.fields['reason'])}
-          className="min-w-56 flex-1"
-        />
-
-        {pools.length > 0 && (
-          <label className="flex flex-col gap-2">
-            <span className={FIELD_LABEL}>{t('calendar.closureScope')}</span>
-            <select
-              name="poolId"
-              defaultValue={prefill?.poolId ?? ''}
-              className={CONTROL_LINE}
-            >
-              <option value="">{t('calendar.wholeSite')}</option>
-              {pools.map((pool) => (
-                <option key={pool.id} value={pool.id}>
-                  {pool.name}
-                </option>
-              ))}
-            </select>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={warn}
+              onChange={(event) => toggleWarn(event.target.checked)}
+              className="mt-0.5 size-4"
+            />
+            <span>
+              <span className="font-medium">{t('calendar.warn.label')}</span>
+              <span className="block text-foreground-muted">{t('calendar.warn.hint')}</span>
+            </span>
           </label>
-        )}
-      </div>
 
-      <p className="text-sm text-foreground-muted">{t('calendar.closureEffect')}</p>
+          {warn && (
+            <div className="flex flex-col gap-3 rounded border border-border p-3">
+              <TextField
+                name="warnSubject"
+                label={t('calendar.warn.subject')}
+                initial={subject}
+                onValueChange={setSubject}
+                maxLength={200}
+                className="max-w-none"
+              />
+              <TextAreaField
+                name="warnBody"
+                label={t('calendar.warn.body')}
+                initial={body}
+                onValueChange={setBody}
+                rows={5}
+                maxLength={10000}
+                className="max-w-none"
+              />
+            </div>
+          )}
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60"
-        >
-          {saving ? t('common.working') : t('calendar.addClosure')}
-        </button>
-        <button type="button" onClick={onDone} className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border">
-          {t('common.cancel')}
-        </button>
-      </div>
+          {state.errorKey !== undefined && (
+            <p className="text-sm text-danger">
+              {t(state.errorKey, { existing: state.detail ?? '' })}
+            </p>
+          )}
 
-      {state.errorKey !== undefined && (
-        <p className="text-sm text-danger">
-          {t(state.errorKey, { existing: state.detail ?? '' })}
-        </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={saving || (warn && (subject.trim() === '' || body.trim() === ''))}
+              className={BUTTON}
+            >
+              {saving
+                ? t('common.working')
+                : warn
+                  ? t('calendar.warn.saveAndCount')
+                  : t('calendar.addClosure')}
+            </button>
+            <button type="button" onClick={onDone} className={BUTTON_QUIET}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-success">{t('calendar.warn.closureSaved')}</p>
+
+          {warning.step === 'counting' && (
+            <p className="text-sm text-foreground-muted">{t('calendar.warn.counting')}</p>
+          )}
+          {warning.step === 'failed' && (
+            <p className="text-sm text-danger">{t('calendar.warn.countFailed')}</p>
+          )}
+          {warning.step === 'confirm' && warning.preview.studentCount === 0 && (
+            <p className="text-sm">{t('calendar.warn.nobody')}</p>
+          )}
+          {warning.step === 'confirm' && warning.preview.studentCount > 0 && (
+            <>
+              <p className="text-sm">
+                {t('calendar.warn.reaches', {
+                  addresses: warning.preview.addressCount,
+                  students: warning.preview.studentCount,
+                })}
+              </p>
+              {warning.preview.unreachable.length > 0 && (
+                <p className="text-sm text-warning">
+                  {t('calendar.warn.unreachable', {
+                    count: warning.preview.unreachable.length,
+                    names: warning.preview.unreachable.map((one) => one.name).join(', '),
+                  })}
+                </p>
+              )}
+              {!warning.preview.emailConfigured && (
+                <p className="text-sm text-foreground-muted">{t('calendar.warn.notSent')}</p>
+              )}
+            </>
+          )}
+
+          {sendError !== null && (
+            <p className="text-sm text-danger">{t(sendError.key, sendError.values ?? {})}</p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {sendable && (
+              <button
+                type="button"
+                disabled={sending}
+                onClick={() => void send(warning.closureId)}
+                className={BUTTON}
+              >
+                {sending ? t('common.working') : t('calendar.warn.send')}
+              </button>
+            )}
+            <button type="button" onClick={onDone} className={BUTTON_QUIET}>
+              {sendable ? t('calendar.warn.dontSend') : t('common.close')}
+            </button>
+          </div>
+        </div>
       )}
-    </form>
+    </Dialog>
   );
 }
 
@@ -515,7 +692,7 @@ function ClosureList({
 
           <span className="flex items-center gap-3 text-sm text-foreground-muted">
             {closure.startsOn === closure.endsOn
-              ? closure.startsOn
+              ? formatDate(closure.startsOn)
               : `${formatDate(closure.startsOn)} — ${formatDate(closure.endsOn)}`}
             {canManage && (
               <RemoveClosure

@@ -2696,7 +2696,27 @@
     "freeSwimTitleRequired": "Enter a name of up to 60 characters.",
     "freeSwimDraftSeason": "Free swim can only be held in the published season.",
     "choosePool": "Choose a pool",
-    "choosePoolHint": "Choose a pool above to see the week."
+    "choosePoolHint": "Choose a pool above to see the week.",
+    "warn": {
+      "subjectDefault": "Pool closed from {from} to {to}",
+      "bodyDefault": "Dear families,\n\nThe pool will be closed from {from} to {to} ({reason}). Lessons on these days will not take place.\n\nWe apologise for the inconvenience.",
+      "label": "Warn the families by email",
+      "hint": "Only the families of classes that lose a lesson to this closure. Before sending, we show how many.",
+      "subject": "Subject",
+      "body": "Message",
+      "saveAndCount": "Save and see who receives it",
+      "closureSaved": "The closure is saved and lessons on these days are cancelled.",
+      "counting": "Counting the families affected…",
+      "countFailed": "Could not work out who receives the warning. The closure is saved; you can write to the families under Students → Messages.",
+      "nobody": "No class with students lost a lesson to this closure — there are no families to warn.",
+      "reaches": "The warning reaches {addresses, plural, one {1 address} other {# addresses}} for {students, plural, one {1 student} other {# students}}.",
+      "unreachable": "{count, plural, one {1 student has} other {# students have}} no email on record: {names}.",
+      "notSent": "No email sending is configured yet: the message is recorded under Messages but does not go out.",
+      "send": "Send warning",
+      "dontSend": "Don't send",
+      "sent": "Warning recorded under Messages.",
+      "wordsRequired": "Enter the subject and the message."
+    }
   },
   "inventory": {
     "title": "Inventory",
@@ -3941,7 +3961,8 @@
       "class_group": "A class group",
       "level": "A level",
       "facility": "A site",
-      "organization": "The whole club"
+      "organization": "The whole club",
+      "closure": "Closure"
     },
     "field": {
       "audience": "To",

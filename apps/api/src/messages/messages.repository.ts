@@ -22,13 +22,18 @@ import { TOTAL_COUNT, windowed, type PageQuery, type Paginated } from '../common
  * screens say so.
  */
 
-export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization';
+/**
+ * `closure` (12 October 2026) is the families of turmas a closure took a lesson
+ * from. It is written from the closure itself, never offered in the composer.
+ */
+export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure';
 
 export const MESSAGE_AUDIENCES: readonly MessageAudience[] = [
   'class_group',
   'level',
   'facility',
   'organization',
+  'closure',
 ];
 
 /** What a message is addressed to. `targetId` is null only for the whole club. */
@@ -113,13 +118,16 @@ export function quotaRefusal(error: unknown): QuotaRefusal | null {
   return { kind, limit: figures[0]!, used: figures[1]!, requested: figures[2]! };
 }
 
-/** The four columns `message_recipients()` takes after the organization. */
-function targetParams(target: MessageTarget): [string, string | null, string | null, string | null] {
+/** The five columns `message_recipients()` takes after the organization. */
+function targetParams(
+  target: MessageTarget,
+): [string, string | null, string | null, string | null, string | null] {
   return [
     target.audience,
     target.audience === 'class_group' ? target.targetId : null,
     target.audience === 'level' ? target.targetId : null,
     target.audience === 'facility' ? target.targetId : null,
+    target.audience === 'closure' ? target.targetId : null,
   ];
 }
 
@@ -138,7 +146,9 @@ export async function targetExists(organizationId: string, target: MessageTarget
       ? 'class_group'
       : target.audience === 'level'
         ? 'student_level'
-        : 'facility';
+        : target.audience === 'closure'
+          ? 'closure'
+          : 'facility';
 
   return withOrg(organizationId, async (tx) => {
     const { rowCount } = await tx.query(
@@ -159,7 +169,7 @@ export async function previewMessage(
       address_count: number;
       unreachable: UnreachableStudent[] | null;
     }>(
-      `WITH r AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5)),
+      `WITH r AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
             per_student AS (
               SELECT student_id, min(student_name) AS student_name,
                      bool_or(email IS NOT NULL) AS reachable
@@ -199,13 +209,13 @@ export async function sendMessage(
 ): Promise<{ id: string; addressCount: number }> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string | null; address_count: number }>(
-      `WITH r AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5)),
+      `WITH r AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
             n AS (SELECT count(DISTINCT email)::int AS address_count FROM r WHERE email IS NOT NULL),
             m AS (
               INSERT INTO message (organization_id, audience, class_group_id, level_id,
-                                   facility_id, subject, body, sent_by_membership_id,
-                                   address_count)
-              SELECT $1, $2::message_audience, $3, $4, $5, $6, $7, $8, n.address_count
+                                   facility_id, closure_id, subject, body,
+                                   sent_by_membership_id, address_count)
+              SELECT $1, $2::message_audience, $3, $4, $5, $6, $7, $8, $9, n.address_count
                 FROM n
                WHERE n.address_count > 0
               RETURNING id, address_count
@@ -256,8 +266,8 @@ interface SummaryRow {
 
 const SUMMARY_COLUMNS = `
   m.id, m.audience,
-  coalesce(m.class_group_id, m.level_id, m.facility_id) AS target_id,
-  coalesce(cg.name, lv.name, f.name) AS target_name,
+  coalesce(m.class_group_id, m.level_id, m.facility_id, m.closure_id) AS target_id,
+  coalesce(cg.name, lv.name, f.name, cl.reason) AS target_name,
   m.subject, m.sent_at,
   person_name(m.sent_by_membership_id) AS sent_by_name,
   m.address_count,
@@ -272,7 +282,8 @@ const SUMMARY_COLUMNS = `
 const SUMMARY_JOINS = `
   LEFT JOIN class_group cg ON cg.id = m.class_group_id AND cg.organization_id = m.organization_id
   LEFT JOIN student_level lv ON lv.id = m.level_id AND lv.organization_id = m.organization_id
-  LEFT JOIN facility f ON f.id = m.facility_id AND f.organization_id = m.organization_id`;
+  LEFT JOIN facility f ON f.id = m.facility_id AND f.organization_id = m.organization_id
+  LEFT JOIN closure cl ON cl.id = m.closure_id AND cl.organization_id = m.organization_id`;
 
 function toSummary(row: Omit<SummaryRow, 'total_count'>): MessageSummary {
   return {

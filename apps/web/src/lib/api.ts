@@ -3966,7 +3966,7 @@ export interface EnergyCostsWidgetData {
  * Messages to families — POOLSE-67
  * ------------------------------------------------------------------------- */
 
-export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization';
+export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure';
 
 export interface MessagePreview {
   studentCount: number;

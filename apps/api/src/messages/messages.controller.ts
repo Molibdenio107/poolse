@@ -181,7 +181,7 @@ function readTarget(body: Record<string, unknown>): MessageTarget {
   const audience = body['audience'];
   if (typeof audience !== 'string' || !MESSAGE_AUDIENCES.includes(audience as MessageAudience)) {
     throw new BadRequestException({
-      message: 'audience must be one of class_group, level, facility, organization',
+      message: 'audience must be one of class_group, level, facility, organization, closure',
       fields: { audience: 'messages.error.audienceRequired' },
     });
   }
