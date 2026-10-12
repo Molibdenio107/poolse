@@ -64,7 +64,7 @@ carries an action). The button calls the same restore endpoint with the archive 
 id, so there is no second code path. Archives done by a closure, by the trial clock or by
 any job without a person behind it never get a toast and are not offered in the bin.
 
-**Open — 1: which kinds in v1.** *Recommend:* student, turma (`class_group`), facility,
+**Answered 12-10-2026 (Rui) — 1: the recommended list.** Student, turma (`class_group`), facility,
 pool, space, inventory item, maintenance task, partner and fee line, the things an
 Owner/Admin archives from a screen today. Membership (staff) is **excluded** in v1:
 bringing a person back touches seats, Clerk and invitations, and "re-invite them" is
@@ -91,8 +91,8 @@ refuses a kind whose archive path does not record its cascade.
 - `POST /archive/:auditEntryId/restore`: one transaction; `recordAudit` inside it.
 - Both `requireRole('owner','admin')`.
 
-**Web:** *Arquivados* as a sidebar item for Owner/Admin (placement **Open — 2**; recommend
-under the user menu beside *O meu perfil*, not in the main nav). The undo button goes on
+**Web:** *Arquivados* as a sidebar item for Owner/Admin (placement **answered 12-10-2026
+(Rui) — 2**: under the user menu beside *O meu perfil*, not in the main nav). The undo button goes on
 `toast.tsx` as an optional `action`, so every archive site gets it by passing the entry id
 that `useSavedAction` already receives.
 
@@ -105,6 +105,34 @@ that `useSavedAction` already receives.
   separately.
 - Treating a 23505 as a 500.
 - A restore that skips `recordAudit`.
+
+### Build plan (12-10-2026)
+
+Found while reading the archive paths, and not in the text above:
+
+- **Action names are not uniform.** `inventory.item.archived` and `maintenance.taskArchived`
+  sit beside `student.archived`. So the bin reads each kind's own action from `RESTORABLE`,
+  never a `*.archived` pattern. The old names stay, because rewriting history would break
+  the audit log.
+- **Archiving a turma also ends its enrolments** (`status = 'ended'`, `ended_on = today`) and
+  archives its `class_schedule` rows. Restoring a turma must reopen exactly those enrolments
+  and those rows, so the cascade records them too. Afterwards `syncSeasonLessons` tops up
+  the lessons from today on, never the past.
+- **Facility → pool and partner → contacts/groups already cascade in SQL**, but nothing
+  lists the children. **Entries written before this ticket** have no `cascade`. Their
+  children are found by the same `archived_at`, because `now()` is the transaction's start
+  and so is identical across one archive. This fallback is for legacy entries only, and it
+  is exact for them.
+
+Three slices, each ending working:
+
+1. **API.** `RESTORABLE` and its assertion. Every v1 archive path writes its `cascade`. Then
+   `GET /archive` and `POST /archive/:id/restore` with the four 409s, the role-probe lines,
+   and QA 1–10 as integration tests.
+2. **Bin.** *Arquivados* under the user menu: list, filters, *Restaurar*, each refusal as a
+   sentence. pt-PT and en.
+3. **Undo.** An optional `action` on `toast.tsx`, passed through `useSavedAction` from
+   every v1 archive site. `docs/features/archive.md` and the `data-model.md` note.
 
 ### QA — test scenarios
 

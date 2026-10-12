@@ -1065,3 +1065,4 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   on" with past days kept. A period writes ordinary daily duties tagged with it, so the week
   view, the gap warning and the incident's lifeguard are unchanged and a single day can still
   be removed. A day the person already holds is skipped and counted, not a refusal.
+- **2026-10-12** — **POOLSE-78's bin restores the recommended kinds and lives in the user menu.** Rui: student, turma, site, tank, space, inventory item, maintenance task, partner and fee line. Staff and seasons are excluded, because bringing a person back touches seats, Clerk and invitations, and a season has its own lifecycle. *Arquivados* sits beside *O meu perfil* for Owner/Admin, not in the main nav.
