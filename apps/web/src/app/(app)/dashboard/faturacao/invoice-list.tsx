@@ -85,7 +85,7 @@ export function InvoiceList({
                       </span>
                     )}
                   </td>
-                  <td className="py-3">{invoice.payerName}</td>
+                  <td className="py-3">{invoice.payerName ?? t('invoices.finalConsumer')}</td>
                   <td className="py-3">
                     {formatDate(new Date(`${invoice.issuedOn}T12:00:00Z`))}
                   </td>

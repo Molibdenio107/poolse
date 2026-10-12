@@ -3,6 +3,7 @@ import {
   CalendarDays,
   CalendarRange,
   Camera,
+  ConciergeBell,
   GraduationCap,
   FileText,
   HeartPulse,
@@ -47,6 +48,9 @@ const ICONS = {
   medical: HeartPulse,
   // A bolt for the module about what running the site costs — 5.1.
   energy: Zap,
+  // The desk somebody walks up to — POOLSE-68. A bell rather than a ticket,
+  // because what happens there is a person arriving, not a document.
+  reception: ConciergeBell,
 } satisfies Record<string, LucideIcon>;
 
 export type EntityKind = keyof typeof ICONS;

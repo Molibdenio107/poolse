@@ -209,6 +209,18 @@ const SECTIONS: Item[] = [
    * admin only, and the endpoints refuse everybody else besides — a menu that is
    * merely absent is a URL somebody can still type.
    */
+  /*
+   * Receção — POOLSE-68. Free swim: sell an entry or a pack, check somebody in,
+   * see who is in the water. Owner and admin, because there is no reception
+   * role and the endpoints refuse everybody else.
+   */
+  {
+    href: '/dashboard/rececao',
+    key: 'reception.title',
+    icon: 'reception',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+  },
   {
     href: '/dashboard/faturacao',
     key: 'invoices.title',

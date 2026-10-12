@@ -3413,3 +3413,60 @@ and the block all read it. **The block is a BEFORE trigger on a new instructor v
 type with `blocks_assignment`, raising `qualification_blocked|<type>|<expired on>` in DETAIL.
 **Seeding is a trigger on the organization insert**, so `provision_organization` was not rewritten,
 and it never re-runs. `tenant-isolation.sql` test 25 asserts the person's composite key.
+
+### Free swim, passes and check-in — POOLSE-68, 12 October 2026
+
+```
+facility.free_swim_stay_minutes smallint not null default 90   -- 15..720
+
+enum pass_kind: single | pack | period
+
+pass_product                               -- what a site sells; one table, three shapes by CHECK
+  id, organization_id, facility_id         -- composite fk; unique (organization_id, facility_id, id)
+  kind pass_kind, name                     -- unique lower(name) per facility where archived_at is null
+  entries smallint                         -- pack only, 2..500
+  validity_days smallint                   -- required on period, optional on pack, null on single
+  amount_cents, vat_rate, vat_exempt       -- gross, VAT inside (docs/financials.md)
+  provenance money_provenance default 'contracted', CHECK <> 'actual'
+  amount_low_cents, amount_high_cents
+  archived_at, created_at, updated_at
+
+pass                                       -- one sold pass; SELECT and INSERT only
+  id, organization_id, facility_id, product_id   -- fk (organization_id, facility_id, product_id)
+  membership_id                            -- null only when kind = 'single'
+  kind, entries, valid_from date, valid_until date   -- snapshotted from the product at sale
+  sold_at, sold_by, created_at
+  constraint trigger pass_sold_on_a_line (deferred): an invoice line names it by commit
+
+invoice.payer_name                         -- now nullable: null exactly when both payer ids are
+invoice_line.pass_id                       -- fk pass; exactly one of student_fee_id, pass_id
+  student_id, student_fee_id, student_name, kind   -- now nullable; set iff student_fee_id is
+  unique (pass_id) where document_kind = 'invoice'
+
+pass_check_in                              -- one entry; SELECT, INSERT, UPDATE (checked_out_at, archived_at)
+  id, organization_id, pass_id, pool_id    -- composite fks
+  checked_in_at, checked_out_at, checked_in_by, archived_at
+  trigger pass_check_in_allowed (BEFORE INSERT)
+  trigger pass_check_in_no_restore (archived stays archived)
+
+view pass_current (security_invoker)       -- voided, entries_used, entries_left, expired
+function pool_occupancy(org, pool, at) -> (capacity, swimmers, in_classes)
+```
+
+**A sale is an invoice line.** `pass_id` sits beside `student_fee_id` the way that column
+attaches a fee. It is a column on the line rather than a reference on the pass, because the pass
+has to exist before the line can name it. A credit on the sale line is what `pass_current.voided`
+reads. The double-billing trigger ignores pass lines, since they have no fee occurrence.
+
+**Uses left, expiry and void are derived** in `pass_current`; there is no counter. A cancelled
+check-in (`archived_at`) gives its entry back and cannot be restored.
+
+**`pool_occupancy` is the one definition of who is in the water.** It counts check-ins inside
+the default stay or not yet checked out, plus classes running now: a turma counts its active
+enrolments, and a parceria counts `headcount_override`, else `participant_count`. The tank is
+the session's, else the turma's, else any lane the session sits in, and `class_group` is LEFT
+joined. The check-in trigger reads it under a lock on the pool row, after an advisory lock on
+the pass (a row lock needs an UPDATE grant, which `pass` does not have). It refuses with DETAIL
+`pool_occupancy|capacity|occupied|1`, `pass_used_up|entries`, `pass_expired|date`,
+`pass_not_yet|date`, `pass_void`, `pass_in_water` or `pass_wrong_site`.
+`tenant-isolation.sql` test 26 asserts the pass's and the check-in's composite keys.

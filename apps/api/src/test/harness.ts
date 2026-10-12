@@ -164,9 +164,14 @@ const TENANT_TABLES = [
    */
   // Settlement — 2.3. A payment and a chase each point at a document, so both
   // go before it.
+  // POOLSE-68. A check-in names a pass and a tank; a sale line names the pass,
+  // so the pass goes after `invoice_line` and its product after that.
+  'pass_check_in',
   'invoice_payment',
   'invoice_chase',
   'invoice_line',
+  'pass',
+  'pass_product',
   'invoice',
   'invoice_series',
   // A settlement points at a line, so it goes before it.

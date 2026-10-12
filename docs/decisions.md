@@ -1005,3 +1005,13 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   so the calendar stays the one picture of the pool and the lane rules keep turmas off public
   lanes), **and "in the water" is a default stay per site** (90 minutes unless the club changes it,
   with an early check-out at reception) rather than a check-out nobody remembers to record.
+- **2026-10-12** — **POOLSE-68 slice 1, built.** Four calls taken while building it. **(1) An
+  anonymous entry is an invoice with no payer**: `payer_name` is null exactly when both payer ids
+  are, and the interface prints *Consumidor final*. The phrase stays out of the document so it is
+  never frozen in one language. **(2) The payment is recorded with the sale**, because otherwise
+  every walk-in would be an overdue document on the chase list by morning. This is not a till:
+  there is still no cash-desk reconciliation. **(3) `invoice_line.pass_id`, not
+  `pass.invoice_line_id`**: the ticket named both, and the line-side reference matches how
+  `student_fee_id` attaches. A deferred constraint trigger keeps a pass from existing without its
+  sale. **(4) One person in the water per pass**, so a pass cannot be shared at the turnstile.
+  Reception is owner and admin until a reception role exists.

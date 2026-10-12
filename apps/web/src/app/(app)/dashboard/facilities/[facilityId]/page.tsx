@@ -20,6 +20,8 @@ import { HoursPanel } from './hours-panel';
 import { PricesPanel } from './prices-panel';
 import { listPrices } from './prices.actions';
 import { InsurancePanel } from './insurance-panel';
+import { PassesPanel } from './passes-panel';
+import { listPassProducts } from './passes.actions';
 import { listPolicies } from './insurance.actions';
 import { CategoriesPanel } from './categories-panel';
 import { listCategories } from './categories.actions';
@@ -138,7 +140,7 @@ export default async function FacilityPage({
     because a 500 is not a permission — it used to be the same null, and on a
     bad night an owner's Manutenção tab simply was not there.
   */
-  const [partners, spaces, tasks, meters, prices, categories, policies] = await Promise.all([
+  const [partners, spaces, tasks, meters, prices, categories, policies, passes] = await Promise.all([
     // Parcerias — POOLSE-47. Page 1; the panel pages itself.
     listPartners(facilityId, 1),
     // Espaços — round 6.
@@ -164,6 +166,8 @@ export default async function FacilityPage({
     listCategories(),
     // What the club pays its insurer is a commercial fact; the endpoint decides.
     listPolicies(facilityId),
+    // Natação livre — POOLSE-68. Owner and admin; the endpoint decides.
+    listPassProducts(facilityId),
   ]);
 
   // A record opened from a tab is sent back to that tab, not to General.
@@ -189,7 +193,8 @@ export default async function FacilityPage({
           visible:
             prices.state !== 'refused' ||
             categories.state !== 'refused' ||
-            policies.state !== 'refused',
+            policies.state !== 'refused' ||
+            passes.state !== 'refused',
           content: async () => {
             const register =
               prices.state === 'ok'
@@ -247,6 +252,20 @@ export default async function FacilityPage({
                     facilityId={facilityId}
                     policies={policies.data}
                     canManage={register?.canManage ?? false}
+                  />
+                )}
+
+                {/*
+                  Natação livre — POOLSE-68. What reception sells, priced like
+                  the rest of this tab, and the default stay that decides how
+                  long somebody counts as in the water.
+                */}
+                {passes.state === 'failed' && <PageError message={t(passes.failure.key)} />}
+                {passes.state === 'ok' && (
+                  <PassesPanel
+                    facilityId={facilityId}
+                    products={passes.data.products}
+                    stayMinutes={passes.data.stayMinutes}
                   />
                 )}
               </>

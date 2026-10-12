@@ -1453,4 +1453,60 @@ BEGIN
   RAISE NOTICE 'PASS test 25: a qualification cannot cross the tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 26 — a free-swim pass cannot belong to, or be used by, another club
+-- ---------------------------------------------------------------------------
+--
+-- `pass.membership_id` and `pass_check_in.pass_id` (POOLSE-68). Occupancy and
+-- the uses-remaining count both trust a check-in's pass and tank to be one club's.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid; v_product_a uuid; v_mem_b uuid; v_pool_b uuid; v_pass_a uuid; ok boolean;
+BEGIN
+  RESET ROLE;
+  SELECT id INTO v_fac_a FROM facility WHERE organization_id = v_a LIMIT 1;
+  SELECT id INTO v_mem_b FROM membership WHERE organization_id = v_b LIMIT 1;
+  SELECT id INTO v_pool_b FROM pool WHERE organization_id = v_b LIMIT 1;
+  IF v_fac_a IS NULL OR v_mem_b IS NULL OR v_pool_b IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 26: fixture is missing a facility, membership or pool';
+  END IF;
+
+  INSERT INTO pass_product (organization_id, facility_id, kind, name, entries, amount_cents)
+  VALUES (v_a, v_fac_a, 'pack', 'Teste 26', 10, 3000)
+  RETURNING id INTO v_product_a;
+
+  ok := false;
+  BEGIN
+    INSERT INTO pass (organization_id, facility_id, product_id, membership_id, kind, entries,
+                      valid_from)
+    VALUES (v_a, v_fac_a, v_product_a, v_mem_b, 'pack', 10, current_date);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 26: org A sold a pass to org B''s person'; END IF;
+
+  -- A single entry needs no owner, which is what lets the check-in half be asked.
+  SET CONSTRAINTS pass_sold_on_a_line DEFERRED;
+  INSERT INTO pass (organization_id, facility_id, product_id, kind, entries, valid_from,
+                    valid_until)
+  VALUES (v_a, v_fac_a, v_product_a, 'single', 1, current_date, current_date)
+  RETURNING id INTO v_pass_a;
+
+  ok := false;
+  BEGIN
+    INSERT INTO pass_check_in (organization_id, pass_id, pool_id)
+    VALUES (v_a, v_pass_a, v_pool_b);
+  EXCEPTION WHEN foreign_key_violation OR check_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 26: org A checked a pass into org B''s tank'; END IF;
+
+  -- The pass was never sold on a line; take it back out before the deferred
+  -- check runs at the end of the file's transaction.
+  DELETE FROM pass WHERE id = v_pass_a;
+
+  RAISE NOTICE 'PASS test 26: a free-swim pass cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;

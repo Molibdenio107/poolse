@@ -18,7 +18,9 @@ import type { InvoiceLine } from '@/lib/api';
 export function LineLabel({ line }: { line: InvoiceLine }): React.ReactElement {
   const t = useTranslations();
 
-  const parts = [t(`fees.kind.${line.kind}`)];
+  // A free-swim sale (POOLSE-68) has no fee kind; its description is the
+  // product's own name.
+  const parts = [line.kind === null ? t('invoices.freeSwim') : t(`fees.kind.${line.kind}`)];
   if (line.description !== null) parts.push(line.description);
 
   return (

@@ -3057,11 +3057,17 @@ export interface InvoiceSeries {
 
 export interface InvoiceLine {
   id: string | null;
-  studentId: string;
-  studentName: string;
+  /**
+   * The swimmer and the fee a line charges — all null on a free-swim sale
+   * (POOLSE-68), where `passId` is set instead and the person is the payer.
+   */
+  studentId: string | null;
+  studentName: string | null;
   studentTaxNumber: string | null;
-  studentFeeId: string;
-  kind: FeeKind;
+  studentFeeId: string | null;
+  kind: FeeKind | null;
+  /** The pass this line sold. Null on a fee line. */
+  passId: string | null;
   /**
    * The club's own words — a level's name, or a season's. Never the kind:
    * `kind` is an enum whose Portuguese is a translation key, so the sentence is
@@ -3102,7 +3108,8 @@ export interface Invoice {
   systemEntryAt: string;
   payerMembershipId: string | null;
   payerStudentId: string | null;
-  payerName: string;
+  /** Null only on an anonymous free-swim sale: "Consumidor final", said by the interface. */
+  payerName: string | null;
   payerTaxNumber: string | null;
   payerAddress: string | null;
   payerEmail: string | null;
@@ -3127,6 +3134,76 @@ export interface Invoice {
   lines?: InvoiceLine[];
   payments?: InvoicePayment[];
   chases?: InvoiceChase[];
+}
+
+// ---------------------------------------------------------------------------
+// Free swim — POOLSE-68
+// ---------------------------------------------------------------------------
+
+export type PassKind = 'single' | 'pack' | 'period';
+
+/** What a site sells at reception. Priced like a fee: gross, VAT inside. */
+export interface PassProduct {
+  id: string;
+  kind: PassKind;
+  name: string;
+  /** A pack's entries. Null for a single entry and a period pass. */
+  entries: number | null;
+  /** Days a sold pass is good for. Required on a period pass, optional on a pack. */
+  validityDays: number | null;
+  amountCents: number;
+  vatRate: number;
+  vatExempt: boolean;
+  provenance: 'actual' | 'contracted' | 'estimated' | 'assumed';
+  soldCount: number;
+}
+
+/** One tank right now. `capacity` null is "not measured" and refuses nothing. */
+export interface PoolOccupancy {
+  poolId: string;
+  poolName: string;
+  capacity: number | null;
+  swimmers: number;
+  inClasses: number;
+}
+
+export interface InWater {
+  checkInId: string;
+  passId: string;
+  poolId: string;
+  membershipId: string | null;
+  /** Null for an anonymous single entry. */
+  personName: string | null;
+  productName: string;
+  kind: PassKind;
+  checkedInAt: string;
+  leavesAt: string;
+}
+
+export interface Reception {
+  stayMinutes: number;
+  pools: PoolOccupancy[];
+  inWater: InWater[];
+  products: PassProduct[];
+}
+
+/** A sold pass, with everything about it derived on the server. */
+export interface Pass {
+  id: string;
+  productName: string;
+  kind: PassKind;
+  entries: number | null;
+  entriesUsed: number;
+  entriesLeft: number | null;
+  validFrom: string;
+  validUntil: string | null;
+  soldAt: string;
+  voided: boolean;
+  expired: boolean;
+  notYet: boolean;
+  inWater: boolean;
+  documentNo: string | null;
+  invoiceId: string | null;
 }
 
 export interface InvoiceDraft {

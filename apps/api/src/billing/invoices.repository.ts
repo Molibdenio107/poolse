@@ -99,11 +99,18 @@ export interface InvoiceSeries {
 export interface InvoiceLine {
   /** Null on a candidate — it has no row yet. */
   id: string | null;
-  studentId: string;
-  studentName: string;
+  /**
+   * The swimmer and the fee occurrence a line charges — or all four null on a
+   * free-swim sale (POOLSE-68), where `passId` is set instead and the person is
+   * the document's payer. Exactly one of `studentFeeId` and `passId`, by CHECK.
+   */
+  studentId: string | null;
+  studentName: string | null;
   studentTaxNumber: string | null;
-  studentFeeId: string;
-  kind: FeeKind;
+  studentFeeId: string | null;
+  kind: FeeKind | null;
+  /** The pass this line sold. Null on a fee line. */
+  passId: string | null;
   /**
    * The club's **own** words for this charge — the level's name, or the
    * season's. Null where the club has none.
@@ -154,7 +161,12 @@ export interface Invoice {
   systemEntryAt: string;
   payerMembershipId: string | null;
   payerStudentId: string | null;
-  payerName: string;
+  /**
+   * Null only on a document with no payer — an anonymous free-swim entry. The
+   * interface says "Consumidor final" in the reader's language; the document
+   * stores no words for it.
+   */
+  payerName: string | null;
   payerTaxNumber: string | null;
   payerAddress: string | null;
   payerEmail: string | null;
@@ -590,6 +602,7 @@ export async function runInvoices(
         studentName: row.student_name,
         studentTaxNumber: row.student_tax_number,
         studentFeeId: row.student_fee_id,
+        passId: null,
         kind: row.kind,
         description: row.description,
         feeCategoryName: row.fee_category_name,
@@ -819,7 +832,7 @@ interface InvoiceRow {
   system_entry_at: Date;
   payer_membership_id: string | null;
   payer_student_id: string | null;
-  payer_name: string;
+  payer_name: string | null;
   payer_tax_number: string | null;
   payer_address: string | null;
   payer_email: string | null;
@@ -965,11 +978,12 @@ export async function readInvoice(
 async function readLines(tx: Tx, invoiceId: string): Promise<InvoiceLine[]> {
   const { rows } = await tx.query<{
     id: string;
-    student_id: string;
-    student_name: string;
+    student_id: string | null;
+    student_name: string | null;
     student_tax_number: string | null;
-    student_fee_id: string;
-    kind: FeeKind;
+    student_fee_id: string | null;
+    pass_id: string | null;
+    kind: FeeKind | null;
     description: string | null;
     fee_category_name: string | null;
     lessons_per_week: number | null;
@@ -983,7 +997,7 @@ async function readLines(tx: Tx, invoiceId: string): Promise<InvoiceLine[]> {
     credits_invoice_line_id: string | null;
   }>(
     `SELECT l.id, l.student_id, l.student_name, l.student_tax_number, l.student_fee_id,
-            l.kind, l.description, l.fee_category_name, l.lessons_per_week,
+            l.pass_id, l.kind, l.description, l.fee_category_name, l.lessons_per_week,
             to_char(l.period_start, 'YYYY-MM-DD') AS period_start,
             l.months, l.amount_cents, l.vat_rate, l.vat_exempt, l.vat_exemption_reason,
             invoice_vat_cents(l.amount_cents, l.vat_rate) AS vat_cents,
@@ -1000,6 +1014,7 @@ async function readLines(tx: Tx, invoiceId: string): Promise<InvoiceLine[]> {
     studentName: row.student_name,
     studentTaxNumber: row.student_tax_number,
     studentFeeId: row.student_fee_id,
+    passId: row.pass_id,
     kind: row.kind,
     description: row.description,
     feeCategoryName: row.fee_category_name,
@@ -1045,7 +1060,7 @@ export async function creditInvoice(
       facility_id: string;
       payer_membership_id: string | null;
       payer_student_id: string | null;
-      payer_name: string;
+      payer_name: string | null;
       payer_tax_number: string | null;
       payer_address: string | null;
       payer_email: string | null;
@@ -1108,11 +1123,11 @@ export async function creditInvoice(
      */
     await tx.query(
       `INSERT INTO invoice_line
-         (organization_id, invoice_id, student_id, student_fee_id, credits_invoice_line_id,
-          student_name, student_tax_number, kind, description, fee_category_name,
+         (organization_id, invoice_id, student_id, student_fee_id, pass_id,
+          credits_invoice_line_id, student_name, student_tax_number, kind, description, fee_category_name,
           lessons_per_week, period_start, months, amount_cents, vat_rate, vat_exempt,
           vat_exemption_reason, sort_order)
-       SELECT l.organization_id, $2, l.student_id, l.student_fee_id, l.id,
+       SELECT l.organization_id, $2, l.student_id, l.student_fee_id, l.pass_id, l.id,
               l.student_name, l.student_tax_number, l.kind, l.description,
               l.fee_category_name,
               l.lessons_per_week, l.period_start, l.months, l.amount_cents, l.vat_rate,

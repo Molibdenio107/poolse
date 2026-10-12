@@ -48,9 +48,9 @@ export function DocumentLines({ lines }: { lines: InvoiceLine[] }): React.ReactE
           </thead>
           <tbody className="divide-y divide-border">
             {lines.map((line) => (
-              <tr key={line.id ?? `${line.studentFeeId}-${line.periodStart}`}>
+              <tr key={line.id ?? `${line.studentFeeId ?? line.passId}-${line.periodStart}`}>
                 <td className="py-3">
-                  {line.studentName}
+                  {line.studentName ?? '—'}
                   {line.studentTaxNumber !== null && (
                     <span className="block text-foreground-muted">
                       {t('invoices.taxNumber', { number: line.studentTaxNumber })}

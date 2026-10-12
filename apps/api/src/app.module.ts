@@ -68,6 +68,7 @@ import {
   StudentSocioController,
 } from './billing/fees.controller.js';
 import { InsurancePoliciesController } from './billing/insurance.controller.js';
+import { PassProductsController, ReceptionController } from './reception/passes.controller.js';
 import {
   InvoiceSeriesController,
   InvoicesController,
@@ -179,6 +180,9 @@ const IDENTITY_ONLY_ROUTES = [
     FeePeriodsController,
     FeePlansController,
     InsurancePoliciesController,
+    // POOLSE-68 — free swim: what a site sells, and reception.
+    PassProductsController,
+    ReceptionController,
     InvoicesController,
     InvoiceSeriesController,
     FeeCategoriesController,

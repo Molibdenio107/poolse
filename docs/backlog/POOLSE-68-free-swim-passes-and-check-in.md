@@ -78,6 +78,13 @@ summing pass revenue with mensalidades into one unlabelled figure.
 7. **Given** Club B's pass id, **when** Club A checks it in, **then** refused — cross-tenant.
 8. **Given** two check-ins racing for the last place, **then** exactly one succeeds.
 
+### Status — 12-10-2026
+
+**Slice 1 built** (`feat/free-swim`): AC 1–5 and 7, QA 1–8 as integration tests in
+`apps/api/src/reception/passes.integration.test.ts`. **Slice 2 still open:** AC 6 (pass revenue
+reported separately from fees), the `free_swim` subject type on the lane grid (answered above), and
+the dashboard card reading `pool_occupancy`.
+
 ### Acceptance criteria
 
 1. Single entries, packs and time-boxed passes can be defined per facility and priced per

@@ -729,6 +729,17 @@ through `applyNewRate`, the same function the form calls.
 
 **A message to families is a record first and an email second.** POOLSE-67. `message_recipients()` is the one definition of who a message reaches — active enrolment in a live turma, live guardians else the student — read by the preview and the send alike, and the send is **one statement**, so the count confirmed and the rows written share a snapshot. Names and addresses are snapshots; `delivered_at` null is said in words; email leaves after the commit (`deliverMessage`, never awaited by the request). **20 messages / 2,000 addresses per club per Lisbon day**, a trigger under an advisory lock with its figures in DETAIL. A message is archived, never edited — column grants, as on `invoice`. An instructor writes to `myTurmaIds` only. `docs/features/messages.md`.
 
+**A free-swim sale is an invoice line, and who is in the water is `pool_occupancy()`.** POOLSE-68
+slice 1. `invoice_line.pass_id` sits beside `student_fee_id` (exactly one is set, by CHECK); a
+credit on the sale line voids the pass, and `pass_current` derives entries left, expiry and void,
+so there is no counter. An anonymous single entry is a document with **no payer**: `payer_name` is
+null and the screen says *Consumidor final*. Anything that reads `invoice.payer_name` or a line's
+`student_*`/`kind` must handle null. The payment is recorded with the sale. `pool_occupancy` counts
+check-ins inside the site's `free_swim_stay_minutes`, plus classes running now by enrolment (never
+by ceiling), with `class_group` LEFT joined. The check-in trigger reads it under the pool lock, and
+it is the number reception, the refusal and the coming dashboard card share. Owner and admin only.
+`docs/features/reception.md`.
+
 **Capacity rules compose, they do not override.** An enrolment must fit its turma
 (`class_group.capacity`), the turmas sharing a slot must fit the tank (`pool.max_capacity`),
 and `lane_level_capacity` is a separate teaching judgement. A null ceiling means "not

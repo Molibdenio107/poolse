@@ -90,7 +90,7 @@ export function OutstandingList({
                     />
                   </td>
                   <td className="py-3">
-                    {invoice.payerName}
+                    {invoice.payerName ?? t('invoices.finalConsumer')}
                     {invoice.payerEmail !== null && (
                       // Visible, not a tooltip: it is what the operator needs in
                       // order to do the thing this list exists for.

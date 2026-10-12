@@ -53,6 +53,7 @@ work being awkward:
 | Níveis, épocas, instalações, pools | A handful, by nature. Adding the tenth level is a decision, not growth. |
 | Roles, consent kinds, timezones, strokes | Enums. They change when a developer changes them. |
 | The weather forecast | Seven days, from the provider. |
+| Reception's *em natação livre* list | The default stay. A check-in leaves it on its own after that window, and a tank holds what it holds. Paging it would hide the swimmer reception came to check out. |
 | Pending invitations | A queue worked down, not a register kept. Paging it would hide the invite somebody came to chase. |
 | Ownership-transfer candidates | Every admin — a picker must be complete, or it tells the owner their colleague is not an admin. |
 | A form's dropdown options | Everything the form can express. A half-filled `<select>` is a form that silently cannot say what somebody means. |

@@ -132,7 +132,7 @@ export default async function InvoicePage({
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('invoices.payer')}
             </h2>
-            <p className="mt-2 font-medium">{invoice.payerName}</p>
+            <p className="mt-2 font-medium">{invoice.payerName ?? t('invoices.finalConsumer')}</p>
             {invoice.payerTaxNumber !== null && (
               <p className="text-sm text-foreground-muted">
                 {t('invoices.taxNumber', { number: invoice.payerTaxNumber })}
