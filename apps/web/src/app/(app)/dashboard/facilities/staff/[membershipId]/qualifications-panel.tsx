@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { DocumentUpload } from '@/components/document-upload';
+import { AttachedDocument } from '@/components/file-upload';
 import { QualificationStatus } from '@/components/qualification-status';
 import { SelectField, TextField } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
@@ -47,12 +47,15 @@ export function QualificationsPanel({
   membershipId,
   data,
   types,
+  storageReady,
 }: {
   organizationId: string;
   membershipId: string;
   data: PersonQualifications;
   /** Only for management: the form's options. */
   types: QualificationType[];
+  /** Whether file storage is configured — the certificate control says so if not. */
+  storageReady: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
@@ -173,11 +176,8 @@ export function QualificationsPanel({
                   error={fieldError('expiresOn')}
                 />
               </div>
-              <DocumentUpload
-                label={t('qualifications.document')}
-                reason={t('students.photoNoStorage')}
-                purpose={t('qualifications.documentPurpose')}
-              />
+              {/* The scan is attached to the record once it exists, below. */}
+              <p className="text-sm text-foreground-muted">{t('files.certificateAfterSave')}</p>
               <div>
                 <button
                   type="submit"
@@ -216,6 +216,17 @@ export function QualificationsPanel({
                           expires: formatDate(record.expiresOn),
                         })}
                     {record.archived && ` · ${t('qualifications.archivedLabel')}`}
+                  </span>
+                  {/* The certificate — attached once (12 October 2026). The
+                      person it certifies sees the link too. */}
+                  <span className="mt-1">
+                    <AttachedDocument
+                      fileId={record.documentFileId}
+                      target={`qualification:${record.id}`}
+                      canManage={data.canManage && !record.archived}
+                      storageReady={storageReady}
+                      once
+                    />
                   </span>
                 </span>
                 {data.canManage && !record.archived && (

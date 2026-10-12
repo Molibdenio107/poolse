@@ -4327,5 +4327,33 @@
       "addFailed": "The shift could not be added.",
       "removeFailed": "The shift could not be taken off."
     }
+  },
+  "files": {
+    "chooseFile": "Choose a file.",
+    "tooLarge": "The file is larger than 10 MB.",
+    "wrongType": "Only PDF, JPEG, PNG and WebP are accepted — and only images for photographs.",
+    "uploadFailed": "The file could not be saved.",
+    "removeFailed": "The photograph could not be removed.",
+    "notConfigured": "File storage is not configured on this installation yet.",
+    "notAllowed": "You do not have permission to save this file.",
+    "certificateAttached": "This record already has its certificate. A different certificate is a new record.",
+    "uploading": "Uploading…",
+    "dropHint": "Or drag the file here.",
+    "photoHint": "JPEG, PNG or WebP, up to 10 MB. Photographs are reduced before they are sent.",
+    "documentHint": "A PDF or a photograph of the document, up to 10 MB.",
+    "removePhoto": "Remove photograph",
+    "viewDocument": "View document",
+    "noDocument": "No document.",
+    "attachDocument": "Attach document",
+    "replaceDocument": "Replace document",
+    "removeDocument": "Remove document",
+    "agreementFirst": "Record the agreement first; the signed contract is filed with it.",
+    "certificateAfterSave": "Once saved, attach the scanned certificate to the record in the history below.",
+    "logoTitle": "Club logo",
+    "logoHint": "Shown in the top corner of every screen, beside the club's name.",
+    "logoAlt": "Club logo",
+    "logoUpload": "Upload logo",
+    "logoReplace": "Replace logo",
+    "logoRemove": "Remove logo"
   }
 }

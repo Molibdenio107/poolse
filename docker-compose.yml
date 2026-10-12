@@ -32,5 +32,23 @@ services:
       timeout: 5s
       retries: 20
 
+  # Local file storage — 12 October 2026. S3-compatible, like Cloudflare R2 in
+  # production, so the API speaks the same protocol in both and moving provider
+  # is configuration. Adobe's S3Mock rather than MinIO, whose public images are
+  # gone; it creates the bucket itself and keeps the files in the volume.
+  storage:
+    image: adobe/s3mock:3.11.0
+    container_name: poolse-storage
+    restart: unless-stopped
+    environment:
+      initialBuckets: poolse-dev
+      root: /data
+      retainFilesOnExit: 'true'
+    ports:
+      - '9090:9090'
+    volumes:
+      - poolse-files:/data
+
 volumes:
   poolse-pgdata:
+  poolse-files:

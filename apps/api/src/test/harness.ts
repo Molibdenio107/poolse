@@ -320,6 +320,10 @@ const TENANT_TABLES = [
    * person paid and the person who set it.
    */
   'staff_compensation',
+  // File storage. After every table that points at a file (photos, the
+  // apólice, qualifications, partner agreements) and before the uploader's
+  // membership. The club's logo is unhooked before this loop runs.
+  'stored_file',
   'membership_role',
   'membership',
 ] as const;
@@ -401,6 +405,7 @@ async function sweepStaleScratchTenants(): Promise<void> {
           'UPDATE membership SET dashboard_facility_id = NULL WHERE organization_id = $1',
           [id],
         );
+        await client.query('UPDATE organization SET logo_file_id = NULL WHERE id = $1', [id]);
         for (const table of TENANT_TABLES) {
           await client.query(`DELETE FROM ${table} WHERE organization_id = $1`, [id]);
         }
@@ -534,6 +539,10 @@ export async function removeTenant(organizationId: string, clerkUserId: string):
       'UPDATE membership SET dashboard_facility_id = NULL WHERE organization_id = $1',
       [organizationId],
     );
+    // The club's logo points at a stored file, which is deleted in the loop.
+    await client.query('UPDATE organization SET logo_file_id = NULL WHERE id = $1', [
+      organizationId,
+    ]);
     for (const table of TENANT_TABLES) {
       await client.query(`DELETE FROM ${table} WHERE organization_id = $1`, [organizationId]);
     }

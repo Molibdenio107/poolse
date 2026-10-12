@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AttachedDocument } from '@/components/file-upload';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
@@ -79,10 +80,13 @@ export function InsurancePanel({
   facilityId,
   policies,
   canManage,
+  storageReady,
 }: {
   facilityId: string;
   policies: InsurancePolicy[];
   canManage: boolean;
+  /** Whether file storage is configured — the document control says so if not. */
+  storageReady: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -133,6 +137,15 @@ export function InsurancePanel({
                   {policy.notes !== null && (
                     <p className="mt-1 whitespace-pre-line text-sm">{policy.notes}</p>
                   )}
+                  {/* The apólice itself — 12 October 2026. */}
+                  <div className="mt-2">
+                    <AttachedDocument
+                      fileId={policy.documentFileId}
+                      target={`policy:${facilityId}:${policy.id}`}
+                      canManage={canManage}
+                      storageReady={storageReady}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">

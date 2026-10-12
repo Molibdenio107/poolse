@@ -218,6 +218,11 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       is shown. The safe default is what ships today: the history flag **off**, and no archive
       call at all.
 - [ ] **TimescaleDB confirmed** on the production database, or the fallback taken — see below.
+- [ ] **A Cloudflare R2 bucket per environment**, private, with an API token scoped to that one
+      bucket, and `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` /
+      `S3_REGION=auto` on the **API only**. Without them every upload control says storage is not
+      configured — `docs/features/files.md`. Never make the bucket public: files are served
+      through the app after a permission check.
 
 ## Known limitations, with dates
 

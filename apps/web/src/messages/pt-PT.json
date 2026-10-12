@@ -4327,5 +4327,33 @@
       "addFailed": "Não foi possível acrescentar o turno.",
       "removeFailed": "Não foi possível retirar o turno."
     }
+  },
+  "files": {
+    "chooseFile": "Escolha um ficheiro.",
+    "tooLarge": "O ficheiro tem mais de 10 MB.",
+    "wrongType": "Só são aceites PDF, JPEG, PNG e WebP — e, para fotografias, só imagens.",
+    "uploadFailed": "Não foi possível guardar o ficheiro.",
+    "removeFailed": "Não foi possível retirar a fotografia.",
+    "notConfigured": "O armazenamento de ficheiros ainda não está configurado nesta instalação.",
+    "notAllowed": "Não tem permissão para guardar este ficheiro.",
+    "certificateAttached": "Este registo já tem o seu certificado. Um certificado diferente é um registo novo.",
+    "uploading": "A carregar…",
+    "dropHint": "Ou arraste o ficheiro para aqui.",
+    "photoHint": "JPEG, PNG ou WebP, até 10 MB. As fotografias são reduzidas antes de serem enviadas.",
+    "documentHint": "PDF ou fotografia do documento, até 10 MB.",
+    "removePhoto": "Retirar fotografia",
+    "viewDocument": "Ver documento",
+    "noDocument": "Sem documento.",
+    "attachDocument": "Juntar documento",
+    "replaceDocument": "Substituir documento",
+    "removeDocument": "Retirar documento",
+    "agreementFirst": "Registe primeiro o acordo; o contrato assinado fica junto dele.",
+    "certificateAfterSave": "Depois de guardar, junte o certificado digitalizado ao registo, no histórico abaixo.",
+    "logoTitle": "Logótipo do clube",
+    "logoHint": "Aparece no canto superior de todos os ecrãs, ao lado do nome do clube.",
+    "logoAlt": "Logótipo do clube",
+    "logoUpload": "Carregar logótipo",
+    "logoReplace": "Substituir logótipo",
+    "logoRemove": "Retirar logótipo"
   }
 }

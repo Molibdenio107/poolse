@@ -16,6 +16,7 @@ import { PhotoUpload } from '@/components/photo-upload';
 import { RoleBadges } from '@/components/role-badge';
 import { DetailPage } from '@/components/detail-page';
 import { Reinvite, RoleEditor, StaffForm } from './staff-form';
+import { storageConfigured } from '@/lib/storage-status';
 
 /**
  * One staff member — POOLSE-39.
@@ -40,6 +41,7 @@ export default async function StaffMemberPage({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { membershipId } = await params;
+  const storageReady = await storageConfigured();
   const { tab } = await searchParams;
 
   let staff: StaffRecord | null = null;
@@ -177,6 +179,7 @@ export default async function StaffMemberPage({
                 membershipId={membershipId}
                 data={qualifications.data}
                 types={types !== null && types.state === 'ok' ? types.data.types : []}
+                storageReady={storageReady}
               />
             );
           },

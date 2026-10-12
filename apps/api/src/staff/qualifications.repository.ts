@@ -35,6 +35,8 @@ export interface QualificationRecord {
   expiresOn: string | null;
   archived: boolean;
   createdAt: string;
+  /** The scanned certificate, attached once — served at `/files/:id`. */
+  documentFileId: string | null;
 }
 
 export interface Standing {
@@ -272,9 +274,10 @@ export async function personQualifications(
       expires_on: Date | null;
       archived_at: Date | null;
       created_at: Date;
+      document_file_id: string | null;
     }>(
       `SELECT q.id, t.id AS type_id, t.name AS type_name, q.issuing_body, q.issued_on,
-              q.expires_on, q.archived_at, q.created_at
+              q.expires_on, q.archived_at, q.created_at, q.document_file_id
          FROM qualification q
          JOIN qualification_type t ON t.id = q.qualification_type_id
         WHERE q.membership_id = $1
@@ -299,6 +302,7 @@ export async function personQualifications(
         issuedOn: day(row.issued_on),
         expiresOn: day(row.expires_on),
         archived: row.archived_at !== null,
+        documentFileId: row.document_file_id,
         createdAt: row.created_at.toISOString(),
       })),
     };

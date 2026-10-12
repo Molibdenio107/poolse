@@ -9,6 +9,7 @@ import { PartnerAgreementPanel } from './partner-agreement';
 import { PartnerGroups } from './partner-groups';
 import { PartnerSchedule } from './partner-schedule';
 import { backLabelKey, readFrom } from '@/lib/back';
+import { storageConfigured } from '@/lib/storage-status';
 
 /**
  * One partnership, in detail — POOLSE-47, criterion 9.
@@ -34,6 +35,7 @@ export default async function PartnerPage({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { partnerId } = await params;
+  const storageReady = await storageConfigured();
   const { tab, from } = await searchParams;
   const origin = readFrom(from);
 
@@ -86,6 +88,7 @@ export default async function PartnerPage({
               partnerId={partner.id}
               agreement={partner.agreement}
               canManage={partner.canManage}
+              storageReady={storageReady}
             />
           ),
         },

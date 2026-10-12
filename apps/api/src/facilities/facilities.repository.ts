@@ -21,8 +21,10 @@ export interface Pool {
 
 export interface Photo {
   id: string;
-  /** The object key. Turned into a signed URL at render time, never stored as one. */
+  /** The object key in the bucket. */
   storageKey: string;
+  /** The `stored_file` it names, served at `/files/:id` — 12 October 2026. */
+  fileId: string | null;
   caption: string | null;
 }
 
@@ -168,6 +170,9 @@ export async function listFacilities(organizationId: string): Promise<Facility[]
                SELECT coalesce(
                         json_agg(
                           json_build_object('id', fp.id, 'storageKey', fp.storage_key,
+                                            'fileId', (SELECT sf.id FROM stored_file sf
+                                                        WHERE sf.organization_id = fp.organization_id
+                                                          AND sf.storage_key = fp.storage_key),
                                             'caption', fp.caption)
                           ORDER BY fp.sort_order, fp.created_at
                         ),
@@ -239,6 +244,9 @@ export async function findPool(
                SELECT coalesce(
                         json_agg(
                           json_build_object('id', pp.id, 'storageKey', pp.storage_key,
+                                            'fileId', (SELECT sf.id FROM stored_file sf
+                                                        WHERE sf.organization_id = pp.organization_id
+                                                          AND sf.storage_key = pp.storage_key),
                                             'caption', pp.caption)
                           ORDER BY pp.sort_order, pp.created_at
                         ),
@@ -344,6 +352,9 @@ export async function findFacility(
                SELECT coalesce(
                         json_agg(
                           json_build_object('id', fp.id, 'storageKey', fp.storage_key,
+                                            'fileId', (SELECT sf.id FROM stored_file sf
+                                                        WHERE sf.organization_id = fp.organization_id
+                                                          AND sf.storage_key = fp.storage_key),
                                             'caption', fp.caption)
                           ORDER BY fp.sort_order, fp.created_at
                         ),

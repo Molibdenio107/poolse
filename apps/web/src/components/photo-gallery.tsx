@@ -1,42 +1,47 @@
+import { getTranslations } from 'next-intl/server';
 import { EntityIcon } from '@/components/entity-icon';
-import { PhotoUpload } from '@/components/photo-upload';
-import { photoUrlFor } from '@/lib/photo';
+import { FileUpload, RemovePhotoButton } from '@/components/file-upload';
+import { fileUrl, type FileTarget } from '@/lib/files';
+import { storageConfigured } from '@/lib/storage-status';
 import { cn } from '@/lib/utils';
 
 export interface GalleryPhoto {
   id: string;
   storageKey: string;
+  fileId: string | null;
   caption: string | null;
 }
 
 /**
- * A gallery and the control that will one day fill it.
+ * A site's or a tank's photographs, and the control that adds them.
  *
- * Both halves are built now with storage deliberately unconnected, because the
- * expensive part of this feature is the layout and the empty state, not the
- * upload handler. When Cloudflare R2 is configured, this component does not
- * change: `photoUrlFor` starts returning signed URLs and the upload control
- * loses its `disabled`.
+ * Built in round 4 with storage unconnected; wired on 12 October 2026. Each
+ * image is read through `/files/:id`, which checks the reader on every request.
+ * On an installation with no bucket the upload panel stays visible and says
+ * why it is off.
  *
  * The empty state is a designed thing rather than an absence. A gallery that
- * collapses to nothing when it has no photographs reads as a broken page, and
- * this screen will have no photographs for a while yet.
+ * collapses to nothing when it has no photographs reads as a broken page.
  */
-export function PhotoGallery({
+export async function PhotoGallery({
   photos,
+  target,
   emptyLabel,
   uploadLabel,
-  uploadReason,
   canManage,
   className,
 }: {
   photos: GalleryPhoto[];
+  /** Where an upload is filed — `facility-photo:<id>` or `pool-photo:<id>`. */
+  target: FileTarget;
   emptyLabel: string;
   uploadLabel: string;
-  uploadReason: string;
   canManage: boolean;
   className?: string;
-}): React.ReactElement {
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const configured = canManage ? await storageConfigured() : true;
+
   return (
     <div className={cn('flex flex-col gap-4', className)}>
       {photos.length === 0 ? (
@@ -47,34 +52,34 @@ export function PhotoGallery({
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {photos.map((photo) => {
-            const url = photoUrlFor(photo.storageKey);
+            const url = fileUrl(photo.fileId);
             return (
               <li
                 key={photo.id}
-                className="overflow-hidden rounded border border-border bg-surface-muted"
+                className="relative overflow-hidden rounded border border-border bg-surface-muted"
               >
-                {/*
-                  A stored key that resolves to nothing is not an error — it is
-                  what every key does until storage is wired. The tile keeps its
-                  shape so the grid does not collapse around it.
-                */}
                 <div className="flex aspect-video items-center justify-center">
                   {url === null ? (
                     <EntityIcon kind="photo" className="size-5 text-foreground-muted" />
                   ) : (
-                    // eslint-disable-next-line @next/next/no-img-element -- served
-                    // from object storage on a signed URL, which next/image's
-                    // loader is not configured for.
-                    <img
-                      src={url}
-                      alt={photo.caption ?? ''}
-                      className="size-full object-cover"
-                      loading="lazy"
-                    />
+                    <a href={url} target="_blank" rel="noreferrer" className="size-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- streamed
+                          through /files/:id after a permission check, which
+                          next/image's optimiser would bypass. */}
+                      <img
+                        src={url}
+                        alt={photo.caption ?? ''}
+                        className="size-full object-cover"
+                        loading="lazy"
+                      />
+                    </a>
                   )}
                 </div>
                 {photo.caption !== null && (
                   <p className="px-2 py-1 text-sm text-foreground-muted">{photo.caption}</p>
+                )}
+                {canManage && (
+                  <RemovePhotoButton target={target} photoId={photo.id} label={t('files.removePhoto')} />
                 )}
               </li>
             );
@@ -82,7 +87,15 @@ export function PhotoGallery({
         </ul>
       )}
 
-      {canManage && <PhotoUpload label={uploadLabel} reason={uploadReason} />}
+      {canManage && (
+        <FileUpload
+          target={target}
+          variant="panel"
+          label={uploadLabel}
+          hint={t('files.photoHint')}
+          unavailable={configured ? null : t('files.notConfigured')}
+        />
+      )}
     </div>
   );
 }

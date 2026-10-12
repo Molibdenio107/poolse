@@ -1054,8 +1054,14 @@ Decisions taken in review that are not obvious from the code, so they are not re
   vacation calendar filters on that column — a shutdown for building works is not a public
   holiday and must not make a vacation day free.
 - **Scheduling-grid slots are configurable per organization** (15, 30 or 60 minutes).
-- **File storage stays deferred.** Logo, pool photo and student photo controls are present,
-  styled and visibly disabled until it lands. One decision unblocks all three.
+- **File storage is R2 (S3Mock in dev), and a file is read only through the app.** 12 October
+  2026. `stored_file` is the registry; `POST /files` takes raw bytes (purpose and name in the
+  query), judges the type by its first bytes, 10 MB; a feature attaches the returned id with its
+  own route, which re-checks the purpose in its transaction. `GET /files/:id` applies
+  `RULES[purpose]` in `files/files.repository.ts` and streams; the web serves it at `/files/<id>`.
+  Never a public bucket or a pre-signed link. Student photos (consent rule) and incident
+  attachments (encrypted) are named in the enum and not switched on. Upload controls:
+  `FileUpload` / `AttachedDocument` in `components/file-upload.tsx`. `docs/features/files.md`.
 - **Vacation carry-over to 30 April is not tracked in v1**, and the balance summary says so
   rather than being quietly wrong.
 

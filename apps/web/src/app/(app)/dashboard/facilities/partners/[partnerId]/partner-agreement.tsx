@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useSavedAction } from '@/lib/saved';
 import type { BillingModel, PartnerAgreement } from '@/lib/api';
-import { DocumentUpload } from '@/components/document-upload';
+import { AttachedDocument } from '@/components/file-upload';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { saveAgreementAction } from '../../[facilityId]/partners.actions';
@@ -68,10 +68,12 @@ export function PartnerAgreementPanel({
   partnerId,
   agreement,
   canManage,
+  storageReady,
 }: {
   partnerId: string;
   agreement: PartnerAgreement | null;
   canManage: boolean;
+  storageReady: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -242,20 +244,22 @@ export function PartnerAgreementPanel({
         ))}
 
       {/*
-        The signed contract — criterion 6.
-
-        Present, styled and visibly disabled with the reason named, exactly as
-        the logo, the pool photo and the student photograph are. One storage
-        decision unblocks all four; until then a control that opened a picker and
-        then lost the file would be worse than one that says why it cannot.
+        The signed contract — criterion 6, live since 12 October 2026. It
+        belongs to the agreement in force, so there is nothing to attach it to
+        until one is recorded.
       */}
       <div className="border-t border-border pt-4">
         <h3 className="mb-3 text-sm font-medium">{t('partners.contract')}</h3>
-        <DocumentUpload
-          label={t('partners.uploadContract')}
-          reason={t('students.photoNoStorage')}
-          purpose={t('partners.contractPurpose')}
-        />
+        {agreement === null ? (
+          <p className="text-sm text-foreground-muted">{t('files.agreementFirst')}</p>
+        ) : (
+          <AttachedDocument
+            fileId={agreement.documentFileId}
+            target={`agreement:${partnerId}`}
+            canManage={canManage}
+            storageReady={storageReady}
+          />
+        )}
       </div>
     </section>
   );

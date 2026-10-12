@@ -18,6 +18,8 @@ import { GridController } from '../facilities/grid.controller.js';
 import { OccupancyController } from '../facilities/occupancy.controller.js';
 import { PartnersController } from '../facilities/partners.controller.js';
 import { SlotsController } from '../facilities/slots.controller.js';
+import { AttachmentsController } from '../files/attachments.controller.js';
+import { FilesController } from '../files/files.controller.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
@@ -635,5 +637,36 @@ test('incidents and the lifeguard roster refuse a guardian and a student (403)',
     await refused('POST lifeguard-duties/:id/archive', 403, () =>
       new LifeguardDutiesController().archive('00000000-0000-0000-0000-000000000000'),
     );
+  });
+});
+
+// File storage (12 October 2026) — every write is the office's; reading is
+// GET /files/:id's rule by purpose, proven in files.integration.test.ts.
+test('file uploads and attachments refuse a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const fac = tenantRef.facilityId;
+    await refused('POST files', 403, () => new FilesController().upload('logo', 'x.png', Buffer.from('x')));
+    await refused('POST facilities/:id/photos', 403, () =>
+      new AttachmentsController().addFacilityPhoto(fac, { fileId: NO_SUCH_ID }),
+    );
+    await refused('DELETE facilities/:id/photos/:id', 403, () =>
+      new AttachmentsController().removeFacilityPhoto(fac, NO_SUCH_ID),
+    );
+    await refused('POST pools/:id/photos', 403, () =>
+      new AttachmentsController().addPoolPhoto(fixture.poolId, { fileId: NO_SUCH_ID }),
+    );
+    await refused('DELETE pools/:id/photos/:id', 403, () =>
+      new AttachmentsController().removePoolPhoto(fixture.poolId, NO_SUCH_ID),
+    );
+    await refused('PUT insurance-policies/:id/document', 403, () =>
+      new AttachmentsController().policyDocument(fac, NO_SUCH_ID, { fileId: null }),
+    );
+    await refused('PUT partners/:id/agreement/document', 403, () =>
+      new AttachmentsController().agreementDocument(NO_SUCH_ID, { fileId: null }),
+    );
+    await refused('PUT qualifications/:id/document', 403, () =>
+      new AttachmentsController().qualificationDocument(NO_SUCH_ID, { fileId: NO_SUCH_ID }),
+    );
+    await refused('PUT settings/logo', 403, () => new AttachmentsController().setLogo({ fileId: null }));
   });
 });

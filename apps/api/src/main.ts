@@ -46,6 +46,12 @@ async function bootstrap(): Promise<void> {
   // Clerk webhook signature is computed over those bytes, and a re-serialised
   // body does not match.
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+  /*
+   * Uploaded files arrive as raw bytes — `POST /files` (12 October 2026). The
+   * Next server reads the form's file and forwards it; 10 MB is the product's
+   * limit, checked again in the controller and by a CHECK on `stored_file`.
+   */
+  app.useBodyParser('raw', { type: 'application/octet-stream', limit: '10mb' });
   app.enableCors({ origin: process.env['WEB_ORIGIN'] ?? 'http://localhost:3000' });
 
   /*

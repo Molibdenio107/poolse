@@ -38,6 +38,7 @@ import { PageError, PageShell } from '@/components/page-shell';
 import { OccupancyPanel } from '@/components/occupancy-panel';
 import { WaterThresholdForm } from './water-threshold-form';
 import { backLabelKey, readFrom } from '@/lib/back';
+import { storageConfigured } from '@/lib/storage-status';
 
 /**
  * One site, in detail — backlog round 3, stories 2 and 3.
@@ -90,6 +91,7 @@ export default async function FacilityPage({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { facilityId } = await params;
+  const storageReady = await storageConfigured();
   const { tab, from, section } = await searchParams;
   // Back to where the link was followed from, when it says — the `withFrom`
   // links from the dashboard, Energia and Turmas. October 2026 sweep.
@@ -283,6 +285,7 @@ export default async function FacilityPage({
                         facilityId={facilityId}
                         policies={policies.data}
                         canManage={register?.canManage ?? false}
+                        storageReady={storageReady}
                       />
                     )}
                   </>
@@ -495,10 +498,10 @@ export default async function FacilityPage({
               */}
               <PhotoGallery
                 photos={loaded.photos}
+                target={`facility-photo:${loaded.id}`}
                 canManage={loaded.canManage}
                 emptyLabel={t('facilities.noSitePhotos')}
                 uploadLabel={t('facilities.uploadSitePhoto')}
-                uploadReason={t('students.photoNoStorage')}
               />
             </section>
           ),

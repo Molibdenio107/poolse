@@ -289,10 +289,10 @@ export default async function PoolPage({
               </h2>
               <PhotoGallery
                 photos={loaded.photos}
+                target={`pool-photo:${loaded.id}`}
                 canManage={loaded.canManage}
                 emptyLabel={t('facilities.noPhotos')}
                 uploadLabel={t('facilities.uploadPoolPhoto')}
-                uploadReason={t('students.photoNoStorage')}
               />
             </section>
           ),

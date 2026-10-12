@@ -108,8 +108,8 @@ export interface PartnerAgreement {
   vatRate: string | null;
   paymentPeriod: string | null;
   notes: string | null;
-  /** Always null until file storage lands. The control is disabled, not hidden. */
-  documentKey: string | null;
+  /** The signed contract, served at `/files/:id` — null when none is filed. */
+  documentFileId: string | null;
 }
 
 export interface PartnerGroup {
@@ -476,10 +476,13 @@ export async function getPartner(
       vat_rate: string | null;
       payment_period: string | null;
       notes: string | null;
-      document_key: string | null;
+      document_file_id: string | null;
     }>(
       `SELECT id, season_id, start_date::text, end_date::text, billing_model,
-              unit_price::text, vat_rate::text, payment_period, notes, document_key
+              unit_price::text, vat_rate::text, payment_period, notes,
+              (SELECT sf.id FROM stored_file sf
+                WHERE sf.organization_id = partner_agreement.organization_id
+                  AND sf.storage_key = partner_agreement.document_key) AS document_file_id
          FROM partner_agreement
         WHERE partner_id = $1 AND archived_at IS NULL
         ORDER BY start_date DESC
@@ -578,7 +581,7 @@ export async function getPartner(
               vatRate: readNumeric(agreement.vat_rate),
               paymentPeriod: agreement.payment_period,
               notes: agreement.notes,
-              documentKey: agreement.document_key,
+              documentFileId: agreement.document_file_id,
             },
       groups: groups.rows.map((row) => ({
         id: row.id,

@@ -3524,3 +3524,21 @@ are allowed. `lifeguard_valid_on(org, membership, day)` is the one definition of
 lifeguard on a day, read by the roster and by the incident. `lifeguard_gaps(org, facility,
 from, days)` subtracts the duties' `range_agg` from each tank's opening window
 (`facility_hours`, in the site's time zone) as multiranges, and returns the uncovered times.
+
+
+### Stored files — 12 October 2026
+
+`stored_file` is the registry of every object in the bucket: `organization_id`, `purpose`
+(`file_purpose` enum: `policy_document`, `qualification_document`, `agreement_document`,
+`facility_photo`, `pool_photo`, `logo`, `student_photo`, `incident_attachment` — the last two
+named, not yet switched on), `storage_key`, `content_type`, `byte_size`, `original_name`,
+`uploaded_by`, `created_at`, `archived_at`. RLS by tenant; `poolse_app` holds SELECT and INSERT
+and `UPDATE (archived_at)` only. CHECKs: the key starts with the club's own id, size 1 B–10 MB,
+type one of PDF/JPEG/PNG/WebP. Unique `(organization_id, id)` and `(organization_id, storage_key)`.
+
+What points at it: `insurance_policy.document_file_id`; `qualification.document_file_id` (settable
+once, from empty — `GRANT UPDATE (document_file_id)` plus the trigger
+`qualification_document_once`, DETAIL `qualification_document_set`);
+`organization.logo_file_id`; and composite FKs from `facility_photo.storage_key`,
+`pool_photo.storage_key` and `partner_agreement.document_key` to
+`stored_file (organization_id, storage_key)`. Migration `1790157600000_stored-files.sql`.

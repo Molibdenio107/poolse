@@ -185,6 +185,49 @@ export async function apiDelete<T>(
   return request<T>(path, { ...options, method: 'DELETE' });
 }
 
+/**
+ * Sends a file's bytes to `POST /files` — 12 October 2026.
+ *
+ * Raw bytes rather than multipart: the file was read from the form here on the
+ * Next server, as every importer reads its file, and the API judges what it is
+ * from its first bytes, never from a name or a browser's claim.
+ */
+export async function apiUpload<T>(path: string, bytes: ArrayBuffer): Promise<T> {
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) throw new ApiError(401, 'No active session');
+
+  const response = await fetch(`${baseUrl()}${path}`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: 'application/json',
+      'content-type': 'application/octet-stream',
+    },
+    body: bytes,
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    throw readError(response.status, await response.text(), response.statusText);
+  }
+  return (await response.json()) as T;
+}
+
+/**
+ * The API's own response for a stored file, unread, so `/files/[id]` can hand
+ * the stream on without holding a photograph in memory. The status is the
+ * API's: a 403 or 404 is passed through as it is.
+ */
+export async function apiFileResponse(path: string): Promise<Response> {
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return new Response(null, { status: 401 });
+  return fetch(`${baseUrl()}${path}`, {
+    headers: { authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+}
+
 import type { Paginated } from './pagination';
 
 export type { Paginated };
@@ -537,8 +580,10 @@ export interface InventoryExport {
 
 export interface Photo {
   id: string;
-  /** Object key. Resolved to a signed URL by photoUrlFor, never stored as one. */
+  /** Object key in the bucket. */
   storageKey: string;
+  /** The stored file, read at `/files/:id` — 12 October 2026. */
+  fileId: string | null;
   caption: string | null;
 }
 
@@ -2351,6 +2396,8 @@ export interface InsurancePolicy {
   renewalDue: boolean;
   /** How many students hold cover under it — and the reason to renew. */
   coveredCount: number;
+  /** The policy's own document, read at `/files/:id`. */
+  documentFileId: string | null;
 }
 
 /** What a reset would retire, so the confirmation can name real numbers. */
@@ -2805,8 +2852,8 @@ export interface PartnerAgreement {
   vatRate: string | null;
   paymentPeriod: string | null;
   notes: string | null;
-  /** Always null until file storage lands; the control is disabled, not hidden. */
-  documentKey: string | null;
+  /** The signed contract, read at `/files/:id`; null when none is filed. */
+  documentFileId: string | null;
 }
 
 export interface PartnerGroup {
@@ -4063,6 +4110,8 @@ export interface QualificationRecord {
   expiresOn: string | null;
   archived: boolean;
   createdAt: string;
+  /** The scanned certificate, attached once — read at `/files/:id`. */
+  documentFileId: string | null;
 }
 
 export interface PersonQualifications {

@@ -40,6 +40,8 @@ export interface InsurancePolicy {
   renewalDue: boolean;
   /** How many students hold cover under it. Read-only, and the reason to renew. */
   coveredCount: number;
+  /** The policy's own document, served at `/files/:id` — 12 October 2026. */
+  documentFileId: string | null;
 }
 
 /**
@@ -90,6 +92,7 @@ export async function listPolicies(
       notes: string | null;
       days_to_expiry: number;
       covered_count: number;
+      document_file_id: string | null;
     }>(
       /*
        * The dates are cast to text on the way out, like every other date in this
@@ -105,7 +108,7 @@ export async function listPolicies(
       `SELECT p.id, p.insurer, p.policy_number,
               p.valid_from::text AS valid_from,
               p.valid_to::text   AS valid_to,
-              p.cost_per_person_cents, p.notes,
+              p.cost_per_person_cents, p.notes, p.document_file_id,
               (p.valid_to - current_date) AS days_to_expiry,
               (SELECT count(*)::int FROM student_fee sf
                 WHERE sf.insurance_policy_id = p.id
@@ -131,6 +134,7 @@ export async function listPolicies(
       expired: row.days_to_expiry < 0,
       renewalDue: row.days_to_expiry >= 0 && row.days_to_expiry <= RENEWAL_WARNING_DAYS,
       coveredCount: row.covered_count,
+      documentFileId: row.document_file_id,
     }));
   });
 }

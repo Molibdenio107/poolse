@@ -9,6 +9,7 @@ import { SeriesPanel } from './series-panel';
 import { OutstandingList } from './outstanding-list';
 import { ViewTabs, type InvoiceView } from './view-tabs';
 import { TaxPanel } from './tax-panel';
+import { LogoPanel } from './logo-panel';
 import {
   listInvoices,
   listOutstanding,
@@ -193,6 +194,7 @@ export default async function InvoicingPage({
               empty field they cannot save.
             */}
             {tax !== null && <TaxPanel settings={tax} />}
+            {tax !== null && <LogoPanel />}
             {taxLoad.state === 'failed' && <PageError message={t(taxLoad.failure.key)} />}
           </>
         )}

@@ -40,6 +40,8 @@ import { ReadOnlyNotice } from './read-only-notice';
 interface Viewer {
   roles: string[];
   kind: OrganizationKind;
+  /** The club's name, for the brand slot. Null when there is no membership. */
+  organizationName: string | null;
   /**
    * The tenant is closed — slice 3.
    *
@@ -80,6 +82,7 @@ async function currentViewer(): Promise<Viewer> {
     return {
       roles: membership?.roles ?? [],
       kind: membership?.organizationKind ?? 'business',
+      organizationName: membership?.organizationName ?? null,
       readOnly:
         membership?.readOnlyAt != null
           ? {
@@ -109,7 +112,20 @@ async function currentViewer(): Promise<Viewer> {
      * paying club its account is closed when it is not, which is a telephone
      * call we would deserve.
      */
-    return { roles: [], kind: 'business', suspended: null, readOnly: null };
+    return { roles: [], kind: 'business', organizationName: null, suspended: null, readOnly: null };
+  }
+}
+
+/**
+ * The club's logo for the brand slot, read beside `/me` rather than inside
+ * it: `/me` comes from a SECURITY DEFINER function and one image id is not
+ * worth changing its shape. A failure is no logo — a corner, not a page.
+ */
+async function brandLogo(): Promise<string | null> {
+  try {
+    return (await apiFetch<{ fileId: string | null }>('/settings/logo')).fileId;
+  } catch {
+    return null;
   }
 }
 
@@ -118,7 +134,10 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const { roles, kind, suspended, readOnly } = await currentViewer();
+  const [{ roles, kind, organizationName, suspended, readOnly }, logoFileId] = await Promise.all([
+    currentViewer(),
+    brandLogo(),
+  ]);
 
   /*
    * Instead of the shell, not inside it.
@@ -157,12 +176,19 @@ export default async function DashboardLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-app-bar items-center justify-between gap-3 border-b border-border bg-surface px-6 print:hidden">
           {/*
-            The brand slot. Empty until stories 5 and 7 land, which put the
-            organization's logo and name here — deliberately left as a slot
-            rather than filled with Poolse's own mark, because the whole point of
-            those stories is that this corner belongs to the customer.
+            The brand slot — the club's logo and name, never Poolse's own mark,
+            because this corner belongs to the customer. The logo is set under
+            Faturação → Definições (12 October 2026).
           */}
-          <div />
+          <div className="flex min-w-0 items-center gap-2">
+            {logoFileId !== null && (
+              // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
+              <img src={`/files/${logoFileId}`} alt="" className="h-8 w-auto max-w-32 object-contain" />
+            )}
+            {organizationName !== null && (
+              <span className="truncate text-sm font-medium">{organizationName}</span>
+            )}
+          </div>
 
           <div className="flex items-center gap-3">
             <PreferenceControls />

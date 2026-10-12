@@ -205,10 +205,10 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                   </h3>
                   <PhotoGallery
                     photos={facility.photos}
+                    target={`facility-photo:${facility.id}`}
                     canManage={data.canManage}
                     emptyLabel={t('facilities.noSitePhotos')}
                     uploadLabel={t('facilities.uploadSitePhoto')}
-                    uploadReason={t('students.photoNoStorage')}
                   />
                 </div>
 

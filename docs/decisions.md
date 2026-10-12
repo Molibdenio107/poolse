@@ -1050,3 +1050,12 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   readable by all staff (as `parcerias.md` settled), but a contract's money is owner/admin only.
   `places` is owner/admin. The probe is now a regression test. Intended-open reads stay open:
   seasons, closures, the dashboard (filtered by role), sites and the lesson plan.
+
+- **2026-10-12** — **File storage, decided and built.** Rui: **Cloudflare R2** (S3-compatible, so
+  development runs S3Mock and a later move is configuration); **10 MB** a file; the first slice is
+  the foundation, the documents (apólice, contract, certificate), site and tank photographs and the
+  logo; **student photographs are seen by staff and the family, and only with photo consent** — a
+  later slice, as are incident attachments (encrypted, being health data). Files are **served
+  through the app**, permission checked on every read, rather than by pre-signed links that work for
+  whoever holds them. A certificate is attached once (POOLSE-27's "never edited"); an apólice's
+  document is replaceable. This retires the "file storage stays deferred" rule.

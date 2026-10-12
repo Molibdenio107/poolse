@@ -68,6 +68,8 @@ import {
   StudentSocioController,
 } from './billing/fees.controller.js';
 import { InsurancePoliciesController } from './billing/insurance.controller.js';
+import { FilesController } from './files/files.controller.js';
+import { AttachmentsController } from './files/attachments.controller.js';
 import { PassProductsController, ReceptionController } from './reception/passes.controller.js';
 import { FacilityIncidentsController, IncidentsController } from './safety/incidents.controller.js';
 import { LifeguardDutiesController, LifeguardRosterController } from './safety/roster.controller.js';
@@ -182,6 +184,8 @@ const IDENTITY_ONLY_ROUTES = [
     FeePeriodsController,
     FeePlansController,
     InsurancePoliciesController,
+    FilesController,
+    AttachmentsController,
     // POOLSE-68 — free swim: what a site sells, and reception.
     PassProductsController,
     ReceptionController,
