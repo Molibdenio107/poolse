@@ -88,11 +88,19 @@ export class PartnersController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<Paginated<PartnerRow> & { canManage: boolean }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
 
     const result = await listPartners(organizationId, facilityId, readPageQuery(page, limit));
+    // What a school pays is the owner's and the admins' — instructors and
+    // maintenance see the partnerships, not the contracts.
+    const canManage = hasRole('owner', 'admin');
+    const items = canManage
+      ? result.items
+      : result.items.map((row) => ({ ...row, contractedCents: null, billingModel: null }));
 
-    return { ...result, canManage: hasRole('owner', 'admin') };
+    return { ...result, items, canManage };
   }
 
   /**
@@ -134,6 +142,8 @@ export class PartnersController {
   async bookable(@Param('facilityId') facilityId: string): Promise<{
     partners: { id: string; name: string; color: string; groups: { id: string; name: string }[] }[];
   }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
     return { partners: await listBookablePartners(organizationId, facilityId) };
   }
@@ -142,12 +152,18 @@ export class PartnersController {
   async detail(
     @Param('partnerId') partnerId: string,
   ): Promise<PartnerDetail & { canManage: boolean }> {
+    // Security review, 12 October 2026: this answered any member, a guardian
+    // included. Staff read a partnership (docs/features/parcerias.md: an
+    // instructor needs to know lane 3 is a school's); what the contract is worth
+    // is the owner's and the admins', as the price list's amounts are.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
 
     const partner = await getPartner(organizationId, partnerId);
     if (partner === null) throw new NotFoundException('No such partner');
 
-    return { ...partner, canManage: hasRole('owner', 'admin') };
+    const canManage = hasRole('owner', 'admin');
+    return { ...partner, agreement: canManage ? partner.agreement : null, canManage };
   }
 
   @Post('facilities/:facilityId/partners')

@@ -91,6 +91,8 @@ export class InventoryController {
      */
     locations: string[];
   }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
     const window = readPageQuery(page, limit);
 
@@ -129,6 +131,8 @@ export class InventoryController {
     @Query('facilityId') requested?: string,
     @Query('search') search?: string,
   ): Promise<{ facilityId: string | null; items: InventoryItem[] }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
 
     const facilityId = await this.resolveFacility(organizationId, requested);
@@ -166,6 +170,8 @@ export class InventoryController {
     students: { id: string; name: string }[];
     canManage: boolean;
   }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included. It names the child who lost something.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
     const facilityId = await this.resolveFacility(organizationId, requested);
 

@@ -1,3 +1,4 @@
+import { requireRole } from '../tenant/roles.js';
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { fetchWeather, searchPlaces, type Place, type Weather } from './open-meteo.js';
 
@@ -99,6 +100,8 @@ export class PlacesController {
     @Query('q') query: string,
     @Query('language') language = 'pt',
   ): Promise<{ places: Place[] }> {
+    // Only the site's address editor needs it, and it drives an external API.
+    requireRole('owner', 'admin');
     const term = (query ?? '').trim();
     // Below two characters every town in Europe matches and the answer is noise.
     if (term.length < 2) return { places: [] };

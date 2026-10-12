@@ -1,6 +1,6 @@
 import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole } from '../tenant/roles.js';
+import { hasRole, requireRole } from '../tenant/roles.js';
 import { readGrid, type Grid } from './grid.repository.js';
 
 /**
@@ -23,6 +23,8 @@ export class GridController {
     @Param('facilityId') facilityId: string,
     @Query('seasonId') seasonId?: string,
   ): Promise<Grid & { canManage: boolean }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
 
     const grid = await readGrid(organizationId, facilityId, readOptionalId(seasonId));

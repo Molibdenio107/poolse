@@ -9,6 +9,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
+import { requireActsForStudent } from './student-access.js';
 import { canArchive, hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
   addRecord,
@@ -46,6 +47,8 @@ const MAX_NOTE = 500;
 export class RecordsController {
   @Get()
   async read(@Param('studentId') studentId: string): Promise<ProgressionResponse> {
+    // Security review, 12 October 2026: this answered any member, a guardian included. A family reads its own child only.
+    await requireActsForStudent(studentId);
     const { organizationId } = currentTenant();
 
     const progression = await progressionFor(organizationId, studentId);

@@ -20,6 +20,8 @@ import {
   mayReadDetail,
   readIncident,
   readIncidentDetail,
+  searchIncidentPeople,
+  type PickKind,
   recordIncident,
   OccurredInFutureError,
   PlaceOffSiteError,
@@ -87,6 +89,22 @@ export class FacilityIncidentsController {
 
 @Controller('incidents')
 export class IncidentsController {
+  /** Names for the form's pickers — before `:id`, which would claim the path. */
+  @Get('people')
+  async people(
+    @Query('kind') kind?: string,
+    @Query('q') q?: string,
+  ): Promise<{ people: { id: string; name: string }[] }> {
+    requireRole(...STAFF);
+    const which: PickKind = kind === 'student' || kind === 'staff' ? kind : 'member';
+    const term = (q ?? '').trim();
+    // Two characters, like every person search here: below that it is a list.
+    if (term.length < 2) return { people: [] };
+    return {
+      people: await searchIncidentPeople(currentTenant().organizationId, which, term.slice(0, 80)),
+    };
+  }
+
   @Get(':id')
   async one(
     @Param('id', new ParseUUIDPipe()) id: string,

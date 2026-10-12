@@ -116,6 +116,8 @@ export class MaintenanceController {
   /** Every task at one site, worst first. */
   @Get('facilities/:facilityId/tasks')
   async list(@Param('facilityId') facilityId: string): Promise<FacilityTaskResponse> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
     const canPlan = hasRole(...CAN_PLAN);
 
@@ -216,6 +218,8 @@ export class MaintenanceController {
     /** Whole, and only for somebody who may plan — as on the list. */
     assignees: Option[];
   }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
     const canPlan = hasRole(...CAN_PLAN);
 
@@ -240,6 +244,8 @@ export class MaintenanceController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<Paginated<TaskCompletion>> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
     return listCompletions(organizationId, taskId, readPageQuery(page, limit));
   }

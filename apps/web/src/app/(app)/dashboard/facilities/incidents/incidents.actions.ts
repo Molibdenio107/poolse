@@ -141,56 +141,34 @@ export interface PickOption {
 }
 
 /**
- * Students matching what was typed. `null` means the search failed, which the
- * picker says — distinct from an empty list, which means nobody matched.
+ * The pickers ask `/incidents/people`, which answers an id and a name and
+ * nothing else — the register and the people search are the office's and the
+ * instructors' since the security review of 12 October 2026, and maintenance
+ * records incidents too. `null` means the search failed, which the picker says,
+ * distinct from an empty list, which means nobody matched.
  */
-export async function searchStudentsAction(query: string): Promise<PickOption[] | null> {
+async function pick(kind: 'student' | 'member' | 'staff', query: string): Promise<PickOption[] | null> {
   try {
-    const result = await apiFetch<Students>(
-      `/students?search=${encodeURIComponent(query)}&limit=10`,
+    const result = await apiFetch<{ people: { id: string; name: string }[] }>(
+      `/incidents/people?kind=${kind}&q=${encodeURIComponent(query)}`,
     );
-    return result.students.items.map((student) => ({
-      id: student.id,
-      name: student.displayName,
-      detail: student.levelName,
-    }));
+    return result.people.map((person) => ({ id: person.id, name: person.name, detail: null }));
   } catch {
     return null;
   }
+}
+
+/** Students matching what was typed. */
+export async function searchStudentsAction(query: string): Promise<PickOption[] | null> {
+  return pick('student', query);
 }
 
 /** Anybody in the club with a membership — a parent on the deck, a member swimming. */
 export async function searchMembersAction(query: string): Promise<PickOption[] | null> {
-  try {
-    const result = await apiFetch<{ people: PersonSummary[] }>(
-      `/people-search?q=${encodeURIComponent(query)}`,
-    );
-    return result.people.map((person) => ({
-      id: person.membershipId,
-      name: person.name,
-      detail: person.email ?? person.taxNumber,
-    }));
-  } catch {
-    return null;
-  }
+  return pick('member', query);
 }
 
-const STAFF_ROLES = new Set(['owner', 'admin', 'instructor', 'maintenance']);
-
-/**
- * Staff only, for the lifeguard on duty. The person search rather than the
- * staff list, because `/people` is the owner's and the admins' and an
- * instructor recording an incident must be able to name a colleague too.
- */
+/** Staff only, for the lifeguard on duty — a teacher can be the lifeguard too. */
 export async function searchStaffAction(query: string): Promise<PickOption[] | null> {
-  try {
-    const result = await apiFetch<{ people: PersonSummary[] }>(
-      `/people-search?q=${encodeURIComponent(query)}`,
-    );
-    return result.people
-      .filter((person) => person.roles.some((role) => STAFF_ROLES.has(role)))
-      .map((person) => ({ id: person.membershipId, name: person.name, detail: person.email }));
-  } catch {
-    return null;
-  }
+  return pick('staff', query);
 }

@@ -87,6 +87,8 @@ export class VacationsController {
    */
   @Get('mine')
   async mine(@Query('year') yearRaw?: string): Promise<MyVacationsResponse> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId, membershipId } = currentTenant();
     const year = parseYear(yearRaw);
 
@@ -117,6 +119,8 @@ export class VacationsController {
    */
   @Post('requests')
   async request(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included. Leave is a staff member's.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId, membershipId } = currentTenant();
 
     const days = parseDays(body['days']);
@@ -169,6 +173,8 @@ export class VacationsController {
    */
   @Post('requests/:id/withdraw')
   async withdraw(@Param('id') id: string): Promise<{ withdrawn: true }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId, membershipId } = currentTenant();
 
     const outcome = await withdrawOwn(organizationId, membershipId, id);

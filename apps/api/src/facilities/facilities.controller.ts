@@ -194,6 +194,9 @@ export class FacilitiesController {
       emailConfigured: boolean;
     }
   > {
+    // Security review, 12 October 2026: this answered any member, a guardian
+    // included — the water log names who recorded each reading.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
 
     const detail = await findPool(organizationId, poolId);

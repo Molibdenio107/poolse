@@ -1041,3 +1041,12 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   also be the lifeguard). So there is no lifeguard role and no exclusion: validity is a
   qualification, and `qualification_type.counts_as_lifeguard` (seeded on *Nadador-salvador (ISN)*)
   says which type counts.
+- **2026-10-12** — **Security review: role checks on every route.** A guardian or student login
+  (both can be invited) could read the student register, parents' and staff's contacts, NIFs and
+  addresses, a colleague's medical leave and partner contract prices, and could write skill
+  sign-offs and leave requests. A runtime probe proved 31 handlers open. All now refuse by role.
+  A family reads its own child's record, timetable, calendar and progression and no one else's.
+  An instructor with no office role marks skills only for students they teach. Partners stay
+  readable by all staff (as `parcerias.md` settled), but a contract's money is owner/admin only.
+  `places` is owner/admin. The probe is now a regression test. Intended-open reads stay open:
+  seasons, closures, the dashboard (filtered by role), sites and the lesson plan.

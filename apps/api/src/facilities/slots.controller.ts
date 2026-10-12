@@ -56,6 +56,8 @@ export class SlotsController {
     seasonId: string | null;
     slots: TimeSlot[];
   }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
 
     const { seasonId: season, slots } = await listSlots(

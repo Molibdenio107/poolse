@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
+import { requireMyStudent, teachesOnly } from '../tenant/assignment.js';
 import {
   archiveSkill,
   createSkill,
@@ -53,6 +54,8 @@ export class SkillsController {
   /** The grid for one turma: students down, skills across. */
   @Get('turma/:classGroupId')
   async grid(@Param('classGroupId') classGroupId: string): Promise<TurmaSkills> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
 
     const grid = await turmaSkills(organizationId, classGroupId);
@@ -89,6 +92,8 @@ export class SkillsController {
    */
   @Post('mark')
   async mark(@Body() body: Record<string, unknown>): Promise<MarkOutcome> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor');
     const { organizationId, membershipId } = currentTenant();
 
     const raw = body['marks'];
@@ -126,6 +131,14 @@ export class SkillsController {
         overrideReason: reason === '' ? null : reason,
       };
     });
+
+    // An instructor holding no office role marks only the students in turmas
+    // they teach — the same rule as the register (review of 12 October 2026).
+    if (teachesOnly()) {
+      for (const studentId of new Set(marks.map((mark) => mark.studentId))) {
+        await requireMyStudent(studentId);
+      }
+    }
 
     return markSkills(organizationId, membershipId, marks);
   }

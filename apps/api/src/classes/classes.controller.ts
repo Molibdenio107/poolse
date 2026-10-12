@@ -13,6 +13,7 @@ import {
 import { withOrg } from '@poolse/db';
 import { isExclusionViolation } from './sessions.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
+import { requireActsForStudent } from '../students/student-access.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import { canSeeBothViews, teachesOnly } from '../tenant/assignment.js';
 import { nameOrder, shortName } from '../people/names.js';
@@ -110,6 +111,8 @@ const MAX_NAME = 120;
 export class ClassesController {
   @Get()
   async list(@Query('scope') scope?: string): Promise<ClassesResponse> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId, membershipId } = currentTenant();
 
     /*
@@ -166,6 +169,8 @@ export class ClassesController {
 
   @Get(':id')
   async one(@Param('id') id: string): Promise<ClassGroup & { canManage: boolean }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
 
     const group = await findClassGroup(organizationId, id);
@@ -380,6 +385,8 @@ export class ClassesController {
 export class TimetableController {
   @Get()
   async read(@Param('studentId') studentId: string): Promise<{ entries: TimetableEntry[] }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included. A family reads its own child only.
+    await requireActsForStudent(studentId);
     const { organizationId } = currentTenant();
     return { entries: await timetableFor(organizationId, studentId) };
   }

@@ -176,6 +176,8 @@ export class SpacesController {
   /** The spaces at one site, each with its last cleaning and open-issue count. */
   @Get()
   async list(@Query('facilityId') facilityId?: string): Promise<SpaceListResponse> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     if (facilityId === undefined || facilityId === '') {
       throw new BadRequestException({ message: 'facilityId is required' });
     }
@@ -194,6 +196,8 @@ export class SpacesController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<SpaceDetailResponse> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
     const detail = await getSpace(organizationId, id, readPageQuery(page, limit));
     if (detail === null) throw new NotFoundException({ message: 'spaceNotFound' });

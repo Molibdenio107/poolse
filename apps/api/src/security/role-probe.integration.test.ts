@@ -1,0 +1,611 @@
+import { after, before, test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  ClassesController,
+  TimetableController,
+} from '../classes/classes.controller.js';
+import {
+  CalendarController,
+  ClosuresController,
+  SessionsCalendarController,
+  StudentCalendarController,
+} from '../classes/sessions.controller.js';
+import { SeasonsController } from '../classes/seasons.controller.js';
+import { SkillsController } from '../classes/skills.controller.js';
+import { DashboardController } from '../dashboard/dashboard.controller.js';
+import { FacilitiesController } from '../facilities/facilities.controller.js';
+import { GridController } from '../facilities/grid.controller.js';
+import { OccupancyController } from '../facilities/occupancy.controller.js';
+import { PartnersController } from '../facilities/partners.controller.js';
+import { SlotsController } from '../facilities/slots.controller.js';
+import { InventoryController } from '../inventory/inventory.controller.js';
+import { InvitationsController } from '../invitations/invitations.controller.js';
+import { MaintenanceController } from '../maintenance/maintenance.controller.js';
+import { IncidentsController } from '../safety/incidents.controller.js';
+import { SpacesController } from '../spaces/spaces.controller.js';
+import { RecordsController } from '../students/records.controller.js';
+import {
+  GuardiansController,
+  PeopleDedupController,
+  PeopleSearchController,
+  StudentsController,
+} from '../students/students.controller.js';
+import { VacationsController } from '../vacations/vacations.controller.js';
+import { PlacesController } from '../weather/weather.controller.js';
+import {
+  actingAs,
+  addMember,
+  closeHarness,
+  expectStatus,
+  withScratchTenant,
+  type ScratchTenant,
+} from '../test/harness.js';
+import type { MemberRole } from '../tenant/roles.js';
+
+/**
+ * Role probe — security review, 12-10-2026, inverted into a regression test.
+ *
+ * There is no global role guard: every handler calls `requireRole` or refuses
+ * per row. The review found 48 handlers that did neither, and a member holding
+ * only `guardian` (linked to nobody) or only `student` could read the student
+ * register, every parent's contacts and staff NIFs and addresses, and write
+ * skill sign-offs and leave requests. Each test below pins the refusal that
+ * replaced a leak, and the positive case the fix must not break: a linked
+ * guardian still reads their own child, a student still reads themselves.
+ *
+ * The fixture is one club with: an admin with phone, NIF and address; two
+ * instructors (Ana teaches the turma; Beatriz teaches nothing and is on
+ * approved *medical* leave on the lesson day); a maintenance member; two
+ * students with birth dates, contact e-mails and NIFs (Alice, and Bruno, whose
+ * row is the student-role member's own); Marta, linked to Alice; a turma with
+ * both enrolled, a weekly slot and a lesson next week; a partner with a contact
+ * and a priced agreement; a lost-and-found item naming Alice. The probers are
+ * Zeca (guardian, unlinked) and Bruno (student role).
+ *
+ * Run: cd apps/api && node --env-file-if-exists=../../.env --test dist/security/role-probe.integration.test.js
+ */
+
+interface Fixture {
+  aliceId: string;
+  brunoStudentId: string;
+  martaId: string;
+  adminId: string;
+  instructorId: string;
+  awayInstructorId: string;
+  groupId: string;
+  sessionId: string;
+  poolId: string;
+  partnerId: string;
+  skillId: string;
+  unlinkedGuardianId: string;
+  studentMemberId: string;
+  maintenanceId: string;
+}
+
+const ADMIN_NIF = '245678905';
+const ALICE_NIF = '123456789';
+
+async function seed(tenant: ScratchTenant): Promise<Fixture> {
+  const org = tenant.organizationId;
+
+  const [pool] = await tenant.sql<{ id: string }>(
+    `INSERT INTO pool (organization_id, facility_id, name, kind)
+     VALUES ($1, $2, 'Tanque Grande', 'indoor') RETURNING id`,
+    [org, tenant.facilityId],
+  );
+
+  const adminId = await addMember(tenant, 'Carla', 'Admin', ['admin']);
+  await tenant.sql(
+    `UPDATE membership SET phone = '912345678', tax_number = $2, address = 'Rua Privada 1, Lisboa'
+      WHERE id = $1`,
+    [adminId, ADMIN_NIF],
+  );
+
+  const instructorId = await addMember(tenant, 'Ana', 'Ribeiro', ['instructor']);
+  const awayInstructorId = await addMember(tenant, 'Beatriz', 'Doente', ['instructor']);
+  const maintenanceId = await addMember(tenant, 'Mario', 'Manutencao', ['maintenance']);
+
+  const [level] = await tenant.sql<{ id: string }>(
+    `INSERT INTO student_level (organization_id, name) VALUES ($1, 'Iniciados') RETURNING id`,
+    [org],
+  );
+  const [skill] = await tenant.sql<{ id: string }>(
+    `INSERT INTO skill (organization_id, level_id, name, sort_order)
+     VALUES ($1, $2, 'Respiração lateral', 1) RETURNING id`,
+    [org, level!.id],
+  );
+
+  // Two students with personal data.
+  const [alice] = await tenant.sql<{ id: string }>(
+    `INSERT INTO student (organization_id, first_name, last_name, birth_date, contact_email,
+                          contact_phone, tax_number, notes, level_id)
+     VALUES ($1, 'Alice', 'Privada', '2016-03-04', 'alice.family@example.test',
+             '934000111', $2, 'Nota interna sobre a Alice', $3) RETURNING id`,
+    [org, ALICE_NIF, level!.id],
+  );
+
+  const studentMemberId = await addMember(tenant, 'Bruno', 'Aluno', ['student']);
+  const [bruno] = await tenant.sql<{ id: string }>(
+    `INSERT INTO student (organization_id, first_name, last_name, birth_date, contact_email,
+                          membership_id, level_id)
+     VALUES ($1, 'Bruno', 'Aluno', '2001-07-08', 'bruno@example.test', $2, $3) RETURNING id`,
+    [org, studentMemberId, level!.id],
+  );
+
+  // Alice's mother — the linked guardian. Not the prober.
+  const martaId = await addMember(tenant, 'Marta', 'Mae', ['guardian']);
+  await tenant.sql(
+    `UPDATE membership SET phone = '961111222', address = 'Rua da Alice 2' WHERE id = $1`,
+    [martaId],
+  );
+  await tenant.sql(
+    `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship)
+     VALUES ($1, $2, $3, 'mãe')`,
+    [org, alice!.id, martaId],
+  );
+
+  // The prober: a guardian linked to nobody.
+  const unlinkedGuardianId = await addMember(tenant, 'Zeca', 'Estranho', ['guardian']);
+
+  const { id: groupId } = await actingAs(tenant, { roles: ['owner'] }, async () =>
+    new ClassesController().create({
+      name: 'Iniciados A',
+      poolId: pool!.id,
+      lane: 1,
+      levelId: level!.id,
+      instructorMembershipId: instructorId,
+    }),
+  );
+
+  // A weekly slot, so the timetable has something to say.
+  await actingAs(tenant, { roles: ['owner'] }, async () =>
+    new ClassesController().schedule(groupId, {
+      weekday: '3',
+      startTime: '18:00',
+      durationMinutes: '45',
+    }),
+  );
+
+  for (const studentId of [alice!.id, bruno!.id]) {
+    await tenant.sql(
+      `INSERT INTO enrollment (organization_id, class_group_id, student_id, status)
+       VALUES ($1, $2, $3, 'active')`,
+      [org, groupId, studentId],
+    );
+  }
+
+  const [session] = await tenant.sql<{ id: string; occurs_on: string }>(
+    `INSERT INTO class_session
+       (organization_id, class_group_id, pool_id, starts_at, duration_minutes, occurs_on)
+     VALUES ($1, $2, $3, now() + interval '7 days', 45, (now() + interval '7 days')::date)
+     RETURNING id, occurs_on::text`,
+    [org, groupId, pool!.id],
+  );
+
+  // Beatriz is on approved medical leave that day.
+  const [leave] = await tenant.sql<{ id: string }>(
+    `INSERT INTO vacation_request (organization_id, membership_id, kind, reason, status,
+                                   decided_at, decided_by_membership_id)
+     VALUES ($1, $2, 'medical', 'Cirurgia ao joelho', 'approved', now(), $3) RETURNING id`,
+    [org, awayInstructorId, tenant.ownerMembershipId],
+  );
+  await tenant.sql(
+    `INSERT INTO vacation_day (organization_id, vacation_request_id, membership_id, day)
+     VALUES ($1, $2, $3, $4::date)`,
+    [org, leave!.id, awayInstructorId, session!.occurs_on],
+  );
+
+  // A partner with a contact and a priced agreement.
+  const partners = new PartnersController();
+  const partnerId = await actingAs(tenant, { roles: ['owner'] }, async () => {
+    const { id } = await partners.create(tenant.facilityId, {
+      name: 'ES D. Dinis',
+      type: 'escola',
+      nif: '501234560',
+      color: '#67a6b6',
+    });
+    await partners.addPartnerContact(id, {
+      name: 'Diretor Contacto',
+      email: 'diretor@escola.example.test',
+      phone: '939999888',
+    });
+    await partners.recordAgreement(id, {
+      startDate: '2026-09-01',
+      endDate: '2027-07-31',
+      billingModel: 'por_hora_pista',
+      unitPrice: '14.375',
+      vatRate: '23',
+      paymentPeriod: 'mensal',
+    });
+
+    await new InventoryController().recordFound({
+      facilityId: tenant.facilityId,
+      description: 'Óculos azuis',
+      locationFound: 'Balneário',
+      studentId: alice!.id,
+    });
+    return id;
+  });
+
+  return {
+    aliceId: alice!.id,
+    brunoStudentId: bruno!.id,
+    martaId,
+    adminId,
+    instructorId,
+    awayInstructorId,
+    groupId,
+    sessionId: session!.id,
+    poolId: pool!.id,
+    partnerId,
+    skillId: skill!.id,
+    unlinkedGuardianId,
+    studentMemberId,
+    maintenanceId,
+  };
+}
+
+/** Both non-staff probers, so every refusal is checked twice. */
+function probers(f: Fixture): { label: string; membershipId: string; roles: MemberRole[] }[] {
+  return [
+    { label: 'unlinked guardian', membershipId: f.unlinkedGuardianId, roles: ['guardian'] },
+    { label: 'student', membershipId: f.studentMemberId, roles: ['student'] },
+  ];
+}
+
+let tenantRef: ScratchTenant;
+let fixture: Fixture;
+let release: () => void = () => {};
+let done: Promise<void> = Promise.resolve();
+
+/*
+ * One tenant for the whole file: the fixture is expensive. The tenant is held
+ * open until every test has run, then torn down, then the pools close.
+ */
+before(async () => {
+  await new Promise<void>((resolveReady, rejectReady) => {
+    done = withScratchTenant(async (tenant) => {
+      tenantRef = tenant;
+      fixture = await seed(tenant);
+      resolveReady();
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    }).catch((error: unknown) => rejectReady(error));
+  });
+});
+
+after(async () => {
+  release();
+  await done;
+  await closeHarness();
+});
+
+async function asEach(fn: (who: { label: string }) => Promise<void>): Promise<void> {
+  for (const who of probers(fixture)) {
+    await actingAs(tenantRef, { membershipId: who.membershipId, roles: who.roles }, () => fn(who));
+  }
+}
+
+function as<T>(membershipId: string, roles: MemberRole[], fn: () => Promise<T>): Promise<T> {
+  return actingAs(tenantRef, { membershipId, roles }, fn);
+}
+
+/** expectStatus, with the route named so a failure says which one opened up. */
+async function refused(route: string, status: number, fn: () => Promise<unknown>): Promise<void> {
+  try {
+    await expectStatus(fn, status);
+  } catch (error) {
+    throw new Error(`${route}: ${(error as Error).message}`);
+  }
+}
+
+const NO_SUCH_ID = '00000000-0000-0000-0000-000000000000';
+
+// --------------------------------------------------------------------------
+// Personal data — staff routes refuse non-staff
+// --------------------------------------------------------------------------
+
+test('people, register and guardian lists refuse a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    await refused('GET people-search', 403, () => new PeopleSearchController().search('Carla'));
+    await refused('GET people/duplicate', 403, () =>
+      new PeopleDedupController().duplicate(ADMIN_NIF),
+    );
+    await refused('GET students', 403, () => new StudentsController().list());
+    await refused('GET guardians', 403, () => new GuardiansController().list());
+    await refused('GET people-search/:marta/students', 403, () =>
+      new PeopleSearchController().students(fixture.martaId),
+    );
+  });
+});
+
+test('people-search/:membershipId/students answers for the caller themselves', async () => {
+  await as(fixture.martaId, ['guardian'], async () => {
+    const { students } = await new PeopleSearchController().students(fixture.martaId);
+    assert.deepEqual(
+      students.map((s) => s.id),
+      [fixture.aliceId],
+      'Marta sees her own child',
+    );
+  });
+});
+
+test('rosters, skills grid and stand-in list refuse non-staff (403)', async () => {
+  await asEach(async () => {
+    await refused('GET class-groups', 403, () => new ClassesController().list());
+    await refused('GET class-groups/:id', 403, () => new ClassesController().one(fixture.groupId));
+    await refused('GET skills/turma/:id', 403, () => new SkillsController().grid(fixture.groupId));
+    await refused('GET sessions/:id/stand-in', 403, () =>
+      new SessionsCalendarController().standInOptions(fixture.sessionId),
+    );
+  });
+});
+
+test("a stranger's child is not there: students/:id and its timetable, calendar, progression (404)", async () => {
+  await asEach(async () => {
+    await refused('GET students/:alice', 404, () => new StudentsController().one(fixture.aliceId));
+    await refused('GET students/:alice/timetable', 404, () =>
+      new TimetableController().read(fixture.aliceId),
+    );
+    await refused('GET students/:alice/calendar', 404, () =>
+      new StudentCalendarController().read(fixture.aliceId),
+    );
+    await refused('GET students/:alice/progression', 404, () =>
+      new RecordsController().read(fixture.aliceId),
+    );
+  });
+});
+
+test("a linked guardian reads their own child, and not another's", async () => {
+  await as(fixture.martaId, ['guardian'], async () => {
+    const alice = await new StudentsController().one(fixture.aliceId);
+    assert.equal(alice.id, fixture.aliceId);
+    assert.equal(alice.canViewSensitive, false, 'the medical record stays behind its own guard');
+
+    const timetable = await new TimetableController().read(fixture.aliceId);
+    assert.ok(timetable.entries.length > 0, "her child's timetable");
+
+    const calendar = await new StudentCalendarController().read(fixture.aliceId);
+    assert.ok(calendar.sessions.length > 0, "her child's calendar");
+
+    const progression = await new RecordsController().read(fixture.aliceId);
+    assert.ok(Array.isArray(progression.records), "her child's progression");
+
+    await refused('GET students/:bruno as Marta', 404, () =>
+      new StudentsController().one(fixture.brunoStudentId),
+    );
+    await refused('GET students/:bruno/timetable as Marta', 404, () =>
+      new TimetableController().read(fixture.brunoStudentId),
+    );
+    await refused('GET students/:bruno/calendar as Marta', 404, () =>
+      new StudentCalendarController().read(fixture.brunoStudentId),
+    );
+    await refused('GET students/:bruno/progression as Marta', 404, () =>
+      new RecordsController().read(fixture.brunoStudentId),
+    );
+  });
+});
+
+test('a student reads their own record, timetable, calendar and progression', async () => {
+  await as(fixture.studentMemberId, ['student'], async () => {
+    const me = await new StudentsController().one(fixture.brunoStudentId);
+    assert.equal(me.id, fixture.brunoStudentId);
+
+    const timetable = await new TimetableController().read(fixture.brunoStudentId);
+    assert.ok(timetable.entries.length > 0, 'own timetable');
+
+    const calendar = await new StudentCalendarController().read(fixture.brunoStudentId);
+    assert.ok(calendar.sessions.length > 0, 'own calendar');
+
+    const progression = await new RecordsController().read(fixture.brunoStudentId);
+    assert.ok(Array.isArray(progression.records), 'own progression');
+  });
+});
+
+// --------------------------------------------------------------------------
+// Partners — money and third-party contacts
+// --------------------------------------------------------------------------
+
+test('partners: staff only; contract money only for owner and admin', async () => {
+  await asEach(async () => {
+    await refused('GET partners/:id', 403, () => new PartnersController().detail(fixture.partnerId));
+    await refused('GET facilities/:id/partners', 403, () =>
+      new PartnersController().list(tenantRef.facilityId),
+    );
+    await refused('GET facilities/:id/partners/bookable', 403, () =>
+      new PartnersController().bookable(tenantRef.facilityId),
+    );
+  });
+
+  await as(fixture.instructorId, ['instructor'], async () => {
+    const detail = await new PartnersController().detail(fixture.partnerId);
+    assert.equal(detail.name, 'ES D. Dinis', 'an instructor still reads the partnership');
+    assert.equal(detail.agreement, null, 'but not the contract');
+
+    const page = await new PartnersController().list(tenantRef.facilityId);
+    assert.ok(page.items.length > 0, 'an instructor still sees the partners');
+    assert.equal(page.items[0]!.contractedCents, null, 'but not what they pay');
+    assert.equal(page.items[0]!.billingModel, null, 'nor how they are billed');
+  });
+
+  await as(tenantRef.ownerMembershipId, ['owner'], async () => {
+    const detail = await new PartnersController().detail(fixture.partnerId);
+    assert.equal(Number(detail.agreement?.unitPrice), 14.375, 'the owner still reads the contract');
+  });
+});
+
+// --------------------------------------------------------------------------
+// Writes — refused, and nothing written
+// --------------------------------------------------------------------------
+
+async function count(table: 'skill_progress' | 'vacation_request'): Promise<number> {
+  const [row] = await tenantRef.sql<{ n: number }>(`SELECT count(*)::int AS n FROM ${table}`);
+  return row!.n;
+}
+
+test('POST skills/mark: refused for non-staff and for an instructor outside the turma; nothing written', async () => {
+  const before = await count('skill_progress');
+
+  await as(fixture.studentMemberId, ['student'], async () => {
+    await refused('POST skills/mark as student (own row)', 403, () =>
+      new SkillsController().mark({
+        marks: [
+          {
+            studentId: fixture.brunoStudentId,
+            skillId: fixture.skillId,
+            state: 'attained',
+            overrideReason: 'eu acho que sim',
+          },
+        ],
+      }),
+    );
+  });
+
+  await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
+    await refused('POST skills/mark as unlinked guardian', 403, () =>
+      new SkillsController().mark({
+        marks: [
+          { studentId: fixture.aliceId, skillId: fixture.skillId, state: 'attained', overrideReason: 'x' },
+        ],
+      }),
+    );
+  });
+
+  // Beatriz teaches nothing, so Alice is not hers to mark.
+  await as(fixture.awayInstructorId, ['instructor'], async () => {
+    await refused('POST skills/mark as an instructor who does not teach Alice', 403, () =>
+      new SkillsController().mark({
+        marks: [{ studentId: fixture.aliceId, skillId: fixture.skillId, state: 'attained', overrideReason: 'x' }],
+      }),
+    );
+  });
+
+  assert.equal(await count('skill_progress'), before, 'no mark was written');
+});
+
+test('vacations: mine, request and withdraw refuse non-staff; nothing written', async () => {
+  const before = await count('vacation_request');
+
+  await asEach(async ({ label }) => {
+    await refused(`GET vacations/mine as ${label}`, 403, () => new VacationsController().mine());
+    await refused(`POST vacations/requests as ${label}`, 403, () =>
+      new VacationsController().request({ days: ['2027-02-01'], kind: 'vacation' }),
+    );
+    await refused(`POST vacations/requests/:id/withdraw as ${label}`, 403, () =>
+      new VacationsController().withdraw(NO_SUCH_ID),
+    );
+  });
+
+  assert.equal(await count('vacation_request'), before, 'no leave request was written');
+});
+
+// --------------------------------------------------------------------------
+// Club-internal operational data — staff only
+// --------------------------------------------------------------------------
+
+test('operational reads refuse non-staff (403)', async () => {
+  await asEach(async () => {
+    const fac = tenantRef.facilityId;
+    await refused('GET calendar', 403, () => new CalendarController().read());
+    await refused('GET facilities/:id/grid', 403, () => new GridController().read(fac));
+    await refused('GET facilities/:id/occupancy', 403, () => new OccupancyController().read(fac));
+    await refused('GET facilities/:id/slots', 403, () => new SlotsController().list(fac));
+    await refused('GET facilities/pools/:id', 403, () =>
+      new FacilitiesController().pool(fixture.poolId),
+    );
+    await refused('GET maintenance/facilities/:id/tasks', 403, () =>
+      new MaintenanceController().list(fac),
+    );
+    await refused('GET maintenance/tasks/:id', 403, () => new MaintenanceController().one(NO_SUCH_ID));
+    await refused('GET maintenance/tasks/:id/completions', 403, () =>
+      new MaintenanceController().history(NO_SUCH_ID),
+    );
+    await refused('GET spaces', 403, () => new SpacesController().list(fac));
+    await refused('GET spaces/:id', 403, () => new SpacesController().detail(NO_SUCH_ID));
+    await refused('GET inventory', 403, () => new InventoryController().list(fac));
+    await refused('GET inventory/export', 403, () => new InventoryController().exportAll(fac));
+    await refused('GET inventory/lost-and-found', 403, () =>
+      new InventoryController().lostAndFound(fac),
+    );
+    await refused('GET places', 403, () => new PlacesController().search('Lisboa'));
+    await refused('GET incidents/people', 403, () =>
+      new IncidentsController().people('student', 'Alice'),
+    );
+  });
+});
+
+test('places is owner/admin: an instructor is refused too', async () => {
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('GET places as instructor', 403, () => new PlacesController().search('Lisboa'));
+  });
+});
+
+test('operational reads still answer staff: maintenance reads the calendar, grid, spaces and lost-and-found', async () => {
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    const calendar = await new CalendarController().read();
+    assert.ok(Array.isArray(calendar.sessions));
+    assert.ok(await new GridController().read(tenantRef.facilityId));
+    const spaces = await new SpacesController().list(tenantRef.facilityId);
+    assert.ok(Array.isArray(spaces.items));
+    const found = await new InventoryController().lostAndFound(tenantRef.facilityId);
+    assert.ok(Array.isArray(found.items));
+  });
+});
+
+test('incidents/people gives maintenance names and nothing else', async () => {
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    const { people } = await new IncidentsController().people('student', 'Alice');
+    const alice = people.find((p) => p.id === fixture.aliceId);
+    assert.ok(alice, 'Alice is found by name');
+    for (const person of people) {
+      assert.deepEqual(Object.keys(person).sort(), ['id', 'name'], 'no contact, NIF or birth date');
+    }
+
+    const staff = await new IncidentsController().people('staff', 'Carla');
+    for (const person of staff.people) {
+      assert.deepEqual(Object.keys(person).sort(), ['id', 'name'], 'the staff picker is names only too');
+    }
+  });
+});
+
+// --------------------------------------------------------------------------
+// Intended open — reads a family legitimately needs
+// --------------------------------------------------------------------------
+
+test('intended open: seasons, closures, lesson plan and dashboard still answer non-staff', async () => {
+  await asEach(async ({ label }) => {
+    const plan = await new SessionsCalendarController().plan(fixture.sessionId);
+    assert.equal(plan.canEdit, false, `${label}: lesson plan, read-only`);
+
+    const seasons = await new SeasonsController().list();
+    assert.ok(seasons.seasons.length > 0, `${label}: seasons`);
+
+    const closures = await new ClosuresController().list();
+    assert.ok(Array.isArray(closures.closures), `${label}: closures`);
+
+    const dashboard = await new DashboardController().read();
+    assert.ok(dashboard, `${label}: dashboard (registry decides)`);
+  });
+});
+
+// --------------------------------------------------------------------------
+// Protected — controls that held before the review
+// --------------------------------------------------------------------------
+
+test('protected: invitations and role grants refuse non-staff', async () => {
+  await asEach(async () => {
+    await expectStatus(
+      () => new InvitationsController().create({ email: 'x@example.test', roles: ['guardian'] }),
+      403,
+    );
+    await expectStatus(
+      () => new PeopleDedupController().grant(fixture.martaId, { role: 'guardian' }),
+      403,
+    );
+    await expectStatus(
+      () => new PeopleDedupController().revoke(fixture.martaId, 'guardian'),
+      403,
+    );
+  });
+});

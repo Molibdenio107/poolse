@@ -7,7 +7,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole } from '../tenant/roles.js';
+import { hasRole, requireRole } from '../tenant/roles.js';
 import { DraftSeasonError, readOccupancy, type Occupancy } from './occupancy.repository.js';
 
 /**
@@ -31,6 +31,8 @@ export class OccupancyController {
     @Param('facilityId') facilityId: string,
     @Query('seasonId') seasonId?: string,
   ): Promise<Occupancy> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
 
     let occupancy: Occupancy | null;

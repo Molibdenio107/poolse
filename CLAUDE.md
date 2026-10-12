@@ -629,6 +629,18 @@ seed created a second site to keep demo data tidy and nothing objected.
 null`). Otherwise archiving an instructor and re-adding them next season violates the
 constraint against a dead row.
 
+**Every handler refuses by role in its first line; there is no global role guard.** Security
+review, 12 October 2026. A guardian or a student holds a full tenant context (owners, admins and
+instructors can invite them), and 31 handlers answered them: the whole register, every parent's
+and every staff member's contacts, NIFs and addresses, a colleague's medical leave, partner
+prices, and two writes. Staff routes start with `requireRole(...)`, and `hasRole` computes a flag
+but refuses nothing. A child's own pages (record, timetable, calendar, progression) use
+`requireActsForStudent` (`students/student-access.ts`): staff pass, a family only for its own
+child, and anyone else gets a 404. A picker that non-office staff need gets a names-only endpoint
+(`incidents/people`) rather than reopening the register. `security/role-probe.integration.test.ts`
+calls every route as an unlinked guardian and as a student. **A new endpoint is added there in
+the same change.**
+
 **A permission about a *row* is a repository answer, not `requireRole`.** "The instructor
 responsible for this turma" cannot be written as a role, so the repository resolves the row,
 decides, and the controller turns a refusal into a 403 — while the read endpoint returns the

@@ -4,6 +4,7 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { decryptSensitive, encryptSensitive } from '../sensitive/cipher.js';
 import { personName } from '../people/names.js';
 import { TOTAL_COUNT, windowed, type PageQuery, type Paginated } from '../common/pagination.js';
+import { searchPredicate } from '../common/search.js';
 
 /**
  * Bather incidents — POOLSE-70, slice 1.
@@ -386,6 +387,48 @@ export async function addAddendum(
       data: { addendumId: rows[0]!.id },
     });
     return 'added';
+  });
+}
+
+export type PickKind = 'student' | 'member' | 'staff';
+
+/**
+ * Names for the incident form's pickers — an id and a name, nothing else.
+ *
+ * The register and the people search are the office's and the instructors'
+ * (security review, 12 October 2026), but maintenance records incidents too and
+ * must be able to name who slipped. This answers exactly that and no more: no
+ * contact, no NIF, no birth date. `staff` is anybody holding a staff role — a
+ * teacher can be the lifeguard (Rui, 12 October 2026). Ten at most; a search,
+ * not a list.
+ */
+export async function searchIncidentPeople(
+  organizationId: string,
+  kind: PickKind,
+  term: string,
+): Promise<{ id: string; name: string }[]> {
+  return withOrg(organizationId, async (tx) => {
+    const sql =
+      kind === 'student'
+        ? `SELECT s.id, btrim(s.first_name || ' ' || s.last_name) AS name
+             FROM student s
+            WHERE s.archived_at IS NULL
+              AND ${searchPredicate("s.first_name || ' ' || s.last_name", '$1')}
+            ORDER BY lower(s.last_name), lower(s.first_name), s.id
+            LIMIT 10`
+        : `SELECT m.id, ${personName('m.id')} AS name
+             FROM membership m
+            WHERE m.archived_at IS NULL AND m.status = 'active'
+              AND ${searchPredicate(`coalesce(${personName('m.id')}, '')`, '$1')}
+              ${kind === 'staff'
+                ? `AND EXISTS (SELECT 1 FROM membership_role r
+                                WHERE r.membership_id = m.id AND r.archived_at IS NULL
+                                  AND r.role IN ('owner', 'admin', 'instructor', 'maintenance'))`
+                : ''}
+            ORDER BY lower(${personName('m.id')}), m.id
+            LIMIT 10`;
+    const { rows } = await tx.query<{ id: string; name: string | null }>(sql, [term]);
+    return rows.map((row) => ({ id: row.id, name: row.name ?? '' }));
   });
 }
 

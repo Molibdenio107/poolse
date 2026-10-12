@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { isValidNif } from '@poolse/rules';
 import { currentTenant } from '../tenant/tenant.context.js';
+import { requireActsForStudent } from './student-access.js';
 import {
   hasRole,
   isMemberRole,
@@ -163,6 +164,8 @@ export class GuardiansController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<{ organizationId: string; guardians: Paginated<GuardianRow> }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
     return {
       organizationId,
@@ -194,6 +197,8 @@ export class PeopleDedupController {
     @Query('taxNumber') taxNumber?: string,
     @Query('email') email?: string,
   ): Promise<{ match: DuplicateMatch | null }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
     return {
       match: await findDuplicate(organizationId, taxNumber ?? null, email ?? null),
@@ -279,6 +284,8 @@ export class PeopleDedupController {
 export class PeopleSearchController {
   @Get()
   async search(@Query('q') q?: string): Promise<{ people: PersonSummary[] }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
 
     // Two characters is where a search stops being a list of everybody. Below
@@ -295,6 +302,9 @@ export class PeopleSearchController {
   async students(
     @Param('membershipId') membershipId: string,
   ): Promise<{ students: { id: string; name: string; relationship: string | null }[] }> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    // Somebody asking about their own children, or staff about anybody's.
+    if (membershipId !== currentTenant().membershipId) requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
     return { students: await studentsOf(organizationId, membershipId) };
   }
@@ -310,6 +320,8 @@ export class StudentsController {
     @Query('limit') limit?: string,
     @Query('sort') sort?: string,
   ): Promise<StudentsResponse> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
 
     // All three are tenant-scoped reads on the same organization; together they
@@ -343,6 +355,8 @@ export class StudentsController {
 
   @Get(':id')
   async one(@Param('id') id: string): Promise<StudentDetail> {
+    // Security review, 12 October 2026: this answered any member, a guardian included. A family reads its own child only.
+    await requireActsForStudent(id);
     const { organizationId } = currentTenant();
     const student = await findStudent(organizationId, id);
     // Also the answer when the id belongs to another tenant: RLS makes the two

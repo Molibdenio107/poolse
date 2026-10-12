@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { withOrg } from '@poolse/db';
 import { currentTenant } from '../tenant/tenant.context.js';
+import { requireActsForStudent } from '../students/student-access.js';
 import { moveOccurrence } from './classes.repository.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import { candidatesFor, setStandIn, type Candidate } from './stand-in.repository.js';
@@ -213,6 +214,8 @@ export class CalendarController {
     @Query('from') from?: string,
     @Query('to') to?: string,
   ): Promise<CalendarResponse> {
+    // Security review, 12 October 2026: this answered any member, a guardian included.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
     const window = parseWindow(from, to);
 
@@ -359,6 +362,9 @@ export class SessionsCalendarController {
     currentId: string | null;
     candidates: Candidate[];
   }> {
+    // Security review, 12 October 2026: this answered any member, a guardian
+    // included, and it names a colleague's medical leave.
+    requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
     const found = await candidatesFor(organizationId, id);
     if (found === null) throw new NotFoundException({ message: 'sessionNotFound' });
@@ -682,6 +688,8 @@ export class StudentCalendarController {
     @Query('from') from?: string,
     @Query('to') to?: string,
   ): Promise<CalendarResponse> {
+    // Security review, 12 October 2026: this answered any member, a guardian included. A family reads its own child only.
+    await requireActsForStudent(studentId);
     const { organizationId } = currentTenant();
     const window = parseWindow(from, to);
 
