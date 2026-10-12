@@ -208,3 +208,47 @@ test('an incident in the future, or with nobody named, is refused by field', asy
     });
   });
 });
+
+test("the insurer's copy carries the addenda and the lifeguard's licence as it stood that day", async () => {
+  await withScratchTenant(async (tenant) => {
+    const lifeguard = await addMember(tenant, 'Nuno', 'Salvador', ['instructor']);
+    const other = await addMember(tenant, 'Bruno', 'Alheio', ['instructor']);
+    const [type] = await tenant.sql<{ id: string }>(
+      `SELECT id FROM qualification_type WHERE counts_as_lifeguard AND archived_at IS NULL LIMIT 1`,
+    );
+    // Lapsed two days ago: on yesterday's incident it had already expired.
+    const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
+    await tenant.sql(
+      `INSERT INTO qualification (organization_id, membership_id, qualification_type_id, issued_on, expires_on)
+       VALUES ($1, $2, $3, DATE '2022-01-01', $4::date)`,
+      [tenant.organizationId, lifeguard, type!.id, twoDaysAgo],
+    );
+
+    const id = await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const { id: created } = await new FacilityIncidentsController().record(tenant.facilityId, {
+        ...incident(await student(tenant)),
+        lifeguardMembershipId: lifeguard,
+      });
+      await new IncidentsController().addendum(created, { body: 'Os pais levaram-na ao centro de saúde.' });
+
+      const copy = await new IncidentsController().export(created);
+      assert.equal(copy.detail.whatHappened, 'Escorregou no cais junto à escada.');
+      assert.deepEqual(copy.detail.addenda.map((a) => a.body), ['Os pais levaram-na ao centro de saúde.']);
+      assert.equal(copy.lifeguardQualifications.length, 1);
+      assert.equal(copy.lifeguardQualifications[0]?.validThatDay, false, 'expired before the incident');
+      assert.equal(copy.lifeguardQualifications[0]?.expiresOn, twoDaysAgo);
+
+      const [log] = await tenant.sql<{ n: number }>(
+        `SELECT count(*)::int AS n FROM audit_log WHERE action = 'incident.exported' AND entity_id = $1`,
+        [created],
+      );
+      assert.equal(log?.n, 1, 'the export is in the trail');
+      return created;
+    });
+
+    // It holds the health detail, so it follows the detail's rule.
+    await actingAs(tenant, { membershipId: other, roles: ['instructor'] }, async () => {
+      await expectStatus(() => new IncidentsController().export(id), 403);
+    });
+  });
+});

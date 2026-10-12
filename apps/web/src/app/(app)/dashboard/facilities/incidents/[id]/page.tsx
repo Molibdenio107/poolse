@@ -1,3 +1,4 @@
+import { FileText } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Siren, TriangleAlert } from 'lucide-react';
@@ -59,9 +60,27 @@ export default async function IncidentPage({
       subtitle={incident.facilityName}
       back={{ href: listHref, label: t('incidents.backToList') }}
       actions={
-        incident.canArchive && !incident.archived ? (
-          <ArchiveIncident incidentId={incident.id} listHref={listHref} />
-        ) : null
+        <div className="flex flex-wrap gap-2">
+          {/*
+            The insurer's copy — slice 3. A plain link in a new tab, never a
+            prefetching <Link>: opening it is an export, read under the clinical
+            rule and written to the audit log.
+          */}
+          {incident.canReadDetail && (
+            <a
+              href={`/dashboard/facilities/incidents/${incident.id}/print`}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <FileText aria-hidden className="size-4" />
+              {t('incidents.print.link')}
+            </a>
+          )}
+          {incident.canArchive && !incident.archived && (
+            <ArchiveIncident incidentId={incident.id} listHref={listHref} />
+          )}
+        </div>
       }
     >
       <div className="flex flex-col gap-6">

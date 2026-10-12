@@ -629,6 +629,9 @@ test('incidents and the lifeguard roster refuse a guardian and a student (403)',
     await refused('POST facilities/:id/lifeguard-roster', 403, () =>
       new LifeguardRosterController().add(fac, {}),
     );
+    await refused('POST incidents/:id/export', 403, () =>
+      new IncidentsController().export('00000000-0000-0000-0000-000000000000'),
+    );
     await refused('POST lifeguard-duties/:id/archive', 403, () =>
       new LifeguardDutiesController().archive('00000000-0000-0000-0000-000000000000'),
     );

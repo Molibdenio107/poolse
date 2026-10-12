@@ -4165,6 +4165,21 @@ export interface OnDuty {
   onDuty: { membershipId: string; name: string | null; licensed: boolean }[];
 }
 
+/** POOLSE-70 slice 3: the insurer's copy. Read under the detail's rule, logged as an export. */
+export interface IncidentExport {
+  facts: IncidentFacts;
+  detail: IncidentDetail;
+  /** The recorded lifeguard's lifeguard-type records as they stood on the incident's day. */
+  lifeguardQualifications: {
+    typeName: string;
+    issuingBody: string | null;
+    issuedOn: string | null;
+    expiresOn: string | null;
+    validThatDay: boolean;
+  }[];
+  exportedAt: string;
+}
+
 export interface IncidentDetail {
   whatHappened: string;
   injury: string | null;

@@ -373,6 +373,94 @@ export async function readIncidentDetail(
   });
 }
 
+export interface LifeguardQualificationOnDay {
+  typeName: string;
+  issuingBody: string | null;
+  issuedOn: string | null;
+  expiresOn: string | null;
+  /** Valid on the incident's day: issued by then and not yet expired. */
+  validThatDay: boolean;
+}
+
+export interface IncidentExport {
+  facts: IncidentFacts;
+  detail: IncidentDetail;
+  /**
+   * The recorded lifeguard's lifeguard-type records as they stood on the
+   * incident's day — derived from 7b.2's dated records at the moment of export
+   * and printed, which is the snapshot the ticket asks for. Empty when nobody
+   * was recorded, or they held none.
+   */
+  lifeguardQualifications: LifeguardQualificationOnDay[];
+  exportedAt: string;
+}
+
+/**
+ * The insurer's copy — slice 3. Everything the record holds, the health detail
+ * included, so it is read under the detail's rule and logged as an export (one
+ * `incident.exported` row, which is also the read). `'refused'` otherwise.
+ */
+export async function exportIncident(
+  organizationId: string,
+  incidentId: string,
+  owns: boolean,
+): Promise<IncidentExport | 'refused' | null> {
+  const detail = await readIncidentDetail(organizationId, incidentId, owns);
+  if (detail === null || detail === 'refused') return detail;
+
+  return withOrg(organizationId, async (tx) => {
+    const facts = await factsOf(tx, incidentId);
+    if (facts === null) return null;
+
+    const { rows } = await tx.query<{
+      type_name: string;
+      issuing_body: string | null;
+      issued_on: string | null;
+      expires_on: string | null;
+      valid_that_day: boolean;
+    }>(
+      `WITH day AS (
+         SELECT (i.occurred_at AT TIME ZONE f.timezone)::date AS d, i.lifeguard_membership_id AS m
+           FROM incident i
+           JOIN facility f ON f.id = i.facility_id AND f.organization_id = i.organization_id
+          WHERE i.id = $1
+       )
+       SELECT t.name AS type_name, q.issuing_body,
+              to_char(q.issued_on, 'YYYY-MM-DD') AS issued_on,
+              to_char(q.expires_on, 'YYYY-MM-DD') AS expires_on,
+              ((q.issued_on IS NULL OR q.issued_on <= day.d)
+               AND (q.expires_on IS NULL OR q.expires_on >= day.d)) AS valid_that_day
+         FROM day
+         JOIN qualification q ON q.membership_id = day.m AND q.archived_at IS NULL
+         JOIN qualification_type t
+           ON t.id = q.qualification_type_id AND t.organization_id = q.organization_id
+        WHERE t.counts_as_lifeguard AND t.archived_at IS NULL
+        ORDER BY q.expires_on DESC NULLS FIRST, q.issued_on DESC NULLS LAST`,
+      [incidentId],
+    );
+
+    await recordAudit(tx, {
+      action: 'incident.exported',
+      entityType: 'incident',
+      entityId: incidentId,
+      data: {},
+    });
+
+    return {
+      facts,
+      detail,
+      lifeguardQualifications: rows.map((row) => ({
+        typeName: row.type_name,
+        issuingBody: row.issuing_body,
+        issuedOn: row.issued_on,
+        expiresOn: row.expires_on,
+        validThatDay: row.valid_that_day,
+      })),
+      exportedAt: new Date().toISOString(),
+    };
+  });
+}
+
 /** A correction, under the same rule as reading the detail it corrects. */
 export async function addAddendum(
   organizationId: string,

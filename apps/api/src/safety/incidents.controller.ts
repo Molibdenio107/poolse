@@ -15,6 +15,7 @@ import { hasRole, requireRole, type MemberRole } from '../tenant/roles.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import {
   addAddendum,
+  exportIncident,
   archiveIncident,
   listIncidents,
   mayReadDetail,
@@ -26,6 +27,7 @@ import {
   OccurredInFutureError,
   PlaceOffSiteError,
   type IncidentDetail,
+  type IncidentExport,
   type IncidentFacts,
   type IncidentInput,
   type IncidentSummary,
@@ -135,6 +137,28 @@ export class IncidentsController {
       });
     }
     return detail;
+  }
+
+  /**
+   * The insurer's copy — POOLSE-70 slice 3. A POST for the reason the detail
+   * read is one: it decrypts and it writes an audit row.
+   */
+  @Post(':id/export')
+  async export(@Param('id', new ParseUUIDPipe()) id: string): Promise<IncidentExport> {
+    requireRole(...STAFF);
+    const exported = await exportIncident(
+      currentTenant().organizationId,
+      id,
+      hasRole('owner', 'admin'),
+    );
+    if (exported === null) throw new NotFoundException();
+    if (exported === 'refused') {
+      throw new ForbiddenException({
+        code: 'incident_detail_refused',
+        message: 'The insurer copy holds the health detail: owner, admins and its author',
+      });
+    }
+    return exported;
   }
 
   @Post(':id/addenda')

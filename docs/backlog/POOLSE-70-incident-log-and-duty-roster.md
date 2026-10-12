@@ -79,6 +79,12 @@ by default privileges; the roster warning becoming a refusal.
 7. **Given** an incident, **when** exported, **then** the PDF carries the addenda and the
    qualification state on that date.
 
+### Status — built 12-10-2026
+
+All three slices are built on `feat/incident-log`, AC 1–5, with QA 1–7 as integration tests in
+`apps/api/src/safety/` and the routes in the role probe. Nobody has looked at the screens in a
+browser yet.
+
 ### Build plan — set up 12-10-2026
 
 Three vertical slices, each schema → API → UI → tests, on `feat/incident-log` (from main b69c9b7):

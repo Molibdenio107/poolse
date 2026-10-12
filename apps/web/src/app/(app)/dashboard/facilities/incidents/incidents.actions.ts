@@ -5,6 +5,7 @@ import {
   apiFetch,
   apiPost,
   type IncidentDetail,
+  type IncidentExport,
   type IncidentList,
   type OnDuty,
   type Students,
@@ -192,4 +193,12 @@ export async function onDutyAction(
   } catch {
     return null;
   }
+}
+
+/**
+ * The insurer's copy — slice 3. A POST because it decrypts and is logged as an
+ * export; read when the print page renders, which is the moment of export.
+ */
+export async function exportIncidentAction(incidentId: string): Promise<Outcome<IncidentExport>> {
+  return outcome(apiPost<IncidentExport>(`/incidents/${incidentId}/export`, {}));
 }

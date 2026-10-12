@@ -4272,7 +4272,17 @@
       "onDuty": "De serviço segundo a escala: {names}",
       "notLicensed": "{name} não tinha habilitação de nadador-salvador válida nesse dia."
     },
-    "lifeguardNotLicensed": "Este nadador-salvador não tinha habilitação de nadador-salvador válida no dia da ocorrência."
+    "lifeguardNotLicensed": "Este nadador-salvador não tinha habilitação de nadador-salvador válida no dia da ocorrência.",
+    "print": {
+      "link": "PDF para a seguradora",
+      "exportedAt": "Exportado a {at}. Esta exportação fica registada.",
+      "licenceTitle": "Habilitação do nadador-salvador nesse dia",
+      "noLicence": "Sem nenhuma habilitação de nadador-salvador registada.",
+      "validity": "de {from} a {to}",
+      "validThatDay": "válida nesse dia",
+      "notValidThatDay": "não válida nesse dia",
+      "footer": "Registo interno do clube, escrito uma vez e corrigido apenas por aditamentos. O detalhe clínico é guardado cifrado e cada leitura fica registada."
+    }
   },
   "roster": {
     "title": "Nadadores-salvadores",

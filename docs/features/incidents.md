@@ -55,6 +55,11 @@ sees none of it.
   writer can change it. The incident page says if the recorded lifeguard did not hold a valid
   qualification on the incident's day. It is a warning, and the incident is saved regardless.
 
-## Not yet
+## The insurer's PDF — slice 3
 
-The PDF for the insurer (slice 3).
+On an incident's page, **PDF para a seguradora** opens the record as an A4 page and the print
+dialog (*Guardar como PDF*). It contains the facts, the clinical detail, every addendum in
+order, and the recorded lifeguard's licence **as it stood on the incident's day**: each
+lifeguard-type record with its dates and whether it was valid then. That is derived at the
+moment of export and printed. Because it holds the clinical detail, only the owner, the admins
+and the author can produce it. Each export is written to the audit log as `incident.exported`.

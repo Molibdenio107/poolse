@@ -4272,7 +4272,17 @@
       "onDuty": "On duty according to the roster: {names}",
       "notLicensed": "{name} did not hold a valid lifeguard qualification on that day."
     },
-    "lifeguardNotLicensed": "This lifeguard did not hold a valid lifeguard qualification on the day of the incident."
+    "lifeguardNotLicensed": "This lifeguard did not hold a valid lifeguard qualification on the day of the incident.",
+    "print": {
+      "link": "PDF for the insurer",
+      "exportedAt": "Exported on {at}. This export is logged.",
+      "licenceTitle": "The lifeguard’s licence on that day",
+      "noLicence": "No lifeguard qualification on record.",
+      "validity": "from {from} to {to}",
+      "validThatDay": "valid on that day",
+      "notValidThatDay": "not valid on that day",
+      "footer": "The club’s internal record, written once and corrected only by addenda. The clinical detail is stored encrypted and every read is logged."
+    }
   },
   "roster": {
     "title": "Lifeguards",

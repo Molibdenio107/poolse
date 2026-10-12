@@ -55,6 +55,8 @@ const EXEMPT = [
   // One invoice, printed — 12 October 2026. A document like the two above:
   // black on white on A4, the shell's chrome hidden on paper.
   'faturacao/[id]/print',
+  // One incident, printed for the insurer — POOLSE-70 slice 3. A document too.
+  'incidents/[id]/print',
 ];
 
 /** Outer-layout classes on a page root — the thing the shell now owns. */
