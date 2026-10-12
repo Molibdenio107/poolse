@@ -4325,7 +4325,44 @@
       "notStaff": "Só uma pessoa da equipa pode ficar na escala.",
       "double": "Essa pessoa já está de serviço neste tanque a essa hora.",
       "addFailed": "Não foi possível acrescentar o turno.",
-      "removeFailed": "Não foi possível retirar o turno."
+      "removeFailed": "Não foi possível retirar o turno.",
+      "poolsRequired": "Escolha pelo menos um tanque deste local.",
+      "weekdaysRequired": "Escolha pelo menos um dia da semana.",
+      "endBeforeStart": "A data final não pode ser anterior à inicial.",
+      "periodTooLong": "Um período não pode ter mais de 400 dias.",
+      "endInPast": "Um período termina hoje ou numa data futura; os dias que já passaram ficam como registo.",
+      "periodFailed": "Não foi possível guardar o período.",
+      "endFailed": "Não foi possível terminar o período."
+    },
+    "fromPeriod": "· do período",
+    "view": {
+      "label": "Vista",
+      "week": "Escala da semana",
+      "periods": "Períodos de vigilância"
+    },
+    "period": {
+      "hint": "Um período escala a mesma pessoa em vários dias de uma vez: escolha os tanques, as datas, os dias da semana e o horário. Cada dia fica na escala da semana, onde pode ser retirado sozinho.",
+      "none": "Ainda não há períodos de vigilância neste local.",
+      "new": "Novo período",
+      "pools": "Tanques",
+      "startsOn": "De",
+      "endsOn": "Até",
+      "endsOnHint": "No máximo cerca de um ano e um mês.",
+      "weekdays": "Dias da semana",
+      "hours": "Horário",
+      "openingHours": "Horário de abertura do local",
+      "fixedHours": "Horas fixas",
+      "skipsNote": "Os dias em que o local está fechado e os encerramentos não são escalados. Um dia em que a pessoa já está de serviço no tanque fica como está.",
+      "save": "Guardar período",
+      "saving": "A guardar…",
+      "saved": "{written, plural, =0 {Nenhum dia escalado} one {# dia escalado} other {# dias escalados}}{clashes, plural, =0 {} one { · # dia já estava escalado} other { · # dias já estavam escalados}}.",
+      "dates": "De {from} a {to}",
+      "noDaysLeft": "sem dias por cumprir",
+      "end": "Terminar",
+      "endTitle": "Terminar este período?",
+      "endHint": "Os turnos de {name} a partir da data escolhida saem da escala. Os anteriores ficam como estão.",
+      "endFrom": "A partir de",
+      "ended": "{removed, plural, =0 {Período terminado.} one {Período terminado · # turno retirado.} other {Período terminado · # turnos retirados.}}"
     }
   },
   "files": {

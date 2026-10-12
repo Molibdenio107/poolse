@@ -4191,6 +4191,23 @@ export interface LifeguardDuty {
   endsAt: string;
   /** Held a valid lifeguard qualification on the duty's day. */
   licensed: boolean;
+  /** The vigilance period that wrote it; null for a duty added on its own. */
+  periodId: string | null;
+}
+
+/** A vigilance period — who, which tanks, when, which weekdays, which hours. */
+export interface LifeguardPeriod {
+  id: string;
+  membershipId: string;
+  name: string | null;
+  startsOn: string;
+  endsOn: string;
+  /** ISO weekdays, 1 = Monday. */
+  weekdays: number[];
+  /** Both null: the site's opening hours of each day. */
+  from: string | null;
+  to: string | null;
+  pools: { id: string; name: string }[];
 }
 
 /** An open window on a tank with nobody rostered. `day` is `YYYY-MM-DD`; the ends are instants. */
@@ -4205,6 +4222,8 @@ export interface LifeguardRoster {
   pools: { id: string; name: string }[];
   duties: LifeguardDuty[];
   gaps: RosterGap[];
+  /** Periods still running on or after the first day asked for. */
+  periods: LifeguardPeriod[];
   /** Owner and admin — the API's answer, so the buttons and the guard agree. */
   canManage: boolean;
 }

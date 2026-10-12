@@ -55,6 +55,22 @@ sees none of it.
   writer can change it. The incident page says if the recorded lifeguard did not hold a valid
   qualification on the incident's day. It is a warning, and the incident is saved regardless.
 
+### Vigilance periods — 12 October 2026
+
+The page has two views: **Escala da semana** and **Períodos de vigilância**. A period rosters one
+person on many days at once: **one or more tanks**, a **from and until date** (at most 400 days),
+the **weekdays**, and either **the site's opening hours** of each day or **fixed hours** (an end
+before the start runs past midnight).
+
+- Saving writes one ordinary duty per covered day per tank. Days the site is shut and days a
+  closure covers are skipped. A day the person already holds on that tank is left as it is and
+  counted ("12 dias escalados · 1 já estava escalado"), never a refusal of the whole period.
+- Those days appear in the week view marked *do período*, and any one of them can still be
+  removed on its own (a sick day).
+- **Terminar a partir de** a date (today or later) removes the period's days from that date on;
+  the days before stay as the record. Ended from its first day, the period disappears.
+- Owner and admin only, as the rest of the roster.
+
 ## The insurer's PDF — slice 3
 
 On an incident's page, **PDF para a seguradora** opens the record as an A4 page and the print

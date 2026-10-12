@@ -1059,3 +1059,9 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   through the app**, permission checked on every read, rather than by pre-signed links that work for
   whoever holds them. A certificate is attached once (POOLSE-27's "never edited"); an apólice's
   document is replaceable. This retires the "file storage stays deferred" rule.
+
+- **2026-10-12** — **Lifeguards are rostered by period, not day by day.** Rui: a period may use
+  the site's opening hours or typed hours, may cover several tanks, and is ended "from a date
+  on" with past days kept. A period writes ordinary daily duties tagged with it, so the week
+  view, the gap warning and the incident's lifeguard are unchanged and a single day can still
+  be removed. A day the person already holds is skipped and counted, not a refusal.

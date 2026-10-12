@@ -70,6 +70,8 @@ const TENANT_TABLES = [
   // a student and people — so all three go before any of those.
   // POOLSE-70 slice 2. A duty names a tank and two memberships.
   'lifeguard_duty',
+  // A period's duties point at it, so it goes after them.
+  'lifeguard_period',
   'incident_addendum',
   'incident_detail',
   'incident',

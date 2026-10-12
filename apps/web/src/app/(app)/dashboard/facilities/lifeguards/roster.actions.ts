@@ -70,3 +70,51 @@ export async function removeDutyAction(dutyId: string): Promise<FormState> {
   revalidatePath(PAGE);
   return { ok: true };
 }
+
+export interface PeriodState extends FormState {
+  /** Days written, and days the person already held there — said in the toast. */
+  written?: number;
+  clashes?: number;
+}
+
+/**
+ * A vigilance period: who, which tanks, which dates and weekdays, and either the
+ * site's opening hours or a typed window. The API writes the days at once.
+ */
+export async function addPeriodAction(facilityId: string, formData: FormData): Promise<PeriodState> {
+  const fixed = formData.get('hours') === 'fixed';
+  try {
+    const made = await apiPost<{ written: number; clashes: number }>(
+      `/facilities/${encodeURIComponent(facilityId)}/lifeguard-roster/periods`,
+      {
+        membershipId: String(formData.get('membershipId') ?? ''),
+        poolIds: formData.getAll('poolIds').map(String),
+        weekdays: formData.getAll('weekdays').map(Number),
+        startsOn: String(formData.get('startsOn') ?? ''),
+        endsOn: String(formData.get('endsOn') ?? ''),
+        hours: fixed ? 'fixed' : 'opening',
+        ...(fixed
+          ? { from: String(formData.get('from') ?? ''), to: String(formData.get('to') ?? '') }
+          : {}),
+      },
+    );
+    revalidatePath(PAGE);
+    return { ok: true, written: made.written, clashes: made.clashes };
+  } catch (error) {
+    return describeFailure(error, 'roster.error.periodFailed');
+  }
+}
+
+/** Ends a period from a day on; the days before stay as the record. */
+export async function endPeriodAction(periodId: string, from: string): Promise<PeriodState> {
+  try {
+    const ended = await apiPost<{ removed: number }>(
+      `/lifeguard-periods/${encodeURIComponent(periodId)}/end`,
+      { from },
+    );
+    revalidatePath(PAGE);
+    return { ok: true, written: ended.removed };
+  } catch (error) {
+    return describeFailure(error, 'roster.error.endFailed');
+  }
+}

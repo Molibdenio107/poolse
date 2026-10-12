@@ -22,6 +22,13 @@ import {
   PoolOffSiteError,
   type Roster,
 } from './roster.repository.js';
+import {
+  addPeriod,
+  endPeriod,
+  listPeriods,
+  EndInPastError,
+  type LifeguardPeriod,
+} from './periods.repository.js';
 
 /**
  * The lifeguard roster — POOLSE-70 slice 2.
@@ -41,13 +48,84 @@ export class LifeguardRosterController {
     @Param('facilityId', new ParseUUIDPipe()) facilityId: string,
     @Query('from') from?: string,
     @Query('days') days?: string,
-  ): Promise<Roster & { canManage: boolean }> {
+  ): Promise<Roster & { periods: LifeguardPeriod[]; canManage: boolean }> {
     requireRole(...STAFF);
     if (from === undefined || !DAY.test(from)) throw new BadRequestException('from is YYYY-MM-DD');
     const span = Math.min(Math.max(Number.parseInt(days ?? '7', 10) || 7, 1), 31);
-    const roster = await readRoster(currentTenant().organizationId, facilityId, from, span);
+    const { organizationId } = currentTenant();
+    const roster = await readRoster(organizationId, facilityId, from, span);
     if (roster === null) throw new NotFoundException('No such site');
-    return { ...roster, canManage: hasRole('owner', 'admin') };
+    return {
+      ...roster,
+      periods: await listPeriods(organizationId, facilityId, from),
+      canManage: hasRole('owner', 'admin'),
+    };
+  }
+
+  /**
+   * A vigilance period — who, which tanks, which dates and weekdays, and either
+   * the site's opening hours or one typed window. Writes the days at once and
+   * answers how many, and how many were already held by that person.
+   */
+  @Post('periods')
+  async addPeriod(
+    @Param('facilityId', new ParseUUIDPipe()) facilityId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ id: string; written: number; clashes: number }> {
+    requireRole('owner', 'admin');
+    const read = (key: string): string =>
+      typeof body[key] === 'string' ? (body[key] as string).trim() : '';
+    const poolIds = Array.isArray(body['poolIds'])
+      ? (body['poolIds'] as unknown[]).filter((id): id is string => typeof id === 'string' && UUID.test(id))
+      : [];
+    const weekdays = Array.isArray(body['weekdays'])
+      ? [...new Set((body['weekdays'] as unknown[]).map(Number))].filter((d) => Number.isInteger(d) && d >= 1 && d <= 7)
+      : [];
+    const opening = body['hours'] !== 'fixed';
+    const input = {
+      membershipId: read('membershipId'),
+      poolIds,
+      startsOn: read('startsOn'),
+      endsOn: read('endsOn'),
+      weekdays,
+      from: opening ? null : read('from'),
+      to: opening ? null : read('to'),
+    };
+
+    const fields: Record<string, string> = {};
+    if (!UUID.test(input.membershipId)) fields['membershipId'] = 'roster.error.personRequired';
+    if (poolIds.length === 0) fields['poolIds'] = 'roster.error.poolsRequired';
+    if (weekdays.length === 0) fields['weekdays'] = 'roster.error.weekdaysRequired';
+    if (!DAY.test(input.startsOn)) fields['startsOn'] = 'roster.error.dayRequired';
+    if (!DAY.test(input.endsOn)) fields['endsOn'] = 'roster.error.dayRequired';
+    else if (DAY.test(input.startsOn) && input.endsOn < input.startsOn) fields['endsOn'] = 'roster.error.endBeforeStart';
+    else if (DAY.test(input.startsOn) && daysBetween(input.startsOn, input.endsOn) > 400) {
+      fields['endsOn'] = 'roster.error.periodTooLong';
+    }
+    if (!opening) {
+      if (!TIME.test(input.from ?? '')) fields['from'] = 'roster.error.timeRequired';
+      if (!TIME.test(input.to ?? '') || input.to === input.from) fields['to'] = 'roster.error.timeRequired';
+    }
+    if (Object.keys(fields).length > 0) {
+      throw new BadRequestException({ message: 'Invalid period', fields });
+    }
+
+    try {
+      const made = await addPeriod(currentTenant().organizationId, facilityId, input);
+      if (made === null) throw new NotFoundException('No such site');
+      return made;
+    } catch (error) {
+      if (error instanceof PoolOffSiteError) {
+        throw new BadRequestException({ message: 'No such tank here', fields: { poolIds: 'roster.error.poolsRequired' } });
+      }
+      if (error instanceof NotStaffError) {
+        throw new BadRequestException({
+          message: 'Only a staff member can be rostered',
+          fields: { membershipId: 'roster.error.notStaff' },
+        });
+      }
+      throw error;
+    }
   }
 
   /** Who was on duty on a tank at a moment — the incident form's pre-fill. */
@@ -106,6 +184,42 @@ export class LifeguardRosterController {
         throw new ConflictException({
           code: 'lifeguard_double',
           message: 'That person is already on this tank then',
+        });
+      }
+      throw error;
+    }
+  }
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000);
+}
+
+@Controller('lifeguard-periods')
+export class LifeguardPeriodsController {
+  /** Ends a period from a day on — today or later; the days before stay as they are. */
+  @Post(':id/end')
+  async end(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ removed: number }> {
+    requireRole('owner', 'admin');
+    const from = typeof body['from'] === 'string' ? body['from'].trim() : '';
+    if (!DAY.test(from)) {
+      throw new BadRequestException({ message: 'from is YYYY-MM-DD', fields: { from: 'roster.error.dayRequired' } });
+    }
+    try {
+      const ended = await endPeriod(currentTenant().organizationId, id, from);
+      if (ended === null) throw new NotFoundException();
+      return ended;
+    } catch (error) {
+      if (error instanceof EndInPastError) {
+        throw new BadRequestException({
+          code: 'period_end_in_past',
+          message: 'A period ends today or later',
+          fields: { from: 'roster.error.endInPast' },
         });
       }
       throw error;

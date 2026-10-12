@@ -11,6 +11,7 @@ import { SiteLinks } from '../incidents/site-links';
 import { readRoster } from './roster.actions';
 import { AddDuty } from './add-duty';
 import { RemoveDuty } from './remove-duty';
+import { PeriodsPanel } from './periods';
 
 const QUIET =
   'inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
@@ -37,10 +38,10 @@ const QUIET =
 export default async function LifeguardsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ site?: string; week?: string; pool?: string }>;
+  searchParams: Promise<{ site?: string; week?: string; pool?: string; view?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { site: requested = '', week, pool: requestedPool } = await searchParams;
+  const { site: requested = '', week, pool: requestedPool, view: requestedView } = await searchParams;
 
   // Today on the club's wall clock, not the server's — at 00:30 in Lisbon a
   // server on UTC would still be showing yesterday's week.
@@ -67,12 +68,18 @@ export default async function LifeguardsPage({
 
   const list = sites.data.facilities;
   const chosen = list.find((site) => site.id === requested.trim()) ?? list[0]!;
-  const roster = await readRoster(chosen.id, monday);
+  // Two views, one at a time (Rui, 12 October 2026): the week, and the
+  // vigilance periods that fill it.
+  const view = pickSection(['week', 'periods'], requestedView, 'week');
 
-  const href = (query: { week?: string; pool?: string }): string => {
+  // The periods view lists what is still running from today; the week, from its Monday.
+  const roster = await readRoster(chosen.id, view === 'periods' ? today : monday);
+
+  const href = (query: { week?: string; pool?: string; view?: string }): string => {
     const params = new URLSearchParams({ site: chosen.id });
     params.set('week', query.week ?? monday);
     if (query.pool !== undefined) params.set('pool', query.pool);
+    if ((query.view ?? view) !== 'week') params.set('view', query.view ?? view);
     return `/dashboard/facilities/lifeguards?${params.toString()}`;
   };
 
@@ -108,8 +115,36 @@ export default async function LifeguardsPage({
           // The pool is kept in the week links, so moving a week stays on the tank.
           const weekHref = (to: string): string => href({ week: to, pool: poolId });
 
+          const views = (
+            <SectionPills
+              items={[
+                { key: 'week', label: t('roster.view.week'), href: href({ pool: poolId, view: 'week' }) },
+                { key: 'periods', label: t('roster.view.periods'), href: href({ pool: poolId, view: 'periods' }) },
+              ]}
+              current={view}
+              label={t('roster.view.label')}
+            />
+          );
+
+          if (view === 'periods') {
+            return (
+              <>
+                {views}
+                <PeriodsPanel
+                  facilityId={chosen.id}
+                  pools={pools}
+                  periods={roster.data.periods}
+                  canManage={canManage}
+                  defaultPoolId={poolId}
+                  today={today}
+                />
+              </>
+            );
+          }
+
           return (
             <>
+              {views}
               <nav
                 aria-label={t('roster.weekNav')}
                 className="flex flex-wrap items-center gap-2"
@@ -214,6 +249,9 @@ async function DayRow({
           {duties.map((duty) => (
             <li key={duty.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               <span className="font-medium">{duty.name ?? t('roster.unknownPerson')}</span>
+              {duty.periodId !== null && (
+                <span className="text-foreground-muted">{t('roster.fromPeriod')}</span>
+              )}
               <span className="tabular-nums">
                 {t('roster.dutyTimes', {
                   from: formatTime(duty.startsAt),

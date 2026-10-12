@@ -25,6 +25,8 @@ export interface LifeguardDuty {
   endsAt: string;
   /** Held a valid lifeguard qualification on the duty's day. False is a warning. */
   licensed: boolean;
+  /** The vigilance period that wrote it; null for a duty added on its own. */
+  periodId: string | null;
 }
 
 export interface RosterGap {
@@ -88,9 +90,10 @@ export async function readRoster(
       starts_at: Date;
       ends_at: Date;
       licensed: boolean;
+      period_id: string | null;
     }>(
       `SELECT l.id, l.pool_id, l.membership_id, ${personName('l.membership_id')} AS name,
-              l.starts_at, l.ends_at,
+              l.starts_at, l.ends_at, l.period_id,
               lifeguard_valid_on(l.organization_id, l.membership_id,
                                  (l.starts_at AT TIME ZONE f.timezone)::date) AS licensed
          FROM lifeguard_duty l
@@ -125,6 +128,7 @@ export async function readRoster(
         startsAt: row.starts_at.toISOString(),
         endsAt: row.ends_at.toISOString(),
         licensed: row.licensed,
+        periodId: row.period_id,
       })),
       gaps: gaps.map((row) => ({
         poolId: row.pool_id,

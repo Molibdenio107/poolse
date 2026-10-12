@@ -24,7 +24,11 @@ import { InventoryController } from '../inventory/inventory.controller.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
 import { FacilityIncidentsController, IncidentsController } from '../safety/incidents.controller.js';
-import { LifeguardDutiesController, LifeguardRosterController } from '../safety/roster.controller.js';
+import {
+  LifeguardDutiesController,
+  LifeguardPeriodsController,
+  LifeguardRosterController,
+} from '../safety/roster.controller.js';
 import { SpacesController } from '../spaces/spaces.controller.js';
 import { RecordsController } from '../students/records.controller.js';
 import {
@@ -633,6 +637,12 @@ test('incidents and the lifeguard roster refuse a guardian and a student (403)',
     );
     await refused('POST incidents/:id/export', 403, () =>
       new IncidentsController().export('00000000-0000-0000-0000-000000000000'),
+    );
+    await refused('POST facilities/:id/lifeguard-roster/periods', 403, () =>
+      new LifeguardRosterController().addPeriod(fac, {}),
+    );
+    await refused('POST lifeguard-periods/:id/end', 403, () =>
+      new LifeguardPeriodsController().end('00000000-0000-0000-0000-000000000000', {}),
     );
     await refused('POST lifeguard-duties/:id/archive', 403, () =>
       new LifeguardDutiesController().archive('00000000-0000-0000-0000-000000000000'),

@@ -4325,7 +4325,44 @@
       "notStaff": "Only a member of staff can be on the roster.",
       "double": "That person is already on duty at this tank at that time.",
       "addFailed": "The shift could not be added.",
-      "removeFailed": "The shift could not be taken off."
+      "removeFailed": "The shift could not be taken off.",
+      "poolsRequired": "Choose at least one tank at this site.",
+      "weekdaysRequired": "Choose at least one weekday.",
+      "endBeforeStart": "The end date cannot be before the start date.",
+      "periodTooLong": "A period cannot be longer than 400 days.",
+      "endInPast": "A period ends today or later; days already past stay as the record.",
+      "periodFailed": "The period could not be saved.",
+      "endFailed": "The period could not be ended."
+    },
+    "fromPeriod": "· from a period",
+    "view": {
+      "label": "View",
+      "week": "Week roster",
+      "periods": "Vigilance periods"
+    },
+    "period": {
+      "hint": "A period rosters the same person on many days at once: choose the tanks, the dates, the weekdays and the hours. Each day appears on the week roster, where it can be removed on its own.",
+      "none": "There are no vigilance periods at this site yet.",
+      "new": "New period",
+      "pools": "Tanks",
+      "startsOn": "From",
+      "endsOn": "Until",
+      "endsOnHint": "At most about a year and a month.",
+      "weekdays": "Weekdays",
+      "hours": "Hours",
+      "openingHours": "The site's opening hours",
+      "fixedHours": "Fixed hours",
+      "skipsNote": "Days the site is shut and closures are not rostered. A day the person is already on duty at the tank is left as it is.",
+      "save": "Save period",
+      "saving": "Saving…",
+      "saved": "{written, plural, =0 {No days rostered} one {# day rostered} other {# days rostered}}{clashes, plural, =0 {} one { · # day was already rostered} other { · # days were already rostered}}.",
+      "dates": "{from} to {to}",
+      "noDaysLeft": "no days left to cover",
+      "end": "End",
+      "endTitle": "End this period?",
+      "endHint": "{name}'s duties from the chosen date on leave the roster. Earlier ones stay as they are.",
+      "endFrom": "From",
+      "ended": "{removed, plural, =0 {Period ended.} one {Period ended · # duty removed.} other {Period ended · # duties removed.}}"
     }
   },
   "files": {

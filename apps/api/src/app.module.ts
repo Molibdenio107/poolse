@@ -72,7 +72,11 @@ import { FilesController } from './files/files.controller.js';
 import { AttachmentsController } from './files/attachments.controller.js';
 import { PassProductsController, ReceptionController } from './reception/passes.controller.js';
 import { FacilityIncidentsController, IncidentsController } from './safety/incidents.controller.js';
-import { LifeguardDutiesController, LifeguardRosterController } from './safety/roster.controller.js';
+import {
+  LifeguardDutiesController,
+  LifeguardPeriodsController,
+  LifeguardRosterController,
+} from './safety/roster.controller.js';
 import {
   InvoiceSeriesController,
   InvoicesController,
@@ -194,6 +198,7 @@ const IDENTITY_ONLY_ROUTES = [
     IncidentsController,
     LifeguardRosterController,
     LifeguardDutiesController,
+    LifeguardPeriodsController,
     InvoicesController,
     InvoiceSeriesController,
     FeeCategoriesController,

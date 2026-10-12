@@ -3542,3 +3542,13 @@ once, from empty — `GRANT UPDATE (document_file_id)` plus the trigger
 `organization.logo_file_id`; and composite FKs from `facility_photo.storage_key`,
 `pool_photo.storage_key` and `partner_agreement.document_key` to
 `stored_file (organization_id, storage_key)`. Migration `1790157600000_stored-files.sql`.
+
+
+### Vigilance periods — 12 October 2026
+
+`lifeguard_period`: `organization_id`, `facility_id`, `membership_id`, `starts_on`, `ends_on`
+(≤ 400 days apart), `weekdays smallint[]` (ISO 1–7, at least one), `from_time` / `to_time` (both
+null = the site's opening hours; both set and different = a fixed window), `created_by`,
+timestamps, `archived_at`. RLS by tenant; no DELETE grant. `lifeguard_duty.period_id` (composite
+FK) tags the duties a period wrote; the tanks a period covers are read from those duties, not
+stored twice. Migration `1790200800000_lifeguard-periods.sql`.
