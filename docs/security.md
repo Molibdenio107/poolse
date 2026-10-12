@@ -31,6 +31,7 @@ has a mechanism, and the mechanism is what to check when something looks wrong.
 | Platform access arriving through a tenant role | It cannot. `platform_admin` is keyed on the Clerk user id and has no `organization_id`; `PlatformAdminGuard` reads `currentAuth()`, never `currentTenant()`. Being owner of a demo tenant grants nothing. |
 | An unaudited platform request | Reads are logged by `PlatformAuditInterceptor`; writes log themselves inside the transaction that performed them, so an entry cannot commit while its change rolls back. There is one write path (`changeTenant`) and it cannot skip its own entry. |
 | A suspended tenant still being served | `TenantMiddleware` refuses with `tenant_suspended` before any handler runs. `/me` and `/platform` stay open on purpose — so the club can be told why, and so an operator can undo it. |
+| Poolse support inside a club | Only through a live `support_grant` the Owner opened, as a membership of its own entered via `support_session` (definer; it re-checks the platform admin and the live grant). Its role exists only while the grant is live, derived in `resolve_memberships`, so it ends with no job running. It is an Admin: `student_sensitive`, the Owner's salary and the subscription are refused exactly as to one. `poolse_platform` gained only `SELECT` on `support_grant` — POOLSE-79. |
 
 ## The checks
 

@@ -520,6 +520,7 @@ export async function searchIncidentPeople(
         : `SELECT m.id, ${personName('m.id')} AS name
              FROM membership m
             WHERE m.archived_at IS NULL AND m.status = 'active'
+              AND m.support_grant_id IS NULL
               AND ${searchPredicate(`coalesce(${personName('m.id')}, '')`, '$1')}
               ${kind === 'staff'
                 ? `AND EXISTS (SELECT 1 FROM membership_role r

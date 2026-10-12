@@ -285,6 +285,8 @@ never sent**: `delivered_at` stays null until an email provider exists, and read
 took `app_user` onto the platform grant — the eighth table, two columns of it, decided the
 same day. `docs/features/trial.md`.
 
+**Poolse support enters a club only through a grant the Owner opened, and is never one of the club's people.** POOLSE-79. `support_grant` is the window. An operator enters through `support_session`, a definer function that only `poolse_platform` may execute and that re-checks the platform admin and the live grant. They then work through the ordinary tenant path, so RLS, `requireRole` and `audit_log` name them. **The role is not a row**: a support membership holds no `membership_role` rows (a trigger refuses one), and `resolve_memberships` gives it `admin` only while the grant is live. Expiry and revocation therefore need no job, and every role-keyed list leaves support out with no edit. **A read over *every* membership (Pessoas, a people search, a picker, a team count) adds `support_grant_id IS NULL`**, because "no role" reads as staff there. A new one earns a line in `support.integration.test.ts` QA 5. `docs/features/platform.md`.
+
 **Platform administration is not a tenant role, and it has its own database login.** `member_role`
 says what somebody may do inside one club; `platform_admin` — keyed on the Clerk user id, no
 `organization_id` — says whether they may look at all of them. No role grants it, being owner of a
@@ -292,7 +294,7 @@ demo tenant grants nothing, and `PlatformAdminGuard` reads `currentAuth()` rathe
 `currentTenant()` because an operator may belong to no organization at all (`platform/(.*)` is in
 `IDENTITY_ONLY_ROUTES`). Cross-tenant reads go through **`poolse_platform`**, a third login on its
 own pool (`DATABASE_PLATFORM_URL`), used by `PlatformModule` and nothing else. It does **not** carry
-`BYPASSRLS`: it is named in a `FOR SELECT TO poolse_platform USING (true)` policy on eight tables and
+`BYPASSRLS`: it is named in a `FOR SELECT TO poolse_platform USING (true)` policy on eight tables of club data (plus `support_grant`, which holds only who consented and until when — POOLSE-79) and
 holds no privilege on the rest of the schema, so a mistake leaks those eight rather than
 `student_sensitive` — and reaching a ninth is a reviewed line of SQL. **The eighth is `app_user`,
 added 14 September 2026** so a trial notice can record the address it was owed to, and it is a

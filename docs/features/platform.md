@@ -325,6 +325,38 @@ what stands in the way meanwhile.
 **`/admin` also still shares an origin and a cookie with the tenant app** — a known
 limitation with a date and a plan, in `docs/deploy.md`.
 
+## Support access — POOLSE-79 (slice 1, 12 October 2026)
+
+A club's Owner can let Poolse support in for a fixed window, and support then enters the club
+as a membership of its own. The platform login itself still reads no club data.
+
+**Granting is Owner only:** `GET/POST /support-grants`, `POST /support-grants/:id/revoke`.
+
+- The window is 24 h, 3 days or 7 days, starting now, and only one is live at a time.
+- Revoking is effective on support's next request.
+- An Admin is refused, and so is a support session, which is an Admin.
+
+**Entering:** an operator lists clubs with a live window (`GET /platform/support`) and enters
+one (`POST /platform/support/:grantId/enter`). They then work in it through the ordinary tenant
+path, as an Admin.
+
+- Their writes are attributed to the support membership in the club's `audit_log`.
+- The Owner's salary, the subscription and ownership transfer stay hidden, as from any Admin.
+- `POST …/leave` ends the window early, recorded as ended by support.
+
+**It ends on time with nothing running:** `resolve_memberships` stops returning the membership
+once the window passes or is revoked.
+
+**Support is not one of the club's people.** The membership holds no role row, so every
+role-keyed list leaves it out with no edit. The lists over *every* membership (*Pessoas*, the
+team count, people search, the incident picker) filter `support_grant_id IS NULL`, and
+`support.integration.test.ts` calls each of them with a live session in the club.
+
+**Not built yet:** *Pedir acesso*, the emergency override (slice 2), and the screens (slice 3).
+**Known gap:** an Owner's revocation and plain expiry reach the platform only through the grant
+row, never as a `platform_audit_log` entry. That log records what an operator did, and neither
+of those is.
+
 ## Not in this slice
 
 **`platform_alert` has no screen, deliberately.** It is a channel, not a page: an alert that

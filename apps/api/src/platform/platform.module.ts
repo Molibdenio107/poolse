@@ -3,6 +3,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { PlatformAuditInterceptor } from './platform-audit.interceptor.js';
 import { PlatformController } from './platform.controller.js';
 import { PlatformAdminGuard } from './platform.guard.js';
+import { PlatformSupportController } from './support.controller.js';
 import { TrialClockService } from './trial-clock.service.js';
 
 /**
@@ -32,7 +33,7 @@ import { TrialClockService } from './trial-clock.service.js';
  */
 @Module({
   imports: [ScheduleModule.forRoot()],
-  controllers: [PlatformController],
+  controllers: [PlatformController, PlatformSupportController],
   providers: [PlatformAdminGuard, PlatformAuditInterceptor, TrialClockService],
 })
 export class PlatformModule {}

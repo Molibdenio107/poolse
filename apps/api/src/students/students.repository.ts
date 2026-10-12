@@ -1557,6 +1557,8 @@ export async function searchPeople(
               )::int AS guardian_of
          FROM membership m
         WHERE m.archived_at IS NULL
+          -- Not Poolse support (POOLSE-79): it is nobody the club can pick.
+          AND m.support_grant_id IS NULL
           AND m.status <> 'invited'
           AND (
             /*

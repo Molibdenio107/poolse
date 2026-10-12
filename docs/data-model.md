@@ -3560,3 +3560,28 @@ null = the site's opening hours; both set and different = a fixed window), `crea
 timestamps, `archived_at`. RLS by tenant; no DELETE grant. `lifeguard_duty.period_id` (composite
 FK) tags the duties a period wrote; the tanks a period covers are read from those duties, not
 stored twice. Migration `1790200800000_lifeguard-periods.sql`.
+
+### Support access — POOLSE-79, 12 October 2026
+
+`support_grant`: `organization_id`, `source` (`owner | request | override`),
+`requested_by_platform_admin_id`, `granted_by_membership_id` (null only for an override, by
+CHECK), `reason` (required for a request or override, at most 500), `starts_at`, `expires_at`,
+`ended_at` / `ended_by` (`owner | support`, set together), timestamps.
+
+- **Expiry is never written.** A grant is live while `ended_at IS NULL AND starts_at <= now() <
+  expires_at`.
+- **Grants.** `poolse_app` holds SELECT and INSERT, and UPDATE on `ended_at` and `ended_by`
+  only, with no DELETE. `poolse_platform` reads it through a `FOR SELECT` policy.
+
+`membership.support_grant_id` (composite FK) marks a support membership. It always has a login,
+by CHECK, and **holds no `membership_role` rows**: a trigger refuses one.
+
+- **The role comes from the grant.** `resolve_memberships` returns it with `{admin}` and
+  `o_support_expires_at` while its grant is live, and drops it otherwise.
+- **Entering and leaving** go through `support_session(clerk_user_id, grant_id, 'enter' |
+  'leave')`, a `SECURITY DEFINER` function that only `poolse_platform` may execute. It
+  re-checks the platform admin, the live grant and that the person is not already a member.
+  There is one support membership per operator per club, re-pointed at each grant. It writes
+  `support.entered` / `support.ended` to both `audit_log` and `platform_audit_log`.
+
+Migration `1790244000000_support-grant.sql`.

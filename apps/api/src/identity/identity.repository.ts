@@ -70,6 +70,11 @@ export interface MembershipSummary {
    * from thirty days of arithmetic in a browser.
    */
   pendingDeleteAt: string | null;
+  /**
+   * Set only on a Poolse support membership (POOLSE-79): when its grant ends.
+   * The banner reads it; the role it carries came from the grant, not a row.
+   */
+  supportExpiresAt: string | null;
 }
 
 /**
@@ -145,6 +150,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       o_suspension_reason: string | null;
       o_read_only_at: Date | null;
       o_pending_delete_at: Date | null;
+      o_support_expires_at: Date | null;
     }>('SELECT * FROM resolve_memberships($1)', [clerkUserId]);
 
     return rows.map((row) => ({
@@ -161,6 +167,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       suspensionReason: row.o_suspension_reason,
       readOnlyAt: row.o_read_only_at?.toISOString() ?? null,
       pendingDeleteAt: row.o_pending_delete_at?.toISOString() ?? null,
+      supportExpiresAt: row.o_support_expires_at?.toISOString() ?? null,
     }));
   });
 }

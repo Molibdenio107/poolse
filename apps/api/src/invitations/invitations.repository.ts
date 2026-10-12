@@ -209,6 +209,8 @@ export async function countStaff(organizationId: string): Promise<StaffCounts> {
           FROM membership m
          WHERE m.archived_at IS NULL
            AND m.status = 'active'
+           -- Not Poolse support, which holds no role (POOLSE-79).
+           AND m.support_grant_id IS NULL
            AND (
              NOT EXISTS (
                SELECT 1 FROM membership_role r
@@ -350,6 +352,9 @@ export async function listMembers(
            LIMIT 1
         ) i ON true
        WHERE m.archived_at IS NULL
+         -- Poolse support is not one of the club's people (POOLSE-79). It holds
+         -- no role, and "no role" counts as staff here, so it is named out.
+         AND m.support_grant_id IS NULL
          /*
           * Staff, learners, or everybody. Written as EXISTS rather than as a
           * HAVING on the aggregated array so the role index can serve it, and so

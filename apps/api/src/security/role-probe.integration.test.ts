@@ -1,6 +1,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
+import { SupportGrantsController } from '../support/support.controller.js';
 import {
   ClassesController,
   TimetableController,
@@ -688,5 +689,14 @@ test('the archive bin refuses a guardian and a student (403)', async () => {
     await refused('GET archive', 403, () => archive.list());
     await refused('GET archive/actors', 403, () => archive.actors());
     await refused('POST archive/:id/restore', 403, () => archive.restore(NO_SUCH_ID));
+  });
+});
+
+test('support access refuses a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const support = new SupportGrantsController();
+    await refused('GET support-grants', 403, () => support.list());
+    await refused('POST support-grants', 403, () => support.open({ hours: 24 }));
+    await refused('POST support-grants/:id/revoke', 403, () => support.revoke(NO_SUCH_ID));
   });
 });
