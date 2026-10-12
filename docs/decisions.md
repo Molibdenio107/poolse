@@ -1022,3 +1022,9 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   counts zero in occupancy, because its people are check-ins. A lifeguard on duty is POOLSE-70,
   not an instructor. **Pass revenue (AC 6) is its own card and its own line on Receção**: sales
   this month not since credited, `actual`, never added to the mensalidades card.
+- **2026-10-12** — **One section at a time, app-wide.** Rui asked that the reader scroll as little as
+  possible. Pages and tabs that stacked independent sections now show one at a time behind
+  `SectionPills` (list in `docs/features/navigation.md`). **The dashboard stays stacked** (Rui's call:
+  it is an overview), and so does the calendar. **Site cards on Instalações show tanks only** (Rui's
+  call): Espaços and Fotografias live on the site's own tabs. The unsafe-water warning is drawn
+  above the tank's pills, because a safety warning must not depend on which section is open.

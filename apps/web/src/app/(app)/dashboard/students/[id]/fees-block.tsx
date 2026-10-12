@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Check, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
+import { SectionPills, sectionHref } from '@/components/section-pills';
 import { formatCents, monthlyEquivalentCents } from '@/lib/money';
 import type {
   CurrentPlan,
@@ -165,14 +166,13 @@ function SeasonCharges({
 
   if (charges.length === 0) return null;
 
+  // A card of its own since the section pills: the heading is the card's, so
+  // only the sentence about which price applies is said here.
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-5">
-      <div>
-        <h3 className="text-base font-medium">{t('fees.seasonCharges')}</h3>
-        <p className="mt-0.5 text-sm text-foreground-muted">
-          {returning ? t('fees.returningStudent') : t('fees.newStudent')}
-        </p>
-      </div>
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-foreground-muted">
+        {returning ? t('fees.returningStudent') : t('fees.newStudent')}
+      </p>
 
       <ul className="flex flex-col divide-y divide-border">
         {charges.map((charge) => (
@@ -390,14 +390,37 @@ function Problem({ state }: { state: FormState }): React.ReactElement | null {
   );
 }
 
+/**
+ * The tab's sections, one drawn at a time — 12 October 2026, the same pill row
+ * as Preços. `joining` is offered only when a season has a price to charge,
+ * which the page decides from the same `seasonCharges` this block renders.
+ */
+export type FeesSection = 'mensalidade' | 'joining' | 'socio';
+
+// The card headings the sections already carry, so a pill and the card it
+// opens say the same words.
+const SECTION_LABEL: Record<FeesSection, string> = {
+  mensalidade: 'fees.section.mensalidade',
+  joining: 'fees.seasonCharges',
+  socio: 'fees.membershipTitle',
+};
+
 export function FeesBlock({
   studentId,
   fees,
   periods,
+  section,
+  offered,
+  path,
 }: {
   studentId: string;
   fees: StudentFees;
   periods: Record<string, FeePeriod[]>;
+  section: FeesSection;
+  /** The sections this reader is offered, in order; `section` is one of them. */
+  offered: readonly FeesSection[];
+  /** The record's own path, which each pill's link keeps `tab=fees` on. */
+  path: string;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -455,7 +478,78 @@ export function FeesBlock({
       its own heading and its own border. The order is the argument — the first
       says what they attend, the second what they belong to, and the third adds
       the two up. A total above its parts would be a figure nobody could check.
+
+      **One section at a time since 12 October 2026** — the pill row Preços got
+      the same day, because the three cards plus a season's charges were a long
+      scroll to the one a club came for. Mensalidades · Inscrição e seguro ·
+      Quota de sócio, `?section=`.
+
+      The **period total stays in Mensalidades, under the lines**, and is not a
+      strip shown in every section. It is the sum of the lines — every line,
+      the inscrição and the quota included, since those are lines too — and the
+      lines are drawn only in that section; a figure shown where its parts are
+      not is the figure nobody can check that the round-5 note above argues
+      against. Charging an inscrição or saving a quota writes a line, so the
+      answer is one pill away, and each of those sections says so.
     */
+    <>
+    {/* Above the pills, in every section, and not beside the seguro line: a
+        student with no cover has no such line, so a badge attached to one would
+        appear only for the students who do not need it — and a warning about a
+        person belongs where it cannot be paged away. */}
+    <CoverBadge cover={fees.cover} />
+
+    <SectionPills
+      label={t('fees.studentSection.nav')}
+      current={section}
+      items={offered.map((key) => ({
+        key,
+        label: t(SECTION_LABEL[key]),
+        href: sectionHref(path, { tab: 'fees' }, key),
+      }))}
+    />
+
+    {section === 'joining' && (
+      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <div>
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('fees.seasonCharges')}
+          </h2>
+          <p className="mt-1 text-sm text-foreground-muted">{t('fees.studentSection.linesHint')}</p>
+        </div>
+        <SeasonCharges
+          studentId={studentId}
+          charges={fees.seasonCharges}
+          returning={fees.inscricao.returning}
+          categories={fees.categories}
+          suggestedCategoryId={fees.suggestedCategoryId}
+        />
+      </section>
+    )}
+
+    {section === 'socio' && (
+      /*
+        Membership, as its own card — 10.1.
+
+        It was the last block inside the fees card, which made a club's quota
+        read as one more line of what this student pays. It is not: being a
+        sócio is a fact about the person that happens to carry a fee, and the
+        form that sets it belongs beside the plans rather than under them.
+      */
+      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <div>
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('fees.membershipTitle')}
+          </h2>
+          <p className="mt-1 text-sm text-foreground-muted">{t('fees.membershipHint')}</p>
+          <p className="mt-1 text-sm text-foreground-muted">{t('fees.studentSection.linesHint')}</p>
+        </div>
+
+        <SocioForm studentId={studentId} socio={fees.socio} />
+      </section>
+    )}
+
+    {section === 'mensalidade' && (
     <>
     <section className="flex flex-col gap-5 rounded border border-border bg-surface p-5">
       <div>
@@ -463,12 +557,6 @@ export function FeesBlock({
           {t('fees.studentTitle')}
         </h2>
         <p className="mt-1 text-sm text-foreground-muted">{t('fees.studentHint')}</p>
-        {/* Up here, not beside the seguro line: a student with no cover has no
-            such line, so a badge attached to one would appear only for the
-            students who do not need it. */}
-        <div className="mt-2">
-          <CoverBadge cover={fees.cover} />
-        </div>
       </div>
 
       {/*
@@ -501,14 +589,6 @@ export function FeesBlock({
           </ul>
         )}
       </div>
-
-      <SeasonCharges
-        studentId={studentId}
-        charges={fees.seasonCharges}
-        returning={fees.inscricao.returning}
-        categories={fees.categories}
-        suggestedCategoryId={fees.suggestedCategoryId}
-      />
 
       {live.length === 0 && <p className="text-sm text-foreground-muted">{t('fees.noLines')}</p>}
 
@@ -670,25 +750,8 @@ export function FeesBlock({
       </div>
     )}
     </section>
-
-    {/*
-      Membership, as its own card — 10.1.
-
-      It was the last block inside the fees card, which made a club's quota read
-      as one more line of what this student pays. It is not: being a sócio is a
-      fact about the person that happens to carry a fee, and the form that sets
-      it belongs beside the plans rather than under them.
-    */}
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-      <div>
-        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          {t('fees.membershipTitle')}
-        </h2>
-        <p className="mt-1 text-sm text-foreground-muted">{t('fees.membershipHint')}</p>
-      </div>
-
-      <SocioForm studentId={studentId} socio={fees.socio} />
-    </section>
+    </>
+    )}
     </>
   );
 }

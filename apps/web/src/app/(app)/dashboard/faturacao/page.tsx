@@ -7,7 +7,7 @@ import { InvoiceRunPanel } from './invoice-run-panel';
 import { InvoiceList } from './invoice-list';
 import { SeriesPanel } from './series-panel';
 import { OutstandingList } from './outstanding-list';
-import { ViewTabs } from './view-tabs';
+import { ViewTabs, type InvoiceView } from './view-tabs';
 import { TaxPanel } from './tax-panel';
 import {
   listInvoices,
@@ -49,11 +49,15 @@ export default async function InvoicingPage({
   const { facilityId: requested = '', month: monthParam, view } = await searchParams;
 
   /*
-   * Two views, one page, and the view is in the URL like every other filter
+   * Three views, one page, and the view is in the URL like every other filter
    * here. "This month" is what a club does on the 1st; "em dívida" is what it
-   * does on the 20th, and neither is a sub-page worth its own route.
+   * does on the 20th, and neither is a sub-page worth its own route. The third,
+   * Configuração (12 October 2026), is the series and the NIPC — set once a
+   * year, and no longer drawn under both lists where it pushed them down.
    */
-  const owing = view === 'owing';
+  const asked: InvoiceView =
+    view === 'owing' ? 'owing' : view === 'settings' ? 'settings' : 'month';
+  const owing = asked === 'owing';
 
   const month = /^\d{4}-\d{2}$/.test(monthParam ?? '') ? monthParam! : thisMonth();
   const periodStart = `${month}-01`;
@@ -87,9 +91,11 @@ export default async function InvoicingPage({
 
   const skipped = Promise.resolve(null);
   const [runLoad, issuedLoad, outstandingLoad, booksLoad, taxLoad] = await Promise.all([
-    owing ? skipped : previewRun(chosen, periodStart),
-    owing ? skipped : listInvoices(chosen, periodStart),
+    asked === 'month' ? previewRun(chosen, periodStart) : skipped,
+    asked === 'month' ? listInvoices(chosen, periodStart) : skipped,
     owing ? listOutstanding(chosen) : skipped,
+    // Both of these load under every view, as they always have: whether the
+    // Configuração pill is offered rests on whether either would be refused.
     listSeries(chosen),
     // The club's own number rather than the site's — POOLSE-62.
     readTaxSettings(),
@@ -117,6 +123,13 @@ export default async function InvoicingPage({
   const books = booksLoad.state === 'ok' ? booksLoad.data : null;
   const tax = taxLoad.state === 'ok' ? taxLoad.data : null;
 
+  const settingsOffered = booksLoad.state !== 'refused' || taxLoad.state !== 'refused';
+  // No fallback is needed for a bookmarked Configuração the reader may not
+  // have: under that view the series is the only load that ran, so a refusal
+  // of it is the "not yours" page above.
+  // A view that is not offered falls back to the month rather than an empty page.
+  const current: InvoiceView = asked === 'settings' && !settingsOffered ? 'month' : asked;
+
   return (
     <PageShell title={t('invoices.title')} subtitle={t('invoices.hint')}>
       <div className="flex flex-col gap-6">
@@ -131,7 +144,7 @@ export default async function InvoicingPage({
           {t('invoices.internalOnly')}
         </p>
 
-        <ViewTabs owing={owing} />
+        <ViewTabs view={current} settings={settingsOffered} />
 
         {/*
           Each list's own failure, said in its own place — October 2026 sweep.
@@ -139,13 +152,14 @@ export default async function InvoicingPage({
           reads "nothing owed": the most reassuring sentence on the screen, on
           exactly the day it was not true.
         */}
-        {owing ? (
-          outstanding === null ? (
+        {current === 'owing' &&
+          (outstanding === null ? (
             <PageError message={t(failedKey(outstandingLoad))} />
           ) : (
             <OutstandingList facilityId={chosen} invoices={outstanding.invoices} />
-          )
-        ) : (
+          ))}
+
+        {current === 'month' && (
           <>
             <InvoiceFilters
               facilityId={chosen}
@@ -165,19 +179,23 @@ export default async function InvoicingPage({
           </>
         )}
 
-        {books === null ? (
-          <PageError message={t(failedKey(booksLoad))} />
-        ) : (
-          <SeriesPanel facilityId={chosen} series={books.series} />
-        )}
+        {current === 'settings' && (
+          <>
+            {books === null ? (
+              booksLoad.state !== 'refused' && <PageError message={t(failedKey(booksLoad))} />
+            ) : (
+              <SeriesPanel facilityId={chosen} series={books.series} />
+            )}
 
-        {/*
-          The club's own number, under the books that carry it — POOLSE-62.
-          Absent for anybody the endpoint would refuse, rather than shown as an
-          empty field they cannot save.
-        */}
-        {tax !== null && <TaxPanel settings={tax} />}
-        {taxLoad.state === 'failed' && <PageError message={t(taxLoad.failure.key)} />}
+            {/*
+              The club's own number, under the books that carry it — POOLSE-62.
+              Absent for anybody the endpoint would refuse, rather than shown as an
+              empty field they cannot save.
+            */}
+            {tax !== null && <TaxPanel settings={tax} />}
+            {taxLoad.state === 'failed' && <PageError message={t(taxLoad.failure.key)} />}
+          </>
+        )}
       </div>
     </PageShell>
   );

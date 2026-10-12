@@ -131,3 +131,31 @@ Hovering or focusing a partnership shows which lanes of its tank are busy at tha
 counted across everything sharing the water, so "All lanes taken" can be true when a turma
 holds the other half. The sentence is visible text as well as a tooltip: a tooltip may
 clarify, and may never be the only place a piece of information appears.
+
+## One section at a time — 12 October 2026
+
+Where a page or a record tab stacks independent sections, a row of pills (`SectionPills`,
+`?section=`) shows one at a time, so the reader scrolls as little as possible. The pills keep the
+page's other query parameters (tab, site, search, filters) and drop `page`. A section the reader
+cannot see is not offered, and one pill alone is not drawn. Where:
+
+| Screen | Pills |
+|---|---|
+| Site → General | Pessoas · Meteorologia · Localização · Horário · Água |
+| Site → Preços | Mensalidades · Quota de sócio · Inscrição e seguro · Natação livre · Descontos · Pagamentos |
+| Tank → Água | Última análise · Tendências · Histórico · Alertas · Registar · Limites (the unsafe-water warning stays above the pills) |
+| Meter → General | Consumo · Ano a ano · Custo estimado |
+| Inventário | Inventário · Achados e perdidos |
+| Equipa | Membros · Convites |
+| Qualificações | A tratar · Tipos |
+| Aluno → Mensalidade | Mensalidades (with the period total) · Inscrição e seguro · Quota de sócio |
+| Turmas | Semana · Sem horário · Parcerias |
+| Épocas | Épocas · Planeamento · Iniciar nova época |
+| Faturação | Este mês · Em dívida · Configuração (the existing view switch, extended) |
+| `/admin` | Clientes · Faturação |
+
+Not split, on purpose: the dashboard (an overview read at a glance), the calendar, documents
+(an invoice, an energy bill) and a summary above the list it sums (Salários, where the import and
+export are folded into a disclosure instead). On Instalações each site card shows its tanks only;
+Espaços and Fotografias are links to the site's own tabs. A turma's roster puts *Inscrever aluno*
+first, folded.

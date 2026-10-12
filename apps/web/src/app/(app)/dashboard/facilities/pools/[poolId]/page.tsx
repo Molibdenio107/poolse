@@ -28,19 +28,21 @@ import { publicLinkView } from '@/lib/public-water-link';
  * the API would refuse.
  *
  * **Tabs since the detail-tabs change**: General (the details, with Arquivar at
- * its foot), Qualidade da água, Custo por utilização and Fotografias.
+ * its foot), Qualidade da água, Custo por utilização and Fotografias. Water
+ * quality shows one section at a time by `?section=` — `ReadingsBlock` decides
+ * which are offered, since it is the one that knows what each would draw.
  */
 export default async function PoolPage({
   params,
   searchParams,
 }: {
   params: Promise<{ poolId: string }>;
-  searchParams: Promise<{ from?: string; tab?: string | string[] }>;
+  searchParams: Promise<{ from?: string; tab?: string | string[]; section?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
   const { poolId } = await params;
-  const { from, tab } = await searchParams;
+  const { from, tab, section } = await searchParams;
 
   /*
    * A pool is reached from the site list and from the site itself, and those are
@@ -219,6 +221,8 @@ export default async function PoolPage({
                 emailConfigured={loaded.emailConfigured}
                 canManage={loaded.canManage}
                 canRecord={loaded.canRecordAnalysis}
+                section={section}
+                from={from}
               />
             </section>
           ),

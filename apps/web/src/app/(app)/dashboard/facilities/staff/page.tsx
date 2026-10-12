@@ -18,6 +18,7 @@ import { InvitePanel } from './invite-panel';
 import { ReissueButton } from './reissue-button';
 import { RevokeButton } from './revoke-button';
 import { PageError, PageShell } from '@/components/page-shell';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import { formatStamp } from '@/lib/date-format';
 
 /**
@@ -43,7 +44,13 @@ const ROLES: readonly string[] = STAFF_ROLES;
 export default async function PeoplePage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string; page?: string; search?: string; from?: string }>;
+  searchParams: Promise<{
+    role?: string;
+    page?: string;
+    search?: string;
+    from?: string;
+    section?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
 
@@ -57,7 +64,7 @@ export default async function PeoplePage({
    * part of the same query as the window — and the API enforces the staff
    * boundary rather than trusting this page to (POOLSE-35 criterion 7).
    */
-  const { role: requestedRole, page: pageParam, search = '', from } = await searchParams;
+  const { role: requestedRole, page: pageParam, search = '', from, section } = await searchParams;
   const role = ROLES.includes(requestedRole ?? '') ? requestedRole! : null;
   const page = readPage(pageParam);
   const term = search.trim();
@@ -108,6 +115,9 @@ export default async function PeoplePage({
    * them.
    */
   const members = people?.members.items ?? [];
+
+  const path = '/dashboard/facilities/staff';
+  const current = pickSection(['members', 'invitations'] as const, section, 'members');
 
   if (people !== null && isPastEnd(page, people.members.total, people.members.limit)) {
     redirect(
@@ -171,6 +181,33 @@ export default async function PeoplePage({
             />
           )}
 
+          {/*
+            One list at a time — 12 October 2026. Membros carries the role chips,
+            the search and the pages; Convites is a short list of its own. The
+            invite button stays above both, because a new invitation lands in
+            Convites and the button is how either list grows. The chips, the
+            search and the pages keep `section` absent, which is Membros.
+          */}
+          <SectionPills
+            label={t('staff.section.nav')}
+            current={current}
+            items={[
+              {
+                key: 'members',
+                label: t('people.members'),
+                href: sectionHref(path, { from, role: role ?? undefined, search: term || undefined }, 'members'),
+                count: people.counts.total,
+              },
+              {
+                key: 'invitations',
+                label: t('staff.section.invitations'),
+                href: sectionHref(path, { from }, 'invitations'),
+                count: people.invitations.length,
+              },
+            ]}
+          />
+
+          {current === 'members' && (
           <section className="rounded border border-border bg-surface p-5">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
               <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -339,7 +376,9 @@ export default async function PeoplePage({
               query={{ role: role ?? undefined, search: term }}
             />
           </section>
+          )}
 
+          {current === 'invitations' && (
           <section className="rounded border border-border bg-surface p-5">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('people.invitations')}
@@ -410,6 +449,7 @@ export default async function PeoplePage({
               </ul>
             )}
           </section>
+          )}
         </>
       )}
     </PageShell>

@@ -57,7 +57,9 @@ export function LostAndFoundPanel({
   canManage: boolean;
 }): React.ReactElement {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
+  // Open on arrival since it has its own section on the inventory page
+  // (12 October 2026): folded, it cost a click on a screen that holds nothing else.
+  const [open, setOpen] = useState(true);
   const [adding, setAdding] = useState(false);
 
   const outstanding = items.filter((item) => item.status === 'found').length;

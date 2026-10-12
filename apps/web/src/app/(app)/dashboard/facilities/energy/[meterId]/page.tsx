@@ -12,7 +12,8 @@ import { getMeter } from '../../energy.actions';
 import { listInvoices } from '../invoice.actions';
 import { MeterAdmin, ReadingForm, RemoveReading } from './meter-forms';
 import { TariffPanel } from './tariff-panel';
-import { YearOnYearPanel } from './year-on-year';
+import { YearOnYearPanel, hasYearOnYear } from './year-on-year';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 /**
  * One meter: its consumption by month, the form for the next reading, and the
@@ -24,7 +25,7 @@ import { YearOnYearPanel } from './year-on-year';
  * derived by the API from the meter's `reads` flag — nothing here subtracts.
  *
  * **Tabs since the detail-tabs change**: General (consumption, year on year and
- * the estimated cost), Leituras (the form and the record), Faturas — fetched
+ * the estimated cost, one at a time by `?section=`), Leituras (the form and the record), Faturas — fetched
  * when it opens — Tarifário, and Detalhes (owner and admin).
  */
 export default async function MeterPage({
@@ -32,10 +33,10 @@ export default async function MeterPage({
   searchParams,
 }: {
   params: Promise<{ meterId: string }>;
-  searchParams: Promise<{ from?: string; tab?: string | string[] }>;
+  searchParams: Promise<{ from?: string; tab?: string | string[]; section?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const { meterId } = await params;
-  const { from, tab } = await searchParams;
+  const { from, tab, section } = await searchParams;
   const t = await getTranslations();
   const locale = await getLocale();
   const format = await getFormatter();
@@ -64,6 +65,30 @@ export default async function MeterPage({
     t(`energy.reads.${meter.reads}`),
   ].join(' · ');
 
+  /*
+   * General shows one section at a time — 12 October 2026, Rui's standing
+   * preference that the reader scrolls as little as possible; the pill row is
+   * `components/section-pills.tsx`. Three charts had stacked into a page whose
+   * cost estimate sat two screens below the fold.
+   *
+   * A section is offered only where it would draw something. Year on year asks
+   * `hasYearOnYear`, the panel's own guard — a pill leading to a blank page reads
+   * as a broken one.
+   * Consumption is always offered: its empty state is the hint that says how to
+   * get a chart.
+   */
+  const generalSections = (
+    [
+      ['consumption', true],
+      ['yearOnYear', hasYearOnYear(monthly.yearOnYear)],
+      ['cost', monthly.monthsPriced > 0],
+    ] as const
+  )
+    .filter(([, offered]) => offered)
+    .map(([key]) => key);
+  const generalSection = pickSection(generalSections, section, 'consumption');
+  const meterPath =`/dashboard/facilities/energy/${meter.id}`;
+
   return (
     <DetailPage
       title={meter.name}
@@ -88,32 +113,47 @@ export default async function MeterPage({
                 </p>
               )}
 
-              <section className="rounded border border-border bg-surface p-5">
-                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                  {t('energy.consumption')}
-                </h2>
-                {readings.length === 0 ? (
-                  <p className="text-sm text-foreground-muted">{t('energy.noReadingsHint')}</p>
-                ) : (
-                  <ConsumptionBars
-                    monthly={monthly.months.map((m) => ({
-                      month: m.month,
-                      consumed: m.consumed,
-                      previous: m.previousConsumed,
-                      // Context in the record, not a second axis — slice 5.4b.
-                      temperatureC: m.meanTempC,
-                    }))}
-                    unit={meter.unit}
-                    locale={locale}
-                  />
-                )}
-              </section>
+              <SectionPills
+                label={t('energy.meterSection.nav')}
+                current={generalSection}
+                items={generalSections.map((key) => ({
+                  key,
+                  label: t(`energy.meterSection.${key}`),
+                  href: sectionHref(meterPath, { tab: 'general', from }, key),
+                }))}
+              />
+
+              {generalSection === 'consumption' && (
+                <section className="rounded border border-border bg-surface p-5">
+                  <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('energy.consumption')}
+                  </h2>
+                  {readings.length === 0 ? (
+                    <p className="text-sm text-foreground-muted">{t('energy.noReadingsHint')}</p>
+                  ) : (
+                    <ConsumptionBars
+                      monthly={monthly.months.map((m) => ({
+                        month: m.month,
+                        consumed: m.consumed,
+                        previous: m.previousConsumed,
+                        // Context in the record, not a second axis — slice 5.4b.
+                        temperatureC: m.meanTempC,
+                      }))}
+                      unit={meter.unit}
+                      locale={locale}
+                    />
+                  )}
+                </section>
+              )}
 
               {/*
-                This year against last — slice 5.4a. Directly under the chart it
-                reads, and absent entirely for a club with no counterpart months.
+                This year against last — slice 5.4a. Its own pill, offered only
+                for a club with counterpart months; the chart's outlined bars
+                still carry last year on Consumo.
               */}
-              <YearOnYearPanel yearOnYear={monthly.yearOnYear} unit={meter.unit} />
+              {generalSection === 'yearOnYear' && (
+                <YearOnYearPanel yearOnYear={monthly.yearOnYear} unit={meter.unit} />
+              )}
 
               {/*
                 What that consumption cost, at the rates the club typed — slice
@@ -125,7 +165,7 @@ export default async function MeterPage({
                 — so the heading says estimate, the coverage says how much of
                 the year it reached, and the two totals never meet.
               */}
-              {monthly.monthsPriced > 0 && (
+              {generalSection === 'cost' && (
                 <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
                   <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
                     {t('energy.tariff.costSection')}

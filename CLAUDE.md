@@ -769,6 +769,15 @@ exists, which runs with the page. Hide a tab with `visible` from an existing `ca
 refusal, never a new role list. Cards keep their own saves; `DetailTabs` notices typing in a
 posting form and asks before it is lost. `docs/features/navigation.md`.
 
+**A page or tab that stacks independent sections shows one at a time, behind `SectionPills`.**
+Rui's standing call, 12 October 2026: the reader scrolls as little as possible. The pill row is
+`components/section-pills.tsx` (`?section=`, a link per section, `pickSection` to fall back,
+`sectionHref` to keep the other query params and drop `page`). A section the reader may not see
+is not offered. One flow (a summary above the list it sums, a document, a form) stays whole, and
+so does an overview meant to be read at a glance: the dashboard bands and the calendar are
+deliberately not split. A page that already has a view switch (Faturação's `ViewTabs`) extends
+it rather than adding a second row.
+
 **One content width, and the calendar is the single exception.** `PageShell` caps every page
 at `max-w-page`; `width="wide"` exists for a screen whose content is a grid rather than prose,
 and the calendar is meant to stay its only caller. A second caller is a decision to take out

@@ -5,6 +5,7 @@ import { ApiError, apiFetch, type Inventory, type LostAndFound } from '@/lib/api
 import { EntityIcon } from '@/components/entity-icon';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { InventoryPanel } from './inventory-panel';
 import { LostAndFoundPanel } from './lost-and-found-panel';
@@ -30,17 +31,24 @@ const BASE = '/dashboard/facilities/inventory';
  * Read-only for anyone who cannot manage facilities. An instructor who wants to
  * know whether there are enough pranchas for a class is asking a reasonable
  * question and should not be offered a save button the API would refuse.
+ *
+ * **One section at a time** — 12 October 2026. Inventário and Achados e
+ * perdidos are two pills (`?section=`), the store room first because it is what
+ * the page is opened for. `sectionHref` keeps `facilityId` and `search` and
+ * drops `page`, so a search survives a trip to lost property and back; the
+ * search box and the pager stay inside Inventário, where they belong.
  */
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ facilityId?: string; search?: string; page?: string }>;
+  searchParams: Promise<{ facilityId?: string; search?: string; page?: string; section?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const {
     facilityId: requested = '',
     search = '',
     page: pageParam,
+    section,
   } = await searchParams;
 
   const page = readPage(pageParam);
@@ -140,33 +148,71 @@ export default async function InventoryPage({
           )}
 
 
-          {lost?.state === 'failed' && <PageError message={t(lost.failure.key)} />}
-          {lost?.state === 'ok' && data.facilityId !== null && (
-            <LostAndFoundPanel
-              facilityId={data.facilityId}
-              items={lost.data.items}
-              students={lost.data.students}
-              locations={data.locations}
-              canManage={lost.data.canManage}
-            />
-          )}
+          {(() => {
+            // Lost property is offered unless the endpoint refused it — a
+            // failed load keeps its pill and says so inside, as a tab would.
+            const offered: ('inventory' | 'lost')[] =
+              lost === null || lost.state === 'refused' ? ['inventory'] : ['inventory', 'lost'];
+            const current = pickSection(offered, section, 'inventory');
+            const params = {
+              facilityId: data.facilityId ?? undefined,
+              search: search.trim() || undefined,
+            };
+            const outstanding =
+              lost?.state === 'ok'
+                ? lost.data.items.filter((item) => item.status === 'found').length
+                : undefined;
 
-          <InventoryPanel
-            organizationId={data.organizationId}
-            facilities={data.facilities}
-            facilityId={data.facilityId}
-            items={data.items.items}
-            locations={data.locations}
-            total={data.items.total}
-            search={search.trim()}
-            canManage={data.canManage}
-          />
+            return (
+              <>
+                <SectionPills
+                  label={t('inventory.section.nav')}
+                  current={current}
+                  items={offered.map((key) => ({
+                    key,
+                    label: t(`inventory.section.${key}`),
+                    href: sectionHref(BASE, params, key),
+                    // The store room's size, and what is still waiting to be claimed.
+                    count: key === 'inventory' ? data.items.total : outstanding,
+                  }))}
+                />
 
-          <Pagination
-            page={data.items}
-            basePath={BASE}
-            query={{ facilityId: data.facilityId, search }}
-          />
+                {current === 'lost' && lost?.state === 'failed' && (
+                  <PageError message={t(lost.failure.key)} />
+                )}
+                {current === 'lost' && lost?.state === 'ok' && data.facilityId !== null && (
+                  <LostAndFoundPanel
+                    facilityId={data.facilityId}
+                    items={lost.data.items}
+                    students={lost.data.students}
+                    locations={data.locations}
+                    canManage={lost.data.canManage}
+                  />
+                )}
+
+                {current === 'inventory' && data.facilityId !== null && (
+                  <>
+                    <InventoryPanel
+                      organizationId={data.organizationId}
+                      facilities={data.facilities}
+                      facilityId={data.facilityId}
+                      items={data.items.items}
+                      locations={data.locations}
+                      total={data.items.total}
+                      search={search.trim()}
+                      canManage={data.canManage}
+                    />
+
+                    <Pagination
+                      page={data.items}
+                      basePath={BASE}
+                      query={{ facilityId: data.facilityId, search }}
+                    />
+                  </>
+                )}
+              </>
+            );
+          })()}
         </>
       )}
     </PageShell>

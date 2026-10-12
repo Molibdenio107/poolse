@@ -225,7 +225,11 @@
     "emailInvalid": "Endereço inválido, ou já é o endereço atual.",
     "alsoAStudent": "Esta pessoa também é aluno.",
     "openStudentRecord": "Ver a ficha de aluno",
-    "searchPlaceholder": "Nome ou email"
+    "searchPlaceholder": "Nome ou email",
+    "section": {
+      "nav": "Secções da equipa",
+      "invitations": "Convites"
+    }
   },
   "salaries": {
     "title": "Salários",
@@ -356,6 +360,10 @@
       "contracted": "Um valor acordado, ainda não pago.",
       "estimated": "Calculado a partir de outros dados, não acordado.",
       "assumed": "Um palpite. Serve para ter uma ideia, não para contar como certo."
+    },
+    "file": {
+      "summary": "Importar ou exportar a lista de salários",
+      "summaryHint": "Excel ou CSV. Exporte para corrigir numa folha de cálculo e importe de volta."
     }
   },
   "subscription": {
@@ -724,7 +732,13 @@
       "tempWarmer": "O ar esteve em média a {temp}, {difference} mais quente do que no ano anterior ({before}). É contexto: nenhum dos valores acima foi corrigido pelo tempo.",
       "tempSame": "O ar esteve em média a {temp}, praticamente igual ao ano anterior."
     },
-    "outsideTemp": "Temp. exterior"
+    "outsideTemp": "Temp. exterior",
+    "meterSection": {
+      "nav": "Secções do contador",
+      "consumption": "Consumo",
+      "yearOnYear": "Ano a ano",
+      "cost": "Custo estimado"
+    }
   },
   "maintenance": {
     "about": "Sobre",
@@ -1021,7 +1035,25 @@
       "value": "Um tanque precisa de análise ao fim de {hours} horas."
     },
     "waterThresholdInvalid": "Um número inteiro de horas, de 1 a 8760.",
-    "waterThresholdFailed": "Não foi possível guardar o limite."
+    "waterThresholdFailed": "Não foi possível guardar o limite.",
+    "section": {
+      "nav": "Secções do local",
+      "people": "Pessoas",
+      "weather": "Meteorologia",
+      "location": "Localização",
+      "hours": "Horário",
+      "water": "Água"
+    },
+    "cardMore": "Mais sobre {name}",
+    "waterSection": {
+      "nav": "Secções da qualidade da água",
+      "latest": "Última análise",
+      "trends": "Tendências",
+      "history": "Histórico",
+      "alerts": "Alertas",
+      "record": "Registar",
+      "ranges": "Limites"
+    }
   },
   "classes": {
     "colour": "Cor da turma",
@@ -1149,7 +1181,12 @@
     "poolRequired": "Escolha o tanque onde esta turma nada.",
     "laneRequired": "Indique quantas pistas ocupa.",
     "noInstructorYet": "Ainda sem instrutor",
-    "closedDay": "encerrado"
+    "closedDay": "encerrado",
+    "section": {
+      "nav": "Secções das turmas",
+      "unscheduled": "Sem horário"
+    },
+    "enrolStudent": "Inscrever aluno"
   },
   "reposicao": {
     "title": "Aulas de reposição",
@@ -1290,7 +1327,10 @@
     "publishFailed": "Não foi possível publicar a época.",
     "discardFailed": "Não foi possível eliminar o rascunho.",
     "cannotPublishArchived": "Uma época terminada não pode voltar a ser publicada.",
-    "cannotDiscard": "Só é possível eliminar um rascunho sem turmas."
+    "cannotDiscard": "Só é possível eliminar um rascunho sem turmas.",
+    "section": {
+      "nav": "Secções das épocas"
+    }
   },
   "week": {
     "1": "Segunda",
@@ -1522,7 +1562,11 @@
       "categories": "Descontos",
       "payments": "Pagamentos"
     },
-    "addFirstQuota": "Definir a quota"
+    "addFirstQuota": "Definir a quota",
+    "studentSection": {
+      "nav": "Secções da mensalidade",
+      "linesHint": "O que for cobrado aqui passa a ser uma linha em Mensalidades, onde está o total do período."
+    }
   },
   "categories": {
     "title": "Categorias de preço",
@@ -2755,6 +2799,11 @@
       "saveFailed": "Não foi possível registar o achado.",
       "returnFailed": "Não foi possível marcar como entregue.",
       "removeFailed": "Não foi possível remover o achado."
+    },
+    "section": {
+      "nav": "Secções do inventário",
+      "inventory": "Inventário",
+      "lost": "Achados e perdidos"
     }
   },
   "slots": {
@@ -3423,7 +3472,8 @@
     "dueOnRequired": "Indique a data de vencimento.",
     "noSites": "Ainda não há instalações. Crie a primeira em Instalações para poder faturar.",
     "freeSwim": "Natação livre",
-    "finalConsumer": "Consumidor final"
+    "finalConsumer": "Consumidor final",
+    "viewSettings": "Configuração"
   },
   "reception": {
     "title": "Receção",
@@ -3791,6 +3841,11 @@
       "trialing": "Em avaliação",
       "expired": "Terminadas",
       "pendingDelete": "A caminho de eliminação"
+    },
+    "section": {
+      "nav": "Secções da administração",
+      "tenants": "Clientes",
+      "billing": "Faturação"
     }
   },
   "suspended": {
@@ -4059,6 +4114,10 @@
       "saveFailed": "Não foi possível guardar.",
       "archiveFailed": "Não foi possível arquivar."
     },
-    "historyLineNoExpiry": "Emitida a {issued} · sem data de validade"
+    "historyLineNoExpiry": "Emitida a {issued} · sem data de validade",
+    "section": {
+      "nav": "Secções das qualificações",
+      "types": "Tipos"
+    }
   }
 }

@@ -14,6 +14,7 @@ import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { QualificationStatus } from '@/components/qualification-status';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import { TypesPanel } from './types-panel';
 
 /**
@@ -21,19 +22,22 @@ import { TypesPanel } from './types-panel';
  *
  * Everybody âmbar, vermelho or em falta, worst first, so the office renews
  * before the date rather than after it. Paginated: it grows with the staff.
- * Below it, the club's types and its âmbar window — tenant data, in the club's
- * own words.
+ * Beside it, under its own pill, the club's types and its âmbar window —
+ * tenant data, in the club's own words. One section at a time (12 October
+ * 2026): the list is what the office opens this for, and the types are set up
+ * once. The types are fetched only when that section is open.
  *
  * Owner and admin, refused by the API as well as hidden from the menu.
  */
 export default async function QualificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; section?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, section } = await searchParams;
   const page = readPage(pageParam);
+  const current = pickSection(['attention', 'types'] as const, section, 'attention');
 
   let list: Paginated<ExpiringQualification> | null = null;
   let types: QualificationTypes | null = null;
@@ -46,12 +50,12 @@ export default async function QualificationsPage({
       apiFetch<Paginated<ExpiringQualification>>(
         `/qualifications/expiring${page > 1 ? `?page=${page}` : ''}`,
       ),
-      apiFetch<QualificationTypes>('/qualification-types'),
-      apiFetch<Me>('/me'),
+      current === 'types' ? apiFetch<QualificationTypes>('/qualification-types') : null,
+      current === 'types' ? apiFetch<Me>('/me') : null,
     ]);
     list = loadedList;
     types = loadedTypes;
-    organizationId = me.memberships[0]?.organizationId ?? '';
+    organizationId = me?.memberships[0]?.organizationId ?? '';
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) notPermitted = true;
     else failure = describeLoad(error);
@@ -77,6 +81,22 @@ export default async function QualificationsPage({
       {failure !== null && <PageError message={t(failure.key)} detail={failure.detail} />}
 
       {list !== null && (
+        <SectionPills
+          label={t('qualifications.section.nav')}
+          current={current}
+          items={[
+            {
+              key: 'attention',
+              label: t('qualifications.attention'),
+              href: sectionHref(base, {}, 'attention'),
+              count: list.total,
+            },
+            { key: 'types', label: t('qualifications.section.types'), href: sectionHref(base, {}, 'types') },
+          ]}
+        />
+      )}
+
+      {list !== null && current === 'attention' && (
         <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
           <h2 className="font-medium">{t('qualifications.attention')}</h2>
           {list.total === 0 ? (
@@ -106,7 +126,7 @@ export default async function QualificationsPage({
         </section>
       )}
 
-      {types !== null && (
+      {types !== null && current === 'types' && (
         <TypesPanel organizationId={organizationId} types={types.types} amberDays={types.amberDays} />
       )}
     </PageShell>

@@ -18,7 +18,8 @@ import { photoUrlFor } from '@/lib/photo';
 import { StudentForm } from '../student-forms';
 import { CreditBooking } from './credit-booking';
 import { StudentWeek } from './student-week';
-import { FeesBlock } from './fees-block';
+import { FeesBlock, type FeesSection } from './fees-block';
+import { pickSection } from '@/components/section-pills';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -42,12 +43,12 @@ export default async function StudentPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ week?: string; tab?: string | string[] }>;
+  searchParams: Promise<{ week?: string; tab?: string | string[]; section?: string | string[] }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
   const { id } = await params;
-  const { week, tab } = await searchParams;
+  const { week, tab, section } = await searchParams;
 
   const monday = mondayOf(isDate(week) ? week : today());
   const sunday = addDays(monday, 6);
@@ -277,6 +278,13 @@ export default async function StudentPage({
             ) : (
               billing?.state === 'ok' && (
                 <>
+                  {/*
+                    One section at a time — 12 October 2026, as on Preços.
+                    Inscrição e seguro is offered only when a season has a
+                    price to charge: with none, the card had nothing in it but
+                    its heading, and a pill that opens an empty card is a pill
+                    somebody clicks to find nothing.
+                  */}
                   {(sitesUnread || billing.data.sitesFailed > 0) && (
                     <p className="text-sm text-warning">{t('fees.pricesUnread')}</p>
                   )}
@@ -284,6 +292,8 @@ export default async function StudentPage({
                     studentId={loaded.id}
                     fees={billing.data.fees}
                     periods={billing.data.periods}
+                    {...feesSections(billing.data.fees.seasonCharges.length > 0, section)}
+                    path={`/dashboard/students/${id}`}
                   />
                 </>
               )
@@ -466,4 +476,15 @@ function Row({ label, value }: { label: string; value: string | null }): React.R
       <dd className="text-right">{value ?? '—'}</dd>
     </div>
   );
+}
+
+/** Which fee sections are offered, and which of them is open. */
+function feesSections(
+  hasSeasonCharges: boolean,
+  requested: string | string[] | undefined,
+): { offered: FeesSection[]; section: FeesSection } {
+  const offered: FeesSection[] = hasSeasonCharges
+    ? ['mensalidade', 'joining', 'socio']
+    : ['mensalidade', 'socio'];
+  return { offered, section: pickSection(offered, requested, 'mensalidade') };
 }

@@ -14,6 +14,7 @@ import { PageError, PageShell } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
 import { classColourVar } from '@/lib/calendar-scale';
 import { cn } from '@/lib/utils';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 /**
  * The whole week, and who is in it.
@@ -27,7 +28,7 @@ import { cn } from '@/lib/utils';
 export default async function ClassesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scope?: string }>;
+  searchParams: Promise<{ scope?: string; section?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -41,7 +42,7 @@ export default async function ClassesPage({
     roles, so an absent parameter is not "all" — it is "whichever is useful to
     you", and the answer comes back in `scope`.
   */
-  const { scope } = await searchParams;
+  const { scope, section } = await searchParams;
   const asked = scope === 'mine' || scope === 'all' ? `?scope=${scope}` : '';
 
   let data: Classes | null = null;
@@ -279,6 +280,49 @@ export default async function ClassesPage({
    */
   const unscheduled = (data?.groups ?? []).filter((group) => group.schedules.length === 0);
 
+  const partnerBookings = (grid?.bookings ?? []).filter(
+    (booking) => booking.subjectType === 'parceria',
+  );
+
+  /*
+    One section at a time — 12 October 2026, Rui's standing preference that the
+    reader scrolls as little as possible. The week grid is tall, and the two
+    lists that used to sit under it were found only by scrolling past a whole
+    week.
+
+    **Sem horário is a pill with its count, offered only while there is one.**
+    A notice above the grid linking down to the list would have kept the list
+    below a week of columns; the pill keeps it one click away, and the count is
+    what makes it visible from the week without stealing the week's room.
+    Parcerias likewise only when there is one — `PartnerClasses` draws nothing
+    for none, and a pill that opens an empty page is a pill for nothing.
+  */
+  const sections = (
+    [
+      ['week', true],
+      ['unscheduled', unscheduled.length > 0],
+      ['partners', grid !== null && partnerBookings.length > 0],
+    ] as const
+  )
+    .filter(([, offered]) => offered)
+    .map(([key]) => key);
+  const current = pickSection(sections, section, 'week');
+
+  /*
+    The section links keep the scope, and the scope links keep the section, so
+    neither choice undoes the other. An absent scope stays absent — it is not
+    "all", it is "whichever the API thinks is useful to you" (above).
+  */
+  const sectionLink = (key: string): string =>
+    sectionHref('/dashboard/classes', { scope }, key);
+  const scopeLink = (option: 'all' | 'mine'): string => {
+    const query = new URLSearchParams();
+    if (option === 'mine') query.set('scope', 'mine');
+    if (current !== 'week') query.set('section', current);
+    const rest = query.toString();
+    return rest === '' ? '/dashboard/classes' : `/dashboard/classes?${rest}`;
+  };
+
   return (
     <PageShell
       title={t('classes.title')}
@@ -306,80 +350,126 @@ export default async function ClassesPage({
 
       {data !== null && (
         <>
-          {/*
-            The switch, and only for somebody with two views — slice 1.12.
-
-            An instructor holding no office role has one list and does not need a
-            control telling them so; an owner who also teaches has two real
-            questions on the same evening — "what am I teaching" and "what is the
-            club running" — and this is how they move between them.
-          */}
-          {data.canSwitchScope && (
-            <nav aria-label={t('classes.scopeLabel')} className="flex flex-wrap items-center gap-2">
-              {(['all', 'mine'] as const).map((option) => {
-                const current = data.scope === option;
-                return (
-                  <Link
-                    key={option}
-                    href={option === 'all' ? '/dashboard/classes' : '/dashboard/classes?scope=mine'}
-                    aria-current={current ? 'page' : undefined}
-                    className={cn(
-                      'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                      current
-                        ? 'border-primary bg-primary/10 font-medium text-primary'
-                        : 'border-border text-foreground-muted hover:border-border-strong hover:text-foreground',
-                    )}
-                  >
-                    {t(option === 'all' ? 'classes.scopeAll' : 'classes.scopeMine')}
-                  </Link>
-                );
-              })}
-            </nav>
-          )}
+          <SectionPills
+            label={t('classes.section.nav')}
+            current={current}
+            items={sections.map((key) => ({
+              key,
+              label:
+                key === 'week'
+                  ? t('classes.week')
+                  : key === 'unscheduled'
+                    ? t('classes.section.unscheduled')
+                    : t('partnerClasses.title'),
+              href: sectionLink(key),
+              ...(key === 'unscheduled'
+                ? { count: unscheduled.length }
+                : key === 'partners'
+                  ? { count: partnerBookings.length }
+                  : {}),
+            }))}
+          />
 
           {/*
-            And for an instructor who has only their own, a line saying so —
-            never a silent filter. A list of four where the club runs forty must
-            explain itself, or it reads as turmas having gone missing.
+            The scope row, and "Criar turma", only where they act on what is
+            drawn: the week and the turmas with no days are both lists of turmas
+            the scope filters; the parcerias are not turmas and no scope reaches
+            them, so a switch above them would be a switch that does nothing.
           */}
-          {!data.canSwitchScope && data.scope === 'mine' && (
-            <p className="text-sm text-foreground-muted">{t('classes.scopeMineOnly')}</p>
-          )}
+          {current !== 'partners' && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {/*
+                The switch, and only for somebody with two views — slice 1.12.
 
-          {data.canManage && (
-            <Link
-              href="/dashboard/classes/new"
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground"
-            >
-              {t('classes.create')}
-            </Link>
-          )}
+                An instructor holding no office role has one list and does not
+                need a control telling them so; an owner who also teaches has two
+                real questions on the same evening — "what am I teaching" and
+                "what is the club running" — and this is how they move between
+                them.
+              */}
+              {data.canSwitchScope && (
+                <nav aria-label={t('classes.scopeLabel')} className="flex flex-wrap items-center gap-2">
+                  {(['all', 'mine'] as const).map((option) => {
+                    const on = data.scope === option;
+                    return (
+                      <Link
+                        key={option}
+                        href={scopeLink(option)}
+                        aria-current={on ? 'page' : undefined}
+                        scroll={false}
+                        className={cn(
+                          'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                          on
+                            ? 'border-primary bg-primary/10 font-medium text-primary'
+                            : 'border-border text-foreground-muted hover:border-border-strong hover:text-foreground',
+                        )}
+                      >
+                        {t(option === 'all' ? 'classes.scopeAll' : 'classes.scopeMine')}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              )}
 
-          <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('classes.week')}
-              </h2>
-              <p className="text-sm text-foreground-muted">{t('classes.weekHint')}</p>
+              {/*
+                And for an instructor who has only their own, a line saying so —
+                never a silent filter. A list of four where the club runs forty
+                must explain itself, or it reads as turmas having gone missing.
+              */}
+              {!data.canSwitchScope && data.scope === 'mine' && (
+                <p className="text-sm text-foreground-muted">{t('classes.scopeMineOnly')}</p>
+              )}
+
+              {data.canManage && (
+                <Link
+                  href="/dashboard/classes/new"
+                  className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {t('classes.create')}
+                </Link>
+              )}
             </div>
+          )}
 
-            <WeekGrid
-              entries={entries}
-              dayNames={dayNames}
-              emptyLabel={t('classes.noSlots')}
-              // Only the days the site opens — round 5, ticket 8.4. A day it is
-              // shut on that still carries a turma is drawn and flagged, never
-              // hidden: a class you cannot see is one you cannot move.
-              {...(grid === null ? {} : { openWeekdays: grid.openWeekdays })}
-              closedLabel={t('classes.closedDay')}
-              // The one screen where a class on the grid opens its turma.
-              // The whole square opens the turma here — this grid has no
-              // controls on it, so the card can mean exactly one thing.
-              linkCards
-            />
-          </section>
+          {current === 'week' && (
+            <>
+              {/* Above the grid, so a club with none is told before an empty week. */}
+              {data.groups.length === 0 && (
+                <section className="rounded border border-border bg-surface p-5">
+                  <p>{t('classes.none')}</p>
+                  <p className="mt-1 text-sm text-foreground-muted">
+                    {data.canManage ? t('classes.noneHintManager') : t('classes.noneHintMember')}
+                  </p>
+                </section>
+              )}
 
-          {unscheduled.length > 0 && (
+              <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('classes.week')}
+                  </h2>
+                  <p className="text-sm text-foreground-muted">{t('classes.weekHint')}</p>
+                </div>
+
+                <WeekGrid
+                  entries={entries}
+                  dayNames={dayNames}
+                  emptyLabel={t('classes.noSlots')}
+                  // Only the days the site opens — round 5, ticket 8.4. A day it is
+                  // shut on that still carries a turma is drawn and flagged, never
+                  // hidden: a class you cannot see is one you cannot move.
+                  {...(grid === null ? {} : { openWeekdays: grid.openWeekdays })}
+                  closedLabel={t('classes.closedDay')}
+                  // The one screen where a class on the grid opens its turma.
+                  // The whole square opens the turma here — this grid has no
+                  // controls on it, so the card can mean exactly one thing.
+                  linkCards
+                />
+              </section>
+            </>
+          )}
+
+          {current === 'unscheduled' && (
             <section className="rounded border border-border bg-surface p-5">
               <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('classes.unscheduled')}
@@ -400,11 +490,11 @@ export default async function ClassesPage({
             </section>
           )}
 
-          {grid !== null && (
+          {current === 'partners' && grid !== null && (
             <PartnerClasses
               organizationId={data.organizationId}
               facilityId={grid.facilityId}
-              bookings={grid.bookings.filter((booking) => booking.subjectType === 'parceria')}
+              bookings={partnerBookings}
               // Everything sharing the water, so "all lanes taken" can be true
               // when a turma holds the other half — 8.1.
               allBookings={grid.bookings}
@@ -415,16 +505,9 @@ export default async function ClassesPage({
               // club is shut — POOLSE-QA-04.
               hours={data.facilities.find((site) => site.id === grid.facilityId)?.hours ?? []}
               canManage={data.canManage}
+              // The list is the whole section now, so it arrives open.
+              defaultOpen
             />
-          )}
-
-          {data.groups.length === 0 && (
-            <section className="rounded border border-border bg-surface p-5">
-              <p>{t('classes.none')}</p>
-              <p className="mt-1 text-sm text-foreground-muted">
-                {data.canManage ? t('classes.noneHintManager') : t('classes.noneHintMember')}
-              </p>
-            </section>
           )}
         </>
       )}

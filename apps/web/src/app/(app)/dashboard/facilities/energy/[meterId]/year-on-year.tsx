@@ -3,6 +3,19 @@ import { centsToText } from '@/lib/energy-invoice';
 import type { YearOnYear } from '@/lib/api';
 
 /**
+ * Whether there is anything to compare — one definition, read by this panel
+ * and by the meter page deciding whether to offer its *Ano a ano* pill. A copy
+ * of the rule in the page would agree with this one until somebody changed one.
+ */
+export function hasYearOnYear(yearOnYear: YearOnYear): boolean {
+  return (
+    yearOnYear.comparableMonths > 0 &&
+    yearOnYear.consumed !== null &&
+    yearOnYear.previousConsumed !== null
+  );
+}
+
+/**
  * This year against last — slice 5.4a.
  *
  * **Consumption and cost are two sentences, never one.** A club whose bill is
@@ -41,7 +54,7 @@ export async function YearOnYearPanel({
     previousMeanTempC,
   } = yearOnYear;
 
-  if (comparableMonths === 0 || consumed === null || previousConsumed === null) return null;
+  if (!hasYearOnYear(yearOnYear) || consumed === null || previousConsumed === null) return null;
 
   const quantity = (value: number): string =>
     format.number(value, { maximumFractionDigits: 1 });

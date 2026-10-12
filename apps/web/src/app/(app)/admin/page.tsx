@@ -7,6 +7,7 @@ import { DataTable, type Column } from '@/components/data-table';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { SearchInput, SearchStatus } from '@/components/search-input';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import type { Paginated } from '@/lib/pagination';
@@ -38,12 +39,25 @@ import { formatDate, formatStamp } from '@/lib/date-format';
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; search?: string; sort?: string; filter?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    search?: string;
+    sort?: string;
+    filter?: string;
+    section?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
 
-  const { page: pageParam, search = '', sort, filter } = await searchParams;
+  const { page: pageParam, search = '', sort, filter, section } = await searchParams;
+  /*
+   * One section at a time — 12 October 2026. Clientes is the table with its
+   * search, filter and sort, all of which keep `section` absent and so stay in
+   * it; Faturação is the billing panel. Only the open section is fetched, so a
+   * page view is still one line in `platform_audit_log` per thing shown.
+   */
+  const current = pickSection(['tenants', 'billing'] as const, section, 'tenants');
   const page = readPage(pageParam);
   const term = search.trim();
 
@@ -54,12 +68,11 @@ export default async function AdminPage({
 
   try {
     /*
-     * In parallel: two independent reads, and neither needs the other. Two lines
-     * in `platform_audit_log` for one page view, which is the honest price of a
-     * screen that shows two different things.
+     * In parallel: two independent reads, and neither needs the other — and
+     * only the one the open section draws is made.
      */
     [tenants, billing] = await Promise.all([
-      apiFetch<Paginated<PlatformTenant>>(
+      current !== 'tenants' ? null : apiFetch<Paginated<PlatformTenant>>(
         `/platform/tenants?${new URLSearchParams({
           ...(term === '' ? {} : { search: term }),
           ...(page > 1 ? { page: String(page) } : {}),
@@ -68,7 +81,7 @@ export default async function AdminPage({
           ...(filter === undefined || filter === '' ? {} : { filter }),
         })}`,
       ),
-      apiFetch<BillingOverview>('/platform/billing'),
+      current !== 'billing' ? null : apiFetch<BillingOverview>('/platform/billing'),
     ]);
   } catch (error) {
     if (error instanceof ApiError && error.code === 'not_platform_admin') {
@@ -122,6 +135,7 @@ export default async function AdminPage({
       title={t('admin.title')}
       subtitle={t('admin.subtitle')}
       filters={
+        current !== 'tenants' ? undefined : (
         <>
           <SearchInput
             label={t('admin.searchLabel')}
@@ -138,6 +152,7 @@ export default async function AdminPage({
           <FilterLinks current={filter} search={term} t={t} />
           <SortLinks current={sort} search={term} t={t} />
         </>
+        )
       }
     >
       {/*
@@ -147,10 +162,23 @@ export default async function AdminPage({
       */}
       <StatusStrip />
 
+      <SectionPills
+        label={t('admin.section.nav')}
+        current={current}
+        items={[
+          {
+            key: 'tenants',
+            label: t('admin.section.tenants'),
+            href: sectionHref('/admin', { search: term || undefined, filter: filter || undefined, sort }, 'tenants'),
+          },
+          { key: 'billing', label: t('admin.section.billing'), href: sectionHref('/admin', {}, 'billing') },
+        ]}
+      />
+
       {/*
-        What is falling due, and what pays for what — POOLSE-63. Above the table
-        because a renewal that has already lapsed is the row an operator opened
-        this screen to find, and it is not one of the ten below.
+        What is falling due, and what pays for what — POOLSE-63. Its own section
+        now rather than above the table: a renewal that has already lapsed is
+        still one click away, and the table no longer starts below the fold.
       */}
       {billing !== null && <BillingPanel overview={billing} />}
 

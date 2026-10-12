@@ -9,6 +9,7 @@ import { WaterImport } from './pools/[poolId]/water-import';
 import { AnalysisForm, ArchiveAnalysisButton, SafeRangesForm } from './analysis-forms';
 import { formatStamp } from '@/lib/date-format';
 import { formatReading } from '@/lib/pool-metrics';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 /**
  * Water quality — round 4, built.
@@ -33,7 +34,17 @@ import { formatReading } from '@/lib/pool-metrics';
  *
  * A server component: the charts are SVG with no interaction, and only the entry
  * form and the archive control are client code.
+ *
+ * **One section at a time** — 12 October 2026, Rui's standing preference that
+ * the reader scrolls as little as possible (`components/section-pills.tsx`).
+ * Eight blocks had stacked into a tab where the form somebody came to fill in
+ * sat below every chart and every past analysis. Each is now a pill on
+ * `?section=`: what the water is now, how it moved, the record, what was sent,
+ * adding one, and the bands. A section with nothing in it is not offered —
+ * except the two where things are *added*, which are empty until somebody does.
  */
+
+type WaterSection = 'latest' | 'trends' | 'history' | 'alerts' | 'record' | 'ranges';
 
 export async function ReadingsBlock({
   organizationId,
@@ -46,6 +57,8 @@ export async function ReadingsBlock({
   emailConfigured,
   canManage,
   canRecord,
+  section,
+  from,
 }: {
   organizationId: string;
   poolId: string;
@@ -70,6 +83,10 @@ export async function ReadingsBlock({
   canManage: boolean;
   /** The record-one-analysis form: owner, admin and maintenance. */
   canRecord: boolean;
+  /** The `?section=` the page was asked for; resolved against what is offered. */
+  section?: string | string[] | undefined;
+  /** The page's own `?from=`, kept on every pill so "Voltar" still knows the way. */
+  from?: string | undefined;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -98,95 +115,136 @@ export async function ReadingsBlock({
     return { from: band.from, to: band.to };
   };
 
+  /*
+   * What is offered. Última análise always is — with no analysis it is the empty
+   * state naming what the first one unlocks, and a tab must never be a row of
+   * zero pills. Registar and Limites follow the roles that may write them, not
+   * whether anything is there yet, because they are where it gets there.
+   */
+  const offered = (
+    [
+      ['latest', true],
+      ['trends', measured.length > 0],
+      ['history', analyses.length > 0],
+      ['alerts', alerts.length > 0],
+      ['record', canRecord || canManage],
+      ['ranges', canManage],
+    ] as const
+  )
+    .filter(([, on]) => on)
+    .map(([key]): WaterSection => key);
+  const current = pickSection(offered, section, 'latest');
+  const counts: Partial<Record<WaterSection, number>> = {
+    history: analyses.length,
+    alerts: alerts.length,
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <p className="text-sm text-foreground-muted">{t('facilities.readingsHint')}</p>
 
-      {analyses.length === 0 ? (
-        /*
-          An empty state that says what will be here — round 4 follow-up.
-          "None recorded" alone reads as a dead panel; naming the three things
-          the first analysis unlocks tells an operator the form below is worth
-          filling in.
-        */
-        <div className="flex flex-col gap-2 rounded border border-dashed border-border p-4">
-          <p className="text-sm font-medium">{t('facilities.noAnalyses')}</p>
-          <ul className="list-inside list-disc text-sm text-foreground-muted">
-            <li>{t('facilities.emptyLatest')}</li>
-            <li>{t('facilities.emptyTrend')}</li>
-            <li>{t('facilities.emptyReport')}</li>
-          </ul>
+      {/*
+        Above the pills, in every section: water out of range is a safety
+        warning, and a warning that disappears when somebody opens Histórico or
+        Registar is one they can miss on the day it matters.
+      */}
+      <UnsafeWaterNotice
+        poolId={poolId}
+        excursions={latest === undefined ? [] : excursions(latest.values, bands)}
+      />
+
+      <SectionPills
+        label={t('facilities.waterSection.nav')}
+        current={current}
+        items={offered.map((key) => ({
+          key,
+          label: t(`facilities.waterSection.${key}`),
+          href: sectionHref(`/dashboard/facilities/pools/${poolId}`, { tab: 'water', from }, key),
+          count: counts[key],
+        }))}
+      />
+
+      {current === 'latest' &&
+        (analyses.length === 0 ? (
+          /*
+            An empty state that says what will be here — round 4 follow-up.
+            "None recorded" alone reads as a dead panel; naming the three things
+            the first analysis unlocks tells an operator Registar is worth
+            filling in.
+          */
+          <div className="flex flex-col gap-2 rounded border border-dashed border-border p-4">
+            <p className="text-sm font-medium">{t('facilities.noAnalyses')}</p>
+            <ul className="list-inside list-disc text-sm text-foreground-muted">
+              <li>{t('facilities.emptyLatest')}</li>
+              <li>{t('facilities.emptyTrend')}</li>
+              <li>{t('facilities.emptyReport')}</li>
+            </ul>
+          </div>
+        ) : (
+          <>
+            {/*
+              The most recent reading, as tiles. This is the question the panel is
+              opened for nine times out of ten — "what is it right now" — and it
+              should not require reading a chart.
+            */}
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {latest?.values.map((value) => (
+                <div
+                  key={value.metric}
+                  className="flex flex-col gap-0.5 rounded border border-border p-3"
+                >
+                  <dt className="text-sm text-foreground-muted">{labelFor(value.metric)}</dt>
+                  <dd className="text-lg font-medium">
+                    {formatReading(value.value, locale)}{' '}
+                    <span className="text-sm font-normal text-foreground-muted">{value.unit}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
+          </>
+        ))}
+
+      {current === 'trends' && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {measured.map((metric) => {
+            const points = analyses
+              .filter((analysis) =>
+                analysis.values.some((value) => value.metric === metric),
+              )
+              .map((analysis) => ({
+                at: analysis.takenAt,
+                value:
+                  analysis.values.find((value) => value.metric === metric)?.value ?? 0,
+              }));
+
+            return (
+              <TrendChart
+                key={metric}
+                locale={locale}
+                points={points}
+                label={labelFor(metric)}
+                unit={
+                  latest?.values.find((value) => value.metric === metric)?.unit ??
+                  analyses
+                    .flatMap((analysis) => analysis.values)
+                    .find((value) => value.metric === metric)?.unit ??
+                  ''
+                }
+                /*
+                  This pool's band, not the published one. A tank judged
+                  only from below draws one edge, and a metric switched off
+                  draws none — the honest picture either way.
+                */
+                band={bandFor(metric)}
+              />
+            );
+          })}
         </div>
-      ) : (
+      )}
+
+      {current === 'history' && (
         <>
-          {/*
-            The most recent reading, as tiles. This is the question the panel is
-            opened for nine times out of ten — "what is it right now" — and it
-            should not require reading a chart.
-          */}
-          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {latest?.values.map((value) => (
-              <div
-                key={value.metric}
-                className="flex flex-col gap-0.5 rounded border border-border p-3"
-              >
-                <dt className="text-sm text-foreground-muted">{labelFor(value.metric)}</dt>
-                <dd className="text-lg font-medium">
-                  {formatReading(value.value, locale)}{' '}
-                  <span className="text-sm font-normal text-foreground-muted">{value.unit}</span>
-                </dd>
-              </div>
-            ))}
-          </dl>
-
-          {/*
-            Between the readings and the charts on purpose: it is a consequence
-            of the numbers just above it, and putting it under the trend would
-            mean scrolling past the thing it is warning about.
-          */}
-          <UnsafeWaterNotice
-            poolId={poolId}
-            excursions={latest === undefined ? [] : excursions(latest.values, bands)}
-          />
-
-          {measured.length > 0 && (
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              {measured.map((metric) => {
-                const points = analyses
-                  .filter((analysis) =>
-                    analysis.values.some((value) => value.metric === metric),
-                  )
-                  .map((analysis) => ({
-                    at: analysis.takenAt,
-                    value:
-                      analysis.values.find((value) => value.metric === metric)?.value ?? 0,
-                  }));
-
-                return (
-                  <TrendChart
-                    key={metric}
-                    locale={locale}
-                    points={points}
-                    label={labelFor(metric)}
-                    unit={
-                      latest?.values.find((value) => value.metric === metric)?.unit ??
-                      analyses
-                        .flatMap((analysis) => analysis.values)
-                        .find((value) => value.metric === metric)?.unit ??
-                      ''
-                    }
-                    /*
-                      This pool's band, not the published one. A tank judged
-                      only from below draws one edge, and a metric switched off
-                      draws none — the honest picture either way.
-                    */
-                    band={bandFor(metric)}
-                  />
-                );
-              })}
-            </div>
-          )}
-
           {/* The record itself. Newest first here — a list is read from the top. */}
           <ul className="flex flex-col divide-y divide-border rounded border border-border">
             {[...analyses].reverse().map((analysis) => (
@@ -264,11 +322,12 @@ export async function ReadingsBlock({
       {/*
         What was actually sent, and to how many people — slice 4.2.
 
-        Under the readings because it answers the next question an operator has:
-        the band is crossed, and did anybody hear about it. It renders only when
-        there is a history, so a tank that has never had a bad reading carries no
-        empty panel — and it renders *outside* the "no analyses yet" branch,
-        because archiving a mistyped reading does not unsend the email it caused.
+        Beside the record because it answers the next question an operator has:
+        the band is crossed, and did anybody hear about it. Its pill is offered
+        only when there is a history, so a tank that has never had a bad reading
+        carries no empty section — and it is decided by the alerts alone, never
+        by whether analyses remain, because archiving a mistyped reading does not
+        unsend the email it caused.
 
         **A count, not the addresses.** This panel is readable by any member and
         the club's staff addresses are not what it is for.
@@ -279,7 +338,7 @@ export async function ReadingsBlock({
         identical either way would let somebody believe a message went out. Same
         reasoning as the chase list in 2.3.
       */}
-      {alerts.length > 0 && (
+      {current === 'alerts' && (
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-medium">{t('facilities.alertHistory')}</h3>
           <p className="text-sm text-foreground-muted">{t('facilities.alertHint')}</p>
@@ -316,17 +375,17 @@ export async function ReadingsBlock({
       )}
 
       {/*
-        The form folds; the readings and the trends do not — round 5.
+        Registar — the form and the import, the two ways an analysis gets in.
 
-        Recording an analysis is a weekly job that takes thirty seconds; reading
-        the last one is what this panel is opened for every other time. So the
-        nine inputs sit behind a disclosure and the tiles, the charts and the
-        record stay where they are. `<details>` rather than a state hook: the
-        browser's own disclosure is keyboard-operable, announced as one, and
-        works before any JavaScript arrives.
+        The form still folds (round 5), but it opens already unfolded: choosing
+        this pill *is* the click that used to open it, and a second one would be
+        ceremony. `<details>` rather than a state hook because the browser's own
+        disclosure is keyboard-operable, announced as one, and works before any
+        JavaScript arrives — and folding it away is still how somebody reaches
+        the import beneath without scrolling past nine inputs.
       */}
-      {canRecord && (
-        <details className="group rounded border border-border">
+      {current === 'record' && canRecord && (
+        <details open className="group rounded border border-border">
           <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <ChevronRight
               aria-hidden
@@ -357,19 +416,20 @@ export async function ReadingsBlock({
         The wizard renders nothing for somebody who may not write, so a
         read-only visitor sees the readings and no control the API would refuse.
       */}
-      {canManage && <WaterImport poolId={poolId} canManage={canManage} />}
+      {current === 'record' && canManage && (
+        <WaterImport poolId={poolId} canManage={canManage} />
+      )}
 
       {/*
         What this tank's water is supposed to look like — slice 4.2, second half.
 
-        Behind a disclosure and last in the panel, because it is a setting rather
-        than a job: a club sets it once when a tank is not a municipal pool, and
-        never looks at it again. `<details>` for the reason the analysis form
-        uses one — the browser's own disclosure is keyboard-operable and
-        announced as one before any JavaScript arrives.
+        The last pill, because it is a setting rather than a job: a club sets it
+        once when a tank is not a municipal pool, and never looks at it again.
+        Still a `<details>`, opened when its pill is chosen, for the reason the
+        analysis form keeps one.
       */}
-      {canManage && (
-        <details className="group rounded border border-border">
+      {current === 'ranges' && canManage && (
+        <details open className="group rounded border border-border">
           <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <ChevronRight
               aria-hidden

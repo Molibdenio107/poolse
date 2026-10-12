@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SectionPills, pickSection, sectionHref as sectionUrl } from '@/components/section-pills';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -185,7 +186,9 @@ export default async function FacilityPage({
         {
           slug: 'general',
           labelKey: 'detailTabs.general',
-          content: () => <GeneralTab site={loaded} path={path} />,
+          content: () => (
+            <GeneralTab site={loaded} path={path} from={from} section={section} />
+          ),
         },
         {
           slug: 'prices',
@@ -216,8 +219,7 @@ export default async function FacilityPage({
             )
               .filter(([, offered]) => offered)
               .map(([key]) => key);
-            const current =
-              sections.find((key) => key === section) ?? sections[0] ?? 'mensalidade';
+            const current = pickSection(sections, section, 'mensalidade');
 
             const needsRegister =
               prices.state === 'ok' && (current !== 'freeSwim' && current !== 'categories');
@@ -225,27 +227,20 @@ export default async function FacilityPage({
               ? await apiFetch<Students>('/students').catch(() => null)
               : null;
             const sectionHref = (key: string): string =>
-              `${path}?tab=prices&section=${key}${origin === null ? '' : `&from=${encodeURIComponent(origin)}`}`;
+              sectionUrl(path, { tab: 'prices', from }, key);
 
             return (
               <>
                 <p className="text-sm text-foreground-muted">{t('fees.pricesHint')}</p>
-                <nav aria-label={t('fees.section.nav')} className="flex flex-wrap gap-2">
-                  {sections.map((key) => (
-                    <Link
-                      key={key}
-                      href={sectionHref(key)}
-                      aria-current={key === current ? 'page' : undefined}
-                      className={
-                        key === current
-                          ? 'inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground'
-                          : 'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
-                      }
-                    >
-                      {t(`fees.section.${key}`)}
-                    </Link>
-                  ))}
-                </nav>
+                <SectionPills
+                  label={t('fees.section.nav')}
+                  current={current}
+                  items={sections.map((key) => ({
+                    key,
+                    label: t(`fees.section.${key}`),
+                    href: sectionHref(key),
+                  }))}
+                />
 
                 {current !== 'freeSwim' && current !== 'categories' && (
                   <>
@@ -516,25 +511,56 @@ export default async function FacilityPage({
 /**
  * General: what the site is — its people, its weather, where it is and when it
  * opens, in the order those questions are asked.
+ *
+ * **One section at a time**, as on Preços — 12 October 2026. Five independent
+ * cards stacked into a page whose last one (the water rule) was found by
+ * scrolling. A pill per card, `?section=`, and a card the reader cannot see is
+ * not offered: the counts are absent for anybody below admin (the API does not
+ * send them) and the city picker is a manager's. Only the chosen card is drawn,
+ * so the weather is fetched only when somebody asks for it.
  */
+const GENERAL_SECTIONS = ['people', 'weather', 'location', 'hours', 'water'] as const;
+type GeneralSection = (typeof GENERAL_SECTIONS)[number];
+
 async function GeneralTab({
   site,
   path,
+  from,
+  section,
 }: {
   site: FacilityDetail;
   path: string;
+  /** The page's `?from=`, kept on every pill so "Voltar" still knows its way. */
+  from: string | undefined;
+  /** The requested `?section=`; a key from another tab falls back to the first. */
+  section: string | undefined;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
 
+  const offered = GENERAL_SECTIONS.filter((key: GeneralSection) =>
+    key === 'people' ? site.counts !== undefined : key === 'location' ? site.canManage : true,
+  );
+  const current = pickSection(offered, section, 'weather');
+
   return (
     <>
+      <SectionPills
+        label={t('facilities.section.nav')}
+        current={current}
+        items={offered.map((key) => ({
+          key,
+          label: t(`facilities.section.${key}`),
+          href: sectionUrl(path, { tab: 'general', from }, key),
+        }))}
+      />
+
       {/*
         Counts first, because "how big is this" is the question story 2 says the
         screen exists to answer. Absent entirely for anybody who is not an owner
         or an admin — the API does not send them, so there is nothing here to
         hide badly.
       */}
-      {site.counts !== undefined && (
+      {current === 'people' && site.counts !== undefined && (
         <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
           <div>
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -569,9 +595,11 @@ async function GeneralTab({
         </section>
       )}
 
-      <WeatherPanel city={site.city} latitude={site.latitude} longitude={site.longitude} />
+      {current === 'weather' && (
+        <WeatherPanel city={site.city} latitude={site.latitude} longitude={site.longitude} />
+      )}
 
-      {site.canManage && (
+      {current === 'location' && site.canManage && (
         <section className="rounded border border-border bg-surface p-5">
           <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
             {t('facilities.location')}
@@ -591,53 +619,57 @@ async function GeneralTab({
         explicable — and writable only by an owner or admin, which the API
         enforces rather than this.
       */}
-      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('facilities.hours')}
-          </h2>
+      {current === 'hours' && (
+        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+              {t('facilities.hours')}
+            </h2>
+            {/*
+              Closures live in the calendar and stay there: a second place to enter
+              them would be a second place for them to disagree.
+            */}
+            <Link
+              href={withFrom('/dashboard/calendar/closures', path)}
+              className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {t('facilities.manageClosures')}
+            </Link>
+          </div>
+
+          <HoursPanel
+            organizationId={site.organizationId}
+            facilityId={site.id}
+            hours={site.hours}
+            canManage={site.canManage}
+          />
+
           {/*
-            Closures live in the calendar and stay there: a second place to enter
-            them would be a second place for them to disagree.
+            The schedule grid's editor used to be here and was removed in round 6;
+            the rows themselves are untouched and still read by the calendar, the
+            Turmas board, the printed sheet and the XLSX export. If a club ever
+            needs to change them again, this is where it comes back.
           */}
-          <Link
-            href={withFrom('/dashboard/calendar/closures', path)}
-            className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            {t('facilities.manageClosures')}
-          </Link>
-        </div>
-
-        <HoursPanel
-          organizationId={site.organizationId}
-          facilityId={site.id}
-          hours={site.hours}
-          canManage={site.canManage}
-        />
-
-        {/*
-          The schedule grid's editor used to be here and was removed in round 6;
-          the rows themselves are untouched and still read by the calendar, the
-          Turmas board, the printed sheet and the XLSX export. If a club ever
-          needs to change them again, this is where it comes back.
-        */}
-      </section>
+        </section>
+      )}
 
       {/*
         How old a tank's latest analysis may be — POOLSE-66 slice 2b. A standing
         rule of the site, beside its opening hours; the dashboard's water card
         calls a tank "due" past it, and an empty box flags nothing.
       */}
-      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          {t('facilities.waterThreshold.title')}
-        </h2>
-        <WaterThresholdForm
-          facilityId={site.id}
-          hours={site.waterAnalysisMaxAgeHours}
-          canManage={site.canManage}
-        />
-      </section>
+      {current === 'water' && (
+        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+            {t('facilities.waterThreshold.title')}
+          </h2>
+          <WaterThresholdForm
+            facilityId={site.id}
+            hours={site.waterAnalysisMaxAgeHours}
+            canManage={site.canManage}
+          />
+        </section>
+      )}
     </>
   );
 }

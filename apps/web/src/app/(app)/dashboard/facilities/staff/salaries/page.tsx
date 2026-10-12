@@ -193,7 +193,9 @@ export default async function SalariesPage({
             * Below the list, deliberately. What a club does here every week is
             * read the figures; importing a file is what it does in December, and
             * putting a dropzone above the thing everybody came for would make the
-            * screen about the spreadsheet rather than about the pay.
+            * screen about the spreadsheet rather than about the pay. Folded into
+            * a `<details>` inside the panel (12 October 2026). Not section pills:
+            * the roll-up summarises the table, so the two are one flow.
             */}
           <SalaryFilePanel canEdit={data.canEdit} locale={locale} />
         </>

@@ -225,7 +225,11 @@
     "emailInvalid": "Invalid address, or it is already their address.",
     "alsoAStudent": "This person is also a student.",
     "openStudentRecord": "Open their student record",
-    "searchPlaceholder": "Name or email"
+    "searchPlaceholder": "Name or email",
+    "section": {
+      "nav": "Team sections",
+      "invitations": "Invitations"
+    }
   },
   "salaries": {
     "title": "Salaries",
@@ -356,6 +360,10 @@
       "contracted": "An agreed figure, not yet paid.",
       "estimated": "Worked out from other data, not agreed.",
       "assumed": "A guess. Good for a sense of the shape, not for counting on."
+    },
+    "file": {
+      "summary": "Import or export the pay list",
+      "summaryHint": "Excel or CSV. Export it to correct in a spreadsheet, then import it back."
     }
   },
   "subscription": {
@@ -724,7 +732,13 @@
       "tempWarmer": "The air averaged {temp}, {difference} warmer than the previous year ({before}). This is context: none of the figures above has been adjusted for the weather.",
       "tempSame": "The air averaged {temp}, much the same as the previous year."
     },
-    "outsideTemp": "Outside temp."
+    "outsideTemp": "Outside temp.",
+    "meterSection": {
+      "nav": "Meter sections",
+      "consumption": "Consumption",
+      "yearOnYear": "Year on year",
+      "cost": "Estimated cost"
+    }
   },
   "maintenance": {
     "about": "About",
@@ -1021,7 +1035,25 @@
       "value": "A tank needs an analysis after {hours} hours."
     },
     "waterThresholdInvalid": "A whole number of hours, from 1 to 8760.",
-    "waterThresholdFailed": "The limit could not be saved."
+    "waterThresholdFailed": "The limit could not be saved.",
+    "section": {
+      "nav": "Site sections",
+      "people": "People",
+      "weather": "Weather",
+      "location": "Location",
+      "hours": "Hours",
+      "water": "Water"
+    },
+    "cardMore": "More about {name}",
+    "waterSection": {
+      "nav": "Water quality sections",
+      "latest": "Latest analysis",
+      "trends": "Trends",
+      "history": "History",
+      "alerts": "Alerts",
+      "record": "Record",
+      "ranges": "Ranges"
+    }
   },
   "classes": {
     "colour": "Class colour",
@@ -1149,7 +1181,12 @@
     "poolRequired": "Choose the tank this class group swims in.",
     "laneRequired": "Say how many lanes it uses.",
     "noInstructorYet": "No instructor assigned yet",
-    "closedDay": "closed"
+    "closedDay": "closed",
+    "section": {
+      "nav": "Class sections",
+      "unscheduled": "No days set"
+    },
+    "enrolStudent": "Enrol a student"
   },
   "reposicao": {
     "title": "Make-up classes",
@@ -1290,7 +1327,10 @@
     "publishFailed": "The season could not be published.",
     "discardFailed": "The draft could not be deleted.",
     "cannotPublishArchived": "A finished season cannot be published again.",
-    "cannotDiscard": "Only a draft with no classes can be deleted."
+    "cannotDiscard": "Only a draft with no classes can be deleted.",
+    "section": {
+      "nav": "Season sections"
+    }
   },
   "week": {
     "1": "Monday",
@@ -1522,7 +1562,11 @@
       "categories": "Discounts",
       "payments": "Payments"
     },
-    "addFirstQuota": "Set the membership fee"
+    "addFirstQuota": "Set the membership fee",
+    "studentSection": {
+      "nav": "Fee sections",
+      "linesHint": "Anything charged here becomes a line under Monthly fees, where the period total is shown."
+    }
   },
   "categories": {
     "title": "Fee categories",
@@ -2755,6 +2799,11 @@
       "saveFailed": "The item could not be recorded.",
       "returnFailed": "The item could not be marked as returned.",
       "removeFailed": "The item could not be removed."
+    },
+    "section": {
+      "nav": "Inventory sections",
+      "inventory": "Inventory",
+      "lost": "Lost and found"
     }
   },
   "slots": {
@@ -3423,7 +3472,8 @@
     "dueOnRequired": "Enter the due date.",
     "noSites": "There are no sites yet. Create the first under Facilities to start invoicing.",
     "freeSwim": "Free swim",
-    "finalConsumer": "Final consumer"
+    "finalConsumer": "Final consumer",
+    "viewSettings": "Settings"
   },
   "reception": {
     "title": "Reception",
@@ -3791,6 +3841,11 @@
       "trialing": "On trial",
       "expired": "Expired",
       "pendingDelete": "Pending deletion"
+    },
+    "section": {
+      "nav": "Administration sections",
+      "tenants": "Clients",
+      "billing": "Billing"
     }
   },
   "suspended": {
@@ -4059,6 +4114,10 @@
       "saveFailed": "Could not save.",
       "archiveFailed": "Could not archive."
     },
-    "historyLineNoExpiry": "Issued {issued} · does not expire"
+    "historyLineNoExpiry": "Issued {issued} · does not expire",
+    "section": {
+      "nav": "Qualification sections",
+      "types": "Types"
+    }
   }
 }

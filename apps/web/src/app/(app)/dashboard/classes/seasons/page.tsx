@@ -6,6 +6,7 @@ import { SeasonReset } from './season-reset';
 import { SeasonDrafts } from './season-drafts';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatDate } from '@/lib/date-format';
+import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 /**
  * Seasons — POOLSE-07.
@@ -19,8 +20,13 @@ import { formatDate } from '@/lib/date-format';
  * — a list and one button — because the button is the only irreversible thing in
  * the product and it should not be next to anything anybody presses often.
  */
-export default async function SeasonsPage(): Promise<React.ReactElement> {
+export default async function SeasonsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ section?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { section } = await searchParams;
   const locale = await getLocale();
 
   let data: Seasons | null = null;
@@ -31,6 +37,29 @@ export default async function SeasonsPage(): Promise<React.ReactElement> {
   } catch (error) {
     failure = describeLoad(error);
   }
+
+  /*
+    One section at a time — 12 October 2026, Rui's standing preference that the
+    reader scrolls as little as possible. Three things that are done at
+    different times of the year: reading the seasons, planning the next one as
+    a draft, and ending the current one. The last two are management's, so an
+    instructor is offered neither and sees the list with no pills at all.
+
+    Which also serves the rule above: the irreversible button now lives on a
+    page of its own, reached by a pill that names it, and is not under the
+    drafts form somebody uses all summer.
+  */
+  const sections = (
+    [
+      ['seasons', true],
+      ['planning', data?.canManage === true],
+      ['start', data?.canManage === true],
+    ] as const
+  )
+    .filter(([, offered]) => offered)
+    .map(([key]) => key);
+  const current = pickSection(sections, section, 'seasons');
+  const drafts = (data?.seasons ?? []).filter((season) => season.status === 'draft');
 
   return (
     <PageShell
@@ -49,57 +78,85 @@ export default async function SeasonsPage(): Promise<React.ReactElement> {
 
       {data !== null && (
         <>
-          <section className="rounded border border-border bg-surface p-5">
-            {data.seasons.length === 0 ? (
-              <p className="text-foreground-muted">{t('seasons.none')}</p>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {data.seasons.map((season) => (
-                  <li
-                    key={season.id}
-                    className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"
-                  >
-                    <div className="flex flex-col">
-                      <span className="flex items-center gap-2 font-medium">
-                        {season.name}
-                        {/*
-                          Three states since POOLSE-45. A draft is neither the
-                          season the club is running nor a year that happened,
-                          and calling it "past" would be a lie about a plan.
-                        */}
-                        <span
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-xs font-normal',
-                            season.status === 'published'
-                              ? 'bg-primary/15 text-primary'
-                              : 'bg-surface-muted text-foreground-muted',
-                          )}
-                        >
-                          {t(`seasons.status.${season.status}`)}
+          <SectionPills
+            label={t('seasons.section.nav')}
+            current={current}
+            items={sections.map((key) => ({
+              key,
+              label:
+                key === 'seasons'
+                  ? t('seasons.title')
+                  : key === 'planning'
+                    ? t('seasons.planning')
+                    : t('seasons.startNew'),
+              href: sectionHref('/dashboard/classes/seasons', {}, key),
+              ...(key === 'seasons'
+                ? { count: data.seasons.length }
+                : key === 'planning'
+                  ? { count: drafts.length }
+                  : {}),
+            }))}
+          />
+
+          {current === 'seasons' && (
+            <>
+              <section className="rounded border border-border bg-surface p-5">
+                {data.seasons.length === 0 ? (
+                  <p className="text-foreground-muted">{t('seasons.none')}</p>
+                ) : (
+                  <ul className="flex flex-col gap-3">
+                    {data.seasons.map((season) => (
+                      <li
+                        key={season.id}
+                        className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"
+                      >
+                        <div className="flex flex-col">
+                          <span className="flex items-center gap-2 font-medium">
+                            {season.name}
+                            {/*
+                              Three states since POOLSE-45. A draft is neither the
+                              season the club is running nor a year that happened,
+                              and calling it "past" would be a lie about a plan.
+                            */}
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-xs font-normal',
+                                season.status === 'published'
+                                  ? 'bg-primary/15 text-primary'
+                                  : 'bg-surface-muted text-foreground-muted',
+                              )}
+                            >
+                              {t(`seasons.status.${season.status}`)}
+                            </span>
+                          </span>
+                          <span className="text-sm text-foreground-muted">
+                            {formatDate(season.startsOn)} — {formatDate(season.endsOn)}
+                          </span>
+                        </div>
+                        <span className="text-sm text-foreground-muted">
+                          {t('seasons.countClasses', { count: season.classGroups })}
                         </span>
-                      </span>
-                      <span className="text-sm text-foreground-muted">
-                        {formatDate(season.startsOn)} — {formatDate(season.endsOn)}
-                      </span>
-                    </div>
-                    <span className="text-sm text-foreground-muted">
-                      {t('seasons.countClasses', { count: season.classGroups })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
 
-          {/*
-            Past seasons are readable, not restorable. Said on the screen rather
-            than left to be discovered, the same way the vacation carry-over rule
-            is: an operator who thinks a reset can be pressed twice and undone
-            once will press it.
-          */}
-          <p className="text-sm text-foreground-muted">{t('seasons.pastAreKept')}</p>
+              {/*
+                Past seasons are readable, not restorable. Said on the screen rather
+                than left to be discovered, the same way the vacation carry-over rule
+                is: an operator who thinks a reset can be pressed twice and undone
+                once will press it.
+              */}
+              <p className="text-sm text-foreground-muted">{t('seasons.pastAreKept')}</p>
 
-          {data.canManage && (
+              {!data.canManage && (
+                <p className="text-sm text-foreground-muted">{t('seasons.readOnly')}</p>
+              )}
+            </>
+          )}
+
+          {current === 'planning' && data.canManage && (
             <SeasonDrafts
               organizationId={data.organizationId}
               seasons={data.seasons}
@@ -107,14 +164,16 @@ export default async function SeasonsPage(): Promise<React.ReactElement> {
             />
           )}
 
-          {data.canManage ? (
-            <SeasonReset
-              organizationId={data.organizationId}
-              preview={data.preview}
-              suggested={data.suggested}
-            />
-          ) : (
-            <p className="text-sm text-foreground-muted">{t('seasons.readOnly')}</p>
+          {/* The note again where it bites: beside the button it is about. */}
+          {current === 'start' && data.canManage && (
+            <>
+              <SeasonReset
+                organizationId={data.organizationId}
+                preview={data.preview}
+                suggested={data.suggested}
+              />
+              <p className="text-sm text-foreground-muted">{t('seasons.pastAreKept')}</p>
+            </>
           )}
         </>
       )}

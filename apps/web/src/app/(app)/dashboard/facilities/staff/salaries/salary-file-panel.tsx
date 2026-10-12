@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Download, Upload } from 'lucide-react';
+import { ChevronRight, Download, Upload } from 'lucide-react';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { SalaryImportWizard } from './import-wizard';
 
@@ -23,6 +23,12 @@ import { SalaryImportWizard } from './import-wizard';
  * browser does what browsers do with an attachment, and it works with no
  * JavaScript at all. Neither link is the permission — the endpoint refuses
  * anybody but an Owner or an Admin, and an Admin's file omits the Owner.
+ *
+ * **Folded away by default** (12 October 2026): a club does this about once a
+ * year, so it is a `<details>` after the table with a summary line that says
+ * what is inside, rather than three buttons everybody scrolls past every week.
+ * A file dropped anywhere on the screen unfolds it — the wizard it opens must
+ * not be hidden inside a closed box.
  */
 
 const ACCEPTED = ['.xlsx', '.csv'];
@@ -46,12 +52,14 @@ export function SalaryFilePanel({
 
   const [open, setOpen] = useState(false);
   const [dropped, setDropped] = useState<File | null>(null);
+  const [unfolded, setUnfolded] = useState(false);
 
   const onFile = useCallback(
     (file: File) => {
       if (!canEdit || !isAccepted(file)) return;
       setDropped(file);
       setOpen(true);
+      setUnfolded(true);
     },
     [canEdit],
   );
@@ -59,7 +67,24 @@ export function SalaryFilePanel({
   const { dragging } = useFileDrop(onFile);
 
   return (
-    <section className="flex flex-col gap-4">
+    <>
+    <details
+      open={unfolded}
+      onToggle={(event) => setUnfolded(event.currentTarget.open)}
+      className="group rounded border border-border bg-surface"
+    >
+      <summary className="flex cursor-pointer list-none items-start gap-2 rounded p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          aria-hidden
+          className="mt-0.5 size-4 shrink-0 transition-transform group-open:rotate-90"
+        />
+        <span className="flex flex-col">
+          <span className="font-medium">{t('salaries.file.summary')}</span>
+          <span className="text-sm text-foreground-muted">{t('salaries.file.summaryHint')}</span>
+        </span>
+      </summary>
+
+      <div className="flex flex-col gap-4 border-t border-border p-4">
       <div className="flex flex-wrap items-center gap-2">
         <a href="/dashboard/facilities/staff/salaries/export" className={BUTTON_QUIET}>
           <Download aria-hidden className="size-4" />
@@ -105,8 +130,11 @@ export function SalaryFilePanel({
           />
         </div>
       )}
+      </div>
+    </details>
 
-      <DropOverlay shown={canEdit && dragging} label={t('salaries.import.dropHere')} />
-    </section>
+    {/* Outside the box: a closed <details> draws nothing but its summary. */}
+    <DropOverlay shown={canEdit && dragging} label={t('salaries.import.dropHere')} />
+    </>
   );
 }

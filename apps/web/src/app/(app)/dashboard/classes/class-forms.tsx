@@ -423,6 +423,19 @@ export function EnrolForm({
 
   // How many the age filter is holding back — said as a number, because "some
   // students are hidden" is a sentence people ignore.
+  /*
+    The picker is controlled — CLAUDE.md, POOLSE-09/10. An uncontrolled select
+    reverts to its mount-time option when the action returns, and since it sits
+    inside a fold now that is a reset nobody would see happen. The choice holds
+    while it is still on offer and falls to the first match when it is not: a
+    search that filters the chosen name out must not submit a student the list
+    no longer shows.
+  */
+  const [picked, setPicked] = useState('');
+  const studentId = matching.some((student) => student.id === picked)
+    ? picked
+    : (matching[0]?.id ?? '');
+
   const hidden = level === null
     ? 0
     : students.filter((student) => {
@@ -480,7 +493,14 @@ export function EnrolForm({
           <label htmlFor="enrol-student" className={FIELD_LABEL}>
             {t('classes.student')}
           </label>
-          <select id="enrol-student" name="studentId" required className={CONTROL_LINE}>
+          <select
+            id="enrol-student"
+            name="studentId"
+            required
+            value={studentId}
+            onChange={(event) => setPicked(event.target.value)}
+            className={CONTROL_LINE}
+          >
             {matching.length === 0 && (
               <option value="" disabled>
                 {t('classes.noStudentsMatch')}

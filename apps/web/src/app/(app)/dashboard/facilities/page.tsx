@@ -4,10 +4,7 @@ import { ApiError, apiFetch, type Facilities } from '../../../../lib/api';
 import Link from 'next/link';
 import { ActionButton } from '@/components/action-button';
 import { EntityIcon } from '@/components/entity-icon';
-import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from './facility-forms';
-import { SpacesPanel } from './spaces-panel';
-import { listSpaces } from './spaces.actions';
 import { PageError, PageShell } from '@/components/page-shell';
 
 /**
@@ -17,6 +14,13 @@ import { PageError, PageShell } from '@/components/page-shell';
  * plumbing works. Everything in module 1 hangs off what is created here: a class
  * group happens at a pool, attendance is taken at a pool, and a reading in phase
  * 4 belongs to one.
+ *
+ * **A card per site is the site's identity and its tanks, and nothing else** —
+ * 12 October 2026, Rui's call, so the list reads without scrolling. Each card
+ * used to carry the site's espaços and its photo gallery too, which made a
+ * two-site club a page of balneários; both live on the site's own tabs
+ * (`?tab=spaces`, `?tab=photos`) and the card links there in one line. That
+ * also drops the per-site `listSpaces` loop this page ran on every visit.
  */
 export default async function FacilitiesPage(): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -35,26 +39,6 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
       failure = describeLoad(error);
     }
   }
-
-  /*
-   * Each site's espaços — round 6.
-   *
-   * One request per site, in parallel. That is a loop over an endpoint, which is
-   * usually the wrong shape; here it is the right one, because a licence bounds
-   * a club to the sites it has paid for and that is one for most of them and two
-   * or three for a câmara. Folding it into `/facilities` would put the cleaning
-   * state of every site behind the request that draws the page, and lose the
-   * property that a site whose spaces fail to load still renders.
-   *
-   * A refused block is absent; a failed one says so in its place (`Outcome`).
-   */
-  const spacesBySite = new Map(
-    await Promise.all(
-      (data?.facilities ?? []).map(
-        async (facility) => [facility.id, await listSpaces(facility.id)] as const,
-      ),
-    ),
-  );
 
   return (
     <PageShell
@@ -189,41 +173,26 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                 )}
 
                 {/*
-                  Espaços, directly under this site's tanks — round 6.
-
-                  The order is deliberate: the tanks are what a swimming pool is,
-                  and the balneários, the sala de máquinas and the arrecadação
-                  are the rest of the building around them.
+                  The rest of the site, one line — its espaços and photographs
+                  are tabs of the site's page, not blocks of this card.
                 */}
-                {(() => {
-                  const spaces = spacesBySite.get(facility.id);
-                  if (spaces === undefined || spaces.state === 'refused') return null;
-                  if (spaces.state === 'failed') {
-                    return <PageError message={t(spaces.failure.key)} />;
-                  }
-                  return (
-                    <SpacesPanel
-                      facilityId={facility.id}
-                      spaces={spaces.data.items}
-                      canManage={spaces.data.canManage}
-                      variant="block"
-                      backTo="/dashboard/facilities"
-                    />
-                  );
-                })()}
-
-                <div className="border-t border-border pt-4">
-                  <h3 className="mb-3 text-sm text-foreground-muted">
-                    {t('facilities.sitePhotos')}
-                  </h3>
-                  <PhotoGallery
-                    photos={facility.photos}
-                    canManage={data.canManage}
-                    emptyLabel={t('facilities.noSitePhotos')}
-                    uploadLabel={t('facilities.uploadSitePhoto')}
-                    uploadReason={t('students.photoNoStorage')}
-                  />
-                </div>
+                <nav
+                  aria-label={t('facilities.cardMore', { name: facility.name })}
+                  className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-4 text-sm"
+                >
+                  <Link
+                    href={`/dashboard/facilities/${facility.id}?tab=spaces`}
+                    className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('spaces.title')}
+                  </Link>
+                  <Link
+                    href={`/dashboard/facilities/${facility.id}?tab=photos`}
+                    className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('facilities.photos')}
+                  </Link>
+                </nav>
 
                 {data.canManage && (
                   <Link

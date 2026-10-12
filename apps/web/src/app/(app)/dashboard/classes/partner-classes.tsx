@@ -50,6 +50,7 @@ export function PartnerClasses({
   openWeekdays,
   hours,
   canManage,
+  defaultOpen = false,
 }: {
   organizationId: string;
   facilityId: string;
@@ -63,9 +64,17 @@ export function PartnerClasses({
   /** ISO weekdays the site opens. A closed day is not offered. */
   openWeekdays: number[];
   canManage: boolean;
+  /**
+   * Open on arrival. True where the list is the whole of what is on screen —
+   * the Classes page's Parcerias section, 12 October 2026 — because a section
+   * chosen by its pill that then needs a second click to show anything is a
+   * click spent for nothing. The collapse below was for a page that stacked it
+   * under the week.
+   */
+  defaultOpen?: boolean;
 }): React.ReactElement | null {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   // Nothing to show is not an empty state here: the Classes screen belongs to
   // turmas, and a club with no partnerships should not be told so twice.

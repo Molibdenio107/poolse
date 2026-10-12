@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type ClassGroup, type Classes, type GroupCost } from '@/lib/api';
@@ -228,6 +229,42 @@ export default async function ClassPage({
                 </h2>
 
                 {/*
+                  Inscrever first, folded — 12 October 2026. It sat under the
+                  roster and the waiting list, so adding the twenty-first child
+                  meant scrolling past the twenty already in; Rui's standing
+                  preference is that the reader scrolls as little as possible.
+                  Folded rather than open, because reading the roster is what
+                  this tab is opened for most of the time. `<details>` as on the
+                  water readings: the browser's own disclosure, keyboard-operable
+                  and announced, and closing it hides the form without
+                  unmounting it, so a half-chosen student survives the fold.
+                */}
+                {loaded.canManage && (
+                  <details className="group rounded border border-border">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 p-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+                      <ChevronRight
+                        aria-hidden
+                        className="size-4 transition-transform group-open:rotate-90"
+                      />
+                      {t('classes.enrolStudent')}
+                    </summary>
+                    <div className="border-t border-border p-4">
+                      <EnrolForm
+                        // The turma's level, so the picker can offer the right ages
+                        // first — round 5. Null when the turma has no level.
+                        level={
+                          options.options.levels.find((candidate) => candidate.id === loaded.levelId) ??
+                          null
+                        }
+                        organizationId={options.organizationId}
+                        groupId={loaded.id}
+                        students={available}
+                      />
+                    </div>
+                  </details>
+                )}
+
+                {/*
                   The cost of the water, under the heading that counts the people
                   in it. Absent entirely when the tank is unmetered or unpriced —
                   there is no figure to soften, and an empty row would read as free.
@@ -335,21 +372,6 @@ export default async function ClassPage({
                   </div>
                 )}
 
-                {loaded.canManage && (
-                  <div className="border-t border-border pt-4">
-                    <EnrolForm
-                      // The turma's level, so the picker can offer the right ages
-                      // first — round 5. Null when the turma has no level.
-                      level={
-                        options.options.levels.find((candidate) => candidate.id === loaded.levelId) ??
-                        null
-                      }
-                      organizationId={options.organizationId}
-                      groupId={loaded.id}
-                      students={available}
-                    />
-                  </div>
-                )}
               </section>
             );
           },
