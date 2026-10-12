@@ -29,6 +29,8 @@ export interface SupportGrant {
   endedAt: string | null;
   state: GrantState;
   grantedByName: string | null;
+  /** An override only: how many Owners the notice was owed to, and whether it left. */
+  notice: { recipients: number; delivered: boolean } | null;
 }
 
 /** The one definition of a grant's state, in SQL, beside `resolve_memberships`'s. */
@@ -48,6 +50,8 @@ interface GrantRow {
   ended_at: Date | null;
   state: GrantState;
   granted_by_name: string | null;
+  notice_recipients?: string[] | null;
+  notice_delivered_at?: Date | null;
 }
 
 function toGrant(row: GrantRow): SupportGrant {
@@ -60,6 +64,10 @@ function toGrant(row: GrantRow): SupportGrant {
     endedAt: row.ended_at?.toISOString() ?? null,
     state: row.state,
     grantedByName: row.granted_by_name,
+    notice:
+      row.notice_recipients === null || row.notice_recipients === undefined
+        ? null
+        : { recipients: row.notice_recipients.length, delivered: row.notice_delivered_at != null },
   };
 }
 
@@ -72,7 +80,7 @@ export async function listGrants(organizationId: string): Promise<SupportGrant[]
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<GrantRow>(
       `SELECT sg.id, sg.source, sg.reason, sg.starts_at, sg.expires_at, sg.ended_at,
-              ${STATE} AS state,
+              ${STATE} AS state, sg.notice_recipients, sg.notice_delivered_at,
               CASE WHEN sg.granted_by_membership_id IS NULL THEN NULL
                    ELSE ${personShortName('sg.granted_by_membership_id')} END AS granted_by_name
          FROM support_grant sg
@@ -151,5 +159,162 @@ export async function revokeGrant(organizationId: string, grantId: string): Prom
       entityId: grantId,
     });
     return true;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Requests — slice 2
+// ---------------------------------------------------------------------------
+
+/** A request lapses after this many days unanswered. Derived, never written. */
+export const REQUEST_LAPSES_AFTER_DAYS = 7;
+
+export interface SupportRequest {
+  id: string;
+  reason: string;
+  requestedAt: string;
+}
+
+/** What Poolse support has asked for and nobody has answered yet. */
+export async function pendingRequests(organizationId: string): Promise<SupportRequest[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string; reason: string; created_at: Date }>(
+      `SELECT id, reason, created_at FROM support_request
+        WHERE answered_at IS NULL
+          AND created_at > now() - make_interval(days => $1)
+        ORDER BY created_at`,
+      [REQUEST_LAPSES_AFTER_DAYS],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      reason: row.reason,
+      requestedAt: row.created_at.toISOString(),
+    }));
+  });
+}
+
+export class RequestNotPendingError extends Error {
+  constructor() {
+    super('request_not_pending');
+  }
+}
+
+/**
+ * Approves a request with the Owner's choice of window. The window is an
+ * ordinary grant, `source = 'request'`, carrying the request's reason and who
+ * asked, so the history reads "Poolse asked, because …; the Owner said yes".
+ */
+export async function approveRequest(
+  organizationId: string,
+  membershipId: string,
+  requestId: string,
+  hours: GrantHours,
+): Promise<SupportGrant> {
+  return withOrg(organizationId, async (tx) => {
+    await tx.query(`SELECT pg_advisory_xact_lock(hashtext('support_grant:' || $1))`, [
+      organizationId,
+    ]);
+
+    const { rows: requests } = await tx.query<{
+      reason: string;
+      requested_by_platform_admin_id: string;
+    }>(
+      `SELECT reason, requested_by_platform_admin_id FROM support_request
+        WHERE id = $1 AND answered_at IS NULL
+          AND created_at > now() - make_interval(days => $2)
+        FOR UPDATE`,
+      [requestId, REQUEST_LAPSES_AFTER_DAYS],
+    );
+    const request = requests[0];
+    if (request === undefined) throw new RequestNotPendingError();
+
+    const { rows: live } = await tx.query<{ expires_at: Date }>(
+      `SELECT expires_at FROM support_grant
+        WHERE ended_at IS NULL AND starts_at <= now() AND expires_at > now()
+        LIMIT 1`,
+    );
+    if (live[0] !== undefined) throw new GrantAlreadyLiveError(live[0].expires_at.toISOString());
+
+    const { rows } = await tx.query<GrantRow>(
+      `INSERT INTO support_grant (organization_id, source, requested_by_platform_admin_id,
+                                  granted_by_membership_id, reason, expires_at)
+       VALUES ($1, 'request', $2, $3, $4, now() + make_interval(hours => $5))
+       RETURNING id, source, reason, starts_at, expires_at, ended_at, 'live' AS state,
+                 NULL::text AS granted_by_name`,
+      [organizationId, request.requested_by_platform_admin_id, membershipId, request.reason, hours],
+    );
+    const grant = toGrant(rows[0]!);
+
+    await tx.query(
+      `UPDATE support_request
+          SET answered_at = now(), answer = 'approved', answered_by_membership_id = $2, grant_id = $3
+        WHERE id = $1`,
+      [requestId, membershipId, grant.id],
+    );
+
+    await recordAudit(tx, {
+      action: 'support.request.approved',
+      entityType: 'support_request',
+      entityId: requestId,
+      data: { grantId: grant.id, hours, expiresAt: grant.expiresAt },
+    });
+    return grant;
+  });
+}
+
+export async function declineRequest(
+  organizationId: string,
+  membershipId: string,
+  requestId: string,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string }>(
+      `UPDATE support_request
+          SET answered_at = now(), answer = 'declined', answered_by_membership_id = $2
+        WHERE id = $1 AND answered_at IS NULL
+          AND created_at > now() - make_interval(days => $3)
+      RETURNING id`,
+      [requestId, membershipId, REQUEST_LAPSES_AFTER_DAYS],
+    );
+    if (rows[0] === undefined) return false;
+    await recordAudit(tx, {
+      action: 'support.request.declined',
+      entityType: 'support_request',
+      entityId: requestId,
+    });
+    return true;
+  });
+}
+
+/**
+ * What the club's own strip says: whether support may be in right now, and
+ * whether it has asked. Read by the Owner and the Admins, so the window's end
+ * and its source, and nothing else.
+ */
+export async function supportStatus(
+  organizationId: string,
+): Promise<{
+  live: { id: string; expiresAt: string; source: SupportGrant['source'] } | null;
+  pendingRequests: number;
+}> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string; expires_at: Date; source: SupportGrant['source'] }>(
+      `SELECT id, expires_at, source FROM support_grant
+        WHERE ended_at IS NULL AND starts_at <= now() AND expires_at > now()
+        ORDER BY expires_at DESC LIMIT 1`,
+    );
+    const { rows: pending } = await tx.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM support_request
+        WHERE answered_at IS NULL AND created_at > now() - make_interval(days => $1)`,
+      [REQUEST_LAPSES_AFTER_DAYS],
+    );
+    const live = rows[0];
+    return {
+      live:
+        live === undefined
+          ? null
+          : { id: live.id, expiresAt: live.expires_at.toISOString(), source: live.source },
+      pendingRequests: pending[0]?.n ?? 0,
+    };
   });
 }

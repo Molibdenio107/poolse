@@ -251,4 +251,71 @@ BEGIN
   RAISE NOTICE 'PASS test 4c: leaving ends the grant, said as support';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 6 — slice 2: the platform writes an override and a request, and only so
+-- ---------------------------------------------------------------------------
+
+SET LOCAL ROLE poolse_platform;
+
+DO $$
+DECLARE v_admin uuid;
+BEGIN
+  SELECT id INTO v_admin FROM platform_admin WHERE clerk_user_id = 'user_test_support_operator';
+
+  BEGIN
+    INSERT INTO support_grant (organization_id, source, requested_by_platform_admin_id, reason,
+                               starts_at, expires_at, notice_recipients)
+    VALUES ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'override', v_admin, 'Teste',
+            now(), now() + interval '5 hours', ARRAY[]::text[]);
+    RAISE EXCEPTION 'FAIL test 6a: a five-hour override was accepted';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'PASS test 6a: an override is exactly four hours';
+  END;
+
+  BEGIN
+    INSERT INTO support_grant (organization_id, source, requested_by_platform_admin_id, reason,
+                               starts_at, expires_at)
+    VALUES ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'override', v_admin, 'Teste',
+            now(), now() + interval '4 hours');
+    RAISE EXCEPTION 'FAIL test 6b: an override owed nobody a notice';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'PASS test 6b: an override records who it owes a notice';
+  END;
+
+  INSERT INTO support_grant (organization_id, source, requested_by_platform_admin_id, reason,
+                             starts_at, expires_at, notice_recipients)
+  VALUES ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'override', v_admin, 'Teste',
+          now(), now() + interval '4 hours', ARRAY['dono@example.test']);
+  RAISE NOTICE 'PASS test 6c: a well-formed override is the platform''s to write';
+
+  INSERT INTO support_request (organization_id, requested_by_platform_admin_id, reason)
+  VALUES ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', v_admin, 'Pedido de teste');
+
+  BEGIN
+    UPDATE support_request SET answer = 'approved';
+    RAISE EXCEPTION 'FAIL test 6d: the platform answered its own request';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 6d: only the club answers a request';
+  END;
+END $$;
+
+RESET ROLE;
+
+SET LOCAL ROLE poolse_app;
+SELECT set_config('app.organization_id', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', true);
+
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO support_request (organization_id, requested_by_platform_admin_id, reason)
+    SELECT 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', requested_by_platform_admin_id, 'Forjado'
+      FROM support_request LIMIT 1;
+    RAISE EXCEPTION 'FAIL test 6e: the club wrote a request in Poolse''s name';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 6e: a request is Poolse''s to make';
+  END;
+END $$;
+
+RESET ROLE;
+
 ROLLBACK;

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Patch, Put } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Patch, Put } from '@nestjs/common';
 import { currentAuth } from '../auth/auth.context.js';
 import {
   listMemberships,
@@ -12,7 +12,30 @@ import { ensureAppUser, updateClerkName } from './identity.service.js';
 
 interface MeResponse {
   user: AppUserSummary;
+  /**
+   * The club the request asked for comes first — POOLSE-79's switcher. So every
+   * screen that reads `memberships[0]` reads the club it is acting in, which is
+   * also the one `TenantMiddleware` picks for the same header.
+   */
   memberships: MembershipSummary[];
+  /**
+   * The request named a club this person no longer belongs to: a support
+   * window that ended, above all. The screen says so rather than quietly
+   * acting somewhere else, because a write landing in the wrong club is worse
+   * than a page that stops.
+   */
+  requestedOrganizationMissing?: boolean;
+}
+
+/** The requested club first; the rest in their usual order. */
+function activeFirst(
+  memberships: MembershipSummary[],
+  requested: string | undefined,
+): Pick<MeResponse, 'memberships' | 'requestedOrganizationMissing'> {
+  if (requested === undefined || requested === '') return { memberships };
+  const active = memberships.find((one) => one.organizationId === requested);
+  if (active === undefined) return { memberships, requestedOrganizationMissing: true };
+  return { memberships: [active, ...memberships.filter((one) => one !== active)] };
 }
 
 interface PreferencesBody {
@@ -67,13 +90,13 @@ const SUPPORTED_THEMES = ['light', 'dark', 'system'];
 @Controller('me')
 export class MeController {
   @Get()
-  async me(): Promise<MeResponse> {
+  async me(@Headers('x-poolse-organization') requested?: string): Promise<MeResponse> {
     const { clerkUserId } = currentAuth();
 
     const user = await ensureAppUser(clerkUserId);
     const memberships = await listMemberships(clerkUserId);
 
-    return { user, memberships };
+    return { user, ...activeFirst(memberships, requested) };
   }
 
   /**

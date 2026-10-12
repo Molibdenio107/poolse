@@ -18,6 +18,7 @@ import {
   type ScratchTenant,
 } from '../test/harness.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
+import { MeController } from '../identity/me.controller.js';
 import { SupportGrantsController } from './support.controller.js';
 
 /**
@@ -58,10 +59,15 @@ async function makeOperator(): Promise<{ clerkUserId: string; appUserId: string 
   return { clerkUserId, appUserId: rows[0]!.id };
 }
 
-async function dropOperator(clerkUserId: string): Promise<void> {
-  await owner.query('DELETE FROM platform_admin WHERE clerk_user_id = $1', [clerkUserId]);
+/** The operator's trail names the club, so it goes before the club does. */
+async function dropTrail(clerkUserId: string): Promise<void> {
   await owner.query('DELETE FROM platform_audit_log WHERE clerk_user_id = $1', [clerkUserId]);
   await owner.query('DELETE FROM platform_alert WHERE clerk_user_id = $1', [clerkUserId]);
+}
+
+/** The operator outlives the club's grants and requests, which name them. */
+async function dropOperator(clerkUserId: string): Promise<void> {
+  await owner.query('DELETE FROM platform_admin WHERE clerk_user_id = $1', [clerkUserId]);
 }
 
 function asOperator<T>(clerkUserId: string, fn: () => Promise<T>): Promise<T> {
@@ -88,12 +94,14 @@ async function withOperator(fn: (tenant: ScratchTenant, op: { clerkUserId: strin
       try {
         await fn(tenant, op);
       } finally {
-        // The platform's trail names the club, so it goes before the club does.
-        await dropOperator(op.clerkUserId);
+        await dropTrail(op.clerkUserId);
       }
     });
   } finally {
-    if (clerkUserId !== null) await removeAppUser(clerkUserId);
+    if (clerkUserId !== null) {
+      await dropOperator(clerkUserId);
+      await removeAppUser(clerkUserId);
+    }
   }
 }
 
@@ -301,5 +309,160 @@ test('sweep: entering and leaving each raise a platform alert, and so does a ref
       { kind: 'write', action: 'support.ended' },
       { kind: 'denied', action: 'support.enter' },
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Slice 2 — requests and the override
+// ---------------------------------------------------------------------------
+
+async function alertsFor(clerkUserId: string): Promise<{ kind: string; action: string }[]> {
+  const { rows } = await owner.query<{ kind: string; action: string }>(
+    `SELECT kind::text, action FROM platform_alert WHERE clerk_user_id = $1 ORDER BY raised_at`,
+    [clerkUserId],
+  );
+  return rows;
+}
+
+test('QA 7: an override needs a reason and the club’s name, and each refusal raises an alert', async () => {
+  await withOperator(async (tenant, op) => {
+    await asOperator(op.clerkUserId, async () => {
+      await expectStatus(() => platform.override(tenant.organizationId, { confirmName: tenant.name }), 400);
+      try {
+        await platform.override(tenant.organizationId, { reason: 'Importação partida', confirmName: 'Outro' });
+        assert.fail('a wrong name was accepted');
+      } catch (error) {
+        const response = (error as { response?: { fields?: Record<string, string> } }).response;
+        assert.equal(response?.fields?.['confirmName'], 'admin.error.nameMismatch');
+      }
+    });
+
+    const [count] = await tenant.sql<{ n: number }>(`SELECT count(*)::int AS n FROM support_grant`);
+    assert.equal(count!.n, 0, 'nothing was opened');
+    assert.deepEqual(
+      (await alertsFor(op.clerkUserId)).map((row) => row.kind),
+      ['denied', 'denied'],
+    );
+  });
+});
+
+test('QA 8: a valid override opens 4 h, alerts, records the Owner notice, and support can enter', async () => {
+  await withOperator(async (tenant, op) => {
+    const reason = 'O registo de presenças não abre desde as 07:00';
+    const opened = await asOperator(op.clerkUserId, () =>
+      platform.override(tenant.organizationId, { reason, confirmName: tenant.name.toUpperCase() }),
+    );
+
+    const hours = (Date.parse(opened.expiresAt) - Date.now()) / 3_600_000;
+    assert.ok(hours > 3.9 && hours <= 4, `4 hours, not ${hours}`);
+    assert.deepEqual(await alertsFor(op.clerkUserId), [{ kind: 'write', action: 'support.override' }]);
+
+    const [grant] = await tenant.sql<{ source: string; reason: string; notice: string[] | null; delivered: Date | null }>(
+      `SELECT source::text, reason, notice_recipients AS notice, notice_delivered_at AS delivered
+         FROM support_grant WHERE id = $1`,
+      [opened.grantId],
+    );
+    assert.equal(grant?.source, 'override');
+    assert.equal(grant?.reason, reason, 'the reason, verbatim');
+    assert.ok(Array.isArray(grant?.notice), 'who the notice was owed to is recorded');
+    assert.equal(grant?.delivered, null, 'recorded, not sent');
+
+    await asOperator(op.clerkUserId, () => platform.enter(opened.grantId));
+    const listed = await actingAs(tenant, { roles: ['owner'] }, () => grants.list());
+    assert.equal(listed.grants[0]?.source, 'override');
+    assert.equal(listed.grants[0]?.notice?.delivered, false);
+
+    // Not renewable while it runs: a second override is refused.
+    await asOperator(op.clerkUserId, () =>
+      expectStatus(() => platform.override(tenant.organizationId, { reason, confirmName: tenant.name }), 409),
+    );
+  });
+});
+
+test('a request waits for the Owner, and approving it opens an ordinary window', async () => {
+  await withOperator(async (tenant, op) => {
+    const reason = 'Ajudar a corrigir a importação de alunos';
+    const { requestId } = await asOperator(op.clerkUserId, () =>
+      platform.request(tenant.organizationId, { reason }),
+    );
+
+    // Asking opened nothing.
+    assert.equal(clubOf(await listMemberships(op.clerkUserId), tenant), undefined);
+    const support = await asOperator(op.clerkUserId, () => platform.tenant(tenant.organizationId));
+    assert.equal(support.pendingRequest?.id, requestId);
+    assert.equal(support.live, null);
+    await asOperator(op.clerkUserId, () =>
+      expectStatus(() => platform.request(tenant.organizationId, { reason }), 409),
+    );
+
+    const { grant } = await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const pending = await grants.requests();
+      assert.deepEqual(pending.requests.map((one) => one.reason), [reason]);
+      const status = await grants.status();
+      assert.equal(status.pendingRequests, 1);
+      return grants.approve(requestId, { hours: 72 });
+    });
+    assert.equal(grant.source, 'request');
+    assert.equal(grant.reason, reason);
+
+    await asOperator(op.clerkUserId, () => platform.enter(grant.id));
+    assert.ok(clubOf(await listMemberships(op.clerkUserId), tenant));
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.deepEqual((await grants.requests()).requests, [], 'answered');
+      assert.equal((await grants.status()).live?.id, grant.id);
+      await expectStatus(() => grants.approve(requestId, { hours: 24 }), 404);
+    });
+  });
+});
+
+test('a request can be declined, and one left unanswered lapses after 7 days', async () => {
+  await withOperator(async (tenant, op) => {
+    const first = await asOperator(op.clerkUserId, () =>
+      platform.request(tenant.organizationId, { reason: 'Verificar faturas' }),
+    );
+    await actingAs(tenant, { roles: ['owner'] }, () => grants.decline(first.requestId));
+    const [count] = await tenant.sql<{ n: number }>(`SELECT count(*)::int AS n FROM support_grant`);
+    assert.equal(count!.n, 0, 'declining opens nothing');
+
+    const second = await asOperator(op.clerkUserId, () =>
+      platform.request(tenant.organizationId, { reason: 'Outra vez' }),
+    );
+    await owner.query(`UPDATE support_request SET created_at = now() - interval '8 days' WHERE id = $1`, [
+      second.requestId,
+    ]);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.deepEqual((await grants.requests()).requests, [], 'lapsed');
+      await expectStatus(() => grants.approve(second.requestId, { hours: 24 }), 404);
+    });
+  });
+});
+
+test('the status strip answers the Owner and the Admins, and nobody else', async () => {
+  await withOperator(async (tenant) => {
+    const admin = await addMember(tenant, 'Bea', 'Admin', ['admin']);
+    const instructor = await addMember(tenant, 'Ana', 'Costa', ['instructor']);
+    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, async () => {
+      assert.equal((await grants.status()).live, null);
+      await expectStatus(() => grants.requests(), 403);
+    });
+    await actingAs(tenant, { membershipId: instructor, roles: ['instructor'] }, () =>
+      expectStatus(() => grants.status(), 403),
+    );
+  });
+});
+
+test('/me puts the requested club first, and says when it is gone', async () => {
+  await withOperator(async (tenant, op) => {
+    const { grantId } = await enter(tenant, op.clerkUserId);
+    const me = new MeController();
+
+    const active = await asOperator(op.clerkUserId, () => me.me(tenant.organizationId));
+    assert.equal(active.memberships[0]?.organizationId, tenant.organizationId);
+    assert.equal(active.requestedOrganizationMissing, undefined);
+
+    await actingAs(tenant, { roles: ['owner'] }, () => grants.revoke(grantId));
+    const gone = await asOperator(op.clerkUserId, () => me.me(tenant.organizationId));
+    assert.equal(gone.requestedOrganizationMissing, true);
   });
 });

@@ -327,6 +327,8 @@ const TENANT_TABLES = [
   'membership_role',
   // POOLSE-79. Names the Owner's membership; the support membership's
   // pointer back to it is nulled before this list runs.
+  // Names an answering membership and the window it opened, so before both.
+  'support_request',
   'support_grant',
   'membership',
 ] as const;

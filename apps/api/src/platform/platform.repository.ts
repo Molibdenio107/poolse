@@ -830,7 +830,7 @@ const IRREVERSIBLE = ['suspended_at', 'pending_delete_at', 'archived_at'] as con
  * An unsupplied name never matches, which is what makes the check fail closed: a
  * caller that forgets to ask gets a refusal naming the field, not a write.
  */
-function nameMatches(typed: string | undefined, actual: unknown): boolean {
+export function nameMatches(typed: string | undefined, actual: unknown): boolean {
   if (typed === undefined || typeof actual !== 'string') return false;
 
   // NFD splits an accented letter into the letter and its mark, so the marks can
