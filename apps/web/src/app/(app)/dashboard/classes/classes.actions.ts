@@ -500,7 +500,7 @@ export async function createFreeSwimAction(
   try {
     added = await apiPost('/bookings/free-swim', { ...input, slotId: null }, { organizationId });
   } catch (error) {
-    if (error instanceof ApiError && error.status === 400) {
+    if (error instanceof ApiError && error.status === 400 && /title/.test(error.message)) {
       return { ok: false, errorKey: 'calendar.freeSwimTitleRequired' };
     }
     return await bookingFailure(error);
@@ -599,6 +599,9 @@ async function bookingFailure(
     }
     if (body.message === 'alreadyThere') {
       return { ok: false, errorKey: 'grid.alreadyThere' };
+    }
+    if (body.message === 'seasonNotPublished') {
+      return { ok: false, errorKey: 'calendar.freeSwimDraftSeason' };
     }
     return { ok: false, errorKey: 'grid.dropRefused' };
   }

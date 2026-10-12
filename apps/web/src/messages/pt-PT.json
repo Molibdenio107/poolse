@@ -2638,7 +2638,8 @@
     "freeSwimHint": "Ou reserve esta pista, todas as semanas a esta hora, para natação livre. Nenhuma turma pode ocupá-la nesse horário.",
     "freeSwimTitle": "Nome no calendário",
     "freeSwimHere": "Reservar para natação livre",
-    "freeSwimTitleRequired": "Indique um nome com até 60 caracteres."
+    "freeSwimTitleRequired": "Indique um nome com até 60 caracteres.",
+    "freeSwimDraftSeason": "Natação livre só se reserva na época publicada."
   },
   "inventory": {
     "title": "Inventário",
@@ -3496,7 +3497,8 @@
     "checkOutFailed": "A saída não ficou registada.",
     "cancelFailed": "A entrada não foi anulada.",
     "walkInFailed": "Não foi possível acrescentar esta pessoa.",
-    "month": "Natação livre este mês: {amount} em {sales, plural, =0 {nenhuma venda} one {1 venda} other {# vendas}} · {entries, plural, =0 {nenhuma entrada} one {1 entrada} other {# entradas}}. Contado à parte das mensalidades."
+    "month": "Natação livre este mês: {amount} em {sales, plural, =0 {nenhuma venda} one {1 venda} other {# vendas}} · {entries, plural, =0 {nenhuma entrada} one {1 entrada} other {# entradas}}. Contado à parte das mensalidades.",
+    "startsLaterNoEntry": "Um passe que começa noutro dia não dá entrada hoje — vende-se agora e usa-se a partir dessa data."
   },
   "passes": {
     "title": "Natação livre",
@@ -3552,7 +3554,8 @@
     "entriesInvalid": "Um pack tem entre 2 e 500 entradas.",
     "validityInvalid": "Entre 1 e 3660 dias.",
     "validityRequired": "Um passe por período precisa de uma validade.",
-    "vatInvalid": "Uma taxa entre 0 e 100."
+    "vatInvalid": "Uma taxa entre 0 e 100.",
+    "emailInvalid": "Este endereço de email não é válido."
   },
   "admin": {
     "mark": "Poolse · Plataforma",

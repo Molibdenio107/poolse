@@ -33,11 +33,14 @@ interface Chosen {
 export function PersonDesk({
   facilityId,
   products,
+  inWaterVersion,
   poolId,
   poolName,
 }: {
   facilityId: string;
   products: PassProduct[];
+  /** Changes whenever the board's in-water list does — a check-out or a cancel there. */
+  inWaterVersion: string;
   poolId: string;
   poolName: string;
 }): React.ReactElement {
@@ -76,6 +79,7 @@ export function PersonDesk({
         <PersonPasses
           facilityId={facilityId}
           person={chosen}
+          inWaterVersion={inWaterVersion}
           products={products}
           poolId={poolId}
           poolName={poolName}
@@ -292,6 +296,7 @@ function Standing({ pass }: { pass: Pass }): React.ReactElement {
 function PersonPasses({
   facilityId,
   person,
+  inWaterVersion,
   products,
   poolId,
   poolName,
@@ -299,6 +304,7 @@ function PersonPasses({
 }: {
   facilityId: string;
   person: Chosen;
+  inWaterVersion: string;
   products: PassProduct[];
   poolId: string;
   poolName: string;
@@ -309,7 +315,7 @@ function PersonPasses({
   const [state, setState] = useState<'loading' | 'failed' | 'done'>('loading');
 
   const load = useCallback(async () => {
-    setState('loading');
+    setState((current) => (current === 'done' ? 'done' : 'loading'));
     const found = await passesOf(facilityId, person.membershipId);
     if (found === null) {
       setState('failed');
@@ -319,9 +325,11 @@ function PersonPasses({
     setState('done');
   }, [facilityId, person.membershipId]);
 
+  // Again whenever the in-water list changes: a check-out or a cancelled entry
+  // at the bottom of the screen changes what this person's passes say.
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, inWaterVersion]);
 
   // Expired, void and used-up passes stay listed — they answer "but I bought a
   // pack" — after the ones still good.
@@ -444,7 +452,16 @@ function SellForm({
   const locale = useLocale();
   const [productId, setProductId] = useState(products[0]?.id ?? '');
   const [enter, setEnter] = useState(true);
+  const [validFrom, setValidFrom] = useState('');
   const chosen = products.find((product) => product.id === productId);
+  /*
+   * A pass that starts on a later day cannot let anybody in today — the trigger
+   * refuses it and, being one transaction, the sale with it. So the box is not
+   * offered then. The browser's date only decides whether to *offer* it; the
+   * server still decides what is valid.
+   */
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Lisbon' });
+  const startsLater = chosen?.kind !== 'single' && validFrom !== '' && validFrom > today;
   const [state, submit, pending] = useSavedAction(
     async (previous: ReceptionState, formData: FormData) => {
       const next = await sellAction(previous, formData);
@@ -479,19 +496,25 @@ function SellForm({
           type="date"
           label={t('reception.validFrom')}
           hint={t('reception.validFromHint')}
+          initial={validFrom}
+          onValueChange={setValidFrom}
           error={fields['validFrom'] === undefined ? undefined : t(fields['validFrom'])}
         />
       )}
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          name="checkIn"
-          checked={enter}
-          onChange={(event) => setEnter(event.target.checked)}
-          className="size-4"
-        />
-        {t('reception.enterNow')}
-      </label>
+      {startsLater ? (
+        <p className="text-sm text-foreground-muted">{t('reception.startsLaterNoEntry')}</p>
+      ) : (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="checkIn"
+            checked={enter}
+            onChange={(event) => setEnter(event.target.checked)}
+            className="size-4"
+          />
+          {t('reception.enterNow')}
+        </label>
+      )}
       <div>
         <button type="submit" disabled={pending} className={BUTTON}>
           {t('reception.sell')}

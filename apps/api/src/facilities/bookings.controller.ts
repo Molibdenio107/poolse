@@ -18,6 +18,8 @@ import {
   NonContiguousLanesError,
   assignInstructor,
   createFreeSwimBooking,
+  ForeignLaneError,
+  SeasonNotPublishedError,
   type AssignedInstructor,
   runTimetableImport,
   setInstructorStatus,
@@ -141,6 +143,10 @@ export class BookingsController {
     try {
       created = await createFreeSwimBooking(organizationId, facilityId, seasonId, title, target);
     } catch (error) {
+      if (error instanceof SeasonNotPublishedError) {
+        throw new ConflictException({ message: 'seasonNotPublished' });
+      }
+      if (error instanceof ForeignLaneError) throw new BadRequestException('laneIds must be lanes of this site');
       throw asHttp(error);
     }
     if (created === null) throw new NotFoundException('No such site or season');

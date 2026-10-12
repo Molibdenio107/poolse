@@ -425,7 +425,10 @@ export default async function CalendarPage({
               <CalendarWeek
                 organizationId={classes.organizationId}
                 facilityId={classes.facilities[0]?.id ?? null}
-                seasonId={grid?.seasonId ?? null}
+                // Free swim is offered on the published season only — the
+                // generator gives a non-turma booking that season's dates, so a
+                // block placed in a draft would land in this year (POOLSE-68).
+                seasonId={grid?.seasonStatus === 'published' ? (grid.seasonId ?? null) : null}
                 weekStart={monday}
                 dayNames={dayNames}
                 todayWeekday={todayWeekday}

@@ -410,6 +410,8 @@ export async function readGrid(
      */
     const staffing = { uncovered: 0, toDefine: 0 };
     for (const row of bookings.rows) {
+      // Free swim is water held for the public; nobody teaches it (POOLSE-68).
+      if (row.subject_type === 'free_swim') continue;
       if (row.instructor_status === 'uncovered') staffing.uncovered += 1;
       else if (row.instructor_status === 'to_define') staffing.toDefine += 1;
     }

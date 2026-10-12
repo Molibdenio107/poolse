@@ -31,7 +31,8 @@ person leaving.
 - **Cliente**: find somebody by name, email or NIF, or add a new person (a walk-in gets no role
   and no login). Their passes are listed with what each one is good for: entries left, valid
   until, ended, used up, or cancelled by a credit note. Next to each live pass is *Dar entrada*,
-  and below the list a form sells them a new pass, optionally letting them in at once.
+  and below the list a form sells them a new pass, optionally letting them in at once. A pass
+  that starts on a later day is sold without the entry, because it cannot let anybody in today.
 - **Em natação livre**: who is in the water on a pass, since when and until when. *Saída*
   records an early check-out. *Anular* takes back a check-in entered by mistake: the entry goes
   back on the pack and the place in the tank is freed.

@@ -724,15 +724,17 @@ export async function sellPass(
      * Consumidor final. Null name and null ids together, by CHECK.
      */
     const { rows: invoiceRows } = await tx.query<{ id: string; document_no: string }>(
+      // Dated on the site's own day — the day the pass starts — not the
+      // database's UTC date, which puts a sale at 00:30 in the previous month.
       `INSERT INTO invoice
-         (organization_id, facility_id, series_id, due_on, payer_membership_id,
+         (organization_id, facility_id, series_id, issued_on, due_on, payer_membership_id,
           payer_name, payer_tax_number, payer_address, payer_email)
-       SELECT $1, $2, $3, current_date, m.id,
+       SELECT $1, $2, $3, $5::date, $5::date, m.id,
               ${personName('m.id')}, m.tax_number, m.address, person_email(m.id)
          FROM (SELECT $4::uuid AS id) wanted
          LEFT JOIN membership m ON m.id = wanted.id AND m.archived_at IS NULL
        RETURNING id, document_no`,
-      [organizationId, facilityId, series[0].id, input.membershipId],
+      [organizationId, facilityId, series[0].id, input.membershipId, product.today],
     );
     const invoice = invoiceRows[0]!;
 
@@ -758,8 +760,8 @@ export async function sellPass(
       await tx.query(
         `INSERT INTO invoice_payment
            (organization_id, invoice_id, amount_cents, paid_on, source, recorded_by)
-         VALUES ($1, $2, $3, current_date, 'manual', $4)`,
-        [organizationId, invoice.id, product.amount_cents, currentTenant().membershipId],
+         VALUES ($1, $2, $3, $5::date, 'manual', $4)`,
+        [organizationId, invoice.id, product.amount_cents, currentTenant().membershipId, product.today],
       );
     }
 

@@ -102,6 +102,7 @@ export function ReceptionBoard({
           <PersonDesk
             facilityId={facilityId}
             products={reception.products}
+            inWaterVersion={reception.inWater.map((row) => row.checkInId).join(',')}
             poolId={poolId}
             poolName={poolName(poolId)}
           />

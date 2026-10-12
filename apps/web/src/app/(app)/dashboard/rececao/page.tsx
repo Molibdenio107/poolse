@@ -76,7 +76,9 @@ export default async function ReceptionPage({
           />
         )}
         {reception.state === 'ok' && (
-          <ReceptionBoard facilityId={chosen.id} reception={reception.data} />
+          // Keyed by site: switching sites must not carry the last site's tank,
+          // which every check-in there would then refuse as the wrong site.
+          <ReceptionBoard key={chosen.id} facilityId={chosen.id} reception={reception.data} />
         )}
       </div>
     </PageShell>

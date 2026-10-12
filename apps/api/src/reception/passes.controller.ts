@@ -187,11 +187,23 @@ export class ReceptionController {
     } catch (error) {
       // The club already knows this email or NIF: the person exists, and the
       // answer is to find them rather than make a second one.
+      if (
+        (error as { code?: string }).code === '23514' &&
+        (error as { constraint?: string }).constraint === 'membership_email_shape'
+      ) {
+        throw new BadRequestException({
+          message: 'Not an email address',
+          fields: { email: 'passes.emailInvalid' },
+        });
+      }
       if ((error as { code?: string }).code === '23505') {
+        // Beside the box that clashed: a NIF typed with no email must not light
+        // up the empty email field.
+        const onNif = (error as { constraint?: string }).constraint === 'membership_tax_number_uq';
         throw new ConflictException({
           code: 'person_exists',
           message: 'Somebody in this club already has that email or NIF',
-          fields: { email: 'passes.personExists' },
+          fields: { [onNif ? 'taxNumber' : 'email']: 'passes.personExists' },
         });
       }
       throw error;
@@ -214,7 +226,12 @@ export class ReceptionController {
       });
     }
     const validFrom = text(body['validFrom']);
-    if (validFrom !== null && !/^\d{4}-\d{2}-\d{2}$/.test(validFrom)) {
+    // The shape and a real day: 2026-02-30 has the shape and would 500 on the cast.
+    if (
+      validFrom !== null &&
+      (!/^\d{4}-\d{2}-\d{2}$/.test(validFrom) ||
+        new Date(`${validFrom}T12:00:00Z`).toISOString().slice(0, 10) !== validFrom)
+    ) {
       throw new BadRequestException({
         message: 'validFrom must be YYYY-MM-DD',
         fields: { validFrom: 'passes.validFromInvalid' },

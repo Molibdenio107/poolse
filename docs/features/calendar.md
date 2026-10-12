@@ -398,4 +398,6 @@ other block, and generates its lessons with the season. While it holds a lane, n
 that lane: a block dropped on it is refused with the lane and what holds it. It has no register,
 no plan and no instructor, it is not counted as a class on the dashboard, and the people in it
 are counted by check-in at reception, never by the block. The **Mostrar** list shows it as
-*Natação livre*.
+*Natação livre*. It is offered only on the published season and only on that site's lanes,
+because a block with no turma takes its lessons from the published season whatever season it
+was drawn on.

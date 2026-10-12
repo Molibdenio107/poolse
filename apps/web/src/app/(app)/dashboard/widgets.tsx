@@ -58,7 +58,7 @@ export async function renderWidget(
     case 'mgmt.occupancy.today':
       return <OccupancyTodayCard widget={widget} />;
     case 'mgmt.freeswim':
-      return <FreeSwimCard widget={widget} />;
+      return <FreeSwimCard widget={widget} scope={scope} />;
     case 'mgmt.waterquality.alerts':
       return <WaterCard widget={widget} scope={scope} />;
     case 'mgmt.maintenance.open':
@@ -431,7 +431,13 @@ async function MoneyCard({ widget }: { widget: DashboardWidget }): Promise<React
  * which is AC 6. The month is labelled as sales, because it is documents that
  * happened, not money expected.
  */
-async function FreeSwimCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {
+async function FreeSwimCard({
+  widget,
+  scope,
+}: {
+  widget: DashboardWidget;
+  scope: DashboardScope;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
   const data = widget.data as FreeSwimWidgetData | null;
@@ -440,7 +446,11 @@ async function FreeSwimCard({ widget }: { widget: DashboardWidget }): Promise<Re
     <WidgetCard
       widget={widget}
       title={t('dashboard.widget.freeSwim.title')}
-      href="/dashboard/rececao"
+      href={
+        scope.mode === 'facility' && scope.facilityId !== null
+          ? `/dashboard/rececao?site=${scope.facilityId}`
+          : '/dashboard/rececao'
+      }
       linkLabel={t('dashboard.widget.freeSwim.open')}
       emptyMessage={t('dashboard.widget.freeSwim.empty')}
     >

@@ -718,6 +718,11 @@ export async function duplicateBooking(
   });
 }
 
+/** A free-swim block in a season that is not the published one. */
+export class SeasonNotPublishedError extends Error {}
+/** A lane that is not one of this site's live lanes. */
+export class ForeignLaneError extends Error {}
+
 /**
  * Lanes held for the public — POOLSE-68 slice 2.
  *
@@ -742,13 +747,36 @@ export async function createFreeSwimBooking(
   target: BookingTarget,
 ): Promise<{ id: string } | null> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query(
-      `SELECT 1 FROM facility f, season s
+    const { rows } = await tx.query<{ status: string }>(
+      `SELECT s.status::text AS status FROM facility f, season s
         WHERE f.id = $1 AND f.archived_at IS NULL
           AND s.id = $2 AND s.archived_at IS NULL`,
       [facilityId, seasonId],
     );
-    if (rows.length === 0) return null;
+    if (rows[0] === undefined) return null;
+    /*
+     * The published season only. `generate_sessions` gives a booking with no
+     * turma the *published* season's dates whatever its own `season_id` says,
+     * so a block placed in next year's draft would be checked against the draft
+     * and then materialised into this year — over lanes its check never looked
+     * at. Refused rather than half-supported until the generator reads the
+     * booking's own season.
+     */
+    if (rows[0].status !== 'published') throw new SeasonNotPublishedError();
+
+    // Every lane must be this site's: one lane skips the contiguity check, and
+    // a lane from another site's tank would hold water the site does not have.
+    const { rows: foreign } = await tx.query(
+      `SELECT 1 FROM lane l JOIN pool p ON p.id = l.pool_id AND p.organization_id = l.organization_id
+        WHERE l.id = ANY($1::uuid[])
+          AND (p.facility_id <> $2 OR l.archived_at IS NOT NULL OR p.archived_at IS NOT NULL)`,
+      [target.laneIds, facilityId],
+    );
+    const { rows: known } = await tx.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM lane WHERE id = ANY($1::uuid[])`,
+      [target.laneIds],
+    );
+    if (foreign.length > 0 || known[0]!.n !== target.laneIds.length) throw new ForeignLaneError();
 
     await assertContiguous(tx, target.laneIds);
 

@@ -231,3 +231,61 @@ test('an instructor may not hold a lane for free swim', async () => {
     });
   });
 });
+
+test('free swim is held only in the published season, and only on this site\'s lanes', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const { laneIds } = await tank(tenant, null);
+      const [draft] = await tenant.sql<{ id: string }>(
+        `INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+         VALUES ($1, 'Próxima', current_date + 400, current_date + 700, 'draft') RETURNING id`,
+        [tenant.organizationId],
+      );
+      const block = {
+        facilityId: tenant.facilityId,
+        title: 'Natação livre',
+        weekday: 4,
+        startTime: '18:00',
+        durationMinutes: 60,
+      };
+      const bookings = new BookingsController();
+
+      // A draft's block would be generated into this year's season, over lanes
+      // its check never looked at.
+      await expectStatus(
+        () => bookings.freeSwim({ ...block, seasonId: draft!.id, laneIds: [laneIds[0]] }),
+        409,
+      );
+
+      const [otherSite] = await tenant.sql<{ id: string }>(
+        `SELECT l.id FROM lane l JOIN pool p ON p.id = l.pool_id
+          WHERE p.facility_id <> $1 LIMIT 1`,
+        [tenant.facilityId],
+      );
+      if (otherSite !== undefined) {
+        await expectStatus(
+          () => bookings.freeSwim({ ...block, seasonId: tenant.seasonId, laneIds: [otherSite.id] }),
+          400,
+        );
+      }
+    });
+  });
+});
+
+test('a walk-in whose NIF is taken is told so beside the NIF', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const reception = new ReceptionController();
+      await reception.walkIn({ firstName: 'Ana', lastName: 'Primeira', taxNumber: '123456789' });
+      try {
+        await reception.walkIn({ firstName: 'Ana', lastName: 'Segunda', taxNumber: '123456789' });
+        assert.fail('a second person with one NIF was accepted');
+      } catch (error) {
+        assert.ok(error instanceof HttpException);
+        assert.deepEqual((error.getResponse() as { fields?: unknown }).fields, {
+          taxNumber: 'passes.personExists',
+        });
+      }
+    });
+  });
+});
