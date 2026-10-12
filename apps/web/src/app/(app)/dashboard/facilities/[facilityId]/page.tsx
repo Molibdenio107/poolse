@@ -85,11 +85,11 @@ export default async function FacilityPage({
   searchParams,
 }: {
   params: Promise<{ facilityId: string }>;
-  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string; section?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { facilityId } = await params;
-  const { tab, from } = await searchParams;
+  const { tab, from, section } = await searchParams;
   // Back to where the link was followed from, when it says — the `withFrom`
   // links from the dashboard, Energia and Turmas. October 2026 sweep.
   const origin = readFrom(from);
@@ -196,77 +196,135 @@ export default async function FacilityPage({
             policies.state !== 'refused' ||
             passes.state !== 'refused',
           content: async () => {
-            const register =
-              prices.state === 'ok'
-                ? await apiFetch<Students>('/students').catch(() => null)
-                : null;
+            /*
+              One section at a time — 12 October 2026, Rui's report that the
+              tab was "all on top of each other". Six sub-sections of the price
+              list and three more cards had stacked into one long page, and the
+              one a club came for (often Natação livre, last of all) was found
+              by scrolling. Each section is a pill naming it, `?section=`, and
+              a section whose list the reader may not see is not offered.
+            */
+            const sections = (
+              [
+                ['mensalidade', prices.state !== 'refused'],
+                ['quota', prices.state !== 'refused'],
+                ['joining', prices.state !== 'refused' || policies.state !== 'refused'],
+                ['freeSwim', passes.state !== 'refused'],
+                ['categories', categories.state !== 'refused'],
+                ['payments', prices.state !== 'refused'],
+              ] as const
+            )
+              .filter(([, offered]) => offered)
+              .map(([key]) => key);
+            const current =
+              sections.find((key) => key === section) ?? sections[0] ?? 'mensalidade';
+
+            const needsRegister =
+              prices.state === 'ok' && (current !== 'freeSwim' && current !== 'categories');
+            const register = needsRegister
+              ? await apiFetch<Students>('/students').catch(() => null)
+              : null;
+            const sectionHref = (key: string): string =>
+              `${path}?tab=prices&section=${key}${origin === null ? '' : `&from=${encodeURIComponent(origin)}`}`;
+
             return (
               <>
-                {prices.state === 'failed' && <PageError message={t(prices.failure.key)} />}
-                {prices.state === 'ok' && (
+                <p className="text-sm text-foreground-muted">{t('fees.pricesHint')}</p>
+                <nav aria-label={t('fees.section.nav')} className="flex flex-wrap gap-2">
+                  {sections.map((key) => (
+                    <Link
+                      key={key}
+                      href={sectionHref(key)}
+                      aria-current={key === current ? 'page' : undefined}
+                      className={
+                        key === current
+                          ? 'inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground'
+                          : 'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+                      }
+                    >
+                      {t(`fees.section.${key}`)}
+                    </Link>
+                  ))}
+                </nav>
+
+                {current !== 'freeSwim' && current !== 'categories' && (
                   <>
-                    {/*
-                      The register supplies the levels and whether the reader may
-                      edit. Without it an owner got a read-only list and no word
-                      why; now the list is still shown, and the reason with it.
-                    */}
-                    {register === null && <PageError message={t('detailTabs.loadFailed')} />}
-                    <PricesPanel
-                      facilityId={facilityId}
-                      plans={prices.data.plans}
-                      periods={prices.data.periods}
-                      seasons={prices.data.seasons}
-                      billing={prices.data.billing}
-                      levels={register?.levels ?? []}
-                      canManage={register?.canManage ?? false}
-                    />
+                    {prices.state === 'failed' && <PageError message={t(prices.failure.key)} />}
+                    {prices.state === 'ok' && (
+                      <>
+                        {/*
+                          The register supplies the levels and whether the reader
+                          may edit. Without it an owner got a read-only list and no
+                          word why; now the list is still shown, and the reason.
+                        */}
+                        {register === null && <PageError message={t('detailTabs.loadFailed')} />}
+                        <PricesPanel
+                          section={current}
+                          facilityId={facilityId}
+                          plans={prices.data.plans}
+                          periods={prices.data.periods}
+                          seasons={prices.data.seasons}
+                          billing={prices.data.billing}
+                          levels={register?.levels ?? []}
+                          canManage={register?.canManage ?? false}
+                        />
+                      </>
+                    )}
                   </>
                 )}
 
                 {/*
-                  Directly under the price list, because a concession is the
-                  other half of what somebody pays and the two are one
-                  conversation. Not gated on `prices`: a reader may see the
-                  names without seeing the amounts.
+                  The apólice beside the seguro price, because the two halves of
+                  the seguro are one conversation: what the club is covered by,
+                  and what it charges a family for being on it.
                 */}
-                {categories.state === 'failed' && (
-                  <PageError message={t(categories.failure.key)} />
+                {current === 'joining' && (
+                  <>
+                    {policies.state === 'failed' && (
+                      <PageError message={t(policies.failure.key)} />
+                    )}
+                    {policies.state === 'ok' && (
+                      <InsurancePanel
+                        facilityId={facilityId}
+                        policies={policies.data}
+                        canManage={register?.canManage ?? false}
+                      />
+                    )}
+                  </>
                 )}
-                {categories.state === 'ok' && (
-                  <CategoriesPanel
-                    facilityId={facilityId}
-                    categories={categories.data.categories}
-                    canManage={categories.data.canManage}
-                    canSeeValues={categories.data.canSeeValues}
-                  />
+
+                {/* Natação livre — POOLSE-68. What reception sells, and the default stay. */}
+                {current === 'freeSwim' && (
+                  <>
+                    {passes.state === 'failed' && <PageError message={t(passes.failure.key)} />}
+                    {passes.state === 'ok' && (
+                      <PassesPanel
+                        facilityId={facilityId}
+                        products={passes.data.products}
+                        stayMinutes={passes.data.stayMinutes}
+                      />
+                    )}
+                  </>
                 )}
 
                 {/*
-                  The apólice sits beside the price list because the two halves
-                  of the seguro are one conversation: what the club is covered
-                  by, and what it charges a family for being on it.
+                  Concessions: a reader may see the names without the amounts,
+                  so this is not gated on the price list.
                 */}
-                {policies.state === 'failed' && <PageError message={t(policies.failure.key)} />}
-                {policies.state === 'ok' && (
-                  <InsurancePanel
-                    facilityId={facilityId}
-                    policies={policies.data}
-                    canManage={register?.canManage ?? false}
-                  />
-                )}
-
-                {/*
-                  Natação livre — POOLSE-68. What reception sells, priced like
-                  the rest of this tab, and the default stay that decides how
-                  long somebody counts as in the water.
-                */}
-                {passes.state === 'failed' && <PageError message={t(passes.failure.key)} />}
-                {passes.state === 'ok' && (
-                  <PassesPanel
-                    facilityId={facilityId}
-                    products={passes.data.products}
-                    stayMinutes={passes.data.stayMinutes}
-                  />
+                {current === 'categories' && (
+                  <>
+                    {categories.state === 'failed' && (
+                      <PageError message={t(categories.failure.key)} />
+                    )}
+                    {categories.state === 'ok' && (
+                      <CategoriesPanel
+                        facilityId={facilityId}
+                        categories={categories.data.categories}
+                        canManage={categories.data.canManage}
+                        canSeeValues={categories.data.canSeeValues}
+                      />
+                    )}
+                  </>
                 )}
               </>
             );

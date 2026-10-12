@@ -2,6 +2,14 @@
 
 What a site charges, and what one student pays. Schema in `docs/data-model.md`.
 
+## Where it lives
+
+A site's **Preços** tab, one section at a time (`?section=`), chosen from a row of pills:
+**Mensalidades**, **Quota de sócio**, **Inscrição e seguro** (with the apólice), **Natação livre**
+(what reception sells, `reception.md`), **Descontos** (the fee categories) and **Pagamentos** (due
+day, late penalties and periodicities). A section whose list the reader may not see is not offered.
+Before 12 October 2026 all of these were stacked on one page.
+
 ## Who can do what
 
 | Action | Roles |

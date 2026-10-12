@@ -1512,7 +1512,17 @@
     "oneDiscountAuthor": "A discount comes from a category or from your own decision, not both.",
     "nameRequired": "Give the period a name.",
     "alreadyChargedThisSeason": "This student has already been charged this for the season.",
-    "pricesUnread": "The price lists of every site could not be read, so not every fee can be assigned right now. Reopen the page to try again."
+    "pricesUnread": "The price lists of every site could not be read, so not every fee can be assigned right now. Reopen the page to try again.",
+    "section": {
+      "nav": "Price sections",
+      "mensalidade": "Monthly fees",
+      "quota": "Membership fee",
+      "joining": "Joining and insurance",
+      "freeSwim": "Free swim",
+      "categories": "Discounts",
+      "payments": "Payments"
+    },
+    "addFirstQuota": "Set the membership fee"
   },
   "categories": {
     "title": "Fee categories",

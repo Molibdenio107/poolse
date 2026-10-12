@@ -119,7 +119,17 @@ function Problem({ state }: { state: FormState }): React.ReactElement | null {
   );
 }
 
+/**
+ * Which part of the price list is on screen — the Preços tab's own sections.
+ *
+ * One at a time, chosen by `?section=` on the tab. Stacked, the list was six
+ * sub-sections in one card plus three more cards below it, and the one a club
+ * opened the tab for was always somewhere down the page.
+ */
+export type PriceSection = 'mensalidade' | 'quota' | 'joining' | 'payments';
+
 export function PricesPanel({
+  section,
   facilityId,
   plans,
   periods,
@@ -128,6 +138,7 @@ export function PricesPanel({
   billing,
   canManage,
 }: {
+  section: PriceSection;
   facilityId: string;
   plans: FeePlan[];
   periods: FeePeriod[];
@@ -154,21 +165,15 @@ export function PricesPanel({
 
   return (
     <section className="flex flex-col gap-6 rounded border border-border bg-surface p-5">
-      <div className="flex items-start gap-3">
-        <Wallet aria-hidden className="mt-0.5 size-5 shrink-0 text-primary" />
-        <div>
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('fees.pricesTitle')}
-          </h2>
-          <p className="mt-1 text-sm text-foreground-muted">{t('fees.pricesHint')}</p>
-        </div>
-      </div>
-
       {/* ---- what a place costs -------------------------------------------- */}
+      {section === 'mensalidade' && (
       <div className="flex flex-col gap-3">
-        <div>
+        <div className="flex items-start gap-3">
+          <Wallet aria-hidden className="mt-0.5 size-5 shrink-0 text-primary" />
+          <div>
           <h3 className="text-base font-semibold">{t('fees.levelPrices')}</h3>
           <p className="mt-0.5 text-sm text-foreground-muted">{t('fees.levelPricesHint')}</p>
+          </div>
         </div>
 
         {mensalidades.length === 0 ? (
@@ -284,15 +289,17 @@ export function PricesPanel({
             </button>
           ))}
       </div>
+      )}
 
       {/* ---- the quota, on its own ------------------------------------------ */}
-      <div className="flex flex-col gap-3 border-t border-border pt-5">
+      {section === 'quota' && (
+      <div className="flex flex-col gap-3">
         <div>
           <h3 className="text-base font-semibold">{t('fees.quotaTitle')}</h3>
           <p className="mt-0.5 text-sm text-foreground-muted">{t('fees.quotaHint')}</p>
         </div>
 
-        {quotas.length === 0 && !canManage && (
+        {quotas.length === 0 && (
           <p className="text-sm text-foreground-muted">{t('fees.noQuota')}</p>
         )}
 
@@ -348,7 +355,7 @@ export function PricesPanel({
         </ul>
 
         {canManage &&
-          (addingQuota || quotas.length === 0 ? (
+          (addingQuota ? (
             <PlanForm
               facilityId={facilityId}
               plan={null}
@@ -364,10 +371,11 @@ export function PricesPanel({
               className="self-start text-sm text-primary hover:underline"
             >
               <Plus aria-hidden className="mr-1 inline size-3.5" />
-              {t('fees.addQuotaRate')}
+              {quotas.length === 0 ? t('fees.addFirstQuota') : t('fees.addQuotaRate')}
             </button>
           ))}
       </div>
+      )}
 
       {/* ---- what a season costs to join, and to be insured for ------------- */}
       {/*
@@ -377,6 +385,8 @@ export function PricesPanel({
         which is why each row says which season it belongs to — a price list
         holding two years at once is ordinary in June.
       */}
+      {section === 'joining' && (
+      <>
       <SeasonalPrices
         kind="inscricao"
         title={t('fees.inscricaoTitle')}
@@ -414,6 +424,8 @@ export function PricesPanel({
         adding={addingSeasonal === 'seguro'}
         setAdding={(on) => setAddingSeasonal(on ? 'seguro' : null)}
       />
+      </>
+      )}
 
       {/* ---- when a payment is late, and what that costs -------------------- */}
       {/*
@@ -422,7 +434,9 @@ export function PricesPanel({
         read — a tooltip may explain a control, but never be the only place a
         fact appears.
       */}
-      <details className="border-t border-border pt-5">
+      {section === 'payments' && (
+      <>
+      <details open>
         <summary className="cursor-pointer text-base font-semibold">
           {t('fees.paymentsTitle')}
           <span className="ml-2 text-sm font-normal text-foreground-muted">
@@ -454,7 +468,7 @@ export function PricesPanel({
       </details>
 
       {/* ---- the setup nobody touches twice --------------------------------- */}
-      <details className="border-t border-border pt-5">
+      <details open className="border-t border-border pt-5">
         <summary className="cursor-pointer text-base font-semibold">
           {t('fees.periods')}
           <span className="ml-2 text-sm font-normal text-foreground-muted">
@@ -540,7 +554,8 @@ export function PricesPanel({
           )}
         </div>
       </details>
-
+      </>
+      )}
     </section>
   );
 }
@@ -713,7 +728,7 @@ function SeasonalPrices({
   const t = useTranslations();
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-5">
+    <div className="flex flex-col gap-3 border-t border-border pt-5 first:border-t-0 first:pt-0">
       <div>
         <h3 className="text-base font-semibold">{title}</h3>
         <p className="mt-0.5 text-sm text-foreground-muted">{hint}</p>

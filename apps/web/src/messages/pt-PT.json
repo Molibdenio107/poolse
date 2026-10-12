@@ -1512,7 +1512,17 @@
     "oneDiscountAuthor": "O desconto vem de uma categoria ou de uma decisão sua, não dos dois.",
     "nameRequired": "Indique o nome do período.",
     "alreadyChargedThisSeason": "Este aluno já foi cobrado por isto nesta época.",
-    "pricesUnread": "Não foi possível ler os preços de todas as instalações, por isso nem todas as mensalidades podem ser atribuídas agora. Volte a abrir a página para tentar outra vez."
+    "pricesUnread": "Não foi possível ler os preços de todas as instalações, por isso nem todas as mensalidades podem ser atribuídas agora. Volte a abrir a página para tentar outra vez.",
+    "section": {
+      "nav": "Secções dos preços",
+      "mensalidade": "Mensalidades",
+      "quota": "Quota de sócio",
+      "joining": "Inscrição e seguro",
+      "freeSwim": "Natação livre",
+      "categories": "Descontos",
+      "payments": "Pagamentos"
+    },
+    "addFirstQuota": "Definir a quota"
   },
   "categories": {
     "title": "Categorias de preço",
