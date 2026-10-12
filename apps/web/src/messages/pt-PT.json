@@ -2693,7 +2693,9 @@
     "freeSwimTitle": "Nome no calendário",
     "freeSwimHere": "Reservar para natação livre",
     "freeSwimTitleRequired": "Indique um nome com até 60 caracteres.",
-    "freeSwimDraftSeason": "Natação livre só se reserva na época publicada."
+    "freeSwimDraftSeason": "Natação livre só se reserva na época publicada.",
+    "choosePool": "Escolha uma piscina",
+    "choosePoolHint": "Escolha uma piscina acima para ver a semana."
   },
   "inventory": {
     "title": "Inventário",
@@ -3558,7 +3560,10 @@
     "cancelFailed": "A entrada não foi anulada.",
     "walkInFailed": "Não foi possível acrescentar esta pessoa.",
     "month": "Natação livre este mês: {amount} em {sales, plural, =0 {nenhuma venda} one {1 venda} other {# vendas}} · {entries, plural, =0 {nenhuma entrada} one {1 entrada} other {# entradas}}. Contado à parte das mensalidades.",
-    "startsLaterNoEntry": "Um passe que começa noutro dia não dá entrada hoje — vende-se agora e usa-se a partir dessa data."
+    "startsLaterNoEntry": "Um passe que começa noutro dia não dá entrada hoje — vende-se agora e usa-se a partir dessa data.",
+    "choosePool": "Escolha o tanque",
+    "chooseTankFirst": "Escolha o tanque acima para dar entrada.",
+    "chooseTankToEnter": "Escolha o tanque acima para poder dar entrada já; sem tanque, o passe é só vendido."
   },
   "passes": {
     "title": "Natação livre",

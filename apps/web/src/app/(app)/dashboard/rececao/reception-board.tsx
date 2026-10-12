@@ -42,7 +42,12 @@ export function ReceptionBoard({
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
-  const [poolId, setPoolId] = useState(reception.pools[0]?.poolId ?? '');
+  // No tank until reception picks one (Rui, 12 October 2026) — an entry let
+  // into the first tank by default is an entry counted in the wrong water. One
+  // tank is no choice, so it is taken.
+  const [poolId, setPoolId] = useState(
+    reception.pools.length === 1 ? (reception.pools[0]?.poolId ?? '') : '',
+  );
 
   if (reception.pools.length === 0) {
     return <p className="text-sm text-foreground-muted">{t('reception.noPools')}</p>;
@@ -82,7 +87,10 @@ export function ReceptionBoard({
           hint={t('reception.tankHint')}
           initial={poolId}
           onValueChange={setPoolId}
-          options={reception.pools.map((pool) => ({ value: pool.poolId, label: pool.poolName }))}
+          options={[
+            { value: '', label: t('reception.choosePool') },
+            ...reception.pools.map((pool) => ({ value: pool.poolId, label: pool.poolName })),
+          ]}
         />
       )}
 
@@ -186,6 +194,9 @@ function QuickEntry({
 
       {singles.length === 0 ? (
         <p className="text-sm text-foreground-muted">{t('reception.noSingles')}</p>
+      ) : poolId === '' ? (
+        // Said rather than disabled: the entry has nowhere to go yet.
+        <p className="text-sm text-foreground-muted">{t('reception.chooseTankFirst')}</p>
       ) : (
         <form action={submit} className="flex flex-col gap-3">
           <input type="hidden" name="facilityId" value={facilityId} />

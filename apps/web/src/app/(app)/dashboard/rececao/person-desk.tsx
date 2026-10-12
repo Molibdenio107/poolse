@@ -375,7 +375,12 @@ function PersonPasses({
                   <Standing pass={pass} />
                 </p>
               </div>
-              {live.includes(pass) && (
+              {live.includes(pass) && poolId === '' && (
+                <p className="shrink-0 text-sm text-foreground-muted">
+                  {t('reception.chooseTankFirst')}
+                </p>
+              )}
+              {live.includes(pass) && poolId !== '' && (
                 <CheckInButton
                   facilityId={facilityId}
                   passId={pass.id}
@@ -503,6 +508,8 @@ function SellForm({
       )}
       {startsLater ? (
         <p className="text-sm text-foreground-muted">{t('reception.startsLaterNoEntry')}</p>
+      ) : poolId === '' ? (
+        <p className="text-sm text-foreground-muted">{t('reception.chooseTankToEnter')}</p>
       ) : (
         <label className="flex items-center gap-2 text-sm">
           <input

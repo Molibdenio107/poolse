@@ -2693,7 +2693,9 @@
     "freeSwimTitle": "Name on the calendar",
     "freeSwimHere": "Hold for free swim",
     "freeSwimTitleRequired": "Enter a name of up to 60 characters.",
-    "freeSwimDraftSeason": "Free swim can only be held in the published season."
+    "freeSwimDraftSeason": "Free swim can only be held in the published season.",
+    "choosePool": "Choose a pool",
+    "choosePoolHint": "Choose a pool above to see the week."
   },
   "inventory": {
     "title": "Inventory",
@@ -3558,7 +3560,10 @@
     "cancelFailed": "The entry was not cancelled.",
     "walkInFailed": "This person could not be added.",
     "month": "Free swim this month: {amount} from {sales, plural, =0 {no sales} one {1 sale} other {# sales}} · {entries, plural, =0 {no entries} one {1 entry} other {# entries}}. Counted separately from monthly fees.",
-    "startsLaterNoEntry": "A pass that starts on a later day cannot let anyone in today — it is sold now and used from that date."
+    "startsLaterNoEntry": "A pass that starts on a later day cannot let anyone in today — it is sold now and used from that date.",
+    "choosePool": "Choose the pool",
+    "chooseTankFirst": "Choose the pool above to let someone in.",
+    "chooseTankToEnter": "Choose the pool above to let them in now; without one, the pass is only sold."
   },
   "passes": {
     "title": "Free swim",

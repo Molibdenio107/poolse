@@ -219,7 +219,16 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
    * nobody can read and a horizontal scrollbar measured in screens. The club
    * with one pool never sees the control.
    */
-  const [poolId, setPoolId] = useState<string>(() => pools[0]?.id ?? '');
+  /*
+   * **No tank until somebody chooses one** — Rui, 12 October 2026. Opening on
+   * the first tank drew one tank's week as if it were the site's, and a club
+   * reading it took the other tank's classes for missing. With one tank there
+   * is nothing to choose, so that one is shown.
+   */
+  const [poolId, setPoolId] = useState<string>(() =>
+    pools.length === 1 ? (pools[0]?.id ?? '') : '',
+  );
+  const choosing = pools.length > 1 && !pools.some((pool) => pool.id === poolId);
 
   /*
    * Whether this week has a class in no pista at all — round 8.
@@ -934,6 +943,11 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         </p>
       )}
 
+      {choosing ? (
+        <p className="rounded border border-dashed border-border p-6 text-center text-sm text-foreground-muted">
+          {t('calendar.choosePoolHint')}
+        </p>
+      ) : (
       <DndContext
         // A fixed id: dnd-kit numbers its aria ids with a counter that differs
         // between the server render and the browser, which is a hydration mismatch.
@@ -1062,6 +1076,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
           </div>
         </div>
       </DndContext>
+      )}
 
       {ask !== null && (
         <ScopePopover ask={ask} onScope={settle} onCancel={abandon} />
@@ -1166,6 +1181,10 @@ function Toolbar({
                 onChange={(event) => onPool(event.target.value)}
                 className="h-control rounded border-2 border-primary/60 bg-background px-2 text-control font-medium text-foreground hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
+                {/* Nothing chosen at first, and said so in the box itself. */}
+                <option value="" disabled>
+                  {t('calendar.choosePool')}
+                </option>
                 {pools.map((pool) => (
                   <option key={pool.id} value={pool.id}>
                     {pool.name}
