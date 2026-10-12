@@ -205,19 +205,21 @@ export class PartnersController {
   }
 
   @Delete('partners/:partnerId')
-  async remove(@Param('partnerId') partnerId: string): Promise<{ archived: true }> {
+  async remove(
+    @Param('partnerId') partnerId: string,
+  ): Promise<{ archived: true; archiveEntryId: string }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    let archived: boolean;
+    let archived: string | null;
     try {
       archived = await archivePartner(organizationId, partnerId);
     } catch (error) {
       throw asHttp(error);
     }
 
-    if (!archived) throw new NotFoundException('No such partner');
-    return { archived: true };
+    if (archived === null) throw new NotFoundException('No such partner');
+    return { archived: true, archiveEntryId: archived };
   }
 
   @Post('partners/:partnerId/contacts')

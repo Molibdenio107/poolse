@@ -711,7 +711,7 @@ export async function updatePartner(
 export async function archivePartner(
   organizationId: string,
   partnerId: string,
-): Promise<boolean> {
+): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ bookings: number }>(
       `SELECT count(*)::int AS bookings
@@ -729,7 +729,7 @@ export async function archivePartner(
       `UPDATE partner SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`,
       [partnerId],
     );
-    if (rowCount === 0) return false;
+    if (rowCount === 0) return null;
 
     // The children go with it, so a re-added partner does not inherit a list of
     // contacts nobody expected. Archived, never deleted.
@@ -745,14 +745,14 @@ export async function archivePartner(
     );
 
     // The contacts and groups are listed so the bin can bring back exactly these.
-    await recordAudit(tx, {
+    const entryId = await recordAudit(tx, {
       action: 'partner.archived',
       entityType: 'partner',
       entityId: partnerId,
       data: { cascade: await cascadeAt(tx, restorableKind('partner'), partnerId) },
     });
 
-    return true;
+    return entryId;
   });
 }
 

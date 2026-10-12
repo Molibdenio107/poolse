@@ -2,8 +2,7 @@
 
 POOLSE-78. A club brings back what it archived by mistake, without asking Poolse.
 
-**Built so far:** the API (slice 1) and the *Arquivados* page (slice 2). The toast's *Anular*
-(slice 3) is not built yet.
+All three slices are built: the API, the *Arquivados* page and the toast's *Anular*.
 
 ## What can come back
 
@@ -68,6 +67,19 @@ Owner or Admin is offered the link.
   figures (`lib/archive-refusal.ts`).
 - When the refusal is "its site is still archived", the row also offers *Restaurar primeiro
   «Sede»*.
+
+## Anular
+
+Every archive of the nine kinds raises a toast such as "Turma arquivada", with an *Anular*
+button. The toast stays 8 s, as long as a refusal does, because there is a button to decide
+on.
+
+- *Anular* sends the archive's audit entry to the same `POST /archive/:id/restore` the bin
+  uses, so there is one way back.
+- The outcome is a second toast: "Restaurado: …", or the refusal as a sentence.
+- Every archive endpoint of the nine kinds returns `archiveEntryId` for this.
+- Archiving a turma used to `redirect()` on the server, which raised no toast at all. It now
+  returns `redirectTo`, and the client navigates.
 
 ## Refusals
 

@@ -149,14 +149,15 @@ export async function archiveTask(
   const facilityId = String(formData.get('facilityId') ?? '');
   const taskId = String(formData.get('taskId') ?? '');
 
+  let archived: { archiveEntryId: string };
   try {
-    await apiPost(`/maintenance/tasks/${taskId}/archive`, {});
+    archived = await apiPost<{ archiveEntryId: string }>(`/maintenance/tasks/${taskId}/archive`, {});
   } catch (error) {
     return failure(error, 'maintenance.saveFailed');
   }
 
   refresh(facilityId, taskId);
-  return { ok: true };
+  return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.maintenance_task' };
 }
 
 /**

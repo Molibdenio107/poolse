@@ -246,14 +246,15 @@ export class SpacesController {
   }
 
   @Post(':id/archive')
-  async archive(@Param('id') id: string): Promise<{ ok: true }> {
+  async archive(@Param('id') id: string): Promise<{ ok: true; archiveEntryId: string }> {
     requireCanArchive();
 
     const { organizationId } = currentTenant();
-    if (!(await archiveSpace(organizationId, id))) {
+    const archiveEntryId = await archiveSpace(organizationId, id);
+    if (archiveEntryId === null) {
       throw new NotFoundException({ message: 'spaceNotFound' });
     }
-    return { ok: true };
+    return { ok: true, archiveEntryId };
   }
 
   /**

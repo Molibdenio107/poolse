@@ -692,7 +692,7 @@ export async function updateClassGroup(
 export async function archiveClassGroup(
   organizationId: string,
   groupId: string,
-): Promise<{ archived: boolean; ended: number }> {
+): Promise<{ archived: boolean; ended: number; entryId: string | null }> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string; name: string }>(
       `UPDATE class_group SET archived_at = now()
@@ -701,7 +701,7 @@ export async function archiveClassGroup(
       [groupId],
     );
     const group = rows[0];
-    if (!group) return { archived: false, ended: 0 };
+    if (!group) return { archived: false, ended: 0, entryId: null };
 
     const schedules = await tx.query<{ id: string }>(
       `UPDATE class_schedule SET archived_at = now()
@@ -746,14 +746,14 @@ export async function archiveClassGroup(
       })),
     ];
 
-    await recordAudit(tx, {
+    const entryId = await recordAudit(tx, {
       action: 'class_group.archived',
       entityType: 'class_group',
       entityId: groupId,
       data: { name: group.name, endedEnrollments: ended.rowCount ?? 0, cascade },
     });
 
-    return { archived: true, ended: ended.rowCount ?? 0 };
+    return { archived: true, ended: ended.rowCount ?? 0, entryId };
   });
 }
 

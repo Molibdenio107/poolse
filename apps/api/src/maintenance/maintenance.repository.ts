@@ -486,7 +486,7 @@ export async function updateTask(
 export async function archiveTask(
   organizationId: string,
   taskId: string,
-): Promise<boolean> {
+): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE maintenance_task SET archived_at = now()
@@ -494,16 +494,16 @@ export async function archiveTask(
       RETURNING id`,
       [taskId],
     );
-    if (!rows[0]) return false;
+    if (!rows[0]) return null;
 
-    await recordAudit(tx, {
+    const entryId = await recordAudit(tx, {
       action: 'maintenance.taskArchived',
       entityType: 'maintenance_task',
       entityId: taskId,
       data: {},
     });
 
-    return true;
+    return entryId;
   });
 }
 

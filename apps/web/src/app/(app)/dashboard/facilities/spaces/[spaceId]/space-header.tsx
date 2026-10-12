@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
-import { useSavedAction } from '@/lib/saved';
+import { useArchiveUndo, useSavedAction } from '@/lib/saved';
 import { timeAgo } from '@/lib/relative-time';
 import type { Space } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
@@ -39,6 +39,7 @@ export function SpaceHeader({
   const toast = useToast();
   const locale = useLocale();
   const router = useRouter();
+  const offerUndo = useArchiveUndo();
 
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -208,8 +209,10 @@ export function SpaceHeader({
                 setDeleting(false);
                 setConfirmingDelete(false);
                 // Back to the site's rooms: the page this was on no longer exists.
-                if (result.ok) router.push(`/dashboard/facilities/${space.facilityId}?tab=spaces`);
-                else toast.show('danger', t((result.errorKey ?? 'common.notSaved') as never));
+                if (result.ok) {
+                  router.push(`/dashboard/facilities/${space.facilityId}?tab=spaces`);
+                  if (result.undo !== undefined) offerUndo(result.undo, t('archive.archived.space'));
+                } else toast.show('danger', t((result.errorKey ?? 'common.notSaved') as never));
               });
             }}
             className={BUTTON}

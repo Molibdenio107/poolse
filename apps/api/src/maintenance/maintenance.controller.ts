@@ -168,14 +168,15 @@ export class MaintenanceController {
   }
 
   @Post('tasks/:taskId/archive')
-  async remove(@Param('taskId') taskId: string): Promise<{ archived: true }> {
+  async remove(@Param('taskId') taskId: string): Promise<{ archived: true; archiveEntryId: string }> {
     requireCanArchive();
     const { organizationId } = currentTenant();
 
-    if (!(await archiveTask(organizationId, taskId))) {
+    const archiveEntryId = await archiveTask(organizationId, taskId);
+    if (archiveEntryId === null) {
       throw new NotFoundException('No such task');
     }
-    return { archived: true };
+    return { archived: true, archiveEntryId };
   }
 
   /**

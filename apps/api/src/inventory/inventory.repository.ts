@@ -327,22 +327,22 @@ export async function updateInventoryItem(
 export async function archiveInventoryItem(
   organizationId: string,
   itemId: string,
-): Promise<boolean> {
+): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
     const { rowCount } = await tx.query(
       `UPDATE inventory_item SET archived_at = now()
         WHERE id = $1 AND archived_at IS NULL`,
       [itemId],
     );
-    if (rowCount === 0) return false;
+    if (rowCount === 0) return null;
 
-    await recordAudit(tx, {
+    const entryId = await recordAudit(tx, {
       action: 'inventory.item.archived',
       entityType: 'inventory_item',
       entityId: itemId,
     });
 
-    return true;
+    return entryId;
   });
 }
 

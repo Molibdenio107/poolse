@@ -231,14 +231,15 @@ export async function archiveFeeAction(
   const studentId = String(formData.get('studentId') ?? '');
   const feeId = String(formData.get('feeId') ?? '');
 
+  let archived: { archiveEntryId: string };
   try {
-    await apiPost(`/students/${studentId}/fees/${feeId}/archive`, {});
+    archived = await apiPost<{ archiveEntryId: string }>(`/students/${studentId}/fees/${feeId}/archive`, {});
   } catch (error) {
     return failure(error, 'fees.saveFailed');
   }
 
   refresh(studentId);
-  return { ok: true };
+  return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.student_fee' };
 }
 
 /**

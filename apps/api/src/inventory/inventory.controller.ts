@@ -305,14 +305,15 @@ export class InventoryController {
   }
 
   @Post(':itemId/archive')
-  async remove(@Param('itemId') itemId: string): Promise<{ archived: true }> {
+  async remove(@Param('itemId') itemId: string): Promise<{ archived: true; archiveEntryId: string }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    if (!(await archiveInventoryItem(organizationId, itemId))) {
+    const archiveEntryId = await archiveInventoryItem(organizationId, itemId);
+    if (archiveEntryId === null) {
       throw new NotFoundException('No such item');
     }
-    return { archived: true };
+    return { archived: true, archiveEntryId };
   }
 }
 

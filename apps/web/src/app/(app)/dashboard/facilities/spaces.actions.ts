@@ -147,9 +147,9 @@ export async function archiveSpace(
   facilityId: string,
 ): Promise<FormState> {
   try {
-    await apiPost(`/spaces/${spaceId}/archive`, {});
+    const archived = await apiPost<{ archiveEntryId: string }>(`/spaces/${spaceId}/archive`, {});
     refreshFacility(facilityId);
-    return { ok: true };
+    return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.space' };
   } catch (error) {
     return failure(error, 'spaces.deleteFailed');
   }

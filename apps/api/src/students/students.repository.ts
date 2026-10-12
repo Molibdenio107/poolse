@@ -1196,7 +1196,7 @@ async function updateStudentIn(
 export async function archiveStudent(
   organizationId: string,
   studentId: string,
-): Promise<boolean> {
+): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string; first_name: string; last_name: string }>(
       `UPDATE student SET archived_at = now()
@@ -1205,16 +1205,16 @@ export async function archiveStudent(
       [studentId],
     );
     const student = rows[0];
-    if (!student) return false;
+    if (!student) return null;
 
-    await recordAudit(tx, {
+    const entryId = await recordAudit(tx, {
       action: 'student.archived',
       entityType: 'student',
       entityId: studentId,
       data: { name: `${student.first_name} ${student.last_name}` },
     });
 
-    return true;
+    return entryId;
   });
 }
 

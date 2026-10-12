@@ -48,6 +48,17 @@ export interface FormState {
    * restore says what came back (POOLSE-78). Rendered with `values`.
    */
   toastKey?: string;
+  /**
+   * An archive's audit entry — POOLSE-78. Present, the success toast carries
+   * *Anular*, which restores exactly that action through the bin's endpoint.
+   */
+  undo?: string;
+  /**
+   * Where to go after a success that removed the page it was on — an archived
+   * turma's page. Navigated by `useSavedAction` rather than `redirect()`, so the
+   * toast (and its *Anular*) is still raised.
+   */
+  redirectTo?: string;
 }
 
 export interface InviteState extends FormState {

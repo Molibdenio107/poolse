@@ -26,18 +26,22 @@ export interface AuditEntry {
  * "who" is never something a caller should get to decide. There is no parameter
  * to pass the wrong value to.
  *
- * Deliberately returns void and is deliberately awaited. An audit write that
- * fails should fail the mutation: a change nobody can account for is worse than
- * a change that did not happen.
+ * Deliberately awaited. An audit write that fails should fail the mutation: a
+ * change nobody can account for is worse than a change that did not happen.
+ *
+ * Returns the entry's id, which an archive hands back to the screen so the
+ * toast's *Anular* can name the action it undoes — POOLSE-78. Every other
+ * caller ignores it.
  */
-export async function recordAudit(tx: Tx, entry: AuditEntry): Promise<void> {
+export async function recordAudit(tx: Tx, entry: AuditEntry): Promise<string> {
   const { organizationId, membershipId, appUserId } = currentTenant();
 
-  await tx.query(
+  const { rows } = await tx.query<{ id: string }>(
     `INSERT INTO audit_log (
        organization_id, actor_membership_id, actor_app_user_id,
        action, entity_type, entity_id, data
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+     RETURNING id`,
     [
       organizationId,
       membershipId,
@@ -59,6 +63,7 @@ export async function recordAudit(tx: Tx, entry: AuditEntry): Promise<void> {
       JSON.stringify(entry.data ?? {}),
     ],
   );
+  return rows[0]!.id;
 }
 
 /**

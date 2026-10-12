@@ -101,14 +101,17 @@ export async function archiveClassAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   const groupId = String(formData.get('groupId') ?? '');
 
+  let archived: { archiveEntryId: string };
   try {
-    await apiPost(`/class-groups/${groupId}/archive`, {}, { organizationId });
+    archived = await apiPost<{ archiveEntryId: string }>(`/class-groups/${groupId}/archive`, {}, { organizationId });
   } catch (error) {
     return failure(error, 'classes.archiveFailed');
   }
 
   revalidatePath('/dashboard/classes');
-  redirect('/dashboard/classes');
+  // Navigated by the client rather than `redirect()`, so the toast and its
+  // Anular are still raised — POOLSE-78.
+  return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.class_group', redirectTo: '/dashboard/classes' };
 }
 
 export async function addSlotAction(

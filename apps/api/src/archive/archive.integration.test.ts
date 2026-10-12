@@ -7,6 +7,8 @@ import { archiveClassGroup } from '../classes/classes.repository.js';
 import { archiveFacility, archivePool } from '../facilities/facilities.repository.js';
 import { archivePartner } from '../facilities/partners.repository.js';
 import { archiveStudent } from '../students/students.repository.js';
+import { StudentsController } from '../students/students.controller.js';
+import { FacilitiesController } from '../facilities/facilities.controller.js';
 import { FeePeriodsController, FeePlansController } from '../billing/fees.controller.js';
 import {
   actingAs,
@@ -528,5 +530,24 @@ test('the list filters by kind, person and period', async () => {
       await expectStatus(() => bin.list('invoice'), 400);
       await expectStatus(() => bin.list(undefined, undefined, '13-09-2026'), 400);
     });
+  });
+});
+
+test("the toast's Anular: an archive endpoint returns the entry the bin restores", async () => {
+  await withScratchTenant(async (tenant) => {
+    const studentId = await addStudent(tenant, 'Alice');
+    const pool = await addPool(tenant, 'Piscina 1');
+
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const student = await new StudentsController().archive(studentId);
+      const tank = await new FacilitiesController().archivePoolById(pool);
+
+      // The same endpoint as the bin's Restaurar — no second way back.
+      assert.equal((await bin.restore(student.archiveEntryId)).entityId, studentId);
+      assert.equal((await bin.restore(tank.archiveEntryId)).entityId, pool);
+    });
+
+    assert.equal(await archivedAt(tenant, 'student', studentId), false);
+    assert.equal(await archivedAt(tenant, 'pool', pool), false);
   });
 });

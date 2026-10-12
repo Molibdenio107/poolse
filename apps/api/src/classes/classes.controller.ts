@@ -233,13 +233,17 @@ export class ClassesController {
   }
 
   @Post(':id/archive')
-  async archive(@Param('id') id: string): Promise<{ archived: true; ended: number }> {
+  async archive(
+    @Param('id') id: string,
+  ): Promise<{ archived: true; ended: number; archiveEntryId: string }> {
     requireCanArchive();
     const { organizationId } = currentTenant();
 
     const result = await archiveClassGroup(organizationId, id);
-    if (!result.archived) throw new NotFoundException('No such class group');
-    return { archived: true, ended: result.ended };
+    if (!result.archived || result.entryId === null) {
+      throw new NotFoundException('No such class group');
+    }
+    return { archived: true, ended: result.ended, archiveEntryId: result.entryId };
   }
 
   @Post(':id/schedules')

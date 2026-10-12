@@ -857,7 +857,7 @@ export async function updatePool(
 export async function archiveFacility(
   organizationId: string,
   facilityId: string,
-): Promise<boolean> {
+): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string; name: string }>(
       `UPDATE facility SET archived_at = now()
@@ -867,7 +867,7 @@ export async function archiveFacility(
     );
 
     const facility = rows[0];
-    if (!facility) return false;
+    if (!facility) return null;
 
     // The pools go with it. Leaving them live would leave a pool with no site,
     // which every later screen would have to special-case.
@@ -878,7 +878,7 @@ export async function archiveFacility(
     );
 
     // The tanks are listed so the bin can bring back exactly these — POOLSE-78.
-    await recordAudit(tx, {
+    const entryId = await recordAudit(tx, {
       action: 'facility.archived',
       entityType: 'facility',
       entityId: facilityId,
@@ -888,11 +888,11 @@ export async function archiveFacility(
       },
     });
 
-    return true;
+    return entryId;
   });
 }
 
-export async function archivePool(organizationId: string, poolId: string): Promise<boolean> {
+export async function archivePool(organizationId: string, poolId: string): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string; name: string }>(
       `UPDATE pool SET archived_at = now()
@@ -902,16 +902,16 @@ export async function archivePool(organizationId: string, poolId: string): Promi
     );
 
     const pool = rows[0];
-    if (!pool) return false;
+    if (!pool) return null;
 
-    await recordAudit(tx, {
+    const entryId = await recordAudit(tx, {
       action: 'pool.archived',
       entityType: 'pool',
       entityId: poolId,
       data: { name: pool.name },
     });
 
-    return true;
+    return entryId;
   });
 }
 

@@ -2,6 +2,9 @@
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
+> **Built 12-10-2026** on `feat/archive-bin`: the API, *Arquivados* and the toast's *Anular*. Every
+> acceptance criterion is met. Not yet seen in a browser.
+
 **Type:** Feature · **Area:** Global / Data integrity · **Priority:** High — the first of three, and the one that makes the other two rare · **Depends on** — (`archived_at` and `audit_log` are already everywhere) · **Brainstormed** 11-10-2026
 
 ### PO — why this exists

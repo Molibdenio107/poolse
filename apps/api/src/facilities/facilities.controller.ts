@@ -667,25 +667,27 @@ export class FacilitiesController {
   }
 
   @Post(':facilityId/archive')
-  async archive(@Param('facilityId') facilityId: string): Promise<{ archived: true }> {
+  async archive(@Param('facilityId') facilityId: string): Promise<{ archived: true; archiveEntryId: string }> {
     requireCanArchive();
     const { organizationId } = currentTenant();
 
-    if (!(await archiveFacility(organizationId, facilityId))) {
+    const archiveEntryId = await archiveFacility(organizationId, facilityId);
+    if (archiveEntryId === null) {
       throw new NotFoundException('No such facility');
     }
-    return { archived: true };
+    return { archived: true, archiveEntryId };
   }
 
   @Post('pools/:poolId/archive')
-  async archivePoolById(@Param('poolId') poolId: string): Promise<{ archived: true }> {
+  async archivePoolById(@Param('poolId') poolId: string): Promise<{ archived: true; archiveEntryId: string }> {
     requireCanArchive();
     const { organizationId } = currentTenant();
 
-    if (!(await archivePool(organizationId, poolId))) {
+    const archiveEntryId = await archivePool(organizationId, poolId);
+    if (archiveEntryId === null) {
       throw new NotFoundException('No such pool');
     }
-    return { archived: true };
+    return { archived: true, archiveEntryId };
   }
 }
 

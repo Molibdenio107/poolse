@@ -139,12 +139,13 @@ export async function archiveItemAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   const itemId = String(formData.get('itemId') ?? '');
 
+  let archived: { archiveEntryId: string };
   try {
-    await apiPost(`/inventory/${itemId}/archive`, {}, { organizationId });
+    archived = await apiPost<{ archiveEntryId: string }>(`/inventory/${itemId}/archive`, {}, { organizationId });
   } catch (error) {
     return failure(error, 'inventory.failed');
   }
 
   revalidatePath('/dashboard/facilities/inventory');
-  return { ok: true };
+  return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.inventory_item' };
 }

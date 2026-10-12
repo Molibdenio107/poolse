@@ -98,3 +98,6 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-69](./POOLSE-69-online-pre-registration.md) | Online pre-registration and trial lessons | Students / Public | Medium | POOLSE-17 | 2 |
 | [POOLSE-70](./POOLSE-70-incident-log-and-duty-roster.md) | Bather incident log and lifeguard on duty | Safety / Compliance | High | POOLSE-27 (7b.2), slice 1.3 | 1 |
 | [POOLSE-71](./POOLSE-71-public-water-quality-page.md) | A public water-quality page per tank | Maintenance / Public | High | slice 4.2 | 2 |
+| [POOLSE-78](./POOLSE-78-undo-and-the-archive-bin.md) | Undo, and a bin the owner can restore from | Global / Data integrity | High | — | 0 |
+| [POOLSE-79](./POOLSE-79-support-access.md) | Support access | Platform / Security | High | POOLSE-78, POOLSE-64 | — |
+| [POOLSE-80](./POOLSE-80-reverting-an-edit.md) | Reverting an edit | Global / Data integrity | Medium | POOLSE-78 | — |

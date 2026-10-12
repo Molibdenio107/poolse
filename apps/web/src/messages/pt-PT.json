@@ -4452,6 +4452,17 @@
       "licence": "O plano permite {allowed, plural, one {# instalação} other {# instalações}} e já {current, plural, one {há # ativa} other {há # ativas}}. Arquive outra ou peça um plano maior para restaurar esta.",
       "poolFull": "O tanque leva {max} pessoas e as turmas nesse horário já somam {taken}. Liberte lugares para restaurar esta turma.",
       "classFull": "A turma tem {capacity} lugares e {taken} já estão ocupados, por isso as inscrições não podem voltar todas."
+    },
+    "archived": {
+      "student": "Aluno arquivado",
+      "class_group": "Turma arquivada",
+      "facility": "Instalação arquivada",
+      "pool": "Tanque arquivado",
+      "space": "Espaço arquivado",
+      "inventory_item": "Artigo arquivado",
+      "maintenance_task": "Tarefa arquivada",
+      "partner": "Parceria arquivada",
+      "student_fee": "Linha de pagamento arquivada"
     }
   }
 }

@@ -4452,6 +4452,17 @@
       "licence": "The plan allows {allowed, plural, one {# site} other {# sites}} and {current, plural, one {# is} other {# are}} already active. Archive another or ask for a bigger plan to restore this one.",
       "poolFull": "The pool holds {max} people and the classes in that slot already total {taken}. Free some places to restore this class.",
       "classFull": "The class has {capacity} places and {taken} are taken, so not every enrolment can come back."
+    },
+    "archived": {
+      "student": "Student archived",
+      "class_group": "Class archived",
+      "facility": "Site archived",
+      "pool": "Pool archived",
+      "space": "Space archived",
+      "inventory_item": "Item archived",
+      "maintenance_task": "Task archived",
+      "partner": "Partnership archived",
+      "student_fee": "Fee line archived"
     }
   }
 }

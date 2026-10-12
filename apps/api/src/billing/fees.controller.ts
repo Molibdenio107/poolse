@@ -357,14 +357,15 @@ export class StudentFeesController {
   async archive(
     @Param('studentId') studentId: string,
     @Param('id') id: string,
-  ): Promise<{ archived: true }> {
+  ): Promise<{ archived: true; archiveEntryId: string }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    if (!(await archiveStudentFee(organizationId, studentId, id))) {
+    const archiveEntryId = await archiveStudentFee(organizationId, studentId, id);
+    if (archiveEntryId === null) {
       throw new BadRequestException('No such fee line');
     }
-    return { archived: true };
+    return { archived: true, archiveEntryId };
   }
 }
 

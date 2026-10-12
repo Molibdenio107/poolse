@@ -452,14 +452,15 @@ export class StudentsController {
   }
 
   @Post(':id/archive')
-  async archive(@Param('id') id: string): Promise<{ archived: true }> {
+  async archive(@Param('id') id: string): Promise<{ archived: true; archiveEntryId: string }> {
     requireCanArchive();
     const { organizationId } = currentTenant();
 
-    if (!(await archiveStudent(organizationId, id))) {
+    const archiveEntryId = await archiveStudent(organizationId, id);
+    if (archiveEntryId === null) {
       throw new NotFoundException('No such student');
     }
-    return { archived: true };
+    return { archived: true, archiveEntryId };
   }
 }
 

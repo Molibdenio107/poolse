@@ -1746,7 +1746,7 @@ export async function archiveStudentFee(
   organizationId: string,
   studentId: string,
   feeId: string,
-): Promise<boolean> {
+): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE student_fee SET archived_at = now()
@@ -1754,15 +1754,15 @@ export async function archiveStudentFee(
       RETURNING id`,
       [studentId, feeId],
     );
-    if (rows[0] === undefined) return false;
+    if (rows[0] === undefined) return null;
 
-    await recordAudit(tx, {
+    const entryId = await recordAudit(tx, {
       action: 'student_fee.archived',
       entityType: 'student_fee',
       entityId: feeId,
       data: { studentId },
     });
-    return true;
+    return entryId;
   });
 }
 

@@ -61,6 +61,11 @@ export async function restoreArchiveAction(
   _previous: RestoreState,
   _formData: FormData,
 ): Promise<RestoreState> {
+  return undoArchive(entryId);
+}
+
+/** The same restore, called by the toast's *Anular* rather than a form. */
+export async function undoArchive(entryId: string): Promise<RestoreState> {
   const t = await getTranslations();
 
   try {

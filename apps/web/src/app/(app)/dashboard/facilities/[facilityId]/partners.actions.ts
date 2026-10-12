@@ -141,14 +141,15 @@ export async function archivePartnerAction(
   const facilityId = text(formData, 'facilityId');
   const partnerId = text(formData, 'partnerId');
 
+  let archived: { archiveEntryId: string };
   try {
-    await apiDelete(`/partners/${partnerId}`);
+    archived = await apiDelete<{ archiveEntryId: string }>(`/partners/${partnerId}`);
   } catch (error) {
     return failure(error, 'partners.saveFailed');
   }
 
   refreshFacility(facilityId);
-  return { ok: true };
+  return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.partner' };
 }
 
 export async function addContactAction(

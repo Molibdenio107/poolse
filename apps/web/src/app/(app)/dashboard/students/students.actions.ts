@@ -172,14 +172,15 @@ export async function archiveStudentAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   const studentId = String(formData.get('studentId') ?? '');
 
+  let archived: { archiveEntryId: string };
   try {
-    await apiPost(`/students/${studentId}/archive`, {}, { organizationId });
+    archived = await apiPost<{ archiveEntryId: string }>(`/students/${studentId}/archive`, {}, { organizationId });
   } catch (error) {
     return failure(error, 'students.archiveFailed');
   }
 
   revalidatePath('/dashboard/students');
-  return { ok: true };
+  return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.student' };
 }
 
 // ---------------------------------------------------------------------------

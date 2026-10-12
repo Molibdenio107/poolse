@@ -36,10 +36,20 @@ import { cn } from '@/lib/utils';
 
 export type ToastTone = 'success' | 'warning' | 'danger';
 
+/**
+ * One button on the toast — POOLSE-78's *Anular*. A toast that carries one
+ * stays as long as a refusal does, because somebody has to read it and decide.
+ */
+export interface ToastAction {
+  label: string;
+  onAct: () => void;
+}
+
 export interface Toast {
   id: number;
   tone: ToastTone;
   message: string;
+  action?: ToastAction;
 }
 
 /** How long each tone stays, in milliseconds. */
@@ -59,7 +69,7 @@ const DWELL: Record<ToastTone, number> = {
 const MOST = 3;
 
 interface ToastApi {
-  show: (tone: ToastTone, message: string) => void;
+  show: (tone: ToastTone, message: string, action?: ToastAction) => void;
 }
 
 /*
@@ -88,9 +98,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
     setToasts((was) => was.filter((one) => one.id !== id));
   }, []);
 
-  const show = useCallback((tone: ToastTone, message: string) => {
+  const show = useCallback((tone: ToastTone, message: string, action?: ToastAction) => {
     const id = (nextId.current += 1);
-    setToasts((was) => [...was, { id, tone, message }].slice(-MOST));
+    const toast: Toast = action === undefined ? { id, tone, message } : { id, tone, message, action };
+    setToasts((was) => [...was, toast].slice(-MOST));
   }, []);
 
   const api = useMemo(() => ({ show }), [show]);
@@ -156,10 +167,12 @@ function ToastCard({
   const tone = TONE[toast.tone];
   const { Icon } = tone;
 
+  // A toast with a button stays as long as a refusal: 8 s.
+  const dwell = toast.action === undefined ? DWELL[toast.tone] : DWELL.danger;
   useEffect(() => {
-    const timer = window.setTimeout(() => onDismiss(toast.id), DWELL[toast.tone]);
+    const timer = window.setTimeout(() => onDismiss(toast.id), dwell);
     return () => window.clearTimeout(timer);
-  }, [toast.id, toast.tone, onDismiss]);
+  }, [toast.id, dwell, onDismiss]);
 
   return (
     <div
@@ -189,6 +202,18 @@ function ToastCard({
     >
       <Icon aria-hidden="true" className={cn('mt-0.5 size-4 shrink-0', tone.icon)} />
       <p className="min-w-0 flex-1 text-sm text-foreground">{toast.message}</p>
+      {toast.action !== undefined && (
+        <button
+          type="button"
+          onClick={() => {
+            toast.action?.onAct();
+            onDismiss(toast.id);
+          }}
+          className="-my-1.5 inline-flex h-control shrink-0 items-center justify-center rounded border border-primary/40 px-4 text-control font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+        >
+          {toast.action.label}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}

@@ -170,14 +170,15 @@ export async function archiveFacilityAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   const facilityId = String(formData.get('facilityId') ?? '');
 
+  let archived: { archiveEntryId: string };
   try {
-    await apiPost(`/facilities/${facilityId}/archive`, {}, { organizationId });
+    archived = await apiPost<{ archiveEntryId: string }>(`/facilities/${facilityId}/archive`, {}, { organizationId });
   } catch (error) {
     return failure(error, 'facilities.archiveFailed');
   }
 
   revalidatePath('/dashboard/facilities');
-  return { ok: true };
+  return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.facility' };
 }
 
 export async function archivePoolAction(
@@ -187,14 +188,15 @@ export async function archivePoolAction(
   const organizationId = String(formData.get('organizationId') ?? '');
   const poolId = String(formData.get('poolId') ?? '');
 
+  let archived: { archiveEntryId: string };
   try {
-    await apiPost(`/facilities/pools/${poolId}/archive`, {}, { organizationId });
+    archived = await apiPost<{ archiveEntryId: string }>(`/facilities/pools/${poolId}/archive`, {}, { organizationId });
   } catch (error) {
     return failure(error, 'facilities.archiveFailed');
   }
 
   revalidatePath('/dashboard/facilities');
-  return { ok: true };
+  return { ok: true, undo: archived.archiveEntryId, toastKey: 'archive.archived.pool' };
 }
 
 /**

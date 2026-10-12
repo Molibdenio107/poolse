@@ -431,7 +431,7 @@ export async function updateSpace(
 export async function archiveSpace(
   organizationId: string,
   spaceId: string,
-): Promise<boolean> {
+): Promise<string | null> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ facility_id: string; name: string }>(
       `UPDATE space SET archived_at = now()
@@ -439,15 +439,15 @@ export async function archiveSpace(
       RETURNING facility_id, name`,
       [spaceId],
     );
-    if (rows.length === 0) return false;
+    if (rows.length === 0) return null;
 
-    await recordAudit(tx, {
+    const entryId = await recordAudit(tx, {
       action: 'space.archived',
       entityType: 'space',
       entityId: spaceId,
       data: { facilityId: rows[0]!.facility_id, name: rows[0]!.name },
     });
-    return true;
+    return entryId;
   });
 }
 
