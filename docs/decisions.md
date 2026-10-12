@@ -1035,3 +1035,9 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   page** saved from the browser, not a generated file: one layout, no library. (4) **List importers
   take a PDF** (alunos, horário, parcerias, salários, inventário) through one AI table reader
   that turns it into spreadsheet rows. It is off by default and metered.
+- **2026-10-12** — **POOLSE-70 answered before the build.** The health detail of an incident is
+  read by Owner/Admin and its author, every read logged. **Several lifeguards may be on duty on
+  a tank at once, none is mandatory, and any staff member can be rostered** (Rui: a teacher can
+  also be the lifeguard). So there is no lifeguard role and no exclusion: validity is a
+  qualification, and `qualification_type.counts_as_lifeguard` (seeded on *Nadador-salvador (ISN)*)
+  says which type counts.

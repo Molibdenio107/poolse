@@ -39,8 +39,15 @@ pre-fills the lifeguard from the roster and lets the writer correct it.
 **Export one incident as PDF** for the insurer: the record, its addenda, the lifeguard's
 qualification state *at the time of the incident*.
 
-**Open:** who may read the health detail — Owner/Admin only, or also the staff member who wrote
-it? *Recommend:* Owner/Admin plus the author, every read logged.
+**Answered 12-10-2026: who may read the health detail.** Owner/Admin plus the staff member who
+wrote it, every read logged.
+
+**Answered 12-10-2026: how many lifeguards (Rui).** Several may be on duty on one tank at once,
+and none is mandatory: an hour with nobody is a warning, never a refusal. **Anyone on the staff
+can be rostered.** A teacher can be the lifeguard too, so there is no lifeguard role and no
+exclusion constraint. What makes someone a valid lifeguard is a qualification under 7b.2. Which
+type counts is a flag on `qualification_type` (`counts_as_lifeguard`), seeded true on the
+*Nadador-salvador (ISN)* type every club already has. This is a build call and cheap to reverse.
 
 ### Dev — schema, API, where it goes
 
@@ -71,6 +78,28 @@ by default privileges; the roster warning becoming a refusal.
 6. **Given** Club B's incident id, **when** Club A reads it, **then** nothing — cross-tenant.
 7. **Given** an incident, **when** exported, **then** the PDF carries the addenda and the
    qualification state on that date.
+
+### Build plan — set up 12-10-2026
+
+Three vertical slices, each schema → API → UI → tests, on `feat/incident-log` (from main b69c9b7):
+
+1. **The incident record.** `incident` holds the plain facts: when, tank or space, the people
+   involved (a membership or a typed visitor name), whether emergency services were called, the
+   lifeguard on duty, the author, and a free-text policy reference. It has an INSERT grant only,
+   plus `UPDATE (archived_at)`. `incident_addendum` is insert-only. `incident_sensitive` holds
+   what happened, the injury and the first aid given, encrypted by `sensitive/cipher.ts`. Every
+   decrypting read writes `incident_sensitive.read` to the audit log, and only Owner/Admin and
+   the author may read it. The screens are a list per site, a new-incident form with the
+   sensitive part visibly separate, and a detail page with its addenda in order. Covers QA 1, 2,
+   3 and 6.
+2. **The duty roster.** `lifeguard_duty` holds a tank, a staff member and a time range; several
+   per tank are allowed. Warnings, never gates: the person has no valid `counts_as_lifeguard`
+   qualification at that time, or an open hour has nobody. The roster page goes per tank and per
+   week. A new incident pre-fills the lifeguard from the roster, and the writer can change it.
+   Covers QA 4 and 5.
+3. **The insurer's PDF.** A print page in the PDF pattern from 12-10-2026 shows the record, its
+   addenda and the lifeguard's qualification state *on the incident's date*, derived from 7b.2's
+   dated records and snapshotted on the page. Covers QA 7.
 
 ### Acceptance criteria
 
