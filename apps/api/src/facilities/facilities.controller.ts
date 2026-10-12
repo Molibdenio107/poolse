@@ -54,6 +54,7 @@ import {
   findFacility,
   findPool,
   listFacilities,
+  facilityLimit,
   setFacilityHours,
   setWaterThreshold,
   updateFacility,
@@ -113,6 +114,8 @@ interface FacilitiesResponse {
   /** So the UI can hide forms the API would refuse. */
   canManage: boolean;
   timezones: string[];
+  /** The licence's site ceiling; null is not measured. */
+  maxFacilities: number | null;
 }
 
 /**
@@ -134,11 +137,16 @@ export class FacilitiesController {
   async list(): Promise<FacilitiesResponse> {
     const { organizationId } = currentTenant();
 
+    const [facilities, maxFacilities] = await Promise.all([
+      listFacilities(organizationId),
+      facilityLimit(organizationId),
+    ]);
     return {
       organizationId,
-      facilities: await listFacilities(organizationId),
+      facilities,
       canManage: hasRole('owner', 'admin'),
       timezones: TIMEZONES,
+      maxFacilities,
     };
   }
 

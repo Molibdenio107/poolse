@@ -256,3 +256,11 @@ no owner.
 
 There is no photo control. File storage is deferred, and the three existing photo controls
 are the ones that get one when it lands.
+
+## The Instalações list — 12 October 2026
+
+Each site card's main action is **Configurar instalação**, a primary button, with a line saying
+what is set up there: hours, prices, tanks, partners, spaces, maintenance and energy. Once the
+club has as many sites as its licence allows (`organization.max_facilities`, now sent with the
+list), *Adicionar instalação* is replaced by a sentence saying the plan is full and how to
+extend it. The licence trigger is still what refuses a site over the limit.

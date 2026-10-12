@@ -1220,6 +1220,8 @@ export interface Facilities {
   facilities: Facility[];
   canManage: boolean;
   timezones: string[];
+  /** The licence's site ceiling (`organization.max_facilities`); null limits nothing. */
+  maxFacilities: number | null;
 }
 
 export interface StudentLevel {

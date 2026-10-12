@@ -106,6 +106,22 @@ function asDuplicate<T>(error: unknown, name: string): T {
  * one shows the other. Two queries and a join in JavaScript would be the same
  * data and one more thing to keep in step.
  */
+/**
+ * How many sites the club's licence allows — `organization.max_facilities`, the
+ * one author of that limit (set on /admin, enforced by trigger). Null is "not
+ * measured" and limits nothing. Read so the Instalações page can say the plan is
+ * full instead of offering a button the database would refuse.
+ */
+export async function facilityLimit(organizationId: string): Promise<number | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ max_facilities: number | null }>(
+      `SELECT max_facilities FROM organization WHERE id = $1`,
+      [organizationId],
+    );
+    return rows[0]?.max_facilities ?? null;
+  });
+}
+
 export async function listFacilities(organizationId: string): Promise<Facility[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{

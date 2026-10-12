@@ -1054,7 +1054,10 @@
       "alerts": "Alerts",
       "record": "Record",
       "ranges": "Ranges"
-    }
+    },
+    "configure": "Set up this site",
+    "configureHint": "Hours, prices, pools, partners, spaces, maintenance and energy — all set up on the site’s page.",
+    "planFull": "Your plan includes {max, plural, one {1 site} other {# sites}}, already in use. To add another, get in touch to extend the plan."
   },
   "classes": {
     "colour": "Class colour",

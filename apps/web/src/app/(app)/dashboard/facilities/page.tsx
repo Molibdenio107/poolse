@@ -2,7 +2,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ApiError, apiFetch, type Facilities } from '../../../../lib/api';
 import Link from 'next/link';
-import { ActionButton } from '@/components/action-button';
+import { Settings } from 'lucide-react';
 import { EntityIcon } from '@/components/entity-icon';
 import { ArchiveButton } from './facility-forms';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -65,14 +65,25 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
             <p className="text-sm text-foreground-muted">{t('facilities.readOnly')}</p>
           )}
 
-          {data.canManage && (
-            <Link
-              href="/dashboard/facilities/new"
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary text-primary-foreground"
-            >
-              {t('facilities.addSite')}
-            </Link>
-          )}
+          {/*
+            The plan's ceiling, said rather than discovered — 12 October 2026.
+            With the licence full, "Adicionar instalação" led to a form the
+            database then refused; now the place where it stood says why it is
+            gone and what to do. The trigger is still the control.
+          */}
+          {data.canManage &&
+            (data.maxFacilities !== null && data.facilities.length >= data.maxFacilities ? (
+              <p className="text-sm text-foreground-muted">
+                {t('facilities.planFull', { max: data.maxFacilities })}
+              </p>
+            ) : (
+              <Link
+                href="/dashboard/facilities/new"
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:bg-surface-muted"
+              >
+                {t('facilities.addSite')}
+              </Link>
+            ))}
 
           {data.facilities.length === 0 ? (
             <section className="rounded border border-border bg-surface p-5">
@@ -90,6 +101,10 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-col">
                     <h2 className="text-lg font-medium">{facility.name}</h2>
+                    {/* What is behind the button, so it reads as the place to go. */}
+                    <span className="text-sm text-foreground-muted">
+                      {t('facilities.configureHint')}
+                    </span>
                     {facility.address !== null && (
                       <span className="text-sm text-foreground-muted">{facility.address}</span>
                     )}
@@ -101,11 +116,19 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                       that turns out to be clickable. A heading that navigates is
                       a heading half the people reading it never try.
                     */}
-                    <ActionButton
+                    {/*
+                      The site's page is where it is configured — hours, prices,
+                      tanks, partners, spaces, maintenance, energy — so its door
+                      is the page's primary action (Rui, 12 October 2026), not a
+                      quiet bordered button beside the archive control.
+                    */}
+                    <Link
                       href={`/dashboard/facilities/${facility.id}`}
-                      icon="facility"
-                      label={t('facilities.seeDetails')}
-                    />
+                      className="inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <Settings aria-hidden className="size-4" />
+                      {t('facilities.configure')}
+                    </Link>
                     {data.canManage && (
                       <ArchiveButton
                         organizationId={data.organizationId}

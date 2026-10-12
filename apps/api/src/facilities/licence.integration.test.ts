@@ -164,3 +164,19 @@ test('an ordinary edit to a site that is already live is never refused', async (
     });
   });
 });
+
+test('the site list carries the licence ceiling, so the page can say the plan is full', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const [row] = await tenant.sql<{ max_facilities: number | null }>(
+        `SELECT max_facilities FROM organization WHERE id = $1`,
+        [tenant.organizationId],
+      );
+      const list = await new FacilitiesController().list();
+      // Read through the club's own login, so RLS on organization lets it see
+      // its own ceiling — and it is the row's figure, whatever that is.
+      assert.equal(list.maxFacilities, row?.max_facilities ?? null);
+      assert.equal(typeof list.maxFacilities, 'number');
+    });
+  });
+});
