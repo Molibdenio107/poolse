@@ -3489,3 +3489,29 @@ with the mensalidades.
 null). The closure branch is the students actively enrolled in a turma with a `class_session`
 whose `closure_id` is this closure. `apply_closure` stamps that when it cancels the session, so
 the recipients are exactly the lessons the closure took.
+
+### Bather incidents — POOLSE-70, 12 October 2026
+
+```
+incident                          -- SELECT, INSERT, UPDATE (archived_at) only
+  id, organization_id, facility_id
+  pool_id | space_id              -- at most one; trigger: both at the incident's site
+  occurred_at
+  student_id | membership_id | visitor_name   -- exactly one (num_nonnulls)
+  emergency_called, lifeguard_membership_id, policy_reference
+  recorded_by, created_at, archived_at
+
+incident_detail                   -- SELECT, INSERT only
+  incident_id (pk), organization_id
+  what_happened_encrypted not null, injury_encrypted, first_aid_encrypted
+  CHECK: each matches the cipher.ts shape ^v1\.<iv>\.<tag>\.<data>$
+
+incident_addendum                 -- SELECT, INSERT only
+  id, organization_id, incident_id, body_encrypted (same CHECK), written_by, created_at
+```
+
+The split is what keeps lists and the roster from decrypting anything: the facts are columns,
+and the words are ciphertext the application encrypts (`sensitive/cipher.ts`). Who may read the
+words (Owner/Admin and the author) is decided per row in `incidents.repository.ts`. Every
+decrypting read writes `incident_detail.read` to `audit_log` in the same transaction.
+`tenant-isolation.sql` test 27 asserts the person's composite key.

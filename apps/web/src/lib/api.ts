@@ -4082,3 +4082,49 @@ export interface QualificationsWidgetData {
   missing: number;
   top: ExpiringQualification[];
 }
+
+/**
+ * Bather incidents — POOLSE-70, slice 1. Mirrors `safety/incidents.repository.ts`.
+ *
+ * The facts are any staff member's; what happened, the injury, the first aid and
+ * the words of every addendum are `IncidentDetail`, read by a POST that the API
+ * logs, and only for the owner, the admins and the incident's author.
+ */
+export interface IncidentSummary {
+  id: string;
+  occurredAt: string;
+  /** The tank's or space's name; null when it happened elsewhere on the site. */
+  placeName: string | null;
+  personName: string;
+  personKind: 'student' | 'member' | 'visitor';
+  emergencyCalled: boolean;
+  lifeguardName: string | null;
+  recordedByName: string | null;
+  addendaCount: number;
+  archived: boolean;
+}
+
+export type IncidentList = Paginated<IncidentSummary>;
+
+export interface IncidentFacts extends IncidentSummary {
+  facilityId: string;
+  facilityName: string;
+  poolId: string | null;
+  spaceId: string | null;
+  lifeguardMembershipId: string | null;
+  policyReference: string | null;
+  recordedBy: string;
+  createdAt: string;
+  /** Who added a correction and when — the words are behind the detail rule. */
+  addenda: { id: string; writtenByName: string | null; createdAt: string }[];
+  /** The API's answer to the per-row rule, so the screen and the guard agree. */
+  canReadDetail: boolean;
+  canArchive: boolean;
+}
+
+export interface IncidentDetail {
+  whatHappened: string;
+  injury: string | null;
+  firstAid: string | null;
+  addenda: { id: string; body: string; writtenByName: string | null; createdAt: string }[];
+}

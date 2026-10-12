@@ -66,6 +66,11 @@ const TENANT_TABLES = [
   // POOLSE-67. A recipient points at its message, a student and a guardian's
   // membership; a message at its turma, level, site and sender. First, so
   // every one of those is still there when these go.
+  // POOLSE-70. Addenda and detail name the incident; it names a tank, a space,
+  // a student and people — so all three go before any of those.
+  'incident_addendum',
+  'incident_detail',
+  'incident',
   'message_recipient',
   'message',
   // POOLSE-27. An alert points at a record, a record at its type and its

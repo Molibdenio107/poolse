@@ -1509,4 +1509,36 @@ BEGIN
   RAISE NOTICE 'PASS test 26: a free-swim pass cannot cross the tenant boundary';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 27 — an incident cannot name another club's student, or be read by it
+-- ---------------------------------------------------------------------------
+--
+-- `incident.student_id` (POOLSE-70). The record an insurer is shown trusts its
+-- people to be the club's own.
+
+DO $$
+DECLARE
+  v_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  v_b uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  v_fac_a uuid; v_mem_a uuid; v_student_b uuid; ok boolean;
+BEGIN
+  RESET ROLE;
+  SELECT id INTO v_fac_a FROM facility WHERE organization_id = v_a LIMIT 1;
+  SELECT id INTO v_mem_a FROM membership WHERE organization_id = v_a LIMIT 1;
+  SELECT id INTO v_student_b FROM student WHERE organization_id = v_b LIMIT 1;
+  IF v_fac_a IS NULL OR v_mem_a IS NULL OR v_student_b IS NULL THEN
+    RAISE EXCEPTION 'FAIL test 27: fixture is missing a facility, membership or student';
+  END IF;
+
+  ok := false;
+  BEGIN
+    INSERT INTO incident (organization_id, facility_id, occurred_at, student_id, recorded_by)
+    VALUES (v_a, v_fac_a, now(), v_student_b, v_mem_a);
+  EXCEPTION WHEN foreign_key_violation THEN ok := true;
+  END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL test 27: org A recorded an incident about org B''s student'; END IF;
+
+  RAISE NOTICE 'PASS test 27: an incident cannot cross the tenant boundary';
+END $$;
+
 ROLLBACK;

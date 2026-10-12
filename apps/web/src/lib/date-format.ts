@@ -129,3 +129,28 @@ export function formatTime(value: DateLike | null | undefined): string {
   const { hour, minute } = partsOf(TIME_PARTS, date);
   return `${hour}:${minute}`;
 }
+
+/**
+ * Now, as a `datetime-local` value on a given site's wall clock — POOLSE-70.
+ *
+ * An incident form sends `YYYY-MM-DDTHH:mm` in the *site's* time and the API
+ * reads it in `facility.timezone`. Defaulting the box from the browser's clock
+ * would be right in Lisbon and an hour out on a laptop set to Madrid, so the
+ * default is computed here, from the site's zone, where every other formatter
+ * in the app already lives.
+ */
+export function wallClockNow(timeZone: string, now: Date = new Date()): string {
+  const parts = partsOf(
+    new Intl.DateTimeFormat(PARTS_LOCALE, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+      timeZone,
+    }),
+    now,
+  );
+  return `${parts['year']}-${parts['month']}-${parts['day']}T${parts['hour']}:${parts['minute']}`;
+}

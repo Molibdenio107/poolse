@@ -22,6 +22,7 @@ looks for it.
 | [staff.md](staff.md) | Qualifications with expiry: verde, âmbar, vermelho, em falta, and the opt-in block |
 | [messages.md](messages.md) | Writing to families: who a message reaches, the daily ceiling, and the record of who was told |
 | [billing.md](billing.md) | Price list, periodicities, what a student pays |
+| [incidents.md](incidents.md) | Bather incidents: the facts, the encrypted clinical detail, addenda, who may read what |
 | [reception.md](reception.md) | Free swim: what a site sells, who is in the water, selling an entry and checking somebody in |
 | [invoicing.md](invoicing.md) | The documents a fee line becomes: numbering, runs, credit notes, payments and chasing |
 | [energy.md](energy.md) | Meters, what they read, the dial rule, and consumption by month |

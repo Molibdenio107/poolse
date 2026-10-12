@@ -135,6 +135,17 @@ const SECTIONS: Item[] = [
        * or not this link is shown.
        */
       { href: '/dashboard/facilities/inventory', key: 'inventory.title' },
+      /*
+       * Ocorrências — POOLSE-70. The staff on the deck when something happens;
+       * students and guardians are refused by the API, so they are not offered
+       * the link. A club's book, not a personal pool's.
+       */
+      {
+        href: '/dashboard/facilities/incidents',
+        key: 'incidents.title',
+        roles: ['owner', 'admin', 'instructor', 'maintenance'],
+        kinds: ['business'],
+      },
       {
         href: '/dashboard/facilities/staff',
         key: 'staff.title',
