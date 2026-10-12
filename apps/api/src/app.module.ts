@@ -70,6 +70,7 @@ import {
 import { InsurancePoliciesController } from './billing/insurance.controller.js';
 import { FilesController } from './files/files.controller.js';
 import { AttachmentsController } from './files/attachments.controller.js';
+import { ArchiveController } from './archive/archive.controller.js';
 import { PassProductsController, ReceptionController } from './reception/passes.controller.js';
 import { FacilityIncidentsController, IncidentsController } from './safety/incidents.controller.js';
 import {
@@ -190,6 +191,7 @@ const IDENTITY_ONLY_ROUTES = [
     InsurancePoliciesController,
     FilesController,
     AttachmentsController,
+    ArchiveController,
     // POOLSE-68 — free swim: what a site sells, and reception.
     PassProductsController,
     ReceptionController,

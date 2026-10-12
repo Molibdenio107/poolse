@@ -1,5 +1,6 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { cascadeAt, restorableKind } from '../archive/restorable.js';
 import { TOTAL_COUNT, windowed, type Paginated, type PageQuery } from '../common/pagination.js';
 import {
   previewPartners,
@@ -743,10 +744,12 @@ export async function archivePartner(
       [partnerId],
     );
 
+    // The contacts and groups are listed so the bin can bring back exactly these.
     await recordAudit(tx, {
       action: 'partner.archived',
       entityType: 'partner',
       entityId: partnerId,
+      data: { cascade: await cascadeAt(tx, restorableKind('partner'), partnerId) },
     });
 
     return true;

@@ -1,5 +1,6 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { ArchiveController } from '../archive/archive.controller.js';
 import {
   ClassesController,
   TimetableController,
@@ -678,5 +679,14 @@ test('file uploads and attachments refuse a guardian and a student (403)', async
       new AttachmentsController().qualificationDocument(NO_SUCH_ID, { fileId: NO_SUCH_ID }),
     );
     await refused('PUT settings/logo', 403, () => new AttachmentsController().setLogo({ fileId: null }));
+  });
+});
+
+test('the archive bin refuses a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const archive = new ArchiveController();
+    await refused('GET archive', 403, () => archive.list());
+    await refused('GET archive/actors', 403, () => archive.actors());
+    await refused('POST archive/:id/restore', 403, () => archive.restore(NO_SUCH_ID));
   });
 });

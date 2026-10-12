@@ -18,6 +18,7 @@ looks for it.
 | [salaries.md](salaries.md) | What the club pays its staff: effective-dated rates, the two monthly-cost figures, and who may see them |
 | [classes.md](classes.md) | Turmas, parcerias, the lane grid |
 | [parcerias.md](parcerias.md) | Partnerships, their groups, the import and the export |
+| [archive.md](archive.md) | Arquivados: what an Owner or Admin can bring back, and what a restore brings with it |
 | [files.md](files.md) | Photographs, documents and the logo: what can be uploaded, who sees it |
 | [calendar.md](calendar.md) | The dated week, the hover card, cancelling a class |
 | [staff.md](staff.md) | Qualifications with expiry: verde, âmbar, vermelho, em falta, and the opt-in block |

@@ -1211,6 +1211,14 @@ PRIVILEGES` from decision 2 grants all four verbs on every new table, so `audit_
 two back. An audit log the application can rewrite is not an audit log, and "nobody has
 written that UPDATE yet" is not a guarantee.
 
+**An archive that takes children lists them in `data.cascade`** (POOLSE-78):
+`[{ "entityType": "pool", "id": "…" }, …]`. An ended enrolment also carries the `status` it
+had, and a fee line closed with it carries its `endsOn`. The bin restores exactly that list.
+No table gained an `archive_batch_id`. An entry written before the list existed is resolved
+by its timestamp instead: `now()` is the transaction's start, so the children's `archived_at`
+equals the entry's `created_at`. `cascadeAt` in `archive/restorable.ts` is that one
+definition.
+
 ### Billing
 
 ```

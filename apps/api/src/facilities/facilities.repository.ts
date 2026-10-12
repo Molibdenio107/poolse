@@ -1,5 +1,6 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { cascadeAt, restorableKind } from '../archive/restorable.js';
 
 export type PoolKind = 'indoor' | 'outdoor';
 
@@ -876,11 +877,15 @@ export async function archiveFacility(
       [facilityId],
     );
 
+    // The tanks are listed so the bin can bring back exactly these — POOLSE-78.
     await recordAudit(tx, {
       action: 'facility.archived',
       entityType: 'facility',
       entityId: facilityId,
-      data: { name: facility.name },
+      data: {
+        name: facility.name,
+        cascade: await cascadeAt(tx, restorableKind('facility'), facilityId),
+      },
     });
 
     return true;

@@ -1,5 +1,6 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import type { CascadeItem } from '../archive/restorable.js';
 import { displayName, nameOrder, shortName } from '../people/names.js';
 import {
   paginated,
@@ -702,23 +703,54 @@ export async function archiveClassGroup(
     const group = rows[0];
     if (!group) return { archived: false, ended: 0 };
 
-    await tx.query(
+    const schedules = await tx.query<{ id: string }>(
       `UPDATE class_schedule SET archived_at = now()
-        WHERE class_group_id = $1 AND archived_at IS NULL`,
+        WHERE class_group_id = $1 AND archived_at IS NULL
+      RETURNING id`,
       [groupId],
     );
 
-    const ended = await tx.query(
-      `UPDATE enrollment SET status = 'ended', ended_on = current_date
-        WHERE class_group_id = $1 AND status <> 'ended'`,
+    // What each enrolment *was* is captured on the way out, because "ended" is
+    // all the row says afterwards and the bin has to put it back — POOLSE-78.
+    const ended = await tx.query<{ id: string; was: 'active' | 'waiting' }>(
+      `WITH was AS (
+         SELECT id, status FROM enrollment
+          WHERE class_group_id = $1 AND status <> 'ended'
+          FOR UPDATE
+       )
+       UPDATE enrollment e SET status = 'ended', ended_on = current_date
+         FROM was
+        WHERE e.id = was.id
+      RETURNING e.id, was.status::text AS was`,
       [groupId],
     );
+
+    // The fee lines `enrollment_ends_its_fees` just closed: touched in this
+    // transaction, and ending today.
+    const fees = await tx.query<{ id: string; ends_on: string }>(
+      `SELECT id, to_char(ends_on, 'YYYY-MM-DD') AS ends_on
+         FROM student_fee
+        WHERE enrollment_id = ANY($1::uuid[]) AND archived_at IS NULL
+          AND updated_at = now() AND ends_on = current_date
+        ORDER BY id`,
+      [ended.rows.map((row) => row.id)],
+    );
+
+    const cascade: CascadeItem[] = [
+      ...schedules.rows.map((row) => ({ entityType: 'class_schedule' as const, id: row.id })),
+      ...ended.rows.map((row) => ({ entityType: 'enrollment' as const, id: row.id, status: row.was })),
+      ...fees.rows.map((row) => ({
+        entityType: 'student_fee.ends_on' as const,
+        id: row.id,
+        endsOn: row.ends_on,
+      })),
+    ];
 
     await recordAudit(tx, {
       action: 'class_group.archived',
       entityType: 'class_group',
       entityId: groupId,
-      data: { name: group.name, endedEnrollments: ended.rowCount ?? 0 },
+      data: { name: group.name, endedEnrollments: ended.rowCount ?? 0, cascade },
     });
 
     return { archived: true, ended: ended.rowCount ?? 0 };
