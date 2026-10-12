@@ -924,6 +924,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         hidden={hidden}
         onToggle={toggle}
         onShowAll={() => setHidden(new Set())}
+        choosing={choosing}
       />
 
       {/*
@@ -1114,6 +1115,7 @@ function Toolbar({
   hidden,
   onToggle,
   onShowAll,
+  choosing,
 }: {
   pools: { id: string; name: string }[];
   poolId: string;
@@ -1124,11 +1126,16 @@ function Toolbar({
   hidden: ReadonlySet<string>;
   onToggle: (key: string) => void;
   onShowAll: () => void;
+  /** No tank chosen yet: there is no week to filter, so no filters. */
+  choosing: boolean;
 }): React.ReactElement {
   const t = useTranslations();
 
   // A tank with no classes this week offers no checkboxes at all.
-  const anything = [...counts.values()].some((count) => count > 0);
+  // Nothing to filter until a tank is chosen (Rui, 12 October 2026): the
+  // checkboxes count one tank's classes, and with none chosen they described a
+  // week that is not on the screen.
+  const anything = !choosing && [...counts.values()].some((count) => count > 0);
 
   /** One row: a checkbox, its colour, its name and how much it accounts for. */
   const row = (key: string, label: string, tint: number | null, icon?: React.ReactNode) => {
