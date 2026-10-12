@@ -224,6 +224,44 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       configured — `docs/features/files.md`. Never make the bucket public: files are served
       through the app after a permission check.
 
+## Paid services: what launch costs, and who pays
+
+Rui pays every service himself, as a private person, so **23% IVA is added on top of these
+prices**. Euro figures use about €0.89 to the dollar (October 2026). The amounts move with the
+exchange rate and the providers' price lists, so check each pricing page on the day. Estimated
+12 October 2026.
+
+Rui enters the card and presses pay on each service. Claude can open the pages, fill in
+everything except payment, set the variables and run *Prove it* afterwards.
+
+| Service | Plan at launch | €/month with IVA | Start paying | Fills |
+|---|---|---|---|---|
+| Vercel | Pro (Hobby is non-commercial) | ~22 | Go-live | — (Vercel project) |
+| Railway | Hobby, then Pro once clubs pay | ~22–33 | Go-live | `DATABASE_*` |
+| Clerk | Pro: MFA for `/admin` needs it | ~27 (~22 yearly) | Production instance | `CLERK_*`, `NEXT_PUBLIC_CLERK_*` |
+| Resend | Free (3,000/month, 100/day), then Pro ~22 | 0 | Go-live | `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM` |
+| Sentry | Free (Developer) | 0 | Go-live | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` |
+| Cloudflare R2 | Free up to 10 GB | 0 | Go-live | `S3_*` |
+| Anthropic API | Pay as you go, per-feature flags | ~1–5 | When a parser flag is turned on | `ANTHROPIC_API_KEY` |
+| Stripe | No monthly fee; ~1.5% + €0.25 per EU card payment | 0 fixed | First paying club | `STRIPE_*` |
+| Apple Developer | €99/year | ~8 | Mobile app (phase 3) | — |
+| Google Play | ~€27 once | 0 | Mobile app (phase 3) | — |
+| Expo (EAS) | Free, then Starter ~21 if builds run short | 0 | Mobile app (phase 3) | — |
+| Domain | — | ~1–6 | Before go-live | DNS, `EMAIL_FROM` domain |
+| **Pilot total** | | **~€80–100** | | |
+
+**Open-Meteo is not paid for.** The commercial licence (~€32/month with IVA) was turned down on
+12 October 2026. `WEATHER_HISTORY_ENABLED` stays **off**. The forecast panel on a site's page also
+reads Open-Meteo, so before a paying club it must be switched off or moved to a free commercial
+source (IPMA).
+
+**What grows with paying clubs.** At 10–20 clubs with students on the mobile app, expect about
+**€135–380/month** with IVA: Railway Pro with a larger database, Resend Pro, more Anthropic usage,
+and possibly Expo Starter and Sentry Team. **Clerk is the largest step.** Free and Pro allow 20
+members per organization, and the add-on that removes that limit is about €109/month with IVA.
+It is only needed if students and guardians become members of the club's organization in Clerk,
+which is the open question in `docs/decisions.md` (management-seat sizing).
+
 ## Known limitations, with dates
 
 Things that are true today, were decided rather than overlooked, and have a plan.
