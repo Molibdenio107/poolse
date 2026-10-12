@@ -57,6 +57,8 @@ const READ_ERRORS: Record<ReadFailure, string> = {
   fileType: 'students.import.errorFileType',
   fileEmpty: 'students.import.errorFileEmpty',
   fileUnreadable: 'students.import.errorFileUnreadable',
+  // The PDF reader is off — said, so a PDF is not mistaken for a broken file.
+  pdfDisabled: 'import.pdfDisabled',
 };
 
 /**

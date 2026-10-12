@@ -165,7 +165,7 @@ export function InventoryImportWizard({
                 name="file"
                 type="file"
                 required
-                accept=".xlsx,.csv,text/csv"
+                accept=".xlsx,.csv,.pdf,text/csv,application/pdf"
                 className={cn(
                   CONTROL_LINE,
                   'py-1.5 file:mr-3 file:rounded file:border-0 file:bg-surface-muted file:px-3 file:py-1 file:text-sm file:text-foreground',

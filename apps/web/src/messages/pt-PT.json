@@ -4146,5 +4146,8 @@
       "nav": "Secções das qualificações",
       "types": "Tipos"
     }
+  },
+  "import": {
+    "pdfDisabled": "A leitura de PDF não está ativa nesta instalação. Abra o documento no programa de origem e exporte para Excel ou CSV — ou peça para ativar a leitura de PDF."
   }
 }

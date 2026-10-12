@@ -682,6 +682,15 @@ optional and off unless its own flag and `ANTHROPIC_API_KEY` are both set, sends
 document and nothing else about the tenant, and has everything it extracts confirmed by a
 person on the preview. `lib/analysis-report.ts` is the contract; `-agent.ts` is the model.
 
+**A list importer takes a PDF by `readSheet(file, { pdf: true })`, and the PDF becomes a
+spreadsheet.** 12 October 2026. `lib/pdf-table-agent.ts` transcribes the document's tables into
+the same header and rows `readSheet` returns for a workbook, and the importer then maps and
+previews them as it does any file. It transcribes and never interprets. It is behind
+`PDF_TABLE_AI_ENABLED` plus `ANTHROPIC_API_KEY`, and with it off the importer says so
+(`pdfDisabled`). It is opt-in per importer: alunos, horário, parcerias, salários and inventário
+take PDFs, while the water log keeps its own lab-report parser. It uses structured output, not a
+forced tool call, because the current Opus refuses `tool_choice` `tool`.
+
 **An importer is a `MatchSpec`, never a new pipeline.** There are six — the register, the
 store room, the wall timetable, the water log, parcerias and the pay list. A new one is a field list, a
 synonym list and `matchFields` in `lib/<thing>-sheet.ts`, plus a preview/commit pair on one

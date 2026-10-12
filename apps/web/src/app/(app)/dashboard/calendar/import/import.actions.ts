@@ -50,6 +50,8 @@ const READ_ERRORS: Record<ReadFailure, string> = {
   fileType: 'students.import.errorFileType',
   fileEmpty: 'students.import.errorFileEmpty',
   fileUnreadable: 'students.import.errorFileUnreadable',
+  // The PDF reader is off — said, so a PDF is not mistaken for a broken file.
+  pdfDisabled: 'import.pdfDisabled',
 };
 
 /** Step one: the file becomes a grid, already read into candidate bookings. */
@@ -61,7 +63,7 @@ export async function readTimetableAction(
   const upload = formData.get('file');
   const file = upload instanceof File ? upload : null;
 
-  const outcome = await readSheet(file);
+  const outcome = await readSheet(file, { pdf: true });
   if ('error' in outcome) {
     return { ok: false, errorKey: READ_ERRORS[outcome.error], attempt };
   }

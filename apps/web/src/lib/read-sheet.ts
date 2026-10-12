@@ -1,6 +1,7 @@
 import 'server-only';
 import ExcelJS from 'exceljs';
 import { parseCsv, toSheet, type NamedSheet } from './sheet';
+import { readPdfTables } from './pdf-table-agent';
 
 /**
  * Reading an uploaded spreadsheet, on the server only — slice 1.10, generalised
@@ -60,7 +61,9 @@ export type ReadFailure =
   | 'fileTooLarge'
   | 'fileType'
   | 'fileEmpty'
-  | 'fileUnreadable';
+  | 'fileUnreadable'
+  /** A PDF, at an importer that takes them, with the PDF reader switched off. */
+  | 'pdfDisabled';
 
 /**
  * One cell, as text.
@@ -144,11 +147,35 @@ async function readWorkbook(bytes: ArrayBuffer): Promise<NamedSheet[]> {
  */
 export async function readSheet(
   file: File | null,
+  /**
+   * `pdf`: this importer takes a PDF too, read by `pdf-table-agent.ts` into the
+   * same sheets a workbook gives (12 October 2026). Opt-in per importer — the
+   * water log keeps its own lab-report reader for PDFs.
+   */
+  options: { pdf?: boolean } = {},
 ): Promise<{ sheets: NamedSheet[] } | { error: ReadFailure }> {
   if (file === null || file.size === 0) return { error: 'fileMissing' };
   if (file.size > MAX_FILE_BYTES) return { error: 'fileTooLarge' };
 
   const name = file.name.toLowerCase();
+  if (options.pdf === true && name.endsWith('.pdf')) {
+    const read = await readPdfTables(await file.arrayBuffer());
+    if ('error' in read) {
+      return {
+        error:
+          read.error === 'disabled'
+            ? 'pdfDisabled'
+            : read.error === 'nothingFound'
+              ? 'fileEmpty'
+              : 'fileUnreadable',
+      };
+    }
+    const sheets = read.tables
+      .map((table) => ({ name: table.name, ...toSheet(table.grid) }))
+      .filter((sheet) => sheet.headers.length > 0 && sheet.rows.length > 0);
+    return sheets.length === 0 ? { error: 'fileEmpty' } : { sheets };
+  }
+
   const extension = ACCEPTED_EXTENSIONS.find((candidate) => name.endsWith(candidate));
   if (extension === undefined) return { error: 'fileType' };
 

@@ -4146,5 +4146,8 @@
       "nav": "Qualification sections",
       "types": "Types"
     }
+  },
+  "import": {
+    "pdfDisabled": "Reading PDFs is not switched on here. Export the document to Excel or CSV from the program it came from — or ask for PDF reading to be switched on."
   }
 }

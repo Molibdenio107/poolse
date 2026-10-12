@@ -38,7 +38,7 @@ import { SelectField } from '@/components/ui/field';
  * one nobody meant to give it is a screen people stop dragging onto.
  */
 
-const ACCEPTED = ['.xlsx', '.csv'];
+const ACCEPTED = ['.xlsx', '.csv', '.pdf'];
 
 const BUTTON =
    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';

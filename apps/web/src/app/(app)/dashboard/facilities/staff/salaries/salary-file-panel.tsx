@@ -31,7 +31,7 @@ import { SalaryImportWizard } from './import-wizard';
  * not be hidden inside a closed box.
  */
 
-const ACCEPTED = ['.xlsx', '.csv'];
+const ACCEPTED = ['.xlsx', '.csv', '.pdf'];
 
 const BUTTON_QUIET =
    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
