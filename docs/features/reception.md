@@ -54,7 +54,12 @@ check-in (for example, the tank is full) sells nothing.
 **A credit note on the document voids the pass.** Nothing about a pass is ever edited.
 
 These documents appear in Faturação like any other, with *Natação livre* and the product's name
-on the line. Reporting pass revenue separately from fees is slice 2.
+on the line.
+
+**Pass revenue is its own figure.** Receção and the dashboard's *Natação livre* card show what free
+swim sold this month: sale lines on documents issued this month and not since credited, plus the
+month's entries. It is never added to the mensalidades card, which goes on counting only
+mensalidades.
 
 ## Who can do it
 
@@ -75,7 +80,10 @@ to them.
 - The last place in a tank and the last entry on a pack each go to exactly one of two racing
   check-ins.
 
-## Not yet (slice 2)
+## On the calendar and the dashboard
 
-Free swim as a booking on the lane grid, pass revenue reported separately from fees, and a
-dashboard card. Out of scope altogether: turnstiles, QR cards, online sales and a till.
+A lane can be held for free swim on the calendar (`calendar.md`), which keeps turmas off it. The
+dashboard's *Natação livre* card (owner and admin) shows each tank now and the month's sales. It
+moves up the band when a tank is 90 % full, and it is empty for a club that sells no free swim.
+
+Out of scope altogether: turnstiles, QR cards, online sales and a till.

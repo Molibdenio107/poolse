@@ -737,8 +737,12 @@ null and the screen says *Consumidor final*. Anything that reads `invoice.payer_
 `student_*`/`kind` must handle null. The payment is recorded with the sale. `pool_occupancy` counts
 check-ins inside the site's `free_swim_stay_minutes`, plus classes running now by enrolment (never
 by ceiling), with `class_group` LEFT joined. The check-in trigger reads it under the pool lock, and
-it is the number reception, the refusal and the coming dashboard card share. Owner and admin only.
-`docs/features/reception.md`.
+it is the number reception, the refusal and the `mgmt.freeswim` card share. Owner and admin only.
+**A free-swim block (`free_swim` subject) is water held for the public, not a class**: it has a
+stored, editable title, no register or instructor, counts zero in occupancy and is left out of
+the dashboard's classes and *sem professor*. A new reader of sessions or bookings must leave it
+out the same way. Pass revenue is its own figure (sales not since credited) and is never summed
+with mensalidades. `docs/features/reception.md`.
 
 **Capacity rules compose, they do not override.** An enrolment must fit its turma
 (`class_group.capacity`), the turmas sharing a slot must fit the tank (`pool.max_capacity`),

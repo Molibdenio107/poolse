@@ -12,6 +12,8 @@ import {
   overdueCleanings,
   ownWaterQuality,
   faultNeedsSomebody,
+  freeSwim,
+  tankIsNearlyFull,
   myWeek,
   nextClass,
   nextTrainingPlan,
@@ -285,6 +287,23 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     size: 2,
     priority: 45,
     resolver: occupancyToday,
+  },
+  /*
+   * Natação livre — POOLSE-68. Who is in the water now and what free swim sold
+   * this month, in its own card so it is never summed with mensalidades
+   * (AC 6). Lifted when a tank is nearly full.
+   */
+  {
+    id: 'mgmt.freeswim',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'facility',
+    size: 2,
+    priority: 40,
+    escalate: tankIsNearlyFull,
+    escalatedPriority: 85,
+    resolver: freeSwim,
   },
   {
     id: 'mgmt.waterquality.alerts',

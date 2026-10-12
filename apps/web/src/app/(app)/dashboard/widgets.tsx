@@ -8,6 +8,7 @@ import type {
   EnergyCostsWidgetData,
   MaintenanceWidgetData,
   MoneyWidgetData,
+  FreeSwimWidgetData,
   OccupancyTodayWidgetData,
   PeopleWidgetData,
   StaffCostWidgetData,
@@ -56,6 +57,8 @@ export async function renderWidget(
       return <MoneyCard widget={widget} />;
     case 'mgmt.occupancy.today':
       return <OccupancyTodayCard widget={widget} />;
+    case 'mgmt.freeswim':
+      return <FreeSwimCard widget={widget} />;
     case 'mgmt.waterquality.alerts':
       return <WaterCard widget={widget} scope={scope} />;
     case 'mgmt.maintenance.open':
@@ -414,6 +417,66 @@ async function MoneyCard({ widget }: { widget: DashboardWidget }): Promise<React
             {t('dashboard.widget.money.students', {
               students: data.students,
               overdue: data.studentsOverdue,
+            })}
+          </p>
+        </>
+      )}
+    </WidgetCard>
+  );
+}
+
+/**
+ * Natação livre — POOLSE-68. Each tank now, in words, and what free swim sold
+ * this month as its own figure: it is never added to the mensalidades card,
+ * which is AC 6. The month is labelled as sales, because it is documents that
+ * happened, not money expected.
+ */
+async function FreeSwimCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const locale = await getLocale();
+  const data = widget.data as FreeSwimWidgetData | null;
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={t('dashboard.widget.freeSwim.title')}
+      href="/dashboard/rececao"
+      linkLabel={t('dashboard.widget.freeSwim.open')}
+      emptyMessage={t('dashboard.widget.freeSwim.empty')}
+    >
+      {data !== null && (
+        <>
+          <ul className="flex flex-col gap-1">
+            {data.pools.map((pool) => {
+              const occupied = pool.swimmers + pool.inClasses;
+              const nearlyFull = pool.capacity !== null && occupied >= pool.capacity * 0.9;
+              return (
+                <li key={pool.poolId} className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-foreground-muted">{pool.poolName}</span>
+                  <span
+                    className={cn(
+                      'flex items-center gap-1.5 tabular-nums',
+                      nearlyFull ? 'font-semibold text-warning' : 'font-medium',
+                    )}
+                  >
+                    {/* An icon and the words, never the colour alone. */}
+                    {nearlyFull && <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />}
+                    {pool.capacity === null
+                      ? t('dashboard.widget.freeSwim.inWater', { occupied })
+                      : t('dashboard.widget.freeSwim.inWaterOf', {
+                          occupied,
+                          capacity: pool.capacity,
+                        })}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-sm text-foreground-muted">
+            {t('dashboard.widget.freeSwim.month', {
+              amount: formatCents(locale, data.month.salesCents),
+              sales: data.month.sales,
+              entries: data.month.entries,
             })}
           </p>
         </>

@@ -41,6 +41,7 @@ export function ReceptionBoard({
   reception: Reception;
 }): React.ReactElement {
   const t = useTranslations();
+  const locale = useLocale();
   const [poolId, setPoolId] = useState(reception.pools[0]?.poolId ?? '');
 
   if (reception.pools.length === 0) {
@@ -63,6 +64,14 @@ export function ReceptionBoard({
         </ul>
         <p className="text-sm text-foreground-muted">
           {t('reception.stayNote', { minutes: reception.stayMinutes })}
+        </p>
+        {/* Free swim's own figure — never added to the mensalidades (AC 6). */}
+        <p className="text-sm">
+          {t('reception.month', {
+            amount: formatCents(locale, reception.month.salesCents),
+            sales: reception.month.sales,
+            entries: reception.month.entries,
+          })}
         </p>
       </section>
 

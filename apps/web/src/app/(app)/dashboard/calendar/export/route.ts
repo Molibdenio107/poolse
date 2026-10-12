@@ -160,6 +160,7 @@ export async function GET(request: Request): Promise<Response> {
       parceria: t('grid.export.subject.parceria'),
       evento: t('grid.export.subject.evento'),
       manutencao: t('grid.export.subject.manutencao'),
+      free_swim: t('grid.export.subject.free_swim'),
     },
     status: {
       assigned: t('grid.export.status.assigned'),

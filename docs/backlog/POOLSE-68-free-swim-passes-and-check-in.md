@@ -80,10 +80,10 @@ summing pass revenue with mensalidades into one unlabelled figure.
 
 ### Status — 12-10-2026
 
-**Slice 1 built** (`feat/free-swim`): AC 1–5 and 7, QA 1–8 as integration tests in
-`apps/api/src/reception/passes.integration.test.ts`. **Slice 2 still open:** AC 6 (pass revenue
-reported separately from fees), the `free_swim` subject type on the lane grid (answered above), and
-the dashboard card reading `pool_occupancy`.
+**Built** (`feat/free-swim`), AC 1–7. Slice 1 is the products, sale, check-in and occupancy, with QA
+1–8 in `apps/api/src/reception/passes.integration.test.ts`. Slice 2 is pass revenue reported apart
+from fees (AC 6), the `free_swim` booking on the lane grid and the dashboard card, tested in
+`free-swim.integration.test.ts`. Nobody has looked at either screen in a browser yet.
 
 ### Acceptance criteria
 

@@ -2350,6 +2350,14 @@
         "open": "See qualifications",
         "empty": "Everything is current.",
         "summary": "{red} expired · {amber} expiring · {missing} missing"
+      },
+      "freeSwim": {
+        "title": "Free swim",
+        "open": "Open reception",
+        "empty": "This site does not sell free swim. Entries are set up under Prices.",
+        "inWater": "{occupied} in the water",
+        "inWaterOf": "{occupied} of {capacity} in the water",
+        "month": "This month: {amount} from {sales, plural, =0 {no sales} one {1 sale} other {# sales}} · {entries, plural, =0 {no entries} one {1 entry} other {# entries}}. Separate from monthly fees."
       }
     },
     "scope": {
@@ -2615,7 +2623,8 @@
     "subject": {
       "parceria": "Partnerships",
       "evento": "Events",
-      "manutencao": "Maintenance"
+      "manutencao": "Maintenance",
+      "free_swim": "Free swim"
     },
     "lanesOccupied": "Lanes occupied",
     "restoreFailedConflict": "This class was cancelled by a closure. To bring it back, remove the closure.",
@@ -2625,7 +2634,11 @@
       "closures": "Closures could not be loaded. Closed days are not marked or locked this week."
     },
     "impactUnknown": "Could not check which classes this closure affects. You can still create it; check the calendar for registers already taken.",
-    "blockActions": "Actions for {name}"
+    "blockActions": "Actions for {name}",
+    "freeSwimHint": "Or hold this lane, every week at this hour, for free swim. No class can take it at that time.",
+    "freeSwimTitle": "Name on the calendar",
+    "freeSwimHere": "Hold for free swim",
+    "freeSwimTitleRequired": "Enter a name of up to 60 characters."
   },
   "inventory": {
     "title": "Inventory",
@@ -2991,7 +3004,8 @@
         "turma": "Class",
         "parceria": "Partnership",
         "evento": "Event",
-        "manutencao": "Maintenance"
+        "manutencao": "Maintenance",
+        "free_swim": "Free swim"
       },
       "status": {
         "assigned": "Assigned",
@@ -3481,7 +3495,8 @@
     "checkInFailed": "The entry was not recorded.",
     "checkOutFailed": "The check-out was not recorded.",
     "cancelFailed": "The entry was not cancelled.",
-    "walkInFailed": "This person could not be added."
+    "walkInFailed": "This person could not be added.",
+    "month": "Free swim this month: {amount} from {sales, plural, =0 {no sales} one {1 sale} other {# sales}} · {entries, plural, =0 {no entries} one {1 entry} other {# entries}}. Counted separately from monthly fees."
   },
   "passes": {
     "title": "Free swim",

@@ -194,6 +194,9 @@ export async function readOccupancyToday(
              ON f.id = coalesce(p.facility_id, sch.facility_id)
             AND f.organization_id = cs.organization_id
           WHERE cs.status <> 'cancelled'
+            -- Free swim is water held for the public, not a class: it has no
+            -- instructor to be missing and its swimmers are check-ins (POOLSE-68).
+            AND sch.subject_type IS DISTINCT FROM 'free_swim'
             AND cs.starts_at >= now() - interval '1 day'
             AND cs.starts_at <  now() + interval '2 days'
             AND (cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'))::date

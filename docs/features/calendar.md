@@ -387,3 +387,15 @@ and a drop slides into its slot rather than jumping.
 elsewhere, and the click that ends a drag or resize never does. A class can be resized from all four
 edges — the top changes the start and keeps the end. If two turmas clash, only those two are left
 without lessons and the calendar names the clash after the save.
+
+## Free swim on the grid — POOLSE-68, 12 October 2026
+
+Clicking an empty cell offers, below the turmas to place, **Reservar para natação livre**. That
+holds the clicked lane every week at that hour for the public. The name on the calendar is
+prefilled with *Natação livre* and can be changed (for example *Hidroginástica livre*), because
+it is the club's own words. A free-swim block moves, resizes and widens across lanes like any
+other block, and generates its lessons with the season. While it holds a lane, no turma can take
+that lane: a block dropped on it is refused with the lane and what holds it. It has no register,
+no plan and no instructor, it is not counted as a class on the dashboard, and the people in it
+are counted by check-in at reception, never by the block. The **Mostrar** list shows it as
+*Natação livre*.

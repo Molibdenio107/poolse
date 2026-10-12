@@ -1073,7 +1073,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
 /* ------------------------------------------------------------------ pieces */
 
 /** The things on the grid that are not turmas, and so have no level. */
-const SUBJECT_KEYS = ['parceria', 'evento', 'manutencao'] as const;
+const SUBJECT_KEYS = ['parceria', 'evento', 'manutencao', 'free_swim'] as const;
 
 /**
  * What is on the grid, and what to leave off it.

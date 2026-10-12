@@ -17,6 +17,7 @@ import {
   moveBooking,
   NonContiguousLanesError,
   assignInstructor,
+  createFreeSwimBooking,
   type AssignedInstructor,
   runTimetableImport,
   setInstructorStatus,
@@ -111,6 +112,39 @@ export class BookingsController {
 
     if (copy === null) throw new NotFoundException('No such booking');
     return { ...copy, lessons: await syncSeasonLessons(organizationId) };
+  }
+
+  /**
+   * Lanes held for free swim — POOLSE-68 slice 2. The grid's empty-cell click
+   * offers it beside placing a turma. Owner/admin, like every grid write, and
+   * the same named refusals as a drag: a lane already taken, a closed hour.
+   */
+  @Post('free-swim')
+  async freeSwim(@Body() body: Record<string, unknown>): Promise<{ id: string; lessons: LessonSync }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const facilityId = typeof body['facilityId'] === 'string' ? body['facilityId'].trim() : '';
+    const seasonId = typeof body['seasonId'] === 'string' ? body['seasonId'].trim() : '';
+    if (facilityId === '' || seasonId === '') {
+      throw new BadRequestException('facilityId and seasonId are required');
+    }
+    const title = typeof body['title'] === 'string' ? body['title'].trim() : '';
+    if (title === '' || title.length > 60) {
+      throw new BadRequestException('title is required, at most 60 characters');
+    }
+    const target = readTarget(body);
+    // Free swim holds water somebody can point at; a block in no lane holds nothing.
+    if (target.laneIds.length === 0) throw new BadRequestException('laneIds must name a lane');
+
+    let created: { id: string } | null;
+    try {
+      created = await createFreeSwimBooking(organizationId, facilityId, seasonId, title, target);
+    } catch (error) {
+      throw asHttp(error);
+    }
+    if (created === null) throw new NotFoundException('No such site or season');
+    return { ...created, lessons: await syncSeasonLessons(organizationId) };
   }
 
   /**

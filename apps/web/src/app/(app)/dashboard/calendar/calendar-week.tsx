@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/toast';
-import { Ban, ClipboardCheck, NotebookPen } from 'lucide-react';
+import { Ban, ClipboardCheck, NotebookPen, Waves } from 'lucide-react';
+import { TextField } from '@/components/ui/field';
 import type { ClassGroup, FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 import { bookingKey, slotKey } from '@/lib/slot-key';
 import { startTimeOf } from '@/lib/calendar-scale';
@@ -20,6 +21,7 @@ import {
   moveBookingAction,
   moveOccurrenceAction,
   placeSlotAction,
+  createFreeSwimAction,
 } from '../classes/classes.actions';
 
 /**
@@ -35,6 +37,8 @@ import {
  */
 export function CalendarWeek({
   organizationId,
+  facilityId,
+  seasonId,
   weekStart,
   dayNames,
   todayWeekday,
@@ -51,6 +55,9 @@ export function CalendarWeek({
   openPlanFor,
 }: {
   organizationId: string;
+  /** The site and season on screen — what a free-swim block is created in. */
+  facilityId: string | null;
+  seasonId: string | null;
   weekStart: string;
   dayNames: Record<number, string>;
   todayWeekday?: number | undefined;
@@ -80,7 +87,12 @@ export function CalendarWeek({
     null,
   );
   const [cancelling, setCancelling] = useState<CancelTarget | null>(null);
-  const [placing, setPlacing] = useState<{ weekday: number; startMinutes: number } | null>(null);
+  const [placing, setPlacing] = useState<{
+    weekday: number;
+    startMinutes: number;
+    laneId: string;
+  } | null>(null);
+  const [freeSwimTitle, setFreeSwimTitle] = useState('');
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -295,10 +307,14 @@ export function CalendarWeek({
    * A brand-new turma is still one link away, and comes back to the grid to be
    * placed once it has a name.
    */
-  const onCreate = useCallback((weekday: number, _laneId: string, startMinutes: number) => {
-    setPlaceError(null);
-    setPlacing({ weekday, startMinutes });
-  }, []);
+  const onCreate = useCallback(
+    (weekday: number, laneId: string, startMinutes: number) => {
+      setPlaceError(null);
+      setFreeSwimTitle(t('calendar.subject.free_swim'));
+      setPlacing({ weekday, startMinutes, laneId });
+    },
+    [t],
+  );
 
   /*
    * How long the placed class runs.
@@ -335,6 +351,35 @@ export function CalendarWeek({
     setBusy(false);
     if (!result.ok) {
       setPlaceError(result.errorKey);
+      return;
+    }
+    setPlacing(null);
+    if (result.lessonClash) show('warning', t('grid.lessonsClash'));
+    router.refresh();
+  }
+
+  /**
+   * This lane, at this hour, every week, for the public — POOLSE-68 slice 2.
+   *
+   * Unlike a turma, the lane is known: it is the one that was clicked, so the
+   * block lands where the operator pointed. Wider is a drag of its edge.
+   */
+  async function placeFreeSwim(): Promise<void> {
+    if (placing === null || facilityId === null || seasonId === null) return;
+    setBusy(true);
+    const result = await createFreeSwimAction(organizationId, {
+      facilityId,
+      seasonId,
+      title: freeSwimTitle,
+      weekday: placing.weekday,
+      startTime: startTimeOf(placing.startMinutes).slice(0, 5),
+      durationMinutes: durationAt(placing.weekday, placing.startMinutes),
+      laneIds: [placing.laneId],
+    });
+    setBusy(false);
+    if (!result.ok) {
+      // The calendar's refusals are toasts, said once, with the lane and holder.
+      show('danger', result.detail === undefined ? t(result.errorKey) : `${t(result.errorKey)} — ${result.detail}`);
       return;
     }
     setPlacing(null);
@@ -572,6 +617,40 @@ export function CalendarWeek({
         >
           {t('calendar.createTurma')}
         </Link>
+
+        {/*
+          Or hold this lane for the public — POOLSE-68. The title is the club's
+          own words, prefilled in the reader's language.
+        */}
+        {facilityId !== null && seasonId !== null && (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void placeFreeSwim();
+            }}
+            className="mt-4 flex flex-col gap-3 border-t border-border pt-4"
+          >
+            <p className="text-sm text-foreground-muted">{t('calendar.freeSwimHint')}</p>
+            <TextField
+              name="freeSwimTitle"
+              label={t('calendar.freeSwimTitle')}
+              initial={freeSwimTitle}
+              onValueChange={setFreeSwimTitle}
+              maxLength={60}
+              className="max-w-none"
+            />
+            <div>
+              <button
+                type="submit"
+                disabled={busy || freeSwimTitle.trim() === ''}
+                className="inline-flex h-control items-center justify-center gap-2 rounded border border-primary/40 px-4 text-control font-medium text-primary hover:bg-primary/10 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <Waves className="size-4" aria-hidden="true" />
+                {t('calendar.freeSwimHere')}
+              </button>
+            </div>
+          </form>
+        )}
       </Dialog>
     </>
   );

@@ -424,6 +424,8 @@ export default async function CalendarPage({
               */
               <CalendarWeek
                 organizationId={classes.organizationId}
+                facilityId={classes.facilities[0]?.id ?? null}
+                seasonId={grid?.seasonId ?? null}
                 weekStart={monday}
                 dayNames={dayNames}
                 todayWeekday={todayWeekday}

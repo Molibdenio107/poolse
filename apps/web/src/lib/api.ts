@@ -2881,7 +2881,7 @@ export interface GridLane {
 
 export interface GridBooking {
   id: string;
-  subjectType: 'turma' | 'parceria' | 'evento' | 'manutencao';
+  subjectType: 'turma' | 'parceria' | 'evento' | 'manutencao' | 'free_swim';
   /** The turma behind a turma booking; null for everything else. */
   classGroupId: string | null;
   name: string;
@@ -3185,6 +3185,7 @@ export interface Reception {
   pools: PoolOccupancy[];
   inWater: InWater[];
   products: PassProduct[];
+  month: FreeSwimMonth;
 }
 
 /** A sold pass, with everything about it derived on the server. */
@@ -3749,6 +3750,22 @@ export interface TasksWidgetData {
 
 /** `setup.checklist` — a club with no sites, and the only card it gets. */
 /** `mgmt.money.period` — mensalidades in their current period. Cents. */
+/** POOLSE-68: free swim this month — never summed with mensalidades. */
+export interface FreeSwimMonth {
+  from: string;
+  salesCents: number;
+  sales: number;
+  entries: number;
+  provenance: 'actual';
+}
+
+/** The `mgmt.freeswim` card: the tanks now, the month, how many products are sold. */
+export interface FreeSwimWidgetData {
+  pools: PoolOccupancy[];
+  month: FreeSwimMonth;
+  products: number;
+}
+
 export interface MoneyWidgetData {
   paidCents: number;
   dueCents: number;

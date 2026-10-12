@@ -1015,3 +1015,10 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   `student_fee_id` attaches. A deferred constraint trigger keeps a pass from existing without its
   sale. **(4) One person in the water per pass**, so a pass cannot be shared at the turnstile.
   Reception is owner and admin until a reception role exists.
+- **2026-10-12** — **POOLSE-68 slice 2, built.** **A free-swim block's name is a stored title**,
+  prefilled in the reader's language and editable: it is the club's own words, the same as an
+  evento's, so the grid, the classes board, the export and the printed wall need no special case.
+  **Free swim is not a class.** It is out of the dashboard's classes and *sem professor*, and it
+  counts zero in occupancy, because its people are check-ins. A lifeguard on duty is POOLSE-70,
+  not an instructor. **Pass revenue (AC 6) is its own card and its own line on Receção**: sales
+  this month not since credited, `actual`, never added to the mensalidades card.

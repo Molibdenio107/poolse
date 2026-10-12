@@ -3470,3 +3470,13 @@ the pass (a row lock needs an UPDATE grant, which `pass` does not have). It refu
 `pool_occupancy|capacity|occupied|1`, `pass_used_up|entries`, `pass_expired|date`,
 `pass_not_yet|date`, `pass_void`, `pass_in_water` or `pass_wrong_site`.
 `tenant-isolation.sql` test 26 asserts the pass's and the check-in's composite keys.
+
+**Slice 2 (12 October 2026).** `booking_subject` gains `free_swim`, which has no turma and no
+partner group, like `evento` (`class_schedule_subject_check`). It is created on the calendar with
+its own `title` and `season_id`, and `generate_sessions` materialises it unchanged, lane rows
+included, so the lane exclusion keeps a turma off it. `pool_occupancy` counts a free-swim session
+as zero, because its swimmers are check-ins. `readOccupancyToday` leaves free swim out of the
+dashboard's classes and *sem professor*. Its `instructor_status` stays `to_define`, and no reader
+shows it. Pass revenue is `freeSwimMonth` in `passes.repository.ts`: sale lines on invoices issued
+since the first of the club's month and not since credited. It is `actual` and is never summed
+with the mensalidades.

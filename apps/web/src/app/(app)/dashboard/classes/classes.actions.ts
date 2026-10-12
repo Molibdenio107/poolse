@@ -480,6 +480,38 @@ export async function duplicateBookingAction(
 }
 
 /**
+ * Lanes held for free swim — POOLSE-68 slice 2. Placed from the calendar's
+ * empty-cell dialog on the lane that was clicked; refused with the same named
+ * reasons as a drag, because it is the same lane check.
+ */
+export async function createFreeSwimAction(
+  organizationId: string,
+  input: {
+    facilityId: string;
+    seasonId: string;
+    title: string;
+    weekday: number;
+    startTime: string;
+    durationMinutes: number;
+    laneIds: string[];
+  },
+): Promise<{ ok: true; lessonClash: boolean } | { ok: false; errorKey: string; detail?: string }> {
+  let added: { lessons?: { clashes?: unknown[] } | null };
+  try {
+    added = await apiPost('/bookings/free-swim', { ...input, slotId: null }, { organizationId });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 400) {
+      return { ok: false, errorKey: 'calendar.freeSwimTitleRequired' };
+    }
+    return await bookingFailure(error);
+  }
+
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/classes');
+  return { ok: true, lessonClash: (added.lessons?.clashes?.length ?? 0) > 0 };
+}
+
+/**
  * A refusal, turned into something the grid can say out loud.
  *
  * The operator is mid-gesture with a block under their hand; "conflict" sends

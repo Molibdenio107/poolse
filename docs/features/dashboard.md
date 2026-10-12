@@ -199,6 +199,7 @@ Six aggregates, **one SQL statement each whatever the number of sites**
 |---|---|---|---|---|
 | `mgmt.money.period` | 50 | site | mensalidades this period: paid, to pay, overdue | `current_period_start`, `fee_payable_cents`, `fee_due_on` — the per-student rule, summed |
 | `mgmt.occupancy.today` | 45 | site | classes today, swimmers expected, classes *sem professor*, the busiest tank against its `max_capacity` | `class_session` (never the pattern), the booking's `instructor_status` |
+| `mgmt.freeswim` | 40 → 85 with a tank ≥ 90 % full | site | each tank's people in the water out of its capacity; free swim sold this month and entries, **apart from mensalidades** (POOLSE-68) | `pool_occupancy`, and sale lines not since credited — `reception.md` |
 | `mgmt.waterquality.alerts` | 30 → 80 out of range | site | tanks out of range, or due for an analysis | `excursions` / `resolveBands`, and `facility.water_analysis_max_age_hours` |
 | `mgmt.maintenance.open` | 25 → 60 with a fault or overdue room | site | open avarias and reposições by severity, rooms overdue for cleaning | `OVERDUE` from `spaces.repository.ts` |
 | `mgmt.people` | 15 | club | students, staff by role, invitations lapsing within 24 h | `countPeople`'s headcount rules |

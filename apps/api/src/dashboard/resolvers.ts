@@ -37,6 +37,7 @@ import {
   type OverdueSpaces,
 } from './maintenance-band.repository.js';
 import type { ResolverContext } from './widget-registry.js';
+import { readFreeSwim, type FreeSwim } from '../reception/passes.repository.js';
 
 /**
  * The three resolvers slice 1 ships — POOLSE-66.
@@ -244,6 +245,26 @@ export async function moneyPeriod(ctx: ResolverContext): Promise<MoneyPeriod | n
 export async function occupancyToday(ctx: ResolverContext): Promise<OccupancyToday | null> {
   const today = await readOccupancyToday(ctx.organizationId, ctx.facilityIds);
   return today.classes === 0 ? null : today;
+}
+
+/**
+ * Free swim — POOLSE-68: the tanks now and this month's sales, which are
+ * never added to the mensalidades card. Empty for a club that sells no free
+ * swim at these sites — the card would otherwise say "0 na água" about a
+ * service that does not exist.
+ */
+export async function freeSwim(ctx: ResolverContext): Promise<FreeSwim | null> {
+  const swim = await readFreeSwim(ctx.organizationId, ctx.facilityIds);
+  return swim.products === 0 && swim.month.sales === 0 ? null : swim;
+}
+
+/** A tank at nine-tenths of its ceiling is the thing reception must see coming. */
+export function tankIsNearlyFull(data: unknown): boolean {
+  const swim = data as FreeSwim | null;
+  if (swim === null) return false;
+  return swim.pools.some(
+    (pool) => pool.capacity !== null && pool.swimmers + pool.inClasses >= pool.capacity * 0.9,
+  );
 }
 
 /** Open requests and overdue rooms. Empty is good news: nothing outstanding. */

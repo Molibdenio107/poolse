@@ -27,7 +27,7 @@ import { withOrg, type Tx } from '@poolse/db';
 
 export type DayGroup = 'weekday' | 'saturday' | 'sunday';
 
-export type SubjectType = 'turma' | 'parceria' | 'evento' | 'manutencao';
+export type SubjectType = 'turma' | 'parceria' | 'evento' | 'manutencao' | 'free_swim';
 
 /** Mirrors the `instructor_status` enum. `to_define` and `uncovered` are real states. */
 export type InstructorStatus = 'assigned' | 'to_define' | 'external' | 'uncovered';

@@ -101,6 +101,34 @@ export interface Reception {
   pools: PoolOccupancy[];
   inWater: InWater[];
   products: PassProduct[];
+  month: FreeSwimMonth;
+}
+
+/**
+ * Free swim this month — POOLSE-68 AC 6, **never summed with fees**.
+ *
+ * What was sold: pass sale lines on documents issued this month and not since
+ * credited. Every one is a document that happened and was paid at the counter,
+ * so the figure is `actual` and complete — no coverage to report, because
+ * there is no pass whose price is unknown. It is labelled as free swim wherever
+ * it is shown, and the mensalidades card goes on counting only mensalidades.
+ */
+export interface FreeSwimMonth {
+  /** The first day of the month counted, as the club's date. */
+  from: string;
+  salesCents: number;
+  sales: number;
+  /** Entries this month — check-ins, not passes. A pack sold in May swims in June. */
+  entries: number;
+  provenance: 'actual';
+}
+
+/** The dashboard's card: the tanks now, and the month. */
+export interface FreeSwim {
+  pools: PoolOccupancy[];
+  month: FreeSwimMonth;
+  /** Live products across the sites read. Zero means the club does not sell free swim. */
+  products: number;
 }
 
 /** Raised when a product's facility, or the facility itself, is not this club's. */
@@ -324,6 +352,109 @@ export async function setStayMinutes(
 // ---------------------------------------------------------------------------
 
 /**
+ * Free swim this month at these sites, one statement whatever their number.
+ *
+ * The month is the club's (`club_today()`); an entry's day is its own site's.
+ */
+async function freeSwimMonth(tx: Tx, facilityIds: readonly string[]): Promise<FreeSwimMonth> {
+  const { rows } = await tx.query<{
+    from: string;
+    sales_cents: string;
+    sales: number;
+    entries: number;
+  }>(
+    `WITH bounds AS (SELECT date_trunc('month', club_today())::date AS from_day)
+     SELECT to_char(b.from_day, 'YYYY-MM-DD') AS from,
+            (SELECT coalesce(sum(l.amount_cents), 0)
+               FROM invoice_line l
+               JOIN invoice i ON i.id = l.invoice_id AND i.organization_id = l.organization_id
+              WHERE l.pass_id IS NOT NULL
+                AND l.document_kind = 'invoice'
+                AND i.facility_id = ANY($1::uuid[])
+                AND i.issued_on >= b.from_day
+                AND NOT EXISTS (
+                  SELECT 1 FROM invoice c
+                   WHERE c.corrects_invoice_id = i.id
+                     AND c.organization_id = i.organization_id
+                     AND c.kind = 'credit_note')) AS sales_cents,
+            (SELECT count(*)::int
+               FROM invoice_line l
+               JOIN invoice i ON i.id = l.invoice_id AND i.organization_id = l.organization_id
+              WHERE l.pass_id IS NOT NULL
+                AND l.document_kind = 'invoice'
+                AND i.facility_id = ANY($1::uuid[])
+                AND i.issued_on >= b.from_day
+                AND NOT EXISTS (
+                  SELECT 1 FROM invoice c
+                   WHERE c.corrects_invoice_id = i.id
+                     AND c.organization_id = i.organization_id
+                     AND c.kind = 'credit_note')) AS sales,
+            (SELECT count(*)::int
+               FROM pass_check_in c
+               JOIN pool p ON p.id = c.pool_id AND p.organization_id = c.organization_id
+               JOIN facility f ON f.id = p.facility_id AND f.organization_id = p.organization_id
+              WHERE p.facility_id = ANY($1::uuid[])
+                AND c.archived_at IS NULL
+                AND (c.checked_in_at AT TIME ZONE f.timezone)::date >= b.from_day) AS entries
+       FROM bounds b`,
+    [facilityIds],
+  );
+  const row = rows[0]!;
+  return {
+    from: row.from,
+    // A sum arrives as bigint, which node-postgres hands over as a string.
+    salesCents: Number(row.sales_cents),
+    sales: row.sales,
+    entries: row.entries,
+    provenance: 'actual',
+  };
+}
+
+/** Each tank at these sites, now. One statement: `pool_occupancy` per row. */
+async function occupancyOf(tx: Tx, facilityIds: readonly string[]): Promise<PoolOccupancy[]> {
+  const { rows } = await tx.query<{
+    id: string;
+    name: string;
+    capacity: number | null;
+    swimmers: number;
+    in_classes: number;
+  }>(
+    `SELECT p.id, p.name, o.capacity, o.swimmers, o.in_classes
+       FROM pool p
+       CROSS JOIN LATERAL pool_occupancy(p.organization_id, p.id) o
+      WHERE p.facility_id = ANY($1::uuid[]) AND p.archived_at IS NULL
+      ORDER BY lower(p.name), p.id`,
+    [facilityIds],
+  );
+  return rows.map((row) => ({
+    poolId: row.id,
+    poolName: row.name,
+    capacity: row.capacity,
+    swimmers: row.swimmers,
+    inClasses: row.in_classes,
+  }));
+}
+
+/** The dashboard card's read — the reader's sites, already narrowed by the selector. */
+export async function readFreeSwim(
+  organizationId: string,
+  facilityIds: readonly string[],
+): Promise<FreeSwim> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM pass_product
+        WHERE facility_id = ANY($1::uuid[]) AND archived_at IS NULL`,
+      [facilityIds],
+    );
+    return {
+      pools: await occupancyOf(tx, facilityIds),
+      month: await freeSwimMonth(tx, facilityIds),
+      products: rows[0]!.n,
+    };
+  });
+}
+
+/**
  * The reception screen in one read: each tank's occupancy, who is in the water
  * on a pass, and what may be sold. Null when the facility is not this club's.
  *
@@ -343,20 +474,7 @@ export async function readReception(
     );
     if (facility[0] === undefined) return null;
 
-    const { rows: pools } = await tx.query<{
-      id: string;
-      name: string;
-      capacity: number | null;
-      swimmers: number;
-      in_classes: number;
-    }>(
-      `SELECT p.id, p.name, o.capacity, o.swimmers, o.in_classes
-         FROM pool p
-         CROSS JOIN LATERAL pool_occupancy(p.organization_id, p.id) o
-        WHERE p.facility_id = $1 AND p.archived_at IS NULL
-        ORDER BY lower(p.name), p.id`,
-      [facilityId],
-    );
+    const pools = await occupancyOf(tx, [facilityId]);
 
     const { rows: inWater } = await tx.query<{
       check_in_id: string;
@@ -393,13 +511,7 @@ export async function readReception(
 
     return {
       stayMinutes: facility[0].stay,
-      pools: pools.map((row) => ({
-        poolId: row.id,
-        poolName: row.name,
-        capacity: row.capacity,
-        swimmers: row.swimmers,
-        inClasses: row.in_classes,
-      })),
+      pools,
       inWater: inWater.map((row) => ({
         checkInId: row.check_in_id,
         passId: row.pass_id,
@@ -412,6 +524,7 @@ export async function readReception(
         leavesAt: new Date(row.leaves_at).toISOString(),
       })),
       products: await readProducts(tx, facilityId),
+      month: await freeSwimMonth(tx, [facilityId]),
     };
   });
 }

@@ -719,6 +719,93 @@ export async function duplicateBooking(
 }
 
 /**
+ * Lanes held for the public — POOLSE-68 slice 2.
+ *
+ * A `free_swim` booking: no turma, no partner group, no instructor, on the
+ * lanes somebody clicked, in the season the grid is showing. The same lane
+ * check a drag or a copy asks, so a public lane over a turma is refused by
+ * name, and the same lane rows, so `generate_sessions` materialises it and the
+ * lane exclusion keeps a turma off it afterwards.
+ *
+ * **The title is the club's own words**, prefilled by the screen with "Natação
+ * livre" in the reader's language and editable — "Hidroginástica livre" is a
+ * real thing to call it. Stored like an evento's title, so the grid, the
+ * export and the printed wall read it with no special case.
+ *
+ * Null when the site or the season is not this club's.
+ */
+export async function createFreeSwimBooking(
+  organizationId: string,
+  facilityId: string,
+  seasonId: string,
+  title: string,
+  target: BookingTarget,
+): Promise<{ id: string } | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query(
+      `SELECT 1 FROM facility f, season s
+        WHERE f.id = $1 AND f.archived_at IS NULL
+          AND s.id = $2 AND s.archived_at IS NULL`,
+      [facilityId, seasonId],
+    );
+    if (rows.length === 0) return null;
+
+    await assertContiguous(tx, target.laneIds);
+
+    const { startTime, durationMinutes } = await timeFor(tx, target);
+    const duration = target.durationMinutes ?? durationMinutes ?? 60;
+
+    const clash = await laneConflicts(
+      tx,
+      '00000000-0000-0000-0000-000000000000',
+      target.weekday,
+      startTime,
+      duration,
+      target.laneIds,
+      seasonId,
+    );
+    if (clash !== null) {
+      throw new LaneTakenError(clash.laneName, clash.holder, clash.weekday, clash.startTime);
+    }
+
+    let id: string;
+    try {
+      const inserted = await tx.query<{ id: string }>(
+        `INSERT INTO class_schedule
+           (organization_id, facility_id, subject_type, season_id, slot_id, weekday,
+            start_time, duration_minutes, title)
+         VALUES ($1, $2, 'free_swim', $3, $4, $5, $6::time, $7, $8)
+         RETURNING id`,
+        [
+          organizationId,
+          facilityId,
+          seasonId,
+          target.slotId,
+          target.weekday,
+          startTime,
+          duration,
+          title,
+        ],
+      );
+      id = inserted.rows[0]!.id;
+    } catch (error) {
+      classify(error);
+    }
+
+    await setLanes(tx, organizationId, id, target.laneIds);
+
+    await recordAudit(tx, {
+      action: 'booking.free_swim_created',
+      entityType: 'class_schedule',
+      entityId: id,
+      data: { weekday: target.weekday, startTime, durationMinutes: duration },
+    });
+
+    return { id };
+  });
+}
+
+/**
  * The operator escalates a slot to "sem professor", or takes it back — POOLSE-53.
  *
  * **Only between the two states a person is entitled to set.** `assigned` and

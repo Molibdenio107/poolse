@@ -2350,6 +2350,14 @@
         "open": "Ver qualificações",
         "empty": "Está tudo em dia.",
         "summary": "{red, plural, one {# expirada} other {# expiradas}} · {amber} a expirar · {missing} em falta"
+      },
+      "freeSwim": {
+        "title": "Natação livre",
+        "open": "Abrir a receção",
+        "empty": "Esta instalação não vende natação livre. As entradas definem-se em Preços.",
+        "inWater": "{occupied} na água",
+        "inWaterOf": "{occupied} de {capacity} na água",
+        "month": "Este mês: {amount} em {sales, plural, =0 {nenhuma venda} one {1 venda} other {# vendas}} · {entries, plural, =0 {nenhuma entrada} one {1 entrada} other {# entradas}}. À parte das mensalidades."
       }
     },
     "scope": {
@@ -2615,7 +2623,8 @@
     "subject": {
       "parceria": "Parcerias",
       "evento": "Eventos",
-      "manutencao": "Manutenção"
+      "manutencao": "Manutenção",
+      "free_swim": "Natação livre"
     },
     "lanesOccupied": "Pistas ocupadas",
     "restoreFailedConflict": "Esta aula foi cancelada por um encerramento. Para a repor, retire o encerramento.",
@@ -2625,7 +2634,11 @@
       "closures": "Não foi possível carregar os encerramentos. Os dias fechados não estão assinalados nem bloqueados nesta semana."
     },
     "impactUnknown": "Não foi possível verificar que aulas este encerramento afeta. Pode criá-lo na mesma; confirme no calendário se havia presenças marcadas.",
-    "blockActions": "Ações de {name}"
+    "blockActions": "Ações de {name}",
+    "freeSwimHint": "Ou reserve esta pista, todas as semanas a esta hora, para natação livre. Nenhuma turma pode ocupá-la nesse horário.",
+    "freeSwimTitle": "Nome no calendário",
+    "freeSwimHere": "Reservar para natação livre",
+    "freeSwimTitleRequired": "Indique um nome com até 60 caracteres."
   },
   "inventory": {
     "title": "Inventário",
@@ -2991,7 +3004,8 @@
         "turma": "Turma",
         "parceria": "Parceria",
         "evento": "Evento",
-        "manutencao": "Manutenção"
+        "manutencao": "Manutenção",
+        "free_swim": "Natação livre"
       },
       "status": {
         "assigned": "Atribuído",
@@ -3481,7 +3495,8 @@
     "checkInFailed": "A entrada não ficou registada.",
     "checkOutFailed": "A saída não ficou registada.",
     "cancelFailed": "A entrada não foi anulada.",
-    "walkInFailed": "Não foi possível acrescentar esta pessoa."
+    "walkInFailed": "Não foi possível acrescentar esta pessoa.",
+    "month": "Natação livre este mês: {amount} em {sales, plural, =0 {nenhuma venda} one {1 venda} other {# vendas}} · {entries, plural, =0 {nenhuma entrada} one {1 entrada} other {# entradas}}. Contado à parte das mensalidades."
   },
   "passes": {
     "title": "Natação livre",
