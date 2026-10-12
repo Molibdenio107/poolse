@@ -294,7 +294,7 @@ END $$;
 -- ---------------------------------------------------------------------------
 
 DO $$
-DECLARE v_a uuid; v_b uuid; v_a_pool uuid; v_a_facility uuid; n int;
+DECLARE v_a uuid; v_b uuid; v_a_pool uuid; v_a_facility uuid; v_key text; v_uploader uuid; n int;
 BEGIN
   SELECT id INTO v_a FROM organization WHERE name = 'Clube A';
   SELECT id INTO v_b FROM organization WHERE name = 'Clube B';
@@ -318,13 +318,22 @@ BEGIN
     WHEN foreign_key_violation THEN NULL;
   END;
 
+  -- Since file storage (12 October 2026) a photo's key names a stored file of
+  -- the same club, so the object is registered first.
+  v_key := v_a::text || '/pool_photo/norte.jpg';
+  INSERT INTO membership (organization_id, status, first_name, last_name)
+  VALUES (v_a, 'active', 'Foto', 'Grafo') RETURNING id INTO v_uploader;
+  INSERT INTO stored_file (organization_id, purpose, storage_key, content_type, byte_size,
+                           original_name, uploaded_by)
+  VALUES (v_a, 'pool_photo', v_key, 'image/jpeg', 1024, 'norte.jpg', v_uploader);
+
   -- The same object attached twice is a double-submitted upload, not two
   -- photographs.
   INSERT INTO pool_photo (organization_id, pool_id, storage_key)
-  VALUES (v_a, v_a_pool, 'pools/norte.jpg');
+  VALUES (v_a, v_a_pool, v_key);
   BEGIN
     INSERT INTO pool_photo (organization_id, pool_id, storage_key)
-    VALUES (v_a, v_a_pool, 'pools/norte.jpg');
+    VALUES (v_a, v_a_pool, v_key);
     RAISE EXCEPTION 'FAIL test 9c: the same object was attached to one pool twice';
   EXCEPTION
     WHEN unique_violation THEN NULL;
@@ -332,11 +341,11 @@ BEGIN
 
   -- Removing one and re-uploading it later must work, which is what the partial
   -- index is for.
-  UPDATE pool_photo SET archived_at = now() WHERE storage_key = 'pools/norte.jpg';
+  UPDATE pool_photo SET archived_at = now() WHERE storage_key = v_key;
   INSERT INTO pool_photo (organization_id, pool_id, storage_key)
-  VALUES (v_a, v_a_pool, 'pools/norte.jpg');
+  VALUES (v_a, v_a_pool, v_key);
 
-  SELECT count(*) INTO n FROM pool_photo WHERE storage_key = 'pools/norte.jpg';
+  SELECT count(*) INTO n FROM pool_photo WHERE storage_key = v_key;
   IF n <> 2 THEN
     RAISE EXCEPTION 'FAIL test 9d: expected the archived row beside the new one, got %', n;
   END IF;

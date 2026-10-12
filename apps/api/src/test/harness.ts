@@ -227,6 +227,12 @@ const TENANT_TABLES = [
   'partner_contact',
   'partner',
   'skill',
+  /*
+   * Lost property, which round 5 added and never listed here. It points at
+   * `facility` and at the student who claimed it, and nothing cascades either —
+   * listed after `student` it failed the stale-tenant sweep on 12 October 2026.
+   */
+  'lost_and_found_item',
   'student',
   'student_level',
   'vacation_day',
@@ -261,14 +267,6 @@ const TENANT_TABLES = [
   'cleaning_log',
   'inventory_item_pool',
   'inventory_item',
-  /*
-   * Lost property, which round 5 added and never listed here.
-   *
-   * It points at `facility` by composite key and nothing cascades it, so the
-   * first test to record a found item failed teardown on the foreign key —
-   * exactly the way this list's comment says a gap announces itself.
-   */
-  'lost_and_found_item',
   /*
    * The water log, before the tank it belongs to — round 5, ticket 5.
    *
@@ -400,19 +398,27 @@ async function sweepStaleScratchTenants(): Promise<void> {
       );
 
       for (const { id } of rows) {
-        await client.query('BEGIN');
-        // The remembered dashboard site points at a facility — clear it first,
-        // as `removeTenant` does, or every stale tenant refuses to be swept.
-        await client.query(
-          'UPDATE membership SET dashboard_facility_id = NULL WHERE organization_id = $1',
-          [id],
-        );
-        await client.query('UPDATE organization SET logo_file_id = NULL WHERE id = $1', [id]);
-        for (const table of TENANT_TABLES) {
-          await client.query(`DELETE FROM ${table} WHERE organization_id = $1`, [id]);
+        // One tenant per transaction, rolled back if it cannot go: a failed
+        // sweep must never hand the pool a connection stuck mid-transaction,
+        // which is how one stale tenant once failed the first test of every file.
+        try {
+          await client.query('BEGIN');
+          // The remembered dashboard site points at a facility — clear it first,
+          // as `removeTenant` does, or every stale tenant refuses to be swept.
+          await client.query(
+            'UPDATE membership SET dashboard_facility_id = NULL WHERE organization_id = $1',
+            [id],
+          );
+          await client.query('UPDATE organization SET logo_file_id = NULL WHERE id = $1', [id]);
+          for (const table of TENANT_TABLES) {
+            await client.query(`DELETE FROM ${table} WHERE organization_id = $1`, [id]);
+          }
+          await client.query('DELETE FROM organization WHERE id = $1', [id]);
+          await client.query('COMMIT');
+        } catch (error) {
+          await client.query('ROLLBACK');
+          console.warn(`harness: could not sweep stale tenant ${id}: ${String(error)}`);
         }
-        await client.query('DELETE FROM organization WHERE id = $1', [id]);
-        await client.query('COMMIT');
       }
 
       await client.query(
