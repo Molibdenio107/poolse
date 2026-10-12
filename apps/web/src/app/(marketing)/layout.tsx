@@ -5,7 +5,7 @@ import '../globals.css';
 export const metadata: Metadata = {
   title: 'Poolse — Gestão de piscinas',
   description:
-    'Software para quem gere piscinas: instalações, tanques, equipa e permissões. Teste 14 dias sem cartão.',
+    'Software para quem gere piscinas: turmas, alunos, mensalidades, água, energia e equipa. Experimente 15 dias sem cartão.',
 };
 
 /**

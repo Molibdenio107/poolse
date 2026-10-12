@@ -5,14 +5,32 @@ import { MarketingShell, ScreenshotSlot } from './shell';
 /**
  * The landing page, for both locales.
  *
- * The copy makes one promise the product can currently keep — sites, pools,
- * staff and their permissions — and is explicit that the rest is coming. There
- * are no customer names, no logos, no counts of pools managed and no
- * testimonials, because none of those exist and a landing page that invents them
- * is a landing page that has to be quietly rewritten later.
+ * It lists what the product does today and is explicit about what it does not
+ * yet. The invoices are internal records and not certified faturas, and the
+ * page says so in that line. There are no customer names, no logos, no counts
+ * of pools managed and no testimonials, because none of those exist, and a
+ * landing page that invents them has to be quietly rewritten later.
+ *
+ * Updated 12-10-2026: the old copy still called classes, billing, maintenance
+ * and energy "coming". All four have been built for weeks.
  */
-const AVAILABLE_NOW = ['facilities', 'people', 'roles', 'languages'] as const;
-const COMING = ['classes', 'attendance', 'billing', 'maintenance', 'energy'] as const;
+const AVAILABLE_NOW = [
+  'facilities',
+  'classes',
+  'students',
+  'billing',
+  'reception',
+  'water',
+  'energy',
+  'staff',
+  'safety',
+  'families',
+  'imports',
+  'undo',
+  'support',
+  'languages',
+] as const;
+const COMING = ['studentApp', 'certified', 'preRegistration'] as const;
 
 export function Landing({ locale }: { locale: MarketingLocale }): React.ReactElement {
   const t = translator(locale);
@@ -47,12 +65,12 @@ export function Landing({ locale }: { locale: MarketingLocale }): React.ReactEle
       </section>
 
       <section className="border-t border-border bg-surface">
-        <div className="mx-auto grid max-w-5xl gap-10 px-6 py-16 sm:grid-cols-2">
-          <div className="flex flex-col gap-4">
+        <div className="mx-auto flex max-w-5xl flex-col gap-12 px-6 py-16">
+          <div className="flex flex-col gap-6">
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('marketing.availableNow')}
             </h2>
-            <ul className="flex flex-col gap-3">
+            <ul className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
               {AVAILABLE_NOW.map((item) => (
                 <li key={item} className="flex flex-col gap-0.5">
                   <span className="font-medium">{t(`marketing.now.${item}.title`)}</span>
@@ -68,7 +86,7 @@ export function Landing({ locale }: { locale: MarketingLocale }): React.ReactEle
             <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
               {t('marketing.comingLater')}
             </h2>
-            <ul className="flex flex-col gap-3">
+            <ul className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
               {COMING.map((item) => (
                 <li key={item} className="flex flex-col gap-0.5">
                   <span className="font-medium text-foreground-muted">

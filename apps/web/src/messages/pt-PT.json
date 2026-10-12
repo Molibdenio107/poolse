@@ -2427,59 +2427,91 @@
     "pricingLink": "Preços",
     "startFree": "Experimentar grátis",
     "seePricing": "Ver preços",
-    "trialNote": "14 dias grátis. Sem cartão de crédito.",
+    "trialNote": "15 dias grátis. Sem cartão de crédito.",
     "headline": "A gestão da sua piscina, fora da folha de cálculo.",
-    "subhead": "O Poolse organiza as instalações, os tanques e a equipa de quem gere piscinas — escolas, piscinas municipais, hotéis e condomínios.",
+    "subhead": "O Poolse junta as turmas, os alunos, as mensalidades, a água e a energia de quem gere piscinas — escolas, piscinas municipais, hotéis e condomínios.",
     "screenshotPlaceholder": "[Imagem do produto — ainda por fazer]",
     "availableNow": "Já disponível",
     "comingLater": "A caminho",
-    "comingNote": "Ainda não está construído. Está no plano, por esta ordem.",
+    "comingNote": "Ainda não está construído. Está no plano.",
     "ctaTitle": "Comece pelo início.",
     "ctaBody": "Crie a organização, registe as instalações e traga a equipa. Leva menos de cinco minutos e não precisa de cartão.",
-    "footerNote": "Poolse — em construção, honestamente.",
+    "footerNote": "O Poolse ainda está em construção, e não o esconde.",
     "now": {
       "facilities": {
         "title": "Instalações e tanques",
-        "body": "Vários locais, cada um com os seus tanques, pistas e volume."
+        "body": "Vários locais, cada um com os seus tanques, pistas, lotação e horário de abertura."
       },
-      "people": {
-        "title": "Convites para a equipa",
-        "body": "Convide por email; a pessoa entra com as funções que lhe deu."
-      },
-      "roles": {
-        "title": "Funções por pessoa",
-        "body": "Proprietário, administrador, instrutor, manutenção — e várias em simultâneo."
-      },
-      "languages": {
-        "title": "Português e inglês",
-        "body": "Cada pessoa escolhe o seu idioma e o seu tema."
-      }
-    },
-    "soon": {
       "classes": {
-        "title": "Turmas e horários",
-        "body": "Aulas recorrentes, feriados e o mês de agosto."
+        "title": "Turmas e calendário",
+        "body": "O horário da semana, arrastar uma aula para outra hora e as aulas da época criadas sozinhas."
       },
-      "attendance": {
-        "title": "Presenças",
-        "body": "Marcar uma aula em menos de um minuto."
+      "students": {
+        "title": "Alunos e presenças",
+        "body": "A ficha do aluno, os encarregados de educação, os níveis, a progressão e a chamada em menos de um minuto."
       },
       "billing": {
-        "title": "Mensalidades e faturas",
-        "body": "Quem deve o quê, com débito direto e MB WAY."
+        "title": "Mensalidades e pagamentos",
+        "body": "Preçário, descontos por categoria, documentos internos e quem está em atraso. Ainda não são faturas certificadas."
       },
-      "maintenance": {
-        "title": "Manutenção",
-        "body": "pH, temperatura, tarefas e alertas fora do intervalo."
+      "reception": {
+        "title": "Receção e banho livre",
+        "body": "Vender entradas e packs, registar quem entra e saber quantas pessoas estão na água."
+      },
+      "water": {
+        "title": "Água e manutenção",
+        "body": "Análises com alertas fora do intervalo, tarefas recorrentes, pedidos de reparação e uma página pública da qualidade da água."
       },
       "energy": {
         "title": "Energia",
-        "body": "Consumo e custo por instalação."
+        "body": "Contadores, faturas da luz e do gás, e quanto custa cada hora de aula em cada tanque."
+      },
+      "staff": {
+        "title": "Equipa",
+        "body": "Funções, vencimentos, férias, qualificações com validade e a escala de nadadores-salvadores."
+      },
+      "safety": {
+        "title": "Ocorrências",
+        "body": "O registo de um acidente, com os dados clínicos cifrados e um PDF para a seguradora."
+      },
+      "families": {
+        "title": "Mensagens às famílias",
+        "body": "Avisar uma turma inteira por email, com o registo de quem foi avisado."
+      },
+      "imports": {
+        "title": "Excel, à entrada e à saída",
+        "body": "Traga os alunos, o horário e os vencimentos da folha de cálculo que já usa."
+      },
+      "undo": {
+        "title": "Anular um engano",
+        "body": "Arquivou por engano? Anule no próprio aviso, ou recupere mais tarde em Arquivados."
+      },
+      "support": {
+        "title": "Suporte só com autorização",
+        "body": "O suporte Poolse só entra quando o proprietário deixa, por um prazo, e tudo o que faz fica registado."
+      },
+      "languages": {
+        "title": "Português e inglês",
+        "body": "Cada pessoa escolhe o seu idioma e o tema, claro ou escuro."
+      }
+    },
+    "soon": {
+      "studentApp": {
+        "title": "App para alunos e famílias",
+        "body": "O horário, os avisos e o pagamento por débito direto e MB WAY."
+      },
+      "certified": {
+        "title": "Faturação certificada",
+        "body": "Faturas legais, emitidas através de um programa certificado pela AT."
+      },
+      "preRegistration": {
+        "title": "Inscrição online",
+        "body": "A família inscreve-se no site do clube e a receção não volta a escrever nada."
       }
     },
     "pricing": {
       "title": "Preços",
-      "subhead": "Três planos. Os valores ainda não estão fechados — as funcionalidades estão.",
+      "subhead": "Um plano, com tudo incluído. O valor ainda não está fechado — as funcionalidades estão.",
       "amountPlaceholder": "—",
       "amountNote": "Valor por definir",
       "questionsTitle": "Ainda não há valores?",

@@ -5,7 +5,7 @@ import '../globals.css';
 export const metadata: Metadata = {
   title: 'Poolse — Pool management',
   description:
-    'Software for people who run swimming pools: sites, tanks, staff and permissions. 14-day trial, no card.',
+    'Software for the people who run pools: classes, students, fees, water, energy and staff. Try it free for 15 days, no card.',
 };
 
 /**
