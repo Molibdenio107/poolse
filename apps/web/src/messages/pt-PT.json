@@ -4392,5 +4392,66 @@
     "logoUpload": "Carregar logótipo",
     "logoReplace": "Substituir logótipo",
     "logoRemove": "Retirar logótipo"
+  },
+  "archive": {
+    "title": "Arquivados",
+    "subtitle": "O que foi arquivado neste clube. Restaurar traz de volta o registo e o que foi arquivado com ele.",
+    "notPermitted": "Só o proprietário e os administradores podem ver os arquivados.",
+    "empty": "Nada arquivado neste período.",
+    "emptyHint": "Mostram-se os últimos 90 dias. Alargue o período para ver registos mais antigos.",
+    "emptyHintAll": "Quando algo for arquivado, aparece aqui e pode ser restaurado.",
+    "restore": "Restaurar",
+    "restoreNamed": "Restaurar {name}",
+    "restoreParent": "Restaurar primeiro «{name}»",
+    "restoredToast": "Restaurado: {name}",
+    "restoreFailed": "Não foi possível restaurar.",
+    "archivedBy": "Arquivado por {name} em {at}",
+    "someone": "alguém",
+    "withChildren": "com {list}",
+    "alreadyBack": "Já foi restaurado",
+    "kind": {
+      "student": "Aluno",
+      "class_group": "Turma",
+      "student_fee": "Linha de pagamento",
+      "facility": "Instalação",
+      "pool": "Tanque",
+      "space": "Espaço",
+      "inventory_item": "Artigo de inventário",
+      "maintenance_task": "Tarefa de manutenção",
+      "partner": "Parceria",
+      "partner_group": "Grupo de parceria",
+      "class_schedule": "Horário de turma"
+    },
+    "children": {
+      "pool": "{count, plural, one {# tanque} other {# tanques}}",
+      "classSchedule": "{count, plural, one {# horário} other {# horários}}",
+      "enrollment": "{count, plural, one {# inscrição} other {# inscrições}}",
+      "feeLine": "{count, plural, one {# linha de pagamento} other {# linhas de pagamento}}",
+      "partnerContact": "{count, plural, one {# contacto} other {# contactos}}",
+      "partnerGroup": "{count, plural, one {# grupo} other {# grupos}}"
+    },
+    "filter": {
+      "kind": "Tipo",
+      "anyKind": "Todos os tipos",
+      "actor": "Arquivado por",
+      "anyActor": "Qualquer pessoa",
+      "period": "Período",
+      "last90": "Últimos 90 dias",
+      "lastYear": "Último ano",
+      "all": "Todo o histórico"
+    },
+    "refusal": {
+      "alreadyRestored": "Isto já tinha sido restaurado.",
+      "parentArchived": "Primeiro é preciso restaurar «{name}» ({kind}), que continua nos arquivados.",
+      "conflict": {
+        "name": "Já existe outro registo com o nome «{value}» ({kind}). Mude o nome a um deles para restaurar.",
+        "taxNumber": "Já existe outro aluno com o NIF {value}. Corrija o NIF de um deles para restaurar.",
+        "socioNumber": "Já existe outro aluno com o n.º de sócio {value}. Mude o número de um deles para restaurar.",
+        "kind": "Este aluno já tem outra linha «{value}» nesta época. Arquive-a para restaurar esta."
+      },
+      "licence": "O plano permite {allowed, plural, one {# instalação} other {# instalações}} e já {current, plural, one {há # ativa} other {há # ativas}}. Arquive outra ou peça um plano maior para restaurar esta.",
+      "poolFull": "O tanque leva {max} pessoas e as turmas nesse horário já somam {taken}. Liberte lugares para restaurar esta turma.",
+      "classFull": "A turma tem {capacity} lugares e {taken} já estão ocupados, por isso as inscrições não podem voltar todas."
+    }
   }
 }

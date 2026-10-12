@@ -64,7 +64,19 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
 
     if (state.ok === true) {
       router.refresh();
-      toast.show('success', t('common.savedToast'));
+      // An action may name its own sentence — "Restaurado: Piscina 1" — and
+      // falls back to the one every save says.
+      const done = state as { toastKey?: string; values?: Record<string, string | number> };
+      let message: string;
+      try {
+        message =
+          done.toastKey === undefined
+            ? t('common.savedToast')
+            : t(done.toastKey as never, done.values as never);
+      } catch {
+        message = t('common.savedToast');
+      }
+      toast.show('success', message);
       return;
     }
 

@@ -2,8 +2,8 @@
 
 POOLSE-78. A club brings back what it archived by mistake, without asking Poolse.
 
-**Built so far:** the API (slice 1). The *Arquivados* page (slice 2) and the toast's *Anular*
-(slice 3) are not built yet.
+**Built so far:** the API (slice 1) and the *Arquivados* page (slice 2). The toast's *Anular*
+(slice 3) is not built yet.
 
 ## What can come back
 
@@ -55,6 +55,19 @@ Restoring a turma also undoes what archiving it did to the people in it:
 
 A child that has its own history since the archive is left alone and counted as `kept`. That
 covers a child restored separately, archived again, or edited.
+
+## The page
+
+*Arquivados* is at `/dashboard/arquivados`, in the user menu beside *O meu perfil*. Only an
+Owner or Admin is offered the link.
+
+- The first screen shows the last 90 days. *Último ano* and *Todo o histórico* widen it.
+- It also filters by kind and by the person who archived.
+- Each row has *Restaurar*. A row that is already back says so in words instead.
+- A successful restore toasts "Restaurado: «name»". A refusal toasts its sentence, with its
+  figures (`lib/archive-refusal.ts`).
+- When the refusal is "its site is still archived", the row also offers *Restaurar primeiro
+  «Sede»*.
 
 ## Refusals
 

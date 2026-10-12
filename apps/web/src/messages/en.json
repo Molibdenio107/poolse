@@ -4392,5 +4392,66 @@
     "logoUpload": "Upload logo",
     "logoReplace": "Replace logo",
     "logoRemove": "Remove logo"
+  },
+  "archive": {
+    "title": "Archive",
+    "subtitle": "What was archived in this club. Restoring brings back the record and whatever was archived with it.",
+    "notPermitted": "Only the owner and administrators can see the archive.",
+    "empty": "Nothing archived in this period.",
+    "emptyHint": "Showing the last 90 days. Widen the period to see older records.",
+    "emptyHintAll": "When something is archived it appears here and can be restored.",
+    "restore": "Restore",
+    "restoreNamed": "Restore {name}",
+    "restoreParent": "Restore “{name}” first",
+    "restoredToast": "Restored: {name}",
+    "restoreFailed": "Could not restore.",
+    "archivedBy": "Archived by {name} on {at}",
+    "someone": "someone",
+    "withChildren": "with {list}",
+    "alreadyBack": "Already restored",
+    "kind": {
+      "student": "Student",
+      "class_group": "Class",
+      "student_fee": "Fee line",
+      "facility": "Site",
+      "pool": "Pool",
+      "space": "Space",
+      "inventory_item": "Inventory item",
+      "maintenance_task": "Maintenance task",
+      "partner": "Partnership",
+      "partner_group": "Partner group",
+      "class_schedule": "Class time slot"
+    },
+    "children": {
+      "pool": "{count, plural, one {# pool} other {# pools}}",
+      "classSchedule": "{count, plural, one {# time slot} other {# time slots}}",
+      "enrollment": "{count, plural, one {# enrolment} other {# enrolments}}",
+      "feeLine": "{count, plural, one {# fee line} other {# fee lines}}",
+      "partnerContact": "{count, plural, one {# contact} other {# contacts}}",
+      "partnerGroup": "{count, plural, one {# group} other {# groups}}"
+    },
+    "filter": {
+      "kind": "Type",
+      "anyKind": "All types",
+      "actor": "Archived by",
+      "anyActor": "Anyone",
+      "period": "Period",
+      "last90": "Last 90 days",
+      "lastYear": "Last year",
+      "all": "All history"
+    },
+    "refusal": {
+      "alreadyRestored": "This had already been restored.",
+      "parentArchived": "“{name}” ({kind}) is still archived and has to be restored first.",
+      "conflict": {
+        "name": "Another record is already called “{value}” ({kind}). Rename one of them to restore this.",
+        "taxNumber": "Another student already has the NIF {value}. Correct one of them to restore this.",
+        "socioNumber": "Another student already has member number {value}. Change one of them to restore this.",
+        "kind": "This student already has another “{value}” line this season. Archive it to restore this one."
+      },
+      "licence": "The plan allows {allowed, plural, one {# site} other {# sites}} and {current, plural, one {# is} other {# are}} already active. Archive another or ask for a bigger plan to restore this one.",
+      "poolFull": "The pool holds {max} people and the classes in that slot already total {taken}. Free some places to restore this class.",
+      "classFull": "The class has {capacity} places and {taken} are taken, so not every enrolment can come back."
+    }
   }
 }

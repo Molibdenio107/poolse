@@ -4254,3 +4254,48 @@ export interface IncidentDetail {
   firstAid: string | null;
   addenda: { id: string; body: string; writtenByName: string | null; createdAt: string }[];
 }
+
+/**
+ * Arquivados — POOLSE-78. One row per archive *action*, so a site archived with
+ * its tanks is one entry carrying `children: { pool: 3 }`.
+ */
+export type ArchiveKind =
+  | 'student'
+  | 'class_group'
+  | 'facility'
+  | 'pool'
+  | 'space'
+  | 'inventory_item'
+  | 'maintenance_task'
+  | 'partner'
+  | 'student_fee';
+
+export interface ArchiveEntry {
+  /** The audit entry's id — what *Restaurar* sends. */
+  id: string;
+  kind: ArchiveKind;
+  entityId: string;
+  name: string;
+  /** An enum to translate — a fee line's kind. */
+  detail: string | null;
+  archivedAt: string;
+  actor: { membershipId: string; name: string } | null;
+  children: Record<string, number>;
+  /** False once the row is live again. */
+  archived: boolean;
+}
+
+export type ArchiveList = Paginated<ArchiveEntry>;
+
+export interface ArchiveActor {
+  membershipId: string;
+  name: string;
+}
+
+export interface ArchiveRestored {
+  kind: ArchiveKind;
+  entityId: string;
+  name: string;
+  children: Record<string, number>;
+  kept: number;
+}

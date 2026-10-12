@@ -192,7 +192,7 @@ export default async function DashboardLayout({
 
           <div className="flex items-center gap-3">
             <PreferenceControls />
-            <UserMenu />
+            <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} />
           </div>
         </header>
 

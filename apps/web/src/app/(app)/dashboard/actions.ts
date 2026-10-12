@@ -43,6 +43,11 @@ export interface FormState {
    * with no placeholders ignores them, so it costs nothing to pass always.
    */
   values?: Record<string, string | number>;
+  /**
+   * The success toast's sentence, where "Guardado" would be the wrong word — a
+   * restore says what came back (POOLSE-78). Rendered with `values`.
+   */
+  toastKey?: string;
 }
 
 export interface InviteState extends FormState {

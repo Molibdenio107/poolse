@@ -350,7 +350,8 @@ that carry their numbers.
 
 **A save says so, and it says so once.** `useSavedAction` raises the toast — one place, every
 form — so no screen has to remember to report an outcome and none of them can word it
-differently. Field errors still render beside their field, because a message at the top of the
+differently. Where "Guardado" is the wrong word, an action returns `toastKey` (and `values`) — a
+restore says "Restaurado: Piscina 1" through the same hook. Field errors still render beside their field, because a message at the top of the
 page cannot say which of a dozen boxes it meant; the top-of-form banner and the inline
 "Guardado" are the toast's job now. `components/ui/toast.tsx`: muted tones on the surface
 colour, an icon per tone so colour never carries the meaning alone, 4s for a success and 8s
