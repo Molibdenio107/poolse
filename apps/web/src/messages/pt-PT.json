@@ -650,7 +650,8 @@
       "newMeter": "Criar um contador a partir desta fatura",
       "newMeterHint": "Nenhum contador tem o CPE desta fatura. Criamos um contador «Geral» com este CPE ao registar.",
       "newMeterSite": "Instalação do novo contador",
-      "newMeterNoPreview": "A verificação completa acontece ao registar, quando o contador existir."
+      "newMeterNoPreview": "A verificação completa acontece ao registar, quando o contador existir.",
+      "dropHere": "Arraste a fatura (PDF ou fotografia) para qualquer ponto desta página — ou escolha o ficheiro abaixo."
     },
     "title": "Energia",
     "subtitle": "Os contadores de cada instalação e as suas leituras.",

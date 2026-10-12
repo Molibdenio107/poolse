@@ -650,7 +650,8 @@
       "newMeter": "Create a meter from this bill",
       "newMeterHint": "No meter carries this bill's CPE. A “Whole site” meter with this CPE is created when you file.",
       "newMeterSite": "Site for the new meter",
-      "newMeterNoPreview": "The full check happens on filing, once the meter exists."
+      "newMeterNoPreview": "The full check happens on filing, once the meter exists.",
+      "dropHere": "Drag the bill (PDF or photo) anywhere onto this page — or choose the file below."
     },
     "title": "Energy",
     "subtitle": "Each site's meters and their readings.",

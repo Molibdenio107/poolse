@@ -285,6 +285,16 @@ export function InvoiceForm({
       {/* ---- Importar ------------------------------------------------------ */}
       <section className="flex flex-col gap-3 rounded border border-dashed border-border p-4">
         <h3 className="text-sm font-medium">{t('energy.invoice.importTitle')}</h3>
+        {/*
+          The gesture, said where somebody looks for it — 12 October 2026. The
+          whole page took a dropped bill already, and nothing on it said so.
+        */}
+        {dropAnywhere && importAvailable && (
+          <p className="flex items-center gap-2 text-sm font-medium text-primary">
+            <Upload className="size-4 shrink-0" aria-hidden="true" />
+            {t('energy.invoice.dropHere')}
+          </p>
+        )}
         {importAvailable ? (
           <form ref={readForm} action={readAction} className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm">
