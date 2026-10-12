@@ -466,3 +466,29 @@ test('/me puts the requested club first, and says when it is gone', async () => 
     assert.equal(gone.requestedOrganizationMissing, true);
   });
 });
+
+test('the Owner sees what support did, and only what support did', async () => {
+  await withOperator(async (tenant, op) => {
+    const { membershipId } = await enter(tenant, op.clerkUserId);
+    const [student] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name)
+       VALUES ($1, 'Alice', 'Melo') RETURNING id`,
+      [tenant.organizationId],
+    );
+    await actingAs(tenant, { membershipId, roles: ['admin'], clerkUserId: op.clerkUserId, support: true }, () =>
+      new StudentsController().archive(student!.id),
+    );
+
+    const { activity } = await actingAs(tenant, { roles: ['owner'] }, () => grants.activity());
+    const actions = activity.map((entry) => entry.action);
+    assert.ok(actions.includes('student.archived'), 'the archive is there');
+    assert.ok(actions.includes('support.entered'), 'and so is the entry');
+    assert.ok(!actions.includes('support.granted'), 'the Owner’s own act is not support’s');
+    assert.ok(activity.every((entry) => entry.byName === 'Zacarias Suporte'));
+
+    const admin = await addMember(tenant, 'Bea', 'Admin', ['admin']);
+    await actingAs(tenant, { membershipId: admin, roles: ['admin'] }, () =>
+      expectStatus(() => grants.activity(), 403),
+    );
+  });
+});

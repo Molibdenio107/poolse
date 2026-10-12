@@ -3585,3 +3585,19 @@ by CHECK, and **holds no `membership_role` rows**: a trigger refuses one.
   `support.entered` / `support.ended` to both `audit_log` and `platform_audit_log`.
 
 Migration `1790244000000_support-grant.sql`.
+
+**Slice 2** (`1790287200000_support-request.sql`):
+
+- **`support_request`**: `requested_by_platform_admin_id`, `reason` (required, at most 500),
+  `answered_at` / `answer` (`approved | declined`) / `answered_by_membership_id` set together,
+  and `grant_id`, set exactly when approved.
+  - **The club** reads requests and answers them through column-level UPDATE; it never inserts
+    or deletes one.
+  - **The platform** inserts an unanswered request and reads them.
+  - **Pending** is unanswered and younger than 7 days.
+- **`support_grant`** gains `notice_recipients text[]`, required exactly when `source =
+  'override'`, and `notice_delivered_at`. An override is exactly 4 hours, by CHECK. The
+  platform may INSERT an override and nothing else.
+- **Both tenant policies are `TO poolse_app`.** Permissive policies OR together, so once the
+  platform could insert, an unscoped tenant policy would have let it write an Owner's grant
+  whenever the club GUC matched. `support-access.sql` test 5b caught it.

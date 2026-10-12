@@ -1,3 +1,5 @@
+import { SupportCard } from './support-card';
+import { loadTenantSupport } from '../../../dashboard/support.actions';
 import { notFound, redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
@@ -251,6 +253,22 @@ export default async function TenantRequestsPage({
           slug: 'actions',
           labelKey: 'detailTabs.actions',
           content: () => <TenantActions tenant={club} />,
+        },
+        {
+          // POOLSE-79: ask the Owner to let support in, or force a window.
+          slug: 'support',
+          labelKey: 'admin.support.tab',
+          content: async () => {
+            const support = await loadTenantSupport(club.id);
+            if (support.state !== 'ok') {
+              return (
+                <PageError
+                  message={t(support.state === 'failed' ? support.failure.key : 'common.notAllowed')}
+                />
+              );
+            }
+            return <SupportCard tenantId={club.id} tenantName={club.name} support={support.data} />;
+          },
         },
         {
           /*

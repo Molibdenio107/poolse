@@ -3874,7 +3874,27 @@
     "section": {
       "nav": "Secções da administração",
       "tenants": "Clientes",
-      "billing": "Faturação"
+      "billing": "Faturação",
+      "support": "Suporte"
+    },
+    "support": {
+      "tab": "Suporte",
+      "title": "Acesso de suporte",
+      "explain": "Peça ao proprietário que deixe o suporte entrar. Só em último caso, abra um acesso de emergência.",
+      "none": "Nenhum clube tem acesso de suporte aberto.",
+      "noneHint": "Quando um proprietário abrir ou aprovar um acesso, o clube aparece aqui.",
+      "until": "até às {time} de {date}",
+      "enter": "Entrar",
+      "enterNamed": "Entrar em {club}",
+      "waiting": "Pedido enviado em {date}, à espera do proprietário.",
+      "reason": "Motivo",
+      "reasonHint": "Uma frase que o proprietário vai ler, até 500 caracteres.",
+      "reasonRequired": "Escreva o motivo.",
+      "request": "Pedir acesso",
+      "override": "Acesso de emergência",
+      "overrideExplain": "Entra no clube sem o consentimento do proprietário, durante 4 horas. Gera um alerta e fica registado um aviso ao proprietário com o motivo, tal como o escrever.",
+      "overrideReasonHint": "O proprietário vai ler isto. Diga o que está avariado e porque não pode esperar.",
+      "overrideConfirm": "Abrir acesso de emergência"
     }
   },
   "suspended": {
@@ -4465,5 +4485,68 @@
       "student_fee": "Linha de pagamento arquivada"
     },
     "restoredKeptToast": "Restaurado: {name}. {kept, plural, one {# registo ligado não voltou} other {# registos ligados não voltaram}}, porque mudaram entretanto. Uma mensalidade de dias já passados fica terminada; acrescente uma a partir de hoje."
+  },
+  "support": {
+    "tab": "Acesso de suporte",
+    "title": "Acesso de suporte",
+    "explain": "Deixe o suporte Poolse entrar neste clube durante um período, para resolver um problema. Entra como administrador, tudo o que fizer fica registado em seu nome e o acesso termina sozinho.",
+    "duration": "Duração",
+    "hours24": "24 horas",
+    "hours72": "3 dias",
+    "hours168": "7 dias",
+    "open": "Abrir acesso",
+    "liveUntil": "O suporte Poolse tem acesso até às {time} de {date}.",
+    "revoke": "Revogar",
+    "askedOn": "O suporte Poolse pediu acesso em {date}",
+    "reason": "Motivo: {reason}",
+    "approve": "Aprovar",
+    "decline": "Recusar",
+    "activityTitle": "O que o suporte fez",
+    "activityEmpty": "O suporte ainda não fez nada neste clube.",
+    "historyTitle": "Acessos anteriores",
+    "historyEmpty": "Ainda não foi dado acesso ao suporte.",
+    "window": "De {from} a {to}",
+    "grantedBy": "dado por {name}",
+    "noticeRecorded": "Aviso ao proprietário: registado, não enviado.",
+    "noticeSent": "Aviso ao proprietário: enviado.",
+    "source": {
+      "owner": "Aberto pelo proprietário",
+      "request": "Pedido pelo suporte",
+      "override": "Acesso de emergência"
+    },
+    "state": {
+      "live": "em curso",
+      "expired": "terminou no prazo",
+      "revoked": "revogado",
+      "ended": "terminado pelo suporte"
+    },
+    "sessionBanner": "Sessão de suporte em {club} · termina às {time} de {date}",
+    "stepOut": "Sair",
+    "endNow": "Terminar agora",
+    "clubStripLive": "O suporte Poolse tem acesso a este clube até às {time} de {date}.",
+    "clubStripAsked": "{count, plural, one {O suporte Poolse pediu acesso a este clube.} other {O suporte Poolse fez # pedidos de acesso.}}",
+    "manage": "Ver acesso",
+    "answer": "Responder",
+    "endedTitle": "A sessão de suporte terminou",
+    "endedBody": "O acesso a este clube terminou ou foi revogado, por isso já não pode trabalhar nele.",
+    "backToMine": "Voltar",
+    "openedToast": "Acesso de suporte aberto",
+    "revokedToast": "Acesso de suporte revogado",
+    "approvedToast": "Pedido aprovado: o suporte tem acesso",
+    "declinedToast": "Pedido recusado",
+    "requestedToast": "Pedido enviado ao proprietário",
+    "overrideToast": "Acesso de emergência aberto por 4 horas",
+    "openFailed": "Não foi possível abrir o acesso.",
+    "openFailedConflict": "Já há um acesso de suporte aberto.",
+    "revokeFailed": "Não foi possível revogar o acesso.",
+    "answerFailed": "Não foi possível responder ao pedido.",
+    "answerFailedConflict": "Já há um acesso de suporte aberto.",
+    "enterFailed": "Não foi possível entrar no clube.",
+    "enterFailedConflict": "Já é membro deste clube; não precisa de acesso de suporte.",
+    "endFailed": "Não foi possível terminar a sessão.",
+    "requestFailed": "Não foi possível enviar o pedido.",
+    "requestFailedConflict": "Já há um pedido à espera de resposta, ou um acesso aberto.",
+    "overrideFailed": "Não foi possível abrir o acesso de emergência.",
+    "overrideFailedConflict": "Já há um acesso aberto: entre por ele."
   }
 }

@@ -1,4 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
+import { cookies } from 'next/headers';
 import type { SkillState } from './skills';
 import type { PoolMetric } from './pool-metrics';
 import type { BandMap, BandOverride } from './water';
@@ -108,9 +109,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   };
 
   // Which organization to act as, when the person belongs to several. The API
-  // treats this as a request, not a grant: it re-checks the membership.
-  if (options.organizationId) {
-    headers['x-poolse-organization'] = options.organizationId;
+  // treats this as a request, not a grant: it re-checks the membership. An
+  // explicit one wins; otherwise the club chosen with the switcher — POOLSE-79.
+  const organizationId = options.organizationId ?? (await activeOrganization());
+  if (organizationId) {
+    headers['x-poolse-organization'] = organizationId;
   }
 
   if (options.clientIp) {
@@ -136,6 +139,29 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (response.status === 204) return undefined as T;
 
   return (await response.json()) as T;
+}
+
+/**
+ * The club this browser chose to act in — POOLSE-79. Set by entering a support
+ * window (and cleared by leaving one). Absent, the API picks the first
+ * membership, as it always has. `/me` puts this club first, so every screen
+ * that reads `memberships[0]` reads the club it is acting in.
+ */
+export const ACTIVE_ORG_COOKIE = 'poolse_org';
+
+async function activeOrganization(): Promise<string | undefined> {
+  try {
+    const value = (await cookies()).get(ACTIVE_ORG_COOKIE)?.value;
+    return value === undefined || value === '' ? undefined : value;
+  } catch {
+    // Outside a request (a build, a test): no choice was made.
+    return undefined;
+  }
+}
+
+async function organizationHeader(): Promise<Record<string, string>> {
+  const organizationId = await activeOrganization();
+  return organizationId === undefined ? {} : { 'x-poolse-organization': organizationId };
 }
 
 export async function apiFetch<T>(
@@ -203,6 +229,7 @@ export async function apiUpload<T>(path: string, bytes: ArrayBuffer): Promise<T>
       authorization: `Bearer ${token}`,
       accept: 'application/json',
       'content-type': 'application/octet-stream',
+      ...(await organizationHeader()),
     },
     body: bytes,
     cache: 'no-store',
@@ -223,7 +250,7 @@ export async function apiFileResponse(path: string): Promise<Response> {
   const token = await getToken();
   if (!token) return new Response(null, { status: 401 });
   return fetch(`${baseUrl()}${path}`, {
-    headers: { authorization: `Bearer ${token}` },
+    headers: { authorization: `Bearer ${token}`, ...(await organizationHeader()) },
     cache: 'no-store',
   });
 }
@@ -287,6 +314,11 @@ export interface Me {
      * thirty days of arithmetic done here.
      */
     pendingDeleteAt: string | null;
+    /**
+     * Set only on a Poolse support membership (POOLSE-79): when the window
+     * closes. The support banner quotes it; the role came from the grant.
+     */
+    supportExpiresAt: string | null;
     membershipId: string;
     roles: string[];
     /**
@@ -300,6 +332,12 @@ export interface Me {
     /** ISO date, or null once the organization is no longer trialing. */
     trialEndsAt: string | null;
   }[];
+  /**
+   * The club this browser asked for is not one of these any more — a support
+   * window that ended, above all (POOLSE-79). The shell says so rather than
+   * quietly acting in another club.
+   */
+  requestedOrganizationMissing?: boolean;
 }
 
 export interface OrganizationMember {
@@ -4298,4 +4336,53 @@ export interface ArchiveRestored {
   name: string;
   children: Record<string, number>;
   kept: number;
+}
+
+/** Support access — POOLSE-79. A window the club's Owner opened, asked for, or Poolse forced. */
+export type SupportSource = 'owner' | 'request' | 'override';
+
+export interface SupportGrant {
+  id: string;
+  source: SupportSource;
+  reason: string | null;
+  startsAt: string;
+  expiresAt: string;
+  endedAt: string | null;
+  /** Derived on the server: expiry is never written. */
+  state: 'live' | 'expired' | 'revoked' | 'ended';
+  grantedByName: string | null;
+  /** An override's notice to the Owners: how many it was owed to, and whether it left. */
+  notice: { recipients: number; delivered: boolean } | null;
+}
+
+export interface SupportRequest {
+  id: string;
+  reason: string;
+  requestedAt: string;
+}
+
+export interface SupportActivity {
+  id: string;
+  action: string;
+  entityType: string;
+  at: string;
+  byName: string;
+}
+
+export interface SupportStatus {
+  live: { id: string; expiresAt: string; source: SupportSource } | null;
+  pendingRequests: number;
+}
+
+export interface OpenSupportGrant {
+  grantId: string;
+  organizationId: string;
+  organizationName: string;
+  source: SupportSource;
+  expiresAt: string;
+}
+
+export interface TenantSupport {
+  live: { grantId: string; source: SupportSource; expiresAt: string } | null;
+  pendingRequest: { id: string; reason: string; requestedAt: string } | null;
 }

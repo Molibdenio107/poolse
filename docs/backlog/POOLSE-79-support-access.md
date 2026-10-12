@@ -2,6 +2,11 @@
 
 > Part of the Poolse backlog. Conventions in [CONVENTIONS.md](./CONVENTIONS.md) apply to this ticket and are not repeated here.
 
+> **Built 12-10-2026**, all three slices: the grant and entering through it, requests and the
+> emergency override, and the screens. Every acceptance criterion is met. Two departures, both in
+> `docs/decisions.md`: the support role is not a row, and the Owner sees a pending request as a
+> strip on every page rather than as a dashboard card. Not yet seen in a browser.
+
 **Type:** Feature · **Area:** Platform / Security · **Priority:** High · **Depends on** POOLSE-78 (most requests should never need this), POOLSE-64 (the `confirmName` and `platform_alert` machinery) · **Brainstormed** 11-10-2026
 
 ### PO — why this exists

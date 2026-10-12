@@ -325,7 +325,7 @@ what stands in the way meanwhile.
 **`/admin` also still shares an origin and a cookie with the tenant app** — a known
 limitation with a date and a plan, in `docs/deploy.md`.
 
-## Support access — POOLSE-79 (slice 1, 12 October 2026)
+## Support access — POOLSE-79 (12 October 2026)
 
 A club's Owner can let Poolse support in for a fixed window, and support then enters the club
 as a membership of its own. The platform login itself still reads no club data.
@@ -360,7 +360,41 @@ role-keyed list leaves it out with no edit. The lists over *every* membership (*
 team count, people search, the incident picker) filter `support_grant_id IS NULL`, and
 `support.integration.test.ts` calls each of them with a live session in the club.
 
-**Not built yet:** *Pedir acesso*, the emergency override (slice 2), and the screens (slice 3).
+**Asking — *Pedir acesso*.** On a club's `/admin` page, the *Suporte* tab takes a sentence of
+reason (`POST /platform/support/tenants/:id/request`).
+
+- It opens nothing. The Owner sees a strip on every page and answers under *O meu perfil →
+  Acesso de suporte*, approving with a duration or declining.
+- An approval is an ordinary window, `source = 'request'`, carrying the request's reason.
+- One request waits at a time. An unanswered one lapses after 7 days, derived and never
+  written.
+
+**Forcing — *Acesso de emergência*.** For the 08:00 case. It sits behind a dialog that asks for
+a reason and the club's name typed back (`nameMatches`, as for a suspension).
+
+- It lasts exactly 4 hours, by CHECK; renewing it is a second override with its reason again.
+- It raises a `platform_alert`, and records a notice to every Owner with the reason verbatim
+  (`notice_recipients`). `notice_delivered_at` stays null until an email provider exists, and
+  the Owner's list says *registado, não enviado*.
+- It is the one grant the platform writes itself, by an INSERT policy limited to
+  `source = 'override'`.
+
+**The screens.**
+
+- **The Owner's tab.** *O meu perfil → Acesso de suporte* opens a window (24 h, 3 days, 7 days),
+  revokes the live one, answers requests, and lists every past window with how it ended. It
+  also lists *what support did*: the club's own `audit_log` rows whose actor is a support
+  membership.
+- **The club's strip.** Every page carries a strip for the Owner and the Admins while support
+  has access or has asked.
+- **The operator's way in.** `/admin → Suporte` lists every open window with *Entrar*.
+  Entering sets the `poolse_org` cookie, which every API call then sends as the club it asks
+  for, and `/me` puts that club first.
+- **The operator's banner.** It names the club and the end time, with *Sair* (keeps the
+  window) and *Terminar agora* (ends it).
+- **When a window ends.** The shell shows *A sessão de suporte terminou* instead of acting in
+  another club.
+
 **Known gap:** an Owner's revocation and plain expiry reach the platform only through the grant
 row, never as a `platform_audit_log` entry. That log records what an operator did, and neither
 of those is.

@@ -21,9 +21,11 @@ import {
   openGrant,
   pendingRequests,
   revokeGrant,
+  supportActivity,
   supportStatus,
   type GrantHours,
   type SupportGrant,
+  type SupportActivity,
   type SupportRequest,
 } from './support.repository.js';
 
@@ -81,6 +83,13 @@ export class SupportGrantsController {
   async status(): Promise<Awaited<ReturnType<typeof supportStatus>>> {
     requireRole('owner', 'admin');
     return supportStatus(currentTenant().organizationId);
+  }
+
+  /** What support did here — Owner only, like the rest of this screen. */
+  @Get('activity')
+  async activity(): Promise<{ activity: SupportActivity[] }> {
+    requireRole('owner');
+    return { activity: await supportActivity(currentTenant().organizationId) };
   }
 
   @Get('requests')

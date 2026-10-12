@@ -5,6 +5,8 @@ import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { SuspendedNotice } from './suspended-notice';
 import { ReadOnlyNotice } from './read-only-notice';
+import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
+import { loadSupportStatus } from './support.actions';
 
 /**
  * The backoffice shell.
@@ -39,6 +41,13 @@ import { ReadOnlyNotice } from './read-only-notice';
  */
 interface Viewer {
   roles: string[];
+  /**
+   * This browser is acting as Poolse support in the club — POOLSE-79. The
+   * banner says so and ends it; null for everybody else.
+   */
+  support: { organizationId: string; organizationName: string; expiresAt: string } | null;
+  /** The club this browser chose is gone — a window that ended. */
+  clubGone: boolean;
   kind: OrganizationKind;
   /** The club's name, for the brand slot. Null when there is no membership. */
   organizationName: string | null;
@@ -81,6 +90,15 @@ async function currentViewer(): Promise<Viewer> {
 
     return {
       roles: membership?.roles ?? [],
+      support:
+        membership?.supportExpiresAt != null
+          ? {
+              organizationId: membership.organizationId,
+              organizationName: membership.organizationName,
+              expiresAt: membership.supportExpiresAt,
+            }
+          : null,
+      clubGone: me.requestedOrganizationMissing === true,
       kind: membership?.organizationKind ?? 'business',
       organizationName: membership?.organizationName ?? null,
       readOnly:
@@ -112,7 +130,15 @@ async function currentViewer(): Promise<Viewer> {
      * paying club its account is closed when it is not, which is a telephone
      * call we would deserve.
      */
-    return { roles: [], kind: 'business', organizationName: null, suspended: null, readOnly: null };
+    return {
+      roles: [],
+      support: null,
+      clubGone: false,
+      kind: 'business',
+      organizationName: null,
+      suspended: null,
+      readOnly: null,
+    };
   }
 }
 
@@ -134,10 +160,15 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const [{ roles, kind, organizationName, suspended, readOnly }, logoFileId] = await Promise.all([
-    currentViewer(),
-    brandLogo(),
-  ]);
+  const [{ roles, support, clubGone, kind, organizationName, suspended, readOnly }, logoFileId] =
+    await Promise.all([currentViewer(), brandLogo()]);
+
+  // A support window that ended, with this browser still pointed at its club.
+  if (clubGone) return <SupportEndedNotice />;
+
+  // The club's own strip — the Owner and the Admins, never support itself.
+  const clubManager = support === null && (roles.includes('owner') || roles.includes('admin'));
+  const supportStatus = clubManager ? await loadSupportStatus() : null;
 
   /*
    * Instead of the shell, not inside it.
@@ -202,6 +233,21 @@ export default async function DashboardLayout({
           content. Inside the shell, deliberately: unlike a suspension the
           navigation still works and every screen behind it still reads.
         */}
+        {support !== null && (
+          <SupportSessionBanner
+            organizationId={support.organizationId}
+            organizationName={support.organizationName}
+            expiresAt={support.expiresAt}
+          />
+        )}
+        {supportStatus !== null && (
+          <ClubSupportStrip
+            isOwner={roles.includes('owner')}
+            liveUntil={supportStatus.live?.expiresAt ?? null}
+            pendingRequests={supportStatus.pendingRequests}
+          />
+        )}
+
         {readOnly !== null && (
           <ReadOnlyNotice
             readOnlyAt={readOnly.at}

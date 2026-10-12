@@ -4,6 +4,8 @@ import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { apiFetch, type ActiveSession, type Me, type People } from '@/lib/api';
 import { ProfileForm } from './profile-form';
 import { TransferOwnership } from './transfer-ownership';
+import { SupportAccess } from './support-access';
+import { loadSupportAccess } from '../support.actions';
 import { Sessions } from '../sessions';
 import { PhotoUpload } from '@/components/photo-upload';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -290,6 +292,25 @@ export default async function ProfilePage({
                 />
               </section>
             ),
+        },
+        {
+          // POOLSE-79. The Owner's alone, like the subscription: the club's
+          // decision about its own data. Not offered to a support session,
+          // which is an Admin, and refused by the API to anybody else.
+          slug: 'support',
+          labelKey: 'support.tab',
+          visible: isOwner,
+          content: async () => {
+            const loaded = await loadSupportAccess();
+            if (loaded.state !== 'ok') {
+              return (
+                <PageError
+                  message={t(loaded.state === 'failed' ? loaded.failure.key : 'common.notAllowed')}
+                />
+              );
+            }
+            return <SupportAccess {...loaded.data} />;
+          },
         },
       ]}
     />

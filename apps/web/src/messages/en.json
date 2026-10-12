@@ -3874,7 +3874,27 @@
     "section": {
       "nav": "Administration sections",
       "tenants": "Clients",
-      "billing": "Billing"
+      "billing": "Billing",
+      "support": "Support"
+    },
+    "support": {
+      "tab": "Support",
+      "title": "Support access",
+      "explain": "Ask the owner to let support in. Only as a last resort, open emergency access.",
+      "none": "No club has support access open.",
+      "noneHint": "When an owner opens or approves access, the club appears here.",
+      "until": "until {time} on {date}",
+      "enter": "Enter",
+      "enterNamed": "Enter {club}",
+      "waiting": "Request sent on {date}, waiting for the owner.",
+      "reason": "Reason",
+      "reasonHint": "One sentence the owner will read, up to 500 characters.",
+      "reasonRequired": "Write the reason.",
+      "request": "Ask for access",
+      "override": "Emergency access",
+      "overrideExplain": "Enters the club without the owner's consent, for 4 hours. It raises an alert and records a notice to the owner with the reason, exactly as you write it.",
+      "overrideReasonHint": "The owner will read this. Say what is broken and why it cannot wait.",
+      "overrideConfirm": "Open emergency access"
     }
   },
   "suspended": {
@@ -4465,5 +4485,68 @@
       "student_fee": "Fee line archived"
     },
     "restoredKeptToast": "Restored: {name}. {kept, plural, one {# linked record did not come back} other {# linked records did not come back}} because they changed since. A fee line for days already gone stays ended; add one from today."
+  },
+  "support": {
+    "tab": "Support access",
+    "title": "Support access",
+    "explain": "Let Poolse support into this club for a while, to fix a problem. They come in as an administrator, everything they do is recorded under their name, and the access ends on its own.",
+    "duration": "Duration",
+    "hours24": "24 hours",
+    "hours72": "3 days",
+    "hours168": "7 days",
+    "open": "Open access",
+    "liveUntil": "Poolse support has access until {time} on {date}.",
+    "revoke": "Revoke",
+    "askedOn": "Poolse support asked for access on {date}",
+    "reason": "Reason: {reason}",
+    "approve": "Approve",
+    "decline": "Decline",
+    "activityTitle": "What support did",
+    "activityEmpty": "Support has not done anything in this club yet.",
+    "historyTitle": "Earlier access",
+    "historyEmpty": "Support has never been given access.",
+    "window": "From {from} to {to}",
+    "grantedBy": "granted by {name}",
+    "noticeRecorded": "Notice to the owner: recorded, not sent.",
+    "noticeSent": "Notice to the owner: sent.",
+    "source": {
+      "owner": "Opened by the owner",
+      "request": "Requested by support",
+      "override": "Emergency access"
+    },
+    "state": {
+      "live": "in progress",
+      "expired": "ended on time",
+      "revoked": "revoked",
+      "ended": "ended by support"
+    },
+    "sessionBanner": "Support session in {club} · ends at {time} on {date}",
+    "stepOut": "Leave",
+    "endNow": "End now",
+    "clubStripLive": "Poolse support has access to this club until {time} on {date}.",
+    "clubStripAsked": "{count, plural, one {Poolse support asked for access to this club.} other {Poolse support made # access requests.}}",
+    "manage": "View access",
+    "answer": "Answer",
+    "endedTitle": "The support session has ended",
+    "endedBody": "Access to this club ended or was revoked, so you can no longer work in it.",
+    "backToMine": "Go back",
+    "openedToast": "Support access opened",
+    "revokedToast": "Support access revoked",
+    "approvedToast": "Request approved: support has access",
+    "declinedToast": "Request declined",
+    "requestedToast": "Request sent to the owner",
+    "overrideToast": "Emergency access opened for 4 hours",
+    "openFailed": "Could not open access.",
+    "openFailedConflict": "Support access is already open.",
+    "revokeFailed": "Could not revoke access.",
+    "answerFailed": "Could not answer the request.",
+    "answerFailedConflict": "Support access is already open.",
+    "enterFailed": "Could not enter the club.",
+    "enterFailedConflict": "You are already a member of this club; you do not need support access.",
+    "endFailed": "Could not end the session.",
+    "requestFailed": "Could not send the request.",
+    "requestFailedConflict": "A request is already waiting for an answer, or access is open.",
+    "overrideFailed": "Could not open emergency access.",
+    "overrideFailedConflict": "Access is already open: enter through it."
   }
 }

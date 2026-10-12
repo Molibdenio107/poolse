@@ -318,3 +318,48 @@ export async function supportStatus(
     };
   });
 }
+
+// ---------------------------------------------------------------------------
+// What support did — slice 3
+// ---------------------------------------------------------------------------
+
+export interface SupportActivity {
+  id: string;
+  /** The audit action's machine key — `student.archived`. */
+  action: string;
+  entityType: string;
+  at: string;
+  byName: string;
+}
+
+/**
+ * Every entry in the club's own log written by a support membership, newest
+ * first. The trail needed nothing new: `recordAudit` names the support
+ * membership as actor, so this is a filter on who, not a second log.
+ */
+export async function supportActivity(organizationId: string): Promise<SupportActivity[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{
+      id: string;
+      action: string;
+      entity_type: string;
+      created_at: Date;
+      by_name: string;
+    }>(
+      `SELECT a.id, a.action, a.entity_type, a.created_at,
+              ${personShortName('a.actor_membership_id')} AS by_name
+         FROM audit_log a
+         JOIN membership m ON m.id = a.actor_membership_id AND m.organization_id = a.organization_id
+        WHERE m.support_grant_id IS NOT NULL
+        ORDER BY a.created_at DESC
+        LIMIT 100`,
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      action: row.action,
+      entityType: row.entity_type,
+      at: row.created_at.toISOString(),
+      byName: row.by_name,
+    }));
+  });
+}
