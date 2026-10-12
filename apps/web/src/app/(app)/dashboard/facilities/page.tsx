@@ -4,6 +4,7 @@ import { ApiError, apiFetch, type Facilities } from '../../../../lib/api';
 import Link from 'next/link';
 import { Settings } from 'lucide-react';
 import { EntityIcon } from '@/components/entity-icon';
+import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from './facility-forms';
 import { PageError, PageShell } from '@/components/page-shell';
 
@@ -15,12 +16,11 @@ import { PageError, PageShell } from '@/components/page-shell';
  * group happens at a pool, attendance is taken at a pool, and a reading in phase
  * 4 belongs to one.
  *
- * **A card per site is the site's identity and its tanks, and nothing else** —
- * 12 October 2026, Rui's call, so the list reads without scrolling. Each card
- * used to carry the site's espaços and its photo gallery too, which made a
- * two-site club a page of balneários; both live on the site's own tabs
- * (`?tab=spaces`, `?tab=photos`) and the card links there in one line. That
- * also drops the per-site `listSpaces` loop this page ran on every visit.
+ * **A card per site is the site's identity, its tanks and its photographs** —
+ * 12 October 2026, Rui's calls. The espaços block left the card (it made a
+ * two-site club a page of balneários) and lives on the site's own tab, one
+ * link away, which also drops the per-site `listSpaces` loop this page ran on
+ * every visit. The photo gallery went with it and came back the same day.
  */
 export default async function FacilitiesPage(): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -196,9 +196,23 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                 )}
 
                 {/*
-                  The rest of the site, one line — its espaços and photographs
-                  are tabs of the site's page, not blocks of this card.
+                  The site's photographs, back on the card — Rui, 12 October
+                  2026: the picture of the place is part of what the card is.
                 */}
+                <div className="border-t border-border pt-4">
+                  <h3 className="mb-3 text-sm text-foreground-muted">
+                    {t('facilities.sitePhotos')}
+                  </h3>
+                  <PhotoGallery
+                    photos={facility.photos}
+                    canManage={data.canManage}
+                    emptyLabel={t('facilities.noSitePhotos')}
+                    uploadLabel={t('facilities.uploadSitePhoto')}
+                    uploadReason={t('students.photoNoStorage')}
+                  />
+                </div>
+
+                {/* Its espaços are a tab of the site's page, one link away. */}
                 <nav
                   aria-label={t('facilities.cardMore', { name: facility.name })}
                   className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-4 text-sm"
@@ -208,12 +222,6 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                     className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('spaces.title')}
-                  </Link>
-                  <Link
-                    href={`/dashboard/facilities/${facility.id}?tab=photos`}
-                    className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                  >
-                    {t('facilities.photos')}
                   </Link>
                 </nav>
 

@@ -264,3 +264,6 @@ what is set up there: hours, prices, tanks, partners, spaces, maintenance and en
 club has as many sites as its licence allows (`organization.max_facilities`, now sent with the
 list), *Adicionar instalação* is replaced by a sentence saying the plan is full and how to
 extend it. The licence trigger is still what refuses a site over the limit.
+
+Each card also shows the site's **photographs** (restored the same day); its espaços are a link to
+the site's Espaços tab.
