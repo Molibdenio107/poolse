@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Siren } from 'lucide-react';
+import { Siren, TriangleAlert } from 'lucide-react';
 import { apiFetch, type IncidentFacts } from '@/lib/api';
 import { isMissing, outcome } from '@/lib/load-failure';
 import { formatStamp } from '@/lib/date-format';
@@ -107,7 +107,16 @@ export default async function IncidentPage({
             </dd>
 
             <dt className="text-foreground-muted">{t('incidents.field.lifeguard')}</dt>
-            <dd>{incident.lifeguardName ?? t('incidents.noLifeguardNamed')}</dd>
+            <dd className="flex flex-col gap-1">
+              <span>{incident.lifeguardName ?? t('incidents.noLifeguardNamed')}</span>
+              {/* POOLSE-70 slice 2: a warning beside the name, never a change to the record. */}
+              {incident.lifeguardLicensed === false && (
+                <span className="inline-flex items-center gap-1.5">
+                  <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" />
+                  {t('incidents.lifeguardNotLicensed')}
+                </span>
+              )}
+            </dd>
 
             <dt className="text-foreground-muted">{t('incidents.field.policyReference')}</dt>
             <dd>{incident.policyReference ?? t('incidents.noPolicyReference')}</dd>

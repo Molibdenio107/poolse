@@ -4112,6 +4112,11 @@ export interface IncidentFacts extends IncidentSummary {
   poolId: string | null;
   spaceId: string | null;
   lifeguardMembershipId: string | null;
+  /**
+   * Whether the lifeguard held a valid lifeguard qualification on the incident's
+   * day — POOLSE-70 slice 2. Null when nobody was named. False is a warning only.
+   */
+  lifeguardLicensed: boolean | null;
   policyReference: string | null;
   recordedBy: string;
   createdAt: string;
@@ -4120,6 +4125,44 @@ export interface IncidentFacts extends IncidentSummary {
   /** The API's answer to the per-row rule, so the screen and the guard agree. */
   canReadDetail: boolean;
   canArchive: boolean;
+}
+
+/**
+ * The lifeguard roster — POOLSE-70, slice 2. Mirrors `safety/roster.repository.ts`.
+ *
+ * `licensed` false and every gap are warnings, derived in SQL; neither refuses
+ * anything. Several duties on one tank at once are allowed.
+ */
+export interface LifeguardDuty {
+  id: string;
+  poolId: string;
+  membershipId: string;
+  name: string | null;
+  startsAt: string;
+  endsAt: string;
+  /** Held a valid lifeguard qualification on the duty's day. */
+  licensed: boolean;
+}
+
+/** An open window on a tank with nobody rostered. `day` is `YYYY-MM-DD`; the ends are instants. */
+export interface RosterGap {
+  poolId: string;
+  day: string;
+  from: string;
+  to: string;
+}
+
+export interface LifeguardRoster {
+  pools: { id: string; name: string }[];
+  duties: LifeguardDuty[];
+  gaps: RosterGap[];
+  /** Owner and admin — the API's answer, so the buttons and the guard agree. */
+  canManage: boolean;
+}
+
+/** Who the roster says was on a tank at a moment — the incident form's pre-fill. */
+export interface OnDuty {
+  onDuty: { membershipId: string; name: string | null; licensed: boolean }[];
 }
 
 export interface IncidentDetail {

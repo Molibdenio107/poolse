@@ -19,6 +19,10 @@ const QUIET =
  *
  * The choice is drawn as the person's name with a way to change it, so the form
  * says who will be recorded rather than leaving the reader to trust a highlight.
+ *
+ * **Optionally controlled** — POOLSE-70 slice 2. The incident form pre-fills the
+ * lifeguard from the roster, so it passes `chosen` and hears every change the
+ * writer makes through `onChosenChange`. Left out, the picker holds its own.
  */
 export function PersonPicker({
   name,
@@ -26,6 +30,8 @@ export function PersonPicker({
   search,
   error,
   hint,
+  chosen: controlled,
+  onChosenChange,
 }: {
   /** The hidden field the chosen id is posted under. */
   name: string;
@@ -33,10 +39,19 @@ export function PersonPicker({
   search: (query: string) => Promise<PickOption[] | null>;
   error?: string | undefined;
   hint?: string | undefined;
+  /** The choice, where the parent holds it. Undefined leaves it to the picker. */
+  chosen?: PickOption | null | undefined;
+  /** Told of a choice the *reader* made — never of one the parent passed in. */
+  onChosenChange?: ((option: PickOption | null) => void) | undefined;
 }): React.ReactElement {
   const t = useTranslations();
   const errorId = useId();
-  const [chosen, setChosen] = useState<PickOption | null>(null);
+  const [own, setOwn] = useState<PickOption | null>(null);
+  const chosen = controlled === undefined ? own : controlled;
+  const setChosen = (option: PickOption | null): void => {
+    if (controlled === undefined) setOwn(option);
+    onChosenChange?.(option);
+  };
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PickOption[] | null>(null);
   const [state, setState] = useState<'idle' | 'loading' | 'failed' | 'done'>('idle');

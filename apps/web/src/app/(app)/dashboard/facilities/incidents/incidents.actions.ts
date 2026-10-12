@@ -6,7 +6,7 @@ import {
   apiPost,
   type IncidentDetail,
   type IncidentList,
-  type PersonSummary,
+  type OnDuty,
   type Students,
 } from '@/lib/api';
 import { outcome, type Outcome } from '@/lib/load-failure';
@@ -171,4 +171,25 @@ export async function searchMembersAction(query: string): Promise<PickOption[] |
 /** Staff only, for the lifeguard on duty — a teacher can be the lifeguard too. */
 export async function searchStaffAction(query: string): Promise<PickOption[] | null> {
   return pick('staff', query);
+}
+
+/**
+ * Who the roster says was the lifeguard on a tank at a moment — POOLSE-70
+ * slice 2, the form's pre-fill. `at` is the form's own `YYYY-MM-DDTHH:mm` on the
+ * site's wall clock, which is how the API reads it. `null` means the roster
+ * could not be read, which the form says, distinct from nobody on duty.
+ */
+export async function onDutyAction(
+  facilityId: string,
+  poolId: string,
+  at: string,
+): Promise<OnDuty['onDuty'] | null> {
+  try {
+    const result = await apiFetch<OnDuty>(
+      `/facilities/${encodeURIComponent(facilityId)}/lifeguard-roster/on-duty?poolId=${encodeURIComponent(poolId)}&at=${encodeURIComponent(at)}`,
+    );
+    return result.onDuty;
+  } catch {
+    return null;
+  }
 }

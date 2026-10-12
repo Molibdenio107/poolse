@@ -146,6 +146,18 @@ const SECTIONS: Item[] = [
         roles: ['owner', 'admin', 'instructor', 'maintenance'],
         kinds: ['business'],
       },
+      /*
+       * Nadadores-salvadores — POOLSE-70 slice 2. Who is on which tank this
+       * week. Every member of staff reads it, because the person on the deck is
+       * the one who needs to know; owner and admin write it, and the API says
+       * so whether or not the buttons are drawn.
+       */
+      {
+        href: '/dashboard/facilities/lifeguards',
+        key: 'roster.title',
+        roles: ['owner', 'admin', 'instructor', 'maintenance'],
+        kinds: ['business'],
+      },
       {
         href: '/dashboard/facilities/staff',
         key: 'staff.title',

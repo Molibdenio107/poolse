@@ -4264,6 +4264,58 @@
       "whatRequired": "Descreva o que aconteceu.",
       "addendumRequired": "Escreva o aditamento antes de o juntar."
     },
-    "noPolicyReference": "Não indicada"
+    "noPolicyReference": "Não indicada",
+    "roster": {
+      "loading": "A consultar a escala de nadadores-salvadores…",
+      "failed": "Não foi possível consultar a escala. Pode escolher o nadador-salvador à mão.",
+      "nobody": "A escala não tem ninguém de serviço neste tanque a essa hora.",
+      "onDuty": "De serviço segundo a escala: {names}",
+      "notLicensed": "{name} não tinha habilitação de nadador-salvador válida nesse dia."
+    },
+    "lifeguardNotLicensed": "Este nadador-salvador não tinha habilitação de nadador-salvador válida no dia da ocorrência."
+  },
+  "roster": {
+    "title": "Nadadores-salvadores",
+    "subtitle": "Quem está de serviço em cada tanque, semana a semana.",
+    "sites": "Locais",
+    "notPermitted": "A sua função não permite consultar a escala de nadadores-salvadores.",
+    "noSites": "Ainda não há nenhum local. Crie um em Instalações para fazer a escala.",
+    "noPools": "{site} ainda não tem tanques, por isso não há escala para fazer.",
+    "weekNav": "Semana",
+    "previousWeek": "Semana anterior",
+    "nextWeek": "Semana seguinte",
+    "thisWeek": "Esta semana",
+    "weekRange": "De {from} a {to}",
+    "pools": "Tanques",
+    "hint": "Podem estar várias pessoas de serviço no mesmo tanque ao mesmo tempo. Os avisos servem para reparar a tempo e nunca impedem nada.",
+    "dayHeading": "{weekday}, {date}",
+    "today": "hoje",
+    "closed": "Fechado",
+    "unknownPerson": "Pessoa sem nome",
+    "dutyTimes": "das {from} às {to}",
+    "notLicensed": "Sem habilitação de nadador-salvador válida neste dia",
+    "gap": "Sem nadador-salvador das {from} às {to}",
+    "add": "Acrescentar",
+    "adding": "A acrescentar…",
+    "field": {
+      "person": "Nadador-salvador",
+      "personHint": "Qualquer pessoa da equipa. Escreva pelo menos duas letras do nome.",
+      "from": "Das",
+      "to": "Às",
+      "toHint": "Uma hora anterior à de início termina no dia seguinte."
+    },
+    "removeTitle": "Retirar este turno da escala?",
+    "removeHint": "{name}, das {from} às {to} de {date}. O turno sai da escala mas fica no histórico.",
+    "removed": "Turno retirado da escala.",
+    "error": {
+      "poolRequired": "Escolha um tanque deste local.",
+      "personRequired": "Escolha quem fica de serviço.",
+      "dayRequired": "Indique o dia.",
+      "timeRequired": "Indique uma hora válida, diferente da de início.",
+      "notStaff": "Só uma pessoa da equipa pode ficar na escala.",
+      "double": "Essa pessoa já está de serviço neste tanque a essa hora.",
+      "addFailed": "Não foi possível acrescentar o turno.",
+      "removeFailed": "Não foi possível retirar o turno."
+    }
   }
 }

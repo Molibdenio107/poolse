@@ -70,6 +70,7 @@ import {
 import { InsurancePoliciesController } from './billing/insurance.controller.js';
 import { PassProductsController, ReceptionController } from './reception/passes.controller.js';
 import { FacilityIncidentsController, IncidentsController } from './safety/incidents.controller.js';
+import { LifeguardDutiesController, LifeguardRosterController } from './safety/roster.controller.js';
 import {
   InvoiceSeriesController,
   InvoicesController,
@@ -187,6 +188,8 @@ const IDENTITY_ONLY_ROUTES = [
     // POOLSE-70 — bather incidents.
     FacilityIncidentsController,
     IncidentsController,
+    LifeguardRosterController,
+    LifeguardDutiesController,
     InvoicesController,
     InvoiceSeriesController,
     FeeCategoriesController,

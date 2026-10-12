@@ -37,6 +37,24 @@ admin can **archive** an incident; the record stays.
 | Read the clinical detail, add an addendum | ✓ | ✓ | ✓ | — | — |
 | Archive | ✓ | ✓ | — | — | — |
 
+## The lifeguard on duty — slice 2
+
+**Instalações → Nadadores-salvadores** (`/dashboard/facilities/lifeguards`) shows who is the
+lifeguard on each tank, week by week. Owner and admin write it; all staff read it; a family
+sees none of it.
+
+- **Anyone on the staff can be rostered**, a teacher included. **Several people may be on duty
+  on one tank at once, and none is required.** The one refusal is the same person entered twice
+  on the same tank at overlapping times, which is a typo.
+- What makes someone a valid lifeguard is a qualification (Equipa → Qualificações) of a type
+  marked as counting. Every club has *Nadador-salvador (ISN)* marked.
+- **Two warnings, neither a gate.** A rostered person with no valid lifeguard qualification on
+  that day is said beside their duty. An open window with nobody on duty is said as exact times
+  ("sem nadador-salvador das 11:00 às 13:00"), from the site's opening hours minus the duties.
+- **A new incident pre-fills the lifeguard** from the roster for that tank and moment, and the
+  writer can change it. The incident page says if the recorded lifeguard did not hold a valid
+  qualification on the incident's day. It is a warning, and the incident is saved regardless.
+
 ## Not yet
 
-The lifeguard duty roster with its two warnings (slice 2), and the PDF for the insurer (slice 3).
+The PDF for the insurer (slice 3).

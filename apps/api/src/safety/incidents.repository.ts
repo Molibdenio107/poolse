@@ -42,6 +42,12 @@ export interface IncidentFacts extends IncidentSummary {
   poolId: string | null;
   spaceId: string | null;
   lifeguardMembershipId: string | null;
+  /**
+   * Whether the lifeguard recorded held a valid lifeguard qualification on the
+   * incident's day — `lifeguard_valid_on`, derived, never copied. Null when no
+   * lifeguard was recorded. False is a warning on the page, never a refusal.
+   */
+  lifeguardLicensed: boolean | null;
   policyReference: string | null;
   recordedBy: string;
   createdAt: string;
@@ -238,6 +244,7 @@ async function factsOf(tx: Tx, incidentId: string): Promise<IncidentFacts | null
       pool_id: string | null;
       space_id: string | null;
       lifeguard_membership_id: string | null;
+      lifeguard_licensed: boolean | null;
       policy_reference: string | null;
       recorded_by: string;
       created_at: Date;
@@ -245,7 +252,12 @@ async function factsOf(tx: Tx, incidentId: string): Promise<IncidentFacts | null
   >(
     `SELECT ${SUMMARY_COLUMNS},
             i.facility_id, f.name AS facility_name, i.pool_id, i.space_id,
-            i.lifeguard_membership_id, i.policy_reference, i.recorded_by, i.created_at
+            i.lifeguard_membership_id,
+            CASE WHEN i.lifeguard_membership_id IS NULL THEN NULL
+                 ELSE lifeguard_valid_on(i.organization_id, i.lifeguard_membership_id,
+                                         (i.occurred_at AT TIME ZONE f.timezone)::date)
+            END AS lifeguard_licensed,
+            i.policy_reference, i.recorded_by, i.created_at
        FROM incident i ${SUMMARY_JOINS}
        JOIN facility f ON f.id = i.facility_id AND f.organization_id = i.organization_id
       WHERE i.id = $1`,
@@ -273,6 +285,7 @@ async function factsOf(tx: Tx, incidentId: string): Promise<IncidentFacts | null
     poolId: row.pool_id,
     spaceId: row.space_id,
     lifeguardMembershipId: row.lifeguard_membership_id,
+    lifeguardLicensed: row.lifeguard_licensed,
     policyReference: row.policy_reference,
     recordedBy: row.recorded_by,
     createdAt: row.created_at.toISOString(),

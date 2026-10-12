@@ -3515,3 +3515,12 @@ and the words are ciphertext the application encrypts (`sensitive/cipher.ts`). W
 words (Owner/Admin and the author) is decided per row in `incidents.repository.ts`. Every
 decrypting read writes `incident_detail.read` to `audit_log` in the same transaction.
 `tenant-isolation.sql` test 27 asserts the person's composite key.
+
+**Slice 2, the lifeguard on duty.** `qualification_type.counts_as_lifeguard` (seeded on
+*Nadador-salvador (ISN)*, backfilled, and set by `seed_qualification_types` for new clubs).
+`lifeguard_duty` (pool, membership, `starts_at`/`ends_at` at most 24 h, archived on removal) has
+an exclusion only on the **same person** on the same tank at overlapping times; several people
+are allowed. `lifeguard_valid_on(org, membership, day)` is the one definition of a valid
+lifeguard on a day, read by the roster and by the incident. `lifeguard_gaps(org, facility,
+from, days)` subtracts the duties' `range_agg` from each tank's opening window
+(`facility_hours`, in the site's time zone) as multiranges, and returns the uncovered times.

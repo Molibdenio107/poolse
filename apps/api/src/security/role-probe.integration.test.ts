@@ -21,7 +21,8 @@ import { SlotsController } from '../facilities/slots.controller.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
-import { IncidentsController } from '../safety/incidents.controller.js';
+import { FacilityIncidentsController, IncidentsController } from '../safety/incidents.controller.js';
+import { LifeguardDutiesController, LifeguardRosterController } from '../safety/roster.controller.js';
 import { SpacesController } from '../spaces/spaces.controller.js';
 import { RecordsController } from '../students/records.controller.js';
 import {
@@ -606,6 +607,30 @@ test('protected: invitations and role grants refuse non-staff', async () => {
     await expectStatus(
       () => new PeopleDedupController().revoke(fixture.martaId, 'guardian'),
       403,
+    );
+  });
+});
+
+// POOLSE-70 — the incident book and the lifeguard roster, added with the
+// endpoints (the rule since the review of 12 October 2026).
+test('incidents and the lifeguard roster refuse a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const fac = tenantRef.facilityId;
+    await refused('GET facilities/:id/incidents', 403, () => new FacilityIncidentsController().list(fac));
+    await refused('POST facilities/:id/incidents', 403, () =>
+      new FacilityIncidentsController().record(fac, { occurredAt: '2026-01-01T10:00', visitorName: 'X', whatHappened: 'x' }),
+    );
+    await refused('GET facilities/:id/lifeguard-roster', 403, () =>
+      new LifeguardRosterController().read(fac, '2026-01-05', '7'),
+    );
+    await refused('GET lifeguard-roster/on-duty', 403, () =>
+      new LifeguardRosterController().onDuty(fixture.poolId, '2026-01-05T10:00'),
+    );
+    await refused('POST facilities/:id/lifeguard-roster', 403, () =>
+      new LifeguardRosterController().add(fac, {}),
+    );
+    await refused('POST lifeguard-duties/:id/archive', 403, () =>
+      new LifeguardDutiesController().archive('00000000-0000-0000-0000-000000000000'),
     );
   });
 });

@@ -4264,6 +4264,58 @@
       "whatRequired": "Describe what happened.",
       "addendumRequired": "Write the addendum before attaching it."
     },
-    "noPolicyReference": "Not given"
+    "noPolicyReference": "Not given",
+    "roster": {
+      "loading": "Checking the lifeguard roster…",
+      "failed": "The roster could not be read. You can choose the lifeguard yourself.",
+      "nobody": "The roster has nobody on duty at this tank at that time.",
+      "onDuty": "On duty according to the roster: {names}",
+      "notLicensed": "{name} did not hold a valid lifeguard qualification on that day."
+    },
+    "lifeguardNotLicensed": "This lifeguard did not hold a valid lifeguard qualification on the day of the incident."
+  },
+  "roster": {
+    "title": "Lifeguards",
+    "subtitle": "Who is on duty at each tank, week by week.",
+    "sites": "Sites",
+    "notPermitted": "Your role does not allow you to see the lifeguard roster.",
+    "noSites": "There are no sites yet. Create one under Facilities to draw up the roster.",
+    "noPools": "{site} has no tanks yet, so there is no roster to draw up.",
+    "weekNav": "Week",
+    "previousWeek": "Previous week",
+    "nextWeek": "Next week",
+    "thisWeek": "This week",
+    "weekRange": "From {from} to {to}",
+    "pools": "Tanks",
+    "hint": "Several people may be on duty at the same tank at once. The warnings are there so you notice in time, and they never block anything.",
+    "dayHeading": "{weekday}, {date}",
+    "today": "today",
+    "closed": "Closed",
+    "unknownPerson": "Unnamed person",
+    "dutyTimes": "from {from} to {to}",
+    "notLicensed": "No valid lifeguard qualification on this day",
+    "gap": "No lifeguard from {from} to {to}",
+    "add": "Add",
+    "adding": "Adding…",
+    "field": {
+      "person": "Lifeguard",
+      "personHint": "Anyone on the staff. Type at least two letters of their name.",
+      "from": "From",
+      "to": "To",
+      "toHint": "A time earlier than the start ends on the next day."
+    },
+    "removeTitle": "Take this shift off the roster?",
+    "removeHint": "{name}, from {from} to {to} on {date}. The shift leaves the roster but stays in the history.",
+    "removed": "Shift taken off the roster.",
+    "error": {
+      "poolRequired": "Choose a tank at this site.",
+      "personRequired": "Choose who is on duty.",
+      "dayRequired": "Give the day.",
+      "timeRequired": "Give a valid time, different from the start.",
+      "notStaff": "Only a member of staff can be on the roster.",
+      "double": "That person is already on duty at this tank at that time.",
+      "addFailed": "The shift could not be added.",
+      "removeFailed": "The shift could not be taken off."
+    }
   }
 }

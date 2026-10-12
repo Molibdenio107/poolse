@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Lock } from 'lucide-react';
+import { Lock, TriangleAlert } from 'lucide-react';
 import {
   SelectField,
   TextAreaField,
@@ -14,10 +14,12 @@ import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { PersonPicker } from './person-picker';
 import {
+  onDutyAction,
   recordIncidentAction,
   searchMembersAction,
   searchStaffAction,
   searchStudentsAction,
+  type PickOption,
   type RecordState,
 } from './incidents.actions';
 
@@ -46,6 +48,14 @@ const PRIMARY =
  * `useActionState`, not `useSavedAction`: a recorded incident navigates to its
  * own page, and the shared hook would refresh this one on the way out — the
  * composer's reasoning (POOLSE-67). The outcome is reported here instead, once.
+ *
+ * **The lifeguard comes from the roster, and the writer has the last word** —
+ * POOLSE-70 slice 2. Once a tank and a moment are chosen the form asks who was
+ * on duty, says so beside the field, and fills the field with the first of them
+ * *while the writer has not touched it*. Any choice the writer makes — a person
+ * or clearing it — is never overwritten. A person the roster shows without a
+ * valid lifeguard qualification that day is a warning beside the field, and the
+ * incident records exactly as before.
  */
 export function IncidentForm({
   facilityId,
@@ -69,6 +79,51 @@ export function IncidentForm({
   );
   const [kind, setKind] = useState<PersonKind>('student');
   const [emergency, setEmergency] = useState(false);
+
+  const [place, setPlace] = useState('');
+  const [occurredAt, setOccurredAt] = useState(now);
+  const [lifeguard, setLifeguard] = useState<PickOption | null>(null);
+  // Set the first time the writer picks or clears the lifeguard themselves.
+  const writerChose = useRef(false);
+  const [roster, setRoster] = useState<RosterState>({ state: 'idle' });
+
+  useEffect(() => {
+    const poolId = place.startsWith('pool:') ? place.slice(5) : null;
+    if (poolId === null || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(occurredAt)) {
+      setRoster({ state: 'idle' });
+      return;
+    }
+    let stale = false;
+    // A pause while the time is typed, so each keystroke is not a request.
+    const timer = setTimeout(() => {
+      setRoster({ state: 'loading' });
+      void onDutyAction(facilityId, poolId, occurredAt).then((found) => {
+        if (stale) return;
+        if (found === null) {
+          setRoster({ state: 'failed' });
+          return;
+        }
+        setRoster({ state: 'done', people: found });
+        if (!writerChose.current) {
+          const first = found[0];
+          setLifeguard(
+            first === undefined
+              ? null
+              : {
+                  id: first.membershipId,
+                  // Named at render, so this effect need not depend on `t`.
+                  name: first.name ?? '',
+                  detail: null,
+                },
+          );
+        }
+      });
+    }, 300);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [place, occurredAt, facilityId]);
 
   useFocusFirstError(form, state.fields, state);
 
@@ -121,6 +176,7 @@ export function IncidentForm({
             hint={t('incidents.field.occurredAtHint')}
             initial={now}
             required
+            onValueChange={setOccurredAt}
             error={fieldError('occurredAt')}
           />
           <SelectField
@@ -128,6 +184,7 @@ export function IncidentForm({
             label={t('incidents.field.place')}
             initial=""
             options={[{ value: '', label: t('incidents.elsewhere') }, ...places]}
+            onValueChange={setPlace}
             error={fieldError('place')}
           />
         </div>
@@ -200,12 +257,24 @@ export function IncidentForm({
           {t('incidents.field.emergencyCalled')}
         </label>
 
-        <PersonPicker
-          name="lifeguardMembershipId"
-          label={t('incidents.field.lifeguard')}
-          hint={t('incidents.field.lifeguardHint')}
-          search={searchStaffAction}
-        />
+        <div className="flex flex-col gap-2">
+          <PersonPicker
+            name="lifeguardMembershipId"
+            label={t('incidents.field.lifeguard')}
+            hint={t('incidents.field.lifeguardHint')}
+            search={searchStaffAction}
+            chosen={
+              lifeguard === null || lifeguard.name !== ''
+                ? lifeguard
+                : { ...lifeguard, name: t('incidents.unknownPerson') }
+            }
+            onChosenChange={(option) => {
+              writerChose.current = true;
+              setLifeguard(option);
+            }}
+          />
+          <RosterNote roster={roster} />
+        </div>
 
         <TextField
           name="policyReference"
@@ -259,5 +328,49 @@ export function IncidentForm({
         </div>
       </div>
     </form>
+  );
+}
+
+type RosterState =
+  | { state: 'idle' | 'loading' | 'failed' }
+  | {
+      state: 'done';
+      people: { membershipId: string; name: string | null; licensed: boolean }[];
+    };
+
+/**
+ * What the roster says beside the lifeguard field. Says nothing until a tank and
+ * a moment are chosen; a roster that could not be read says so, because silence
+ * would read as "nobody was on duty".
+ */
+function RosterNote({ roster }: { roster: RosterState }): React.ReactElement | null {
+  const t = useTranslations();
+  if (roster.state === 'idle') return null;
+  if (roster.state === 'loading') {
+    return <p className="text-sm text-foreground-muted">{t('incidents.roster.loading')}</p>;
+  }
+  if (roster.state === 'failed') {
+    return <p className="text-sm text-foreground-muted">{t('incidents.roster.failed')}</p>;
+  }
+  if (roster.state !== 'done') return null;
+  if (roster.people.length === 0) {
+    return <p className="text-sm text-foreground-muted">{t('incidents.roster.nobody')}</p>;
+  }
+  const name = (person: { name: string | null }): string =>
+    person.name ?? t('incidents.unknownPerson');
+  return (
+    <div className="flex flex-col gap-1 text-sm">
+      <p className="text-foreground-muted">
+        {t('incidents.roster.onDuty', { names: roster.people.map(name).join(', ') })}
+      </p>
+      {roster.people
+        .filter((person) => !person.licensed)
+        .map((person) => (
+          <p key={person.membershipId} className="inline-flex items-center gap-1.5">
+            <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" />
+            {t('incidents.roster.notLicensed', { name: name(person) })}
+          </p>
+        ))}
+    </div>
   );
 }

@@ -68,6 +68,8 @@ const TENANT_TABLES = [
   // every one of those is still there when these go.
   // POOLSE-70. Addenda and detail name the incident; it names a tank, a space,
   // a student and people — so all three go before any of those.
+  // POOLSE-70 slice 2. A duty names a tank and two memberships.
+  'lifeguard_duty',
   'incident_addendum',
   'incident_detail',
   'incident',
