@@ -56,7 +56,7 @@ It raises a `platform_alert`. It records a notice to the Owner with the reason v
 which is sent once the email provider exists and says "registado, não enviado" until then.
 It is shown on the Owner's grants list as *Acesso de emergência*.
 
-**What a support session can do:** it holds role **admin** (**Open — 1**), so:
+**What a support session can do:** it holds role **admin** (**answered 12-10-2026, Rui — 1**), so:
 
 - every existing role check already knows the answer;
 - the Owner's salary, the subscription and transfer of ownership stay hidden, as they are
@@ -64,7 +64,7 @@ It is shown on the Owner's grants list as *Acesso de emergência*.
 - it can archive and restore (POOLSE-78) and edit;
 - it cannot hard delete, because nothing can.
 
-**Read-only by default:** **Open — 2**, recommended **no**. A support session is opened to
+**Read-only by default:** **answered 12-10-2026, Rui — 2: no.** A support session is opened to
 fix something, and a read-only one that has to be re-requested to write is a second round
 trip at the worst moment. The trail is the safeguard, not the mode.
 
@@ -123,10 +123,53 @@ with a *Suporte* badge. Entering and leaving also write `support.entered` /
 - Expiry enforced by a cron instead of in `resolve_memberships`.
 - Granting `poolse_platform` anything on `membership`. The membership is created by the
   tenant-side function inside the grant's transaction, or by a `SECURITY DEFINER` function
-  keyed on a live grant (**Open — 3**). Recommend the function, because an override has no
+  keyed on a live grant (**answered 12-10-2026, Rui — 3: the function**), because an override has no
   Owner session to ride on, and reconsider it per the migration checklist rather than
   adding a column grant.
 - An override that does not alert.
+
+### Build plan (12-10-2026)
+
+**One change from the Dev section above: the role is not a row.** `resolve_memberships`
+builds a member's roles from `membership_role`. A support membership is therefore created
+with **no** `membership_role` rows, and `resolve_memberships` gives it `{admin}` only while
+its grant is live:
+
+- Every role-keyed list (staff, instructor pickers, payees, the management-seat count,
+  owner/admin recipients of alerts) leaves it out with no edit, because it holds no role
+  there.
+- A forgotten filter therefore fails closed. Rui is missing from a list rather than shown on
+  it as staff.
+- Role checks still work. They read `currentTenant().roles`, which comes from
+  `resolve_memberships`. No SQL function checks a caller's role (checked: the 16 migrations
+  that touch `membership_role` define none).
+
+What still needs `support_grant_id is null` is the handful of reads over **every**
+membership regardless of role: *Pessoas*, people search and pickers, invitations and the
+dedup check. The build classifies the 136 membership reads (121 in the API, 15 in SQL), and
+QA 5 asserts against each list endpoint rather than trusting the grep.
+
+Three slices, each ending working:
+
+1. **Grant and entry (API + SQL).**
+   - `support_grant` and `membership.support_grant_id`.
+   - `resolve_memberships` (live-grant role, expiry and revocation at read time).
+   - The `SECURITY DEFINER` entry function, keyed on a live grant.
+   - The Owner's grant/revoke endpoints and the support side's "end now".
+   - `support.entered` / `support.ended` on both logs.
+   - QA 1–6, 9 and 10, plus the role probe.
+2. **Request and override (platform).**
+   - *Pedir acesso*, and the Owner's approval card on the dashboard.
+   - *Acesso de emergência*: reason, `confirmName`, 4 h, `platform_alert`, and the recorded
+     Owner notice.
+   - The `poolse_platform` grant on `support_grant`, asserted in `platform-admin.sql`.
+   - QA 7 and 8.
+3. **Screens.**
+   - The *Acesso de suporte* card under *O meu perfil*.
+   - Both banners, from `/me`.
+   - Rui's switcher entry.
+   - The *Suporte* badge in the activity view.
+   - Docs (`platform.md`, `security.md`, `data-model.md`).
 
 ### QA — test scenarios
 
