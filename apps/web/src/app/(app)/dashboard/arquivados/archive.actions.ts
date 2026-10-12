@@ -74,7 +74,15 @@ export async function undoArchive(entryId: string): Promise<RestoreState> {
       {},
     );
     revalidatePath('/dashboard', 'layout');
-    return { ok: true, toastKey: 'archive.restoredToast', values: { name: restored.name } };
+    // Something the archive took has its own history since — a fee line from a
+    // month already gone, above all. Said, so the office knows to look.
+    return restored.kept > 0
+      ? {
+          ok: true,
+          toastKey: 'archive.restoredKeptToast',
+          values: { name: restored.name, kept: restored.kept },
+        }
+      : { ok: true, toastKey: 'archive.restoredToast', values: { name: restored.name } };
   } catch (error) {
     if (error instanceof ApiError && error.status === 409) {
       const refused = archiveRefusal(error.details, (key) => t(key as never));

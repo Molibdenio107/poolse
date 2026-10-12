@@ -108,7 +108,16 @@ const INVITATION_MATRIX: Record<MemberRole, readonly MemberRole[]> = {
  * "primary" role, is a concept this product does not have.
  */
 export function grantableRoles(): MemberRole[] {
-  const { roles } = currentTenant();
+  const { roles, support } = currentTenant();
+
+  /*
+   * Support grants nothing — sweep, 12-10-2026. A support session is an Admin,
+   * and an Admin may invite an Admin. An operator could then invite a second
+   * address of their own and keep it after the grant expired or the Owner
+   * revoked it. Access to the club outlives the window only if the club grants
+   * it, so a support session invites nobody and changes nobody's roles.
+   */
+  if (support === true) return [];
 
   const allowed = new Set<MemberRole>();
   for (const held of roles) {

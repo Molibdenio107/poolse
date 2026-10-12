@@ -344,6 +344,14 @@ path, as an Admin.
 - The Owner's salary, the subscription and ownership transfer stay hidden, as from any Admin.
 - `POST …/leave` ends the window early, recorded as ended by support.
 
+**Support grants nothing.** A support session is an Admin, and an Admin may invite one, so an
+operator could otherwise invite a second address of their own and keep access after the
+window closed. `grantableRoles()` returns nothing for a support session: it invites nobody and
+changes nobody's roles.
+
+**Every entry, exit and refusal raises a `platform_alert`**, written in the same transaction
+(a refusal's in its own) and emailed after commit, as every platform write does.
+
 **It ends on time with nothing running:** `resolve_memberships` stops returning the membership
 once the window passes or is revoked.
 

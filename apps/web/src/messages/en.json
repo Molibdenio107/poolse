@@ -4463,6 +4463,7 @@
       "maintenance_task": "Task archived",
       "partner": "Partnership archived",
       "student_fee": "Fee line archived"
-    }
+    },
+    "restoredKeptToast": "Restored: {name}. {kept, plural, one {# linked record did not come back} other {# linked records did not come back}} because they changed since. A fee line for days already gone stays ended; add one from today."
   }
 }

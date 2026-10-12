@@ -53,7 +53,20 @@ Restoring a turma also undoes what archiving it did to the people in it:
 - the turma's lessons from today on are generated again. The past is never touched.
 
 A child that has its own history since the archive is left alone and counted as `kept`. That
-covers a child restored separately, archived again, or edited.
+covers a child restored separately, archived again, or edited. The toast then says how many
+did not come back.
+
+**Fee lines and time.** These rules keep a restore from billing what nobody taught:
+
+- A turma's fee lines reopen only on the **day** they were closed. A turma restored later
+  keeps them ended and counts them as kept, so the months it was gone are never billed; the
+  office adds a line from today.
+- A fee line restored after its enrolment ended takes the enrolment's end date, rather than
+  coming back open-ended.
+
+**Not offered:** an archive that was the consequence of another change, recorded with a
+`reason` in its audit data. Today that is the quota line archived when sócio is switched off;
+restoring it alone would bill a non-member.
 
 ## The page
 

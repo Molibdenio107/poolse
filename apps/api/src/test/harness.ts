@@ -425,8 +425,12 @@ async function sweepStaleScratchTenants(): Promise<void> {
       }
 
       await client.query(
+        // Older than an hour, like the tenants above: test files run in parallel,
+        // and a signup test's brand-new login holds no membership yet. Without
+        // the age, another file's sweep deleted it mid-test — sweep, 12-10-2026.
         `DELETE FROM app_user
           WHERE clerk_user_id LIKE 'user_test_%'
+            AND created_at < now() - interval '1 hour'
             AND NOT EXISTS (SELECT 1 FROM membership m WHERE m.app_user_id = app_user.id)`,
       );
 
@@ -578,7 +582,7 @@ export async function removeTenant(organizationId: string, clerkUserId: string):
  */
 export async function actingAs<T>(
   tenant: ScratchTenant,
-  options: { membershipId?: string; roles: MemberRole[]; clerkUserId?: string },
+  options: { membershipId?: string; roles: MemberRole[]; clerkUserId?: string; support?: boolean },
   fn: () => Promise<T>,
 ): Promise<T> {
   const membershipId = options.membershipId ?? tenant.ownerMembershipId;
@@ -600,6 +604,7 @@ export async function actingAs<T>(
           membershipId,
           appUserId: row?.app_user_id ?? '',
           roles: options.roles,
+          ...(options.support === true ? { support: true } : {}),
         },
         fn,
       ),

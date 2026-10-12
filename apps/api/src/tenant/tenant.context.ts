@@ -7,6 +7,11 @@ export interface TenantContext {
   membershipId: string;
   appUserId: string;
   roles: readonly string[];
+  /**
+   * A Poolse support session (POOLSE-79). Its admin role came from a grant, and
+   * it must not mint access that outlives that grant.
+   */
+  support?: boolean;
 }
 
 /**

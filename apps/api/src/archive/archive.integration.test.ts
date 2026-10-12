@@ -1,11 +1,16 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
+import pg from 'pg';
 import { withOrg } from '@poolse/db';
 import { ArchiveController } from './archive.controller.js';
 import { RESTORABLE, type CascadeItem, type RestorableKindName } from './restorable.js';
 import { archiveClassGroup } from '../classes/classes.repository.js';
 import { archiveFacility, archivePool } from '../facilities/facilities.repository.js';
 import { archivePartner } from '../facilities/partners.repository.js';
+import { archiveSpace } from '../spaces/spaces.repository.js';
+import { archiveInventoryItem } from '../inventory/inventory.repository.js';
+import { archiveTask } from '../maintenance/maintenance.repository.js';
+import { archiveStudentFee } from '../billing/fees.repository.js';
 import { archiveStudent } from '../students/students.repository.js';
 import { StudentsController } from '../students/students.controller.js';
 import { FacilitiesController } from '../facilities/facilities.controller.js';
@@ -549,5 +554,244 @@ test("the toast's Anular: an archive endpoint returns the entry the bin restores
 
     assert.equal(await archivedAt(tenant, 'student', studentId), false);
     assert.equal(await archivedAt(tenant, 'pool', pool), false);
+  });
+});
+
+/**
+ * Sweep, 12-10-2026: every kind's label query run for real. Two of the nine
+ * build their name from a join (`student_fee` joins `student`), and the bin
+ * appends its own JOIN after `label.from` — only a test that lists and
+ * restores each kind proves that SQL is valid for all of them.
+ */
+test('every kind lists with its own name and restores', async () => {
+  await withScratchTenant(async (tenant) => {
+    const [level] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student_level (organization_id, name, sort_order)
+       VALUES ($1, 'Iniciação', 1) RETURNING id`,
+      [tenant.organizationId],
+    );
+    const studentId = await addStudent(tenant, 'Alice');
+    const feeStudent = await addStudent(tenant, 'Bruno');
+    const pool = await addPool(tenant, 'Piscina 1');
+    const [group] = await tenant.sql<{ id: string }>(
+      `INSERT INTO class_group (organization_id, season_id, facility_id, name)
+       VALUES ($1, $2, $3, 'Golfinhos') RETURNING id`,
+      [tenant.organizationId, tenant.seasonId, tenant.facilityId],
+    );
+    const [space] = await tenant.sql<{ id: string }>(
+      `INSERT INTO space (organization_id, facility_id, name) VALUES ($1, $2, 'Balneário') RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const [item] = await tenant.sql<{ id: string }>(
+      `INSERT INTO inventory_item (organization_id, facility_id, name) VALUES ($1, $2, 'Pranchas') RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const [task] = await tenant.sql<{ id: string }>(
+      `INSERT INTO maintenance_task (organization_id, facility_id, title, interval_days)
+       VALUES ($1, $2, 'Limpar filtros', 7) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const [partner] = await tenant.sql<{ id: string }>(
+      `INSERT INTO partner (organization_id, facility_id, name, type)
+       VALUES ($1, $2, 'Escola EB1', 'escola') RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const mensal = (
+        await new FeePeriodsController().create(tenant.facilityId, {
+          name: 'Mensal',
+          months: 1,
+          isDefault: true,
+        })
+      ).id;
+      const plan = (
+        await new FeePlansController().create(tenant.facilityId, {
+          kind: 'mensalidade',
+          levelId: level!.id,
+          lessonsPerWeek: 1,
+          amountCents: 3000,
+        })
+      ).id;
+      const [fee] = await tenant.sql<{ id: string }>(
+        `INSERT INTO student_fee (organization_id, student_id, fee_plan_id, fee_period_id, amount_cents)
+         VALUES ($1, $2, $3, $4, 3000) RETURNING id`,
+        [tenant.organizationId, feeStudent, plan, mensal],
+      );
+
+      const org = tenant.organizationId;
+      const expected: Record<string, string> = {
+        student: 'Alice Melo',
+        class_group: 'Golfinhos',
+        pool: 'Piscina 1',
+        space: 'Balneário',
+        inventory_item: 'Pranchas',
+        maintenance_task: 'Limpar filtros',
+        partner: 'Escola EB1',
+        student_fee: 'Bruno Melo',
+      };
+      assert.ok(await archiveStudent(org, studentId));
+      assert.ok((await archiveClassGroup(org, group!.id)).archived);
+      assert.ok(await archivePool(org, pool));
+      assert.ok(await archiveSpace(org, space!.id));
+      assert.ok(await archiveInventoryItem(org, item!.id));
+      assert.ok(await archiveTask(org, task!.id));
+      assert.ok(await archivePartner(org, partner!.id));
+      assert.ok(await archiveStudentFee(org, feeStudent, fee!.id));
+
+      const page = await bin.list(undefined, undefined, undefined, undefined, undefined, '100');
+      assert.equal(page.total, Object.keys(expected).length);
+      for (const [kind, name] of Object.entries(expected)) {
+        const entry = page.items.find((one) => one.kind === kind);
+        assert.ok(entry, `${kind} is in the bin`);
+        assert.equal(entry.name, name, `${kind} reads as its own name`);
+        assert.equal(entry.archived, true);
+        if (kind === 'student_fee') assert.equal(entry.detail, 'mensalidade');
+
+        const filtered = await bin.list(kind);
+        assert.equal(filtered.total, 1, `the ${kind} filter`);
+
+        await bin.restore(entry.id);
+      }
+
+      const after = await bin.list(undefined, undefined, undefined, undefined, undefined, '100');
+      assert.ok(after.items.every((one) => !one.archived), 'every one of them is back');
+    });
+  });
+});
+
+/** A turma with one active enrolment and its running mensalidade. */
+async function turmaWithFee(tenant: ScratchTenant) {
+  const [level] = await tenant.sql<{ id: string }>(
+    `INSERT INTO student_level (organization_id, name, sort_order)
+     VALUES ($1, 'Iniciação', 1) RETURNING id`,
+    [tenant.organizationId],
+  );
+  const [group] = await tenant.sql<{ id: string }>(
+    `INSERT INTO class_group (organization_id, season_id, facility_id, name, level_id)
+     VALUES ($1, $2, $3, 'Golfinhos', $4) RETURNING id`,
+    [tenant.organizationId, tenant.seasonId, tenant.facilityId, level!.id],
+  );
+  const student = await addStudent(tenant, 'Alice');
+  const [enrolment] = await tenant.sql<{ id: string }>(
+    `INSERT INTO enrollment (organization_id, class_group_id, student_id, status)
+     VALUES ($1, $2, $3, 'active') RETURNING id`,
+    [tenant.organizationId, group!.id, student],
+  );
+  const { plan, mensal } = await actingAs(tenant, { roles: ['owner'] }, async () => ({
+    mensal: (
+      await new FeePeriodsController().create(tenant.facilityId, {
+        name: 'Mensal',
+        months: 1,
+        isDefault: true,
+      })
+    ).id,
+    plan: (
+      await new FeePlansController().create(tenant.facilityId, {
+        kind: 'mensalidade',
+        levelId: level!.id,
+        lessonsPerWeek: 1,
+        amountCents: 3000,
+      })
+    ).id,
+  }));
+  const [fee] = await tenant.sql<{ id: string }>(
+    `INSERT INTO student_fee (organization_id, student_id, fee_plan_id, fee_period_id,
+                              enrollment_id, amount_cents, starts_on)
+     VALUES ($1, $2, $3, $4, $5, 3000, current_date - 30) RETURNING id`,
+    [tenant.organizationId, student, plan, mensal, enrolment!.id],
+  );
+  return { groupId: group!.id, studentId: student, enrolmentId: enrolment!.id, feeId: fee!.id };
+}
+
+async function endsOn(tenant: ScratchTenant, feeId: string): Promise<string | null> {
+  const [row] = await tenant.sql<{ ends_on: string | null }>(
+    `SELECT ends_on::text FROM student_fee WHERE id = $1`,
+    [feeId],
+  );
+  return row!.ends_on;
+}
+
+test('sweep: a fee line restored after its enrolment ended ends with it, never runs open', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { groupId, studentId, feeId } = await turmaWithFee(tenant);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await archiveStudentFee(tenant.organizationId, studentId, feeId);
+      // The turma goes while the line is in the bin; the trigger skips it.
+      await archiveClassGroup(tenant.organizationId, groupId);
+      assert.equal(await endsOn(tenant, feeId), null, 'an archived line is not closed');
+
+      const entry = await entryFor(tenant, 'student_fee.archived', feeId);
+      await bin.restore(entry.id);
+    });
+
+    assert.equal(await archivedAt(tenant, 'student_fee', feeId), false);
+    assert.notEqual(await endsOn(tenant, feeId), null, 'it ends when its enrolment did');
+  });
+});
+
+test('sweep: a turma restored on a later day keeps its fee lines ended, and says so', async () => {
+  const ownerPool = new pg.Pool({ connectionString: process.env['DATABASE_URL'], max: 1 });
+  try {
+    await withScratchTenant(async (tenant) => {
+      const { groupId, feeId } = await turmaWithFee(tenant);
+
+      await actingAs(tenant, { roles: ['owner'] }, async () => {
+        await archiveClassGroup(tenant.organizationId, groupId);
+        const entry = await entryFor(tenant, 'class_group.archived', groupId);
+
+        // The archive happened yesterday: the line closed then, and the entry
+        // says so. Triggers are off for this one statement so `updated_at` stays
+        // the archive's own.
+        const client = await ownerPool.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query(`SET LOCAL session_replication_role = replica`);
+          await client.query(`UPDATE student_fee SET ends_on = ends_on - 1 WHERE id = $1`, [feeId]);
+          await client.query(
+            `UPDATE audit_log
+                SET data = jsonb_set(data, '{cascade}', (
+                  SELECT jsonb_agg(CASE WHEN el->>'entityType' = 'student_fee.ends_on'
+                                        THEN jsonb_set(el, '{endsOn}', to_jsonb((current_date - 1)::text))
+                                        ELSE el END)
+                    FROM jsonb_array_elements(data->'cascade') el))
+              WHERE id = $1`,
+            [entry.id],
+          );
+          await client.query('COMMIT');
+        } finally {
+          client.release();
+        }
+
+        const restored = await bin.restore(entry.id);
+        assert.equal(restored.kept, 1, 'the fee line is counted as kept');
+        assert.equal(restored.children['enrollment'], 1, 'the enrolment still comes back');
+      });
+
+      assert.notEqual(await endsOn(tenant, feeId), null, 'and it does not bill the gap');
+    });
+  } finally {
+    await ownerPool.end();
+  }
+});
+
+test('sweep: an archive that was a consequence of another change is not offered', async () => {
+  await withScratchTenant(async (tenant) => {
+    const studentId = await addStudent(tenant, 'Alice');
+    const [entry] = await tenant.sql<{ id: string }>(
+      `WITH archived AS (
+         UPDATE student SET archived_at = now() WHERE id = $3 RETURNING id
+       )
+       INSERT INTO audit_log (organization_id, actor_membership_id, action, entity_type, entity_id, data)
+       SELECT $1, $2, 'student.archived', 'student', id, '{"reason":"socio_off"}' FROM archived
+       RETURNING id`,
+      [tenant.organizationId, tenant.ownerMembershipId, studentId],
+    );
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      assert.equal((await bin.list()).total, 0);
+      await expectStatus(() => bin.restore(entry!.id), 404);
+    });
   });
 });

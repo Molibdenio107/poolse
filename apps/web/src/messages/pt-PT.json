@@ -4463,6 +4463,7 @@
       "maintenance_task": "Tarefa arquivada",
       "partner": "Parceria arquivada",
       "student_fee": "Linha de pagamento arquivada"
-    }
+    },
+    "restoredKeptToast": "Restaurado: {name}. {kept, plural, one {# registo ligado não voltou} other {# registos ligados não voltaram}}, porque mudaram entretanto. Uma mensalidade de dias já passados fica terminada; acrescente uma a partir de hoje."
   }
 }

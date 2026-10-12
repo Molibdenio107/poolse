@@ -17,6 +17,7 @@ import {
   withScratchTenant,
   type ScratchTenant,
 } from '../test/harness.js';
+import { InvitationsController } from '../invitations/invitations.controller.js';
 import { SupportGrantsController } from './support.controller.js';
 
 /**
@@ -42,7 +43,10 @@ after(async () => {
 
 /** A platform operator with a login and a name the people searches can find. */
 async function makeOperator(): Promise<{ clerkUserId: string; appUserId: string }> {
-  const clerkUserId = `user_test_support_${process.pid}_${Math.floor(performance.now())}`;
+  // Not `user_test_…`: every test file's first sweep deletes those when they
+  // hold no membership, and this login holds none until it enters — another
+  // file running in parallel would remove it mid-test. It is removed here.
+  const clerkUserId = `user_sptest_${process.pid}_${Math.floor(performance.now())}`;
   const { rows } = await owner.query<{ id: string }>(
     `INSERT INTO app_user (clerk_user_id, cached_first_name, cached_last_name, cached_email)
      VALUES ($1, 'Zacarias', 'Suporte', 'zacarias.suporte@example.test') RETURNING id`,
@@ -57,6 +61,7 @@ async function makeOperator(): Promise<{ clerkUserId: string; appUserId: string 
 async function dropOperator(clerkUserId: string): Promise<void> {
   await owner.query('DELETE FROM platform_admin WHERE clerk_user_id = $1', [clerkUserId]);
   await owner.query('DELETE FROM platform_audit_log WHERE clerk_user_id = $1', [clerkUserId]);
+  await owner.query('DELETE FROM platform_alert WHERE clerk_user_id = $1', [clerkUserId]);
 }
 
 function asOperator<T>(clerkUserId: string, fn: () => Promise<T>): Promise<T> {
@@ -78,8 +83,6 @@ async function withOperator(fn: (tenant: ScratchTenant, op: { clerkUserId: strin
   let clerkUserId: string | null = null;
   try {
     await withScratchTenant(async (tenant) => {
-      // Inside the tenant, not before it: the harness's first sweep removes any
-      // `user_test_%` login with no membership, which this one has not got yet.
       const op = await makeOperator();
       clerkUserId = op.clerkUserId;
       try {
@@ -259,5 +262,44 @@ test('leaving ends the grant and is on both trails', async () => {
       rows.map((row) => row.action),
       ['support.entered', 'support.ended'],
     );
+  });
+});
+
+test('sweep: support invites nobody, so no access outlives the grant', async () => {
+  await withOperator(async (tenant, op) => {
+    const { membershipId } = await enter(tenant, op.clerkUserId);
+    const asSupport = { membershipId, roles: ['admin' as const], clerkUserId: op.clerkUserId, support: true };
+
+    await actingAs(tenant, asSupport, async () => {
+      const people = await new PeopleController().list();
+      assert.deepEqual(people.grantableRoles, [], 'nothing is offered');
+      assert.equal(people.canInvite, false);
+      await expectStatus(
+        () =>
+          new InvitationsController().create({
+            email: 'second.address@example.test',
+            roles: ['admin'],
+          } as never),
+        403,
+      );
+    });
+  });
+});
+
+test('sweep: entering and leaving each raise a platform alert, and so does a refusal', async () => {
+  await withOperator(async (tenant, op) => {
+    const { grantId } = await enter(tenant, op.clerkUserId);
+    await asOperator(op.clerkUserId, () => platform.leave(grantId));
+    await asOperator(op.clerkUserId, () => expectStatus(() => platform.enter(grantId), 404));
+
+    const { rows } = await owner.query<{ kind: string; action: string }>(
+      `SELECT kind::text, action FROM platform_alert WHERE clerk_user_id = $1 ORDER BY raised_at`,
+      [op.clerkUserId],
+    );
+    assert.deepEqual(rows, [
+      { kind: 'write', action: 'support.entered' },
+      { kind: 'write', action: 'support.ended' },
+      { kind: 'denied', action: 'support.enter' },
+    ]);
   });
 });

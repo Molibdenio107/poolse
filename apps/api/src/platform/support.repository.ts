@@ -1,4 +1,5 @@
 import { withPlatform } from '@poolse/db';
+import { deliverAlert, recordAlert, type RecordedAlert } from './platform-alert.js';
 
 /**
  * Support access, the operator's side — POOLSE-79.
@@ -62,23 +63,66 @@ export async function supportSession(
   grantId: string,
   action: 'enter' | 'leave',
 ): Promise<{ membershipId: string; organizationId: string }> {
-  return withPlatform(async (tx) => {
-    try {
-      const { rows } = await tx.query<{ membership_id: string; organization_id: string }>(
-        `SELECT support_session($1, $2, $3) AS membership_id,
-                (SELECT organization_id FROM support_grant WHERE id = $2) AS organization_id`,
+  /*
+   * Every platform write and every refusal raises an alert (POOLSE-64).
+   * Entering a club opens its data, so it is the write that most needs one.
+   * The alert is written in the same transaction as the entry, a refusal's in a
+   * transaction of its own (the refused one rolled back), and both are emailed
+   * after commit.
+   */
+  let alert: RecordedAlert;
+  let result: { membershipId: string; organizationId: string };
+  try {
+    [result, alert] = await withPlatform(async (tx) => {
+      // The function first and on its own: it is what refuses an unknown grant,
+      // and a join to the grant would skip calling it at all.
+      const { rows: entered } = await tx.query<{ membership_id: string }>(
+        `SELECT support_session($1, $2, $3) AS membership_id`,
         [clerkUserId, grantId, action],
       );
-      return { membershipId: rows[0]!.membership_id, organizationId: rows[0]!.organization_id };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      if (message.startsWith('support_not_platform_admin')) {
-        throw new SupportSessionRefused('not_platform_admin');
-      }
-      if (message.startsWith('support_grant_not_live')) throw new SupportSessionRefused('grant_not_live');
-      if (message.startsWith('support_already_member')) throw new SupportSessionRefused('already_member');
-      if (message.startsWith('support_not_entered')) throw new SupportSessionRefused('not_entered');
-      throw error;
-    }
-  });
+      const { rows } = await tx.query<{ organization_id: string; organization_name: string }>(
+        `SELECT sg.organization_id, o.name AS organization_name
+           FROM support_grant sg JOIN organization o ON o.id = sg.organization_id
+          WHERE sg.id = $1`,
+        [grantId],
+      );
+      const row = { membership_id: entered[0]!.membership_id, ...rows[0]! };
+      const recorded = await recordAlert(tx, {
+        kind: 'write',
+        action: `support.${action === 'enter' ? 'entered' : 'ended'}`,
+        clerkUserId,
+        organizationId: row.organization_id,
+        organizationName: row.organization_name,
+        detail: { grantId },
+      });
+      return [{ membershipId: row.membership_id, organizationId: row.organization_id }, recorded];
+    });
+  } catch (error) {
+    const reason = refusalOf(error);
+    if (reason === null) throw error;
+    const denied = await withPlatform((tx) =>
+      recordAlert(tx, {
+        kind: 'denied',
+        action: `support.${action}`,
+        clerkUserId,
+        organizationId: null,
+        organizationName: null,
+        detail: { grantId, reason },
+      }),
+    );
+    await deliverAlert(denied);
+    throw new SupportSessionRefused(reason);
+  }
+
+  await deliverAlert(alert);
+  return result;
+}
+
+function refusalOf(error: unknown): SupportRefusal | null {
+  const message = error instanceof Error ? error.message : '';
+  if (message.startsWith('support_not_platform_admin')) return 'not_platform_admin';
+  if (message.startsWith('support_grant_not_live')) return 'grant_not_live';
+  if (message.startsWith('support_already_member')) return 'already_member';
+  if (message.startsWith('support_not_entered')) return 'not_entered';
+  return null;
 }

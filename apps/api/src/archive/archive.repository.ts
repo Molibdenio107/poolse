@@ -67,6 +67,14 @@ interface EntryRow {
 
 const ACTIONS = RESTORABLE.map((one) => one.action);
 
+/**
+ * An archive that was the consequence of another change is not offered — sweep,
+ * 12-10-2026. Turning sócio off archives the quota line with a `reason`, and
+ * restoring it alone would bill a non-member, because nothing re-checks the
+ * flag. Undoing the cause is how that one comes back.
+ */
+const NOT_A_CONSEQUENCE = `NOT (a.data ? 'reason')`;
+
 export async function listArchive(
   organizationId: string,
   filters: ArchiveFilters,
@@ -84,6 +92,7 @@ export async function listArchive(
         WHERE a.action = ANY($1::text[])
           AND a.actor_membership_id IS NOT NULL
           AND a.entity_id IS NOT NULL
+          AND ${NOT_A_CONSEQUENCE}
           AND ($2::text IS NULL OR a.entity_type = $2)
           AND ($3::uuid IS NULL OR a.actor_membership_id = $3)
           AND ($4::date IS NULL OR (a.created_at AT TIME ZONE 'Europe/Lisbon')::date >= $4::date)
@@ -140,6 +149,7 @@ export async function listArchiveActors(
               ${personShortName('a.actor_membership_id')} AS name
          FROM audit_log a
         WHERE a.action = ANY($1::text[]) AND a.actor_membership_id IS NOT NULL
+          AND ${NOT_A_CONSEQUENCE}
         ORDER BY 2`,
       [ACTIONS],
     );
@@ -262,7 +272,8 @@ export async function restoreArchive(
     const { rows: entries } = await tx.query<EntryForRestore>(
       `SELECT action, entity_type, entity_id, created_at::text AS at, data -> 'cascade' AS cascade
          FROM audit_log
-        WHERE id = $1 AND actor_membership_id IS NOT NULL AND entity_id IS NOT NULL`,
+        WHERE id = $1 AND actor_membership_id IS NOT NULL AND entity_id IS NOT NULL
+          AND NOT (data ? 'reason')`,
       [entryId],
     );
     const entry = entries[0];
@@ -295,6 +306,23 @@ export async function restoreArchive(
     await attempt(tx, kind.table, entry.entity_id, () =>
       tx.query(`UPDATE ${kind.table} SET archived_at = NULL WHERE id = $1`, [entry.entity_id]),
     );
+
+    /*
+     * A fee line whose enrolment ended while it sat in the bin — sweep,
+     * 12-10-2026. `enrollment_ends_its_fees` only closes live lines, so this one
+     * missed it. Back without an end, it would bill every month from now on for a
+     * turma the student has left. It ends when its enrolment did.
+     */
+    if (kind.kind === 'student_fee') {
+      await tx.query(
+        `UPDATE student_fee sf SET ends_on = e.ended_on
+           FROM enrollment e
+          WHERE sf.id = $1 AND sf.ends_on IS NULL
+            AND e.id = sf.enrollment_id AND e.organization_id = sf.organization_id
+            AND e.status = 'ended'`,
+        [entry.entity_id],
+      );
+    }
 
     const cascade = Array.isArray(entry.cascade)
       ? (entry.cascade as CascadeItem[])
@@ -369,10 +397,17 @@ async function restoreChild(tx: Tx, item: CascadeItem, at: string): Promise<bool
     return (rowCount ?? 0) > 0;
   }
 
+  /*
+   * A fee line closed with its turma reopens only on the day it was closed —
+   * sweep, 12-10-2026. Reopened later, it would be chargeable for the weeks the
+   * turma was gone, with no lessons in them. So it stays ended and is counted as
+   * kept, and the toast says so; the office adds a line from today.
+   */
   if (item.entityType === 'student_fee.ends_on') {
     const { rowCount } = await tx.query(
       `UPDATE student_fee SET ends_on = NULL
         WHERE id = $1 AND archived_at IS NULL AND ends_on = $2::date
+          AND $2::date >= current_date
           AND updated_at = $3::timestamptz`,
       [item.id, item.endsOn, at],
     );
