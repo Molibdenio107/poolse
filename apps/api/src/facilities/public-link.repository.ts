@@ -2,10 +2,17 @@ import { randomBytes } from 'node:crypto';
 import { withOrg, withoutTenantScope, type Tx } from '@poolse/db';
 import {
   excursions,
+  gradeLabResult,
+  ORGANISMS,
   POOL_METRICS,
+  POOL_USES,
   resolveBands,
   type BandOverride,
+  type LabGrade,
+  type Organism,
+  type PoolKind,
   type PoolMetric,
+  type PoolUse,
 } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 
@@ -156,14 +163,26 @@ export interface PublicWaterPage {
   poolName: string;
   timezone: string;
   readings: PublicReading[];
+  /**
+   * The latest laboratory grade and the day it was sampled — POOLSE-72. The
+   * grade and the date and nothing else from the report. Null when the tank has
+   * no lab result, or the latest one has nothing gradeable in it.
+   */
+  lab: { grade: LabGrade; sampledAt: string } | null;
 }
 
 interface RawPage {
   facilityName: string;
   poolName: string;
   timezone: string;
+  poolKind: string | null;
+  poolUse: string | null;
   readings: { metric: string; value: number | string; unit: string; takenAt: string }[];
   bands: { metric: string; from: number | string | null; to: number | string | null }[];
+  lab: {
+    sampledAt: string;
+    values: { parameter: string; value: number | string; unit: string }[];
+  } | null;
 }
 
 const asNumber = (value: number | string | null): number | null =>
@@ -200,7 +219,18 @@ export async function readPublicWaterPage(
       from: asNumber(band.from),
       to: asNumber(band.to),
     }));
-  const bands = resolveBands(overrides);
+  const pool = {
+    kind: raw.poolKind === 'indoor' || raw.poolKind === 'outdoor' ? (raw.poolKind as PoolKind) : null,
+    use: (POOL_USES as readonly string[]).includes(raw.poolUse ?? '') ? (raw.poolUse as PoolUse) : null,
+  };
+  const bands = resolveBands(overrides, pool);
+  /*
+   * The latest value of each metric may come from different analyses. Free
+   * chlorine is judged by pH only when both were taken in the same analysis —
+   * the same instant — and otherwise by the widest band, as `excursions()`
+   * does for an analysis with no pH.
+   */
+  const phReading = raw.readings.find((reading) => reading.metric === 'ph');
   const staleBefore = now.getTime() - STALE_AFTER_HOURS * 60 * 60 * 1000;
 
   const readings: PublicReading[] = raw.readings
@@ -209,7 +239,14 @@ export async function readPublicWaterPage(
       const metric = reading.metric as PoolMetric;
       const value = Number(reading.value);
       const band = bands[metric] ?? null;
-      const [excursion] = excursions([{ metric, value, unit: reading.unit }], bands);
+      const sameAnalysisPh =
+        metric !== 'ph' && phReading !== undefined && phReading.takenAt === reading.takenAt
+          ? [{ metric: 'ph' as const, value: Number(phReading.value), unit: phReading.unit }]
+          : [];
+      const [excursion] = excursions(
+        [...sameAnalysisPh, { metric, value, unit: reading.unit }],
+        bands,
+      ).filter((one) => one.metric === metric);
       const takenAt = new Date(reading.takenAt);
       return {
         metric,
@@ -229,5 +266,24 @@ export async function readPublicWaterPage(
     poolName: raw.poolName,
     timezone: raw.timezone,
     readings,
+    lab: gradePublicLab(raw.lab, pool),
   };
+}
+
+function gradePublicLab(
+  lab: RawPage['lab'],
+  pool: { kind: PoolKind | null; use: PoolUse | null },
+): PublicWaterPage['lab'] {
+  if (lab === null) return null;
+  const organisms: Partial<Record<Organism, number>> = {};
+  const chemistry: { metric: PoolMetric; value: number; unit: string }[] = [];
+  for (const entry of lab.values) {
+    if ((ORGANISMS as readonly string[]).includes(entry.parameter)) {
+      organisms[entry.parameter as Organism] = Number(entry.value);
+    } else if (isMetric(entry.parameter)) {
+      chemistry.push({ metric: entry.parameter, value: Number(entry.value), unit: entry.unit });
+    }
+  }
+  const { grade } = gradeLabResult({ organisms, chemistry }, pool);
+  return grade === null ? null : { grade, sampledAt: new Date(lab.sampledAt).toISOString() };
 }

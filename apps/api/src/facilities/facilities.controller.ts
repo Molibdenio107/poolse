@@ -21,6 +21,7 @@ import {
   listAnalyses,
   listPoolAlerts,
   listPoolRanges,
+  poolBands,
   markAlertSent,
   METRIC_UNITS,
   POOL_METRICS,
@@ -66,7 +67,9 @@ import {
   type PeopleCounts,
   type PoolDetail,
   type PoolKind,
+  type PoolUse,
 } from './facilities.repository.js';
+import { POOL_USES, type PoolContext } from '@poolse/rules';
 
 interface FacilityDetailResponse extends FacilityDetail {
   organizationId: string;
@@ -106,6 +109,22 @@ interface FacilityDetailResponse extends FacilityDetail {
  */
 const TIMEZONES = ['Europe/Lisbon', 'Atlantic/Madeira', 'Atlantic/Azores'];
 const POOL_KINDS: PoolKind[] = ['indoor', 'outdoor'];
+
+/**
+ * What the tank is for — POOLSE-72. Empty or absent is "not said", and the
+ * temperature is then not judged; anything else must be one of the five.
+ */
+function poolUse(value: unknown): PoolUse | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value === 'string' && (POOL_USES as readonly string[]).includes(value)) {
+    return value as PoolUse;
+  }
+  throw new BadRequestException({
+    code: 'invalid',
+    message: `Unsupported pool use: ${String(value)}`,
+    fields: { use: 'facilities.poolUseInvalid' },
+  });
+}
 const MAX_NAME = 120;
 
 interface FacilitiesResponse {
@@ -176,6 +195,14 @@ export class FacilitiesController {
        */
       bands: BandMap;
       /**
+       * The national reference for this tank, before any override — POOLSE-72.
+       * What the band form labels "referência", resolved here so the client
+       * never resolves a band itself.
+       */
+      reference: BandMap;
+      /** What that reference depended on: the tank's kind and use. */
+      context: PoolContext;
+      /**
        * The raw overrides, for the editor only.
        *
        * The resolved map above cannot answer "is this metric on the reference or
@@ -221,7 +248,11 @@ export class FacilitiesController {
       // reason — ten rows at most, rendered in the same panel.
       analyses: await listAnalyses(organizationId, poolId),
       alerts: await listPoolAlerts(organizationId, poolId),
-      bands: resolveBands(overrides),
+      // POOLSE-72: resolved against the national reference for *this* tank —
+      // its kind and use — and that reference beside it, which the band form
+      // labels as "referência" rather than a constant the client would have
+      // to resolve for itself.
+      ...(await poolBands(organizationId, poolId)),
       bandOverrides: overrides,
       emailConfigured: emailIsConfigured(),
     };
@@ -616,6 +647,7 @@ export class FacilitiesController {
         facilityId,
         name: name!,
         kind: kind as PoolKind,
+        use: poolUse(body['use']),
         volumeLitres,
         laneCount,
         lengthM,
@@ -650,6 +682,7 @@ export class FacilitiesController {
       updated = await updatePool(organizationId, poolId, {
         name: text(body['name'], 'name', { required: true })!,
         kind: kind as PoolKind,
+        use: poolUse(body['use']),
         volumeLitres: positiveLitres(body['volumeLitres']),
         laneCount: positiveInteger(body['laneCount'], 'laneCount'),
         lengthM: positiveMetres(body['lengthM'], 'lengthM'),

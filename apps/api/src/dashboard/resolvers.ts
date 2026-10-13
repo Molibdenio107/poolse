@@ -307,7 +307,7 @@ export async function waterQuality(ctx: ResolverContext): Promise<WaterQualityWi
   if (pools.length === 0) return null;
 
   const flagged = pools.flatMap((pool) => {
-    const bad = excursions(pool.values, resolveBands(pool.overrides));
+    const bad = excursions(pool.values, resolveBands(pool.overrides, pool.pool));
     if (bad.length === 0 && !pool.due) return [];
     return [
       {

@@ -37,6 +37,7 @@ import { QualificationAlertService } from './staff/qualification-alerts.js';
 import { LeadsController, RegistrationSettingsController } from './leads/leads.controller.js';
 import { PublicLeadsController } from './leads/public-leads.controller.js';
 import { LeadRetentionService } from './leads/lead-retention.service.js';
+import { LabResultsController } from './facilities/lab-results.controller.js';
 import {
   PoolPublicLinkController,
   PublicWaterController,
@@ -156,6 +157,7 @@ const IDENTITY_ONLY_ROUTES = [
     QualificationsController,
     PoolPublicLinkController,
     PublicWaterController,
+    LabResultsController,
     LeadsController,
     RegistrationSettingsController,
     PublicLeadsController,

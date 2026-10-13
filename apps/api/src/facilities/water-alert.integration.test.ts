@@ -93,12 +93,12 @@ test('4.2 — a metric with no published band is never alerted on', async () => 
     const poolId = await aTank(tenant);
 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
-      // Cyanuric acid at a figure that would worry anybody. Nothing in
-      // `@poolse/rules` knows what a bad one is, and a threshold nobody chose is
-      // a threshold that pages somebody at midnight for no reason.
+      // Calcium hardness at a figure that would worry anybody. NP 4542 sets no
+      // band for it (POOLSE-72 — cyanuric acid, which this test used, now has
+      // one), and a threshold nobody chose pages somebody at midnight for no reason.
       await new FacilitiesController().recordAnalysis(poolId, {
         takenAt: recently(),
-        values: { cyanuric_acid: 180 },
+        values: { calcium_hardness: 9000 },
       });
     });
 

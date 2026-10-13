@@ -1,5 +1,5 @@
 import { withOrg } from '@poolse/db';
-import type { BandOverride, PoolMetric } from '@poolse/rules';
+import type { BandOverride, PoolContext, PoolKind, PoolMetric, PoolUse } from '@poolse/rules';
 import { OVERDUE, SPACE_JOINS } from '../spaces/spaces.repository.js';
 
 /**
@@ -296,6 +296,8 @@ export interface PoolWaterRow {
   takenAt: string | null;
   values: { metric: PoolMetric; value: number; unit: string }[];
   overrides: BandOverride[];
+  /** What the national bands depend on — POOLSE-72. */
+  pool: PoolContext;
   /** Past the site's threshold, or never analysed while one is set. */
   due: boolean;
 }
@@ -326,9 +328,12 @@ export async function readPoolWater(
       taken_at: Date | null;
       values: PoolWaterRow['values'] | null;
       overrides: { metric: PoolMetric; from: number | null; to: number | null }[] | null;
+      kind: PoolKind | null;
+      use: PoolUse | null;
       due: boolean;
     }>(
       `SELECT p.id AS pool_id, p.name AS pool_name, p.facility_id,
+              p.kind::text AS kind, p.use::text AS use,
               latest.taken_at,
               (SELECT json_agg(json_build_object('metric', v.metric,
                                                  -- ::float8, or numeric arrives as a string
@@ -372,6 +377,7 @@ export async function readPoolWater(
       takenAt: row.taken_at === null ? null : row.taken_at.toISOString(),
       values: row.values ?? [],
       overrides: (row.overrides ?? []).map((o) => ({ metric: o.metric, from: o.from, to: o.to })),
+      pool: { kind: row.kind, use: row.use },
       due: row.due,
     }));
   });

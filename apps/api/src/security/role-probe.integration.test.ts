@@ -33,6 +33,7 @@ import {
 } from '../safety/roster.controller.js';
 import { SpacesController } from '../spaces/spaces.controller.js';
 import { LeadsController, RegistrationSettingsController } from '../leads/leads.controller.js';
+import { LabResultsController } from '../facilities/lab-results.controller.js';
 import { RecordsController } from '../students/records.controller.js';
 import {
   GuardiansController,
@@ -722,5 +723,18 @@ test('the pre-registration queue refuses a guardian and a student (403)', async 
     const settings = new RegistrationSettingsController();
     await refused('GET settings/registration', 403, () => settings.read());
     await refused('PUT settings/registration', 403, () => settings.update({ slug: 'abc', open: true }));
+  });
+});
+
+test('lab results refuse a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const lab = new LabResultsController();
+    await refused('GET facilities/pools/:poolId/lab-results', 403, () => lab.list(NO_SUCH_ID));
+    await refused('POST facilities/pools/:poolId/lab-results', 403, () =>
+      lab.record(NO_SUCH_ID, { sampledAt: new Date().toISOString(), values: [] }),
+    );
+    await refused('POST facilities/pools/:poolId/lab-results/:id/archive', 403, () =>
+      lab.archive(NO_SUCH_ID, NO_SUCH_ID),
+    );
   });
 });

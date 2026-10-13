@@ -196,7 +196,9 @@ test('4.2 — a metric left out of the save reverts to the published band', asyn
       });
 
       const detail = await controller.pool(poolId);
-      assert.deepEqual(detail.bands.temperature, { from: 25, to: 29 }, 'back to published');
+      // Back to the national reference — which, for a tank whose use nobody set,
+      // judges no temperature at all (POOLSE-72).
+      assert.equal(detail.bands.temperature, undefined, 'back to the reference');
       assert.deepEqual(detail.bands.ph, { from: 7, to: 8 }, 'and the other one stands');
       assert.equal(detail.bandOverrides.length, 1, 'one live override');
     });

@@ -5,10 +5,15 @@ import {
   ALERT_WINDOW_HOURS,
   METRIC_UNITS,
   excursions,
+  nationalBands,
   resolveBands,
+  type BandMap,
   type BandOverride,
   type Excursion,
+  type PoolContext,
+  type PoolKind,
   type PoolMetric,
+  type PoolUse,
 } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 import {
@@ -40,7 +45,8 @@ import {
 export {
   POOL_METRICS,
   METRIC_UNITS,
-  HEALTHY,
+  NATIONAL_BANDS,
+  nationalBands,
   excursions,
   resolveBands,
   ALERT_WINDOW_HOURS,
@@ -423,6 +429,39 @@ export async function runAnalysisImport(
  * Almost always empty, which is the design: a row is an exception and the
  * published band is the answer for nearly every pool.
  */
+/**
+ * What a tank's national bands depend on — POOLSE-72: covered or open-air
+ * (free chlorine) and what it is for (temperature). Read inside the caller's
+ * transaction, for the same reason the ranges are.
+ */
+export async function readPoolContext(tx: Tx, poolId: string): Promise<PoolContext> {
+  const { rows } = await tx.query<{ kind: PoolKind | null; use: PoolUse | null }>(
+    'SELECT kind::text AS kind, use::text AS use FROM pool WHERE id = $1',
+    [poolId],
+  );
+  return { kind: rows[0]?.kind ?? null, use: rows[0]?.use ?? null };
+}
+
+/** This pool's resolved bands — its overrides over the national reference for the tank. */
+export async function readPoolBands(tx: Tx, poolId: string): Promise<BandMap> {
+  return resolveBands(await readRanges(tx, poolId), await readPoolContext(tx, poolId));
+}
+
+/** The same, for a caller with no transaction — the pool's page. */
+export async function poolBands(
+  organizationId: string,
+  poolId: string,
+): Promise<{ bands: BandMap; reference: BandMap; context: PoolContext }> {
+  return withOrg(organizationId, async (tx) => {
+    const context = await readPoolContext(tx, poolId);
+    return {
+      bands: resolveBands(await readRanges(tx, poolId), context),
+      reference: nationalBands(context),
+      context,
+    };
+  });
+}
+
 export async function listPoolRanges(
   organizationId: string,
   poolId: string,
@@ -580,7 +619,7 @@ async function raiseAlert(
   // temperature off gets no email about temperature.
   const failed = excursions(
     values.map((reading) => ({ ...reading, unit: METRIC_UNITS[reading.metric] })),
-    resolveBands(await readRanges(tx, poolId)),
+    await readPoolBands(tx, poolId),
   );
   if (failed.length === 0) return null;
 
@@ -823,7 +862,7 @@ export async function findWaterAlertNotice(
       facilityTimezone: row.facility_timezone,
       poolName: row.pool_name,
       takenAt: row.taken_at,
-      excursions: excursions(row.values ?? [], resolveBands(await readRanges(tx, row.pool_id)))
+      excursions: excursions(row.values ?? [], await readPoolBands(tx, row.pool_id))
         .filter((one) => named.has(one.metric)),
       recipients: people.map((person) => person.email),
     };

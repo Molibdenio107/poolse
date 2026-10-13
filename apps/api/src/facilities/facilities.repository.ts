@@ -3,12 +3,16 @@ import { recordAudit } from '../audit/audit.js';
 import { cascadeAt, restorableKind } from '../archive/restorable.js';
 
 export type PoolKind = 'indoor' | 'outdoor';
+export type { PoolUse } from '@poolse/rules';
+import type { PoolUse } from '@poolse/rules';
 
 export interface Pool {
   id: string;
   facilityId: string;
   name: string;
   kind: PoolKind;
+  /** What the tank is for — POOLSE-72; picks the temperature band. Null: not said. */
+  use: PoolUse | null;
   volumeLitres: number | null;
   laneCount: number | null;
   /** Metres. Decimal, because 12.5 m is an ordinary pool length. */
@@ -147,6 +151,7 @@ export async function listFacilities(organizationId: string): Promise<Facility[]
                             'facilityId', p.facility_id,
                             'name', p.name,
                             'kind', p.kind,
+                            'use', p.use,
                             'volumeLitres', p.volume_litres::float8,
                             'laneCount', (SELECT count(*)::int FROM lane ln
                                 WHERE ln.pool_id = p.id AND ln.archived_at IS NULL),
@@ -218,6 +223,7 @@ export async function findPool(
       facility_name: string;
       name: string;
       kind: PoolKind;
+      use: PoolUse | null;
       volume_litres: number | null;
       lane_count: number | null;
       length_m: number | null;
@@ -233,6 +239,7 @@ export async function findPool(
              f.name AS facility_name,
              p.name,
              p.kind,
+             p.use::text AS use,
              p.volume_litres::float8 AS volume_litres,
              (SELECT count(*)::int FROM lane ln
                                 WHERE ln.pool_id = p.id AND ln.archived_at IS NULL) AS lane_count,
@@ -277,6 +284,7 @@ export async function findPool(
       facilityName: row.facility_name,
       name: row.name,
       kind: row.kind,
+      use: row.use,
       volumeLitres: row.volume_litres,
       laneCount: row.lane_count,
       lengthM: row.length_m,
@@ -334,6 +342,7 @@ export async function findFacility(
                             'facilityId', p.facility_id,
                             'name', p.name,
                             'kind', p.kind,
+                            'use', p.use,
                             'volumeLitres', p.volume_litres,
                             'laneCount', (SELECT count(*)::int FROM lane ln
                                 WHERE ln.pool_id = p.id AND ln.archived_at IS NULL),
@@ -700,6 +709,7 @@ export interface CreatePoolInput {
   facilityId: string;
   name: string;
   kind: PoolKind;
+  use: PoolUse | null;
   volumeLitres: number | null;
   laneCount: number | null;
   lengthM: number | null;
@@ -729,9 +739,9 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO pool (
            organization_id, facility_id, name, kind, volume_litres,
-           length_m, width_m, max_depth_m, min_depth_m, max_capacity
+           length_m, width_m, max_depth_m, min_depth_m, max_capacity, use
          )
-         VALUES ($1, $2, $3, $4::pool_kind, $5, $6, $7, $8, $9, $10)
+         VALUES ($1, $2, $3, $4::pool_kind, $5, $6, $7, $8, $9, $10, $11::pool_use)
          RETURNING id`,
         [
           input.organizationId,
@@ -744,6 +754,7 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
           input.maxDepthM,
           input.minDepthM,
           input.maxCapacity,
+          input.use,
         ],
       );
 
@@ -777,6 +788,7 @@ export async function createPool(input: CreatePoolInput): Promise<string | null>
 export interface UpdatePoolInput {
   name: string;
   kind: PoolKind;
+  use: PoolUse | null;
   volumeLitres: number | null;
   laneCount: number | null;
   lengthM: number | null;
@@ -810,7 +822,7 @@ export async function updatePool(
         `UPDATE pool
             SET name = $2, kind = $3::pool_kind, volume_litres = $4,
                 length_m = $5, width_m = $6, max_depth_m = $7, min_depth_m = $8,
-                max_capacity = $9
+                max_capacity = $9, use = $10::pool_use
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -823,6 +835,7 @@ export async function updatePool(
           input.maxDepthM,
           input.minDepthM,
           input.maxCapacity,
+          input.use,
         ],
       );
       if (!rows[0]) return false;
@@ -836,7 +849,7 @@ export async function updatePool(
         action: 'pool.updated',
         entityType: 'pool',
         entityId: poolId,
-        data: { name: input.name, kind: input.kind },
+        data: { name: input.name, kind: input.kind, use: input.use },
       });
 
       return true;

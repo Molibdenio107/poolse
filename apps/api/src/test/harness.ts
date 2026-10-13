@@ -288,6 +288,10 @@ const TENANT_TABLES = [
    * app role — cleaning it up is possible only because teardown runs as the
    * owner.
    */
+  // POOLSE-72. The alert names the report, the values belong to it.
+  'lab_result_alert',
+  'lab_result_value',
+  'lab_result',
   'pool_analysis_alert',
   // POOLSE-71. Points at a pool and its creator's membership.
   'pool_public_link',
