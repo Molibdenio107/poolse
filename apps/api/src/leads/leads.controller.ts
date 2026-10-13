@@ -22,7 +22,6 @@ import {
   TrialFullError,
   TrialUnavailableError,
   bookTrial,
-  countOpenLeads,
   dismissLead,
   listLeads,
   placeLead,
@@ -79,12 +78,6 @@ export class LeadsController {
     requireRole(...CAN_WORK_LEADS);
     const leads = await listLeads(currentTenant().organizationId, view === 'done' ? 'done' : 'open');
     return { leads, retentionMonths: LEAD_RETENTION_MONTHS };
-  }
-
-  @Get('count')
-  async count(): Promise<{ open: number }> {
-    requireRole(...CAN_WORK_LEADS);
-    return { open: await countOpenLeads(currentTenant().organizationId) };
   }
 
   @Get('trial-options')

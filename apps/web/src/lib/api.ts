@@ -4448,3 +4448,11 @@ export interface RegistrationSettings {
   slug: string;
   open: boolean;
 }
+
+/** `mgmt.leads` — POOLSE-69: pre-registrations to answer. */
+export interface LeadsWidgetData {
+  waiting: number;
+  trials: number;
+  /** Whole days the oldest unanswered request has waited; null with none waiting. */
+  oldestWaitingDays: number | null;
+}

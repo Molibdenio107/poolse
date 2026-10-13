@@ -6,6 +6,8 @@ import {
   maintenanceOpen,
   moneyPeriod,
   inventoryWatch,
+  leadHasWaited,
+  leads,
   maintenanceFaults,
   myTasks,
   myTurmas,
@@ -349,6 +351,19 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     size: 1,
     priority: 10,
     resolver: staffCost,
+  },
+  {
+    // POOLSE-69: pre-registrations to answer. Lifted when one has waited three days.
+    id: 'mgmt.leads',
+    band: 'management',
+    roles: ['owner', 'admin'],
+    kinds: ['business'],
+    scope: 'tenant',
+    size: 1,
+    priority: 20,
+    escalate: leadHasWaited,
+    escalatedPriority: 65,
+    resolver: leads,
   },
   {
     // POOLSE-27, 7b.2: everybody âmbar, vermelho or em falta. Lifts itself when

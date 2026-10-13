@@ -72,6 +72,9 @@ Waitlisting and enrolling go through the student form's own rules (`parseStudent
 **A swimmer NIF that already belongs to a student attaches the request to that student** rather
 than creating a second one. The free-text note is never copied onto the student.
 
+**On the dashboard**, `mgmt.leads` (Owner and Admin) counts the requests waiting and the trials
+booked, and says how long the oldest has waited. It moves up once a family has waited 3 days.
+
 ## The address
 
 The address is `organization.slug`, the same one the club has had since signup. **Only the

@@ -6,6 +6,7 @@ import { PublicLeadsController, forgetOrigins } from './public-leads.controller.
 import { LeadRetentionService } from './lead-retention.service.js';
 import { issueStamp } from './form-stamp.js';
 import { findRegister } from '../classes/attendance.repository.js';
+import { leadHasWaited, leads as leadsResolver } from '../dashboard/resolvers.js';
 import {
   actingAs,
   addMember,
@@ -476,5 +477,31 @@ test('a booked trial is named on the register, and leaves it when dismissed', as
       const after = await findRegister(tenant.organizationId, sessionId);
       assert.equal(after!.trialGuests.length, 0);
     });
+  });
+});
+
+test('the dashboard card counts what is waiting, and lifts itself after three days', async () => {
+  await withScratchTenant(async (tenant) => {
+    const ctx = {
+      organizationId: tenant.organizationId,
+      membershipId: tenant.ownerMembershipId,
+      roles: ['owner'],
+      facilityIds: [],
+      ownFacilityIds: [],
+      scope: { mode: 'all' as const, facilityId: null },
+      locale: 'pt-PT',
+    };
+    assert.equal(await leadsResolver(ctx), null, 'an empty queue is not a card with zeros');
+
+    const slug = await openClub(tenant);
+    await publicApi.submit(slug, minor(slug), from());
+    const fresh = await leadsResolver(ctx);
+    assert.deepEqual(fresh, { waiting: 1, trials: 0, oldestWaitingDays: 0 });
+    assert.equal(leadHasWaited(fresh), false);
+
+    await tenant.sql(`UPDATE lead SET created_at = now() - interval '4 days'`);
+    const late = await leadsResolver(ctx);
+    assert.equal(late!.oldestWaitingDays, 4);
+    assert.equal(leadHasWaited(late), true);
   });
 });

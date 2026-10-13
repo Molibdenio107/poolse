@@ -9,6 +9,7 @@ import type {
   MaintenanceWidgetData,
   MoneyWidgetData,
   FreeSwimWidgetData,
+  LeadsWidgetData,
   OccupancyTodayWidgetData,
   PeopleWidgetData,
   StaffCostWidgetData,
@@ -67,6 +68,8 @@ export async function renderWidget(
       return <PeopleCard widget={widget} />;
     case 'mgmt.staffcost':
       return <StaffCostCard widget={widget} />;
+    case 'mgmt.leads':
+      return <LeadsCard widget={widget} />;
     case 'mgmt.qualifications':
       return <QualificationsCard widget={widget} />;
     case 'mgmt.subscription':
@@ -713,6 +716,51 @@ async function PeopleCard({ widget }: { widget: DashboardWidget }): Promise<Reac
             </p>
           )}
           <p className="text-xs text-foreground-muted">{t('dashboard.widget.clubWide')}</p>
+        </>
+      )}
+    </WidgetCard>
+  );
+}
+
+/**
+ * Pedidos de inscrição — POOLSE-69. How many families are waiting for an
+ * answer and for how long, in words; the wait turns to the warning tone (with
+ * its icon) once it reaches three days, when the server also lifts the card.
+ */
+async function LeadsCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const data = widget.data as LeadsWidgetData | null;
+  const late = (data?.oldestWaitingDays ?? 0) >= 3;
+
+  return (
+    <WidgetCard
+      widget={widget}
+      title={t('leads.title')}
+      href="/dashboard/students/pedidos"
+      linkLabel={t('dashboard.widget.leads.open')}
+      emptyMessage={t('dashboard.widget.leads.empty')}
+    >
+      {data !== null && (
+        <>
+          <p className="text-lg font-medium">
+            {t('dashboard.widget.leads.waiting', { count: data.waiting })}
+          </p>
+          {data.trials > 0 && (
+            <p className="text-sm text-foreground-muted">
+              {t('dashboard.widget.leads.trials', { count: data.trials })}
+            </p>
+          )}
+          {data.oldestWaitingDays !== null && (
+            <p
+              className={cn(
+                'flex items-center gap-1.5 text-sm',
+                late ? 'text-warning' : 'text-foreground-muted',
+              )}
+            >
+              {late && <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />}
+              {t('dashboard.widget.leads.oldest', { days: data.oldestWaitingDays })}
+            </p>
+          )}
         </>
       )}
     </WidgetCard>

@@ -240,14 +240,28 @@ async function leadById(tx: Tx, leadId: string, lock = false): Promise<Lead | nu
   return rows[0] ? toLead(rows[0]) : null;
 }
 
-/** The queue's count of leads still to answer, for the menu and the card. */
-export async function countOpenLeads(organizationId: string): Promise<number> {
+/** What the dashboard card says — POOLSE-69. One statement. */
+export interface LeadsWidget {
+  /** New requests nobody has answered. */
+  waiting: number;
+  /** Requests with an aula experimental booked and no answer since. */
+  trials: number;
+  /** Whole days the oldest unanswered request has waited; null with none waiting. */
+  oldestWaitingDays: number | null;
+}
+
+export async function readLeadsWidget(organizationId: string): Promise<LeadsWidget> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM lead
+    const { rows } = await tx.query<{ waiting: number; trials: number; oldest: number | null }>(
+      `SELECT count(*) FILTER (WHERE status = 'new')::int AS waiting,
+              count(*) FILTER (WHERE status = 'trial_booked')::int AS trials,
+              floor(extract(EPOCH FROM now() - min(created_at) FILTER (WHERE status = 'new'))
+                    / 86400)::int AS oldest
+         FROM lead
         WHERE archived_at IS NULL AND status IN ('new', 'trial_booked')`,
     );
-    return rows[0]?.n ?? 0;
+    const row = rows[0]!;
+    return { waiting: row.waiting, trials: row.trials, oldestWaitingDays: row.oldest };
   });
 }
 

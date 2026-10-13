@@ -2416,6 +2416,13 @@
         "inWater": "{occupied} in the water",
         "inWaterOf": "{occupied} of {capacity} in the water",
         "month": "This month: {amount} from {sales, plural, =0 {no sales} one {1 sale} other {# sales}} · {entries, plural, =0 {no entries} one {1 entry} other {# entries}}. Separate from monthly fees."
+      },
+      "leads": {
+        "waiting": "{count, plural, =0 {No new requests} one {# request to answer} other {# requests to answer}}",
+        "trials": "{count, plural, one {# trial lesson booked} other {# trial lessons booked}}",
+        "oldest": "{days, plural, =0 {The oldest arrived today} one {The oldest has waited # day} other {The oldest has waited # days}}",
+        "empty": "There are no registration requests to handle.",
+        "open": "See requests"
       }
     },
     "scope": {

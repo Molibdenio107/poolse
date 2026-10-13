@@ -38,6 +38,7 @@ import {
 } from './maintenance-band.repository.js';
 import type { ResolverContext } from './widget-registry.js';
 import { readFreeSwim, type FreeSwim } from '../reception/passes.repository.js';
+import { readLeadsWidget, type LeadsWidget } from '../leads/leads.repository.js';
 
 /**
  * The three resolvers slice 1 ships — POOLSE-66.
@@ -352,6 +353,20 @@ export async function staffCost(ctx: ResolverContext): Promise<SalarySummary | n
 export async function qualifications(ctx: ResolverContext): Promise<QualificationsWidget | null> {
   const widget = await readQualificationsWidget(ctx.organizationId);
   return widget.red + widget.amber + widget.missing === 0 ? null : widget;
+}
+
+/**
+ * Pedidos de inscrição — POOLSE-69: requests waiting and trials booked. Empty
+ * when there is nothing to answer, whether or not the form is open.
+ */
+export async function leads(ctx: ResolverContext): Promise<LeadsWidget | null> {
+  const widget = await readLeadsWidget(ctx.organizationId);
+  return widget.waiting + widget.trials === 0 ? null : widget;
+}
+
+/** A family that has waited three days for an answer is a family calling another club. */
+export function leadHasWaited(data: unknown): boolean {
+  return ((data as LeadsWidget | null)?.oldestWaitingDays ?? 0) >= 3;
 }
 
 /** An expired qualification is something somebody must act on this week. */

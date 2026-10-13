@@ -713,7 +713,6 @@ test('the pre-registration queue refuses a guardian and a student (403)', async 
   await asEach(async () => {
     const leads = new LeadsController();
     await refused('GET leads', 403, () => leads.list());
-    await refused('GET leads/count', 403, () => leads.count());
     await refused('GET leads/trial-options', 403, () => leads.options(NO_SUCH_ID));
     await refused('GET leads/:id', 403, () => leads.one(NO_SUCH_ID));
     await refused('POST leads/:id/waitlist', 403, () => leads.waitlist(NO_SUCH_ID, { classGroupId: NO_SUCH_ID }));

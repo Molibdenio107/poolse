@@ -202,6 +202,7 @@ Six aggregates, **one SQL statement each whatever the number of sites**
 | `mgmt.freeswim` | 40 → 85 with a tank ≥ 90 % full | site | each tank's people in the water out of its capacity; free swim sold this month and entries, **apart from mensalidades** (POOLSE-68) | `pool_occupancy`, and sale lines not since credited — `reception.md` |
 | `mgmt.waterquality.alerts` | 30 → 80 out of range | site | tanks out of range, or due for an analysis | `excursions` / `resolveBands`, and `facility.water_analysis_max_age_hours` |
 | `mgmt.maintenance.open` | 25 → 60 with a fault or overdue room | site | open avarias and reposições by severity, rooms overdue for cleaning | `OVERDUE` from `spaces.repository.ts` |
+| `mgmt.leads` | 20 → 65 when a request has waited 3 days | club | pre-registrations waiting, trials booked, the oldest wait | `readLeadsWidget` — POOLSE-69, `registration.md` |
 | `mgmt.people` | 15 | club | students, staff by role, invitations lapsing within 24 h | `countPeople`'s headcount rules |
 | `mgmt.staffcost` | 10 | club | the monthly staff cost with coverage | `salarySummary` — an admin's excludes the owner's pay, and says so |
 | `mgmt.qualifications` | 12, 55 when one has lapsed | club | qualifications vermelho, âmbar and em falta, the worst five | `qualification_current` — POOLSE-27, `staff.md` |

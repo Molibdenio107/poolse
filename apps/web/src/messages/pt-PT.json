@@ -2416,6 +2416,13 @@
         "inWater": "{occupied} na água",
         "inWaterOf": "{occupied} de {capacity} na água",
         "month": "Este mês: {amount} em {sales, plural, =0 {nenhuma venda} one {1 venda} other {# vendas}} · {entries, plural, =0 {nenhuma entrada} one {1 entrada} other {# entradas}}. À parte das mensalidades."
+      },
+      "leads": {
+        "waiting": "{count, plural, =0 {Nenhum pedido novo} one {# pedido por responder} other {# pedidos por responder}}",
+        "trials": "{count, plural, one {# aula experimental marcada} other {# aulas experimentais marcadas}}",
+        "oldest": "{days, plural, =0 {O mais antigo chegou hoje} one {O mais antigo espera há # dia} other {O mais antigo espera há # dias}}",
+        "empty": "Não há pedidos de inscrição por tratar.",
+        "open": "Ver pedidos"
       }
     },
     "scope": {
