@@ -98,7 +98,8 @@ export function ReceptionBoard({
         <p className="rounded border border-border bg-surface-muted p-4 text-sm text-foreground-muted">
           {t('reception.noProducts')}{' '}
           <Link
-            href={`/dashboard/facilities/${facilityId}?tab=prices`}
+            // Straight to the Natação livre section, not the tab's first one.
+            href={`/dashboard/facilities/${facilityId}?tab=prices&section=freeSwim`}
             className="text-primary underline underline-offset-2"
           >
             {t('reception.noProductsLink')}
