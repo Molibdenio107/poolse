@@ -1056,7 +1056,7 @@
       "ranges": "Ranges"
     },
     "configure": "Set up this site",
-    "configureHint": "Hours, prices, pools, partners, spaces, maintenance and energy — all set up on the site’s page.",
+    "configureHint": "Hours, prices, pools, partners, spaces, maintenance, energy and the club details — all set up on the site’s page.",
     "planFull": "Your plan includes {max, plural, one {1 site} other {# sites}}, already in use. To add another, get in touch to extend the plan.",
     "useLabel": "Use",
     "useHint": "Sets the NP 4542 reference temperature. With no use, temperature is not judged.",
@@ -3565,7 +3565,9 @@
     "noSites": "There are no sites yet. Create the first under Facilities to start invoicing.",
     "freeSwim": "Free swim",
     "finalConsumer": "Final consumer",
-    "viewSettings": "Settings"
+    "viewSettings": "Settings",
+    "clubDataMoved": "The club's tax details and logo have moved to the site settings.",
+    "clubDataLink": "Open the club details"
   },
   "reception": {
     "title": "Reception",
@@ -4877,5 +4879,9 @@
     "urlRequired": "Give the platform's full address, starting with https://",
     "urlTooLong": "Address too long.",
     "saveFailed": "The complaints book setting could not be saved."
+  },
+  "clubData": {
+    "tab": "Club details",
+    "hint": "Tax details and the logo belong to the club and apply to every site, not just this one."
   }
 }

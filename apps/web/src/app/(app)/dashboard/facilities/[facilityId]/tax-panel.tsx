@@ -5,14 +5,14 @@ import { TextField } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
 import type { TaxSettings } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
-import { saveTaxNumberAction } from './invoices.actions';
+import { saveTaxNumberAction } from './club.actions';
 
 /**
  * The club's own NIPC — POOLSE-62, second half.
  *
- * **Here because this is where it is true.** A fatura's issuer is the club, and
- * its tax number is what the document carries; the numbering books are on the
- * same screen for the same reason. Signup deliberately does not ask — it stays
+ * **With the club's settings, on the site's *Dados do clube* tab** — moved from
+ * Faturação → Configuração on 13 October 2026 (Rui): the number is defined for
+ * the club, and the documents read it from there. Signup deliberately does not ask — it stays
  * three fields and thirty seconds, and a tax number is the most intrusive
  * question you can put to somebody who has not decided yet.
  *

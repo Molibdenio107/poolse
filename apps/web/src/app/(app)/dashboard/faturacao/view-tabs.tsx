@@ -21,9 +21,10 @@ import { SectionPills } from '@/components/section-pills';
  * the same either way. `aria-current`, a fill and the label carry which one is
  * open; colour never does it alone.
  *
- * **Configuração** holds the series and the club's NIPC, which used to sit under
- * both lists and pushed the one somebody came for off the screen. Offered only
- * when the reader may read either of them.
+ * **Configuração** holds the series, which used to sit under both lists and
+ * pushed the one somebody came for off the screen. Offered only when the reader
+ * may read them. The club's NIPC and logo moved to the site's *Dados do clube*
+ * tab on 13 October 2026.
  */
 export type InvoiceView = 'month' | 'owing' | 'settings';
 

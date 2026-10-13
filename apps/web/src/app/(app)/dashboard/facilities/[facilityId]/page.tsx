@@ -1,4 +1,7 @@
 import { RegulationPanel, type ComplaintsSettingsView, type RegulationVersionView } from './regulation-panel';
+import { TaxPanel } from './tax-panel';
+import { LogoPanel } from './logo-panel';
+import { readTaxSettings } from './club.actions';
 import { wallClockNow } from '@/lib/date-format';
 import Link from 'next/link';
 import { SectionPills, pickSection, sectionHref as sectionUrl } from '@/components/section-pills';
@@ -515,6 +518,33 @@ export default async function FacilityPage({
                   today={wallClockNow(loaded.timezone ?? 'Europe/Lisbon').slice(0, 10)}
                 />
               </section>
+            );
+          },
+        },
+        {
+          /*
+            The club's own data — its NIPC and logo — moved here from Faturação
+            → Configuração on 13 October 2026 (Rui): they are defined for the
+            club, and this page is where the club is configured. Club-wide, as
+            the complaints setting on the Regulamento tab is, and the tab says
+            so. Owner and admin, as the endpoints are.
+          */
+          slug: 'club',
+          labelKey: 'clubData.tab',
+          visible: loaded.canManage,
+          content: async () => {
+            const tax = await readTaxSettings();
+            if (tax.state === 'refused') return <PageError message={t('common.notAllowed')} />;
+            return (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-foreground-muted">{t('clubData.hint')}</p>
+                {tax.state === 'failed' ? (
+                  <PageError message={t(tax.failure.key)} />
+                ) : (
+                  <TaxPanel settings={tax.data} />
+                )}
+                <LogoPanel />
+              </div>
             );
           },
         },

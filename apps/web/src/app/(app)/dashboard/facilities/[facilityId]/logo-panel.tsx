@@ -7,10 +7,11 @@ import { storageConfigured } from '@/lib/storage-status';
 /**
  * The club's logo — 12 October 2026.
  *
- * Beside the NIPC because both are how the club appears as itself: on its own
+ * Beside the NIPC on the site's *Dados do clube* tab (moved from Faturação on
+ * 13 October 2026) because both are how the club appears as itself: on its own
  * documents, and in the corner of every screen (the app bar's brand slot,
  * which belongs to the customer rather than to Poolse). Owner and admin, as the
- * rest of this section.
+ * rest of this tab.
  */
 export async function LogoPanel(): Promise<React.ReactElement> {
   const t = await getTranslations();

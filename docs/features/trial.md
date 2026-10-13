@@ -242,10 +242,11 @@ refusing.
 A second e-mail costs nothing. The thing that does not change is the legal entity, so the
 second block is on the club's NIPC.
 
-**It is asked for under Faturação, not at signup.** Signup stays three fields and thirty
-seconds, and a tax number is the most intrusive question you can put to somebody who has not
-decided yet — and the one they cannot answer from memory. Under Faturação it is where it is
-already true: a fatura's issuer is the club, and its number is what the document carries. The
+**It is asked for on the site's *Dados do clube* tab, not at signup.** Signup stays three
+fields and thirty seconds, and a tax number is the most intrusive question you can put to
+somebody who has not decided yet — and the one they cannot answer from memory. It sat under
+Faturação → Configuração until 13 October 2026; it moved to the club's settings, beside the
+logo, because it is defined for the club (a fatura's issuer) rather than for invoicing. The
 panel says out loud that the number is also checked against other clubs, because a field that
 quietly does two things is a field somebody fills in wrongly.
 

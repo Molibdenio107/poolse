@@ -8,15 +8,8 @@ import { InvoiceList } from './invoice-list';
 import { SeriesPanel } from './series-panel';
 import { OutstandingList } from './outstanding-list';
 import { ViewTabs, type InvoiceView } from './view-tabs';
-import { TaxPanel } from './tax-panel';
-import { LogoPanel } from './logo-panel';
-import {
-  listInvoices,
-  listOutstanding,
-  listSeries,
-  previewRun,
-  readTaxSettings,
-} from './invoices.actions';
+import Link from 'next/link';
+import { listInvoices, listOutstanding, listSeries, previewRun } from './invoices.actions';
 
 /**
  * Faturação — phase 2.2.
@@ -91,15 +84,13 @@ export default async function InvoicingPage({
     sites.facilities.find((site) => site.id === requested.trim())?.id ?? sites.facilities[0]!.id;
 
   const skipped = Promise.resolve(null);
-  const [runLoad, issuedLoad, outstandingLoad, booksLoad, taxLoad] = await Promise.all([
+  const [runLoad, issuedLoad, outstandingLoad, booksLoad] = await Promise.all([
     asked === 'month' ? previewRun(chosen, periodStart) : skipped,
     asked === 'month' ? listInvoices(chosen, periodStart) : skipped,
     owing ? listOutstanding(chosen) : skipped,
-    // Both of these load under every view, as they always have: whether the
-    // Configuração pill is offered rests on whether either would be refused.
+    // Loads under every view: whether the Configuração pill is offered rests on
+    // whether it would be refused.
     listSeries(chosen),
-    // The club's own number rather than the site's — POOLSE-62.
-    readTaxSettings(),
   ]);
 
   // "Not yours" only when every load that ran was refused; a failure is said
@@ -122,9 +113,8 @@ export default async function InvoicingPage({
   const issued = issuedLoad?.state === 'ok' ? issuedLoad.data : null;
   const outstanding = outstandingLoad?.state === 'ok' ? outstandingLoad.data : null;
   const books = booksLoad.state === 'ok' ? booksLoad.data : null;
-  const tax = taxLoad.state === 'ok' ? taxLoad.data : null;
 
-  const settingsOffered = booksLoad.state !== 'refused' || taxLoad.state !== 'refused';
+  const settingsOffered = booksLoad.state !== 'refused';
   // No fallback is needed for a bookmarked Configuração the reader may not
   // have: under that view the series is the only load that ran, so a refusal
   // of it is the "not yours" page above.
@@ -189,13 +179,19 @@ export default async function InvoicingPage({
             )}
 
             {/*
-              The club's own number, under the books that carry it — POOLSE-62.
-              Absent for anybody the endpoint would refuse, rather than shown as an
-              empty field they cannot save.
+              The club's NIPC and logo live with the club's settings now — Rui,
+              13 October 2026. Said here, with the way there, because this is
+              where somebody who has used Poolse before will look for them.
             */}
-            {tax !== null && <TaxPanel settings={tax} />}
-            {tax !== null && <LogoPanel />}
-            {taxLoad.state === 'failed' && <PageError message={t(taxLoad.failure.key)} />}
+            <p className="text-sm text-foreground-muted">
+              {t('invoices.clubDataMoved')}{' '}
+              <Link
+                href={`/dashboard/facilities/${chosen}?tab=club`}
+                className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('invoices.clubDataLink')}
+              </Link>
+            </p>
           </>
         )}
       </div>

@@ -1056,7 +1056,7 @@
       "ranges": "Limites"
     },
     "configure": "Configurar instalação",
-    "configureHint": "Horário, preços, tanques, parcerias, espaços, manutenção e energia — tudo se configura na página da instalação.",
+    "configureHint": "Horário, preços, tanques, parcerias, espaços, manutenção, energia e os dados do clube — tudo se configura na página da instalação.",
     "planFull": "O seu plano inclui {max, plural, one {1 instalação} other {# instalações}}, já em uso. Para acrescentar outra, fale connosco para alargar o plano.",
     "useLabel": "Utilização",
     "useHint": "Define a temperatura de referência da NP 4542. Sem utilização, a temperatura não é avaliada.",
@@ -3565,7 +3565,9 @@
     "noSites": "Ainda não há instalações. Crie a primeira em Instalações para poder faturar.",
     "freeSwim": "Natação livre",
     "finalConsumer": "Consumidor final",
-    "viewSettings": "Configuração"
+    "viewSettings": "Configuração",
+    "clubDataMoved": "Os dados fiscais e o logotipo do clube passaram para a configuração da instalação.",
+    "clubDataLink": "Abrir os dados do clube"
   },
   "reception": {
     "title": "Receção",
@@ -4877,5 +4879,9 @@
     "urlRequired": "Indique o endereço completo da plataforma, a começar por https://",
     "urlTooLong": "Endereço demasiado longo.",
     "saveFailed": "Não foi possível guardar a definição do livro de reclamações."
+  },
+  "clubData": {
+    "tab": "Dados do clube",
+    "hint": "Os dados fiscais e o logotipo são do clube e aplicam-se a todas as instalações, não só a esta."
   }
 }

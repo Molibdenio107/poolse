@@ -1106,3 +1106,4 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   - **A walk-in with a pass is not staff.** The "staff with no role yet" scope of Pessoas leaves out memberships that hold a `pass`, as it leaves out support.
   - **A stand-in must be a live instructor**, and an instructor may set one only on their own class; cancelling "this and every later week" is owner and admin.
   - **Withdrawing a regulation version asks first**, naming the version.
+- **2026-10-13** — **The club’s NIPC and logo move from Faturação → Configuração to a *Dados do clube* tab on the site’s page** (Rui): they are defined for the club, and the site’s page is where the club is configured. Club-wide, and the tab says so; owner and admin. Configuração keeps the invoice series and links to the new place.
