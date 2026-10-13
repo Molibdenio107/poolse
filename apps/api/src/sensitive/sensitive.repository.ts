@@ -352,7 +352,7 @@ export async function enrolmentContext(
     }>(
       `SELECT student_is_adult_path(s.organization_id, s.id) AS adult_path,
               CASE WHEN s.birth_date IS NULL THEN NULL
-                   ELSE extract(year FROM age(current_date, s.birth_date))::int
+                   ELSE extract(year FROM age(club_today(), s.birth_date))::int
               END AS age_years,
               o.age_of_majority,
               EXISTS (

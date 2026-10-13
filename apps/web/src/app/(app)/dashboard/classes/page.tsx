@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { dataOf, describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -65,12 +65,15 @@ export default async function ClassesPage({
     leaves the block absent rather than the screen broken.
   */
   let grid: (FacilityGrid & { facilityId: string; openWeekdays: number[] }) | null = null;
+  // A refusal hides the block; a failure says so (13-10-2026 sweep) — a 500
+  // used to make every parceria vanish from the week without a word.
+  let gridFailure: LoadFailure | null = null;
   if (data !== null) {
     const site = data.facilities[0];
     if (site !== undefined) {
-      const loaded = await apiFetch<FacilityGrid>(`/facilities/${site.id}/grid`).catch(
-        () => null,
-      );
+      const result = await outcome(apiFetch<FacilityGrid>(`/facilities/${site.id}/grid`));
+      if (result.state === 'failed') gridFailure = result.failure;
+      const loaded = dataOf(result);
       if (loaded !== null) {
         grid = {
           ...loaded,
@@ -345,6 +348,13 @@ export default async function ClassesPage({
         <PageError
           message={t(failure.key)}
           {...(failure.detail === '' ? {} : { detail: failure.detail })}
+        />
+      )}
+
+      {gridFailure !== null && (
+        <PageError
+          message={t(gridFailure.key)}
+          {...(gridFailure.detail === '' ? {} : { detail: gridFailure.detail })}
         />
       )}
 

@@ -49,6 +49,10 @@ export async function recordAttendanceAction(
   try {
     await apiPost(`/sessions/${sessionId}/attendance`, { marks }, { organizationId });
   } catch (error) {
+    // The register's own refusals, said in words — 13-10-2026 sweep.
+    if (error instanceof ApiError && error.code !== null && error.code.startsWith('register_')) {
+      return { ok: false, errorKey: `attendance.refused.${error.code.slice('register_'.length)}` };
+    }
     if (error instanceof ApiError) {
       return { ok: false, errorKey: 'attendance.saveFailed', detail: error.message };
     }

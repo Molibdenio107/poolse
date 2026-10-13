@@ -115,7 +115,8 @@ records**.
 - **When a trial ends without payment**, the account becomes read-only immediately. Nothing
   is deleted. The club may sign in, read everything, and export all of it.
 - **Data is kept for 30 days** after that, during which paying restores full access
-  immediately and nothing has been lost.
+  immediately and nothing has been lost. (The Stripe webhook lifts read-only and the deletion
+  date when the subscription becomes active, unless the club is suspended.)
 - **After 30 days**, sign-in is closed. The data still exists and can still be restored by
   contacting us.
 - **After a further 30 days** — 60 days after the trial ended — the account and everything

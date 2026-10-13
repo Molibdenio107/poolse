@@ -927,7 +927,7 @@ export async function studentFees(
               -- on the client, where a stale page would age into a wrong answer.
               (pay.id IS NULL
                AND cur.period_start IS NOT NULL
-               AND fee_due_on(cur.period_start, f.payment_due_day) < current_date) AS is_overdue,
+               AND fee_due_on(cur.period_start, f.payment_due_day) < club_today()) AS is_overdue,
               -- Only when it differs. Null is "no marker", decided here so the
               -- interface has no rule of its own to get wrong — AC5.
               --
@@ -1065,7 +1065,7 @@ export async function studentFees(
                   ON pay.student_fee_id = sf.id AND pay.period_start = cur.period_start
           WHERE sf.student_id = $1 AND sf.archived_at IS NULL
             AND pay.id IS NULL AND cur.period_start IS NOT NULL
-            AND fee_due_on(cur.period_start, f.payment_due_day) < current_date
+            AND fee_due_on(cur.period_start, f.payment_due_day) < club_today()
        )
        /*
         * The largest of each kind, so a student late at two sites is not quietly
@@ -1108,7 +1108,7 @@ export async function studentFees(
       covers_to: string;
       insurer_name: string | null;
     }>(
-      `SELECT (current_date BETWEEN sf.covers_from AND sf.covers_to) AS covered,
+      `SELECT (club_today() BETWEEN sf.covers_from AND sf.covers_to) AS covered,
               to_char(sf.covers_from, 'YYYY-MM-DD') AS covers_from,
               to_char(sf.covers_to, 'YYYY-MM-DD') AS covers_to,
               ip.insurer AS insurer_name
@@ -1116,7 +1116,7 @@ export async function studentFees(
          LEFT JOIN insurance_policy ip
                 ON ip.id = sf.insurance_policy_id AND ip.organization_id = sf.organization_id
         WHERE sf.student_id = $1 AND sf.archived_at IS NULL AND sf.kind = 'seguro'
-        ORDER BY (current_date BETWEEN sf.covers_from AND sf.covers_to) DESC,
+        ORDER BY (club_today() BETWEEN sf.covers_from AND sf.covers_to) DESC,
                  sf.covers_to DESC
         LIMIT 1`,
       [studentId],
@@ -1525,7 +1525,7 @@ export async function createStudentFee(
               CASE WHEN fc.id IS NOT NULL THEN fc.discount_percent ELSE $5 END,
               CASE WHEN fc.id IS NOT NULL THEN fc.discount_cents   ELSE $6 END,
               CASE WHEN fc.id IS NOT NULL THEN NULL                ELSE $7 END,
-              coalesce($8::date, current_date),
+              coalesce($8::date, club_today()),
               p.season_id,
               ip.id, cover.from_day, cover.to_day,
               fc.id
@@ -1813,7 +1813,7 @@ export async function markFeePaid(
       await tx.query(
         `INSERT INTO student_fee_payment (organization_id, student_fee_id, period_start,
                                           paid_on, recorded_by, source)
-         VALUES ($1, $2, $3::date, coalesce($4::date, current_date), $5, $6::payment_source)
+         VALUES ($1, $2, $3::date, coalesce($4::date, club_today()), $5, $6::payment_source)
          ON CONFLICT (student_fee_id, period_start)
            DO UPDATE SET paid_on = EXCLUDED.paid_on,
                          recorded_by = EXCLUDED.recorded_by,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
@@ -50,7 +50,12 @@ export function SpaceHeader({
     INITIAL,
   );
 
-  if (state.ok && editing) setEditing(false);
+  // Closed by a *new* successful result, in an effect: state.ok stays true after
+  // a save, so a check during render closed the dialog again the moment it was
+  // reopened (13-10-2026 sweep).
+  useEffect(() => {
+    if (state.ok) setEditing(false);
+  }, [state]);
 
   const ago = timeAgo(space.lastCleanedAt, locale);
 

@@ -588,7 +588,7 @@ export async function energyCosts(organizationId: string, months = 12): Promise<
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ month: string; total_cents: number | null; kwh: number | null; bills: number }>(
       `WITH months AS (
-         SELECT to_char(date_trunc('month', current_date) - (n || ' months')::interval, 'YYYY-MM') AS month
+         SELECT to_char(date_trunc('month', club_today()) - (n || ' months')::interval, 'YYYY-MM') AS month
            FROM generate_series($2::int - 1, 0, -1) AS n
        ),
        billed AS (

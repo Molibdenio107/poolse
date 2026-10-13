@@ -1097,3 +1097,12 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   - **The link is plain, prominent text, not the DGC icon.** The icon's artwork must come from the official kit.
   - **The regulation is text, versioned by the day it takes effect, never edited.** No PDF in this slice.
   - Correction to the morning's water research: **Portaria 454/2023 art. 46.º exists** and is the operating-regulation rule (`docs/research/public-notices-2026-10.md`).
+- **2026-10-13** — **Second sweep, taken without asking:**
+  - **A wall-clock moment is the facility's clock.** A water sample, a lab sample, a meter reading and a task completion typed as `datetime-local` are resolved in `facility.timezone` (`facilities/sample-moment.ts`), never in the server's UTC; a string that names its zone is kept as an instant.
+  - **"Today" in SQL is `club_today()`, never `current_date`.** Thirty-nine reads and seven column defaults moved; between midnight and 01:00 in a Lisbon summer the server's date is yesterday.
+  - **One instructor across lanes of one pool is not a clash**, in the clash report and the lesson top-up alike — they now mirror `class_session_instructor_free` (effective instructor, different pools, published season). The old rule silently left turmas with no lessons.
+  - **Paying lifts read-only.** A Stripe event that makes a club `active` or `trialing` clears `read_only_at` and `pending_delete_at` unless it is suspended, which is what `trial.md` already promised. Events older than the last one applied are ignored (`organization.stripe_event_at`), and a manually billed club cannot open a Stripe checkout.
+  - **The app login cannot DELETE an organization**, and `provision_organization` is executable by `poolse_app` only.
+  - **A walk-in with a pass is not staff.** The "staff with no role yet" scope of Pessoas leaves out memberships that hold a `pass`, as it leaves out support.
+  - **A stand-in must be a live instructor**, and an instructor may set one only on their own class; cancelling "this and every later week" is owner and admin.
+  - **Withdrawing a regulation version asks first**, naming the version.

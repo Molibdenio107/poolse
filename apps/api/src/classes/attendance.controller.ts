@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Query,
+  ConflictException,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
@@ -19,6 +20,7 @@ import {
   type AttendanceSummary,
   type Mark,
   type Register,
+  RegisterRefusedError,
 } from './attendance.repository.js';
 
 const STATUSES: AttendanceStatus[] = ['present', 'absent', 'excused'];
@@ -92,8 +94,25 @@ export class AttendanceController {
 
     const marks = parseMarks(body['marks']);
 
-    if (!(await saveRegister(organizationId, id, membershipId, marks))) {
-      throw new NotFoundException('No such class');
+    try {
+      if (!(await saveRegister(organizationId, id, membershipId, marks))) {
+        throw new NotFoundException('No such class');
+      }
+    } catch (error) {
+      if (error instanceof RegisterRefusedError) {
+        throw new ConflictException({ code: `register_${error.reason}`, message: `attendance.refused.${error.reason}` });
+      }
+      /*
+       * A mark that earned a reposição credit cannot be cleared (23503, the
+       * credit names it) nor changed once the credit was booked or spent
+       * (23001). Both were 500s that rolled back the whole register —
+       * 13-10-2026 sweep. Said in words; the rest of the register is resent.
+       */
+      const code = (error as { code?: string }).code;
+      if (code === '23503' || code === '23001') {
+        throw new ConflictException({ code: 'register_credited', message: 'attendance.refused.credited' });
+      }
+      throw error;
     }
     return { recorded: true };
   }

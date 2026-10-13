@@ -280,7 +280,7 @@ export class TrialClockService {
           WHERE billing_mode = 'manual'
             AND subscription_status = 'active'
             AND paid_through IS NOT NULL
-            AND paid_through < current_date
+            AND paid_through < club_today()
             AND archived_at IS NULL
             AND ($1::uuid IS NULL OR id = $1)
         RETURNING id
@@ -313,7 +313,7 @@ export class TrialClockService {
           WHERE billing_mode = 'manual'
             AND subscription_status = 'past_due'
             AND paid_through IS NOT NULL
-            AND (paid_through + manual_grace_period())::date < current_date
+            AND (paid_through + manual_grace_period())::date < club_today()
             AND read_only_at IS NULL
             AND archived_at IS NULL
             AND ($1::uuid IS NULL OR id = $1)

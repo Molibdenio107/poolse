@@ -979,20 +979,20 @@ export async function facilityHours(
              h.opens_at::text  AS opens_at,
              h.closes_at::text AS closes_at,
              (
+               -- Every block at the site that day, partnerships and free swim
+               -- included: the schedule carries its own facility. An inner join
+               -- to class_group counted turmas only, so closing a day that held
+               -- only a school's parceria warned of nothing (13-10-2026 sweep).
                SELECT count(*)::int
                  FROM class_schedule cs
-                 JOIN class_group g
+                 LEFT JOIN class_group g
                    ON g.id = cs.class_group_id
                   AND g.organization_id = cs.organization_id
-                 JOIN pool p
-                   ON p.id = g.pool_id
-                  AND p.organization_id = g.organization_id
                 WHERE cs.organization_id = h.organization_id
+                  AND cs.facility_id = h.facility_id
                   AND cs.weekday = h.weekday
                   AND cs.archived_at IS NULL
-                  AND g.archived_at IS NULL
-                  AND p.archived_at IS NULL
-                  AND p.facility_id = h.facility_id
+                  AND (g.id IS NULL OR g.archived_at IS NULL)
              ) AS scheduled_classes
         FROM facility_hours h
        WHERE h.facility_id = $1

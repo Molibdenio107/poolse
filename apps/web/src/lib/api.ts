@@ -999,6 +999,8 @@ export interface PoolCostReport {
   costCents: number | null;
   kwh: number | null;
   taughtMinutes: number;
+  /** Taught minutes in the priced months — what cost per hour divides by (13-10-2026 sweep). */
+  allocatableMinutes: number;
   bathers: number;
   unallocatedCents: number | null;
   monthsWithConsumption: number;

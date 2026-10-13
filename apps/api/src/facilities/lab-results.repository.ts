@@ -13,6 +13,7 @@ import {
 } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 import { readPoolContext } from './analyses.repository.js';
+import { resolveSample, type SampleMoment } from './sample-moment.js';
 
 /**
  * Laboratory results — POOLSE-72.
@@ -35,7 +36,8 @@ export function unitOf(parameter: LabParameter): string {
 }
 
 export interface LabResultInput {
-  sampledAt: Date;
+  /** Resolved in the facility's timezone by `resolveSample` — 13-10-2026 sweep. */
+  sampledAt: SampleMoment;
   laboratory: string | null;
   reportReference: string | null;
   samplePoint: string | null;
@@ -155,6 +157,8 @@ export async function createLabResult(
       poolId,
     ]);
     if (pools.length === 0) return null;
+    const sampledAt = await resolveSample(tx, poolId, input.sampledAt);
+    if (sampledAt === null) return null;
 
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO lab_result (
@@ -165,7 +169,7 @@ export async function createLabResult(
       [
         organizationId,
         poolId,
-        input.sampledAt,
+        sampledAt,
         input.laboratory,
         input.reportReference,
         input.samplePoint,

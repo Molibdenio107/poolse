@@ -718,7 +718,7 @@ export async function archiveClassGroup(
           WHERE class_group_id = $1 AND status <> 'ended'
           FOR UPDATE
        )
-       UPDATE enrollment e SET status = 'ended', ended_on = current_date
+       UPDATE enrollment e SET status = 'ended', ended_on = club_today()
          FROM was
         WHERE e.id = was.id
       RETURNING e.id, was.status::text AS was`,
@@ -731,7 +731,7 @@ export async function archiveClassGroup(
       `SELECT id, to_char(ends_on, 'YYYY-MM-DD') AS ends_on
          FROM student_fee
         WHERE enrollment_id = ANY($1::uuid[]) AND archived_at IS NULL
-          AND updated_at = now() AND ends_on = current_date
+          AND updated_at = now() AND ends_on = club_today()
         ORDER BY id`,
       [ended.rows.map((row) => row.id)],
     );
@@ -770,7 +770,12 @@ export async function archiveClassGroup(
  * designed, reported as a crash. The prefix is what turns it back into a
  * sentence somebody can act on.
  */
-export type ScheduleRefusal = 'closed_that_day' | 'outside_hours' | 'ends_after_closing';
+export type ScheduleRefusal =
+  | 'closed_that_day'
+  | 'outside_hours'
+  | 'ends_after_closing'
+  /** A later week would land on a lane or an instructor already taken — 13-10-2026 sweep. */
+  | 'lessons_clash';
 
 function scheduleRefusal(error: unknown): ScheduleRefusal | null {
   if (!(error instanceof Error)) return null;
@@ -898,7 +903,20 @@ export async function moveSchedule(
      * forward. Weeks already taught keep the time they were actually taught
      * at, and a week somebody moved by hand is left where they put it.
      */
-    const realigned = await realignFutureSessions(tx, organizationId, scheduleId);
+    // A later week landing on a taken lane or an occupied instructor refuses
+    // the move in words, rather than a 23P01 surfacing as a 500 — 13-10-2026.
+    let realigned: number;
+    await tx.query('SAVEPOINT before_realign');
+    try {
+      realigned = await realignFutureSessions(tx, organizationId, scheduleId);
+      await tx.query('RELEASE SAVEPOINT before_realign');
+    } catch (error) {
+      if ((error as { code?: string }).code === '23P01') {
+        await tx.query('ROLLBACK TO SAVEPOINT before_realign');
+        throw new LessonsClashError();
+      }
+      throw error;
+    }
 
     await recordAudit(tx, {
       action: 'class_schedule.moved',
@@ -1061,7 +1079,7 @@ export async function endEnrollment(
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ student_id: string }>(
       `UPDATE enrollment
-          SET status = 'ended', ended_on = current_date, waiting_position = NULL
+          SET status = 'ended', ended_on = club_today(), waiting_position = NULL
         WHERE id = $1 AND class_group_id = $2 AND status <> 'ended'
       RETURNING student_id`,
       [enrollmentId, groupId],
@@ -1175,7 +1193,8 @@ export type MoveOccurrence =
   | { outcome: 'moved' }
   | { outcome: 'not_found' }
   | { outcome: 'taught' }
-  | { outcome: 'occupied'; clash: OccupiedLane | null };
+  | { outcome: 'occupied'; clash: OccupiedLane | null }
+  | { outcome: 'instructor_busy' };
 
 /**
  * Moving one week's class, without moving every week's.
@@ -1334,8 +1353,12 @@ export async function moveOccurrence(
         );
       }
     } catch (error) {
-      // 23P01 is the lane exclusion; 23505 the one-occurrence-per-booking key.
+      // 23P01 is the lane exclusion — or the instructor's, which is a different
+      // sentence (13-10-2026 sweep); 23505 the one-occurrence-per-booking key.
       const code = (error as { code?: string }).code;
+      if (code === '23P01' && (error as { constraint?: string }).constraint === 'class_session_instructor_free') {
+        return { outcome: 'instructor_busy' };
+      }
       if (code === '23P01' || code === '23505') {
         return { outcome: 'occupied', clash: await occupiedBy(tx, sessionId, laneIds, date, startTime) };
       }
@@ -1488,9 +1511,15 @@ export async function realignFutureSessions(
           ON f.id = sch.facility_id AND f.organization_id = sch.organization_id
        WHERE sch.id = $1
          AND cs.organization_id = $2
-         AND cs.occurs_on >= current_date
+         AND cs.occurs_on >= club_today()
          AND cs.moved_at IS NULL
          AND cs.status <> 'cancelled'
+         -- A taught class is a record and does not move; and no week is moved
+         -- onto a day already behind us — 13-10-2026 sweep.
+         AND NOT EXISTS (
+           SELECT 1 FROM attendance a
+            WHERE a.class_session_id = cs.id AND a.organization_id = cs.organization_id)
+         AND cs.occurs_on + (sch.weekday - extract(ISODOW FROM cs.occurs_on)::int) >= club_today()
     )
     UPDATE class_session cs
        SET occurs_on = m.on_date,
@@ -1504,3 +1533,6 @@ export async function realignFutureSessions(
 
   return rowCount ?? 0;
 }
+
+/** Moving a pattern would put a later week on a taken lane or instructor. */
+export class LessonsClashError extends Error {}

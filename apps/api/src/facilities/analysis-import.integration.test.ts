@@ -79,7 +79,9 @@ test('5 — a commit turns one row into an analysis and its readings', async () 
     });
 
     const analyses = await tenant.sql<{ id: string; notes: string | null; taken: string }>(
-      `SELECT id, notes, to_char(taken_at, 'YYYY-MM-DD HH24:MI') AS taken
+      // A sheet's times are the site's wall clock (13-10-2026 sweep): 08:30 in
+      // Lisbon in September is 07:30 UTC, so read it back on the site's clock.
+      `SELECT id, notes, to_char(taken_at AT TIME ZONE 'Europe/Lisbon', 'YYYY-MM-DD HH24:MI') AS taken
          FROM pool_analysis WHERE pool_id = $1 ORDER BY taken_at`,
       [poolId],
     );

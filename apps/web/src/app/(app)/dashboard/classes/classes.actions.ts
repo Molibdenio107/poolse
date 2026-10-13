@@ -274,6 +274,11 @@ export async function moveSlotAction(
     );
   } catch (error) {
     if (error instanceof ApiError && error.status === 409) {
+      // A later lesson would clash at the new hour — 13-10-2026 sweep. Not a
+      // duplicate slot, so it must not read as one.
+      if ((error.details as { code?: string } | undefined)?.code === 'lessons_clash') {
+        return { ok: false, errorKey: 'classes.slotLessonsClash' };
+      }
       return { ok: false, errorKey: 'classes.slotDuplicate' };
     }
     return { ok: false, errorKey: 'classes.slotRefused' };
@@ -365,6 +370,10 @@ export async function moveOccurrenceAction(
       // clash somebody could go and clear.
       if (body.message === 'occurrenceTaught') {
         return { ok: false, errorKey: 'classes.occurrenceTaught' };
+      }
+      // The instructor is teaching elsewhere — 13-10-2026 sweep.
+      if (body.message === 'occurrenceInstructorBusy') {
+        return { ok: false, errorKey: 'classes.occurrenceInstructorBusy' };
       }
       const detail = [body.lane, body.holder].filter(Boolean).join(' · ');
       return detail === ''

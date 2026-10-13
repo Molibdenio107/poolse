@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, CalendarClock, Check, PauseCircle, Plus } from 'lucide-react';
@@ -251,10 +251,12 @@ function TaskDialog({
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createTask, INITIAL);
 
-  // Closed by the state it produced, during render, exactly as the espaços
-  // dialog is — a save that worked should not leave the form sitting open over
-  // the list it just changed.
-  if (state.ok && open) onClose();
+  // A save that worked should not leave the form sitting open over the list it
+  // just changed.
+  useEffect(() => {
+    if (state.ok) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per result
+  }, [state]);
 
   return (
     <Dialog

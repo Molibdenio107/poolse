@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertCircle, Check, Plus, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
@@ -63,7 +63,12 @@ function IssueRow({
     INITIAL,
   );
 
-  if (state.ok && resolving) setResolving(false);
+  // Closed by a *new* successful result, in an effect: state.ok stays true after
+  // a save, so a check during render closed the dialog again the moment it was
+  // reopened (13-10-2026 sweep).
+  useEffect(() => {
+    if (state.ok) setResolving(false);
+  }, [state]);
 
   const reportedAt = new Date(issue.reportedAt);
 
@@ -235,7 +240,9 @@ export function IssuesPanel({
     INITIAL,
   );
 
-  if (state.ok && reporting) setReporting(false);
+  useEffect(() => {
+    if (state.ok) setReporting(false);
+  }, [state]);
 
   const open = issues.filter((issue) => issue.status === 'open');
   const resolved = issues.filter((issue) => issue.status === 'resolved');

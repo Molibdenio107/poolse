@@ -334,11 +334,15 @@ export async function saveRegister(
   marks: Mark[],
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string }>(
-      `SELECT id FROM class_session WHERE id = $1`,
+    const { rows } = await tx.query<{ id: string; status: string; class_group_id: string | null }>(
+      `SELECT id, status::text AS status, class_group_id FROM class_session WHERE id = $1`,
       [sessionId],
     );
     if (!rows[0]) return false;
+    // A cancelled class is not marked, and a parceria takes no register, ever
+    // (CLAUDE.md) — refused here, not only by the screen. 13-10-2026 sweep.
+    if (rows[0].status === 'cancelled') throw new RegisterRefusedError('cancelled');
+    if (rows[0].class_group_id === null) throw new RegisterRefusedError('partnership');
 
     const cleared = marks.filter((mark) => mark.status === null).map((mark) => mark.studentId);
     const set = marks.filter((mark) => mark.status !== null);
@@ -453,4 +457,11 @@ export async function summaryForStudent(
       unmarked: Number(row?.unmarked ?? 0),
     };
   });
+}
+
+/** Why a register was not saved, in a form the controller can say. */
+export class RegisterRefusedError extends Error {
+  constructor(readonly reason: 'cancelled' | 'partnership' | 'credited') {
+    super(reason);
+  }
 }

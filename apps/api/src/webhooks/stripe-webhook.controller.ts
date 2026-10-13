@@ -59,6 +59,8 @@ export class StripeWebhookController {
       event.type,
       change.customerId,
       change.change,
+      // Stripe's own clock for the event, so a late delivery cannot undo a newer one.
+      typeof event.created === 'number' ? new Date(event.created * 1000) : null,
     );
 
     this.logger.log(

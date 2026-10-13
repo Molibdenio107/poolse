@@ -43,7 +43,7 @@ import {
   StudentsController,
 } from '../students/students.controller.js';
 import { VacationsController } from '../vacations/vacations.controller.js';
-import { PlacesController } from '../weather/weather.controller.js';
+import { PlacesController, WeatherController } from '../weather/weather.controller.js';
 import {
   actingAs,
   addMember,
@@ -541,6 +541,8 @@ test('operational reads refuse non-staff (403)', async () => {
       new InventoryController().lostAndFound(fac),
     );
     await refused('GET places', 403, () => new PlacesController().search('Lisboa'));
+    // 13-10-2026 sweep: the one handler that had no role check.
+    await refused('GET weather', 403, () => new WeatherController().current('38.7', '-9.1'));
     await refused('GET incidents/people', 403, () =>
       new IncidentsController().people('student', 'Alice'),
     );

@@ -69,6 +69,7 @@ import {
   type PoolKind,
   type PoolUse,
 } from './facilities.repository.js';
+import { SampleInFutureError, sampleMoment, type SampleMoment } from './sample-moment.js';
 import { POOL_USES, type PoolContext } from '@poolse/rules';
 
 interface FacilityDetailResponse extends FacilityDetail {
@@ -725,6 +726,9 @@ export class FacilitiesController {
 }
 
 function asHttp(error: unknown): unknown {
+  if (error instanceof SampleInFutureError) {
+    return analysisField('takenAt', 'facilities.analysisTakenAtInvalid', 'takenAt is in the future');
+  }
   if (error instanceof DuplicateNameError) {
     return new ConflictException(`"${error.message}" already exists here`);
   }
@@ -1067,26 +1071,28 @@ function bound(value: unknown, field: string): number | null {
  * When the sample was taken.
  *
  * Accepts what `<input type="datetime-local">` posts - "2026-08-29T09:30", with
- * no zone - and anything already carrying one. A bare local string is read in
- * the server's zone, which is the same compromise every other "now" in this app
- * makes until facility timezones reach the UI; the column is `timestamptz`, so
- * whatever is resolved here is stored as a real instant rather than as text.
+ * no zone - and anything already carrying one. A bare local string is the
+ * facility's wall clock, resolved by `resolveSample`; the column is
+ * `timestamptz`, so it is stored as a real instant rather than as text.
+ *
+ * Refusals name the field, so the sentence lands beside the box.
  */
-function analysisMoment(value: unknown): string {
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw new BadRequestException('takenAt is required');
-  }
+function analysisField(field: string, key: string, message: string): BadRequestException {
+  return new BadRequestException({ code: 'invalid', message, fields: { [field]: key } });
+}
 
-  const parsed = new Date(value.trim());
-  if (Number.isNaN(parsed.getTime())) {
-    throw new BadRequestException('takenAt is not a valid date and time');
+function analysisMoment(value: unknown): SampleMoment {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw analysisField('takenAt', 'facilities.analysisMomentRequired', 'takenAt is required');
   }
-  // A sample cannot have been taken tomorrow. A minute of slack absorbs a client
-  // clock that is slightly ahead rather than refusing a form somebody just filled.
-  if (parsed.getTime() > Date.now() + 60_000) {
-    throw new BadRequestException('takenAt is in the future');
+  // Shape only. The instant — and whether it is in the future — is resolved
+  // in the facility's timezone by `resolveSample`, never in the server's
+  // (13-10-2026 sweep: a Lisbon summer sample was an hour out on a UTC server).
+  const moment = sampleMoment(value);
+  if (moment === null) {
+    throw analysisField('takenAt', 'facilities.analysisTakenAtInvalid', 'takenAt is not a valid date and time');
   }
-  return parsed.toISOString();
+  return moment;
 }
 
 /**
@@ -1116,10 +1122,10 @@ function analysisValues(raw: unknown): { metric: PoolMetric; value: number }[] {
 
     const parsed = typeof value === 'number' ? value : Number(String(value).trim().replace(',', '.'));
     if (!Number.isFinite(parsed) || parsed < 0) {
-      throw new BadRequestException(`${metric} must be a number of ${METRIC_UNITS[metric]}`);
+      throw analysisField(metric, 'facilities.analysisValueInvalid', `${metric} must be a number of ${METRIC_UNITS[metric]}`);
     }
     if (metric === 'ph' && parsed > 14) {
-      throw new BadRequestException('ph must be between 0 and 14');
+      throw analysisField(metric, 'facilities.analysisPhInvalid', 'ph must be between 0 and 14');
     }
 
     // numeric(10,3) - rounded here so the value stored is the value sent.

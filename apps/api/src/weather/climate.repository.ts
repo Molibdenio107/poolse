@@ -151,7 +151,7 @@ export async function readClimate(
               days_counted
          FROM facility_climate_month
         WHERE organization_id = $1 AND facility_id = $2
-          AND month >= (date_trunc('month', current_date) - (($3::int - 1) || ' months')::interval)::date
+          AND month >= (date_trunc('month', club_today()) - (($3::int - 1) || ' months')::interval)::date
         ORDER BY month`,
       [organizationId, facilityId, months],
     );

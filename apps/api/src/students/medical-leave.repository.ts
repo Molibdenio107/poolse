@@ -61,8 +61,8 @@ export async function listMedicalLeave(
                           coalesce(u.cached_last_name, '')), '') AS recorded_by_name,
              -- current_date, not a value from the caller: two clients with two
              -- clocks must not disagree about whether a student is off today.
-             (l.starts_on <= current_date
-              AND (l.ends_on IS NULL OR l.ends_on >= current_date)) AS active
+             (l.starts_on <= club_today()
+              AND (l.ends_on IS NULL OR l.ends_on >= club_today())) AS active
         FROM student_medical_leave l
         LEFT JOIN membership m ON m.id = l.recorded_by AND m.organization_id = l.organization_id
         LEFT JOIN app_user u   ON u.id = m.app_user_id

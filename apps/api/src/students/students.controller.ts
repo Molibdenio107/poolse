@@ -1116,7 +1116,12 @@ export class RedemptionController {
   async cancel(@Param('bookingId') bookingId: string): Promise<{ cancelled: true }> {
     const { organizationId, membershipId } = currentTenant();
 
-    if (!hasRole('owner', 'admin', 'instructor')) {
+    // An instructor cancels a guest booked into *their* class, as approve and
+    // reject already require; any instructor could cancel any booking before
+    // (13-10-2026 sweep). Owner and admin are let through by requireMyBooking.
+    if (hasRole('owner', 'admin', 'instructor')) {
+      await requireMyBooking(bookingId);
+    } else {
       const studentId = await studentOfBooking(organizationId, bookingId);
       if (studentId === null) throw new NotFoundException('No such booking');
       if (!(await mayActForStudent(organizationId, membershipId, studentId))) {

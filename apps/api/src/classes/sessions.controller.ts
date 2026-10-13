@@ -32,6 +32,8 @@ import {
   listClosures,
   listSessions,
   removeFutureSessions,
+  NotAnInstructorError,
+  PartnershipSeriesError,
   sessionsForStudent,
   updateClosure,
   cancelSession,
@@ -43,6 +45,7 @@ import {
   type GenerationResult,
   type Session,
 } from './sessions.repository.js';
+import { requireMySession } from '../tenant/assignment.js';
 import {
   readLessonPlan,
   saveLessonPlan,
@@ -279,6 +282,15 @@ export class CalendarController {
           message: 'A closure covers a class that has already been marked',
         });
       }
+      // An instructor clash the weekly check could not see (a one-week move,
+      // a substitute). A sentence, never a 500 — 13-10-2026 sweep.
+      if ((error as { code?: string }).code === '23P01') {
+        throw new ConflictException({
+          code: 'schedule_clash',
+          message: 'An instructor would teach two classes at once',
+          clashes: [],
+        });
+      }
       throw error;
     }
   }
@@ -386,6 +398,9 @@ export class SessionsCalendarController {
     @Body() body: { membershipId?: unknown },
   ): Promise<{ ok: true }> {
     requireRole('owner', 'admin', 'instructor');
+    // The row half of the rule the comment above states — 13-10-2026 sweep:
+    // an instructor arranges cover for *their own* lesson, not a colleague's.
+    await requireMySession(id);
     const { organizationId } = currentTenant();
 
     const raw = body?.membershipId;
@@ -398,6 +413,9 @@ export class SessionsCalendarController {
     }
     if (result === 'clash') {
       throw new ConflictException({ message: 'calendar.standIn.clash' });
+    }
+    if (result === 'not_instructor') {
+      throw new BadRequestException({ code: 'not_an_instructor', message: 'calendar.standIn.notInstructor' });
     }
     return { ok: true };
   }
@@ -468,6 +486,11 @@ export class SessionsCalendarController {
       // record rather than a plan, and a record is not dragged about.
       throw new ConflictException({ message: 'occurrenceTaught' });
     }
+    if (result.outcome === 'instructor_busy') {
+      // The instructor is teaching elsewhere then — not a lane problem, and
+      // not to be reported as one (13-10-2026 sweep).
+      throw new ConflictException({ message: 'occurrenceInstructorBusy' });
+    }
     if (result.outcome === 'occupied') {
       /*
        * The lane is genuinely busy, or the class is already there.
@@ -515,10 +538,24 @@ export class SessionsCalendarController {
     }
 
     if (body['scope'] === 'future') {
+      // Ending every later week ends the turma — a management act, not the
+      // one-lesson call a stand-in or the turma's instructor makes for today.
+      if (!hasRole('owner', 'admin')) {
+        throw new ForbiddenException({
+          code: 'future_needs_management',
+          message: 'Only an owner or an admin may remove every future week',
+        });
+      }
       let outcome;
       try {
         outcome = await removeFutureSessions(organizationId, id, reason || null);
       } catch (error) {
+        if (error instanceof PartnershipSeriesError) {
+          throw new ConflictException({
+            code: 'partnership_series',
+            message: 'A partnership series is ended from the parceria, not from one of its weeks',
+          });
+        }
         if (isMarkedSessionViolation(error)) {
           throw new ConflictException({
             code: 'attendance_recorded',
@@ -668,6 +705,9 @@ export class SessionsCalendarController {
         throw new NotFoundException('No such class');
       }
     } catch (error) {
+      if (error instanceof NotAnInstructorError) {
+        throw new BadRequestException({ code: 'not_an_instructor', message: 'calendar.standIn.notInstructor' });
+      }
       // Somebody covering a class cannot also be teaching their own at that
       // moment. The constraint says so; this says which class — which needs the
       // substitute we tried to set, since the failed write left no trace of them.

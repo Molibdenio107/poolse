@@ -281,6 +281,10 @@ export async function requestAccess(
   reasonInput: unknown,
 ): Promise<{ requestId: string }> {
   return alerted(clerkUserId, organizationId, 'support.requested', async (tx) => {
+    // The club's own grant paths take this lock before "nothing is live"; the
+    // platform's must too, or an Owner's grant and an override both land
+    // (13-10-2026 sweep). Advisory locks are shared across logins.
+    await tx.query(`SELECT pg_advisory_xact_lock(hashtext('support_grant:' || $1))`, [organizationId]);
     const admin = await operatorId(tx, clerkUserId);
     const name = await clubName(tx, organizationId);
     const reason = readReason(reasonInput);
@@ -323,6 +327,10 @@ export async function overrideAccess(
   confirmName: string | undefined,
 ): Promise<{ grantId: string; expiresAt: string }> {
   return alerted(clerkUserId, organizationId, 'support.override', async (tx) => {
+    // The club's own grant paths take this lock before "nothing is live"; the
+    // platform's must too, or an Owner's grant and an override both land
+    // (13-10-2026 sweep). Advisory locks are shared across logins.
+    await tx.query(`SELECT pg_advisory_xact_lock(hashtext('support_grant:' || $1))`, [organizationId]);
     const admin = await operatorId(tx, clerkUserId);
     const name = await clubName(tx, organizationId);
     const reason = readReason(reasonInput);

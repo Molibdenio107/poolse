@@ -611,6 +611,11 @@ function ItemRow({
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useSavedAction(updateItemAction, INITIAL);
   const [archiveState, archive, archiving] = useSavedAction(archiveItemAction, INITIAL);
+  // Closed by a successful save, not on submit: a refused one has to stay open
+  // with its message and what was typed (13-10-2026 sweep).
+  useEffect(() => {
+    if (state.ok) setEditing(false);
+  }, [state]);
 
   /*
    * Editing takes the whole width, because the form is four fields and a set of
@@ -622,7 +627,7 @@ function ItemRow({
     return (
       <tr className="border-b border-border last:border-0">
         <td colSpan={canManage ? 4 : 3} className="py-3">
-          <form action={action} onSubmit={() => setEditing(false)} className="flex flex-col gap-3">
+          <form action={action} className="flex flex-col gap-3">
             <input type="hidden" name="organizationId" value={organizationId} />
             <input type="hidden" name="itemId" value={item.id} />
 

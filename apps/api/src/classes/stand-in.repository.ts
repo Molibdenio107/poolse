@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 
 /**
@@ -182,7 +182,7 @@ export async function candidatesFor(
   });
 }
 
-export type StandInResult = 'set' | 'missing' | 'away' | 'clash';
+export type StandInResult = 'set' | 'missing' | 'away' | 'clash' | 'not_instructor';
 
 /**
  * Puts somebody else on this lesson, or takes the stand-in off again.
@@ -190,6 +190,30 @@ export type StandInResult = 'set' | 'missing' | 'away' | 'clash';
  * `membershipId` of null clears it, which is how a club undoes a stand-in: the
  * turma's own instructor comes back, because they were never replaced.
  */
+/**
+ * Whether a membership may stand in front of a class — 13-10-2026 sweep.
+ *
+ * A live, active membership holding a live `instructor` role, and never a
+ * support membership. The endpoint used to accept any membership id in the
+ * club, so a guardian, a student or Poolse support could be put on a lesson.
+ */
+export async function isLiveInstructor(tx: Tx, membershipId: string): Promise<boolean> {
+  const { rowCount } = await tx.query(
+    `SELECT 1
+       FROM membership m
+       JOIN membership_role r
+         ON r.membership_id = m.id AND r.organization_id = m.organization_id
+      WHERE m.id::text = $1
+        AND m.archived_at IS NULL
+        AND m.status = 'active'
+        AND m.support_grant_id IS NULL
+        AND r.role = 'instructor'
+        AND r.archived_at IS NULL`,
+    [membershipId],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 export async function setStandIn(
   organizationId: string,
   sessionId: string,
@@ -207,6 +231,10 @@ export async function setStandIn(
       [sessionId],
     );
     if (session.rowCount === 0) return 'missing';
+
+    if (membershipId !== null && !(await isLiveInstructor(tx, membershipId))) {
+      return 'not_instructor';
+    }
 
     if (membershipId !== null) {
       /*

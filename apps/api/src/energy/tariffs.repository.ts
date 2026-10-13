@@ -134,8 +134,8 @@ export async function listTariffs(organizationId: string, meterId: string): Prom
               t.provenance::text         AS provenance,
               to_char(t.effective_from, 'YYYY-MM-DD') AS effective_from,
               to_char(t.effective_to,   'YYYY-MM-DD') AS effective_to,
-              (t.effective_from <= current_date
-                 AND (t.effective_to IS NULL OR t.effective_to >= current_date)) AS live,
+              (t.effective_from <= club_today()
+                 AND (t.effective_to IS NULL OR t.effective_to >= club_today())) AS live,
               t.note,
               ${AUTHOR_NAME} AS created_by_name
          FROM energy_tariff t

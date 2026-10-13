@@ -304,7 +304,7 @@ export async function runImport(
        */
       if (created !== null && row.isPaid) {
         await tx.query(
-          `UPDATE student SET paid_through_month = date_trunc('month', current_date)::date
+          `UPDATE student SET paid_through_month = date_trunc('month', club_today())::date
             WHERE id = $1`,
           [created],
         );
@@ -353,7 +353,7 @@ export async function runImport(
        */
       if (row.isPaid) {
         await tx.query(
-          `UPDATE student SET paid_through_month = date_trunc('month', current_date)::date
+          `UPDATE student SET paid_through_month = date_trunc('month', club_today())::date
             WHERE id = $1`,
           [studentId],
         );

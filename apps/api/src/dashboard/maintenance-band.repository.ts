@@ -253,7 +253,7 @@ export async function readInventoryWatch(
           WHERE l.status = 'found'
             AND l.archived_at IS NULL
             AND l.facility_id = ANY($1::uuid[])
-            AND l.found_on >= current_date - ${LOST_FOUND_RECENT_DAYS}
+            AND l.found_on >= club_today() - ${LOST_FOUND_RECENT_DAYS}
        )
        SELECT (SELECT count(*) FROM restock)::int AS restock_total,
               coalesce((SELECT json_agg(json_build_object(

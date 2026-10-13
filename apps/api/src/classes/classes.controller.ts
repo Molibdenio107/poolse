@@ -44,6 +44,7 @@ import {
   type ClassColour,
   type ClassGroupInput,
   type TimetableEntry,
+  LessonsClashError,
 } from './classes.repository.js';
 import { qualificationRefusal } from '../staff/qualification-refusal.js';
 import { syncSeasonLessons, type LessonSync } from './lesson-sync.js';
@@ -460,6 +461,13 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
 }
 
 function asHttp(error: unknown): unknown {
+  if (error instanceof LessonsClashError) {
+    return new ConflictException({
+      code: 'lessons_clash',
+      message: 'A later lesson of this turma would clash with another class at the new time',
+      fields: { startTime: 'classes.slotLessonsClash' },
+    });
+  }
   if (error instanceof DuplicateNameError) {
     return new ConflictException(`"${error.message}" already exists`);
   }

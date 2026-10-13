@@ -43,7 +43,8 @@ export async function setTrialAction(
      * is the kind of bug nobody reports and everybody notices.
      */
     await apiPost(`/platform/tenants/${tenantId}/trial`, {
-      endsAt: `${endsAt}T23:59:59.000Z`,
+      // The day; the API makes it the end of that day in Lisbon (13-10-2026 sweep).
+      endsAt,
       // Conceder novo período — POOLSE-62. Absent means a plain date change;
       // the API frees the address only when this says so.
       releaseClaim: formData.get('releaseClaim') === 'true',

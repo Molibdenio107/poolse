@@ -70,9 +70,10 @@ export async function findStaff(
               ${personName('m.id')} AS display_name,
               ${personShortName('m.id')} AS short_name,
               person_email(m.id)::text AS email,
-              -- Their own number where they have an account, the club's record
-              -- where they do not. Same resolution rule as the name.
-              coalesce(u.contact_phone, m.phone) AS phone,
+              -- The club's record first, the account's own number where the club
+              -- has none — the order the write path below assumes. Reversed, an
+              -- admin's edit saved and then showed the old number (13-10-2026 sweep).
+              coalesce(m.phone, u.contact_phone) AS phone,
               m.notes,
               m.status::text AS status,
               coalesce((

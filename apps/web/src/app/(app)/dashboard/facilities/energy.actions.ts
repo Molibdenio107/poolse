@@ -102,17 +102,17 @@ export async function archiveMeter(_previous: FormState, formData: FormData): Pr
 /**
  * A figure off the dial.
  *
- * `takenAt` arrives as the `datetime-local` string the browser produced, in the
- * operator's own clock; `new Date` reads it as local time on the server, which
- * is the same machine's idea of local. Good enough for a monthly figure —
- * nothing here is minute-sensitive — and the alternative is a timezone picker
- * on a form whose whole content is one number.
+ * `takenAt` arrives as the `datetime-local` string the browser produced, on the
+ * site's wall clock, and is sent **as typed**: the API reads it in the
+ * facility's timezone. Converting it here read it in the Next server's zone —
+ * UTC on Vercel — so a summer reading typed at 23:30 on the 31st landed in the
+ * next month's bucket (13-10-2026 sweep).
  */
 export async function recordReading(_previous: FormState, formData: FormData): Promise<FormState> {
   const facilityId = String(formData.get('facilityId') ?? '');
   const meterId = String(formData.get('meterId') ?? '');
   const takenAtRaw = String(formData.get('takenAt') ?? '').trim();
-  const takenAt = takenAtRaw === '' ? '' : new Date(takenAtRaw).toISOString();
+  const takenAt = takenAtRaw;
 
   try {
     await apiPost(`/energy/meters/${meterId}/readings`, {

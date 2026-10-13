@@ -60,6 +60,17 @@ interface Row {
   returned_at: Date | null;
 }
 
+/**
+ * A `date` column as `YYYY-MM-DD`. node-pg builds it at *local* midnight, so
+ * `toISOString()` gives the day before on any machine east of UTC — local
+ * getters read back the day that was stored (13-10-2026 sweep).
+ */
+function localDay(value: Date): string {
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const date = String(value.getDate()).padStart(2, '0');
+  return `${value.getFullYear()}-${month}-${date}`;
+}
+
 function toItem(row: Row): LostAndFoundItem {
   return {
     id: row.id,
@@ -67,7 +78,7 @@ function toItem(row: Row): LostAndFoundItem {
     locationFound: row.location_found,
     // A date, and a date only. `found_on` is a `date` column precisely so this
     // never grows a time nobody entered.
-    foundOn: row.found_on.toISOString().slice(0, 10),
+    foundOn: localDay(row.found_on),
     notes: row.notes,
     studentId: row.student_id,
     studentName: row.student_name,
@@ -123,7 +134,7 @@ export async function createLostAndFound(
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO lost_and_found_item
          (organization_id, facility_id, description, location_found, found_on, notes, student_id)
-       VALUES ($1, $2, $3, $4, coalesce($5::date, CURRENT_DATE), $6, $7)
+       VALUES ($1, $2, $3, $4, coalesce($5::date, club_today()), $6, $7)
        RETURNING id`,
       [
         organizationId,

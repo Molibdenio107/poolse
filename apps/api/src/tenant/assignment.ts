@@ -187,7 +187,7 @@ export async function isMyStudent(studentId: string): Promise<boolean> {
         WHERE e.student_id = $1
           AND cg.archived_at IS NULL
           AND e.status = 'active'
-          AND (e.ended_on IS NULL OR e.ended_on >= current_date)
+          AND (e.ended_on IS NULL OR e.ended_on >= club_today())
           AND (
             cg.instructor_membership_id = $2
             OR EXISTS (

@@ -401,8 +401,8 @@ export async function readOccupancy(
           WHERE p.facility_id = $1
             AND p.archived_at IS NULL
             AND pa.archived_at IS NULL
-            AND pa.start_date <= current_date
-            AND (pa.end_date IS NULL OR pa.end_date >= current_date)`,
+            AND pa.start_date <= club_today()
+            AND (pa.end_date IS NULL OR pa.end_date >= club_today())`,
         [facilityId],
       );
       contractedCents = money.rows[0]?.cents ?? 0;

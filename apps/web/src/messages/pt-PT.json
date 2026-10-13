@@ -1068,7 +1068,10 @@
       "children": "Manutenção e infantil",
       "hydrotherapy": "Hidroterapia"
     },
-    "poolUseInvalid": "Escolha uma utilização da lista."
+    "poolUseInvalid": "Escolha uma utilização da lista.",
+    "analysisTakenAtInvalid": "Indique uma data e hora válidas e que não estejam no futuro.",
+    "analysisValueInvalid": "Indique um número igual ou superior a zero.",
+    "analysisPhInvalid": "O pH vai de 0 a 14."
   },
   "classes": {
     "colour": "Cor da turma",
@@ -1201,7 +1204,9 @@
       "nav": "Secções das turmas",
       "unscheduled": "Sem horário"
     },
-    "enrolStudent": "Inscrever aluno"
+    "enrolStudent": "Inscrever aluno",
+    "slotLessonsClash": "Uma aula futura desta turma ficaria sobreposta a outra aula do mesmo professor a essa hora.",
+    "occurrenceInstructorBusy": "O professor já tem outra aula noutro tanque a essa hora."
   },
   "reposicao": {
     "title": "Aulas de reposição",
@@ -2583,7 +2588,12 @@
     "noInsurance": "Sem seguro",
     "trialGuests": "{count, plural, one {Aula experimental: # pessoa} other {Aulas experimentais: # pessoas}}",
     "trialGuest": "{name}, {age} anos",
-    "trialGuestsHint": "Vêm experimentar e ocupam um lugar nesta aula. Não são marcados no registo."
+    "trialGuestsHint": "Vêm experimentar e ocupam um lugar nesta aula. Não são marcados no registo.",
+    "refused": {
+      "cancelled": "Esta aula foi cancelada, por isso não há presenças a marcar.",
+      "partnership": "Uma aula de parceria não tem registo de presenças.",
+      "credited": "Esta presença já deu origem a uma reposição e não pode ser alterada."
+    }
   },
   "calendar": {
     "resizeLanes": "Arraste para alterar as pistas ocupadas",
@@ -2726,7 +2736,9 @@
       "failed": "Não foi possível alterar o professor.",
       "loadFailed": "Não foi possível carregar a lista de professores.",
       "retry": "Tentar de novo",
-      "awayRefused": "Essa pessoa está ausente neste dia."
+      "awayRefused": "Essa pessoa está ausente neste dia.",
+      "notInstructor": "Essa pessoa não é professor neste clube.",
+      "notYours": "Só pode escolher o substituto numa aula sua."
     },
     "show": "Mostrar",
     "showAll": "Mostrar tudo",
@@ -2877,7 +2889,8 @@
       "markReturned": "Marcar como entregue",
       "saveFailed": "Não foi possível registar o achado.",
       "returnFailed": "Não foi possível marcar como entregue.",
-      "removeFailed": "Não foi possível remover o achado."
+      "removeFailed": "Não foi possível remover o achado.",
+      "studentInvalid": "Esse aluno já não existe neste clube."
     },
     "section": {
       "nav": "Secções do inventário",
@@ -4031,7 +4044,8 @@
       "class_group": "Turma: {name}",
       "level": "Nível: {name}",
       "facility": "Instalação: {name}",
-      "organization": "Todo o clube"
+      "organization": "Todo o clube",
+      "closure": "Encerramento: {name}"
     },
     "audience": {
       "class_group": "Uma turma",
@@ -4842,7 +4856,10 @@
     "bodyRequired": "Escreva o texto do regulamento.",
     "bodyTooLong": "O texto é demasiado longo (máximo de 50 000 caracteres).",
     "dateInvalid": "Indique uma data válida.",
-    "sameDay": "Já há uma versão que entra em vigor nesse dia."
+    "sameDay": "Já há uma versão que entra em vigor nesse dia.",
+    "withdrawLabel": "Retirar a versão de {date}",
+    "withdrawTitle": "Retirar a versão de {date}?",
+    "withdrawConfirm": "A versão sai das páginas públicas e a anterior volta a estar em vigor. Fica no histórico como retirada; para a repor, publique-a de novo."
   },
   "publicNotices": {
     "complaints": "Livro de Reclamações",

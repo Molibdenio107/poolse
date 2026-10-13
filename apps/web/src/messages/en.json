@@ -1068,7 +1068,10 @@
       "children": "Maintenance and children's",
       "hydrotherapy": "Hydrotherapy"
     },
-    "poolUseInvalid": "Choose a use from the list."
+    "poolUseInvalid": "Choose a use from the list.",
+    "analysisTakenAtInvalid": "Enter a valid date and time that is not in the future.",
+    "analysisValueInvalid": "Enter a number of zero or more.",
+    "analysisPhInvalid": "pH runs from 0 to 14."
   },
   "classes": {
     "colour": "Class colour",
@@ -1201,7 +1204,9 @@
       "nav": "Class sections",
       "unscheduled": "No days set"
     },
-    "enrolStudent": "Enrol a student"
+    "enrolStudent": "Enrol a student",
+    "slotLessonsClash": "A future lesson of this group would overlap another of the same instructor's classes at that time.",
+    "occurrenceInstructorBusy": "The instructor already has another class in a different pool at that time."
   },
   "reposicao": {
     "title": "Make-up classes",
@@ -2583,7 +2588,12 @@
     "noInsurance": "No insurance",
     "trialGuests": "{count, plural, one {Trial lesson: # person} other {Trial lessons: # people}}",
     "trialGuest": "{name}, {age}",
-    "trialGuestsHint": "Coming to try the class, and holding a place in it. They are not marked on the register."
+    "trialGuestsHint": "Coming to try the class, and holding a place in it. They are not marked on the register.",
+    "refused": {
+      "cancelled": "This class was cancelled, so there is no register to take.",
+      "partnership": "A partnership class has no register.",
+      "credited": "This attendance has already been used for a make-up lesson and cannot be changed."
+    }
   },
   "calendar": {
     "resizeLanes": "Drag to change how many lanes it uses",
@@ -2726,7 +2736,9 @@
       "failed": "The teacher could not be changed.",
       "loadFailed": "The list of teachers could not be loaded.",
       "retry": "Try again",
-      "awayRefused": "That person is away on this day."
+      "awayRefused": "That person is away on this day.",
+      "notInstructor": "That person is not an instructor at this club.",
+      "notYours": "You can only choose a stand-in for one of your own classes."
     },
     "show": "Show",
     "showAll": "Show all",
@@ -2877,7 +2889,8 @@
       "markReturned": "Mark as returned",
       "saveFailed": "The item could not be recorded.",
       "returnFailed": "The item could not be marked as returned.",
-      "removeFailed": "The item could not be removed."
+      "removeFailed": "The item could not be removed.",
+      "studentInvalid": "That student no longer exists at this club."
     },
     "section": {
       "nav": "Inventory sections",
@@ -4031,7 +4044,8 @@
       "class_group": "Class group: {name}",
       "level": "Level: {name}",
       "facility": "Site: {name}",
-      "organization": "The whole club"
+      "organization": "The whole club",
+      "closure": "Closure: {name}"
     },
     "audience": {
       "class_group": "A class group",
@@ -4842,7 +4856,10 @@
     "bodyRequired": "Write the regulation's text.",
     "bodyTooLong": "The text is too long (at most 50,000 characters).",
     "dateInvalid": "Give a valid date.",
-    "sameDay": "A version already takes effect on that day."
+    "sameDay": "A version already takes effect on that day.",
+    "withdrawLabel": "Withdraw the version of {date}",
+    "withdrawTitle": "Withdraw the version of {date}?",
+    "withdrawConfirm": "It comes off the public pages and the previous version is back in force. It stays in the history as withdrawn; to restore it, publish it again."
   },
   "publicNotices": {
     "complaints": "Livro de Reclamações (complaints book)",

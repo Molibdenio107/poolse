@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SelectField, TextAreaField, TextField, useFocusFirstError } from '@/components/ui/field';
 import { POOL_METRICS } from '@/lib/pool-metrics';
@@ -27,17 +27,30 @@ export function LabResultForm({ poolId }: { poolId: string }): React.ReactElemen
   const [state, dispatch, pending] = useSavedAction(recordLabResultAction, INITIAL);
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state.fields, state);
+
+  /*
+   * A saved report empties the form and folds it away — 13-10-2026 sweep. The
+   * fields are controlled, so they used to keep all sixteen figures after the
+   * save, and a second press filed the same report twice.
+   */
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const [round, setRound] = useState(0);
+  useEffect(() => {
+    if (!state.ok) return;
+    setRound((n) => n + 1);
+    if (detailsRef.current !== null) detailsRef.current.open = false;
+  }, [state]);
   const error = (field: string): string | undefined => {
     const key = state.fields?.[field];
     return key === undefined ? undefined : t(key, state.values ?? {});
   };
 
   return (
-    <details className="group rounded border border-border">
+    <details ref={detailsRef} className="group rounded border border-border">
       <summary className="cursor-pointer list-none p-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
         {t('labResults.record')}
       </summary>
-      <form ref={formRef} action={dispatch} className="flex flex-col gap-5 border-t border-border p-4">
+      <form key={round} ref={formRef} action={dispatch} className="flex flex-col gap-5 border-t border-border p-4">
         <input type="hidden" name="poolId" value={poolId} />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -61,11 +61,42 @@ function refuse(field: string, key: string): never {
   throw new BadRequestException({ fields: { [field]: key } });
 }
 
-/** An ISO instant or date, within the typo guard. */
+/**
+ * The last second of a calendar day in Lisbon, as an instant — 13-10-2026
+ * sweep. The form sends a day; "the trial ends on the 20th" includes the 20th
+ * *in Portugal*, and 23:59:59Z is 00:59:59 on the 21st there in summer, which
+ * /admin then showed as the 21st.
+ */
+export function endOfLisbonDay(day: string): Date {
+  const [y, m, d] = day.split('-').map(Number) as [number, number, number];
+  const guess = Date.UTC(y, m - 1, d, 23, 59, 59);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Lisbon',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    })
+      .formatToParts(new Date(guess))
+      .map((p) => [p.type, p.value]),
+  );
+  const asIfUtc = Date.UTC(
+    Number(parts['year']), Number(parts['month']) - 1, Number(parts['day']),
+    Number(parts['hour']), Number(parts['minute']), Number(parts['second']),
+  );
+  // Lisbon is ahead of UTC by (asIfUtc - guess); step back by that much.
+  return new Date(guess - (asIfUtc - guess));
+}
+
+/** A day (`YYYY-MM-DD`, the end of it in Lisbon) or an ISO instant, within the typo guard. */
 export function readTrialEndsAt(raw: unknown): string {
   if (typeof raw !== 'string' || raw.trim() === '') refuse('endsAt', 'admin.error.dateRequired');
 
-  const at = new Date(raw as string);
+  const text = (raw as string).trim();
+  const isDay = /^\d{4}-\d{2}-\d{2}$/.test(text);
+  if (isDay && new Date(`${text}T12:00:00Z`).toISOString().slice(0, 10) !== text) {
+    refuse('endsAt', 'admin.error.dateInvalid');
+  }
+  const at = isDay ? endOfLisbonDay(text) : new Date(text);
   if (Number.isNaN(at.getTime())) refuse('endsAt', 'admin.error.dateInvalid');
 
   const ceiling = new Date();

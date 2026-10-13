@@ -21,6 +21,14 @@ import {
 } from '../../actions';
 
 /**
+ * A field error is a catalogue key (the API's and this app's alike) — shown
+ * translated, never as the raw key. 13-10-2026 sweep.
+ */
+function fieldText(t: ReturnType<typeof useTranslations>, key: string | undefined): string | undefined {
+  return key === undefined ? undefined : t(key);
+}
+
+/**
  * What an operator can change about a tenant — slice 3.
  *
  * **Four small forms rather than one.** They are four unrelated decisions, taken
@@ -147,7 +155,7 @@ function TrialCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
         type="date"
         label={t('admin.action.trialEndsAt')}
         initial={asDateInput(tenant.trialEndsAt)}
-        error={state.fields?.['endsAt']}
+        error={fieldText(t, state.fields?.['endsAt'])}
         hint={t('admin.action.trialPastHint')}
       />
 
@@ -198,7 +206,7 @@ function SubscriptionCard({ tenant }: { tenant: PlatformTenant }): React.ReactEl
         name="status"
         label={t('admin.column.status')}
         initial={tenant.subscriptionStatus}
-        error={state.fields?.['status']}
+        error={fieldText(t, state.fields?.['status'])}
         /*
           `comped` is deliberately absent — POOLSE-63. A free pilot is a *mode*
           now, offered on the card below, because one fact with two homes is how
@@ -230,7 +238,7 @@ function PlanCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
         label={t('admin.column.facilities')}
         inputMode="numeric"
         initial={String(tenant.maxFacilities ?? 1)}
-        error={state.fields?.['maxFacilities']}
+        error={fieldText(t, state.fields?.['maxFacilities'])}
         hint={t('admin.action.facilitiesHint', { count: tenant.facilityCount })}
       />
       <TextField
@@ -238,7 +246,7 @@ function PlanCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
         label={t('admin.column.seats')}
         inputMode="numeric"
         initial={tenant.maxManagementUsers === null ? '' : String(tenant.maxManagementUsers)}
-        error={state.fields?.['maxManagementUsers']}
+        error={fieldText(t, state.fields?.['maxManagementUsers'])}
         /*
           Empty means unlimited, said in the hint rather than left to be
           discovered. A blank box that silently means "no limit" is the kind of
@@ -319,7 +327,7 @@ function ReadOnlyCard({ tenant }: { tenant: PlatformTenant }): React.ReactElemen
         type="date"
         initial=""
         onValueChange={setKeptUntil}
-        error={state.fields?.['dataKeptUntil']}
+        error={fieldText(t, state.fields?.['dataKeptUntil'])}
         hint={t('admin.action.dataKeptUntilHint')}
       />
 
@@ -342,7 +350,7 @@ function ReadOnlyCard({ tenant }: { tenant: PlatformTenant }): React.ReactElemen
           initial=""
           required
           autoComplete="off"
-          error={state.fields?.['confirmName']}
+          error={fieldText(t, state.fields?.['confirmName'])}
           hint={t('admin.action.confirmNameHint')}
         />
       )}
@@ -439,7 +447,7 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
             rows={3}
             maxLength={500}
             required
-            error={state.fields?.['reason']}
+            error={fieldText(t, state.fields?.['reason'])}
             hint={t('admin.action.reasonHint')}
           />
 
@@ -461,7 +469,7 @@ function SuspensionCard({ tenant }: { tenant: PlatformTenant }): React.ReactElem
             initial=""
             required
             autoComplete="off"
-            error={state.fields?.['confirmName']}
+            error={fieldText(t, state.fields?.['confirmName'])}
             hint={t('admin.action.confirmNameHint')}
           />
 
@@ -509,7 +517,7 @@ function BillingModeCard({ tenant }: { tenant: PlatformTenant }): React.ReactEle
         name="billingMode"
         label={t('admin.action.billingMode')}
         initial={tenant.billingMode}
-        error={state.fields?.['billingMode']}
+        error={fieldText(t, state.fields?.['billingMode'])}
         options={(['stripe', 'manual', 'comped'] as const).map((mode) => ({
           value: mode,
           label: t(`admin.billingMode.${mode}`),
@@ -561,7 +569,7 @@ function PaymentCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement
         label={t('admin.action.amount')}
         inputMode="decimal"
         initial=""
-        error={state.fields?.['amount'] ?? state.fields?.['amountCents']}
+        error={fieldText(t, state.fields?.['amount'] ?? state.fields?.['amountCents'])}
         hint={t('admin.action.amountHint')}
       />
       <TextField
@@ -569,13 +577,13 @@ function PaymentCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement
         type="date"
         label={t('admin.action.receivedOn')}
         initial={today()}
-        error={state.fields?.['receivedOn']}
+        error={fieldText(t, state.fields?.['receivedOn'])}
       />
       <SelectField
         name="method"
         label={t('admin.action.method')}
         initial="bank_transfer"
-        error={state.fields?.['method']}
+        error={fieldText(t, state.fields?.['method'])}
         options={(['cash', 'bank_transfer', 'other'] as const).map((method) => ({
           value: method,
           label: t(`admin.method.${method}`),
@@ -586,7 +594,7 @@ function PaymentCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement
         type="date"
         label={t('admin.action.coversFrom')}
         initial=""
-        error={state.fields?.['coversFrom']}
+        error={fieldText(t, state.fields?.['coversFrom'])}
         hint={t('admin.action.coversFromHint')}
       />
       <TextField
@@ -594,14 +602,14 @@ function PaymentCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement
         type="date"
         label={t('admin.action.coversTo')}
         initial=""
-        error={state.fields?.['coversTo']}
+        error={fieldText(t, state.fields?.['coversTo'])}
         hint={t('admin.action.coversToHint')}
       />
       <TextAreaField
         name="note"
         label={t('admin.action.paymentNote')}
         initial=""
-        error={state.fields?.['note']}
+        error={fieldText(t, state.fields?.['note'])}
         rows={2}
       />
       <Submit

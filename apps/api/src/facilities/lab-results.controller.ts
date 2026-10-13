@@ -24,6 +24,7 @@ import {
   type LabResult,
   type LabResultInput,
 } from './lab-results.repository.js';
+import { SampleInFutureError, sampleMoment } from './sample-moment.js';
 
 /** The people who record analyses record lab results — POOLSE-72. */
 const CAN_RECORD_LAB = ['owner', 'admin', 'maintenance'] as const;
@@ -44,12 +45,11 @@ function optionalText(value: unknown, key: string, max: number): string | null {
 }
 
 /** The body as a report, or a 400 naming the box that is wrong. */
-export function parseLabResult(body: Record<string, unknown>, now: Date = new Date()): LabResultInput {
-  const raw = body['sampledAt'];
-  const sampledAt = typeof raw === 'string' ? new Date(raw.trim()) : new Date(Number.NaN);
-  // A sample cannot have been taken tomorrow; a minute of slack for a client clock.
-  if (Number.isNaN(sampledAt.getTime()) || sampledAt.getTime() > now.getTime() + 60_000
-      || sampledAt.getUTCFullYear() < 2000) {
+export function parseLabResult(body: Record<string, unknown>): LabResultInput {
+  // Shape only: the instant, and "not in the future", are resolved in the
+  // facility's timezone by `resolveSample` (13-10-2026 sweep).
+  const sampledAt = sampleMoment(body['sampledAt']);
+  if (sampledAt === null) {
     throw field('sampledAt', 'sampledAt is not a valid past date and time');
   }
 
@@ -123,7 +123,15 @@ export class LabResultsController {
     requireRole(...CAN_RECORD_LAB);
     const { organizationId, membershipId } = currentTenant();
     const input = parseLabResult(body);
-    const created = await createLabResult(organizationId, poolId, input, membershipId);
+    let created: Awaited<ReturnType<typeof createLabResult>>;
+    try {
+      created = await createLabResult(organizationId, poolId, input, membershipId);
+    } catch (error) {
+      if (error instanceof SampleInFutureError) {
+        throw field('sampledAt', 'sampledAt is in the future');
+      }
+      throw error;
+    }
     if (created === null) throw new NotFoundException('No such pool');
 
     // After the commit, and unable to undo it.

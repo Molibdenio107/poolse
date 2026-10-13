@@ -701,8 +701,11 @@ async function changeTenant(
   const clerkUserId = currentAuth().clerkUserId;
 
   const done = await withPlatform(async (tx) => {
+    // Locked: the plan below decides from this row (a payment takes the later
+    // of two paid_through dates), so two operators at once must not both read
+    // the old one — 13-10-2026 sweep.
     const { rows: before } = await tx.query<TenantBefore>(
-      `SELECT name, ${AUDITED_SELECT} FROM organization WHERE id = $1`,
+      `SELECT name, ${AUDITED_SELECT} FROM organization WHERE id = $1 FOR UPDATE`,
       [organizationId],
     );
     if (before.length === 0) return null;
@@ -929,8 +932,13 @@ export async function setSubscriptionStatus(
   organizationId: string,
   status: SubscriptionStatus,
 ): Promise<TenantChangeResult | null> {
-  return changeTenant(organizationId, 'tenant.subscription.set', {
-    subscription_status: status,
+  return changeTenant(organizationId, 'tenant.subscription.set', (before) => {
+    // A manual club cannot be active with no paid-through date (CHECK), which
+    // was a 500 — said beside the control instead (13-10-2026 sweep).
+    if (status === 'active' && before['billing_mode'] === 'manual' && before['paid_through'] === null) {
+      throw new BadRequestException({ fields: { status: 'admin.error.manualNeedsPayment' } });
+    }
+    return Promise.resolve({ change: { subscription_status: status } });
   });
 }
 
@@ -1319,7 +1327,7 @@ export async function readBillingOverview(): Promise<BillingOverview> {
     }>(
       `SELECT sum(amount_cents)                       AS all_time,
               sum(amount_cents) FILTER (
-                WHERE received_on >= current_date - interval '1 year'
+                WHERE received_on >= club_today() - interval '1 year'
               )                                       AS last_year,
               count(*)                                AS payments
          FROM manual_payment`,
@@ -1342,14 +1350,14 @@ export async function readBillingOverview(): Promise<BillingOverview> {
       `SELECT o.id,
               o.name,
               o.paid_through::text AS paid_through,
-              (o.paid_through - current_date) AS days_left,
+              (o.paid_through - club_today()) AS days_left,
               o.subscription_status::text AS subscription_status,
               o.read_only_at
          FROM organization o
         WHERE o.archived_at IS NULL
           AND o.billing_mode = 'manual'
           AND o.paid_through IS NOT NULL
-          AND o.paid_through <= current_date + make_interval(days => $1)
+          AND o.paid_through <= club_today() + make_interval(days => $1)
         ORDER BY o.paid_through, o.name`,
       [RENEWALS_WINDOW_DAYS],
     );

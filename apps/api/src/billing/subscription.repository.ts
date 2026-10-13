@@ -118,13 +118,32 @@ export async function readCustomerId(organizationId: string): Promise<string | n
 export async function rememberCustomer(
   organizationId: string,
   customerId: string,
-): Promise<void> {
-  await withOrg(organizationId, async (tx) => {
+): Promise<string> {
+  return withOrg(organizationId, async (tx) => {
     await tx.query(
       `UPDATE organization SET stripe_customer_id = $2
         WHERE id = $1 AND stripe_customer_id IS NULL`,
       [organizationId, customerId],
     );
+    // The one that is stored, which is the racing request's when two checkouts
+    // made a customer each — 13-10-2026 sweep. Checkout must use this one, or
+    // its subscription lands on a customer the webhook cannot map to the club.
+    const { rows } = await tx.query<{ id: string }>(
+      `SELECT stripe_customer_id AS id FROM organization WHERE id = $1`,
+      [organizationId],
+    );
+    return rows[0]?.id ?? customerId;
+  });
+}
+
+/** How this club pays Poolse — POOLSE-63. */
+export async function readBillingMode(organizationId: string): Promise<string | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ mode: string }>(
+      `SELECT billing_mode::text AS mode FROM organization WHERE id = $1`,
+      [organizationId],
+    );
+    return rows[0]?.mode ?? null;
   });
 }
 
@@ -166,7 +185,9 @@ export type EventOutcome =
    * The club is hand-managed or comped, so Stripe does not get to speak for it
    * — POOLSE-63.
    */
-  | 'not_stripe_billed';
+  | 'not_stripe_billed'
+  /** Older than the last event applied to this club — 13-10-2026 sweep. */
+  | 'stale';
 
 export interface AppliedEvent {
   outcome: EventOutcome;
@@ -194,6 +215,8 @@ export async function applyStripeEvent(
   eventType: string,
   customerId: string | null,
   change: SubscriptionChange,
+  /** Stripe's `event.created`. Null applies regardless, as before. */
+  eventCreated: Date | null = null,
 ): Promise<AppliedEvent> {
   return withPlatform(async (tx) => {
     const seen = await tx.query(`SELECT 1 FROM stripe_event WHERE id = $1`, [eventId]);
@@ -204,9 +227,12 @@ export async function applyStripeEvent(
     const found =
       customerId === null
         ? { rows: [] }
-        : await tx.query<{ id: string; billing_mode: string }>(
-            `SELECT id, billing_mode::text AS billing_mode
-               FROM organization WHERE stripe_customer_id = $1`,
+        : await tx.query<{ id: string; billing_mode: string; stripe_event_at: Date | null }>(
+            // Locked: two events for one club are applied one after the other,
+            // so the newer-than check below cannot race itself.
+            `SELECT id, billing_mode::text AS billing_mode, stripe_event_at
+               FROM organization WHERE stripe_customer_id = $1
+               FOR UPDATE`,
             [customerId],
           );
 
@@ -246,6 +272,21 @@ export async function applyStripeEvent(
       return { outcome: 'not_stripe_billed' as const, organizationId, changed: {} };
     }
 
+    /*
+     * Older than what was last applied: recorded, not applied — 13-10-2026
+     * sweep. Stripe does not deliver in order, and a late payment_failed must
+     * not put a club back to past_due after a newer event said active.
+     */
+    const lastApplied = found.rows[0]!.stripe_event_at;
+    if (eventCreated !== null && lastApplied !== null && eventCreated < lastApplied) {
+      await tx.query(
+        `INSERT INTO stripe_event (id, type, organization_id, outcome)
+              VALUES ($1, $2, $3, 'stale')`,
+        [eventId, eventType, organizationId],
+      );
+      return { outcome: 'stale' as const, organizationId, changed: {} };
+    }
+
     const columns = (Object.keys(change) as (keyof SubscriptionChange)[]).filter(
       (key) => change[key] !== undefined,
     );
@@ -280,6 +321,35 @@ export async function applyStripeEvent(
       const was = normalise(before[0]![column]);
       const now = normalise(after[0]![column]);
       if (was !== now) changed[column] = { before: was, after: now };
+    }
+
+    if (eventCreated !== null) {
+      await tx.query(`UPDATE organization SET stripe_event_at = $2 WHERE id = $1`, [
+        organizationId,
+        eventCreated,
+      ]);
+    }
+
+    /*
+     * Paying restores full access — 13-10-2026 sweep. A club the trial clock
+     * made read-only pays through checkout (deliberately open to it), the event
+     * makes it active, and until now it stayed read-only with its deletion date
+     * until an operator noticed. Lifted with the deletion date, as the /admin
+     * control does — and never for a club an operator suspended, whose reason
+     * is somebody's decision.
+     */
+    if (change.status === 'active' || change.status === 'trialing') {
+      const { rows: lifted } = await tx.query<{ read_only_at: Date }>(
+        `UPDATE organization o
+            SET read_only_at = NULL, pending_delete_at = NULL
+           FROM (SELECT read_only_at FROM organization WHERE id = $1) was
+          WHERE o.id = $1 AND o.suspended_at IS NULL AND o.read_only_at IS NOT NULL
+          RETURNING was.read_only_at`,
+        [organizationId],
+      );
+      if (lifted[0]) {
+        changed['read_only_at'] = { before: normalise(lifted[0].read_only_at), after: null };
+      }
     }
 
     await tx.query(

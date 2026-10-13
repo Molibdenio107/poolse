@@ -189,7 +189,17 @@ export class InventoryController {
     const { organizationId } = currentTenant();
 
     const facilityId = readId(body['facilityId'], 'facilityId');
-    const id = await createLostAndFound(organizationId, facilityId, readFound(body));
+    let id: string | null;
+    try {
+      id = await createLostAndFound(organizationId, facilityId, readFound(body));
+    } catch (error) {
+      // A student id that is not this club's: the composite key refuses it,
+      // which was a 500 — 13-10-2026 sweep.
+      if ((error as { code?: string }).code === '23503') {
+        throw new BadRequestException({ code: 'invalid', message: 'No such student', fields: { studentId: 'inventory.lostAndFound.studentInvalid' } });
+      }
+      throw error;
+    }
     if (id === null) throw new NotFoundException('No such site');
     return { id };
   }

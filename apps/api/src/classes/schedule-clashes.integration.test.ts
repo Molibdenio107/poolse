@@ -46,15 +46,25 @@ async function twoClasses(
     [tenant.organizationId],
   );
 
-  for (const one of [first, second]) {
+  /*
+   * Each turma in its own tank. One instructor across lanes of one pool is
+   * allowed (POOLSE-51), so a clash is only ever a person in two waters — the
+   * rule class_session_instructor_free enforces and this query mirrors.
+   */
+  for (const [index, one] of [first, second].entries()) {
+    const [pool] = await tenant.sql<{ id: string }>(
+      `INSERT INTO pool (organization_id, facility_id, name) VALUES ($1, $2, $3) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId, `Tanque ${index + 1}`],
+    );
     const [group] = await tenant.sql<{ id: string }>(
-      `INSERT INTO class_group (organization_id, season_id, facility_id, name, level_id,
+      `INSERT INTO class_group (organization_id, season_id, facility_id, pool_id, name, level_id,
                                 instructor_membership_id)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
       [
         tenant.organizationId,
         tenant.seasonId,
         tenant.facilityId,
+        pool!.id,
         one.name,
         level!.id,
         instructor,

@@ -38,7 +38,14 @@ export async function CostPerUsePanel({
    * zero here is a number an owner would act on.
    */
   const hours = report.taughtMinutes / 60;
-  const perHour = report.costCents !== null && hours > 0 ? report.costCents / hours : null;
+  // The cost of the months something was taught in, over those months' hours —
+  // the same figure the turma page shows (13-10-2026 sweep: this used every
+  // month's cost, unallocated included, over every month's hours).
+  const allocatableHours = report.allocatableMinutes / 60;
+  const perHour =
+    report.costCents !== null && allocatableHours > 0
+      ? (report.costCents - (report.unallocatedCents ?? 0)) / allocatableHours
+      : null;
   const perBather =
     report.costCents !== null && report.bathers > 0 ? report.costCents / report.bathers : null;
   const perCubicMetre =

@@ -96,11 +96,18 @@ export class BadInputFilter implements ExceptionFilter {
   }
 }
 
-/** Postgres 22P02 — "invalid input syntax for type …". */
+/**
+ * Postgres 22P02 — "invalid input syntax for type …" — and, since the
+ * 13-10-2026 sweep, 22008 / 22007: a date that has the right shape and does
+ * not exist ("2026-02-31"). JavaScript's `Date` rolls those into March, so
+ * they passed every shape check in the controllers and reached the cast,
+ * answering 500 from a dozen endpoints. A value the client sent wrongly is a
+ * 400 wherever it is caught.
+ */
+const BAD_VALUE_CODES = new Set(['22P02', '22008', '22007']);
+
 function isBadTextRepresentation(error: unknown): error is Error & { code: string } {
-  return (
-    error instanceof Error && (error as { code?: unknown }).code === '22P02'
-  );
+  return error instanceof Error && BAD_VALUE_CODES.has(String((error as { code?: unknown }).code));
 }
 
 /**

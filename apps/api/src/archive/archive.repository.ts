@@ -407,7 +407,7 @@ async function restoreChild(tx: Tx, item: CascadeItem, at: string): Promise<bool
     const { rowCount } = await tx.query(
       `UPDATE student_fee SET ends_on = NULL
         WHERE id = $1 AND archived_at IS NULL AND ends_on = $2::date
-          AND $2::date >= current_date
+          AND $2::date >= club_today()
           AND updated_at = $3::timestamptz`,
       [item.id, item.endsOn, at],
     );

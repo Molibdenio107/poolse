@@ -59,6 +59,12 @@ it sees the notice instead.
 A subscription set to cancel says so and counts down to the period end. Until that date
 nothing changes.
 
+**Paying opens a read-only club again.** When an event makes the subscription `active` or
+`trialing`, the webhook clears `read_only_at` and `pending_delete_at` in the same transaction,
+unless `suspended_at` is set. An event older than the last one applied
+(`organization.stripe_event_at`) is recorded and ignored, so a late retry cannot undo a newer
+change. A club billed manually or comped is refused a checkout (`not_stripe_billed`).
+
 ## One plan, two intervals
 
 **There is one plan, `poolse_full`** — POOLSE-60, which reversed the three tiers that shipped a

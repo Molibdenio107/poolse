@@ -12,6 +12,14 @@ import type { FormState } from '@/app/(app)/dashboard/actions';
 import { overrideSupportAction, requestSupportAction } from '@/app/(app)/dashboard/support.actions';
 import { EnterSupportButton } from '../../enter-support-button';
 
+/**
+ * A field error is a catalogue key (the API's and this app's alike) — shown
+ * translated, never as the raw key. 13-10-2026 sweep.
+ */
+function fieldText(t: ReturnType<typeof useTranslations>, key: string | undefined): string | undefined {
+  return key === undefined ? undefined : t(key);
+}
+
 const INITIAL: FormState = { ok: false };
 
 const PRIMARY =
@@ -84,7 +92,7 @@ function RequestForm({ tenantId }: { tenantId: string }) {
         required
         maxLength={500}
         rows={2}
-        error={state.fields?.['reason']}
+        error={fieldText(t, state.fields?.['reason'])}
       />
       <button type="submit" disabled={pending} className={PRIMARY}>
         {pending ? t('common.working') : t('admin.support.request')}
@@ -126,7 +134,7 @@ function OverrideButton({ tenantId, tenantName }: { tenantId: string; tenantName
             required
             maxLength={500}
             rows={3}
-            error={state.fields?.['reason']}
+            error={fieldText(t, state.fields?.['reason'])}
           />
           <TextField
             name="confirmName"
@@ -134,7 +142,7 @@ function OverrideButton({ tenantId, tenantName }: { tenantId: string; tenantName
             initial=""
             required
             autoComplete="off"
-            error={state.fields?.['confirmName']}
+            error={fieldText(t, state.fields?.['confirmName'])}
             hint={t('admin.action.confirmNameHint')}
           />
           <button type="submit" disabled={pending} className={DANGER}>

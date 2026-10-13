@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
@@ -199,6 +199,11 @@ function SlotRow({
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useSavedAction(updateSlotAction, INITIAL);
   const [removeState, remove, removing] = useSavedAction(removeSlotAction, INITIAL);
+  // Closed by a successful save, not on submit: a refused one has to stay open
+  // with its message and what was typed (13-10-2026 sweep).
+  useEffect(() => {
+    if (state.ok) setEditing(false);
+  }, [state]);
 
   if (!editing) {
     return (
@@ -239,7 +244,7 @@ function SlotRow({
   }
 
   return (
-    <form action={action} onSubmit={() => setEditing(false)} className="flex flex-wrap items-end gap-3">
+    <form action={action} className="flex flex-wrap items-end gap-3">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="facilityId" value={facilityId} />
       <input type="hidden" name="slotId" value={slot.id} />

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { describeLoad, outcome, type LoadFailure, type Outcome } from '@/lib/load-failure';
 import { apiFetch, type ActiveSession, type Me, type People } from '@/lib/api';
 import { ProfileForm } from './profile-form';
 import { TransferOwnership } from './transfer-ownership';
@@ -60,35 +60,26 @@ export default async function ProfilePage({
    * `GET /people` is owner and admin only; for an instructor it answers 403
    * with `forbidden_role`, which is the API working rather than anything going
    * wrong. This page belongs to everybody, so the whole fetch is wrapped and
-   * every failure — refused, offline, no organization yet — lands in the same
-   * place: `people` stays null and the page renders without the transfer block.
-   * Turning this into an error banner would break the one screen an instructor
-   * is guaranteed to be able to open.
+   * a refusal leaves the page without the transfer block. Any other failure
+   * keeps the tab and says so inside it (13-10-2026 sweep): it used to drive
+   * `visible:` too, so a 500 made the Owner's transfer tab vanish. Never a
+   * banner over the page — the one screen an instructor can always open.
    *
    * The smallest page of members the API will give, because nothing here reads
    * the list: the transfer picker gets `transferCandidates`, which is every
    * admin and is not paginated — POOLSE-29.
    */
-  let people: People | null = null;
-  if (me !== null) {
-    try {
-      people = await apiFetch<People>('/people?scope=staff&limit=1');
-    } catch {
-      people = null;
-    }
-  }
+  const people: Outcome<People> =
+    me === null ? { state: 'refused' } : await outcome(apiFetch<People>('/people?scope=staff&limit=1'));
 
-  // Where this account is signed in. Best-effort, as it was on the dashboard: a
-  // Clerk hiccup should cost the device list, not the whole page — and this page
-  // is the one screen every role is guaranteed to be able to open.
-  let sessions: ActiveSession[] = [];
-  if (me !== null) {
-    try {
-      sessions = (await apiFetch<{ sessions: ActiveSession[] }>('/me/sessions')).sessions;
-    } catch {
-      sessions = [];
-    }
-  }
+  // Where this account is signed in. Best-effort: a Clerk hiccup costs the
+  // device list, not the whole page — and the tab says it did not load rather
+  // than vanishing as if there were nothing to show.
+  const sessionsLoad: Outcome<{ sessions: ActiveSession[] }> =
+    me === null
+      ? { state: 'ok', data: { sessions: [] } }
+      : await outcome(apiFetch<{ sessions: ActiveSession[] }>('/me/sessions'));
+  const sessions = sessionsLoad.state === 'ok' ? sessionsLoad.data.sessions : [];
 
   const membership = me?.memberships[0] ?? null;
 
@@ -253,12 +244,15 @@ export default async function ProfilePage({
         {
           slug: 'sessions',
           labelKey: 'sessions.title',
-          visible: sessions.length > 0,
+          visible: sessions.length > 0 || sessionsLoad.state === 'failed',
           content: () => (
             <section className="rounded border border-border bg-surface p-5">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('sessions.title')}
               </h2>
+              {sessionsLoad.state === 'failed' && (
+                <PageError message={t(sessionsLoad.failure.key)} />
+              )}
               <Sessions
                 sessions={sessions}
                 formatted={sessions.map((session) => ({
@@ -273,25 +267,31 @@ export default async function ProfilePage({
         {
           slug: 'transfer',
           labelKey: 'transfer.title',
-          visible: people !== null && people.canTransferOwnership,
-          content: () =>
-            people !== null && (
-              <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
-                <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                  {t('transfer.title')}
-                </h2>
-                <p className="text-sm text-foreground-muted">{t('transfer.explain')}</p>
-                {/*
-                  Every admin, from its own query — not from a page of the
-                  members list, which would have offered only the admins who
-                  happened to land on page 1 — POOLSE-29.
-                */}
-                <TransferOwnership
-                  organizationId={people.organizationId}
-                  candidates={people.transferCandidates}
-                />
-              </section>
-            ),
+          visible:
+            (people.state === 'ok' && people.data.canTransferOwnership) ||
+            (people.state === 'failed' && isOwner),
+          content: () => (
+            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                {t('transfer.title')}
+              </h2>
+              {people.state === 'failed' && <PageError message={t(people.failure.key)} />}
+              {people.state === 'ok' && (
+                <>
+                  <p className="text-sm text-foreground-muted">{t('transfer.explain')}</p>
+                  {/*
+                    Every admin, from its own query — not from a page of the
+                    members list, which would have offered only the admins who
+                    happened to land on page 1 — POOLSE-29.
+                  */}
+                  <TransferOwnership
+                    organizationId={people.data.organizationId}
+                    candidates={people.data.transferCandidates}
+                  />
+                </>
+              )}
+            </section>
+          ),
         },
         {
           // POOLSE-79. The Owner's alone, like the subscription: the club's

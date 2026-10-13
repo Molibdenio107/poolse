@@ -3710,3 +3710,14 @@ on top of it restricts nothing. The same migration revokes it on POOLSE-72's
 `complaintsRegime`, `complaintsUrl` and `regulation`. `public_lead_form()` gains the complaints
 pair and `regulations[]`. The private operator's link is the API's constant, not a column.
 Migration `1790460000000_public-notices.sql`; `packages/db/test/public-notices.sql`.
+
+**13-10-2026 sweep, second pass** (`1790503200000_sweep-oct-13b.sql`):
+`provision_organization` returns the slug actually stored and is executable by `poolse_app`
+only (the trial-claim migration had left it on PUBLIC). `poolse_app` loses DELETE on
+`organization`. `poolse_platform` may DELETE `tenant_request_stats` rows older than 30 days and
+nothing newer, by policy, so the hourly prune works where TimescaleDB retention is absent.
+Seven date defaults move from `current_date` to `club_today()` (`enrollment.joined_on`,
+`student_fee_payment.paid_on`, `student_fee.starts_on`, `invoice_payment.paid_on`,
+`invoice_chase.chased_on`, `lost_and_found_item.found_on`, `invoice.issued_on`).
+`organization.stripe_event_at` is the creation time of the last Stripe event applied, so an
+out-of-order delivery cannot undo a later one; `poolse_platform` may update it.

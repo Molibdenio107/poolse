@@ -1,4 +1,5 @@
 import { withOrg, type Tx } from '@poolse/db';
+import { isLiveInstructor } from './stand-in.repository.js';
 import { recordAudit } from '../audit/audit.js';
 import { holidaysBetween } from './holidays.js';
 import { nameOrder, shortName } from '../people/names.js';
@@ -731,6 +732,9 @@ export async function removeFutureSessions(
 
     const anchor = anchors[0];
     if (!anchor) return null;
+    // A partnership hour has no turma to end; its series lives on the
+    // parceria. Said, rather than answering "0 removed" — 13-10-2026 sweep.
+    if (anchor.class_group_id === null) throw new PartnershipSeriesError();
 
     const { rows: removed } = await tx.query<{ id: string }>(
       `UPDATE class_session cs
@@ -935,7 +939,10 @@ export async function findClash(
       kind: 'lane' | 'instructor';
     }>(
       `
-      SELECT cg.name AS class_name,
+      -- A parceria's hour has no turma: its name comes through the booking and
+      -- its partner group. An inner join dropped it, and the 409 named nobody
+      -- — the fourth time here (13-10-2026 sweep).
+      SELECT coalesce(cg.name, pg.name, sch.title, '—') AS class_name,
              to_char(
                cs.starts_at AT TIME ZONE coalesce(f.timezone, 'Europe/Lisbon'),
                'YYYY-MM-DD HH24:MI'
@@ -950,8 +957,12 @@ export async function findClash(
                ELSE 'lane'
              END AS kind
         FROM class_session cs
-        JOIN class_group cg
+        LEFT JOIN class_group cg
           ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
+        LEFT JOIN class_schedule sch
+          ON sch.id = cs.schedule_id AND sch.organization_id = cs.organization_id
+        LEFT JOIN partner_group pg
+          ON pg.id = sch.partner_group_id AND pg.organization_id = sch.organization_id
         LEFT JOIN pool p     ON p.id = cs.pool_id     AND p.organization_id = cs.organization_id
         LEFT JOIN class_session_lane csl ON csl.session_id = cs.id
         LEFT JOIN lane ln    ON ln.id = csl.lane_id    AND ln.organization_id = cs.organization_id
@@ -963,10 +974,12 @@ export async function findClash(
               -- Same pool and lane.
               ($2::uuid IS NOT NULL AND $3::smallint IS NOT NULL
                  AND cs.pool_id = $2::uuid AND ln.position = $3::smallint)
-              -- Or the same person teaching, wherever they are.
+              -- Or the same person teaching in *other* water — the rule the
+              -- exclusion constraint enforces since POOLSE-51.
            OR ($4::uuid IS NOT NULL
                  AND coalesce(cs.substitute_instructor_membership_id,
-                              cs.instructor_membership_id) = $4::uuid)
+                              cs.instructor_membership_id) = $4::uuid
+                 AND ($2::uuid IS NULL OR cs.pool_id IS DISTINCT FROM $2::uuid))
          )
        /*
         * An instructor clash is the more surprising of the two and the harder to
@@ -1136,10 +1149,20 @@ export async function findScheduleClashes(organizationId: string): Promise<Sched
       overlap_from: string;
       overlap_to: string;
     }>(`
+      /*
+       * Mirrors class_session_instructor_free and generate_sessions exactly
+       * — 13-10-2026 sweep. It used the pre-POOLSE-51 rule (same instructor,
+       * any pool), so two turmas sharing an instructor in *one* tank — the
+       * club's ordinary Tuesday, which the database allows — were reported as a
+       * clash and silently given no lessons. Now: the effective instructor (the
+       * booking's, else the turma's), *different* pools, published season only.
+       */
       WITH slot AS (
         SELECT cg.id AS group_id,
                cg.name,
-               cg.instructor_membership_id,
+               coalesce(s.instructor_membership_id, cg.instructor_membership_id)
+                 AS instructor_membership_id,
+               cg.pool_id,
                s.weekday,
                s.start_time,
                s.start_time + make_interval(mins => s.duration_minutes) AS end_time
@@ -1148,8 +1171,15 @@ export async function findScheduleClashes(organizationId: string): Promise<Sched
             ON s.class_group_id = cg.id
            AND s.organization_id = cg.organization_id
            AND s.archived_at IS NULL
+          JOIN season se
+            ON se.organization_id = cg.organization_id
+           AND se.id = coalesce(cg.season_id, (
+                 SELECT s2.id FROM season s2
+                  WHERE s2.organization_id = cg.organization_id AND s2.status = 'published'))
+           AND se.status = 'published'
          WHERE cg.archived_at IS NULL
-           AND cg.instructor_membership_id IS NOT NULL
+           AND cg.pool_id IS NOT NULL
+           AND coalesce(s.instructor_membership_id, cg.instructor_membership_id) IS NOT NULL
       )
       SELECT a.name              AS first_class,
              b.name              AS second_class,
@@ -1167,6 +1197,8 @@ export async function findScheduleClashes(organizationId: string): Promise<Sched
         FROM slot a
         JOIN slot b
           ON b.instructor_membership_id = a.instructor_membership_id
+         -- Different water: one instructor across lanes of one tank is allowed.
+         AND b.pool_id <> a.pool_id
          AND b.weekday = a.weekday
          -- Each pair once. Without this every clash is reported twice, once
          -- from each side, and the operator counts double.
@@ -1199,6 +1231,10 @@ export async function setSubstitute(
   membershipId: string | null,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
+    // Only an instructor stands in front of a class — 13-10-2026 sweep.
+    if (membershipId !== null && !(await isLiveInstructor(tx, membershipId))) {
+      throw new NotAnInstructorError();
+    }
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE class_session SET substitute_instructor_membership_id = $2
         WHERE id = $1
@@ -1223,3 +1259,9 @@ function isoDate(value: Date): string {
   const day = `${value.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/** The person named is not a live instructor of this club. */
+export class NotAnInstructorError extends Error {}
+
+/** A partnership session's series is not ended from one of its weeks. */
+export class PartnershipSeriesError extends Error {}

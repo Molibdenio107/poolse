@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, ChevronRight, Plus, Wrench } from 'lucide-react';
@@ -115,7 +115,12 @@ export function SpacesPanel({
 
   // Closing on success rather than on submit: a refused name must leave the
   // dialog open with what somebody typed still in it.
-  if (state.ok && adding) setAdding(false);
+  // Closed by a *new* successful result, in an effect: state.ok stays true after
+  // a save, so a check during render closed the dialog again the moment it was
+  // reopened (13-10-2026 sweep).
+  useEffect(() => {
+    if (state.ok) setAdding(false);
+  }, [state]);
 
   const block = variant === 'block';
   const Wrapper = block ? 'div' : 'section';

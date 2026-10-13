@@ -27,6 +27,7 @@ import {
   readSubscription,
   rememberCustomer,
   type OrganizationSubscription,
+  readBillingMode,
 } from './subscription.repository.js';
 
 /**
@@ -177,6 +178,18 @@ export class SubscriptionController {
       });
     }
 
+    /*
+     * A club billed by hand or comped is not Stripe's — 13-10-2026 sweep. Its
+     * webhook events are recorded as not_stripe_billed and change nothing, so a
+     * checkout here would take a card every month and restore no access.
+     */
+    if ((await readBillingMode(organizationId)) !== 'stripe') {
+      throw new ConflictException({
+        code: 'not_stripe_billed',
+        message: 'This club is billed outside Stripe; Poolse arranges its payment directly',
+      });
+    }
+
     const stripe = stripeClient();
     const customerId = await customerFor(organizationId, subscription);
 
@@ -257,8 +270,7 @@ async function customerFor(
     metadata: { organization_id: organizationId },
   });
 
-  await rememberCustomer(organizationId, customer.id);
-  return customer.id;
+  return rememberCustomer(organizationId, customer.id);
 }
 
 /**

@@ -102,6 +102,8 @@ export interface PoolCostReport {
   costCents: number | null;
   kwh: number | null;
   taughtMinutes: number;
+  /** Taught minutes in the priced months only — what cost per hour and the shares divide by. */
+  allocatableMinutes: number;
   bathers: number;
   /** Consumption in months where nothing was taught, in cents. */
   unallocatedCents: number | null;
@@ -268,6 +270,15 @@ export async function poolCostReport(
         WHERE cs.organization_id = $1
           AND cs.pool_id = $2
           AND cs.status <> 'cancelled'
+          -- Taught, not timetabled: lessons are generated to the season's end,
+          -- and counting next June's would divide this year's heat by them —
+          -- 13-10-2026 sweep (shares came out at about 9x the cost).
+          AND cs.starts_at <= now()
+          -- A free-swim block is water held for the public, not a lesson.
+          AND NOT EXISTS (
+            SELECT 1 FROM class_schedule fs
+             WHERE fs.id = cs.schedule_id AND fs.organization_id = cs.organization_id
+               AND fs.subject_type = 'free_swim')
           AND cs.occurs_on >= (date_trunc('month', (now() AT TIME ZONE $3)) - (($4::int - 1) || ' months')::interval)::date
         GROUP BY 1`,
       [organizationId, poolId, timezone, months],
@@ -304,10 +315,28 @@ export async function poolCostReport(
         WHERE cs.organization_id = $1
           AND cs.pool_id = $2
           AND cs.status <> 'cancelled'
+          -- Taught, not timetabled: lessons are generated to the season's end,
+          -- and counting next June's would divide this year's heat by them —
+          -- 13-10-2026 sweep (shares came out at about 9x the cost).
+          AND cs.starts_at <= now()
+          -- A free-swim block is water held for the public, not a lesson.
+          AND NOT EXISTS (
+            SELECT 1 FROM class_schedule fs
+             WHERE fs.id = cs.schedule_id AND fs.organization_id = cs.organization_id
+               AND fs.subject_type = 'free_swim')
           AND cs.occurs_on >= (date_trunc('month', (now() AT TIME ZONE $3)) - (($4::int - 1) || ' months')::interval)::date
+          -- Only the months whose euros are known, so the shares divide the
+          -- priced cost by the minutes of those same months.
+          AND to_char(cs.occurs_on, 'YYYY-MM') = ANY($5::text[])
         GROUP BY 1, 2
         ORDER BY 3 DESC`,
-      [organizationId, poolId, timezone, months],
+      [
+        organizationId,
+        poolId,
+        timezone,
+        months,
+        energy.filter((row) => row.kwh !== null && row.cost_cents !== null).map((row) => row.month),
+      ],
     );
 
     const taught = new Map(teaching.map((row) => [row.month, row]));
@@ -345,7 +374,9 @@ export async function poolCostReport(
      * so charging them to the ones that did teach would inflate every share.
      */
     const allocatableCents = costCents === null ? null : costCents - (unallocatedCents ?? 0);
-    const allocatableMinutes = sum((m) => m.taughtMinutes);
+    // The minutes of the priced months only, so cost per hour and every share
+    // divide like by like: euros known from August over lessons from August.
+    const allocatableMinutes = priced.reduce((t, m) => t + m.taughtMinutes, 0);
 
     return {
       poolId,
@@ -361,7 +392,8 @@ export async function poolCostReport(
       // is a figure an owner would act on.
       costCents,
       kwh: withConsumption.length === 0 ? null : sum((m) => m.kwh),
-      taughtMinutes: allocatableMinutes,
+      taughtMinutes: sum((m) => m.taughtMinutes),
+      allocatableMinutes,
       bathers: sum((m) => m.bathers),
       unallocatedCents,
       monthsWithConsumption: withConsumption.length,

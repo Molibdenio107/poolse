@@ -341,8 +341,8 @@ export async function listPartners(
                 WHERE pa.partner_id = p.id
                   AND pa.organization_id = p.organization_id
                   AND pa.archived_at IS NULL
-                  AND pa.start_date <= current_date
-                  AND (pa.end_date IS NULL OR pa.end_date >= current_date)
+                  AND pa.start_date <= club_today()
+                  AND (pa.end_date IS NULL OR pa.end_date >= club_today())
                 ORDER BY pa.start_date DESC
                 LIMIT 1
              ) a ON true

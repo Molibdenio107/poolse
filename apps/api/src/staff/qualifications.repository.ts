@@ -80,8 +80,19 @@ export interface QualificationInput {
 export class DuplicateTypeError extends Error {}
 export class UnknownReferenceError extends Error {}
 
+/**
+ * A `date` column as `YYYY-MM-DD`. node-pg builds it at *local* midnight, so
+ * `toISOString()` gives the day before on any machine east of UTC — local
+ * getters read back the day that was stored (13-10-2026 sweep).
+ */
+function localDay(value: Date): string {
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const date = String(value.getDate()).padStart(2, '0');
+  return `${value.getFullYear()}-${month}-${date}`;
+}
+
 const day = (value: Date | string | null): string | null =>
-  value === null ? null : typeof value === 'string' ? value : value.toISOString().slice(0, 10);
+  value === null ? null : typeof value === 'string' ? value : localDay(value);
 
 /* ------------------------------------------------------------------ types */
 

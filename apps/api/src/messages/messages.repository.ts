@@ -465,10 +465,13 @@ export async function findDelivery(
       pending: string[] | null;
     }>(
       `SELECT m.subject, m.body, o.name AS organization_name, o.locale AS organization_locale,
-              (SELECT array_agg(DISTINCT mr.email::text)
-                 FROM message_recipient mr
-                WHERE mr.message_id = m.id AND mr.organization_id = m.organization_id
-                  AND mr.email IS NOT NULL AND mr.delivered_at IS NULL) AS pending
+              -- DISTINCT on the citext itself, then cast: on text, Ana@x.pt and
+              -- ana@x.pt were two emails to one person (13-10-2026 sweep).
+              (SELECT array_agg(d.email::text)
+                 FROM (SELECT DISTINCT mr.email
+                         FROM message_recipient mr
+                        WHERE mr.message_id = m.id AND mr.organization_id = m.organization_id
+                          AND mr.email IS NOT NULL AND mr.delivered_at IS NULL) d) AS pending
          FROM message m
          JOIN organization o ON o.id = m.organization_id
         WHERE m.id = $1`,

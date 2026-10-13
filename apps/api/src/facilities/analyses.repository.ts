@@ -16,6 +16,7 @@ import {
   type PoolUse,
 } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
+import { poolTimezone, resolveSample, type SampleMoment } from './sample-moment.js';
 import {
   checkAnalysisRows,
   type AnalysisImportRow,
@@ -140,7 +141,8 @@ export async function listAnalyses(
 
 export interface CreateAnalysisInput {
   poolId: string;
-  takenAt: string;
+  /** Resolved in the facility's timezone by `resolveSample` — 13-10-2026 sweep. */
+  takenAt: SampleMoment;
   notes: string | null;
   recordedBy: string | null;
   values: { metric: PoolMetric; value: number }[];
@@ -174,11 +176,13 @@ export async function createAnalysis(
   input: CreateAnalysisInput,
 ): Promise<CreatedAnalysis> {
   return withOrg(organizationId, async (tx) => {
+    const takenAt = await resolveSample(tx, input.poolId, input.takenAt);
+    if (takenAt === null) throw new Error('No such pool');
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO pool_analysis (organization_id, pool_id, taken_at, notes, recorded_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [organizationId, input.poolId, input.takenAt, input.notes, input.recordedBy],
+      [organizationId, input.poolId, takenAt, input.notes, input.recordedBy],
     );
 
     const id = rows[0]?.id;
@@ -294,11 +298,12 @@ export interface AnalysisImportResult {
  */
 async function recordedMoments(tx: Tx, poolId: string): Promise<Set<string>> {
   const { rows } = await tx.query<{ moment: string; day: string }>(
-    `SELECT to_char(taken_at, 'YYYY-MM-DD HH24:MI') AS moment,
-            to_char(taken_at, 'YYYY-MM-DD') AS day
+    // In the facility's own reckoning — the sheet's clock, not the server's.
+    `SELECT to_char(taken_at AT TIME ZONE $2, 'YYYY-MM-DD HH24:MI') AS moment,
+            to_char(taken_at AT TIME ZONE $2, 'YYYY-MM-DD') AS day
        FROM pool_analysis
       WHERE pool_id = $1 AND archived_at IS NULL`,
-    [poolId],
+    [poolId, await poolTimezone(tx, poolId)],
   );
 
   // Both keys, because a sheet with no time column dedupes on the day alone and
@@ -342,6 +347,8 @@ export async function runAnalysisImport(
 
     if (!request.commit) return checked;
 
+    // The facility's zone, for reading the sheet's wall-clock times.
+    const timezone = await poolTimezone(tx, request.poolId);
     const wanted = request.include === null ? null : new Set(request.include);
     let created = 0;
     let skipped = 0;
@@ -360,10 +367,11 @@ export async function runAnalysisImport(
       const takenAt = `${row.takenOn} ${row.takenTime ?? '00:00'}`;
 
       const inserted = await tx.query<{ id: string }>(
+        // The sheet's clock is the facility's: read there, not in UTC.
         `INSERT INTO pool_analysis (organization_id, pool_id, taken_at, notes, recorded_by)
-         VALUES ($1, $2, $3::timestamptz, $4, $5)
+         VALUES ($1, $2, ($3::timestamp AT TIME ZONE $6), $4, $5)
          RETURNING id`,
-        [organizationId, request.poolId, takenAt, row.notes, membershipId],
+        [organizationId, request.poolId, takenAt, row.notes, membershipId, timezone],
       );
 
       const id = inserted.rows[0]?.id;

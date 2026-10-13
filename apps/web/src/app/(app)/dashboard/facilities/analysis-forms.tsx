@@ -1,15 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import { POOL_METRICS, type PoolMetric } from '@/lib/pool-metrics';
 import { describeBand, type BandMap, type BandOverride } from '@/lib/water';
 import {
-  CONTROL_LINE,
-  FIELD_COLUMN,
-  FIELD_LABEL,
   SelectField,
   TextField,
 } from '@/components/ui/field';
@@ -34,9 +31,13 @@ const INITIAL: FormState = { ok: false };
  * **Units are labels, not inputs.** The unit for a metric is fixed and the
  * server looks it up — there is no control here that could put a pH in ppm.
  *
- * `TextField` for the moment and the notes, plain inputs for the nine numbers:
- * a nine-column grid of labelled `TextField`s would be nine max-width columns
- * and a very tall form, and these need to read as a panel of numbers.
+ * **Every box is a controlled `TextField`** — 13-10-2026 sweep. The nine
+ * numbers used to be uncontrolled `type="number"` inputs, so a refused save
+ * wiped every reading typed (React 19 resets a form when its action returns),
+ * and a comma decimal — "7,4", how a Portuguese keyboard writes it — was
+ * silently refused by the browser. Text with a decimal keyboard instead; the
+ * API reads either mark. A save that worked empties the form, so a second
+ * press cannot file the same analysis twice.
  */
 export function AnalysisForm({
   organizationId,
@@ -49,9 +50,17 @@ export function AnalysisForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(recordAnalysisAction, INITIAL);
+  const [round, setRound] = useState(0);
+  useEffect(() => {
+    if (state.ok) setRound((n) => n + 1);
+  }, [state]);
+  const error = (field: string): string | undefined => {
+    const key = state.fields?.[field];
+    return key === undefined ? undefined : t(key, state.values ?? {});
+  };
 
   return (
-    <form action={action} className="flex flex-col gap-4 rounded border border-border bg-surface-muted p-4">
+    <form key={round} action={action} className="flex flex-col gap-4 rounded border border-border bg-surface-muted p-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="poolId" value={poolId} />
 
@@ -68,6 +77,8 @@ export function AnalysisForm({
           label={t('facilities.analysisTakenAt')}
           type="datetime-local"
           className="w-56"
+          required
+          error={error('takenAt')}
         />
       </div>
 
@@ -77,21 +88,14 @@ export function AnalysisForm({
         </legend>
 
         {POOL_METRICS.map((metric) => (
-          <div key={metric} className={FIELD_COLUMN}>
-            <label htmlFor={`metric-${metric}`} className={FIELD_LABEL}>
-              {t(`facilities.metric.${metric}`)}{' '}
-              <span className="text-foreground-muted">({t(`facilities.unit.${metric}`)})</span>
-            </label>
-            <input
-              id={`metric-${metric}`}
-              name={metric}
-              type="number"
-              step="0.001"
-              min={0}
-              {...(metric === 'ph' ? { max: 14 } : {})}
-              className={CONTROL_LINE}
-            />
-          </div>
+          <TextField
+            key={metric}
+            name={metric}
+            label={`${t(`facilities.metric.${metric}`)} (${t(`facilities.unit.${metric}`)})`}
+            inputMode="decimal"
+            autoComplete="off"
+            error={error(metric)}
+          />
         ))}
       </fieldset>
 
@@ -101,6 +105,7 @@ export function AnalysisForm({
         maxLength={500}
         hint={t('facilities.analysisNotesHint')}
         className="max-w-form"
+        error={error('notes')}
       />
 
 

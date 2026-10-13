@@ -122,6 +122,15 @@ export class EnergyInvoicesController {
           fields: error.fields,
         });
       }
+      // The same bill filed twice at once: the second insert meets the unique
+      // number its own duplicate check could not yet see — 13-10-2026 sweep.
+      if ((error as { code?: string; constraint?: string }).constraint === 'energy_invoice_number_uq') {
+        throw new UnprocessableEntityException({
+          code: 'invoice_refused',
+          message: 'The bill was refused; see fields',
+          fields: { invoiceNumber: 'energy.invoice.duplicate' },
+        });
+      }
       throw error;
     }
   }

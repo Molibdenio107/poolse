@@ -135,6 +135,14 @@ export async function setStandInAction(
             : 'calendar.standIn.clash',
       };
     }
+    // Only a live instructor stands in, and only for one's own lesson —
+    // 13-10-2026 sweep.
+    if (error instanceof ApiError && error.code === 'not_an_instructor') {
+      return { ok: false, errorKey: 'calendar.standIn.notInstructor' };
+    }
+    if (error instanceof ApiError && error.status === 403) {
+      return { ok: false, errorKey: 'calendar.standIn.notYours' };
+    }
     return { ok: false, errorKey: 'calendar.standIn.failed' };
   }
 }

@@ -212,10 +212,16 @@ export async function countStaff(organizationId: string): Promise<StaffCounts> {
            -- Not Poolse support, which holds no role (POOLSE-79).
            AND m.support_grant_id IS NULL
            AND (
-             NOT EXISTS (
+             (NOT EXISTS (
                SELECT 1 FROM membership_role r
                 WHERE r.membership_id = m.id AND r.archived_at IS NULL
              )
+              -- A walk-in swimmer holds no role either; one with a pass is a
+              -- customer, not staff (13-10-2026 sweep).
+              AND NOT EXISTS (
+                SELECT 1 FROM pass ps
+                 WHERE ps.membership_id = m.id AND ps.organization_id = m.organization_id
+              ))
              OR EXISTS (
                SELECT 1 FROM membership_role r
                 WHERE r.membership_id = m.id
@@ -364,10 +370,16 @@ export async function listMembers(
          AND (
            $1::text IS NULL
            OR ($1 = 'staff' AND (
-                NOT EXISTS (
+                (NOT EXISTS (
                   SELECT 1 FROM membership_role r
                    WHERE r.membership_id = m.id AND r.archived_at IS NULL
                 )
+                 -- A walk-in swimmer holds no role either; one with a pass is a
+                 -- customer, not staff (13-10-2026 sweep).
+                 AND NOT EXISTS (
+                   SELECT 1 FROM pass ps
+                    WHERE ps.membership_id = m.id AND ps.organization_id = m.organization_id
+                 ))
                 OR EXISTS (
                   SELECT 1 FROM membership_role r
                    WHERE r.membership_id = m.id AND r.archived_at IS NULL

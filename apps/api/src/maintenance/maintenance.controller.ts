@@ -9,6 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { localInstant, sampleMoment } from '../facilities/sample-moment.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
@@ -203,7 +204,7 @@ export class MaintenanceController {
       organizationId,
       taskId,
       membershipId,
-      performedMoment(body['performedAt']),
+      await performedAt(organizationId, taskId, body['performedAt']),
       text(body['note'], MAX_NOTE),
     );
 
@@ -349,6 +350,14 @@ function id(value: unknown): string | null {
  * a client sending rubbish is told rather than silently having "now" recorded
  * against work done last week.
  */
+/** `performedMoment`, read on the task's site clock — 13-10-2026 sweep. */
+async function performedAt(organizationId: string, taskId: string, value: unknown): Promise<string | null> {
+  const parsed = performedMoment(value);
+  if (parsed === null) return null;
+  const typed = sampleMoment(value);
+  return typed === null ? parsed : localInstant(organizationId, 'maintenance_task', taskId, typed);
+}
+
 function performedMoment(value: unknown): string | null {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value !== 'string') {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { Gauge, Plus } from 'lucide-react';
@@ -166,7 +166,13 @@ function MeterDialog({
   const [state, action, pending] = useSavedAction(createMeter, INITIAL);
   const [reads, setReads] = useState<'cumulative_index' | 'interval_consumption'>('cumulative_index');
 
-  if (state.ok && open) onClose();
+  // Closed by a *new* successful result, in an effect: state.ok stays true after
+  // a save, so a check during render closed the dialog again the moment it was
+  // reopened (13-10-2026 sweep).
+  useEffect(() => {
+    if (state.ok) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per result
+  }, [state]);
 
   return (
     <Dialog open={open} onClose={onClose} title={t('energy.add')} closeLabel={t('common.close')}>

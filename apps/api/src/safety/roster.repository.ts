@@ -101,8 +101,11 @@ export async function readRoster(
          JOIN facility f ON f.id = p.facility_id AND f.organization_id = p.organization_id
         WHERE p.facility_id = $1
           AND l.archived_at IS NULL
-          AND l.starts_at < (($2::date + $3::int) AT TIME ZONE f.timezone)
-          AND l.ends_at > ($2::date AT TIME ZONE f.timezone)
+          -- ::timestamp first: a bare date AT TIME ZONE is read as UTC midnight
+          -- and turned into Lisbon wall time, shifting the window about two
+          -- hours in summer — 13-10-2026 sweep. Midnight on the site's clock.
+          AND l.starts_at < (($2::date + $3::int)::timestamp AT TIME ZONE f.timezone)
+          AND l.ends_at > ($2::date::timestamp AT TIME ZONE f.timezone)
         ORDER BY l.starts_at, l.id`,
       [facilityId, from, days],
     );

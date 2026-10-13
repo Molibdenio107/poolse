@@ -27,11 +27,13 @@ async function aTurma(
   tenant: ScratchTenant,
   name = 'Golfinhos',
   instructor: string | null = null,
+  poolId: string | null = null,
 ): Promise<string> {
   const [row] = await tenant.sql<{ id: string }>(
-    `INSERT INTO class_group (organization_id, facility_id, season_id, name, instructor_membership_id)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [tenant.organizationId, tenant.facilityId, tenant.seasonId, name, instructor],
+    `INSERT INTO class_group (organization_id, facility_id, season_id, name, instructor_membership_id,
+                              pool_id)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [tenant.organizationId, tenant.facilityId, tenant.seasonId, name, instructor, poolId],
   );
   return row!.id;
 }
@@ -91,13 +93,22 @@ test('removing the slot takes its future lessons with it', async () => {
 test('a clash leaves out only the turmas in it, and names them', async () => {
   await withScratchTenant(async (tenant) => {
     const teacher = await addMember(tenant, 'Prof', 'Dobrado', ['instructor']);
-    const first = await aTurma(tenant, 'Bebés', teacher);
-    const second = await aTurma(tenant, 'Aperfeiçoamento', teacher);
+    // Two tanks: one instructor across lanes of one pool is allowed (POOLSE-51).
+    const pools: string[] = [];
+    for (const name of ['Tanque 1', 'Tanque 2']) {
+      const [pool] = await tenant.sql<{ id: string }>(
+        `INSERT INTO pool (organization_id, facility_id, name) VALUES ($1, $2, $3) RETURNING id`,
+        [tenant.organizationId, tenant.facilityId, name],
+      );
+      pools.push(pool!.id);
+    }
+    const first = await aTurma(tenant, 'Bebés', teacher, pools[0]!);
+    const second = await aTurma(tenant, 'Aperfeiçoamento', teacher, pools[1]!);
     const other = await aTurma(tenant, 'Cadetes');
 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       const controller = new ClassesController();
-      // Same instructor, same Monday hour: a clash.
+      // Same instructor, same Monday hour, two tanks: a clash.
       await controller.schedule(first, { weekday: '1', startTime: '12:45', durationMinutes: '45' });
       await controller.schedule(second, { weekday: '1', startTime: '12:45', durationMinutes: '45' });
       const added = await controller.schedule(other, {

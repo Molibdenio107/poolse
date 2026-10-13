@@ -815,7 +815,7 @@ const INVOICE_COLUMNS = `
    */
   invoice_status(i.kind, note.id IS NOT NULL, t.total_cents, pay.paid_cents, i.due_on)
     AS status,
-  (current_date - i.due_on) AS days_overdue,
+  (club_today() - i.due_on) AS days_overdue,
   to_char(ch.last_chased_on, 'YYYY-MM-DD') AS last_chased_on,
   ch.chase_count`;
 
@@ -1095,7 +1095,7 @@ export async function creditInvoice(
          (organization_id, facility_id, series_id, kind, corrects_invoice_id, due_on,
           payer_membership_id, payer_student_id, payer_name, payer_tax_number,
           payer_address, payer_email, notes)
-       VALUES ($1, $2, $3, 'credit_note', $4, current_date, $5, $6, $7, $8, $9, $10, $11)
+       VALUES ($1, $2, $3, 'credit_note', $4, club_today(), $5, $6, $7, $8, $9, $10, $11)
        RETURNING id, document_no`,
       [
         organizationId,

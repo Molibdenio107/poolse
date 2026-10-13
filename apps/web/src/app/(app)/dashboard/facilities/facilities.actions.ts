@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ApiError, apiPatch, apiPost, apiPut } from '../../../../lib/api';
 import { POOL_METRICS } from '../../../../lib/pool-metrics';
+import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../actions';
 
 /**
@@ -219,7 +220,7 @@ export async function recordAnalysisAction(
   const poolId = String(formData.get('poolId') ?? '');
   const takenAt = String(formData.get('takenAt') ?? '').trim();
 
-  if (takenAt === '') return { ok: false, errorKey: 'facilities.analysisMomentRequired' };
+  if (takenAt === '') return { ok: false, fields: { takenAt: 'facilities.analysisMomentRequired' } };
 
   const values: Record<string, string> = {};
   for (const metric of POOL_METRICS) {
@@ -239,7 +240,9 @@ export async function recordAnalysisAction(
       { organizationId },
     );
   } catch (error) {
-    return failure(error, 'facilities.analysisFailed');
+    // describeFailure keeps the API's named field, so "pH entre 0 e 14" lands
+    // beside the pH box rather than as a generic toast.
+    return describeFailure(error, 'facilities.analysisFailed');
   }
 
   revalidatePath(`/dashboard/facilities/pools/${poolId}`);

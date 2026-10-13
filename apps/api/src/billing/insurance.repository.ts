@@ -109,7 +109,7 @@ export async function listPolicies(
               p.valid_from::text AS valid_from,
               p.valid_to::text   AS valid_to,
               p.cost_per_person_cents, p.notes, p.document_file_id,
-              (p.valid_to - current_date) AS days_to_expiry,
+              (p.valid_to - club_today()) AS days_to_expiry,
               (SELECT count(*)::int FROM student_fee sf
                 WHERE sf.insurance_policy_id = p.id
                   AND sf.organization_id = p.organization_id

@@ -79,7 +79,7 @@ export async function readMoneyPeriod(
                                     sf.line_discount_cents) AS payable,
                   (pay.id IS NOT NULL) AS paid,
                   (pay.id IS NULL
-                   AND fee_due_on(cur.period_start, f.payment_due_day) < current_date) AS overdue
+                   AND fee_due_on(cur.period_start, f.payment_due_day) < club_today()) AS overdue
              FROM student_fee sf
              JOIN fee_plan p
                ON p.id = sf.fee_plan_id AND p.organization_id = sf.organization_id
@@ -167,14 +167,18 @@ export async function readOccupancyToday(
     }>(
       `WITH today AS (
          SELECT cs.id, cs.pool_id, cs.starts_at, cs.ends_at,
-                coalesce(
-                  (SELECT count(*) FROM enrollment e
-                    WHERE e.organization_id = cs.organization_id
-                      AND e.class_group_id = cs.class_group_id
-                      AND e.status = 'active'),
-                  0
-                )::int + coalesce(CASE WHEN cs.class_group_id IS NULL THEN pg.participant_count END, 0)
-                  AS swimmers,
+                -- Counted as pool_occupancy() counts — the figure reception and
+                -- the desk's refusal use (13-10-2026 sweep): the turma through
+                -- the session or its booking, else the booking's headcount
+                -- override, else the partner group's size.
+                CASE
+                  WHEN coalesce(cs.class_group_id, sch.class_group_id) IS NOT NULL THEN
+                    (SELECT count(*) FROM enrollment e
+                      WHERE e.organization_id = cs.organization_id
+                        AND e.class_group_id = coalesce(cs.class_group_id, sch.class_group_id)
+                        AND e.status = 'active')::int
+                  ELSE coalesce(sch.headcount_override, pg.participant_count, 0)
+                END AS swimmers,
                 (coalesce(cs.substitute_instructor_membership_id,
                           cs.instructor_membership_id,
                           cg.instructor_membership_id,

@@ -800,6 +800,12 @@ in `numeric` with an explicit unit column — pH, °C, ppm and kWh do not share 
 **Times are stored UTC, displayed in the facility's timezone.** Class schedules are the
 place this bites; get it right once in the scheduling layer.
 
+**A typed moment is the facility's wall clock, and "today" is `club_today()`.** A
+`datetime-local` value goes to the API as typed and is resolved there in `facility.timezone`
+(`facilities/sample-moment.ts`: `resolveSample` for a pool, `localInstant` for a meter or a
+task) — never `new Date(raw)` on a UTC server. In SQL, a day is `club_today()`, never
+`current_date`, including column defaults. 13-10-2026 sweep.
+
 **A record's page uses `DetailPage`; one card is one tab, and the first is General.** The tab
 is `?tab=<slug>`; each tab's `content` is a function and only the active one is called, so a
 tab nobody opens costs nothing — except a list whose null-on-refusal decides whether its tab

@@ -1,9 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SelectField, TextAreaField, TextField, useFocusFirstError } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
+import { Dialog } from '@/components/ui/dialog';
 import type { FormState } from '../../actions';
 import { publishRegulationAction, saveComplaintsAction, withdrawRegulationAction } from './regulation.actions';
 
@@ -71,23 +72,63 @@ export function PublishRegulationForm({
   );
 }
 
+/**
+ * Withdrawing takes a version off every public page at once, so it asks first
+ * and names the version — 13-10-2026 sweep. One click used to do it, from a
+ * list of identical "Retirar" buttons a screen reader could not tell apart.
+ */
 export function WithdrawRegulationButton({
   facilityId,
   regulationId,
+  versionDate,
 }: {
   facilityId: string;
   regulationId: string;
+  /** The day it takes effect, already formatted — what tells the versions apart. */
+  versionDate: string;
 }): React.ReactElement {
   const t = useTranslations();
-  const [, dispatch, pending] = useSavedAction(withdrawRegulationAction, INITIAL);
+  const [confirming, setConfirming] = useState(false);
+  const [state, dispatch, pending] = useSavedAction(withdrawRegulationAction, INITIAL);
+  useEffect(() => {
+    if (state.ok) setConfirming(false);
+  }, [state]);
+
   return (
-    <form action={dispatch}>
-      <input type="hidden" name="facilityId" value={facilityId} />
-      <input type="hidden" name="regulationId" value={regulationId} />
-      <button type="submit" disabled={pending} className={BUTTON}>
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        aria-label={t('regulation.withdrawLabel', { date: versionDate })}
+        className={BUTTON}
+      >
         {t('regulation.withdraw')}
       </button>
-    </form>
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t('regulation.withdrawTitle', { date: versionDate })}
+        closeLabel={t('common.close')}
+      >
+        <form action={dispatch} className="flex flex-col gap-4">
+          <input type="hidden" name="facilityId" value={facilityId} />
+          <input type="hidden" name="regulationId" value={regulationId} />
+          <p className="text-sm">{t('regulation.withdrawConfirm')}</p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button type="button" onClick={() => setConfirming(false)} className={BUTTON}>
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="inline-flex h-control items-center justify-center gap-2 rounded border border-danger/50 px-4 text-control text-danger hover:bg-danger/10 disabled:opacity-60"
+            >
+              {pending ? t('common.working') : t('regulation.withdraw')}
+            </button>
+          </div>
+        </form>
+      </Dialog>
+    </>
   );
 }
 

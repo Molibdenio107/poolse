@@ -88,7 +88,13 @@ export async function RegulationPanel({
                     })}
                   </span>
                 </span>
-                {canManage && <WithdrawRegulationButton facilityId={facilityId} regulationId={version.id} />}
+                {canManage && (
+                  <WithdrawRegulationButton
+                    facilityId={facilityId}
+                    regulationId={version.id}
+                    versionDate={formatDate(version.effectiveFrom)}
+                  />
+                )}
               </li>
             ))}
           </ul>

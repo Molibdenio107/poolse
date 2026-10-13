@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { localInstant, sampleMoment } from '../facilities/sample-moment.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
@@ -215,10 +216,12 @@ export class EnergyController {
       throw new BadRequestException('Only a member of this organization can record a reading');
     }
 
-    const takenAt = moment(body['takenAt'], 'takenAt');
-    if (takenAt === null) {
+    // The site's wall clock, not the server's — 13-10-2026 sweep.
+    const typed = sampleMoment(body['takenAt']);
+    if (typed === null) {
       throw new BadRequestException({ message: 'When was the meter read?', field: 'takenAt' });
     }
+    const takenAt = await localInstant(organizationId, 'energy_meter', meterId, typed);
 
     const value = typeof body['value'] === 'number' ? body['value'] : Number(body['value']);
     if (!Number.isFinite(value) || value < 0 || value > MAX_VALUE) {
@@ -294,8 +297,8 @@ export class EnergyController {
     const allocatable =
       report.costCents === null ? null : report.costCents - (report.unallocatedCents ?? 0);
     const costPerHourCents =
-      allocatable !== null && report.taughtMinutes > 0
-        ? Math.round(allocatable / (report.taughtMinutes / 60))
+      allocatable !== null && report.allocatableMinutes > 0
+        ? Math.round(allocatable / (report.allocatableMinutes / 60))
         : null;
 
     return { share, poolName: report.poolName, costPerHourCents };
@@ -580,6 +583,15 @@ function moment(value: unknown, field: string): string | null {
  * `t(key, values)`. Same contract as `poolCapacity`.
  */
 function asHttp(error: unknown): unknown {
+  // A meter that is not this club's, or no longer exists — a 404, not a 500
+  // (13-10-2026 sweep): the repository's own "no such meter", and the foreign
+  // key a tariff on a foreign meter hits.
+  if (error instanceof Error && error.message === 'No such meter') {
+    return new NotFoundException('No such meter');
+  }
+  if ((error as { code?: string }).code === '23503') {
+    return new NotFoundException('No such meter');
+  }
   if (error instanceof MeterConflictError) {
     if (error.field === 'name') {
       return new ConflictException({

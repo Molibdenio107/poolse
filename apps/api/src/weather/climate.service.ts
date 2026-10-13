@@ -97,6 +97,9 @@ export class ClimateService {
     let months = 0;
 
     for (const tenant of tenants) {
+      // One club's failure is not every club's — 13-10-2026 sweep, as the
+      // qualification and lead sweeps already do.
+      try {
       // A site nobody has placed on the map has no point to ask about. That is
       // ordinary — the location picker is optional — and not an error.
       const located = await withOrg(tenant, async (tx) => {
@@ -112,6 +115,9 @@ export class ClimateService {
       for (const facilityId of located) {
         sites += 1;
         months += await this.fillOne(tenant, facilityId);
+      }
+      } catch (error) {
+        this.log.warn(`Climate sweep failed for ${tenant}: ${String(error)}`);
       }
     }
 

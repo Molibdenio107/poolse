@@ -648,7 +648,7 @@ export async function archiveLevel(
  */
 const IMPORTED_PAYMENT = `CASE
     WHEN s.paid_through_month IS NULL THEN 'none'
-    WHEN s.paid_through_month >= date_trunc('month', current_date)::date THEN 'paid'
+    WHEN s.paid_through_month >= date_trunc('month', club_today())::date THEN 'paid'
     ELSE 'overdue'
   END`;
 
@@ -656,7 +656,7 @@ const PAYMENT_STATE = `(
   SELECT CASE
            WHEN count(*) = 0 THEN ${IMPORTED_PAYMENT}
            WHEN bool_or(pay.id IS NULL
-                        AND fee_due_on(cur.period_start, f.payment_due_day) < current_date)
+                        AND fee_due_on(cur.period_start, f.payment_due_day) < club_today())
              THEN 'overdue'
            WHEN bool_or(pay.id IS NULL) THEN 'due'
            ELSE 'paid'

@@ -87,6 +87,10 @@ export async function issuePublicLink(
 ): Promise<PublicLink> {
   return withOrg(organizationId, async (tx) => {
     await assertPool(tx, poolId);
+    // Two "turn on" clicks at once both missed the live link and the second
+    // insert hit the unique index as a 500 — 13-10-2026 sweep. The pool row
+    // serialises them, so the second sees the first one's link.
+    await tx.query('SELECT 1 FROM pool WHERE id = $1 FOR UPDATE', [poolId]);
 
     if (!replace) {
       const { rows } = await tx.query<{ token: string; created_at: Date }>(

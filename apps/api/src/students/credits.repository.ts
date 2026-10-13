@@ -82,7 +82,7 @@ export async function creditsFor(
                    AND b.archived_at IS NULL
               ) AS booking_id,
               CASE WHEN c.status = 'available'
-                   THEN (c.expires_on - current_date)::int
+                   THEN (c.expires_on - club_today())::int
                    ELSE NULL
               END AS days_left
          FROM reposicao_credit c

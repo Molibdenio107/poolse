@@ -46,6 +46,8 @@ interface Entry {
  * API ever runs more than a couple of instances.
  */
 const cache = new Map<string, Entry>();
+/** Far more sites than any instance serves; a ceiling, not a working size. */
+const MAX_CACHED = 500;
 
 function cached(latitude: number, longitude: number): Weather | null {
   const entry = cache.get(cacheKey(latitude, longitude));
@@ -70,6 +72,10 @@ export class WeatherController {
     @Query('latitude') latitudeRaw: string,
     @Query('longitude') longitudeRaw: string,
   ): Promise<WeatherResponse> {
+    // The staff who see a site's weather panel — 13-10-2026 sweep: this was
+    // the one handler with no role check, open to any member with any
+    // coordinates, each new pair a paid-tier call and a cache entry.
+    requireRole('owner', 'admin', 'instructor', 'maintenance');
     const latitude = degrees(latitudeRaw, 'latitude', 90);
     const longitude = degrees(longitudeRaw, 'longitude', 180);
 
@@ -82,6 +88,13 @@ export class WeatherController {
     if (weather === null) return { available: false, weather: null };
 
     cache.set(cacheKey(latitude, longitude), { at: Date.now(), weather });
+    // Bounded: a club has a handful of sites. Oldest first out — a Map iterates
+    // in insertion order.
+    while (cache.size > MAX_CACHED) {
+      const oldest = cache.keys().next().value;
+      if (oldest === undefined) break;
+      cache.delete(oldest);
+    }
     return { available: true, weather };
   }
 }

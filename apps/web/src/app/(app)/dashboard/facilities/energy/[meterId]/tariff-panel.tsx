@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { Check, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
@@ -231,6 +231,13 @@ function TariffDialog({
     INITIAL,
   );
 
+  // A saved rate closes its dialog; a refused one stays open with its message
+  // (13-10-2026 sweep — it used to sit open after a save that worked).
+  useEffect(() => {
+    if (state.ok) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per result
+  }, [state]);
+
   const error = (field: string): { error: string } | Record<string, never> => {
     const key = state.fields?.[field];
     return key === undefined ? {} : { error: t(key, state.values ?? {}) };
@@ -362,7 +369,12 @@ function RemoveTariffDialog({
   onClose: () => void;
 }): React.ReactElement {
   const t = useTranslations();
-  const [, action, pending] = useSavedAction(removeTariff, INITIAL);
+  const [state, action, pending] = useSavedAction(removeTariff, INITIAL);
+
+  useEffect(() => {
+    if (state.ok) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per result
+  }, [state]);
 
   return (
     <Dialog
@@ -378,6 +390,10 @@ function RemoveTariffDialog({
         <input type="hidden" name="tariffId" value={tariff?.id ?? ''} />
 
         <p className="text-sm text-foreground-muted">{t('energy.tariff.removeHint')}</p>
+
+        {state.ok === false && state.errorKey !== undefined && (
+          <p className="text-sm text-danger">{t(state.errorKey)}</p>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <button
