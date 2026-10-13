@@ -1,7 +1,16 @@
 import { withOrg, withoutTenantScope, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
-import { enrollmentRefusal, insertEnrollment } from '../classes/classes.repository.js';
-import { insertStudent, type StudentInput } from '../students/students.repository.js';
+import {
+  AlreadyEnrolledError,
+  FullError,
+  insertEnrollment,
+} from '../classes/classes.repository.js';
+import {
+  DuplicateTaxNumberError,
+  insertStudent,
+  isDuplicateTaxNumber,
+  type StudentInput,
+} from '../students/students.repository.js';
 
 /**
  * Online pre-registration — POOLSE-69.
@@ -19,12 +28,15 @@ import { insertStudent, type StudentInput } from '../students/students.repositor
 
 export interface PublicLeadForm {
   clubName: string;
+  /** Under this a swimmer needs a guardian — the club's own setting. */
+  ageOfMajority: number;
   facilities: { id: string; name: string }[];
   levels: { id: string; name: string }[];
 }
 
 interface RawForm {
   clubName: string;
+  ageOfMajority: number;
   facilities: { id: string; name: string }[];
   levels: { id: string; name: string }[];
 }
@@ -41,6 +53,7 @@ export async function readLeadForm(slug: string): Promise<PublicLeadForm | null>
   if (raw === null) return null;
   return {
     clubName: raw.clubName,
+    ageOfMajority: raw.ageOfMajority,
     facilities: raw.facilities.map((f) => ({ id: f.id, name: f.name })),
     levels: raw.levels.map((l) => ({ id: l.id, name: l.name })),
   };
@@ -393,7 +406,21 @@ export async function placeLead(
     });
   } catch (error) {
     if (error instanceof GroupGone) return { ok: false, reason: 'group_not_found' };
-    throw enrollmentRefusal(error, groupId, leadId);
+    /*
+     * By constraint, never by code alone — 13-10-2026 sweep. The student insert
+     * and the guardian sync raise 23505 and 23514 of their own in this same
+     * transaction, and reading every one as "already in the turma" or "full"
+     * told an admin the wrong thing about a duplicate NIF.
+     */
+    if (isDuplicateTaxNumber(error)) throw new DuplicateTaxNumberError();
+    const pg = error as { code?: string; constraint?: string };
+    if (pg.code === '23505' && pg.constraint === 'enrollment_live_uq') {
+      throw new AlreadyEnrolledError(groupId);
+    }
+    // The capacity trigger raises check_violation with no constraint name; a
+    // table CHECK always carries one.
+    if (pg.code === '23514' && pg.constraint === undefined) throw new FullError(groupId);
+    throw error;
   }
 }
 

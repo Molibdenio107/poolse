@@ -11,6 +11,8 @@ import 'server-only';
 export interface RegistrationForm {
   form: {
     clubName: string;
+    /** Under this a swimmer needs a guardian — the club's own setting. */
+    ageOfMajority: number;
     facilities: { id: string; name: string }[];
     levels: { id: string; name: string }[];
   };
@@ -55,6 +57,10 @@ export async function postRegistration(
     'content-type': 'application/json',
   };
   if (clientIp) headers['x-poolse-client-ip'] = clientIp;
+  // What makes the API believe the address above — `leads/visitor.ts`. A
+  // server-side variable, never NEXT_PUBLIC_: it is a secret between two servers.
+  const proxySecret = process.env['WEB_PROXY_SECRET'];
+  if (proxySecret) headers['x-poolse-proxy-secret'] = proxySecret;
 
   const response = await fetch(
     `${baseUrl()}/public/clubs/${encodeURIComponent(slug)}/registration`,
@@ -63,7 +69,12 @@ export async function postRegistration(
   if (response.status === 202) return { ok: true };
   if (response.status === 400) {
     const parsed = (await response.json().catch(() => ({}))) as { fields?: Record<string, string> };
-    return { ok: false, fields: parsed.fields ?? {} };
+    // A 400 that names no field (a body the API could not read) has nothing to
+    // mark beside a box, so it is a failure the page says out loud.
+    if (parsed.fields === undefined || Object.keys(parsed.fields).length === 0) {
+      return { ok: false, failed: true };
+    }
+    return { ok: false, fields: parsed.fields };
   }
   return { ok: false, failed: true };
 }

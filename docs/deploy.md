@@ -206,6 +206,10 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       needs the production Clerk instance for the same reason MFA does. Until both ship, the
       typed club name is what stands in the way of an irreversible act.
 
+- [ ] **`WEB_PROXY_SECRET` set on both the API and the web app**, to the same long random
+      string (server-side only, never `NEXT_PUBLIC_`). Without it the public sign-up form's
+      per-visitor limit believes a header any direct caller can set, and the API warns at boot
+      in production — `apps/api/src/leads/visitor.ts`, POOLSE-69 sweep.
 - [ ] **A Sentry DSN**, if errors are to be seen at all. Off without one, by design.
 - [ ] **Open-Meteo moved to the commercial endpoint, or the weather history left off.** The
       free tier is **non-commercial use only**, which is fine while Poolse has no paying

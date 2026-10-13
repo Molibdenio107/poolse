@@ -976,7 +976,7 @@ export interface StudentInput {
  * localised by the server's lc_messages and would stop matching the day
  * somebody deploys to a differently configured box.
  */
-function isDuplicateTaxNumber(error: unknown): boolean {
+export function isDuplicateTaxNumber(error: unknown): boolean {
   const code = (error as { code?: string } | null)?.code;
   const constraint = (error as { constraint?: string } | null)?.constraint;
   return code === '23505' && constraint === 'student_tax_number_uq';

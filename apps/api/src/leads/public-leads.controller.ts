@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { isValidNif } from '@poolse/rules';
-import { clientIpFrom } from '../organizations/signup-claim.js';
+import { visitorOf } from './visitor.js';
 import { issueStamp, stampIsFresh } from './form-stamp.js';
 import {
   readLeadForm,
@@ -40,8 +40,8 @@ const MAX_TRACKED_ORIGINS = 10_000;
  * flooding origin to read exactly what a parent reads. So this route keeps its
  * own small window and drops silently. In memory, per instance: a second Railway
  * instance doubles the allowance, which is still bounded by `submit_lead`'s
- * per-club ceiling in the database. The browser posts here directly, so
- * `request.ip` (with `trust proxy`) is the visitor, not the Next server.
+ * per-club ceiling in the database. The form posts from the Next server, so the
+ * visitor is `visitorOf()` — the forwarded address, believed only from the web.
  */
 const recent = new Map<string, number[]>();
 
@@ -67,9 +67,19 @@ export function forgetOrigins(): void {
   recent.clear();
 }
 
-/** Under this, a swimmer needs a guardian on the form. The club's own age of
- * majority is applied again when staff convert the lead. */
-const FORM_MAJORITY = 18;
+/**
+ * Under this, a swimmer needs a guardian. The form sends the club's own age of
+ * majority, which `public_lead_form` returns, so the form asks for a guardian
+ * exactly where conversion will require one — 13-10-2026 sweep. A value outside
+ * the club setting's own range falls back to 18; a tampered one only makes the
+ * sender's own lead harder to convert.
+ */
+const DEFAULT_MAJORITY = 18;
+
+function majorityFrom(value: unknown): number {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 10 && n <= 30 ? n : DEFAULT_MAJORITY;
+}
 
 /**
  * The public sign-up — POOLSE-69. No session, no tenant; `public/(.*)` is in
@@ -110,7 +120,7 @@ export class PublicLeadsController {
     const quiet =
       isFilled(body['website']) ||
       !stampIsFresh(slug, body['stamp']) ||
-      !originAllows(clientIpFrom(request.headers['x-poolse-client-ip']) ?? request.ip ?? 'unknown');
+      !originAllows(visitorOf(request));
 
     if (!quiet) {
       try {
@@ -184,8 +194,11 @@ export function parseSubmission(
   let swimmerBirthDate: string | null = null;
   if (birth !== null) {
     const parsed = new Date(`${birth}T12:00:00Z`);
-    if (!ISO_DAY.test(birth) || Number.isNaN(parsed.getTime()) || parsed > today
-        || ageOn(birth, today) > 110) {
+    // A day that exists: 31-02 rolls over to March in JavaScript, then fails the
+    // database's ::date, and the parent was told "received" for nothing.
+    if (!ISO_DAY.test(birth) || Number.isNaN(parsed.getTime())
+        || parsed.toISOString().slice(0, 10) !== birth
+        || parsed > today || ageOn(birth, today) > 110) {
       fields['swimmerBirthDate'] = 'leads.public.invalidDate';
     } else {
       swimmerBirthDate = birth;
@@ -197,7 +210,8 @@ export function parseSubmission(
   const guardianRelationship = text(body, 'guardianRelationship', 80, fields);
   const guardianTaxNumber = nif(body, 'guardianTaxNumber', fields);
 
-  const minor = swimmerBirthDate !== null && ageOn(swimmerBirthDate, today) < FORM_MAJORITY;
+  const minor =
+    swimmerBirthDate !== null && ageOn(swimmerBirthDate, today) < majorityFrom(body['majority']);
   if (minor) {
     if (guardianName === null) fields['guardianName'] = 'leads.public.guardianRequired';
     if (guardianRelationship === null) {

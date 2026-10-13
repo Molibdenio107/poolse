@@ -28,6 +28,7 @@ export function RegistrationForm({
   slug,
   locale,
   stamp,
+  majority,
   facilities,
   levels,
   weekdays,
@@ -37,6 +38,8 @@ export function RegistrationForm({
   slug: string;
   locale: 'pt-PT' | 'en';
   stamp: string;
+  /** The club's age of majority; under it, the guardian is required. */
+  majority: number;
   facilities: { id: string; name: string }[];
   levels: { id: string; name: string }[];
   /** ISO weekday (1 = Monday) and its name in the reader's language. */
@@ -81,6 +84,7 @@ export function RegistrationForm({
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="stamp" value={stamp} />
+      <input type="hidden" name="majority" value={majority} />
 
       {/* The honeypot. Off-screen rather than display:none, which some scripts skip. */}
       <div aria-hidden className="absolute -left-[10000px] top-auto size-px overflow-hidden">

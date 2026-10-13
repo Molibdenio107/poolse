@@ -3643,3 +3643,18 @@ to null.
 the session and refuses a full one, a cancelled one, one that has started, or a partnership
 hour. `poolse_app` holds no DELETE on `lead`. Migration `1790330400000_lead.sql`;
 `packages/db/test/lead.sql`.
+
+**13-10-2026 sweep** (`1790373600000_lead-sweep.sql`):
+
+- **`slug_claim (slug PK, organization_id, claimed_at)`** holds every slug any club has ever
+  used, and never releases one.
+  - An AFTER trigger on `organization` claims each new slug. It refuses one another club holds,
+    as `organization_slug_uq`, so the API's existing *address taken* answer applies.
+  - A BEFORE INSERT trigger steps provisioning past a claimed slug.
+  - It is tenant-scoped. The primary key does the cross-club refusal, because RLS does not hide
+    a row from a unique check.
+- **`slugify()`** now cuts to 50 characters and pads anything under 3 as `piscina-…`, so every
+  name fits `organization_slug_shape`.
+- **`public_lead_form`** also returns `ageOfMajority`.
+- **`submit_lead`** locks `FOR NO KEY UPDATE`.
+- **The trial trigger** answers a session that is not the club's as `foreign_key_violation`.

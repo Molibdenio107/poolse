@@ -29,6 +29,13 @@ async function bootstrap(): Promise<void> {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
+  // Not required — a dev machine has no proxy to trust — but in production the
+  // public form's per-visitor limit believes a header anybody can set without
+  // it. `leads/visitor.ts`; docs/deploy.md, go-live checklist.
+  if (process.env['NODE_ENV'] === 'production' && !process.env['WEB_PROXY_SECRET']) {
+    console.warn('WEB_PROXY_SECRET is not set: the public form trusts x-poolse-client-ip from any caller.');
+  }
+
   // Refuse to start if the app is connected as a role that bypasses RLS. A
   // misconfigured DATABASE_APP_URL disables tenant isolation without any visible
   // symptom, so it has to fail here rather than in production six weeks later.

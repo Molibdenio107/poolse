@@ -9,8 +9,9 @@ A family fills in a request from a link on the club's website or a poster at rec
 no login and nothing to pay. The form asks for:
 
 - the swimmer: name, surname, birth date and, optionally, a NIF;
-- for anyone under 18, a guardian with a full name and a relationship (the guardian's NIF is
-  optional);
+- for anyone under the club's own age of majority, a guardian with a full name and a
+  relationship (the guardian's NIF is optional). The form uses the same age that conversion
+  will check;
 - an email, which is the guardian's for a minor, and an optional mobile number;
 - a preferred site (offered only when the club has more than one), level and days;
 - a note, which tells the family not to put health information in it;
@@ -26,9 +27,9 @@ changes that answer:
 
 - A hidden honeypot box that has been filled in.
 - A form that wasn't rendered recently: an HMAC stamp issued with the page must be between 3 s
-  and 4 h old.
+  and 24 h old.
 - More than 5 sends a minute from one visitor (`x-poolse-client-ip`, which the web forwards as
-  signup does).
+  signup does). The API believes that header only with `WEB_PROXY_SECRET`, when one is set.
 
 The database adds two more silent refusals:
 
@@ -79,7 +80,9 @@ booked, and says how long the oldest has waited. It moves up once a family has w
 
 The address is `organization.slug`, the same one the club has had since signup. **Only the
 Owner** can change it or open and close the form; an Admin sees the link. A taken address is
-refused by name. Changing it moves the link every poster already prints, and the form says so.
+refused by name, and **an address a club has ever used stays that club's** (`slug_claim`).
+Another club can never take it, so a poster printed before a rename can't send families to
+somebody else. Changing it moves the link every poster already prints, and the form says so.
 
 ## Retention
 

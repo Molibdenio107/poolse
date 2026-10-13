@@ -333,6 +333,8 @@ const TENANT_TABLES = [
   'support_request',
   'support_grant',
   'membership',
+  // 13-10-2026 sweep. Every slug a club ever used; it points only at the club.
+  'slug_claim',
 ] as const;
 
 export interface ScratchTenant {

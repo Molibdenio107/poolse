@@ -174,7 +174,7 @@ test('QA 3: a honeypot, a stale stamp and a flooding origin write nothing and an
     assert.deepEqual(
       await publicApi.submit(
         slug,
-        minor(slug, { stamp: issueStamp(slug, new Date(Date.now() - 6 * 3600_000)) }),
+        minor(slug, { stamp: issueStamp(slug, new Date(Date.now() - 25 * 3600_000)) }),
         from(),
       ),
       RECEIVED,
@@ -503,5 +503,96 @@ test('the dashboard card counts what is waiting, and lifts itself after three da
     const late = await leadsResolver(ctx);
     assert.equal(late!.oldestWaitingDays, 4);
     assert.equal(leadHasWaited(late), true);
+  });
+});
+
+test('sweep: a day that does not exist is a 400, not a silent drop', async () => {
+  const slug = 'nao-existe-de-todo';
+  try {
+    await publicApi.submit(slug, minor(slug, { swimmerBirthDate: '2018-02-31' }), from());
+    assert.fail('31 February was accepted');
+  } catch (error) {
+    const body = (error as { getResponse(): { fields: Record<string, string> } }).getResponse();
+    assert.deepEqual(Object.keys(body.fields), ['swimmerBirthDate']);
+  }
+});
+
+test("sweep: the form asks for a guardian under the club's own age of majority", async () => {
+  await withScratchTenant(async (tenant) => {
+    const slug = await openClub(tenant);
+    await tenant.sql('UPDATE organization SET age_of_majority = 21 WHERE id = $1', [tenant.organizationId]);
+    const form = await publicApi.form(slug);
+    assert.equal(form.form.ageOfMajority, 21);
+
+    const nineteen = `${new Date().getUTCFullYear() - 19}-01-01`;
+    const adult = minor(slug, {
+      swimmerBirthDate: nineteen, guardianName: '', guardianRelationship: '', majority: 21,
+    });
+    await expectStatus(() => publicApi.submit(slug, adult, from()), 400);
+    // At 18 the same nineteen-year-old needs nobody.
+    assert.deepEqual(await publicApi.submit(slug, { ...adult, majority: 18 }, from()), RECEIVED);
+  });
+});
+
+test('sweep: with WEB_PROXY_SECRET set, a forged visitor header buys nothing', async () => {
+  await withScratchTenant(async (tenant) => {
+    const slug = await openClub(tenant);
+    const previous = process.env['WEB_PROXY_SECRET'];
+    process.env['WEB_PROXY_SECRET'] = 'segredo-de-teste';
+    try {
+      for (let i = 0; i < 12; i += 1) {
+        const forged = {
+          ip: '198.51.100.99',
+          headers: { 'x-poolse-client-ip': `203.0.113.${i}` },
+        } as unknown as Request;
+        assert.deepEqual(await publicApi.submit(slug, minor(slug), forged), RECEIVED);
+      }
+      assert.equal(await leadCount(tenant), 5, 'rotating the header escaped the per-visitor limit');
+
+      // The web, which carries the secret, is believed.
+      const viaWeb = {
+        ip: '10.0.0.1',
+        headers: { 'x-poolse-client-ip': '192.0.2.44', 'x-poolse-proxy-secret': 'segredo-de-teste' },
+      } as unknown as Request;
+      await publicApi.submit(slug, minor(slug), viaWeb);
+      assert.equal(await leadCount(tenant), 6);
+    } finally {
+      if (previous === undefined) delete process.env['WEB_PROXY_SECRET'];
+      else process.env['WEB_PROXY_SECRET'] = previous;
+    }
+  });
+});
+
+test('sweep: a slug a club gave up stays its own — another club cannot take it', async () => {
+  await withScratchTenant(async (clubA) => {
+    const oldSlug = await openClub(clubA);
+    const newSlug = `${oldSlug}-novo`.slice(0, 60);
+    await actingAs(clubA, { roles: ['owner'] }, () =>
+      new RegistrationSettingsController().update({ slug: newSlug, open: true }),
+    );
+    await withScratchTenant(async (clubB) => {
+      await actingAs(clubB, { roles: ['owner'] }, () =>
+        expectStatus(() => new RegistrationSettingsController().update({ slug: oldSlug, open: true }), 409),
+      );
+    });
+    // A may go back to its own old address.
+    const back = await actingAs(clubA, { roles: ['owner'] }, () =>
+      new RegistrationSettingsController().update({ slug: oldSlug, open: true }),
+    );
+    assert.equal(back.slug, oldSlug);
+  });
+});
+
+test("sweep: a trial into another club's session is not found", async () => {
+  await withScratchTenant(async (clubB) => {
+    const { sessionId: sessionOfB } = await turma(clubB, 5);
+    await withScratchTenant(async (clubA) => {
+      const slug = await openClub(clubA);
+      await publicApi.submit(slug, minor(slug), from());
+      const leadId = await onlyLead(clubA);
+      await actingAs(clubA, { roles: ['owner'] }, () =>
+        expectStatus(() => new LeadsController().trial(leadId, { sessionId: sessionOfB }), 404),
+      );
+    });
   });
 });

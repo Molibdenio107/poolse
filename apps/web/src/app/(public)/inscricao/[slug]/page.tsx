@@ -83,7 +83,7 @@ export default async function RegistrationPage({
     swimmerBirthDate: label('swimmerBirthDate'),
     swimmerTaxNumber: label('swimmerTaxNumber'),
     guardian: label('guardian'),
-    guardianHint: label('guardianHint'),
+    guardianHint: t('leads.public.guardianHint', { age: loaded.form.ageOfMajority }),
     guardianName: label('guardianName'),
     guardianRelationship: label('guardianRelationship'),
     guardianRelationshipHint: label('guardianRelationshipHint'),
@@ -115,7 +115,10 @@ export default async function RegistrationPage({
     'guardianRequired', 'sameNif', 'consentRequired',
   ];
   const errors = Object.fromEntries(
-    errorKeys.map((key) => [`leads.public.${key}`, t(`leads.public.${key}`)]),
+    errorKeys.map((key) => [
+      `leads.public.${key}`,
+      t(`leads.public.${key}`, { age: loaded.form.ageOfMajority }),
+    ]),
   );
 
   const weekdays = [1, 2, 3, 4, 5, 6, 7].map((value) => ({
@@ -134,6 +137,7 @@ export default async function RegistrationPage({
         slug={slug}
         locale={locale}
         stamp={loaded.stamp}
+        majority={loaded.form.ageOfMajority}
         facilities={loaded.form.facilities}
         levels={loaded.form.levels}
         weekdays={weekdays}

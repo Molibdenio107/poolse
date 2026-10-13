@@ -4692,7 +4692,7 @@
       "swimmerBirthDate": "Data de nascimento",
       "swimmerTaxNumber": "NIF",
       "guardian": "Encarregado de educação",
-      "guardianHint": "Obrigatório para menores de 18 anos. Para um adulto que se inscreve a si próprio, deixe em branco.",
+      "guardianHint": "Obrigatório para menores de {age} anos. Para um adulto que se inscreve a si próprio, deixe em branco.",
       "guardianName": "Nome completo",
       "guardianRelationship": "Parentesco",
       "guardianRelationshipHint": "Por exemplo: mãe, pai, avó.",
@@ -4722,7 +4722,7 @@
       "invalidNif": "Este NIF não é válido.",
       "invalidDate": "Indique uma data de nascimento válida.",
       "invalidEmail": "Indique um email válido.",
-      "guardianRequired": "Obrigatório para menores de 18 anos.",
+      "guardianRequired": "Obrigatório para menores de {age} anos.",
       "sameNif": "O NIF do encarregado tem de ser diferente do NIF de quem vai nadar.",
       "consentRequired": "É preciso autorizar para enviar o pedido."
     }

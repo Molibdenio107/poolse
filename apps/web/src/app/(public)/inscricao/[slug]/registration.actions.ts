@@ -40,6 +40,9 @@ export async function submitRegistrationAction(
     preferredDays: formData.getAll('preferredDays').map((d) => Number(d)),
     consent: formData.get('consent') === 'on',
     locale: formData.get('locale') === 'en' ? 'en' : 'pt-PT',
+    // The club's age of majority, as the form was given it: the API asks for a
+    // guardian under it, so the form and conversion agree.
+    majority: Number(formData.get('majority') ?? 18),
     stamp: text('stamp'),
     // The honeypot: a box no person can see, so anything in it was typed by a script.
     website: text('website'),

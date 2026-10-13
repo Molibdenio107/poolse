@@ -15,8 +15,12 @@ import { derivedKey } from '../sensitive/cipher.js';
 
 /** Faster than this is a script, not a parent typing a child's name. */
 export const STAMP_MIN_AGE_MS = 3_000;
-/** A form left open over lunch still works; one from yesterday does not. */
-export const STAMP_MAX_AGE_MS = 4 * 60 * 60 * 1000;
+/**
+ * A form opened at lunch and sent in the evening still works — 13-10-2026
+ * sweep. Four hours dropped that parent silently while telling them it was
+ * received; a day is long for a script and short enough to retire a page.
+ */
+export const STAMP_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 function sign(slug: string, issuedAt: number): string {
   return createHmac('sha256', derivedKey('lead-form-stamp'))

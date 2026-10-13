@@ -70,7 +70,7 @@ BEGIN
     RAISE EXCEPTION 'FAIL test 1a: an open club has no form';
   END IF;
   IF (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(v_form) k)
-     <> ARRAY['clubName', 'facilities', 'levels'] THEN
+     <> ARRAY['ageOfMajority', 'clubName', 'facilities', 'levels'] THEN
     RAISE EXCEPTION 'FAIL test 1a: the form carries keys %', v_form;
   END IF;
   IF jsonb_array_length(v_form->'levels') <> 1 THEN
@@ -264,6 +264,58 @@ BEGIN
       v_archived, v_left, v_total;
   END IF;
   RAISE NOTICE 'PASS test 6: old unconverted leads are archived, not deleted';
+END $$;
+
+RESET ROLE;
+
+-- ---------------------------------------------------------------------------
+-- Test 7 — slugs (13-10-2026 sweep): every name fits the shape, and a slug a
+-- club once held is never handed to another
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v_short text; v_long text; v_org uuid; v_slug text;
+BEGIN
+  v_short := slugify('GD');
+  v_long := slugify('Clube de Natação e Atividades Aquáticas da Junta de Freguesia de Santo António');
+  IF v_short !~ '^[a-z0-9]+(-[a-z0-9]+)*$' OR length(v_short) < 3
+     OR length(v_long) > 50 OR v_long ~ '-$' THEN
+    RAISE EXCEPTION 'FAIL test 7a: slugify gave % and %', v_short, v_long;
+  END IF;
+  RAISE NOTICE 'PASS test 7a: a two-letter and a 78-character name both make a valid slug';
+
+  -- Clube Aberto gives up its slug; a new club named the same is not given it.
+  UPDATE organization SET slug = 'clube-aberto-lisboa' WHERE slug = 'clube-aberto';
+  INSERT INTO organization (name, slug) VALUES ('Clube Aberto', 'clube-aberto')
+  RETURNING id, slug INTO v_org, v_slug;
+  IF v_slug = 'clube-aberto' THEN
+    RAISE EXCEPTION 'FAIL test 7b: a new club was handed a slug another club held';
+  END IF;
+  RAISE NOTICE 'PASS test 7b: provisioning steps past a retired slug (got %)', v_slug;
+END $$;
+
+SET LOCAL ROLE poolse_app;
+SELECT set_config('app.organization_id', 'f6900000-0000-0000-0000-000000000002', true);
+DO $$
+BEGIN
+  BEGIN
+    UPDATE organization SET slug = 'clube-aberto'
+     WHERE id = 'f6900000-0000-0000-0000-000000000002';
+    RAISE EXCEPTION 'FAIL test 7c: a club took another club''s retired slug';
+  EXCEPTION WHEN unique_violation THEN
+    RAISE NOTICE 'PASS test 7c: another club''s retired slug is refused';
+  END;
+END $$;
+
+SELECT set_config('app.organization_id', 'f6900000-0000-0000-0000-000000000001', true);
+UPDATE organization SET slug = 'clube-aberto' WHERE id = 'f6900000-0000-0000-0000-000000000001';
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM organization WHERE slug = 'clube-aberto'
+                    AND id = 'f6900000-0000-0000-0000-000000000001') THEN
+    RAISE EXCEPTION 'FAIL test 7d: a club could not go back to its own slug';
+  END IF;
+  RAISE NOTICE 'PASS test 7d: a club may go back to its own old slug';
 END $$;
 
 RESET ROLE;

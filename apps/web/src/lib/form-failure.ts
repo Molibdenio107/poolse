@@ -150,6 +150,23 @@ function refusalValues(error: ApiError): { values?: Record<string, number> } {
     }
   }
 
+  /*
+   * The plain shape — 13-10-2026 sweep. Most refusals that carry figures send
+   * them as a flat `values` object (a full trial lesson's capacity and taken,
+   * an invoice's number), and this used to drop them, so the sentence they
+   * belonged to rendered as its raw key. Numbers only: they are what a
+   * placeholder is for, and a string here would be prose from the server.
+   */
+  const flat = (body as { values?: unknown }).values;
+  if (typeof flat === 'object' && flat !== null) {
+    const numbers = Object.fromEntries(
+      Object.entries(flat as Record<string, unknown>).filter(
+        (entry): entry is [string, number] => typeof entry[1] === 'number',
+      ),
+    );
+    if (Object.keys(numbers).length > 0) return { values: numbers };
+  }
+
   return {};
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, useFocusFirstError } from '@/components/ui/field';
@@ -78,6 +78,81 @@ export function LeadActions({
   );
 }
 
+/**
+ * A button and the dialog it opens — 13-10-2026 sweep.
+ *
+ * The form, and the `useSavedAction` state behind it, live in a child that is
+ * mounted only while the dialog is open. Before, the state outlived the
+ * dialog: `open={open && !state.ok}` stayed false after one success, so a
+ * trial that had been booked could never be moved without a reload, and a
+ * reopened dialog showed the last attempt's errors and the last turma's dates.
+ * Now every opening is a fresh question, and success closes it.
+ */
+function Question({
+  label,
+  primary = false,
+  title,
+  description,
+  children,
+}: {
+  label: string;
+  primary?: boolean;
+  title: string;
+  description: string;
+  children: (done: () => void) => React.ReactNode;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={primary ? PRIMARY : BUTTON}>
+        {label}
+      </button>
+      <Dialog
+        open={open}
+        onClose={close}
+        title={title}
+        description={description}
+        closeLabel={t('common.close')}
+      >
+        {open && children(close)}
+      </Dialog>
+    </>
+  );
+}
+
+/** Closes the question once its save has worked. */
+function useCloseOnSuccess(state: FormState, done: () => void): void {
+  useEffect(() => {
+    if (state.ok) done();
+  }, [state, done]);
+}
+
+function Buttons({
+  onCancel,
+  pending,
+  submitLabel,
+  disabled = false,
+}: {
+  onCancel: () => void;
+  pending: boolean;
+  submitLabel: string;
+  disabled?: boolean;
+}): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <div className="flex justify-end gap-2">
+      <button type="button" onClick={onCancel} className={BUTTON}>
+        {t('common.cancel')}
+      </button>
+      <button type="submit" disabled={pending || disabled} className={PRIMARY}>
+        {submitLabel}
+      </button>
+    </div>
+  );
+}
+
 function PlaceDialog({
   lead,
   options,
@@ -88,62 +163,66 @@ function PlaceDialog({
   kind: 'convert' | 'waitlist';
 }): React.ReactElement {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
+  const name = `${lead.swimmerFirstName} ${lead.swimmerLastName}`;
+  const verb = t(kind === 'convert' ? 'leads.convert' : 'leads.waitlist');
+  return (
+    <Question
+      label={verb}
+      primary={kind === 'convert'}
+      title={t(kind === 'convert' ? 'leads.convertTitle' : 'leads.waitlistTitle', { name })}
+      description={t(kind === 'convert' ? 'leads.convertHint' : 'leads.waitlistHint')}
+    >
+      {(done) => <PlaceForm lead={lead} options={options} kind={kind} verb={verb} done={done} />}
+    </Question>
+  );
+}
+
+function PlaceForm({
+  lead,
+  options,
+  kind,
+  verb,
+  done,
+}: {
+  lead: Lead;
+  options: { value: string; label: string }[];
+  kind: 'convert' | 'waitlist';
+  verb: string;
+  done: () => void;
+}): React.ReactElement {
+  const t = useTranslations();
   const [state, dispatch, pending] = useSavedAction(
     kind === 'convert' ? convertLeadAction : waitlistLeadAction,
     INITIAL,
   );
+  useCloseOnSuccess(state, done);
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state.fields, state);
-  const fieldError = (name: string): string | undefined => {
-    const key = state.fields?.[name];
-    return key === undefined ? undefined : t(key, state.values ?? {});
-  };
-  const name = `${lead.swimmerFirstName} ${lead.swimmerLastName}`;
+  const turmaKey = state.fields?.['classGroupId'];
 
   return (
-    <>
-      <button type="button" onClick={() => setOpen(true)} className={kind === 'convert' ? PRIMARY : BUTTON}>
-        {t(kind === 'convert' ? 'leads.convert' : 'leads.waitlist')}
-      </button>
-      <Dialog
-        open={open && !state.ok}
-        onClose={() => setOpen(false)}
-        title={t(kind === 'convert' ? 'leads.convertTitle' : 'leads.waitlistTitle', { name })}
-        description={t(kind === 'convert' ? 'leads.convertHint' : 'leads.waitlistHint')}
-        closeLabel={t('common.close')}
-      >
-        <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
-          <input type="hidden" name="leadId" value={lead.id} />
-          <SelectField
-            name="classGroupId"
-            label={t('leads.turma')}
-            options={options}
-            error={fieldError('classGroupId')}
-          />
-          {/*
-            The student form's own refusals — a minor with no reachable guardian,
-            a NIF shared with the parent. They name fields this dialog does not
-            have, so they are said here in full; the fix is on the request.
-          */}
-          {Object.entries(state.fields ?? {})
-            .filter(([field]) => field !== 'classGroupId')
-            .map(([field, key]) => (
-              <p key={field} role="alert" className="text-sm text-danger">
-                {t(key, state.values ?? {})}
-              </p>
-            ))}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className={BUTTON}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" disabled={pending} className={PRIMARY}>
-              {t(kind === 'convert' ? 'leads.convert' : 'leads.waitlist')}
-            </button>
-          </div>
-        </form>
-      </Dialog>
-    </>
+    <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
+      <input type="hidden" name="leadId" value={lead.id} />
+      <SelectField
+        name="classGroupId"
+        label={t('leads.turma')}
+        options={options}
+        error={turmaKey === undefined ? undefined : t(turmaKey, state.values ?? {})}
+      />
+      {/*
+        The student form's own refusals — a minor with no reachable guardian,
+        a NIF shared with the parent. They name fields this dialog does not
+        have, so they are said here in full; the fix is on the request.
+      */}
+      {Object.entries(state.fields ?? {})
+        .filter(([field]) => field !== 'classGroupId')
+        .map(([field, key]) => (
+          <p key={field} role="alert" className="text-sm text-danger">
+            {t(key, state.values ?? {})}
+          </p>
+        ))}
+      <Buttons onCancel={done} pending={pending} submitLabel={verb} />
+    </form>
   );
 }
 
@@ -155,17 +234,43 @@ function TrialDialog({
   options: { value: string; label: string }[];
 }): React.ReactElement {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
+  const name = `${lead.swimmerFirstName} ${lead.swimmerLastName}`;
+  return (
+    <Question
+      label={t(lead.status === 'trial_booked' ? 'leads.trialMove' : 'leads.trial')}
+      title={t('leads.trialTitle', { name })}
+      description={t('leads.trialHint')}
+    >
+      {(done) => <TrialForm lead={lead} options={options} done={done} />}
+    </Question>
+  );
+}
+
+type Sessions =
+  | { state: 'idle' }
+  | { state: 'loading' }
+  | { state: 'failed' }
+  | { state: 'loaded'; options: TrialOption[] };
+
+function TrialForm({
+  lead,
+  options,
+  done,
+}: {
+  lead: Lead;
+  options: { value: string; label: string }[];
+  done: () => void;
+}): React.ReactElement {
+  const t = useTranslations();
   const [state, dispatch, pending] = useSavedAction(bookTrialAction, INITIAL);
+  useCloseOnSuccess(state, done);
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state.fields, state);
 
   const [groupId, setGroupId] = useState('');
   // `loaded` is its own state: "not chosen yet", "loading" and "failed" are three
   // different sentences, and a null that meant all three is a grey dropdown.
-  const [sessions, setSessions] = useState<
-    { state: 'idle' } | { state: 'loading' } | { state: 'failed' } | { state: 'loaded'; options: TrialOption[] }
-  >({ state: 'idle' });
+  const [sessions, setSessions] = useState<Sessions>({ state: 'idle' });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -184,126 +289,96 @@ function TrialDialog({
     };
   }, [groupId, attempt]);
 
-  const fieldError = (name: string): string | undefined => {
-    const key = state.fields?.[name];
-    return key === undefined ? undefined : t(key, state.values ?? {});
-  };
-  const name = `${lead.swimmerFirstName} ${lead.swimmerLastName}`;
+  const sessionKey = state.fields?.['sessionId'];
 
   return (
-    <>
-      <button type="button" onClick={() => setOpen(true)} className={BUTTON}>
-        {t(lead.status === 'trial_booked' ? 'leads.trialMove' : 'leads.trial')}
-      </button>
-      <Dialog
-        open={open && !state.ok}
-        onClose={() => setOpen(false)}
-        title={t('leads.trialTitle', { name })}
-        description={t('leads.trialHint')}
-        closeLabel={t('common.close')}
-      >
-        <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
-          <input type="hidden" name="leadId" value={lead.id} />
-          <SelectField
-            name="classGroupId"
-            label={t('leads.turma')}
-            options={options}
-            onValueChange={setGroupId}
-          />
-          {sessions.state === 'idle' && (
-            <p className="text-sm text-foreground-muted">{t('leads.trialPickTurmaFirst')}</p>
-          )}
-          {sessions.state === 'loading' && (
-            <p className="text-sm text-foreground-muted">{t('leads.trialLoading')}</p>
-          )}
-          {sessions.state === 'failed' && (
-            <p className="flex flex-wrap items-center gap-2 text-sm text-danger">
-              {t('leads.trialLoadFailed')}
-              <button type="button" onClick={() => setAttempt((n) => n + 1)} className={BUTTON}>
-                {t('leads.retry')}
-              </button>
-            </p>
-          )}
-          {sessions.state === 'loaded' && sessions.options.length === 0 && (
-            <p className="text-sm text-foreground-muted">{t('leads.trialNone')}</p>
-          )}
-          {sessions.state === 'loaded' && sessions.options.length > 0 && (
-            <SelectField
-              name="sessionId"
-              label={t('leads.trialDate')}
-              error={fieldError('sessionId')}
-              options={[
-                { value: '', label: t('leads.trialPickDate') },
-                ...sessions.options.map((o) => ({
-                  value: o.sessionId,
-                  label: `${formatStamp(o.startsAt)} · ${
-                    o.freeSeats === null
-                      ? t('leads.trialUncapped')
-                      : o.freeSeats === 0
-                        ? t('leads.trialFullOption')
-                        : t('leads.trialSeats', { count: o.freeSeats })
-                  }`,
-                })),
-              ]}
-            />
-          )}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className={BUTTON}>
-              {t('common.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={pending || sessions.state !== 'loaded' || sessions.options.length === 0}
-              className={PRIMARY}
-            >
-              {t('leads.trialBook')}
-            </button>
-          </div>
-        </form>
-      </Dialog>
-    </>
+    <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
+      <input type="hidden" name="leadId" value={lead.id} />
+      <SelectField
+        name="classGroupId"
+        label={t('leads.turma')}
+        options={options}
+        onValueChange={setGroupId}
+      />
+      {sessions.state === 'idle' && (
+        <p className="text-sm text-foreground-muted">{t('leads.trialPickTurmaFirst')}</p>
+      )}
+      {sessions.state === 'loading' && (
+        <p className="text-sm text-foreground-muted">{t('leads.trialLoading')}</p>
+      )}
+      {sessions.state === 'failed' && (
+        <p className="flex flex-wrap items-center gap-2 text-sm text-danger">
+          {t('leads.trialLoadFailed')}
+          <button type="button" onClick={() => setAttempt((n) => n + 1)} className={BUTTON}>
+            {t('leads.retry')}
+          </button>
+        </p>
+      )}
+      {sessions.state === 'loaded' && sessions.options.length === 0 && (
+        <p className="text-sm text-foreground-muted">{t('leads.trialNone')}</p>
+      )}
+      {sessions.state === 'loaded' && sessions.options.length > 0 && (
+        <SelectField
+          name="sessionId"
+          label={t('leads.trialDate')}
+          error={sessionKey === undefined ? undefined : t(sessionKey, state.values ?? {})}
+          options={[
+            { value: '', label: t('leads.trialPickDate') },
+            ...sessions.options.map((o) => ({
+              value: o.sessionId,
+              label: `${formatStamp(o.startsAt)} · ${
+                o.freeSeats === null
+                  ? t('leads.trialUncapped')
+                  : o.freeSeats === 0
+                    ? t('leads.trialFullOption')
+                    : t('leads.trialSeats', { count: o.freeSeats })
+              }`,
+            })),
+          ]}
+        />
+      )}
+      <Buttons
+        onCancel={done}
+        pending={pending}
+        submitLabel={t('leads.trialBook')}
+        disabled={sessions.state !== 'loaded' || sessions.options.length === 0}
+      />
+    </form>
   );
 }
 
 function DismissDialog({ lead }: { lead: Lead }): React.ReactElement {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
+  const name = `${lead.swimmerFirstName} ${lead.swimmerLastName}`;
+  return (
+    <Question
+      label={t('leads.dismiss')}
+      title={t('leads.dismissTitle', { name })}
+      description={t('leads.dismissHint')}
+    >
+      {(done) => <DismissForm lead={lead} done={done} />}
+    </Question>
+  );
+}
+
+function DismissForm({ lead, done }: { lead: Lead; done: () => void }): React.ReactElement {
+  const t = useTranslations();
   const [state, dispatch, pending] = useSavedAction(dismissLeadAction, INITIAL);
+  useCloseOnSuccess(state, done);
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state.fields, state);
   const key = state.fields?.['reason'];
-  const name = `${lead.swimmerFirstName} ${lead.swimmerLastName}`;
 
   return (
-    <>
-      <button type="button" onClick={() => setOpen(true)} className={BUTTON}>
-        {t('leads.dismiss')}
-      </button>
-      <Dialog
-        open={open && !state.ok}
-        onClose={() => setOpen(false)}
-        title={t('leads.dismissTitle', { name })}
-        description={t('leads.dismissHint')}
-        closeLabel={t('common.close')}
-      >
-        <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
-          <input type="hidden" name="leadId" value={lead.id} />
-          <TextAreaField
-            name="reason"
-            label={t('leads.reason')}
-            maxLength={500}
-            error={key === undefined ? undefined : t(key)}
-          />
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className={BUTTON}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" disabled={pending} className={PRIMARY}>
-              {t('leads.dismiss')}
-            </button>
-          </div>
-        </form>
-      </Dialog>
-    </>
+    <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
+      <input type="hidden" name="leadId" value={lead.id} />
+      <TextAreaField
+        name="reason"
+        label={t('leads.reason')}
+        maxLength={500}
+        error={key === undefined ? undefined : t(key)}
+      />
+      <Buttons onCancel={done} pending={pending} submitLabel={t('leads.dismiss')} />
+    </form>
   );
 }

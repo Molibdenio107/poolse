@@ -4692,7 +4692,7 @@
       "swimmerBirthDate": "Date of birth",
       "swimmerTaxNumber": "NIF",
       "guardian": "Parent or guardian",
-      "guardianHint": "Required for anyone under 18. For an adult signing themselves up, leave it blank.",
+      "guardianHint": "Required for anyone under {age}. For an adult signing themselves up, leave it blank.",
       "guardianName": "Full name",
       "guardianRelationship": "Relationship",
       "guardianRelationshipHint": "For example: mother, father, grandmother.",
@@ -4722,7 +4722,7 @@
       "invalidNif": "This NIF is not valid.",
       "invalidDate": "Give a valid date of birth.",
       "invalidEmail": "Give a valid email address.",
-      "guardianRequired": "Required for anyone under 18.",
+      "guardianRequired": "Required for anyone under {age}.",
       "sameNif": "The guardian's NIF must differ from the swimmer's.",
       "consentRequired": "You need to agree to send the request."
     }

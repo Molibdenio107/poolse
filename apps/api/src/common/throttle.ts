@@ -2,6 +2,7 @@ import { Injectable, type ExecutionContext } from '@nestjs/common';
 import { ThrottlerGuard, seconds, type ThrottlerModuleOptions } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { authStorage } from '../auth/auth.context.js';
+import { visitorOf } from '../leads/visitor.js';
 
 /**
  * Request limits — the ceiling that was missing.
@@ -142,6 +143,12 @@ export class UserThrottlerGuard extends ThrottlerGuard {
     const water = publicWaterTracker(request.path);
     if (water !== null) return water;
 
+    // The public sign-up form — per club and per visitor, 13-10-2026 sweep. It
+    // arrives from the Next server, and an address bucket would be one bucket
+    // for every parent of every club in September.
+    const registration = publicRegistrationTracker(request);
+    if (registration !== null) return registration;
+
     // Public routes only: health, and the Clerk webhook. The webhook is verified
     // by signature rather than by session, so an unsigned flood is refused
     // before it reaches anything expensive — but it still gets a bucket.
@@ -160,6 +167,12 @@ export class UserThrottlerGuard extends ThrottlerGuard {
     const request = context.switchToHttp().getRequest<Request>();
     return request.path === '/health' || request.path === '/health/';
   }
+}
+
+/** `registration:<slug>:<visitor>` for the public sign-up form, null for any other path. */
+export function publicRegistrationTracker(request: Pick<Request, 'path' | 'headers' | 'ip'>): string | null {
+  const match = /^\/public\/clubs\/([^/]+)\/registration\/?$/.exec(request.path);
+  return match === null ? null : `registration:${match[1]}:${visitorOf(request)}`;
 }
 
 /** `water:<token>` for the public water page, null for any other path. */
