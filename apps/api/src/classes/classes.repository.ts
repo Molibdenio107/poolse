@@ -978,54 +978,79 @@ export async function enrol(
   waiting: boolean,
 ): Promise<'enrolled' | 'waiting' | 'not_found'> {
   try {
-    return await withOrg(organizationId, async (tx) => {
-      const group = await tx.query<{ capacity: number | null }>(
-        'SELECT capacity FROM class_group WHERE id = $1 AND archived_at IS NULL',
-        [groupId],
-      );
-      if (!group.rows[0]) return 'not_found';
-
-      const student = await tx.query(
-        'SELECT 1 FROM student WHERE id = $1 AND archived_at IS NULL',
-        [studentId],
-      );
-      if (student.rows.length === 0) return 'not_found';
-
-      const status = waiting ? 'waiting' : 'active';
-      const position = waiting
-        ? (
-            await tx.query<{ next: number }>(
-              `SELECT coalesce(max(waiting_position), 0) + 1 AS next
-                 FROM enrollment WHERE class_group_id = $1 AND status = 'waiting'`,
-              [groupId],
-            )
-          ).rows[0]?.next ?? 1
-        : null;
-
-      await tx.query(
-        `INSERT INTO enrollment (
-           organization_id, class_group_id, student_id, status, waiting_position
-         ) VALUES ($1, $2, $3, $4::enrollment_status, $5)`,
-        [organizationId, groupId, studentId, status, position],
-      );
-
-      await recordAudit(tx, {
-        action: 'enrollment.created',
-        entityType: 'class_group',
-        entityId: groupId,
-        data: { studentId, status },
-      });
-
-      return waiting ? 'waiting' : 'enrolled';
-    });
+    return await withOrg(organizationId, (tx) =>
+      insertEnrollment(tx, organizationId, groupId, studentId, waiting),
+    );
   } catch (error) {
-    const code = error instanceof Error ? (error as { code?: string }).code : undefined;
-    // 23505 is enrollment_live_uq; 23514 is the capacity trigger, which raises
-    // with a check_violation code so it reads like the constraint it is.
-    if (code === '23505') throw new AlreadyEnrolledError(studentId);
-    if (code === '23514') throw new FullError(groupId);
-    throw error;
+    throw enrollmentRefusal(error, groupId, studentId);
   }
+}
+
+/**
+ * `enrol`, inside a transaction somebody else opened.
+ *
+ * Lifted out for POOLSE-69: converting a lead writes the student and the
+ * enrolment together, and a student left behind by a full turma would be a
+ * second student the next time somebody pressed the button. One insert path,
+ * audit entry included.
+ */
+export async function insertEnrollment(
+  tx: Tx,
+  organizationId: string,
+  groupId: string,
+  studentId: string,
+  waiting: boolean,
+): Promise<'enrolled' | 'waiting' | 'not_found'> {
+  const group = await tx.query<{ capacity: number | null }>(
+    'SELECT capacity FROM class_group WHERE id = $1 AND archived_at IS NULL',
+    [groupId],
+  );
+  if (!group.rows[0]) return 'not_found';
+
+  const student = await tx.query(
+    'SELECT 1 FROM student WHERE id = $1 AND archived_at IS NULL',
+    [studentId],
+  );
+  if (student.rows.length === 0) return 'not_found';
+
+  const status = waiting ? 'waiting' : 'active';
+  const position = waiting
+    ? (
+        await tx.query<{ next: number }>(
+          `SELECT coalesce(max(waiting_position), 0) + 1 AS next
+             FROM enrollment WHERE class_group_id = $1 AND status = 'waiting'`,
+          [groupId],
+        )
+      ).rows[0]?.next ?? 1
+    : null;
+
+  await tx.query(
+    `INSERT INTO enrollment (
+       organization_id, class_group_id, student_id, status, waiting_position
+     ) VALUES ($1, $2, $3, $4::enrollment_status, $5)`,
+    [organizationId, groupId, studentId, status, position],
+  );
+
+  await recordAudit(tx, {
+    action: 'enrollment.created',
+    entityType: 'class_group',
+    entityId: groupId,
+    data: { studentId, status },
+  });
+
+  return waiting ? 'waiting' : 'enrolled';
+}
+
+/**
+ * What an enrolment insert's failure means. 23505 is enrollment_live_uq; 23514
+ * is the capacity trigger, which raises with a check_violation code so it reads
+ * like the constraint it is. Anything else is returned as it came.
+ */
+export function enrollmentRefusal(error: unknown, groupId: string, studentId: string): unknown {
+  const code = error instanceof Error ? (error as { code?: string }).code : undefined;
+  if (code === '23505') return new AlreadyEnrolledError(studentId);
+  if (code === '23514') return new FullError(groupId);
+  return error;
 }
 
 export async function endEnrollment(

@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto';
 
 /**
  * Encryption for special-category data, done in the application rather than the
@@ -50,6 +50,18 @@ function key(): Buffer {
     );
   }
   return decoded;
+}
+
+/**
+ * A key for another purpose, derived from this one — never this key itself.
+ *
+ * POOLSE-69's form stamp needs a server secret, and a second env var nobody
+ * remembers to set on a deploy would leave the public form refusing everything.
+ * HKDF with a distinct `info` per purpose means a signature made for one can
+ * never be read as a ciphertext or a signature for another.
+ */
+export function derivedKey(purpose: string): Buffer {
+  return Buffer.from(hkdfSync('sha256', key(), Buffer.alloc(0), `poolse:${purpose}`, KEY_BYTES));
 }
 
 /** Null in, null out: "no medical notes" is a state, not an empty string. */

@@ -34,6 +34,9 @@ import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { MessagesController } from './messages/messages.controller.js';
 import { QualificationsController } from './staff/qualifications.controller.js';
 import { QualificationAlertService } from './staff/qualification-alerts.js';
+import { LeadsController, RegistrationSettingsController } from './leads/leads.controller.js';
+import { PublicLeadsController } from './leads/public-leads.controller.js';
+import { LeadRetentionService } from './leads/lead-retention.service.js';
 import {
   PoolPublicLinkController,
   PublicWaterController,
@@ -153,6 +156,9 @@ const IDENTITY_ONLY_ROUTES = [
     QualificationsController,
     PoolPublicLinkController,
     PublicWaterController,
+    LeadsController,
+    RegistrationSettingsController,
+    PublicLeadsController,
     SessionsController,
     ClerkWebhookController,
     StripeWebhookController,
@@ -264,6 +270,7 @@ const IDENTITY_ONLY_ROUTES = [
      */
     ClimateService,
     QualificationAlertService,
+    LeadRetentionService,
   ],
 })
 export class AppModule implements NestModule {

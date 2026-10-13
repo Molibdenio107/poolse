@@ -32,6 +32,7 @@ import {
   LifeguardRosterController,
 } from '../safety/roster.controller.js';
 import { SpacesController } from '../spaces/spaces.controller.js';
+import { LeadsController, RegistrationSettingsController } from '../leads/leads.controller.js';
 import { RecordsController } from '../students/records.controller.js';
 import {
   GuardiansController,
@@ -705,5 +706,22 @@ test('support access refuses a guardian and a student (403)', async () => {
       support.approve(NO_SUCH_ID, { hours: 24 }),
     );
     await refused('POST support-grants/requests/:id/decline', 403, () => support.decline(NO_SUCH_ID));
+  });
+});
+
+test('the pre-registration queue refuses a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const leads = new LeadsController();
+    await refused('GET leads', 403, () => leads.list());
+    await refused('GET leads/count', 403, () => leads.count());
+    await refused('GET leads/trial-options', 403, () => leads.options(NO_SUCH_ID));
+    await refused('GET leads/:id', 403, () => leads.one(NO_SUCH_ID));
+    await refused('POST leads/:id/waitlist', 403, () => leads.waitlist(NO_SUCH_ID, { classGroupId: NO_SUCH_ID }));
+    await refused('POST leads/:id/convert', 403, () => leads.convert(NO_SUCH_ID, { classGroupId: NO_SUCH_ID }));
+    await refused('POST leads/:id/trial', 403, () => leads.trial(NO_SUCH_ID, { sessionId: NO_SUCH_ID }));
+    await refused('POST leads/:id/dismiss', 403, () => leads.dismiss(NO_SUCH_ID, { reason: 'x' }));
+    const settings = new RegistrationSettingsController();
+    await refused('GET settings/registration', 403, () => settings.read());
+    await refused('PUT settings/registration', 403, () => settings.update({ slug: 'abc', open: true }));
   });
 });

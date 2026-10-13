@@ -673,7 +673,7 @@ function asHttp(error: unknown): unknown {
  * guardian's number typed into the child's row, and the field error points at
  * exactly the box to look at.
  */
-function taxNumberConflict(): ConflictException {
+export function taxNumberConflict(): ConflictException {
   return new ConflictException({
     code: 'duplicate_tax_number',
     message: 'Another student already has that NIF',
@@ -681,7 +681,7 @@ function taxNumberConflict(): ConflictException {
   });
 }
 
-function parseStudent(body: Record<string, unknown>, majority: number): StudentInput {
+export function parseStudent(body: Record<string, unknown>, majority: number): StudentInput {
   const birthDate = parseBirthDate(body['birthDate']);
 
   const guardians = readGuardians(body);

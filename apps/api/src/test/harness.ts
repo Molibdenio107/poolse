@@ -63,6 +63,8 @@ const TENANT_TABLES = [
    * membership, and only a teardown has any business removing it.
    */
   'audit_log',
+  // POOLSE-69. A lead names a student, a session and a deciding membership.
+  'lead',
   // POOLSE-67. A recipient points at its message, a student and a guardian's
   // membership; a message at its turma, level, site and sender. First, so
   // every one of those is still there when these go.
