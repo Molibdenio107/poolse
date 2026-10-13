@@ -808,7 +808,7 @@
     "rangeOff": "Não avisar",
     "rangeOffHint": "As leituras continuam a ser registadas e apresentadas; deixa apenas de haver aviso.",
     "rangeOutOfOrder": "O máximo não pode ser inferior ao mínimo.",
-    "rangeReference": "Referência ({from}–{to})",
+    "rangeReference": "Referência NP 4542 ({band})",
     "rangesFailed": "Não foi possível guardar os intervalos.",
     "rangesHint": "Os valores de referência são os de uma piscina municipal portuguesa. Altere-os quando esta piscina é diferente — uma piscina de hotel a 30 °C está sempre fora do intervalo de temperatura.",
     "rangesTitle": "Intervalos desta piscina",
@@ -1057,7 +1057,18 @@
     },
     "configure": "Configurar instalação",
     "configureHint": "Horário, preços, tanques, parcerias, espaços, manutenção e energia — tudo se configura na página da instalação.",
-    "planFull": "O seu plano inclui {max, plural, one {1 instalação} other {# instalações}}, já em uso. Para acrescentar outra, fale connosco para alargar o plano."
+    "planFull": "O seu plano inclui {max, plural, one {1 instalação} other {# instalações}}, já em uso. Para acrescentar outra, fale connosco para alargar o plano.",
+    "useLabel": "Utilização",
+    "useHint": "Define a temperatura de referência da NP 4542. Sem utilização, a temperatura não é avaliada.",
+    "useNone": "Não indicada",
+    "use": {
+      "sport": "Natação desportiva, polo aquático, sincronizada",
+      "diving": "Saltos e atividades subaquáticas",
+      "learning": "Aprendizagem, lazer e polivalente",
+      "children": "Manutenção e infantil",
+      "hydrotherapy": "Hidroterapia"
+    },
+    "poolUseInvalid": "Escolha uma utilização da lista."
   },
   "classes": {
     "colour": "Cor da turma",
@@ -4136,7 +4147,11 @@
       "error": "Não foi possível alterar a página pública."
     },
     "unavailable": "As medições não estão disponíveis neste momento.",
-    "unavailableHint": "Tente novamente dentro de alguns minutos."
+    "unavailableHint": "Tente novamente dentro de alguns minutos.",
+    "lab": {
+      "title": "Última análise laboratorial",
+      "sampled": "Amostra de {date}"
+    }
   },
   "qualifications": {
     "title": "Qualificações",
@@ -4726,5 +4741,78 @@
       "sameNif": "O NIF do encarregado tem de ser diferente do NIF de quem vai nadar.",
       "consentRequired": "É preciso autorizar para enviar o pedido."
     }
+  },
+  "labResults": {
+    "hint": "Os relatórios do laboratório, classificados pela NP 4542:2017. Um resultado não conforme avisa o proprietário, os administradores e a manutenção.",
+    "empty": "Ainda não há análises laboratoriais registadas para esta piscina.",
+    "noValues": "Preencha pelo menos um valor do relatório.",
+    "sampledAt": "Amostra de {when}",
+    "noLaboratory": "Laboratório não indicado",
+    "failure": {
+      "limit": "{parameter}: {value} {unit} — acima do valor limite de {limit}",
+      "recommended": "{parameter}: {value} {unit} — acima do valor recomendado de {limit}",
+      "criterion": "{parameter}: {value} {unit} — fora do critério de qualidade ({limit})"
+    },
+    "noPh": "(sem pH medido nesta análise: avaliado pelo intervalo mais largo)",
+    "noMicrobiology": "O relatório não inclui microbiologia: a classificação cobre só a química.",
+    "notReported": "Não reportado pelo laboratório: {list}.",
+    "samplePointShown": "Ponto de colheita: {point} · {depth}",
+    "depth": {
+      "surface": "Superfície",
+      "subsurface": "Subsuperfície (10–30 cm)",
+      "unknown": "Não indicado"
+    },
+    "alertSent": "{count, plural, one {Aviso enviado a # pessoa.} other {Aviso enviado a # pessoas.}}",
+    "alertNotSent": "Aviso registado — o envio do email falhou.",
+    "alertNoProvider": "Aviso registado — ainda não saiu nenhum email (sem fornecedor de email configurado).",
+    "grade": {
+      "conforme": "Conforme",
+      "conforme_condicionada": "Conforme condicionada",
+      "nao_conforme": "Não conforme",
+      "none": "Sem classificação"
+    },
+    "parameter": {
+      "colonies_37c": "Colónias a 37 °C",
+      "total_coliforms": "Bactérias coliformes",
+      "e_coli": "Escherichia coli",
+      "enterococci": "Enterococos",
+      "pseudomonas_aeruginosa": "Pseudomonas aeruginosa",
+      "staphylococcus_coagulase_positive": "Estafilococos produtores de coagulase",
+      "staphylococcus_total": "Estafilococos totais",
+      "ph": "pH",
+      "temperature": "Temperatura",
+      "free_chlorine": "Cloro livre",
+      "combined_chlorine": "Cloro combinado",
+      "total_alkalinity": "Alcalinidade total",
+      "calcium_hardness": "Dureza cálcica",
+      "cyanuric_acid": "Ácido cianúrico",
+      "turbidity": "Turvação",
+      "salt": "Sal"
+    },
+    "record": "Registar análise laboratorial",
+    "sampledAtLabel": "Data e hora da colheita",
+    "laboratory": "Laboratório",
+    "reportReference": "Referência do relatório",
+    "samplePoint": "Ponto de colheita",
+    "samplePointHint": "Junto ao rebordo, no ponto mais afastado da entrada de água.",
+    "sampleDepth": "Profundidade da colheita",
+    "microbiology": "Microbiologia",
+    "chemistry": "Físico-química",
+    "notes": "Observações",
+    "save": "Guardar análise",
+    "archive": "Arquivar",
+    "saved": "Análise laboratorial guardada",
+    "archived": "Análise laboratorial arquivada",
+    "saveFailed": "Não foi possível guardar a análise laboratorial.",
+    "archiveFailed": "Não foi possível arquivar a análise laboratorial.",
+    "sampledAtRequired": "Indique a data e hora da colheita.",
+    "sampledAtInvalid": "Indique uma data e hora de colheita válida e no passado.",
+    "sampleDepthInvalid": "Escolha a profundidade da colheita.",
+    "valuesInvalid": "Há um valor que não foi possível ler.",
+    "valueInvalid": "Indique um número igual ou superior a zero.",
+    "laboratoryInvalid": "Nome do laboratório demasiado longo.",
+    "reportReferenceInvalid": "Referência demasiado longa.",
+    "samplePointInvalid": "Ponto de colheita demasiado longo.",
+    "notesInvalid": "Observações demasiado longas."
   }
 }

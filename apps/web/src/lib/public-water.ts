@@ -26,6 +26,8 @@ export interface PublicWater {
   poolName: string;
   timezone: string;
   readings: PublicReading[];
+  /** The latest laboratory grade and the day it was sampled — POOLSE-72. */
+  lab: { grade: 'conforme' | 'conforme_condicionada' | 'nao_conforme'; sampledAt: string } | null;
 }
 
 function baseUrl(): string {

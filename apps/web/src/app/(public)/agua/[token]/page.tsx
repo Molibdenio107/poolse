@@ -6,6 +6,7 @@ import { formatDate, formatTime } from '@/lib/date-format';
 import { timeAgo } from '@/lib/relative-time';
 import { fetchPublicWater, type PublicReading } from '@/lib/public-water';
 import { cn } from '@/lib/utils';
+import { LabGradeChip } from '@/components/lab-grade-chip';
 import pt from '@/messages/pt-PT.json';
 import en from '@/messages/en.json';
 
@@ -126,6 +127,26 @@ export default async function PublicWaterPage({
             />
           ))}
         </ul>
+      )}
+
+      {/*
+        The latest laboratory grade — POOLSE-72. The grade and the day and
+        nothing else from the report; words and an icon, never colour alone.
+      */}
+      {page.lab !== null && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-4">
+          <div className="flex flex-col gap-0.5">
+            <span className={cn('font-medium', lobby && 'text-2xl')}>{t('publicWater.lab.title')}</span>
+            <span className={cn('text-foreground-muted', lobby ? 'text-lg' : 'text-sm')}>
+              {t('publicWater.lab.sampled', { date: formatDate(page.lab.sampledAt) })}
+            </span>
+          </div>
+          <LabGradeChip
+            grade={page.lab.grade}
+            label={t(`labResults.grade.${page.lab.grade}` as never)}
+            className={lobby ? 'text-xl' : undefined}
+          />
+        </section>
       )}
 
       <footer

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useFormatter, useTranslations } from 'next-intl';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, SelectField } from '@/components/ui/field';
+import { POOL_USES, type PoolUse } from '@/lib/water';
 import type { FormState } from '../actions';
 import { createPoolAction, updatePoolAction } from './facilities.actions';
 
@@ -13,6 +14,7 @@ export interface PoolFormValues {
   id?: string;
   name?: string;
   kind?: 'indoor' | 'outdoor';
+  use?: PoolUse | null;
   volumeLitres?: number | null;
   laneCount?: number | null;
   maxCapacity?: number | null;
@@ -360,6 +362,21 @@ export function PoolForm({
             <option value="outdoor">{t('facilities.kind.outdoor')}</option>
           </select>
         </div>
+
+        {/*
+          What the tank is for — POOLSE-72. NP 4542 sets the water temperature
+          by it, so the hint says what choosing nothing means.
+        */}
+        <SelectField
+          name="use"
+          label={t('facilities.useLabel')}
+          hint={t('facilities.useHint')}
+          initial={pool?.use ?? ''}
+          options={[
+            { value: '', label: t('facilities.useNone') },
+            ...POOL_USES.map((use) => ({ value: use, label: t(`facilities.use.${use}`) })),
+          ]}
+        />
       </div>
 
       <PoolDimensions pool={pool} />

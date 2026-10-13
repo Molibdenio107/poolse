@@ -1,6 +1,6 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
-import { ApiError, apiFetch, type PoolCostReport, type PoolDetail } from '@/lib/api';
+import { ApiError, apiFetch, type LabResult, type PoolCostReport, type PoolDetail } from '@/lib/api';
 import { backTarget } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PhotoGallery } from '@/components/photo-gallery';
@@ -131,6 +131,10 @@ export default async function PoolPage({
                       value={t(`facilities.kind.${loaded.kind}`)}
                     />
                     <Detail
+                      label={t('facilities.useLabel')}
+                      value={loaded.use === null ? t('facilities.useNone') : t(`facilities.use.${loaded.use}`)}
+                    />
+                    <Detail
                       label={t('facilities.lengthLabel')}
                       value={loaded.lengthM === null ? null : `${loaded.lengthM}`}
                     />
@@ -205,7 +209,13 @@ export default async function PoolPage({
           slug: 'water',
           labelKey: 'facilities.readings',
           badge: outOfBand ? { kind: 'dot', labelKey: 'detailTabs.badge.waterOutOfBand' } : undefined,
-          content: () => (
+          content: async () => {
+            // Laboratory reports — POOLSE-72. A refusal hides the section; a
+            // failure keeps it and says so, never a silent absence.
+            const lab = await outcome(
+              apiFetch<{ results: LabResult[] }>(`/facilities/pools/${poolId}/lab-results`),
+            );
+            return (
             <section className="rounded border border-border bg-surface p-5">
               <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
                 {t('facilities.readings')}
@@ -217,6 +227,9 @@ export default async function PoolPage({
                 analyses={loaded.analyses}
                 alerts={loaded.alerts}
                 bands={loaded.bands}
+                reference={loaded.reference}
+                labResults={lab.state === 'ok' ? lab.data.results : null}
+                labFailed={lab.state === 'failed'}
                 bandOverrides={loaded.bandOverrides}
                 emailConfigured={loaded.emailConfigured}
                 canManage={loaded.canManage}
@@ -225,7 +238,8 @@ export default async function PoolPage({
                 from={from}
               />
             </section>
-          ),
+            );
+          },
         },
         {
           /*

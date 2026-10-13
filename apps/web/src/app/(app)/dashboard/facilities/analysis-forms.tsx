@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import { POOL_METRICS, type PoolMetric } from '@/lib/pool-metrics';
-import { HEALTHY, type BandOverride } from '@/lib/water';
+import { describeBand, type BandMap, type BandOverride } from '@/lib/water';
 import {
   CONTROL_LINE,
   FIELD_COLUMN,
@@ -169,9 +169,11 @@ export function ArchiveAnalysisButton({
  * does test it can still give it numbers, which is the case this form adds
  * beyond the overrides it was built for.
  *
- * `HEALTHY` is read here for a *label* — "(7.2–7.6)" beside the reference option
- * — and never to judge a reading. The judging map comes resolved from the API,
- * which is what keeps this screen and the alert email in agreement.
+ * `reference` is the national band for *this* tank, resolved by the API
+ * (POOLSE-72: free chlorine depends on its kind, temperature on its use), and
+ * is read here for a *label* only — never to judge a reading. The judging map
+ * comes resolved from the API too, which keeps this screen and the alert email
+ * in agreement.
  *
  * Text inputs with `inputMode="decimal"`, not `type="number"`: a number input
  * refuses silently and the form then does nothing with no explanation, which is
@@ -182,12 +184,16 @@ export function SafeRangesForm({
   organizationId,
   poolId,
   overrides,
+  reference,
 }: {
   organizationId: string;
   poolId: string;
   overrides: BandOverride[];
+  /** The national band per metric for this tank, before any override. */
+  reference: BandMap;
 }): React.ReactElement {
   const t = useTranslations();
+  const locale = useLocale();
   const [state, action, pending] = useSavedAction(savePoolRangesAction, INITIAL);
 
   /*
@@ -223,7 +229,7 @@ export function SafeRangesForm({
 
       <ul className="flex flex-col divide-y divide-border">
         {POOL_METRICS.map((metric) => {
-          const published = HEALTHY[metric];
+          const published = reference[metric];
           const mode = modes[metric] ?? 'reference';
           const override = overrideFor(metric);
 
@@ -252,8 +258,7 @@ export function SafeRangesForm({
                         {
                           value: 'reference',
                           label: t('facilities.rangeReference', {
-                            from: published.from,
-                            to: published.to,
+                            band: describeBand(published, locale),
                           }),
                         },
                         { value: 'custom', label: t('facilities.rangeCustom') },

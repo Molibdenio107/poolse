@@ -102,6 +102,9 @@ function poolBody(formData: FormData): Record<string, string> {
   return {
     name: String(formData.get('name') ?? '').trim(),
     kind: String(formData.get('kind') ?? 'indoor'),
+    // POOLSE-72: what the tank is for. Empty is "not said", and the API then
+    // judges no temperature — it is always sent, so an edit can clear it.
+    use: String(formData.get('use') ?? '').trim(),
     // Empty means "not recorded". The API keeps it null rather than inventing a
     // zero, and the CHECK constraints refuse a zero anyway.
     volumeLitres: String(formData.get('volumeLitres') ?? '').trim(),
@@ -231,7 +234,7 @@ export async function recordAnalysisAction(
 
   try {
     await apiPost(
-      `/pools/${poolId}/analyses`,
+      `/facilities/pools/${poolId}/analyses`,
       { takenAt, notes: String(formData.get('notes') ?? '').trim(), values },
       { organizationId },
     );
@@ -307,7 +310,7 @@ export async function savePoolRangesAction(
   }
 
   try {
-    await apiPut(`/pools/${poolId}/ranges`, { ranges }, { organizationId });
+    await apiPut(`/facilities/pools/${poolId}/ranges`, { ranges }, { organizationId });
   } catch (error) {
     return failure(error, 'facilities.rangesFailed');
   }
@@ -342,7 +345,7 @@ export async function archiveAnalysisAction(
   const analysisId = String(formData.get('analysisId') ?? '');
 
   try {
-    await apiPost(`/analyses/${analysisId}/archive`, {}, { organizationId });
+    await apiPost(`/facilities/analyses/${analysisId}/archive`, {}, { organizationId });
   } catch (error) {
     return failure(error, 'facilities.analysisFailed');
   }

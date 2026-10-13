@@ -3658,3 +3658,31 @@ hour. `poolse_app` holds no DELETE on `lead`. Migration `1790330400000_lead.sql`
 - **`public_lead_form`** also returns `ageOfMajority`.
 - **`submit_lead`** locks `FOR NO KEY UPDATE`.
 - **The trial trigger** answers a session that is not the club's as `foreign_key_violation`.
+
+### The national water reference and lab results — POOLSE-72, 13 October 2026
+
+```
+pool
+  + use pool_use        -- sport | diving | learning | children | hydrotherapy; null = temperature not judged
+
+lab_result
+  id, organization_id, pool_id                 -- composite fk to pool
+  sampled_at timestamptz, laboratory, report_reference, sample_point,
+  sample_depth lab_sample_depth                -- surface | subsurface
+  notes, recorded_by_membership_id, created_at, updated_at, archived_at
+
+lab_result_value
+  (lab_result_id, parameter lab_parameter)     -- 7 organisms + the 9 pool_metric names
+  organization_id, value numeric(12,3) CHECK >= 0, unit
+
+lab_result_alert
+  id, organization_id, pool_id, lab_result_id (unique), parameters lab_parameter[],
+  recipients text[], delivered_at, raised_at
+```
+
+**The bands are code, not rows:** NP 4542:2017 in `@poolse/rules`, cited by quadro. **The grade
+is never stored.** It is `gradeLabResult()` over the values, against the national reference for
+the tank. `poolse_app` holds no DELETE on any of the three tables, and no UPDATE on
+`lab_result_value`. `public_water_page()` gains `poolKind`, `poolUse` and `lab` (the latest live
+report's date and values). The API grades the report and passes on the grade and date only.
+Migration `1790416800000_lab-results.sql`; `packages/db/test/lab-results.sql`.

@@ -7,6 +7,7 @@ import {
   POOL_METRICS,
   POOL_USES,
   resolveBands,
+  type Band,
   type BandOverride,
   type LabGrade,
   type Organism,
@@ -253,7 +254,10 @@ export async function readPublicWaterPage(
         value,
         unit: reading.unit,
         takenAt: takenAt.toISOString(),
-        band: band === null ? null : { from: band.from, to: band.to },
+        // For free chlorine judged by a pH from the same analysis, the side of
+        // the split it was judged against — not the union, which would show a
+        // reading "inside 0,5–2" that is in fact above its 1,2.
+        band: band === null ? null : shownBand(band, sameAnalysisPh[0]?.value ?? null),
         state: band === null ? 'unjudged' : excursion === undefined ? 'inside' : excursion.direction,
         stale: takenAt.getTime() < staleBefore,
       };
@@ -268,6 +272,14 @@ export async function readPublicWaterPage(
     readings,
     lab: gradePublicLab(raw.lab, pool),
   };
+}
+
+function shownBand(band: Band, ph: number | null): { from: number | null; to: number | null } {
+  if (band.byPh !== undefined && ph !== null) {
+    const side = ph <= band.byPh.at ? band.byPh.atOrBelow : band.byPh.above;
+    return { from: side.from, to: side.to };
+  }
+  return { from: band.from, to: band.to };
 }
 
 function gradePublicLab(

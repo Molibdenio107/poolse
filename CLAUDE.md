@@ -965,6 +965,8 @@ index, and the *sending* happens after the commit where it can never roll a read
 `metrics` is a snapshot even so, because a measurement is corrected in place and a compliance
 record that rewrote itself when somebody fixed a typo would not be one.
 
+**The published band is NP 4542:2017, and a lab result's grade is derived, never stored.** POOLSE-72. `nationalBands({ kind, use })` in `@poolse/rules` holds the bands, each cited to its quadro (`docs/research/water-reference-2026-10.md`). Free chlorine is a `byPh` band, judged by the pH **in the same analysis**, which is why `excursions()` takes one analysis's values. Temperature comes from `pool.use`, and an unset use judges none. `resolveBands(overrides, pool)` needs the tank. `gradeLabResult()` grades a lab report under §4.4 against the national reference, never a club's own bands, and every reader calls it. A não conforme report alerts through `lab_result_alert` on the water alert's terms. `docs/features/water-quality.md`.
+
 **A pool's band is the published one until a club says otherwise, and `resolveBands` is where
 the two meet.** `pool_metric_range` holds only exceptions — no row is the answer for almost
 every pool, which is what lets a later correction to a published band reach everybody who never

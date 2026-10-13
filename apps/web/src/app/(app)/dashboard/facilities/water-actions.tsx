@@ -85,6 +85,8 @@ export function UnsafeWaterNotice({
                 <li key={excursion.metric}>
                   {t(`facilities.metric.${excursion.metric}`)}: {formatReading(excursion.value, locale)}{' '}
                   {excursion.unit} — {t(text.key, text.values)}
+                  {/* POOLSE-72: free chlorine judged with no pH in the analysis. */}
+                  {excursion.ph === null && ` ${t('labResults.noPh')}`}
                 </li>
               );
             })}

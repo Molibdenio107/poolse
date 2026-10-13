@@ -808,7 +808,7 @@
     "rangeOff": "Do not warn",
     "rangeOffHint": "Readings are still recorded and shown; only the warning stops.",
     "rangeOutOfOrder": "The maximum cannot be below the minimum.",
-    "rangeReference": "Reference ({from}–{to})",
+    "rangeReference": "NP 4542 reference ({band})",
     "rangesFailed": "Could not save the ranges.",
     "rangesHint": "The reference values are those of a Portuguese municipal pool. Change them where this pool is different — a hotel pool kept at 30 °C is always outside the temperature range.",
     "rangesTitle": "This pool's ranges",
@@ -1057,7 +1057,18 @@
     },
     "configure": "Set up this site",
     "configureHint": "Hours, prices, pools, partners, spaces, maintenance and energy — all set up on the site’s page.",
-    "planFull": "Your plan includes {max, plural, one {1 site} other {# sites}}, already in use. To add another, get in touch to extend the plan."
+    "planFull": "Your plan includes {max, plural, one {1 site} other {# sites}}, already in use. To add another, get in touch to extend the plan.",
+    "useLabel": "Use",
+    "useHint": "Sets the NP 4542 reference temperature. With no use, temperature is not judged.",
+    "useNone": "Not given",
+    "use": {
+      "sport": "Competitive swimming, water polo, synchronised",
+      "diving": "Diving and underwater activities",
+      "learning": "Learning, leisure and multi-use",
+      "children": "Maintenance and children's",
+      "hydrotherapy": "Hydrotherapy"
+    },
+    "poolUseInvalid": "Choose a use from the list."
   },
   "classes": {
     "colour": "Class colour",
@@ -4136,7 +4147,11 @@
       "error": "Could not change the public page."
     },
     "unavailable": "The readings are not available right now.",
-    "unavailableHint": "Please try again in a few minutes."
+    "unavailableHint": "Please try again in a few minutes.",
+    "lab": {
+      "title": "Latest laboratory analysis",
+      "sampled": "Sampled on {date}"
+    }
   },
   "qualifications": {
     "title": "Qualifications",
@@ -4726,5 +4741,78 @@
       "sameNif": "The guardian's NIF must differ from the swimmer's.",
       "consentRequired": "You need to agree to send the request."
     }
+  },
+  "labResults": {
+    "hint": "The laboratory's reports, graded by NP 4542:2017. A non-compliant result alerts the owner, the admins and maintenance.",
+    "empty": "No laboratory analyses recorded for this pool yet.",
+    "noValues": "Fill in at least one value from the report.",
+    "sampledAt": "Sample of {when}",
+    "noLaboratory": "Laboratory not given",
+    "failure": {
+      "limit": "{parameter}: {value} {unit} — above the limit of {limit}",
+      "recommended": "{parameter}: {value} {unit} — above the recommended value of {limit}",
+      "criterion": "{parameter}: {value} {unit} — outside the quality criterion ({limit})"
+    },
+    "noPh": "(no pH measured in this analysis: judged by the widest band)",
+    "noMicrobiology": "The report has no microbiology: the grade covers the chemistry only.",
+    "notReported": "Not reported by the laboratory: {list}.",
+    "samplePointShown": "Sampling point: {point} · {depth}",
+    "depth": {
+      "surface": "Surface",
+      "subsurface": "Below the surface (10–30 cm)",
+      "unknown": "Not given"
+    },
+    "alertSent": "{count, plural, one {Alert sent to # person.} other {Alert sent to # people.}}",
+    "alertNotSent": "Alert recorded — sending the email failed.",
+    "alertNoProvider": "Alert recorded — no email has left yet (no email provider configured).",
+    "grade": {
+      "conforme": "Compliant",
+      "conforme_condicionada": "Conditionally compliant",
+      "nao_conforme": "Not compliant",
+      "none": "Not graded"
+    },
+    "parameter": {
+      "colonies_37c": "Colonies at 37 °C",
+      "total_coliforms": "Coliform bacteria",
+      "e_coli": "Escherichia coli",
+      "enterococci": "Enterococci",
+      "pseudomonas_aeruginosa": "Pseudomonas aeruginosa",
+      "staphylococcus_coagulase_positive": "Coagulase-positive staphylococci",
+      "staphylococcus_total": "Total staphylococci",
+      "ph": "pH",
+      "temperature": "Temperature",
+      "free_chlorine": "Free chlorine",
+      "combined_chlorine": "Combined chlorine",
+      "total_alkalinity": "Total alkalinity",
+      "calcium_hardness": "Calcium hardness",
+      "cyanuric_acid": "Cyanuric acid",
+      "turbidity": "Turbidity",
+      "salt": "Salt"
+    },
+    "record": "Record a laboratory analysis",
+    "sampledAtLabel": "Date and time of sampling",
+    "laboratory": "Laboratory",
+    "reportReference": "Report reference",
+    "samplePoint": "Sampling point",
+    "samplePointHint": "At the inner edge, at the point furthest from the water inlet.",
+    "sampleDepth": "Sampling depth",
+    "microbiology": "Microbiology",
+    "chemistry": "Physical and chemical",
+    "notes": "Notes",
+    "save": "Save analysis",
+    "archive": "Archive",
+    "saved": "Laboratory analysis saved",
+    "archived": "Laboratory analysis archived",
+    "saveFailed": "The laboratory analysis could not be saved.",
+    "archiveFailed": "The laboratory analysis could not be archived.",
+    "sampledAtRequired": "Give the date and time of sampling.",
+    "sampledAtInvalid": "Give a valid sampling date and time in the past.",
+    "sampleDepthInvalid": "Choose the sampling depth.",
+    "valuesInvalid": "A value could not be read.",
+    "valueInvalid": "Give a number of zero or more.",
+    "laboratoryInvalid": "Laboratory name too long.",
+    "reportReferenceInvalid": "Reference too long.",
+    "samplePointInvalid": "Sampling point too long.",
+    "notesInvalid": "Notes too long."
   }
 }

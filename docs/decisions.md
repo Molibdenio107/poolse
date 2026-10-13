@@ -1088,3 +1088,7 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
 - **2026-10-13** — **POOLSE-72: a pool gets a `use`, and the use picks the temperature band** (Rui). An unset use means temperature is not judged; nothing guesses a band.
 - **2026-10-13** — **POOLSE-72: a lab result is graded by NP 4542 §4.4 over the parameters Poolse holds** (Rui). Limits relative to the supply water are not judged, and the grade says what it did not cover.
 - **2026-10-13** — **POOLSE-72, taken without asking: free chlorine's low band is pH ≤ 7.4 and its high band is pH > 7.4.** NP 4542 leaves 7.4–7.5 uncovered for covered tanks. With no pH in the same analysis, a reading is judged against the union of both bands.
+- **2026-10-13** — **POOLSE-72, taken without asking:**
+  - **A lab grade is judged against the national reference for the tank, never a club's own bands.** A club may relax its working pH range; that does not make a sample *conforme* under NP 4542.
+  - **Reading a lab PDF into the lab form is not built in this slice.** The water-log parser keeps reading chemistry only, and a lab report is typed in.
+  - **On the public page, a free-chlorine reading is judged by pH only when both were taken in the same analysis.**

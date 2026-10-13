@@ -69,6 +69,9 @@ const SAME_ON_PURPOSE = new Map([
   // Portuguese catalogue already uses ("Email de contacto").
   ['leads.public.swimmerTaxNumber', 'the same Portuguese acronym'],
   ['leads.public.email', 'the word the Portuguese catalogue already uses'],
+  // POOLSE-72: a species is written in Latin in both languages.
+  ['labResults.parameter.e_coli', 'a Latin species name'],
+  ['labResults.parameter.pseudomonas_aeruginosa', 'a Latin species name'],
   ['students.import.updateField.contactEmail', '"email" is the ordinary pt-PT word too'],
   // A file-format name and its extension. "CSV" is not an English word being
   // left untranslated; it is what the format is called in every language.

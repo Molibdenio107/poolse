@@ -468,6 +468,8 @@ export interface Pool {
   facilityId: string;
   name: string;
   kind: 'indoor' | 'outdoor';
+  /** What the tank is for — POOLSE-72; picks the temperature band. Null: not said. */
+  use: PoolUse | null;
   volumeLitres: number | null;
   laneCount: number | null;
   minDepthM: number | null;
@@ -491,6 +493,8 @@ export type { PoolMetric } from './pool-metrics';
 // The band types travel with the pool, and they are the rules package's — one
 // vocabulary for a band, whichever side of the wire it is on.
 export type { Band, BandMap, BandOverride } from './water';
+import type { LabGrading, PoolUse } from './water';
+export type { PoolUse } from './water';
 
 export interface AnalysisValue {
   metric: PoolMetric;
@@ -1288,6 +1292,8 @@ export interface PoolDetail extends Pool {
    * what it is given, the way it renders the overdue-cleaning boolean.
    */
   bands: BandMap;
+  /** The national reference for this tank before any override — POOLSE-72. */
+  reference: BandMap;
   /** The raw overrides, which only the editor needs — see `SafeRangesForm`. */
   bandOverrides: BandOverride[];
   /** Whether an alert would actually be sent from this environment. */
@@ -4455,4 +4461,22 @@ export interface LeadsWidgetData {
   trials: number;
   /** Whole days the oldest unanswered request has waited; null with none waiting. */
   oldestWaitingDays: number | null;
+}
+
+/** A lab parameter: one of the seven organisms, or a chemistry metric — POOLSE-72. */
+export type LabParameter = string;
+
+/** One laboratory report on a tank, graded by the API with `gradeLabResult()`. */
+export interface LabResult {
+  id: string;
+  sampledAt: string;
+  laboratory: string | null;
+  reportReference: string | null;
+  samplePoint: string | null;
+  sampleDepth: 'surface' | 'subsurface' | null;
+  notes: string | null;
+  values: { parameter: LabParameter; value: number; unit: string }[];
+  grading: LabGrading;
+  /** Null when the report raised no alert. */
+  alert: { raisedAt: string; recipients: string[]; deliveredAt: string | null } | null;
 }

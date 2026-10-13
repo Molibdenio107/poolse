@@ -1,12 +1,14 @@
 import { ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
-import type { BandMap, BandOverride, PoolAlert, PoolAnalysis, PoolMetric } from '@/lib/api';
+import type { BandMap, BandOverride, LabResult, PoolAlert, PoolAnalysis, PoolMetric } from '@/lib/api';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { TrendChart } from '@/components/trend-chart';
 import { excursions } from '@/lib/water';
 import { ExportAnalyses, UnsafeWaterNotice } from './water-actions';
 import { WaterImport } from './pools/[poolId]/water-import';
 import { AnalysisForm, ArchiveAnalysisButton, SafeRangesForm } from './analysis-forms';
+import { LabResultsSection } from './lab-results';
+import { PageError } from '@/components/page-shell';
 import { formatStamp } from '@/lib/date-format';
 import { formatReading } from '@/lib/pool-metrics';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
@@ -44,7 +46,7 @@ import { SectionPills, pickSection, sectionHref } from '@/components/section-pil
  * except the two where things are *added*, which are empty until somebody does.
  */
 
-type WaterSection = 'latest' | 'trends' | 'history' | 'alerts' | 'record' | 'ranges';
+type WaterSection = 'latest' | 'trends' | 'history' | 'alerts' | 'lab' | 'record' | 'ranges';
 
 export async function ReadingsBlock({
   organizationId,
@@ -53,6 +55,9 @@ export async function ReadingsBlock({
   analyses,
   alerts,
   bands,
+  reference,
+  labResults,
+  labFailed,
   bandOverrides,
   emailConfigured,
   canManage,
@@ -76,6 +81,15 @@ export async function ReadingsBlock({
    * warning and the alert email cannot disagree.
    */
   bands: BandMap;
+  /** The national band per metric for this tank, before overrides — POOLSE-72. */
+  reference: BandMap;
+  /**
+   * Laboratory reports, newest first, graded by the API — POOLSE-72. Null when
+   * they could not be read for this person, and the section is then not offered.
+   */
+  labResults: LabResult[] | null;
+  /** They were refused by nobody and still did not load: offered, with an error. */
+  labFailed: boolean;
   /** The raw overrides, for the editor's three-state selects. */
   bandOverrides: BandOverride[];
   /** Whether an alert would actually be sent from this environment. */
@@ -127,6 +141,8 @@ export async function ReadingsBlock({
       ['trends', measured.length > 0],
       ['history', analyses.length > 0],
       ['alerts', alerts.length > 0],
+      // Where reports are added as well as read, so offered empty — like Registar.
+      ['lab', labResults !== null || labFailed],
       ['record', canRecord || canManage],
       ['ranges', canManage],
     ] as const
@@ -137,6 +153,7 @@ export async function ReadingsBlock({
   const counts: Partial<Record<WaterSection, number>> = {
     history: analyses.length,
     alerts: alerts.length,
+    ...(labResults !== null && labResults.length > 0 ? { lab: labResults.length } : {}),
   };
 
   return (
@@ -420,6 +437,18 @@ export async function ReadingsBlock({
         <WaterImport poolId={poolId} canManage={canManage} />
       )}
 
+      {current === 'lab' && labFailed && <PageError message={t('detailTabs.loadFailed')} />}
+
+      {current === 'lab' && labResults !== null && (
+        <LabResultsSection
+          poolId={poolId}
+          results={labResults}
+          canRecord={canRecord || canManage}
+          canArchive={canManage}
+          emailConfigured={emailConfigured}
+        />
+      )}
+
       {/*
         What this tank's water is supposed to look like — slice 4.2, second half.
 
@@ -442,6 +471,7 @@ export async function ReadingsBlock({
               organizationId={organizationId}
               poolId={poolId}
               overrides={bandOverrides}
+              reference={reference}
             />
           </div>
         </details>
