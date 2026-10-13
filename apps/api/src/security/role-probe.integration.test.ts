@@ -34,6 +34,7 @@ import {
 import { SpacesController } from '../spaces/spaces.controller.js';
 import { LeadsController, RegistrationSettingsController } from '../leads/leads.controller.js';
 import { LabResultsController } from '../facilities/lab-results.controller.js';
+import { ComplaintsSettingsController, RegulationsController } from '../facilities/regulations.controller.js';
 import { RecordsController } from '../students/records.controller.js';
 import {
   GuardiansController,
@@ -736,5 +737,21 @@ test('lab results refuse a guardian and a student (403)', async () => {
     await refused('POST facilities/pools/:poolId/lab-results/:id/archive', 403, () =>
       lab.archive(NO_SUCH_ID, NO_SUCH_ID),
     );
+  });
+});
+
+test('regulations and the complaints setting refuse a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const regulations = new RegulationsController();
+    await refused('GET facilities/:id/regulations', 403, () => regulations.list(NO_SUCH_ID));
+    await refused('POST facilities/:id/regulations', 403, () =>
+      regulations.publish(NO_SUCH_ID, { effectiveFrom: '2026-10-13', body: 'x' }),
+    );
+    await refused('POST facilities/:id/regulations/:id/archive', 403, () =>
+      regulations.archive(NO_SUCH_ID, NO_SUCH_ID),
+    );
+    const complaints = new ComplaintsSettingsController();
+    await refused('GET settings/complaints', 403, () => complaints.read());
+    await refused('PUT settings/complaints', 403, () => complaints.update({ regime: 'private' }));
   });
 });

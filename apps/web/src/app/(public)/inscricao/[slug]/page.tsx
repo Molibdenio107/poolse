@@ -4,6 +4,7 @@ import { fetchRegistrationForm, type RegistrationForm as Loaded } from '@/lib/pu
 import pt from '@/messages/pt-PT.json';
 import en from '@/messages/en.json';
 import { RegistrationForm, type RegistrationLabels } from './registration-form';
+import { PublicNotices } from '@/components/public-notices';
 
 /**
  * A club's public sign-up form — POOLSE-69.
@@ -143,6 +144,19 @@ export default async function RegistrationPage({
         weekdays={weekdays}
         labels={labels}
         errors={errors}
+      />
+      {/* POOLSE-73: the complaints book and each site's rules in force. */}
+      <PublicNotices
+        complaints={loaded.form.complaints}
+        regulations={loaded.form.regulations.map((r) =>
+          loaded!.form.regulations.length > 1 ? r : { effectiveFrom: r.effectiveFrom, body: r.body },
+        )}
+        labels={{
+          complaints: t('publicNotices.complaints'),
+          complaintsPublic: t('publicNotices.complaintsPublic'),
+          regulation: t('publicNotices.regulation'),
+          effectiveFrom: (date) => t('publicNotices.effectiveFrom', { date }),
+        }}
       />
     </>,
   );

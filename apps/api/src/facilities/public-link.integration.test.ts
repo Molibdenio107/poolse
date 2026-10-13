@@ -76,7 +76,7 @@ test('71 — the payload carries exactly the allowed keys and the latest reading
     const token = await publish(tenant, poolId);
 
     const page = await new PublicWaterController().page(token);
-    assert.deepEqual(Object.keys(page).sort(), ['facilityName', 'lab', 'poolName', 'readings', 'timezone']);
+    assert.deepEqual(Object.keys(page).sort(), ['complaints', 'facilityName', 'lab', 'poolName', 'readings', 'regulation', 'timezone']);
     assert.equal(page.poolName, 'Piscina Grande');
     for (const reading of page.readings) {
       assert.deepEqual(Object.keys(reading).sort(), [

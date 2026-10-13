@@ -3686,3 +3686,27 @@ the tank. `poolse_app` holds no DELETE on any of the three tables, and no UPDATE
 `lab_result_value`. `public_water_page()` gains `poolKind`, `poolUse` and `lab` (the latest live
 report's date and values). The API grades the report and passes on the grade and date only.
 Migration `1790416800000_lab-results.sql`; `packages/db/test/lab-results.sql`.
+
+### The complaints book and the operating regulation — POOLSE-73, 13 October 2026
+
+```
+organization
+  + complaints_regime complaints_regime not null default 'private'   -- private | public_service
+  + complaints_url text      -- https only; required when public_service (CHECK)
+
+facility_regulation
+  id, organization_id, facility_id                -- composite fk to facility
+  effective_from date, body text (1–50 000)
+  published_by_membership_id, created_at, archived_at
+unique (organization_id, facility_id, effective_from) where archived_at is null
+
+function facility_regulation_current(facility_id) returns uuid   -- latest live, day reached, site tz
+```
+
+`poolse_app` holds SELECT and INSERT on `facility_regulation`, plus UPDATE (archived_at) only.
+**The table-wide UPDATE from the default privileges is revoked first**, because a column GRANT
+on top of it restricts nothing. The same migration revokes it on POOLSE-72's
+`lab_result_alert`, which had shipped with that mistake. `public_water_page()` gains
+`complaintsRegime`, `complaintsUrl` and `regulation`. `public_lead_form()` gains the complaints
+pair and `regulations[]`. The private operator's link is the API's constant, not a column.
+Migration `1790460000000_public-notices.sql`; `packages/db/test/public-notices.sql`.

@@ -7,6 +7,7 @@ import { timeAgo } from '@/lib/relative-time';
 import { fetchPublicWater, type PublicReading } from '@/lib/public-water';
 import { cn } from '@/lib/utils';
 import { LabGradeChip } from '@/components/lab-grade-chip';
+import { PublicNotices } from '@/components/public-notices';
 import pt from '@/messages/pt-PT.json';
 import en from '@/messages/en.json';
 
@@ -148,6 +149,19 @@ export default async function PublicWaterPage({
           />
         </section>
       )}
+
+      {/* POOLSE-73: the complaints book and the rules in force, on every public page. */}
+      <PublicNotices
+        complaints={page.complaints}
+        regulations={page.regulation === null ? [] : [page.regulation]}
+        large={lobby}
+        labels={{
+          complaints: t('publicNotices.complaints'),
+          complaintsPublic: t('publicNotices.complaintsPublic'),
+          regulation: t('publicNotices.regulation'),
+          effectiveFrom: (date) => t('publicNotices.effectiveFrom', { date }),
+        }}
+      />
 
       <footer
         className={cn(

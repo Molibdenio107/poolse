@@ -1,6 +1,8 @@
+import { RegulationPanel, type ComplaintsSettingsView, type RegulationVersionView } from './regulation-panel';
+import { wallClockNow } from '@/lib/date-format';
 import Link from 'next/link';
 import { SectionPills, pickSection, sectionHref as sectionUrl } from '@/components/section-pills';
-import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import {
@@ -481,6 +483,40 @@ export default async function FacilityPage({
                 </section>
               )
             ),
+        },
+        {
+          /*
+            The operating regulation and where complaints go — POOLSE-73. Both
+            reach the public pages, so they are managed here, beside the site.
+            Every staff role reads; the API refuses a family, so the tab follows.
+          */
+          slug: 'regulation',
+          labelKey: 'regulation.tab',
+          content: async () => {
+            const [versions, complaints] = await Promise.all([
+              outcome(
+                apiFetch<{ versions: RegulationVersionView[] }>(`/facilities/${loaded.id}/regulations`),
+              ),
+              outcome(apiFetch<ComplaintsSettingsView>('/settings/complaints')),
+            ]);
+            if (versions.state !== 'ok') {
+              return <PageError message={t('detailTabs.loadFailed')} />;
+            }
+            return (
+              <section className="rounded border border-border bg-surface p-5">
+                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('regulation.title')}
+                </h2>
+                <RegulationPanel
+                  facilityId={loaded.id}
+                  versions={versions.data.versions}
+                  complaints={complaints.state === 'ok' ? complaints.data : null}
+                  canManage={loaded.canManage}
+                  today={wallClockNow(loaded.timezone ?? 'Europe/Lisbon').slice(0, 10)}
+                />
+              </section>
+            );
+          },
         },
         {
           slug: 'photos',

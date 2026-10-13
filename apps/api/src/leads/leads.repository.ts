@@ -1,6 +1,12 @@
 import { withOrg, withoutTenantScope, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import {
+  complaintsFor,
+  regulationFrom,
+  type PublicComplaints,
+  type PublicRegulation,
+} from '../facilities/public-notices.js';
+import {
   AlreadyEnrolledError,
   FullError,
   insertEnrollment,
@@ -28,6 +34,10 @@ import {
 
 export interface PublicLeadForm {
   clubName: string;
+  /** Where a complaint goes — POOLSE-73. */
+  complaints: PublicComplaints;
+  /** Each site's operating regulation in force; sites with none are left out. */
+  regulations: ({ facilityName: string } & PublicRegulation)[];
   /** Under this a swimmer needs a guardian — the club's own setting. */
   ageOfMajority: number;
   facilities: { id: string; name: string }[];
@@ -36,6 +46,9 @@ export interface PublicLeadForm {
 
 interface RawForm {
   clubName: string;
+  complaintsRegime: string | null;
+  complaintsUrl: string | null;
+  regulations: { facilityName: string; effectiveFrom: string; body: string }[];
   ageOfMajority: number;
   facilities: { id: string; name: string }[];
   levels: { id: string; name: string }[];
@@ -53,6 +66,11 @@ export async function readLeadForm(slug: string): Promise<PublicLeadForm | null>
   if (raw === null) return null;
   return {
     clubName: raw.clubName,
+    complaints: complaintsFor(raw.complaintsRegime, raw.complaintsUrl),
+    regulations: (raw.regulations ?? []).map((r) => ({
+      facilityName: r.facilityName,
+      ...regulationFrom(r)!,
+    })),
     ageOfMajority: raw.ageOfMajority,
     facilities: raw.facilities.map((f) => ({ id: f.id, name: f.name })),
     levels: raw.levels.map((l) => ({ id: l.id, name: l.name })),

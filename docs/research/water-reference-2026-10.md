@@ -72,6 +72,7 @@ Labels used below:
 - **Why it matters:** it is the most explicit official side-by-side of CNQ 23/93, DR 5/97 and WHO 2006. It also shows the three-tier classification as health authorities applied it before NP 4542:2017. It is regional and predates NP 4542:2017.
 
 ### 1.6 Other instruments checked
+- **Correction, same day:** the finding below is wrong. Portaria n.º 454/2023, de 28 de dezembro, exists, and art. 46.º is the operating-regulation rule. See `public-notices-2026-10.md` §2.1. The original note follows.
 - **"Portaria 454/2023": nothing found.** A search returned only Brazilian results. No Portuguese portaria with this number concerning pools turned up, and the DGS pool page does not list one. **UNVERIFIED that it exists or touches pools. Do not cite it.**
 - **No 2024 or 2025 Portuguese decree-law on pool water quality was found.** DL 69/2023 (water for human consumption) does not cover pool water. The DGS pool page lists no newer law.
 - **DL 141/2009 (sports facilities for public use):** listed on the DGS page and in ARSLVT 2014. I did not check whether it sets water parameters. ARSLVT says the licensing it provides for "não esteja regulamentada".
@@ -265,7 +266,7 @@ The daily record also holds the number of bathers, the fresh-water meter reading
 3. **Whether DR 5/97 has been revoked was not confirmed** against a consolidated version on diariodarepublica.pt (JS-rendered). It is still cited as in force as late as 2024–2026.
 4. **Despacho n.º 2064/2021** (the planned revision of the DGS pool norm) is known only from search snippets; the page would not render. No revised DGS norm was found.
 5. **"Circular Normativa n.º 24/2018 da DGS"** is cited by a municipality but appears nowhere at DGS. Probably an error.
-6. **"Portaria 454/2023"** was not found in any Portuguese source relevant to pools.
+6. **"Portaria 454/2023"** was not found in this search. **Corrected the same day**: it exists, and art. 46.º is the operating-regulation rule (`public-notices-2026-10.md` §2.1).
 7. **Garbled print in DR 5/97.** The "‹" characters are mis-encoded in the 1997 PDF and are probably "<". The temperature line ("‹ 24º a 30º") has ambiguous column placement. Read in context, the colonies line "‹ 100ml" means < 100 per mL.
 8. **Scrambled table in DGS CN 14/DA.** Tabela 5 came out jumbled in layout mode. The values above come from the `-raw` re-extraction, which pairs each parameter with its value cleanly. Turbidity "0,5 – 4" is printed as a range; INSA reads it as ≤ 4.
 9. **Madeira 2025, Tabela 2: one value uncertain.** Its turbidity cell extracted ambiguously, as "0,5-2,0" sitting where NP 4542 says ≤ 1,5. Its temperature is "≤32" for covered pools, which is not an NP 4542 figure. I have not relied on Madeira for either.

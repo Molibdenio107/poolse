@@ -16,6 +16,12 @@ import {
   type PoolUse,
 } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
+import {
+  complaintsFor,
+  regulationFrom,
+  type PublicComplaints,
+  type PublicRegulation,
+} from './public-notices.js';
 
 /**
  * A tank's public water page — POOLSE-71.
@@ -170,6 +176,10 @@ export interface PublicWaterPage {
    * no lab result, or the latest one has nothing gradeable in it.
    */
   lab: { grade: LabGrade; sampledAt: string } | null;
+  /** Where a complaint goes — POOLSE-73. Always present. */
+  complaints: PublicComplaints;
+  /** The facility's operating regulation in force, or null when none is published. */
+  regulation: PublicRegulation | null;
 }
 
 interface RawPage {
@@ -180,6 +190,9 @@ interface RawPage {
   poolUse: string | null;
   readings: { metric: string; value: number | string; unit: string; takenAt: string }[];
   bands: { metric: string; from: number | string | null; to: number | string | null }[];
+  complaintsRegime: string | null;
+  complaintsUrl: string | null;
+  regulation: { effectiveFrom: string; body: string } | null;
   lab: {
     sampledAt: string;
     values: { parameter: string; value: number | string; unit: string }[];
@@ -271,6 +284,8 @@ export async function readPublicWaterPage(
     timezone: raw.timezone,
     readings,
     lab: gradePublicLab(raw.lab, pool),
+    complaints: complaintsFor(raw.complaintsRegime, raw.complaintsUrl),
+    regulation: regulationFrom(raw.regulation),
   };
 }
 

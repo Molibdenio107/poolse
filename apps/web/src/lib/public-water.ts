@@ -28,6 +28,10 @@ export interface PublicWater {
   readings: PublicReading[];
   /** The latest laboratory grade and the day it was sampled — POOLSE-72. */
   lab: { grade: 'conforme' | 'conforme_condicionada' | 'nao_conforme'; sampledAt: string } | null;
+  /** Where a complaint goes — POOLSE-73. */
+  complaints: { regime: 'private' | 'public_service'; url: string };
+  /** The facility's operating regulation in force, or null. */
+  regulation: { effectiveFrom: string; body: string } | null;
 }
 
 function baseUrl(): string {

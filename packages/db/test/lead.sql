@@ -70,7 +70,7 @@ BEGIN
     RAISE EXCEPTION 'FAIL test 1a: an open club has no form';
   END IF;
   IF (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(v_form) k)
-     <> ARRAY['ageOfMajority', 'clubName', 'facilities', 'levels'] THEN
+     <> ARRAY['ageOfMajority', 'clubName', 'complaintsRegime', 'complaintsUrl', 'facilities', 'levels', 'regulations'] THEN
     RAISE EXCEPTION 'FAIL test 1a: the form carries keys %', v_form;
   END IF;
   IF jsonb_array_length(v_form->'levels') <> 1 THEN

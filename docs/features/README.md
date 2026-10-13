@@ -16,6 +16,7 @@ looks for it.
 | [spaces.md](spaces.md) | Espaços, the cleaning log, maintenance requests |
 | [maintenance.md](maintenance.md) | Planned maintenance: recurring tasks, who they are for, and the record of every time one was done |
 | [water-quality.md](water-quality.md) | The NP 4542 reference bands, a pool's use, and grading a laboratory result |
+| [public-notices.md](public-notices.md) | The complaints-book link and the versioned operating regulation on every public page |
 | [salaries.md](salaries.md) | What the club pays its staff: effective-dated rates, the two monthly-cost figures, and who may see them |
 | [classes.md](classes.md) | Turmas, parcerias, the lane grid |
 | [parcerias.md](parcerias.md) | Partnerships, their groups, the import and the export |

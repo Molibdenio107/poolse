@@ -288,6 +288,8 @@ const TENANT_TABLES = [
    * app role — cleaning it up is possible only because teardown runs as the
    * owner.
    */
+  // POOLSE-73. A version names its facility and its publisher.
+  'facility_regulation',
   // POOLSE-72. The alert names the report, the values belong to it.
   'lab_result_alert',
   'lab_result_value',

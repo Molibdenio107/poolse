@@ -38,6 +38,7 @@ import { LeadsController, RegistrationSettingsController } from './leads/leads.c
 import { PublicLeadsController } from './leads/public-leads.controller.js';
 import { LeadRetentionService } from './leads/lead-retention.service.js';
 import { LabResultsController } from './facilities/lab-results.controller.js';
+import { ComplaintsSettingsController, RegulationsController } from './facilities/regulations.controller.js';
 import {
   PoolPublicLinkController,
   PublicWaterController,
@@ -158,6 +159,8 @@ const IDENTITY_ONLY_ROUTES = [
     PoolPublicLinkController,
     PublicWaterController,
     LabResultsController,
+    RegulationsController,
+    ComplaintsSettingsController,
     LeadsController,
     RegistrationSettingsController,
     PublicLeadsController,

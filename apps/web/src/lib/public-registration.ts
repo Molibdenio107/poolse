@@ -13,6 +13,10 @@ export interface RegistrationForm {
     clubName: string;
     /** Under this a swimmer needs a guardian — the club's own setting. */
     ageOfMajority: number;
+    /** Where a complaint goes — POOLSE-73. */
+    complaints: { regime: 'private' | 'public_service'; url: string };
+    /** Each site's operating regulation in force. */
+    regulations: { facilityName: string; effectiveFrom: string; body: string }[];
     facilities: { id: string; name: string }[];
     levels: { id: string; name: string }[];
   };

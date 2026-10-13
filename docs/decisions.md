@@ -1092,3 +1092,8 @@ two gates that would hold the line afterwards (a `check-fields.mjs`, and widenin
   - **A lab grade is judged against the national reference for the tank, never a club's own bands.** A club may relax its working pH range; that does not make a sample *conforme* under NP 4542.
   - **Reading a lab PDF into the lab form is not built in this slice.** The water-log parser keeps reading chemistry only, and a lab report is typed in.
   - **On the public page, a free-chlorine reading is judged by pH only when both were taken in the same analysis.**
+- **2026-10-13** — **POOLSE-73, taken without asking:**
+  - **The complaints regime is the club's: private by default, or a public service that gives its own platform address.** The public-sector platform's URL could not be verified, so Poolse does not guess one.
+  - **The link is plain, prominent text, not the DGC icon.** The icon's artwork must come from the official kit.
+  - **The regulation is text, versioned by the day it takes effect, never edited.** No PDF in this slice.
+  - Correction to the morning's water research: **Portaria 454/2023 art. 46.º exists** and is the operating-regulation rule (`docs/research/public-notices-2026-10.md`).

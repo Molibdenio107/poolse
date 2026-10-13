@@ -92,6 +92,13 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN
     RAISE NOTICE 'PASS test 6: a value is written with its report and never edited';
   END;
+
+  BEGIN
+    UPDATE lab_result_alert SET parameters = '{e_coli}';
+    RAISE EXCEPTION 'FAIL test 7: an alert''s parameters were rewritten';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 7: an alert says what it said; only its delivery is stamped';
+  END;
 END $$;
 
 RESET ROLE;
