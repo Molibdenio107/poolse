@@ -95,6 +95,27 @@ come from the API, which requires a session, and that page is open to the world.
 card, a Mensal/Anual toggle defaulting to Anual, and the placeholder. A small public endpoint is
 what closes that gap on the day the numbers are settled.
 
+### Working prices — 12-10-2026
+
+Decided with Rui, not yet entered in Stripe. All figures exclude IVA.
+
+| | Monthly | Yearly |
+|---|---|---|
+| List price, per facility | €99 | €990 |
+| Each extra facility | €49 | €490 |
+| Founding price (the first two clubs) | €49 | €490 |
+
+**Flat per facility.** No student count is metered.
+
+**The founding price is a discount on the list price, not a second plan.** It is a Stripe coupon
+(50%, repeating for 12 months) on the same `poolse_full` price, or the same figure recorded as a
+manual payment. It always ends on a date, and the club is told that date in writing on day one.
+
+**The pilot club** stays `comped` for about its first year. After that it pays the founding price.
+
+**The aim for the first years is to break even, not to make a margin.** Two clubs at €49 roughly
+cover the ~€80–100/month of running costs (IVA included, `docs/deploy.md` *Paid services*).
+
 ## Paying
 
 **Poolse never holds a card.** Subscrever creates a Stripe Checkout session and sends the
