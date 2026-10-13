@@ -59,6 +59,21 @@ export interface Register {
   status: 'scheduled' | 'cancelled' | 'completed';
   instructorName: string | null;
   entries: RegisterEntry[];
+  /**
+   * Families coming to an aula experimental — POOLSE-69.
+   *
+   * Not entries: a lead is not a student, `attendance` needs a `student_id`,
+   * and nothing about a trial is marked. They hold a seat all the same, so the
+   * instructor is told who to expect, in words, beside the roll.
+   */
+  trialGuests: TrialGuest[];
+}
+
+export interface TrialGuest {
+  leadId: string;
+  name: string;
+  /** Whole years on the class's own day; null when it cannot be said. */
+  ageYears: number | null;
 }
 
 /*
@@ -248,6 +263,22 @@ export async function findRegister(
       [sessionId, session.local_date],
     );
 
+    /*
+     * Booked aulas experimentais — POOLSE-69. The same predicate
+     * session_free_seats() counts, so the seat and the name agree.
+     */
+    const { rows: trials } = await tx.query<{ id: string; name: string; age: number | null }>(
+      `SELECT l.id,
+              l.swimmer_first_name || ' ' || l.swimmer_last_name AS name,
+              extract(YEAR FROM age($2::date, l.swimmer_birth_date))::int AS age
+         FROM lead l
+        WHERE l.trial_session_id = $1
+          AND l.status = 'trial_booked'
+          AND l.archived_at IS NULL
+        ORDER BY l.swimmer_first_name, l.swimmer_last_name`,
+      [sessionId, session.local_date],
+    );
+
     return {
       sessionId,
       className: session.class_name,
@@ -272,6 +303,7 @@ export async function findRegister(
         isGuest: row.is_guest,
         insured: row.insured,
       })),
+      trialGuests: trials.map((row) => ({ leadId: row.id, name: row.name, ageYears: row.age })),
     };
   });
 }

@@ -5,6 +5,7 @@ import { LeadsController, RegistrationSettingsController } from './leads.control
 import { PublicLeadsController, forgetOrigins } from './public-leads.controller.js';
 import { LeadRetentionService } from './lead-retention.service.js';
 import { issueStamp } from './form-stamp.js';
+import { findRegister } from '../classes/attendance.repository.js';
 import {
   actingAs,
   addMember,
@@ -453,5 +454,27 @@ test('QA 8: retention archives an old unconverted lead and deletes nothing', asy
         ['Zé', false],
       ],
     );
+  });
+});
+
+test('a booked trial is named on the register, and leaves it when dismissed', async () => {
+  await withScratchTenant(async (tenant) => {
+    const slug = await openClub(tenant);
+    const { sessionId } = await turma(tenant, 5);
+    await publicApi.submit(slug, minor(slug), from());
+    const leadId = await onlyLead(tenant);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await new LeadsController().trial(leadId, { sessionId });
+      const register = await findRegister(tenant.organizationId, sessionId);
+      assert.equal(register!.entries.length, 0, 'a trial guest became a markable entry');
+      assert.equal(register!.trialGuests.length, 1);
+      assert.equal(register!.trialGuests[0]!.name, 'Tomás Reis');
+      assert.ok((register!.trialGuests[0]!.ageYears ?? 0) >= 8);
+
+      await new LeadsController().dismiss(leadId, { reason: 'Desistiu' });
+      const after = await findRegister(tenant.organizationId, sessionId);
+      assert.equal(after!.trialGuests.length, 0);
+    });
   });
 });

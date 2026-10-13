@@ -58,6 +58,9 @@ one call:
   - A cancelled class, a class that has started and a partnership hour all refuse.
   - A booked trial can be moved, and after the trial the request is still open for one of the
     other answers.
+  - **The class's register names who is coming**, with their age on the day, above the roll.
+    A trial guest isn't a student, so they are never marked; dismissing the request takes them
+    off.
 - **Dispensar** needs a reason. Nothing is sent to the family.
 
 Waitlisting and enrolling go through the student form's own rules (`parseStudent`):
@@ -84,5 +87,5 @@ Waitlisted requests are archived too; the student they created is untouched.
 ## Not built
 
 There's no email to the family on receipt or on an answer; that waits for the notifications
-phase. Instructors aren't shown trial guests on the register. There's also no online payment,
+phase. There's also no online payment,
 no picking a session from the public form, and no parent account.

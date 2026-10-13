@@ -2562,7 +2562,10 @@
     "restricted": "This section is for instructors, administrators and owners.",
     "attendanceRecorded": "This class already has attendance recorded, so it cannot be cancelled.",
     "guest": "Make-up",
-    "noInsurance": "No insurance"
+    "noInsurance": "No insurance",
+    "trialGuests": "{count, plural, one {Trial lesson: # person} other {Trial lessons: # people}}",
+    "trialGuest": "{name}, {age}",
+    "trialGuestsHint": "Coming to try the class, and holding a place in it. They are not marked on the register."
   },
   "calendar": {
     "resizeLanes": "Drag to change how many lanes it uses",

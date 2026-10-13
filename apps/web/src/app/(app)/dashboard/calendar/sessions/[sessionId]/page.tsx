@@ -87,6 +87,28 @@ export default async function AttendancePage({
 
       {register !== null && (
         <>
+          {/*
+            Aulas experimentais — POOLSE-69. Above the roll and outside the form:
+            nothing here is marked, and a trial guest is not a student. Words, so
+            "who is the child I don't know" has its answer before the class starts.
+          */}
+          {register.trialGuests.length > 0 && register.status !== 'cancelled' && (
+            <section className="flex flex-col gap-2 rounded border border-border bg-surface p-4">
+              <h2 className="font-medium">
+                {t('attendance.trialGuests', { count: register.trialGuests.length })}
+              </h2>
+              <ul className="flex flex-col gap-1 text-sm">
+                {register.trialGuests.map((guest) => (
+                  <li key={guest.leadId}>
+                    {guest.ageYears === null
+                      ? guest.name
+                      : t('attendance.trialGuest', { name: guest.name, age: guest.ageYears })}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-foreground-muted">{t('attendance.trialGuestsHint')}</p>
+            </section>
+          )}
 
           {/*
             A cancelled class is not marked. Saying so beats rendering a register

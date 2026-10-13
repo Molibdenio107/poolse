@@ -2378,6 +2378,11 @@ export interface Register {
   status: 'scheduled' | 'cancelled' | 'completed';
   instructorName: string | null;
   entries: RegisterEntry[];
+  /**
+   * Families coming to an aula experimental — POOLSE-69. Not entries: nobody
+   * marks a trial, but the instructor is told who to expect.
+   */
+  trialGuests: { leadId: string; name: string; ageYears: number | null }[];
 }
 
 export interface Calendar {
