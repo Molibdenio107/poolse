@@ -4386,3 +4386,60 @@ export interface TenantSupport {
   live: { grantId: string; source: SupportSource; expiresAt: string } | null;
   pendingRequest: { id: string; reason: string; requestedAt: string } | null;
 }
+
+/**
+ * A public pre-registration — POOLSE-69. `open` leads are `new` or
+ * `trial_booked`; the rest have been answered. The swimmer's birth date is a
+ * day (`YYYY-MM-DD`), never an instant.
+ */
+export type LeadStatus = 'new' | 'waitlisted' | 'trial_booked' | 'converted' | 'dismissed';
+
+export interface Lead {
+  id: string;
+  status: LeadStatus;
+  createdAt: string;
+  swimmerFirstName: string;
+  swimmerLastName: string;
+  swimmerBirthDate: string;
+  swimmerTaxNumber: string | null;
+  guardianName: string | null;
+  guardianRelationship: string | null;
+  guardianTaxNumber: string | null;
+  email: string;
+  phone: string | null;
+  note: string | null;
+  locale: string;
+  preferredDays: number[];
+  facilityId: string | null;
+  facilityName: string | null;
+  levelId: string | null;
+  levelName: string | null;
+  consentTextVersion: string;
+  consentedAt: string;
+  dismissedReason: string | null;
+  studentId: string | null;
+  trialSessionId: string | null;
+  trialStartsAt: string | null;
+  trialGroupName: string | null;
+  trialTimezone: string | null;
+  decidedAt: string | null;
+}
+
+export interface Leads {
+  leads: Lead[];
+  retentionMonths: number;
+}
+
+export interface TrialOption {
+  sessionId: string;
+  startsAt: string;
+  timezone: string;
+  /** Null when the turma has no recorded capacity — not measured, not zero. */
+  freeSeats: number | null;
+}
+
+/** The club's public sign-up switch and address — POOLSE-69. */
+export interface RegistrationSettings {
+  slug: string;
+  open: boolean;
+}

@@ -18,6 +18,9 @@ const isPublicRoute = createRouteMatcher([
   // POOLSE-71's public water page, opened from a QR at the entrance by people
   // who have no account. It reads one token and nothing else.
   '/agua(.*)',
+  // POOLSE-69's public sign-up form, linked from a club's own website. It
+  // reads and writes through the API's slug-keyed public routes and nothing else.
+  '/inscricao(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

@@ -31,10 +31,16 @@ beforeEach(forgetOrigins);
 const publicApi = new PublicLeadsController();
 let visitor = 0;
 
-/** A fresh address per call unless one is given, so QA 3 is the only test that floods. */
+/**
+ * A fresh visitor per call unless one is given, so QA 3 is the only test that
+ * floods. `ip` is the Next server, the same for everybody, as in production.
+ */
 function from(ip?: string): Request {
   visitor += 1;
-  return { ip: ip ?? `203.0.113.${visitor % 250}` } as Request;
+  return {
+    ip: '10.0.0.1',
+    headers: { 'x-poolse-client-ip': ip ?? `203.0.113.${visitor % 250}` },
+  } as unknown as Request;
 }
 
 /** A stamp issued ten seconds ago — old enough to be a person, young enough to be fresh. */

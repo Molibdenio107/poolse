@@ -23,6 +23,7 @@ looks for it.
 | [calendar.md](calendar.md) | The dated week, the hover card, cancelling a class |
 | [staff.md](staff.md) | Qualifications with expiry: verde, âmbar, vermelho, em falta, and the opt-in block |
 | [messages.md](messages.md) | Writing to families: who a message reaches, the daily ceiling, and the record of who was told |
+| [registration.md](registration.md) | The public pre-registration form, the request queue, trial lessons and the 12-month archive |
 | [billing.md](billing.md) | Price list, periodicities, what a student pays |
 | [incidents.md](incidents.md) | Bather incidents: the facts, the encrypted clinical detail, addenda, who may read what |
 | [reception.md](reception.md) | Free swim: what a site sells, who is in the water, selling an entry and checking somebody in |

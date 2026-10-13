@@ -1,0 +1,88 @@
+# Pre-registration
+
+POOLSE-69, roadmap 7.3. **Alunos → Pedidos de inscrição** (`/dashboard/students/pedidos`), and
+the public form at **`/inscricao/<slug>`** (`?lang=en` for English).
+
+## The public form
+
+A family fills in a request from a link on the club's website or a poster at reception. There's
+no login and nothing to pay. The form asks for:
+
+- the swimmer: name, surname, birth date and, optionally, a NIF;
+- for anyone under 18, a guardian with a full name and a relationship (the guardian's NIF is
+  optional);
+- an email, which is the guardian's for a minor, and an optional mobile number;
+- a preferred site (offered only when the club has more than one), level and days;
+- a note, which tells the family not to put health information in it;
+- the consent sentence, which names the club and the 12-month archive. The request records the
+  sentence's version and when it was ticked.
+
+**The club opens the form, and it is closed by default.** Until the Owner opens it, the link
+says *Este formulário não está disponível*, exactly as an address no club uses does.
+
+**The answer never depends on the club.** Once a request is shaped like a sign-up, the family
+always reads *Recebemos o seu pedido*. Three things are refused silently, and none of them
+changes that answer:
+
+- A hidden honeypot box that has been filled in.
+- A form that wasn't rendered recently: an HMAC stamp issued with the page must be between 3 s
+  and 4 h old.
+- More than 5 sends a minute from one visitor (`x-poolse-client-ip`, which the web forwards as
+  signup does).
+
+The database adds two more silent refusals:
+
+- An unknown, closed, suspended, archived or read-only club.
+- More than 30 requests to one club in 10 minutes.
+
+A site or level id that isn't the club's becomes *no preference*. A malformed body is a 400
+naming its fields, decided before any club is looked at.
+
+## The queue
+
+Owner and Admin. Three sections:
+
+- **Por tratar:** new requests and booked trials.
+- **Tratados:** waitlisted, enrolled and dismissed requests.
+- **Formulário público:** the switch and the address.
+
+Everything a family sent is visible text on the request's card. Each answer is one dialog and
+one call:
+
+- **Inscrever** creates the student and guardian and enrols them in a chosen turma, in one
+  transaction. A full turma refuses and leaves nothing behind.
+- **Lista de espera** does the same and puts the student on the turma's waiting list.
+- **Aula experimental** books one occurrence in the next four weeks.
+  - It takes a place counted by `session_free_seats()`, beside the reposição guests.
+  - A full occurrence refuses with its numbers.
+  - A cancelled class, a class that has started and a partnership hour all refuse.
+  - A booked trial can be moved, and after the trial the request is still open for one of the
+    other answers.
+- **Dispensar** needs a reason. Nothing is sent to the family.
+
+Waitlisting and enrolling go through the student form's own rules (`parseStudent`):
+
+- the club's age of majority and the guardian requirement;
+- the NIF checksum, and one NIF per person;
+- guardian matching on NIF, else email.
+
+**A swimmer NIF that already belongs to a student attaches the request to that student** rather
+than creating a second one. The free-text note is never copied onto the student.
+
+## The address
+
+The address is `organization.slug`, the same one the club has had since signup. **Only the
+Owner** can change it or open and close the form; an Admin sees the link. A taken address is
+refused by name. Changing it moves the link every poster already prints, and the form says so.
+
+## Retention
+
+A request that never became an enrolment is **archived after 12 months** (`lead_retention()`)
+by a daily job, run per club inside the club's own policy. Requests are never deleted.
+Waitlisted requests are archived too; the student they created is untouched.
+
+## Not built
+
+There's no email to the family on receipt or on an answer; that waits for the notifications
+phase. Instructors aren't shown trial guests on the register. There's also no online payment,
+no picking a session from the public form, and no parent account.

@@ -265,6 +265,10 @@ const SECTIONS: Item[] = [
       // Encarregados de educação belong with the families, not with the staff —
       // POOLSE-35.
       { href: '/dashboard/students/guardians', key: 'students.guardiansTitle' },
+      // Pedidos de inscrição — POOLSE-69. Second, under Encarregados: a request
+      // is a family that is not a student yet, and in September it is the list
+      // reception works first. The roles are the endpoint's own.
+      { href: '/dashboard/students/pedidos', key: 'leads.title', roles: ['owner', 'admin'] },
       // Mensagens sit with the families they are written to — POOLSE-67. The
       // roles are the endpoint's own; an instructor writes to their own turmas.
       {

@@ -65,6 +65,10 @@ const SAME_ON_PURPOSE = new Map([
   ['students.taxNumber', 'a Portuguese acronym, used as-is in both languages'],
   // The field names the import lists when it says what it will fill in.
   ['students.import.updateField.taxNumber', 'the same Portuguese acronym'],
+  // POOLSE-69's public form: NIF is the acronym, and "Email" is the word the
+  // Portuguese catalogue already uses ("Email de contacto").
+  ['leads.public.swimmerTaxNumber', 'the same Portuguese acronym'],
+  ['leads.public.email', 'the word the Portuguese catalogue already uses'],
   ['students.import.updateField.contactEmail', '"email" is the ordinary pt-PT word too'],
   // A file-format name and its extension. "CSV" is not an English word being
   // left untranslated; it is what the format is called in every language.

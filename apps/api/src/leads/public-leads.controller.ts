@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { isValidNif } from '@poolse/rules';
+import { clientIpFrom } from '../organizations/signup-claim.js';
 import { issueStamp, stampIsFresh } from './form-stamp.js';
 import {
   readLeadForm,
@@ -109,7 +110,7 @@ export class PublicLeadsController {
     const quiet =
       isFilled(body['website']) ||
       !stampIsFresh(slug, body['stamp']) ||
-      !originAllows(request.ip ?? 'unknown');
+      !originAllows(clientIpFrom(request.headers['x-poolse-client-ip']) ?? request.ip ?? 'unknown');
 
     if (!quiet) {
       try {

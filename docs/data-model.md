@@ -3601,3 +3601,45 @@ Migration `1790244000000_support-grant.sql`.
 - **Both tenant policies are `TO poolse_app`.** Permissive policies OR together, so once the
   platform could insert, an unscoped tenant policy would have let it write an Owner's grant
   whenever the club GUC matched. `support-access.sql` test 5b caught it.
+
+### Pre-registration — POOLSE-69, 13 October 2026
+
+```
+organization
+  + public_registration_open boolean not null default false
+  + CHECK organization_slug_shape            -- ^[a-z0-9]+(-[a-z0-9]+)*$, 3–60 chars
+
+lead
+  id, organization_id
+  facility_id, level_id                      -- composite fks, nullable = no preference
+  preferred_days smallint[]                  -- ISO weekdays; empty = any day
+  swimmer_first_name, swimmer_last_name, swimmer_birth_date date, swimmer_tax_number
+  guardian_name, guardian_relationship, guardian_tax_number
+  email, phone, note, locale ('pt-PT' | 'en')
+  consent_text_version, consented_at
+  status lead_status                         -- new | waitlisted | trial_booked | converted | dismissed
+  dismissed_reason                           -- required when dismissed
+  student_id                                 -- composite fk; required when waitlisted/converted
+  trial_session_id                           -- composite fk to class_session; required when trial_booked
+  decided_by_membership_id, decided_at
+  created_at, updated_at, archived_at
+
+function public_lead_form(p_slug text) returns jsonb       -- SECURITY DEFINER
+function submit_lead(p_slug text, p_lead jsonb) returns void   -- SECURITY DEFINER
+function lead_retention() returns interval                -- 12 months
+function archive_stale_leads() returns integer            -- current tenant; archives, never deletes
+trigger lead_trial_capacity                               -- DETAIL trial_capacity|<capacity>|<taken>
+```
+
+**The two definer functions are the whole public boundary**, keyed on the slug, the
+`public_water_page()` pattern. `public_lead_form` returns `clubName`, `facilities[{id,name}]`
+and `levels[{id,name}]` for an open, live, writable club, and null otherwise. `submit_lead`
+writes or doesn't and returns nothing either way. It refuses a closed or unknown club and more
+than 30 leads per club in 10 minutes, and it drops a site or level id that isn't the club's
+to null.
+
+**An aula experimental is `trial_session_id` while `status = 'trial_booked'`.**
+`session_free_seats()` subtracts it, beside the reposição guests. `lead_trial_capacity` locks
+the session and refuses a full one, a cancelled one, one that has started, or a partnership
+hour. `poolse_app` holds no DELETE on `lead`. Migration `1790330400000_lead.sql`;
+`packages/db/test/lead.sql`.
