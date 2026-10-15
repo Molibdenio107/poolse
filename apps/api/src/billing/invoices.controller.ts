@@ -10,6 +10,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { clubToday } from '../common/club-day.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import {
@@ -408,8 +409,9 @@ function readChase(body: Record<string, unknown>): ChaseInput {
  * date a payment yesterday. `paid_on` still defaults in SQL for anything that
  * reaches the table another way.
  */
+/** The club's day, not UTC's — `common/club-day.ts`. */
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return clubToday();
 }
 
 function cents(value: unknown, field: string): number {

@@ -242,7 +242,10 @@ export class CompensationController {
 
     await mayTouch(organizationId, membershipId);
 
-    return { history: await listHistory(organizationId, membershipId), canEdit: true };
+    return {
+      history: await listHistory(organizationId, membershipId),
+      canEdit: !isOwnRateForAnAdmin(membershipId),
+    };
   }
 
   /** A new rate. Closes the one it succeeds; never edits it. */
@@ -254,7 +257,7 @@ export class CompensationController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    await mayTouch(organizationId, membershipId);
+    await mayWrite(organizationId, membershipId);
 
     return refuseOverlap(() => addRate(organizationId, membershipId, readRate(body)));
   }
@@ -270,7 +273,7 @@ export class CompensationController {
 
     const rate = await findRate(organizationId, id);
     if (rate === null) throw new NotFoundException('No such rate');
-    await mayTouch(organizationId, rate.staffMembershipId);
+    await mayWrite(organizationId, rate.staffMembershipId);
 
     const edit = readRate(body);
     const effectiveTo = optionalDate(body['effectiveTo'], 'effectiveTo');
@@ -291,7 +294,7 @@ export class CompensationController {
 
     const rate = await findRate(organizationId, id);
     if (rate === null) throw new NotFoundException('No such rate');
-    await mayTouch(organizationId, rate.staffMembershipId);
+    await mayWrite(organizationId, rate.staffMembershipId);
 
     await refuseOverlap(() => archiveRate(organizationId, id));
     return { ok: true };
@@ -307,6 +310,25 @@ export class CompensationController {
  * understand. Collapsing them into one answer would either confirm the existence
  * of rows in other clubs or tell an Admin their colleague does not exist.
  */
+/**
+ * An Admin writing their own pay — sweep of 15-10-2026. They may read it, and
+ * the Owner sets it, as the Owner's own is theirs alone: nobody raises their
+ * own salary.
+ */
+function isOwnRateForAnAdmin(membershipId: string): boolean {
+  return !hasRole('owner') && membershipId === currentTenant().membershipId;
+}
+
+async function mayWrite(organizationId: string, membershipId: string): Promise<void> {
+  await mayTouch(organizationId, membershipId);
+  if (isOwnRateForAnAdmin(membershipId)) {
+    throw new ForbiddenException({
+      code: 'compensation_not_your_own',
+      message: 'Your own rate is set by the owner',
+    });
+  }
+}
+
 async function mayTouch(organizationId: string, membershipId: string): Promise<void> {
   const verdict = await canSeeCompensation(organizationId, viewer(), membershipId);
 

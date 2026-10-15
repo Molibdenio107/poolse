@@ -83,6 +83,10 @@ export function StaffForm({
           autoComplete="family-name"
           maxLength={120}
         />
+        {/* Said before anybody tries: the name of somebody who signs in is theirs. */}
+        {staff.clerkUserId !== null && (
+          <p className="text-sm text-foreground-muted sm:col-span-2">{t('staff.nameHasLogin')}</p>
+        )}
         <TextField
           name="phone"
           type="tel"

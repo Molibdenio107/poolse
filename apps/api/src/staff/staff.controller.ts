@@ -133,7 +133,23 @@ export class StaffController {
      * anywhere, which is why this happens before the row is touched.
      */
     const clerkHandled = staff.clerkUserId !== null;
-    if (clerkHandled) {
+    const renamed =
+      (edit.firstName ?? '') !== (staff.firstName ?? '') || (edit.lastName ?? '') !== (staff.lastName ?? '');
+
+    /*
+     * A login's name is the person's own, in every club — sweep of 15-10-2026.
+     * Clerk holds one name for them, so an Admin here (or a support session)
+     * writing it renamed them in every other club and on their own account. Only
+     * the person changes it, on O meu perfil; an unchanged name passes through.
+     */
+    if (clerkHandled && renamed && !own) {
+      throw new ForbiddenException({
+        code: 'name_is_theirs',
+        message: 'This person signs in, and only they can change their name',
+      });
+    }
+
+    if (clerkHandled && renamed) {
       await updateClerkName(staff.clerkUserId as string, edit.firstName, edit.lastName);
     }
 

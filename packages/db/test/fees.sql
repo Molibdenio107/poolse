@@ -442,10 +442,15 @@ BEGIN
   END IF;
 
   -- A quarterly line is asked for one payment a quarter, not one a month.
-  IF current_period_start(DATE '2026-01-15', NULL, 3::smallint)
-     <> DATE '2026-07-15' THEN
-    RAISE EXCEPTION 'FAIL test 7b-c: the quarterly occurrence was %',
-      current_period_start(DATE '2026-01-15', NULL, 3::smallint);
+  -- Whatever today is (this pinned 15-07-2026 and failed the day the next
+  -- quarter began, 15-10-2026): the occurrence is a whole number of quarters
+  -- after the start, at or before today, and the next one is after today.
+  v_start := current_period_start(DATE '2025-01-15', NULL, 3::smallint);
+  IF v_start > club_today()
+     OR (v_start + interval '3 months')::date <= club_today()
+     OR extract(day FROM v_start) <> 15
+     OR ((extract(year FROM v_start) - 2025) * 12 + extract(month FROM v_start) - 1)::int % 3 <> 0 THEN
+    RAISE EXCEPTION 'FAIL test 7b-c: the quarterly occurrence was % (today %)', v_start, club_today();
   END IF;
 
   -- An ended line is not asking for anything.

@@ -37,6 +37,10 @@ export async function saveStaffAction(
   try {
     await apiPatch(`/staff/${membershipId}`, body, { organizationId });
   } catch (error) {
+    // A login's name is the person's own — the API refuses anybody else.
+    if (error instanceof ApiError && error.code === 'name_is_theirs') {
+      return { ok: false, errorKey: 'staff.nameIsTheirs' };
+    }
     if (error instanceof ApiError && error.status === 403) {
       return { ok: false, errorKey: 'staff.notYours' };
     }

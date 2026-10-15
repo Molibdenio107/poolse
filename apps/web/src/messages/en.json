@@ -187,6 +187,8 @@
     "birthdayToday": "Birthday today"
   },
   "staff": {
+    "nameIsTheirs": "This person has an account, and only they can change their name, under My profile.",
+    "nameHasLogin": "This person has an account: the name is their account’s, and only they can change it, under My profile.",
     "title": "Staff",
     "subtitle": "Who works at the club, and who has been invited.",
     "backToStaff": "Back to Staff",

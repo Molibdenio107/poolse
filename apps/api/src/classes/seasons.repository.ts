@@ -422,7 +422,22 @@ export async function discardDraft(
     );
     if (Number(groups[0]?.count ?? '0') > 0) return false;
 
-    await tx.query(`DELETE FROM facility_time_slot WHERE season_id = $1`, [seasonId]);
+    /*
+     * Anything else that already points at the draft — a price for its
+     * inscrição, a parceria's booking, an archived turma — makes it not a scrap
+     * of paper either. Sweep of 15-10-2026: the foreign key refused the DELETE
+     * with 23503 and the operator got a 500. The database knows every
+     * reference; a list kept here would not, so its refusal is the answer.
+     */
+    await tx.query('SAVEPOINT discard_draft');
+    try {
+      await tx.query(`DELETE FROM facility_time_slot WHERE season_id = $1`, [seasonId]);
+      await tx.query(`DELETE FROM season WHERE id = $1`, [seasonId]);
+    } catch (error) {
+      if ((error as { code?: string }).code !== '23503') throw error;
+      await tx.query('ROLLBACK TO SAVEPOINT discard_draft');
+      return false;
+    }
 
     await recordAudit(tx, {
       action: 'season.draft.discarded',
@@ -430,8 +445,6 @@ export async function discardDraft(
       entityId: seasonId,
       data: { name: draft.name },
     });
-
-    await tx.query(`DELETE FROM season WHERE id = $1`, [seasonId]);
 
     return true;
   });

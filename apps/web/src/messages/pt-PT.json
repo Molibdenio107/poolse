@@ -187,6 +187,8 @@
     "birthdayToday": "Faz anos hoje"
   },
   "staff": {
+    "nameIsTheirs": "Esta pessoa tem conta e só ela pode mudar o seu nome, em O meu perfil.",
+    "nameHasLogin": "Esta pessoa tem conta: o nome é o da conta dela e só ela o pode mudar, em O meu perfil.",
     "title": "Staff",
     "subtitle": "Quem trabalha no clube, e quem foi convidado.",
     "backToStaff": "Voltar ao Staff",

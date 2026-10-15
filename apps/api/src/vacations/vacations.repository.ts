@@ -472,6 +472,17 @@ export type DecisionOutcome = 'decided' | 'not_found' | 'not_pending';
  * not here — there are three callers and the one that forgets is the one that
  * ships.
  */
+/** Whose request this is, or null when there is none — for the self-decision guard. */
+export async function requesterOf(organizationId: string, requestId: string): Promise<string | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ membership_id: string }>(
+      `SELECT membership_id FROM vacation_request WHERE id = $1 AND archived_at IS NULL`,
+      [requestId],
+    );
+    return rows[0]?.membership_id ?? null;
+  });
+}
+
 export async function decideRequest(
   organizationId: string,
   requestId: string,

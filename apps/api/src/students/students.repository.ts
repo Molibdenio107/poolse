@@ -663,10 +663,16 @@ const PAYMENT_STATE = `(
          END
     FROM student_fee sf
     JOIN fee_plan fpl ON fpl.id = sf.fee_plan_id
-    JOIN fee_period fp ON fp.id = sf.fee_period_id
+    -- LEFT, sweep of 15-10-2026: a one-off inscrição or seguro has no period,
+    -- and an inner join dropped it — the badge said paid while the student's
+    -- own page showed the joining fee overdue. Its one occurrence is starts_on.
+    LEFT JOIN fee_period fp ON fp.id = sf.fee_period_id
     JOIN facility f ON f.id = fpl.facility_id
     CROSS JOIN LATERAL (
-      SELECT current_period_start(sf.starts_on, sf.ends_on, fp.months) AS period_start
+      SELECT CASE
+               WHEN sf.fee_period_id IS NULL THEN sf.starts_on
+               ELSE current_period_start(sf.starts_on, sf.ends_on, fp.months)
+             END AS period_start
     ) cur
     LEFT JOIN student_fee_payment pay
            ON pay.student_fee_id = sf.id AND pay.period_start = cur.period_start

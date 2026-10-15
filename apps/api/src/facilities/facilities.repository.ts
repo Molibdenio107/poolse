@@ -682,12 +682,26 @@ async function setLaneCount(
    * is what lets them go and move it.
    */
   const { rows: inUse } = await tx.query<{ lane_name: string; group_name: string }>(
-    `SELECT l.name AS lane_name, cg.name AS group_name
-       FROM class_group cg
-       JOIN lane l ON l.id = cg.lane_id
-      WHERE cg.lane_id = ANY($1::uuid[])
-        AND cg.archived_at IS NULL
-      ORDER BY l.position, cg.name`,
+    `SELECT lane_name, group_name FROM (
+       SELECT l.position, l.name AS lane_name, cg.name AS group_name
+         FROM class_group cg
+         JOIN lane l ON l.id = cg.lane_id
+        WHERE cg.lane_id = ANY($1::uuid[])
+          AND cg.archived_at IS NULL
+       UNION
+       -- And every live booking holding the lane — sweep of 15-10-2026. Multi-lane
+       -- turmas, parcerias and free-swim blocks keep their lanes here, not on the
+       -- turma, and shrinking the pool archived those lanes under them.
+       SELECT l.position, l.name, coalesce(cg.name, pg.name, sch.title, '?')
+         FROM booking_lane bl
+         JOIN lane l ON l.id = bl.lane_id
+         JOIN class_schedule sch ON sch.id = bl.schedule_id AND sch.organization_id = bl.organization_id
+         LEFT JOIN class_group cg ON cg.id = sch.class_group_id AND cg.organization_id = sch.organization_id
+         LEFT JOIN partner_group pg ON pg.id = sch.partner_group_id AND pg.organization_id = sch.organization_id
+        WHERE bl.lane_id = ANY($1::uuid[])
+          AND sch.archived_at IS NULL
+     ) used
+      ORDER BY position, group_name`,
     [doomed.map((lane) => lane.id)],
   );
 

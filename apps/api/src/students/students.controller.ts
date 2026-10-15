@@ -282,7 +282,21 @@ export class PeopleDedupController {
     // Zero means one of them was not live in this tenant — which is also the
     // answer for another tenant's id, because RLS hid it. The caller learns
     // nothing either way.
-    const rows = await mergePeople(organizationId, keepId, absorbId);
+    /*
+     * What is not a duplicate is refused by the function — sweep of 15-10-2026:
+     * absorbing the Owner (ownership changes hands only by transfer), two
+     * records that each have a login, and a support membership.
+     */
+    let rows: number;
+    try {
+      rows = await mergePeople(organizationId, keepId, absorbId);
+    } catch (error) {
+      const pgError = error as { code?: string; message?: string };
+      if (pgError.code === 'P0001' && ['merge_absorbs_owner', 'merge_two_logins', 'merge_support'].includes(pgError.message ?? '')) {
+        throw new ConflictException({ code: pgError.message, message: 'These two records cannot be merged' });
+      }
+      throw error;
+    }
     return { merged: true, rows };
   }
 }
@@ -436,11 +450,13 @@ export class StudentsController {
       throw new NotFoundException('No such student');
     }
 
+    // A 404, like every other family read — sweep of 15-10-2026: a 403 here told
+    // a stranger which student ids exist.
     if (
       !hasRole('owner', 'admin', 'instructor') &&
       !(await mayActForStudent(organizationId, membershipId, id))
     ) {
-      throw new ForbiddenException('That student is not yours');
+      throw new NotFoundException('No such student');
     }
 
     return { credits: await creditsFor(organizationId, id) };
@@ -1313,6 +1329,9 @@ export class AdvancementController {
   @Post(':id/dismiss')
   async dismiss(@Param('id') id: string): Promise<{ dismissed: true }> {
     requireRole('owner', 'admin', 'instructor');
+    // The same row check `confirm` makes — sweep of 15-10-2026: any instructor
+    // could dismiss a proposal about another instructor's student.
+    await requireMyProposal(id);
     const { organizationId, membershipId } = currentTenant();
 
     const outcome = await dismissProposal(organizationId, id, membershipId);

@@ -720,8 +720,11 @@ export async function reissueInvitation(
     // Retire the placeholder membership the old invitation created, exactly as
     // revoking does — the replacement makes its own.
     await tx.query(
+      // Only a placeholder's roles — sweep of 15-10-2026. A staff re-invite points
+      // at the person's live membership, and revoking it stripped their roles.
       `UPDATE membership_role SET archived_at = now()
-        WHERE membership_id = $1 AND archived_at IS NULL`,
+        WHERE membership_id = $1 AND archived_at IS NULL
+          AND EXISTS (SELECT 1 FROM membership m WHERE m.id = $1 AND m.status = 'invited')`,
       [previous.membership_id],
     );
     await tx.query(
@@ -806,8 +809,11 @@ export async function revokeInvitation(
     if (!membershipId) return false;
 
     await tx.query(
+      // Only a placeholder's roles — sweep of 15-10-2026. A staff re-invite points
+      // at the person's live membership, and revoking it stripped their roles.
       `UPDATE membership_role SET archived_at = now()
-        WHERE membership_id = $1 AND archived_at IS NULL`,
+        WHERE membership_id = $1 AND archived_at IS NULL
+          AND EXISTS (SELECT 1 FROM membership m WHERE m.id = $1 AND m.status = 'invited')`,
       [membershipId],
     );
     await tx.query(

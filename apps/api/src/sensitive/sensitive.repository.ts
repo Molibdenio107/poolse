@@ -522,6 +522,10 @@ export async function contactCandidates(
          FROM membership m
          LEFT JOIN app_user u ON u.id = m.app_user_id
         WHERE m.status = 'active'
+          -- Not an archived person, and never Poolse support — sweep of 15-10-2026
+          -- (POOLSE-79: a read over every membership leaves support out).
+          AND m.archived_at IS NULL
+          AND m.support_grant_id IS NULL
         ORDER BY lower(strip_accents(coalesce(m.last_name, ''))),
                  lower(strip_accents(coalesce(m.first_name, '')))`,
     );

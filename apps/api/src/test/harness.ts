@@ -194,6 +194,8 @@ const TENANT_TABLES = [
   // the lines and before the facility it is held at.
   'insurance_policy',
   'student_sensitive',
+  // Child of student, no cascade — missing until the sweep of 15-10-2026.
+  'student_medical_leave',
   'consent',
   'guardian_link',
   'enrollment',

@@ -70,7 +70,7 @@ export class HealthController {
         await pool.query('SELECT 1');
       }),
       timed('timescale', checkTimescale),
-      timed('clerk', checkClerk),
+      clerkCheck(),
     ]);
 
     const checks = [postgres, timescale, clerk];
@@ -154,6 +154,24 @@ async function checkTimescale(): Promise<CheckStatus | void> {
  * Without a secret key configured this is `not_installed` rather than failing:
  * a developer running the API with Clerk stubbed out is not an incident.
  */
+/**
+ * The Clerk check, answered from memory for 30 seconds — sweep of 15-10-2026.
+ * This endpoint is public and unthrottled, and each call spent one request of
+ * the backend key's Clerk quota: a flood of /health could push the key into
+ * Clerk's rate limit and take sign-in reads down with it. Postgres is still
+ * asked every time, because that answer is the deploy gate.
+ */
+const CLERK_CHECK_TTL_MS = 30_000;
+let clerkCached: { at: number; check: Promise<DependencyCheck> } | null = null;
+
+function clerkCheck(): Promise<DependencyCheck> {
+  const now = Date.now();
+  if (clerkCached === null || now - clerkCached.at > CLERK_CHECK_TTL_MS) {
+    clerkCached = { at: now, check: timed('clerk', checkClerk) };
+  }
+  return clerkCached.check;
+}
+
 async function checkClerk(): Promise<CheckStatus | void> {
   const secret = process.env['CLERK_SECRET_KEY'];
   if (!secret) return 'not_installed';

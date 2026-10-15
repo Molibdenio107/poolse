@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  ForbiddenException,
   Get,
   Logger,
   NotFoundException,
@@ -21,6 +22,7 @@ import {
   createRequest,
   DayUnavailableError,
   decideRequest,
+  requesterOf,
   findDecisionNotice,
   findRequestOwner,
   listHolidays,
@@ -244,6 +246,14 @@ export class VacationsController {
   ): Promise<{ decided: true }> {
     const { organizationId, membershipId } = currentTenant();
 
+    // Nobody decides their own leave but the Owner — sweep of 15-10-2026.
+    if (!hasRole('owner') && (await requesterOf(organizationId, id)) === membershipId) {
+      throw new ForbiddenException({
+        code: 'own_request',
+        message: 'Your own leave is decided by somebody else',
+      });
+    }
+
     const outcome = await decideRequest(
       organizationId,
       id,
@@ -327,7 +337,15 @@ export class VacationsController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ updated: true }> {
     requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId: actor } = currentTenant();
+
+    // An Admin does not set their own entitlement — sweep of 15-10-2026.
+    if (!hasRole('owner') && membershipId === actor) {
+      throw new ForbiddenException({
+        code: 'own_entitlement',
+        message: 'Your own entitlement is set by the owner',
+      });
+    }
 
     const days = Number(body['days']);
     if (!Number.isInteger(days) || days < 0 || days > 365) {

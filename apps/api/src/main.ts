@@ -77,6 +77,24 @@ async function bootstrap(): Promise<void> {
    */
   app.set('trust proxy', 1);
 
+  /*
+   * The headers a JSON API owes its callers — sweep of 15-10-2026. It is public
+   * on its own origin, and `/files/:id` streams uploads, so `nosniff` matters
+   * there; nothing here is ever meant to be framed or to leak a referrer. A few
+   * lines rather than a dependency, because this is the whole of what is needed.
+   */
+  app.disable('x-powered-by');
+  app.use((_request: unknown, response: { setHeader(name: string, value: string): void }, next: () => void) => {
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader('X-Frame-Options', 'DENY');
+    response.setHeader('Referrer-Policy', 'no-referrer');
+    response.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+    if (process.env['NODE_ENV'] === 'production') {
+      response.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+  });
+
   // A truncated link in an email is a 404, not a 500 — POOLSE-R3-01.
   app.useGlobalFilters(new BadInputFilter());
 

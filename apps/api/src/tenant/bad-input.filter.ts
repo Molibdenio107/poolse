@@ -104,7 +104,9 @@ export class BadInputFilter implements ExceptionFilter {
  * answering 500 from a dozen endpoints. A value the client sent wrongly is a
  * 400 wherever it is caught.
  */
-const BAD_VALUE_CODES = new Set(['22P02', '22008', '22007']);
+// 22003 is a number out of range for its column (a quantity of 1e12 in an
+// integer) — sweep of 15-10-2026: it answered 500 for a typo, not 400.
+const BAD_VALUE_CODES = new Set(['22P02', '22008', '22007', '22003']);
 
 function isBadTextRepresentation(error: unknown): error is Error & { code: string } {
   return error instanceof Error && BAD_VALUE_CODES.has(String((error as { code?: unknown }).code));
