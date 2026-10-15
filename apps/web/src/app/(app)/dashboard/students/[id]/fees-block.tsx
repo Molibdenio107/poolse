@@ -8,6 +8,7 @@ import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { SectionPills, sectionHref } from '@/components/section-pills';
 import { formatCents, monthlyEquivalentCents } from '@/lib/money';
+import { feeTotals } from '@/lib/fee-totals';
 import type {
   CurrentPlan,
   FeeKind,
@@ -64,7 +65,7 @@ const BUTTON_QUIET =
  * "Iniciação · 2x/semana" for a mensalidade, and the quota is simply the quota —
  * a club has one, and naming it would be naming the only thing in its category.
  */
-function lineLabel(
+export function lineLabel(
   line: {
     kind: FeeKind;
     levelName: string | null;
@@ -108,7 +109,7 @@ function lineLabel(
  * a renewal; no cover is a conversation with a family. Colour never carries it
  * alone: each state has its own words and the two warnings carry an icon.
  */
-function CoverBadge({ cover }: { cover: StudentFees['cover'] }): React.ReactElement {
+export function CoverBadge({ cover }: { cover: StudentFees['cover'] }): React.ReactElement {
   const t = useTranslations();
 
   if (cover.covered) {
@@ -425,8 +426,8 @@ export function FeesBlock({
   const t = useTranslations();
   const locale = useLocale();
 
-  const live = fees.lines.filter((line) => line.endsOn === null);
-  const ended = fees.lines.filter((line) => line.endsOn !== null);
+  // `lib/fee-totals.ts` — shared with the family's view, so the two agree.
+  const { live, ended, grandTotal, paidTotal, outstanding } = feeTotals(fees);
 
   /*
    * What this family pays, everything included — the mensalidades and the quota.
@@ -435,7 +436,6 @@ export function FeesBlock({
    * answers the question the office is actually asked at the counter. Both are
    * shown because a student at two sites has two agreements and one bill.
    */
-  const grandTotal = live.reduce((sum, line) => sum + line.payableCents, 0);
 
   /*
    * The two halves of the period, split out — round 6, ticket 5.1.
@@ -452,13 +452,6 @@ export function FeesBlock({
    * added here rather than written as a charge, because an automatic fee with
    * nobody's name against it has to be defensible at a counter.
    */
-  const paidTotal = live
-    .filter((line) => line.isPaid)
-    .reduce((sum, line) => sum + line.payableCents, 0);
-
-  const outstanding =
-    live.filter((line) => !line.isPaid).reduce((sum, line) => sum + line.payableCents, 0) +
-    fees.penaltyCents;
 
   // Grouped by site. The key is the facility, so two sites never share a total.
   const sites = [...new Set(live.map((line) => line.facilityId))];

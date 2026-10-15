@@ -33,6 +33,12 @@ interface StudentDetail extends Student {
    */
   canViewSensitive: boolean;
   canViewProgress: boolean;
+  /**
+   * Read by the child's own family rather than by staff — 15 October 2026.
+   * The page then shows the family's tabs, read-only, and the record arrives
+   * without the club's internal notes or another guardian's details.
+   */
+  familyView: boolean;
 }
 import {
   archiveLevel,
@@ -57,6 +63,7 @@ import {
   renameLevel,
   searchPeople,
   studentsOf,
+  familyStudents,
   updateStudent,
   type DuplicateMatch,
   type GuardianInput,
@@ -280,6 +287,20 @@ export class PeopleDedupController {
   }
 }
 
+/**
+ * A family's own records — 15 October 2026 (Rui). Any member may ask, and the
+ * answer is only ever theirs: their children, and themselves as a student. A
+ * member of staff with no children gets an empty list, which is the truth.
+ */
+@Controller('family')
+export class FamilyController {
+  @Get()
+  async mine(): Promise<{ students: { id: string; name: string; relationship: string | null; self: boolean }[] }> {
+    const { organizationId, membershipId } = currentTenant();
+    return { students: await familyStudents(organizationId, membershipId) };
+  }
+}
+
 @Controller('people-search')
 export class PeopleSearchController {
   @Get()
@@ -367,10 +388,28 @@ export class StudentsController {
     // control — SensitiveController and RecordsController each enforce their own
     // and would refuse the request anyway. This only stops the screen offering a
     // door that opens onto a refusal.
+    if (hasRole('owner', 'admin', 'instructor')) {
+      return { ...student, canViewSensitive: true, canViewProgress: true, familyView: false };
+    }
+
+    /*
+     * Past `requireActsForStudent`, so this is the student or one of their
+     * guardians. The notes are the club's, and a co-guardian is named but not
+     * contactable here — separated parents are ordinary, and an address is not
+     * the other one's to read off a swimming club's page.
+     */
+    const { membershipId } = currentTenant();
     return {
       ...student,
-      canViewSensitive: hasRole('owner', 'admin', 'instructor'),
-      canViewProgress: hasRole('owner', 'admin', 'instructor'),
+      notes: null,
+      guardians: student.guardians.map((guardian) =>
+        guardian.membershipId === membershipId
+          ? guardian
+          : { ...guardian, email: null, phone: null, taxNumber: null, address: null },
+      ),
+      canViewSensitive: false,
+      canViewProgress: true,
+      familyView: true,
     };
   }
 

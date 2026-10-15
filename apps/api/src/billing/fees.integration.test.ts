@@ -359,13 +359,15 @@ test('42.10 — an instructor cannot read what a family pays', async () => {
     const guardian = await addMember(tenant, 'Sofia', 'Melo', ['guardian']);
     const pupil = await addMember(tenant, 'Ana', 'Aluna', ['student']);
 
-    for (const [membershipId, role] of [
-      [instructor, 'instructor'],
-      [guardian, 'guardian'],
-      [pupil, 'student'],
+    // A family that is not this student's gets the 404 every family read gives
+    // for somebody else's child (15-10-2026); staff who may not see it, a 403.
+    for (const [membershipId, role, status] of [
+      [instructor, 'instructor', 403],
+      [guardian, 'guardian', 404],
+      [pupil, 'student', 404],
     ] as const) {
       await actingAs(tenant, { membershipId, roles: [role] }, async () => {
-        await expectStatus(() => fees.list(student), 403);
+        await expectStatus(() => fees.list(student), status);
         await expectStatus(() => new FeePlansController().list(tenant.facilityId), 403);
         await expectStatus(() => new FeePeriodsController().list(tenant.facilityId), 403);
       });

@@ -47,6 +47,7 @@ export function LostAndFoundPanel({
   students,
   locations,
   canManage,
+  canArchive,
 }: {
   facilityId: string;
   items: LostAndFoundItem[];
@@ -55,6 +56,7 @@ export function LostAndFoundPanel({
   /** The same place names the store room suggests — one vocabulary. */
   locations: string[];
   canManage: boolean;
+  canArchive: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   // Open on arrival since it has its own section on the inventory page
@@ -105,7 +107,7 @@ export function LostAndFoundPanel({
           ) : (
             <ul className="flex flex-col divide-y divide-border">
               {items.map((item) => (
-                <FoundRow key={item.id} item={item} canManage={canManage} />
+                <FoundRow key={item.id} item={item} canManage={canManage} canArchive={canArchive} />
               ))}
             </ul>
           )}
@@ -136,9 +138,11 @@ export function LostAndFoundPanel({
 function FoundRow({
   item,
   canManage,
+  canArchive,
 }: {
   item: LostAndFoundItem;
   canManage: boolean;
+  canArchive: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const [returnState, giveBack, returning] = useSavedAction(returnFoundAction, INITIAL);
@@ -201,17 +205,19 @@ function FoundRow({
           )}
 
           {/* Owner/admin only, and refused by the API as well — G1. */}
-          <form action={remove}>
-            <input type="hidden" name="itemId" value={item.id} />
-            <button
-              type="submit"
-              disabled={removing}
-              aria-label={t('common.remove')}
-              className="rounded text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              <Trash2 aria-hidden className="size-4" />
-            </button>
-          </form>
+          {canArchive && (
+            <form action={remove}>
+              <input type="hidden" name="itemId" value={item.id} />
+              <button
+                type="submit"
+                disabled={removing}
+                aria-label={t('common.remove')}
+                className="rounded text-danger hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <Trash2 aria-hidden className="size-4" />
+              </button>
+            </form>
+          )}
         </span>
       )}
     </li>

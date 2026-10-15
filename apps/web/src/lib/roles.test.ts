@@ -30,8 +30,8 @@ test('the full list comes back in the documented order', () => {
   assert.deepEqual(bySeniority(shuffled), [
     'owner',
     'admin',
-    'instructor',
     'maintenance',
+    'instructor',
     'guardian',
     'student',
   ]);

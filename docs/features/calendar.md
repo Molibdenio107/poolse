@@ -292,6 +292,13 @@ Owner, admin and the lesson's own instructor may set a stand-in.
 
 ## The training plan
 
+**Who reads it** (15 October 2026, Rui). Staff read every plan. The turma's instructor, the
+lesson's stand-in, an owner or an admin write it. A family reads only the plan of a lesson its
+child was enrolled for on that day (`familyMayReadPlan`), on any day, and is not told who
+wrote it. Any other session answers 404. Families read the plan in the child's Semana, one
+lesson at a time. *Marcar presenças* is offered only to owner, admin and instructor
+(`canTakeRegister`), whose roles the register itself answers.
+
 **Plano de treino** on the hover card opens a sheet down the side of the page — the week stays
 visible behind it, because somebody writing Tuesday's plan is looking at Tuesday. It sits
 beside Take the register and Cancel class.

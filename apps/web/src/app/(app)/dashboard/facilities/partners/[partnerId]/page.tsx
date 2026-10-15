@@ -83,6 +83,9 @@ export default async function PartnerPage({
         {
           slug: 'agreement',
           labelKey: 'partners.agreement',
+          // The API sends no agreement to non-managers, so the tab would only
+          // ever say there is none — 15-10-2026.
+          visible: partner.canManage,
           content: () => (
             <PartnerAgreementPanel
               partnerId={partner.id}

@@ -1627,6 +1627,35 @@ export async function studentsOf(
 }
 
 /**
+ * The records one person may open as family — 15 October 2026 (Rui): the
+ * children they are a live guardian of, and their own record if they are a
+ * student. The same two edges `mayActForStudent` reads, so this list and that
+ * check cannot disagree about whose records these are.
+ */
+export async function familyStudents(
+  organizationId: string,
+  membershipId: string,
+): Promise<{ id: string; name: string; relationship: string | null; self: boolean }[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ id: string; name: string; relationship: string | null; self: boolean }>(
+      `SELECT s.id, ${shortName('s')} AS name, NULL::text AS relationship, true AS self
+         FROM student s
+        WHERE s.membership_id = $1 AND s.archived_at IS NULL
+       UNION ALL
+       SELECT s.id, ${shortName('s')} AS name, gl.relationship, false AS self
+         FROM guardian_link gl
+         JOIN student s ON s.id = gl.student_id AND s.organization_id = gl.organization_id
+        WHERE gl.guardian_membership_id = $1
+          AND gl.archived_at IS NULL
+          AND s.archived_at IS NULL
+        ORDER BY self DESC, name`,
+      [membershipId],
+    );
+    return rows;
+  });
+}
+
+/**
  * Every encarregado de educação, with the students they are responsible for —
  * POOLSE-35, criterion 5, and POOLSE-04, criterion 9.
  *

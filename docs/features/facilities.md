@@ -11,7 +11,8 @@ Schema in `docs/data-model.md`.
 | Open a tank's page | owner, admin, instructor, maintenance |
 | Create, edit or archive a site or a tank; add a photograph | owner, admin |
 | Read the inventory | everybody |
-| Change the inventory | owner, admin |
+| Change the inventory and lost-and-found | owner, admin, maintenance (since 15-10-2026) |
+| Archive an inventory or lost-and-found item | owner, admin |
 
 Knowing whether there are enough pranchas for a class is not privileged. Changing anything
 is.

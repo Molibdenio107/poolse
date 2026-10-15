@@ -580,7 +580,10 @@ export interface FacilitySlots {
 /** What the inventory screen loads: a site's store, and the sites to choose from. */
 export interface Inventory {
   organizationId: string;
+  /** Owner, admin, maintenance. */
   canManage: boolean;
+  /** Owner, admin — the trash button. */
+  canArchive: boolean;
   facilities: { id: string; name: string; pools: { id: string; name: string }[] }[];
   /** The site being shown — the requested one, or the first. */
   facilityId: string | null;
@@ -612,6 +615,7 @@ export interface LostAndFound {
   /** The register, complete — a picker with a window cannot find everybody. */
   students: { id: string; name: string }[];
   canManage: boolean;
+  canArchive: boolean;
 }
 
 /** The whole filtered list, for the export route. No window. */
@@ -1463,6 +1467,8 @@ export interface Student {
    */
   canViewSensitive?: boolean;
   canViewProgress?: boolean;
+  /** Read by the child's own family: the family's tabs, read-only. */
+  familyView?: boolean;
 }
 
 export interface Students {
@@ -1896,6 +1902,8 @@ export interface SeasonCharge {
 }
 
 export interface StudentFees {
+  /** Read by the child's own family; offers and the office's reasons are empty. */
+  familyView?: boolean;
   /** What their turmas come to, before anything is charged. */
   currentPlans: CurrentPlan[];
   /** The joining fee and the insurance fee, offered per season. */
@@ -2403,6 +2411,8 @@ export interface Calendar {
   to: string;
   sessions: CalendarSession[];
   canManage: boolean;
+  /** Owner, admin, instructor — whether Marcar presenças is offered. */
+  canTakeRegister?: boolean;
 }
 
 /**

@@ -48,6 +48,7 @@ import {
 import { requireMySession } from '../tenant/assignment.js';
 import {
   readLessonPlan,
+  familyMayReadPlan,
   saveLessonPlan,
   type LessonPlan,
 } from './lesson-plans.repository.js';
@@ -208,6 +209,8 @@ interface CalendarResponse {
   to: string;
   sessions: Session[];
   canManage: boolean;
+  /** Absent on a student's own calendar, which offers no register. */
+  canTakeRegister?: boolean;
 }
 
 @Controller('calendar')
@@ -227,6 +230,9 @@ export class CalendarController {
       ...window,
       sessions: await listSessions(organizationId, window.from, window.to),
       canManage: hasRole('owner', 'admin'),
+      // Who may open a register — the attendance read's own roles, so a
+      // maintenance reader is not offered Marcar presenças (15-10-2026).
+      canTakeRegister: hasRole('owner', 'admin', 'instructor'),
     };
   }
 
@@ -631,9 +637,11 @@ export class SessionsCalendarController {
   /**
    * The plan for this lesson — round 6, ticket 4.3.
    *
-   * Readable by any member. An instructor covering for a colleague needs to
-   * know what the group was doing, and a guardian asking what Tuesday holds is
-   * asking a reasonable question about a class their child is in.
+   * Staff read every plan: an instructor covering for a colleague needs to
+   * know what the group was doing. **A family reads only its own classes** —
+   * 15 October 2026 (Rui): a guardian asking what Tuesday holds is asking about
+   * a class their child is in (`familyMayReadPlan`), and any other session is a
+   * 404. A family is not told who wrote it, nor the lesson before.
    *
    * The response carries `canEdit`, which is the same answer the write guard
    * gives — so the screen and the API cannot disagree about who may type.
@@ -641,10 +649,14 @@ export class SessionsCalendarController {
   @Get(':id/plan')
   async plan(@Param('id') id: string): Promise<LessonPlan> {
     const { organizationId, roles, membershipId } = currentTenant();
+    const staff = hasRole('owner', 'admin', 'instructor', 'maintenance');
+    if (!staff && !(await familyMayReadPlan(organizationId, membershipId, id))) {
+      throw new NotFoundException('No such class');
+    }
 
     const plan = await readLessonPlan(organizationId, id, roles, membershipId);
     if (plan === null) throw new NotFoundException('No such class');
-    return plan;
+    return staff ? plan : { ...plan, updatedBy: null, previous: null, canEdit: false };
   }
 
   /**

@@ -60,7 +60,7 @@ export default async function ClosuresPage({
      */
     data = await apiFetch<Closures>(`/closures?year=${year}`);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 403) noOrganization = true;
+    if (error instanceof ApiError && error.code === 'no_organization') noOrganization = true;
     else failure = describeLoad(error);
   }
 

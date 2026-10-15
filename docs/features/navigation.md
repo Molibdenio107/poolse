@@ -17,16 +17,34 @@ same page.
 Defined once, in `apps/web/src/app/(app)/app-sidebar.tsx`. The mobile and collapsed views
 read the same array, so structure, labels and permissions cannot drift between them.
 
-Order: **Dashboard**, Instalações, Turmas, Calendário, Alunos.
+Order: **Dashboard**, Instalações, Energia, Turmas, Calendário, Receção, Faturação, Alunos,
+then the family's own entry.
+
+**An entry is shown only to the roles its page's API answers** (15 October 2026, Rui). A new
+entry takes the roles of the route its page loads, and the role probe tests that route.
 
 | Item | Visible to |
 |---|---|
 | Dashboard | everybody |
 | Instalações | everybody |
-| — Inventário | everybody |
-| — Staff | owner, admin |
-| — — Férias | owner, admin |
-| Turmas, Calendário, Alunos | everybody |
+| — Inventário | owner, admin, instructor, maintenance |
+| — Ocorrências, Nadadores-salvadores | owner, admin, instructor, maintenance |
+| — As minhas férias | instructor, maintenance (not owner or admin, who have Férias under Staff) |
+| — Staff, and Férias, Salários, Qualificações under it | owner, admin |
+| Energia | owner, admin, maintenance |
+| Turmas (Épocas), Calendário (Encerramentos) | owner, admin, instructor, maintenance |
+| Receção, Faturação | owner, admin |
+| Alunos, Encarregados, Níveis, Avanço | owner, admin, instructor |
+| — Mensagens | owner, admin, instructor |
+| — Pedidos de inscrição, Reposições | owner, admin |
+| Os meus educandos | guardian |
+| O meu registo | student who is not also a guardian |
+
+`unlessRoles` hides an entry from anybody holding one of the listed roles. It exists for a shortcut
+to a page that a more senior role reaches another way.
+
+A refusal on a list page reads *not allowed*. *You belong to no organization* is shown only for
+the API's `no_organization` code.
 
 **A hidden menu item is never the permission.** Every restricted section's API refuses the
 request as well; the menu is a convenience, and a URL somebody types has to be refused on

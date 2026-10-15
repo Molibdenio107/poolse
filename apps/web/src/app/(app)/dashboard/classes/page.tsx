@@ -52,7 +52,7 @@ export default async function ClassesPage({
   try {
     data = await apiFetch<Classes>(`/class-groups${asked}`);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 403) noOrganization = true;
+    if (error instanceof ApiError && error.code === 'no_organization') noOrganization = true;
     else failure = describeLoad(error);
   }
 

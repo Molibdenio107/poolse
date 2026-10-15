@@ -8,8 +8,23 @@ import {
   type WidgetDefinition,
   type WidgetState,
 } from './widget-registry.js';
+import { MEMBER_ROLES } from '../tenant/roles.js';
 
 const logger = new Logger('Dashboard');
+
+/**
+ * Which of the reader's working roles a card is there for, as a seniority
+ * index — Rui, 15 October 2026: somebody who is both maintenance and an
+ * instructor sees the maintenance cards first. Owner and admin are left out,
+ * so an owner who also teaches keeps the order priority alone gives them.
+ * A card no working role reaches ranks last and ties with its neighbours.
+ */
+function leadRank(widget: WidgetDefinition, roles: readonly string[]): number {
+  const ranks = widget.roles
+    .filter((role) => role !== 'owner' && role !== 'admin' && roles.includes(role))
+    .map((role) => MEMBER_ROLES.indexOf(role));
+  return ranks.length === 0 ? MEMBER_ROLES.length : Math.min(...ranks);
+}
 
 /**
  * Composing the page — POOLSE-66, slice 1.
@@ -173,6 +188,7 @@ export async function composeDashboard(
 
   const composed = settled.map(({ widget, state, data }) => ({
     widget,
+    lead: leadRank(widget, ctx.roles),
     card: {
       id: widget.id,
       size: widget.size,
@@ -202,10 +218,13 @@ export async function composeDashboard(
        * is a fact — but it never takes the place of one that has figures. An
        * error counts as something to say: hiding the card that failed would
        * hide that anything did.
+       *
+       * Then the reader's leading working role (`leadRank`), then priority.
        */
       .sort(
         (a, b) =>
           Number(a.card.state === 'empty') - Number(b.card.state === 'empty') ||
+          a.lead - b.lead ||
           b.card.priority - a.card.priority ||
           a.card.id.localeCompare(b.card.id),
       )

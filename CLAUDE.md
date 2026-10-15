@@ -646,6 +646,10 @@ child, and anyone else gets a 404. A picker that non-office staff need gets a na
 calls every route as an unlinked guardian and as a student. **A new endpoint is added there in
 the same change.**
 
+**A menu entry is shown only to the roles its page's API answers, and maintenance outranks instructor.** 15 October 2026, Rui's call. `app-sidebar.tsx` gives each entry the roles of the route its page loads (`STAFF`, `TEACHING`, `OFFICE`); `unlessRoles` hides a shortcut from a role that reaches the page another way. A list page says *not allowed* on a 403 and *no organization* only for the `no_organization` code. `MEMBER_ROLES` is owner, admin, maintenance, instructor, guardian, student. Permissions stay the union; the order only decides which role leads (badges, `leadRank` in a dashboard band). Maintenance writes the inventory (`INVENTORY_EDITORS`) but archives nothing. `docs/features/navigation.md`.
+
+**A family reads its own child's record through the staff page in `familyView`.** 15 October 2026. `GET /family` lists a person's own records. `GET /students/:id` and `GET /students/:id/fees` answer the child's guardian or the student with the club's notes, a co-guardian's contacts, discount reasons and the office's offers left out. A family reads a lesson plan only for a class its child was enrolled in that day (`familyMayReadPlan`). Totals are `feeTotals`, shared with the office. `docs/features/students.md`.
+
 **A permission about a *row* is a repository answer, not `requireRole`.** "The instructor
 responsible for this turma" cannot be written as a role, so the repository resolves the row,
 decides, and the controller turns a refusal into a 403 — while the read endpoint returns the

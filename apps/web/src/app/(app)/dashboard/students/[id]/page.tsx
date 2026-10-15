@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { describeLoad, outcome, type LoadFailure, type Outcome } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
   ApiError,
   apiFetch,
   type Calendar,
   type Student,
+  type StudentFees,
   type Students,
   type TimetableEntry,
   type ReposicaoCredit,
@@ -19,6 +20,7 @@ import { StudentForm } from '../student-forms';
 import { CreditBooking } from './credit-booking';
 import { StudentWeek } from './student-week';
 import { FeesBlock, type FeesSection } from './fees-block';
+import { FamilyFees } from './family-fees';
 import { pickSection } from '@/components/section-pills';
 import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
@@ -37,6 +39,11 @@ import { formatDate } from '@/lib/date-format';
  * **Tabs since the detail-tabs change**: General (the progress and medical
  * record buttons, then the identity form), Mensalidades, Documento, Turmas,
  * Semana and Reposições. Progress and the medical record stay their own pages.
+ *
+ * **A family reads it too** — 15 October 2026 (Rui). The child's guardian, or
+ * the student, gets the record read-only (`familyView` from the API): General
+ * without the club's notes, Mensalidades as `FamilyFees`, Turmas, Semana with
+ * the lesson plans and Reposições. No medical record, no document, no forms.
  */
 export default async function StudentPage({
   params,
@@ -75,12 +82,15 @@ export default async function StudentPage({
         apiFetch<Student>(`/students/${id}`),
         // One row is enough: this only needs the levels, the permissions and the
         // maioridade off the register response, not a page of other students.
-        apiFetch<Students>('/students?limit=1'),
+        // Staff only; a family's record needs none of it, so a refusal here
+        // is not a missing student.
+        outcome(apiFetch<Students>('/students?limit=1')),
         apiFetch<{ entries: TimetableEntry[] }>(`/students/${id}/timetable`),
         apiFetch<{ credits: ReposicaoCredit[] }>(`/students/${id}/credits`),
       ]);
     student = studentResult;
-    register = registerResult;
+    if (registerResult.state === 'ok') register = registerResult.data;
+    else if (registerResult.state === 'failed') failure = registerResult.failure;
     timetable = timetableResult.entries;
     credits = creditsResult.credits;
   } catch (error) {
@@ -99,12 +109,17 @@ export default async function StudentPage({
    * answers null when the endpoint refuses, which is what an instructor gets.
    * AC10 makes that a page without the block, not a block saying no.
    */
+  const family = student?.familyView === true;
   let sitesUnread = false;
+  let organizationId = register?.organizationId ?? '';
   const facilities =
     student === null
       ? []
-      : await apiFetch<{ facilities: { id: string; name: string }[] }>('/facilities')
-          .then((response) => response.facilities.map((f) => ({ id: f.id, name: f.name })))
+      : await apiFetch<{ organizationId: string; facilities: { id: string; name: string }[] }>('/facilities')
+          .then((response) => {
+            organizationId = organizationId || response.organizationId;
+            return response.facilities.map((f) => ({ id: f.id, name: f.name }));
+          })
           .catch(() => {
             // Still the lines the student has; but a new fee at another site
             // cannot be offered, and the tab says so.
@@ -112,7 +127,11 @@ export default async function StudentPage({
             return [];
           });
 
-  const billing = student === null ? null : await loadFees(id, facilities.map((f) => f.id));
+  const billing = student === null || family ? null : await loadFees(id, facilities.map((f) => f.id));
+  // What a family owes, from the same endpoint's family path.
+  const familyFees: Outcome<StudentFees> | null = family
+    ? await outcome(apiFetch<StudentFees>(`/students/${id}/fees`))
+    : null;
 
   // A detail page shows the full legal name, every part — POOLSE-32
   // criterion 3. Abbreviation is for lists.
@@ -120,9 +139,11 @@ export default async function StudentPage({
     student?.age === null || student === null
       ? t('students.subtitle')
       : t('students.years', { count: student.age });
-  const back = { href: '/dashboard/students', label: t('students.backToRegister') };
+  const back = family
+    ? { href: '/dashboard/family', label: t('family.back') }
+    : { href: '/dashboard/students', label: t('students.backToRegister') };
 
-  if (student === null || register === null) {
+  if (student === null || (register === null && !family)) {
     return (
       <PageShell title={t('students.title')} subtitle={subtitle} back={back}>
         {missing && (
@@ -142,7 +163,13 @@ export default async function StudentPage({
   }
 
   const loaded = student;
-  const reg = register;
+  // A family has no register: nothing to manage, no levels to pick from.
+  const reg = register ?? {
+    organizationId,
+    canManage: false,
+    levels: [],
+    ageOfMajority: 18,
+  };
   // One row per turma, not per slot: a turma that meets on Tuesday and Thursday
   // is one enrolment, and listing it twice would read as two.
   const turmas = [...new Map(timetable.map((entry) => [entry.classGroupId, entry])).values()];
@@ -233,7 +260,9 @@ export default async function StudentPage({
                   </div>
                 ) : (
                   <>
-                    <p className="mb-4 text-sm text-foreground-muted">{t('students.readOnly')}</p>
+                    <p className="mb-4 text-sm text-foreground-muted">
+                      {family ? t('family.recordHint') : t('students.readOnly')}
+                    </p>
                     <dl className="flex flex-col gap-3">
                       <Row
                         label={t('students.level')}
@@ -256,7 +285,7 @@ export default async function StudentPage({
                       <Row label={t('students.contactEmail')} value={loaded.contactEmail} />
                       <Row label={t('students.contactPhone')} value={loaded.contactPhone} />
                       <Row label={t('students.taxNumber')} value={loaded.taxNumber} />
-                      <Row label={t('students.notes')} value={loaded.notes} />
+                      {!family && <Row label={t('students.notes')} value={loaded.notes} />}
                     </dl>
                   </>
                 )}
@@ -271,9 +300,17 @@ export default async function StudentPage({
           */
           slug: 'fees',
           labelKey: 'detailTabs.fees',
-          visible: billing !== null && billing.state !== 'refused',
+          visible: family
+            ? familyFees !== null && familyFees.state !== 'refused'
+            : billing !== null && billing.state !== 'refused',
           content: () =>
-            billing?.state === 'failed' ? (
+            familyFees !== null ? (
+              familyFees.state === 'failed' ? (
+                <PageError message={t(familyFees.failure.key)} />
+              ) : (
+                familyFees.state === 'ok' && <FamilyFees fees={familyFees.data} />
+              )
+            ) : billing?.state === 'failed' ? (
               <PageError message={t(billing.failure.key)} />
             ) : (
               billing?.state === 'ok' && (
@@ -346,12 +383,17 @@ export default async function StudentPage({
                     className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 first:pt-0 last:pb-0"
                   >
                     <span className="flex flex-wrap items-baseline gap-x-2">
-                      <Link
-                        href={`/dashboard/classes/${entry.classGroupId}`}
-                        className="rounded font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                      >
-                        {entry.className}
-                      </Link>
+                      {family ? (
+                        // A turma's page is staff only.
+                        <span className="font-medium">{entry.className}</span>
+                      ) : (
+                        <Link
+                          href={`/dashboard/classes/${entry.classGroupId}`}
+                          className="rounded font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
+                          {entry.className}
+                        </Link>
+                      )}
                       {entry.status === 'waiting' && (
                         <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-foreground-muted">
                           {t('students.waiting')}
@@ -391,6 +433,7 @@ export default async function StudentPage({
                 initialWeek={monday}
                 initialSessions={calendar.sessions}
                 timetable={timetable}
+                family={family}
               />
             );
           },

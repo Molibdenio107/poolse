@@ -14,8 +14,8 @@
 export const MEMBER_ROLES = [
   'owner',
   'admin',
-  'instructor',
   'maintenance',
+  'instructor',
   'guardian',
   'student',
 ] as const;
@@ -23,7 +23,10 @@ export const MEMBER_ROLES = [
 export type MemberRole = (typeof MEMBER_ROLES)[number];
 
 /**
- * Owner → Admin → Instructor → Maintenance → Encarregado → Student.
+ * Owner → Admin → Maintenance → Instructor → Encarregado → Student.
+ *
+ * Maintenance ahead of Instructor since 15 October 2026 (Rui): a person who
+ * is both reads as maintenance first. Permissions are still the union.
  *
  * The order POOLSE-18 asks for, and the one that makes a multi-role person
  * readable: the badge that says most about what somebody can do comes first. A

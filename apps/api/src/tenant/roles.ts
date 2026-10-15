@@ -19,12 +19,16 @@ import { currentTenant } from './tenant.context.js';
  *
  * Encarregado de educação outranks Student: a parent acting for a child is
  * further from the pool than the child is.
+ *
+ * **Maintenance outranks Instructor** — Rui, 15 October 2026. Permissions
+ * are still the union, so a person who is both loses nothing; where only one
+ * can lead (a badge, a band, a default) maintenance does.
  */
 export const MEMBER_ROLES = [
   'owner',
   'admin',
-  'instructor',
   'maintenance',
+  'instructor',
   'guardian',
   'student',
 ] as const;

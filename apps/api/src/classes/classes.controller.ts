@@ -169,7 +169,9 @@ export class ClassesController {
   }
 
   @Get(':id')
-  async one(@Param('id') id: string): Promise<ClassGroup & { canManage: boolean }> {
+  async one(
+    @Param('id') id: string,
+  ): Promise<ClassGroup & { canManage: boolean; canMarkSkills: boolean }> {
     // Security review, 12 October 2026: this answered any member, a guardian included.
     requireRole('owner', 'admin', 'instructor', 'maintenance');
     const { organizationId } = currentTenant();
@@ -177,7 +179,12 @@ export class ClassesController {
     const group = await findClassGroup(organizationId, id);
     if (!group) throw new NotFoundException('No such class group');
 
-    return { ...group, canManage: hasRole('owner', 'admin') };
+    return {
+      ...group,
+      canManage: hasRole('owner', 'admin'),
+      // The skills grid's own roles (`skills.controller.ts`) — 15-10-2026.
+      canMarkSkills: hasRole('owner', 'admin', 'instructor'),
+    };
   }
 
   @Post()

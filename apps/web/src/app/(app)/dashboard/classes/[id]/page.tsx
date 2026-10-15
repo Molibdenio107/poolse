@@ -39,14 +39,14 @@ export default async function ClassPage({
   const { id } = await params;
   const { tab, from } = await searchParams;
 
-  let group: (ClassGroup & { canManage: boolean }) | null = null;
+  let group: (ClassGroup & { canManage: boolean; canMarkSkills: boolean }) | null = null;
   let all: Classes | null = null;
   let failure: LoadFailure | null = null;
   let missing = false;
 
   try {
     [group, all] = await Promise.all([
-      apiFetch<ClassGroup & { canManage: boolean }>(`/class-groups/${id}`),
+      apiFetch<ClassGroup & { canManage: boolean; canMarkSkills: boolean }>(`/class-groups/${id}`),
       apiFetch<Classes>('/class-groups'),
     ]);
   } catch (error) {
@@ -105,12 +105,15 @@ export default async function ClassPage({
       subtitle={[loaded.levelName, loaded.instructorName, loaded.poolName].filter(Boolean).join(' · ')}
       back={back}
       actions={
+        // Only for whoever the skills grid answers — maintenance is refused it.
+        loaded.canMarkSkills && (
         <Link
           href={`/dashboard/classes/${id}/skills`}
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('skills.title')}
         </Link>
+        )
       }
       requested={tab}
       tabs={[

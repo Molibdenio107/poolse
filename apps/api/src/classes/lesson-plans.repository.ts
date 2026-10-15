@@ -404,3 +404,47 @@ export async function saveLessonPlan(
     return 'saved';
   });
 }
+
+/**
+ * Whether a family may read this lesson's plan — 15 October 2026 (Rui).
+ *
+ * The person is the student, or a live guardian of one, and that student was
+ * enrolled in the session's turma on the day it falls: joined on or before it,
+ * not ended before it, and not merely waiting. Any day, past or future, but
+ * only their own classes. A parceria has no turma and so no family.
+ */
+export async function familyMayReadPlan(
+  organizationId: string,
+  membershipId: string,
+  sessionId: string,
+): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ allowed: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+           FROM class_session cs
+           JOIN enrollment e
+             ON e.organization_id = cs.organization_id
+            AND e.class_group_id = cs.class_group_id
+            AND e.status <> 'waiting'
+            AND e.joined_on <= cs.occurs_on
+            AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on)
+           JOIN student s
+             ON s.id = e.student_id AND s.organization_id = e.organization_id
+            AND s.archived_at IS NULL
+          WHERE cs.id = $2
+            AND (
+              s.membership_id = $1
+              OR EXISTS (
+                SELECT 1 FROM guardian_link gl
+                 WHERE gl.student_id = s.id
+                   AND gl.guardian_membership_id = $1
+                   AND gl.archived_at IS NULL
+              )
+            )
+       ) AS allowed`,
+      [membershipId, sessionId],
+    );
+    return rows[0]?.allowed ?? false;
+  });
+}

@@ -4,12 +4,14 @@ import {
   ConflictException,
   Controller,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { requireRole } from '../tenant/roles.js';
+import { hasRole, requireRole } from '../tenant/roles.js';
+import { mayActForStudent } from '../students/redemption.repository.js';
 import {
   archiveFeePeriod,
   archiveFeePlan,
@@ -226,12 +228,37 @@ export class FeePlansController {
 @Controller('students/:studentId/fees')
 export class StudentFeesController {
   @Get()
-  async list(@Param('studentId') studentId: string): Promise<StudentFees> {
-    // Reading, not only writing. What a family pays is not something the
-    // instructor who teaches them is entitled to see — AC10.
-    requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
-    return studentFees(organizationId, studentId);
+  async list(
+    @Param('studentId') studentId: string,
+  ): Promise<StudentFees & { familyView: boolean }> {
+    const { organizationId, membershipId } = currentTenant();
+    if (hasRole('owner', 'admin')) {
+      return { ...(await studentFees(organizationId, studentId)), familyView: false };
+    }
+
+    /*
+     * A family reads what it owes — 15 October 2026 (Rui). The child's own
+     * guardian, or the student, and nobody else: an instructor who teaches
+     * them is still refused (AC10), and a stranger's child is a 404 like every
+     * other family read. What the office decides with goes: the reason a
+     * discount was given, the club's concessions and the charges it could add.
+     */
+    if (!(await mayActForStudent(organizationId, membershipId, studentId))) {
+      // Staff who are not this family's keep the 403 they had; a family, a 404.
+      if (hasRole('instructor', 'maintenance')) requireRole('owner', 'admin');
+      throw new NotFoundException('No such student');
+    }
+    const fees = await studentFees(organizationId, studentId);
+    return {
+      ...fees,
+      lines: fees.lines.map((line) => ({ ...line, discountReason: null })),
+      currentPlans: [],
+      seasonCharges: [],
+      categories: [],
+      suggestedCategoryId: null,
+      inscricao: { suggestedPlanId: null, returning: fees.inscricao.returning },
+      familyView: true,
+    };
   }
 
   @Post()

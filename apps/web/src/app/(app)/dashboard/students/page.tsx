@@ -93,7 +93,7 @@ export default async function StudentsPage({
   try {
     data = await apiFetch<Students>(`/students${query.size > 0 ? `?${query}` : ''}`);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 403) {
+    if (error instanceof ApiError && error.code === 'no_organization') {
       noOrganization = true;
     } else {
       failure = describeLoad(error);

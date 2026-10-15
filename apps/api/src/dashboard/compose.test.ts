@@ -157,6 +157,28 @@ test('a band keeps four, by priority, and ties do not shuffle between requests',
   assert.deepEqual(ids(first), ids(second), 'and a tie breaks on the id, not on the file order');
 });
 
+test('somebody who is maintenance and an instructor sees the maintenance cards first', async () => {
+  const registry = [
+    widget({ id: 'inst.next', band: 'operational', roles: ['instructor'], priority: 50 }),
+    widget({ id: 'inst.week', band: 'operational', roles: ['instructor'], priority: 35 }),
+    widget({ id: 'maint.req', band: 'operational', roles: ['maintenance'], priority: 45 }),
+    widget({ id: 'maint.rooms', band: 'operational', roles: ['maintenance'], priority: 40 }),
+    widget({ id: 'maint.store', band: 'operational', roles: ['maintenance'], priority: 20 }),
+  ];
+  const ids = (page: Dashboard): string[] => page.bands[0]!.widgets.map((one) => one.id);
+
+  const both = await composeDashboard({ ...CTX, roles: ['instructor', 'maintenance'] }, {
+    kind: 'business', sites: SITE, selector: SITE, registry, timeoutMs: 40,
+  });
+  assert.deepEqual(ids(both), ['maint.req', 'maint.rooms', 'maint.store', 'inst.next']);
+
+  // One working role: priority alone, exactly as before.
+  const teacher = await composeDashboard({ ...CTX, roles: ['instructor'] }, {
+    kind: 'business', sites: SITE, selector: SITE, registry, timeoutMs: 40,
+  });
+  assert.deepEqual(ids(teacher), ['inst.next', 'inst.week']);
+});
+
 test('an escalation can still change which four a band keeps', async () => {
   /*
    * The ticket's "priority boosted when the trial is under five days". It is a

@@ -11,7 +11,10 @@ import {
   Query,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
+import { canArchive, hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
+
+/** Who changes the store room and lost property — everything but archiving. */
+const INVENTORY_EDITORS = ['owner', 'admin', 'maintenance'] as const;
 import { listFacilities, type Facility } from '../facilities/facilities.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { readSearch } from '../common/search.js';
@@ -56,7 +59,8 @@ import {
  *
  * Reads are open to any member — an instructor who wants to know whether there
  * are enough pranchas for a class is asking a reasonable question. Writes are
- * owner and admin, as everywhere else that changes a facility.
+ * `INVENTORY_EDITORS`: owner, admin and, since 15 October 2026 (Rui),
+ * maintenance, who keeps the store room. Archiving stays owner and admin.
  */
 @Controller('inventory')
 export class InventoryController {
@@ -76,6 +80,8 @@ export class InventoryController {
   ): Promise<{
     organizationId: string;
     canManage: boolean;
+    /** Owner and admin — maintenance edits the store but archives nothing. */
+    canArchive: boolean;
     facilities: { id: string; name: string; pools: { id: string; name: string }[] }[];
     /** The site actually being shown — the requested one, or the first. */
     facilityId: string | null;
@@ -101,7 +107,8 @@ export class InventoryController {
 
     return {
       organizationId,
-      canManage: hasRole('owner', 'admin'),
+      canManage: hasRole(...INVENTORY_EDITORS),
+      canArchive: canArchive(),
       facilities: facilities.map((facility) => ({
         id: facility.id,
         name: facility.name,
@@ -169,6 +176,8 @@ export class InventoryController {
     /** The register, complete — a picker with a window cannot find everybody. */
     students: { id: string; name: string }[];
     canManage: boolean;
+    /** Owner and admin — maintenance edits the store but archives nothing. */
+    canArchive: boolean;
   }> {
     // Security review, 12 October 2026: this answered any member, a guardian included. It names the child who lost something.
     requireRole('owner', 'admin', 'instructor', 'maintenance');
@@ -178,14 +187,15 @@ export class InventoryController {
     return {
       items: facilityId === null ? [] : await listLostAndFound(organizationId, facilityId),
       // Only worth fetching for somebody who can use the form it fills.
-      students: hasRole('owner', 'admin') ? await studentsForPicker(organizationId) : [],
-      canManage: hasRole('owner', 'admin'),
+      students: hasRole(...INVENTORY_EDITORS) ? await studentsForPicker(organizationId) : [],
+      canManage: hasRole(...INVENTORY_EDITORS),
+      canArchive: canArchive(),
     };
   }
 
   @Post('lost-and-found')
   async recordFound(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
-    requireRole('owner', 'admin');
+    requireRole(...INVENTORY_EDITORS);
     const { organizationId } = currentTenant();
 
     const facilityId = readId(body['facilityId'], 'facilityId');
@@ -206,7 +216,7 @@ export class InventoryController {
 
   @Post('lost-and-found/:itemId/return')
   async giveBack(@Param('itemId') itemId: string): Promise<{ returned: true }> {
-    requireRole('owner', 'admin');
+    requireRole(...INVENTORY_EDITORS);
     const { organizationId } = currentTenant();
 
     if (!(await returnLostAndFound(organizationId, itemId))) {
@@ -252,7 +262,7 @@ export class InventoryController {
    */
   @Post()
   async add(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
-    requireRole('owner', 'admin');
+    requireRole(...INVENTORY_EDITORS);
     const { organizationId } = currentTenant();
 
     const facilityId = readId(body['facilityId'], 'facilityId');
@@ -280,7 +290,7 @@ export class InventoryController {
     // Adding kit is owner/admin on the form, so it is owner/admin in bulk. An
     // import that took a role the single create refuses would be the permission
     // model, worked around by uploading a file.
-    requireRole('owner', 'admin');
+    requireRole(...INVENTORY_EDITORS);
     const { organizationId } = currentTenant();
 
     const result = await runInventoryImport(organizationId, {
@@ -300,7 +310,7 @@ export class InventoryController {
     @Param('itemId') itemId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<{ updated: true }> {
-    requireRole('owner', 'admin');
+    requireRole(...INVENTORY_EDITORS);
     const { organizationId } = currentTenant();
 
     let updated: boolean;

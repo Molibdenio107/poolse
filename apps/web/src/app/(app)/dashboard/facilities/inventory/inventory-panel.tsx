@@ -71,6 +71,7 @@ export function InventoryPanel({
   total,
   search,
   canManage,
+  canArchive,
   locations,
 }: {
   organizationId: string;
@@ -82,6 +83,8 @@ export function InventoryPanel({
   total: number;
   search: string;
   canManage: boolean;
+  /** Owner and admin; maintenance edits but does not archive. */
+  canArchive: boolean;
   /** What this site already calls its places — the location suggestions. */
   locations: string[];
 }): React.ReactElement {
@@ -543,7 +546,8 @@ export function InventoryPanel({
                     item={item}
                     pools={pools}
                     canManage={canManage}
-                  locations={locations}
+                    canArchive={canArchive}
+                    locations={locations}
                   />
                 ))}
               </tbody>
@@ -599,12 +603,14 @@ function ItemRow({
   item,
   pools,
   canManage,
+  canArchive,
   locations,
 }: {
   organizationId: string;
   item: InventoryItem;
   pools: Pool[];
   canManage: boolean;
+  canArchive: boolean;
   locations: string[];
 }): React.ReactElement {
   const t = useTranslations();
@@ -706,18 +712,20 @@ function ItemRow({
               {t('inventory.edit')}
             </button>
 
-            <form action={archive}>
-              <input type="hidden" name="organizationId" value={organizationId} />
-              <input type="hidden" name="itemId" value={item.id} />
-              <button
-                type="submit"
-                disabled={archiving}
-                aria-label={t('inventory.removeLabel', { name: item.name })}
-                className="rounded text-foreground-muted hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            </form>
+            {canArchive && (
+              <form action={archive}>
+                <input type="hidden" name="organizationId" value={organizationId} />
+                <input type="hidden" name="itemId" value={item.id} />
+                <button
+                  type="submit"
+                  disabled={archiving}
+                  aria-label={t('inventory.removeLabel', { name: item.name })}
+                  className="rounded text-foreground-muted hover:text-danger disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </form>
+            )}
           </div>
         </td>
       )}

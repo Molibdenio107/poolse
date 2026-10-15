@@ -37,11 +37,13 @@ import { LabResultsController } from '../facilities/lab-results.controller.js';
 import { ComplaintsSettingsController, RegulationsController } from '../facilities/regulations.controller.js';
 import { RecordsController } from '../students/records.controller.js';
 import {
+  FamilyController,
   GuardiansController,
   PeopleDedupController,
   PeopleSearchController,
   StudentsController,
 } from '../students/students.controller.js';
+import { StudentFeesController } from '../billing/fees.controller.js';
 import { VacationsController } from '../vacations/vacations.controller.js';
 import { PlacesController, WeatherController } from '../weather/weather.controller.js';
 import {
@@ -599,11 +601,8 @@ test('incidents/people gives maintenance names and nothing else', async () => {
 // Intended open — reads a family legitimately needs
 // --------------------------------------------------------------------------
 
-test('intended open: seasons, closures, lesson plan and dashboard still answer non-staff', async () => {
+test('intended open: seasons, closures and dashboard still answer non-staff', async () => {
   await asEach(async ({ label }) => {
-    const plan = await new SessionsCalendarController().plan(fixture.sessionId);
-    assert.equal(plan.canEdit, false, `${label}: lesson plan, read-only`);
-
     const seasons = await new SeasonsController().list();
     assert.ok(seasons.seasons.length > 0, `${label}: seasons`);
 
@@ -767,5 +766,119 @@ test('regulations and the complaints setting refuse a guardian and a student (40
     const complaints = new ComplaintsSettingsController();
     await refused('GET settings/complaints', 403, () => complaints.read());
     await refused('PUT settings/complaints', 403, () => complaints.update({ regime: 'private' }));
+  });
+});
+
+// --------------------------------------------------------------------------
+// A family's own record, fees and plans — 15 October 2026 (Rui)
+// --------------------------------------------------------------------------
+
+test('a lesson plan is read by its own class, and by nobody else outside staff', async () => {
+  // Bruno is enrolled in the turma: he reads it, without who wrote it.
+  await as(fixture.studentMemberId, ['student'], async () => {
+    const plan = await new SessionsCalendarController().plan(fixture.sessionId);
+    assert.equal(plan.canEdit, false);
+    assert.equal(plan.updatedBy, null, 'a family is not told who wrote it');
+    assert.equal(plan.previous, null);
+  });
+  // Marta's Alice is enrolled too.
+  await as(fixture.martaId, ['guardian'], async () => {
+    assert.ok(await new SessionsCalendarController().plan(fixture.sessionId));
+  });
+  // Zeca has no child in that class.
+  await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
+    await refused('GET sessions/:id/plan as a stranger', 404, () =>
+      new SessionsCalendarController().plan(fixture.sessionId),
+    );
+  });
+  // Staff read every plan.
+  for (const [id, roles] of [
+    [fixture.instructorId, ['instructor']],
+    [fixture.maintenanceId, ['maintenance']],
+  ] as const) {
+    await as(id, [...roles], async () => {
+      const plan = await new SessionsCalendarController().plan(fixture.sessionId);
+      assert.ok(plan.sessionId === fixture.sessionId);
+    });
+  }
+});
+
+test("a guardian reads their own child's record, without the club's notes", async () => {
+  await as(fixture.martaId, ['guardian'], async () => {
+    const alice = await new StudentsController().one(fixture.aliceId);
+    assert.equal(alice.familyView, true);
+    assert.equal(alice.notes, null, 'internal notes stay with the club');
+    assert.equal(alice.canViewSensitive, false);
+    assert.equal(alice.canViewProgress, true);
+    const own = alice.guardians.find((g) => g.membershipId === fixture.martaId);
+    assert.equal(own?.phone, '961111222', 'her own entry is whole');
+
+    const { students } = await new FamilyController().mine();
+    assert.deepEqual(students.map((s) => s.id), [fixture.aliceId]);
+
+    await refused('GET students/:bruno as Marta', 404, () =>
+      new StudentsController().one(fixture.brunoStudentId),
+    );
+  });
+  // Staff still get the whole record.
+  await as(fixture.instructorId, ['instructor'], async () => {
+    const alice = await new StudentsController().one(fixture.aliceId);
+    assert.equal(alice.familyView, false);
+    assert.equal(alice.notes, 'Nota interna sobre a Alice');
+  });
+});
+
+test('a student finds their own record through /family', async () => {
+  await as(fixture.studentMemberId, ['student'], async () => {
+    const { students } = await new FamilyController().mine();
+    assert.deepEqual(students, [
+      { id: fixture.brunoStudentId, name: students[0]!.name, relationship: null, self: true },
+    ]);
+  });
+  await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
+    assert.deepEqual((await new FamilyController().mine()).students, []);
+  });
+});
+
+test('a family reads what it owes; the instructor who teaches them does not', async () => {
+  await as(fixture.martaId, ['guardian'], async () => {
+    const fees = await new StudentFeesController().list(fixture.aliceId);
+    assert.equal(fees.familyView, true);
+    assert.deepEqual(fees.categories, [], 'the club\'s concessions are the office\'s');
+    assert.deepEqual(fees.seasonCharges, []);
+    assert.ok(fees.lines.every((line) => line.discountReason === null));
+    await refused('GET students/:bruno/fees as Marta', 404, () =>
+      new StudentFeesController().list(fixture.brunoStudentId),
+    );
+  });
+  await as(fixture.studentMemberId, ['student'], async () => {
+    assert.equal((await new StudentFeesController().list(fixture.brunoStudentId)).familyView, true);
+  });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('GET students/:id/fees as instructor', 403, () =>
+      new StudentFeesController().list(fixture.aliceId),
+    );
+  });
+  await as(fixture.adminId, ['admin'], async () => {
+    assert.equal((await new StudentFeesController().list(fixture.aliceId)).familyView, false);
+  });
+});
+
+test('maintenance is offered neither the register nor the skills grid; an instructor is', async () => {
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    assert.equal((await new CalendarController().read()).canTakeRegister, false);
+    assert.equal((await new ClassesController().one(fixture.groupId)).canMarkSkills, false);
+  });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    assert.equal((await new CalendarController().read()).canTakeRegister, true);
+    assert.equal((await new ClassesController().one(fixture.groupId)).canMarkSkills, true);
+  });
+});
+
+test('a partner\'s agreement is not offered to staff who are sent none', async () => {
+  await as(fixture.instructorId, ['instructor'], async () => {
+    const partner = await new PartnersController().detail(fixture.partnerId);
+    assert.equal(partner.canManage, false);
+    assert.equal(partner.agreement, null);
   });
 });

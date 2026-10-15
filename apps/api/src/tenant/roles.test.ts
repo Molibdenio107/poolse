@@ -41,7 +41,7 @@ test('nobody may grant owner, not even the owner', () => {
 });
 
 test('an owner and an admin may grant everything except owner', () => {
-  const expected = ['admin', 'instructor', 'maintenance', 'guardian', 'student'];
+  const expected = ['admin', 'maintenance', 'instructor', 'guardian', 'student'];
   assert.deepEqual(as(['owner'], grantableRoles), expected);
   assert.deepEqual(as(['admin'], grantableRoles), expected);
 });
@@ -66,7 +66,7 @@ test('holding two roles grants the union of both', () => {
   // An owner who also teaches should be able to do everything either can. The
   // product has no concept of a "primary" role and this is where that shows.
   const both = as(['instructor', 'admin'], grantableRoles);
-  assert.deepEqual(both, ['admin', 'instructor', 'maintenance', 'guardian', 'student']);
+  assert.deepEqual(both, ['admin', 'maintenance', 'instructor', 'guardian', 'student']);
 
   // And a role with nothing to grant does not subtract from one that has.
   assert.deepEqual(as(['maintenance', 'instructor'], grantableRoles), ['guardian', 'student']);

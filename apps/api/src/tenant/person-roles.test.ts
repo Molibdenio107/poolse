@@ -73,7 +73,7 @@ test('17.4 an admin who is also a student gets the admin invite list', () => {
 
   // Everything except owner, in seniority order — the admin list, unaffected by
   // also being a student.
-  assert.deepEqual(roles, ['admin', 'instructor', 'maintenance', 'guardian', 'student']);
+  assert.deepEqual(roles, ['admin', 'maintenance', 'instructor', 'guardian', 'student']);
   assert.ok(!roles.includes('owner'));
 });
 
@@ -103,6 +103,16 @@ test('strongestRole reads the seniority order, not the order given', () => {
   assert.equal(strongestRole(['student', 'owner']), 'owner');
   assert.equal(strongestRole(['guardian', 'instructor']), 'instructor');
   assert.equal(strongestRole(['maintenance', 'admin']), 'admin');
+});
+
+test('an instructor who is also maintenance reads as maintenance, and keeps both', () => {
+  // Rui, 15-10-2026: maintenance has precedence where one role must lead;
+  // permissions stay the union, so nothing either role allows is lost.
+  assert.equal(strongestRole(['instructor', 'maintenance']), 'maintenance');
+  assert.deepEqual(as(['instructor', 'maintenance'], rolesHeld), ['maintenance', 'instructor']);
+  assert.doesNotThrow(() => as(['instructor', 'maintenance'], () => requireRole('instructor')));
+  assert.doesNotThrow(() => as(['instructor', 'maintenance'], () => requireRole('maintenance')));
+  assert.deepEqual(as(['instructor', 'maintenance'], grantableRoles), ['guardian', 'student']);
 });
 
 test('encarregado de educação outranks student', () => {

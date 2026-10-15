@@ -2153,6 +2153,7 @@
     "differentAccount": "This invitation was addressed to a different email. If you continue, it is this account that joins the organization."
   },
   "vacations": {
+    "mine": "My leave",
     "title": "Leave",
     "subtitle": "Ask for your days, and see what has been approved.",
     "tabs": "Leave sections",
@@ -4883,5 +4884,23 @@
   "clubData": {
     "tab": "Club details",
     "hint": "Tax details and the logo belong to the club and apply to every site, not just this one."
+  },
+  "family": {
+    "navGuardian": "My children",
+    "navStudent": "My record",
+    "title": "My children",
+    "subtitle": "The records the club keeps for the people in your care.",
+    "none": "No student record is linked to your account. If your child is at the club, ask reception to link them.",
+    "yourself": "Your own record",
+    "back": "Back to my children",
+    "recordHint": "This is what the club has on file. To correct anything, speak to reception.",
+    "feesHint": "What is agreed with the club and what is still to pay. Payment is made at the club.",
+    "noFees": "No monthly fees or other charges have been agreed yet.",
+    "plansTitle": "This week's lesson plans",
+    "showPlan": "View lesson plan",
+    "planFailed": "The plan could not be loaded.",
+    "planEmpty": "The instructor has not written this lesson's plan yet.",
+    "retry": "Try again",
+    "noSessionsHint": "This season's lessons are not on the calendar yet. Until then, this is the weekly timetable:"
   }
 }

@@ -49,6 +49,13 @@ interface Item {
   /** Absent means everybody. Present means only these roles. */
   roles?: readonly string[];
   /**
+   * Hidden from anybody holding one of these, whatever `roles` says. For an
+   * entry that is a shortcut to something a senior role already reaches by
+   * another way — the staff's own Férias, which owners and admins open under
+   * Staff.
+   */
+  unlessRoles?: readonly string[];
+  /**
    * Absent means every kind of tenant. Present means only these — slice 4.5.
    *
    * A personal tenant is one person and one pool: no turmas, no calendar of
@@ -61,6 +68,15 @@ interface Item {
   kinds?: readonly OrganizationKind[];
 }
 
+/*
+ * Who an entry is for, matched to its endpoint — 15 October 2026 (Rui): a menu
+ * never offers a screen that would refuse its reader. A new entry takes the
+ * roles of the API route its page loads, and the role probe proves that route.
+ */
+const STAFF = ['owner', 'admin', 'instructor', 'maintenance'] as const;
+const TEACHING = ['owner', 'admin', 'instructor'] as const;
+const OFFICE = ['owner', 'admin'] as const;
+
 /** Who is looking: their roles, and what kind of tenant they are in. */
 interface Viewer {
   roles: readonly string[];
@@ -71,7 +87,9 @@ interface Viewer {
 function visible(item: Item, viewer: Viewer): boolean {
   const byRole = item.roles === undefined || item.roles.some((role) => viewer.roles.includes(role));
   const byKind = item.kinds === undefined || item.kinds.includes(viewer.kind);
-  return byRole && byKind;
+  const notExcluded =
+    item.unlessRoles === undefined || !item.unlessRoles.some((role) => viewer.roles.includes(role));
+  return byRole && byKind && notExcluded;
 }
 
 /** The item and its permitted descendants, or null if the item itself is hidden. */
@@ -130,11 +148,11 @@ const SECTIONS: Item[] = [
        * of any one pool. It was a block on the pool page and had to be found
        * through a tank to be read at all.
        *
-       * Visible to everybody: knowing whether there are enough pranchas for a
-       * class is not privileged, and the write endpoints are owner/admin whether
-       * or not this link is shown.
+       * Staff only, as the endpoint is: knowing whether there are enough
+       * pranchas for a class is not privileged, but it is not a family's
+       * question. Owner, admin and maintenance write; the API says so.
        */
-      { href: '/dashboard/facilities/inventory', key: 'inventory.title' },
+      { href: '/dashboard/facilities/inventory', key: 'inventory.title', roles: STAFF },
       /*
        * Ocorrências — POOLSE-70. The staff on the deck when something happens;
        * students and guardians are refused by the API, so they are not offered
@@ -158,10 +176,22 @@ const SECTIONS: Item[] = [
         roles: ['owner', 'admin', 'instructor', 'maintenance'],
         kinds: ['business'],
       },
+      /*
+       * The staff's own leave — 15 October 2026 (Rui). Instructors and
+       * maintenance request it and see their balance; approving is owner and
+       * admin, who reach the same page under Staff and so are not shown this.
+       */
+      {
+        href: '/dashboard/facilities/staff/vacations',
+        key: 'vacations.mine',
+        roles: ['instructor', 'maintenance'],
+        unlessRoles: OFFICE,
+        kinds: ['business'],
+      },
       {
         href: '/dashboard/facilities/staff',
         key: 'staff.title',
-        roles: ['owner', 'admin'],
+        roles: OFFICE,
         kinds: ['business'],
         // Férias is staff leave, so it belongs to Staff — POOLSE-34 as amended.
         // The chain is Instalações → Staff → Férias.
@@ -203,6 +233,7 @@ const SECTIONS: Item[] = [
     href: '/dashboard/classes',
     key: 'classes.title',
     icon: 'class',
+    roles: STAFF,
     kinds: ['business'],
     // Épocas sits under Turmas because that is what a season contains. Visible to
     // everyone — knowing which year is running is not privileged — while the
@@ -220,6 +251,7 @@ const SECTIONS: Item[] = [
     href: '/dashboard/calendar',
     key: 'calendar.title',
     icon: 'calendar',
+    roles: STAFF,
     kinds: ['business'],
     children: [{ href: '/dashboard/calendar/closures', key: 'calendar.closures' }],
   },
@@ -255,6 +287,7 @@ const SECTIONS: Item[] = [
     href: '/dashboard/students',
     key: 'students.title',
     icon: 'student',
+    roles: TEACHING,
     kinds: ['business'],
     // Ordered by how close each one sits to a student — round 6. Encarregados
     // first, directly under Alunos, because a guardian is a person attached to a
@@ -268,7 +301,7 @@ const SECTIONS: Item[] = [
       // Pedidos de inscrição — POOLSE-69. Second, under Encarregados: a request
       // is a family that is not a student yet, and in September it is the list
       // reception works first. The roles are the endpoint's own.
-      { href: '/dashboard/students/pedidos', key: 'leads.title', roles: ['owner', 'admin'] },
+      { href: '/dashboard/students/pedidos', key: 'leads.title', roles: OFFICE },
       // Mensagens sit with the families they are written to — POOLSE-67. The
       // roles are the endpoint's own; an instructor writes to their own turmas.
       {
@@ -298,8 +331,29 @@ const SECTIONS: Item[] = [
        */
       // Reposicoes moved here in round 5: a make-up class is something a
       // student is owed, and the person looking for one is looking at a student.
-      { href: '/dashboard/classes/reposicoes', key: 'reposicao.title' },
+      { href: '/dashboard/classes/reposicoes', key: 'reposicao.title', roles: OFFICE },
     ],
+  },
+  /*
+   * A family's own way in — 15 October 2026 (Rui). A guardian opens their
+   * children, a student their own record; the page goes straight to the record
+   * when there is one. The API decides whose records those are
+   * (`requireActsForStudent`), not this list.
+   */
+  {
+    href: '/dashboard/family',
+    key: 'family.navGuardian',
+    icon: 'student',
+    roles: ['guardian'],
+    kinds: ['business'],
+  },
+  {
+    href: '/dashboard/family',
+    key: 'family.navStudent',
+    icon: 'student',
+    roles: ['student'],
+    unlessRoles: ['guardian'],
+    kinds: ['business'],
   },
   /*
    * Subscrição is deliberately **not** here — 13 September 2026.

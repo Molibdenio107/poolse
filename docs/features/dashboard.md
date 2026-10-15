@@ -103,6 +103,11 @@ widgets for four places and a new club's empty mensalidades card outranked an en
 year of bills. Every card carries a link to the real page:
 the dashboard is a launcher, not a replacement for the pages.
 
+**Between the empty key and priority sits the reader's leading working role** (`leadRank`,
+15 October 2026, Rui). Somebody who is both maintenance and an instructor sees the maintenance
+cards first, because maintenance now outranks instructor in `MEMBER_ROLES`. Owner and admin
+are left out of that rank, so an owner who also teaches keeps the order priority gives them.
+
 **`escalate` runs after the resolvers and before the cap.** "Boost the subscription widget when
 the trial has fewer than five days left" is a predicate on the *resolved* data — nothing about
 a declaration can know how many days are left — so every allowed widget is resolved rather than

@@ -90,7 +90,7 @@ export default async function InventoryPage({
       ),
     );
   } catch (error) {
-    if (error instanceof ApiError && error.status === 403) noOrganization = true;
+    if (error instanceof ApiError && error.code === 'no_organization') noOrganization = true;
     else failure = describeLoad(error);
   }
 
@@ -187,6 +187,7 @@ export default async function InventoryPage({
                     students={lost.data.students}
                     locations={data.locations}
                     canManage={lost.data.canManage}
+                    canArchive={lost.data.canArchive}
                   />
                 )}
 
@@ -201,6 +202,7 @@ export default async function InventoryPage({
                       total={data.items.total}
                       search={search.trim()}
                       canManage={data.canManage}
+                      canArchive={data.canArchive}
                     />
 
                     <Pagination

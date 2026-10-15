@@ -72,7 +72,7 @@ export default async function CalendarPage({
   try {
     calendar = await apiFetch<Calendar>(`/calendar?from=${monday}&to=${sunday}`);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 403) noOrganization = true;
+    if (error instanceof ApiError && error.code === 'no_organization') noOrganization = true;
     else failure = describeLoad(error);
   }
 
@@ -224,7 +224,7 @@ export default async function CalendarPage({
             take: `attendance` needs a real student on every row. A partnership
             the club runs gets the plan and Cancelar aula, and stops there.
           */
-          mark: cancelled || session.classGroupId === null
+          mark: cancelled || session.classGroupId === null || calendar?.canTakeRegister !== true
             ? undefined
             : {
                 href: `/dashboard/calendar/sessions/${session.id}?week=${monday}`,

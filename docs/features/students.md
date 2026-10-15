@@ -140,6 +140,25 @@ somebody's encarregada. Asking "does this person have any guardian edges at all"
 she holds over her granddaughter, which would take her off the adult path and address her own
 consent form to a parent she does not have.
 
+## A family reads its own record
+
+Since 15 October 2026 (Rui), a guardian opens *Os meus educandos* and a student opens *O meu
+registo*. `GET /family` lists the reader's own records: the children they are a live guardian
+of, and themselves as a student. One record goes straight to its page.
+
+The record is the staff page in a read-only family mode (`familyView` from `GET /students/:id`):
+
+- **General**, without the club's internal notes. Another guardian is named but their contacts,
+  NIF and address are left out.
+- **Mensalidades**, through `GET /students/:id/fees`'s family path: the lines, paid or due, and
+  what is outstanding. Discount reasons, the club's concessions and the charges it could add are
+  left out. The totals are `feeTotals` in `lib/fee-totals.ts`, the same function the office's
+  block reads.
+- **Turmas**, **Semana** with each lesson's plan, **Reposições** and **Progress**.
+
+Never shown: the medical record, the identity document, any form. Somebody else's child is a
+404. An instructor is still refused a family's fees with a 403.
+
 ## Levels
 
 Senior levels sit in the **same ladder** as everything else, ordered by the same `sort_order`

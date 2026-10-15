@@ -9,6 +9,7 @@ import {
   GuardiansController,
   PeopleDedupController,
   PeopleSearchController,
+  FamilyController,
   AdvancementController,
   RedemptionController,
 } from './students/students.controller.js';
@@ -193,6 +194,7 @@ const IDENTITY_ONLY_ROUTES = [
     AttendanceController,
     SeasonsController,
     PeopleSearchController,
+    FamilyController,
     GuardiansController,
     PeopleDedupController,
     StudentImportController,

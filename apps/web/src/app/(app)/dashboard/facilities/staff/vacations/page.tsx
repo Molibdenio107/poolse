@@ -85,7 +85,13 @@ export default async function VacationsPage({
     <PageShell
       title={t('vacations.title')}
       subtitle={t('vacations.subtitle')}
-      back={{ href: "/dashboard/facilities/staff", label: t('staff.backToStaff') }}
+      // Staff is the office's; an instructor or maintenance came from the menu
+      // and goes back to the dashboard rather than to a page that refuses them.
+      back={
+        mine?.canApprove === false
+          ? { href: '/dashboard', label: t('common.backToDashboard') }
+          : { href: '/dashboard/facilities/staff', label: t('staff.backToStaff') }
+      }
     >
 
 

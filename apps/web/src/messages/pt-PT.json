@@ -2153,6 +2153,7 @@
     "differentAccount": "O convite foi dirigido a outro email. Se continuar, é esta conta que entra na organização."
   },
   "vacations": {
+    "mine": "As minhas férias",
     "title": "Férias",
     "subtitle": "Peça os seus dias, veja o que já foi aprovado.",
     "tabs": "Secções das férias",
@@ -4883,5 +4884,23 @@
   "clubData": {
     "tab": "Dados do clube",
     "hint": "Os dados fiscais e o logotipo são do clube e aplicam-se a todas as instalações, não só a esta."
+  },
+  "family": {
+    "navGuardian": "Os meus educandos",
+    "navStudent": "O meu registo",
+    "title": "Os meus educandos",
+    "subtitle": "As fichas que o clube tem de quem está ao seu cuidado.",
+    "none": "Não há nenhuma ficha de aluno associada à sua conta. Se tem um educando no clube, peça à receção para o associar.",
+    "yourself": "A sua própria ficha",
+    "back": "Voltar aos meus educandos",
+    "recordHint": "Estes são os dados que o clube tem. Para corrigir alguma coisa, fale com a receção.",
+    "feesHint": "O que está acordado com o clube e o que falta pagar. O pagamento é feito no clube.",
+    "noFees": "Ainda não há mensalidades nem outras quotas acordadas.",
+    "plansTitle": "Planos das aulas desta semana",
+    "showPlan": "Ver plano da aula",
+    "planFailed": "Não foi possível carregar o plano.",
+    "planEmpty": "O professor ainda não escreveu o plano desta aula.",
+    "retry": "Tentar de novo",
+    "noSessionsHint": "As aulas desta época ainda não foram marcadas no calendário. Até lá, este é o horário semanal:"
   }
 }

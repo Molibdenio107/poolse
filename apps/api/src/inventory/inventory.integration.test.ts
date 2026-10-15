@@ -1,7 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { InventoryController } from './inventory.controller.js';
-import { actingAs, closeHarness, withScratchTenant } from '../test/harness.js';
+import { actingAs, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 
 /**
  * The store-room screen loads — round 6, ticket 2.
@@ -96,6 +96,50 @@ test('an instructor may read the store room and is told they may not change it',
 
       assert.equal(response.canManage, false, 'the screen renders read-only');
       assert.deepEqual(response.items.items, [], 'and it still loads');
+    });
+  });
+});
+
+test('maintenance keeps the store room and lost property, and archives nothing', async () => {
+  // Rui, 15-10-2026: maintenance edits the inventory; archiving stays owner/admin.
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['maintenance'] }, async () => {
+      const controller = new InventoryController();
+      const { id } = await controller.add({
+        facilityId: tenant.facilityId,
+        name: 'Pranchas',
+        quantity: 18,
+        scope: 'facility',
+      });
+      await controller.edit(id, { name: 'Pranchas', quantity: 16, scope: 'facility' });
+      const { id: found } = await controller.recordFound({
+        facilityId: tenant.facilityId,
+        description: 'Toalha',
+      });
+      await controller.giveBack(found);
+
+      const response = await controller.list();
+      assert.equal(response.canManage, true);
+      assert.equal(response.canArchive, false);
+      assert.equal(response.items.items[0]?.quantity, 16);
+      assert.equal((await controller.lostAndFound()).canManage, true);
+
+      await expectStatus(() => controller.remove(id), 403);
+      await expectStatus(() => controller.removeFound(found), 403);
+    });
+  });
+});
+
+test('an instructor who is also maintenance edits the store; an instructor alone does not', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['instructor', 'maintenance'] }, async () => {
+      assert.equal((await new InventoryController().list()).canManage, true);
+    });
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      await expectStatus(
+        () => new InventoryController().add({ facilityId: tenant.facilityId, name: 'X', quantity: 1, scope: 'facility' }),
+        403,
+      );
     });
   });
 });

@@ -9,6 +9,7 @@ import type { CalendarSession, TimetableEntry } from '@/lib/api';
 import { studentWeekAction } from '../students.actions';
 import { laneLabel } from '@/lib/lanes';
 import { formatDate } from '@/lib/date-format';
+import { FamilyPlans } from './family-plans';
 
 /**
  * "This student's week", stepping without reloading the page — round 6.
@@ -42,6 +43,7 @@ export function StudentWeek({
   initialWeek,
   initialSessions,
   timetable,
+  family = false,
 }: {
   studentId: string;
   /** The Monday the server rendered. */
@@ -49,6 +51,8 @@ export function StudentWeek({
   initialSessions: CalendarSession[];
   /** The recurring pattern, which does not change with the week. */
   timetable: TimetableEntry[];
+  /** Read by the child's family: no links to staff pages, and the plans. */
+  family?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -146,7 +150,8 @@ export function StudentWeek({
             ]
               .filter(Boolean)
               .join(' · '),
-            href: `/dashboard/classes/${session.classGroupId}`,
+            // A turma's page is staff only.
+            ...(family ? {} : { href: `/dashboard/classes/${session.classGroupId}` }),
             cancelled,
             muted: cancelled,
             note: cancelled ? session.cancellationReason ?? t('calendar.cancelledNoReason') : null,
@@ -161,6 +166,8 @@ export function StudentWeek({
         emptyLabel={t('students.noClassesThisWeek')}
       />
 
+      {family && !failed && <FamilyPlans sessions={sessions} />}
+
       {/*
         A student with a weekly pattern and no dated classes has not been left
         out of the timetable — the season simply has not been built. Saying which
@@ -174,10 +181,16 @@ export function StudentWeek({
       {sessions.length === 0 && !failed && timetable.length > 0 && (
         <div className="flex flex-col gap-3 rounded border border-dashed border-border p-4">
           <p className="text-sm text-foreground-muted">
-            {t('students.noSessionsHint')}{' '}
-            <Link href="/dashboard/calendar" className="text-primary hover:underline">
-              {t('calendar.title')}
-            </Link>
+            {family ? (
+              t('family.noSessionsHint')
+            ) : (
+              <>
+                {t('students.noSessionsHint')}{' '}
+                <Link href="/dashboard/calendar" className="text-primary hover:underline">
+                  {t('calendar.title')}
+                </Link>
+              </>
+            )}
           </p>
           <WeekGrid
             entries={timetable.map(
@@ -194,7 +207,7 @@ export function StudentWeek({
                 ]
                   .filter(Boolean)
                   .join(' · '),
-                href: `/dashboard/classes/${entry.classGroupId}`,
+                ...(family ? {} : { href: `/dashboard/classes/${entry.classGroupId}` }),
                 // A place on the waiting list is not a class to turn up to, so
                 // it is drawn as the provisional thing it is.
                 muted: entry.status === 'waiting',
