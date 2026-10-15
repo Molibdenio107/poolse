@@ -86,6 +86,8 @@ interface Fixture {
   awayInstructorId: string;
   groupId: string;
   sessionId: string;
+  /** The session's day — a week out, so outside the calendar's default window. */
+  sessionOn: string;
   poolId: string;
   partnerId: string;
   skillId: string;
@@ -248,6 +250,7 @@ async function seed(tenant: ScratchTenant): Promise<Fixture> {
     awayInstructorId,
     groupId,
     sessionId: session!.id,
+    sessionOn: session!.occurs_on,
     poolId: pool!.id,
     partnerId,
     skillId: skill!.id,
@@ -378,7 +381,11 @@ test("a linked guardian reads their own child, and not another's", async () => {
     const timetable = await new TimetableController().read(fixture.aliceId);
     assert.ok(timetable.entries.length > 0, "her child's timetable");
 
-    const calendar = await new StudentCalendarController().read(fixture.aliceId);
+    const calendar = await new StudentCalendarController().read(
+      fixture.aliceId,
+      fixture.sessionOn,
+      fixture.sessionOn,
+    );
     assert.ok(calendar.sessions.length > 0, "her child's calendar");
 
     const progression = await new RecordsController().read(fixture.aliceId);
@@ -407,7 +414,11 @@ test('a student reads their own record, timetable, calendar and progression', as
     const timetable = await new TimetableController().read(fixture.brunoStudentId);
     assert.ok(timetable.entries.length > 0, 'own timetable');
 
-    const calendar = await new StudentCalendarController().read(fixture.brunoStudentId);
+    const calendar = await new StudentCalendarController().read(
+      fixture.brunoStudentId,
+      fixture.sessionOn,
+      fixture.sessionOn,
+    );
     assert.ok(calendar.sessions.length > 0, 'own calendar');
 
     const progression = await new RecordsController().read(fixture.brunoStudentId);
@@ -526,6 +537,7 @@ test('operational reads refuse non-staff (403)', async () => {
     await refused('GET facilities/pools/:id', 403, () =>
       new FacilitiesController().pool(fixture.poolId),
     );
+    await refused('GET facilities/:id', 403, () => new FacilitiesController().one(fac));
     await refused('GET maintenance/facilities/:id/tasks', 403, () =>
       new MaintenanceController().list(fac),
     );

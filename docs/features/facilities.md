@@ -6,8 +6,10 @@ Schema in `docs/data-model.md`.
 
 | Action | Roles |
 |---|---|
-| Read a site, its tanks and its lanes | everybody |
-| Create, edit or archive a site or a tank | owner, admin |
+| Read the Instalações list: sites, tanks, photographs | everybody |
+| Open a site's page (its configuration) | owner, admin; maintenance sees only Espaços, Manutenção and Energia |
+| Open a tank's page | owner, admin, instructor, maintenance |
+| Create, edit or archive a site or a tank; add a photograph | owner, admin |
 | Read the inventory | everybody |
 | Change the inventory | owner, admin |
 
@@ -267,3 +269,11 @@ extend it. The licence trigger is still what refuses a site over the limit.
 
 Each card also shows the site's **photographs** (restored the same day); its espaços are a link to
 the site's Espaços tab.
+
+**Since 15 October 2026 the site's page is owner and admin only** (Rui), with Poolse support
+counted as admin inside a grant's window. `GET /facilities/:id` refuses everybody else except
+maintenance, which opens the page for its Espaços, Manutenção and Energia tabs and sees no
+other tab. On the list, *Configurar instalação* is drawn for owner and admin only. The
+Espaços · Manutenção · Energia links are drawn for whoever may open the page (`canOpenSite`).
+A tank's name links to its page only for staff (`canOpenPools`). An instructor, a guardian and a
+student see the cards, tanks and photographs and nothing to change.

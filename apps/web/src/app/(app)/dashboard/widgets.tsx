@@ -179,10 +179,15 @@ async function TasksCard({ widget }: { widget: DashboardWidget }): Promise<React
   */
   const sites = new Set(data?.tasks.map((task) => task.facilityId) ?? []);
   const [only] = sites;
+  // An instructor may not open the site page (15-10-2026), so their card opens
+  // their first task; every task on it is a link of its own besides.
+  const [first] = data?.tasks ?? [];
   const href =
-    sites.size === 1 && only !== undefined
-      ? `/dashboard/facilities/${only}?tab=maintenance`
-      : '/dashboard/facilities';
+    data !== null && !data.canOpenSite && first !== undefined
+      ? withFrom(`/dashboard/facilities/tasks/${first.id}`, '/dashboard')
+      : sites.size === 1 && only !== undefined
+        ? `/dashboard/facilities/${only}?tab=maintenance`
+        : '/dashboard/facilities';
 
   return (
     <WidgetCard

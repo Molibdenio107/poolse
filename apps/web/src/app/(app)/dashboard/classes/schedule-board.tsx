@@ -1990,7 +1990,7 @@ export function ScheduleBoard({
           <section className="rounded border border-dashed border-border bg-surface-muted p-6 text-center">
             <p className="text-sm font-medium">{t('grid.noSlots')}</p>
             <p className="mt-1 text-sm text-foreground-muted">{t('grid.noSlotsHint')}</p>
-            {facility !== undefined && (
+            {facility !== undefined && canManage && (
               <a
                 href={`/dashboard/facilities/${facility.id}`}
                 className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-3 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"

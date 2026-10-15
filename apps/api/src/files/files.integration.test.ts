@@ -133,7 +133,8 @@ test('who reads a file is decided by what it is for', async () => {
     const guardian = await addMember(tenant, 'Rita', 'Mãe', ['guardian']);
     await actingAs(tenant, { membershipId: guardian, roles: ['guardian'] }, async () => {
       await new FilesController().read(logo);
-      await expectStatus(() => new FilesController().read(photo), 403);
+      // A site's photographs are on the Instalações list, which families see.
+      await new FilesController().read(photo);
       await expectStatus(() => new FilesController().read(policyDoc), 403);
     });
   });

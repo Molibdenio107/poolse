@@ -38,7 +38,10 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   policy_document: { write: OFFICE, read: OFFICE },
   agreement_document: { write: OFFICE, read: OFFICE },
   qualification_document: { write: OFFICE, read: OFFICE },
-  facility_photo: { write: OFFICE, read: STAFF },
+  // Every member since 15 October 2026 (Rui): the Instalações list is
+  // everybody's, families included, and the picture of the place is part of
+  // the card. A tank's photographs sit on its page, which is staff only.
+  facility_photo: { write: OFFICE, read: ANYONE },
   pool_photo: { write: OFFICE, read: STAFF },
   logo: { write: OFFICE, read: ANYONE },
   student_photo: { write: null, read: OFFICE },

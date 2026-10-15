@@ -6,7 +6,7 @@ Built 12 October 2026. What a club can upload, who can see it, and how it is kep
 
 | Where | What | Who uploads | Who can open it |
 |---|---|---|---|
-| A site's page and the Instalações list | Photographs of the site | Owner, admin | All staff |
+| A site's page and the Instalações list | Photographs of the site | Owner, admin | Every member, families included (since 15-10-2026) |
 | A tank's page | Photographs of the tank | Owner, admin | All staff |
 | A site's page → Dados do clube (with the NIPC; under Faturação until 13-10-2026) | The club's logo, shown in the top corner of every screen beside the club's name | Owner, admin | Every member, families included |
 | A site's apólices (Seguros) | The policy document, one per apólice, replaceable | Owner, admin | Owner, admin |

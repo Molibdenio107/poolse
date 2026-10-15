@@ -651,6 +651,8 @@ responsible for this turma" cannot be written as a role, so the repository resol
 decides, and the controller turns a refusal into a 403 — while the read endpoint returns the
 same answer as `canEdit` so the screen and the guard cannot disagree. See `lesson-plans.repository.ts`.
 
+**A site's page configures the club; the Instalações list is everybody's.** 15 October 2026, Rui's call. `GET /facilities/:id` is `SITE_PAGE_ROLES` (owner, admin, maintenance; support is admin), and the page shows maintenance only Espaços, Manutenção and Energia. The list carries `canOpenSite` and `canOpenPools` so it never links to a page that will refuse. A new site-page tab is `visible: loaded.canManage` unless it is maintenance's daily work. `docs/features/facilities.md`.
+
 **An Admin sees every staff member's pay except the Owner's, and the card says so.** Salaries
 are the first table whose visibility differs *between* two management roles, and the rule is a
 question about a row, so it lives in `compensation.repository.ts` — one predicate feeding the

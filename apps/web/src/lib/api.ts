@@ -1310,6 +1310,10 @@ export interface Facilities {
   organizationId: string;
   facilities: Facility[];
   canManage: boolean;
+  /** The site's own page answers this reader: owner, admin, maintenance. */
+  canOpenSite: boolean;
+  /** A tank's page answers this reader: staff, never a family. */
+  canOpenPools: boolean;
   timezones: string[];
   /** The licence's site ceiling (`organization.max_facilities`); null limits nothing. */
   maxFacilities: number | null;
@@ -3846,6 +3850,8 @@ export interface SubscriptionWidgetData {
 export interface TasksWidgetData {
   total: number;
   tasks: MaintenanceTask[];
+  /** The site page answers this reader; an instructor's card opens the task instead. */
+  canOpenSite: boolean;
 }
 
 /** `setup.checklist` — a club with no sites, and the only card it gets. */

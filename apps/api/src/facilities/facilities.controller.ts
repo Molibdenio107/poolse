@@ -70,6 +70,7 @@ import {
   type PoolUse,
 } from './facilities.repository.js';
 import { SampleInFutureError, sampleMoment, type SampleMoment } from './sample-moment.js';
+import { SITE_PAGE_ROLES } from './site-access.js';
 import { POOL_USES, type PoolContext } from '@poolse/rules';
 
 interface FacilityDetailResponse extends FacilityDetail {
@@ -133,6 +134,10 @@ interface FacilitiesResponse {
   facilities: Facility[];
   /** So the UI can hide forms the API would refuse. */
   canManage: boolean;
+  /** Whether `GET /facilities/:id` answers this reader — `SITE_PAGE_ROLES`. */
+  canOpenSite: boolean;
+  /** Whether `GET /facilities/pools/:id` answers this reader — staff only. */
+  canOpenPools: boolean;
   timezones: string[];
   /** The licence's site ceiling; null is not measured. */
   maxFacilities: number | null;
@@ -141,13 +146,16 @@ interface FacilitiesResponse {
 /**
  * Slice 1.1 — an operator sets up their site.
  *
- * Reading is open to any member: an instructor needs to know which pool their
- * class is in. Writing is owner and admin, the same line invitations draw, and
+ * The list is open to any member: an instructor needs to know which pool their
+ * class is in. A site's own page is `SITE_PAGE_ROLES` and a tank's is staff
+ * only. Writing is owner and admin, the same line invitations draw, and
  * for the same reason — the people who run the organization decide what it
  * contains.
  */
 /** Who may record one water analysis — the form, not the importer. */
 const CAN_RECORD_ANALYSIS = ['owner', 'admin', 'maintenance'] as const;
+
+const POOL_PAGE_ROLES = ['owner', 'admin', 'instructor', 'maintenance'] as const;
 
 @Controller('facilities')
 export class FacilitiesController {
@@ -165,6 +173,8 @@ export class FacilitiesController {
       organizationId,
       facilities,
       canManage: hasRole('owner', 'admin'),
+      canOpenSite: hasRole(...SITE_PAGE_ROLES),
+      canOpenPools: hasRole(...POOL_PAGE_ROLES),
       timezones: TIMEZONES,
       maxFacilities,
     };
@@ -224,7 +234,7 @@ export class FacilitiesController {
   > {
     // Security review, 12 October 2026: this answered any member, a guardian
     // included — the water log names who recorded each reading.
-    requireRole('owner', 'admin', 'instructor', 'maintenance');
+    requireRole(...POOL_PAGE_ROLES);
     const { organizationId } = currentTenant();
 
     const detail = await findPool(organizationId, poolId);
@@ -453,6 +463,7 @@ export class FacilitiesController {
    */
   @Get(':facilityId')
   async one(@Param('facilityId') facilityId: string): Promise<FacilityDetailResponse> {
+    requireRole(...SITE_PAGE_ROLES);
     const { organizationId } = currentTenant();
 
     const detail = await findFacility(organizationId, facilityId);

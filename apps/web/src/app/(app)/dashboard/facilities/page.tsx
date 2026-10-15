@@ -102,9 +102,11 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                   <div className="flex min-w-0 flex-col">
                     <h2 className="text-lg font-medium">{facility.name}</h2>
                     {/* What is behind the button, so it reads as the place to go. */}
-                    <span className="text-sm text-foreground-muted">
-                      {t('facilities.configureHint')}
-                    </span>
+                    {data.canManage && (
+                      <span className="text-sm text-foreground-muted">
+                        {t('facilities.configureHint')}
+                      </span>
+                    )}
                     {facility.address !== null && (
                       <span className="text-sm text-foreground-muted">{facility.address}</span>
                     )}
@@ -121,14 +123,18 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                       tanks, partners, spaces, maintenance, energy — so its door
                       is the page's primary action (Rui, 12 October 2026), not a
                       quiet bordered button beside the archive control.
+                      Owner and admin only since 15 October 2026 (Rui): this
+                      card is everybody's, configuring the site is not.
                     */}
-                    <Link
-                      href={`/dashboard/facilities/${facility.id}`}
-                      className="inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    >
-                      <Settings aria-hidden className="size-4" />
-                      {t('facilities.configure')}
-                    </Link>
+                    {data.canManage && (
+                      <Link
+                        href={`/dashboard/facilities/${facility.id}`}
+                        className="inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        <Settings aria-hidden className="size-4" />
+                        {t('facilities.configure')}
+                      </Link>
+                    )}
                     {data.canManage && (
                       <ArchiveButton
                         organizationId={data.organizationId}
@@ -151,12 +157,17 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                         <div className="flex min-w-0 items-center gap-2">
                           <EntityIcon kind="pool" className="text-foreground-muted" />
                           <div className="flex min-w-0 flex-col">
-                          <Link
-                            href={`/dashboard/facilities/pools/${pool.id}`}
-                            className="truncate text-primary hover:underline"
-                          >
-                            {pool.name}
-                          </Link>
+                          {/* A tank's page is staff only; a family reads the name. */}
+                          {data.canOpenPools ? (
+                            <Link
+                              href={`/dashboard/facilities/pools/${pool.id}`}
+                              className="truncate text-primary hover:underline"
+                            >
+                              {pool.name}
+                            </Link>
+                          ) : (
+                            <span className="truncate">{pool.name}</span>
+                          )}
                           <span className="text-sm text-foreground-muted">
                             {[
                               t(`facilities.kind.${pool.kind}`),
@@ -212,18 +223,33 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                   />
                 </div>
 
-                {/* Its espaços are a tab of the site's page, one link away. */}
-                <nav
-                  aria-label={t('facilities.cardMore', { name: facility.name })}
-                  className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-4 text-sm"
-                >
-                  <Link
-                    href={`/dashboard/facilities/${facility.id}?tab=spaces`}
-                    className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                {/*
+                  The site page's working tabs, one link away — for whoever may
+                  open it. Maintenance has no Configurar button, so these are
+                  its way in.
+                */}
+                {data.canOpenSite && (
+                  <nav
+                    aria-label={t('facilities.cardMore', { name: facility.name })}
+                    className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-4 text-sm"
                   >
-                    {t('spaces.title')}
-                  </Link>
-                </nav>
+                    {(
+                      [
+                        ['spaces', 'spaces.title'],
+                        ['maintenance', 'maintenance.section'],
+                        ['energy', 'energy.section'],
+                      ] as const
+                    ).map(([tab, key]) => (
+                      <Link
+                        key={tab}
+                        href={`/dashboard/facilities/${facility.id}?tab=${tab}`}
+                        className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        {t(key)}
+                      </Link>
+                    ))}
+                  </nav>
+                )}
 
                 {data.canManage && (
                   <Link

@@ -1,6 +1,7 @@
 import { readSubscription } from '../billing/subscription.repository.js';
 import { energyCosts } from '../energy/invoices.repository.js';
 import { listMyTasks } from '../maintenance/maintenance.repository.js';
+import { SITE_PAGE_ROLES } from '../facilities/site-access.js';
 import { readSetupProgress } from './dashboard.repository.js';
 import { excursions, resolveBands, type PoolMetric } from '@poolse/rules';
 import { salarySummary, type SalarySummary } from '../staff/compensation.repository.js';
@@ -120,6 +121,11 @@ export interface TasksWidget {
   total: number;
   /** The first few, for the card. The link goes to the real list. */
   tasks: unknown[];
+  /**
+   * Whether the reader may open the site page, where the real list is. An
+   * instructor with a task may not (15-10-2026), so the card opens the task.
+   */
+  canOpenSite: boolean;
 }
 
 /** How many tasks a card shows before it stops being a card. */
@@ -134,7 +140,11 @@ export async function myTasks(ctx: ResolverContext): Promise<TasksWidget | null>
   const tasks = await listMyTasks(ctx.organizationId, ctx.membershipId, true);
   if (tasks.length === 0) return null;
 
-  return { total: tasks.length, tasks: tasks.slice(0, TASKS_SHOWN) };
+  return {
+    total: tasks.length,
+    tasks: tasks.slice(0, TASKS_SHOWN),
+    canOpenSite: SITE_PAGE_ROLES.some((role) => ctx.roles.includes(role)),
+  };
 }
 
 export interface EnergyCostsWidget {

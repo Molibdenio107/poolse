@@ -57,6 +57,12 @@ import { storageConfigured } from '@/lib/storage-status';
  * tabs: General holds what the site *is* (its people, weather, location and
  * hours), Preços holds the price list with the two cards that modify it, and
  * every other section is a tab of its own, in the order they were stacked.
+ *
+ * **Owner and admin configure the site here; maintenance works here** —
+ * 15 October 2026, Rui's call. The API answers owner, admin and maintenance
+ * (`SITE_PAGE_ROLES`), and maintenance is shown Espaços, Manutenção and
+ * Energia only — its daily work, not the club's set-up. Everybody else has
+ * the Instalações list, photographs included.
  */
 
 /**
@@ -192,6 +198,7 @@ export default async function FacilityPage({
       tabs={[
         {
           slug: 'general',
+          visible: loaded.canManage,
           labelKey: 'detailTabs.general',
           content: () => (
             <GeneralTab site={loaded} path={path} from={from} section={section} />
@@ -201,10 +208,11 @@ export default async function FacilityPage({
           slug: 'prices',
           labelKey: 'detailTabs.prices',
           visible:
-            prices.state !== 'refused' ||
-            categories.state !== 'refused' ||
-            policies.state !== 'refused' ||
-            passes.state !== 'refused',
+            loaded.canManage &&
+            (prices.state !== 'refused' ||
+              categories.state !== 'refused' ||
+              policies.state !== 'refused' ||
+              passes.state !== 'refused'),
           content: async () => {
             /*
               One section at a time — 12 October 2026, Rui's report that the
@@ -336,7 +344,7 @@ export default async function FacilityPage({
         {
           slug: 'partners',
           labelKey: 'partners.title',
-          visible: partners.state !== 'refused',
+          visible: loaded.canManage && partners.state !== 'refused',
           badge:
             partners.state === 'ok' ? { kind: 'count', value: partners.data.total } : undefined,
           content: () =>
@@ -356,6 +364,7 @@ export default async function FacilityPage({
         },
         {
           slug: 'pools',
+          visible: loaded.canManage,
           labelKey: 'facilities.pools',
           badge: { kind: 'count', value: loaded.pools.length },
           content: () => (
@@ -396,6 +405,7 @@ export default async function FacilityPage({
             endpoint's to withhold. Fetched when the tab opens.
           */
           slug: 'occupancy',
+          visible: loaded.canManage,
           labelKey: 'detailTabs.occupancy',
           content: async () => {
             const occupancy = await apiFetch<Occupancy>(
@@ -494,6 +504,7 @@ export default async function FacilityPage({
             Every staff role reads; the API refuses a family, so the tab follows.
           */
           slug: 'regulation',
+          visible: loaded.canManage,
           labelKey: 'regulation.tab',
           content: async () => {
             const [versions, complaints] = await Promise.all([
@@ -550,6 +561,7 @@ export default async function FacilityPage({
         },
         {
           slug: 'photos',
+          visible: loaded.canManage,
           labelKey: 'facilities.photos',
           content: () => (
             <section className="rounded border border-border bg-surface p-5">
