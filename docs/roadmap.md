@@ -449,6 +449,100 @@ starting the slice, not during.
 surprise. The choice was made on 8 September 2026 by moving this whole phase after 4, 5
 and 6 — so 3.6 now simply follows the readings it needs.
 
+## Phase 3b — wearables *(added 15 October 2026)*
+
+**After phase 3, and in this order.** A watch app is a separate native build per platform
+(watchOS in Swift, Wear OS in Kotlin, Garmin in Connect IQ), whatever 3.1 picks for the
+phone. So the first three slices get most of the value with no watch code at all. Payments,
+forms and the register stay on the phone. Touch is off in the water (Apple Water Lock), so
+the watch shows the plan before and after a class and tracks automatically during it.
+
+| # | Slice | Done when |
+|---|---|---|
+| W.1 | Notifications that read on a wrist: 3.0's push with a short title, the hour and the pool | A class reminder and a cancellation show on a paired watch with no watch code |
+| W.2 | Swim import: pool-swim workouts from Apple Health (HealthKit, via the iOS app) and Garmin Connect (OAuth2) onto the student's record; Fitbit as a data source only | A swim recorded on a watch appears on the student's page in Poolse |
+| W.3 | Training plan to Garmin: the lesson's plan sent as a structured workout through Garmin's Training API | A student's Garmin guides them through today's plan set by set |
+| W.4 | Training plan to Apple Watch through WorkoutKit, **only if it supports pool-swim workouts** (check before starting) | The same, on an Apple Watch |
+| W.5 | Apple Watch companion app: today's class, the training plan, water temperature, next class | A student checks today's plan on their wrist without opening the phone |
+| W.6 | Wear OS companion app, same scope as W.5 | Build it when the clubs' students turn out to use Wear OS |
+
+**W.1 needs 3.0, and W.2 needs 3.2** (a student account to attach the data to). **W.2 imports
+health data**, so it needs the student's or guardian's consent per source, revocable, and a
+decision on who in the club may read it. Take that decision before starting the slice, as with
+POOLSE-23's health notes. **Apply to Garmin's developer programme early**: W.2 and W.3 both
+need it and approval is not instant.
+
+## Phase 3c — individual plans: personal trainers and nutritionists *(brainstorm, added 15 October 2026)*
+
+**A service the club sells to its own students, not a fitness app.** A student who pays for it
+gets an individual plan from a personal trainer or a nutritionist. Food databases, calorie
+counting and meal logging stay out of scope: the professional already has tools for those, and
+Poolse holds who follows whom, the plan, check-ins, measurements over time and billing. It
+comes after phases 3 and 3b because most of it lives in the student app.
+
+**Decided (15 October 2026):**
+
+- **The professionals are the club's own staff**, not outside freelancers. They work inside the
+  tenant, and the club bills the student. No marketplace and no revenue split.
+- **Adults only for now**, meaning students on the adult path (`student_is_adult_path`). Minors
+  would bring guardian consent and clinical care into scope.
+- **Their qualification is checked**: the IPDJ exercise-technician title (TPTEF) for a trainer
+  and registration with the Ordem dos Nutricionistas for a nutritionist, both as POOLSE-27
+  qualification types.
+- **Measurements and nutrition notes are health data.** They need the encrypted, read-logged
+  path (as `incident_detail`), explicit consent that can be revoked, and access decided per row.
+- **Who reads them: the professional, the student, the Owner and the Admin.** When a student
+  moves to another professional, the history passes on only once the student approves.
+- **Withdrawing consent, or leaving the service,** stops new records and hides existing ones
+  from the professional straight away. What is already recorded stays encrypted until 7b.8's
+  retention period ends, and is then anonymised.
+- **A session is a normal class**, with a register, cancellation and the calendar, and a
+  nutrition consultation is too. It happens in the pool (a lane) or dryland (an Espaço).
+  Classes book lanes today, so a class held in an Espaço is new work for I.1.
+- **The plan's content:** training is structured (exercises, sets, reps) in the lesson-plan
+  format, so W.3 can send it to a watch. Nutrition is a document the nutritionist attaches.
+- **Measurements are a fixed set** (weight, height, body fat %, waist, resting heart rate),
+  each `numeric` with its unit, plus a free-text note. Professionals cannot add fields, so
+  progress can always be charted.
+- **Sold under two names on one `fee_kind`:** *Aulas particulares* for a trainer and
+  *Consultas de nutrição* for a nutritionist (the enum spelling is decided when it is built).
+  A monthly fee and a pack of sessions (the free-swim pass model) are both possible.
+- **A student may have a trainer and a nutritionist at once.** Both see the shared
+  measurements, and each sees only their own notes.
+- **It is a paid add-on for clubs, except the pilot,** which gets it included. "One plan
+  decides no feature" is a settled rule (slice 2.4), so the add-on is a per-tenant switch an
+  operator sets on `/admin`, as `max_facilities` is, and not a second plan. That needs writing
+  down as a deliberate exception when the slice is built.
+- **A student can message their professional** from the app, or through the front desk.
+  POOLSE-67's messages go one way, from the club to families, so a two-way conversation is
+  new work. It reuses 67's record-first rule: the message is stored, and the email is sent
+  after the commit.
+- **Only the professional manages the schedule.** The student cannot book or move a session;
+  they ask through a message or at the front desk.
+- **How the professional is paid is postponed until after the alpha go-live.** Until then the
+  salaries module applies as it stands, so commission per client or per session is not built.
+- **The account type is postponed until after the alpha go-live.** A new role (for example
+  `specialist`) is the likely answer, because a nutritionist may teach nothing and so hold no
+  role today.
+- **Enrolment happens at the front desk**: the contract and the health-data consent are signed
+  in person. The student app tells the student about the service, and once they are enrolled
+  it shows them the service and their professional.
+
+**What it reuses:** per-lesson training plans (the shape of a plan), `fee_kind` (a new kind for
+the monthly service), the free-swim pass (a pack of N sessions), bookings in a lane or an
+Espaço (one-to-one sessions), stored files (the professional's own plan document), W.2 (swim
+data for the trainer) and W.3 (a personal plan sent to the watch).
+
+| # | Slice | Done when |
+|---|---|---|
+| I.1 | A professional is assigned to an adult student, with an individual plan (goals, a document, sessions) | A trainer opens their client list and the client's plan |
+| I.2 | Measurements and check-ins over time, visible only to the professional and the student | A dated weight or body-measurement record that only those two can read, every read logged |
+| I.3 | Billing: a monthly fee, or a pack of sessions | The service appears on the student's invoice |
+| I.4 | In the student app: my plan, next session, the plan on the watch | A student sees their personal plan on their phone and their Garmin |
+
+**Open, to settle before building:** see the brainstorm entries in `docs/decisions.md` dated
+15 October 2026 onwards.
+
 ## Phase 4 — maintenance
 
 | # | Slice | Done when |
@@ -593,7 +687,7 @@ on 7b.7.
 | Item | Build it when |
 |---|---|
 | Parent communication and swim stats | An operator asks for it, or phase 1 is in real use |
-| Apple Health / Fitbit / Garmin | Parent communication exists — the stats have to come from somewhere first |
+| Apple Health / Fitbit / Garmin | No longer deferred — now slice W.2 of phase 3b (15 October 2026) |
 | AI-assisted column mapping | The manual mapping step has been used enough to know where it is wrong |
 | Automated meter feeds | Manual energy entry is in real use and is the bottleneck |
 | SMS as a notification channel | Push and email have proven insufficient — it costs real money per message |
