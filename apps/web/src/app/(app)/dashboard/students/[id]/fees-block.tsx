@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, Check, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { SectionPills, sectionHref } from '@/components/section-pills';
 import { formatCents, monthlyEquivalentCents } from '@/lib/money';
@@ -269,6 +269,9 @@ function ChargeSeasonForm({
   );
 
   const policy = charge.policies.find((one) => one.id === policyId);
+  // Re-seeded when another policy is picked, so the dates follow the apólice.
+  const [coversFrom, setCoversFrom] = useSeeded<string>(policy?.validFrom ?? '');
+  const [coversTo, setCoversTo] = useSeeded<string>(policy?.validTo ?? '');
   const fields = state.fields ?? {};
 
   return (
@@ -315,7 +318,8 @@ function ChargeSeasonForm({
               id={`from-${charge.planId}`}
               type="date"
               name="coversFrom"
-              defaultValue={policy?.validFrom ?? ''}
+              value={coversFrom}
+              onChange={(event) => setCoversFrom(event.target.value)}
               className={CONTROL_LINE}
             />
             <p className="text-sm text-foreground-muted">{t('fees.coversFromHint')}</p>
@@ -329,7 +333,8 @@ function ChargeSeasonForm({
               id={`to-${charge.planId}`}
               type="date"
               name="coversTo"
-              defaultValue={policy?.validTo ?? ''}
+              value={coversTo}
+              onChange={(event) => setCoversTo(event.target.value)}
               className={CONTROL_LINE}
             />
           </div>
@@ -1193,6 +1198,12 @@ function DiscountFields({
   suggestedCategoryId?: string | null;
   line?: StudentFeeLine;
 }): React.ReactElement {
+  const [discountValueField, setDiscountValueField] = useSeeded<string>(String(line?.lineDiscountPercent !== null && line?.lineDiscountPercent !== undefined
+                  ? String(line.lineDiscountPercent)
+                  : line?.lineDiscountCents !== null && line?.lineDiscountCents !== undefined
+                    ? (line.lineDiscountCents / 100).toFixed(2)
+                    : ''));
+  const [discountReasonField, setDiscountReasonField] = useSeeded<string>(String(line?.discountReason ?? ''));
   const t = useTranslations();
   const locale = useLocale();
 
@@ -1314,13 +1325,8 @@ function DiscountFields({
               id={`${idPrefix}-dvalue`}
               name="discountValue"
               inputMode="decimal"
-              defaultValue={
-                line?.lineDiscountPercent !== null && line?.lineDiscountPercent !== undefined
-                  ? String(line.lineDiscountPercent)
-                  : line?.lineDiscountCents !== null && line?.lineDiscountCents !== undefined
-                    ? (line.lineDiscountCents / 100).toFixed(2)
-                    : ''
-              }
+              value={discountValueField}
+              onChange={(event) => setDiscountValueField(event.target.value)}
               className={CONTROL_LINE}
             />
           </div>
@@ -1332,7 +1338,8 @@ function DiscountFields({
             <input
               id={`${idPrefix}-dreason`}
               name="discountReason"
-              defaultValue={line?.discountReason ?? ''}
+              value={discountReasonField}
+              onChange={(event) => setDiscountReasonField(event.target.value)}
               required
               maxLength={500}
               className={CONTROL_LINE}
@@ -1476,6 +1483,7 @@ function ChargePlanForm({
   // The plan's own preference, then the site's — AC2.
   const suggested =
     suggestedPeriodId ?? periods.find((period) => period.isDefault)?.id ?? periods[0]?.id ?? '';
+  const [feePeriodIdField, setFeePeriodIdField] = useSeeded<string>(suggested);
 
   return (
     <form action={submit} className="flex flex-col gap-3 rounded border border-border p-4">
@@ -1491,7 +1499,8 @@ function ChargePlanForm({
             id={`charge-${planId}-period`}
             name="feePeriodId"
             key={suggested}
-            defaultValue={suggested}
+            value={feePeriodIdField}
+            onChange={(event) => setFeePeriodIdField(event.target.value)}
             required
             className={CONTROL_LINE}
           >
@@ -1537,6 +1546,8 @@ function EditFeeForm({
   categories: StudentFees['categories'];
   onDone: () => void;
 }): React.ReactElement {
+  const [endsOnField, setEndsOnField] = useSeeded<string>(String(line.endsOn ?? ''));
+  const [feePeriodIdField, setFeePeriodIdField] = useSeeded<string>(String(line.periodId ?? ''));
   const t = useTranslations();
   const [state, submit, pending] = useSavedAction(
     async (previous: FormState, formData: FormData) => {
@@ -1560,7 +1571,8 @@ function EditFeeForm({
           <select
             id={`edit-period-${line.id}`}
             name="feePeriodId"
-            defaultValue={line.periodId ?? ''}
+            value={feePeriodIdField}
+            onChange={(event) => setFeePeriodIdField(event.target.value)}
             className={CONTROL_LINE}
           >
             {periods.map((period) => (
@@ -1579,7 +1591,8 @@ function EditFeeForm({
             id={`edit-ends-${line.id}`}
             name="endsOn"
             type="date"
-            defaultValue={line.endsOn ?? ''}
+            value={endsOnField}
+            onChange={(event) => setEndsOnField(event.target.value)}
             className={CONTROL_LINE}
           />
         </div>

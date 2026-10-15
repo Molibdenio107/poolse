@@ -6,7 +6,7 @@ import { Pencil, Plus, Tag, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
 import { Reorderable } from '@/components/reorderable';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextField } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextField, useSeeded } from '@/components/ui/field';
 import { centsToInput, formatCents } from '@/lib/money';
 import { describeCost } from '@/lib/fee-category';
 import { cn } from '@/lib/utils';
@@ -378,6 +378,16 @@ function CategoryForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [kind, setKind] = useState<DiscountKind>(kindOf(category));
+  // Re-seeded when the kind changes, so switching % and € shows that kind's figure.
+  const [discountValueField, setDiscountValueField] = useSeeded<string>(
+    kind === 'percent'
+      ? category?.discountPercent === null || category?.discountPercent === undefined
+        ? ''
+        : String(category.discountPercent)
+      : category?.discountCents === null || category?.discountCents === undefined
+        ? ''
+        : centsToInput(category.discountCents),
+  );
   const [state, submit, pending] = useSavedAction(
     async (previous: FormState, formData: FormData) => {
       const next = await saveCategoryAction(previous, formData);
@@ -441,15 +451,8 @@ function CategoryForm({
                 does not leave "20" in a box that now means twenty euros.
               */
               key={kind}
-              defaultValue={
-                kind === 'percent'
-                  ? category?.discountPercent === null || category?.discountPercent === undefined
-                    ? ''
-                    : String(category.discountPercent)
-                  : category?.discountCents === null || category?.discountCents === undefined
-                    ? ''
-                    : centsToInput(category.discountCents)
-              }
+              value={discountValueField}
+              onChange={(event) => setDiscountValueField(event.target.value)}
               className={CONTROL_LINE}
             />
             {fields['discountValue'] !== undefined && (

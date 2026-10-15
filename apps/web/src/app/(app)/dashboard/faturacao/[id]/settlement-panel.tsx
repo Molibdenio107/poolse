@@ -5,13 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Plus, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { Dialog } from '@/components/ui/dialog';
-import {
-  CONTROL_LINE,
-  FIELD_COLUMN,
-  FIELD_LABEL,
-  TextAreaField,
-  TextField,
-} from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextAreaField, TextField, useSeeded } from '@/components/ui/field';
 import { centsToInput, formatCents } from '@/lib/money';
 import type { ChaseChannel, Invoice, PaymentSource } from '@/lib/api';
 import type { FormState } from '../../actions';
@@ -221,6 +215,8 @@ function PaymentDialog({
   invoice: Invoice;
   onDone: () => void;
 }): React.ReactElement {
+  const [sourceField, setSourceField] = useSeeded<string>('manual');
+  const [paidOnField, setPaidOnField] = useSeeded<string>(String(today()));
   const t = useTranslations();
   const [state, submit, pending] = useSavedAction(
     async (previous: FormState, formData: FormData) => {
@@ -267,7 +263,8 @@ function PaymentDialog({
               id="payment-paid-on"
               type="date"
               name="paidOn"
-              defaultValue={today()}
+              value={paidOnField}
+              onChange={(event) => setPaidOnField(event.target.value)}
               className={CONTROL_LINE}
             />
             {/*
@@ -282,7 +279,13 @@ function PaymentDialog({
           <label htmlFor="payment-source" className={FIELD_LABEL}>
             {t('invoices.sourceLabel')}
           </label>
-          <select id="payment-source" name="source" defaultValue="manual" className={CONTROL_LINE}>
+          <select
+            id="payment-source"
+            name="source"
+            value={sourceField}
+            onChange={(event) => setSourceField(event.target.value)}
+            className={CONTROL_LINE}
+          >
             {SOURCES.map((source) => (
               <option key={source} value={source}>
                 {t(`invoices.source.${source}`)}
@@ -327,6 +330,8 @@ function ChaseDialog({
   invoiceId: string;
   onDone: () => void;
 }): React.ReactElement {
+  const [channelField, setChannelField] = useSeeded<string>('phone');
+  const [chasedOnField, setChasedOnField] = useSeeded<string>(String(today()));
   const t = useTranslations();
   const [state, submit, pending] = useSavedAction(
     async (previous: FormState, formData: FormData) => {
@@ -357,7 +362,13 @@ function ChaseDialog({
             <label htmlFor="chase-channel" className={FIELD_LABEL}>
               {t('invoices.channelLabel')}
             </label>
-            <select id="chase-channel" name="channel" defaultValue="phone" className={CONTROL_LINE}>
+            <select
+              id="chase-channel"
+              name="channel"
+              value={channelField}
+              onChange={(event) => setChannelField(event.target.value)}
+              className={CONTROL_LINE}
+            >
               {CHANNELS.map((channel) => (
                 <option key={channel} value={channel}>
                   {t(`invoices.channel.${channel}`)}
@@ -378,7 +389,8 @@ function ChaseDialog({
               id="chase-on"
               type="date"
               name="chasedOn"
-              defaultValue={today()}
+              value={chasedOnField}
+              onChange={(event) => setChasedOnField(event.target.value)}
               className={CONTROL_LINE}
             />
           </div>

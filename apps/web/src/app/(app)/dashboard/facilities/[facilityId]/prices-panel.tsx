@@ -4,7 +4,7 @@ import { Fragment, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
 import { Pencil, Plus, Trash2, Wallet } from 'lucide-react';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { centsToInput, formatCents, parseCents } from '@/lib/money';
 import type {
@@ -595,6 +595,10 @@ function PeriodForm({
   period: FeePeriod | null;
   onDone: () => void;
 }): React.ReactElement {
+  const [nameField, setNameField] = useSeeded<string>(String(period?.name ?? ''));
+  const [monthsField, setMonthsField] = useSeeded<string>(String(period?.months ?? 1));
+  const [discountPercentField, setDiscountPercentField] = useSeeded<string>(String(period?.discountPercent ?? 0));
+  const [isDefaultField, setIsDefaultField] = useSeeded<boolean>(period?.isDefault ?? false);
   const t = useTranslations();
   const [state, submit, pending] = useSavedAction(
     async (previous: FormState, formData: FormData) => {
@@ -620,7 +624,8 @@ function PeriodForm({
           <input
             id={`p-name-${id}`}
             name="name"
-            defaultValue={period?.name ?? ''}
+            value={nameField}
+            onChange={(event) => setNameField(event.target.value)}
             required
             maxLength={120}
             className={CONTROL_LINE}
@@ -637,7 +642,8 @@ function PeriodForm({
             type="number"
             min={1}
             max={24}
-            defaultValue={period?.months ?? 1}
+            value={monthsField}
+            onChange={(event) => setMonthsField(event.target.value)}
             required
             className={CONTROL_LINE}
           />
@@ -651,7 +657,8 @@ function PeriodForm({
             id={`p-disc-${id}`}
             name="discountPercent"
             inputMode="decimal"
-            defaultValue={String(period?.discountPercent ?? 0)}
+            value={discountPercentField}
+            onChange={(event) => setDiscountPercentField(event.target.value)}
             className={CONTROL_LINE}
           />
         </div>
@@ -660,7 +667,8 @@ function PeriodForm({
           <input
             type="checkbox"
             name="isDefault"
-            defaultChecked={period?.isDefault ?? false}
+            checked={isDefaultField}
+            onChange={(event) => setIsDefaultField(event.target.checked)}
             className="size-4"
           />
           {t('fees.isDefault')}
@@ -835,6 +843,13 @@ function PlanForm({
   seasons?: Season[];
   onDone: () => void;
 }): React.ReactElement {
+  const [isRenewalField, setIsRenewalField] = useSeeded<boolean>(plan?.isRenewal ?? false);
+  const [levelIdField, setLevelIdField] = useSeeded<string>(String(plan?.levelId ?? ''));
+  const [lessonsPerWeekField, setLessonsPerWeekField] = useSeeded<string>(String(plan?.lessonsPerWeek ?? 1));
+  const [defaultFeePeriodIdField, setDefaultFeePeriodIdField] = useSeeded<string>(String(plan?.defaultFeePeriodId ?? ''));
+  const [vatRateField, setVatRateField] = useSeeded<string>(String(plan === null ? '' : String(plan.vatRate)));
+  const [ageBandField, setAgeBandField] = useSeeded<string>(String(plan?.ageBand ?? 'any'));
+  const [seasonIdField, setSeasonIdField] = useSeeded<string>(String(plan?.seasonId ?? ''));
   const t = useTranslations();
   const [amount, setAmount] = useState(plan === null ? '' : centsToInput(plan.amountCents));
 
@@ -881,7 +896,8 @@ function PlanForm({
             <select
               id={`f-band-${id}`}
               name="ageBand"
-              defaultValue={plan?.ageBand ?? 'any'}
+              value={ageBandField}
+              onChange={(event) => setAgeBandField(event.target.value)}
               className={CONTROL_LINE}
             >
               <option value="any">{t('fees.band.any')}</option>
@@ -901,7 +917,8 @@ function PlanForm({
             <select
               id={`f-season-${id}`}
               name="seasonId"
-              defaultValue={plan?.seasonId ?? ''}
+              value={seasonIdField}
+              onChange={(event) => setSeasonIdField(event.target.value)}
               required
               className={CONTROL_LINE}
             >
@@ -928,7 +945,8 @@ function PlanForm({
               <input
                 type="checkbox"
                 name="isRenewal"
-                defaultChecked={plan?.isRenewal ?? false}
+                checked={isRenewalField}
+                onChange={(event) => setIsRenewalField(event.target.checked)}
                 className="size-4"
               />
               {t('fees.isRenewal')}
@@ -966,7 +984,8 @@ function PlanForm({
               <select
                 id={`f-level-${id}`}
                 name="levelId"
-                defaultValue={plan?.levelId ?? ''}
+                value={levelIdField}
+                onChange={(event) => setLevelIdField(event.target.value)}
                 required
                 className={CONTROL_LINE}
               >
@@ -989,7 +1008,8 @@ function PlanForm({
                 type="number"
                 min={1}
                 max={7}
-                defaultValue={plan?.lessonsPerWeek ?? 1}
+                value={lessonsPerWeekField}
+                onChange={(event) => setLessonsPerWeekField(event.target.value)}
                 required
                 className={CONTROL_LINE}
               />
@@ -1025,7 +1045,8 @@ function PlanForm({
             <select
               id={`f-period-${id}`}
               name="defaultFeePeriodId"
-              defaultValue={plan?.defaultFeePeriodId ?? ''}
+              value={defaultFeePeriodIdField}
+              onChange={(event) => setDefaultFeePeriodIdField(event.target.value)}
               className={CONTROL_LINE}
             >
               <option value="">{t('fees.facilityDefault')}</option>
@@ -1063,7 +1084,8 @@ function PlanForm({
               aria-label={t('fees.vatRate')}
               name="vatRate"
               inputMode="decimal"
-              defaultValue={plan === null ? '' : String(plan.vatRate)}
+              value={vatRateField}
+              onChange={(event) => setVatRateField(event.target.value)}
               placeholder={t('fees.vatRate')}
               className={CONTROL_LINE}
             />

@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useSavedAction } from '@/lib/saved';
-import { CONTROL_LINE } from '@/components/ui/field';
+import { CONTROL_LINE, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import { setEnrollmentCategoryAction } from './enrollment-category.actions';
@@ -35,6 +35,9 @@ export function EnrollmentCategoryPicker({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, submit, pending] = useSavedAction(setEnrollmentCategoryAction, INITIAL);
+  // Controlled: after a save the form resets, and an uncontrolled select would
+  // spring back to the category it had before the change it just saved.
+  const [chosen, setChosen] = useSeeded<string>(own ?? '');
 
   return (
     <form action={submit}>
@@ -45,9 +48,12 @@ export function EnrollmentCategoryPicker({
       <select
         id={`cat-${enrollmentId}`}
         name="categoryId"
-        defaultValue={own ?? ''}
+        value={chosen}
         disabled={pending}
-        onChange={(event) => event.currentTarget.form?.requestSubmit()}
+        onChange={(event) => {
+          setChosen(event.target.value);
+          event.currentTarget.form?.requestSubmit();
+        }}
         className={cn(CONTROL_LINE, 'w-auto')}
       >
         {/*

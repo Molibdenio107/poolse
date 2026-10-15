@@ -93,10 +93,27 @@ const INVALID = CONTROL_INVALID;
  * Without the guard this would fight the person typing: every re-render would
  * shove the saved value back into the box. With it, a save that succeeds updates
  * the field, and a save that fails leaves what they wrote alone.
+ *
+ * **Exported for the hand-built controls** — the form-debt sweep, 15 October
+ * 2026. A price row or an inventory line cannot take a labelled `TextField`
+ * without changing shape, so it keeps its markup and takes this instead:
+ * `const [v, setV] = useSeeded(server)` and `value={v} onChange={…}`. A
+ * checkbox passes a boolean and binds `checked`. `defaultValue` and
+ * `defaultChecked` are refused by `scripts/check-forms.mjs`.
+ *
+ * **`resetKey` is for a form that stays on screen to be typed into again** —
+ * add a slot, add a record, add an item. React used to clear those on success
+ * by itself; a controlled field does not, so the form passes
+ * `useSuccessKey(state)` and the field goes back to `initial` after each save
+ * that worked, and never after one that failed.
  */
-function useSeeded(initial: string): [string, (next: string) => void] {
-  const [value, setValue] = useState(initial);
+export function useSeeded<T extends string | boolean>(
+  initial: T,
+  resetKey?: number,
+): [T, (next: T) => void] {
+  const [value, setValue] = useState<T>(initial);
   const seeded = useRef(initial);
+  const resetAt = useRef(resetKey);
 
   useEffect(() => {
     if (seeded.current === initial) return;
@@ -104,7 +121,31 @@ function useSeeded(initial: string): [string, (next: string) => void] {
     setValue(initial);
   }, [initial]);
 
+  useEffect(() => {
+    if (resetAt.current === resetKey) return;
+    resetAt.current = resetKey;
+    setValue(seeded.current);
+  }, [resetKey]);
+
   return [value, setValue];
+}
+
+/**
+ * A number that goes up once for every save that worked — the `resetKey` a
+ * create form hands its fields. Keyed on the state object's identity, because
+ * `ok` stays true across renders and two successes in a row are two resets.
+ */
+export function useSuccessKey(state: { ok?: boolean }): number {
+  const [key, setKey] = useState(0);
+  const seen = useRef(state);
+
+  useEffect(() => {
+    if (seen.current === state) return;
+    seen.current = state;
+    if (state.ok === true) setKey((n) => n + 1);
+  }, [state]);
+
+  return key;
 }
 
 interface Common {
