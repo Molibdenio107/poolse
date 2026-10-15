@@ -57,7 +57,13 @@ import { ScopeSelector } from './scope-selector';
  * made and reported as unavailable; what a person with one pool opens Poolse
  * for is whether the water is all right, and `MyPoolPanel` is that answer.
  */
-export default async function DashboardPage(): Promise<React.ReactElement> {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ child?: string }>;
+}): Promise<React.ReactElement> {
+  // Whose cards the personal band shows — the API checks it is the reader's own.
+  const { child } = await searchParams;
   const t = await getTranslations();
   const activeLocale = await getLocale();
   const activeTheme = await readTheme();
@@ -121,7 +127,11 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
   const dashboard =
     me === null || membership === null
       ? null
-      : await apiFetch<Dashboard>('/dashboard').catch(() => null);
+      : await apiFetch<Dashboard>(
+          typeof child === 'string' && child !== ''
+            ? `/dashboard?child=${encodeURIComponent(child)}`
+            : '/dashboard',
+        ).catch(() => null);
 
   const name =
     me === null
@@ -169,10 +179,9 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
           )}
 
           {/*
-            Still bespoke, and waiting for its own widget.
-
-            `me.pool` is the personal band in slice 5, behind its flag, and stays
-            below the bands until then. The season-occupancy panel that sat here
+            Still bespoke: the personal tenant's own pool. Slice 5's family band
+            shipped without it — its water card is `me.water`, about a child's
+            pool at a club, and this is one owner's garden tank. The season-occupancy panel that sat here
             too went in slice 2b: today's figures are `mgmt.occupancy.today`, and
             the season summary moved to each site's Ocupação tab, which is where a
             per-site, per-season figure belongs.

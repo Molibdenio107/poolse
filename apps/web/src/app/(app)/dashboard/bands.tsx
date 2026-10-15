@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { Dashboard } from '@/lib/api';
 import { renderWidget } from './widgets';
@@ -29,6 +30,8 @@ import { renderWidget } from './widgets';
  */
 export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const family = dashboard.family;
+  const chosen = family?.children.find((child) => child.id === family.selectedId);
 
   const bands = await Promise.all(
     dashboard.bands.map(async (band) => ({
@@ -36,7 +39,7 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
       cards: await Promise.all(
         band.widgets.map(async (widget) => ({
           id: widget.id,
-          element: await renderWidget(widget, dashboard.scope),
+          element: await renderWidget(widget, dashboard.scope, dashboard.family),
         })),
       ),
     })),
@@ -48,7 +51,36 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
         <section key={band.id} className="flex flex-col gap-3">
           <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
             {t(`dashboard.band.${band.id}`)}
+            {band.id === 'personal' && chosen !== undefined && <> · {chosen.name}</>}
           </h2>
+
+          {/*
+            Whose cards these are — slice 5. Plain links, so the choice lives in
+            the address (`?child=`, Rui's call) and Back works; offered only
+            when there is a choice. The current one says so in words as well
+            as weight.
+          */}
+          {band.id === 'personal' && family !== null && family.children.length > 1 && (
+            <nav aria-label={t('family.picker')} className="flex flex-wrap gap-2">
+              {family.children.map((child) => {
+                const current = child.id === family.selectedId;
+                return (
+                  <Link
+                    key={child.id}
+                    href={`/dashboard?child=${child.id}`}
+                    aria-current={current ? 'page' : undefined}
+                    className={
+                      current
+                        ? 'inline-flex h-control items-center justify-center rounded border border-primary bg-primary/10 px-4 text-control font-medium text-primary'
+                        : 'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+                    }
+                  >
+                    {child.self ? t('family.yourselfShort', { name: child.name }) : child.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
 
           <div className="grid grid-cols-1 gap-page-gap lg:grid-cols-3">
             {band.cards.map((card) => (

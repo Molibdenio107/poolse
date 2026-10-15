@@ -152,8 +152,8 @@ The record is the staff page in a read-only family mode (`familyView` from `GET 
   NIF and address are left out.
 - **Mensalidades**, through `GET /students/:id/fees`'s family path: the lines, paid or due, and
   what is outstanding. Discount reasons, the club's concessions and the charges it could add are
-  left out. The totals are `feeTotals` in `lib/fee-totals.ts`, the same function the office's
-  block reads.
+  left out. The totals are the API's `balance` (`billing/fee-balance.ts`), which the office's
+  block and the family dashboard card read too.
 - **Turmas**, **Semana** with each lesson's plan, **Reposições** and **Progress**.
 
 Never shown: the medical record, the identity document, any form. Somebody else's child is a

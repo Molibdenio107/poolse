@@ -1,6 +1,12 @@
 import type { MemberRole } from '../tenant/roles.js';
 import { MEMBER_ROLES } from '../tenant/roles.js';
 import {
+  childAttendance,
+  childFees,
+  childNextClass,
+  childPlan,
+  childWater,
+  feesAreOverdue,
   energySpend,
   maintenanceNeedsSomebody,
   maintenanceOpen,
@@ -93,6 +99,12 @@ export interface ResolverContext {
   /** The selector: every site, or the one that was asked for. */
   scope: { mode: 'all' | 'facility'; facilityId: string | null };
   locale: string;
+  /**
+   * The student the personal band is about — one of the reader's own
+   * records, chosen by the controller (`?child=`). Absent or null means the
+   * reader has none, and the personal band is left out.
+   */
+  childStudentId?: string | null;
 }
 
 /**
@@ -496,6 +508,66 @@ export const WIDGETS: readonly WidgetDefinition[] = [
    * things only they can do; nobody else should be handed a checklist they
    * cannot act on.
    */
+  /*
+   * The personal band — "me and mine", POOLSE-66 slice 5 (15 October 2026).
+   * Guardians and students, about the one child the controller chose; compose
+   * leaves the band out when the reader has nobody. Visible from the start, by
+   * Rui's call — the DASHBOARD_PERSONAL_BAND flag the ticket named is not used.
+   * Five candidates for four places: the water is the one that waits for room.
+   */
+  {
+    id: 'me.nextclass',
+    band: 'personal',
+    roles: ['guardian', 'student'],
+    kinds: ['business'],
+    scope: 'self',
+    size: 2,
+    priority: 50,
+    resolver: childNextClass,
+  },
+  {
+    id: 'me.trainingplan',
+    band: 'personal',
+    roles: ['guardian', 'student'],
+    kinds: ['business'],
+    scope: 'self',
+    size: 2,
+    priority: 40,
+    resolver: childPlan,
+  },
+  {
+    id: 'me.fees',
+    band: 'personal',
+    roles: ['guardian', 'student'],
+    kinds: ['business'],
+    scope: 'self',
+    size: 1,
+    priority: 35,
+    escalate: feesAreOverdue,
+    escalatedPriority: 60,
+    resolver: childFees,
+  },
+  {
+    id: 'me.attendance',
+    band: 'personal',
+    roles: ['guardian', 'student'],
+    kinds: ['business'],
+    scope: 'self',
+    size: 1,
+    priority: 30,
+    resolver: childAttendance,
+  },
+  {
+    // Not `me.pool`: that names the personal tenant's own pool panel.
+    id: 'me.water',
+    band: 'personal',
+    roles: ['guardian', 'student'],
+    kinds: ['business'],
+    scope: 'self',
+    size: 1,
+    priority: 20,
+    resolver: childWater,
+  },
   {
     id: 'setup.checklist',
     band: 'management',

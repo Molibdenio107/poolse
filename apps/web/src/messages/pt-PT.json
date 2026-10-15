@@ -4886,6 +4886,41 @@
     "hint": "Os dados fiscais e o logotipo são do clube e aplicam-se a todas as instalações, não só a esta."
   },
   "family": {
+    "picker": "De quem é este resumo",
+    "yourselfShort": "{name} (eu)",
+    "widget": {
+      "next": {
+        "title": "Próxima aula",
+        "open": "Ver a semana",
+        "empty": "Não há aulas marcadas para os próximos dias.",
+        "with": "Com {name}"
+      },
+      "plan": {
+        "title": "Plano da próxima aula",
+        "open": "Ver os planos da semana",
+        "empty": "Não há próxima aula, por isso ainda não há plano."
+      },
+      "fees": {
+        "title": "Mensalidades",
+        "open": "Ver as mensalidades",
+        "settled": "Está tudo pago neste período.",
+        "overdue": "{count, plural, one {# pagamento em atraso} other {# pagamentos em atraso}}"
+      },
+      "attendance": {
+        "title": "Presenças este mês",
+        "open": "Ver o progresso",
+        "empty": "Ainda não houve aulas este mês.",
+        "summary": "Presente em {present} de {held, plural, one {# aula} other {# aulas}}",
+        "detail": "{absent, plural, one {# falta} other {# faltas}} · {excused, plural, one {# justificada} other {# justificadas}}",
+        "unmarked": "{count, plural, one {# aula ainda sem registo} other {# aulas ainda sem registo}}"
+      },
+      "water": {
+        "title": "Água da piscina",
+        "empty": "Ainda não foi registada a temperatura da água desta piscina.",
+        "celsius": "{value, number} °C",
+        "measured": "{pool} · medida a {date}, às {time}"
+      }
+    },
     "navGuardian": "Os meus educandos",
     "navStudent": "O meu registo",
     "title": "Os meus educandos",

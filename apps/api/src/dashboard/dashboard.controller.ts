@@ -10,7 +10,8 @@ import {
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
-import { composeDashboard, type Dashboard } from './compose.js';
+import { composeDashboard, type Dashboard, type FamilyChoice } from './compose.js';
+import { familyStudents } from '../students/students.repository.js';
 import { readDashboardShape, rememberDashboardFacility } from './dashboard.repository.js';
 import { ROLES_WITH_DERIVED_FACILITIES, SELECTOR_ROLES } from './widget-registry.js';
 
@@ -32,8 +33,34 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 @Controller('dashboard')
 export class DashboardController {
   @Get()
-  async read(@Query('facility') facility?: string): Promise<Dashboard> {
+  async read(
+    @Query('facility') facility?: string,
+    @Query('child') requestedChild?: string,
+  ): Promise<Dashboard> {
     const { organizationId, membershipId, roles } = currentTenant();
+
+    /*
+     * Whose cards the personal band shows — slice 5. Only the reader's own
+     * records are candidates (`familyStudents`, the list `GET /family` gives),
+     * so `?child=` can choose among them and never reach past them: an id that
+     * is not theirs is a 404, the answer every family read gives for somebody
+     * else's child. No choice means the first — themselves, when a student.
+     */
+    const children = hasRole('guardian', 'student')
+      ? await familyStudents(organizationId, membershipId)
+      : [];
+    const askedChild = (requestedChild ?? '').trim();
+    if (askedChild !== '' && !children.some((one) => one.id === askedChild)) {
+      throw new NotFoundException('No such student');
+    }
+    const chosen = askedChild !== '' ? askedChild : (children[0]?.id ?? null);
+    const family: FamilyChoice | null =
+      chosen === null
+        ? null
+        : {
+            children: children.map(({ id, name, self }) => ({ id, name, self })),
+            selectedId: chosen,
+          };
 
     const shape = await readDashboardShape(organizationId, membershipId);
 
@@ -87,9 +114,11 @@ export class DashboardController {
         ownFacilityIds: own,
         scope: named === null ? { mode: 'all', facilityId: null } : { mode: 'facility', facilityId: named },
         locale: shape.locale,
+        childStudentId: chosen,
       },
       {
         kind: shape.kind,
+        family,
         // The club's own sites, whoever is asking: this is what decides whether
         // the club is bare, and that is a fact about the club.
         sites: shape.facilities,

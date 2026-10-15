@@ -1901,6 +1901,14 @@ export interface SeasonCharge {
   }[];
 }
 
+export interface FeeBalance {
+  totalCents: number;
+  paidCents: number;
+  outstandingCents: number;
+  overdueCount: number;
+  nextDueOn: string | null;
+}
+
 export interface StudentFees {
   /** Read by the child's own family; offers and the office's reasons are empty. */
   familyView?: boolean;
@@ -1925,6 +1933,8 @@ export interface StudentFees {
    */
   penalties: { mensalidadeCents: number; quotaCents: number };
   penaltyCents: number;
+  /** Computed by the API (`fee-balance.ts`) — every screen reads this, none adds it up. */
+  balance: FeeBalance;
   /**
    * The club's concessions, and the one this student's turmas imply.
    *
@@ -3841,9 +3851,62 @@ export interface DashboardScope {
   facilities: { id: string; name: string }[];
 }
 
+/** Whose cards the personal band shows — the reader's own records, and the one chosen. */
+export interface DashboardFamily {
+  children: { id: string; name: string; self: boolean }[];
+  selectedId: string;
+}
+
 export interface Dashboard {
   scope: DashboardScope;
   bands: DashboardBand[];
+  /** Null for anybody with no record of their own or a child's. */
+  family: DashboardFamily | null;
+}
+
+/** `me.nextclass` — the child's next lesson, on the site's clock. */
+export interface ChildNextClassWidgetData {
+  sessionId: string;
+  className: string;
+  levelName: string | null;
+  poolId: string | null;
+  poolName: string | null;
+  lanes: number[];
+  localDate: string;
+  localTime: string;
+  durationMinutes: number;
+  dayOffset: number;
+  weekday: number;
+  instructorName: string | null;
+}
+
+/** `me.trainingplan` — that lesson's plan, read-only, no author. */
+export interface ChildPlanWidgetData {
+  next: Pick<ChildNextClassWidgetData, 'sessionId' | 'className' | 'localDate' | 'localTime' | 'dayOffset' | 'weekday'>;
+  body: string;
+}
+
+/** `me.attendance` — this month so far. */
+export interface ChildAttendanceWidgetData {
+  month: string;
+  held: number;
+  present: number;
+  absent: number;
+  excused: number;
+  unmarked: number;
+}
+
+/** `me.fees` — the API's `balance`, and how many lines are running. */
+export interface ChildFeesWidgetData extends FeeBalance {
+  lines: number;
+}
+
+/** `me.water` — the latest water temperature at the next lesson's pool. */
+export interface PoolTemperatureWidgetData {
+  poolName: string;
+  celsius: string;
+  localDate: string;
+  localTime: string;
 }
 
 /** `mgmt.subscription` — where the club stands with Poolse. Owner only. */

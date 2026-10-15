@@ -29,6 +29,16 @@ import {
   type WeekClass,
 } from './instructor.repository.js';
 import { readLessonPlan } from '../classes/lesson-plans.repository.js';
+import { studentFees } from '../billing/fees.repository.js';
+import type { FeeBalance } from '../billing/fee-balance.js';
+import {
+  readChildAttendance,
+  readChildNextClass,
+  readPoolTemperature,
+  type ChildAttendance,
+  type ChildNextClass,
+  type PoolTemperature,
+} from './family.repository.js';
 import {
   readInventoryWatch,
   readOpenFaults,
@@ -538,4 +548,95 @@ export async function ownWaterQuality(ctx: ResolverContext): Promise<WaterQualit
 export async function inventoryWatch(ctx: ResolverContext): Promise<InventoryWatch | null> {
   const watch = await readInventoryWatch(ctx.organizationId, ctx.ownFacilityIds);
   return watch.restockTotal === 0 && watch.lostTotal === 0 ? null : watch;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* The personal band — slice 5, 15 October 2026                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Every one of these is about `ctx.childStudentId`, which the controller chose
+ * from the reader's own records; compose leaves the band out when there is
+ * none, so the non-null assertion below is a statement of that rule rather than
+ * a hope. Nothing here is money the office decides with: no discount reasons,
+ * no prices on offer — the family path of the fee read already leaves those out.
+ */
+function child(ctx: ResolverContext): string {
+  if (ctx.childStudentId === undefined || ctx.childStudentId === null) {
+    throw new Error('A personal widget was resolved with no child chosen');
+  }
+  return ctx.childStudentId;
+}
+
+/** The child's next lesson. Empty between seasons, which is a sentence. */
+export async function childNextClass(ctx: ResolverContext): Promise<ChildNextClass | null> {
+  return readChildNextClass(ctx.organizationId, child(ctx));
+}
+
+export interface ChildPlanWidget {
+  next: Pick<ChildNextClass, 'sessionId' | 'className' | 'localDate' | 'localTime' | 'dayOffset' | 'weekday'>;
+  /** The whole plan, read-only; empty when nothing is written yet. */
+  body: string;
+}
+
+/**
+ * The next lesson's plan, read-only and without its author — the rule a
+ * family's plan read follows on the record's Semana. Empty when there is no
+ * next lesson; `body: ''` when there is one and nothing is written.
+ */
+export async function childPlan(ctx: ResolverContext): Promise<ChildPlanWidget | null> {
+  const next = await readChildNextClass(ctx.organizationId, child(ctx));
+  if (next === null) return null;
+
+  const plan = await readLessonPlan(ctx.organizationId, next.sessionId, ctx.roles, ctx.membershipId);
+  if (plan === null) throw new Error('The next lesson vanished between two reads');
+
+  return {
+    next: {
+      sessionId: next.sessionId,
+      className: next.className,
+      localDate: next.localDate,
+      localTime: next.localTime,
+      dayOffset: next.dayOffset,
+      weekday: next.weekday,
+    },
+    body: plan.body.trim(),
+  };
+}
+
+/** This month's register for the child. Empty before anything is held. */
+export async function childAttendance(ctx: ResolverContext): Promise<ChildAttendance | null> {
+  return readChildAttendance(ctx.organizationId, child(ctx));
+}
+
+export interface ChildFeesWidget extends FeeBalance {
+  /** How many running lines there are — the card says "1 mensalidade" or more. */
+  lines: number;
+}
+
+/**
+ * What the family owes — `balance` from the fee read, the same figure the
+ * record's Mensalidades tab shows. Empty when nothing is agreed.
+ */
+export async function childFees(ctx: ResolverContext): Promise<ChildFeesWidget | null> {
+  const fees = await studentFees(ctx.organizationId, child(ctx));
+  const lines = fees.lines.filter((line) => line.endsOn === null).length;
+  if (lines === 0) return null;
+  return { ...fees.balance, lines };
+}
+
+/** Something is overdue: the family should read that first. */
+export function feesAreOverdue(data: unknown): boolean {
+  return ((data as ChildFeesWidget | null)?.overdueCount ?? 0) > 0;
+}
+
+/**
+ * The water at the pool of the child's next lesson — temperature only. Empty
+ * with no next lesson or no temperature recorded there.
+ */
+export async function childWater(ctx: ResolverContext): Promise<PoolTemperature | null> {
+  const next = await readChildNextClass(ctx.organizationId, child(ctx));
+  if (next === null || next.poolId === null) return null;
+  return readPoolTemperature(ctx.organizationId, next.poolId);
 }

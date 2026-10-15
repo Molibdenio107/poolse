@@ -189,10 +189,9 @@ owner, admin and maintenance, and the card is owner and admin. What the site cos
 on Energia by whoever runs it; the management band is not where they read it. Asserted, because
 it is a decision rather than an oversight.
 
-**Two panels are still bespoke, below the bands**: occupancy and the personal tenant's pool.
-Their widgets are in the catalogue — `mgmt.occupancy.today` needs slice 2b's grouped SQL, and
-`me.pool` is the personal band in slice 5 — and each carries a comment naming the card that
-replaces it. A slice that ended by removing a figure an operator reads every morning would not
+**One panel is still bespoke, below the bands**: the personal tenant's own pool (`MyPoolPanel`).
+Occupancy became `mgmt.occupancy.today` in slice 2b. The family band's water card is `me.water`,
+a child's pool at a club, so it does not replace that panel. A slice that ended by removing a figure an operator reads every morning would not
 have ended well.
 
 ## The management band — slice 2b, 6 October 2026
@@ -299,7 +298,33 @@ admin (`canRecordAnalysis` beside `canManage` on the pool). With `maint.mytasks`
 candidates for four places. No money anywhere in the band, asserted on the raw payload, and no
 selector is sent to a maintenance reader even at a club with two sites.
 
-**Not built:** the personal band behind `DASHBOARD_PERSONAL_BAND`. There is also **no React test harness in this repo**,
+## The personal band — slice 5, 15 October 2026
+
+Guardians and students, about **one child at a time**. The controller lists the reader's own
+records (`familyStudents`, the list `GET /family` gives): themselves first when they are a
+student, then their children. `?child=` chooses among them, and an id that is not theirs is a
+404. No choice means the first. A reader with nobody has no band at all, not a row of empty
+cards, and `family` is null.
+
+The response carries `family: { children, selectedId }`. The web draws a link per child above
+the band when there is more than one, so the choice lives in the address (Rui's call) and Back
+works. **It ships visible**, also Rui's call: the `DASHBOARD_PERSONAL_BAND` flag the ticket
+named is not used.
+
+| id | priority | content |
+|---|---|---|
+| `me.nextclass` | 50 | next lesson not cancelled, at the week's own hour; pool, pista, who teaches it (the stand-in when set) |
+| `me.fees` | 35, 60 when something is overdue | what is still to pay, the next due date, how many are late: `balance` from the fee read |
+| `me.trainingplan` | 40 | the next lesson's plan, read-only, no author |
+| `me.attendance` | 30 | this calendar month on the club's clock: present, absent, excused, unmarked, of lessons held |
+| `me.water` | 20 | the latest water temperature at the next lesson's pool, and when it was taken |
+
+"Their lesson" is a session of a turma the child was enrolled in on that day, the predicate
+`familyMayReadPlan` uses (`family.repository.ts`). Five cards for four places: the water is the
+one that waits. **`balance` is computed once, on the API** (`billing/fee-balance.ts`), and the
+office's fee block, the family's Mensalidades tab and this card all read it.
+
+**Also not built:** there is **no React test harness in this repo**,
 so the card's three states are proven by the API's own state assertions and by the build rather
 than by a render test; adding one is its own decision. Widget customisation is out of scope for
 the whole ticket; if it is ever wanted it is one `dashboard_widget_prefs` table keyed on the

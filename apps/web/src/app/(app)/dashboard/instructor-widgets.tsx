@@ -35,7 +35,7 @@ type Translate = Awaited<ReturnType<typeof getTranslations>>;
  * chosen here, so a browser in another timezone cannot turn tomorrow into
  * today. One function for every instructor card, so no two word a day apart.
  */
-function dayPhrase(
+export function dayPhrase(
   t: Translate,
   when: { dayOffset: number; weekday: number; localDate: string },
 ): string {

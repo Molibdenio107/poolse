@@ -82,9 +82,20 @@ export interface DashboardScope {
   facilities: { id: string; name: string }[];
 }
 
+/**
+ * Whose cards the personal band shows — POOLSE-66 slice 5. The reader's own
+ * records, themselves first when they are a student, and the one chosen. Null
+ * for anybody with none, whose page has no personal band at all.
+ */
+export interface FamilyChoice {
+  children: { id: string; name: string; self: boolean }[];
+  selectedId: string;
+}
+
 export interface Dashboard {
   scope: DashboardScope;
   bands: ComposedBand[];
+  family: FamilyChoice | null;
 }
 
 /**
@@ -157,6 +168,8 @@ export async function composeDashboard(
      */
     registry?: readonly WidgetDefinition[];
     timeoutMs?: number;
+    /** The family picker, echoed back; its choice is `ctx.childStudentId`. */
+    family?: FamilyChoice | null;
   },
 ): Promise<Dashboard> {
   const bare = options.sites.length === 0;
@@ -170,9 +183,16 @@ export async function composeDashboard(
   const allowed = widgetsFor(
     { roles: ctx.roles, kind: options.kind },
     options.registry,
-  ).filter((widget) =>
-    bare ? widget.id === ONBOARDING_WIDGET_ID : widget.id !== ONBOARDING_WIDGET_ID,
-  );
+  )
+    .filter((widget) =>
+      bare ? widget.id === ONBOARDING_WIDGET_ID : widget.id !== ONBOARDING_WIDGET_ID,
+    )
+    /*
+     * The personal band is about one student. A guardian with no linked child,
+     * or a student with no record, has nobody for it to be about: the band is
+     * absent, not a row of empty cards.
+     */
+    .filter((widget) => widget.band !== 'personal' || (ctx.childStudentId ?? null) !== null);
 
   /*
    * Every allowed widget is resolved, not only the four that would survive the
@@ -244,5 +264,6 @@ export async function composeDashboard(
       facilities: options.selector,
     },
     bands,
+    family: options.family ?? null,
   };
 }

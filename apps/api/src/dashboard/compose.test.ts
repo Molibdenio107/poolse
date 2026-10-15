@@ -114,7 +114,8 @@ test('a band is absent when the reader holds no role in it', async () => {
 
 test('bands render in their fixed order whatever order the registry is written in', async () => {
   const page = await composeDashboard(
-    { ...CTX, roles: ['owner', 'instructor', 'guardian'] },
+    // A guardian's band is about a child, so one is chosen (slice 5).
+    { ...CTX, roles: ['owner', 'instructor', 'guardian'], childStudentId: 'child' },
     {
       kind: 'business',
       sites: SITE,
@@ -264,4 +265,19 @@ test('an empty card never takes the place of one with something to say', async (
   assert.deepEqual(ids.slice(0, 2), ['mgmt.figures', 'mgmt.broken'], 'data and errors first');
   assert.equal(ids.length, 4, 'and the empty ones take the room that is left, by priority');
   assert.deepEqual(ids.slice(2), ['mgmt.empty1', 'mgmt.empty2']);
+});
+
+test('a reader with no child chosen gets no personal band, not a row of empty cards', async () => {
+  const page = await composeDashboard(
+    { ...CTX, roles: ['guardian'] },
+    {
+      kind: 'business',
+      sites: SITE,
+      selector: SITE,
+      timeoutMs: 40,
+      registry: [widget({ id: 'me.one', band: 'personal', roles: ['guardian'] })],
+    },
+  );
+  assert.deepEqual(page.bands, []);
+  assert.equal(page.family, null);
 });

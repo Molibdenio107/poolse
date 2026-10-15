@@ -3,6 +3,7 @@ import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, CalendarClock, Check, Circle } from 'lucide-react';
 import type {
   ChecklistWidgetData,
+  DashboardFamily,
   DashboardScope,
   DashboardWidget,
   EnergyCostsWidgetData,
@@ -33,6 +34,13 @@ import {
   OverdueCleaningsCard,
   WaterDueCard,
 } from './maintenance-widgets';
+import {
+  ChildAttendanceCard,
+  ChildFeesCard,
+  ChildNextClassCard,
+  ChildPlanCard,
+  ChildWaterCard,
+} from './family-widgets';
 
 /**
  * What each card draws — POOLSE-66, slice 2a.
@@ -52,7 +60,10 @@ import {
 export async function renderWidget(
   widget: DashboardWidget,
   scope: DashboardScope,
+  /** The child the personal band is about; null when there is none. */
+  family: DashboardFamily | null = null,
 ): Promise<React.ReactElement | null> {
+  const childId = family?.selectedId ?? null;
   switch (widget.id) {
     case 'mgmt.money.period':
       return <MoneyCard widget={widget} />;
@@ -96,6 +107,18 @@ export async function renderWidget(
       return <InventoryWatchCard widget={widget} />;
     case 'setup.checklist':
       return <ChecklistCard widget={widget} />;
+    // The personal band — slice 5. Never sent without a child; drawn as
+    // nothing in the one case it could be, rather than with a broken link.
+    case 'me.nextclass':
+      return childId === null ? null : <ChildNextClassCard widget={widget} childId={childId} />;
+    case 'me.trainingplan':
+      return childId === null ? null : <ChildPlanCard widget={widget} childId={childId} />;
+    case 'me.fees':
+      return childId === null ? null : <ChildFeesCard widget={widget} childId={childId} />;
+    case 'me.attendance':
+      return childId === null ? null : <ChildAttendanceCard widget={widget} childId={childId} />;
+    case 'me.water':
+      return childId === null ? null : <ChildWaterCard widget={widget} childId={childId} />;
     /*
      * A widget the server offers and this client cannot draw.
      *

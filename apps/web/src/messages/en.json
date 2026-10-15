@@ -4886,6 +4886,41 @@
     "hint": "Tax details and the logo belong to the club and apply to every site, not just this one."
   },
   "family": {
+    "picker": "Whose summary this is",
+    "yourselfShort": "{name} (me)",
+    "widget": {
+      "next": {
+        "title": "Next lesson",
+        "open": "See the week",
+        "empty": "No lessons are scheduled for the coming days.",
+        "with": "With {name}"
+      },
+      "plan": {
+        "title": "Next lesson plan",
+        "open": "See this week's plans",
+        "empty": "There is no next lesson, so there is no plan yet."
+      },
+      "fees": {
+        "title": "Monthly fees",
+        "open": "See the fees",
+        "settled": "Everything is paid for this period.",
+        "overdue": "{count, plural, one {# payment overdue} other {# payments overdue}}"
+      },
+      "attendance": {
+        "title": "Attendance this month",
+        "open": "See progress",
+        "empty": "There have been no lessons this month yet.",
+        "summary": "Present at {present} of {held, plural, one {# lesson} other {# lessons}}",
+        "detail": "{absent} absent · {excused} excused",
+        "unmarked": "{count, plural, one {# lesson not yet marked} other {# lessons not yet marked}}"
+      },
+      "water": {
+        "title": "Pool water",
+        "empty": "No water temperature has been recorded for this pool yet.",
+        "celsius": "{value, number} °C",
+        "measured": "{pool} · measured on {date} at {time}"
+      }
+    },
     "navGuardian": "My children",
     "navStudent": "My record",
     "title": "My children",

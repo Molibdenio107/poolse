@@ -1,3 +1,4 @@
+import { feeBalance, type FeeBalance } from './fee-balance.js';
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { currentTenant } from '../tenant/tenant.context.js';
@@ -334,6 +335,8 @@ export interface StudentFees {
   penalties: { mensalidadeCents: number; quotaCents: number };
   /** The two above, summed — what the outstanding line adds. */
   penaltyCents: number;
+  /** What the running lines come to — `feeBalance`, the one definition. */
+  balance: FeeBalance;
   /**
    * The club's concessions, and which one this student's classes imply.
    *
@@ -854,6 +857,14 @@ export async function studentFees(
   organizationId: string,
   studentId: string,
 ): Promise<StudentFees> {
+  const fees = await readStudentFees(organizationId, studentId);
+  return { ...fees, balance: feeBalance(fees.lines, fees.penaltyCents) };
+}
+
+async function readStudentFees(
+  organizationId: string,
+  studentId: string,
+): Promise<Omit<StudentFees, 'balance'>> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
       id: string;
