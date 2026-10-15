@@ -4,7 +4,7 @@ import { startTransition, useActionState, useEffect, useRef, useState } from 're
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { Feedback, type FeedbackMessage } from '@/components/feedback';
 import { Dialog } from '@/components/ui/dialog';
 import type { Closure } from '@/lib/api';
@@ -130,6 +130,10 @@ export function ClosureForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createClosureAction, INITIAL);
+  // A form typed into again after each save: its fields clear when one works.
+  const added = useSuccessKey(state);
+  const [poolIdField, setPoolIdField] = useSeeded<string>('', added);
+  const [blocksGenerationField, setBlocksGenerationField] = useSeeded<string>('closed', added);
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -169,7 +173,13 @@ export function ClosureForm({
           <label htmlFor="closure-pool" className={FIELD_LABEL}>
             {t('calendar.scope')}
           </label>
-          <select id="closure-pool" name="poolId" defaultValue="" className={CONTROL_LINE}>
+          <select
+            id="closure-pool"
+            name="poolId"
+            value={poolIdField}
+            onChange={(event) => setPoolIdField(event.target.value)}
+            className={CONTROL_LINE}
+          >
             <option value="">{t('calendar.wholeOrganization')}</option>
             {pools.map((pool) => (
               <option key={pool.id} value={pool.id}>
@@ -186,7 +196,8 @@ export function ClosureForm({
           <select
             id="closure-effect"
             name="blocksGeneration"
-            defaultValue="closed"
+            value={blocksGenerationField}
+            onChange={(event) => setBlocksGenerationField(event.target.value)}
             className={CONTROL_LINE}
           >
             <option value="closed">{t('calendar.effectClosed')}</option>
@@ -308,6 +319,8 @@ export function CancelSessionDialog({
   const router = useRouter();
 
   const [toast, setToast] = useState<FeedbackMessage | null>(null);
+  // Controlled, so a refused cancellation keeps the scope somebody picked.
+  const [scope, setScope] = useState<'occurrence' | 'future'>('occurrence');
   const attempt = useRef(0);
   const settled = useRef<string | null>(null);
 
@@ -425,7 +438,8 @@ export function CancelSessionDialog({
                   type="radio"
                   name="scope"
                   value={option}
-                  defaultChecked={option === 'occurrence'}
+                  checked={scope === option}
+                  onChange={() => setScope(option)}
                   className="mt-0.5 size-4 accent-primary"
                 />
                 <span>{t(`calendar.removalScope.${option}`)}</span>

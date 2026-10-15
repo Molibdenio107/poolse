@@ -5,7 +5,7 @@ import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '@/lib/api';
 import { overlapping } from '@/lib/levels';
-import { CONTROL_LINE, SelectField, TextField } from '@/components/ui/field';
+import { CONTROL_LINE, SelectField, TextField, useSeeded } from '@/components/ui/field';
 import { ColourSwatches } from '@/components/ui/colour-swatches';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
@@ -363,6 +363,7 @@ export function EditLevelForm({
   level: StudentLevel;
   levels: StudentLevel[];
 }): React.ReactElement {
+  const [nameField, setNameField] = useSeeded<string>(String(level.name));
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useSavedAction(renameLevelAction, INITIAL);
@@ -456,7 +457,8 @@ export function EditLevelForm({
           name="name"
           required
           maxLength={120}
-          defaultValue={level.name}
+          value={nameField}
+          onChange={(event) => setNameField(event.target.value)}
           aria-label={t('students.levelName')}
           className={CONTROL_LINE}
         />

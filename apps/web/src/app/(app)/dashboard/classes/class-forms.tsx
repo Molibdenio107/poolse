@@ -3,13 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import {
-  CONTROL_LINE,
-  FIELD_COLUMN,
-  FIELD_LABEL,
-  SelectField,
-  TextField,
-} from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, SelectField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { ColourSwatches } from '@/components/ui/colour-swatches';
 import { fitsLevel, type AgeFit } from '@/lib/ages';
 import { cn } from '@/lib/utils';
@@ -263,6 +257,10 @@ export function AddSlotForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(addSlotAction, INITIAL);
+  // A form typed into again after each save: its fields clear when one works.
+  const added = useSuccessKey(state);
+  const [weekdayField, setWeekdayField] = useSeeded<string>('', added);
+  const [durationMinutesField, setDurationMinutesField] = useSeeded<string>('45', added);
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -284,7 +282,14 @@ export function AddSlotForm({
             makes the form say what it is — a blank to fill in — and `required`
             means it cannot be submitted half-answered.
           */}
-          <select id="slot-day" name="weekday" required defaultValue="" className={CONTROL_LINE}>
+          <select
+            id="slot-day"
+            name="weekday"
+            required
+            value={weekdayField}
+            onChange={(event) => setWeekdayField(event.target.value)}
+            className={CONTROL_LINE}
+          >
             <option value="" disabled>
               {t('classes.chooseDay')}
             </option>
@@ -319,7 +324,8 @@ export function AddSlotForm({
             type="number"
             min={5}
             max={480}
-            defaultValue={45}
+            value={durationMinutesField}
+            onChange={(event) => setDurationMinutesField(event.target.value)}
             className={cn(CONTROL_LINE, 'w-28')}
           />
         </div>

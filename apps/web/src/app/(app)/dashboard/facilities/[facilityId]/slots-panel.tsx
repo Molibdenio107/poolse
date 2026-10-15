@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import type { DayGroup, FacilityDay, TimeSlot } from '@/lib/api';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { Dialog } from '@/components/ui/dialog';
 import type { FormState } from '../../actions';
@@ -195,6 +195,8 @@ function SlotRow({
   slot: TimeSlot;
   canManage: boolean;
 }): React.ReactElement {
+  const [startTimeField, setStartTimeField] = useSeeded<string>(String(slot.startTime));
+  const [endTimeField, setEndTimeField] = useSeeded<string>(String(slot.endTime));
   const t = useTranslations();
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useSavedAction(updateSlotAction, INITIAL);
@@ -259,7 +261,8 @@ function SlotRow({
           name="startTime"
           type="time"
           required
-          defaultValue={slot.startTime}
+          value={startTimeField}
+          onChange={(event) => setStartTimeField(event.target.value)}
           className={CONTROL_LINE}
         />
       </div>
@@ -276,7 +279,8 @@ function SlotRow({
           id={`slot-to-${slot.id}`}
           name="endTime"
           required
-          defaultValue={slot.endTime}
+          value={endTimeField}
+          onChange={(event) => setEndTimeField(event.target.value)}
           pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00"
           className={CONTROL_LINE}
         />

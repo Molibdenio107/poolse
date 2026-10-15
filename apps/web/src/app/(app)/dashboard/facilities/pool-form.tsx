@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useFormatter, useTranslations } from 'next-intl';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, SelectField } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, SelectField, useSeeded } from '@/components/ui/field';
 import { POOL_USES, type PoolUse } from '@/lib/water';
 import type { FormState } from '../actions';
 import { createPoolAction, updatePoolAction } from './facilities.actions';
@@ -320,6 +320,8 @@ export function PoolForm({
   pool?: PoolFormValues;
   mode: 'create' | 'edit';
 }): React.ReactElement {
+  const [nameField, setNameField] = useSeeded<string>(String(pool?.name ?? ''));
+  const [kindField, setKindField] = useSeeded<string>(String(pool?.kind ?? 'indoor'));
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(
     mode === 'create' ? createPoolAction : updatePoolAction,
@@ -342,7 +344,8 @@ export function PoolForm({
             name="name"
             required
             maxLength={120}
-            defaultValue={pool?.name ?? ''}
+            value={nameField}
+            onChange={(event) => setNameField(event.target.value)}
             placeholder={t('facilities.poolNamePlaceholder')}
             className={CONTROL_LINE}
           />
@@ -355,7 +358,8 @@ export function PoolForm({
           <select
             id="pool-kind"
             name="kind"
-            defaultValue={pool?.kind ?? 'indoor'}
+            value={kindField}
+            onChange={(event) => setKindField(event.target.value)}
             className={CONTROL_LINE}
           >
             <option value="indoor">{t('facilities.kind.indoor')}</option>

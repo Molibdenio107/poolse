@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import { PlaceField } from './place-field';
 import type { FormState } from '../actions';
 import {
@@ -45,6 +45,7 @@ export function CreateFacilityForm({
   organizationId: string;
   timezones: string[];
 }): React.ReactElement {
+  const [timezoneField, setTimezoneField] = useSeeded<string>(timezones[0] ?? '');
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createFacilityAction, INITIAL);
 
@@ -81,7 +82,13 @@ export function CreateFacilityForm({
         <label htmlFor="facility-timezone" className={FIELD_LABEL}>
           {t('facilities.timezoneLabel')}
         </label>
-        <select id="facility-timezone" name="timezone" defaultValue={timezones[0]} className={CONTROL_LINE}>
+        <select
+          id="facility-timezone"
+          name="timezone"
+          value={timezoneField}
+          onChange={(event) => setTimezoneField(event.target.value)}
+          className={CONTROL_LINE}
+        >
           {timezones.map((zone) => (
             <option key={zone} value={zone}>
               {zone}

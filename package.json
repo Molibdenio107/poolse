@@ -29,6 +29,7 @@
     "layout:check": "pnpm --filter @poolse/web layout:check",
     "sql:check": "pnpm --filter @poolse/api sql:check",
     "csv:check": "pnpm --filter @poolse/web csv:check",
+    "forms:check": "pnpm --filter @poolse/web forms:check",
     "audit:check": "pnpm audit --audit-level high",
     "security:check": "pnpm sql:check && pnpm csv:check && pnpm audit:check"
   },

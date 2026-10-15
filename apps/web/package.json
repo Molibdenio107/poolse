@@ -14,7 +14,8 @@
     "layout:check": "node scripts/check-layout.mjs",
     "contrast:check": "node scripts/check-contrast.mjs",
     "pt:check": "node scripts/check-portuguese.mjs",
-    "csv:check": "node scripts/check-csv.mjs"
+    "csv:check": "node scripts/check-csv.mjs",
+    "forms:check": "node scripts/check-forms.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

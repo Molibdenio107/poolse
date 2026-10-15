@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import type { Season } from '@/lib/api';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import { createDraftAction, discardDraftAction, publishSeasonAction } from './drafts.actions';
@@ -228,6 +228,11 @@ function DraftForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createDraftAction, INITIAL);
+  // A form typed into again after each save: its fields clear when one works.
+  const added = useSuccessKey(state);
+  const [nameField, setNameField] = useSeeded<string>(String(suggested.name), added);
+  const [startsOnField, setStartsOnField] = useSeeded<string>(String(suggested.startsOn), added);
+  const [endsOnField, setEndsOnField] = useSeeded<string>(String(suggested.endsOn), added);
   const [copy, setCopy] = useState(true);
 
   return (
@@ -249,7 +254,8 @@ function DraftForm({
             name="name"
             required
             maxLength={60}
-            defaultValue={suggested.name}
+            value={nameField}
+            onChange={(event) => setNameField(event.target.value)}
             className={CONTROL_LINE}
           />
         </div>
@@ -263,7 +269,8 @@ function DraftForm({
             name="startsOn"
             type="date"
             required
-            defaultValue={suggested.startsOn}
+            value={startsOnField}
+            onChange={(event) => setStartsOnField(event.target.value)}
             className={CONTROL_LINE}
           />
         </div>
@@ -277,7 +284,8 @@ function DraftForm({
             name="endsOn"
             type="date"
             required
-            defaultValue={suggested.endsOn}
+            value={endsOnField}
+            onChange={(event) => setEndsOnField(event.target.value)}
             className={CONTROL_LINE}
           />
         </div>

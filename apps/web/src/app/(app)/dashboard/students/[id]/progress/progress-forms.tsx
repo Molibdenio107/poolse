@@ -2,7 +2,7 @@
 
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { CONTROL_LINE, FIELD_LABEL, SelectField } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_LABEL, SelectField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { Stroke } from '@/lib/api';
 import type { FormState } from '../../../actions';
@@ -41,6 +41,10 @@ export function AddRecordForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(addRecordAction, INITIAL);
+  // A form typed into again after each save: its fields clear when one works.
+  const added = useSuccessKey(state);
+  const [distanceMField, setDistanceMField] = useSeeded<string>('50', added);
+  const [swumOnField, setSwumOnField] = useSeeded<string>(String(today), added);
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -71,7 +75,8 @@ export function AddRecordForm({
             type="number"
             min={1}
             max={10000}
-            defaultValue={50}
+            value={distanceMField}
+            onChange={(event) => setDistanceMField(event.target.value)}
             list="common-distances"
             className={cn(CONTROL_LINE, 'w-28')}
           />
@@ -130,7 +135,8 @@ export function AddRecordForm({
             name="swumOn"
             type="date"
             required
-            defaultValue={today}
+            value={swumOnField}
+            onChange={(event) => setSwumOnField(event.target.value)}
             max={today}
             className={CONTROL_LINE}
           />

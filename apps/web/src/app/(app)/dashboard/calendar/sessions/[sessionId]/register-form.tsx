@@ -50,6 +50,11 @@ export function RegisterForm({ register }: { register: Register & { organization
     Object.fromEntries(register.entries.map((entry) => [entry.studentId, entry.status ?? ''])),
   );
 
+  // The notes, the same way — a refused save keeps what was typed beside each name.
+  const [notes, setNotes] = useState<Record<string, string>>(() =>
+    Object.fromEntries(register.entries.map((entry) => [entry.studentId, entry.note ?? ''])),
+  );
+
   const marked = Object.values(marks).filter((value) => value !== '').length;
 
   function setAll(status: string): void {
@@ -205,7 +210,10 @@ export function RegisterForm({ register }: { register: Register & { organization
             {marks[entry.studentId] !== '' && (
               <input
                 name={`note-${entry.studentId}`}
-                defaultValue={entry.note ?? ''}
+                value={notes[entry.studentId] ?? ''}
+                onChange={(event) =>
+                  setNotes((all) => ({ ...all, [entry.studentId]: event.target.value }))
+                }
                 maxLength={200}
                 placeholder={t('attendance.notePlaceholder')}
                 aria-label={t('attendance.noteFor', { name: entry.displayName })}

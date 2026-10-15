@@ -2,12 +2,7 @@
 
 import { useActionState, useRef, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import {
-  SelectField,
-  TextAreaField,
-  TextField,
-  useFocusFirstError,
-} from '@/components/ui/field';
+import { SelectField, TextAreaField, TextField, useFocusFirstError } from '@/components/ui/field';
 import { submitRegistrationAction, type RegistrationState } from './registration.actions';
 
 const INITIAL: RegistrationState = { status: 'idle' };
@@ -90,7 +85,7 @@ export function RegistrationForm({
       <div aria-hidden className="absolute -left-[10000px] top-auto size-px overflow-hidden">
         <label>
           {labels.honeypot}
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" defaultValue="" />
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
 

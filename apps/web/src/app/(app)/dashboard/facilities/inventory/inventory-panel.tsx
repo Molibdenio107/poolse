@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronRight, FileSpreadsheet, Trash2, Upload, X } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import type { InventoryItem, InventoryScope } from '@/lib/api';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import { addItemAction, archiveItemAction, updateItemAction } from './inventory.actions';
@@ -736,13 +736,11 @@ function ItemRow({
 /**
  * Add one kind of item.
  *
- * The text inputs are uncontrolled on purpose, and the exception proves the rule
- * in `field.tsx`: that rule exists because a form React resets on a returned
- * error wipes what somebody was correcting. Here the reset is what is wanted —
- * the form's whole job is to be typed into repeatedly, and after "Flutuadores,
- * 24" is added the next thing anybody does is type a different item. On an error
- * the fields do hold, because a failed action returns state and React only
- * resets on success.
+ * The fields are controlled (the form-debt sweep, 15 October 2026) and clear
+ * after each item that is added, never after one that is refused: the form's
+ * whole job is to be typed into repeatedly, and after "Flutuadores, 24" the
+ * next thing anybody does is type a different item. `useSuccessKey` is that
+ * reset, passed down to `Fields`.
  *
  * The scope is different: it is React state, because the pool checkboxes only
  * exist while it says "these tanks", and a `<select>` the browser owns cannot
@@ -761,13 +759,14 @@ function AddItemForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(addItemAction, INITIAL);
+  const added = useSuccessKey(state);
 
   return (
     <form action={action} className="flex flex-col gap-3 border-t border-border pt-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="facilityId" value={facilityId} />
 
-      <Fields pools={pools} locations={locations} />
+      <Fields pools={pools} locations={locations} resetKey={added} />
 
       <button
         type="submit"
@@ -787,15 +786,31 @@ function Fields({
   item,
   pools,
   locations,
+  resetKey,
 }: {
   item?: InventoryItem;
   pools: Pool[];
   /** What this site already calls its places, for the location suggestions. */
   locations: string[];
+  /** The add form's `useSuccessKey`: the fields clear after each item added. */
+  resetKey?: number;
 }): React.ReactElement {
+  const [notesField, setNotesField] = useSeeded<string>(String(item?.notes ?? ''), resetKey);
+  const [nameField, setNameField] = useSeeded<string>(String(item?.name ?? ''), resetKey);
+  const [quantityField, setQuantityField] = useSeeded<string>(String(item?.quantity ?? 0), resetKey);
+  const [unitField, setUnitField] = useSeeded<string>(String(item?.unit ?? ''), resetKey);
+  const [locationField, setLocationField] = useSeeded<string>(String(item?.location ?? ''), resetKey);
   const t = useTranslations();
   const suffix = item?.id ?? 'new';
   const [scope, setScope] = useState<InventoryScope>(item?.scope ?? 'facility');
+  // The tanks ticked, kept across a refused save and a scope switched away and back.
+  const [chosenPools, setChosenPools] = useState<string[]>(item?.poolIds ?? []);
+  const poolsResetAt = useRef(resetKey);
+  useEffect(() => {
+    if (poolsResetAt.current === resetKey) return;
+    poolsResetAt.current = resetKey;
+    setChosenPools(item?.poolIds ?? []);
+  }, [resetKey, item?.poolIds]);
 
   return (
     <>
@@ -815,7 +830,8 @@ function Fields({
             name="name"
             required
             maxLength={120}
-            defaultValue={item?.name ?? ''}
+            value={nameField}
+            onChange={(event) => setNameField(event.target.value)}
             placeholder={t('inventory.namePlaceholder')}
             className={CONTROL_LINE}
           />
@@ -831,7 +847,8 @@ function Fields({
             type="number"
             min={0}
             step={1}
-            defaultValue={item?.quantity ?? 0}
+            value={quantityField}
+            onChange={(event) => setQuantityField(event.target.value)}
             className={CONTROL_LINE}
           />
         </div>
@@ -844,7 +861,8 @@ function Fields({
             id={`item-unit-${suffix}`}
             name="unit"
             maxLength={40}
-            defaultValue={item?.unit ?? ''}
+            value={unitField}
+            onChange={(event) => setUnitField(event.target.value)}
             placeholder={t('inventory.unitPlaceholder')}
             className={CONTROL_LINE}
           />
@@ -868,7 +886,8 @@ function Fields({
             id={`item-location-${suffix}`}
             name="location"
             maxLength={120}
-            defaultValue={item?.location ?? ''}
+            value={locationField}
+            onChange={(event) => setLocationField(event.target.value)}
             list={`locations-${suffix}`}
             aria-describedby={`item-location-hint-${suffix}`}
             className={CONTROL_LINE}
@@ -894,7 +913,8 @@ function Fields({
             id={`item-notes-${suffix}`}
             name="notes"
             maxLength={500}
-            defaultValue={item?.notes ?? ''}
+            value={notesField}
+            onChange={(event) => setNotesField(event.target.value)}
             className={CONTROL_LINE}
           />
         </div>
@@ -939,7 +959,14 @@ function Fields({
                       type="checkbox"
                       name="poolIds"
                       value={pool.id}
-                      defaultChecked={item?.poolIds.includes(pool.id) ?? false}
+                      checked={chosenPools.includes(pool.id)}
+                      onChange={(event) =>
+                        setChosenPools((all) =>
+                          event.target.checked
+                            ? [...all, pool.id]
+                            : all.filter((id) => id !== pool.id),
+                        )
+                      }
                       className="size-4 accent-[rgb(var(--primary))]"
                     />
                     {pool.name}

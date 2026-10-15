@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSavedAction } from '@/lib/saved';
 import type { PartnerDetail, PartnerType } from '@/lib/api';
-import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
+import { SelectField, TextAreaField, TextField, useSeeded } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { savePartnerAction } from '../../[facilityId]/partners.actions';
 
@@ -44,6 +44,7 @@ export function PartnerIdentity({
 }: {
   partner: PartnerDetail;
 }): React.ReactElement {
+  const [managedLessonsField, setManagedLessonsField] = useSeeded<boolean>(partner.managedLessons);
   const t = useTranslations();
   const [editing, setEditing] = useState(false);
   const [state, save, pending] = useSavedAction(savePartnerAction, INITIAL);
@@ -140,7 +141,8 @@ export function PartnerIdentity({
             <input
               type="checkbox"
               name="managedLessons"
-              defaultChecked={partner.managedLessons}
+              checked={managedLessonsField}
+              onChange={(event) => setManagedLessonsField(event.target.checked)}
               className="mt-0.5 size-4 shrink-0 accent-primary"
             />
             <span className="flex flex-col gap-0.5">

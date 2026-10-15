@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { ReposicaoSettings } from '@/lib/api';
-import { SelectField, TextField, useFocusFirstError } from '@/components/ui/field';
+import { SelectField, TextField, useFocusFirstError, useSeeded } from '@/components/ui/field';
 import type { FormState } from '../../actions';
 import { saveReposicaoSettingsAction } from './reposicoes.actions';
 
@@ -30,6 +30,8 @@ export function ReposicaoSettingsForm({
   organizationId: string;
   settings: ReposicaoSettings;
 }): React.ReactElement {
+  const [enabledField, setEnabledField] = useSeeded<boolean>(settings.enabled);
+  const [backfillOnlyField, setBackfillOnlyField] = useSeeded<boolean>(settings.backfillOnly);
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(saveReposicaoSettingsAction, INITIAL);
   const formRef = useRef<HTMLFormElement>(null);
@@ -48,7 +50,8 @@ export function ReposicaoSettingsForm({
         <input
           type="checkbox"
           name="enabled"
-          defaultChecked={settings.enabled}
+          checked={enabledField}
+          onChange={(event) => setEnabledField(event.target.checked)}
           className="mt-1 size-4 shrink-0 accent-primary"
         />
         <span className="flex flex-col gap-1">
@@ -90,7 +93,8 @@ export function ReposicaoSettingsForm({
         <input
           type="checkbox"
           name="backfillOnly"
-          defaultChecked={settings.backfillOnly}
+          checked={backfillOnlyField}
+          onChange={(event) => setBackfillOnlyField(event.target.checked)}
           className="mt-1 size-4 shrink-0 accent-primary"
         />
         <span className="flex flex-col gap-1">

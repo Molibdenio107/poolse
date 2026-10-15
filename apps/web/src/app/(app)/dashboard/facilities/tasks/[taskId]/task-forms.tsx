@@ -6,7 +6,7 @@ import { Check, Trash2 } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import type { MaintenanceTask, TaskOption } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
-import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
+import { SelectField, TextAreaField, TextField, useSeeded } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import {
   archiveTask,
@@ -137,6 +137,7 @@ export function TaskAdmin({
   task: MaintenanceTask;
   assignees: TaskOption[];
 }): React.ReactElement {
+  const [activeField, setActiveField] = useSeeded<boolean>(task.active);
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(updateTask, INITIAL);
   const [confirming, setConfirming] = useState(false);
@@ -226,7 +227,8 @@ export function TaskAdmin({
             type="checkbox"
             name="active"
             value="true"
-            defaultChecked={task.active}
+            checked={activeField}
+            onChange={(event) => setActiveField(event.target.checked)}
             className="mt-0.5"
           />
           <span>

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSavedAction } from '@/lib/saved';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import type { LostAndFoundItem } from '@/lib/api';
 import type { FormState } from '../../actions';
 import {
@@ -235,6 +235,7 @@ function AddFound({
   locations: string[];
   onDone: () => void;
 }): React.ReactElement {
+  const [studentIdField, setStudentIdField] = useSeeded<string>('');
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(recordFoundAction, INITIAL);
 
@@ -296,7 +297,13 @@ function AddFound({
             lets somebody find a child whose name they are unsure how to spell.
             Empty is the ordinary answer.
           */}
-          <select id="lf-student" name="studentId" defaultValue="" className={CONTROL_LINE}>
+          <select
+            id="lf-student"
+            name="studentId"
+            value={studentIdField}
+            onChange={(event) => setStudentIdField(event.target.value)}
+            className={CONTROL_LINE}
+          >
             <option value="">{t('inventory.lostAndFound.noStudent')}</option>
             {students.map((student) => (
               <option key={student.id} value={student.id}>

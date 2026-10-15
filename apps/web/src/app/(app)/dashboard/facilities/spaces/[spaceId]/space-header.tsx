@@ -8,7 +8,7 @@ import { useArchiveUndo, useSavedAction } from '@/lib/saved';
 import { timeAgo } from '@/lib/relative-time';
 import type { Space } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
-import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
+import { SelectField, TextAreaField, TextField, useSeeded } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { archiveSpace, updateSpace } from '../../spaces.actions';
 import { SPACE_TYPES } from '../../spaces-panel';
@@ -35,6 +35,7 @@ export function SpaceHeader({
   space: Space;
   canManage: boolean;
 }): React.ReactElement {
+  const [activeField, setActiveField] = useSeeded<boolean>(space.active);
   const t = useTranslations();
   const toast = useToast();
   const locale = useLocale();
@@ -171,7 +172,8 @@ export function SpaceHeader({
             <input
               type="checkbox"
               name="active"
-              defaultChecked={space.active}
+              checked={activeField}
+              onChange={(event) => setActiveField(event.target.checked)}
               className="size-4"
             />
             {t('spaces.activeLabel')}

@@ -3,13 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import {
-  CONTROL_BLOCK,
-  CONTROL_LINE,
-  FIELD_COLUMN,
-  FIELD_LABEL,
-  TextField,
-} from '@/components/ui/field';
+import { CONTROL_BLOCK, CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextField, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { ConsentKind, EmergencyContact } from '../../../../../../lib/api';
 import type { FormState } from '../../../actions';
@@ -62,6 +56,8 @@ export function MedicalNotesForm({
    */
   mobilityNotes: string | null;
 }): React.ReactElement {
+  const [medicalNotesField, setMedicalNotesField] = useSeeded<string>(String(notes ?? ''));
+  const [mobilityNotesField, setMobilityNotesField] = useSeeded<string>(String(mobilityNotes ?? ''));
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(saveNotesAction, INITIAL);
 
@@ -78,7 +74,8 @@ export function MedicalNotesForm({
         name="medicalNotes"
         rows={5}
         maxLength={4000}
-        defaultValue={notes ?? ''}
+        value={medicalNotesField}
+        onChange={(event) => setMedicalNotesField(event.target.value)}
         placeholder={t('sensitive.notesPlaceholder')}
         className={CONTROL_BLOCK}
       />
@@ -92,7 +89,8 @@ export function MedicalNotesForm({
         name="mobilityNotes"
         rows={4}
         maxLength={4000}
-        defaultValue={mobilityNotes ?? ''}
+        value={mobilityNotesField}
+        onChange={(event) => setMobilityNotesField(event.target.value)}
         placeholder={t('sensitive.mobilityPlaceholder')}
         className={CONTROL_BLOCK}
       />

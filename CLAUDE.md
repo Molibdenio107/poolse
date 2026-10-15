@@ -370,7 +370,7 @@ being asked to correct it, and an uncontrolled `<select>` reverts to its mount-t
 after a save that worked. Both shipped as separate-looking bugs (POOLSE-09, POOLSE-10) from
 one cause. Use `TextField` / `SelectField` / `TextAreaField` from
 `apps/web/src/components/ui/field.tsx`; they are controlled, re-seed only when the server's
-value actually changes, and carry their own label, hint and field-level error.
+value actually changes, and carry their own label, hint and field-level error. **A hand-built control (a price row, an inventory line) takes `useSeeded` from the same file** instead of `defaultValue`, and a create form that stays on screen passes `useSuccessKey(state)` so its fields clear after a save that worked and never after one that failed. `pnpm forms:check` refuses `defaultValue` and `defaultChecked` anywhere but `field.tsx` — the form-debt sweep of 15 October 2026 took the count from 62 to 0.
 
 **A NIF is checksum-validated, and `isValidNif` in `@poolse/rules` is the one definition.**
 Nine digits with a mod-11 check digit; empty stays allowed everywhere it already was. It lives
