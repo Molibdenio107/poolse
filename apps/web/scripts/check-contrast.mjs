@@ -65,17 +65,18 @@ const PAIRS = [
   ['foreground-muted', 'surface-muted', 4.5, 'hints on a muted panel — chips, badges'],
 
   // The primary action, and text on it.
-  ['primary', 'background', 4.5, 'links on the page'],
-  ['primary', 'surface', 4.5, 'links on a card'],
+  // Text reads the ink since 15-10-2026 (`theme.extend.textColor`); fills keep the token.
+  ['primary-ink', 'background', 4.5, 'links on the page'],
+  ['primary-ink', 'surface', 4.5, 'links on a card'],
   ['primary-foreground', 'primary', 4.5, 'text on a primary button'],
   ['destructive-foreground', 'destructive', 4.5, 'text on a destructive button — every confirm-to-delete'],
 
   // Status colours. These carry meaning, so they are paired with words
   // everywhere — but the words themselves still have to be readable.
-  ['danger', 'background', 4.5, 'error text'],
-  ['danger', 'surface', 4.5, 'error text on a card'],
-  ['warning', 'surface', 4.5, 'warning text on a card'],
-  ['success', 'surface', 4.5, 'success text on a card'],
+  ['danger-ink', 'background', 4.5, 'error text'],
+  ['danger-ink', 'surface', 4.5, 'error text on a card'],
+  ['warning-ink', 'surface', 4.5, 'warning text on a card'],
+  ['success-ink', 'surface', 4.5, 'success text on a card'],
 
   // Role badges — POOLSE-18. Text on a muted chip.
   ['role-owner', 'surface', 4.5, 'owner badge'],
@@ -188,12 +189,8 @@ if (JSON.stringify(light) === JSON.stringify(dark)) {
  * untouched, clears AA comfortably — rgb(24 79 94) is 9:1.
  */
 const KNOWN = new Map([
-  ['light:primary:background:4.5', 'brand primary as link text; CLAUDE.md settles the palette'],
   ['light:primary:background:3', 'the focus ring, same brand colour, same decision'],
-  ['light:primary:surface:4.5', 'as above'],
   ['light:primary-foreground:primary:4.5', 'white on brand primary, on every primary button'],
-  ['light:warning:surface:4.5', 'amber on white; always paired with words, never colour alone'],
-  ['light:success:surface:4.5', 'green on white; likewise'],
   ['light:role-guardian:surface:4.5', '4.24:1, a hair under, on a badge that carries its own text'],
 ]);
 

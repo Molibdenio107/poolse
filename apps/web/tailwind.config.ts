@@ -13,6 +13,21 @@ export default {
   theme: {
     extend: {
       /*
+       * Text reads the ink, fills read the token — 15 October 2026. Only the
+       * text utility is remapped, so `text-primary` is AA on white while
+       * `bg-primary`, `border-primary` and `ring-primary` keep the settled brand
+       * fill. See `--primary-ink` in globals.css.
+       */
+      textColor: {
+        primary: {
+          DEFAULT: rgb('--primary-ink'),
+          foreground: rgb('--primary-foreground'),
+        },
+        success: rgb('--success-ink'),
+        warning: rgb('--warning-ink'),
+        danger: rgb('--danger-ink'),
+      },
+      /*
        * One text size for every control — October 2026. Inputs, selects and every
        * button share `text-control` (15px) as they share `h-control` (36px): one
        * step above the 14px they were, which read small, and still dense enough
