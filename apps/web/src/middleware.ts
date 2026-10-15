@@ -12,15 +12,17 @@ const isPublicRoute = createRouteMatcher([
   // The English marketing pages. `/en(.*)` rather than listing each one, because
   // marketing pages will keep being added and forgetting to make one public
   // would send a visitor to a sign-in screen from a search result.
-  '/en(.*)',
+  // With the slash — sweep of 15-10-2026: '/en(.*)' also made '/energy…' public.
+  '/en',
+  '/en/(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
   // POOLSE-71's public water page, opened from a QR at the entrance by people
   // who have no account. It reads one token and nothing else.
-  '/agua(.*)',
+  '/agua/(.*)',
   // POOLSE-69's public sign-up form, linked from a club's own website. It
   // reads and writes through the API's slug-keyed public routes and nothing else.
-  '/inscricao(.*)',
+  '/inscricao/(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

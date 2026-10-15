@@ -1,5 +1,6 @@
 'use server';
 
+import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiPost } from '@/lib/api';
 import { readSheet, type ReadFailure } from '@/lib/read-sheet';
@@ -60,6 +61,9 @@ export async function readTimetableAction(
   formData: FormData,
 ): Promise<ReadState> {
   const attempt = previous.attempt + 1;
+  // Before any file is read: a PDF goes to the model — `lib/ai-guard.ts`.
+  const refused = await guardAiCall(AI_ROLES.timetable);
+  if (refused !== null) return { ok: false, errorKey: `import.ai.${refused}`, attempt };
   const upload = formData.get('file');
   const file = upload instanceof File ? upload : null;
 

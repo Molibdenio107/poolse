@@ -5,10 +5,13 @@ out/
 build/
 coverage/
 
-.env
-.env.local
-.env.*.local
+# Every env file, in every folder - sweep of 15-10-2026: .env.production and
+# .env.staging were not covered. Only the example is tracked.
+.env*
 !.env.example
+
+# Claude Code local settings - per machine, never shared.
+.claude/settings.local.json
 
 *.log
 npm-debug.log*

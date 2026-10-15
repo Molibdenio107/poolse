@@ -1,5 +1,6 @@
 'use server';
 
+import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPost, type EnergyInvoiceCheck, type EnergyInvoiceDetail, type EnergyInvoiceList } from '@/lib/api';
 import { draftToBody, reportMediaType, type InvoiceDraft } from '@/lib/energy-invoice';
@@ -34,6 +35,9 @@ export async function readInvoiceFileAction(
   formData: FormData,
 ): Promise<InvoiceReadState> {
   const attempt = previous.attempt + 1;
+  // Before any file is read: a PDF goes to the model — `lib/ai-guard.ts`.
+  const refused = await guardAiCall(AI_ROLES.energy);
+  if (refused !== null) return { ok: false, errorKey: `import.ai.${refused}`, attempt };
   const upload = formData.get('file');
   const file = upload instanceof File ? upload : null;
   const mediaType = file === null ? null : reportMediaType(file.name);

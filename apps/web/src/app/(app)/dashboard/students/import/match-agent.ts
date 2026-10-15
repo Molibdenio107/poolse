@@ -55,7 +55,12 @@ interface Assignment {
  * invisibly absent.
  */
 export function agentAvailable(): boolean {
-  return (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== '';
+  // Its own flag, off by default — sweep of 15-10-2026. It ran whenever the key
+  // was set, so switching on any parser switched this metered call on too.
+  return (
+    (process.env['COLUMN_MATCH_AI_ENABLED'] ?? '').trim().toLowerCase() === 'true' &&
+    (process.env['ANTHROPIC_API_KEY'] ?? '').trim() !== ''
+  );
 }
 
 const SYSTEM = [

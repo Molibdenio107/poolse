@@ -5,10 +5,14 @@ node_modules
 **/.next
 **/*.tsbuildinfo
 
-# Never ship secrets into an image layer.
+# Never ship secrets into an image layer - in any folder (sweep of 15-10-2026:
+# these patterns are anchored to the context root, so apps/api/.env was not covered).
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
 
 .git
 .github

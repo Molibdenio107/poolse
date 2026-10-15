@@ -1,5 +1,6 @@
 'use server';
 
+import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiPost, type SalaryImportResult, type SalaryImportRowResult } from '@/lib/api';
 import { parseSheetCents } from '@/lib/money';
@@ -118,6 +119,9 @@ export async function matchSheetAction(
 /** Step one: the file becomes one grid per sheet, already matched. */
 export async function readSheetAction(previous: ReadState, formData: FormData): Promise<ReadState> {
   const attempt = previous.attempt + 1;
+  // Before any file is read: a PDF goes to the model — `lib/ai-guard.ts`.
+  const refused = await guardAiCall(AI_ROLES.salaries);
+  if (refused !== null) return { ok: false, errorKey: `import.ai.${refused}`, attempt };
   const upload = formData.get('file');
   const file = upload instanceof File ? upload : null;
 

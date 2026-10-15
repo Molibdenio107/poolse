@@ -76,6 +76,19 @@ const SAME_ON_PURPOSE = new Map([
   // A file-format name and its extension. "CSV" is not an English word being
   // left untranslated; it is what the format is called in every language.
   ['students.export.formatCsv', 'a file format and its extension'],
+  // Sweep of 15-10-2026: the eleven the gate had been red on, every one the same
+  // word in both languages on purpose, so a red gate meant nothing.
+  ['export.pdf.option', 'a file format'],
+  ['energy.cpe', 'the Portuguese code for a supply point, printed on every bill'],
+  ['energy.invoice.cpe', 'as above'],
+  ['energy.invoice.atcud', 'the Portuguese invoice code, printed as-is'],
+  ['energy.invoice.registers.total', '"Total" is the same word in both languages'],
+  ['invoices.total', 'as above'],
+  ['energy.invoice.perKwh', 'a unit'],
+  ['invoices.source.mbway', 'the name of a payment network'],
+  ['invoices.channel.email', '"email" is the ordinary pt-PT word too'],
+  ['reception.email', 'as above'],
+  ['reception.taxNumber', 'the same Portuguese acronym'],
   ['students.export.formatXlsx', 'a product name and its extension — Excel is Excel in Portuguese'],
   // The timetable export's button — POOLSE-54. Same reasoning as the register's
   // above: it names the application the file opens in, and that application is

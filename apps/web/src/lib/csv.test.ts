@@ -25,8 +25,17 @@ test('a formula is neutralised, whatever it starts with', () => {
   assert.equal(csvCell('@SUM(1+1)'), "'@SUM(1+1)");
 
   // Excel strips leading whitespace before deciding, so these are formulas too.
-  assert.equal(csvCell('\t=1+1'), "'\t=1+1");
+  // A tab is quoted as well since 15-10-2026, so the apostrophe sits inside.
+  assert.equal(csvCell('\t=1+1'), '"\'\t=1+1"');
   assert.equal(csvCell('\r=1+1'), '"\'\r=1+1"');
+});
+
+test('a comma is quoted, so a comma-locale spreadsheet keeps it one cell', () => {
+  // `Ana,=cmd|…` unquoted split into two cells in an English-locale Excel, and
+  // the second began with `=` — a live formula the leading-character escape
+  // never saw. Quoted, it is one cell whose text merely contains a comma.
+  assert.equal(csvCell("Ana,=cmd|'/c calc'!A0"), "\"Ana,=cmd|'/c calc'!A0\"");
+  assert.equal(csvCell('Silva, Ana'), '"Silva, Ana"');
 });
 
 test('the apostrophe goes on before the quoting, not after', () => {

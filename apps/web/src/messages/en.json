@@ -4245,6 +4245,10 @@
     }
   },
   "import": {
+    "ai": {
+      "notAllowed": "Only people who may import this list can have a file read.",
+      "tooMany": "Too many files have been read in the last few minutes. Wait a little and try again."
+    },
     "pdfDisabled": "Reading PDFs is not switched on here. Export the document to Excel or CSV from the program it came from — or ask for PDF reading to be switched on."
   },
   "export": {

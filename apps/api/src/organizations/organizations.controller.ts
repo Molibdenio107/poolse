@@ -28,7 +28,8 @@ import {
   type ReposicaoSettings,
   type TaxSettings,
 } from './organizations.repository.js';
-import { clientIpFrom, hashSignupIp, isDisposableEmail } from './signup-claim.js';
+import { hashSignupIp, isDisposableEmail } from './signup-claim.js';
+import { forwardedClientIp } from '../leads/visitor.js';
 
 interface CreateOrganizationBody {
   name?: unknown;
@@ -115,7 +116,8 @@ export class OrganizationsController {
       });
     }
 
-    const signupIpHash = hashSignupIp(clientIpFrom(req.headers['x-poolse-client-ip']));
+    // Believed only beside the proxy secret, as the public form does.
+    const signupIpHash = hashSignupIp(forwardedClientIp(req));
 
     try {
       // Blank is allowed and means "same as the organization". An operator with one

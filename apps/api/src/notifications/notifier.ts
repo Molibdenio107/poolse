@@ -57,9 +57,20 @@ function sender(): string {
  */
 export async function sendEmail(email: Email): Promise<boolean> {
   if (provider() === 'console') {
-    logger.log(
-      `[console] would send to ${email.to}\n  subject: ${email.subject}\n  ${email.text.replace(/\n/g, '\n  ')}`,
-    );
+    /*
+     * The body only off production — sweep of 15-10-2026. An invitation's body
+     * is a live join link and a message to families is their words, and a
+     * hosting log is not where either belongs: a forgotten EMAIL_PROVIDER on
+     * Railway would have written them there. In production the log says who and
+     * what about, and that nothing went.
+     */
+    if (process.env['NODE_ENV'] === 'production') {
+      logger.warn(`[console] not sent (EMAIL_PROVIDER is not set) — to ${email.to}, subject: ${email.subject}`);
+    } else {
+      logger.log(
+        `[console] would send to ${email.to}\n  subject: ${email.subject}\n  ${email.text.replace(/\n/g, '\n  ')}`,
+      );
+    }
     return false;
   }
 

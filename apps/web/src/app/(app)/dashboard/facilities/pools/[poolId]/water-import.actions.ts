@@ -1,5 +1,6 @@
 'use server';
 
+import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { apiPost } from '@/lib/api';
 import { readSheet, type ReadFailure } from '@/lib/read-sheet';
@@ -80,6 +81,9 @@ export async function readWaterFileAction(
   formData: FormData,
 ): Promise<WaterReadState> {
   const attempt = previous.attempt + 1;
+  // Before any file is read: a PDF goes to the model — `lib/ai-guard.ts`.
+  const refused = await guardAiCall(AI_ROLES.water);
+  if (refused !== null) return { ok: false, errorKey: `import.ai.${refused}`, attempt };
 
   // `FormData` hands back a string for a text field and a File for an upload;
   // narrowing rather than casting means a form that posts the wrong thing is a

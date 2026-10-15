@@ -26,8 +26,10 @@ import {
 async function persist(locale?: string, theme?: string): Promise<void> {
   const store = await cookies();
 
-  if (locale !== undefined && isLocale(locale)) store.set(LOCALE_COOKIE, locale, localeCookieOptions);
-  if (theme !== undefined && isTheme(theme)) store.set(THEME_COOKIE, theme, themeCookieOptions);
+  const newLocale = locale !== undefined && isLocale(locale) && store.get(LOCALE_COOKIE)?.value !== locale;
+  const newTheme = theme !== undefined && isTheme(theme) && store.get(THEME_COOKIE)?.value !== theme;
+  if (newLocale) store.set(LOCALE_COOKIE, locale, localeCookieOptions);
+  if (newTheme) store.set(THEME_COOKIE, theme, themeCookieOptions);
 
   try {
     await apiPatch('/me/preferences', {
@@ -40,8 +42,9 @@ async function persist(locale?: string, theme?: string): Promise<void> {
 
   // Every page renders through the locale and the theme, so all of them are now
   // stale — including the layout, which is why this is layout-deep rather than
-  // one path.
-  revalidatePath('/', 'layout');
+  // one path. Only when something changed: these actions take no session, and a
+  // loop of them must not bust every page's cache (sweep of 15-10-2026).
+  if (newLocale || newTheme) revalidatePath('/', 'layout');
 }
 
 export async function setLocaleAction(formData: FormData): Promise<void> {
@@ -65,8 +68,10 @@ export async function syncPreferencesAction(locale: string, theme: string): Prom
   const currentLocale = store.get(LOCALE_COOKIE)?.value;
   const currentTheme = store.get(THEME_COOKIE)?.value;
 
-  if (isLocale(locale) && currentLocale !== locale) store.set(LOCALE_COOKIE, locale, localeCookieOptions);
-  if (isTheme(theme) && currentTheme !== theme) store.set(THEME_COOKIE, theme, themeCookieOptions);
+  const newLocale = isLocale(locale) && currentLocale !== locale;
+  const newTheme = isTheme(theme) && currentTheme !== theme;
+  if (newLocale) store.set(LOCALE_COOKIE, locale, localeCookieOptions);
+  if (newTheme) store.set(THEME_COOKIE, theme, themeCookieOptions);
 
-  revalidatePath('/', 'layout');
+  if (newLocale || newTheme) revalidatePath('/', 'layout');
 }

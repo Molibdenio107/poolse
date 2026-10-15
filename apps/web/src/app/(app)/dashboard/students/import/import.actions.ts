@@ -1,5 +1,6 @@
 'use server';
 
+import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiPost, type ImportResult } from '@/lib/api';
 import { getTranslations } from 'next-intl/server';
@@ -83,6 +84,9 @@ const READ_ERRORS: Record<ReadFailure, string> = {
 export async function matchSheet(sheet: Sheet): Promise<MatchResult> {
   const base = matchColumns(sheet);
   if (base.unmatched.length === 0 || !agentAvailable()) return base;
+  // An export of a 'use server' file is a public endpoint: the model is asked
+  // only for somebody who may import the register, and within their quota.
+  if ((await guardAiCall(AI_ROLES.students)) !== null) return base;
 
   const unfilled = IMPORT_FIELDS.filter((field) => base.mapping[field] === null);
   if (unfilled.length === 0) return base;
@@ -180,6 +184,9 @@ export async function readSheetAction(
   formData: FormData,
 ): Promise<ReadState> {
   const attempt = previous.attempt + 1;
+  // Before any file is read: a PDF goes to the model — `lib/ai-guard.ts`.
+  const refused = await guardAiCall(AI_ROLES.students);
+  if (refused !== null) return { ok: false, errorKey: `import.ai.${refused}`, attempt };
   const upload = formData.get('file');
   const file = upload instanceof File ? upload : null;
 

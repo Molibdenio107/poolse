@@ -57,7 +57,10 @@ const FORMULA_LEAD = /^[=+\-@\t\r]/;
 const NEEDS_ESCAPING = /^['=+\-@\t\r]/;
 
 /** The delimiter, the quote and the line breaks — the characters that need quoting. */
-const NEEDS_QUOTING = /[";\r\n]/;
+// And the comma and the tab — sweep of 15-10-2026. Our delimiter is `;`, but a
+// spreadsheet set to an English locale splits on `,`, so an unquoted
+// `Ana,=cmd|…` became two cells there and the second one a live formula.
+const NEEDS_QUOTING = /[";,\t\r\n]/;
 
 /**
  * One CSV field: never a formula, quoted only where it has to be.

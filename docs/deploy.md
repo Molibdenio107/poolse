@@ -227,6 +227,14 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       `S3_REGION=auto` on the **API only**. Without them every upload control says storage is not
       configured — `docs/features/files.md`. Never make the bucket public: files are served
       through the app after a permission check.
+- [ ] **The dependency advisories that need a major upgrade are cleared**, or accepted again
+      on the day. On 15 October 2026 `pnpm audit` went from 34 to 11 (critical 2 → 0) with
+      overrides in the root `package.json`. What is left needs a major version:
+      `@nestjs/*` 10 → 11, `next-intl` 3 → 4 (its open redirect is in middleware this app does
+      not use), `file-type` 21 (only Nest's file pipes reach it, and none is used), and
+      `fast-xml-parser` 5 / `uuid` 11 inside the AWS SDK. `braces` (GHSA-vfj7-8cjw-p6xm) has no
+      fixed release and is in the Nest CLI's watcher, a dev tool, so it is in
+      `pnpm.auditConfig.ignoreGhsas` — take it out the day a fix exists. Run `pnpm audit:check`.
 
 ## Paid services: what launch costs, and who pays
 

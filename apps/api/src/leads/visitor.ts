@@ -14,13 +14,21 @@ import { clientIpFrom } from '../organizations/signup-claim.js';
  * production without it is a go-live item, and the API says so at boot.
  */
 export function visitorOf(request: Pick<Request, 'headers' | 'ip'>): string {
+  const forwarded = forwardedClientIp(request);
+  return forwarded !== null ? `client:${forwarded}` : `ip:${request.ip ?? 'unknown'}`;
+}
+
+/**
+ * The visitor's address the web server forwarded, or null when it may not be
+ * believed — the one rule for every reader of `x-poolse-client-ip`. Signup read
+ * the header bare until the sweep of 15-10-2026, so anybody could choose the
+ * address behind its origin flag.
+ */
+export function forwardedClientIp(request: Pick<Request, 'headers'>): string | null {
   const forwarded = clientIpFrom(request.headers['x-poolse-client-ip']);
   const secret = process.env['WEB_PROXY_SECRET'];
-
-  if (forwarded !== null && (secret === undefined || secret === '' || proxyIsTrusted(request, secret))) {
-    return `client:${forwarded}`;
-  }
-  return `ip:${request.ip ?? 'unknown'}`;
+  if (forwarded === null) return null;
+  return secret === undefined || secret === '' || proxyIsTrusted(request, secret) ? forwarded : null;
 }
 
 function proxyIsTrusted(request: Pick<Request, 'headers'>, secret: string): boolean {

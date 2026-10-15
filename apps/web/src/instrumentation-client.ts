@@ -36,6 +36,21 @@ if (dsn) {
      * integration is the whole of the protection and both are deliberate.
      */
     sendDefaultPii: false,
+    /*
+     * And the request itself, whatever `sendDefaultPii` says — sweep of
+     * 15-10-2026. With it false the SDK still copies every request header onto
+     * an error event, which here is the Clerk session token and the web-to-API
+     * proxy secret. An error needs its stack and the route, not the caller's
+     * credentials.
+     */
+    beforeSend(event) {
+      if (event.request !== undefined) {
+        delete event.request.headers;
+        delete event.request.cookies;
+        delete event.request.data;
+      }
+      return event;
+    },
   });
 }
 

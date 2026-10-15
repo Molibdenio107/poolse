@@ -103,6 +103,8 @@ function verify(req: RawBodyRequest<Request>): Stripe.Event {
   try {
     return stripeClient().webhooks.constructEvent(req.rawBody, signature, secret.trim());
   } catch (error) {
-    throw new UnauthorizedException(`Invalid Stripe signature: ${String(error)}`);
+    // The library's reason goes to the log; a stranger probing is told nothing more.
+    new Logger('StripeWebhook').warn(`Stripe signature refused: ${String(error)}`);
+    throw new UnauthorizedException('Invalid Stripe signature');
   }
 }
