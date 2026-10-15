@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { useTranslations } from 'next-intl';
 // Aliased: every control in this file is single-line, so one name serves both.
-import { CONTROL_INVALID as INVALID, CONTROL_LINE as FIELD, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_INVALID as INVALID, CONTROL_LINE as FIELD, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import type { Me } from '@/lib/api';
 import { applyTheme } from '@/lib/apply-theme';
 import { isTheme } from '@/lib/theme';
@@ -63,14 +63,14 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
         <Field
           name="firstName"
           label={t('profile.firstName')}
-          defaultValue={me.user.firstName ?? ''}
+          initial={me.user.firstName ?? ''}
           error={errorFor('firstName')}
           autoComplete="given-name"
         />
         <Field
           name="lastName"
           label={t('profile.lastName')}
-          defaultValue={me.user.lastName ?? ''}
+          initial={me.user.lastName ?? ''}
           error={errorFor('lastName')}
           autoComplete="family-name"
         />
@@ -78,7 +78,7 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
           name="birthDate"
           type="date"
           label={t('profile.birthDate')}
-          defaultValue={me.user.birthDate ?? ''}
+          initial={me.user.birthDate ?? ''}
           error={errorFor('birthDate')}
           autoComplete="bday"
         />
@@ -86,7 +86,7 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
           name="contactPhone"
           type="tel"
           label={t('profile.contactPhone')}
-          defaultValue={me.user.contactPhone ?? ''}
+          initial={me.user.contactPhone ?? ''}
           error={errorFor('contactPhone')}
           autoComplete="tel"
           hint={t('profile.contactPhoneHint')}
@@ -119,14 +119,14 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
         <Choice
           name="locale"
           label={t('profile.locale')}
-          defaultValue={me.user.locale}
+          initial={me.user.locale}
           options={LOCALES.map((value) => ({ value, label: t(`locale.${value}`) }))}
           error={errorFor('locale')}
         />
         <Choice
           name="theme"
           label={t('profile.theme')}
-          defaultValue={me.user.theme}
+          initial={me.user.theme}
           options={THEMES.map((value) => ({ value, label: t(`theme.${value}`) }))}
           error={errorFor('theme')}
         />
@@ -159,7 +159,7 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
 function Field({
   name,
   label,
-  defaultValue,
+  initial,
   error,
   type = 'text',
   autoComplete,
@@ -167,7 +167,8 @@ function Field({
 }: {
   name: string;
   label: string;
-  defaultValue: string;
+  /** The saved value; re-seeded only when it changes (`useSeeded`). */
+  initial: string;
   error?: string | undefined;
   type?: string;
   autoComplete?: string;
@@ -175,6 +176,7 @@ function Field({
 }): React.ReactElement {
   const t = useTranslations();
   const id = `profile-${name}`;
+  const [value, setValue] = useSeeded<string>(initial);
 
   // Both the hint and the error are announced, and the error is listed first so
   // a screen reader says what is wrong before it says what was expected.
@@ -194,7 +196,8 @@ function Field({
         id={id}
         name={name}
         type={type}
-        defaultValue={defaultValue}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
         autoComplete={autoComplete}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={described === '' ? undefined : described}
@@ -217,18 +220,19 @@ function Field({
 function Choice({
   name,
   label,
-  defaultValue,
+  initial,
   options,
   error,
 }: {
   name: string;
   label: string;
-  defaultValue: string;
+  initial: string;
   options: { value: string; label: string }[];
   error?: string | undefined;
 }): React.ReactElement {
   const t = useTranslations();
   const id = `profile-${name}`;
+  const [value, setValue] = useSeeded<string>(initial);
 
   return (
     <div className={FIELD_COLUMN}>
@@ -238,7 +242,8 @@ function Choice({
       <select
         id={id}
         name={name}
-        defaultValue={defaultValue}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={error === undefined ? undefined : `${id}-error`}
         className={`${FIELD} ${error === undefined ? '' : INVALID}`}
