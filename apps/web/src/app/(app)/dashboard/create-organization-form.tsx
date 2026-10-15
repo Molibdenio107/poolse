@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { CONTROL_LINE, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import type { OrganizationKind } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { createOrganizationAction, type FormState } from './actions';
@@ -31,6 +31,8 @@ export function CreateOrganizationForm(): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createOrganizationAction, INITIAL);
   const [kind, setKind] = useState<OrganizationKind>('business');
+  const [name, setName] = useSeeded<string>('');
+  const [facilityName, setFacilityName] = useSeeded<string>('');
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -61,6 +63,8 @@ export function CreateOrganizationForm(): React.ReactElement {
         id="organization-name"
         name="name"
         required
+        value={name}
+        onChange={(event) => setName(event.target.value)}
         maxLength={120}
         placeholder={
           kind === 'personal'
@@ -87,6 +91,8 @@ export function CreateOrganizationForm(): React.ReactElement {
           <input
             id="organization-facility"
             name="facilityName"
+            value={facilityName}
+            onChange={(event) => setFacilityName(event.target.value)}
             maxLength={120}
             placeholder={t('organization.facilityPlaceholder')}
             className={CONTROL_LINE}

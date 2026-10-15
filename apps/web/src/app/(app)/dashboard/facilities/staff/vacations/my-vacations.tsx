@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import type { MyVacations, VacationRequest } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { YearGrid, type DayState } from '@/components/year-grid';
+import { useSeeded, useSuccessKey } from '@/components/ui/field';
 import { requestVacationAction, withdrawVacationAction } from './vacations.actions';
 import type { FormState } from '../../../actions';
 
@@ -31,6 +32,9 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
    * screen meant before the other two existed.
    */
   const [kind, setKind] = useState('vacation');
+  // The reason is typed afresh for each request, so it clears once one is sent.
+  const sent = useSuccessKey(state);
+  const [reason, setReason] = useSeeded<string>('', sent);
 
   /** Holiday name by day, so a hover can say *which* holiday. */
   const holidays = useMemo(
@@ -197,6 +201,8 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
           {kind !== 'vacation' && (
             <input
               name="reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
               maxLength={200}
               placeholder={t('vacations.leaveReasonPlaceholder')}
               aria-label={t('vacations.reason')}

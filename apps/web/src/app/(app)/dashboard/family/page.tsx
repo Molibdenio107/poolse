@@ -39,7 +39,16 @@ export default async function FamilyPage(): Promise<React.ReactElement> {
   }
 
   return (
-    <PageShell title={t('family.title')} subtitle={t('family.subtitle')}>
+    <PageShell
+      // *O meu registo* when every record listed is the reader's own — the
+      // same choice the sidebar makes — never "my children" for a student.
+      title={
+        students.length > 0 && students.every((student) => student.self)
+          ? t('family.navStudent')
+          : t('family.title')
+      }
+      subtitle={t('family.subtitle')}
+    >
       {failure !== null && <PageError message={t(failure.key)} />}
 
       {failure === null && students.length === 0 && (

@@ -100,6 +100,12 @@ export interface TimetableClash {
   withLine: number | null;
   /** The lane, where the reason is about one. */
   lane: string | null;
+  /**
+   * The reason's own figures from `packages/rules` — the lane, the holder, the
+   * headcount and the capacity — so the sentence quotes what was counted rather
+   * than a placeholder. Names and numbers only; never an id.
+   */
+  detail: Record<string, string | number>;
 }
 
 export interface TimetableRow {
@@ -407,6 +413,7 @@ export function previewTimetable(
         clashes.push({
           code: reason.code,
           verdict: reason.verdict,
+          detail: reason.detail,
           ...namesOfOther(reason, subject, judged, context),
         });
       }

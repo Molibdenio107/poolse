@@ -54,6 +54,7 @@ import { cn } from '@/lib/utils';
 import { TurmaCardButton, TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
 import { useToast } from '@/components/ui/toast';
 import { inkFor } from '@/lib/ink';
+import { APP_TIME_ZONE } from '@/lib/date-format';
 
 /**
  * The dated week, drawn on a pixel scale — round 6.
@@ -1460,9 +1461,19 @@ function NowLine({
   const [minutes, setMinutes] = useState<number | null>(null);
 
   useEffect(() => {
+    // The club's wall clock, not the browser's: a laptop set to Madrid would
+    // otherwise draw the line an hour below the lessons it is meant to mark.
+    const clock = new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+      timeZone: APP_TIME_ZONE,
+    });
     const read = (): void => {
-      const now = new Date();
-      setMinutes(now.getHours() * 60 + now.getMinutes());
+      const parts = Object.fromEntries(
+        clock.formatToParts(new Date()).map((part) => [part.type, part.value]),
+      );
+      setMinutes(Number(parts['hour']) * 60 + Number(parts['minute']));
     };
     read();
     // A minute is the resolution of the thing being shown; anything faster is

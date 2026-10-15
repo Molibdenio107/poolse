@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
-import { redirect } from 'next/navigation';
 import { ApiError, apiPatch, apiPost } from '../../../../lib/api';
 import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../actions';
@@ -71,7 +70,8 @@ export async function createClassAction(
   revalidatePath('/dashboard/classes');
   // Straight to the turma, because a class group with no weekly pattern is not
   // yet a class — adding the days is the next thing anyone wants to do.
-  redirect(`/dashboard/classes/${created.id}`);
+  // `redirectTo` rather than redirect(), which swallowed the save's toast.
+  return { ok: true, redirectTo: `/dashboard/classes/${created.id}` };
 }
 
 export async function updateClassAction(

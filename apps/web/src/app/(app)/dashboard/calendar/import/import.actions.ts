@@ -128,6 +128,8 @@ export interface TimetableClash {
   with: string | null;
   withLine: number | null;
   lane: string | null;
+  /** The rule's own figures — lane, holder, headcount, capacity, count, limit. */
+  detail: Record<string, string | number>;
 }
 
 export interface TimetableRow {

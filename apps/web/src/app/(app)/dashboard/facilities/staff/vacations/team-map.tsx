@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { TeamVacations } from '@/lib/api';
 import { YearGrid, type DayState } from '@/components/year-grid';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * "Mapa da equipa" — backlog round 3, story 8.
@@ -99,13 +100,9 @@ export function TeamMap({ data }: { data: TeamVacations }): React.ReactElement {
     [locale],
   );
 
+  // The one date shape, spoken as well as shown — CLAUDE.md's dd-MM-yyyy rule.
   function labelFor(day: string): string {
-    return new Intl.DateTimeFormat(locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(`${day}T00:00:00Z`));
+    return formatDate(day);
   }
 
   function stateFor(day: string): DayState {

@@ -54,7 +54,7 @@ export async function recordAttendanceAction(
       return { ok: false, errorKey: `attendance.refused.${error.code.slice('register_'.length)}` };
     }
     if (error instanceof ApiError) {
-      return { ok: false, errorKey: 'attendance.saveFailed', detail: error.message };
+      return { ok: false, errorKey: 'attendance.saveFailed' };
     }
     return { ok: false, errorKey: 'attendance.saveFailed', detail: String(error) };
   }

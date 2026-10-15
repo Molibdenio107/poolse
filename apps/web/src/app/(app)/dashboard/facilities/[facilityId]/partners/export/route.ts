@@ -103,7 +103,14 @@ export async function GET(
       title: t('partners.title'),
       subtitle,
       headers,
-      rows: data.rows.map(rowFor),
+      // The file writes the enum's own spelling so it re-imports in either
+      // language; paper is read by a person, so the type is said in their words.
+      rows: data.rows.map((row) => {
+        const out = rowFor(row);
+        const at = PARTNER_EXPORT_FIELDS.indexOf('partnerType');
+        if (at >= 0) out[at] = t(`partners.kind.${row.partnerType}`);
+        return out;
+      }),
       printedOn: t('export.pdf.printedOn', { date: formatDate(new Date()) }),
       printLabel: t('export.pdf.printLabel'),
       emptyLabel: t('export.pdf.empty'),

@@ -48,14 +48,26 @@ export function LevelSkills({
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [skills, setSkills] = useState<Skill[] | null>(null);
+  // Its own state, beside the list — 15-10-2026 sweep. A failed load used to
+  // arrive as an empty list and read "no skills yet", which invites somebody to
+  // type a level's skills in a second time.
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [state, action, saving] = useSavedAction(createSkillAction, INITIAL);
 
   // Re-read when opened, and again after a save — `state` changes identity on
   // every submission, which is what makes the new skill appear.
   useEffect(() => {
     if (!open) return;
-    void skillsOfAction(levelId).then(setSkills);
-  }, [open, levelId, state]);
+    setFailed(false);
+    void skillsOfAction(levelId).then(
+      (loaded) => {
+        if (loaded === null) setFailed(true);
+        else setSkills(loaded);
+      },
+      () => setFailed(true),
+    );
+  }, [open, levelId, state, attempt]);
 
   return (
     <div className="mt-2">
@@ -77,7 +89,18 @@ export function LevelSkills({
 
       {open && (
         <div className="mt-3 flex flex-col gap-3 rounded border border-border bg-surface-muted p-3">
-          {skills === null ? (
+          {failed ? (
+            <div className="flex flex-col items-start gap-2 rounded border border-danger/40 bg-danger/10 p-4">
+              <p className="text-sm font-medium text-danger">{t('skills.loadFailed')}</p>
+              <button
+                type="button"
+                onClick={() => setAttempt((n) => n + 1)}
+                className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border bg-surface hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                {t('skills.retry')}
+              </button>
+            </div>
+          ) : skills === null ? (
             <p className="text-sm text-foreground-muted">{t('common.working')}</p>
           ) : skills.length === 0 ? (
             /* A purposeful empty state, not a blank table — AC6. */

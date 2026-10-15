@@ -41,7 +41,7 @@ function failure(error: unknown, errorKey: string): FormState {
      */
     if (Object.keys(error.fields).length > 0) return { ok: false, fields: error.fields };
     if (error.status === 409) return { ok: false, errorKey: 'fees.nameTaken' };
-    if (error.status < 500) return { ok: false, errorKey, detail: error.message };
+    if (error.status < 500) return { ok: false, errorKey };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
   }
   return { ok: false, errorKey, detail: String(error) };

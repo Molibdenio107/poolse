@@ -13,7 +13,7 @@ import { Hint } from '@/components/ui/tooltip';
 import { AddRecordForm, ArchiveRecordButton, FavouriteStrokeForm } from './progress-forms';
 import { DetailPage } from '@/components/detail-page';
 import { PageError, PageShell } from '@/components/page-shell';
-import { formatDate } from '@/lib/date-format';
+import { APP_TIME_ZONE, formatDate } from '@/lib/date-format';
 
 /**
  * Backlog story 6 — a student's performances over time.
@@ -55,8 +55,10 @@ export default async function ProgressPage({
   }
 
   // Resolved on the server so the default date does not depend on the visitor's
-  // clock, which may be in another timezone or simply wrong.
-  const today = new Date().toISOString().slice(0, 10);
+  // clock, which may be in another timezone or simply wrong — and in the club's
+  // zone, because `toISOString()` is the UTC day and was yesterday until 01:00
+  // every Lisbon summer night. `sv-SE` only because it writes `YYYY-MM-DD`.
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: APP_TIME_ZONE });
 
   // The chart shows one line, so it has to be one comparable thing: the stroke
   // and distance this student has raced most. Mixing a 50 m butterfly into a

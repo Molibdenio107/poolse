@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import {
   ApiError,
   apiFetch,
@@ -128,13 +127,11 @@ export async function createStudentAction(
   }
 
   revalidatePath('/dashboard/students');
-  // Outside the try: redirect() signals by throwing, and catching it here would
-  // turn a successful save into "could not create".
-  //
   // Straight to the student rather than back to the register, because a student
   // record is not finished at their name — the photograph, the consents and the
   // level are all on that page, and it is where you were going anyway.
-  redirect(`/dashboard/students/${created.id}`);
+  // `redirectTo` rather than redirect(), which swallowed the save's toast.
+  return { ok: true, redirectTo: `/dashboard/students/${created.id}` };
 }
 
 export async function updateStudentAction(
@@ -331,18 +328,20 @@ export async function archiveLevelAction(
  * every other call here: the Clerk session token stays on the server and there
  * is no CORS surface to keep in step across two environments.
  *
- * Returns an empty list on failure. A search box that shows nothing is a search
- * box that found nothing; one that throws takes the whole student form down
- * because somebody typed while the API was restarting.
+ * Returns null on failure, never throws: one that throws takes the whole
+ * student form down because somebody typed while the API was restarting. Null
+ * and not an empty list (15-10-2026 sweep), because an empty list means nobody
+ * matched — and "no matches" over a search that never ran is how a second
+ * record of the same mother gets made. The picker says which it was.
  */
-export async function searchPeopleAction(query: string): Promise<PersonSummary[]> {
+export async function searchPeopleAction(query: string): Promise<PersonSummary[] | null> {
   try {
     const result = await apiFetch<{ people: PersonSummary[] }>(
       `/people-search?q=${encodeURIComponent(query)}`,
     );
     return result.people;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -353,15 +352,19 @@ export async function searchPeopleAction(query: string): Promise<PersonSummary[]
  * that page are about levels and not about skills: loading every skill of every
  * level to render a page that usually shows none of them is work nobody asked
  * for.
+ *
+ * Null when the load failed, an empty list when the level has none — two
+ * different sentences on screen, because "no skills yet" over a failed load
+ * invites somebody to add them all again (15-10-2026 sweep).
  */
-export async function skillsOfAction(levelId: string): Promise<Skill[]> {
+export async function skillsOfAction(levelId: string): Promise<Skill[] | null> {
   try {
     const result = await apiFetch<{ skills: Skill[] }>(
       `/skills?levelId=${encodeURIComponent(levelId)}`,
     );
     return result.skills;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -449,22 +452,26 @@ export async function archiveSkillAction(
  * Is this person already here? — POOLSE-17 AC9.
  *
  * Called as the guardian block is filled in, so the warning appears before a
- * second record exists rather than after. Returns null on failure: a dedup check
+ * second record exists rather than after. A failure never throws: a dedup check
  * that cannot reach the API must not stop somebody enrolling a child.
+ *
+ * `{ match: null }` is "nobody matched"; `null` is "the check did not run" —
+ * 15-10-2026 sweep. They used to be the same null, so a check that failed read
+ * as a clean bill, and the warning says which it was now.
  */
 export async function findDuplicateAction(
   taxNumber: string,
   email: string,
-): Promise<DuplicateMatch | null> {
+): Promise<{ match: DuplicateMatch | null } | null> {
   const nif = taxNumber.trim();
   const address = email.trim();
-  if (nif === '' && address === '') return null;
+  if (nif === '' && address === '') return { match: null };
 
   try {
     const result = await apiFetch<{ match: DuplicateMatch | null }>(
       `/people/duplicate?taxNumber=${encodeURIComponent(nif)}&email=${encodeURIComponent(address)}`,
     );
-    return result.match;
+    return { match: result.match };
   } catch {
     return null;
   }

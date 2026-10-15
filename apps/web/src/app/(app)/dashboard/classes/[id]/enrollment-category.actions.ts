@@ -27,7 +27,7 @@ export async function setEnrollmentCategoryAction(
     }
   } catch (error) {
     if (error instanceof ApiError && error.status < 500) {
-      return { ok: false, errorKey: 'categories.saveFailed', detail: error.message };
+      return { ok: false, errorKey: 'categories.saveFailed' };
     }
     return { ok: false, errorKey: 'categories.saveFailed' };
   }

@@ -68,6 +68,11 @@ export default async function StudentPage({
 
   let timetable: TimetableEntry[] = [];
 
+  // Held apart so a missing record can still ask it whether the reader is
+  // staff: `outcome` never throws, but `Promise.all` drops it when the record
+  // itself 404s.
+  const registerLoad = outcome(apiFetch<Students>('/students?limit=1'));
+
   try {
     // The register comes along for the level list and the write permission —
     // both belong to the organization rather than to this student.
@@ -84,7 +89,7 @@ export default async function StudentPage({
         // maioridade off the register response, not a page of other students.
         // Staff only; a family's record needs none of it, so a refusal here
         // is not a missing student.
-        outcome(apiFetch<Students>('/students?limit=1')),
+        registerLoad,
         apiFetch<{ entries: TimetableEntry[] }>(`/students/${id}/timetable`),
         apiFetch<{ credits: ReposicaoCredit[] }>(`/students/${id}/credits`),
       ]);
@@ -133,19 +138,38 @@ export default async function StudentPage({
     ? await outcome(apiFetch<StudentFees>(`/students/${id}/fees`))
     : null;
 
+  // A record that will not load is a family's too: the register refuses
+  // anybody who is not staff, which is the one thing a missing record can say.
+  const readerIsFamily = family || (student === null && (await registerLoad).state === 'refused');
+
   // A detail page shows the full legal name, every part — POOLSE-32
   // criterion 3. Abbreviation is for lists.
+  // A family is never shown the staff's "the organization's register".
   const subtitle =
     student?.age === null || student === null
-      ? t('students.subtitle')
+      ? t(readerIsFamily ? 'family.recordSubtitle' : 'students.subtitle')
       : t('students.years', { count: student.age });
-  const back = family
-    ? { href: '/dashboard/family', label: t('family.back') }
+
+  /*
+   * Back, for a family — 15-10-2026 sweep. *Os meus educandos* redirects
+   * straight back here when it holds one record, so a back link to it was a
+   * loop. Only a family with several records has a list to go back to; anyone
+   * else, or a list that will not load, goes to the dashboard.
+   */
+  const familyRecords = readerIsFamily
+    ? await apiFetch<{ students: unknown[] }>('/family')
+        .then((answer) => answer.students.length)
+        .catch(() => 0)
+    : 0;
+  const back = readerIsFamily
+    ? familyRecords > 1
+      ? { href: '/dashboard/family', label: t('family.back') }
+      : { href: '/dashboard', label: t('common.backToDashboard') }
     : { href: '/dashboard/students', label: t('students.backToRegister') };
 
   if (student === null || (register === null && !family)) {
     return (
-      <PageShell title={t('students.title')} subtitle={subtitle} back={back}>
+      <PageShell title={t(readerIsFamily ? 'family.title' : 'students.title')} subtitle={subtitle} back={back}>
         {missing && (
           <section className="rounded border border-border bg-surface p-5">
             <p>{t('students.notFound')}</p>

@@ -1048,6 +1048,14 @@ with a foreign-key violation that looks nothing like the change that caused it.
 overshoot. Exactly one Owner per tenant, enforced; transfer is the only way to change it.
 `docs/decisions.md`, 2026-09-06.
 
+**A model call from a server action is guarded first: `guardAiCall(AI_ROLES.<importer>)` from `lib/ai-guard.ts`.** Sweep of 15-10-2026. Every export of a `'use server'` file is a public endpoint, so the seven AI importers sent any signed-in account's file to Anthropic on Poolse's key before a role was checked. The guard asks `/me` for the importer's roles in the active club and caps 20 calls per person per 10 minutes; each metered call keeps its own `*_ENABLED` flag, off by default (`COLUMN_MATCH_AI_ENABLED` included).
+
+**A person merge never takes the Owner, two logins or support.** `merge_memberships` refuses all three (409 from `POST /people/merge`), because absorbing the Owner's record handed an Admin the club, and it repoints only columns the app may update — the insert-only history keeps the absorbed id, which `merged_into` resolves. `people-merge.integration.test.ts` runs it as `poolse_app`; a SQL test run as the owner proves nothing about a function the app calls.
+
+**A login's name is the person's own.** `PATCH /staff/:id` refuses (`name_is_theirs`) a rename by anybody but the person: Clerk holds one name for them across every club.
+
+**Today in TypeScript is `clubToday()` from `apps/api/src/common/club-day.ts`**, the twin of `club_today()` — never `new Date().toISOString().slice(0, 10)`, which is yesterday between midnight and one in a Lisbon summer.
+
 **Cost per tenant is a design constraint, not a later optimisation.** The first production
 tenant is a free pilot, so prefer designs that keep one tenant inside free tiers and keep
 every metered or pay-per-use call — the Claude API lab-report parsers above — behind its

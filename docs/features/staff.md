@@ -4,6 +4,20 @@
 roles, the staff record, Férias, Salários) is described in `navigation.md`, `salaries.md` and the
 tickets that built it.
 
+## What nobody does to themselves, and what only the person does
+
+Sweep of 15 October 2026:
+
+- **A login's name is the person's.** On the staff record, an Owner, Admin or support session may not
+  change the name of somebody who signs in (`name_is_theirs`). Clerk holds one name for them in every
+  club. They change it under O meu perfil, and the record says so beside the name.
+- **Nobody but the Owner decides their own leave**, sets their own entitlement or writes their own pay.
+  An Admin's own rate is readable and set by the Owner (`compensation_not_your_own`, `own_request`,
+  `own_entitlement`).
+- **A merge never absorbs the Owner**, two records with their own login, or a support membership
+  (`POST /people/merge` answers 409). History stays with the absorbed record, which points at the
+  survivor (`merged_into`).
+
 ## Qualifications
 
 POOLSE-27, brought forward as roadmap 7b.2. Who holds which qualification, and until when.

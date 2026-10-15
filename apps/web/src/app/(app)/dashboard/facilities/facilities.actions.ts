@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { ApiError, apiPatch, apiPost, apiPut } from '../../../../lib/api';
 import { POOL_METRICS } from '../../../../lib/pool-metrics';
 import { describeFailure } from '@/lib/form-failure';
@@ -70,8 +69,9 @@ export async function createFacilityAction(
   revalidatePath('/dashboard/facilities');
   // Back to the list, not to a detail page: a site has no screen of its own —
   // its card in the list is where the pools and the photographs are, and adding
-  // a pool is the next thing anyone does.
-  redirect('/dashboard/facilities');
+  // a pool is the next thing anyone does. `redirectTo` rather than redirect(),
+  // which swallowed the save's toast.
+  return { ok: true, redirectTo: '/dashboard/facilities' };
 }
 
 /**
@@ -139,12 +139,10 @@ export async function createPoolAction(
 
   revalidatePath('/dashboard/facilities');
 
-  // Outside the try: redirect() signals by throwing, and catching it here would
-  // turn a successful create into "could not create the pool".
-  //
   // Straight to the new pool rather than back to the list, because the next
   // thing anyone wants after describing a pool is to put photographs on it.
-  redirect(`/dashboard/facilities/pools/${created.id}`);
+  // `redirectTo` rather than redirect(), which swallowed the save's toast.
+  return { ok: true, redirectTo: `/dashboard/facilities/pools/${created.id}` };
 }
 
 export async function updatePoolAction(

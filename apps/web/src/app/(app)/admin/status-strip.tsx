@@ -120,6 +120,14 @@ export function StatusStrip(): React.ReactElement {
           <span key={check.name} className="flex items-center gap-1.5 text-sm">
             <Icon className={cn('size-3.5 shrink-0', tone.className)} aria-hidden />
             <span>{t(`admin.dependency.${check.name}`)}</span>
+            {/*
+              The state in words for a screen reader — the icon is hidden and
+              its colour says nothing to one. `not_installed` already says itself
+              in the visible text beside it.
+            */}
+            {(check.status === 'ok' || check.status === 'slow' || check.status === 'failing') && (
+              <span className="sr-only">{t(`admin.check.${check.status}`)}</span>
+            )}
             <span className="text-foreground-muted">
               {check.status === 'not_installed'
                 ? t('admin.check.not_installed')

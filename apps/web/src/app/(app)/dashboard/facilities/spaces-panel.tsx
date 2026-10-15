@@ -9,7 +9,7 @@ import { timeAgo } from '@/lib/relative-time';
 import { withFrom } from '@/lib/back';
 import type { Space, SpaceType } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
-import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
+import { SelectField, TextAreaField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../actions';
 import { createSpace } from './spaces.actions';
@@ -121,6 +121,9 @@ export function SpacesPanel({
   useEffect(() => {
     if (state.ok) setAdding(false);
   }, [state]);
+
+  // In service unless somebody says otherwise, and back to that for the next space.
+  const [active, setActive] = useSeeded<boolean>(true, useSuccessKey(state));
 
   const block = variant === 'block';
   const Wrapper = block ? 'div' : 'section';
@@ -297,7 +300,13 @@ export function SpacesPanel({
           <TextAreaField name="description" label={t('spaces.description')} rows={2} />
 
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="active" defaultChecked className="size-4" />
+            <input
+              type="checkbox"
+              name="active"
+              checked={active}
+              onChange={(event) => setActive(event.target.checked)}
+              className="size-4"
+            />
             {t('spaces.activeLabel')}
           </label>
 

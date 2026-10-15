@@ -5,7 +5,13 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { FileText, FileUp, Trash2 } from 'lucide-react';
 import type { MedicalLeave } from '@/lib/api';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import {
+  CONTROL_LINE,
+  FIELD_COLUMN,
+  FIELD_LABEL,
+  useSeeded,
+  useSuccessKey,
+} from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { addMedicalLeaveAction, removeMedicalLeaveAction } from './sensitive.actions';
 import { formatDate } from '@/lib/date-format';
@@ -43,6 +49,12 @@ export function MedicalLeavePanel({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(addMedicalLeaveAction, INITIAL);
+  // Stays on screen for the next leave, so its fields clear after a save that worked.
+  const added = useSuccessKey(state);
+  const [startsOn, setStartsOn] = useSeeded<string>('', added);
+  const [endsOn, setEndsOn] = useSeeded<string>('', added);
+  const [reason, setReason] = useSeeded<string>('', added);
+  const [justification, setJustification] = useSeeded<string>('', added);
 
   return (
     <div className="flex flex-col gap-4">
@@ -166,14 +178,29 @@ export function MedicalLeavePanel({
               <label htmlFor="leave-from" className={FIELD_LABEL}>
                 {t('sensitive.leaveStart')}
               </label>
-              <input id="leave-from" name="startsOn" type="date" required className={CONTROL_LINE} />
+              <input
+                id="leave-from"
+                name="startsOn"
+                type="date"
+                required
+                value={startsOn}
+                onChange={(event) => setStartsOn(event.target.value)}
+                className={CONTROL_LINE}
+              />
             </div>
 
             <div className={`${FIELD_COLUMN} sm:w-44`}>
               <label htmlFor="leave-to" className={FIELD_LABEL}>
                 {t('sensitive.leaveEnd')}
               </label>
-              <input id="leave-to" name="endsOn" type="date" className={CONTROL_LINE} />
+              <input
+                id="leave-to"
+                name="endsOn"
+                type="date"
+                value={endsOn}
+                onChange={(event) => setEndsOn(event.target.value)}
+                className={CONTROL_LINE}
+              />
               <p className="text-xs text-foreground-muted">{t('sensitive.leaveEndHint')}</p>
             </div>
           </div>
@@ -185,6 +212,8 @@ export function MedicalLeavePanel({
             <input
               id="leave-reason"
               name="reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
               maxLength={200}
               className={CONTROL_LINE}
             />
@@ -198,6 +227,8 @@ export function MedicalLeavePanel({
             <input
               id="leave-justification"
               name="justificationReference"
+              value={justification}
+              onChange={(event) => setJustification(event.target.value)}
               maxLength={200}
               placeholder={t('sensitive.leaveJustificationPlaceholder')}
               className={CONTROL_LINE}

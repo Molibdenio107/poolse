@@ -4,6 +4,7 @@ import { useActionState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/toast';
+import { visibleDetail } from '@/components/feedback';
 import { undoArchive } from '@/app/(app)/dashboard/arquivados/archive.actions';
 
 /**
@@ -140,9 +141,9 @@ function failureMessage(t: Translator, state: unknown): string | null {
     message = t('common.notSaved');
   }
 
-  return failed.detail === undefined || failed.detail === ''
-    ? message
-    : `${message} — ${failed.detail}`;
+  // Never the API's own words — `visibleDetail` says which shapes and why.
+  const detail = visibleDetail(failed.detail);
+  return detail === null ? message : `${message} — ${detail}`;
 }
 
 /**

@@ -373,7 +373,7 @@ export default async function PeoplePage({
             <Pagination
               page={people.members}
               basePath="/dashboard/facilities/staff"
-              query={{ role: role ?? undefined, search: term }}
+              query={{ role: role ?? undefined, search: term, from }}
             />
           </section>
           )}

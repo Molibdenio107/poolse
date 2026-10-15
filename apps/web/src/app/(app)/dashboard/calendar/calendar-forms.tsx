@@ -134,6 +134,10 @@ export function ClosureForm({
   const added = useSuccessKey(state);
   const [poolIdField, setPoolIdField] = useSeeded<string>('', added);
   const [blocksGenerationField, setBlocksGenerationField] = useSeeded<string>('closed', added);
+  const [startsOnField, setStartsOnField] = useSeeded<string>('', added);
+  const [endsOnField, setEndsOnField] = useSeeded<string>('', added);
+  const [reasonField, setReasonField] = useSeeded<string>('', added);
+  const [repeatsAnnually, setRepeatsAnnually] = useSeeded<boolean>(false, added);
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -144,14 +148,29 @@ export function ClosureForm({
           <label htmlFor="closure-start" className={FIELD_LABEL}>
             {t('calendar.startsOn')}
           </label>
-          <input id="closure-start" name="startsOn" type="date" required className={CONTROL_LINE} />
+          <input
+            id="closure-start"
+            name="startsOn"
+            type="date"
+            required
+            value={startsOnField}
+            onChange={(event) => setStartsOnField(event.target.value)}
+            className={CONTROL_LINE}
+          />
         </div>
 
         <div className={FIELD_COLUMN}>
           <label htmlFor="closure-end" className={FIELD_LABEL}>
             {t('calendar.endsOn')}
           </label>
-          <input id="closure-end" name="endsOn" type="date" className={CONTROL_LINE} />
+          <input
+            id="closure-end"
+            name="endsOn"
+            type="date"
+            value={endsOnField}
+            onChange={(event) => setEndsOnField(event.target.value)}
+            className={CONTROL_LINE}
+          />
           <span className="text-xs text-foreground-muted">{t('calendar.endsOnHint')}</span>
         </div>
 
@@ -163,6 +182,8 @@ export function ClosureForm({
             id="closure-reason"
             name="reason"
             required
+            value={reasonField}
+            onChange={(event) => setReasonField(event.target.value)}
             maxLength={200}
             placeholder={t('calendar.reasonPlaceholder')}
             className={CONTROL_LINE}
@@ -207,7 +228,13 @@ export function ClosureForm({
       </div>
 
       <label className="flex items-start gap-2 text-sm">
-        <input type="checkbox" name="repeatsAnnually" className="mt-0.5" />
+        <input
+          type="checkbox"
+          name="repeatsAnnually"
+          checked={repeatsAnnually}
+          onChange={(event) => setRepeatsAnnually(event.target.checked)}
+          className="mt-0.5"
+        />
         <span>
           {t('calendar.repeats')}
           <span className="block text-xs text-foreground-muted">{t('calendar.repeatsHint')}</span>
@@ -325,6 +352,16 @@ export function CancelSessionDialog({
   const settled = useRef<string | null>(null);
 
   const sessionId = target?.sessionId ?? null;
+
+  /*
+   * The reason, controlled for the same reason as the scope. It lives here and
+   * not inside the dialog, which unmounts when closed — so it is cleared for
+   * each class asked about, as the uncontrolled box used to be by remounting.
+   */
+  const [reason, setReason] = useSeeded<string>('');
+  useEffect(() => {
+    setReason('');
+  }, [sessionId, setReason]);
   /*
    * Avisar as famílias — POOLSE-67. A cancelled turma offers to open the
    * composer pointed at it, the date already in the subject; a parceria has no
@@ -450,6 +487,8 @@ export function CancelSessionDialog({
 
           <input
             name="reason"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
             maxLength={200}
             aria-label={t('calendar.cancelReason')}
             placeholder={t('calendar.cancelReason')}

@@ -4,6 +4,7 @@ import { DetailPage } from '@/components/detail-page';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { backTarget } from '@/lib/back';
+import { apiFetch, type Facilities } from '@/lib/api';
 import { getTask, listCompletions } from '../../maintenance.actions';
 import { CompleteForm, RemoveCompletion, TaskAdmin } from './task-forms';
 import { formatStamp } from '@/lib/date-format';
@@ -56,8 +57,19 @@ export default async function TaskPage({
   const detail = loaded.data;
   const { task } = detail;
 
-  // Reached from the site's own page, which is where Voltar should land.
-  const back = backTarget(from, `/dashboard/facilities/${task.facilityId}?tab=maintenance`);
+  /*
+   * Reached from the site's own page, which is where Voltar should land — for
+   * a reader that page answers. An instructor opens a task from the dashboard
+   * card and the site page is a 403 to them (15-10-2026 sweep), so their Voltar
+   * goes home. A list of sites that will not load is read as "cannot open".
+   */
+  const canOpenSite = await apiFetch<Facilities>('/facilities')
+    .then((sites) => sites.canOpenSite)
+    .catch(() => false);
+  const back = backTarget(
+    from,
+    canOpenSite ? `/dashboard/facilities/${task.facilityId}?tab=maintenance` : '/dashboard',
+  );
 
   const target = task.spaceName ?? task.poolName ?? task.inventoryItemName;
 

@@ -1255,6 +1255,8 @@
     "cancelFailed": "Não foi possível desmarcar a reposição."
   },
   "skills": {
+    "retry": "Tentar de novo",
+    "loadFailed": "Não foi possível carregar as competências deste escalão.",
     "title": "Competências",
     "subtitle": "O que a turma está a trabalhar, e onde está cada aluno.",
     "backToClass": "Voltar à turma",
@@ -1669,6 +1671,9 @@
     "saveFailed": "Não foi possível guardar a apólice."
   },
   "students": {
+    "duplicateCheckFailed": "Não foi possível verificar se esta pessoa já existe.",
+    "guardianSearchRetry": "Tentar de novo",
+    "guardianSearchFailed": "Não foi possível fazer a pesquisa.",
     "title": "Alunos",
     "subtitle": "O registo de alunos da organização.",
     "search": "Procurar",
@@ -3252,6 +3257,10 @@
     "setCapacity": "Definir a lotação das pistas"
   },
   "timetableImport": {
+    "warning": {
+      "headcountMissing": "O número de alunos não está indicado.",
+      "instructorNotFound": "Não existe nenhum professor «{value}» neste clube; a turma é importada sem professor."
+    },
     "open": "Importar horário",
     "hint": "Ou arraste o ficheiro do horário para qualquer sítio desta página.",
     "dropHere": "Largue o horário para o importar",
@@ -3787,6 +3796,9 @@
       "clerk": "Autenticação"
     },
     "check": {
+      "failing": "em falha",
+      "slow": "lento",
+      "ok": "operacional",
       "latency": "{ms} ms",
       "not_installed": "não instalado"
     },
@@ -4255,6 +4267,8 @@
   },
   "export": {
     "pdf": {
+      "no": "Não",
+      "yes": "Sim",
       "option": "PDF",
       "exportAction": "Exportar em PDF",
       "printLabel": "Imprimir ou guardar como PDF",
@@ -4466,6 +4480,7 @@
     }
   },
   "files": {
+    "photoNumber": "Fotografia {number}",
     "chooseFile": "Escolha um ficheiro.",
     "tooLarge": "O ficheiro tem mais de 10 MB.",
     "wrongType": "Só são aceites PDF, JPEG, PNG e WebP — e, para fotografias, só imagens.",
@@ -4892,6 +4907,7 @@
     "hint": "Os dados fiscais e o logotipo são do clube e aplicam-se a todas as instalações, não só a esta."
   },
   "family": {
+    "recordSubtitle": "A ficha que o clube tem.",
     "picker": "De quem é este resumo",
     "yourselfShort": "{name} (eu)",
     "widget": {

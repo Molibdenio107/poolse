@@ -45,6 +45,11 @@ export function AddRecordForm({
   const added = useSuccessKey(state);
   const [distanceMField, setDistanceMField] = useSeeded<string>('50', added);
   const [swumOnField, setSwumOnField] = useSeeded<string>(String(today), added);
+  const [strokeField, setStrokeField] = useSeeded<string>(strokes[0] ?? '', added);
+  const [minutesField, setMinutesField] = useSeeded<string>('', added);
+  const [secondsField, setSecondsField] = useSeeded<string>('', added);
+  const [hundredthsField, setHundredthsField] = useSeeded<string>('', added);
+  const [noteField, setNoteField] = useSeeded<string>('', added);
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -56,7 +61,13 @@ export function AddRecordForm({
           <label htmlFor="record-stroke" className={FIELD_LABEL}>
             {t('progress.stroke')}
           </label>
-          <select id="record-stroke" name="stroke" className={CONTROL_LINE}>
+          <select
+            id="record-stroke"
+            name="stroke"
+            value={strokeField}
+            onChange={(event) => setStrokeField(event.target.value)}
+            className={CONTROL_LINE}
+          >
             {strokes.map((stroke) => (
               <option key={stroke} value={stroke}>
                 {t(`progress.strokes.${stroke}`)}
@@ -93,6 +104,8 @@ export function AddRecordForm({
             <input
               name="minutes"
               type="number"
+              value={minutesField}
+              onChange={(event) => setMinutesField(event.target.value)}
               min={0}
               max={600}
               placeholder={t('progress.minutes')}
@@ -105,6 +118,8 @@ export function AddRecordForm({
             <input
               name="seconds"
               type="number"
+              value={secondsField}
+              onChange={(event) => setSecondsField(event.target.value)}
               min={0}
               max={59}
               placeholder={t('progress.seconds')}
@@ -117,6 +132,8 @@ export function AddRecordForm({
             <input
               name="hundredths"
               type="number"
+              value={hundredthsField}
+              onChange={(event) => setHundredthsField(event.target.value)}
               min={0}
               max={99}
               placeholder={t('progress.hundredths')}
@@ -146,6 +163,8 @@ export function AddRecordForm({
       <div className="flex flex-wrap gap-3">
         <input
           name="note"
+          value={noteField}
+          onChange={(event) => setNoteField(event.target.value)}
           maxLength={500}
           aria-label={t('progress.note')}
           placeholder={t('progress.notePlaceholder')}

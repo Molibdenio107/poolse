@@ -272,6 +272,7 @@ function ChargeSeasonForm({
   // Re-seeded when another policy is picked, so the dates follow the apólice.
   const [coversFrom, setCoversFrom] = useSeeded<string>(policy?.validFrom ?? '');
   const [coversTo, setCoversTo] = useSeeded<string>(policy?.validTo ?? '');
+  const [proRata, setProRata] = useSeeded<boolean>(false);
   const fields = state.fields ?? {};
 
   return (
@@ -342,7 +343,13 @@ function ChargeSeasonForm({
           <div className={cn(FIELD_COLUMN, 'max-w-none')}>
             <span className={FIELD_LABEL}>{t('fees.proRata')}</span>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="proRata" className="size-4" />
+              <input
+                type="checkbox"
+                name="proRata"
+                checked={proRata}
+                onChange={(event) => setProRata(event.target.checked)}
+                className="size-4"
+              />
               {t('fees.proRataLabel')}
             </label>
             <p className="text-sm text-foreground-muted">{t('fees.proRataHint')}</p>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { CONTROL_BLOCK, CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextField, useSeeded } from '@/components/ui/field';
+import { CONTROL_BLOCK, CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { ConsentKind, EmergencyContact } from '../../../../../../lib/api';
 import type { FormState } from '../../../actions';
@@ -132,6 +132,10 @@ export function RecordConsentForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(recordConsentAction, INITIAL);
+  // Stays on screen for the next decision, so it clears after one is recorded.
+  const recorded = useSuccessKey(state);
+  const [kindField, setKindField] = useSeeded<string>(kinds[0] ?? '', recorded);
+  const [evidenceNote, setEvidenceNote] = useSeeded<string>('', recorded);
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -139,7 +143,13 @@ export function RecordConsentForm({
       <input type="hidden" name="studentId" value={studentId} />
 
       <div className="flex flex-wrap gap-2">
-        <select name="kind" aria-label={t('sensitive.kind')} className={cn(CONTROL_LINE, 'min-w-44')}>
+        <select
+          name="kind"
+          value={kindField}
+          onChange={(event) => setKindField(event.target.value)}
+          aria-label={t('sensitive.kind')}
+          className={cn(CONTROL_LINE, 'min-w-44')}
+        >
           {kinds.map((kind) => (
             <option key={kind} value={kind}>
               {t(`sensitive.kinds.${kind}`)}
@@ -148,6 +158,8 @@ export function RecordConsentForm({
         </select>
         <input
           name="evidenceNote"
+          value={evidenceNote}
+          onChange={(event) => setEvidenceNote(event.target.value)}
           maxLength={500}
           aria-label={t('sensitive.evidence')}
           placeholder={t('sensitive.evidencePlaceholder')}

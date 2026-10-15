@@ -6,6 +6,8 @@ import Link from 'next/link';
 import type { TransferProposal } from '@/lib/api';
 import { confirmAdvancementAction, dismissAdvancementAction } from './advancement.actions';
 import { useToast } from '@/components/ui/toast';
+import { CONTROL_LINE } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 
 /**
  * One student who has finished their level — POOLSE-19, criteria 3, 5 and 6.
@@ -80,7 +82,8 @@ export function ProposalCard({
               type="date"
               value={effectiveOn}
               onChange={(event) => setEffectiveOn(event.target.value)}
-              className="rounded border border-border-strong bg-background px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary text-control"
+              // The one control size — CLAUDE.md — sized to its date, not the row.
+              className={cn(CONTROL_LINE, 'w-auto')}
             />
           </label>
 

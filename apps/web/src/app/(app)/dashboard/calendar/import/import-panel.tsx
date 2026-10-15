@@ -109,6 +109,8 @@ export function TimetableImport({
 
   const rows = result?.rows ?? [];
   const conflicted = rows.filter((row) => !row.importable);
+  // A row somebody chose not to import has nothing left to warn about.
+  const flaggedRows = rows.filter((row) => row.warnings.length > 0 && !dropped.includes(row.index));
   const blocked = result === undefined ? 0 : result.summary.blocked + result.summary.refused;
 
   return (
@@ -319,6 +321,31 @@ export function TimetableImport({
                     })}
                   </p>
 
+                  {/*
+                    The warnings — criterion 6. They never hold a row back, which
+                    is exactly why they are said here: an instructor the file
+                    names and Poolse does not know is imported without one, and
+                    finding that out a week later on the calendar is too late.
+                  */}
+                  {flaggedRows.length > 0 && (
+                    <ul className="flex flex-col gap-1 rounded border border-warning/40 bg-warning/5 p-3 text-sm">
+                      {flaggedRows.flatMap((row) =>
+                        row.warnings.map((warning) => (
+                          <li key={`${row.index}:${warning.code}`} className="flex items-start gap-2">
+                            <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+                            <span>
+                              <span className="font-medium">{row.name}</span>{' '}
+                              <span className="text-foreground-muted">
+                                ({t('timetableImport.line', { line: row.line })})
+                              </span>{' '}
+                              — {t(`timetableImport.warning.${warning.code}`, { value: warning.value ?? '' })}
+                            </span>
+                          </li>
+                        )),
+                      )}
+                    </ul>
+                  )}
+
                   {blocked > 0 ? (
                     <div className="flex flex-col items-start gap-3 rounded border border-warning/40 bg-warning/5 p-4">
                       <p className="flex items-start gap-2 text-sm">
@@ -459,14 +486,22 @@ function ConflictDialog({
                   ))}
                   {row.clashes.map((clash, at) => (
                     <li key={`${clash.code}:${at}`} className="text-foreground">
+                      {/*
+                        The rule's own figures — 15-10-2026 sweep. These used to
+                        be zeros, so "4 alunos numa pista para 3" read "0 numa
+                        pista para 0". The zeros below stand only for a
+                        placeholder this code does not use; the names come from
+                        `namesOfOther`, which also knows an earlier line.
+                      */}
                       {t(`grid.reason.${clash.code}`, {
-                        holder: clash.with ?? '—',
-                        lane: clash.lane ?? '—',
                         reason: '',
                         count: 0,
                         limit: 0,
                         headcount: 0,
                         capacity: 0,
+                        ...(clash.detail ?? {}),
+                        holder: clash.with ?? clash.detail?.['holder'] ?? '—',
+                        lane: clash.lane ?? clash.detail?.['lane'] ?? '—',
                       })}
                       {clash.withLine !== null && (
                         <span className="text-foreground-muted">

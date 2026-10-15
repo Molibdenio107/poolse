@@ -1,5 +1,6 @@
 import { Cake } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import { APP_TIME_ZONE } from '@/lib/date-format';
 
 /**
  * "It is their birthday today" — round 4.
@@ -48,16 +49,14 @@ export async function BirthdayFlag({
 /**
  * Exported so a list can sort or count without rendering anything.
  *
- * `new Date()` here is the *server's* today, which is the same compromise every
- * other "today" in this app makes until facility timezones reach the UI. It is
- * only ever used to produce a `MM-DD`, so an hour of drift at the boundary is
- * the worst it can do.
+ * Today is the club's day in `APP_TIME_ZONE`, never the runtime's: the server
+ * runs in UTC, which put the cake on the wrong row for the first hour of every
+ * Lisbon summer day. `sv-SE` is used only because it writes `YYYY-MM-DD`.
  */
 export function isBirthdayToday(birthDate: string | null | undefined): boolean {
   if (birthDate === null || birthDate === undefined || birthDate.length < 10) return false;
 
-  const now = new Date();
-  const today = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: APP_TIME_ZONE }).slice(5, 10);
 
   return birthDate.slice(5, 10) === today;
 }

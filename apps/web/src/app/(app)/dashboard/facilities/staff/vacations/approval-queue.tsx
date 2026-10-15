@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
 import type { PendingVacations } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { decideVacationAction } from './vacations.actions';
@@ -53,6 +53,7 @@ function RequestCard({
   const t = useTranslations();
   const [state, decide, pending] = useSavedAction(decideVacationAction, INITIAL);
   const [rejecting, setRejecting] = useState(false);
+  const [note, setNote] = useSeeded<string>('');
 
   // `formatDate`, like every other date in the product. This rendered "13 set."
   // in the reader's locale, which the 13-09-2026 decision replaced everywhere
@@ -129,6 +130,8 @@ function RequestCard({
             id={`note-${request.id}`}
             name="note"
             required
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
             maxLength={500}
             placeholder={t('vacations.reasonPlaceholder')}
             className={CONTROL_LINE}

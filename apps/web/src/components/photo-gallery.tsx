@@ -51,7 +51,7 @@ export async function PhotoGallery({
         </div>
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {photos.map((photo) => {
+          {photos.map((photo, index) => {
             const url = fileUrl(photo.fileId);
             return (
               <li
@@ -68,7 +68,9 @@ export async function PhotoGallery({
                           next/image's optimiser would bypass. */}
                       <img
                         src={url}
-                        alt={photo.caption ?? ''}
+                        // A photo with no caption is still a link, and a link
+                        // whose only content has an empty alt has no name.
+                        alt={photo.caption ?? t('files.photoNumber', { number: index + 1 })}
                         className="size-full object-cover"
                         loading="lazy"
                       />

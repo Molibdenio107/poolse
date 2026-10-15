@@ -121,7 +121,7 @@ function Submit({
       type="submit"
       disabled={pending}
       className={cn(
-        'inline-flex h-control items-center gap-2 self-start rounded px-3 text-sm font-medium disabled:opacity-60',
+        'inline-flex h-control items-center justify-center gap-2 self-start rounded px-4 text-control font-medium disabled:opacity-60',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
         tone === 'danger'
           ? 'bg-destructive text-destructive-foreground outline-danger hover:bg-destructive/90'

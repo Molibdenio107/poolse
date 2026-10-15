@@ -9,6 +9,7 @@ import {
   type People,
 } from '@/lib/api';
 import { MergeButton } from './merge-button';
+import { formatDate } from '@/lib/date-format';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
@@ -127,7 +128,13 @@ export default async function DuplicatesPage({
                       <div key={field} className="flex flex-wrap gap-x-2">
                         <dt className="font-medium">{t(`people.field.${field}`)}</dt>
                         <dd>
-                          {t('people.conflictKeeps', { keep: values.keep, absorb: values.absorb })}
+                          {/* A birth date is a day, so it reads dd-MM-yyyy like every other one. */}
+                          {field === 'birth_date'
+                            ? t('people.conflictKeeps', {
+                                keep: formatDate(values.keep),
+                                absorb: formatDate(values.absorb),
+                              })
+                            : t('people.conflictKeeps', { keep: values.keep, absorb: values.absorb })}
                         </dd>
                       </div>
                     ))}

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSavedAction } from '@/lib/saved';
-import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded } from '@/components/ui/field';
+import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, useSeeded, useSuccessKey } from '@/components/ui/field';
 import type { LostAndFoundItem } from '@/lib/api';
 import type { FormState } from '../../actions';
 import {
@@ -236,11 +236,22 @@ function AddFound({
   onDone: () => void;
 }): React.ReactElement {
   const [studentIdField, setStudentIdField] = useSeeded<string>('');
+  const [description, setDescription] = useSeeded<string>('');
+  const [locationFound, setLocationFound] = useSeeded<string>('');
+  const [foundOn, setFoundOn] = useSeeded<string>('');
+  const [notes, setNotes] = useSeeded<string>('');
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(recordFoundAction, INITIAL);
 
+  // Closes once the save has come back and worked — never on submit, which
+  // unmounted the form before its refusal (or its toast) could arrive.
+  const saved = useSuccessKey(state);
+  useEffect(() => {
+    if (saved > 0) onDone();
+  }, [saved, onDone]);
+
   return (
-    <form action={action} onSubmit={() => onDone()} className="flex flex-col gap-3">
+    <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="facilityId" value={facilityId} />
 
       <div className="flex flex-wrap gap-3">
@@ -251,6 +262,8 @@ function AddFound({
           <input
             id="lf-description"
             name="description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
             maxLength={200}
             required
             className={CONTROL_LINE}
@@ -268,6 +281,8 @@ function AddFound({
           <input
             id="lf-location"
             name="locationFound"
+            value={locationFound}
+            onChange={(event) => setLocationFound(event.target.value)}
             maxLength={120}
             list="lf-locations"
             className={CONTROL_LINE}
@@ -284,7 +299,14 @@ function AddFound({
             {t('inventory.lostAndFound.foundOn')}
           </label>
           {/* A date, never a datetime — the column is a `date` for that reason. */}
-          <input id="lf-found-on" name="foundOn" type="date" className={CONTROL_LINE} />
+          <input
+            id="lf-found-on"
+            name="foundOn"
+            type="date"
+            value={foundOn}
+            onChange={(event) => setFoundOn(event.target.value)}
+            className={CONTROL_LINE}
+          />
         </div>
 
         <div className={cn(FIELD_COLUMN, 'sm:w-56')}>
@@ -321,7 +343,14 @@ function AddFound({
         <label htmlFor="lf-notes" className={FIELD_LABEL}>
           {t('inventory.field.notes')}
         </label>
-        <input id="lf-notes" name="notes" maxLength={500} className={CONTROL_LINE} />
+        <input
+          id="lf-notes"
+          name="notes"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          maxLength={500}
+          className={CONTROL_LINE}
+        />
       </div>
 
       <div className="flex flex-wrap gap-3">

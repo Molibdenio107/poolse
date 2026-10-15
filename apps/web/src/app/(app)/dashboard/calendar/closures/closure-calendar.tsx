@@ -108,13 +108,8 @@ export function ClosureCalendar({
     [locale],
   );
 
-  const labelFor = (day: string): string =>
-    new Intl.DateTimeFormat(locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(`${day}T00:00:00Z`));
+  // The one date shape, spoken as well as shown — CLAUDE.md's dd-MM-yyyy rule.
+  const labelFor = (day: string): string => formatDate(day);
 
   const [anchor, setAnchor] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);

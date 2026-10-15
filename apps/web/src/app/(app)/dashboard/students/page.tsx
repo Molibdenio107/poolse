@@ -381,7 +381,9 @@ export default async function StudentsPage({
             <Pagination
               page={data.students}
               basePath="/dashboard/students"
-              query={{ search, levelId }}
+              // The overdue filter and the way back travel with the page, as
+              // they do on the past-the-end redirect above.
+              query={{ search, levelId, sort: overdueOnly ? 'overdue' : undefined, from }}
             />
           </section>
 

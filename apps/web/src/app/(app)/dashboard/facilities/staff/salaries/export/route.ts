@@ -1,7 +1,8 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type SalaryExportRow } from '@/lib/api';
-import { SALARY_EXPORT_FIELDS } from '@/lib/salary-sheet';
+import { SALARY_EXPORT_FIELDS, type SalaryField } from '@/lib/salary-sheet';
 import { formatDate } from '@/lib/date-format';
+import { formatCents, parseCents } from '@/lib/money';
 import { printableResponse } from '@/lib/print-table';
 import { rowFor, salaryCsv, salaryWorkbook } from './write-sheet';
 
@@ -35,6 +36,9 @@ import { rowFor, salaryCsv, salaryWorkbook } from './write-sheet';
  * same `no-store, private`: a pay list on paper is no less a pay list.
  */
 type Format = 'xlsx' | 'csv';
+
+/** `money_provenance`'s four values — anything else is printed as it came. */
+const PROVENANCES = new Set(['actual', 'contracted', 'estimated', 'assumed']);
 
 const CONTENT_TYPE: Record<Format, string> = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -85,7 +89,22 @@ export async function GET(request: Request): Promise<Response> {
       title: t('salaries.title'),
       subtitle: t('export.pdf.count', { count: data.rows.length }),
       headers,
-      rows: data.rows.map(rowFor),
+      // The file writes the enum's spelling, an ISO day and a bare decimal so it
+      // re-imports in either language; paper is read by a person, so the same
+      // three are said in their words — the spreadsheet branch below is untouched.
+      rows: data.rows.map((row) => {
+        const out = rowFor(row);
+        const set = (field: SalaryField, value: string): void => {
+          const at = SALARY_EXPORT_FIELDS.indexOf(field);
+          if (at >= 0) out[at] = value;
+        };
+        if (row.kind === 'monthly' || row.kind === 'hourly') set('kind', t(`salaries.kind.${row.kind}`));
+        if (PROVENANCES.has(row.provenance)) set('provenance', t(`salaries.provenance.${row.provenance}`));
+        set('effectiveFrom', formatDate(row.effectiveFrom));
+        const cents = parseCents(row.amount);
+        if (cents !== null) set('amount', formatCents(locale, cents));
+        return out;
+      }),
       printedOn: t('export.pdf.printedOn', { date: formatDate(new Date()) }),
       printLabel: t('export.pdf.printLabel'),
       emptyLabel: t('export.pdf.empty'),

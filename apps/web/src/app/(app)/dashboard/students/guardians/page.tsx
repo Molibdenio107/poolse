@@ -195,7 +195,7 @@ export default async function GuardiansPage({
           <Pagination
             page={data.guardians}
             basePath="/dashboard/students/guardians"
-            query={{ search: term }}
+            query={{ search: term, from }}
           />
         </section>
       )}

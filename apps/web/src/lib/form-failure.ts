@@ -70,30 +70,24 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
       const conflictKey = `${fallbackKey}Conflict`;
       return hasKey(conflictKey)
         ? { ok: false, errorKey: conflictKey }
-        : { ok: false, errorKey: fallbackKey, detail: error.message };
+        : { ok: false, errorKey: fallbackKey };
     }
 
     if (error.status === 404) return { ok: false, errorKey: 'common.notFound' };
 
     /*
-     * A refused value. `fields` is the good case — it lands beside the box that
-     * caused it. Without it, the API's own message is still better than silence,
-     * so it rides along as detail: untranslated, but true and specific.
+     * A refused value with no field named — the caller's sentence and nothing
+     * after it. 15-10-2026 sweep: the API's own message used to ride along as
+     * detail, and it is English written for a log ("No such student") landing
+     * in a Portuguese toast. The log line at the top of this function keeps it.
      */
-    /*
-     * A refused value with no field named. The API's own message is still better
-     * than silence, so it rides along as detail — untranslated, but true.
-     */
-    if (error.status < 500) {
-      return { ok: false, errorKey: fallbackKey, detail: error.message };
-    }
+    if (error.status < 500) return { ok: false, errorKey: fallbackKey };
 
     /*
      * A server error gets the sentence and **no detail** — round 5, G2.
      *
-     * Every branch above attaches the API's own message as a second line,
-     * because for a refusal it is specific and true: which lane, which hours,
-     * which field. A 500 has none of that. What it carries is
+     * The branches above used to attach the API's own message as a second
+     * line; since the 15-10-2026 sweep none does, and a 500 never did. What it carries is
      * "500 Internal server error", which is the exact string G2 names — it
      * tells an operator nothing they can act on and reads as the product
      * leaking its plumbing at the moment it has already failed them.
@@ -111,8 +105,9 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
    * the port. "Could not reach the server" sends somebody to look at the right
    * thing; "could not save" sends them to re-read a form that was fine.
    */
+  // The exception's text is for the log line above, never the toast.
   log(`${fallbackKey}: no response`, null, String(error));
-  return { ok: false, errorKey: 'common.apiUnreachable', detail: String(error) };
+  return { ok: false, errorKey: 'common.apiUnreachable' };
 }
 
 /**

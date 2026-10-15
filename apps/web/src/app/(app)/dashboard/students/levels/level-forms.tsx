@@ -5,7 +5,7 @@ import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import type { StudentLevel } from '@/lib/api';
 import { overlapping } from '@/lib/levels';
-import { CONTROL_LINE, SelectField, TextField, useSeeded } from '@/components/ui/field';
+import { CONTROL_LINE, SelectField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { ColourSwatches } from '@/components/ui/colour-swatches';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
@@ -122,6 +122,8 @@ export function CreateLevelForm({
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createLevelAction, INITIAL);
+  // Stays on screen for the next level, so the name clears after one is added.
+  const [nameField, setNameField] = useSeeded<string>('', useSuccessKey(state));
   const [admits, setAdmits] = useState({ admitsMale: true, admitsFemale: true });
   const [range, setRange] = useState<{
     minAgeMonths: number | null;
@@ -135,6 +137,8 @@ export function CreateLevelForm({
         <input
           name="name"
           required
+          value={nameField}
+          onChange={(event) => setNameField(event.target.value)}
           maxLength={120}
           aria-label={t('students.levelName')}
           placeholder={t('students.levelPlaceholder')}

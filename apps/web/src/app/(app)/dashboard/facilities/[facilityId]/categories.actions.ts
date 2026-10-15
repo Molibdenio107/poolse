@@ -41,7 +41,7 @@ function failure(error: unknown, errorKey: string): FormState {
         },
       };
     }
-    if (error.status < 500) return { ok: false, errorKey, detail: error.message };
+    if (error.status < 500) return { ok: false, errorKey };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
   }
   return { ok: false, errorKey, detail: String(error) };

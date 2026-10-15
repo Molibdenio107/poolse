@@ -38,9 +38,9 @@ function failure(error: unknown, errorKey: string): FormState {
       return { ok: false, errorKey: 'slots.inUse', detail: bookings.join(', ') };
     }
 
-    // A 400 from the slot endpoints is already an instruction — "endTime cannot
-    // be 00:00, write 24:00" — so it is shown rather than replaced.
-    if (error.status === 400) return { ok: false, errorKey, detail: error.message };
+    // A 400's message is an instruction, but an English one written for the
+    // log ("endTime cannot be 00:00, write 24:00") — 15-10-2026 sweep: the
+    // caller's sentence only. A refusal worth explaining earns a key.
     if (error.status < 500) return { ok: false, errorKey };
     return { ok: false, errorKey, detail: `${error.status} ${error.message}`.trim() };
   }

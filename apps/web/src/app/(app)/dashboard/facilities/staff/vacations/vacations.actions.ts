@@ -12,7 +12,7 @@ function failure(error: unknown, errorKey: string): FormState {
     if (error.code === 'sunday_not_allowed') return { ok: false, errorKey: 'vacations.noSundays' };
     if (error.code === 'already_decided') return { ok: false, errorKey: 'vacations.alreadyDecided' };
     if (error.code === 'note_required') return { ok: false, errorKey: 'vacations.noteRequired' };
-    return { ok: false, errorKey, detail: error.message };
+    return { ok: false, errorKey };
   }
   return { ok: false, errorKey, detail: String(error) };
 }

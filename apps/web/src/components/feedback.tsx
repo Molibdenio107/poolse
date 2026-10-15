@@ -82,6 +82,29 @@ const TONE: Record<FeedbackKind, { box: string; icon: typeof Info }> = {
   info: { box: 'bg-primary text-primary-foreground', icon: Info },
 };
 
+/**
+ * The second line, unless it is plumbing — 15-10-2026 sweep.
+ *
+ * `detail` exists for what a refusal carries as structure: the lane that was
+ * taken, the hours a site keeps, a line number. A long tail of `fail()` helpers
+ * also put the API's own `message` there, and that is English written for a log
+ * — "No such student", "500 Internal server error", "TypeError: fetch failed" —
+ * reaching a Portuguese toast. Two of those shapes are recognisable and refused
+ * here, for every caller at once: a status-prefixed string (`${status} …`) and a
+ * stringified exception (`…Error: …`). A bare machine code (`slotOverlap`,
+ * `support.noPendingRequest`) is the third. None is a reference the operator
+ * could quote, and the server keeps its own log.
+ */
+export function visibleDetail(detail: string | null | undefined): string | null {
+  if (detail === null || detail === undefined) return null;
+  const text = detail.trim();
+  if (text === '') return null;
+  if (/^\d{3}(\s|$)/.test(text)) return null;
+  if (/^[A-Za-z]*Error\b/.test(text)) return null;
+  if (/^[a-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)*$/.test(text)) return null;
+  return text;
+}
+
 /** How long a message that is only good news stays up. */
 const DISMISS_AFTER = 5_000;
 
@@ -173,8 +196,8 @@ export function Feedback({
 
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{message.text}</p>
-          {message.detail !== null && message.detail !== undefined && message.detail !== '' && (
-            <p className="mt-0.5 text-sm opacity-90">{message.detail}</p>
+          {visibleDetail(message.detail) !== null && (
+            <p className="mt-0.5 text-sm opacity-90">{visibleDetail(message.detail)}</p>
           )}
 
           {/*

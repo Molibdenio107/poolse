@@ -171,6 +171,8 @@ export function YearGrid({
                     tabIndex={state.focusable === true || past ? 0 : undefined}
                     title={state.title}
                     onMouseEnter={onHover === undefined ? undefined : () => onHover(day)}
+                    // Focusable, so the keyboard previews it as the mouse does.
+                    onFocus={onHover === undefined ? undefined : () => onHover(day)}
                     aria-label={`${labelFor(day)}${state.description ? `, ${state.description}` : ''}`}
                     className={cn(
                       'flex aspect-square flex-col items-center justify-center rounded text-xs',

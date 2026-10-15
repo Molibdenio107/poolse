@@ -223,7 +223,7 @@ export async function runImportAction(
       return {
         ok: false,
         errorKey: key,
-        detail: error.status >= 500 ? `${error.status} ${error.message}`.trim() : error.message,
+        ...(error.status >= 500 ? { detail: `${error.status} ${error.message}`.trim() } : {}),
         attempt,
       };
     }

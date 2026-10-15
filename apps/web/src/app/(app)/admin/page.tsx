@@ -483,7 +483,7 @@ function FilterLinks({
         href={href(filter)}
         aria-current={active ? 'true' : undefined}
         className={cn(
-          'rounded border px-2.5 text-sm leading-[var(--control-h,2.25rem)] h-control inline-flex items-center',
+          'inline-flex h-control items-center justify-center rounded border px-4 text-control',
           active
             ? 'border-primary font-medium text-primary'
             : 'border-border-strong text-foreground-muted hover:text-foreground',
@@ -531,7 +531,7 @@ function SortLinks({
         href={href(sort)}
         aria-current={active ? 'true' : undefined}
         className={cn(
-          'rounded border px-2.5 text-sm leading-[var(--control-h,2.25rem)] h-control inline-flex items-center',
+          'inline-flex h-control items-center justify-center rounded border px-4 text-control',
           active
             ? 'border-primary font-medium text-primary'
             : 'border-border-strong text-foreground-muted hover:text-foreground',

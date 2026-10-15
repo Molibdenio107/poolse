@@ -260,6 +260,7 @@ export function AddSlotForm({
   // A form typed into again after each save: its fields clear when one works.
   const added = useSuccessKey(state);
   const [weekdayField, setWeekdayField] = useSeeded<string>('', added);
+  const [startTimeField, setStartTimeField] = useSeeded<string>('', added);
   const [durationMinutesField, setDurationMinutesField] = useSeeded<string>('45', added);
 
   return (
@@ -310,6 +311,8 @@ export function AddSlotForm({
             name="startTime"
             type="time"
             required
+            value={startTimeField}
+            onChange={(event) => setStartTimeField(event.target.value)}
             className={CONTROL_LINE}
           />
         </div>

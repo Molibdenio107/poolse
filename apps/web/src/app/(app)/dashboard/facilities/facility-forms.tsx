@@ -46,6 +46,7 @@ export function CreateFacilityForm({
   timezones: string[];
 }): React.ReactElement {
   const [timezoneField, setTimezoneField] = useSeeded<string>(timezones[0] ?? '');
+  const [nameField, setNameField] = useSeeded<string>('');
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(createFacilityAction, INITIAL);
 
@@ -61,6 +62,8 @@ export function CreateFacilityForm({
           id="facility-name"
           name="name"
           required
+          value={nameField}
+          onChange={(event) => setNameField(event.target.value)}
           maxLength={120}
           placeholder={t('facilities.namePlaceholder')}
           className={CONTROL_LINE}

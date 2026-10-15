@@ -425,10 +425,16 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PersonSummary[]>([]);
   const [searching, setSearching] = useState(false);
+  // A search that did not run, kept apart from one that found nobody — the
+  // 15-10-2026 sweep. "Sem resultados" over a failure is how a second record of
+  // the same guardian gets made.
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
   const latest = useRef(0);
 
   useEffect(() => {
     const term = query.trim();
+    setFailed(false);
     if (term.length < MIN_SEARCH_LENGTH) {
       setResults([]);
       return;
@@ -452,19 +458,21 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
       void searchPeopleAction(term)
         .then((people) => {
           if (attempt !== latest.current) return;
-          setResults(people);
+          setResults(people ?? []);
+          setFailed(people === null);
           setSearching(false);
         })
         // A rejected call used to leave "A processar…" on screen for good.
         .catch(() => {
           if (attempt !== latest.current) return;
           setResults([]);
+          setFailed(true);
           setSearching(false);
         });
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, retry]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -536,7 +544,20 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
         </ul>
       )}
 
-      {query.trim().length >= 2 && !searching && results.length === 0 && (
+      {failed && !searching && (
+        <p className="flex flex-wrap items-center gap-3 text-sm text-danger">
+          {t('students.guardianSearchFailed')}
+          <button
+            type="button"
+            onClick={() => setRetry((n) => n + 1)}
+            className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('students.guardianSearchRetry')}
+          </button>
+        </p>
+      )}
+
+      {query.trim().length >= 2 && !searching && !failed && results.length === 0 && (
         <p className="text-sm text-foreground-muted">{t('students.guardianNoMatches')}</p>
       )}
 
@@ -579,11 +600,15 @@ function DuplicateWarning({
 }): React.ReactElement {
   const t = useTranslations();
   const [match, setMatch] = useState<DuplicateMatch | null>(null);
+  // The check did not run — said, rather than read as "nobody matched".
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
   const latest = useRef(0);
 
   useEffect(() => {
     const nif = taxNumber.trim();
     const address = email.trim();
+    setFailed(false);
 
     // A NIF is nine digits in Portugal; anything shorter is somebody mid-type,
     // and an email without an @ is not yet an address.
@@ -595,13 +620,37 @@ function DuplicateWarning({
 
     const attempt = ++latest.current;
     const timer = setTimeout(() => {
-      void findDuplicateAction(nif, address).then((found) => {
-        if (attempt === latest.current) setMatch(found);
-      });
+      void findDuplicateAction(nif, address).then(
+        (found) => {
+          if (attempt !== latest.current) return;
+          setMatch(found?.match ?? null);
+          setFailed(found === null);
+        },
+        () => {
+          if (attempt !== latest.current) return;
+          setMatch(null);
+          setFailed(true);
+        },
+      );
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [taxNumber, email]);
+  }, [taxNumber, email, retry]);
+
+  if (failed) {
+    return (
+      <p className="sm:col-span-2 flex flex-wrap items-center gap-3 text-sm text-warning">
+        {t('students.duplicateCheckFailed')}
+        <button
+          type="button"
+          onClick={() => setRetry((n) => n + 1)}
+          className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          {t('students.guardianSearchRetry')}
+        </button>
+      </p>
+    );
+  }
 
   if (match === null) return <></>;
 

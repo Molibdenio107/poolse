@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useLocale, useTranslations } from 'next-intl';
+import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { formatCents } from '@/lib/money';
 import type { Invoice } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
@@ -28,6 +28,7 @@ export function InvoiceList({
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
+  const format = useFormatter();
 
   return (
     <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
@@ -36,7 +37,12 @@ export function InvoiceList({
       </h2>
 
       {invoices.length === 0 ? (
-        <p className="text-sm text-foreground-muted">{t('invoices.noneIssued', { month })}</p>
+        <p className="text-sm text-foreground-muted">
+          {/* The month by name, as the filter above it reads — never the URL's `YYYY-MM`. */}
+          {t('invoices.noneIssued', {
+            month: format.dateTime(new Date(`${month}-01T12:00:00Z`), 'month'),
+          })}
+        </p>
       ) : (
         <div className="relative overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">

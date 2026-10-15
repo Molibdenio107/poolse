@@ -119,7 +119,7 @@ export function SearchInput({
         {label}
       </label>
 
-      <div className="flex h-control items-center gap-2 rounded border border-border-strong bg-background px-2.5 text-sm focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
+      <div className="flex h-control items-center gap-2 rounded border border-border-strong bg-background px-2.5 text-control focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
         <Search className="size-4 shrink-0 text-foreground-muted" aria-hidden />
 
         <input

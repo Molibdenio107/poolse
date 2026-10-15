@@ -343,6 +343,8 @@ path, as an Admin.
 - Their writes are attributed to the support membership in the club's `audit_log`.
 - The Owner's salary, the subscription and ownership transfer stay hidden, as from any Admin.
 - `POST …/leave` ends the window early, recorded as ended by support.
+- An operator removed from `platform_admin` loses every live session at once — `resolve_memberships`
+  needs their row live as well as the grant (sweep of 15-10-2026).
 
 **Support grants nothing.** A support session is an Admin, and an Admin may invite one, so an
 operator could otherwise invite a second address of their own and keep access after the

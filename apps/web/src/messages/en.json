@@ -1255,6 +1255,8 @@
     "cancelFailed": "The make-up class could not be cancelled."
   },
   "skills": {
+    "retry": "Try again",
+    "loadFailed": "The skills of this level could not be loaded.",
     "title": "Skills",
     "subtitle": "What the class is working on, and where each student stands.",
     "backToClass": "Back to the class",
@@ -1669,6 +1671,9 @@
     "saveFailed": "The policy could not be saved."
   },
   "students": {
+    "duplicateCheckFailed": "Could not check whether this person is already recorded.",
+    "guardianSearchRetry": "Try again",
+    "guardianSearchFailed": "The search could not be run.",
     "title": "Students",
     "subtitle": "The organization's student register.",
     "search": "Search",
@@ -3252,6 +3257,10 @@
     "setCapacity": "Set the lanes' capacity"
   },
   "timetableImport": {
+    "warning": {
+      "headcountMissing": "The number of swimmers is not given.",
+      "instructorNotFound": "There is no instructor called \"{value}\" at this club; the class is imported without one."
+    },
     "open": "Import timetable",
     "hint": "Or drag the timetable file anywhere onto this page.",
     "dropHere": "Drop the timetable to import it",
@@ -3787,6 +3796,9 @@
       "clerk": "Authentication"
     },
     "check": {
+      "failing": "failing",
+      "slow": "slow",
+      "ok": "operational",
       "latency": "{ms} ms",
       "not_installed": "not installed"
     },
@@ -4255,6 +4267,8 @@
   },
   "export": {
     "pdf": {
+      "no": "No",
+      "yes": "Yes",
       "option": "PDF",
       "exportAction": "Export as PDF",
       "printLabel": "Print or save as PDF",
@@ -4466,6 +4480,7 @@
     }
   },
   "files": {
+    "photoNumber": "Photo {number}",
     "chooseFile": "Choose a file.",
     "tooLarge": "The file is larger than 10 MB.",
     "wrongType": "Only PDF, JPEG, PNG and WebP are accepted — and only images for photographs.",
@@ -4892,6 +4907,7 @@
     "hint": "Tax details and the logo belong to the club and apply to every site, not just this one."
   },
   "family": {
+    "recordSubtitle": "The record the club keeps.",
     "picker": "Whose summary this is",
     "yourselfShort": "{name} (me)",
     "widget": {

@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Student } from '@/lib/api';
-import { EXPORT_FIELDS } from '@/lib/sheet';
+import { EXPORT_FIELDS, type ImportField } from '@/lib/sheet';
 import { formatDate } from '@/lib/date-format';
 import { printableResponse } from '@/lib/print-table';
 import { rowFor, studentsCsv, studentsWorkbook } from './write-sheet';
@@ -120,7 +120,33 @@ export async function GET(request: Request): Promise<Response> {
       title: t('students.title'),
       subtitle,
       headers,
-      rows: data.students.map(rowFor),
+      // The file writes an ISO day and the club's own Portuguese words so it
+      // re-imports in either language; paper is read by a person, so the date is
+      // dd-MM-yyyy and the género and yes/no columns are said in their language.
+      rows: data.students.map((student) => {
+        const row = rowFor(student);
+        const set = (field: ImportField, value: string): void => {
+          const at = EXPORT_FIELDS.indexOf(field);
+          if (at >= 0) row[at] = value;
+        };
+        set('birthDate', formatDate(student.birthDate));
+        set(
+          'gender',
+          student.gender === null
+            ? ''
+            : t(student.gender === 'male' ? 'students.genderMale' : 'students.genderFemale'),
+        );
+        set('isSocio', student.isSocio ? t('export.pdf.yes') : '');
+        set(
+          'isPaid',
+          student.paymentState === 'paid'
+            ? t('export.pdf.yes')
+            : student.paymentState === 'none'
+              ? ''
+              : t('export.pdf.no'),
+        );
+        return row;
+      }),
       printedOn: t('export.pdf.printedOn', { date: formatDate(new Date()) }),
       printLabel: t('export.pdf.printLabel'),
       emptyLabel: t('export.pdf.empty'),

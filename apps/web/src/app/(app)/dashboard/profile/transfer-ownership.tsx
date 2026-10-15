@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { CONTROL_LINE } from '@/components/ui/field';
+import { CONTROL_LINE, useSeeded } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { OrganizationMember } from '@/lib/api';
 import type { FormState } from '../actions';
@@ -38,6 +38,12 @@ export function TransferOwnership({
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useSavedAction(transferOwnershipAction, INITIAL);
+  // Controlled, so a refused transfer keeps the person who was chosen. An
+  // uncontrolled select reset to the first candidate, and a second click on
+  // Confirm would have handed the club to somebody else.
+  const [membershipId, setMembershipId] = useSeeded<string>(
+    candidates[0]?.membershipId ?? '',
+  );
 
   if (candidates.length === 0) {
     return (
@@ -70,6 +76,8 @@ export function TransferOwnership({
         <select
           name="membershipId"
           required
+          value={membershipId}
+          onChange={(event) => setMembershipId(event.target.value)}
           aria-label={t('transfer.chooseLabel')}
           className={cn(CONTROL_LINE, 'min-w-48 flex-1')}
         >
