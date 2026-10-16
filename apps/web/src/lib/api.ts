@@ -1392,6 +1392,13 @@ export interface PersonSummary {
 }
 
 export interface Student {
+  /** When this student left and when their data goes — 7b.8. Null while enrolled. */
+  retention?: {
+    leftOn: string;
+    healthErasesOn: string;
+    identityErasesOn: string;
+    healthErasedAt: string | null;
+  } | null;
   id: string;
   firstName: string;
   lastName: string;

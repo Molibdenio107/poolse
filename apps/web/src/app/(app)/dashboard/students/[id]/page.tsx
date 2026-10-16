@@ -219,6 +219,27 @@ export default async function StudentPage({
           content: () => (
             <>
               {/*
+                Retention — 7b.8. A student who left is told, in words, when
+                their health data goes and when their identity does, or that the
+                first already went. Visible text, never a tooltip.
+              */}
+              {loaded.retention != null && (
+                <p className="rounded border border-border bg-surface-muted p-3 text-sm text-foreground-muted">
+                  {loaded.retention.healthErasedAt === null
+                    ? t('students.retention.pending', {
+                        left: formatDate(loaded.retention.leftOn),
+                        health: formatDate(loaded.retention.healthErasesOn),
+                        identity: formatDate(loaded.retention.identityErasesOn),
+                      })
+                    : t('students.retention.healthErased', {
+                        left: formatDate(loaded.retention.leftOn),
+                        erased: formatDate(loaded.retention.healthErasedAt),
+                        identity: formatDate(loaded.retention.identityErasesOn),
+                      })}
+                </p>
+              )}
+
+              {/*
                 The record's action area — backlog round 3, story 9.
 
                 Progress and the medical record remain their own screens rather
