@@ -1966,7 +1966,11 @@
     "birthDateFuture": "A data de nascimento não pode ser no futuro.",
     "required": "Este campo é obrigatório.",
     "tooLong": "Este valor é demasiado longo.",
-    "ageConfirmRequired": "Confirme o escalão para continuar."
+    "ageConfirmRequired": "Confirme o escalão para continuar.",
+    "retention": {
+      "pending": "Este aluno saiu a {left} e não tem inscrição ativa. Pela política de retenção, os dados de saúde são apagados a {health} e a identidade é anonimizada a {identity}. Uma nova inscrição antes disso cancela a contagem.",
+      "healthErased": "Este aluno saiu a {left}. Os dados de saúde foram apagados a {erased}, pela política de retenção, e a identidade é anonimizada a {identity}."
+    }
   },
   "advancement": {
     "title": "Progressões",

@@ -1220,6 +1220,14 @@ PRIVILEGES` from decision 2 grants all four verbs on every new table, so `audit_
 two back. An audit log the application can rewrite is not an audit log, and "nobody has
 written that UPDATE yet" is not a guarantee.
 
+**Retention rewrites four protected tables, through one function** (7b.8). `apply_retention()`
+is `SECURITY DEFINER` because `consent`, `incident_detail`/`incident_addendum`,
+`message_recipient` and `audit_log` are deliberately closed to `poolse_app`. It acts on
+`current_organization_id()` only and refuses without one. `student.health_erased_at` and
+`student.anonymised_at` record what it did; `lead.anonymised_at` likewise.
+`student_left_on()` is the one definition of leaving. An anonymised `audit_log` entry keeps its
+action, actor and time and loses the `name` in its `data`. `docs/features/retention.md`.
+
 **An archive that takes children lists them in `data.cascade`** (POOLSE-78):
 `[{ "entityType": "pool", "id": "…" }, …]`. An ended enrolment also carries the `status` it
 had, and a fee line closed with it carries its `endsOn`. The bin restores exactly that list.

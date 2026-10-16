@@ -38,6 +38,7 @@ import { QualificationAlertService } from './staff/qualification-alerts.js';
 import { LeadsController, RegistrationSettingsController } from './leads/leads.controller.js';
 import { PublicLeadsController } from './leads/public-leads.controller.js';
 import { LeadRetentionService } from './leads/lead-retention.service.js';
+import { RetentionService } from './retention/retention.service.js';
 import { LabResultsController } from './facilities/lab-results.controller.js';
 import { ComplaintsSettingsController, RegulationsController } from './facilities/regulations.controller.js';
 import {
@@ -281,6 +282,8 @@ const IDENTITY_ONLY_ROUTES = [
     ClimateService,
     QualificationAlertService,
     LeadRetentionService,
+    // 7b.8 — health data a year after leaving, identity after five.
+    RetentionService,
   ],
 })
 export class AppModule implements NestModule {

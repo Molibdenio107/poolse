@@ -117,6 +117,16 @@ export interface GuardianInput {
 }
 
 export interface Student {
+  /**
+   * When this student left and when their data goes — 7b.8. Null while they
+   * have not left, and on lists, which do not ask.
+   */
+  retention: {
+    leftOn: string;
+    healthErasesOn: string;
+    identityErasesOn: string;
+    healthErasedAt: string | null;
+  } | null;
   id: string;
   firstName: string;
   lastName: string;
@@ -941,7 +951,11 @@ export async function findStudent(
              ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
-             ${PHOTO_CONSENT} AS photo_consent
+             ${PHOTO_CONSENT} AS photo_consent,
+             student_left_on(s.id)::text AS left_on,
+             (student_left_on(s.id) + retention_health_period())::date::text AS health_erases_on,
+             (student_left_on(s.id) + retention_identity_period())::date::text AS identity_erases_on,
+             s.health_erased_at
         FROM student s
         LEFT JOIN student_level l
                ON l.id = s.level_id AND l.organization_id = s.organization_id
@@ -1375,8 +1389,21 @@ function toStudent(row: {
   photo_consent: boolean;
   is_adult_student: boolean;
   is_guardian: boolean;
+  left_on?: string | null;
+  health_erases_on?: string | null;
+  identity_erases_on?: string | null;
+  health_erased_at?: Date | null;
 }): Student {
   return {
+    retention:
+      row.left_on === undefined || row.left_on === null
+        ? null
+        : {
+            leftOn: row.left_on,
+            healthErasesOn: row.health_erases_on ?? row.left_on,
+            identityErasesOn: row.identity_erases_on ?? row.left_on,
+            healthErasedAt: row.health_erased_at?.toISOString() ?? null,
+          },
     id: row.id,
     firstName: row.first_name,
     lastName: row.last_name,

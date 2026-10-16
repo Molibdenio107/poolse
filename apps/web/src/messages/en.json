@@ -1966,7 +1966,11 @@
     "birthDateFuture": "The date of birth cannot be in the future.",
     "required": "This field is required.",
     "tooLong": "This value is too long.",
-    "ageConfirmRequired": "Confirm the level to continue."
+    "ageConfirmRequired": "Confirm the level to continue.",
+    "retention": {
+      "pending": "This student left on {left} and has no active enrolment. Under the retention policy, their health data is erased on {health} and their identity anonymised on {identity}. A new enrolment before then stops the count.",
+      "healthErased": "This student left on {left}. Their health data was erased on {erased} under the retention policy, and their identity is anonymised on {identity}."
+    }
   },
   "advancement": {
     "title": "Advancement",
