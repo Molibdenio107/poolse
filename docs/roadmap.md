@@ -674,6 +674,12 @@ tables that exist, and 7b.2 is a prerequisite of 7.4. 7b.7 is the one heavy item
 that decides when Poolse can charge a club: choose the provider early, build it when the
 answers are in.
 
+**7b.5, 7b.6 and 7b.7 stay placeholders until after the pilot goes live** (Rui, 16 October 2026).
+Each waits on information from outside: the club's CAE, its current sanitary register, or the
+certified-invoicing provider and the accountant's answer. The free pilot does not need any of
+them yet, and it keeps issuing legal faturas from its current software. 7b.7 still blocks the
+first paying club. 7b.8 is not in this group, because it waits on Rui's own decision.
+
 **7b.8 softens "history is never destroyed"** for personal data that has served its purpose.
 That is a reversal of a standing rule and is taken out loud, not as a refactor.
 

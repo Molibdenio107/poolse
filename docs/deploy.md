@@ -189,7 +189,9 @@ real club depends on Poolse. Each one is here because doing it early breaks some
 - [ ] **MFA on the operator's own Clerk account**, then ship the `PlatformAdminGuard` MFA check
       from [POOLSE-64](./backlog/POOLSE-64-hardening-admin.md). **Order matters**: enforcing it
       first locks the only operator out of `/admin`, and there is no second operator to let them
-      back in.
+      back in. **Deferred for the free pilot** (16 October 2026): MFA needs Clerk Pro, so it ships
+      the day a club pays. Until then, use a long unique password and sign in from your own
+      machine only.
 - [ ] **Stripe**: a live account, one price per interval, the webhook endpoint pointing at
       `POST /webhooks/stripe`, and `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` /
       `STRIPE_PRICE_*` set on the API only. Until then the product runs unsold, by design —
@@ -204,7 +206,8 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       recorded and nothing is sent, which is honest and useless — POOLSE-64.
 - [ ] **Step-up reverification before a mutating platform action** (POOLSE-64 AC 2), which
       needs the production Clerk instance for the same reason MFA does. Until both ship, the
-      typed club name is what stands in the way of an irreversible act.
+      typed club name is what stands in the way of an irreversible act. Deferred with MFA, for
+      the same reason.
 
 - [ ] **`WEB_PROXY_SECRET` set on both the API and the web app**, to the same long random
       string (server-side only, never `NEXT_PUBLIC_`). Without it the public sign-up form's
@@ -260,7 +263,22 @@ everything except payment, set the variables and run *Prove it* afterwards.
 | Google Play | ~€27 once | 0 | Mobile app (phase 3) | — |
 | Expo (EAS) | Free, then Starter ~21 if builds run short | 0 | Mobile app (phase 3) | — |
 | Domain | — | ~1–6 | Before go-live | DNS, `EMAIL_FROM` domain |
-| **Pilot total** | | **~€80–100** | | |
+| **Full launch total** | | **~€80–100** | | |
+
+**The free pilot pays only what is necessary** (Rui, 16 October 2026). While no club pays:
+
+| Service | Pilot plan | €/month with IVA | Moves up when |
+|---|---|---|---|
+| Vercel | Hobby | 0 | The first club pays: Pro, because Hobby is non-commercial |
+| Railway | Hobby, staging allowed to sleep, smallest database | ~6–15 | A paying club, or the database outgrows Hobby |
+| Clerk | Free (the app uses its own memberships, not Clerk Organizations, so the member limit does not apply) | 0 | The first club pays: Pro, then MFA and step-up on `/admin` |
+| Resend, Sentry, R2 | Free tiers | 0 | Their limits are reached |
+| Anthropic | All parser flags off | 0 | A flag is switched on |
+| Domain | Yearly | ~1–2 | — |
+| **Pilot total** | | **~€7–17** | |
+
+Staging and production stay separate databases, which is not negotiable; staging is what may
+sleep.
 
 **Open-Meteo is not paid for.** The commercial licence (~€32/month with IVA) was turned down on
 12 October 2026. `WEATHER_HISTORY_ENABLED` stays **off**. The forecast panel on a site's page also
