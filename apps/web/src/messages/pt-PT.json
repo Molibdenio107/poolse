@@ -1856,7 +1856,7 @@
     "taxNumberHint": "Só quando o aluno é faturado em nome próprio. Pode ficar vazio.",
     "taxNumberTaken": "Já existe outro aluno com este NIF. Verifique se não é o do encarregado.",
     "notes": "Notas gerais",
-    "notesWarning": "Não escreva aqui informação médica. Os dados de saúde são guardados à parte, com registo de acessos, numa fatia posterior.",
+    "notesWarning": "Não escreva aqui informação médica. Os dados de saúde têm o seu próprio registo, em Notas médicas e consentimentos, e cada acesso fica registado.",
     "saved": "Guardado.",
     "archive": "Arquivar",
     "confirmArchive": "Arquivar {name}?",
@@ -2264,7 +2264,7 @@
     "organization": "Organização",
     "yourRoles": "As suas funções",
     "editProfile": "Editar o meu perfil",
-    "multipleOrganizations": "Está a ver a primeira. A troca entre organizações chega numa fatia posterior.",
+    "multipleOrganizations": "Está a ver a primeira. Ainda não é possível mudar de organização aqui.",
     "trial": "Período experimental",
     "trialDaysLeft": "{days, plural, one {Falta # dia} other {Faltam # dias}} de experiência.",
     "trialEnded": "O período experimental terminou. Por agora nada foi bloqueado.",
@@ -4995,7 +4995,7 @@
       "lane": "Pista {lane}"
     },
     "field": {
-      "levelId": "Nível",
+      "levelId": "Escalão",
       "firstName": "Nome próprio",
       "lastName": "Apelido",
       "birthDate": "Data de nascimento",
