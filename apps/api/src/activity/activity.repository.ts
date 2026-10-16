@@ -13,7 +13,6 @@ import {
   type ClassGroupInput,
 } from '../classes/classes.repository.js';
 import {
-  RegisterRefusedError,
   currentMark,
   saveRegisterIn,
   type AttendanceStatus,
@@ -287,33 +286,23 @@ export async function revertChange(
       const studentId = String(entry.data['studentId'] ?? '');
       const mark = await currentMark(tx, entry.entity_id, studentId);
       const plan = await decide(tx, fields, before, after, mark, resolve);
-      let saved: boolean;
-      try {
-        saved = await saveRegisterIn(
-          tx,
-          organizationId,
-          entry.entity_id,
-          currentTenant().membershipId,
-          [
-            {
-              studentId,
-              status: (plan['status'] ?? null) as AttendanceStatus | null,
-              note: mark.note,
-            },
-          ],
-          context,
-        );
-      } catch (error) {
-        /*
-         * A *falta justificada* that minted a reposição credit cannot be cleared
-         * (23503, the credit names it) nor changed once the credit was booked or
-         * spent (23001) — the register's own rule, said in the register's words.
-         * The closest thing this product has to the ticket's "already invoiced".
-         */
-        const code = (error as { code?: string }).code;
-        if (code === '23503' || code === '23001') throw new RegisterRefusedError('credited');
-        throw error;
-      }
+      // A justified absence whose make-up credit exists refuses here as
+      // `credited`, inside the register's own save — the closest thing this
+      // product has to the ticket's "already invoiced".
+      const saved = await saveRegisterIn(
+        tx,
+        organizationId,
+        entry.entity_id,
+        currentTenant().membershipId,
+        [
+          {
+            studentId,
+            status: (plan['status'] ?? null) as AttendanceStatus | null,
+            note: mark.note,
+          },
+        ],
+        context,
+      );
       if (!saved) throw new RevertRefusal('not_found');
       return;
     }

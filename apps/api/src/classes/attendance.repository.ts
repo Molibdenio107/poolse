@@ -371,41 +371,53 @@ export async function saveRegisterIn(
   );
   const was = new Map(previous.map((row) => [row.student_id, row]));
 
-  if (cleared.length > 0) {
-    await tx.query(
-      `DELETE FROM attendance WHERE class_session_id = $1 AND student_id = ANY($2::uuid[])`,
-      [sessionId, cleared],
-    );
-  }
+  try {
+    if (cleared.length > 0) {
+      await tx.query(
+        `DELETE FROM attendance WHERE class_session_id = $1 AND student_id = ANY($2::uuid[])`,
+        [sessionId, cleared],
+      );
+    }
 
-  if (set.length > 0) {
+    if (set.length > 0) {
+      /*
+       * One statement for the whole register, and `recorded_at` moves on every
+       * change. The timestamp answers "when was this marked", not "when was it
+       * first marked" — a correction made a week later is a new claim by a
+       * person and is dated accordingly.
+       */
+      await tx.query(
+        `
+        INSERT INTO attendance (organization_id, class_session_id, student_id, status,
+                                note, recorded_by_membership_id)
+        SELECT $1, $2, m.student_id, m.status::attendance_status, m.note, $3
+          FROM unnest($4::uuid[], $5::text[], $6::text[]) AS m(student_id, status, note)
+        ON CONFLICT (organization_id, class_session_id, student_id) DO UPDATE
+           SET status = excluded.status,
+               note = excluded.note,
+               recorded_by_membership_id = excluded.recorded_by_membership_id,
+               recorded_at = now()
+        `,
+        [
+          organizationId,
+          sessionId,
+          recordedByMembershipId,
+          set.map((mark) => mark.studentId),
+          set.map((mark) => mark.status),
+          set.map((mark) => mark.note),
+        ],
+      );
+    }
+  } catch (error) {
     /*
-     * One statement for the whole register, and `recorded_at` moves on every
-     * change. The timestamp answers "when was this marked", not "when was it
-     * first marked" — a correction made a week later is a new claim by a
-     * person and is dated accordingly.
+     * A mark that earned a reposição credit cannot be cleared (23503, the
+     * credit names it) nor changed once the credit was booked or spent
+     * (23001). Said here, once, so the register's save and a revert of one
+     * mark (POOLSE-80) refuse it in the same words — 13-10-2026 sweep.
      */
-    await tx.query(
-      `
-      INSERT INTO attendance (organization_id, class_session_id, student_id, status,
-                              note, recorded_by_membership_id)
-      SELECT $1, $2, m.student_id, m.status::attendance_status, m.note, $3
-        FROM unnest($4::uuid[], $5::text[], $6::text[]) AS m(student_id, status, note)
-      ON CONFLICT (organization_id, class_session_id, student_id) DO UPDATE
-         SET status = excluded.status,
-             note = excluded.note,
-             recorded_by_membership_id = excluded.recorded_by_membership_id,
-             recorded_at = now()
-      `,
-      [
-        organizationId,
-        sessionId,
-        recordedByMembershipId,
-        set.map((mark) => mark.studentId),
-        set.map((mark) => mark.status),
-        set.map((mark) => mark.note),
-      ],
-    );
+    const code = (error as { code?: string }).code;
+    if (code === '23503' || code === '23001') throw new RegisterRefusedError('credited');
+    throw error;
   }
 
   await recordAudit(tx, {
