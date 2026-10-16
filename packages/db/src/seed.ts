@@ -292,7 +292,12 @@ async function main(): Promise<void> {
 
     const org = await one<{ id: string; name: string }>(
       client,
-      `SELECT id, name FROM organization WHERE archived_at IS NULL ORDER BY created_at LIMIT 1`,
+      // SEED_ORGANIZATION_ID fills one named club (the e2e user's, say) instead
+      // of the oldest one, which on a dev machine is the developer's own.
+      `SELECT id, name FROM organization
+        WHERE archived_at IS NULL AND ($1::uuid IS NULL OR id = $1::uuid)
+        ORDER BY created_at LIMIT 1`,
+      [process.env['SEED_ORGANIZATION_ID'] || null],
     );
     if (!org) {
       throw new Error(
@@ -342,25 +347,36 @@ async function main(): Promise<void> {
     for (const person of STAFF) {
       const clerkId = `seed:${person.first}.${person.last}`.toLowerCase();
 
+      // The login is global and the membership is per club: a login another
+      // club's seed already made still has to join this one.
       const existing = await one<{ id: string }>(
         client,
         `SELECT id FROM app_user WHERE clerk_user_id = $1`,
         [clerkId],
       );
-      if (existing) continue;
+      if (existing) {
+        const member = await one<{ id: string }>(
+          client,
+          `SELECT id FROM membership WHERE organization_id = $1 AND app_user_id = $2`,
+          [org.id, existing.id],
+        );
+        if (member) continue;
+      }
 
-      const user = await one<{ id: string }>(
-        client,
-        `INSERT INTO app_user (clerk_user_id, cached_email, cached_first_name,
-                               cached_last_name, synced_at)
-         VALUES ($1, $2, $3, $4, now()) RETURNING id`,
-        [
-          clerkId,
-          `${person.first}.${person.last}@exemplo.pt`.toLowerCase(),
-          person.first,
-          person.last,
-        ],
-      );
+      const user =
+        existing ??
+        (await one<{ id: string }>(
+          client,
+          `INSERT INTO app_user (clerk_user_id, cached_email, cached_first_name,
+                                 cached_last_name, synced_at)
+           VALUES ($1, $2, $3, $4, now()) RETURNING id`,
+          [
+            clerkId,
+            `${person.first}.${person.last}@exemplo.pt`.toLowerCase(),
+            person.first,
+            person.last,
+          ],
+        ));
 
       const membership = await one<{ id: string }>(
         client,
@@ -627,7 +643,12 @@ async function main(): Promise<void> {
             org.id,
             given,
             surname,
-            `${given}.${surname}${counts.guardians}@exemplo.pt`.toLowerCase(),
+            // No spaces or accents: a family name like "da Silva" fails
+            // `membership_email_shape`, and the seed died there on a new club.
+            `${given}.${surname}${counts.guardians}@exemplo.pt`
+              .normalize('NFD')
+              .replace(/[^A-Za-z0-9.@]/g, '')
+              .toLowerCase(),
             `9${Math.floor(10_000_000 + random() * 89_999_999)}`,
             // A NIF for some but not all: the picker's match-by-NIF path and its
             // match-by-email path both need to be reachable in the demo.
