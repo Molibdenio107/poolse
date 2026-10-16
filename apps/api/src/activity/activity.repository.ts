@@ -128,7 +128,10 @@ export async function listActivity(
                ON a.entity_type = 'class_session' AND s.id = a.entity_id
              LEFT JOIN student st
                ON a.action = 'attendance.changed' AND st.id::text = a.data->>'studentId'
-            WHERE ${scope}
+            WHERE (${scope})
+              -- Changes only. Opening the medical record is an access, logged
+              -- on every read, and would bury the edits (16-10-2026).
+              AND a.action NOT LIKE '%.read'
             ORDER BY a.created_at DESC, a.id DESC
             LIMIT $2 OFFSET $3`,
           [id, limit, offset],

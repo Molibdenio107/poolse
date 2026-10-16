@@ -26,3 +26,41 @@ export function formatActivityValue(t: Translate, field: string, value: Activity
   if (field === 'lane') return t('activity.value.lane', { lane: Number(raw) });
   return String(raw);
 }
+
+/**
+ * The actions with a sentence of their own (`activity.action.<action>`); any
+ * other reads as "Outra alteração". Every action written against a student or
+ * a turma belongs here — `activity.test.ts` checks each has a sentence in both
+ * catalogues. Reads (`*.read`) never reach the list.
+ */
+export const LABELLED_ACTIONS: ReadonlySet<string> = new Set([
+  'student.created',
+  'student.updated',
+  'student.filled',
+  'student.archived',
+  'student.restored',
+  'student.socio_changed',
+  'student.emergency_contact_set',
+  'student.favourite_stroke_set',
+  'class_group.created',
+  'class_group.updated',
+  'class_group.archived',
+  'class_group.restored',
+  'student_record.created',
+  'student_record.archived',
+  'student_sensitive.updated',
+  'student_sensitive.cleared',
+  'consent.recorded',
+  'consent.withdrawn',
+  'enrollment.created',
+  'enrollment.ended',
+  'enrollment.fee_category_set',
+  'reposicao.capped',
+  'retention.health_erased',
+  'retention.anonymised',
+  'guardian.migrated',
+  'class_schedule.added',
+  'class_schedule.moved',
+  'class_schedule.removed',
+  'class_session.removed_future',
+]);

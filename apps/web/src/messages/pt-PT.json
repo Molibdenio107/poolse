@@ -5035,7 +5035,42 @@
         "archived": "Turma arquivada",
         "restored": "Turma restaurada"
       },
-      "other": "Outra alteração"
+      "other": "Outra alteração",
+      "student_record": {
+        "created": "Marca registada",
+        "archived": "Marca arquivada"
+      },
+      "student_sensitive": {
+        "updated": "Notas médicas alteradas",
+        "cleared": "Notas médicas apagadas"
+      },
+      "consent": {
+        "recorded": "Consentimento registado",
+        "withdrawn": "Consentimento retirado"
+      },
+      "enrollment": {
+        "created": "Inscrição numa turma",
+        "ended": "Inscrição terminada",
+        "fee_category_set": "Categoria da inscrição alterada"
+      },
+      "reposicao": {
+        "capped": "Reposição não atribuída: limite da época atingido"
+      },
+      "retention": {
+        "health_erased": "Dados de saúde apagados pela política de retenção",
+        "anonymised": "Identidade anonimizada pela política de retenção"
+      },
+      "guardian": {
+        "migrated": "Encarregado de educação passado para a ficha de pessoa"
+      },
+      "class_schedule": {
+        "added": "Horário acrescentado",
+        "moved": "Horário mudado",
+        "removed": "Horário removido"
+      },
+      "class_session": {
+        "removed_future": "Aulas futuras removidas"
+      }
     }
   }
 }

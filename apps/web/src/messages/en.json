@@ -5035,7 +5035,42 @@
         "archived": "Class archived",
         "restored": "Class restored"
       },
-      "other": "Other change"
+      "other": "Other change",
+      "student_record": {
+        "created": "Swim time recorded",
+        "archived": "Swim time archived"
+      },
+      "student_sensitive": {
+        "updated": "Medical notes changed",
+        "cleared": "Medical notes cleared"
+      },
+      "consent": {
+        "recorded": "Consent recorded",
+        "withdrawn": "Consent withdrawn"
+      },
+      "enrollment": {
+        "created": "Enrolled in a class",
+        "ended": "Enrolment ended",
+        "fee_category_set": "Enrolment category changed"
+      },
+      "reposicao": {
+        "capped": "No make-up lesson issued: season limit reached"
+      },
+      "retention": {
+        "health_erased": "Health data erased under the retention policy",
+        "anonymised": "Identity anonymised under the retention policy"
+      },
+      "guardian": {
+        "migrated": "Guardian moved to a person record"
+      },
+      "class_schedule": {
+        "added": "Time slot added",
+        "moved": "Time slot moved",
+        "removed": "Time slot removed"
+      },
+      "class_session": {
+        "removed_future": "Future lessons removed"
+      }
     }
   }
 }

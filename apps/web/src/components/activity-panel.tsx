@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { loadActivity } from '@/app/(app)/dashboard/activity.actions';
 import type { ActivityEntry } from '@/lib/api';
-import { formatActivityValue, type Translate } from '@/lib/activity';
+import { LABELLED_ACTIONS, formatActivityValue, type Translate } from '@/lib/activity';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { PageEmpty, PageError } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
@@ -114,23 +114,8 @@ function headline(say: Translate, entry: ActivityEntry, kind: 'student' | 'class
       ? say('activity.markFor', { name: entry.student.name, date })
       : say('activity.markOn', { date });
   }
-  return LABELLED.has(entry.action)
+  return LABELLED_ACTIONS.has(entry.action)
     ? say(`activity.action.${entry.action}`)
     : say('activity.action.other');
 }
 
-/** The actions with a sentence of their own; any other reads as "other change". */
-const LABELLED = new Set([
-  'student.created',
-  'student.updated',
-  'student.filled',
-  'student.archived',
-  'student.restored',
-  'student.socio_changed',
-  'student.emergency_contact_set',
-  'student.favourite_stroke_set',
-  'class_group.created',
-  'class_group.updated',
-  'class_group.archived',
-  'class_group.restored',
-]);
