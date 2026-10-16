@@ -136,6 +136,7 @@ revert is therefore revertible, and nothing in the history is edited.
 | `revert_nothing` | The record is already as it was, or every conflict was answered "keep current" | — |
 | `revert_not_revertible` | The entry has no `before` (written before POOLSE-80), or is not an edit | — |
 | `revert_target_gone` | The old value names a level, tank or person since archived, or a lane the tank no longer has | `field`, `label` |
+| `revert_required` | Putting the old value back would leave a turma with no tank or no lane, which the turma form refuses (round 5, 8.2) | `field` |
 | `register_credited` | The mark was a *falta justificada* whose make-up credit exists, or was booked or used | — |
 
 The entity's own refusals arrive as they would from its form: a full tank is `pool_full` with

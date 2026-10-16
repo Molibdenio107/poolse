@@ -4,9 +4,12 @@ Roadmap 7b.8 (POOLSE-77), decided by Rui on 16 October 2026. **Not legal advice.
 
 ## What happens
 
-A student **leaves** on the day they are archived, or, if they are not archived, on the end
-of their last enrolment once none is active or waiting. A student who never had an enrolment
-left on the day they were created. `student_left_on()` is the one definition.
+A student **leaves** on the day they are archived. A student who is not archived has left only
+once they have had an enrolment, none is active or waiting, and no fee line is still running;
+they left on the latest of their last enrolment's end, their last fee line's end and their last
+register mark. A student never placed in a turma has not left until the club archives them, and
+a sócio who pays a quota with no turma is still a member. `student_left_on()` is the one
+definition (corrected in the 16-10-2026 sweep, which found the first version too eager).
 
 | When | What goes | What stays |
 |---|---|---|
@@ -18,7 +21,8 @@ left on the day they were created. `student_left_on()` is the one definition.
 the ten years tax law asks. Clearing those after ten years is not built.
 
 **A guardian is anonymised only when nothing else needs them**: no login (Clerk owns a login's
-name), no role but guardian or student, and no link to a student who is kept. Their role is
+name), no role but guardian or student, no link to a student who is kept, and not the emergency
+contact of a student who is kept. Their role is
 archived first, because a live guardian must have a NIF or an e-mail.
 
 ## How

@@ -28,13 +28,16 @@ changes that answer:
 - A hidden honeypot box that has been filled in.
 - A form that wasn't rendered recently: an HMAC stamp issued with the page must be between 3 s
   and 24 h old.
-- More than 5 sends a minute from one visitor (`x-poolse-client-ip`, which the web forwards as
+- More than 3 sends in 10 minutes from one visitor (`x-poolse-client-ip`, which the web forwards as
   signup does). The API believes that header only with `WEB_PROXY_SECRET`, when one is set.
 
 The database adds two more silent refusals:
 
 - An unknown, closed, suspended, archived or read-only club.
-- More than 30 requests to one club in 10 minutes.
+- More than 30 requests to one club in 10 minutes. This one is **recorded**
+  (`lead.ceiling_reached`, once per window), and the Pedidos page shows a warning for a week:
+  a flood would otherwise hide every real request from the club. One visitor can no longer
+  fill it alone — 16-10-2026 security sweep.
 
 A site or level id that isn't the club's becomes *no preference*. A malformed body is a 400
 naming its fields, decided before any club is looked at.

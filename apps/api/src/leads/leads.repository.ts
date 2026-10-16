@@ -256,6 +256,21 @@ export async function listLeads(organizationId: string, view: LeadView): Promise
   });
 }
 
+/**
+ * When the public form last turned people away for being flooded, within a
+ * week — 16-10-2026 sweep. `submit_lead()` records it, once per ten minutes;
+ * the queue says it, because a drop nobody sees is a parent nobody calls.
+ */
+export async function lastCeilingReached(organizationId: string): Promise<string | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ at: Date }>(
+      `SELECT max(created_at) AS at FROM audit_log
+        WHERE action = 'lead.ceiling_reached' AND created_at > now() - interval '7 days'`,
+    );
+    return rows[0]?.at?.toISOString() ?? null;
+  });
+}
+
 export async function readLead(organizationId: string, leadId: string): Promise<Lead | null> {
   return withOrg(organizationId, (tx) => leadById(tx, leadId));
 }

@@ -2,7 +2,8 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { withoutTenantScope } from '@poolse/db';
 import { RetentionService } from './retention.service.js';
-import { closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
+import { FeePeriodsController, FeePlansController } from '../billing/fees.controller.js';
+import { actingAs, closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
 
 /**
  * Retention — roadmap 7b.8, Rui 16-10-2026.
@@ -208,4 +209,79 @@ test('the function refuses to run without a tenant context', async () => {
     () => withoutTenantScope((tx) => tx.query('SELECT * FROM apply_retention()')),
     /tenant context/,
   );
+});
+
+test('sweep 16-10 — a member still paying, a student never placed, and an emergency contact are kept', async () => {
+  await withScratchTenant(async (tenant) => {
+    // A sócio whose only turma ended years ago but who still pays a fee line.
+    const socio = await student(tenant, 'Sara', null);
+    const [level] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student_level (organization_id, name, sort_order) VALUES ($1, 'Adultos', 1) RETURNING id`,
+      [tenant.organizationId],
+    );
+    const [group] = await tenant.sql<{ id: string }>(
+      `INSERT INTO class_group (organization_id, facility_id, season_id, name, level_id)
+       VALUES ($1, $2, $3, 'Adultos', $4) RETURNING id`,
+      [tenant.organizationId, tenant.facilityId, tenant.seasonId, level!.id],
+    );
+    await tenant.sql(
+      `INSERT INTO enrollment (organization_id, class_group_id, student_id, status, joined_on, ended_on)
+       VALUES ($1, $2, $3, 'ended', club_today() - 2500, club_today() - 2000)`,
+      [tenant.organizationId, group!.id, socio],
+    );
+    const { plan, mensal } = await actingAs(tenant, { roles: ['owner'] }, async () => ({
+      mensal: (
+        await new FeePeriodsController().create(tenant.facilityId, { name: 'Mensal', months: 1, isDefault: true })
+      ).id,
+      plan: (
+        await new FeePlansController().create(tenant.facilityId, {
+          kind: 'mensalidade',
+          levelId: level!.id,
+          lessonsPerWeek: 1,
+          amountCents: 3000,
+        })
+      ).id,
+    }));
+    await tenant.sql(
+      `INSERT INTO student_fee (organization_id, student_id, fee_plan_id, fee_period_id, amount_cents, starts_on)
+       VALUES ($1, $2, $3, $4, 3000, club_today() - 2500)`,
+      [tenant.organizationId, socio, plan, mensal],
+    );
+
+    // A student created years ago and never placed in a turma, not archived.
+    const waiting = await student(tenant, 'Vera', null);
+
+    // Rita left six years ago; her mother is also Joana's emergency contact.
+    const gone = await student(tenant, 'Rita', 6);
+    const joana = await student(tenant, 'Joana', null);
+    const mother = await guardian(tenant, 'Ana', [gone]);
+    await tenant.sql(
+      `UPDATE student SET emergency_contact_name = NULL, emergency_contact_phone = NULL,
+                          emergency_contact_relationship = NULL,
+                          emergency_contact_membership_id = $2
+        WHERE id = $1`,
+      [joana, mother],
+    );
+
+    const run = await new RetentionService().run(tenant.organizationId);
+    assert.equal(run.anonymised, 1, 'only Rita');
+    assert.equal(run.healthErased, 1, 'only Rita');
+
+    for (const id of [socio, waiting]) {
+      const kept = await one<{ left: string | null; sensitive: number }>(
+        tenant,
+        `SELECT student_left_on($1)::text AS left,
+                (SELECT count(*)::int FROM student_sensitive WHERE student_id = $1) AS sensitive`,
+        [id],
+      );
+      assert.deepEqual(kept, { left: null, sensitive: 1 }, 'a member and a waiting student have not left');
+    }
+
+    const contact = await one<{ first_name: string; phone: string | null }>(
+      tenant,
+      'SELECT first_name, phone FROM membership WHERE id = $1',
+      [mother],
+    );
+    assert.deepEqual(contact, { first_name: 'Ana', phone: '966000000' }, "Joana's emergency contact is untouched");
+  });
 });

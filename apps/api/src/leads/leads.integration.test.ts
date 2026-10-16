@@ -2,7 +2,7 @@ import { after, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Request } from 'express';
 import { LeadsController, RegistrationSettingsController } from './leads.controller.js';
-import { PublicLeadsController, forgetOrigins } from './public-leads.controller.js';
+import { LEAD_ORIGIN_LIMIT, PublicLeadsController, forgetOrigins } from './public-leads.controller.js';
 import { LeadRetentionService } from './lead-retention.service.js';
 import { issueStamp } from './form-stamp.js';
 import { findRegister } from '../classes/attendance.repository.js';
@@ -187,11 +187,34 @@ test('QA 3: a honeypot, a stale stamp and a flooding origin write nothing and an
     );
     assert.equal(await leadCount(tenant), 0, 'honeypot or stamp wrote a lead');
 
-    // Twenty in a minute from one address: five land, every answer is the same.
+    // Twenty from one address: three land in ten minutes, every answer the same.
     for (let i = 0; i < 20; i += 1) {
       assert.deepEqual(await publicApi.submit(slug, minor(slug), from('198.51.100.7')), RECEIVED);
     }
-    assert.equal(await leadCount(tenant), 5);
+    assert.equal(await leadCount(tenant), 3);
+  });
+});
+
+test('sweep 16-10 — a flooded form keeps its ceiling, and the queue is told', async () => {
+  await withScratchTenant(async (tenant) => {
+    const slug = await openClub(tenant);
+    // Forty from forty addresses: the club's thirty land, the rest are dropped.
+    for (let i = 0; i < 40; i += 1) {
+      assert.deepEqual(await publicApi.submit(slug, minor(slug), from(`203.0.113.${i + 1}`)), RECEIVED);
+    }
+    assert.equal(await leadCount(tenant), 30);
+
+    const [recorded] = await tenant.sql<{ n: number }>(
+      `SELECT count(*)::int AS n FROM audit_log
+        WHERE organization_id = $1 AND action = 'lead.ceiling_reached'`,
+      [tenant.organizationId],
+    );
+    assert.equal(recorded!.n, 1, 'recorded once per window, not once per drop');
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const queue = await new LeadsController().list();
+      assert.ok(queue.ceilingReachedAt !== null, 'the staff queue says the form was flooded');
+    });
   });
 });
 
@@ -547,7 +570,7 @@ test('sweep: with WEB_PROXY_SECRET set, a forged visitor header buys nothing', a
         } as unknown as Request;
         assert.deepEqual(await publicApi.submit(slug, minor(slug), forged), RECEIVED);
       }
-      assert.equal(await leadCount(tenant), 5, 'rotating the header escaped the per-visitor limit');
+      assert.equal(await leadCount(tenant), LEAD_ORIGIN_LIMIT, 'rotating the header escaped the per-visitor limit');
 
       // The web, which carries the secret, is believed.
       const viaWeb = {
@@ -555,7 +578,7 @@ test('sweep: with WEB_PROXY_SECRET set, a forged visitor header buys nothing', a
         headers: { 'x-poolse-client-ip': '192.0.2.44', 'x-poolse-proxy-secret': 'segredo-de-teste' },
       } as unknown as Request;
       await publicApi.submit(slug, minor(slug), viaWeb);
-      assert.equal(await leadCount(tenant), 6);
+      assert.equal(await leadCount(tenant), LEAD_ORIGIN_LIMIT + 1);
     } finally {
       if (previous === undefined) delete process.env['WEB_PROXY_SECRET'];
       else process.env['WEB_PROXY_SECRET'] = previous;

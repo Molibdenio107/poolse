@@ -134,6 +134,15 @@ export default async function LeadsPage({
   return shell(
     <div className="flex flex-col gap-5">
       <SectionPills items={pills} current={section} label={t('leads.sectionsLabel')} />
+      {/*
+        The form drops requests past its ceiling without telling the sender —
+        so it tells the club instead. 16-10-2026 sweep.
+      */}
+      {openLeads.data.ceilingReachedAt !== null && (
+        <p className="rounded border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+          {t('leads.ceilingReached', { when: formatStamp(openLeads.data.ceilingReachedAt) })}
+        </p>
+      )}
       {section !== 'form' && (
         <p className="text-sm text-foreground-muted">
           {t('leads.retention', { months: retentionMonths })}

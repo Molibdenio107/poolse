@@ -28,9 +28,13 @@ import {
  */
 export const LEAD_CONSENT_VERSION = '2026-10-13';
 
-/** A parent's evening, not a script's: five sends a minute from one address. */
-export const LEAD_ORIGIN_LIMIT = 5;
-const ORIGIN_WINDOW_MS = 60_000;
+/**
+ * A parent's evening, not a script's: three sends in ten minutes from one
+ * address. It was five a minute, which let one address fill the club's thirty
+ * in six minutes and keep it full — 16-10-2026 sweep. Now it takes ten.
+ */
+export const LEAD_ORIGIN_LIMIT = 3;
+const ORIGIN_WINDOW_MS = 10 * 60_000;
 const MAX_TRACKED_ORIGINS = 10_000;
 
 /**

@@ -415,8 +415,19 @@ export async function saveRegisterIn(
      * (23001). Said here, once, so the register's save and a revert of one
      * mark (POOLSE-80) refuse it in the same words — 13-10-2026 sweep.
      */
-    const code = (error as { code?: string }).code;
-    if (code === '23503' || code === '23001') throw new RegisterRefusedError('credited');
+    // Matched on the credit's own key and message, so an unrelated failure is
+    // never told to the office as "this mark earned a make-up lesson".
+    const { code, constraint, message } = error as {
+      code?: string;
+      constraint?: string;
+      message?: string;
+    };
+    if (
+      (code === '23503' && constraint === 'reposicao_credit_organization_id_attendance_id_fkey') ||
+      (code === '23001' && (message ?? '').startsWith('reposicao_credit_spent'))
+    ) {
+      throw new RegisterRefusedError('credited');
+    }
     throw error;
   }
 

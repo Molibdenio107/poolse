@@ -53,6 +53,7 @@ import {
   ageOfMajority,
   findDuplicate,
   grantRole,
+  holdsStaffRole,
   listGuardians,
   mergeCandidates,
   mergePeople,
@@ -231,6 +232,12 @@ export class PeopleDedupController {
      */
     requireGrantable([role]);
 
+    // An instructor adds a family role to a parent, never to staff — 16-10-2026
+    // sweep: the matrix alone let one make the Owner a guardian.
+    if (!hasRole('owner', 'admin') && (await holdsStaffRole(organizationId, membershipId))) {
+      throw new ForbiddenException('Only an owner or admin may change a staff member’s roles');
+    }
+
     if (!(await grantRole(organizationId, membershipId, role, actor))) {
       throw new NotFoundException('No such person');
     }
@@ -242,6 +249,9 @@ export class PeopleDedupController {
     @Param('membershipId') membershipId: string,
     @Param('role') role: string,
   ): Promise<{ revoked: true }> {
+    // Taking a role away is the office's: an instructor could otherwise cut any
+    // parent off from their child's record — 16-10-2026 sweep.
+    requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
     if (!isMemberRole(role)) throw new BadRequestException('role is not a member role');

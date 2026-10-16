@@ -99,6 +99,11 @@ export async function revertAction(
               name: typeof body['label'] === 'string' ? body['label'] : say('activity.value.gone'),
             },
           };
+        case 'revert_required':
+          return {
+            ok: false,
+            errorKey: body['field'] === 'poolId' ? 'classes.poolRequired' : 'classes.laneRequired',
+          };
         case 'register_credited':
           return { ok: false, errorKey: 'attendance.refused.credited' };
         default:

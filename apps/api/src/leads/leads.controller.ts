@@ -23,6 +23,7 @@ import {
   TrialUnavailableError,
   bookTrial,
   dismissLead,
+  lastCeilingReached,
   listLeads,
   placeLead,
   readLead,
@@ -74,10 +75,15 @@ export class LeadsController {
   @Get()
   async list(
     @Query('view') view?: string,
-  ): Promise<{ leads: Lead[]; retentionMonths: number }> {
+  ): Promise<{ leads: Lead[]; retentionMonths: number; ceilingReachedAt: string | null }> {
     requireRole(...CAN_WORK_LEADS);
-    const leads = await listLeads(currentTenant().organizationId, view === 'done' ? 'done' : 'open');
-    return { leads, retentionMonths: LEAD_RETENTION_MONTHS };
+    const { organizationId } = currentTenant();
+    const leads = await listLeads(organizationId, view === 'done' ? 'done' : 'open');
+    return {
+      leads,
+      retentionMonths: LEAD_RETENTION_MONTHS,
+      ceilingReachedAt: await lastCeilingReached(organizationId),
+    };
   }
 
   @Get('trial-options')

@@ -2065,6 +2065,23 @@ export async function findDuplicate(
  * role somebody already holds changes nothing rather than failing, because the
  * operator's intent ("this person should be a guardian") is already true.
  */
+/**
+ * Whether somebody holds a staff role here — 16-10-2026 sweep. An instructor
+ * may add a guardian or student role to a parent they are inviting, never to a
+ * member of staff (the Owner included).
+ */
+export async function holdsStaffRole(organizationId: string, membershipId: string): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query(
+      `SELECT 1 FROM membership_role
+        WHERE membership_id = $1 AND archived_at IS NULL
+          AND role IN ('owner', 'admin', 'instructor', 'maintenance')`,
+      [membershipId],
+    );
+    return rows.length > 0;
+  });
+}
+
 export async function grantRole(
   organizationId: string,
   membershipId: string,

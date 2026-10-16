@@ -213,6 +213,11 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       string (server-side only, never `NEXT_PUBLIC_`). Without it the public sign-up form's
       per-visitor limit believes a header any direct caller can set, and the API warns at boot
       in production — `apps/api/src/leads/visitor.ts`, POOLSE-69 sweep.
+- [ ] **Enforce the full Content-Security-Policy.** Today only `frame-ancestors`, `object-src`,
+      `base-uri` and `form-action` are enforced; `default-src` and `script-src` are report-only, with
+      no `report-uri`. Add a report endpoint, read a week of reports on staging (Clerk and Next's
+      inline scripts are the usual offenders), then promote it. Until then an XSS bug has no CSP
+      behind it — 16-10-2026 security sweep.
 - [ ] **A Sentry DSN**, if errors are to be seen at all. Off without one, by design.
 - [ ] **Open-Meteo moved to the commercial endpoint, or the weather history left off.** The
       free tier is **non-commercial use only**, which is fine while Poolse has no paying
@@ -305,6 +310,12 @@ Things that are true today, were decided rather than overlooked, and have a plan
   the typed club name on irreversible acts, an alert on every write and every refusal, and a
   ceiling five times tighter than the rest of the API. Step-up auth is the piece that would
   make it genuinely small, and it waits on the production Clerk instance.
+
+- **Public pages are throttled per token or per slug, not per visitor** — noted 16 October 2026.
+  One address rotating guessed tokens is never slowed, and each guess costs one database call.
+  The tokens are 256-bit, so this is load, not guessing. *The plan:* a per-visitor ceiling across
+  `public/*`, keyed on the forwarded address, which is trustworthy only once `WEB_PROXY_SECRET`
+  is set in production.
 
 ## Rotating `DATABASE_PLATFORM_URL`
 

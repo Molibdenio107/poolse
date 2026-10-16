@@ -243,7 +243,8 @@ export class RevertRefusal extends Error {
       | 'revert_not_revertible'
       | 'revert_nothing'
       | 'revert_conflict'
-      | 'revert_target_gone',
+      | 'revert_target_gone'
+      | 'revert_required',
     readonly detail: { conflicts?: RevertConflict[]; field?: string; label?: string | null } = {},
   ) {
     super(code);
@@ -327,6 +328,12 @@ export async function revertChange(
       if (current === null) throw new RevertRefusal('not_found');
       const plan = await decide(tx, fields, before, after, { ...current }, resolve);
       const next = { ...current, ...plan } as ClassGroupInput;
+      // The form's rule (round 5, 8.2): a turma needs a tank and a lane. An
+      // entry from before that rule may hold an empty one; it is not put back.
+      if (next.poolId === null) throw new RevertRefusal('revert_required', { field: 'poolId' });
+      if (next.lane === null || next.lane < 1) {
+        throw new RevertRefusal('revert_required', { field: 'lane' });
+      }
       await requireLive(tx, plan);
       try {
         await updateClassGroupIn(tx, organizationId, entry.entity_id, next, context);

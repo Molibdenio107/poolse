@@ -4567,6 +4567,8 @@ export interface Lead {
 export interface Leads {
   leads: Lead[];
   retentionMonths: number;
+  /** The last time, within a week, the public form turned people away for being flooded. */
+  ceilingReachedAt: string | null;
 }
 
 export interface TrialOption {

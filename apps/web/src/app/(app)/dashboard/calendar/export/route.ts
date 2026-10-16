@@ -10,6 +10,7 @@ import {
 } from '@/lib/grid-filters';
 import { groupOf } from '@/lib/grid-layout';
 import { bookingsCsv, scheduleWorkbook, type SheetWords } from './write-sheet';
+import { today as clubToday } from '@/lib/dates';
 
 /**
  * The timetable as a file — POOLSE-54, criterion 9.
@@ -51,7 +52,7 @@ const CONTENT_TYPE: Record<Format, string> = {
 /** A filename a Windows, macOS and Linux machine will all accept unchanged. */
 function fileNameFor(locale: string, filtered: boolean, format: Format): string {
   const base = locale === 'en' ? 'schedule' : 'horario';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = clubToday();
   // ASCII only, deliberately. A `Content-Disposition` carrying accented
   // characters needs the RFC 5987 encoding and is mangled by something in the
   // chain often enough that it is not worth the accent.
@@ -76,7 +77,7 @@ export async function GET(request: Request): Promise<Response> {
   let grid: FacilityGrid;
   try {
     const query = seasonId === '' ? '' : `?seasonId=${encodeURIComponent(seasonId)}`;
-    grid = await apiFetch<FacilityGrid>(`/facilities/${facilityId}/grid${query}`);
+    grid = await apiFetch<FacilityGrid>(`/facilities/${encodeURIComponent(facilityId)}/grid${query}`);
   } catch (error) {
     /*
      * Plain text, and the real status. Nothing renders this — it is what a

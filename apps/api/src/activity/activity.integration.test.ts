@@ -215,9 +215,12 @@ async function turma(tenant: ScratchTenant, capacity: number) {
      VALUES ($1, $2, 'Tanque', 'indoor', 10) RETURNING id`,
     [tenant.organizationId, tenant.facilityId],
   );
+  // On lane 1, as the turma form requires since round 5 (8.2).
   const [group] = await tenant.sql<{ id: string }>(
-    `INSERT INTO class_group (organization_id, facility_id, season_id, name, pool_id, capacity)
-     VALUES ($1, $2, $3, 'Cadetes', $4, $5) RETURNING id`,
+    `INSERT INTO class_group (organization_id, facility_id, season_id, name, pool_id, capacity, lane_id)
+     VALUES ($1, $2, $3, 'Cadetes', $4, $5,
+             (SELECT id FROM lane WHERE pool_id = $4 AND position = 1))
+     RETURNING id`,
     [tenant.organizationId, tenant.facilityId, tenant.seasonId, pool!.id, capacity],
   );
   return { poolId: pool!.id, groupId: group!.id };
@@ -232,8 +235,8 @@ test('a turma edit records every field before and after, and reverts through its
       await classes.update(groupId, { name: 'Cadetes A', poolId, capacity: 6, lane: 1 });
 
       const edit = await latest(tenant, 'class_group.updated');
-      assert.deepEqual(edit.data['before'], { name: 'Cadetes', capacity: 8, lane: null });
-      assert.deepEqual(edit.data['after'], { name: 'Cadetes A', capacity: 6, lane: 1 });
+      assert.deepEqual(edit.data['before'], { name: 'Cadetes', capacity: 8 });
+      assert.deepEqual(edit.data['after'], { name: 'Cadetes A', capacity: 6 });
 
       await activity.revert(edit.id, {});
       const back = await classes.one(groupId);
@@ -368,6 +371,23 @@ test('QA 6 — an instructor has no activity and no revert (403)', async () => {
       await expectStatus(() => activity.student(id), 403);
       await expectStatus(() => activity.classGroup(id), 403);
       await expectStatus(() => activity.revert('00000000-0000-0000-0000-000000000000', {}), 403);
+    });
+  });
+});
+
+test('a revert that would leave a turma with no lane is refused, as the form refuses it', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { poolId, groupId } = await turma(tenant, 8);
+    await tenant.sql('UPDATE class_group SET lane_id = NULL WHERE id = $1', [groupId]);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await new ClassesController().update(groupId, { name: 'Cadetes', poolId, capacity: 8, lane: 1 });
+      const refused = await refusal(async () =>
+        activity.revert((await latest(tenant, 'class_group.updated')).id, {}),
+      );
+      assert.equal(refused.status, 409);
+      assert.equal(refused.body['code'], 'revert_required');
+      assert.equal(refused.body['field'], 'lane');
     });
   });
 });
