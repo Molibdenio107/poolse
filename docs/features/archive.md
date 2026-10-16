@@ -108,3 +108,39 @@ Each refusal is a 409 with a code and its figures as fields:
 | `class_full` | A reopened enrolment no longer fits the turma | `taken`, `capacity` |
 
 An unknown entry, another club's entry, or one a job wrote is a 404.
+
+## Reverting an edit — POOLSE-80
+
+The bin puts back what was archived; *Atividade* puts back what was changed.
+
+**Where.** An *Atividade* tab on a student's page and on a turma's page, Owner and Admin
+only (`GET /students/:id/activity`, `GET /class-groups/:id/activity`, paginated). It lists
+the record's audit entries newest first: who, when, which fields, from what to what. A
+student's tab includes their register marks; a turma's includes the marks in its sessions.
+
+**What can be reverted** (Rui, 16 October 2026). A student's level; a turma's name, level,
+tank, instructor, capacity, lane and colour; a register mark's status. A person's own data —
+name, birth date, gender, phone, e-mail, NIF, notes, a mark's note — shows as *also changed*
+with no values and no *Reverter*, because its values are never copied into the log. A turma's
+fee category is shown and never reverted: money is corrected by its own history. Messages,
+alerts and derived figures have no revert.
+
+**How.** `POST /activity/:entryId/revert` calls the entity's own write path
+(`setStudentLevelIn`, `updateClassGroupIn`, `saveRegisterIn`), so validation, triggers and the
+tank and lane rules all run, and that path writes an ordinary entry carrying `revertOf`. A
+revert is therefore revertible, and nothing in the history is edited.
+
+| Code | When | Carries |
+|---|---|---|
+| `revert_conflict` | The field changed again since that edit | `conflicts`: per field, `before`, `after`, `current` (each a value and its name). Resend with `resolve: { field: 'before' \| 'current' }` |
+| `revert_nothing` | The record is already as it was, or every conflict was answered "keep current" | — |
+| `revert_not_revertible` | The entry has no `before` (written before POOLSE-80), or is not an edit | — |
+| `revert_target_gone` | The old value names a level, tank or person since archived, or a lane the tank no longer has | `field`, `label` |
+| `register_credited` | The mark was a *falta justificada* whose make-up credit exists, or was booked or used | — |
+
+The entity's own refusals arrive as they would from its form: a full tank is `pool_full` with
+its figures, an occupied lane `laneOccupied`. An entry from another club is a 404.
+
+**There is no "already invoiced" refusal**, which the ticket expected: a mark never reaches an
+invoice. The make-up credit is that rule's real counterpart, and the register already enforced
+it.

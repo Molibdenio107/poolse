@@ -2165,7 +2165,6 @@
     "subtitle": "Peça os seus dias, veja o que já foi aprovado.",
     "tabs": "Secções das férias",
     "yearNav": "Escolher o ano",
-    "mine": "As minhas férias",
     "queue": "Pedidos por aprovar",
     "teamMap": "Mapa da equipa",
     "balance": "Saldo",
@@ -4959,5 +4958,76 @@
     "planEmpty": "O professor ainda não escreveu o plano desta aula.",
     "retry": "Tentar de novo",
     "noSessionsHint": "As aulas desta época ainda não foram marcadas no calendário. Até lá, este é o horário semanal:"
+  },
+  "activity": {
+    "tab": "Atividade",
+    "title": "Atividade",
+    "empty": "Ainda não há alterações registadas.",
+    "emptyHint": "Cada alteração feita a partir de agora aparece aqui, com quem a fez e quando.",
+    "byWhen": "{who} · {when}",
+    "system": "Poolse",
+    "fromTo": "{before} → {after}",
+    "withheld": "Também alterou: {fields}. Estes valores são dados pessoais e não ficam no histórico.",
+    "isRevert": "Esta alteração reverteu uma anterior.",
+    "markFor": "Presença de {name} em {date}",
+    "markOn": "Presença em {date}",
+    "revert": "Reverter",
+    "revertedToast": "Revertido.",
+    "revertFailed": "Não foi possível reverter esta alteração.",
+    "conflictTitle": "Este campo voltou a mudar",
+    "conflictHint": "Depois desta alteração, alguém mudou o mesmo campo. Escolha o que fica.",
+    "conflictValues": "Antes: {before} · Esta alteração: {after} · Agora: {current}",
+    "keepBefore": "Repor o valor anterior ({value})",
+    "keepCurrent": "Manter o valor atual ({value})",
+    "refusal": {
+      "nothing": "Não há nada a reverter: o registo já está como estava.",
+      "notRevertible": "Esta alteração não pode ser revertida.",
+      "targetGone": "Não é possível repor {field}: «{name}» foi arquivado."
+    },
+    "value": {
+      "empty": "—",
+      "unmarked": "Por marcar",
+      "gone": "(arquivado)",
+      "lane": "Pista {lane}"
+    },
+    "field": {
+      "levelId": "Nível",
+      "firstName": "Nome próprio",
+      "lastName": "Apelido",
+      "birthDate": "Data de nascimento",
+      "contactEmail": "E-mail",
+      "contactPhone": "Telefone",
+      "taxNumber": "NIF",
+      "notes": "Notas",
+      "gender": "Género",
+      "name": "Nome",
+      "poolId": "Tanque",
+      "instructorMembershipId": "Instrutor",
+      "capacity": "Capacidade",
+      "lane": "Pista",
+      "colour": "Cor",
+      "feeCategoryId": "Categoria",
+      "status": "Presença",
+      "note": "Nota"
+    },
+    "action": {
+      "student": {
+        "created": "Aluno criado",
+        "updated": "Ficha alterada",
+        "filled": "Ficha completada por importação",
+        "archived": "Aluno arquivado",
+        "restored": "Aluno restaurado",
+        "socio_changed": "Sócio alterado",
+        "emergency_contact_set": "Contacto de emergência alterado",
+        "favourite_stroke_set": "Estilo preferido alterado"
+      },
+      "class_group": {
+        "created": "Turma criada",
+        "updated": "Turma alterada",
+        "archived": "Turma arquivada",
+        "restored": "Turma restaurada"
+      },
+      "other": "Outra alteração"
+    }
   }
 }

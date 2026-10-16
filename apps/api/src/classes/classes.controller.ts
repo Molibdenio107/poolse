@@ -467,7 +467,8 @@ async function formOptions(organizationId: string): Promise<ClassesResponse['opt
   });
 }
 
-function asHttp(error: unknown): unknown {
+/** Also what a turma revert's refusal becomes — POOLSE-80. */
+export function asHttp(error: unknown): unknown {
   if (error instanceof LessonsClashError) {
     return new ConflictException({
       code: 'lessons_clash',

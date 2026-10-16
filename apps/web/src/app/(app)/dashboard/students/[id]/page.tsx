@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { ActivityPanel } from '@/components/activity-panel';
+import { readPage } from '@/lib/pagination';
 import { describeLoad, outcome, type LoadFailure, type Outcome } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
@@ -50,12 +52,17 @@ export default async function StudentPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ week?: string; tab?: string | string[]; section?: string | string[] }>;
+  searchParams: Promise<{
+    week?: string;
+    tab?: string | string[];
+    section?: string | string[];
+    page?: string;
+  }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
   const { id } = await params;
-  const { week, tab, section } = await searchParams;
+  const { week, tab, section, page } = await searchParams;
 
   const monday = mondayOf(isDate(week) ? week : today());
   const sunday = addDays(monday, 6);
@@ -529,6 +536,20 @@ export default async function StudentPage({
                 ))}
               </ul>
             </section>
+          ),
+        },
+        {
+          // POOLSE-80 — who changed what, and Reverter. Owner and Admin.
+          slug: 'activity',
+          labelKey: 'activity.tab',
+          visible: reg.canManage,
+          content: () => (
+            <ActivityPanel
+              kind="student"
+              id={loaded.id}
+              page={readPage(page)}
+              basePath={`/dashboard/students/${loaded.id}`}
+            />
           ),
         },
       ]}

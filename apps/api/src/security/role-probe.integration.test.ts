@@ -1,6 +1,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
+import { ActivityController } from '../activity/activity.controller.js';
 import { SupportGrantsController } from '../support/support.controller.js';
 import {
   ClassesController,
@@ -705,6 +706,15 @@ test('the archive bin refuses a guardian and a student (403)', async () => {
     await refused('GET archive', 403, () => archive.list());
     await refused('GET archive/actors', 403, () => archive.actors());
     await refused('POST archive/:id/restore', 403, () => archive.restore(NO_SUCH_ID));
+  });
+});
+
+test('activity and revert refuse a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const activity = new ActivityController();
+    await refused('GET students/:id/activity', 403, () => activity.student(NO_SUCH_ID));
+    await refused('GET class-groups/:id/activity', 403, () => activity.classGroup(NO_SUCH_ID));
+    await refused('POST activity/:entryId/revert', 403, () => activity.revert(NO_SUCH_ID, {}));
   });
 });
 

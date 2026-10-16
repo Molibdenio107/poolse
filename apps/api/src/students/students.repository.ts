@@ -1,5 +1,6 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { describeChange, type ChangeContext, type ChangeSpec } from '../audit/change.js';
 import {
   displayName,
   nameOrder,
@@ -1091,7 +1092,10 @@ export async function fillStudentBlanks(
   studentId: string,
   blanks: StudentBlanks,
 ): Promise<boolean> {
-  const { rows } = await tx.query<{ id: string }>(
+  // The level is the one filled field an entry may value — POOLSE-80.
+  const levelBefore = (await lockStudentFields(tx, studentId))?.levelId ?? null;
+
+  const { rows } = await tx.query<{ id: string; level_id: string | null }>(
     `UPDATE student
         SET birth_date    = coalesce(birth_date, $2::date),
             level_id      = coalesce(level_id, $3::uuid),
@@ -1113,7 +1117,7 @@ export async function fillStudentBlanks(
           OR (tax_number IS NULL AND nullif(btrim($6), '') IS NOT NULL)
           OR (notes IS NULL AND nullif(btrim($7), '') IS NOT NULL)
         )
-    RETURNING id`,
+    RETURNING id, level_id`,
     [
       studentId,
       blanks.birthDate,
@@ -1137,6 +1141,9 @@ export async function fillStudentBlanks(
         fields: Object.entries(blanks)
           .filter(([, value]) => value !== null && String(value).trim() !== '')
           .map(([field]) => field),
+        ...(rows[0]!.level_id !== levelBefore
+          ? { before: { levelId: levelBefore }, after: { levelId: rows[0]!.level_id }, withheld: [] }
+          : {}),
       },
     });
   }
@@ -1164,13 +1171,16 @@ async function updateStudentIn(
   return withOrg(organizationId, async (tx) => {
     if (!(await levelExists(tx, input.levelId))) return 'bad_level';
 
-    const { rows } = await tx.query<{ id: string }>(
+    // Locked and read first, so the entry can say what each field was — POOLSE-80.
+    const before = await lockStudentFields(tx, studentId);
+    if (before === null) return 'not_found';
+
+    await tx.query(
       `UPDATE student
           SET first_name = $2, last_name = $3, birth_date = $4::date, level_id = $5,
               contact_email = $6::citext, contact_phone = $7, tax_number = $8, notes = $9,
               gender = $10::student_gender
-        WHERE id = $1 AND archived_at IS NULL
-      RETURNING id`,
+        WHERE id = $1`,
       [
         studentId,
         input.firstName,
@@ -1184,7 +1194,6 @@ async function updateStudentIn(
         input.gender,
       ],
     );
-    if (!rows[0]) return 'not_found';
 
     await syncGuardians(tx, organizationId, studentId, input.guardians);
 
@@ -1192,11 +1201,110 @@ async function updateStudentIn(
       action: 'student.updated',
       entityType: 'student',
       entityId: studentId,
-      data: { name: `${input.firstName} ${input.lastName}` },
+      data: {
+        name: `${input.firstName} ${input.lastName}`,
+        ...describeChange(STUDENT_CHANGE, before, fieldsOf(input)),
+      },
     });
 
     return 'updated';
   });
+}
+
+/**
+ * What a student edit records — POOLSE-80.
+ *
+ * Only the level is valued and revertible. The rest is the person's own data:
+ * named in `withheld` when it moves, never copied into the log.
+ */
+export const STUDENT_CHANGE = {
+  values: ['levelId'],
+  withheld: [
+    'firstName',
+    'lastName',
+    'birthDate',
+    'contactEmail',
+    'contactPhone',
+    'taxNumber',
+    'notes',
+    'gender',
+  ],
+} as const satisfies ChangeSpec<StudentField>;
+
+type StudentField =
+  | 'firstName'
+  | 'lastName'
+  | 'birthDate'
+  | 'levelId'
+  | 'contactEmail'
+  | 'contactPhone'
+  | 'taxNumber'
+  | 'notes'
+  | 'gender';
+
+function fieldsOf(input: Omit<StudentInput, 'guardians'>): Record<StudentField, unknown> {
+  return {
+    firstName: input.firstName,
+    lastName: input.lastName,
+    birthDate: input.birthDate,
+    levelId: input.levelId,
+    contactEmail: input.contactEmail,
+    contactPhone: input.contactPhone,
+    taxNumber: input.taxNumber,
+    notes: input.notes,
+    gender: input.gender,
+  };
+}
+
+/** A live student's editable fields, locked for the rest of the transaction. */
+async function lockStudentFields(
+  tx: Tx,
+  studentId: string,
+): Promise<Record<StudentField, unknown> | null> {
+  const { rows } = await tx.query<Omit<StudentInput, 'guardians'>>(
+    `SELECT first_name AS "firstName", last_name AS "lastName",
+            birth_date::text AS "birthDate", level_id AS "levelId",
+            contact_email::text AS "contactEmail", contact_phone AS "contactPhone",
+            tax_number AS "taxNumber", notes, gender::text AS gender
+       FROM student
+      WHERE id = $1 AND archived_at IS NULL
+        FOR UPDATE`,
+    [studentId],
+  );
+  return rows[0] ? fieldsOf(rows[0]) : null;
+}
+
+/**
+ * Moves one student to a level, and nothing else — the write path a level
+ * change takes when it is not the whole form: confirming an advancement, and
+ * reverting a change (POOLSE-80). Same validation as the form, same entry.
+ */
+export async function setStudentLevelIn(
+  tx: Tx,
+  studentId: string,
+  levelId: string | null,
+  context: ChangeContext = {},
+): Promise<'updated' | 'not_found' | 'bad_level'> {
+  if (!(await levelExists(tx, levelId))) return 'bad_level';
+  const before = await lockStudentFields(tx, studentId);
+  if (before === null) return 'not_found';
+
+  await tx.query('UPDATE student SET level_id = $2 WHERE id = $1', [studentId, levelId]);
+
+  const change = describeChange(STUDENT_CHANGE, before, { ...before, levelId });
+  if (change !== null) {
+    await recordAudit(tx, {
+      action: 'student.updated',
+      entityType: 'student',
+      entityId: studentId,
+      data: {
+        name: `${String(before.firstName)} ${String(before.lastName)}`,
+        ...change,
+        ...context,
+      },
+    });
+  }
+  return 'updated';
 }
 
 export async function archiveStudent(

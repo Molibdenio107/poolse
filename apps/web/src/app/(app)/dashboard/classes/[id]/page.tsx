@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { ActivityPanel } from '@/components/activity-panel';
+import { readPage } from '@/lib/pagination';
 import { ChevronRight } from 'lucide-react';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getFormatter, getTranslations } from 'next-intl/server';
@@ -32,12 +34,12 @@ export default async function ClassPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string; page?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const format = await getFormatter();
   const { id } = await params;
-  const { tab, from } = await searchParams;
+  const { tab, from, page } = await searchParams;
 
   let group: (ClassGroup & { canManage: boolean; canMarkSkills: boolean }) | null = null;
   let all: Classes | null = null;
@@ -378,6 +380,20 @@ export default async function ClassPage({
               </section>
             );
           },
+        },
+        {
+          // POOLSE-80 — who changed what, and Reverter. Owner and Admin.
+          slug: 'activity',
+          labelKey: 'activity.tab',
+          visible: loaded.canManage,
+          content: () => (
+            <ActivityPanel
+              kind="class_group"
+              id={loaded.id}
+              page={readPage(page)}
+              basePath={`/dashboard/classes/${loaded.id}`}
+            />
+          ),
         },
       ]}
     />

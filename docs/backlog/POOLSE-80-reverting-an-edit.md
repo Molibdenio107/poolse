@@ -45,6 +45,8 @@ sentence.
 **Open — 1: the v1 entities.** *Recommend:* **student** (personal fields, level),
 **attendance** and **turma** (`class_group`: capacity, level, instructor, name). These are
 where instructors and admins write most, and none of them touch money.
+**Answered 16-10-2026 (Rui):** those three, and only their non-personal fields — see
+`docs/features/archive.md`.
 
 ### Dev — schema, API, where it goes
 

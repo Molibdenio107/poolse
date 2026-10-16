@@ -4430,6 +4430,46 @@ export interface ArchiveRestored {
   kept: number;
 }
 
+/**
+ * A record's *Atividade* — POOLSE-80. One audit entry, read for one record.
+ * A value's `label` is the name behind an id (a level, a tank, a person), so
+ * no screen ever shows a uuid; it is null for a value that is not an id.
+ */
+export interface ActivityValue {
+  value: unknown;
+  label: string | null;
+}
+
+export interface ActivityField {
+  field: string;
+  before: ActivityValue;
+  after: ActivityValue;
+  revertible: boolean;
+}
+
+export interface ActivityEntry {
+  id: string;
+  action: string;
+  createdAt: string;
+  actor: { membershipId: string; name: string } | null;
+  fields: ActivityField[];
+  /** Fields that moved and whose values the log does not keep. */
+  withheld: string[];
+  revertOf: string | null;
+  session: { id: string; date: string } | null;
+  student: { id: string; name: string } | null;
+  revertible: boolean;
+}
+
+export type ActivityPage = Paginated<ActivityEntry>;
+
+export interface RevertConflict {
+  field: string;
+  before: ActivityValue;
+  after: ActivityValue;
+  current: ActivityValue;
+}
+
 /** Support access — POOLSE-79. A window the club's Owner opened, asked for, or Poolse forced. */
 export type SupportSource = 'owner' | 'request' | 'override';
 

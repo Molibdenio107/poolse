@@ -1,5 +1,6 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { describeChange, type ChangeContext, type ChangeSpec } from '../audit/change.js';
 import type { CascadeItem } from '../archive/restorable.js';
 import { displayName, nameOrder, shortName } from '../people/names.js';
 import {
@@ -541,145 +542,192 @@ export async function updateClassGroup(
   input: ClassGroupInput,
 ): Promise<boolean> {
   try {
-    return await withOrg(organizationId, async (tx) => {
-      const laneId = await laneIdFor(tx, input.poolId, input.lane);
-
-      const { rows } = await tx.query<{ id: string }>(
-        `UPDATE class_group
-            SET name = $2, level_id = $3, pool_id = $4,
-                instructor_membership_id = $5, capacity = $6, lane_id = $7,
-                colour = $8, fee_category_id = $9
-          WHERE id = $1 AND archived_at IS NULL
-        RETURNING id`,
-        [
-          groupId,
-          input.name,
-          input.levelId,
-          input.poolId,
-          input.instructorMembershipId,
-          input.capacity,
-          laneId,
-          input.colour,
-          input.feeCategoryId,
-        ],
-      );
-      if (!rows[0]) return false;
-
-      /*
-       * Future sessions follow the turma; past ones do not — backlog round 4,
-       * ticket 1.
-       *
-       * `class_session.instructor_membership_id` is a copy, and a copy has to be
-       * told when the original changes or the exclusion constraint is guarding a
-       * name nobody is teaching under any more.
-       *
-       * From today forward only. A session last March keeps whoever actually
-       * stood on the poolside, because that is the record attendance and payroll
-       * will read — rewriting it would retroactively put somebody at a class
-       * they never taught.
-       *
-       * Cancelled sessions are skipped: they are history too, and the constraint
-       * ignores them anyway.
-       */
-      /*
-       * The pool and the lane travel with the instructor.
-       *
-       * `class_session` copies all three from the turma at generation time —
-       * deliberately, because an exclusion constraint cannot reach into another
-       * table. This propagated only the instructor, so moving a turma to another
-       * pool left every already-generated session in the old one, and
-       * regeneration could not repair it either: it inserts `ON CONFLICT DO
-       * NOTHING`, so the stale rows simply stayed.
-       *
-       * The symptom is a calendar that shows a class in a pool the club has
-       * stopped using, which nobody would think to look for.
-       */
-      await tx.query(
-        `UPDATE class_session
-            SET instructor_membership_id = $2,
-                pool_id = $3
-          WHERE class_group_id = $1
-            AND starts_at >= now()
-            AND status <> 'cancelled'
-            AND (instructor_membership_id IS DISTINCT FROM $2
-                 OR pool_id IS DISTINCT FROM $3)`,
-        [groupId, input.instructorMembershipId, input.poolId],
-      );
-
-      /*
-       * A session's lane is a row in `class_session_lane`, not a column —
-       * POOLSE-R2-01.
-       *
-       * This used to set `class_session.lane_id`, which has never existed. A
-       * session holds its lanes in a side table because the exclusion constraint
-       * that stops two classes sharing one lane needs a row per lane and a time
-       * range to overlap — a single column could not express a class occupying
-       * three lanes, which is exactly what `Masters (1-3)` does.
-       *
-       * So every save of a turma raised `42703: column "lane_id" does not exist`
-       * and answered 500. Not on some inputs — on all of them, including a save
-       * that changed nothing, which is how QA found it. Creating worked, which
-       * is what kept it hidden: the insert path never touches this statement.
-       */
-      await tx.query(
-        `DELETE FROM class_session_lane
-          WHERE session_id IN (
-            SELECT s.id FROM class_session s
-             WHERE s.class_group_id = $1
-               AND s.starts_at >= now()
-               AND s.status <> 'cancelled'
-          )`,
-        [groupId],
-      );
-
-      if (laneId !== null) {
-        await tx.query(
-          `INSERT INTO class_session_lane
-             (organization_id, session_id, lane_id, starts_at, ends_at, cancelled)
-           SELECT $1, s.id, $3, s.starts_at, s.ends_at, false
-             FROM class_session s
-            WHERE s.class_group_id = $2
-              AND s.starts_at >= now()
-              AND s.status <> 'cancelled'`,
-          /*
-           * No `ON CONFLICT DO NOTHING` here, deliberately.
-           *
-           * It would swallow the exclusion constraint, and the turma would move
-           * onto the new lane while the one session that clashed quietly ended
-           * up with no lane at all — the operator gets the save they asked for
-           * and a class that is not where they put it. The clash is a real
-           * answer: somebody else has that lane at that hour. It surfaces as a
-           * 409 and the save does not happen.
-           *
-           * The rows for these sessions were deleted a moment ago in this same
-           * transaction, so the primary key cannot be what fires.
-           */
-          [organizationId, groupId, laneId],
-        );
-      }
-
-      // The turma moved lane, so its bookings move with it.
-      await syncBookingLanes(tx, organizationId, groupId);
-
-      await recordAudit(tx, {
-        action: 'class_group.updated',
-        entityType: 'class_group',
-        entityId: groupId,
-        data: { name: input.name },
-      });
-      return true;
-    });
+    return await withOrg(organizationId, (tx) =>
+      updateClassGroupIn(tx, organizationId, groupId, input),
+    );
   } catch (error) {
-    /*
-     * The new lane is already somebody else's at that hour. A real answer, and
-     * the operator can act on it — so it must not arrive as a 500 the way the
-     * missing column did.
-     */
-    if (error instanceof Error && (error as { code?: string }).code === '23P01') {
-      throw new LaneOccupiedError(input.name);
-    }
-    throw asDuplicate(error, input.name);
+    throw classGroupWriteError(error, input.name);
   }
+}
+
+/**
+ * What a turma edit records — POOLSE-80. Every field is the club's, so all are
+ * valued; the fee category is shown and never reverted, because it decides a
+ * discount and money is corrected by its own history.
+ */
+export const CLASS_GROUP_CHANGE = {
+  values: ['name', 'levelId', 'poolId', 'instructorMembershipId', 'capacity', 'lane', 'colour'],
+  shown: ['feeCategoryId'],
+} as const satisfies ChangeSpec<keyof ClassGroupInput>;
+
+/** A live turma as its own form would post it, locked for the transaction. */
+export async function lockClassGroupInput(
+  tx: Tx,
+  groupId: string,
+): Promise<ClassGroupInput | null> {
+  const { rows } = await tx.query<ClassGroupInput>(
+    `SELECT g.name, g.level_id AS "levelId", g.pool_id AS "poolId",
+            g.instructor_membership_id AS "instructorMembershipId", g.capacity,
+            (SELECT l.position FROM lane l WHERE l.id = g.lane_id) AS lane,
+            g.colour::text AS colour, g.fee_category_id AS "feeCategoryId"
+       FROM class_group g
+      WHERE g.id = $1 AND g.archived_at IS NULL
+        FOR UPDATE OF g`,
+    [groupId],
+  );
+  return rows[0] ?? null;
+}
+
+/** The turma's update, inside a caller's transaction — the form's and a revert's. */
+export async function updateClassGroupIn(
+  tx: Tx,
+  organizationId: string,
+  groupId: string,
+  input: ClassGroupInput,
+  context: ChangeContext = {},
+): Promise<boolean> {
+  const before = await lockClassGroupInput(tx, groupId);
+  if (before === null) return false;
+
+  const laneId = await laneIdFor(tx, input.poolId, input.lane);
+
+  const { rows } = await tx.query<{ id: string }>(
+    `UPDATE class_group
+        SET name = $2, level_id = $3, pool_id = $4,
+            instructor_membership_id = $5, capacity = $6, lane_id = $7,
+            colour = $8, fee_category_id = $9
+      WHERE id = $1 AND archived_at IS NULL
+    RETURNING id`,
+    [
+      groupId,
+      input.name,
+      input.levelId,
+      input.poolId,
+      input.instructorMembershipId,
+      input.capacity,
+      laneId,
+      input.colour,
+      input.feeCategoryId,
+    ],
+  );
+  if (!rows[0]) return false;
+
+  /*
+   * Future sessions follow the turma; past ones do not — backlog round 4,
+   * ticket 1.
+   *
+   * `class_session.instructor_membership_id` is a copy, and a copy has to be
+   * told when the original changes or the exclusion constraint is guarding a
+   * name nobody is teaching under any more.
+   *
+   * From today forward only. A session last March keeps whoever actually
+   * stood on the poolside, because that is the record attendance and payroll
+   * will read — rewriting it would retroactively put somebody at a class
+   * they never taught.
+   *
+   * Cancelled sessions are skipped: they are history too, and the constraint
+   * ignores them anyway.
+   */
+  /*
+   * The pool and the lane travel with the instructor.
+   *
+   * `class_session` copies all three from the turma at generation time —
+   * deliberately, because an exclusion constraint cannot reach into another
+   * table. This propagated only the instructor, so moving a turma to another
+   * pool left every already-generated session in the old one, and
+   * regeneration could not repair it either: it inserts `ON CONFLICT DO
+   * NOTHING`, so the stale rows simply stayed.
+   *
+   * The symptom is a calendar that shows a class in a pool the club has
+   * stopped using, which nobody would think to look for.
+   */
+  await tx.query(
+    `UPDATE class_session
+        SET instructor_membership_id = $2,
+            pool_id = $3
+      WHERE class_group_id = $1
+        AND starts_at >= now()
+        AND status <> 'cancelled'
+        AND (instructor_membership_id IS DISTINCT FROM $2
+             OR pool_id IS DISTINCT FROM $3)`,
+    [groupId, input.instructorMembershipId, input.poolId],
+  );
+
+  /*
+   * A session's lane is a row in `class_session_lane`, not a column —
+   * POOLSE-R2-01.
+   *
+   * This used to set `class_session.lane_id`, which has never existed. A
+   * session holds its lanes in a side table because the exclusion constraint
+   * that stops two classes sharing one lane needs a row per lane and a time
+   * range to overlap — a single column could not express a class occupying
+   * three lanes, which is exactly what `Masters (1-3)` does.
+   *
+   * So every save of a turma raised `42703: column "lane_id" does not exist`
+   * and answered 500. Not on some inputs — on all of them, including a save
+   * that changed nothing, which is how QA found it. Creating worked, which
+   * is what kept it hidden: the insert path never touches this statement.
+   */
+  await tx.query(
+    `DELETE FROM class_session_lane
+      WHERE session_id IN (
+        SELECT s.id FROM class_session s
+         WHERE s.class_group_id = $1
+           AND s.starts_at >= now()
+           AND s.status <> 'cancelled'
+      )`,
+    [groupId],
+  );
+
+  if (laneId !== null) {
+    await tx.query(
+      `INSERT INTO class_session_lane
+         (organization_id, session_id, lane_id, starts_at, ends_at, cancelled)
+       SELECT $1, s.id, $3, s.starts_at, s.ends_at, false
+         FROM class_session s
+        WHERE s.class_group_id = $2
+          AND s.starts_at >= now()
+          AND s.status <> 'cancelled'`,
+      /*
+       * No `ON CONFLICT DO NOTHING` here, deliberately.
+       *
+       * It would swallow the exclusion constraint, and the turma would move
+       * onto the new lane while the one session that clashed quietly ended
+       * up with no lane at all — the operator gets the save they asked for
+       * and a class that is not where they put it. The clash is a real
+       * answer: somebody else has that lane at that hour. It surfaces as a
+       * 409 and the save does not happen.
+       *
+       * The rows for these sessions were deleted a moment ago in this same
+       * transaction, so the primary key cannot be what fires.
+       */
+      [organizationId, groupId, laneId],
+    );
+  }
+
+  // The turma moved lane, so its bookings move with it.
+  await syncBookingLanes(tx, organizationId, groupId);
+
+  await recordAudit(tx, {
+    action: 'class_group.updated',
+    entityType: 'class_group',
+    entityId: groupId,
+    data: { name: input.name, ...describeChange(CLASS_GROUP_CHANGE, before, input), ...context },
+  });
+  return true;
+}
+
+/** A turma write's failure, as the API should hear it — the form and a revert alike. */
+export function classGroupWriteError(error: unknown, name: string): unknown {
+  /*
+   * The new lane is already somebody else's at that hour. A real answer, and
+   * the operator can act on it — so it must not arrive as a 500 the way the
+   * missing column did.
+   */
+  if (error instanceof Error && (error as { code?: string }).code === '23P01') {
+    return new LaneOccupiedError(name);
+  }
+  return asDuplicate(error, name);
 }
 
 /**

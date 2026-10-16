@@ -1,5 +1,6 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { sameValue, type ChangeContext } from '../audit/change.js';
 import { displayName, nameOrder, shortName } from '../people/names.js';
 
 /**
@@ -318,10 +319,11 @@ export interface Mark {
 /**
  * Saves a whole register at once.
  *
- * One transaction, one audit entry. Marking is a single act — an instructor
- * looks at a poolside queue and writes the lot — and recording it as fifteen
- * separate events would make the audit log unreadable for the one question it
- * gets asked: who marked this class, and when.
+ * One transaction, one summary entry. Marking is a single act — an instructor
+ * looks at a poolside queue and writes the lot — and the summary answers the
+ * question the log is asked most: who marked this class, and when. Beside it,
+ * one `attendance.changed` per student whose mark actually moved, which is what
+ * a revert reads (POOLSE-80); a save that changed nothing adds none of those.
  *
  * A null status deletes rather than storing a fifth "unknown" state. "Not yet
  * marked" is the absence of a row, and having two ways to say it is how a
@@ -333,66 +335,127 @@ export async function saveRegister(
   recordedByMembershipId: string,
   marks: Mark[],
 ): Promise<boolean> {
-  return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string; status: string; class_group_id: string | null }>(
-      `SELECT id, status::text AS status, class_group_id FROM class_session WHERE id = $1`,
-      [sessionId],
+  return withOrg(organizationId, (tx) =>
+    saveRegisterIn(tx, organizationId, sessionId, recordedByMembershipId, marks),
+  );
+}
+
+/** The register's save inside a caller's transaction — the form's and a revert's. */
+export async function saveRegisterIn(
+  tx: Tx,
+  organizationId: string,
+  sessionId: string,
+  recordedByMembershipId: string,
+  marks: Mark[],
+  context: ChangeContext = {},
+): Promise<boolean> {
+  const { rows } = await tx.query<{ id: string; status: string; class_group_id: string | null }>(
+    `SELECT id, status::text AS status, class_group_id FROM class_session WHERE id = $1`,
+    [sessionId],
+  );
+  if (!rows[0]) return false;
+  // A cancelled class is not marked, and a parceria takes no register, ever
+  // (CLAUDE.md) — refused here, not only by the screen. 13-10-2026 sweep.
+  if (rows[0].status === 'cancelled') throw new RegisterRefusedError('cancelled');
+  if (rows[0].class_group_id === null) throw new RegisterRefusedError('partnership');
+
+  const cleared = marks.filter((mark) => mark.status === null).map((mark) => mark.studentId);
+  const set = marks.filter((mark) => mark.status !== null);
+
+  // What each mark was, so a change can be recorded per student — POOLSE-80.
+  const { rows: previous } = await tx.query<{ student_id: string; status: string; note: string | null }>(
+    `SELECT student_id, status::text AS status, note FROM attendance
+      WHERE class_session_id = $1 AND student_id = ANY($2::uuid[])
+        FOR UPDATE`,
+    [sessionId, marks.map((mark) => mark.studentId)],
+  );
+  const was = new Map(previous.map((row) => [row.student_id, row]));
+
+  if (cleared.length > 0) {
+    await tx.query(
+      `DELETE FROM attendance WHERE class_session_id = $1 AND student_id = ANY($2::uuid[])`,
+      [sessionId, cleared],
     );
-    if (!rows[0]) return false;
-    // A cancelled class is not marked, and a parceria takes no register, ever
-    // (CLAUDE.md) — refused here, not only by the screen. 13-10-2026 sweep.
-    if (rows[0].status === 'cancelled') throw new RegisterRefusedError('cancelled');
-    if (rows[0].class_group_id === null) throw new RegisterRefusedError('partnership');
+  }
 
-    const cleared = marks.filter((mark) => mark.status === null).map((mark) => mark.studentId);
-    const set = marks.filter((mark) => mark.status !== null);
+  if (set.length > 0) {
+    /*
+     * One statement for the whole register, and `recorded_at` moves on every
+     * change. The timestamp answers "when was this marked", not "when was it
+     * first marked" — a correction made a week later is a new claim by a
+     * person and is dated accordingly.
+     */
+    await tx.query(
+      `
+      INSERT INTO attendance (organization_id, class_session_id, student_id, status,
+                              note, recorded_by_membership_id)
+      SELECT $1, $2, m.student_id, m.status::attendance_status, m.note, $3
+        FROM unnest($4::uuid[], $5::text[], $6::text[]) AS m(student_id, status, note)
+      ON CONFLICT (organization_id, class_session_id, student_id) DO UPDATE
+         SET status = excluded.status,
+             note = excluded.note,
+             recorded_by_membership_id = excluded.recorded_by_membership_id,
+             recorded_at = now()
+      `,
+      [
+        organizationId,
+        sessionId,
+        recordedByMembershipId,
+        set.map((mark) => mark.studentId),
+        set.map((mark) => mark.status),
+        set.map((mark) => mark.note),
+      ],
+    );
+  }
 
-    if (cleared.length > 0) {
-      await tx.query(
-        `DELETE FROM attendance WHERE class_session_id = $1 AND student_id = ANY($2::uuid[])`,
-        [sessionId, cleared],
-      );
-    }
+  await recordAudit(tx, {
+    action: 'attendance.recorded',
+    entityType: 'class_session',
+    entityId: sessionId,
+    data: { marked: set.length, cleared: cleared.length },
+  });
 
-    if (set.length > 0) {
-      /*
-       * One statement for the whole register, and `recorded_at` moves on every
-       * change. The timestamp answers "when was this marked", not "when was it
-       * first marked" — a correction made a week later is a new claim by a
-       * person and is dated accordingly.
-       */
-      await tx.query(
-        `
-        INSERT INTO attendance (organization_id, class_session_id, student_id, status,
-                                note, recorded_by_membership_id)
-        SELECT $1, $2, m.student_id, m.status::attendance_status, m.note, $3
-          FROM unnest($4::uuid[], $5::text[], $6::text[]) AS m(student_id, status, note)
-        ON CONFLICT (organization_id, class_session_id, student_id) DO UPDATE
-           SET status = excluded.status,
-               note = excluded.note,
-               recorded_by_membership_id = excluded.recorded_by_membership_id,
-               recorded_at = now()
-        `,
-        [
-          organizationId,
-          sessionId,
-          recordedByMembershipId,
-          set.map((mark) => mark.studentId),
-          set.map((mark) => mark.status),
-          set.map((mark) => mark.note),
-        ],
-      );
-    }
-
+  /*
+   * And one entry per student whose mark moved — POOLSE-80. The summary above
+   * answers "who marked this class"; these answer "what was this child's mark
+   * before", which is what a revert needs. The status is valued; the note is
+   * the instructor's words about a child and is only named.
+   */
+  for (const mark of marks) {
+    const before = was.get(mark.studentId);
+    const statusMoved = !sameValue(before?.status ?? null, mark.status);
+    const noteMoved = !sameValue(before?.note ?? null, mark.status === null ? null : mark.note);
+    if (!statusMoved && !noteMoved) continue;
     await recordAudit(tx, {
-      action: 'attendance.recorded',
+      action: 'attendance.changed',
       entityType: 'class_session',
       entityId: sessionId,
-      data: { marked: set.length, cleared: cleared.length },
+      data: {
+        studentId: mark.studentId,
+        before: statusMoved ? { status: before?.status ?? null } : {},
+        after: statusMoved ? { status: mark.status } : {},
+        withheld: noteMoved ? ['note'] : [],
+        ...context,
+      },
     });
+  }
 
-    return true;
-  });
+  return true;
+}
+
+/** The one mark a revert writes back: the status it was, the note as it is now. */
+export async function currentMark(
+  tx: Tx,
+  sessionId: string,
+  studentId: string,
+): Promise<{ status: AttendanceStatus | null; note: string | null }> {
+  const { rows } = await tx.query<{ status: AttendanceStatus; note: string | null }>(
+    `SELECT status::text AS status, note FROM attendance
+      WHERE class_session_id = $1 AND student_id = $2
+        FOR UPDATE`,
+    [sessionId, studentId],
+  );
+  return { status: rows[0]?.status ?? null, note: rows[0]?.note ?? null };
 }
 
 export interface AttendanceSummary {

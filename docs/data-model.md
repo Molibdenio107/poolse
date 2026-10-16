@@ -1200,6 +1200,15 @@ trade for the one case that does. The convention for a field change is
 imposing its shape on everything else. `created_at` rather than `at`, because every other
 table in the schema says `created_at` and one exception is one thing to remember.
 
+**Since POOLSE-80 a field change actually writes that shape**, and it was a convention nobody
+followed until then: `student.updated` and `class_group.updated` logged a name, and the
+register logged a count. `audit/change.ts` builds `{ before, after, withheld }` from a
+per-entity `ChangeSpec`: `before`/`after` carry only the fields that moved, `withheld` names
+the person's own fields that moved (name, phone, e-mail, NIF, notes, a mark's note) without
+their values, and a revert adds `revertOf`. The register writes one `attendance.changed` per
+student whose mark moved, beside its summary entry. An entry with no `before` predates this
+and is never revertible.
+
 **`actor_membership_id` is nullable and `actor_app_user_id` sits beside it.** Null actor is
 the honest record of something the system did on nobody's behalf — a Clerk webhook, a
 scheduled job — and inventing a membership to satisfy a NOT NULL would be a lie kept

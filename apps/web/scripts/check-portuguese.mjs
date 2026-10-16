@@ -89,6 +89,8 @@ const SAME_ON_PURPOSE = new Map([
   ['invoices.channel.email', '"email" is the ordinary pt-PT word too'],
   ['reception.email', 'as above'],
   ['reception.taxNumber', 'the same Portuguese acronym'],
+  ['activity.field.taxNumber', 'the same Portuguese acronym'],
+  ['activity.system', 'the product is called Poolse in every language'],
   ['students.export.formatXlsx', 'a product name and its extension — Excel is Excel in Portuguese'],
   // The timetable export's button — POOLSE-54. Same reasoning as the register's
   // above: it names the application the file opens in, and that application is

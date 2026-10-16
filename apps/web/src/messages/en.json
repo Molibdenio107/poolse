@@ -2165,7 +2165,6 @@
     "subtitle": "Ask for your days, and see what has been approved.",
     "tabs": "Leave sections",
     "yearNav": "Choose the year",
-    "mine": "My leave",
     "queue": "Awaiting approval",
     "teamMap": "Team map",
     "balance": "Balance",
@@ -4959,5 +4958,76 @@
     "planEmpty": "The instructor has not written this lesson's plan yet.",
     "retry": "Try again",
     "noSessionsHint": "This season's lessons are not on the calendar yet. Until then, this is the weekly timetable:"
+  },
+  "activity": {
+    "tab": "Activity",
+    "title": "Activity",
+    "empty": "No changes recorded yet.",
+    "emptyHint": "Every change made from now on appears here, with who made it and when.",
+    "byWhen": "{who} · {when}",
+    "system": "Poolse",
+    "fromTo": "{before} → {after}",
+    "withheld": "Also changed: {fields}. These are personal data, and their values are not kept in the history.",
+    "isRevert": "This change reverted an earlier one.",
+    "markFor": "{name}'s attendance on {date}",
+    "markOn": "Attendance on {date}",
+    "revert": "Revert",
+    "revertedToast": "Reverted.",
+    "revertFailed": "This change could not be reverted.",
+    "conflictTitle": "This field has changed again",
+    "conflictHint": "After this change, somebody changed the same field. Choose what stays.",
+    "conflictValues": "Before: {before} · This change: {after} · Now: {current}",
+    "keepBefore": "Put back the earlier value ({value})",
+    "keepCurrent": "Keep the current value ({value})",
+    "refusal": {
+      "nothing": "There is nothing to revert: the record is already as it was.",
+      "notRevertible": "This change cannot be reverted.",
+      "targetGone": "{field} cannot be put back: “{name}” has been archived."
+    },
+    "value": {
+      "empty": "—",
+      "unmarked": "Not marked",
+      "gone": "(archived)",
+      "lane": "Lane {lane}"
+    },
+    "field": {
+      "levelId": "Level",
+      "firstName": "First name",
+      "lastName": "Surname",
+      "birthDate": "Date of birth",
+      "contactEmail": "Email",
+      "contactPhone": "Phone",
+      "taxNumber": "NIF",
+      "notes": "Notes",
+      "gender": "Gender",
+      "name": "Name",
+      "poolId": "Pool",
+      "instructorMembershipId": "Instructor",
+      "capacity": "Capacity",
+      "lane": "Lane",
+      "colour": "Colour",
+      "feeCategoryId": "Category",
+      "status": "Attendance",
+      "note": "Note"
+    },
+    "action": {
+      "student": {
+        "created": "Student created",
+        "updated": "Record changed",
+        "filled": "Record completed by an import",
+        "archived": "Student archived",
+        "restored": "Student restored",
+        "socio_changed": "Membership changed",
+        "emergency_contact_set": "Emergency contact changed",
+        "favourite_stroke_set": "Favourite stroke changed"
+      },
+      "class_group": {
+        "created": "Class created",
+        "updated": "Class changed",
+        "archived": "Class archived",
+        "restored": "Class restored"
+      },
+      "other": "Other change"
+    }
   }
 }

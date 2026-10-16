@@ -1,5 +1,6 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { setStudentLevelIn } from './students.repository.js';
 import { nameOrder, shortName } from '../people/names.js';
 import { windowed, TOTAL_COUNT, type PageQuery, type Paginated } from '../common/pagination.js';
 
@@ -239,10 +240,10 @@ export async function confirmProposal(
 
     // The student's own level moves with them, so every screen that filters by
     // level — including POOLSE-21's redemption filter — follows from here.
-    await tx.query('UPDATE student SET level_id = $2 WHERE id = $1', [
-      proposal.student_id,
-      proposal.to_level_id,
-    ]);
+    // Through the level's own write path, so the student's history records the
+    // move with the level it came from — POOLSE-80.
+    const moved = await setStudentLevelIn(tx, proposal.student_id, proposal.to_level_id);
+    if (moved !== 'updated') throw new Error(`Advancement could not move the student: ${moved}`);
 
     await tx.query(
       `UPDATE transfer_proposal
