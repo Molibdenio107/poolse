@@ -15,6 +15,7 @@ import {
   recordChaseAction,
   recordPaymentAction,
 } from '../invoices.actions';
+import { today } from '@/lib/dates';
 
 /**
  * What has been paid, and who has been asked — 2.3.
@@ -41,10 +42,6 @@ const BUTTON_QUIET =
 const SOURCES: PaymentSource[] = ['manual', 'mbway', 'sepa'];
 const CHANNELS: ChaseChannel[] = ['email', 'phone', 'message', 'in_person', 'letter'];
 
-/** Today as an ISO day, for a date box that should open on it. */
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function SettlementPanel({
   facilityId,

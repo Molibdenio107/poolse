@@ -80,13 +80,10 @@ export function MyVacations({ data }: { data: MyVacations }): React.ReactElement
     [locale],
   );
 
+  // dd-MM-yyyy, like every date in Poolse (CLAUDE.md); the twin in team-map
+  // already said so, and this one still spoke "13 de setembro" — 16-10-2026.
   function labelFor(day: string): string {
-    return new Intl.DateTimeFormat(locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(`${day}T00:00:00Z`));
+    return formatDate(day);
   }
 
   function stateFor(day: string): DayState {

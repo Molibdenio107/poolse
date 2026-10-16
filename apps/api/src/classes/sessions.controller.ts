@@ -52,6 +52,7 @@ import {
   saveLessonPlan,
   type LessonPlan,
 } from './lesson-plans.repository.js';
+import { clubToday } from '../common/club-day.js';
 
 /**
  * Slices 1.5 and 1.6 — the closure calendar, and the dated sessions around it.
@@ -794,11 +795,13 @@ function parseWindow(from?: string, to?: string): { from: string; to: string } {
 }
 
 function mondayOfThisWeek(): string {
-  const now = new Date();
-  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  // The club's today, not the server's: on a Monday between midnight and one in
+  // a Lisbon summer the server's date is still Sunday. 16-10-2026 sweep.
+  const today = clubToday();
   // getUTCDay is Sunday-0; the rest of Poolse is ISO, Monday-1.
-  const isoDay = today.getUTCDay() === 0 ? 7 : today.getUTCDay();
-  return addDays(today.toISOString().slice(0, 10), 1 - isoDay);
+  const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
+  const isoDay = weekday === 0 ? 7 : weekday;
+  return addDays(today, 1 - isoDay);
 }
 
 function addDays(date: string, days: number): string {

@@ -8,6 +8,7 @@ import { confirmAdvancementAction, dismissAdvancementAction } from './advancemen
 import { useToast } from '@/components/ui/toast';
 import { CONTROL_LINE } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
+import { today } from '@/lib/dates';
 
 /**
  * One student who has finished their level — POOLSE-19, criteria 3, 5 and 6.
@@ -32,7 +33,7 @@ export function ProposalCard({
   // Today, in the club's terms. The effective date is a decision — a transfer
   // usually starts at the next class — but defaulting to today makes the common
   // case one click rather than a date picker every time.
-  const [effectiveOn, setEffectiveOn] = useState(() => new Date().toISOString().slice(0, 10));
+  const [effectiveOn, setEffectiveOn] = useState(() => today());
 
   function confirm(classGroupId: string): void {
     setFailure(null);

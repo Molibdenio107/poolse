@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type PartnerDetail, type Students } from '@/lib/api';
 import { DetailPage } from '@/components/detail-page';
+import { PageError } from '@/components/page-shell';
+import { outcome } from '@/lib/load-failure';
 import { EntityIcon } from '@/components/entity-icon';
 import { PartnerIdentity } from './partner-identity';
 import { PartnerContacts } from './partner-contacts';
@@ -108,17 +110,24 @@ export default async function PartnerPage({
              * them the tab. The picker only appears for somebody who can
              * manage anyway.
              */
+            // A failed load says so rather than leaving the level picker
+            // silently empty — 16-10-2026 sweep.
             const register = partner.canManage
-              ? await apiFetch<Students>('/students').catch(() => null)
+              ? await outcome(apiFetch<Students>('/students'))
               : null;
 
             return (
-              <PartnerGroups
-                partnerId={partner.id}
-                groups={partner.groups}
-                levels={register?.levels ?? []}
-                canManage={partner.canManage}
-              />
+              <>
+                {register?.state === 'failed' && (
+                  <PageError message={t(register.failure.key as never)} />
+                )}
+                <PartnerGroups
+                  partnerId={partner.id}
+                  groups={partner.groups}
+                  levels={register?.state === 'ok' ? register.data.levels : []}
+                  canManage={partner.canManage}
+                />
+              </>
             );
           },
         },

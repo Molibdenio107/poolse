@@ -1058,7 +1058,9 @@ overshoot. Exactly one Owner per tenant, enforced; transfer is the only way to c
 
 **A login's name is the person's own.** `PATCH /staff/:id` refuses (`name_is_theirs`) a rename by anybody but the person: Clerk holds one name for them across every club.
 
-**Today in TypeScript is `clubToday()` from `apps/api/src/common/club-day.ts`**, the twin of `club_today()` — never `new Date().toISOString().slice(0, 10)`, which is yesterday between midnight and one in a Lisbon summer.
+**Today in TypeScript is `clubToday()` from `apps/api/src/common/club-day.ts`**, the twin of `club_today()` — never `new Date().toISOString().slice(0, 10)`, which is yesterday between midnight and one in a Lisbon summer. In the web app it is `today()` from `lib/dates.ts`, which is the club's day wherever it runs (16-10-2026 sweep).
+
+**A page that fails unexpectedly lands in `dashboard/error.tsx`**, which keeps the sidebar and says so in the reader's language with *Tentar de novo*. It is the net, not the answer: a page that expects a failure still renders `PageError` itself.
 
 **Cost per tenant is a design constraint, not a later optimisation.** The first production
 tenant is a free pilot, so prefer designs that keep one tenant inside free tiers and keep

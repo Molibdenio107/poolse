@@ -28,10 +28,13 @@
     "notAllowed": "A sua função não permite esta operação.",
     "noOrganization": "A sua conta não pertence a nenhuma organização.",
     "notFound": "Já não existe. Pode ter sido removido entretanto.",
-    "apiUnreachable": "Não foi possível contactar o servidor. Verifique se a API está a correr.",
+    "apiUnreachable": "Não foi possível contactar o servidor. Tente de novo dentro de momentos.",
     "serverError": "Ocorreu um erro no servidor ao carregar esta página.",
     "requestRefused": "O servidor recusou este pedido.",
-    "remove": "Remover"
+    "remove": "Remover",
+    "pageFailed": "Esta página não carregou.",
+    "pageFailedHint": "Pode ser uma falha momentânea do servidor. Tente de novo; se continuar a acontecer, avise-nos.",
+    "tryAgain": "Tentar de novo"
   },
   "pagination": {
     "label": "Paginação",
@@ -4781,7 +4784,8 @@
       "guardianRequired": "Obrigatório para menores de {age} anos.",
       "sameNif": "O NIF do encarregado tem de ser diferente do NIF de quem vai nadar.",
       "consentRequired": "É preciso autorizar para enviar o pedido."
-    }
+    },
+    "ceilingReached": "O formulário público recebeu demasiados pedidos em pouco tempo ({when}) e recusou os que excederam o limite, sem o dizer a quem os enviou. Pode ter sido um ataque; se esperava inscrições nessa altura, contacte as famílias por outro meio."
   },
   "labResults": {
     "hint": "Os relatórios do laboratório, classificados pela NP 4542:2017. Um resultado não conforme avisa o proprietário, os administradores e a manutenção.",

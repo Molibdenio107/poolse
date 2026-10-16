@@ -4,6 +4,7 @@ import { EXPORT_FIELDS, type ImportField } from '@/lib/sheet';
 import { formatDate } from '@/lib/date-format';
 import { printableResponse } from '@/lib/print-table';
 import { rowFor, studentsCsv, studentsWorkbook } from './write-sheet';
+import { today as clubToday } from '@/lib/dates';
 
 /**
  * Slice 1.11 — the download itself.
@@ -50,7 +51,7 @@ const CONTENT_TYPE: Record<Format, string> = {
 /** A filename a Windows, macOS and Linux machine will all accept unchanged. */
 function fileNameFor(locale: string, filtered: boolean, format: Format): string {
   const base = locale === 'en' ? 'students' : 'alunos';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = clubToday();
   // ASCII only, deliberately. A `Content-Disposition` carrying accented
   // characters needs the RFC 5987 encoding and is mangled by something in the
   // chain often enough that it is not worth the accent.

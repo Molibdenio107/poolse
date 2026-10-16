@@ -9,6 +9,7 @@ import {
   type Preferences,
 } from './identity.repository.js';
 import { ensureAppUser, updateClerkName } from './identity.service.js';
+import { clubToday } from '../common/club-day.js';
 
 interface MeResponse {
   user: AppUserSummary;
@@ -234,10 +235,9 @@ function birth(value: unknown, errors: FieldErrors): string | null {
     return null;
   }
 
-  // Compared as strings, in UTC, because both sides are calendar days rather
-  // than instants and a timezone offset would make "today" wrong for half the
-  // world for part of the day.
-  if (text > new Date().toISOString().slice(0, 10)) {
+  // Compared as strings, because both sides are calendar days. "Today" is the
+  // club's (Lisbon) day, as `club_today()` is in SQL — 16-10-2026 sweep.
+  if (text > clubToday()) {
     errors['birthDate'] = 'profile.errors.birthDateFuture';
     return null;
   }

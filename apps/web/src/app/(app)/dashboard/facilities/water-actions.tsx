@@ -10,6 +10,7 @@ import { toCsv } from '@/lib/csv';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { printableTable } from '@/lib/print-table';
 import { formatReading } from '@/lib/pool-metrics';
+import { today } from '@/lib/dates';
 
 /**
  * "This water is out of range — do you want to shut the pool?"
@@ -180,7 +181,7 @@ export function ExportAnalyses({
     link.download =
       poolName.replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase() +
       '-' +
-      new Date().toISOString().slice(0, 10) +
+      today() +
       '.csv';
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);

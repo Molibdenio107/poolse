@@ -11,6 +11,7 @@ import {
   type ImportSummary,
   type RawImportRow,
 } from './import.js';
+import { clubToday } from '../common/club-day.js';
 
 /**
  * Slice 1.10 — the import, against the database.
@@ -139,12 +140,12 @@ async function ageOfMajorityIn(tx: Tx, organizationId: string): Promise<number> 
  * Today, in ISO form.
  *
  * A plain calendar date, so "born tomorrow" and "already eighteen" mean the same
- * thing here as they do on the form. UTC rather than the server's zone for the
- * reason `lib/dates.ts` gives: a date is not an instant, and doing this in local
- * time is how a request at 00:30 gets yesterday.
+ * thing here as they do on the form. The club's day, not UTC's: between
+ * midnight and one in a Lisbon summer, UTC is still yesterday, and a swimmer
+ * turning eighteen that day was imported as a minor. 16-10-2026 sweep.
  */
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return clubToday();
 }
 
 export async function runImport(

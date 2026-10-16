@@ -4,6 +4,7 @@ import { INVENTORY_EXPORT_FIELDS } from '@/lib/inventory-sheet';
 import { formatDate } from '@/lib/date-format';
 import { printableResponse } from '@/lib/print-table';
 import { inventoryCsv, inventoryWorkbook, rowFor } from './write-sheet';
+import { today as clubToday } from '@/lib/dates';
 
 /**
  * The store room, downloaded — round 6.
@@ -45,7 +46,7 @@ function fileNameFor(locale: string, filtered: boolean, format: Format): string 
   const base = locale === 'en' ? 'inventory' : 'inventario';
   // Dated, because an inventory export is a stocktake and two of them without
   // dates in the same folder are indistinguishable.
-  const today = new Date().toISOString().slice(0, 10);
+  const today = clubToday();
   // ASCII only, deliberately. A `Content-Disposition` carrying accented
   // characters needs the RFC 5987 encoding and is mangled by something in the
   // chain often enough that it is not worth the accent.

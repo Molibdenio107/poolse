@@ -265,7 +265,9 @@ async function refusal(error: unknown): Promise<FormState> {
 async function range(from?: string, to?: string | null): Promise<{ detail?: string }> {
   if (from === undefined || from === '') return {};
 
-  const day = (value: string): string => formatDate(new Date(`${value}T00:00:00`));
+  // A YYYY-MM-DD day goes in as it is: `formatDate` reads it as a day, never
+  // as midnight in the server's zone — 16-10-2026 sweep.
+  const day = (value: string): string => formatDate(value);
 
   return { detail: to === null || to === undefined ? `${day(from)} —` : `${day(from)} – ${day(to)}` };
 }

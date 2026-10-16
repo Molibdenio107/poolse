@@ -5,6 +5,7 @@ import { formatDate } from '@/lib/date-format';
 import { formatCents, parseCents } from '@/lib/money';
 import { printableResponse } from '@/lib/print-table';
 import { rowFor, salaryCsv, salaryWorkbook } from './write-sheet';
+import { today as clubToday } from '@/lib/dates';
 
 /**
  * The pay list, downloaded — POOLSE-59.
@@ -48,7 +49,7 @@ const CONTENT_TYPE: Record<Format, string> = {
 /** A filename a Windows, macOS and Linux machine will all accept unchanged. */
 function fileNameFor(locale: string, format: Format): string {
   const base = locale === 'en' ? 'salaries' : 'salarios';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = clubToday();
   // ASCII only, deliberately: a `Content-Disposition` carrying accented
   // characters needs the RFC 5987 encoding and is mangled by something in the
   // chain often enough that it is not worth the accent.

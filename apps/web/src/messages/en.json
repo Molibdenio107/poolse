@@ -28,10 +28,13 @@
     "notAllowed": "Your role does not allow this.",
     "noOrganization": "Your account does not belong to an organization.",
     "notFound": "This no longer exists. It may have been removed.",
-    "apiUnreachable": "Could not reach the server. Check that the API is running.",
+    "apiUnreachable": "Could not reach the server. Try again in a moment.",
     "serverError": "The server hit an error loading this page.",
     "requestRefused": "The server refused this request.",
-    "remove": "Remove"
+    "remove": "Remove",
+    "pageFailed": "This page did not load.",
+    "pageFailedHint": "It may be a momentary server failure. Try again; if it keeps happening, let us know.",
+    "tryAgain": "Try again"
   },
   "pagination": {
     "label": "Pagination",
@@ -4781,7 +4784,8 @@
       "guardianRequired": "Required for anyone under {age}.",
       "sameNif": "The guardian's NIF must differ from the swimmer's.",
       "consentRequired": "You need to agree to send the request."
-    }
+    },
+    "ceilingReached": "The public form received too many requests in a short time ({when}) and turned away those over the limit without telling the sender. It may have been an attack; if you were expecting sign-ups then, reach the families another way."
   },
   "labResults": {
     "hint": "The laboratory's reports, graded by NP 4542:2017. A non-compliant result alerts the owner, the admins and maintenance.",

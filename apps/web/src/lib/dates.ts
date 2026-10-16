@@ -40,10 +40,16 @@ export function mondayOf(date: string): string {
 }
 
 export function today(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
-    .toISOString()
-    .slice(0, 10);
+  // The club's day, wherever this runs: a UTC server is still on yesterday
+  // between midnight and one in a Lisbon summer — 16-10-2026 sweep. en-CA
+  // writes ISO dates; the zone is `APP_TIME_ZONE`, kept literal here so this
+  // file stays free of imports.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Lisbon',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
 }
 
 /** The seven dates of the week containing `date`, Monday first. */
