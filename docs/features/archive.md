@@ -116,7 +116,10 @@ The bin puts back what was archived; *Atividade* puts back what was changed.
 **Where.** An *Atividade* tab on a student's page and on a turma's page, Owner and Admin
 only (`GET /students/:id/activity`, `GET /class-groups/:id/activity`, paginated). It lists
 the record's audit entries newest first: who, when, which fields, from what to what. A
-student's tab includes their register marks; a turma's includes the marks in its sessions.
+student's tab includes their register marks; a turma's includes the marks in its sessions. Reads
+are left out — opening the medical record is an access, logged in `audit_log`, not a change — and
+every action has its own sentence (`LABELLED_ACTIONS` in `lib/activity.ts`, tested against both
+catalogues); one that has none reads *Outra alteração*.
 
 **What can be reverted** (Rui, 16 October 2026). A student's level; a turma's name, level,
 tank, instructor, capacity, lane and colour; a register mark's status. A person's own data —
