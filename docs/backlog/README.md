@@ -104,4 +104,6 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-79](./POOLSE-79-support-access.md) | Support access | Platform / Security | High | POOLSE-78, POOLSE-64 | 0 |
 | [POOLSE-80](./POOLSE-80-reverting-an-edit.md) | Reverting an edit | Global / Data integrity | Medium | POOLSE-78 | — |
 | [POOLSE-81](./POOLSE-81-competition-pathway-and-meet-results.md) | The competition pathway, and meet results from a LENEX file | Students / Competition | High | B6, POOLSE-19, POOLSE-20 | 2 |
+| [POOLSE-82](./POOLSE-82-app-enrolment-and-waiting-list-offers.md) | Enrolling from the app, and a waiting list that offers places | Students / Mobile app | High | 1.7, POOLSE-69, 3.0, 3.2 | 1 |
+| [POOLSE-83](./POOLSE-83-paying-at-enrolment.md) | Paying at enrolment — checkout with a held place | Billing / Mobile app | High | POOLSE-82, 3.5, POOLSE-76 | 1 |
 | [POOLSE-84](./POOLSE-84-closures-by-facility-and-tank.md) | Closures by facility or by tank, half days, and who is warned | Scheduling / Closures | High | POOLSE-31 | — |
