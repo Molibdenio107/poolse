@@ -3812,3 +3812,22 @@ out-of-order delivery cannot undo a later one; `poolse_platform` may update it.
   imported file that matched no student, as `[{name, results}]`: names only, replaced by each import.
 - A meet is **restorable** (`RESTORABLE` kind `swim_meet`, cascading `student_record` by `meet_id`):
   archiving takes its results out of the bests, and the bin brings back exactly those.
+
+### Gap to qualify — POOLSE-85, 19 October 2026
+
+Migration `1791194400000_qualifying-standards`. All three tables are tenant-scoped, typed by the
+club (Poolse ships no FPN data), soft-deleted, with RLS and composite keys.
+
+- **`federation_age_group`** — an FPN age group for one `season`: `name`, `gender` (`student_gender`,
+  null admits both), `born_from` / `born_to` (birth years, inclusive, either open). Never a
+  `student_level` row. Unique per season, name and gender among live rows.
+- **`qualifying_standard`** — a championship's entry times for one season: `name`, and an optional
+  `window_from` / `window_to` that falls back to the season's dates.
+- **`qualifying_time`** — one entry time: standard, age group, `stroke`, `distance_m`,
+  `course` (NOT NULL), `time_ms`. It carries `season_id` so both composite keys
+  `(organization_id, season_id, …)` prove the group and the standard share a season. Clearing a
+  cell archives the row.
+- **`federation_age_group_admits()`** — the one definition of who a band admits: birth *year*,
+  gender, and no birth date admits nobody. A swimmer's band is derived, never stored.
+- **`qualifying_gaps(standard, student)`** — the one definition of a valid time and the gap: same
+  course, an official live meet, inside the window. Read by Progressão and the Mínimos board.

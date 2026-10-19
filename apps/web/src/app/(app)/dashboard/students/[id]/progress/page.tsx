@@ -14,6 +14,7 @@ import { formatTime, ProgressChart } from '@/components/progress-chart';
 import { Hint } from '@/components/ui/tooltip';
 import { AddRecordForm, ArchiveRecordButton, FavouriteStrokeForm } from './progress-forms';
 import { DetailPage } from '@/components/detail-page';
+import { GapTable } from '@/components/gap-table';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatDate } from '@/lib/date-format';
 import { today as todayOfClub } from '@/lib/dates';
@@ -259,6 +260,44 @@ export default async function ProgressPage({
               ))}
             </>
           ),
+        },
+        {
+          // POOLSE-85: the gap to this season's standards. Absent, not empty,
+          // when the club has none — most swim-school students never see one.
+          slug: 'qualifying',
+          labelKey: 'qualifying.tab.student',
+          visible: loaded.qualifying !== null,
+          content: () => {
+            const q = loaded.qualifying;
+            if (q === null) return null;
+            return (
+              <>
+                <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">
+                  <p>
+                    {q.ageGroups.length > 0
+                      ? t('qualifying.studentBand', { season: q.seasonName, groups: q.ageGroups.join(', ') })
+                      : t(q.noBand === 'birthDate' ? 'qualifying.studentNoBirthDate' : 'qualifying.studentNoBand', {
+                          season: q.seasonName,
+                        })}
+                  </p>
+                  <p className="text-sm text-foreground-muted">{t('qualifying.studentExplain')}</p>
+                </section>
+                {q.ageGroups.length > 0 && q.standards.length === 0 && (
+                  <section className="rounded border border-border bg-surface p-5">
+                    <p>{t('qualifying.studentNoTimes')}</p>
+                  </section>
+                )}
+                {q.standards.map((standard) => (
+                  <section key={standard.id} className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                    <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                      {standard.name}
+                    </h2>
+                    <GapTable rows={standard.rows} />
+                  </section>
+                ))}
+              </>
+            );
+          },
         },
         {
           slug: 'history',

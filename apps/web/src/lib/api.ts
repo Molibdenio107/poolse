@@ -2181,6 +2181,94 @@ export interface MeetChoice {
   official: boolean;
 }
 
+/* POOLSE-85 — gap to qualify. */
+
+export type AgeGroupGender = 'male' | 'female';
+
+export interface FederationAgeGroup {
+  id: string;
+  name: string;
+  /** Null admits both. */
+  gender: AgeGroupGender | null;
+  bornFrom: number | null;
+  bornTo: number | null;
+}
+
+export interface QualifyingStandardSummary {
+  id: string;
+  name: string;
+  windowFrom: string | null;
+  windowTo: string | null;
+  timeCount: number;
+}
+
+export interface QualifyingOverview {
+  organizationId: string;
+  seasons: { id: string; name: string; status: 'draft' | 'published' | 'archived' }[];
+  seasonId: string | null;
+  ageGroups: FederationAgeGroup[];
+  standards: QualifyingStandardSummary[];
+  canEdit: boolean;
+  canArchive: boolean;
+}
+
+export interface EntryTime {
+  ageGroupId: string;
+  stroke: Stroke;
+  distanceM: number;
+  course: Course;
+  timeMs: number;
+}
+
+export interface QualifyingStandard extends QualifyingStandardSummary {
+  organizationId: string;
+  seasonId: string;
+  seasonName: string;
+  seasonStartsOn: string;
+  seasonEndsOn: string;
+  ageGroups: FederationAgeGroup[];
+  times: EntryTime[];
+  canEdit: boolean;
+  canArchive: boolean;
+}
+
+/** One event against an entry time. `gapMs` ≤ 0 is qualified; null is no valid time. */
+export interface GapRow {
+  ageGroup: string;
+  stroke: Stroke;
+  distanceM: number;
+  course: Course;
+  entryMs: number;
+  bestMs: number | null;
+  bestSwumOn: string | null;
+  bestMeet: string | null;
+  gapMs: number | null;
+}
+
+export interface StudentQualifying {
+  seasonName: string;
+  ageGroups: string[];
+  noBand: 'birthDate' | 'none' | null;
+  standards: { id: string; name: string; rows: GapRow[] }[];
+}
+
+export interface QualifyingBoard {
+  organizationId: string;
+  standard: { id: string; name: string; seasonName: string };
+  marginMs: number;
+  swimmers: {
+    studentId: string;
+    name: string;
+    ageGroup: string;
+    competitive: boolean;
+    qualified: GapRow[];
+    close: GapRow[];
+    further: number;
+    noTime: number;
+  }[];
+  unplaced: { studentId: string; name: string; reason: 'birthDate' | 'none' }[];
+}
+
 export interface Progression {
   organizationId: string;
   records: SwimRecord[];
@@ -2195,6 +2283,8 @@ export interface Progression {
   defaultCourse: Course | null;
   /** Every live meet, for the time form's picker. */
   meets: MeetChoice[];
+  /** The gap to the published season's standards — POOLSE-85. Null: none to show. */
+  qualifying: StudentQualifying | null;
   canRecord: boolean;
   /** Withdrawing a time is owner/admin since round 5's G1 — separate from recording one. */
   canArchive: boolean;

@@ -159,6 +159,10 @@ const TENANT_TABLES = [
   'student_record',
   // POOLSE-81. Results name a meet, so the meet goes after them.
   'swim_meet',
+  // POOLSE-85. A time names a standard and an age group; both name a season.
+  'qualifying_time',
+  'qualifying_standard',
+  'federation_age_group',
   /*
    * Billing, child-first — POOLSE-42.
    *

@@ -406,3 +406,4 @@ export function isValidNif(nif: string): boolean {
 export * from './water.js';
 export * from './lab.js';
 export * from './compensation.js';
+export * from './swim.js';

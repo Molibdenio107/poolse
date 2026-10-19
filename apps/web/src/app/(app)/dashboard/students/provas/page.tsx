@@ -1,44 +1,58 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type MeetList } from '@/lib/api';
+import { ApiError, apiFetch, type MeetList, type QualifyingOverview } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { formatDate } from '@/lib/date-format';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
+import { pickSection, SectionPills, sectionHref } from '@/components/section-pills';
 import { ImportMeet } from './import-meet';
+import { AgeGroupList, SeasonChooser, StandardList } from './qualifying-sections';
 
 /**
- * Provas — POOLSE-81.
+ * Provas — POOLSE-81, and Mínimos — POOLSE-85.
  *
- * The club's meets, newest first, paginated because it grows every season.
- * Owner, admin and instructor; a family reads its own child's results in
- * Progressão and nothing here. Results arrive by importing the meet's LENEX file
- * (or by naming a meet on the time form).
+ * Three sections behind pills: the club's meets, newest first and paginated;
+ * the qualifying standards (Mínimos); and the FPN's age groups, which the club
+ * types for each season. Owner, admin and instructor; a family reads its own
+ * child's results and gap in Progressão and nothing here.
  */
+
+const PATH = '/dashboard/students/provas';
+const SECTIONS = ['meets', 'minimos', 'escaloes'] as const;
+type Section = (typeof SECTIONS)[number];
+
 export default async function MeetsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; section?: string; season?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { page: pageParam } = await searchParams;
-  const page = readPage(pageParam);
+  const params = await searchParams;
+  const section: Section = pickSection(SECTIONS, params.section, 'meets');
+  const page = readPage(params.page);
 
-  let data: MeetList | null = null;
+  let meets: MeetList | null = null;
+  let qualifying: QualifyingOverview | null = null;
   let failure: LoadFailure | null = null;
   let notPermitted = false;
 
   try {
-    data = await apiFetch<MeetList>(`/meets${page > 1 ? `?page=${page}` : ''}`);
+    if (section === 'meets') {
+      meets = await apiFetch<MeetList>(`/meets${page > 1 ? `?page=${page}` : ''}`);
+    } else {
+      const season = params.season === undefined ? '' : `?season=${encodeURIComponent(params.season)}`;
+      qualifying = await apiFetch<QualifyingOverview>(`/qualifying${season}`);
+    }
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) notPermitted = true;
     else failure = describeLoad(error);
   }
 
-  if (data !== null && isPastEnd(page, data.total, data.limit)) {
-    redirect(pageHref('/dashboard/students/provas', {}, lastPage(data.total, data.limit)));
+  if (meets !== null && isPastEnd(page, meets.total, meets.limit)) {
+    redirect(pageHref(PATH, {}, lastPage(meets.total, meets.limit)));
   }
 
   return (
@@ -47,11 +61,23 @@ export default async function MeetsPage({
       subtitle={t('meets.subtitle')}
       back={{ href: '/dashboard/students', label: t('students.backToRegister') }}
       actions={
-        data?.canImport ? (
-          <ImportMeet organizationId={data.organizationId} rememberedClubCode={data.rememberedClubCode} />
+        meets?.canImport ? (
+          <ImportMeet organizationId={meets.organizationId} rememberedClubCode={meets.rememberedClubCode} />
         ) : null
       }
     >
+      {!notPermitted && (
+        <SectionPills
+          label={t('qualifying.sections')}
+          current={section}
+          items={SECTIONS.map((key) => ({
+            key,
+            label: t(`qualifying.section.${key}`),
+            href: sectionHref(PATH, { season: params.season }, key),
+          }))}
+        />
+      )}
+
       {notPermitted && (
         <section className="rounded border border-border bg-surface p-5">
           <p>{t('meets.notPermitted')}</p>
@@ -62,20 +88,20 @@ export default async function MeetsPage({
         <PageError message={t(failure.key)} {...(failure.detail === '' ? {} : { detail: failure.detail })} />
       )}
 
-      {data !== null && (
+      {meets !== null && (
         <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-          {data.total === 0 ? (
+          {meets.total === 0 ? (
             <div className="flex flex-col gap-1">
               <p>{t('meets.empty')}</p>
               <p className="text-sm text-foreground-muted">{t('meets.emptyHint')}</p>
             </div>
           ) : (
             <ul className="flex flex-col divide-y divide-border">
-              {data.items.map((meet) => (
+              {meets.items.map((meet) => (
                 <li key={meet.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <Link
-                      href={`/dashboard/students/provas/${meet.id}`}
+                      href={`${PATH}/${meet.id}`}
                       className="font-medium underline underline-offset-4 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       {meet.name}
@@ -101,9 +127,25 @@ export default async function MeetsPage({
               ))}
             </ul>
           )}
-          <Pagination page={data} basePath="/dashboard/students/provas" />
+          <Pagination page={meets} basePath={PATH} />
         </section>
       )}
+
+      {qualifying !== null &&
+        (qualifying.seasonId === null ? (
+          <section className="rounded border border-border bg-surface p-5">
+            <p>{t('qualifying.noSeason')}</p>
+          </section>
+        ) : (
+          <>
+            <SeasonChooser overview={qualifying} path={PATH} section={section} />
+            {section === 'minimos' ? (
+              <StandardList overview={qualifying} seasonId={qualifying.seasonId} />
+            ) : (
+              <AgeGroupList overview={qualifying} seasonId={qualifying.seasonId} />
+            )}
+          </>
+        ))}
     </PageShell>
   );
 }

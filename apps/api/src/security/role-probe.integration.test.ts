@@ -1,5 +1,6 @@
 import { after, before, test } from 'node:test';
 import { MeetsController } from '../meets/meets.controller.js';
+import { QualifyingController } from '../qualifying/qualifying.controller.js';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
 import { ActivityController } from '../activity/activity.controller.js';
@@ -623,6 +624,24 @@ test('meets refuse a guardian and a student (403) — POOLSE-81', async () => {
     await refused('GET meets/:id', 403, () => meets.one(NO_SUCH_ID));
     await refused('POST meets/import', 403, () => meets.import({}));
     await refused('POST meets/:id/archive', 403, () => meets.archive(NO_SUCH_ID));
+  });
+});
+
+test('qualifying standards refuse a guardian and a student (403) — POOLSE-85', async () => {
+  await asEach(async () => {
+    const q = new QualifyingController();
+    await refused('GET qualifying', 403, () => q.read());
+    await refused('POST qualifying/age-groups', 403, () => q.addAgeGroup({}));
+    await refused('PUT qualifying/age-groups/:id', 403, () => q.editAgeGroup(NO_SUCH_ID, {}));
+    await refused('POST qualifying/age-groups/:id/archive', 403, () => q.removeAgeGroup(NO_SUCH_ID));
+    await refused('POST qualifying/standards', 403, () => q.addStandard({}));
+    await refused('GET qualifying/standards/:id', 403, () => q.standard(NO_SUCH_ID));
+    await refused('PUT qualifying/standards/:id', 403, () => q.editStandard(NO_SUCH_ID, {}));
+    await refused('POST qualifying/standards/:id/archive', 403, () => q.removeStandard(NO_SUCH_ID));
+    await refused('PUT qualifying/standards/:id/times/:ageGroupId', 403, () =>
+      q.setTimes(NO_SUCH_ID, NO_SUCH_ID, {}),
+    );
+    await refused('GET qualifying/standards/:id/board', 403, () => q.board(NO_SUCH_ID));
   });
 });
 

@@ -210,6 +210,30 @@ archiving a meet (with its results) is owner and admin, restorable from Arquivad
 refuses any DOCTYPE or entity, a `.lxf` with two `.lef`s or a nested archive, and anything that
 inflates past 40 MB.
 
+## Mínimos — gap to qualify (POOLSE-85)
+
+**The club types the FPN's tables** (Rui, 19-10-2026); Poolse ships none. Under **Provas**, two more
+sections:
+
+- **Escalões FPN** — the FPN's age groups for a season: a name, a gender (or both) and the birth years.
+  Girls a year earlier is two rows, not a rule. They are not the club's levels and change nobody's
+  turma.
+- **Mínimos** — a championship's entry times for a season, with an optional window (else the whole
+  season). Its page has **Tempos** — one age group at a time, the FPN's individual events down and
+  25 m / 50 m across, typed as `1:05,00` or `28,91` and read by the same `parseSwimTime`
+  (`@poolse/rules`) the API uses — and **Nadadores**, the coach's board: swimmers in competitive
+  levels or with an official time, what each has qualified for and what is within 1, 2 or 5 s, and
+  the competitive swimmers no band admits (no birth date, or no band fits).
+
+**What counts** is the best time at an **official** meet, in the **same pool length**, inside the
+window. 25 m and 50 m are never converted; no valid time is said in words and is never a gap. A
+swimmer's band is derived from birth year, gender and season — no birth date, no band.
+
+**On Progressão**, a *Mínimos* tab appears when the published season has a standard with times: the
+swimmer's band and, per standard, entry time, best valid time and gap. Families see it for their own
+child. **Who:** owner, admin and instructor create and type; archiving a band or a standard (with its
+times) is owner and admin.
+
 ## Not built yet
 
 - **AC7 — communications routed to the adult student rather than a guardian.** There is

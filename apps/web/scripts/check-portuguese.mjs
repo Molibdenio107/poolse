@@ -120,6 +120,8 @@ const SAME_ON_PURPOSE = new Map([
   ['facilities.unit.turbidity', 'a unit symbol — NTU'],
   ['facilities.unit.salt', 'a unit symbol — ppm'],
   ['facilities.metric.ph', 'pH is written the same in both languages'],
+  // POOLSE-85: the FPN's own name for an age group, which English keeps.
+  ['qualifying.ageGroupNamePlaceholder', "the FPN's proper name for an age group"],
 ]);
 
 function flatten(object, prefix = '') {

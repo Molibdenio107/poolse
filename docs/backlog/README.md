@@ -107,3 +107,4 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-82](./POOLSE-82-app-enrolment-and-waiting-list-offers.md) | Enrolling from the app, and a waiting list that offers places | Students / Mobile app | High | 1.7, POOLSE-69, 3.0, 3.2 | 1 |
 | [POOLSE-83](./POOLSE-83-paying-at-enrolment.md) | Paying at enrolment — checkout with a held place | Billing / Mobile app | High | POOLSE-82, 3.5, POOLSE-76 | 1 |
 | [POOLSE-84](./POOLSE-84-closures-by-facility-and-tank.md) | Closures by facility or by tank, half days, and who is warned | Scheduling / Closures | High | POOLSE-31 | — |
+| [POOLSE-85](./POOLSE-85-gap-to-qualify.md) | Gap to qualify — FPN age groups and entry times | Students / Competition | High | POOLSE-81 | 1 |

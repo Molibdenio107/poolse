@@ -1,6 +1,7 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { currentTenant } from '../tenant/tenant.context.js';
+import { studentQualifying, type StudentQualifying } from '../qualifying/qualifying.repository.js';
 
 export type Stroke = 'freestyle' | 'backstroke' | 'breaststroke' | 'butterfly' | 'medley';
 export const STROKES: Stroke[] = [
@@ -77,6 +78,11 @@ export interface Progression {
    */
   defaultCourse: Course | null;
   meets: MeetChoice[];
+  /**
+   * The gap to each of the published season's standards — POOLSE-85. Null when
+   * the season has none with a time in it, so the section is absent rather than empty.
+   */
+  qualifying: StudentQualifying | null;
 }
 
 /**
@@ -166,6 +172,7 @@ export async function progressionFor(
     const personalBests = bestsOf(records);
     const defaultCourse = await courseOfTurma(tx, studentId);
     const meets = await meetChoices(tx);
+    const qualifying = await studentQualifying(tx, studentId);
 
     return {
       records,
@@ -174,6 +181,7 @@ export async function progressionFor(
       favouriteStroke: student.rows[0].favourite_stroke,
       defaultCourse,
       meets,
+      qualifying,
     };
   });
 }
