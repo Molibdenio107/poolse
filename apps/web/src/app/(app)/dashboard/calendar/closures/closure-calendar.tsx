@@ -477,21 +477,11 @@ function ClosureForm({
     );
   }
 
-  /*
-   * Bumped on every answer from the server, and the form's key. React 19
-   * resets a form when its action returns — refusals included — and a reset
-   * unticks a native checkbox whose React state did not change, so a refused
-   * save showed no tank ticked while still holding one. Remounting redraws every
-   * control from state.
-   */
-  const [round, setRound] = useState(0);
-
   // After the render, not during it: closing this form updates the parent.
   const seen = useRef(state);
   useEffect(() => {
     if (seen.current === state) return;
     seen.current = state;
-    setRound((value) => value + 1);
     if (!state.ok) return;
     if (!warn || state.closureId === undefined) {
       onDone();
@@ -542,7 +532,7 @@ function ClosureForm({
       closeLabel={t('common.cancel')}
     >
       {warning === null ? (
-        <form key={round} action={action} className="flex flex-col gap-4">
+        <form action={action} className="flex flex-col gap-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="startsOn" value={range[0]} />
           <input type="hidden" name="endsOn" value={range[1]} />
@@ -973,14 +963,10 @@ function EditClosureDialog({
     };
   }, [organizationId, startsOn, endsOn, facilityId, poolId, partOfDay]);
 
-  // Every answer remounts the form, so React 19's reset cannot untick the box
-  // while state still holds it — the same reason as the create form.
-  const [round, setRound] = useState(0);
   const seen = useRef(state);
   useEffect(() => {
     if (seen.current === state) return;
     seen.current = state;
-    setRound((value) => value + 1);
     if (state.ok) onDone();
   }, [state, onDone]);
 
@@ -996,7 +982,7 @@ function EditClosureDialog({
       title={t('calendar.editClosureTitle', { reason: closure.reason })}
       closeLabel={t('common.cancel')}
     >
-      <form key={round} action={action} className="flex flex-col gap-4">
+      <form action={action} className="flex flex-col gap-4">
         <input type="hidden" name="organizationId" value={organizationId} />
         <input type="hidden" name="closureId" value={closure.id} />
         <input type="hidden" name="facilityId" value={facilityId} />

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ThemeScript } from '../../lib/theme-script';
+import { FormResetGuard } from '../../components/form-reset-guard';
 import '../globals.css';
 
 /**
@@ -28,7 +29,11 @@ export default function PublicLayout({
       <head>
         <ThemeScript />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* The pre-registration form's choices survive a refusal. */}
+        <FormResetGuard />
+      </body>
     </html>
   );
 }

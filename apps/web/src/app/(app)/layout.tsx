@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { formats } from '../../i18n';
 import { ToastProvider } from '../../components/ui/toast';
+import { FormResetGuard } from '../../components/form-reset-guard';
 import { readTheme } from '../../lib/preferences';
 import { ThemeScript } from '../../lib/theme-script';
 import '../globals.css';
@@ -97,6 +98,8 @@ export default async function AppLayout({
               unmounted with it.
             */}
             <ToastProvider>{children}</ToastProvider>
+            {/* A refused save must not untick a box or move a select. */}
+            <FormResetGuard />
           </NextIntlClientProvider>
         </body>
       </html>

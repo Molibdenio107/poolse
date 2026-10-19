@@ -34,7 +34,9 @@ import { fileURLToPath } from 'node:url';
  */
 
 const ROOT = fileURLToPath(new URL('../src', import.meta.url));
-const ALLOWED = new Set(['components/ui/field.tsx']);
+// `form-reset-guard.tsx` writes the DOM's `defaultChecked` on purpose: it is what
+// keeps a controlled box ticked through React 19's form reset (19-10-2026).
+const ALLOWED = new Set(['components/ui/field.tsx', 'components/form-reset-guard.tsx']);
 const DEFAULT_PROP = /\bdefault(Value|Checked)\b/;
 
 /**
