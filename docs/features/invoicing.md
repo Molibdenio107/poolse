@@ -150,11 +150,22 @@ the refusal is the database's rather than a screen's.
 
 ## Chasing
 
-**Poolse sends nothing.** The notification subsystem is a later phase, so what is recorded
-here is that a person telephoned, wrote or spoke to a family on a day — which is what makes a
-second chase a different conversation from the first, and what somebody needs to know before
-picking up the telephone. The screens say so plainly, because a club that believed this
-emailed the family would stop telephoning them.
+A chase records that a person telephoned, wrote or spoke to a family on a day — which is what
+makes a second chase a different conversation from the first, and what somebody needs to know
+before picking up the telephone. A person never records a Poolse email by hand.
+
+**A reminder by email (POOLSE-86).** On **Em dívida**, owner or admin ticks documents (or *Escolher
+o que está em atraso*) and presses *Enviar lembrete por email*. The ticked documents name their
+payers, and the dialog shows, before anything is written, each payer's **overdue** documents at
+this site with the total, the address, anyone with no address (named, sent nothing), anyone whose
+ticked documents are not late yet, and the club's *Como pagar*. A payer reminded by email in the
+last 7 days is flagged with the date and starts unticked — never blocked (Rui, 19-10-2026). Each
+payer gets one email: what is overdue, document by document, the total, and *Como pagar* verbatim
+(else "contact the club"). Each send is an `invoice_reminder` row (what it listed, snapshotted)
+and an ordinary chase on every document it listed, channel *Email (Poolse)*, so "last contact"
+counts it; the document's history says whether the email left. It counts against the club's
+shared daily address ceiling with messages (2,000), and a failed send is retried hourly.
+*Como pagar* is the club's own text on the site page's *Clube* tab.
 
 Each record carries the channel (email, telephone, message, in person, letter), the date and
 an optional note of what was said or answered. The **Em dívida** list shows when each family

@@ -3629,7 +3629,7 @@
     "referenceHint": "The bank reference, the MB WAY id, the receipt number. Optional.",
     "recordedBy": "Recorded by {name}",
     "chasesTitle": "Contacts",
-    "chaseIsManual": "Poolse sends nothing. This records that somebody telephoned, wrote or spoke to the family — so the next person to look knows whether they have been asked once or three times.",
+    "chaseIsManual": "This records that somebody phoned, wrote to or spoke with the family — so the next person to look knows whether they were asked once or three times. A reminder Poolse sent from Outstanding appears here on its own.",
     "noChases": "No contact has been recorded yet.",
     "recordChase": "Record a contact",
     "chaseFailed": "The contact could not be recorded.",
@@ -3640,7 +3640,8 @@
       "phone": "Telephone",
       "message": "Message",
       "in_person": "In person",
-      "letter": "Letter"
+      "letter": "Letter",
+      "poolse_email": "Email (Poolse)"
     },
     "chasedOn": "Contact date",
     "chaseNote": "Note",
@@ -3656,7 +3657,34 @@
     "finalConsumer": "Final consumer",
     "viewSettings": "Settings",
     "clubDataMoved": "The club's tax details and logo have moved to the site settings.",
-    "clubDataLink": "Open the club details"
+    "clubDataLink": "Open the club details",
+    "reminders": {
+      "title": "Send a reminder by email",
+      "loading": "Checking what is overdue…",
+      "explain": "Each payer gets one email with all their overdue documents at this site, the total and the club's payment instructions. Each send is recorded as a contact on every document.",
+      "notConfigured": "Email sending is not configured here: the reminders are recorded, but no email leaves.",
+      "nothingOverdueAtAll": "None of the chosen documents is overdue. A reminder is only sent for what is past its due date.",
+      "noAddress": "No email address — gets no reminder.",
+      "document": "{no}, due {due}: {amount}",
+      "lastReminded": "Last reminded by email on {date}",
+      "notLateYet": "Still within the due date, so no reminder: {names}.",
+      "howToPay": "How to pay (goes in the email)",
+      "noInstructions": "The club has not written how to pay yet; the email asks them to contact the club.",
+      "setInstructions": "Write the payment instructions",
+      "send": "{count, plural, =0 {Send} one {Send # reminder} other {Send # reminders}}",
+      "open": "{count, plural, =0 {Send a reminder by email} one {Send a reminder by email (# document)} other {Send a reminder by email (# documents)}}",
+      "tickOverdue": "{count, plural, =0 {Nothing overdue} one {Choose the overdue (#)} other {Choose the overdue (#)}}",
+      "tickColumn": "Choose",
+      "tickOne": "Choose document {no}",
+      "previewFailed": "Could not prepare the reminders.",
+      "nobodyChosen": "Choose at least one person.",
+      "quota": "{used} of this club's {limit} emails have already gone today. The reminders can be sent tomorrow.",
+      "sendFailed": "Could not send the reminders.",
+      "sentToast": "{count, plural, one {Reminder sent} other {# reminders sent}}",
+      "recordedToast": "{count, plural, one {Reminder recorded} other {# reminders recorded}}; {delivered, plural, =0 {no email has gone yet} one {# email went} other {# emails went}}.",
+      "chaseSent": "Reminder sent by Poolse.",
+      "chaseNotSent": "Reminder recorded — the email has not gone yet."
+    }
   },
   "reception": {
     "title": "Reception",
@@ -4991,7 +5019,13 @@
   },
   "clubData": {
     "tab": "Club details",
-    "hint": "Tax details and the logo belong to the club and apply to every site, not just this one."
+    "hint": "Tax details and the logo belong to the club and apply to every site, not just this one.",
+    "paymentTitle": "How to pay",
+    "paymentHint": "Goes, exactly as written, at the end of every payment reminder Poolse sends: IBAN, MB WAY number, office hours. Left empty, the reminder asks them to contact the club.",
+    "paymentLabel": "Payment instructions",
+    "paymentPlaceholder": "IBAN PT50 …\nMB WAY 9…\nOffice: weekdays, 9:00–12:00",
+    "paymentTooLong": "1000 characters at most.",
+    "paymentFailed": "Could not save the payment instructions."
   },
   "family": {
     "recordSubtitle": "The record the club keeps.",
@@ -5277,7 +5311,11 @@
       "errorFailed": "Could not read or import the times.",
       "errorForbidden": "You are not allowed to import times."
     },
-    "field": {"event": "Event", "distance": "Distance", "stroke": "Stroke"},
+    "field": {
+      "event": "Event",
+      "distance": "Distance",
+      "stroke": "Stroke"
+    },
     "sections": "Meets sections",
     "section": {
       "meets": "Meets",

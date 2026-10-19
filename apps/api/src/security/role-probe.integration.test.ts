@@ -1,6 +1,7 @@
 import { after, before, test } from 'node:test';
 import { MeetsController } from '../meets/meets.controller.js';
 import { QualifyingController } from '../qualifying/qualifying.controller.js';
+import { InvoicesController } from '../billing/invoices.controller.js';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
 import { ActivityController } from '../activity/activity.controller.js';
@@ -624,6 +625,15 @@ test('meets refuse a guardian and a student (403) — POOLSE-81', async () => {
     await refused('GET meets/:id', 403, () => meets.one(NO_SUCH_ID));
     await refused('POST meets/import', 403, () => meets.import({}));
     await refused('POST meets/:id/archive', 403, () => meets.archive(NO_SUCH_ID));
+  });
+});
+
+test('invoice reminders refuse a guardian and a student (403) — POOLSE-86', async () => {
+  await asEach(async () => {
+    const invoices = new InvoicesController();
+    await refused('POST facilities/:id/invoices/reminders', 403, () =>
+      invoices.remind(tenantRef.facilityId, { invoiceIds: [NO_SUCH_ID] }),
+    );
   });
 });
 

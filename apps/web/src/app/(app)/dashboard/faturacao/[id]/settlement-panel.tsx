@@ -154,6 +154,12 @@ export function SettlementPanel({
                 <span className="text-foreground-muted">
                   {formatDate(new Date(`${chase.chasedOn}T12:00:00Z`))}
                 </span>
+                {chase.delivered !== null && (
+                  // A reminder Poolse emailed — POOLSE-86: whether it left, in words.
+                  <span className="block text-foreground-muted">
+                    {t(chase.delivered ? 'invoices.reminders.chaseSent' : 'invoices.reminders.chaseNotSent')}
+                  </span>
+                )}
                 {chase.note !== null && <span className="block">{chase.note}</span>}
                 {chase.recordedByName !== null && (
                   <span className="block text-foreground-muted">

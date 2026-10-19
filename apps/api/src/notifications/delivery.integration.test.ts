@@ -2,7 +2,6 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
 import { closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
-import { TrialClockService } from '../platform/trial-clock.service.js';
 import { deliverSupportNotice, deliverTrialNotice } from '../platform/owner-notices.js';
 import { DeliveryRetryService } from './delivery-retry.service.js';
 import type { Email } from './notifier.js';
@@ -25,7 +24,6 @@ async function sql<T extends pg.QueryResultRow>(text: string, values: unknown[])
   return (await owner.query<T>(text, values)).rows;
 }
 
-const clock = new TrialClockService();
 const retry = new DeliveryRetryService();
 
 function outbox(ok = true): { sent: Email[]; send: (email: Email) => Promise<boolean> } {
@@ -33,15 +31,23 @@ function outbox(ok = true): { sent: Email[]; send: (email: Email) => Promise<boo
   return { sent, send: async (email) => (sent.push(email), ok) };
 }
 
+/**
+ * A trial ending in `days`, and the notice the clock would have written for it.
+ * Written directly rather than by running the clock: the clock takes a global
+ * lock, and running it here races `trial-clock.integration.test.ts`.
+ */
 async function trialEndingIn(tenant: ScratchTenant, days: number): Promise<string> {
   await sql(
     `UPDATE organization SET subscription_status = 'trialing', trial_ends_at = now() + make_interval(days => $2)
       WHERE id = $1`,
     [tenant.organizationId, days],
   );
-  const result = await clock.run(tenant.organizationId);
-  assert.equal(result.noticeIds.length, 1);
-  return result.noticeIds[0]!;
+  const [row] = await sql<{ id: string }>(
+    `INSERT INTO trial_notice (organization_id, kind, due_on, recipients)
+     VALUES ($1, 'trial_ending_soon', club_today(), ARRAY[$2]::text[]) RETURNING id`,
+    [tenant.organizationId, await ownerEmail(tenant)],
+  );
+  return row!.id;
 }
 
 async function ownerEmail(tenant: ScratchTenant): Promise<string> {

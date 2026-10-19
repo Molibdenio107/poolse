@@ -494,9 +494,10 @@ every read, so recording one moves a badge without writing to the invoice; an ov
 settles and `outstandingCents` floors at zero. A credit note is never paid, refused by a
 trigger because a bank feed will be a second way in. **`due_on` may precede `issued_on`** — a
 club billing October in December is ordinary, and 2.2's CHECK to the contrary was dropped
-rather than replaced. **Chasing records what a person did**, not what Poolse sent: nothing is
-delivered until the notifications phase, the channel is on the row so that phase writes into
-the same history, and the screens say so plainly.
+rather than replaced. **Chasing records what a person did, and what Poolse emailed.** A person's chase names its
+channel; a reminder sent from Em dívida (POOLSE-86) is an `invoice_reminder` — the overdue
+documents snapshotted, retried like every email — plus a chase per document with channel
+`poolse_email`, which a person cannot record by hand. The history says whether the email left.
 
 **A fee line with no `fee_period_id` is charged once**, and only an inscrição or a seguro may
 be one. The period is how a recurring line knows what an occurrence is worth and when the next

@@ -228,15 +228,20 @@ export class TaxNumberTakenError extends Error {
 export interface TaxSettings {
   /** Nine digits, normalised, or null where nobody has filled it in. */
   taxNumber: string | null;
+  /** *Como pagar* — POOLSE-86: shown verbatim under an invoice reminder. */
+  paymentInstructions: string | null;
 }
 
 export async function readTaxSettings(organizationId: string): Promise<TaxSettings> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ vat_number: string | null }>(
-      'SELECT vat_number FROM organization WHERE id = $1',
+    const { rows } = await tx.query<{ vat_number: string | null; payment_instructions: string | null }>(
+      'SELECT vat_number, payment_instructions FROM organization WHERE id = $1',
       [organizationId],
     );
-    return { taxNumber: rows[0]?.vat_number ?? null };
+    return {
+      taxNumber: rows[0]?.vat_number ?? null,
+      paymentInstructions: rows[0]?.payment_instructions ?? null,
+    };
   });
 }
 
@@ -277,7 +282,11 @@ export async function saveTaxNumber(
         data: { taxNumber },
       });
 
-      return { taxNumber };
+      const { rows } = await tx.query<{ payment_instructions: string | null }>(
+        'SELECT payment_instructions FROM organization WHERE id = $1',
+        [organizationId],
+      );
+      return { taxNumber, paymentInstructions: rows[0]?.payment_instructions ?? null };
     });
   } catch (error) {
     const { code, constraint } = error as { code?: string; constraint?: string };
@@ -286,4 +295,25 @@ export async function saveTaxNumber(
     }
     throw error;
   }
+}
+
+/**
+ * *Como pagar* — POOLSE-86, 3.0b. The club's own words under every invoice
+ * reminder (IBAN, MB WAY, office hours); null makes the reminder say to contact
+ * the club. Audited by who changed it, not by what it says.
+ */
+export async function savePaymentInstructions(
+  organizationId: string,
+  text: string | null,
+): Promise<TaxSettings> {
+  await withOrg(organizationId, async (tx) => {
+    await tx.query('UPDATE organization SET payment_instructions = $2 WHERE id = $1', [organizationId, text]);
+    await recordAudit(tx, {
+      action: 'organization.payment_instructions_changed',
+      entityType: 'organization',
+      entityId: organizationId,
+      data: { cleared: text === null },
+    });
+  });
+  return readTaxSettings(organizationId);
 }

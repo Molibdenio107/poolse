@@ -3416,7 +3416,8 @@ export type InvoiceStatus =
 export type PaymentSource = 'manual' | 'mbway' | 'sepa';
 
 /** How a family was asked. A person's action until the notifications phase. */
-export type ChaseChannel = 'email' | 'phone' | 'message' | 'in_person' | 'letter';
+/** `poolse_email` is a reminder Poolse sent — POOLSE-86; never recorded by hand. */
+export type ChaseChannel = 'email' | 'phone' | 'message' | 'in_person' | 'letter' | 'poolse_email';
 
 export interface InvoicePayment {
   id: string;
@@ -3434,6 +3435,31 @@ export interface InvoiceChase {
   channel: ChaseChannel;
   note: string | null;
   recordedByName: string | null;
+  /** A reminder Poolse emailed: whether it left. Null for any other channel. */
+  delivered: boolean | null;
+}
+
+/** Invoice reminders by email — POOLSE-86, 3.0b. */
+export interface ReminderPayer {
+  key: string;
+  payerName: string;
+  email: string | null;
+  documents: { invoiceId: string; documentNo: string; issuedOn: string; dueOn: string; outstandingCents: number }[];
+  lastRemindedOn: string | null;
+  recentlyReminded: boolean;
+}
+
+export interface ReminderPreview {
+  payers: ReminderPayer[];
+  nothingOverdue: string[];
+  paymentInstructions: string | null;
+  emailConfigured: boolean;
+}
+
+export interface ReminderSent {
+  reminderIds: string[];
+  noAddress: string[];
+  delivered: number;
 }
 
 export interface InvoiceSeries {
@@ -3686,6 +3712,8 @@ export interface ManualPayment {
 export interface TaxSettings {
   /** Nine digits, normalised, or null where nobody has filled it in. */
   taxNumber: string | null;
+  /** *Como pagar* — POOLSE-86: the club's words under an invoice reminder. */
+  paymentInstructions: string | null;
 }
 
 /**

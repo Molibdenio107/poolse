@@ -50,7 +50,7 @@ Each slice is one vertical, finished on its own.
 - **What stays the same:** each sender's own wording and recipients. Retry re-renders from the row,
   so a retried email is the email that would have gone first time.
 
-#### 3.0b — an invoice reminder by email (Rui, 19-10-2026)
+#### 3.0b — an invoice reminder by email (Rui, 19-10-2026) — built 19-10-2026
 
 - **A person triggers it**, never a schedule: *Enviar lembrete por email* per family on **Em dívida**,
   and for several selected at once. Owner and admin, as chasing is.

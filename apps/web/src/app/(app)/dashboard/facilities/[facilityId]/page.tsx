@@ -1,5 +1,5 @@
 import { RegulationPanel, type ComplaintsSettingsView, type RegulationVersionView } from './regulation-panel';
-import { TaxPanel } from './tax-panel';
+import { PaymentInstructionsPanel, TaxPanel } from './tax-panel';
 import { LogoPanel } from './logo-panel';
 import { readTaxSettings } from './club.actions';
 import { wallClockNow } from '@/lib/date-format';
@@ -554,7 +554,10 @@ export default async function FacilityPage({
                 {tax.state === 'failed' ? (
                   <PageError message={t(tax.failure.key)} />
                 ) : (
-                  <TaxPanel settings={tax.data} />
+                  <>
+                    <TaxPanel settings={tax.data} />
+                    <PaymentInstructionsPanel settings={tax.data} />
+                  </>
                 )}
                 <LogoPanel />
               </div>

@@ -23,6 +23,7 @@ import {
   reposicaoSettings,
   saveReposicaoSettings,
   saveTaxNumber,
+  savePaymentInstructions,
   TaxNumberTakenError,
   TrialAlreadyClaimedError,
   type ReposicaoSettings,
@@ -183,6 +184,18 @@ export class SettingsController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
     return readTaxSettings(organizationId);
+  }
+
+  /** *Como pagar* — POOLSE-86. Owner and admin; an empty box clears it. */
+  @Put('payment-instructions')
+  async savePaymentInstructions(@Body() body: { paymentInstructions?: unknown }): Promise<TaxSettings> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const raw = typeof body.paymentInstructions === 'string' ? body.paymentInstructions.trim() : '';
+    if (raw.length > 1000) {
+      throw new BadRequestException({ fields: { paymentInstructions: 'clubData.paymentTooLong' } });
+    }
+    return savePaymentInstructions(organizationId, raw === '' ? null : raw);
   }
 
   @Put('tax')

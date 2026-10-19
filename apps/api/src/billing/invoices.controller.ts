@@ -37,6 +37,14 @@ import {
   type PaymentInput,
   type PaymentSource,
 } from './invoices.repository.js';
+import { deliverInvoiceReminder } from './reminder-delivery.js';
+import {
+  previewReminders,
+  quotaRefusal,
+  sendReminders,
+  type ReminderPreview,
+  type ReminderSent,
+} from './reminders.repository.js';
 
 /**
  * Invoicing — phase 2.2.
@@ -211,6 +219,46 @@ export class InvoicesController {
     } catch (error) {
       throw refuseNotPayable(error);
     }
+  }
+
+  /**
+   * An invoice reminder by email — POOLSE-86, 3.0b. The ticked documents name
+   * their payers; each payer gets one email listing everything of theirs here
+   * that is overdue. Preview and send on one path: `commit` with the chosen
+   * `payerKeys` writes the reminders and their chases in one transaction, and
+   * the emails go after it. Owner and admin, as chasing is.
+   */
+  @Post('reminders')
+  async remind(
+    @Param('facilityId') facilityId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<ReminderPreview | (ReminderSent & { delivered: number })> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const ids = uuidList(body['invoiceIds'], 'invoiceIds', 500);
+    if (ids.length === 0) throw new BadRequestException('Choose at least one document');
+    if (body['commit'] !== true) return previewReminders(organizationId, facilityId, ids);
+
+    const keys = Array.isArray(body['payerKeys'])
+      ? body['payerKeys'].filter((key): key is string => typeof key === 'string' && /^[ms]:[0-9a-f-]{36}$/i.test(key))
+      : [];
+    let sent: ReminderSent;
+    try {
+      sent = await sendReminders(organizationId, facilityId, ids, keys);
+    } catch (error) {
+      const quota = quotaRefusal(error);
+      if (quota === null) throw error;
+      throw new ConflictException({
+        code: 'email_quota',
+        message: 'Daily email limit reached',
+        values: { limit: quota.limit, used: quota.used },
+      });
+    }
+    let delivered = 0;
+    for (const id of sent.reminderIds) {
+      if (await deliverInvoiceReminder(organizationId, id)) delivered += 1;
+    }
+    return { ...sent, delivered };
   }
 
   /**
@@ -521,4 +569,10 @@ function readPrefix(value: unknown): string {
     });
   }
   return trimmed;
+}
+
+function uuidList(value: unknown, field: string, max: number): string[] {
+  if (!Array.isArray(value)) return [];
+  if (value.length > max) throw new BadRequestException(`${field} is too long`);
+  return [...new Set(value.filter((id): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)))];
 }

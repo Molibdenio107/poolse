@@ -3841,3 +3841,15 @@ Migration `1791280800000_delivery-retry`. `delivery_attempts smallint` (retries 
 already a column grant, and to `poolse_platform` on `platform_alert`. `poolse_platform` gains UPDATE on
 `support_grant`'s three notice columns, by policy limited to `source = 'override'`. `invitation` is not
 retried (its link is stored as a hash).
+
+### Invoice reminders — POOLSE-86 slice 3.0b, 19 October 2026
+
+Migration `1791367200000_invoice-reminders`. `invoice_chase_channel` gains `poolse_email`.
+`organization.payment_instructions` — *Como pagar*, ≤ 1000 characters, null = "contact the club".
+**`invoice_reminder`** — one email to one payer: site, payer (membership or student, exactly one),
+`payer_name`, `email`, `locale`, `lines` (jsonb snapshot of the overdue documents listed), `sent_by`,
+`delivered_at`, `delivery_attempts`, `last_attempt_at`. Insert-only for `poolse_app` bar the delivery
+columns. `invoice_chase.reminder_id` names it, by CHECK exactly when the channel is `poolse_email`.
+**`email_addresses_today(org, at)`** — messages' addresses plus reminders, the one count both the
+message trigger and the new `invoice_reminder_quota` trigger check against
+`message_daily_address_limit()` under the same advisory lock.

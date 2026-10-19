@@ -1,11 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { TextField } from '@/components/ui/field';
+import { TextAreaField, TextField } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
 import type { TaxSettings } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
-import { saveTaxNumberAction } from './club.actions';
+import { savePaymentInstructionsAction, saveTaxNumberAction } from './club.actions';
 
 /**
  * The club's own NIPC — POOLSE-62, second half.
@@ -48,6 +48,43 @@ export function TaxPanel({ settings }: { settings: TaxSettings }): React.ReactEl
           hint={t('settings.tax.numberHint')}
         />
 
+        <button
+          type="submit"
+          disabled={pending}
+          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded bg-primary font-medium text-primary-foreground outline-primary hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+        >
+          {pending ? t('common.working') : t('common.save')}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+/**
+ * *Como pagar* — POOLSE-86, 3.0b. The club's own words, shown verbatim under
+ * every invoice reminder Poolse emails: an IBAN, an MB WAY number, office hours.
+ * Empty, the reminder says to contact the club.
+ */
+export function PaymentInstructionsPanel({ settings }: { settings: TaxSettings }): React.ReactElement {
+  const t = useTranslations();
+  const [state, dispatch, pending] = useSavedAction(savePaymentInstructionsAction, INITIAL);
+
+  return (
+    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+      <div>
+        <h2 className="text-sm font-medium">{t('clubData.paymentTitle')}</h2>
+        <p className="text-sm text-foreground-muted">{t('clubData.paymentHint')}</p>
+      </div>
+      <form action={dispatch} className="flex flex-col gap-3">
+        <TextAreaField
+          name="paymentInstructions"
+          label={t('clubData.paymentLabel')}
+          initial={settings.paymentInstructions ?? ''}
+          rows={4}
+          maxLength={1000}
+          placeholder={t('clubData.paymentPlaceholder')}
+          error={state.fields?.['paymentInstructions'] === undefined ? undefined : t(state.fields['paymentInstructions'])}
+        />
         <button
           type="submit"
           disabled={pending}

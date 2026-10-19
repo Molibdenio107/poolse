@@ -48,7 +48,8 @@ export type InvoiceStatus =
 export type PaymentSource = 'manual' | 'mbway' | 'sepa';
 
 /** How a family was asked to pay. A person's action until phase 3.0 exists. */
-export type ChaseChannel = 'email' | 'phone' | 'message' | 'in_person' | 'letter';
+/** `poolse_email` is a reminder Poolse sent (POOLSE-86); a person never records one by hand. */
+export type ChaseChannel = 'email' | 'phone' | 'message' | 'in_person' | 'letter' | 'poolse_email';
 
 /** One arrival of money against a document. */
 export interface InvoicePayment {
@@ -68,6 +69,8 @@ export interface InvoiceChase {
   channel: ChaseChannel;
   note: string | null;
   recordedByName: string | null;
+  /** A reminder Poolse emailed (POOLSE-86): whether it left. Null for any other channel. */
+  delivered: boolean | null;
 }
 
 /**
@@ -751,7 +754,7 @@ async function issueDraft(
  * same function the candidate query calls, so a preview and the document it
  * became show the same tax.
  */
-const TOTALS_SQL = `
+export const TOTALS_SQL = `
   LEFT JOIN LATERAL (
     SELECT coalesce(sum(l.amount_cents), 0)::int AS total_cents,
            coalesce(sum(invoice_vat_cents(l.amount_cents, l.vat_rate)), 0)::int AS vat_cents,
@@ -891,7 +894,7 @@ function toInvoice(row: InvoiceRow): Invoice {
   };
 }
 
-const JOINS_SQL = `
+export const JOINS_SQL = `
     FROM invoice i
     JOIN facility f ON f.id = i.facility_id
     LEFT JOIN invoice orig
@@ -1191,11 +1194,14 @@ async function readChases(tx: Tx, invoiceId: string): Promise<InvoiceChase[]> {
     channel: ChaseChannel;
     note: string | null;
     recorded_by_name: string | null;
+    delivered: boolean | null;
   }>(
     `SELECT c.id, to_char(c.chased_on, 'YYYY-MM-DD') AS chased_on,
             c.channel, c.note,
-            person_name(c.recorded_by) AS recorded_by_name
+            person_name(c.recorded_by) AS recorded_by_name,
+            CASE WHEN c.reminder_id IS NULL THEN NULL ELSE r.delivered_at IS NOT NULL END AS delivered
        FROM invoice_chase c
+       LEFT JOIN invoice_reminder r ON r.id = c.reminder_id AND r.organization_id = c.organization_id
       WHERE c.invoice_id = $1 AND c.archived_at IS NULL
       ORDER BY c.chased_on DESC, c.created_at DESC`,
     [invoiceId],
@@ -1207,6 +1213,7 @@ async function readChases(tx: Tx, invoiceId: string): Promise<InvoiceChase[]> {
     channel: row.channel,
     note: row.note,
     recordedByName: row.recorded_by_name,
+    delivered: row.delivered,
   }));
 }
 

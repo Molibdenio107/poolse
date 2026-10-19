@@ -9,6 +9,8 @@ import {
   type Invoice,
   type InvoiceRun,
   type InvoiceSeries,
+  type ReminderPreview,
+  type ReminderSent,
 } from '@/lib/api';
 import { parseCents } from '@/lib/money';
 import type { FormState } from '../actions';
@@ -310,3 +312,61 @@ export async function listSeries(
 
 // The club's NIPC and logo moved to the site's *Dados do clube* tab
 // (facilities/[facilityId]/club.actions.ts) — Rui, 13 October 2026.
+
+/**
+ * Invoice reminders by email — POOLSE-86, 3.0b. The preview is asked for by the
+ * dialog when it opens; the send is the dialog's form. One API path with a
+ * `commit` flag, so what the person was shown and what was written agree.
+ */
+export async function previewRemindersAction(
+  facilityId: string,
+  invoiceIds: string[],
+): Promise<{ ok: true; preview: ReminderPreview } | { ok: false; errorKey: string }> {
+  try {
+    const preview = await apiPost<ReminderPreview>(`/facilities/${facilityId}/invoices/reminders`, { invoiceIds });
+    return { ok: true, preview };
+  } catch {
+    return { ok: false, errorKey: 'invoices.reminders.previewFailed' };
+  }
+}
+
+export async function sendRemindersAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const facilityId = String(formData.get('facilityId') ?? '').trim();
+  const read = (field: string): string[] => {
+    try {
+      const value: unknown = JSON.parse(String(formData.get(field) ?? '[]'));
+      return Array.isArray(value) ? value.filter((one): one is string => typeof one === 'string') : [];
+    } catch {
+      return [];
+    }
+  };
+  const payerKeys = read('payerKeys');
+  if (payerKeys.length === 0) return { ok: false, errorKey: 'invoices.reminders.nobodyChosen' };
+
+  let sent: ReminderSent;
+  try {
+    sent = await apiPost<ReminderSent>(`/facilities/${facilityId}/invoices/reminders`, {
+      invoiceIds: read('invoiceIds'),
+      payerKeys,
+      commit: true,
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'email_quota') {
+      // The trigger's figures, carried as structure rather than prose.
+      const raw = (error.details as { values?: Record<string, unknown> } | null)?.values ?? {};
+      const values: Record<string, number> = {};
+      for (const [name, value] of Object.entries(raw)) if (typeof value === 'number') values[name] = value;
+      return { ok: false, errorKey: 'invoices.reminders.quota', values };
+    }
+    return failure(error, 'invoices.reminders.sendFailed');
+  }
+
+  revalidatePath(PATH);
+  return {
+    ok: true,
+    // Said as what happened: written and sent, or written and not sent.
+    toastKey:
+      sent.delivered === sent.reminderIds.length ? 'invoices.reminders.sentToast' : 'invoices.reminders.recordedToast',
+    values: { count: sent.reminderIds.length, delivered: sent.delivered },
+  };
+}

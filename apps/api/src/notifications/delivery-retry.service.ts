@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { withOrg, withPlatform } from '@poolse/db';
 import { deliverLabAlert, deliverWaterAlert } from '../facilities/alert-delivery.js';
+import { deliverInvoiceReminder } from '../billing/reminder-delivery.js';
 import { deliverMessage } from '../messages/delivery.js';
 import { deliverSupportNotice, deliverTrialNotice } from '../platform/owner-notices.js';
 import { alertRecipients, redeliverAlert } from '../platform/platform-alert.js';
@@ -83,6 +84,13 @@ const TENANT_KINDS: TenantKind[] = [
     bump: `UPDATE message_recipient SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now()
             WHERE message_id = $1 AND delivered_at IS NULL AND email IS NOT NULL`,
     deliver: async (organizationId, messageId, send) => (await deliverMessage(organizationId, messageId, send)) > 0,
+  },
+  {
+    // POOLSE-86 3.0b: one invoice reminder, as snapshotted when it was sent.
+    key: 'invoice_reminder',
+    pending: `SELECT id FROM invoice_reminder WHERE delivered_at IS NULL AND ${due('created_at')}`,
+    bump: `UPDATE invoice_reminder SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
+    deliver: deliverInvoiceReminder,
   },
 ];
 
@@ -171,9 +179,13 @@ export class DeliveryRetryService {
     }
 
     return withPlatform(async (platform) => {
+      // The whole estate takes one lock; a pass narrowed to one club takes its
+      // own, so a test of one club never waits on — or blocks — another.
       const { rows: lock } = await platform.query<{ taken: boolean }>(
-        'SELECT pg_try_advisory_xact_lock($1) AS taken',
-        [DeliveryRetryService.LOCK_KEY],
+        organizationId === undefined
+          ? 'SELECT pg_try_advisory_xact_lock($1) AS taken'
+          : `SELECT pg_try_advisory_xact_lock(hashtextextended('delivery_retry:' || $1, 0)) AS taken`,
+        [organizationId ?? DeliveryRetryService.LOCK_KEY],
       );
       if (lock[0]?.taken !== true) return { locked: false, configured: true, attempted: 0, delivered: 0 };
 

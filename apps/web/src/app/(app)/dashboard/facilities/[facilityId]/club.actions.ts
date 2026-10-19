@@ -40,3 +40,19 @@ export async function saveTaxNumberAction(
   revalidatePath('/dashboard/facilities', 'layout');
   return { ok: true };
 }
+
+/** *Como pagar* — POOLSE-86. Blank clears it, and the reminder then says to contact the club. */
+export async function savePaymentInstructionsAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  try {
+    await apiPut('/settings/payment-instructions', {
+      paymentInstructions: String(formData.get('paymentInstructions') ?? ''),
+    });
+  } catch (error) {
+    return describeFailure(error, 'clubData.paymentFailed');
+  }
+  revalidatePath('/dashboard/facilities', 'layout');
+  return { ok: true };
+}
