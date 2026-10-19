@@ -68,6 +68,9 @@ export async function deliverTrialNotice(
       return rows[0] ?? null;
     });
     if (notice === null || notice.delivered || notice.recipients.length === 0) return false;
+    // The state it describes was undone since (an operator lifted read-only, the
+    // club was restored): the date it is about is gone, and so is the notice.
+    if (notice.date === null) return false;
 
     let delivered = false;
     for (const to of notice.recipients) {
@@ -76,8 +79,9 @@ export async function deliverTrialNotice(
           to,
           kind: notice.kind,
           organizationName: notice.name,
-          date: notice.date ?? '',
+          date: notice.date,
           link: webLink('/dashboard/profile/subscription'),
+          supportEmail: process.env['SUPPORT_EMAIL'] ?? process.env['NEXT_PUBLIC_SUPPORT_EMAIL'] ?? null,
           locale: notice.locale,
         }),
       );

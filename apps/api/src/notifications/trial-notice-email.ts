@@ -18,6 +18,8 @@ export interface TrialNoticeEmailInput {
   date: string;
   /** Where the owner pays or sees the subscription. */
   link: string;
+  /** Poolse's support address, where one is configured — for a club whose door is shut. */
+  supportEmail?: string | null;
   locale: string;
 }
 
@@ -50,15 +52,16 @@ const COPY = {
       access_closing_soon: (date: string) =>
         `O acesso a {club} fecha a ${date}. Ative a subscrição até lá para continuar a usar o Poolse.`,
       access_closed: (date: string) =>
-        `O acesso a {club} foi fechado porque a subscrição não foi ativada. Os dados ficam guardados até ${date}; ativar a subscrição reabre tudo.`,
+        `O acesso a {club} foi fechado porque a subscrição não foi ativada. Os dados ficam guardados até ${date}; para reabrir o acesso, contacte o Poolse.`,
       deletion_soon: (date: string) =>
-        `{club} vai ser arquivado a ${date}. Até lá, ativar a subscrição reabre o acesso com todos os dados.`,
+        `{club} vai ser arquivado a ${date}. Até lá, o acesso pode ser reaberto com todos os dados: contacte o Poolse.`,
       payment_overdue: (date: string) =>
         `A subscrição de {club} estava paga até ${date} e ainda não recebemos o pagamento seguinte. O Poolse continua a funcionar normalmente durante o período de tolerância.`,
       payment_read_only: (date: string) =>
         `Como o pagamento da subscrição de {club} continua em atraso, o Poolse está em modo de leitura desde ${date}. Os dados estão todos disponíveis; registar o pagamento reativa a escrita.`,
     },
     action: 'Ver a subscrição',
+    contact: (address: string) => `Escreva para ${address}.`,
     signature: 'Esta mensagem foi enviada automaticamente pelo Poolse a quem é dono do clube.',
   },
   en: {
@@ -82,15 +85,16 @@ const COPY = {
       access_closing_soon: (date: string) =>
         `Access to {club} closes on ${date}. Activate the subscription before then to keep using Poolse.`,
       access_closed: (date: string) =>
-        `Access to {club} has been closed because the subscription was not activated. The data is kept until ${date}; activating the subscription reopens everything.`,
+        `Access to {club} has been closed because the subscription was not activated. The data is kept until ${date}; to reopen access, contact Poolse.`,
       deletion_soon: (date: string) =>
-        `{club} will be archived on ${date}. Until then, activating the subscription reopens access with all the data.`,
+        `{club} will be archived on ${date}. Until then, access can be reopened with all the data: contact Poolse.`,
       payment_overdue: (date: string) =>
         `The subscription for {club} was paid up to ${date} and the next payment has not arrived yet. Poolse keeps working normally during the grace period.`,
       payment_read_only: (date: string) =>
         `As the subscription payment for {club} is still overdue, Poolse has been read-only since ${date}. All the data is available; recording the payment turns writing back on.`,
     },
     action: 'See the subscription',
+    contact: (address: string) => `Write to ${address}.`,
     signature: 'This message was sent automatically by Poolse to the owners of the club.',
   },
 } as const;
@@ -102,14 +106,29 @@ function escapeHtml(value: string): string {
 export function trialNoticeEmail(input: TrialNoticeEmailInput): Email {
   const copy = input.locale.startsWith('en') ? COPY.en : COPY['pt-PT'];
   const line = copy.body[input.kind](input.date).replace('{club}', input.organizationName);
+  // Once the door is shut the subscription page cannot be reached, so these two
+  // point at Poolse rather than at a link that refuses them (sweep 19-10b).
+  const shut = input.kind === 'access_closed' || input.kind === 'deletion_soon';
+  const support = input.supportEmail?.trim() ?? '';
+  const action = shut
+    ? support === ''
+      ? null
+      : { text: copy.contact(support), href: `mailto:${support}` }
+    : { text: `${copy.action}: ${input.link}`, href: input.link, label: copy.action };
 
   return {
     to: input.to,
     subject: `${input.organizationName} — ${copy.subject[input.kind]}`,
-    text: [line, '', `${copy.action}: ${input.link}`, '', copy.signature].join('\n'),
+    text: [line, '', ...(action === null ? [] : [action.text, '']), copy.signature].join('\n'),
     html: [
       `<p>${escapeHtml(line)}</p>`,
-      `<p><a href="${escapeHtml(input.link)}">${escapeHtml(copy.action)}</a></p>`,
+      ...(action === null
+        ? []
+        : [
+            shut
+              ? `<p>${escapeHtml(action.text)}</p>`
+              : `<p><a href="${escapeHtml(action.href)}">${escapeHtml(copy.action)}</a></p>`,
+          ]),
       `<p style="color:#6b7280;font-size:12px">${escapeHtml(copy.signature)}</p>`,
     ].join('\n'),
   };

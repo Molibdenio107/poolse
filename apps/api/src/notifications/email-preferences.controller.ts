@@ -77,12 +77,11 @@ async function self(): Promise<{ organizationId: string; email: string | null }>
   requireRole('owner', 'admin', 'instructor', 'maintenance', 'guardian', 'student');
   const tenant = currentTenant();
   if (tenant.support === true) throw new ForbiddenException('Support has no address of its own here');
-  // A membership with no login has no address of its own to choose for.
-  if (!tenant.appUserId) return { organizationId: tenant.organizationId, email: null };
+  if (!tenant.membershipId) return { organizationId: tenant.organizationId, email: null };
+  // person_email(): the address messages actually go to — the login's, else the
+  // membership's (sweep 19-10b: a phone-only login still has one here).
   const { rows } = await withOrg(tenant.organizationId, (tx) =>
-    tx.query<{ email: string | null }>('SELECT cached_email::text AS email FROM app_user WHERE id = $1', [
-      tenant.appUserId,
-    ]),
+    tx.query<{ email: string | null }>('SELECT person_email($1)::text AS email', [tenant.membershipId]),
   );
   const email = rows[0]?.email?.trim() ?? '';
   return { organizationId: tenant.organizationId, email: email === '' ? null : email };

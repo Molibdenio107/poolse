@@ -276,7 +276,13 @@ export default async function ProgressPage({
                   <p>
                     {q.ageGroups.length > 0
                       ? t('qualifying.studentBand', { season: q.seasonName, groups: q.ageGroups.join(', ') })
-                      : t(q.noBand === 'birthDate' ? 'qualifying.studentNoBirthDate' : 'qualifying.studentNoBand', {
+                      : t(
+                          q.noBand === 'birthDate'
+                            ? 'qualifying.studentNoBirthDate'
+                            : q.noBand === 'gender'
+                              ? 'qualifying.studentNoGender'
+                              : 'qualifying.studentNoBand',
+                          {
                           season: q.seasonName,
                         })}
                   </p>

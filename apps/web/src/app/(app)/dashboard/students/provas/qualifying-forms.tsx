@@ -249,6 +249,7 @@ function StandardFields({
         label={t('qualifying.windowFrom')}
         initial={standard?.windowFrom ?? ''}
         hint={t('qualifying.windowHint')}
+        error={fieldError(t, state, 'windowFrom')}
       />
       <TextField
         name="windowTo"

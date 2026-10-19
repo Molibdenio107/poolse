@@ -59,13 +59,18 @@ interface TenantKind {
 const TENANT_KINDS: TenantKind[] = [
   {
     key: 'water',
-    pending: `SELECT id FROM pool_analysis_alert WHERE delivered_at IS NULL AND ${due('raised_at')}`,
+    // Not for a reading archived since (sweep 19-10b): it no longer happened.
+    pending: `SELECT a.id FROM pool_analysis_alert a
+               JOIN pool_analysis pa ON pa.id = a.analysis_id AND pa.organization_id = a.organization_id
+              WHERE a.delivered_at IS NULL AND pa.archived_at IS NULL AND ${due('a.raised_at', 'a.delivery_attempts', 'a.last_attempt_at')}`,
     bump: `UPDATE pool_analysis_alert SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
     deliver: deliverWaterAlert,
   },
   {
     key: 'lab',
-    pending: `SELECT id FROM lab_result_alert WHERE delivered_at IS NULL AND ${due('raised_at')}`,
+    pending: `SELECT a.id FROM lab_result_alert a
+               JOIN lab_result lr ON lr.id = a.lab_result_id AND lr.organization_id = a.organization_id
+              WHERE a.delivered_at IS NULL AND lr.archived_at IS NULL AND ${due('a.raised_at', 'a.delivery_attempts', 'a.last_attempt_at')}`,
     bump: `UPDATE lab_result_alert SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
     deliver: deliverLabAlert,
   },
@@ -133,8 +138,7 @@ const PLATFORM_KINDS: PlatformKind[] = [
                  AND ($1::uuid IS NULL OR organization_id = $1)
                  AND ${due('raised_at')}`,
     bump: `UPDATE platform_alert SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
-    // Its sender reads PLATFORM_ALERT_EMAIL and sends itself.
-    deliver: (id) => redeliverAlert(id),
+    deliver: (id, send) => redeliverAlert(id, send),
     enabled: () => alertRecipients().length > 0,
   },
 ];

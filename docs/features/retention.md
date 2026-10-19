@@ -39,6 +39,11 @@ no actor: `retention.health_erased`, `retention.anonymised`.
 left, when their health data goes and when their identity does, or that the health data
 already went. A new enrolment before then stops the count, because the student has not left.
 
+**Copies of an address kept elsewhere** go by trigger when retention anonymises their owner
+(sweep 19-10-2026b): the opt-out row for that address in `email_preference`, unless someone
+still live in the club holds the same address, and an invoice reminder's payer name and address,
+with the payer's name stripped from its audit entry.
+
 ## Not covered yet
 
 Staff records, incident reports about visitors or staff, the words of a message body, files in

@@ -93,11 +93,11 @@ export function canImport(mapping: QualifyingMapping): boolean {
  * ("100 L") — "100 M" is refused rather than read as metres or as mariposa.
  */
 const STROKE_WORDS: [QualifyingStroke, string[]][] = [
-  ['freestyle', ['livre', 'livres', 'crol', 'crawl', 'free', 'freestyle', 'fr', 'l']],
-  ['backstroke', ['costas', 'back', 'backstroke', 'bk', 'c']],
-  ['breaststroke', ['brucos', 'bruco', 'breast', 'breaststroke', 'br', 'b']],
-  ['butterfly', ['mariposa', 'borboleta', 'butterfly', 'fly', 'fl']],
-  ['medley', ['estilos', 'estilo individual', 'medley', 'individual medley', 'im', 'e']],
+  ['freestyle', ['livre', 'livres', 'liv', 'crol', 'crawl', 'free', 'freestyle', 'fr', 'l']],
+  ['backstroke', ['costas', 'cos', 'back', 'backstroke', 'bk', 'c']],
+  ['breaststroke', ['brucos', 'bruco', 'bru', 'breast', 'breaststroke', 'br', 'b']],
+  ['butterfly', ['mariposa', 'mar', 'borboleta', 'butterfly', 'fly', 'fl']],
+  ['medley', ['estilos', 'estilos individuais', 'estilo individual', 'est', 'medley', 'individual medley', 'im', 'e']],
 ];
 
 /**
@@ -111,9 +111,12 @@ export function parseEvent(raw: string): { stroke: QualifyingStroke; distanceM: 
   }
   // "100m" and "100 m" are metres; a lone "m" after the distance and nothing else is not read.
   const match = /^(\d{2,4})\s*(?:(?:m|metros|metres|meters)\b)?\s*(.*)$/.exec(text.replace(/^(\d+)([a-z])/, '$1 $2'));
-  if (match === null) return null;
-  const distanceM = Number(match[1]);
-  const rest = (match[2] ?? '').trim();
+  // The stroke first, as some tables write it: "Estilos 200", "Livres 50 m" (sweep 19-10b).
+  const flipped = /^([a-z][a-z ]*?)\s+(\d{2,4})\s*(?:m|metros|metres|meters)?$/.exec(text);
+  const distanceText = match?.[1] ?? flipped?.[2];
+  const rest = (match !== null ? (match[2] ?? '') : (flipped?.[1] ?? '')).trim();
+  if (distanceText === undefined) return null;
+  const distanceM = Number(distanceText);
   if (rest === '' || distanceM < 25 || distanceM > 1500) return null;
   return strokeOf(rest) === null ? null : { stroke: strokeOf(rest)!, distanceM };
 }
@@ -173,7 +176,9 @@ export function cellsOf(sheet: Sheet, mapping: QualifyingMapping): SheetCell[] {
           : null;
     }
     for (const { id, column } of groupColumns) {
-      const time = (row[column] ?? '').trim();
+      // A number typed with one decimal ("29,8") is 29.80: the hundredth a spreadsheet
+      // drops (sweep 19-10b). A bare integer stays ambiguous, and is refused.
+      const time = (row[column] ?? '').trim().replace(/^((?:\d+:)?\d+)[.,](\d)$/, '$1.$20');
       // A row with nothing for this group says nothing — and a blank row is not an event to refuse.
       if (time === '' || label === '') continue;
       cells.push({

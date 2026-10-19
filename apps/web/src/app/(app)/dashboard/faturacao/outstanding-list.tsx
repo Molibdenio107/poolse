@@ -40,7 +40,11 @@ export function OutstandingList({
   const locale = useLocale();
 
   const totalCents = invoices.reduce((sum, invoice) => sum + invoice.outstandingCents, 0);
-  const [ticked, setTicked] = useState<Set<string>>(new Set());
+  const [tickedRaw, setTicked] = useState<Set<string>>(new Set());
+  // Only what is still on the list: a document paid since leaves the selection
+  // with it, so nobody is reminded about it (sweep 19-10b).
+  const listed = new Set(invoices.map((invoice) => invoice.id));
+  const ticked = new Set([...tickedRaw].filter((id) => listed.has(id)));
   const [reminding, setReminding] = useState(false);
   const overdue = invoices.filter((invoice) => invoice.status === 'overdue').map((invoice) => invoice.id);
   const tick = (id: string, on: boolean): void => {

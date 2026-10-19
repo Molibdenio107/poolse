@@ -109,10 +109,10 @@ test('a reminder is written as a chase per document, sent after the commit, and 
         invoiceIds: [late.invoiceId],
         commit: true,
         payerKeys: [payer.key],
-      })) as ReminderSent & { delivered: number };
+      })) as ReminderSent & { emailConfigured: boolean };
       assert.equal(sent.reminderIds.length, 1);
-      // Email is console in tests: written, chased, and honestly not sent.
-      assert.equal(sent.delivered, 0);
+      // Email is console in tests: written and chased; the answer says nothing can leave.
+      assert.equal(sent.emailConfigured, false);
 
       let read = await invoices.read(tenant.facilityId, late.invoiceId);
       assert.equal(read.chaseCount, 1, 'Em dívida counts it like any chase');

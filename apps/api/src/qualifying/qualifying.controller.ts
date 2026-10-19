@@ -319,8 +319,17 @@ function parseAgeGroup(body: Record<string, unknown>): AgeGroupInput {
 
 function optionalDay(value: unknown, field: string): string | null {
   if (value === null || value === undefined || value === '') return null;
-  if (typeof value !== 'string' || !DAY.test(value)) throw new BadRequestException(`${field} must be a date`);
-  return value;
+  // A real day, not only its shape: 2026-02-30 reached Postgres as a 500 (sweep 19-10b).
+  const parsed = typeof value === 'string' && DAY.test(value) ? new Date(`${value}T12:00:00Z`) : null;
+  const real = parsed !== null && !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  if (!real) {
+    throw new UnprocessableEntityException({
+      code: 'bad_date',
+      message: `${field} is not a date`,
+      fields: { [field]: 'qualifying.badDate' },
+    });
+  }
+  return value as string;
 }
 
 function parseStandard(body: Record<string, unknown>): StandardInput {

@@ -2234,6 +2234,7 @@ export interface QualifyingStandard extends QualifyingStandardSummary {
 
 /** One event against an entry time. `gapMs` ≤ 0 is qualified; null is no valid time. */
 export interface GapRow {
+  ageGroupId: string;
   ageGroup: string;
   stroke: Stroke;
   distanceM: number;
@@ -2269,7 +2270,7 @@ export interface QualifyingImportResult {
 export interface StudentQualifying {
   seasonName: string;
   ageGroups: string[];
-  noBand: 'birthDate' | 'none' | null;
+  noBand: 'birthDate' | 'gender' | 'none' | null;
   standards: { id: string; name: string; rows: GapRow[] }[];
 }
 
@@ -2280,6 +2281,7 @@ export interface QualifyingBoard {
   swimmers: {
     studentId: string;
     name: string;
+    ageGroupId: string;
     ageGroup: string;
     competitive: boolean;
     qualified: GapRow[];
@@ -3459,7 +3461,8 @@ export interface ReminderPreview {
 export interface ReminderSent {
   reminderIds: string[];
   noAddress: string[];
-  delivered: number;
+  /** The emails go after the answer; this says whether any can leave at all. */
+  emailConfigured: boolean;
 }
 
 export interface InvoiceSeries {

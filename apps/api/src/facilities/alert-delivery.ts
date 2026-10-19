@@ -24,6 +24,9 @@ export async function deliverWaterAlert(
   try {
     const notice = await findWaterAlertNotice(organizationId, alertId);
     if (notice === null) return false;
+    // A reading corrected back inside its band before a retry has nothing left to
+    // say, and an empty alert would be worse than none (sweep 19-10b).
+    if (notice.excursions.length === 0) return false;
 
     let delivered = false;
     for (const to of notice.recipients) {
@@ -59,6 +62,7 @@ export async function deliverLabAlert(
   try {
     const notice = await findLabAlertNotice(organizationId, alertId);
     if (notice === null) return false;
+    if (notice.grading.failures.length === 0) return false;
     let delivered = false;
     for (const to of notice.recipients) {
       const sent = await send(

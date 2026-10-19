@@ -35,21 +35,9 @@ export async function tokenFor(tx: Tx, organizationId: string, email: string): P
   return rows[0]!.token;
 }
 
-/**
- * The link an email carries for this address in this club. Read only: the send
- * made the token in its own transaction, so delivery — which runs after the
- * request has answered — never writes. Null for a message sent before tokens
- * existed, which then simply goes without the link.
- */
-export async function optOutLink(organizationId: string, email: string): Promise<string | null> {
-  const token = await withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ token: string }>(
-      'SELECT token FROM email_preference WHERE organization_id = $1 AND email = $2::citext',
-      [organizationId, email],
-    );
-    return rows[0]?.token ?? null;
-  });
-  return token === null ? null : webLink(`/email/${token}`);
+/** The opt-out page for a token — the link a general message's footer carries. */
+export function optOutUrl(token: string): string {
+  return webLink(`/email/${token}`);
 }
 
 /** The signed-in member's own choice in this club, for their profile. */

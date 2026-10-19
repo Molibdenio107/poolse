@@ -38,6 +38,7 @@ import {
   type PaymentSource,
 } from './invoices.repository.js';
 import { deliverInvoiceReminder } from './reminder-delivery.js';
+import { emailIsConfigured } from '../notifications/notifier.js';
 import {
   previewReminders,
   quotaRefusal,
@@ -232,7 +233,7 @@ export class InvoicesController {
   async remind(
     @Param('facilityId') facilityId: string,
     @Body() body: Record<string, unknown>,
-  ): Promise<ReminderPreview | (ReminderSent & { delivered: number })> {
+  ): Promise<ReminderPreview | (ReminderSent & { emailConfigured: boolean })> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
     const ids = uuidList(body['invoiceIds'], 'invoiceIds', 500);
@@ -254,11 +255,13 @@ export class InvoicesController {
         values: { limit: quota.limit, used: quota.used },
       });
     }
-    let delivered = 0;
-    for (const id of sent.reminderIds) {
-      if (await deliverInvoiceReminder(organizationId, id)) delivered += 1;
-    }
-    return { ...sent, delivered };
+    // After the commit and without holding the request (sweep 19-10b): sixty payers
+    // at a paced half-second each would outlast the page waiting for them. A send
+    // that fails here is the hourly retry's, as with messages.
+    void (async () => {
+      for (const id of sent.reminderIds) await deliverInvoiceReminder(organizationId, id);
+    })();
+    return { ...sent, emailConfigured: emailIsConfigured() };
   }
 
   /**

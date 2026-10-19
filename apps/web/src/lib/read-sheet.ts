@@ -76,6 +76,15 @@ export type ReadFailure =
  */
 function cellText(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return '';
+  if (value instanceof Date && value.getUTCFullYear() < 1900) {
+    // A duration — a swim time typed as 1:04,50 in Excel is a fraction of a day
+    // from 30-12-1899 (sweep 19-10b). No register holds a date before 1900, so
+    // this reads it as the time it is: m:ss.hh, minutes past 59 kept whole.
+    const hundredths = Math.round((value.getTime() - Date.UTC(1899, 11, 30)) / 10);
+    const minutes = Math.floor(hundredths / 6000);
+    const seconds = Math.floor((hundredths % 6000) / 100);
+    return `${minutes}:${`${seconds}`.padStart(2, '0')}.${`${hundredths % 100}`.padStart(2, '0')}`;
+  }
   if (value instanceof Date) {
     // A date-formatted cell. Rendered ISO so `parseImportDate` takes the
     // unambiguous branch rather than guessing at a day-month order that the

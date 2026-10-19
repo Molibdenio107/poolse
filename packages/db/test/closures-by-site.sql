@@ -654,4 +654,32 @@ BEGIN
   RAISE NOTICE 'PASS test 15: lifting a closure gives back what still exists and fits, and the past stays';
 END $$;
 
+-- Sweep 19-10-2026b: a morning closure and an afternoon closure on the same day
+-- shut the day between them, for every day-level reader.
+DO $$
+DECLARE
+  v_org  uuid := 'c1c1c1c1-0000-0000-0000-000000000084';
+  v_site uuid; v_tank uuid;
+BEGIN
+  SELECT id INTO v_site FROM facility WHERE organization_id = v_org AND name = 'Polo Norte';
+  SELECT id INTO v_tank FROM pool WHERE organization_id = v_org AND name = 'Norte';
+
+  INSERT INTO closure (organization_id, facility_id, pool_id, starts_on, ends_on, reason, part_of_day)
+  VALUES (v_org, v_site, v_tank, DATE '2027-06-15', DATE '2027-06-15', 'Manhã', 'morning');
+  IF closure_day_shut(v_org, v_site, ARRAY[v_tank], DATE '2027-06-15') THEN
+    RAISE EXCEPTION 'FAIL test 16a: a morning alone shut the whole day';
+  END IF;
+
+  INSERT INTO closure (organization_id, facility_id, pool_id, starts_on, ends_on, reason, part_of_day)
+  VALUES (v_org, v_site, v_tank, DATE '2027-06-15', DATE '2027-06-15', 'Tarde', 'afternoon');
+  IF NOT closure_day_shut(v_org, v_site, ARRAY[v_tank], DATE '2027-06-15') THEN
+    RAISE EXCEPTION 'FAIL test 16b: a morning and an afternoon closure left the day open';
+  END IF;
+  IF closure_day_shut(v_org, v_site, '{}'::uuid[], DATE '2027-06-15') THEN
+    RAISE EXCEPTION 'FAIL test 16c: two tank closures shut the whole site';
+  END IF;
+
+  RAISE NOTICE 'PASS test 16: a morning and an afternoon closure shut the day together, and only their tank';
+END $$;
+
 ROLLBACK;

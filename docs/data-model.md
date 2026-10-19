@@ -926,9 +926,11 @@ has a `pool_id`. Readers:
 - `generate_sessions` skips occurrences a closure takes (from the slot's site and tanks) and
   then calls both.
 - `closure_impact(org, from, to, site, tanks[], half, repeats)` counts before saving.
-- `closure_shuts_day(closure, site, tanks[], day)` — both halves taken — is the day-level
-  question: lifeguard gaps, the occupancy denominator (a shut tank's lanes drop out for that
-  day) and safety periods. A half day does not shut a day.
+- `closure_day_shut(org, site, tanks[], day)` is the day-level question: lifeguard gaps, the
+  occupancy denominator (a shut tank's lanes drop out for that day) and safety periods. It takes
+  every closure of the day together, so a morning closure and an afternoon one shut the day
+  (sweep 19-10-2026b, migration `1791540000000`); one half day alone does not.
+  `closure_shuts_day(closure, …)` remains one closure's own answer.
 - `pool_closure_at(org, tank, instant)` and `pool_closures_on(org, day)` answer the free-swim
   check-in (refused under the pool lock, DETAIL `pool_closed|<until>|<half>`) and the tank's
   "Encerrado até" (`closure_until` projects an annual closure onto the year).

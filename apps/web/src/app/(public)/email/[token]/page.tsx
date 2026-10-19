@@ -77,7 +77,7 @@ export default async function EmailPreferencePage({
         <form action={setPreferenceAction}>
           <input type="hidden" name="token" value={token} />
           <input type="hidden" name="optedOut" value={page.optedOut ? 'false' : 'true'} />
-          {lang === 'en' && <input type="hidden" name="lang" value="en" />}
+          {(lang === 'en' || lang === 'pt') && <input type="hidden" name="lang" value={lang} />}
           <button
             type="submit"
             className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90"

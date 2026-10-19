@@ -163,7 +163,8 @@ last 7 days is flagged with the date and starts unticked — never blocked (Rui,
 payer gets one email: what is overdue, document by document, the total, and *Como pagar* verbatim
 (else "contact the club"). Each send is an `invoice_reminder` row (what it listed, snapshotted)
 and an ordinary chase on every document it listed, channel *Email (Poolse)*, so "last contact"
-counts it; the document's history says whether the email left. It counts against the club's
+counts it; the document's history says whether the email left. The emails leave after the
+request has answered (sweep 19-10b), so a long list never times out the page. It counts against the club's
 shared daily address ceiling with messages (2,000), and a failed send is retried hourly.
 *Como pagar* is the club's own text on the site page's *Clube* tab.
 

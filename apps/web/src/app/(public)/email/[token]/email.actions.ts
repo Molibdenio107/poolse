@@ -11,7 +11,8 @@ import { saveEmailPreference } from '@/lib/public-email';
 export async function setPreferenceAction(formData: FormData): Promise<void> {
   const token = String(formData.get('token') ?? '');
   const optedOut = formData.get('optedOut') === 'true';
-  const lang = formData.get('lang') === 'en' ? 'en' : null;
+  const asked = formData.get('lang');
+  const lang = asked === 'en' || asked === 'pt' ? asked : null;
   let saved = false;
   try {
     saved = (await saveEmailPreference(token, optedOut)) !== null;

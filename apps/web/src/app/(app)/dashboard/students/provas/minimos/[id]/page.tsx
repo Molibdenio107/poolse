@@ -51,7 +51,10 @@ export default async function StandardPage({
     <DetailPage
       title={standard.name}
       subtitle={`${standard.seasonName} · ${windowText(t, standard.windowFrom, standard.windowTo)}`}
-      back={{ href: '/dashboard/students/provas?section=minimos', label: t('qualifying.backToStandards') }}
+      back={{
+        href: `/dashboard/students/provas?section=minimos&season=${standard.seasonId}`,
+        label: t('qualifying.backToStandards'),
+      }}
       requested={tab}
       tabs={[
         {
@@ -190,7 +193,7 @@ async function Board({
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {board.swimmers.map((swimmer) => (
-              <li key={`${swimmer.studentId}-${swimmer.ageGroup}`} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
+              <li key={`${swimmer.studentId}-${swimmer.ageGroupId}`} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <Link
                     href={`/dashboard/students/${swimmer.studentId}/progress`}

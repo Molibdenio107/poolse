@@ -30,7 +30,7 @@ export async function GapTable({ rows }: { rows: GapRow[] }): Promise<React.Reac
         <tbody>
           {rows.map((row) => (
             <tr
-              key={`${row.ageGroup}-${row.stroke}-${row.distanceM}-${row.course}`}
+              key={`${row.ageGroupId}-${row.stroke}-${row.distanceM}-${row.course}`}
               className="border-b border-border align-top last:border-0"
             >
               <th scope="row" className="py-2 pr-4 text-left font-normal">

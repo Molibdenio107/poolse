@@ -112,7 +112,26 @@ test('a year after leaving the health data goes, five years after the identity g
     const accident = await incident(tenant, longGone);
     // POOLSE-81: the FPN licence is identity too.
     await tenant.sql(`UPDATE student SET federation_licence = 'FPN-123' WHERE id = $1`, [longGone]);
+    // POOLSE-86, sweep 19-10b: an opt-out row holds an address too.
+    for (const who of [onlyMother, sharedFather]) {
+      await tenant.sql(
+        `INSERT INTO email_preference (organization_id, email, token, messages_opted_out_at)
+         SELECT organization_id, email, replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), now()
+           FROM membership WHERE id = $1`,
+        [who],
+      );
+    }
 
+    // POOLSE-86, sweep 19-10b: an invoice reminder snapshots the payer's name and address.
+    const [reminder] = await tenant.sql<{ id: string }>(
+      `INSERT INTO invoice_reminder (organization_id, facility_id, payer_membership_id, payer_name, email,
+                                     locale, lines, sent_by)
+       SELECT $1, $2, m.id, 'Ana Sousa', m.email, 'pt-PT',
+              '[{"documentNo":"FT 1","issuedOn":"2020-01-01","dueOn":"2020-01-08","outstandingCents":4500}]'::jsonb, $3
+         FROM membership m WHERE m.id = $4
+       RETURNING id`,
+      [tenant.organizationId, tenant.facilityId, tenant.ownerMembershipId, onlyMother],
+    );
     const run = await new RetentionService().run(tenant.organizationId);
     assert.equal(run.healthErased, 2, 'Rita and Tiago left more than a year ago');
     assert.equal(run.anonymised, 1, 'only Rita left more than five years ago');
@@ -126,6 +145,27 @@ test('a year after leaving the health data goes, five years after the identity g
       [longGone],
     );
     assert.equal(rita['federation_licence'], null, 'the FPN licence goes with the identity');
+    const [sentTo] = await tenant.sql<{ payer_name: string; email: string }>(
+      `SELECT payer_name, email::text AS email FROM invoice_reminder WHERE id = $1`,
+      [reminder!.id],
+    );
+    assert.deepEqual(
+      [sentTo!.payer_name, sentTo!.email],
+      ['Pessoa anonimizada', 'anonimizado@anonimizado.invalid'],
+      'a reminder forgets the person it was written to',
+    );
+    const kept = await tenant.sql<{ email: string }>(
+      `SELECT p.email::text AS email FROM email_preference p
+         JOIN membership m ON m.email = p.email AND m.organization_id = p.organization_id
+        WHERE p.organization_id = $1 AND m.id = $2`,
+      [tenant.organizationId, sharedFather],
+    );
+    assert.equal(kept.length, 1, 'a father who still has a child here keeps his choice');
+    const [prefs] = await tenant.sql<{ n: number }>(
+      `SELECT count(*)::int AS n FROM email_preference WHERE organization_id = $1`,
+      [tenant.organizationId],
+    );
+    assert.equal(prefs!.n, 1, "the only mother's address leaves the opt-out list with her");
     assert.equal(`${rita['first_name']} ${rita['last_name']}`, 'Aluno anonimizado');
     assert.equal(rita['contact_phone'], null);
     assert.equal(rita['notes'], null);

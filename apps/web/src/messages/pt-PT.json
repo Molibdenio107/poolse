@@ -3686,10 +3686,11 @@
       "nobodyChosen": "Escolha pelo menos uma pessoa.",
       "quota": "Hoje já saíram {used} de {limit} emails deste clube. Os lembretes podem ser enviados amanhã.",
       "sendFailed": "Não foi possível enviar os lembretes.",
-      "sentToast": "{count, plural, one {Lembrete enviado} other {# lembretes enviados}}",
-      "recordedToast": "{count, plural, one {Lembrete registado} other {# lembretes registados}}; {delivered, plural, =0 {nenhum email saiu ainda} one {saiu # email} other {saíram # emails}}.",
+      "sentToast": "{count, plural, one {Lembrete registado; o email está a sair} other {# lembretes registados; os emails estão a sair}}",
+      "recordedToast": "{count, plural, one {Lembrete registado} other {# lembretes registados}}; o envio de email não está configurado, por isso não sai nenhum.",
       "chaseSent": "Lembrete enviado pelo Poolse.",
-      "chaseNotSent": "Lembrete registado — o email ainda não saiu."
+      "chaseNotSent": "Lembrete registado — o email ainda não saiu.",
+      "nothingSent": "Não há nada a enviar: as pessoas escolhidas já não têm valores em atraso ou não têm endereço de email."
     }
   },
   "reception": {
@@ -5417,7 +5418,9 @@
     "nameRequired": "Escreva um nome.",
     "badYear": "Escreva um ano com quatro algarismos.",
     "yearsReversed": "O último ano não pode ser anterior ao primeiro.",
-    "windowReversed": "O fim não pode ser anterior ao início."
+    "windowReversed": "O fim não pode ser anterior ao início.",
+    "studentNoGender": "O género deste nadador não está indicado e os escalões FPN da época {season} são por género, por isso não há mínimos para comparar.",
+    "badDate": "Escolha uma data válida."
   },
   "emailPreference": {
     "title": "Mensagens do clube por email",

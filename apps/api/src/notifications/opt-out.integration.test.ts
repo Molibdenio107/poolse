@@ -78,6 +78,9 @@ test('a general message carries the link; following it leaves the address out of
       const preview = await new MessagesController().send({ audience: 'class_group', targetId: groupId });
       assert.equal(preview.addressCount, 1);
       assert.equal(preview.optedOutCount, 1, 'the confirmation says how many were left out');
+      // Sweep 19-10b: a family that chose to stop is still a student here, and is not "sem contacto".
+      assert.equal(preview.studentCount, 2);
+      assert.deepEqual(preview.unreachable, []);
 
       const second = await sendGeneral(tenant, groupId);
       assert.deepEqual([...second.keys()], ['ana.optout@example.test']);

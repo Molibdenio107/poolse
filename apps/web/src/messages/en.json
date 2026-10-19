@@ -3686,10 +3686,11 @@
       "nobodyChosen": "Choose at least one person.",
       "quota": "{used} of this club's {limit} emails have already gone today. The reminders can be sent tomorrow.",
       "sendFailed": "Could not send the reminders.",
-      "sentToast": "{count, plural, one {Reminder sent} other {# reminders sent}}",
-      "recordedToast": "{count, plural, one {Reminder recorded} other {# reminders recorded}}; {delivered, plural, =0 {no email has gone yet} one {# email went} other {# emails went}}.",
+      "sentToast": "{count, plural, one {Reminder recorded; the email is on its way} other {# reminders recorded; the emails are on their way}}",
+      "recordedToast": "{count, plural, one {Reminder recorded} other {# reminders recorded}}; email sending is not configured, so none leaves.",
       "chaseSent": "Reminder sent by Poolse.",
-      "chaseNotSent": "Reminder recorded — the email has not gone yet."
+      "chaseNotSent": "Reminder recorded — the email has not gone yet.",
+      "nothingSent": "Nothing to send: the people chosen no longer owe anything overdue, or have no email address."
     }
   },
   "reception": {
@@ -5417,7 +5418,9 @@
     "nameRequired": "Type a name.",
     "badYear": "Type a four-digit year.",
     "yearsReversed": "The last year cannot be before the first.",
-    "windowReversed": "The end cannot be before the start."
+    "windowReversed": "The end cannot be before the start.",
+    "studentNoGender": "This swimmer's gender is not recorded and the FPN age groups of the {season} season are by gender, so there are no qualifying times to compare.",
+    "badDate": "Choose a valid date."
   },
   "emailPreference": {
     "title": "Club messages by email",

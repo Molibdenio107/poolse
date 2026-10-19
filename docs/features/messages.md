@@ -42,7 +42,10 @@ link, and so do invoice reminders, alerts and account emails.
 times, for messages and for every other email Poolse sends — water and lab alerts, qualification
 alerts, trial and support notices, platform alerts. Each retry is the same email the first attempt
 would have been, rebuilt from what was recorded. Invitations are the exception: their link is not
-stored, so *Novo link* is how one is re-sent. Nothing is retried while email is not configured.
+stored, so *Novo link* is how one is re-sent. Nothing is retried while email is not configured. Calls to the provider are spaced about half a
+second apart, a rate-limited one waits and tries once more without spending an attempt, and a
+call that hangs is abandoned after 15 seconds (sweep 19-10b). An alert about a reading archived
+or corrected back inside its band before a retry is not sent at all.
 
 After **Cancelar aula** on the calendar, the success message offers **Avisar as famílias**,
 opening the composer on that turma with the date in the subject. A parceria offers nothing.

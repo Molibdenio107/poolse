@@ -132,11 +132,9 @@ export async function addPeriod(
             AND h.available
             AND h.opens_at IS NOT NULL AND h.closes_at IS NOT NULL
             AND h.closes_at > h.opens_at
-          WHERE NOT EXISTS (
-                  SELECT 1 FROM closure c
-                   WHERE c.organization_id = p.organization_id
-                     -- The site, this tank or a holiday, the whole day — POOLSE-84.
-                     AND closure_shuts_day(c, f.id, ARRAY[pool.id], days.day))
+          -- The site, this tank or a holiday, the whole day — POOLSE-84 — and every
+          -- closure of the day together, so morning + afternoon shut it (sweep 19-10b).
+          WHERE NOT closure_day_shut(p.organization_id, f.id, ARRAY[pool.id], days.day)
        ),
        written AS (
          INSERT INTO lifeguard_duty (organization_id, pool_id, membership_id, starts_at, ends_at,

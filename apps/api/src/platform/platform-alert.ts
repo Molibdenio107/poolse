@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { withPlatform } from '@poolse/db';
-import { sendEmail } from '../notifications/notifier.js';
+import { sendEmail, type Email } from '../notifications/notifier.js';
 import { platformAlertEmail } from '../notifications/platform-alert-email.js';
 
 const logger = new Logger('PlatformAlert');
@@ -146,15 +146,18 @@ export async function recordAlert(tx: Tx, input: PlatformAlertInput): Promise<Re
  * a To field is a list every recipient can then read, and one bad address must
  * not take the rest down with it.
  */
-export async function deliverAlert(alert: RecordedAlert): Promise<void> {
-  if (alert.suppressed) return;
+export async function deliverAlert(
+  alert: RecordedAlert,
+  send: (email: Email) => Promise<boolean> = sendEmail,
+): Promise<boolean> {
+  if (alert.suppressed) return false;
 
   try {
     const to = alertRecipients();
     let delivered = false;
 
     for (const address of to) {
-      const sent = await sendEmail(
+      const sent = await send(
         platformAlertEmail({
           to: address,
           kind: alert.kind,
@@ -187,11 +190,13 @@ export async function deliverAlert(alert: RecordedAlert): Promise<void> {
           (to.length === 0 ? ' — PLATFORM_ALERT_EMAIL is not set' : ''),
       );
     }
+    return delivered;
   } catch (error) {
     logger.warn(
       `Could not deliver platform alert ${alert.id}: ` +
         (error instanceof Error ? error.message : String(error)),
     );
+    return false;
   }
 }
 
@@ -199,7 +204,10 @@ export async function deliverAlert(alert: RecordedAlert): Promise<void> {
  * Send one alert again, rebuilt from its row — POOLSE-86's hourly retry. A
  * suppressed repeat is never resent: it was recorded precisely so as not to be.
  */
-export async function redeliverAlert(alertId: string): Promise<boolean> {
+export async function redeliverAlert(
+  alertId: string,
+  send: (email: Email) => Promise<boolean> = sendEmail,
+): Promise<boolean> {
   const alert = await withPlatform(async (tx) => {
     const { rows } = await tx.query<{
       kind: PlatformAlertKind;
@@ -221,7 +229,7 @@ export async function redeliverAlert(alertId: string): Promise<boolean> {
     return rows[0] ?? null;
   });
   if (alert === null) return false;
-  await deliverAlert({
+  return deliverAlert({
     id: alertId,
     kind: alert.kind,
     action: alert.action,
@@ -231,6 +239,5 @@ export async function redeliverAlert(alertId: string): Promise<boolean> {
     detail: alert.detail,
     raisedAt: alert.raised_at,
     suppressed: false,
-  });
-  return true;
+  }, send);
 }

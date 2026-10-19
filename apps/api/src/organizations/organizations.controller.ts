@@ -191,7 +191,11 @@ export class SettingsController {
   async savePaymentInstructions(@Body() body: { paymentInstructions?: unknown }): Promise<TaxSettings> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
-    const raw = typeof body.paymentInstructions === 'string' ? body.paymentInstructions.trim() : '';
+    // One line break is one character, as the box counted it (sweep 19-10b).
+    const raw =
+      typeof body.paymentInstructions === 'string'
+        ? body.paymentInstructions.split(String.fromCharCode(13)).join('').trim()
+        : '';
     if (raw.length > 1000) {
       throw new BadRequestException({ fields: { paymentInstructions: 'clubData.paymentTooLong' } });
     }

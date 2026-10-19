@@ -115,7 +115,13 @@ test('QA 2, 6 — the student page carries the gap; no birth date says so', asyn
   await withScratchTenant(async (tenant) => {
     await setUp(tenant);
     const ana = await swimmer(tenant, 'Ana', '2012-05-01');
-    const nobody = await swimmer(tenant, 'Sem', null);
+    const team = await actingAs(tenant, { roles: ['owner'] }, () =>
+      new LevelsController().create({ name: 'Competição', competitive: true }),
+    );
+    const nobody = await swimmer(tenant, 'Sem', null, team.id);
+    const learner = await swimmer(tenant, 'Bebé', '2012-03-01');
+    const noGender = await swimmer(tenant, 'Gé', '2012-03-01', team.id);
+    await tenant.sql('UPDATE student SET gender = NULL WHERE id = $1', [noGender]);
     const records = new RecordsController();
 
     await actingAs(tenant, { roles: ['instructor'] }, async () => {
@@ -136,6 +142,11 @@ test('QA 2, 6 — the student page carries the gap; no birth date says so', asyn
       const none = await records.read(nobody);
       assert.equal(none.qualifying?.noBand, 'birthDate');
       assert.deepEqual(none.qualifying?.standards, []);
+
+      // Sweep 19-10b: a learn-to-swim child with nothing to compare sees no tab at all.
+      assert.equal((await records.read(learner)).qualifying, null);
+      // And a missing gender is said as such, not as "no band fits".
+      assert.equal((await records.read(noGender)).qualifying?.noBand, 'gender');
     });
   });
 });
@@ -189,6 +200,18 @@ test('archiving a standard takes it off the student page; an instructor may not 
       await q.removeStandard(standardId);
       assert.equal((await new RecordsController().read(ana)).qualifying, null);
       await expectStatus(() => q.standard(standardId), 404);
+    });
+  });
+});
+
+test('sweep 19-10b — an impossible date on a standard is a 422, not a 500', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { standardId } = await setUp(tenant);
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      await expectStatus(
+        () => new QualifyingController().editStandard(standardId, { name: 'X', windowFrom: '2026-02-30' }),
+        422,
+      );
     });
   });
 });

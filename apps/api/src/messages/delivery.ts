@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { clubMessageEmail } from '../notifications/club-message-email.js';
 import { sendEmail, type Email } from '../notifications/notifier.js';
 import { findDelivery, markDelivered } from './messages.repository.js';
-import { optOutLink } from '../notifications/email-preferences.js';
+import { optOutUrl } from '../notifications/email-preferences.js';
 
 const logger = new Logger('Messages');
 
@@ -31,6 +31,15 @@ export async function deliverMessage(
     const delivery = await findDelivery(organizationId, messageId);
     if (delivery === null) return 0;
 
+    // The tokens came with the delivery, in one read (sweep 19-10b); keyed without
+    // case, as citext compares them. A message from before tokens existed has none.
+    const tokens = new Map(Object.entries(delivery.tokens).map(([email, token]) => [email.toLowerCase(), token]));
+    const link = (to: string): string | null => {
+      if (!delivery.optOutAllowed) return null;
+      const token = tokens.get(to.toLowerCase());
+      return token === undefined ? null : optOutUrl(token);
+    };
+
     let delivered = 0;
     for (const to of delivery.pending) {
       const sent = await send(
@@ -41,7 +50,7 @@ export async function deliverMessage(
           body: delivery.body,
           locale: delivery.organizationLocale,
           // POOLSE-86: a general message carries the way out; a closure warning does not.
-          optOutLink: delivery.optOutAllowed ? await optOutLink(organizationId, to) : null,
+          optOutLink: link(to),
         }),
       );
       if (sent) {

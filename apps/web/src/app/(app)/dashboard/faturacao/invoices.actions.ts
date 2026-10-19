@@ -361,12 +361,15 @@ export async function sendRemindersAction(_previous: FormState, formData: FormDa
     return failure(error, 'invoices.reminders.sendFailed');
   }
 
+  // Nothing written — every chosen payer stopped being overdue, or has no address
+  // (sweep 19-10b): a refusal, never "0 lembretes enviados".
+  if (sent.reminderIds.length === 0) return { ok: false, errorKey: 'invoices.reminders.nothingSent' };
+
   revalidatePath(PATH);
   return {
     ok: true,
-    // Said as what happened: written and sent, or written and not sent.
-    toastKey:
-      sent.delivered === sent.reminderIds.length ? 'invoices.reminders.sentToast' : 'invoices.reminders.recordedToast',
-    values: { count: sent.reminderIds.length, delivered: sent.delivered },
+    // Said as what happened: written and on their way, or written and not sent.
+    toastKey: sent.emailConfigured ? 'invoices.reminders.sentToast' : 'invoices.reminders.recordedToast',
+    values: { count: sent.reminderIds.length },
   };
 }

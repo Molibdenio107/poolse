@@ -175,6 +175,20 @@ export async function targetExists(organizationId: string, target: MessageTarget
   });
 }
 
+/**
+ * Who a message is written to, out of `everyone` the audience names — POOLSE-86.
+ * An address that opted out is left out, and so is a no-address row beside it:
+ * that family chose to stop and is not "sem contacto". Read by the preview and
+ * the send alike, so the count confirmed is the count written.
+ */
+const REACHED = `SELECT * FROM everyone e
+  WHERE NOT e.opted_out
+    AND NOT (e.email IS NULL AND EXISTS (
+      SELECT 1 FROM everyone o
+       WHERE o.opted_out
+         AND coalesce(o.student_id, o.partner_id, o.lead_id)
+           = coalesce(e.student_id, e.partner_id, e.lead_id)))`;
+
 export async function previewMessage(
   organizationId: string,
   target: MessageTarget,
@@ -189,9 +203,11 @@ export async function previewMessage(
       unreachable: UnreachableStudent[] | null;
     }>(
       `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
-            -- POOLSE-86: an address that opted out is left out, and counted.
-            r AS (SELECT * FROM everyone WHERE NOT opted_out),
-            -- One row per person written *for*: a student, a partner or a lead.
+            -- Who is written to: REACHED, above, shared by the preview and the send.
+            r AS (${REACHED}),
+            -- One row per person written *for*: a student, a partner or a lead —
+            -- everyone the audience names, so an opted-out family still counts as
+            -- a student, and "unreachable" means no address on file at all.
             per_subject AS (
               SELECT coalesce(student_id, partner_id, lead_id) AS subject_id,
                      CASE WHEN partner_id IS NOT NULL THEN 'partner'
@@ -199,7 +215,7 @@ export async function previewMessage(
                           ELSE 'student' END AS kind,
                      min(student_name) AS student_name,
                      bool_or(email IS NOT NULL) AS reachable
-                FROM r GROUP BY 1, 2
+                FROM everyone GROUP BY 1, 2
             )
        SELECT (SELECT count(*) FROM per_subject WHERE kind = 'student')::int AS student_count,
               (SELECT count(*) FROM per_subject WHERE kind = 'partner')::int AS partner_count,
@@ -242,9 +258,9 @@ export async function sendMessage(
 ): Promise<{ id: string; addressCount: number }> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string | null; address_count: number }>(
-      `WITH r AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)
-                  -- POOLSE-86: the preview's own filter, so the count confirmed is the count written.
-                  WHERE NOT opted_out),
+      `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
+            -- Who is written to: REACHED, above, shared by the preview and the send.
+            r AS (${REACHED}),
             n AS (SELECT count(DISTINCT email)::int AS address_count FROM r WHERE email IS NOT NULL),
             m AS (
               INSERT INTO message (organization_id, audience, class_group_id, level_id,
@@ -503,6 +519,8 @@ export interface MessageDelivery {
   organizationLocale: string;
   /** Distinct addresses not yet delivered to. */
   pending: string[];
+  /** Each pending address's opt-out token, where it has one — POOLSE-86. */
+  tokens: Record<string, string>;
   /** A closure warning carries no opt-out link: it always goes — POOLSE-86. */
   optOutAllowed: boolean;
 }
@@ -518,10 +536,18 @@ export async function findDelivery(
       organization_name: string;
       organization_locale: string;
       pending: string[] | null;
+      tokens: Record<string, string> | null;
       audience: string;
     }>(
       `SELECT m.subject, m.body, o.name AS organization_name, o.locale AS organization_locale,
               m.audience::text AS audience,
+              -- The opt-out tokens the send made, in this one read (sweep 19-10b).
+              (SELECT jsonb_object_agg(ep.email::text, ep.token)
+                 FROM email_preference ep
+                WHERE ep.organization_id = m.organization_id
+                  AND ep.email IN (SELECT mr.email FROM message_recipient mr
+                                    WHERE mr.message_id = m.id AND mr.organization_id = m.organization_id
+                                      AND mr.email IS NOT NULL AND mr.delivered_at IS NULL)) AS tokens,
               -- DISTINCT on the citext itself, then cast: on text, Ana@x.pt and
               -- ana@x.pt were two emails to one person (13-10-2026 sweep).
               (SELECT array_agg(d.email::text)
@@ -543,6 +569,7 @@ export async function findDelivery(
       organizationLocale: row.organization_locale,
       pending: row.pending ?? [],
       optOutAllowed: row.audience !== 'closure',
+      tokens: row.tokens ?? {},
     };
   });
 }

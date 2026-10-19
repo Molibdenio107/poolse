@@ -58,6 +58,11 @@ test('QA 2 — the ways an event is written, and a relay refused', () => {
   assert.deepEqual(parseEvent('200 Estilos'), { stroke: 'medley', distanceM: 200 });
   assert.deepEqual(parseEvent('50 Bruços'), { stroke: 'breaststroke', distanceM: 50 });
   assert.deepEqual(parseEvent('100 Mariposa'), { stroke: 'butterfly', distanceM: 100 });
+  // Sweep 19-10b: stroke first, the long medley name, and an abbreviation.
+  assert.deepEqual(parseEvent('Estilos 200'), { stroke: 'medley', distanceM: 200 });
+  assert.deepEqual(parseEvent('200 m Estilos Individuais'), { stroke: 'medley', distanceM: 200 });
+  assert.deepEqual(parseEvent('50 Liv.'), { stroke: 'freestyle', distanceM: 50 });
+  assert.deepEqual(parseEvent('Livres 50 m'), { stroke: 'freestyle', distanceM: 50 });
   for (const text of ['4x100 Livres', '100 Livres Estafeta', '100 M', '100m', 'Livres', '']) {
     assert.equal(parseEvent(text), null, text);
   }
@@ -130,3 +135,9 @@ for (const locale of ['pt-PT', 'en']) {
     );
   });
 }
+
+test('sweep 19-10b — a time a spreadsheet kept as 29,8 reads as 29.80', () => {
+  const sheet = toSheet([['Prova', 'Juvenis F'], ['50 Livres', '29,8'], ['100 Livres', '1:04,5'], ['200 Livres', '65']]);
+  const cells = cellsOf(sheet, { event: 0, distance: null, stroke: null, [groupField('jf')]: 1 });
+  assert.deepEqual(cells.map((c) => c.time), ['29.80', '1:04.50', '65']);
+});

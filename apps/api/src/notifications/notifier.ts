@@ -81,20 +81,14 @@ export async function sendEmail(email: Email): Promise<boolean> {
   }
 
   try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${key}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: sender(),
-        to: [email.to],
-        subject: email.subject,
-        text: email.text,
-        html: email.html,
-      }),
-    });
+    let response = await post(key, email);
+    if (response.status === 429) {
+      // Rate-limited (sweep 19-10b): wait as asked, once, rather than spending one
+      // of the retry job's five attempts on the provider being busy.
+      const wait = Math.min(Number(response.headers.get('retry-after') ?? '1') || 1, 10);
+      await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+      response = await post(key, email);
+    }
 
     if (!response.ok) {
       // The body carries the reason — an unverified domain, a bad key, a
@@ -110,4 +104,36 @@ export async function sendEmail(email: Email): Promise<boolean> {
     logger.error(`Could not reach Resend: ${error instanceof Error ? error.message : error}`);
     return false;
   }
+}
+
+/**
+ * One Resend call, paced and bounded — sweep 19-10b. Resend allows a couple of
+ * requests a second, and every sender here loops one email per address, so calls
+ * are spaced through one in-process queue; a call that hangs is abandoned after
+ * 15 s rather than holding a delivery pass open.
+ */
+const SPACING_MS = 550;
+let queue: Promise<unknown> = Promise.resolve();
+let lastCall = 0;
+
+function post(key: string, email: Email): Promise<Response> {
+  const call = queue.then(async () => {
+    const wait = lastCall + SPACING_MS - Date.now();
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    lastCall = Date.now();
+    return fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from: sender(),
+        to: [email.to],
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  });
+  queue = call.catch(() => undefined);
+  return call;
 }

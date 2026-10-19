@@ -78,6 +78,8 @@ export interface StandardDetail extends StandardSummary {
 
 /** One event on a gap table — what `qualifying_gaps()` answered, named. */
 export interface GapRow {
+  /** The band's id — two bands may share a name (Juvenis F and Juvenis for both). */
+  ageGroupId: string;
   ageGroup: string;
   stroke: Stroke;
   distanceM: number;
@@ -95,14 +97,15 @@ export interface StudentQualifying {
   seasonName: string;
   /** The FPN age groups this swimmer is in this season, by name. */
   ageGroups: string[];
-  /** Why there are none: no birth date, or none of the season's bands fits. */
-  noBand: 'birthDate' | 'none' | null;
+  /** Why there are none: no birth date, no gender where the bands have one, or none fits. */
+  noBand: 'birthDate' | 'gender' | 'none' | null;
   standards: { id: string; name: string; rows: GapRow[] }[];
 }
 
 export interface BoardSwimmer {
   studentId: string;
   name: string;
+  ageGroupId: string;
   ageGroup: string;
   competitive: boolean;
   qualified: GapRow[];
@@ -518,6 +521,7 @@ export async function setEntryTimes(
 interface GapQueryRow {
   standard_id: string;
   student_id: string;
+  age_group_id: string;
   age_group: string;
   stroke: Stroke;
   distance_m: number;
@@ -530,7 +534,7 @@ interface GapQueryRow {
 }
 
 const GAP_COLUMNS = `
-  q.standard_id, q.student_id, g.name AS age_group, q.stroke, q.distance_m, q.course,
+  q.standard_id, q.student_id, q.age_group_id, g.name AS age_group, q.stroke, q.distance_m, q.course,
   q.entry_ms, q.best_ms, ${day('q.best_swum_on')} AS best_swum_on, q.best_meet,
   q.best_ms - q.entry_ms AS gap_ms`;
 
@@ -538,6 +542,7 @@ const STROKE_ORDER = `array_position(enum_range(NULL::swim_stroke), q.stroke)`;
 
 function gapRow(row: GapQueryRow): GapRow {
   return {
+    ageGroupId: row.age_group_id,
     ageGroup: row.age_group,
     stroke: row.stroke,
     distanceM: row.distance_m,
@@ -567,8 +572,18 @@ export async function studentQualifying(tx: Tx, studentId: string): Promise<Stud
   const season = seasons[0];
   if (season === undefined) return null;
 
-  const { rows: bands } = await tx.query<{ name: string | null; birth_date: string | null }>(
-    `SELECT g.name, s.birth_date::text AS birth_date
+  const { rows: bands } = await tx.query<{
+    name: string | null;
+    birth_date: string | null;
+    gender: string | null;
+    competitive: boolean;
+    gendered_bands: boolean;
+  }>(
+    `SELECT g.name, s.birth_date::text AS birth_date, s.gender::text AS gender,
+            coalesce((SELECT l.competitive FROM student_level l
+                       WHERE l.id = s.level_id AND l.organization_id = s.organization_id), false) AS competitive,
+            EXISTS (SELECT 1 FROM federation_age_group b
+                     WHERE b.season_id = $2 AND b.archived_at IS NULL AND b.gender IS NOT NULL) AS gendered_bands
        FROM student s
        LEFT JOIN federation_age_group g
               ON g.season_id = $2 AND g.archived_at IS NULL
@@ -599,10 +614,26 @@ export async function studentQualifying(tx: Tx, studentId: string): Promise<Stud
     standard.rows.push(gapRow(row));
   }
 
+  /*
+   * Absent for a swimmer it says nothing to — sweep 19-10b. A club that types one
+   * standard must not give every learn-to-swim child a Mínimos tab: it shows for
+   * a swimmer in a competitive level, or one with a valid time to compare.
+   */
+  const first = bands[0];
+  const hasValidTime = rows.some((row) => row.best_ms !== null);
+  if (first?.competitive !== true && !hasValidTime) return null;
+
   return {
     seasonName: season.name,
     ageGroups,
-    noBand: ageGroups.length > 0 ? null : bands[0]?.birth_date == null ? 'birthDate' : 'none',
+    noBand:
+      ageGroups.length > 0
+        ? null
+        : first?.birth_date == null
+          ? 'birthDate'
+          : first.gender === null && first.gendered_bands
+            ? 'gender'
+            : 'none',
     standards,
   };
 }
@@ -641,12 +672,14 @@ export async function board(organizationId: string, standardId: string, marginMs
 
     const swimmers = new Map<string, BoardSwimmer>();
     for (const row of rows) {
-      const key = `${row.student_id}|${row.age_group}`;
+      // By the band's id: two bands may share a name (sweep 19-10b).
+      const key = `${row.student_id}|${row.age_group_id}`;
       let swimmer = swimmers.get(key);
       if (swimmer === undefined) {
         swimmer = {
           studentId: row.student_id,
           name: row.name,
+          ageGroupId: row.age_group_id,
           ageGroup: row.age_group,
           competitive: row.competitive,
           qualified: [],
