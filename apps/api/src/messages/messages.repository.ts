@@ -42,14 +42,26 @@ export interface MessageTarget {
   targetId: string | null;
 }
 
+/**
+ * Who a message is written *for*. A student's family, and — only on a closure's
+ * warning, POOLSE-84 — a partner (through its contacts) or a trial lead.
+ */
+export type RecipientKind = 'student' | 'partner' | 'lead';
+
 export interface UnreachableStudent {
+  /** The student's, partner's or lead's id, by `kind`. */
   studentId: string;
   name: string;
+  kind: RecipientKind;
 }
 
 export interface MessagePreview {
   /** Students the audience reaches, whether or not anybody can be written to. */
   studentCount: number;
+  /** Partners a closure's warning reaches — POOLSE-84. Zero for every other audience. */
+  partnerCount: number;
+  /** Trial leads a closure's warning reaches — POOLSE-84. */
+  leadCount: number;
   /** Distinct addresses — what will actually be sent, and what the ceiling counts. */
   addressCount: number;
   /** Named, never only counted: "3 alunos sem contacto" is something a club acts on. */
@@ -71,10 +83,12 @@ export interface MessageSummary {
 }
 
 export interface MessageRecipient {
+  /** The student's name — or the partner's, or the trial swimmer's, by `kind`. */
   studentName: string;
   name: string;
   /** True when this row is a guardian; false is the student themselves. */
   isGuardian: boolean;
+  kind: RecipientKind;
   email: string | null;
   deliveredAt: string | null;
 }
@@ -166,25 +180,37 @@ export async function previewMessage(
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
       student_count: number;
+      partner_count: number;
+      lead_count: number;
       address_count: number;
       unreachable: UnreachableStudent[] | null;
     }>(
       `WITH r AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
-            per_student AS (
-              SELECT student_id, min(student_name) AS student_name,
+            -- One row per person written *for*: a student, a partner or a lead.
+            per_subject AS (
+              SELECT coalesce(student_id, partner_id, lead_id) AS subject_id,
+                     CASE WHEN partner_id IS NOT NULL THEN 'partner'
+                          WHEN lead_id IS NOT NULL THEN 'lead'
+                          ELSE 'student' END AS kind,
+                     min(student_name) AS student_name,
                      bool_or(email IS NOT NULL) AS reachable
-                FROM r GROUP BY student_id
+                FROM r GROUP BY 1, 2
             )
-       SELECT (SELECT count(*) FROM per_student)::int AS student_count,
+       SELECT (SELECT count(*) FROM per_subject WHERE kind = 'student')::int AS student_count,
+              (SELECT count(*) FROM per_subject WHERE kind = 'partner')::int AS partner_count,
+              (SELECT count(*) FROM per_subject WHERE kind = 'lead')::int AS lead_count,
               (SELECT count(DISTINCT email) FROM r WHERE email IS NOT NULL)::int AS address_count,
-              (SELECT json_agg(json_build_object('studentId', student_id, 'name', student_name)
+              (SELECT json_agg(json_build_object('studentId', subject_id, 'name', student_name,
+                                                 'kind', kind)
                                ORDER BY student_name)
-                 FROM per_student WHERE NOT reachable) AS unreachable`,
+                 FROM per_subject WHERE NOT reachable) AS unreachable`,
       [organizationId, ...targetParams(target)],
     );
     const row = rows[0]!;
     return {
       studentCount: row.student_count,
+      partnerCount: row.partner_count,
+      leadCount: row.lead_count,
       addressCount: row.address_count,
       unreachable: row.unreachable ?? [],
     };
@@ -222,9 +248,10 @@ export async function sendMessage(
             ),
             ins AS (
               INSERT INTO message_recipient (organization_id, message_id, student_id,
-                                             guardian_membership_id, student_name, name, email)
+                                             guardian_membership_id, student_name, name, email,
+                                             partner_id, lead_id)
               SELECT $1, m.id, r.student_id, r.guardian_membership_id, r.student_name,
-                     r.name, r.email
+                     r.name, r.email, r.partner_id, r.lead_id
                 FROM r CROSS JOIN m
               RETURNING 1
             )
@@ -275,9 +302,9 @@ const SUMMARY_COLUMNS = `
     WHERE mr.message_id = m.id AND mr.organization_id = m.organization_id
       AND mr.delivered_at IS NOT NULL) AS delivered_count,
   (SELECT count(*)::int FROM (
-     SELECT mr.student_id FROM message_recipient mr
+     SELECT coalesce(mr.student_id, mr.partner_id, mr.lead_id) FROM message_recipient mr
       WHERE mr.message_id = m.id AND mr.organization_id = m.organization_id
-      GROUP BY mr.student_id HAVING bool_and(mr.email IS NULL)) u) AS unreachable_count`;
+      GROUP BY 1 HAVING bool_and(mr.email IS NULL)) u) AS unreachable_count`;
 
 const SUMMARY_JOINS = `
   LEFT JOIN class_group cg ON cg.id = m.class_group_id AND cg.organization_id = m.organization_id
@@ -355,10 +382,14 @@ export async function getMessage(
       student_name: string;
       name: string;
       is_guardian: boolean;
+      kind: RecipientKind;
       email: string | null;
       delivered_at: Date | null;
     }>(
       `SELECT student_name, name, guardian_membership_id IS NOT NULL AS is_guardian,
+              CASE WHEN partner_id IS NOT NULL THEN 'partner'
+                   WHEN lead_id IS NOT NULL THEN 'lead'
+                   ELSE 'student' END AS kind,
               email::text AS email, delivered_at
          FROM message_recipient
         WHERE message_id = $1
@@ -373,6 +404,7 @@ export async function getMessage(
         studentName: r.student_name,
         name: r.name,
         isGuardian: r.is_guardian,
+        kind: r.kind,
         email: r.email,
         deliveredAt: r.delivered_at === null ? null : r.delivered_at.toISOString(),
       })),

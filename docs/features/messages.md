@@ -59,3 +59,10 @@ Enforced by the API; the menu entry and the composer's options only follow it.
 A closure can send its own message (`closure` audience, `message.closure_id`). It reaches the
 families of turmas with a lesson that closure cancelled. It is never offered in the composer;
 it is sent from the closure dialog in Encerramentos (`calendar.md`).
+
+**Partners and trial leads — POOLSE-84.** The `closure` audience now covers every closure made
+by the same form (`closure.batch_id`) and reaches, besides families, each affected parceria's
+partner — one row per live contact with an e-mail, or one row with none so the partner is
+counted as unreachable — and every `trial_booked` lead whose session the closure cancelled. On
+those rows `student_id` is null and `partner_id` or `lead_id` is set; the recipient list labels
+them *Parceiro* and *Aula experimental*. No other audience ever reaches a partner or a lead.

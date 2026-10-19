@@ -6,8 +6,9 @@ import {
   ApiError,
   apiFetch,
   type Calendar,
+  type CalendarClosure,
   type Classes,
-  type Closure,
+  type Closures,
   type FacilityGrid,
 } from '@/lib/api';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
@@ -140,26 +141,49 @@ export default async function CalendarPage({
     A repeating closure is a pattern, so it is projected onto the year on screen
     before being compared — the same thing the closures calendar does.
   */
-  let closedDays: { weekday: number; reason: string }[] = [];
+  let closedDays: CalendarClosure[] = [];
   if (calendar !== null) {
     try {
-      const { closures } = await apiFetch<{ closures: Closure[] }>(
+      const { closures, halfDayCut } = await apiFetch<Closures>(
         `/closures?year=${monday.slice(0, 4)}`,
       );
+      /*
+        POOLSE-84: only the closures of the site on screen (and the holidays,
+        which are every site's), each with its tank and, for a half day, the
+        window it shuts. A closure at another site used to grey this one's day.
+      */
+      const site = classes?.facilities[0]?.id ?? null;
+      const [cutHours, cutMinutes] = halfDayCut.split(':').map(Number);
+      const cut = (cutHours ?? 13) * 60 + (cutMinutes ?? 0);
 
       closedDays = [0, 1, 2, 3, 4, 5, 6].flatMap((offset) => {
         const date = addDays(monday, offset);
-        const hit = closures.find((closure) => {
-          const from = closure.repeatsAnnually
-            ? `${date.slice(0, 4)}-${closure.startsOn.slice(5)}`
-            : closure.startsOn;
-          const to = closure.repeatsAnnually
-            ? `${date.slice(0, 4)}-${closure.endsOn.slice(5)}`
-            : closure.endsOn;
-          return date >= from && date <= to;
-        });
-
-        return hit === undefined ? [] : [{ weekday: offset + 1, reason: hit.reason }];
+        return closures
+          .filter((closure) => {
+            const from = closure.repeatsAnnually
+              ? `${date.slice(0, 4)}-${closure.startsOn.slice(5)}`
+              : closure.startsOn;
+            const to = closure.repeatsAnnually
+              ? `${date.slice(0, 4)}-${closure.endsOn.slice(5)}`
+              : closure.endsOn;
+            return (
+              date >= from &&
+              date <= to &&
+              closure.blocksGeneration &&
+              (closure.facilityId === null || closure.facilityId === site)
+            );
+          })
+          .map((closure) => ({
+            weekday: offset + 1,
+            reason: closure.reason,
+            poolId: closure.poolId,
+            window:
+              closure.partOfDay === null
+                ? null
+                : closure.partOfDay === 'morning'
+                  ? { from: 0, to: cut }
+                  : { from: cut, to: 24 * 60 },
+          }));
       });
     } catch (error) {
       // A closure list that will not load costs the locks, not the calendar —

@@ -88,3 +88,11 @@ dashboard's *Natação livre* card (owner and admin) shows each tank now and the
 moves up the band when a tank is 90 % full, and it is empty for a club that sells no free swim.
 
 Out of scope altogether: turnstiles, QR cards, online sales and a till.
+
+## Closed tanks — POOLSE-84
+
+A tank shut now by a closure says **Encerrado até dd-MM-yyyy** (or *esta manhã* / *esta
+tarde*) with its reason on its occupancy card, and reads *(encerrado)* in the tank picker. A
+check-in on it is refused by the check-in trigger under the pool lock — "Este tanque está
+encerrado até …. Escolha outro tanque." — while another tank of the same site takes the
+swimmer.

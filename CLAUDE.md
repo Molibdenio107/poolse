@@ -634,6 +634,8 @@ seed created a second site to keep demo data tidy and nothing objected.
 
 **A departed student's data expires, and `apply_retention()` is the only thing that expires it.** 7b.8, Rui 16-10-2026: health data 1 year after `student_left_on()`, identity 5 years after. The function is `SECURITY DEFINER` because the data sits in tables closed to the app, takes no arguments and acts on `current_organization_id()` only. A new table holding a student's health data or identity earns a line in it and in `retention.integration.test.ts`. Invoices keep their snapshot for the ten years tax law asks. `docs/features/retention.md`.
 
+**A closure is one site or some of its tanks, and what it reaches is `closure_reaches` / `session_reach`.** POOLSE-84. Only a holiday leaves `facility_id` null; a manual closure without a site is refused by CHECK and by the API (422). Several tanks are one row each, sharing `batch_id` (the warning reads the batch). A session's tanks are its turma's pool **and its lanes' pools** — a parceria or free-swim block has no `pool_id`. Half days cut at `closure_half_day_cut()` (13:00, on a lesson's start), written nowhere else. Every reader goes through `apply_closures`, `release_closures`, `closure_impact`, `closure_shuts_day` (day-level questions) or `pool_closure_at` / `pool_closures_on` (check-in refusal, "Encerrado até"); never a hand-written `c.pool_id = cs.pool_id`. `docs/data-model.md`, `docs/features/calendar.md`.
+
 **Every unique constraint on a soft-deletable table is partial** (`where archived_at is
 null`). Otherwise archiving an instructor and re-adding them next season violates the
 constraint against a dead row.

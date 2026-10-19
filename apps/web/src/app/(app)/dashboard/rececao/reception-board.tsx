@@ -9,6 +9,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { SelectField } from '@/components/ui/field';
 import { formatCents } from '@/lib/money';
 import { formatTime } from '@/lib/date-format';
+import { PoolClosureNote } from '@/components/pool-closure-note';
 import type { InWater, PoolOccupancy, Reception } from '@/lib/api';
 import {
   cancelCheckInAction,
@@ -89,7 +90,14 @@ export function ReceptionBoard({
           onValueChange={setPoolId}
           options={[
             { value: '', label: t('reception.choosePool') },
-            ...reception.pools.map((pool) => ({ value: pool.poolId, label: pool.poolName })),
+            // A closed tank stays choosable — the refusal says why — but says so.
+            ...reception.pools.map((pool) => ({
+              value: pool.poolId,
+              label:
+                pool.closure === null
+                  ? pool.poolName
+                  : t('reception.closedOption', { pool: pool.poolName }),
+            })),
           ]}
         />
       )}
@@ -161,6 +169,8 @@ function OccupancyCard({ pool }: { pool: PoolOccupancy }): React.ReactElement {
         {nearlyFull && ` · ${t('reception.nearlyFull')}`}
         {pool.capacity === null && ` · ${t('reception.noCeiling')}`}
       </p>
+      {/* Shut now: a check-in here is refused, and reception sees it first. */}
+      <PoolClosureNote closure={pool.closure} />
     </li>
   );
 }

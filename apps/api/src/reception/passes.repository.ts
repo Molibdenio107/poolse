@@ -60,6 +60,12 @@ export interface PoolOccupancy {
   capacity: number | null;
   swimmers: number;
   inClasses: number;
+  /**
+   * What shuts the tank now — POOLSE-84. A check-in is refused while it is set
+   * (by the trigger, under the pool lock); this is what lets reception say so
+   * before anybody tries.
+   */
+  closure: { reason: string; until: string; partOfDay: 'morning' | 'afternoon' | null } | null;
 }
 
 export interface InWater {
@@ -418,10 +424,16 @@ async function occupancyOf(tx: Tx, facilityIds: readonly string[]): Promise<Pool
     capacity: number | null;
     swimmers: number;
     in_classes: number;
+    closure_reason: string | null;
+    closure_until: string | null;
+    closure_part: 'morning' | 'afternoon' | null;
   }>(
-    `SELECT p.id, p.name, o.capacity, o.swimmers, o.in_classes
+    `SELECT p.id, p.name, o.capacity, o.swimmers, o.in_classes,
+            k.reason AS closure_reason, k.until::text AS closure_until,
+            k.part_of_day::text AS closure_part
        FROM pool p
        CROSS JOIN LATERAL pool_occupancy(p.organization_id, p.id) o
+       LEFT JOIN LATERAL pool_closure_at(p.organization_id, p.id, now()) k ON true
       WHERE p.facility_id = ANY($1::uuid[]) AND p.archived_at IS NULL
       ORDER BY lower(p.name), p.id`,
     [facilityIds],
@@ -432,6 +444,14 @@ async function occupancyOf(tx: Tx, facilityIds: readonly string[]): Promise<Pool
     capacity: row.capacity,
     swimmers: row.swimmers,
     inClasses: row.in_classes,
+    closure:
+      row.closure_until === null
+        ? null
+        : {
+            reason: row.closure_reason ?? '',
+            until: row.closure_until,
+            partOfDay: row.closure_part,
+          },
   }));
 }
 

@@ -175,7 +175,8 @@ export default async function ClosuresPage({
             organizationId={data.organizationId}
             year={year}
             closures={data.closures}
-            pools={data.pools}
+            sites={data.sites}
+            halfDayCut={data.halfDayCut}
             canManage={data.canManage}
             prefill={prefill}
           />

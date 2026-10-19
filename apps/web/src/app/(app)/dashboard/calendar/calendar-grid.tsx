@@ -25,7 +25,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { AlertTriangle, Handshake } from 'lucide-react';
-import type { FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
+import type { CalendarClosure, FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 
 /** Only what a colour and a legend need; the API sends them already ordered. */
 export type CalendarLevel = { id: string; name: string };
@@ -114,7 +114,8 @@ export interface CalendarGridProps {
   dayNames: Record<number, string>;
   /** Set only on the week containing today. Drives the now-line and the fade. */
   todayWeekday?: number | undefined;
-  closures: { weekday: number; reason: string }[];
+  /** The site's closures this week — whole days, tanks and half days (POOLSE-84). */
+  closures: CalendarClosure[];
   /**
    * The site's opening hours, one row per weekday.
    *
@@ -284,9 +285,43 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   const order = useMemo(() => levelOrder(levels), [levels]);
   const height = minutesToPx(range.endMinutes - range.startMinutes);
 
+  /** The whole site, the whole day: the day itself is shut. */
   const closureOf = useCallback(
-    (weekday: number) => closures.find((closure) => closure.weekday === weekday) ?? null,
+    (weekday: number) =>
+      closures.find(
+        (closure) =>
+          closure.weekday === weekday && closure.poolId === null && closure.window === null,
+      ) ?? null,
     [closures],
+  );
+
+  /**
+   * What shuts one lane on a day short of the whole site all day — its tank's
+   * closure, or half of the site's — POOLSE-84. Drawn on that lane only.
+   */
+  const laneClosuresOf = useCallback(
+    (weekday: number, lane: GridLane): CalendarClosure[] =>
+      closures.filter(
+        (closure) =>
+          closure.weekday === weekday &&
+          !(closure.poolId === null && closure.window === null) &&
+          (closure.poolId === null || closure.poolId === lane.poolId),
+      ),
+    [closures],
+  );
+
+  /** Whether a lesson starting at this minute on this lane would land in a closure. */
+  const laneClosedAt = useCallback(
+    (weekday: number, laneId: string, startMinutes: number): boolean => {
+      const lane = lanes.find((one) => one.id === laneId);
+      if (lane === undefined) return false;
+      return laneClosuresOf(weekday, lane).some(
+        (closure) =>
+          closure.window === null ||
+          (startMinutes >= closure.window.from && startMinutes < closure.window.to),
+      );
+    },
+    [lanes, laneClosuresOf],
   );
 
   /*
@@ -622,6 +657,11 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
 
     if (closureOf(target.weekday) !== null) {
       refuse('grid.dayClosed');
+      return;
+    }
+    // A tank shut that day, or that half of it — POOLSE-84.
+    if (target.laneIds.some((id) => laneClosedAt(target.weekday, id, target.startMinutes))) {
+      refuse('grid.tankClosed');
       return;
     }
 
@@ -1027,6 +1067,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
                       height={height}
                       range={range}
                       disabled={!canManage || closureOf(weekday) !== null || !openOn(weekday)}
+                      closed={laneClosuresOf(weekday, lane)}
                       /*
                         The Sem pista column accepts a drop but not a click —
                         round 8. Dropping a class there clears its pistas, which
@@ -1402,14 +1443,21 @@ function LaneColumn({
   height,
   range,
   disabled,
+  closed = [],
   creatable = true,
   onCreate,
 }: {
   weekday: number;
   lane: GridLane;
   height: number;
-  range: { startMinutes: number };
+  range: { startMinutes: number; endMinutes: number };
   disabled: boolean;
+  /**
+   * This lane's tank closures, or half of the site's — POOLSE-84. Each is drawn
+   * as a band over the time it shuts, carrying its reason as text; a click in
+   * one creates nothing.
+   */
+  closed?: CalendarClosure[];
   /**
    * Whether clicking empty space here starts a class — round 8.
    *
@@ -1421,10 +1469,17 @@ function LaneColumn({
   creatable?: boolean;
   onCreate: (weekday: number, laneId: string, startMinutes: number) => void;
 }): React.ReactElement {
+  const t = useTranslations();
   const { setNodeRef, isOver } = useDroppable({
     id: `col:${weekday}:${lane.id}`,
     disabled,
   });
+
+  const shutAt = (minutes: number): boolean =>
+    closed.some(
+      (closure) =>
+        closure.window === null || (minutes >= closure.window.from && minutes < closure.window.to),
+    );
 
   return (
     <div
@@ -1432,7 +1487,9 @@ function LaneColumn({
       onClick={(event) => {
         if (disabled || !creatable) return;
         const box = event.currentTarget.getBoundingClientRect();
-        onCreate(weekday, lane.id, range.startMinutes + pxToMinutes(event.clientY - box.top));
+        const minutes = range.startMinutes + pxToMinutes(event.clientY - box.top);
+        if (shutAt(minutes)) return;
+        onCreate(weekday, lane.id, minutes);
       }}
       className={cn(
         'relative shrink-0 border-l border-border/60 first:border-l-0',
@@ -1446,7 +1503,26 @@ function LaneColumn({
           'repeating-linear-gradient(to bottom, rgb(var(--border) / 0.55) 0 1px, transparent 1px ' +
           `${minutesToPx(60)}px)`,
       }}
-    />
+    >
+      {closed.map((closure, index) => {
+        const from = Math.max(closure.window?.from ?? range.startMinutes, range.startMinutes);
+        const to = Math.min(closure.window?.to ?? range.endMinutes, range.endMinutes);
+        if (to <= from) return null;
+        return (
+          <div
+            key={index}
+            className="pointer-events-none absolute inset-x-0 overflow-hidden border-y border-warning/40 bg-warning/15 px-1 py-0.5 text-xs text-foreground-muted"
+            style={{
+              top: minutesToPx(from - range.startMinutes),
+              height: minutesToPx(to - from),
+            }}
+          >
+            <span className="font-medium text-warning">{t('grid.closedBand')}</span>{' '}
+            <span className="break-words">{closure.reason}</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

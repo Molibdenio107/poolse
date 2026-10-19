@@ -150,8 +150,8 @@ DECLARE v_org uuid; n int;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
 
-  INSERT INTO closure (organization_id, starts_on, ends_on, reason, repeats_annually)
-  VALUES (v_org, DATE '2027-08-01', DATE '2027-08-31', 'Férias de agosto', true);
+  INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason, repeats_annually)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), DATE '2027-08-01', DATE '2027-08-31', 'Férias de agosto', true);
 
   PERFORM generate_sessions(v_org, DATE '2027-01-01', DATE '2027-12-31');
 
@@ -188,8 +188,8 @@ DECLARE v_org uuid; r record; n int;
 BEGIN
   SELECT id INTO v_org FROM organization WHERE name = 'Clube A';
 
-  INSERT INTO closure (organization_id, starts_on, ends_on, reason)
-  VALUES (v_org, DATE '2027-04-05', DATE '2027-04-09', 'Interrupção da Páscoa');
+  INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), DATE '2027-04-05', DATE '2027-04-09', 'Interrupção da Páscoa');
 
   SELECT o_cancelled INTO r FROM generate_sessions(v_org, DATE '2027-01-01', DATE '2027-12-31');
   IF r.o_cancelled = 0 THEN
@@ -458,27 +458,27 @@ BEGIN
 
   -- What it would cost, asked before committing.
   SELECT o_sessions, o_marked INTO v_sessions, v_marked
-    FROM closure_impact(v_org, DATE '2027-03-08', DATE '2027-03-14', NULL);
+    FROM closure_impact(v_org, DATE '2027-03-08', DATE '2027-03-14', v_facility);
 
   IF v_sessions <> 1 OR v_marked <> 0 THEN
     RAISE EXCEPTION 'FAIL test 13: impact said % sessions, % marked', v_sessions, v_marked;
   END IF;
 
-  INSERT INTO closure (organization_id, starts_on, ends_on, reason, source)
-  VALUES (v_org, DATE '2027-03-08', DATE '2027-03-14', 'Manutenção anual', 'manual')
+  INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason, source)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), DATE '2027-03-08', DATE '2027-03-14', 'Manutenção anual', 'manual')
   RETURNING id INTO v_first;
 
   -- Overlapping the same days, same reach, is refused by the database.
   BEGIN
-    INSERT INTO closure (organization_id, starts_on, ends_on, reason, source)
-    VALUES (v_org, DATE '2027-03-12', DATE '2027-03-20', 'Outra coisa', 'manual');
+    INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason, source)
+    VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), DATE '2027-03-12', DATE '2027-03-20', 'Outra coisa', 'manual');
     RAISE EXCEPTION 'FAIL test 13: two closures covered the same days';
   EXCEPTION WHEN exclusion_violation THEN NULL;
   END;
 
   -- Touching but not overlapping is fine — the day after is a different day.
-  INSERT INTO closure (organization_id, starts_on, ends_on, reason, source)
-  VALUES (v_org, DATE '2027-03-15', DATE '2027-03-20', 'Obras', 'manual');
+  INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason, source)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), DATE '2027-03-15', DATE '2027-03-20', 'Obras', 'manual');
 
   -- And the closure takes the class down on its own, without generating.
   SELECT apply_closure(v_org, v_first) INTO v_cancelled;

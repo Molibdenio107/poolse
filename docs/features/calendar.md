@@ -418,5 +418,30 @@ prefilled with the dates and the reason. On save the closure is created, which c
 If the box was ticked, the dialog then says who the warning reaches: addresses, students, and
 anyone with no email, by name. It sends only on *Enviar aviso*. The recipients are the families
 (live guardians, else the adult student) of turmas that lost a lesson to this closure, and
-nobody else. Parcerias are never written to. The message is recorded in Alunos → Mensagens like
+nobody else. (Since POOLSE-84 the warning also reaches partners and trial leads — below.) The message is recorded in Alunos → Mensagens like
 any other, counts against the daily limit, and says plainly when email sending is not configured.
+
+## Encerramentos by site or tank, and half days — POOLSE-84 (19-10-2026)
+
+A closure is always **one site**, all of it or some of its tanks; there is no organization-wide
+manual closure any more (holidays stay the whole organization's). In the dialog a club with
+several sites picks one, and a club with one is told which. **Abrange** lists that site's tanks
+as tick boxes: none ticked closes the whole site, and each tank ticked becomes its own closure,
+so one tank can reopen before another. **Só meio dia** (one day only) asks *Manhã* or *Tarde*;
+the hint says the cut (13:00), judged on when a lesson starts. The cost shown before saving is
+recounted whenever the scope changes.
+
+Everything on a closed tank in the period is cancelled — turmas, parcerias, free-swim blocks,
+events and aulas experimentais — and removing or shortening a closure gives them back at once.
+A clash with a closure already there is refused naming that closure and its tank. The list
+under the year shows each closure's site, tank and half.
+
+On the week calendar only the site on screen's closures (and holidays) count. A whole-site,
+whole-day closure greys the day as before; a tank closure, or half of the site's day, is a band
+over that tank's lanes, or that half of them, reading *Encerrado:* and the reason. A drop or a
+click inside the band is refused (`grid.tankClosed`).
+
+**Avisar por email** now reaches everybody the form took a lesson from: the families of the
+turmas, each affected parceria's partner at its contacts' addresses, and the leads whose aula
+experimental was cancelled. The confirmation counts the three and names anybody with no
+address, a partner with no contact e-mail included. The lead's status is not changed.

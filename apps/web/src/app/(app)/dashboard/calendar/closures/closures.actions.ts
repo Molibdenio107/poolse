@@ -1,8 +1,16 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiFetch, apiPost, type MessagePreview } from '../../../../../lib/api';
+import { ApiError, apiFetch, apiPost, type MessagePreview, type PartOfDay } from '../../../../../lib/api';
 import type { FormState } from '../../actions';
+
+/** What each of the API's closure refusals says — POOLSE-84. */
+const REFUSALS: Record<string, string> = {
+  closure_site_required: 'calendar.refused.siteRequired',
+  closure_site_unknown: 'calendar.refused.siteRequired',
+  closure_pool_elsewhere: 'calendar.refused.poolElsewhere',
+  closure_half_day_one_day: 'calendar.refused.halfDayOneDay',
+};
 
 /** A saved closure hands back its id, so the dialog can warn its families. */
 export interface ClosureState extends FormState {
@@ -25,6 +33,13 @@ export async function createClosureAction(
   const reason = text('reason');
   if (reason === '') return { ok: false, fields: { reason: 'calendar.reasonRequired' } };
 
+  // One site, and any of its tanks — each tank its own closure (POOLSE-84).
+  const poolIds = formData
+    .getAll('poolIds')
+    .map((value) => String(value).trim())
+    .filter((value) => value !== '');
+  const partOfDay = text('partOfDay');
+
   let created: { id: string };
   try {
     created = await apiPost<{ id: string }>(
@@ -33,7 +48,9 @@ export async function createClosureAction(
         startsOn: text('startsOn'),
         endsOn: text('endsOn'),
         reason,
-        poolId: text('poolId'),
+        facilityId: text('facilityId'),
+        poolIds,
+        ...(partOfDay === '' ? {} : { partOfDay }),
       },
       { organizationId },
     );
@@ -48,19 +65,26 @@ export async function createClosureAction(
       // `details` is somebody else's JSON and typed `unknown` on purpose, so it
       // is narrowed here rather than believed.
       const details = error.details;
-      const existing =
-        details !== null && typeof details === 'object' &&
-        typeof (details as Record<string, unknown>)['existing'] === 'string'
-          ? ((details as Record<string, unknown>)['existing'] as string)
-          : undefined;
+      const fields =
+        details !== null && typeof details === 'object'
+          ? (details as Record<string, unknown>)
+          : {};
+      const existing = typeof fields['existing'] === 'string' ? fields['existing'] : undefined;
+      // The tank the clash is on, when it is one — POOLSE-84.
+      const pool = typeof fields['pool'] === 'string' ? fields['pool'] : undefined;
 
       return {
         ok: false,
-        errorKey: 'calendar.closureOverlap',
-        // Spread rather than `detail: existing`: with exactOptionalPropertyTypes
-        // an explicit `undefined` is not the same as the key being absent.
-        ...(existing === undefined ? {} : { detail: existing }),
+        errorKey: pool === undefined ? 'calendar.closureOverlap' : 'calendar.closureOverlapTank',
+        // In `values`, not `detail`: the sentence already names the closure, and
+        // the toast appends a detail after it — which said it twice.
+        values: { existing: existing ?? '', ...(pool === undefined ? {} : { pool }) },
       };
+    }
+    // POOLSE-84's refusals: each is a sentence, never the API's English.
+    if (error instanceof ApiError && error.status === 422) {
+      const key = REFUSALS[error.code ?? ''];
+      if (key !== undefined) return { ok: false, errorKey: key };
     }
     return { ok: false, errorKey: 'calendar.closureFailed' };
   }
@@ -156,12 +180,24 @@ export async function removeClosureAction(
  */
 export async function impactAction(
   organizationId: string,
-  startsOn: string,
-  endsOn: string,
+  scope: {
+    startsOn: string;
+    endsOn: string;
+    facilityId: string;
+    poolIds: string[];
+    partOfDay: PartOfDay | null;
+  },
 ): Promise<{ sessions: number; marked: number } | null> {
+  const query = new URLSearchParams({
+    startsOn: scope.startsOn,
+    endsOn: scope.endsOn,
+    facilityId: scope.facilityId,
+    poolIds: scope.poolIds.join(','),
+    ...(scope.partOfDay === null ? {} : { partOfDay: scope.partOfDay }),
+  });
   try {
     return await apiFetch<{ sessions: number; marked: number }>(
-      `/closures/impact?startsOn=${startsOn}&endsOn=${endsOn}`,
+      `/closures/impact?${query.toString()}`,
       { organizationId },
     );
   } catch {

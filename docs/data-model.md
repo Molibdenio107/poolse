@@ -898,6 +898,50 @@ a class somebody removed by hand (POOLSE-14), and it is what lets removing a
 closure give the classes back — `generate_sessions` only revives what a closure
 put down.
 
+### A closure belongs to a site, or to some of its tanks — POOLSE-84
+
+`closure.facility_id` is required on every manual closure (`closure_manual_has_site`); only a
+holiday (`national_holiday`, `municipal_holiday`) leaves it null and reaches every site. A tank
+closure's site is the tank's, by the composite key `(organization_id, facility_id, pool_id) →
+pool`. Closing several tanks in one form writes **one row per tank**, sharing `batch_id`, so
+each can be shortened or removed on its own while one warning reaches the whole batch.
+
+`part_of_day` (`closure_part_of_day`: `morning | afternoon`, null for the whole day) is allowed
+only on a single-day closure (`closure_half_day_is_one_day`). The cut is
+`closure_half_day_cut()` — 13:00 on the site's clock, judged on a session's **start** — and it
+is written nowhere else: the API sends it to the screens as `halfDayCut`.
+
+What a closure reaches is one definition: `closure_reaches(site, tank, days, half, session's
+site, session's tanks, local start)`, wrapped by `closure_applies(closure, …)` (live and
+blocking). A session's reach is `session_reach(org, session)`: its site (the tank's, else the
+booking's, else the turma's, else its lanes'), every tank it touches — the turma's `pool_id`
+**and** the pool of each `class_session_lane` — and its start on that site's clock. The lanes
+are why a parceria, a free-swim block or an event on a closed tank is cancelled: none of them
+has a `pool_id`. Readers:
+
+- `apply_closures(org, closure?)` cancels and stamps; `apply_closure` is its one-closure form.
+- `release_closures(org)` gives back what a stamped closure no longer takes, or re-stamps it to
+  another closure that still does (a tank closure removed inside its site's closure keeps the
+  tank shut). Saving and removing a closure call it, so a tank reopens at once.
+- `generate_sessions` skips occurrences a closure takes (from the slot's site and tanks) and
+  then calls both.
+- `closure_impact(org, from, to, site, tanks[], half, repeats)` counts before saving.
+- `closure_shuts_day(closure, site, tanks[], day)` — both halves taken — is the day-level
+  question: lifeguard gaps, the occupancy denominator (a shut tank's lanes drop out for that
+  day) and safety periods. A half day does not shut a day.
+- `pool_closure_at(org, tank, instant)` and `pool_closures_on(org, day)` answer the free-swim
+  check-in (refused under the pool lock, DETAIL `pool_closed|<until>|<half>`) and the tank's
+  "Encerrado até" (`closure_until` projects an annual closure onto the year).
+
+`closure_no_overlap` keys on organization, site, tank and `closure_span(starts, ends, half)` —
+a `tsrange` of local time — so a morning and an afternoon of one day coexist, a whole day over
+either is refused, and a tank closure inside its site's closure is redundant, not a conflict.
+
+`message_recipient` may name a `partner_id` or a `lead_id` instead of a `student_id`
+(`message_recipient_one_subject`); a lead's row is scrubbed by trigger when the lead is
+anonymised. Migration `1790848800000` split every organization-wide manual closure into one
+per site (the first site keeps the row) and repointed the sessions each had cancelled.
+
 ### Which day a session is on
 
 Every one of the generator's three passes — create, cancel, restore — has to answer the

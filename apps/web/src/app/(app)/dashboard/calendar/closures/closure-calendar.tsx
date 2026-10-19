@@ -7,7 +7,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, X } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
-import type { Closure, MessagePreview } from '@/lib/api';
+import type { Closure, Closures, MessagePreview, PartOfDay } from '@/lib/api';
 import { YearGrid, type DayState } from '@/components/year-grid';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../../actions';
@@ -57,19 +57,38 @@ function within(day: string, from: string, to: string): boolean {
   return day >= from && day <= to;
 }
 
+/** A site and its tanks — what the form scopes a closure by (POOLSE-84). */
+type Site = Closures['sites'][number];
+
+/** "Sede · Tanque 2 · manhã" — where and when a closure bites, as visible text. */
+function useScopeLabel(): (closure: Closure) => string {
+  const t = useTranslations();
+  return (closure) =>
+    [
+      closure.facilityName ?? t('calendar.everySite'),
+      closure.poolName ?? t('calendar.wholeSite'),
+      closure.partOfDay === null ? null : t(`calendar.partOfDay.${closure.partOfDay}`),
+    ]
+      .filter((part): part is string => part !== null)
+      .join(' · ');
+}
+
 export function ClosureCalendar({
   organizationId,
   year,
   closures,
-  pools,
+  sites,
+  halfDayCut,
   canManage,
   prefill = null,
 }: {
   organizationId: string;
   year: number;
   closures: Closure[];
-  /** Just enough to name a pool in the scope picker — what /closures sends. */
-  pools: { id: string; name: string }[];
+  /** Each site with its tanks — the form's scope (POOLSE-84). */
+  sites: Site[];
+  /** Where a morning ends, from the database. */
+  halfDayCut: string;
   canManage: boolean;
   /**
    * A reason and a pool the operator has effectively already chosen — round 6.
@@ -82,6 +101,7 @@ export function ClosureCalendar({
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
+  const scopeOf = useScopeLabel();
 
   // Built here rather than passed in, exactly as Férias builds them: the month
   // and weekday names belong to the reader's locale, and the grid is the only
@@ -123,7 +143,7 @@ export function ClosureCalendar({
    * otherwise, on every hover.
    */
   const byDay = useMemo(() => {
-    const map = new Map<string, Closure>();
+    const map = new Map<string, Closure[]>();
     for (const closure of closures) {
       // A repeating closure is a pattern; this grid shows one year, so it is
       // projected onto that year rather than onto the dates it was created with.
@@ -138,7 +158,7 @@ export function ClosureCalendar({
         day.setUTCDate(day.getUTCDate() + 1)
       ) {
         const iso = day.toISOString().slice(0, 10);
-        if (iso.startsWith(String(year)) && !map.has(iso)) map.set(iso, closure);
+        if (iso.startsWith(String(year))) map.set(iso, [...(map.get(iso) ?? []), closure]);
       }
     }
     return map;
@@ -165,17 +185,23 @@ export function ClosureCalendar({
       };
     }
 
-    const closure = byDay.get(day);
+    const onDay = byDay.get(day);
+    const closure = onDay?.[0];
 
-    if (closure !== undefined) {
-      const holiday = closure.source !== 'manual';
+    if (closure !== undefined && onDay !== undefined) {
+      // A holiday shuts everything; otherwise the day is held by a person's
+      // closures, each named with where it bites — POOLSE-84.
+      const holiday = onDay.some((one) => one.source !== 'manual');
+      const named = holiday
+        ? closure.reason
+        : onDay.map((one) => `${one.reason} (${scopeOf(one)})`).join('; ');
       return {
         // Feriados read as absence of a working day; a closure reads as a
         // decision somebody made. Different colours because they are different
         // facts, and both carry their name.
         className: holiday ? 'bg-surface-muted text-foreground-muted' : 'bg-warning/25',
-        description: closure.reason,
-        title: closure.reason,
+        description: named,
+        title: named,
         disabled: holiday,
         focusable: holiday,
         // A dot marks a closure somebody made, so the two kinds differ by more
@@ -282,7 +308,8 @@ export function ClosureCalendar({
         <ClosureForm
           organizationId={organizationId}
           range={pending}
-          pools={pools}
+          sites={sites}
+          halfDayCut={halfDayCut}
           prefill={prefill}
           onDone={() => setPending(null)}
         />
@@ -340,13 +367,15 @@ function Legend(): React.ReactElement {
 function ClosureForm({
   organizationId,
   range,
-  pools,
+  sites,
+  halfDayCut,
   prefill,
   onDone,
 }: {
   organizationId: string;
   range: [string, string];
-  pools: { id: string; name: string }[];
+  sites: Site[];
+  halfDayCut: string;
   /** Seeded from a pool's water warning, when that is where this came from. */
   prefill: { poolId: string; reason: string } | null;
   onDone: () => void;
@@ -364,9 +393,29 @@ function ClosureForm({
     'loading' | 'failed' | { sessions: number; marked: number }
   >('loading');
 
+  /*
+   * The scope — POOLSE-84. Always one site; no tank ticked means all of it, and
+   * each tank ticked becomes its own closure. A water warning arrives naming a
+   * tank, so it picks that tank's site and ticks it.
+   */
+  const prefillSite =
+    prefill === null
+      ? undefined
+      : sites.find((site) => site.pools.some((pool) => pool.id === prefill.poolId))?.id;
+  const [facilityId, setFacilityId] = useState(prefillSite ?? sites[0]?.id ?? '');
+  const [poolIds, setPoolIds] = useState<string[]>(
+    prefill !== null && prefillSite !== undefined ? [prefill.poolId] : [],
+  );
+  const site = sites.find((one) => one.id === facilityId);
+
+  // Half a day only on one day — the API and a CHECK say so too.
+  const oneDay = range[0] === range[1];
+  const [halfDay, setHalfDay] = useState(false);
+  const [part, setPart] = useState<PartOfDay>('morning');
+  const partOfDay: PartOfDay | null = oneDay && halfDay ? part : null;
+
   // Controlled, like every field here — an uncontrolled select reverts after
   // the action returns (POOLSE-09/10).
-  const [poolId, setPoolId] = useState(prefill?.poolId ?? '');
   const [reason, setReason] = useState(prefill?.reason ?? '');
   const [warn, setWarn] = useState(false);
   const from = formatDate(range[0]);
@@ -387,15 +436,24 @@ function ClosureForm({
     values?: Record<string, number>;
   } | null>(null);
 
+  // Asked again whenever the scope changes: two tanks cost more than one.
   useEffect(() => {
     let live = true;
-    void impactAction(organizationId, range[0], range[1])
+    setImpact('loading');
+    if (facilityId === '') return;
+    void impactAction(organizationId, {
+      startsOn: range[0],
+      endsOn: range[1],
+      facilityId,
+      poolIds,
+      partOfDay,
+    })
       .then((answer) => live && setImpact(answer ?? 'failed'))
       .catch(() => live && setImpact('failed'));
     return () => {
       live = false;
     };
-  }, [organizationId, range[0], range[1]]);
+  }, [organizationId, range[0], range[1], facilityId, poolIds, partOfDay]);
 
   // The body is written from the reason when the box is ticked, and is then the
   // operator's own to change — never rewritten under them afterwards.
@@ -406,11 +464,27 @@ function ClosureForm({
     }
   }
 
+  function toggleTank(poolId: string, on: boolean): void {
+    setPoolIds((current) =>
+      on ? [...current, poolId] : current.filter((id) => id !== poolId),
+    );
+  }
+
+  /*
+   * Bumped on every answer from the server, and the form's key. React 19
+   * resets a form when its action returns — refusals included — and a reset
+   * unticks a native checkbox whose React state did not change, so a refused
+   * save showed no tank ticked while still holding one. Remounting redraws every
+   * control from state.
+   */
+  const [round, setRound] = useState(0);
+
   // After the render, not during it: closing this form updates the parent.
   const seen = useRef(state);
   useEffect(() => {
     if (seen.current === state) return;
     seen.current = state;
+    setRound((value) => value + 1);
     if (!state.ok) return;
     if (!warn || state.closureId === undefined) {
       onDone();
@@ -448,6 +522,10 @@ function ClosureForm({
   const BUTTON_QUIET =
     'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border';
   const sendable = warning?.step === 'confirm' && warning.preview.addressCount > 0;
+  const reached =
+    warning?.step === 'confirm'
+      ? warning.preview.studentCount + warning.preview.partnerCount + warning.preview.leadCount
+      : 0;
 
   return (
     <Dialog
@@ -457,11 +535,15 @@ function ClosureForm({
       closeLabel={t('common.cancel')}
     >
       {warning === null ? (
-        <form action={action} className="flex flex-col gap-4">
+        <form key={round} action={action} className="flex flex-col gap-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="startsOn" value={range[0]} />
           <input type="hidden" name="endsOn" value={range[1]} />
-          <input type="hidden" name="poolId" value={poolId} />
+          <input type="hidden" name="facilityId" value={facilityId} />
+          {poolIds.map((id) => (
+            <input key={id} type="hidden" name="poolIds" value={id} />
+          ))}
+          <input type="hidden" name="partOfDay" value={partOfDay ?? ''} />
 
           {/*
             Criterion 10. A register already taken means somebody stood at the
@@ -500,18 +582,77 @@ function ClosureForm({
             className="max-w-none"
           />
 
-          {pools.length > 0 && (
+          {/* One site, always. A club with one says which, rather than asking. */}
+          {sites.length > 1 ? (
             <SelectField
-              name="poolChoice"
-              label={t('calendar.closureScope')}
-              initial={poolId}
-              onValueChange={setPoolId}
-              options={[
-                { value: '', label: t('calendar.wholeSite') },
-                ...pools.map((pool) => ({ value: pool.id, label: pool.name })),
-              ]}
+              name="siteChoice"
+              label={t('calendar.closureSite')}
+              initial={facilityId}
+              onValueChange={(value) => {
+                setFacilityId(value);
+                setPoolIds([]);
+              }}
+              options={sites.map((one) => ({ value: one.id, label: one.name }))}
               className="max-w-none"
             />
+          ) : (
+            site !== undefined && (
+              <p className="text-sm">
+                <span className="font-medium">{t('calendar.closureSite')}:</span> {site.name}
+              </p>
+            )
+          )}
+
+          {site !== undefined && site.pools.length > 0 && (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-sm font-medium">{t('calendar.closureScope')}</legend>
+              <p className="text-sm text-foreground-muted">
+                {poolIds.length === 0
+                  ? t('calendar.scopeWholeSite', { site: site.name })
+                  : t('calendar.scopeTanks', { count: poolIds.length })}
+              </p>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                {site.pools.map((pool) => (
+                  <label key={pool.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={poolIds.includes(pool.id)}
+                      onChange={(event) => toggleTank(pool.id, event.target.checked)}
+                      className="size-4"
+                    />
+                    {pool.name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
+          {oneDay && (
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={halfDay}
+                  onChange={(event) => setHalfDay(event.target.checked)}
+                  className="size-4"
+                />
+                <span className="font-medium">{t('calendar.halfDay')}</span>
+              </label>
+              {halfDay && (
+                <SelectField
+                  name="partChoice"
+                  label={t('calendar.halfDayWhich')}
+                  initial={part}
+                  onValueChange={(value) => setPart(value === 'afternoon' ? 'afternoon' : 'morning')}
+                  options={[
+                    { value: 'morning', label: t('calendar.partOfDay.morning') },
+                    { value: 'afternoon', label: t('calendar.partOfDay.afternoon') },
+                  ]}
+                  hint={t('calendar.halfDayHint', { cut: halfDayCut })}
+                  className="max-w-none"
+                />
+              )}
+            </div>
           )}
 
           <p className="text-sm text-foreground-muted">{t('calendar.closureEffect')}</p>
@@ -553,14 +694,18 @@ function ClosureForm({
 
           {state.errorKey !== undefined && (
             <p className="text-sm text-danger">
-              {t(state.errorKey, { existing: state.detail ?? '' })}
+              {t(state.errorKey, { existing: state.detail ?? '', ...(state.values ?? {}) })}
             </p>
           )}
 
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              disabled={saving || (warn && (subject.trim() === '' || body.trim() === ''))}
+              disabled={
+                saving ||
+                facilityId === '' ||
+                (warn && (subject.trim() === '' || body.trim() === ''))
+              }
               className={BUTTON}
             >
               {saving
@@ -584,17 +729,25 @@ function ClosureForm({
           {warning.step === 'failed' && (
             <p className="text-sm text-danger">{t('calendar.warn.countFailed')}</p>
           )}
-          {warning.step === 'confirm' && warning.preview.studentCount === 0 && (
+          {warning.step === 'confirm' && reached === 0 && (
             <p className="text-sm">{t('calendar.warn.nobody')}</p>
           )}
-          {warning.step === 'confirm' && warning.preview.studentCount > 0 && (
+          {warning.step === 'confirm' && reached > 0 && (
             <>
               <p className="text-sm">
-                {t('calendar.warn.reaches', {
-                  addresses: warning.preview.addressCount,
-                  students: warning.preview.studentCount,
-                })}
+                {t('calendar.warn.reaches', { addresses: warning.preview.addressCount })}
               </p>
+              <ul className="list-disc pl-5 text-sm">
+                {warning.preview.studentCount > 0 && (
+                  <li>{t('calendar.warn.students', { count: warning.preview.studentCount })}</li>
+                )}
+                {warning.preview.partnerCount > 0 && (
+                  <li>{t('calendar.warn.partners', { count: warning.preview.partnerCount })}</li>
+                )}
+                {warning.preview.leadCount > 0 && (
+                  <li>{t('calendar.warn.leads', { count: warning.preview.leadCount })}</li>
+                )}
+              </ul>
               {warning.preview.unreachable.length > 0 && (
                 <p className="text-sm text-warning">
                   {t('calendar.warn.unreachable', {
@@ -661,6 +814,7 @@ function ClosureList({
   organizationId: string;
 }): React.ReactElement {
   const t = useTranslations();
+  const scopeOf = useScopeLabel();
 
   const managed = closures.filter((closure) => closure.source === 'manual');
 
@@ -683,6 +837,8 @@ function ClosureList({
           <span className="flex flex-wrap items-center gap-2">
             <span aria-hidden className="size-3 shrink-0 rounded bg-warning/25" />
             <span className="font-medium">{closure.reason}</span>
+            {/* Where it bites — one row per tank, so each reopens on its own. */}
+            <span className="text-sm text-foreground-muted">{scopeOf(closure)}</span>
           </span>
 
           <span className="flex items-center gap-3 text-sm text-foreground-muted">

@@ -18,6 +18,7 @@ import {
 } from '@/lib/api';
 import { withFrom } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
+import { PoolClosureNote } from '@/components/pool-closure-note';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { DetailPage } from '@/components/detail-page';
 import { CityPicker } from './city-picker';
@@ -389,6 +390,7 @@ export default async function FacilityPage({
                           {t(`facilities.kind.${pool.kind}`)}
                         </span>
                       </Link>
+                      <PoolClosureNote closure={pool.closure} className="mt-1" />
                     </li>
                   ))}
                 </ul>

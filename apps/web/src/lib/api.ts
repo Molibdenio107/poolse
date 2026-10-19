@@ -479,6 +479,8 @@ export interface Pool {
   lengthM: number | null;
   widthM: number | null;
   maxDepthM: number | null;
+  /** What shuts it today — POOLSE-84. Absent where the read does not ask. */
+  closure?: PoolClosure | null;
 }
 
 /**
@@ -2305,25 +2307,60 @@ export interface TimetableEntry {
   status: 'active' | 'waiting';
 }
 
+/** Morning or afternoon of one day, cut at `Closures.halfDayCut` — POOLSE-84. */
+export type PartOfDay = 'morning' | 'afternoon';
+
 export interface Closure {
   id: string;
+  /** The site it shuts. Null only for a holiday, which shuts every site. */
   facilityId: string | null;
+  facilityName: string | null;
+  /** One tank of that site, or null for the whole site. */
   poolId: string | null;
   poolName: string | null;
+  /** Null is the whole day. */
+  partOfDay: PartOfDay | null;
+  /** Shared by the closures one form made — one per tank. */
+  batchId: string;
   /** ISO date, YYYY-MM-DD. A closure is days, not instants. */
   startsOn: string;
   endsOn: string;
   reason: string;
   blocksGeneration: boolean;
   repeatsAnnually: boolean;
-  source: 'manual' | 'national_holiday';
+  source: 'manual' | 'national_holiday' | 'municipal_holiday';
 }
 
 export interface Closures {
   organizationId: string;
   closures: Closure[];
   canManage: boolean;
-  pools: { id: string; name: string }[];
+  /** Every tank, with its site — what a water warning arrives naming. */
+  pools: { id: string; name: string; facilityId: string }[];
+  /** The sites and their tanks, for the form's scope. */
+  sites: { id: string; name: string; pools: { id: string; name: string }[] }[];
+  /** Where a morning ends, HH:MM on the site's clock — read from the database. */
+  halfDayCut: string;
+}
+
+/**
+ * A closure as the week calendar draws it — POOLSE-84. One weekday; the whole
+ * site or one tank (`poolId`); the whole day, or the window of it a half day
+ * shuts, in minutes from midnight on the site's clock. The page works the window
+ * out from the database's cut, so the grid never writes the hour itself.
+ */
+export interface CalendarClosure {
+  weekday: number;
+  reason: string;
+  poolId: string | null;
+  window: { from: number; to: number } | null;
+}
+
+/** What shuts a tank today — POOLSE-84. `until` is the last closed day. */
+export interface PoolClosure {
+  reason: string;
+  until: string;
+  partOfDay: PartOfDay | null;
 }
 
 export interface CalendarSession {
@@ -3296,6 +3333,8 @@ export interface PoolOccupancy {
   capacity: number | null;
   swimmers: number;
   inClasses: number;
+  /** What shuts it now; a check-in is refused while it is set — POOLSE-84. */
+  closure: PoolClosure | null;
 }
 
 export interface InWater {
@@ -4154,12 +4193,19 @@ export interface EnergyCostsWidgetData {
 
 export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure';
 
+/** Who a message is written for — a closure's warning also reaches partners and leads. */
+export type RecipientKind = 'student' | 'partner' | 'lead';
+
 export interface MessagePreview {
   studentCount: number;
+  /** Partners a closure's warning reaches — POOLSE-84. */
+  partnerCount: number;
+  /** Trial leads a closure's warning reaches — POOLSE-84. */
+  leadCount: number;
   /** Distinct addresses: what will be sent, and what the daily ceiling counts. */
   addressCount: number;
-  /** Students nobody can be written to for — named, never only counted. */
-  unreachable: { studentId: string; name: string }[];
+  /** Nobody can be written to for these — named, never only counted. */
+  unreachable: { studentId: string; name: string; kind: RecipientKind }[];
   /** False where no email provider is configured: recorded, not sent. */
   emailConfigured: boolean;
   /** Present once the message has been written. */
@@ -4184,9 +4230,11 @@ export interface MessageList extends Paginated<MessageSummary> {
 }
 
 export interface MessageRecipient {
+  /** The student's name — or the partner's, or the trial swimmer's, by `kind`. */
   studentName: string;
   name: string;
   isGuardian: boolean;
+  kind: RecipientKind;
   email: string | null;
   deliveredAt: string | null;
 }

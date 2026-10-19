@@ -124,9 +124,19 @@ export default async function MessagePage({
                 <tbody className="divide-y divide-border">
                   {loaded.recipients.map((recipient, index) => (
                     <tr key={`${recipient.studentName}-${recipient.email ?? 'none'}-${index}`}>
-                      <td className="py-2 pr-4">{recipient.studentName}</td>
                       <td className="py-2 pr-4">
-                        {recipient.isGuardian ? recipient.name : t('messages.theStudent')}
+                        {recipient.studentName}
+                        {/* A closure's warning also reaches partners and trial leads — POOLSE-84. */}
+                        {recipient.kind !== 'student' && (
+                          <span className="block text-foreground-muted">
+                            {t(`messages.kind.${recipient.kind}`)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {recipient.isGuardian || recipient.kind !== 'student'
+                          ? recipient.name
+                          : t('messages.theStudent')}
                       </td>
                       <td className="py-2 pr-4">
                         {recipient.email ?? (

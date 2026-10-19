@@ -615,6 +615,19 @@ test('intended open: seasons, closures and dashboard still answer non-staff', as
   });
 });
 
+test('closure writes refuse a guardian and a student (403) — POOLSE-84', async () => {
+  await asEach(async () => {
+    const closures = new ClosuresController();
+    const body = { startsOn: '2027-03-09', endsOn: '2027-03-09', reason: 'x', facilityId: tenantRef.facilityId };
+    await refused('POST closures', 403, () => closures.create(body));
+    await refused('GET closures/impact', 403, () =>
+      closures.impact('2027-03-09', '2027-03-09', tenantRef.facilityId),
+    );
+    await refused('PUT closures/:id', 403, () => closures.update(NO_SUCH_ID, body));
+    await refused('POST closures/:id/archive', 403, () => closures.remove(NO_SUCH_ID));
+  });
+});
+
 // --------------------------------------------------------------------------
 // Protected — controls that held before the review
 // --------------------------------------------------------------------------

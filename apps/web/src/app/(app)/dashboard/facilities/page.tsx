@@ -4,6 +4,7 @@ import { ApiError, apiFetch, type Facilities } from '../../../../lib/api';
 import Link from 'next/link';
 import { Settings } from 'lucide-react';
 import { EntityIcon } from '@/components/entity-icon';
+import { PoolClosureNote } from '@/components/pool-closure-note';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from './facility-forms';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -199,6 +200,8 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                               .filter(Boolean)
                               .join(' · ')}
                           </span>
+                          {/* Shut today — POOLSE-84. */}
+                          <PoolClosureNote closure={pool.closure} />
                           </div>
                         </div>
                       </li>

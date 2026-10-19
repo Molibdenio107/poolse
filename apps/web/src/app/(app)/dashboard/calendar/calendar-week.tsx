@@ -7,7 +7,14 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/toast';
 import { Ban, ClipboardCheck, NotebookPen, Waves } from 'lucide-react';
 import { TextField } from '@/components/ui/field';
-import type { ClassGroup, FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
+import type {
+  CalendarClosure,
+  ClassGroup,
+  FacilityDay,
+  GridBooking,
+  GridLane,
+  GridSlot,
+} from '@/lib/api';
 import { bookingKey, slotKey } from '@/lib/slot-key';
 import { startTimeOf } from '@/lib/calendar-scale';
 import { slotsFor, toMinutes } from '@/lib/grid-layout';
@@ -61,7 +68,7 @@ export function CalendarWeek({
   weekStart: string;
   dayNames: Record<number, string>;
   todayWeekday?: number | undefined;
-  closures: { weekday: number; reason: string }[];
+  closures: CalendarClosure[];
   hours: FacilityDay[];
   slots: GridSlot[];
   lanes: GridLane[];

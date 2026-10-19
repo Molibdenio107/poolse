@@ -346,8 +346,11 @@ BEGIN
   VALUES (v_org, DATE '2026-05-12', DATE '2026-05-12', 'Feriado municipal de Aveiro',
           'municipal_holiday');
 
-  INSERT INTO closure (organization_id, starts_on, ends_on, reason, source)
-  VALUES (v_org, DATE '2026-06-01', DATE '2026-06-14', 'Obras no tanque grande', 'manual');
+  -- A manual closure names its site (POOLSE-84); this club needs one for it.
+  INSERT INTO facility (organization_id, name) VALUES (v_org, 'Piscina de Aveiro');
+  INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason, source)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1),
+          DATE '2026-06-01', DATE '2026-06-14', 'Obras no tanque grande', 'manual');
 
   -- Seeding twice must be harmless, exactly as it is for national holidays.
   BEGIN

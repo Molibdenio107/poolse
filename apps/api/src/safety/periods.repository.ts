@@ -135,10 +135,8 @@ export async function addPeriod(
           WHERE NOT EXISTS (
                   SELECT 1 FROM closure c
                    WHERE c.organization_id = p.organization_id
-                     AND c.archived_at IS NULL
-                     AND c.blocks_generation
-                     AND (c.pool_id IS NULL OR c.pool_id = pool.id)
-                     AND closure_covers(c.starts_on, c.ends_on, c.repeats_annually, days.day))
+                     -- The site, this tank or a holiday, the whole day — POOLSE-84.
+                     AND closure_shuts_day(c, f.id, ARRAY[pool.id], days.day))
        ),
        written AS (
          INSERT INTO lifeguard_duty (organization_id, pool_id, membership_id, starts_at, ends_at,

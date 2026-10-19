@@ -364,9 +364,10 @@ test('a disabled weekday and a closure both shrink the available hours', async (
 
       // QA 52.8 — and a closure takes another day with it.
       await tenant.sql(
-        `INSERT INTO closure (organization_id, starts_on, ends_on, reason, blocks_generation)
-         VALUES ($1, '2026-09-08', '2026-09-08', 'Obras', true)`,
-        [tenant.organizationId],
+        `INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason,
+                              blocks_generation)
+         VALUES ($1, $2, '2026-09-08', '2026-09-08', 'Obras', true)`,
+        [tenant.organizationId, tenant.facilityId],
       );
       const withClosure = Number(
         (await occupancy.read(tenant.facilityId)).total.availableLaneHours,

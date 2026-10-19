@@ -4,17 +4,27 @@ import { recordAudit } from '../audit/audit.js';
 import { holidaysBetween } from './holidays.js';
 import { nameOrder, shortName } from '../people/names.js';
 
+/** Morning or afternoon, cut at 13:00 on the site's clock — POOLSE-84. */
+export type PartOfDay = 'morning' | 'afternoon';
+
 export interface Closure {
   id: string;
+  /** The site it shuts. Null only for a holiday, which shuts every site. */
   facilityId: string | null;
+  facilityName: string | null;
+  /** One tank of that site, or null for all of them. */
   poolId: string | null;
   poolName: string | null;
+  /** Null is the whole day. */
+  partOfDay: PartOfDay | null;
+  /** Shared by the closures one form made (one per tank). */
+  batchId: string;
   startsOn: string;
   endsOn: string;
   reason: string;
   blocksGeneration: boolean;
   repeatsAnnually: boolean;
-  source: 'manual' | 'national_holiday';
+  source: 'manual' | 'national_holiday' | 'municipal_holiday';
 }
 
 export interface Session {
@@ -110,19 +120,24 @@ export async function listClosures(organizationId: string, year: number | null):
     const { rows } = await tx.query<{
       id: string;
       facility_id: string | null;
+      facility_name: string | null;
       pool_id: string | null;
       pool_name: string | null;
+      part_of_day: PartOfDay | null;
+      batch_id: string;
       starts_on: Date;
       ends_on: Date;
       reason: string;
       blocks_generation: boolean;
       repeats_annually: boolean;
-      source: 'manual' | 'national_holiday';
+      source: Closure['source'];
     }>(`
-      SELECT c.id, c.facility_id, c.pool_id, p.name AS pool_name,
+      SELECT c.id, c.facility_id, f.name AS facility_name, c.pool_id, p.name AS pool_name,
+             c.part_of_day, c.batch_id,
              c.starts_on, c.ends_on, c.reason,
              c.blocks_generation, c.repeats_annually, c.source
         FROM closure c
+        LEFT JOIN facility f ON f.id = c.facility_id AND f.organization_id = c.organization_id
         LEFT JOIN pool p ON p.id = c.pool_id AND p.organization_id = c.organization_id
        WHERE c.archived_at IS NULL
          AND (
@@ -131,14 +146,17 @@ export async function listClosures(organizationId: string, year: number | null):
            OR (c.starts_on <= make_date($1::int, 12, 31)
                AND c.ends_on   >= make_date($1::int, 1, 1))
          )
-       ORDER BY c.starts_on, c.reason
+       ORDER BY c.starts_on, f.name NULLS FIRST, p.name NULLS FIRST, c.part_of_day NULLS FIRST, c.reason
     `, [year]);
 
     return rows.map((row) => ({
       id: row.id,
       facilityId: row.facility_id,
+      facilityName: row.facility_name,
       poolId: row.pool_id,
       poolName: row.pool_name,
+      partOfDay: row.part_of_day,
+      batchId: row.batch_id,
       startsOn: isoDate(row.starts_on),
       endsOn: isoDate(row.ends_on),
       reason: row.reason,
@@ -149,126 +167,196 @@ export async function listClosures(organizationId: string, year: number | null):
   });
 }
 
+/**
+ * What the form sends — POOLSE-84. One site, always; no tanks means the whole
+ * site, several tanks mean one closure per tank. A half day only on one day,
+ * which the parser and a CHECK both refuse otherwise.
+ */
 export interface ClosureInput {
   startsOn: string;
   endsOn: string;
   reason: string;
-  poolId: string | null;
+  facilityId: string;
+  poolIds: string[];
+  partOfDay: PartOfDay | null;
   blocksGeneration: boolean;
   repeatsAnnually: boolean;
 }
 
-export async function createClosure(
+/**
+ * Raised when a tank is not one of the site's — POOLSE-84, QA 12. The composite
+ * key refuses it too; this is what makes it a sentence rather than a 500.
+ */
+export class ClosureScopeError extends Error {
+  constructor(readonly code: 'closure_site_unknown' | 'closure_pool_elsewhere') {
+    super(code);
+  }
+}
+
+/** The site is this club's and live, and every tank is one of its own. */
+async function checkScope(tx: Tx, facilityId: string, poolIds: readonly string[]): Promise<void> {
+  const { rows: site } = await tx.query(
+    `SELECT 1 FROM facility WHERE id = $1 AND archived_at IS NULL`,
+    [facilityId],
+  );
+  if (site.length === 0) throw new ClosureScopeError('closure_site_unknown');
+  if (poolIds.length === 0) return;
+
+  const { rows } = await tx.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM pool
+      WHERE id = ANY ($1::uuid[]) AND facility_id = $2 AND archived_at IS NULL`,
+    [poolIds, facilityId],
+  );
+  if ((rows[0]?.n ?? 0) !== poolIds.length) throw new ClosureScopeError('closure_pool_elsewhere');
+}
+
+/**
+ * Close a site, or some of its tanks — POOLSE-84.
+ *
+ * **One transaction, one row per tank.** Ticking two tanks makes two closures so
+ * that one can reopen before the other; they share a `batch_id`, which is what
+ * the warning to families reads. If any one of them overlaps a closure already
+ * there, the whole create is refused and the refusal names that tank and that
+ * closure — a create that saved one tank and not the other would leave the
+ * operator guessing which.
+ *
+ * Takes effect now, not at the next generation — POOLSE-31, criterion 8.
+ */
+export async function createClosures(
   organizationId: string,
   input: ClosureInput,
-): Promise<string> {
+): Promise<{ ids: string[]; batchId: string }> {
   return withOrg(organizationId, async (tx) => {
+    await checkScope(tx, input.facilityId, input.poolIds);
+
+    const reaches: (string | null)[] = input.poolIds.length === 0 ? [null] : input.poolIds;
+
     /*
      * Checked here as well as by `closure_no_overlap` — POOLSE-31, criterion 7.
      *
-     * Not belt and braces: the constraint is what makes the guarantee true under
-     * two operators at once, and this is what turns it into a message naming the
-     * closure already there. A raw exclusion violation would reach the operator
-     * as "conflicting key value", which tells them nothing they can act on.
+     * The constraint is what makes the guarantee true under two operators at
+     * once; this is what turns it into a message naming the closure already
+     * there, and now the tank it is on.
      */
-    const clash = await overlapping(tx, input.startsOn, input.endsOn, input.poolId, null);
-    if (clash !== null) throw new ClosureOverlapError(clash);
+    for (const poolId of reaches) {
+      const clash = await overlapping(tx, input, poolId, null);
+      if (clash !== null) throw new ClosureOverlapError(clash.reason, clash.poolName);
+    }
 
-    const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO closure (
-         organization_id, pool_id, starts_on, ends_on, reason,
-         blocks_generation, repeats_annually, source
-       ) VALUES ($1, $2, $3::date, $4::date, $5, $6, $7, 'manual')
-       RETURNING id`,
-      [
-        organizationId,
-        input.poolId,
-        input.startsOn,
-        input.endsOn,
-        input.reason,
-        input.blocksGeneration,
-        input.repeatsAnnually,
-      ],
-    );
+    const { rows: batch } = await tx.query<{ id: string }>(`SELECT gen_random_uuid() AS id`);
+    const batchId = batch[0]!.id;
+    const ids: string[] = [];
+    let cancelled = 0;
 
-    const id = rows[0]?.id;
-    if (!id) throw new Error('Could not create the closure');
+    for (const poolId of reaches) {
+      const { rows } = await tx.query<{ id: string }>(
+        `INSERT INTO closure (
+           organization_id, facility_id, pool_id, part_of_day, batch_id,
+           starts_on, ends_on, reason, blocks_generation, repeats_annually, source
+         ) VALUES ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, 'manual')
+         RETURNING id`,
+        [
+          organizationId,
+          input.facilityId,
+          poolId,
+          input.partOfDay,
+          batchId,
+          input.startsOn,
+          input.endsOn,
+          input.reason,
+          input.blocksGeneration,
+          input.repeatsAnnually,
+        ],
+      );
+      const id = rows[0]?.id;
+      if (!id) throw new Error('Could not create the closure');
+      ids.push(id);
 
-    /*
-     * Take effect now, not at the next generation — POOLSE-31, criterion 8.
-     *
-     * Without this, closing the pool for next week leaves next week's classes
-     * standing on the calendar until somebody presses "Gerar a época". An
-     * operator who has just told the system the pool is shut is entitled to see
-     * it shut.
-     */
-    const { rows: applied } = await tx.query<{ apply_closure: number }>(
-      `SELECT apply_closure($1, $2)`,
-      [organizationId, id],
-    );
+      const { rows: applied } = await tx.query<{ apply_closure: number }>(
+        `SELECT apply_closure($1, $2)`,
+        [organizationId, id],
+      );
+      cancelled += applied[0]?.apply_closure ?? 0;
+    }
 
     await recordAudit(tx, {
       action: 'closure.created',
       entityType: 'closure',
-      entityId: id,
+      entityId: ids[0]!,
       data: {
         reason: input.reason,
         startsOn: input.startsOn,
         endsOn: input.endsOn,
+        facilityId: input.facilityId,
+        poolIds: input.poolIds,
+        partOfDay: input.partOfDay,
         // How many classes it took down, so the trail says what it cost rather
         // than only what was asked for.
-        cancelled: applied[0]?.apply_closure ?? 0,
+        cancelled,
       },
     });
 
-    return id;
+    return { ids, batchId };
   });
 }
 
 /**
- * Raised when a closure would cover days another already covers — POOLSE-31,
+ * Raised when a closure would cover time another already covers — POOLSE-31,
  * criterion 7.
  *
- * Carries the name of the closure already there, because "overlaps with an
- * existing closure" sends somebody hunting through a year of calendar, and
- * "overlaps with Encerramento de Natal" does not.
+ * Carries the name of the closure already there and, since POOLSE-84, the tank
+ * it is on: "overlaps with Esvaziamento on Tanque 2" is something to act on.
  */
 export class ClosureOverlapError extends Error {
-  constructor(readonly existing: string) {
+  constructor(
+    readonly existing: string,
+    readonly poolName: string | null = null,
+  ) {
     super(`Overlaps with ${existing}`);
   }
 }
 
-/** The closure already covering any of these days, if there is one. */
+/**
+ * The closure already covering this reach and time, if there is one.
+ *
+ * The same key `closure_no_overlap` uses — site, tank, and `closure_span`, so a
+ * morning and an afternoon of one day pass and a whole day over either does not.
+ */
 async function overlapping(
   tx: Tx,
-  startsOn: string,
-  endsOn: string,
+  input: ClosureInput,
   poolId: string | null,
   excludeId: string | null,
-): Promise<string | null> {
-  const { rows } = await tx.query<{ reason: string }>(
-    `SELECT reason FROM closure
-      WHERE archived_at IS NULL
-        AND source = 'manual'
-        AND NOT repeats_annually
-        AND coalesce(pool_id, '00000000-0000-0000-0000-000000000000'::uuid)
-            = coalesce($3::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
-        AND daterange(starts_on, ends_on, '[]') && daterange($1::date, $2::date, '[]')
-        AND ($4::uuid IS NULL OR id <> $4::uuid)
+): Promise<{ reason: string; poolName: string | null } | null> {
+  if (input.repeatsAnnually) return null;
+  const { rows } = await tx.query<{ reason: string; pool_name: string | null }>(
+    `SELECT c.reason, p.name AS pool_name
+       FROM closure c
+       LEFT JOIN pool p ON p.id = c.pool_id AND p.organization_id = c.organization_id
+      WHERE c.archived_at IS NULL
+        AND c.source = 'manual'
+        AND NOT c.repeats_annually
+        AND c.facility_id = $1::uuid
+        AND coalesce(c.pool_id, '00000000-0000-0000-0000-000000000000'::uuid)
+            = coalesce($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+        AND closure_span(c.starts_on, c.ends_on, c.part_of_day)
+            && closure_span($3::date, $4::date, $5::closure_part_of_day)
+        AND ($6::uuid IS NULL OR c.id <> $6::uuid)
       LIMIT 1`,
-    [startsOn, endsOn, poolId, excludeId],
+    [input.facilityId, poolId, input.startsOn, input.endsOn, input.partOfDay, excludeId],
   );
-  return rows[0]?.reason ?? null;
+  const row = rows[0];
+  return row === undefined ? null : { reason: row.reason, poolName: row.pool_name };
 }
 
 /**
- * What a range would take down, before anybody commits to it — criterion 10.
+ * What a closure would take down, before anybody commits to it — criterion 10.
  *
  * `marked` is the number that matters. Cancelling a class nobody has registered
  * is routine; cancelling one whose register was already taken means somebody
  * stood at the poolside and wrote it down, and they should be told before rather
- * than after.
+ * than after. Counted by `closure_impact`, which reads the same `closure_reaches`
+ * that cancels — site, tanks and half.
  */
 export interface ClosureImpact {
   sessions: number;
@@ -277,26 +365,42 @@ export interface ClosureImpact {
 
 export async function closureImpact(
   organizationId: string,
-  startsOn: string,
-  endsOn: string,
-  poolId: string | null,
+  scope: {
+    startsOn: string;
+    endsOn: string;
+    facilityId: string;
+    poolIds: string[];
+    partOfDay: PartOfDay | null;
+  },
 ): Promise<ClosureImpact> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ o_sessions: number; o_marked: number }>(
-      `SELECT o_sessions, o_marked FROM closure_impact($1, $2::date, $3::date, $4::uuid)`,
-      [organizationId, startsOn, endsOn, poolId],
+      `SELECT o_sessions, o_marked
+         FROM closure_impact($1, $2::date, $3::date, $4::uuid, $5::uuid[],
+                             $6::closure_part_of_day)`,
+      [
+        organizationId,
+        scope.startsOn,
+        scope.endsOn,
+        scope.facilityId,
+        scope.poolIds,
+        scope.partOfDay,
+      ],
     );
     return { sessions: rows[0]?.o_sessions ?? 0, marked: rows[0]?.o_marked ?? 0 };
   });
 }
 
 /**
- * Extend, shorten or rename an existing closure — criterion 6.
+ * Extend, shorten, rename or re-scope one closure — criterion 6.
  *
- * Re-applies afterwards, so shortening a closure gives back the classes it no
- * longer covers and extending it takes down the ones it now does. The restore
- * half is `generate_sessions`' own step 3, which only revives what a closure put
- * down; a class cancelled by a person is never touched.
+ * One row: a closure made for two tanks is two rows, and each is edited on its
+ * own, which is the point of storing them apart. So at most one tank here.
+ *
+ * Re-applies and releases afterwards, in the same transaction: extending takes
+ * down what it now covers, and shortening gives back exactly what it no longer
+ * does (`release_closures`), rather than waiting for somebody to press "Gerar a
+ * época" — POOLSE-84 QA 4.
  */
 export async function updateClosure(
   organizationId: string,
@@ -304,19 +408,17 @@ export async function updateClosure(
   input: ClosureInput,
 ): Promise<'updated' | 'not_found'> {
   return withOrg(organizationId, async (tx) => {
-    const clash = await overlapping(
-      tx,
-      input.startsOn,
-      input.endsOn,
-      input.poolId,
-      closureId,
-    );
-    if (clash !== null) throw new ClosureOverlapError(clash);
+    await checkScope(tx, input.facilityId, input.poolIds);
+    const poolId = input.poolIds[0] ?? null;
+
+    const clash = await overlapping(tx, input, poolId, closureId);
+    if (clash !== null) throw new ClosureOverlapError(clash.reason, clash.poolName);
 
     const { rows } = await tx.query<{ id: string }>(
       `UPDATE closure
           SET starts_on = $2::date, ends_on = $3::date, reason = $4,
-              pool_id = $5, blocks_generation = $6, repeats_annually = $7
+              facility_id = $5, pool_id = $6, part_of_day = $7,
+              blocks_generation = $8, repeats_annually = $9
         WHERE id = $1 AND archived_at IS NULL AND source = 'manual'
       RETURNING id`,
       [
@@ -324,7 +426,9 @@ export async function updateClosure(
         input.startsOn,
         input.endsOn,
         input.reason,
-        input.poolId,
+        input.facilityId,
+        poolId,
+        input.partOfDay,
         input.blocksGeneration,
         input.repeatsAnnually,
       ],
@@ -332,18 +436,34 @@ export async function updateClosure(
     if (!rows[0]) return 'not_found';
 
     await tx.query(`SELECT apply_closure($1, $2)`, [organizationId, closureId]);
+    const { rows: released } = await tx.query<{ release_closures: number }>(
+      `SELECT release_closures($1)`,
+      [organizationId],
+    );
 
     await recordAudit(tx, {
       action: 'closure.updated',
       entityType: 'closure',
       entityId: closureId,
-      data: { reason: input.reason, startsOn: input.startsOn, endsOn: input.endsOn },
+      data: {
+        reason: input.reason,
+        startsOn: input.startsOn,
+        endsOn: input.endsOn,
+        poolId,
+        partOfDay: input.partOfDay,
+        restored: released[0]?.release_closures ?? 0,
+      },
     });
 
     return 'updated';
   });
 }
 
+/**
+ * Remove a closure — and give back, now, the classes it took. Before POOLSE-84
+ * those came back only at the next generation, so a tank reopened on Monday kept
+ * its lessons cancelled until somebody changed a timetable.
+ */
 export async function archiveClosure(
   organizationId: string,
   closureId: string,
@@ -357,11 +477,16 @@ export async function archiveClosure(
     );
     if (!rows[0]) return false;
 
+    const { rows: released } = await tx.query<{ release_closures: number }>(
+      `SELECT release_closures($1)`,
+      [organizationId],
+    );
+
     await recordAudit(tx, {
       action: 'closure.removed',
       entityType: 'closure',
       entityId: closureId,
-      data: { reason: rows[0].reason },
+      data: { reason: rows[0].reason, restored: released[0]?.release_closures ?? 0 },
     });
     return true;
   });

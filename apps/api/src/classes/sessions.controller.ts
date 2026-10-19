@@ -6,6 +6,7 @@ import {
   ForbiddenException,
   Get,
   NotFoundException,
+  UnprocessableEntityException,
   Param,
   Post,
   Put,
@@ -21,7 +22,8 @@ import {
   archiveClosure,
   ClosureOverlapError,
   closureImpact,
-  createClosure,
+  ClosureScopeError,
+  createClosures,
   findClash,
   findScheduleClashes,
   findSessionSlot,
@@ -42,6 +44,7 @@ import {
   type Closure,
   type ClosureImpact,
   type ClosureInput,
+  type PartOfDay,
   type GenerationResult,
   type Session,
 } from './sessions.repository.js';
@@ -84,7 +87,12 @@ interface ClosuresResponse {
   organizationId: string;
   closures: Closure[];
   canManage: boolean;
-  pools: { id: string; name: string }[];
+  /** Every tank, with its site — what a water warning arrives naming. */
+  pools: { id: string; name: string; facilityId: string }[];
+  /** The sites and their tanks, for the form's scope — POOLSE-84. */
+  sites: { id: string; name: string; pools: { id: string; name: string }[] }[];
+  /** Where a morning ends — `closure_half_day_cut()`, HH:MM, so no screen writes it. */
+  halfDayCut: string;
 }
 
 @Controller('closures')
@@ -115,21 +123,43 @@ export class ClosuresController {
     const scopedYear =
       Number.isInteger(requested) && requested >= 2000 && requested <= 2100 ? requested : null;
 
-    const [closures, pools] = await Promise.all([
+    const [closures, sites, halfDayCut] = await Promise.all([
       listClosures(organizationId, scopedYear),
-      poolChoices(organizationId),
+      siteChoices(organizationId),
+      withOrg(organizationId, async (tx) => {
+        const { rows } = await tx.query<{ cut: string }>(
+          `SELECT to_char(closure_half_day_cut(), 'HH24:MI') AS cut`,
+        );
+        return rows[0]!.cut;
+      }),
     ]);
+    const pools = sites.flatMap((site) =>
+      site.pools.map((pool) => ({ ...pool, facilityId: site.id })),
+    );
 
-    return { organizationId, closures, canManage: hasRole('owner', 'admin'), pools };
+    return {
+      organizationId,
+      closures,
+      canManage: hasRole('owner', 'admin'),
+      pools,
+      sites,
+      halfDayCut,
+    };
   }
 
+  /**
+   * One site, or some of its tanks — POOLSE-84. Several tanks are several
+   * closures made in one transaction; `id` is the first, which is all the
+   * warning needs (it reaches the whole batch).
+   */
   @Post()
-  async create(@Body() body: Record<string, unknown>): Promise<{ id: string }> {
+  async create(@Body() body: Record<string, unknown>): Promise<{ id: string; ids: string[] }> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
     try {
-      return { id: await createClosure(organizationId, parseClosure(body)) };
+      const { ids } = await createClosures(organizationId, parseClosure(body));
+      return { id: ids[0]!, ids };
     } catch (error) {
       throw asOverlap(error);
     }
@@ -145,21 +175,23 @@ export class ClosuresController {
   async impact(
     @Query('startsOn') startsOn?: string,
     @Query('endsOn') endsOn?: string,
-    @Query('poolId') poolId?: string,
+    @Query('facilityId') facilityId?: string,
+    @Query('poolIds') poolIds?: string,
+    @Query('partOfDay') partOfDay?: string,
   ): Promise<ClosureImpact> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    const from = parseDate(startsOn, 'startsOn');
-    const to = parseDate(endsOn ?? startsOn, 'endsOn');
-    if (to < from) throw new BadRequestException('The closure ends before it starts');
-
-    return closureImpact(
-      organizationId,
-      from,
-      to,
-      poolId !== undefined && poolId.trim() !== '' ? poolId.trim() : null,
-    );
+    // The same parser as a save, so the count is of the closure that would be made.
+    const scope = parseClosure({
+      startsOn,
+      endsOn: endsOn ?? startsOn,
+      reason: '-',
+      facilityId,
+      poolIds: (poolIds ?? '').split(',').map((id) => id.trim()).filter((id) => id !== ''),
+      partOfDay,
+    });
+    return closureImpact(organizationId, scope);
   }
 
   /** Extend, shorten or rename — criterion 6. */
@@ -171,9 +203,18 @@ export class ClosuresController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
+    const input = parseClosure(body);
+    // One row is one tank or the whole site; two tanks are two closures.
+    if (input.poolIds.length > 1) {
+      throw new UnprocessableEntityException({
+        code: 'closure_one_tank',
+        message: 'A closure is edited one tank at a time',
+      });
+    }
+
     let outcome: 'updated' | 'not_found';
     try {
-      outcome = await updateClosure(organizationId, id, parseClosure(body));
+      outcome = await updateClosure(organizationId, id, input);
     } catch (error) {
       throw asOverlap(error);
     }
@@ -755,10 +796,25 @@ export class StudentCalendarController {
   }
 }
 
-async function poolChoices(organizationId: string): Promise<{ id: string; name: string }[]> {
+/** Each live site with its live tanks, by name — the closure form's scope. */
+async function siteChoices(
+  organizationId: string,
+): Promise<{ id: string; name: string; pools: { id: string; name: string }[] }[]> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string; name: string }>(
-      `SELECT id, name FROM pool WHERE archived_at IS NULL ORDER BY name`,
+    const { rows } = await tx.query<{
+      id: string;
+      name: string;
+      pools: { id: string; name: string }[];
+    }>(
+      `SELECT f.id, f.name,
+              coalesce((SELECT json_agg(json_build_object('id', p.id, 'name', p.name)
+                                        ORDER BY p.name)
+                          FROM pool p
+                         WHERE p.facility_id = f.id AND p.organization_id = f.organization_id
+                           AND p.archived_at IS NULL), '[]'::json) AS pools
+         FROM facility f
+        WHERE f.archived_at IS NULL
+        ORDER BY f.name`,
     );
     return rows;
   });
@@ -816,6 +872,8 @@ function addDays(date: string, days: number): string {
  * Shared deliberately: two parsers drift, and the first symptom is a closure you
  * can save but not edit because one of them trims and the other does not.
  */
+const CLOSURE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function parseClosure(body: Record<string, unknown>): ClosureInput {
   const startsOn = parseDate(body['startsOn'], 'startsOn');
   const endsOn = parseDate(body['endsOn'] ?? body['startsOn'], 'endsOn');
@@ -829,16 +887,52 @@ function parseClosure(body: Record<string, unknown>): ClosureInput {
     throw new BadRequestException(`reason may be at most ${MAX_REASON} characters`);
   }
 
-  const poolId =
-    typeof body['poolId'] === 'string' && body['poolId'].trim().length > 0
-      ? body['poolId'].trim()
-      : null;
+  /*
+   * The site, always — POOLSE-84. A manual closure that names no site used to
+   * mean every site of the club, which is the bug this ticket fixed; the
+   * database refuses one too, and this is the sentence.
+   */
+  const facilityId = typeof body['facilityId'] === 'string' ? body['facilityId'].trim() : '';
+  if (!CLOSURE_UUID.test(facilityId)) {
+    throw new UnprocessableEntityException({
+      code: 'closure_site_required',
+      message: 'A closure names the site it shuts',
+    });
+  }
+
+  // `poolIds` (several tanks) or the older `poolId` (one); none is the whole site.
+  const rawPools: unknown[] = Array.isArray(body['poolIds'])
+    ? body['poolIds']
+    : typeof body['poolId'] === 'string' && body['poolId'].trim() !== ''
+      ? [body['poolId']]
+      : [];
+  const poolIds = [
+    ...new Set(rawPools.map((id) => (typeof id === 'string' ? id.trim() : ''))),
+  ];
+  if (poolIds.some((id) => !CLOSURE_UUID.test(id)) || poolIds.length > 50) {
+    throw new BadRequestException('poolIds must be a list of tank ids');
+  }
+
+  const rawPart = typeof body['partOfDay'] === 'string' ? body['partOfDay'].trim() : '';
+  if (rawPart !== '' && rawPart !== 'morning' && rawPart !== 'afternoon') {
+    throw new BadRequestException('partOfDay must be morning or afternoon');
+  }
+  const partOfDay: PartOfDay | null = rawPart === '' ? null : rawPart;
+  // Half a day is one day — POOLSE-84 (a CHECK says so too).
+  if (partOfDay !== null && startsOn !== endsOn) {
+    throw new UnprocessableEntityException({
+      code: 'closure_half_day_one_day',
+      message: 'A half-day closure is a single day',
+    });
+  }
 
   return {
     startsOn,
     endsOn,
     reason,
-    poolId,
+    facilityId,
+    poolIds,
+    partOfDay,
     // Default true: somebody entering a closure almost always means "we are
     // shut". The note-in-the-calendar case is the one that has to be asked for.
     blocksGeneration: body['blocksGeneration'] !== false,
@@ -859,6 +953,18 @@ function asOverlap(error: unknown): unknown {
       code: 'closure_overlap',
       message: error.message,
       existing: error.existing,
+      // The tank it is on, when it is one — POOLSE-84.
+      pool: error.poolName,
+    });
+  }
+
+  if (error instanceof ClosureScopeError) {
+    return new UnprocessableEntityException({
+      code: error.code,
+      message:
+        error.code === 'closure_site_unknown'
+          ? 'No such site'
+          : "A tank closed here must be one of this site's tanks",
     });
   }
 

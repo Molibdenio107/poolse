@@ -436,6 +436,14 @@ export function checkInRefusal(error: unknown): unknown {
         code: 'pass_in_water',
         message: 'Somebody on this pass is already in the water',
       });
+    // POOLSE-84: the tank is closed. The last closed day and the half, if it is
+    // one, so the sentence can say until when.
+    case 'pool_closed':
+      return new ConflictException({
+        code: 'pool_closed',
+        message: `This tank is closed until ${figures[0]}`,
+        values: { until: figures[0], partOfDay: figures[1] === '' ? null : figures[1] },
+      });
     case 'pass_wrong_site':
       return new BadRequestException({
         code: 'pass_wrong_site',

@@ -35,6 +35,7 @@ const REFUSALS: Record<string, string> = {
   pass_void: 'reception.refused.void',
   pass_in_water: 'reception.refused.inWater',
   pass_wrong_site: 'reception.refused.wrongSite',
+  pool_closed: 'reception.refused.poolClosed',
   no_invoice_series: 'reception.refused.noSeries',
   person_exists: 'passes.personExists',
 };
@@ -48,8 +49,11 @@ function failure(error: unknown, errorKey: string): ReceptionState {
       const values: Record<string, string | number> = {};
       for (const [key, value] of Object.entries(raw)) {
         // A date travels as a day; it is shown in the one shape every date has.
-        if (key === 'date' && typeof value === 'string') values[key] = formatDate(value);
-        else if (typeof value === 'number' || typeof value === 'string') values[key] = value;
+        if ((key === 'date' || key === 'until') && typeof value === 'string') {
+          values[key] = formatDate(value);
+        } else if (typeof value === 'number' || typeof value === 'string') values[key] = value;
+        // A closed tank's half, for the sentence's select; a whole day is 'none'.
+        else if (key === 'partOfDay' && value === null) values[key] = 'none';
       }
       return { ok: false, errorKey: known, values };
     }

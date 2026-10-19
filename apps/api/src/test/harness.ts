@@ -63,6 +63,8 @@ const TENANT_TABLES = [
    * membership, and only a teardown has any business removing it.
    */
   'audit_log',
+  // POOLSE-84. A recipient may name a lead or a partner, so it goes before both.
+  'message_recipient',
   // POOLSE-69. A lead names a student, a session and a deciding membership.
   'lead',
   // POOLSE-67. A recipient points at its message, a student and a guardian's
@@ -77,7 +79,6 @@ const TENANT_TABLES = [
   'incident_addendum',
   'incident_detail',
   'incident',
-  'message_recipient',
   'message',
   // POOLSE-27. An alert points at a record, a record at its type and its
   // person's membership; every business tenant is seeded with types.

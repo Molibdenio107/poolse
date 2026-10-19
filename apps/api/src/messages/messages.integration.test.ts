@@ -641,6 +641,7 @@ test('a closure writes to the families of the turmas it took a lesson from, and 
         startsOn: day!.d,
         endsOn: day!.d,
         reason: 'Avaria na caldeira',
+        facilityId: tenant.facilityId,
       });
 
       const messages = new MessagesController();

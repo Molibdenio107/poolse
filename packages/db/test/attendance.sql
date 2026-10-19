@@ -214,8 +214,8 @@ BEGIN
 
   -- The generator's path, which is the one that matters. A closure covering the
   -- day must not take a taught class down with it.
-  INSERT INTO closure (organization_id, starts_on, ends_on, reason)
-  VALUES (v_org, DATE '2026-09-08', DATE '2026-09-08', 'Obras imprevistas');
+  INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason)
+  VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), DATE '2026-09-08', DATE '2026-09-08', 'Obras imprevistas');
 
   BEGIN
     PERFORM generate_sessions(v_org, DATE '2026-09-01', DATE '2026-09-30');

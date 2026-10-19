@@ -42,6 +42,10 @@ still present until it is dropped separately.
 
 ## A tank
 
+**Shut today — POOLSE-84.** A tank a closure shuts today shows *Encerrado até dd-MM-yyyy* (or
+*esta manhã* / *esta tarde*) and the reason, on Instalações and on the site's page, read from
+`pool_closures_on` on the site's own day. Closures are made in Encerramentos.
+
 Name, kind (indoor or outdoor), and optionally its measurements: length, width, **min
 depth**, **max depth**, volume in litres.
 

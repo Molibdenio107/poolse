@@ -1076,7 +1076,12 @@
     "poolUseInvalid": "Escolha uma utilização da lista.",
     "analysisTakenAtInvalid": "Indique uma data e hora válidas e que não estejam no futuro.",
     "analysisValueInvalid": "Indique um número igual ou superior a zero.",
-    "analysisPhInvalid": "O pH vai de 0 a 14."
+    "analysisPhInvalid": "O pH vai de 0 a 14.",
+    "closedUntil": "Encerrado até {date}",
+    "closedHalf": {
+      "morning": "Encerrado esta manhã",
+      "afternoon": "Encerrado esta tarde"
+    }
   },
   "classes": {
     "colour": "Cor da turma",
@@ -2781,23 +2786,43 @@
     "choosePoolHint": "Escolha uma piscina acima para ver a semana.",
     "warn": {
       "subjectDefault": "Piscina encerrada de {from} a {to}",
-      "bodyDefault": "Caras famílias,\n\nInformamos que a piscina estará encerrada de {from} a {to} ({reason}). As aulas destes dias não se realizam.\n\nPedimos desculpa pelo incómodo.",
-      "label": "Avisar as famílias por email",
-      "hint": "Só as famílias das turmas que perdem uma aula com este encerramento. Antes de enviar, mostramos quantas são.",
+      "bodyDefault": "Bom dia,\n\nInformamos que a piscina estará encerrada de {from} a {to} ({reason}). As aulas destes dias não se realizam.\n\nPedimos desculpa pelo incómodo.",
+      "label": "Avisar por email quem perde uma aula",
+      "hint": "As famílias das turmas, os parceiros (pelo contacto da parceria) e as aulas experimentais que este encerramento cancela. Antes de enviar, mostramos quantos são.",
       "subject": "Assunto",
       "body": "Mensagem",
       "saveAndCount": "Guardar e ver quem recebe",
       "closureSaved": "O encerramento está guardado e as aulas destes dias foram canceladas.",
-      "counting": "A contar as famílias afetadas…",
+      "counting": "A contar quem é afetado…",
       "countFailed": "Não foi possível saber quem recebe o aviso. O encerramento ficou guardado; pode escrever às famílias em Alunos → Mensagens.",
-      "nobody": "Nenhuma turma com alunos perdeu uma aula com este encerramento — não há famílias a avisar.",
-      "reaches": "O aviso chega a {addresses, plural, one {1 endereço} other {# endereços}} de {students, plural, one {1 aluno} other {# alunos}}.",
-      "unreachable": "{count, plural, one {1 aluno não tem} other {# alunos não têm}} email registado: {names}.",
+      "nobody": "Este encerramento não cancela nenhuma aula de turmas com alunos, parcerias ou aulas experimentais — não há ninguém a avisar.",
+      "reaches": "O aviso chega a {addresses, plural, one {1 endereço} other {# endereços}}:",
+      "unreachable": "{count, plural, one {1 destinatário não tem} other {# destinatários não têm}} email registado: {names}.",
       "notSent": "Ainda não há envio de email configurado: a mensagem fica registada em Mensagens, mas não sai.",
       "send": "Enviar aviso",
       "dontSend": "Não enviar",
       "sent": "Aviso registado em Mensagens.",
-      "wordsRequired": "Escreva o assunto e a mensagem."
+      "wordsRequired": "Escreva o assunto e a mensagem.",
+      "students": "{count, plural, one {a família de 1 aluno} other {as famílias de # alunos}}",
+      "partners": "{count, plural, one {1 parceiro} other {# parceiros}}",
+      "leads": "{count, plural, one {1 aula experimental} other {# aulas experimentais}}"
+    },
+    "closureSite": "Instalação",
+    "everySite": "Todas as instalações",
+    "scopeWholeSite": "Sem nenhum tanque marcado, encerra toda a instalação {site}.",
+    "scopeTanks": "{count, plural, one {Encerra só o tanque marcado.} other {Encerra os # tanques marcados, cada um com o seu encerramento — pode reabrir um antes do outro.}}",
+    "halfDay": "Só meio dia",
+    "halfDayWhich": "Que metade do dia",
+    "halfDayHint": "De manhã: as aulas que começam antes das {cut}. À tarde: as que começam às {cut} ou depois.",
+    "partOfDay": {
+      "morning": "Manhã",
+      "afternoon": "Tarde"
+    },
+    "closureOverlapTank": "O {pool} já tem um encerramento nestes dias: {existing}.",
+    "refused": {
+      "siteRequired": "Escolha a instalação a encerrar.",
+      "poolElsewhere": "Um dos tanques escolhidos não pertence a esta instalação.",
+      "halfDayOneDay": "Meio dia só se marca num único dia. Escolha um só dia ou desmarque «Só meio dia»."
     }
   },
   "inventory": {
@@ -3210,7 +3235,9 @@
     "beforeSeason": "Antes do início da época",
     "afterSeason": "Depois do fim da época",
     "filledCellSuspended": "{day}, {time}, {lane}: {what} — não decorre ({why})",
-    "lessonsClash": "Guardado. Há duas turmas com o mesmo professor à mesma hora: essas duas ficam sem aulas até o conflito ser corrigido em Turmas. Todas as outras têm a época completa."
+    "lessonsClash": "Guardado. Há duas turmas com o mesmo professor à mesma hora: essas duas ficam sem aulas até o conflito ser corrigido em Turmas. Todas as outras têm a época completa.",
+    "tankClosed": "Esse tanque está encerrado a essa hora.",
+    "closedBand": "Encerrado:"
   },
   "partnerClasses": {
     "title": "Parcerias",
@@ -3662,7 +3689,8 @@
       "void": "Este passe foi anulado por nota de crédito.",
       "inWater": "Já há alguém na água com este passe.",
       "wrongSite": "Um passe só é usado na instalação que o vendeu.",
-      "noSeries": "Esta instalação não tem uma série de faturas ativa para registar a venda."
+      "noSeries": "Esta instalação não tem uma série de faturas ativa para registar a venda.",
+      "poolClosed": "Este tanque está encerrado {partOfDay, select, morning {esta manhã} afternoon {esta tarde} other {até {until}}}. Escolha outro tanque."
     },
     "saleFailed": "A venda não ficou registada.",
     "checkInFailed": "A entrada não ficou registada.",
@@ -3673,7 +3701,8 @@
     "startsLaterNoEntry": "Um passe que começa noutro dia não dá entrada hoje — vende-se agora e usa-se a partir dessa data.",
     "choosePool": "Escolha o tanque",
     "chooseTankFirst": "Escolha o tanque acima para dar entrada.",
-    "chooseTankToEnter": "Escolha o tanque acima para poder dar entrada já; sem tanque, o passe é só vendido."
+    "chooseTankToEnter": "Escolha o tanque acima para poder dar entrada já; sem tanque, o passe é só vendido.",
+    "closedOption": "{pool} (encerrado)"
   },
   "passes": {
     "title": "Natação livre",
@@ -4133,7 +4162,11 @@
       "quotaMessages": "O clube já enviou {used} de {limit} mensagens hoje. Volte a enviar amanhã.",
       "quotaAddresses": "Hoje já se escreveu a {used} de {limit} endereços e esta mensagem precisa de {requested}; restam {left}. Volte a enviar amanhã ou escolha um grupo mais pequeno."
     },
-    "sentToast": "Mensagem enviada."
+    "sentToast": "Mensagem enviada.",
+    "kind": {
+      "partner": "Parceiro",
+      "lead": "Aula experimental"
+    }
   },
   "publicWater": {
     "subtitle": "Qualidade da água — últimas medições",

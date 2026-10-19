@@ -1076,7 +1076,12 @@
     "poolUseInvalid": "Choose a use from the list.",
     "analysisTakenAtInvalid": "Enter a valid date and time that is not in the future.",
     "analysisValueInvalid": "Enter a number of zero or more.",
-    "analysisPhInvalid": "pH runs from 0 to 14."
+    "analysisPhInvalid": "pH runs from 0 to 14.",
+    "closedUntil": "Closed until {date}",
+    "closedHalf": {
+      "morning": "Closed this morning",
+      "afternoon": "Closed this afternoon"
+    }
   },
   "classes": {
     "colour": "Class colour",
@@ -2781,23 +2786,43 @@
     "choosePoolHint": "Choose a pool above to see the week.",
     "warn": {
       "subjectDefault": "Pool closed from {from} to {to}",
-      "bodyDefault": "Dear families,\n\nThe pool will be closed from {from} to {to} ({reason}). Lessons on these days will not take place.\n\nWe apologise for the inconvenience.",
-      "label": "Warn the families by email",
-      "hint": "Only the families of classes that lose a lesson to this closure. Before sending, we show how many.",
+      "bodyDefault": "Hello,\n\nPlease note that the pool will be closed from {from} to {to} ({reason}). Lessons on these days will not take place.\n\nWe apologise for the inconvenience.",
+      "label": "Email everyone who loses a lesson",
+      "hint": "The families of the class groups, the partners (through the partnership’s contact) and the trial lessons this closure cancels. Before sending, we show how many.",
       "subject": "Subject",
       "body": "Message",
       "saveAndCount": "Save and see who receives it",
       "closureSaved": "The closure is saved and lessons on these days are cancelled.",
-      "counting": "Counting the families affected…",
+      "counting": "Counting who is affected…",
       "countFailed": "Could not work out who receives the warning. The closure is saved; you can write to the families under Students → Messages.",
-      "nobody": "No class with students lost a lesson to this closure — there are no families to warn.",
-      "reaches": "The warning reaches {addresses, plural, one {1 address} other {# addresses}} for {students, plural, one {1 student} other {# students}}.",
-      "unreachable": "{count, plural, one {1 student has} other {# students have}} no email on record: {names}.",
+      "nobody": "This closure cancels no lesson of a class group with students, a partnership or a trial lesson — there is nobody to warn.",
+      "reaches": "The warning reaches {addresses, plural, one {1 address} other {# addresses}}:",
+      "unreachable": "{count, plural, one {1 recipient has} other {# recipients have}} no email on record: {names}.",
       "notSent": "No email sending is configured yet: the message is recorded under Messages but does not go out.",
       "send": "Send warning",
       "dontSend": "Don't send",
       "sent": "Warning recorded under Messages.",
-      "wordsRequired": "Enter the subject and the message."
+      "wordsRequired": "Enter the subject and the message.",
+      "students": "{count, plural, one {the family of 1 student} other {the families of # students}}",
+      "partners": "{count, plural, one {1 partner} other {# partners}}",
+      "leads": "{count, plural, one {1 trial lesson} other {# trial lessons}}"
+    },
+    "closureSite": "Site",
+    "everySite": "Every site",
+    "scopeWholeSite": "With no tank ticked, the whole of {site} closes.",
+    "scopeTanks": "{count, plural, one {Closes only the ticked tank.} other {Closes the # ticked tanks, each with its own closure — one can reopen before the other.}}",
+    "halfDay": "Half a day only",
+    "halfDayWhich": "Which half of the day",
+    "halfDayHint": "Morning: lessons starting before {cut}. Afternoon: those starting at {cut} or later.",
+    "partOfDay": {
+      "morning": "Morning",
+      "afternoon": "Afternoon"
+    },
+    "closureOverlapTank": "{pool} already has a closure on these days: {existing}.",
+    "refused": {
+      "siteRequired": "Choose the site to close.",
+      "poolElsewhere": "One of the tanks chosen is not at this site.",
+      "halfDayOneDay": "Half a day is for a single day. Pick one day, or untick “Half a day only”."
     }
   },
   "inventory": {
@@ -3210,7 +3235,9 @@
     "beforeSeason": "Before the season starts",
     "afterSeason": "After the season ends",
     "filledCellSuspended": "{day}, {time}, {lane}: {what} — not running ({why})",
-    "lessonsClash": "Saved. Two class groups share an instructor at the same hour: those two have no lessons until the clash is fixed under Class groups. Every other class has its full season."
+    "lessonsClash": "Saved. Two class groups share an instructor at the same hour: those two have no lessons until the clash is fixed under Class groups. Every other class has its full season.",
+    "tankClosed": "That tank is closed at that time.",
+    "closedBand": "Closed:"
   },
   "partnerClasses": {
     "title": "Partnerships",
@@ -3662,7 +3689,8 @@
       "void": "This pass was cancelled by a credit note.",
       "inWater": "Somebody is already in the water on this pass.",
       "wrongSite": "A pass is only used at the site that sold it.",
-      "noSeries": "This site has no active invoice series to record the sale in."
+      "noSeries": "This site has no active invoice series to record the sale in.",
+      "poolClosed": "This tank is closed {partOfDay, select, morning {this morning} afternoon {this afternoon} other {until {until}}}. Choose another tank."
     },
     "saleFailed": "The sale was not recorded.",
     "checkInFailed": "The entry was not recorded.",
@@ -3673,7 +3701,8 @@
     "startsLaterNoEntry": "A pass that starts on a later day cannot let anyone in today — it is sold now and used from that date.",
     "choosePool": "Choose the pool",
     "chooseTankFirst": "Choose the pool above to let someone in.",
-    "chooseTankToEnter": "Choose the pool above to let them in now; without one, the pass is only sold."
+    "chooseTankToEnter": "Choose the pool above to let them in now; without one, the pass is only sold.",
+    "closedOption": "{pool} (closed)"
   },
   "passes": {
     "title": "Free swim",
@@ -4133,7 +4162,11 @@
       "quotaMessages": "The club has already sent {used} of {limit} messages today. Send again tomorrow.",
       "quotaAddresses": "{used} of {limit} addresses have been written to today and this message needs {requested}; {left} remain. Send again tomorrow or choose a smaller group."
     },
-    "sentToast": "Message sent."
+    "sentToast": "Message sent.",
+    "kind": {
+      "partner": "Partner",
+      "lead": "Trial lesson"
+    }
   },
   "publicWater": {
     "subtitle": "Water quality — latest readings",

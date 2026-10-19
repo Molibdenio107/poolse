@@ -22,7 +22,27 @@ export interface Pool {
   minDepthM: number | null;
   /** Swimmers in the water at once, across every turma. Null is no ceiling — 4.2. */
   maxCapacity: number | null;
+  /** What shuts it today; absent where the read does not ask. */
+  closure?: PoolClosure | null;
 }
+
+/**
+ * What shuts a tank today — POOLSE-84. `until` is the last closed day; a half
+ * day names its half. Null when the tank is open. Read from `pool_closures_on`,
+ * the same definition that cancels its lessons.
+ */
+export interface PoolClosure {
+  reason: string;
+  until: string;
+  partOfDay: 'morning' | 'afternoon' | null;
+}
+
+/** The JSON for `closure` beside a pool `p` at a site `f`, on that site's today. */
+const POOL_CLOSURE_TODAY = `(
+  SELECT json_build_object('reason', pc.reason, 'until', pc.until,
+                           'partOfDay', pc.part_of_day)
+    FROM pool_closures_on(p.organization_id, (now() AT TIME ZONE f.timezone)::date) pc
+   WHERE pc.pool_id = p.id)`;
 
 export interface Photo {
   id: string;
@@ -162,7 +182,9 @@ export async function listFacilities(organizationId: string): Promise<Facility[]
                             'widthM', p.width_m::float8,
                             'maxDepthM', p.max_depth_m::float8,
                             'minDepthM', p.min_depth_m::float8,
-                            'maxCapacity', p.max_capacity
+                            'maxCapacity', p.max_capacity,
+                            -- What shuts it today, on the site's own day — POOLSE-84.
+                            'closure', ${POOL_CLOSURE_TODAY}
                           ) ORDER BY p.name
                         ),
                         '[]'::json
@@ -348,7 +370,8 @@ export async function findFacility(
                                 WHERE ln.pool_id = p.id AND ln.archived_at IS NULL),
                             'lengthM', p.length_m::float8,
                             'widthM', p.width_m::float8,
-                            'maxDepthM', p.max_depth_m::float8
+                            'maxDepthM', p.max_depth_m::float8,
+                            'closure', ${POOL_CLOSURE_TODAY}
                           ) ORDER BY p.name
                         ),
                         '[]'::json

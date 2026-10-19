@@ -253,14 +253,18 @@ export async function readOccupancy(
            WHERE p.facility_id = $1
              AND l.archived_at IS NULL
              AND p.archived_at IS NULL
+             -- A tank shut all day sells nothing that day — POOLSE-84.
+             AND NOT EXISTS (
+               SELECT 1 FROM closure c
+                WHERE c.organization_id = p.organization_id
+                  AND closure_shuts_day(c, $1, ARRAY[p.id], d::date))
         ) lanes
        WHERE se.id = $2
+         -- A day the site is shut (or a holiday) is not on offer at all.
          AND NOT EXISTS (
            SELECT 1 FROM closure c
             WHERE c.organization_id = se.organization_id
-              AND c.archived_at IS NULL
-              AND c.blocks_generation
-              AND closure_covers(c.starts_on, c.ends_on, c.repeats_annually, d::date)
+              AND closure_shuts_day(c, $1, '{}'::uuid[], d::date)
          )
        GROUP BY 1, 2`;
 
