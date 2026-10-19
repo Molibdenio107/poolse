@@ -98,6 +98,7 @@ import {
   readyNoSeat,
   type TransferProposal,
 } from './advancement.repository.js';
+import { clubToday } from '../common/club-day.js';
 
 const MAX_NAME = 120;
 const MAX_NOTES = 2000;
@@ -999,7 +1000,9 @@ function readNif(value: unknown, field: string): string | null {
  */
 function isMinor(birthDate: string, majority: number): boolean {
   const born = new Date(`${birthDate}T00:00:00Z`);
-  const now = new Date();
+  // The club's day, not the server's: between midnight and one in a Lisbon
+  // summer the UTC day is yesterday (19-10-2026 sweep).
+  const now = new Date(`${clubToday()}T00:00:00Z`);
 
   let age = now.getUTCFullYear() - born.getUTCFullYear();
   const month = now.getUTCMonth() - born.getUTCMonth();

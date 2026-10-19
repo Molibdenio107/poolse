@@ -29,10 +29,20 @@ export interface BalanceLine {
   isOverdue: boolean;
   endsOn: string | null;
   dueOn: string | null;
+  /** The period being charged now; null once the line has run out. */
+  currentPeriodStart: string | null;
 }
 
+/**
+ * A line counts while it runs — and, once ended, while the period it ended in
+ * is still unpaid (19-10-2026 sweep). Ending an enrolment on the 20th used to
+ * drop October's unpaid mensalidade from the balance while the late penalty,
+ * which reads the current period, still charged for it.
+ */
 export function feeBalance(lines: readonly BalanceLine[], penaltyCents: number): FeeBalance {
-  const live = lines.filter((line) => line.endsOn === null);
+  const live = lines.filter(
+    (line) => line.endsOn === null || (line.currentPeriodStart !== null && !line.isPaid),
+  );
   const unpaid = live.filter((line) => !line.isPaid);
   const sum = (some: readonly BalanceLine[]): number =>
     some.reduce((total, line) => total + line.payableCents, 0);

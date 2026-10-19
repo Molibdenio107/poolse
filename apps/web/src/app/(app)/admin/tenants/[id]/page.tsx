@@ -21,6 +21,8 @@ import { RequestCharts } from './request-charts';
 import { TenantActions } from './tenant-actions';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { formatCents } from '@/lib/money';
+import { Pagination } from '@/components/pagination';
+import { readPage } from '@/lib/pagination';
 
 /**
  * One tenant's request health over the last week — platform admin, slice 2.
@@ -43,13 +45,16 @@ export default async function TenantRequestsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; page?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
 
   const { id } = await params;
-  const { tab } = await searchParams;
+  const { tab, page: rawPage } = await searchParams;
+  // The payments tab pages like every other list — 19-10-2026 sweep. It showed
+  // the ten newest and nothing else, and called that the record.
+  const page = readPage(rawPage);
 
   let requests: TenantRequests | null = null;
   let tenant: PlatformTenant | null = null;
@@ -67,7 +72,7 @@ export default async function TenantRequestsPage({
     [tenant, requests, payments, claim] = await Promise.all([
       apiFetch<PlatformTenant>(`/platform/tenants/${id}`),
       apiFetch<TenantRequests>(`/platform/tenants/${id}/requests`),
-      apiFetch<Paginated<ManualPayment>>(`/platform/tenants/${id}/payments`),
+      apiFetch<Paginated<ManualPayment>>(`/platform/tenants/${id}/payments?page=${page}`),
       apiFetch<TenantClaim | null>(`/platform/tenants/${id}/claim`),
     ]);
   } catch (error) {
@@ -278,9 +283,8 @@ export default async function TenantRequestsPage({
           */
           slug: 'payments',
           labelKey: 'admin.payments',
-          visible: payments !== null && payments.items.length > 0,
-          badge:
-            payments === null ? undefined : { kind: 'count', value: payments.items.length },
+          visible: payments !== null && payments.total > 0,
+          badge: payments === null ? undefined : { kind: 'count', value: payments.total },
           content: () =>
             payments !== null && (
               <section className="flex flex-col gap-2">
@@ -292,6 +296,11 @@ export default async function TenantRequestsPage({
                   rows={payments.items}
                   rowKey={(row) => row.id}
                   empty={<PageEmpty message={t('admin.noPayments')} />}
+                />
+                <Pagination
+                  page={payments}
+                  basePath={`/admin/tenants/${id}`}
+                  query={{ tab: 'payments' }}
                 />
               </section>
             ),

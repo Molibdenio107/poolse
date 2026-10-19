@@ -56,6 +56,7 @@ import {
   type LessonPlan,
 } from './lesson-plans.repository.js';
 import { clubToday } from '../common/club-day.js';
+import { syncSeasonLessons } from './lesson-sync.js';
 
 /**
  * Slices 1.5 and 1.6 — the closure calendar, and the dated sessions around it.
@@ -178,6 +179,7 @@ export class ClosuresController {
     @Query('facilityId') facilityId?: string,
     @Query('poolIds') poolIds?: string,
     @Query('partOfDay') partOfDay?: string,
+    @Query('repeatsAnnually') repeatsAnnually?: string,
   ): Promise<ClosureImpact> {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
@@ -190,6 +192,7 @@ export class ClosuresController {
       facilityId,
       poolIds: (poolIds ?? '').split(',').map((id) => id.trim()).filter((id) => id !== ''),
       partOfDay,
+      repeatsAnnually: repeatsAnnually === 'true',
     });
     return closureImpact(organizationId, scope);
   }
@@ -222,6 +225,8 @@ export class ClosuresController {
     // Also the answer for a national holiday, which is not editable: its dates
     // are computed and renaming one would be a lie that survives regeneration.
     if (outcome === 'not_found') throw new NotFoundException('No such closure');
+    // Days it no longer covers may never have had lessons made — 19-10-2026.
+    await syncSeasonLessons(organizationId);
     return { updated: true };
   }
 
@@ -241,6 +246,8 @@ export class ClosuresController {
     if (!(await archiveClosure(organizationId, id))) {
       throw new NotFoundException('No such closure');
     }
+    // The lessons it kept from ever being made are made now — 19-10-2026 sweep.
+    await syncSeasonLessons(organizationId);
     return { archived: true };
   }
 }
@@ -533,6 +540,11 @@ export class SessionsCalendarController {
       // The register is taken, so the class happened. Where it happened is a
       // record rather than a plan, and a record is not dragged about.
       throw new ConflictException({ message: 'occurrenceTaught' });
+    }
+    if (result.outcome === 'closed') {
+      // Into a closure — refused here as well as on the grid (19-10-2026 sweep),
+      // naming the closure so the operator knows what is in the way.
+      throw new ConflictException({ message: 'occurrenceClosed', reason: result.reason });
     }
     if (result.outcome === 'instructor_busy') {
       // The instructor is teaching elsewhere then — not a lane problem, and
@@ -933,10 +945,13 @@ function parseClosure(body: Record<string, unknown>): ClosureInput {
     facilityId,
     poolIds,
     partOfDay,
-    // Default true: somebody entering a closure almost always means "we are
-    // shut". The note-in-the-calendar case is the one that has to be asked for.
-    blocksGeneration: body['blocksGeneration'] !== false,
-    repeatsAnnually: body['repeatsAnnually'] === true,
+    // Null when not sent: a create defaults (blocking — somebody entering a
+    // closure almost always means "we are shut" — and one-off), an edit keeps
+    // what the closure has (19-10-2026 sweep).
+    blocksGeneration:
+      typeof body['blocksGeneration'] === 'boolean' ? body['blocksGeneration'] : null,
+    repeatsAnnually:
+      typeof body['repeatsAnnually'] === 'boolean' ? body['repeatsAnnually'] : null,
   };
 }
 

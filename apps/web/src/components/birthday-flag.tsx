@@ -1,6 +1,6 @@
 import { Cake } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { APP_TIME_ZONE } from '@/lib/date-format';
+import { today as todayOfClub } from '@/lib/dates';
 
 /**
  * "It is their birthday today" — round 4.
@@ -56,7 +56,7 @@ export async function BirthdayFlag({
 export function isBirthdayToday(birthDate: string | null | undefined): boolean {
   if (birthDate === null || birthDate === undefined || birthDate.length < 10) return false;
 
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: APP_TIME_ZONE }).slice(5, 10);
+  const today = todayOfClub().slice(5, 10);
 
   return birthDate.slice(5, 10) === today;
 }

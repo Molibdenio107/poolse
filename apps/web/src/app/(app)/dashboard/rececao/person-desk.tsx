@@ -17,6 +17,7 @@ import {
   type ReceptionState,
 } from './reception.actions';
 import { BUTTON, BUTTON_QUIET, PANEL, PANEL_TITLE } from './styles';
+import { today as todayOfClub } from '@/lib/dates';
 
 const INITIAL: ReceptionState = { ok: false };
 
@@ -465,7 +466,7 @@ function SellForm({
    * offered then. The browser's date only decides whether to *offer* it; the
    * server still decides what is valid.
    */
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Lisbon' });
+  const today = todayOfClub();
   const startsLater = chosen?.kind !== 'single' && validFrom !== '' && validFrom > today;
   const [state, submit, pending] = useSavedAction(
     async (previous: ReceptionState, formData: FormData) => {

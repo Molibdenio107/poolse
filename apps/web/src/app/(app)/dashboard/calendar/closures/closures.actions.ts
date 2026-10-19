@@ -245,6 +245,7 @@ export async function impactAction(
     facilityId: string;
     poolIds: string[];
     partOfDay: PartOfDay | null;
+    repeatsAnnually?: boolean;
   },
 ): Promise<{ sessions: number; marked: number } | null> {
   const query = new URLSearchParams({
@@ -253,6 +254,8 @@ export async function impactAction(
     facilityId: scope.facilityId,
     poolIds: scope.poolIds.join(','),
     ...(scope.partOfDay === null ? {} : { partOfDay: scope.partOfDay }),
+    // An annual closure counts what it takes in every coming year — 19-10-2026.
+    ...(scope.repeatsAnnually === true ? { repeatsAnnually: 'true' } : {}),
   });
   try {
     return await apiFetch<{ sessions: number; marked: number }>(

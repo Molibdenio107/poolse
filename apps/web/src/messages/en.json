@@ -1216,7 +1216,8 @@
     },
     "enrolStudent": "Enrol a student",
     "slotLessonsClash": "A future lesson of this group would overlap another of the same instructor's classes at that time.",
-    "occurrenceInstructorBusy": "The instructor already has another class in a different pool at that time."
+    "occurrenceInstructorBusy": "The instructor already has another class in a different pool at that time.",
+    "occurrenceClosed": "It cannot go there: that pool is closed at that time."
   },
   "reposicao": {
     "title": "Make-up classes",
@@ -2785,8 +2786,8 @@
     "choosePool": "Choose a pool",
     "choosePoolHint": "Choose a pool above to see the week.",
     "warn": {
-      "subjectDefault": "Pool closed from {from} to {to}",
-      "bodyDefault": "Hello,\n\nPlease note that the pool will be closed from {from} to {to} ({reason}). Lessons on these days will not take place.\n\nWe apologise for the inconvenience.",
+      "subjectDefault": "No lessons {when}",
+      "bodyDefault": "Hello,\n\nPlease note that there are no lessons {where} {when} ({reason}).\n\nWe apologise for the inconvenience.",
       "label": "Email everyone who loses a lesson",
       "hint": "The families of the class groups, the partners (through the partnership’s contact) and the trial lessons this closure cancels. Before sending, we show how many.",
       "subject": "Subject",
@@ -2805,7 +2806,15 @@
       "wordsRequired": "Enter the subject and the message.",
       "students": "{count, plural, one {the family of 1 student} other {the families of # students}}",
       "partners": "{count, plural, one {1 partner} other {# partners}}",
-      "leads": "{count, plural, one {1 trial lesson} other {# trial lessons}}"
+      "leads": "{count, plural, one {1 trial lesson} other {# trial lessons}}",
+      "whereSite": "at {site}",
+      "whereTanks": "{count, plural, one {in the pool {names}} other {in the pools {names}}}",
+      "whenRange": "from {from} to {to}",
+      "whenDay": "on {day}",
+      "when": {
+        "morning": "on the morning of {day}",
+        "afternoon": "on the afternoon of {day}"
+      }
     },
     "closureSite": "Site",
     "everySite": "Every site",
@@ -2834,7 +2843,9 @@
     "wholeSiteNamed": "The whole site ({site})",
     "editOneTank": "Each closure is one tank or the whole site. To close another tank as well, add a new closure.",
     "editImpact": "{count, plural, one {The change cancels # more lesson.} other {The change cancels # more lessons.}}",
-    "editGivesBack": "Days the closure no longer covers get their lessons back as soon as you save."
+    "editGivesBack": "Days the closure no longer covers get their lessons back as soon as you save.",
+    "noSites": "To close, the club first needs a site.",
+    "noSitesLink": "Add one in Sites"
   },
   "inventory": {
     "title": "Inventory",
@@ -3713,7 +3724,7 @@
     "choosePool": "Choose the pool",
     "chooseTankFirst": "Choose the pool above to let someone in.",
     "chooseTankToEnter": "Choose the pool above to let them in now; without one, the pass is only sold.",
-    "closedOption": "{pool} (closed)"
+    "closedOption": "{pool}: closed now"
   },
   "passes": {
     "title": "Free swim",

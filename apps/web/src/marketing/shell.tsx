@@ -35,7 +35,7 @@ export function MarketingShell({
           <nav aria-label={t('nav.label')} className="flex flex-wrap items-center gap-2">
             <Link
               href={pricing}
-              className="rounded px-3 py-1.5 text-sm text-foreground-muted hover:bg-surface-muted hover:text-foreground"
+              className="inline-flex h-control items-center justify-center px-4 text-control rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary text-foreground-muted hover:bg-surface-muted hover:text-foreground"
             >
               {t('marketing.pricingLink')}
             </Link>
@@ -60,13 +60,13 @@ export function MarketingShell({
             />
             <Link
               href="/sign-in"
-              className="rounded border border-border px-3 py-1.5 text-sm hover:bg-surface-muted"
+              className="inline-flex h-control items-center justify-center px-4 text-control rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary border border-border hover:bg-surface-muted"
             >
               {t('auth.signIn')}
             </Link>
             <Link
               href="/sign-up"
-              className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+              className="inline-flex h-control items-center justify-center px-4 text-control rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-primary text-primary-foreground"
             >
               {t('marketing.startFree')}
             </Link>

@@ -2,7 +2,7 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HttpException } from '@nestjs/common';
 import { ClassesController } from './classes.controller.js';
-import { ClosuresController } from './sessions.controller.js';
+import { ClosuresController, SessionsCalendarController } from './sessions.controller.js';
 import { ReceptionController, PassProductsController } from '../reception/passes.controller.js';
 import { FacilitiesController } from '../facilities/facilities.controller.js';
 import { MessagesController } from '../messages/messages.controller.js';
@@ -411,5 +411,78 @@ test('QA 8 — the warning reaches families, the partner by its contact, and a t
     );
     assert.equal(scrubbed?.name, 'Pessoa anonimizada');
     assert.equal(scrubbed?.email, 'anonimizado@anonimizado.invalid');
+  });
+});
+
+test('19-10 sweep — a one-week move into a closed tank is refused by the server, naming it', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { tank1, tank2 } = await twoSites(tenant);
+    const day = inDays(12);
+    const lessonId = await lesson(tenant, tank2, day, '10:00');
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await new ClosuresController().create({
+        startsOn: day,
+        endsOn: day,
+        reason: 'Esvaziamento',
+        facilityId: tenant.facilityId,
+        poolIds: [tank1],
+        partOfDay: 'morning',
+      });
+
+      // Into Tanque 1's lane that morning: refused, and the week left as it was.
+      const [lane] = await tenant.sql<{ id: string }>(`SELECT id FROM lane WHERE pool_id = $1`, [tank1]);
+      const refused = await refusal(() =>
+        new SessionsCalendarController().move(lessonId, {
+          date: day,
+          startTime: '11:00',
+          laneIds: [lane!.id],
+        }),
+      );
+      assert.equal(refused.status, 409);
+      assert.equal(refused.body['message'], 'occurrenceClosed');
+      assert.equal(refused.body['reason'], 'Esvaziamento');
+      const [after] = await tenant.sql<{ status: string; at: string }>(
+        `SELECT status, to_char(starts_at AT TIME ZONE 'Europe/Lisbon', 'HH24:MI') AS at
+           FROM class_session WHERE id = $1`,
+        [lessonId],
+      );
+      assert.deepEqual(after, { status: 'scheduled', at: '10:00' }, 'a refused move moves nothing');
+
+      // The same lane in the afternoon is open.
+      await new SessionsCalendarController().move(lessonId, {
+        date: day,
+        startTime: '15:00',
+        laneIds: [lane!.id],
+      });
+    });
+  });
+});
+
+test('19-10 sweep — editing a closure keeps what the edit did not send', async () => {
+  await withScratchTenant(async (tenant) => {
+    const closures = new ClosuresController();
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const { id } = await closures.create({
+        startsOn: inDays(40),
+        endsOn: inDays(41),
+        reason: 'Nota',
+        facilityId: tenant.facilityId,
+        blocksGeneration: false,
+        repeatsAnnually: true,
+      });
+      await closures.update(id, {
+        startsOn: inDays(40),
+        endsOn: inDays(41),
+        reason: 'Nota corrigida',
+        facilityId: tenant.facilityId,
+      });
+      const [row] = await tenant.sql<{ blocks: boolean; repeats: boolean; reason: string }>(
+        `SELECT blocks_generation AS blocks, repeats_annually AS repeats, reason
+           FROM closure WHERE id = $1`,
+        [id],
+      );
+      assert.deepEqual(row, { blocks: false, repeats: true, reason: 'Nota corrigida' });
+    });
   });
 });

@@ -58,6 +58,19 @@ function within(day: string, from: string, to: string): boolean {
   return day >= from && day <= to;
 }
 
+/**
+ * The days a closure covers inside one year. A repeating one is a pattern
+ * projected onto the year — and one that runs past 31 December (24-12 to
+ * 02-01) is two ranges, the start of January and the end of December; read as
+ * one, its start fell after its end and it was never drawn (19-10-2026 sweep).
+ */
+function yearRanges(closure: Closure, year: number): [string, string][] {
+  if (!closure.repeatsAnnually) return [[closure.startsOn, closure.endsOn]];
+  const from = `${year}-${closure.startsOn.slice(5)}`;
+  const to = `${year}-${closure.endsOn.slice(5)}`;
+  return from <= to ? [[from, to]] : [[`${year}-01-01`, to], [from, `${year}-12-31`]];
+}
+
 /** A site and its tanks — what the form scopes a closure by (POOLSE-84). */
 type Site = Closures['sites'][number];
 
@@ -148,18 +161,15 @@ export function ClosureCalendar({
     for (const closure of closures) {
       // A repeating closure is a pattern; this grid shows one year, so it is
       // projected onto that year rather than onto the dates it was created with.
-      const from = closure.repeatsAnnually
-        ? `${year}-${closure.startsOn.slice(5)}`
-        : closure.startsOn;
-      const to = closure.repeatsAnnually ? `${year}-${closure.endsOn.slice(5)}` : closure.endsOn;
-
-      for (
-        let day = new Date(`${from}T00:00:00Z`);
-        day <= new Date(`${to}T00:00:00Z`);
-        day.setUTCDate(day.getUTCDate() + 1)
-      ) {
-        const iso = day.toISOString().slice(0, 10);
-        if (iso.startsWith(String(year))) map.set(iso, [...(map.get(iso) ?? []), closure]);
+      for (const [from, to] of yearRanges(closure, year)) {
+        for (
+          let day = new Date(`${from}T00:00:00Z`);
+          day <= new Date(`${to}T00:00:00Z`);
+          day.setUTCDate(day.getUTCDate() + 1)
+        ) {
+          const iso = day.toISOString().slice(0, 10);
+          if (iso.startsWith(String(year))) map.set(iso, [...(map.get(iso) ?? []), closure]);
+        }
       }
     }
     return map;
@@ -427,7 +437,7 @@ function ClosureForm({
   const [warn, setWarn] = useState(false);
   const from = formatDate(range[0]);
   const to = formatDate(range[1]);
-  const [subject, setSubject] = useState(() => t('calendar.warn.subjectDefault', { from, to }));
+  const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
 
   // The second step: who the warning reaches, then the send.
@@ -462,12 +472,34 @@ function ClosureForm({
     };
   }, [organizationId, range[0], range[1], facilityId, poolIds, partOfDay]);
 
-  // The body is written from the reason when the box is ticked, and is then the
-  // operator's own to change — never rewritten under them afterwards.
+  /*
+   * Written when the box is ticked, from the closure as it stands then — where
+   * (the site, or the tanks by name) and when (a range, one day, or a half) —
+   * and then the operator's own to change, never rewritten under them. It used
+   * to say "a piscina estará encerrada de X a X" whatever was closed, so the
+   * families of the open tanks, or of the afternoon, read that they had no class
+   * (19-10-2026 sweep).
+   */
   function toggleWarn(on: boolean): void {
     setWarn(on);
-    if (on && body === '') {
-      setBody(t('calendar.warn.bodyDefault', { from, to, reason: reason.trim() }));
+    if (!on) return;
+    const names = (site?.pools ?? [])
+      .filter((pool) => poolIds.includes(pool.id))
+      .map((pool) => pool.name)
+      .join(', ');
+    const where =
+      poolIds.length === 0
+        ? t('calendar.warn.whereSite', { site: site?.name ?? '' })
+        : t('calendar.warn.whereTanks', { count: poolIds.length, names });
+    const when =
+      range[0] !== range[1]
+        ? t('calendar.warn.whenRange', { from, to })
+        : partOfDay === null
+          ? t('calendar.warn.whenDay', { day: from })
+          : t(`calendar.warn.when.${partOfDay}`, { day: from });
+    if (subject === '') setSubject(t('calendar.warn.subjectDefault', { when }));
+    if (body === '') {
+      setBody(t('calendar.warn.bodyDefault', { when, where, reason: reason.trim() }));
     }
   }
 
@@ -531,7 +563,14 @@ function ClosureForm({
       title={t('calendar.closeFrom', { from, to })}
       closeLabel={t('common.cancel')}
     >
-      {warning === null ? (
+      {sites.length === 0 ? (
+        <p className="text-sm">
+          {t('calendar.noSites')}{' '}
+          <a href="/dashboard/facilities" className="text-primary underline underline-offset-2">
+            {t('calendar.noSitesLink')}
+          </a>
+        </p>
+      ) : warning === null ? (
         <form action={action} className="flex flex-col gap-4">
           <input type="hidden" name="organizationId" value={organizationId} />
           <input type="hidden" name="startsOn" value={range[0]} />
@@ -955,13 +994,14 @@ function EditClosureDialog({
       facilityId,
       poolIds: poolId === '' ? [] : [poolId],
       partOfDay,
+      repeatsAnnually: closure.repeatsAnnually,
     })
       .then((answer) => live && setImpact(answer ?? 'failed'))
       .catch(() => live && setImpact('failed'));
     return () => {
       live = false;
     };
-  }, [organizationId, startsOn, endsOn, facilityId, poolId, partOfDay]);
+  }, [organizationId, startsOn, endsOn, facilityId, poolId, partOfDay, closure.repeatsAnnually]);
 
   const seen = useRef(state);
   useEffect(() => {

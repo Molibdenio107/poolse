@@ -364,7 +364,15 @@ export async function moveOccurrenceAction(
         message?: string;
         lane?: string;
         holder?: string;
+        reason?: string;
       };
+      // Into a closure — refused by the server as well as the grid (19-10-2026).
+      if (body.message === 'occurrenceClosed') {
+        // The closure's name rides as the detail, the way a lane's holder does.
+        return body.reason === undefined || body.reason === ''
+          ? { ok: false, errorKey: 'classes.occurrenceClosed' }
+          : { ok: false, errorKey: 'classes.occurrenceClosed', detail: body.reason };
+      }
       // The class already happened. A different refusal from a busy lane, and
       // one nothing can be done about — so it says so rather than reading as a
       // clash somebody could go and clear.

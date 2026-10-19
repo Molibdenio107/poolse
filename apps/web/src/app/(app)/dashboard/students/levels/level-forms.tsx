@@ -438,7 +438,7 @@ export function EditLevelForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded px-2 py-1 text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="inline-flex h-control items-center justify-center px-4 text-control rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary border border-border text-primary hover:bg-surface-muted"
       >
         {t('students.editLevel')}
       </button>

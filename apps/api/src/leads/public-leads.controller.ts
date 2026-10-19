@@ -20,6 +20,7 @@ import {
   type LeadSubmission,
   type PublicLeadForm,
 } from './leads.repository.js';
+import { clubToday } from '../common/club-day.js';
 
 /**
  * The version of the consent sentence the form shows — `leads.public.consent`
@@ -187,7 +188,9 @@ function ageOn(birth: string, today: Date): number {
 /** The body as a submission, or a 400 naming the fields that are wrong. */
 export function parseSubmission(
   body: Record<string, unknown>,
-  today: Date = new Date(),
+  // Noon on the club's day: a birth date (also read at noon) of today is not
+  // "in the future" before midday, and the UTC day is not the club's.
+  today: Date = new Date(`${clubToday()}T12:00:00Z`),
 ): LeadSubmission {
   const fields: Record<string, string> = {};
 

@@ -166,9 +166,13 @@ export default async function CalendarPage({
             const to = closure.repeatsAnnually
               ? `${date.slice(0, 4)}-${closure.endsOn.slice(5)}`
               : closure.endsOn;
+            // An annual closure across New Year (24-12 to 02-01) wraps.
+            const covers =
+              closure.repeatsAnnually && from > to
+                ? date >= from || date <= to
+                : date >= from && date <= to;
             return (
-              date >= from &&
-              date <= to &&
+              covers &&
               closure.blocksGeneration &&
               (closure.facilityId === null || closure.facilityId === site)
             );

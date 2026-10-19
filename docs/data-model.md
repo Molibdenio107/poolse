@@ -942,6 +942,11 @@ either is refused, and a tank closure inside its site's closure is redundant, no
 anonymised. Migration `1790848800000` split every organization-wide manual closure into one
 per site (the first site keeps the row) and repointed the sessions each had cancelled.
 
+Migration `1790935200000` (19-10-2026 sweep) bounds `apply_closures`, `release_closures` and
+`closure_impact` to lessons from `club_today()` on; generation-wide `apply_closures` skips a
+lesson with attendance; `release_closures` restores only lessons whose slot and turma are live,
+one at a time, leaving one that would clash cancelled.
+
 ### Which day a session is on
 
 Every one of the generator's three passes — create, cancel, restore — has to answer the

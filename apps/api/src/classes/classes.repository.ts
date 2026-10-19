@@ -1014,6 +1014,20 @@ export async function removeSchedule(
           AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.class_session_id = s.id)`,
       [scheduleId],
     );
+    /*
+     * And the ones a closure had already cancelled stop being the closure's —
+     * 19-10-2026 sweep. Otherwise lifting that closure later restores lessons
+     * of a slot that no longer runs, owing registers.
+     */
+    await tx.query(
+      `UPDATE class_session s
+          SET closure_id = NULL
+        WHERE s.schedule_id = $1
+          AND s.status = 'cancelled'
+          AND s.closure_id IS NOT NULL
+          AND s.occurs_on >= club_today()`,
+      [scheduleId],
+    );
 
     await recordAudit(tx, {
       action: 'class_schedule.removed',
@@ -1242,7 +1256,8 @@ export type MoveOccurrence =
   | { outcome: 'not_found' }
   | { outcome: 'taught' }
   | { outcome: 'occupied'; clash: OccupiedLane | null }
-  | { outcome: 'instructor_busy' };
+  | { outcome: 'instructor_busy' }
+  | { outcome: 'closed'; reason: string };
 
 /**
  * Moving one week's class, without moving every week's.
@@ -1411,6 +1426,30 @@ export async function moveOccurrence(
         return { outcome: 'occupied', clash: await occupiedBy(tx, sessionId, laneIds, date, startTime) };
       }
       throw error;
+    }
+
+    /*
+     * Not into a closure — 19-10-2026 sweep. The grid refuses a drop on a shut
+     * tank or half day, but hiding a control is never the control: a drop into
+     * Sem pista, a turma whose own tank is shut, or a direct call landed a
+     * scheduled lesson inside a closure, which the next pattern write then
+     * cancelled with no word. Asked of the moved session through the one
+     * definition, so a lane, a tank and a half day all count.
+     */
+    const { rows: shut } = await tx.query<{ reason: string }>(
+      `SELECT c.reason
+         FROM class_session cs
+         CROSS JOIN LATERAL session_reach(cs.organization_id, cs.id) r
+         JOIN closure c
+           ON c.organization_id = cs.organization_id
+          AND closure_applies(c, r.facility_id, r.pool_ids, r.local_start)
+        WHERE cs.id = $1
+        LIMIT 1`,
+      [sessionId],
+    );
+    if (shut[0] !== undefined) {
+      await tx.query('ROLLBACK TO SAVEPOINT before_move');
+      return { outcome: 'closed', reason: shut[0].reason };
     }
 
     await tx.query('RELEASE SAVEPOINT before_move');

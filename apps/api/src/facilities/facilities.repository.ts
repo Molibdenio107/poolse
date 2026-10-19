@@ -27,9 +27,9 @@ export interface Pool {
 }
 
 /**
- * What shuts a tank today — POOLSE-84. `until` is the last closed day; a half
- * day names its half. Null when the tank is open. Read from `pool_closures_on`,
- * the same definition that cancels its lessons.
+ * What shuts a tank now — POOLSE-84. `until` is the last closed day; a half
+ * day names its half. Null when the tank is open. Read from `pool_closure_at`,
+ * the same definition that cancels its lessons and refuses a check-in.
  */
 export interface PoolClosure {
   reason: string;
@@ -37,12 +37,16 @@ export interface PoolClosure {
   partOfDay: 'morning' | 'afternoon' | null;
 }
 
-/** The JSON for `closure` beside a pool `p` at a site `f`, on that site's today. */
+/**
+ * The JSON for `closure` beside a pool `p`: what shuts it *now* — the same
+ * question reception's check-in asks. Asked of the day, a morning closure read
+ * "Encerrado esta manhã" all afternoon while check-ins were being accepted
+ * (19-10-2026 sweep).
+ */
 const POOL_CLOSURE_TODAY = `(
   SELECT json_build_object('reason', pc.reason, 'until', pc.until,
                            'partOfDay', pc.part_of_day)
-    FROM pool_closures_on(p.organization_id, (now() AT TIME ZONE f.timezone)::date) pc
-   WHERE pc.pool_id = p.id)`;
+    FROM pool_closure_at(p.organization_id, p.id, now()) pc)`;
 
 export interface Photo {
   id: string;

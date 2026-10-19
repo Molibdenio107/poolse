@@ -1216,7 +1216,8 @@
     },
     "enrolStudent": "Inscrever aluno",
     "slotLessonsClash": "Uma aula futura desta turma ficaria sobreposta a outra aula do mesmo professor a essa hora.",
-    "occurrenceInstructorBusy": "O professor já tem outra aula noutro tanque a essa hora."
+    "occurrenceInstructorBusy": "O professor já tem outra aula noutro tanque a essa hora.",
+    "occurrenceClosed": "Não pode ficar aí: esse tanque está encerrado a essa hora."
   },
   "reposicao": {
     "title": "Aulas de reposição",
@@ -2785,8 +2786,8 @@
     "choosePool": "Escolha uma piscina",
     "choosePoolHint": "Escolha uma piscina acima para ver a semana.",
     "warn": {
-      "subjectDefault": "Piscina encerrada de {from} a {to}",
-      "bodyDefault": "Bom dia,\n\nInformamos que a piscina estará encerrada de {from} a {to} ({reason}). As aulas destes dias não se realizam.\n\nPedimos desculpa pelo incómodo.",
+      "subjectDefault": "Sem aulas {when}",
+      "bodyDefault": "Bom dia,\n\nInformamos que não há aulas {where} {when} ({reason}).\n\nPedimos desculpa pelo incómodo.",
       "label": "Avisar por email quem perde uma aula",
       "hint": "As famílias das turmas, os parceiros (pelo contacto da parceria) e as aulas experimentais que este encerramento cancela. Antes de enviar, mostramos quantos são.",
       "subject": "Assunto",
@@ -2805,7 +2806,15 @@
       "wordsRequired": "Escreva o assunto e a mensagem.",
       "students": "{count, plural, one {a família de 1 aluno} other {as famílias de # alunos}}",
       "partners": "{count, plural, one {1 parceiro} other {# parceiros}}",
-      "leads": "{count, plural, one {1 aula experimental} other {# aulas experimentais}}"
+      "leads": "{count, plural, one {1 aula experimental} other {# aulas experimentais}}",
+      "whereSite": "na instalação {site}",
+      "whereTanks": "{count, plural, one {no tanque {names}} other {nos tanques {names}}}",
+      "whenRange": "de {from} a {to}",
+      "whenDay": "no dia {day}",
+      "when": {
+        "morning": "no dia {day}, de manhã",
+        "afternoon": "no dia {day}, à tarde"
+      }
     },
     "closureSite": "Instalação",
     "everySite": "Todas as instalações",
@@ -2834,7 +2843,9 @@
     "wholeSiteNamed": "Toda a instalação ({site})",
     "editOneTank": "Cada encerramento é um tanque ou a instalação inteira. Para fechar também outro tanque, crie um encerramento novo.",
     "editImpact": "{count, plural, one {A alteração cancela mais # aula.} other {A alteração cancela mais # aulas.}}",
-    "editGivesBack": "Os dias que o encerramento deixar de cobrir recuperam as suas aulas assim que guardar."
+    "editGivesBack": "Os dias que o encerramento deixar de cobrir recuperam as suas aulas assim que guardar.",
+    "noSites": "Para encerrar, o clube precisa primeiro de uma instalação.",
+    "noSitesLink": "Criar em Instalações"
   },
   "inventory": {
     "title": "Inventário",
@@ -3713,7 +3724,7 @@
     "choosePool": "Escolha o tanque",
     "chooseTankFirst": "Escolha o tanque acima para dar entrada.",
     "chooseTankToEnter": "Escolha o tanque acima para poder dar entrada já; sem tanque, o passe é só vendido.",
-    "closedOption": "{pool} (encerrado)"
+    "closedOption": "{pool}: encerramento em curso"
   },
   "passes": {
     "title": "Natação livre",

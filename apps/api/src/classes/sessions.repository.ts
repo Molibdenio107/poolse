@@ -179,8 +179,14 @@ export interface ClosureInput {
   facilityId: string;
   poolIds: string[];
   partOfDay: PartOfDay | null;
-  blocksGeneration: boolean;
-  repeatsAnnually: boolean;
+  /**
+   * Null when the request did not say — 19-10-2026 sweep. A create then takes
+   * the default (blocking, one-off); an edit keeps what the closure has, which
+   * is what stopped renaming a note-only or annual closure turning it into a
+   * blocking one-off.
+   */
+  blocksGeneration: boolean | null;
+  repeatsAnnually: boolean | null;
 }
 
 /**
@@ -230,6 +236,8 @@ export async function createClosures(
     await checkScope(tx, input.facilityId, input.poolIds);
 
     const reaches: (string | null)[] = input.poolIds.length === 0 ? [null] : input.poolIds;
+    const blocksGeneration = input.blocksGeneration ?? true;
+    const repeatsAnnually = input.repeatsAnnually ?? false;
 
     /*
      * Checked here as well as by `closure_no_overlap` — POOLSE-31, criterion 7.
@@ -264,8 +272,8 @@ export async function createClosures(
           input.startsOn,
           input.endsOn,
           input.reason,
-          input.blocksGeneration,
-          input.repeatsAnnually,
+          blocksGeneration,
+          repeatsAnnually,
         ],
       );
       const id = rows[0]?.id;
@@ -328,7 +336,7 @@ async function overlapping(
   poolId: string | null,
   excludeId: string | null,
 ): Promise<{ reason: string; poolName: string | null } | null> {
-  if (input.repeatsAnnually) return null;
+  if (input.repeatsAnnually === true) return null;
   const { rows } = await tx.query<{ reason: string; pool_name: string | null }>(
     `SELECT c.reason, p.name AS pool_name
        FROM closure c
@@ -371,13 +379,14 @@ export async function closureImpact(
     facilityId: string;
     poolIds: string[];
     partOfDay: PartOfDay | null;
+    repeatsAnnually: boolean | null;
   },
 ): Promise<ClosureImpact> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ o_sessions: number; o_marked: number }>(
       `SELECT o_sessions, o_marked
          FROM closure_impact($1, $2::date, $3::date, $4::uuid, $5::uuid[],
-                             $6::closure_part_of_day)`,
+                             $6::closure_part_of_day, $7::boolean)`,
       [
         organizationId,
         scope.startsOn,
@@ -385,6 +394,7 @@ export async function closureImpact(
         scope.facilityId,
         scope.poolIds,
         scope.partOfDay,
+        scope.repeatsAnnually ?? false,
       ],
     );
     return { sessions: rows[0]?.o_sessions ?? 0, marked: rows[0]?.o_marked ?? 0 };
@@ -410,6 +420,19 @@ export async function updateClosure(
   return withOrg(organizationId, async (tx) => {
     await checkScope(tx, input.facilityId, input.poolIds);
     const poolId = input.poolIds[0] ?? null;
+
+    // What the request did not say, the closure keeps.
+    const { rows: stored } = await tx.query<{ blocks: boolean; repeats: boolean }>(
+      `SELECT blocks_generation AS blocks, repeats_annually AS repeats FROM closure
+        WHERE id = $1 AND archived_at IS NULL AND source = 'manual'`,
+      [closureId],
+    );
+    if (!stored[0]) return 'not_found';
+    input = {
+      ...input,
+      blocksGeneration: input.blocksGeneration ?? stored[0].blocks,
+      repeatsAnnually: input.repeatsAnnually ?? stored[0].repeats,
+    };
 
     const clash = await overlapping(tx, input, poolId, closureId);
     if (clash !== null) throw new ClosureOverlapError(clash.reason, clash.poolName);
@@ -873,6 +896,21 @@ export async function removeFutureSessions(
                    AND a.organization_id = cs.organization_id
               )
       RETURNING cs.id`,
+      [anchor.class_group_id, anchor.starts_at, reason],
+    );
+
+    /*
+     * Lessons of this series a closure had already cancelled become the
+     * person's cancellation — 19-10-2026 sweep — so lifting the closure does not
+     * bring back a series somebody ended.
+     */
+    await tx.query(
+      `UPDATE class_session cs
+          SET closure_id = NULL, cancellation_reason = coalesce($3, cs.cancellation_reason)
+        WHERE cs.class_group_id = $1
+          AND cs.starts_at >= $2
+          AND cs.status = 'cancelled'
+          AND cs.closure_id IS NOT NULL`,
       [anchor.class_group_id, anchor.starts_at, reason],
     );
 

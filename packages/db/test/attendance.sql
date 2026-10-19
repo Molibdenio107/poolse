@@ -217,12 +217,15 @@ BEGIN
   INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason)
   VALUES (v_org, (SELECT id FROM facility WHERE organization_id = v_org ORDER BY created_at, id LIMIT 1), DATE '2026-09-08', DATE '2026-09-08', 'Obras imprevistas');
 
-  BEGIN
-    PERFORM generate_sessions(v_org, DATE '2026-09-01', DATE '2026-09-30');
+  -- 19-10-2026: generation leaves a taught class alone and carries on, rather
+  -- than failing — one marked lesson under a closure used to stop every turma in
+  -- the club getting its lessons. Saving one closure over it is still refused
+  -- (the API's attendance_recorded), because there somebody is asking.
+  PERFORM generate_sessions(v_org, DATE '2026-09-01', DATE '2026-09-30');
+  SELECT status INTO v_status FROM class_session WHERE id = v_session;
+  IF v_status <> 'scheduled' THEN
     RAISE EXCEPTION 'FAIL test 4c: generation cancelled a class that had been marked';
-  EXCEPTION
-    WHEN restrict_violation THEN NULL;
-  END;
+  END IF;
 
   RAISE NOTICE 'PASS test 4: a class somebody marked cannot be called off, by any path';
 END $$;

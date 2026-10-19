@@ -586,4 +586,72 @@ BEGIN
   RAISE NOTICE 'PASS test 14: a closure cannot name another club''s site';
 END $$;
 
+-- ---------------------------------------------------------------------------
+-- Test 15 — 19-10-2026 sweep: lifting a closure gives back only what still
+-- exists, one lesson at a time, and never touches the past
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_org uuid := 'c1c1c1c1-0000-0000-0000-000000000084';
+  v_a uuid; v_t2 uuid; v_t3 uuid; v_closure uuid; v_t3_session uuid; v_t2_session uuid;
+  v_intruder uuid; v_restored int; v_past uuid; v_old uuid;
+BEGIN
+  SELECT id INTO v_a FROM facility WHERE organization_id = v_org AND name = 'Sede';
+  SELECT id INTO v_t2 FROM pool WHERE organization_id = v_org AND name = 'Tanque 2';
+  SELECT id INTO v_t3 FROM pool WHERE organization_id = v_org AND name = 'Tanque 3';
+  PERFORM generate_sessions(v_org, DATE '2027-05-01', DATE '2027-05-31');
+
+  INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason)
+  VALUES (v_org, v_a, DATE '2027-05-04', DATE '2027-05-04', 'Avaria geral')
+  RETURNING id INTO v_closure;
+  PERFORM apply_closures(v_org, v_closure);
+
+  -- The T3 turma's slot is removed while the closure holds its week.
+  SELECT id INTO v_t3_session FROM s84 WHERE day = DATE '2027-05-04' AND what = 'T3 turma';
+  UPDATE class_schedule SET archived_at = now()
+   WHERE id = (SELECT schedule_id FROM class_session WHERE id = v_t3_session);
+
+  -- And T2's lane is taken at that hour while its lesson is cancelled. The
+  -- lesson holds its lane as a generated booking does (released while cancelled).
+  SELECT id INTO v_t2_session FROM s84 WHERE day = DATE '2027-05-04' AND what = 'T2 turma';
+  INSERT INTO class_session_lane (organization_id, session_id, lane_id, starts_at, ends_at, cancelled)
+  SELECT v_org, cs.id, l.id, cs.starts_at, cs.ends_at, true
+    FROM class_session cs, lane l WHERE cs.id = v_t2_session AND l.pool_id = v_t2;
+  INSERT INTO class_session (organization_id, starts_at, duration_minutes, occurs_on)
+  SELECT v_org, starts_at, duration_minutes, occurs_on FROM class_session WHERE id = v_t2_session
+  RETURNING id INTO v_intruder;
+  INSERT INTO class_session_lane (organization_id, session_id, lane_id, starts_at, ends_at)
+  SELECT v_org, v_intruder, l.id, cs.starts_at, cs.ends_at
+    FROM class_session cs, lane l WHERE cs.id = v_intruder AND l.pool_id = v_t2;
+
+  UPDATE closure SET archived_at = now() WHERE id = v_closure;
+  v_restored := release_closures(v_org);
+
+  IF (SELECT status FROM class_session WHERE id = v_t3_session) <> 'cancelled' THEN
+    RAISE EXCEPTION 'FAIL test 15a: lifting the closure brought back a removed slot''s lesson';
+  END IF;
+  IF (SELECT status FROM class_session WHERE id = v_t2_session) <> 'cancelled' THEN
+    RAISE EXCEPTION 'FAIL test 15b: a lesson whose lane was taken came back on top of it';
+  END IF;
+  IF (SELECT status FROM s84 WHERE day = DATE '2027-05-04' AND what = 'Norte turma') <> 'scheduled'
+     OR (SELECT status FROM s84 WHERE day = DATE '2027-05-04' AND what = 'T1 manhã') <> 'scheduled' THEN
+    RAISE EXCEPTION 'FAIL test 15c: the lessons that could come back did not';
+  END IF;
+
+  -- The past is history: a closure made over last year changes nothing there.
+  INSERT INTO class_session (organization_id, starts_at, duration_minutes, occurs_on, pool_id)
+  VALUES (v_org, TIMESTAMPTZ '2024-05-07 10:00 Europe/Lisbon', 45, DATE '2024-05-07', v_t3)
+  RETURNING id INTO v_past;
+  INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason, repeats_annually)
+  VALUES (v_org, v_a, DATE '2027-05-07', DATE '2027-05-07', 'Todos os anos', true)
+  RETURNING id INTO v_old;
+  PERFORM apply_closures(v_org, v_old);
+  IF (SELECT status FROM class_session WHERE id = v_past) <> 'scheduled' THEN
+    RAISE EXCEPTION 'FAIL test 15d: an annual closure rewrote a lesson from 2024';
+  END IF;
+
+  RAISE NOTICE 'PASS test 15: lifting a closure gives back what still exists and fits, and the past stays';
+END $$;
+
 ROLLBACK;
