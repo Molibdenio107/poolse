@@ -62,6 +62,8 @@ Each slice is one vertical, finished on its own.
   With no Como pagar text, it says to contact the club.
 - **It is a chase.** Each send writes an `invoice_chase` row with a new channel, `poolse_email`, and a
   delivery stamp. Em dívida's "last asked" counts it like any other.
+- **Overdue only** (Rui, 19-10-2026): a document past its due date and not fully paid. A family is not chased for what is not late yet.
+- **A recent reminder warns and does not block** (Rui, 19-10-2026): the confirmation says when the family was last reminded by email, and a multi-family send leaves anyone reminded in the last 7 days unticked. The person can still send.
 - **A payer with no address** is listed on the confirmation by name and gets no row.
 - **Limits:** counted against the club's daily email limit (`message_recipients` trigger figures).
 - **Wording** is in both languages, chosen by the payer's locale where known, else the club's.
