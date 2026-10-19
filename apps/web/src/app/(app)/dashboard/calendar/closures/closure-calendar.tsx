@@ -4,7 +4,7 @@ import { today } from '@/lib/dates';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useLocale, useTranslations } from 'next-intl';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, Pencil, X } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import type { Closure, Closures, MessagePreview, PartOfDay } from '@/lib/api';
@@ -17,6 +17,7 @@ import {
   previewClosureWarning,
   removeClosureAction,
   sendClosureWarning,
+  updateClosureAction,
   type ClosureState,
 } from './closures.actions';
 import { formatDate } from '@/lib/date-format';
@@ -315,7 +316,13 @@ export function ClosureCalendar({
         />
       )}
 
-      <ClosureList closures={closures} canManage={canManage} organizationId={organizationId} />
+      <ClosureList
+        closures={closures}
+        canManage={canManage}
+        organizationId={organizationId}
+        sites={sites}
+        halfDayCut={halfDayCut}
+      />
     </div>
   );
 }
@@ -808,10 +815,14 @@ function ClosureList({
   closures,
   canManage,
   organizationId,
+  sites,
+  halfDayCut,
 }: {
   closures: Closure[];
   canManage: boolean;
   organizationId: string;
+  sites: Site[];
+  halfDayCut: string;
 }): React.ReactElement {
   const t = useTranslations();
   const scopeOf = useScopeLabel();
@@ -846,6 +857,14 @@ function ClosureList({
               ? formatDate(closure.startsOn)
               : `${formatDate(closure.startsOn)} — ${formatDate(closure.endsOn)}`}
             {canManage && (
+              <EditClosure
+                organizationId={organizationId}
+                closure={closure}
+                sites={sites}
+                halfDayCut={halfDayCut}
+              />
+            )}
+            {canManage && (
               <RemoveClosure
                 organizationId={organizationId}
                 closureId={closure.id}
@@ -856,6 +875,251 @@ function ClosureList({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Change one closure — POOLSE-84's follow-up.
+ *
+ * The days are typed here rather than drawn on the year: the range already
+ * exists, and shortening it by two days is two keystrokes, where redrawing it
+ * would be starting again. One closure is one tank (or the whole site), so the
+ * scope is a single choice, not the create form's tick boxes. The cost shown is
+ * what the change would *add*: lessons this closure already took are counted as
+ * taken, not again.
+ */
+function EditClosure({
+  organizationId,
+  closure,
+  sites,
+  halfDayCut,
+}: {
+  organizationId: string;
+  closure: Closure;
+  sites: Site[];
+  halfDayCut: string;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t('calendar.editClosure', { reason: closure.reason })}
+        className="rounded p-1 text-foreground-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        <Pencil className="size-4" aria-hidden />
+      </button>
+      {open && (
+        <EditClosureDialog
+          organizationId={organizationId}
+          closure={closure}
+          sites={sites}
+          halfDayCut={halfDayCut}
+          onDone={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function EditClosureDialog({
+  organizationId,
+  closure,
+  sites,
+  halfDayCut,
+  onDone,
+}: {
+  organizationId: string;
+  closure: Closure;
+  sites: Site[];
+  halfDayCut: string;
+  onDone: () => void;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [state, action, saving] = useSavedAction(updateClosureAction, INITIAL_CLOSURE);
+
+  const [reason, setReason] = useState(closure.reason);
+  const [startsOn, setStartsOn] = useState(closure.startsOn);
+  const [endsOn, setEndsOn] = useState(closure.endsOn);
+  const [facilityId, setFacilityId] = useState(closure.facilityId ?? sites[0]?.id ?? '');
+  const [poolId, setPoolId] = useState(closure.poolId ?? '');
+  const [halfDay, setHalfDay] = useState(closure.partOfDay !== null);
+  const [part, setPart] = useState<PartOfDay>(closure.partOfDay ?? 'morning');
+  const site = sites.find((one) => one.id === facilityId);
+  const oneDay = startsOn !== '' && startsOn === endsOn;
+  const partOfDay: PartOfDay | null = oneDay && halfDay ? part : null;
+
+  const [impact, setImpact] = useState<
+    'loading' | 'failed' | { sessions: number; marked: number }
+  >('loading');
+  useEffect(() => {
+    let live = true;
+    setImpact('loading');
+    if (facilityId === '' || startsOn === '' || endsOn === '' || endsOn < startsOn) return;
+    void impactAction(organizationId, {
+      startsOn,
+      endsOn,
+      facilityId,
+      poolIds: poolId === '' ? [] : [poolId],
+      partOfDay,
+    })
+      .then((answer) => live && setImpact(answer ?? 'failed'))
+      .catch(() => live && setImpact('failed'));
+    return () => {
+      live = false;
+    };
+  }, [organizationId, startsOn, endsOn, facilityId, poolId, partOfDay]);
+
+  // Every answer remounts the form, so React 19's reset cannot untick the box
+  // while state still holds it — the same reason as the create form.
+  const [round, setRound] = useState(0);
+  const seen = useRef(state);
+  useEffect(() => {
+    if (seen.current === state) return;
+    seen.current = state;
+    setRound((value) => value + 1);
+    if (state.ok) onDone();
+  }, [state, onDone]);
+
+  const BUTTON =
+    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground disabled:opacity-60';
+  const BUTTON_QUIET =
+    'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border';
+
+  return (
+    <Dialog
+      open
+      onClose={onDone}
+      title={t('calendar.editClosureTitle', { reason: closure.reason })}
+      closeLabel={t('common.cancel')}
+    >
+      <form key={round} action={action} className="flex flex-col gap-4">
+        <input type="hidden" name="organizationId" value={organizationId} />
+        <input type="hidden" name="closureId" value={closure.id} />
+        <input type="hidden" name="facilityId" value={facilityId} />
+        <input type="hidden" name="poolId" value={poolId} />
+        <input type="hidden" name="partOfDay" value={partOfDay ?? ''} />
+
+        <TextField
+          name="reason"
+          label={t('calendar.closureReason')}
+          initial={reason}
+          onValueChange={setReason}
+          required
+          maxLength={200}
+          error={state.fields?.['reason'] === undefined ? undefined : t(state.fields['reason'])}
+          className="max-w-none"
+        />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <TextField
+            name="startsOn"
+            type="date"
+            label={t('calendar.closureFrom')}
+            initial={startsOn}
+            onValueChange={setStartsOn}
+            required
+            error={state.fields?.['startsOn'] === undefined ? undefined : t(state.fields['startsOn'])}
+          />
+          <TextField
+            name="endsOn"
+            type="date"
+            label={t('calendar.closureTo')}
+            initial={endsOn}
+            onValueChange={setEndsOn}
+            required
+            error={state.fields?.['endsOn'] === undefined ? undefined : t(state.fields['endsOn'])}
+          />
+        </div>
+
+        {sites.length > 1 && (
+          <SelectField
+            name="siteChoice"
+            label={t('calendar.closureSite')}
+            initial={facilityId}
+            onValueChange={(value) => {
+              setFacilityId(value);
+              setPoolId('');
+            }}
+            options={sites.map((one) => ({ value: one.id, label: one.name }))}
+            className="max-w-none"
+          />
+        )}
+
+        {site !== undefined && site.pools.length > 0 && (
+          <SelectField
+            name="poolChoice"
+            label={t('calendar.closureScope')}
+            initial={poolId}
+            onValueChange={setPoolId}
+            options={[
+              { value: '', label: t('calendar.wholeSiteNamed', { site: site.name }) },
+              ...site.pools.map((pool) => ({ value: pool.id, label: pool.name })),
+            ]}
+            hint={t('calendar.editOneTank')}
+            className="max-w-none"
+          />
+        )}
+
+        {oneDay && (
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={halfDay}
+                onChange={(event) => setHalfDay(event.target.checked)}
+                className="size-4"
+              />
+              <span className="font-medium">{t('calendar.halfDay')}</span>
+            </label>
+            {halfDay && (
+              <SelectField
+                name="partChoice"
+                label={t('calendar.halfDayWhich')}
+                initial={part}
+                onValueChange={(value) => setPart(value === 'afternoon' ? 'afternoon' : 'morning')}
+                options={[
+                  { value: 'morning', label: t('calendar.partOfDay.morning') },
+                  { value: 'afternoon', label: t('calendar.partOfDay.afternoon') },
+                ]}
+                hint={t('calendar.halfDayHint', { cut: halfDayCut })}
+                className="max-w-none"
+              />
+            )}
+          </div>
+        )}
+
+        {impact === 'failed' && <p className="text-sm text-warning">{t('calendar.impactUnknown')}</p>}
+        {typeof impact === 'object' && impact.marked > 0 && (
+          <p className="flex items-start gap-2 rounded border border-warning/40 bg-warning/10 p-3 text-sm">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+            {t('calendar.impactMarked', { marked: impact.marked, sessions: impact.sessions })}
+          </p>
+        )}
+        {typeof impact === 'object' && impact.marked === 0 && impact.sessions > 0 && (
+          <p className="text-sm text-foreground-muted">
+            {t('calendar.editImpact', { count: impact.sessions })}
+          </p>
+        )}
+        <p className="text-sm text-foreground-muted">{t('calendar.editGivesBack')}</p>
+
+        {state.errorKey !== undefined && (
+          <p className="text-sm text-danger">{t(state.errorKey, state.values ?? {})}</p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <button type="submit" disabled={saving || facilityId === ''} className={BUTTON}>
+            {saving ? t('common.working') : t('common.save')}
+          </button>
+          <button type="button" onClick={onDone} className={BUTTON_QUIET}>
+            {t('common.cancel')}
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 

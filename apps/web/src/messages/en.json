@@ -2822,8 +2822,19 @@
     "refused": {
       "siteRequired": "Choose the site to close.",
       "poolElsewhere": "One of the tanks chosen is not at this site.",
-      "halfDayOneDay": "Half a day is for a single day. Pick one day, or untick “Half a day only”."
-    }
+      "halfDayOneDay": "Half a day is for a single day. Pick one day, or untick “Half a day only”.",
+      "registerTaken": "The closure would cover a lesson whose register is already taken. Adjust the days or the tank.",
+      "datesRequired": "Give the first and the last day.",
+      "endsBefore": "The last day cannot be before the first."
+    },
+    "editClosure": "Change {reason}",
+    "editClosureTitle": "Change the closure: {reason}",
+    "closureFrom": "From",
+    "closureTo": "To",
+    "wholeSiteNamed": "The whole site ({site})",
+    "editOneTank": "Each closure is one tank or the whole site. To close another tank as well, add a new closure.",
+    "editImpact": "{count, plural, one {The change cancels # more lesson.} other {The change cancels # more lessons.}}",
+    "editGivesBack": "Days the closure no longer covers get their lessons back as soon as you save."
   },
   "inventory": {
     "title": "Inventory",

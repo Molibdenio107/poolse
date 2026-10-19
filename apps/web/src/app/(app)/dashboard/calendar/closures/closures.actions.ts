@@ -1,7 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiFetch, apiPost, type MessagePreview, type PartOfDay } from '../../../../../lib/api';
+import {
+  ApiError,
+  apiFetch,
+  apiPost,
+  apiPut,
+  type MessagePreview,
+  type PartOfDay,
+} from '../../../../../lib/api';
 import type { FormState } from '../../actions';
 
 /** What each of the API's closure refusals says — POOLSE-84. */
@@ -55,42 +62,94 @@ export async function createClosureAction(
       { organizationId },
     );
   } catch (error) {
-    /*
-     * An overlap comes back as a 409 naming the closure already there — the
-     * message is worth showing verbatim, because "overlaps with an existing
-     * closure" sends somebody hunting through a year of calendar and "overlaps
-     * with Encerramento de Natal" does not.
-     */
-    if (error instanceof ApiError && error.status === 409) {
-      // `details` is somebody else's JSON and typed `unknown` on purpose, so it
-      // is narrowed here rather than believed.
-      const details = error.details;
-      const fields =
-        details !== null && typeof details === 'object'
-          ? (details as Record<string, unknown>)
-          : {};
-      const existing = typeof fields['existing'] === 'string' ? fields['existing'] : undefined;
-      // The tank the clash is on, when it is one — POOLSE-84.
-      const pool = typeof fields['pool'] === 'string' ? fields['pool'] : undefined;
-
-      return {
-        ok: false,
-        errorKey: pool === undefined ? 'calendar.closureOverlap' : 'calendar.closureOverlapTank',
-        // In `values`, not `detail`: the sentence already names the closure, and
-        // the toast appends a detail after it — which said it twice.
-        values: { existing: existing ?? '', ...(pool === undefined ? {} : { pool }) },
-      };
-    }
-    // POOLSE-84's refusals: each is a sentence, never the API's English.
-    if (error instanceof ApiError && error.status === 422) {
-      const key = REFUSALS[error.code ?? ''];
-      if (key !== undefined) return { ok: false, errorKey: key };
-    }
-    return { ok: false, errorKey: 'calendar.closureFailed' };
+    return closureRefusal(error);
   }
 
   revalidateEverythingShowingClasses();
   return { ok: true, closureId: created.id };
+}
+
+/**
+ * A refusal from saving a closure, as a sentence — shared by create and edit.
+ *
+ * An overlap comes back as a 409 naming the closure already there, and since
+ * POOLSE-84 its tank: "overlaps with an existing closure" sends somebody hunting
+ * through a year of calendar, and "Tanque 2 already has Esvaziamento" does not.
+ */
+function closureRefusal(error: unknown): ClosureState {
+  if (error instanceof ApiError && error.status === 409) {
+    // `details` is somebody else's JSON and typed `unknown` on purpose, so it
+    // is narrowed here rather than believed.
+    const details = error.details;
+    const fields =
+      details !== null && typeof details === 'object' ? (details as Record<string, unknown>) : {};
+    if (error.code === 'attendance_recorded') {
+      return { ok: false, errorKey: 'calendar.refused.registerTaken' };
+    }
+    const existing = typeof fields['existing'] === 'string' ? fields['existing'] : undefined;
+    const pool = typeof fields['pool'] === 'string' ? fields['pool'] : undefined;
+
+    return {
+      ok: false,
+      errorKey: pool === undefined ? 'calendar.closureOverlap' : 'calendar.closureOverlapTank',
+      // In `values`, not `detail`: the sentence already names the closure, and
+      // the toast appends a detail after it — which said it twice.
+      values: { existing: existing ?? '', ...(pool === undefined ? {} : { pool }) },
+    };
+  }
+  // POOLSE-84's refusals: each is a sentence, never the API's English.
+  if (error instanceof ApiError && error.status === 422) {
+    const key = REFUSALS[error.code ?? ''];
+    if (key !== undefined) return { ok: false, errorKey: key };
+  }
+  return { ok: false, errorKey: 'calendar.closureFailed' };
+}
+
+/**
+ * Change one closure — its days, reason, tank or half — POOLSE-84.
+ *
+ * One row, one tank: a closure made for two tanks is two rows, edited apart,
+ * which is why they were stored apart. Shortening it gives back the lessons it no
+ * longer covers at once; extending it cancels the ones it now does.
+ */
+export async function updateClosureAction(
+  _previous: ClosureState,
+  formData: FormData,
+): Promise<ClosureState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const closureId = String(formData.get('closureId') ?? '');
+  const text = (field: string): string => String(formData.get(field) ?? '').trim();
+
+  const reason = text('reason');
+  if (reason === '') return { ok: false, fields: { reason: 'calendar.reasonRequired' } };
+  const startsOn = text('startsOn');
+  const endsOn = text('endsOn');
+  if (startsOn === '' || endsOn === '') {
+    return { ok: false, fields: { startsOn: 'calendar.refused.datesRequired' } };
+  }
+  if (endsOn < startsOn) return { ok: false, fields: { endsOn: 'calendar.refused.endsBefore' } };
+  const poolId = text('poolId');
+  const partOfDay = text('partOfDay');
+
+  try {
+    await apiPut(
+      `/closures/${closureId}`,
+      {
+        startsOn,
+        endsOn,
+        reason,
+        facilityId: text('facilityId'),
+        poolIds: poolId === '' ? [] : [poolId],
+        ...(partOfDay === '' || startsOn !== endsOn ? {} : { partOfDay }),
+      },
+      { organizationId },
+    );
+  } catch (error) {
+    return closureRefusal(error);
+  }
+
+  revalidateEverythingShowingClasses();
+  return { ok: true, closureId };
 }
 
 /**

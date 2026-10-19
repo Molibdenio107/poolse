@@ -2822,8 +2822,19 @@
     "refused": {
       "siteRequired": "Escolha a instalação a encerrar.",
       "poolElsewhere": "Um dos tanques escolhidos não pertence a esta instalação.",
-      "halfDayOneDay": "Meio dia só se marca num único dia. Escolha um só dia ou desmarque «Só meio dia»."
-    }
+      "halfDayOneDay": "Meio dia só se marca num único dia. Escolha um só dia ou desmarque «Só meio dia».",
+      "registerTaken": "O encerramento passaria a cobrir uma aula com presenças já marcadas. Ajuste os dias ou o tanque.",
+      "datesRequired": "Indique o primeiro e o último dia.",
+      "endsBefore": "O último dia não pode ser antes do primeiro."
+    },
+    "editClosure": "Alterar {reason}",
+    "editClosureTitle": "Alterar o encerramento: {reason}",
+    "closureFrom": "De",
+    "closureTo": "Até",
+    "wholeSiteNamed": "Toda a instalação ({site})",
+    "editOneTank": "Cada encerramento é um tanque ou a instalação inteira. Para fechar também outro tanque, crie um encerramento novo.",
+    "editImpact": "{count, plural, one {A alteração cancela mais # aula.} other {A alteração cancela mais # aulas.}}",
+    "editGivesBack": "Os dias que o encerramento deixar de cobrir recuperam as suas aulas assim que guardar."
   },
   "inventory": {
     "title": "Inventário",

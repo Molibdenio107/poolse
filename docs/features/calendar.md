@@ -434,7 +434,10 @@ recounted whenever the scope changes.
 Everything on a closed tank in the period is cancelled — turmas, parcerias, free-swim blocks,
 events and aulas experimentais — and removing or shortening a closure gives them back at once.
 A clash with a closure already there is refused naming that closure and its tank. The list
-under the year shows each closure's site, tank and half.
+under the year shows each closure's site, tank and half, and each row has **Alterar**: a dialog
+with the reason, the first and last day typed, the scope (the whole site or one tank — a row is
+one tank) and the half day. It shows how many more lessons the change cancels and gives back the
+days it stops covering as soon as it is saved. Editing sends no warning.
 
 On the week calendar only the site on screen's closures (and holidays) count. A whole-site,
 whole-day closure greys the day as before; a tank closure, or half of the site's day, is a band
