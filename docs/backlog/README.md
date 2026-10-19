@@ -108,3 +108,4 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-83](./POOLSE-83-paying-at-enrolment.md) | Paying at enrolment — checkout with a held place | Billing / Mobile app | High | POOLSE-82, 3.5, POOLSE-76 | 1 |
 | [POOLSE-84](./POOLSE-84-closures-by-facility-and-tank.md) | Closures by facility or by tank, half days, and who is warned | Scheduling / Closures | High | POOLSE-31 | — |
 | [POOLSE-85](./POOLSE-85-gap-to-qualify.md) | Gap to qualify — FPN age groups and entry times | Students / Competition | High | POOLSE-81 | 1 |
+| [POOLSE-86](./POOLSE-86-email-delivery.md) | Email delivery — unsent notices, retries, invoice reminders, opt-outs | Notifications | High | notifier.ts (Resend) | — |

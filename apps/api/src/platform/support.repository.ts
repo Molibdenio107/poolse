@@ -1,4 +1,5 @@
 import { withPlatform } from '@poolse/db';
+import { deliverSupportNotice } from './owner-notices.js';
 import { deliverAlert, recordAlert, type RecordedAlert } from './platform-alert.js';
 import { nameMatches } from './platform.repository.js';
 
@@ -326,7 +327,7 @@ export async function overrideAccess(
   reasonInput: unknown,
   confirmName: string | undefined,
 ): Promise<{ grantId: string; expiresAt: string }> {
-  return alerted(clerkUserId, organizationId, 'support.override', async (tx) => {
+  const opened = await alerted(clerkUserId, organizationId, 'support.override', async (tx) => {
     // The club's own grant paths take this lock before "nothing is live"; the
     // platform's must too, or an Owner's grant and an override both land
     // (13-10-2026 sweep). Advisory locks are shared across logins.
@@ -369,4 +370,8 @@ export async function overrideAccess(
       name,
     };
   });
+  // The Owners' notice, after the override has committed — POOLSE-86. Never
+  // throws; a failed send is the hourly retry's.
+  await deliverSupportNotice(opened.grantId);
+  return opened;
 }

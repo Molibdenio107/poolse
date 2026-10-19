@@ -297,6 +297,30 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN
     RAISE NOTICE 'PASS test 6d: only the club answers a request';
   END;
+
+  -- POOLSE-86: the platform stamps that an override's notice was sent, and
+  -- may touch nothing else about the grant.
+  UPDATE support_grant SET notice_delivered_at = now(), notice_delivery_attempts = 1
+   WHERE organization_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' AND source = 'override';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'FAIL test 6f: the platform could not stamp an override notice';
+  END IF;
+  RAISE NOTICE 'PASS test 6f: the platform stamps an override notice';
+
+  BEGIN
+    UPDATE support_grant SET expires_at = now() + interval '1 day'
+     WHERE organization_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' AND source = 'override';
+    RAISE EXCEPTION 'FAIL test 6g: the platform extended an override';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 6g: the notice columns and nothing else';
+  END;
+
+  UPDATE support_grant SET notice_delivered_at = now()
+   WHERE organization_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' AND source = 'owner';
+  IF FOUND THEN
+    RAISE EXCEPTION 'FAIL test 6h: the platform wrote to an Owner''s own grant';
+  END IF;
+  RAISE NOTICE 'PASS test 6h: an Owner''s grant is not the platform''s to stamp';
 END $$;
 
 RESET ROLE;

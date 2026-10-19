@@ -17,12 +17,10 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import {
   archiveAnalysis,
   createAnalysis,
-  findWaterAlertNotice,
   listAnalyses,
   listPoolAlerts,
   listPoolRanges,
   poolBands,
-  markAlertSent,
   METRIC_UNITS,
   POOL_METRICS,
   resolveBands,
@@ -40,8 +38,8 @@ import {
   type RawAnalysisRow,
 } from './analysis-import.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
-import { emailIsConfigured, sendEmail } from '../notifications/notifier.js';
-import { waterAlertEmail } from '../notifications/water-alert-email.js';
+import { emailIsConfigured } from '../notifications/notifier.js';
+import { deliverWaterAlert } from './alert-delivery.js';
 import {
   archiveFacility,
   archivePool,
@@ -342,33 +340,8 @@ export class FacilitiesController {
    * what happened: the message is in the log.
    */
   private async notifyWaterAlert(organizationId: string, alertId: string): Promise<void> {
-    try {
-      const notice = await findWaterAlertNotice(organizationId, alertId);
-      if (notice === null) return;
-
-      let delivered = false;
-      for (const to of notice.recipients) {
-        const sent = await sendEmail(
-          waterAlertEmail({
-            to,
-            organizationName: notice.organizationName,
-            facilityName: notice.facilityName,
-            poolName: notice.poolName,
-            takenAt: notice.takenAt,
-            timezone: notice.facilityTimezone,
-            excursions: notice.excursions,
-            locale: notice.organizationLocale,
-          }),
-        );
-        // One address that went through is enough to call the alert delivered;
-        // the recipient list is recorded whole either way.
-        delivered = delivered || sent;
-      }
-
-      await markAlertSent(organizationId, alertId, notice.recipients, delivered);
-    } catch (error) {
-      this.logger.warn(`Could not send water alert ${alertId}: ${String(error)}`);
-    }
+    // POOLSE-86: one function, shared with the hourly retry.
+    await deliverWaterAlert(organizationId, alertId);
   }
 
   /**

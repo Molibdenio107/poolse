@@ -30,6 +30,12 @@ provider refused) says *Registada — ainda não saiu nenhum email* rather than 
 was told. The text arrives exactly as typed, with one line from Poolse naming the club and
 saying replies do not reach it.
 
+**An email that did not leave is tried again** (POOLSE-86): every hour, for 48 hours, up to five
+times, for messages and for every other email Poolse sends — water and lab alerts, qualification
+alerts, trial and support notices, platform alerts. Each retry is the same email the first attempt
+would have been, rebuilt from what was recorded. Invitations are the exception: their link is not
+stored, so *Novo link* is how one is re-sent. Nothing is retried while email is not configured.
+
 After **Cancelar aula** on the calendar, the success message offers **Avisar as famílias**,
 opening the composer on that turma with the date in the subject. A parceria offers nothing.
 

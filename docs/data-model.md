@@ -3831,3 +3831,13 @@ club (Poolse ships no FPN data), soft-deleted, with RLS and composite keys.
   gender, and no birth date admits nobody. A swimmer's band is derived, never stored.
 - **`qualifying_gaps(standard, student)`** — the one definition of a valid time and the gap: same
   course, an official live meet, inside the window. Read by Progressão and the Mínimos board.
+
+### Email delivery retry — POOLSE-86 slice 3.0a, 19 October 2026
+
+Migration `1791280800000_delivery-retry`. `delivery_attempts smallint` (retries only, default 0) and
+`last_attempt_at` on `pool_analysis_alert`, `lab_result_alert`, `qualification_alert`,
+`message_recipient`, `platform_alert` and `trial_notice`; `notice_delivery_attempts` /
+`notice_last_attempt_at` on `support_grant`. Column grants to `poolse_app` where its UPDATE was
+already a column grant, and to `poolse_platform` on `platform_alert`. `poolse_platform` gains UPDATE on
+`support_grant`'s three notice columns, by policy limited to `source = 'override'`. `invitation` is not
+retried (its link is stored as a hash).

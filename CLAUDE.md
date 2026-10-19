@@ -280,10 +280,20 @@ machine. That needed `archived_at` on the platform grant, which reversed a settl
 is still its own ticket.
 Transitions go to **`trial_event`**, never `platform_audit_log` — that table's actor is
 `clerk_user_id NOT NULL` and a machine is not a person — which is also what makes a
-machine-set suspension distinguishable from an operator's. **Notices record the owners they were owed to and are
-never sent**: `delivered_at` stays null until an email provider exists, and reading the address
-took `app_user` onto the platform grant — the eighth table, two columns of it, decided the
+machine-set suspension distinguishable from an operator's. **Notices record the owners they were owed to and,
+since POOLSE-86, are emailed to them after the pass commits** (`deliverTrialNotice`); reading the
+address took `app_user` onto the platform grant — the eighth table, two columns of it, decided the
 same day. `docs/features/trial.md`.
+
+**Every email is sent once after its commit, rendered from its row, and retried hourly if it did
+not leave.** POOLSE-86 slice 3.0a. A sender is a by-id function (`deliverWaterAlert`,
+`deliverLabAlert`, `redeliverQualificationAlert`, `deliverMessage`, `deliverTrialNotice`,
+`deliverSupportNotice`, `redeliverAlert`) that the request *and* `DeliveryRetryService` call, so a
+retried email is the first one and no wording exists twice. The retry takes rows raised in the last
+48 h, older than ten minutes, at most once an hour and five times (`delivery_attempts`,
+`last_attempt_at`), and does nothing while `EMAIL_PROVIDER` is console. Invitations are not retried —
+the link is a hash — and *Novo link* re-sends one. **A new email is a by-id sender and a line in
+`TENANT_KINDS` or `PLATFORM_KINDS`.** `docs/features/messages.md`.
 
 **Poolse support enters a club only through a grant the Owner opened, and is never one of the club's people.** POOLSE-79. `support_grant` is the window. An operator enters through `support_session`, a definer function that only `poolse_platform` may execute and that re-checks the platform admin and the live grant. They then work through the ordinary tenant path, so RLS, `requireRole` and `audit_log` name them. **The role is not a row**: a support membership holds no `membership_role` rows (a trigger refuses one), and `resolve_memberships` gives it `admin` only while the grant is live. Expiry and revocation therefore need no job, and every role-keyed list leaves support out with no edit. **A read over *every* membership (Pessoas, a people search, a picker, a team count) adds `support_grant_id IS NULL`**, because "no role" reads as staff there. A new one earns a line in `support.integration.test.ts` QA 5. **A support session grants no roles** (`currentTenant().support`; `grantableRoles()` is empty), so no access outlives the window, and entering raises a `platform_alert`. **Asking is a `support_request`** that opens nothing until the Owner approves it. **Forcing is an override**: a reason, the club's name typed back, exactly 4 h, an alert, and a recorded notice to the Owners. Those two are the only things `poolse_platform` inserts, and both tenant policies there are `TO poolse_app`. **The active club is the `poolse_org` cookie**, which every API call sends as `x-poolse-organization`. `/me` puts that club first, so `memberships[0]` is always the club being acted in; never pick a membership any other way. `docs/features/platform.md`.
 

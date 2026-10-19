@@ -11,15 +11,12 @@ import {
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
-import { sendEmail } from '../notifications/notifier.js';
-import { labAlertEmail } from '../notifications/lab-alert-email.js';
+import { deliverLabAlert } from './alert-delivery.js';
 import {
   LAB_PARAMETERS,
   archiveLabResult,
   createLabResult,
-  findLabAlertNotice,
   listLabResults,
-  markLabAlertSent,
   type LabParameter,
   type LabResult,
   type LabResultInput,
@@ -150,31 +147,9 @@ export class LabResultsController {
     return { archived: true };
   }
 
-  /** One message per recipient; `sendEmail` never throws and this catches the rest. */
+  /** Sends after the commit; `deliverLabAlert` never throws. */
   private async notify(organizationId: string, alertId: string): Promise<void> {
-    try {
-      const notice = await findLabAlertNotice(organizationId, alertId);
-      if (notice === null) return;
-      let delivered = false;
-      for (const to of notice.recipients) {
-        const sent = await sendEmail(
-          labAlertEmail({
-            to,
-            organizationName: notice.organizationName,
-            facilityName: notice.facilityName,
-            poolName: notice.poolName,
-            sampledAt: notice.sampledAt,
-            timezone: notice.facilityTimezone,
-            laboratory: notice.laboratory,
-            failures: notice.grading.failures,
-            locale: notice.organizationLocale,
-          }),
-        );
-        delivered = delivered || sent;
-      }
-      await markLabAlertSent(organizationId, alertId, notice.recipients, delivered);
-    } catch (error) {
-      this.logger.warn(`Could not send lab alert ${alertId}: ${String(error)}`);
-    }
+    // POOLSE-86: one function, shared with the hourly retry.
+    await deliverLabAlert(organizationId, alertId);
   }
 }

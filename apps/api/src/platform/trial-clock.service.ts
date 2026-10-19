@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { withPlatform } from '@poolse/db';
+import { deliverTrialNotice } from './owner-notices.js';
 
 /**
  * The clock that moves a tenant down the trial ladder — POOLSE-61, slice B2.
@@ -83,7 +84,10 @@ export class TrialClockService {
   @Cron(CronExpression.EVERY_HOUR)
   async tick(): Promise<void> {
     try {
-      await this.run();
+      const result = await this.run();
+      // After the commit, never inside it: a provider's bad minute must not roll
+      // back a transition. A notice that fails here is the hourly retry's.
+      await this.deliver(result.noticeIds);
     } catch (error) {
       /*
        * Swallowed, deliberately. An unhandled rejection from a cron takes the
@@ -93,6 +97,15 @@ export class TrialClockService {
        */
       this.log.error('The trial clock failed this hour', error as Error);
     }
+  }
+
+  /** Email the notices one pass recorded — POOLSE-86. Never throws. */
+  async deliver(noticeIds: string[]): Promise<number> {
+    let delivered = 0;
+    for (const id of noticeIds) {
+      if (await deliverTrialNotice(id)) delivered += 1;
+    }
+    return delivered;
   }
 
   /**
@@ -121,6 +134,7 @@ export class TrialClockService {
       lapsed: 0,
       restricted: 0,
       notices: 0,
+      noticeIds: [],
     };
 
     return withPlatform(async (tx) => {
@@ -147,7 +161,8 @@ export class TrialClockService {
        */
       const lapsed = await this.lapseManual(tx, only);
       const restricted = await this.restrictManual(tx, only);
-      const notices = await this.recordNotices(tx, only);
+      const noticeIds = await this.recordNotices(tx, only);
+      const notices = noticeIds.length;
 
       if (expired + closed + archived + lapsed + restricted + notices > 0) {
         this.log.log(
@@ -156,7 +171,7 @@ export class TrialClockService {
         );
       }
 
-      return { locked: true, expired, closed, archived, lapsed, restricted, notices };
+      return { locked: true, expired, closed, archived, lapsed, restricted, notices, noticeIds };
     });
   }
 
@@ -328,12 +343,10 @@ export class TrialClockService {
   }
 
   /**
-   * What somebody was owed, written down — never sent.
-   *
-   * There is no email provider wired; choosing one is a later slice that reads
-   * this same table and stamps `delivered_at`. Every screen that shows a notice
-   * says plainly that nothing has been delivered, which is the honesty the chase
-   * list already owes about the same gap.
+   * What somebody was owed, written down — and, since POOLSE-86, emailed by
+   * `tick` after this pass commits (`deliverTrialNotice`), with `delivered_at`
+   * stamped when mail left. Returns the ids it wrote, so only new notices are
+   * sent; one that fails is retried hourly by `DeliveryRetryService`.
    *
    * **The recipients are the club's owners**, resolved by role when the notice
    * falls due and written onto the row. By role, so turnover cannot orphan a
@@ -353,8 +366,8 @@ export class TrialClockService {
    * hourly job write each notice once, and the day being in the key is what lets a
    * club whose trial was extended be owed the same notice again later.
    */
-  private async recordNotices(tx: Tx, only: string | null): Promise<number> {
-    const { rowCount } = await tx.query(
+  private async recordNotices(tx: Tx, only: string | null): Promise<string[]> {
+    const { rows } = await tx.query<{ id: string }>(
       `WITH owners AS (
          SELECT m.organization_id,
                 array_remove(array_agg(DISTINCT u.cached_email), NULL) AS addresses
@@ -431,10 +444,11 @@ export class TrialClockService {
        SELECT due.id, due.kind, due.due_on, coalesce(owners.addresses, '{}')
          FROM due
          LEFT JOIN owners ON owners.organization_id = due.id
-       ON CONFLICT (organization_id, kind, due_on) DO NOTHING`,
+       ON CONFLICT (organization_id, kind, due_on) DO NOTHING
+       RETURNING id`,
       [only],
     );
-    return rowCount ?? 0;
+    return rows.map((row) => row.id);
   }
 }
 
@@ -449,6 +463,8 @@ export interface TrialClockResult {
   /** Manual subscriptions whose grace ran out too, so writing stopped. */
   restricted: number;
   notices: number;
+  /** The notices this pass wrote, for `deliver` after the commit — POOLSE-86. */
+  noticeIds: string[];
 }
 
 /** The transaction handle `withPlatform` hands out. */

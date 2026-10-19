@@ -35,6 +35,7 @@ import { MaintenanceController } from './maintenance/maintenance.controller.js';
 import { MessagesController } from './messages/messages.controller.js';
 import { QualificationsController } from './staff/qualifications.controller.js';
 import { QualificationAlertService } from './staff/qualification-alerts.js';
+import { DeliveryRetryService } from './notifications/delivery-retry.service.js';
 import { LeadsController, RegistrationSettingsController } from './leads/leads.controller.js';
 import { PublicLeadsController } from './leads/public-leads.controller.js';
 import { LeadRetentionService } from './leads/lead-retention.service.js';
@@ -285,6 +286,8 @@ const IDENTITY_ONLY_ROUTES = [
      */
     ClimateService,
     QualificationAlertService,
+    // POOLSE-86: the hourly retry of mail that failed to leave.
+    DeliveryRetryService,
     LeadRetentionService,
     // 7b.8 — health data a year after leaving, identity after five.
     RetentionService,

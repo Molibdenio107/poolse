@@ -376,8 +376,10 @@ a reason and the club's name typed back (`nameMatches`, as for a suspension).
 
 - It lasts exactly 4 hours, by CHECK; renewing it is a second override with its reason again.
 - It raises a `platform_alert`, and records a notice to every Owner with the reason verbatim
-  (`notice_recipients`). `notice_delivered_at` stays null until an email provider exists, and
-  the Owner's list says *registado, não enviado*.
+  (`notice_recipients`), emailed to them after the override commits (POOLSE-86): who, the reason
+  verbatim, from when to when, and a link to end it. `notice_delivered_at` is stamped when mail
+  left — the platform login may UPDATE those notice columns of an override row and nothing else —
+  and the Owner's list says *enviado* or *registado, não enviado*.
 - It is the one grant the platform writes itself, by an INSERT policy limited to
   `source = 'override'`.
 

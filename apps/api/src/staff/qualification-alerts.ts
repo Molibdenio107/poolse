@@ -151,6 +151,58 @@ export async function deliverQualificationAlerts(
   return delivered;
 }
 
+/**
+ * Send one alert again, rebuilt from its row — POOLSE-86's hourly retry. The
+ * recipients are the ones the row recorded when it was raised, and the email is
+ * the one `deliverQualificationAlerts` would have sent. False when there is no
+ * such undelivered alert.
+ */
+export async function redeliverQualificationAlert(
+  organizationId: string,
+  alertId: string,
+  send: (email: Email) => Promise<boolean> = sendEmail,
+): Promise<boolean> {
+  const run = await withOrg(organizationId, async (tx): Promise<TenantRun | null> => {
+    const { rows } = await tx.query<{
+      threshold: 'amber' | 'red';
+      recipients: string[];
+      person_name: string | null;
+      type_name: string;
+      expires_on: string;
+      org_name: string;
+      locale: string;
+    }>(
+      `SELECT a.threshold, a.recipients, person_name(q.membership_id) AS person_name,
+              t.name AS type_name, to_char(q.expires_on, 'DD-MM-YYYY') AS expires_on,
+              o.name AS org_name, o.locale
+         FROM qualification_alert a
+         JOIN qualification q ON q.id = a.qualification_id AND q.organization_id = a.organization_id
+         JOIN qualification_type t ON t.id = q.qualification_type_id
+         JOIN organization o ON o.id = a.organization_id
+        WHERE a.id = $1 AND a.delivered_at IS NULL`,
+      [alertId],
+    );
+    const row = rows[0];
+    if (row === undefined) return null;
+    return {
+      organizationName: row.org_name,
+      locale: row.locale,
+      raised: [
+        {
+          id: alertId,
+          threshold: row.threshold,
+          recipients: row.recipients,
+          personName: row.person_name ?? '',
+          typeName: row.type_name,
+          expiresOn: row.expires_on,
+        },
+      ],
+    };
+  });
+  if (run === null) return false;
+  return (await deliverQualificationAlerts(organizationId, run, send)) > 0;
+}
+
 @Injectable()
 export class QualificationAlertService {
   private readonly log = new Logger(QualificationAlertService.name);

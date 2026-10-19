@@ -64,13 +64,15 @@ identical.
 the last day, the day it ended, a week before sign-in closes, the day it closes, and a week
 before the data is due to go.
 
-**Nothing is sent.** There is no email provider wired, so `delivered_at` is null on every row
-and the screens say so plainly. The **recipients are recorded** — the club's owners, resolved
+**Each notice is emailed to the owners** after the clock's pass commits (POOLSE-86): what
+happened, the one date it is about (when the trial ends, when access closes, when the club is
+archived), and a link to the subscription page — in the club's language. `delivered_at` is stamped
+when mail left; one that failed is retried hourly for 48 h, up to five times. With email on console
+nothing leaves and the row stays unsent. The **recipients are recorded** — the club's owners, resolved
 by role when the notice falls due, because only an owner can pay and because turnover must not
 orphan a notice. Reading an address meant putting `app_user` on the platform login's grant: the
 eighth table, two columns of it, decided on 14 September 2026. Empty stays legitimate and means
-nobody in the club has an address on file. The slice that chooses a provider stamps
-`delivered_at` into this same history.
+nobody in the club has an address on file, and such a notice is never sent or retried.
 
 Both books are the platform's alone: invisible and unwritable from a tenant connection, for
 two independent reasons — no grant, and no policy naming the tenant login — and asserted in
@@ -152,8 +154,6 @@ Both go through the audited platform write path, so every change lands in
 
 ## Not built yet
 
-- **Delivery.** Notices are recorded, with their recipients, and nothing leaves the building.
-  Choosing a provider is a small slice that stamps `delivered_at` into the same table.
 - **The purge.** Permanently destroying an archived tenant — its own ticket, and deliberately
   not a cron's.
 - **The countdown in the app** from day 10, and a screen showing a club's own notices.

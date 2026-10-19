@@ -196,8 +196,10 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       `POST /webhooks/stripe`, and `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` /
       `STRIPE_PRICE_*` set on the API only. Until then the product runs unsold, by design —
       `docs/features/subscription.md`.
-- [ ] **A transactional email provider.** Invitation delivery, invoice chasing and the whole
-      trial lifecycle record what they owe and deliver nothing without one.
+- [ ] **A transactional email provider.** `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, and a
+      verified sending domain in `EMAIL_FROM` — without the domain Resend only reaches the account's
+      own address. Every alert, message, trial notice and support notice is recorded either way;
+      with email on console nothing leaves and the hourly retry does nothing.
 - [ ] **`DATABASE_PLATFORM_URL` audited**: API environment only, never the web app's, never
       `NEXT_PUBLIC_`. The rotation procedure is below; a test now fails if a `NEXT_PUBLIC_`
       variable ever looks like a database URL — POOLSE-64.

@@ -194,3 +194,43 @@ export async function deliverAlert(alert: RecordedAlert): Promise<void> {
     );
   }
 }
+
+/**
+ * Send one alert again, rebuilt from its row — POOLSE-86's hourly retry. A
+ * suppressed repeat is never resent: it was recorded precisely so as not to be.
+ */
+export async function redeliverAlert(alertId: string): Promise<boolean> {
+  const alert = await withPlatform(async (tx) => {
+    const { rows } = await tx.query<{
+      kind: PlatformAlertKind;
+      action: string;
+      clerk_user_id: string;
+      organization_id: string | null;
+      organization_name: string | null;
+      detail: Record<string, unknown>;
+      raised_at: Date;
+    }>(
+      `SELECT a.kind, a.action, a.clerk_user_id, a.organization_id, o.name AS organization_name,
+              a.detail, a.raised_at
+         FROM platform_alert a
+         LEFT JOIN organization o ON o.id = a.organization_id
+        WHERE a.id = $1 AND a.delivered_at IS NULL
+          AND coalesce(a.detail ->> 'delivery', '') <> 'suppressed_repeat'`,
+      [alertId],
+    );
+    return rows[0] ?? null;
+  });
+  if (alert === null) return false;
+  await deliverAlert({
+    id: alertId,
+    kind: alert.kind,
+    action: alert.action,
+    clerkUserId: alert.clerk_user_id,
+    organizationId: alert.organization_id,
+    organizationName: alert.organization_name,
+    detail: alert.detail,
+    raisedAt: alert.raised_at,
+    suppressed: false,
+  });
+  return true;
+}
