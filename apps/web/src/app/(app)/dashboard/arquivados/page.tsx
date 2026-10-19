@@ -32,6 +32,8 @@ const KINDS: ArchiveKind[] = [
   'inventory_item',
   'maintenance_task',
   'partner',
+  // POOLSE-81: a meet, with its results.
+  'swim_meet',
 ];
 
 /** Period filter: '' is the default 90 days. */
@@ -46,6 +48,7 @@ const CHILD_KEYS: Record<string, string> = {
   'student_fee.ends_on': 'feeLine',
   partner_contact: 'partnerContact',
   partner_group: 'partnerGroup',
+  student_record: 'meetResult',
 };
 
 const BASE = '/dashboard/arquivados';

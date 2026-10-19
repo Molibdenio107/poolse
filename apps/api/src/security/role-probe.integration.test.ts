@@ -1,4 +1,5 @@
 import { after, before, test } from 'node:test';
+import { MeetsController } from '../meets/meets.controller.js';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
 import { ActivityController } from '../activity/activity.controller.js';
@@ -612,6 +613,16 @@ test('intended open: seasons, closures and dashboard still answer non-staff', as
 
     const dashboard = await new DashboardController().read();
     assert.ok(dashboard, `${label}: dashboard (registry decides)`);
+  });
+});
+
+test('meets refuse a guardian and a student (403) — POOLSE-81', async () => {
+  await asEach(async () => {
+    const meets = new MeetsController();
+    await refused('GET meets', 403, () => meets.list());
+    await refused('GET meets/:id', 403, () => meets.one(NO_SUCH_ID));
+    await refused('POST meets/import', 403, () => meets.import({}));
+    await refused('POST meets/:id/archive', 403, () => meets.archive(NO_SUCH_ID));
   });
 });
 

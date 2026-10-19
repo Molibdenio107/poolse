@@ -4618,7 +4618,8 @@
       "maintenance_task": "Tarefa de manutenção",
       "partner": "Parceria",
       "partner_group": "Grupo de parceria",
-      "class_schedule": "Horário de turma"
+      "class_schedule": "Horário de turma",
+      "swim_meet": "Prova"
     },
     "children": {
       "pool": "{count, plural, one {# tanque} other {# tanques}}",
@@ -4626,7 +4627,8 @@
       "enrollment": "{count, plural, one {# inscrição} other {# inscrições}}",
       "feeLine": "{count, plural, one {# linha de pagamento} other {# linhas de pagamento}}",
       "partnerContact": "{count, plural, one {# contacto} other {# contactos}}",
-      "partnerGroup": "{count, plural, one {# grupo} other {# grupos}}"
+      "partnerGroup": "{count, plural, one {# grupo} other {# grupos}}",
+      "meetResult": "{count, plural, one {# resultado} other {# resultados}}"
     },
     "filter": {
       "kind": "Tipo",
@@ -4660,7 +4662,8 @@
       "inventory_item": "Artigo arquivado",
       "maintenance_task": "Tarefa arquivada",
       "partner": "Parceria arquivada",
-      "student_fee": "Linha de pagamento arquivada"
+      "student_fee": "Linha de pagamento arquivada",
+      "swim_meet": "Prova arquivada"
     },
     "restoredKeptToast": "Restaurado: {name}. {kept, plural, one {# registo ligado não voltou} other {# registos ligados não voltaram}}, porque mudaram entretanto. Uma mensalidade de dias já passados fica terminada; acrescente uma a partir de hoje."
   },
@@ -5148,6 +5151,95 @@
       "class_session": {
         "removed_future": "Aulas futuras removidas"
       }
+    }
+  },
+  "meets": {
+    "title": "Provas",
+    "subtitle": "As provas do clube e os resultados dos seus nadadores, importados do ficheiro de resultados.",
+    "notPermitted": "Esta página é para a equipa técnica.",
+    "empty": "Ainda não há provas.",
+    "emptyHint": "Importe o ficheiro de resultados (.lef ou .lxf) que o Meet Manager ou a federação enviam. Também pode indicar uma prova ao registar uma marca.",
+    "friendly": "Particular",
+    "fromFile": "Do ficheiro",
+    "typed": "Indicada à mão",
+    "resultCount": "{count, plural, one {# resultado} other {# resultados}}",
+    "back": "Provas",
+    "importedFrom": "Importada de {file}, {at}.",
+    "results": "{count, plural, one {Resultado do clube} other {Resultados do clube}}",
+    "noResults": "Nenhum resultado de alunos do clube.",
+    "column": {
+      "swimmer": "Nadador",
+      "event": "Prova",
+      "time": "Tempo",
+      "notes": "Notas"
+    },
+    "round": {
+      "pre": "Eliminatórias",
+      "sem": "Meias-finais",
+      "fin": "Finais",
+      "sop": "Desempate",
+      "sos": "Desempate",
+      "qua": "Quartos de final",
+      "other": "Outra fase"
+    },
+    "noLicence": "Sem licença FPN",
+    "unmatchedTitle": "{count, plural, one {# nadador do clube não foi reconhecido} other {# nadadores do clube não foram reconhecidos}}",
+    "unmatchedHint": "Não há aluno com a mesma licença FPN, nem com o mesmo nome e data de nascimento. Os seus resultados não foram registados. Corrija a ficha do aluno e importe o ficheiro de novo.",
+    "archive": "Arquivar prova",
+    "confirmArchive": "{count, plural, =0 {Arquivar esta prova?} one {Arquivar esta prova e o seu resultado? Deixa de contar para os recordes. Pode recuperá-la nos Arquivados.} other {Arquivar esta prova e os seus # resultados? Deixam de contar para os recordes. Pode recuperá-la nos Arquivados.}}",
+    "archiveFailed": "Não foi possível arquivar a prova.",
+    "import": {
+      "button": "Importar resultados",
+      "drop": "Largue o ficheiro de resultados para importar",
+      "title": "Importar resultados",
+      "reading": "A ler o ficheiro…",
+      "club": "O nosso clube no ficheiro",
+      "clubHint": "O ficheiro traz todos os clubes da prova. Só os resultados deste são lidos. Fica escolhido para a próxima vez.",
+      "chooseClub": "Escolha o clube",
+      "clubOption": "{name} ({code}) — {count, plural, one {# nadador} other {# nadadores}}",
+      "official": "Prova oficial",
+      "officialHint": "Os tempos de uma prova oficial contam como melhor marca oficial. Desmarque para uma prova particular.",
+      "preview": "Ver o que vai ser importado",
+      "newMeet": "Prova nova.",
+      "knownMeet": "Esta prova já foi importada: só o que mudou é escrito.",
+      "countNew": "{count, plural, one {# resultado novo} other {# resultados novos}}",
+      "countUpdate": "{count, plural, one {# tempo corrigido} other {# tempos corrigidos}}",
+      "countUnchanged": "{count, plural, one {# já registado, sem alterações} other {# já registados, sem alterações}}",
+      "countBests": "{count, plural, one {# recorde pessoal novo} other {# recordes pessoais novos}}",
+      "skipped": "{count, plural, one {# não importado} other {# não importados}}",
+      "proposals": "Confirme estes nadadores",
+      "proposalsHint": "Sem licença FPN igual, mas com o mesmo nome e data de nascimento de um aluno. Só os confirmados são importados.",
+      "proposal": "{athlete} ({born}) é o aluno {student}",
+      "writeLicence": "Guardar a licença {licence} na ficha do aluno",
+      "results": "O que vai ser escrito",
+      "was": "antes {time}",
+      "unmatched": "{count, plural, one {Não reconhecido, nada é escrito: {names}.} other {Não reconhecidos, nada é escrito: {names}.}}",
+      "commit": "{count, plural, one {Importar # resultado} other {Importar # resultados}}",
+      "back": "Voltar",
+      "done": "{count, plural, one {# resultado importado.} other {# resultados importados.}}",
+      "error": {
+        "noFile": "Escolha um ficheiro.",
+        "type": "Só ficheiros de resultados .lef ou .lxf.",
+        "tooBig": "O ficheiro é demasiado grande (máximo 10 MB, e 40 MB depois de descomprimido).",
+        "notLenex": "Este ficheiro não é um ficheiro de resultados LENEX.",
+        "noMeet": "O ficheiro não diz o nome ou a data da prova.",
+        "entity": "O ficheiro traz uma declaração que não é aceite (DOCTYPE ou entidade). Peça um ficheiro exportado do Meet Manager.",
+        "notZip": "O ficheiro .lxf está danificado.",
+        "oneLef": "O ficheiro .lxf tem de conter exatamente um ficheiro .lef.",
+        "nested": "O ficheiro .lxf contém outro ficheiro compactado dentro. Não é aceite.",
+        "failed": "Não foi possível importar. Tente de novo."
+      }
+    },
+    "skip": {
+      "relay": "estafetas",
+      "dsq": "desclassificados",
+      "dns": "não partiu",
+      "dnf": "não terminou",
+      "wdr": "desistências",
+      "otherStatus": "outro estado",
+      "noTime": "sem tempo",
+      "yards": "em jardas",
+      "stroke": "estilo não reconhecido"
     }
   }
 }

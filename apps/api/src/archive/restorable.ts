@@ -27,7 +27,8 @@ export type RestorableKindName =
   | 'inventory_item'
   | 'maintenance_task'
   | 'partner'
-  | 'student_fee';
+  | 'student_fee'
+  | 'swim_meet';
 
 /**
  * One child of an archive action, as recorded in `audit_log.data.cascade`.
@@ -49,6 +50,8 @@ export const ARCHIVED_CHILDREN = {
   class_schedule: { table: 'class_schedule', parentColumn: 'class_group_id' },
   partner_contact: { table: 'partner_contact', parentColumn: 'partner_id' },
   partner_group: { table: 'partner_group', parentColumn: 'partner_id' },
+  // POOLSE-81: a meet's results leave and come back with it.
+  student_record: { table: 'student_record', parentColumn: 'meet_id' },
 } as const;
 
 export type ArchivedChild = keyof typeof ARCHIVED_CHILDREN;
@@ -171,6 +174,16 @@ export const RESTORABLE: readonly RestorableKind[] = [
     },
     parents: [{ kind: 'student', column: 'student_id' }],
     cascades: [],
+  },
+  {
+    // POOLSE-81: a meet, with its results.
+    kind: 'swim_meet',
+    action: 'swim_meet.archived',
+    table: 'swim_meet',
+    labelKey: 'archive.kind.swim_meet',
+    label: { from: 'swim_meet t', name: 't.name' },
+    parents: [],
+    cascades: ['student_record'],
   },
 ];
 

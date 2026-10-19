@@ -4618,7 +4618,8 @@
       "maintenance_task": "Maintenance task",
       "partner": "Partnership",
       "partner_group": "Partner group",
-      "class_schedule": "Class time slot"
+      "class_schedule": "Class time slot",
+      "swim_meet": "Meet"
     },
     "children": {
       "pool": "{count, plural, one {# pool} other {# pools}}",
@@ -4626,7 +4627,8 @@
       "enrollment": "{count, plural, one {# enrolment} other {# enrolments}}",
       "feeLine": "{count, plural, one {# fee line} other {# fee lines}}",
       "partnerContact": "{count, plural, one {# contact} other {# contacts}}",
-      "partnerGroup": "{count, plural, one {# group} other {# groups}}"
+      "partnerGroup": "{count, plural, one {# group} other {# groups}}",
+      "meetResult": "{count, plural, one {# result} other {# results}}"
     },
     "filter": {
       "kind": "Type",
@@ -4660,7 +4662,8 @@
       "inventory_item": "Item archived",
       "maintenance_task": "Task archived",
       "partner": "Partnership archived",
-      "student_fee": "Fee line archived"
+      "student_fee": "Fee line archived",
+      "swim_meet": "Meet archived"
     },
     "restoredKeptToast": "Restored: {name}. {kept, plural, one {# linked record did not come back} other {# linked records did not come back}} because they changed since. A fee line for days already gone stays ended; add one from today."
   },
@@ -5148,6 +5151,95 @@
       "class_session": {
         "removed_future": "Future lessons removed"
       }
+    }
+  },
+  "meets": {
+    "title": "Meets",
+    "subtitle": "The club's meets and its swimmers' results, imported from the results file.",
+    "notPermitted": "This page is for the coaching staff.",
+    "empty": "No meets yet.",
+    "emptyHint": "Import the results file (.lef or .lxf) that Meet Manager or the federation sends. A meet can also be named when recording a time.",
+    "friendly": "Friendly",
+    "fromFile": "From a file",
+    "typed": "Named by hand",
+    "resultCount": "{count, plural, one {# result} other {# results}}",
+    "back": "Meets",
+    "importedFrom": "Imported from {file}, {at}.",
+    "results": "{count, plural, one {The club's result} other {The club's results}}",
+    "noResults": "No results for the club’s students.",
+    "column": {
+      "swimmer": "Swimmer",
+      "event": "Event",
+      "time": "Time",
+      "notes": "Notes"
+    },
+    "round": {
+      "pre": "Heats",
+      "sem": "Semi-finals",
+      "fin": "Final",
+      "sop": "Swim-off",
+      "sos": "Swim-off",
+      "qua": "Quarter-finals",
+      "other": "Another round"
+    },
+    "noLicence": "No FPN licence",
+    "unmatchedTitle": "{count, plural, one {# of the club's swimmers was not recognised} other {# of the club's swimmers were not recognised}}",
+    "unmatchedHint": "No student has the same FPN licence, or the same name and birth date. Their results were not recorded. Fix the student’s record and import the file again.",
+    "archive": "Archive meet",
+    "confirmArchive": "{count, plural, =0 {Archive this meet?} one {Archive this meet and its result? It stops counting towards bests. It can be restored from Archived.} other {Archive this meet and its # results? They stop counting towards bests. It can be restored from Archived.}}",
+    "archiveFailed": "The meet could not be archived.",
+    "import": {
+      "button": "Import results",
+      "drop": "Drop the results file to import it",
+      "title": "Import results",
+      "reading": "Reading the file…",
+      "club": "Our club in the file",
+      "clubHint": "The file holds every club at the meet. Only this one’s results are read. It stays chosen for next time.",
+      "chooseClub": "Choose the club",
+      "clubOption": "{name} ({code}) — {count, plural, one {# swimmer} other {# swimmers}}",
+      "official": "Official meet",
+      "officialHint": "Times from an official meet count as official bests. Untick for a friendly.",
+      "preview": "See what will be imported",
+      "newMeet": "A new meet.",
+      "knownMeet": "This meet was imported before: only what changed is written.",
+      "countNew": "{count, plural, one {# new result} other {# new results}}",
+      "countUpdate": "{count, plural, one {# corrected time} other {# corrected times}}",
+      "countUnchanged": "{count, plural, one {# already recorded, unchanged} other {# already recorded, unchanged}}",
+      "countBests": "{count, plural, one {# new personal best} other {# new personal bests}}",
+      "skipped": "{count, plural, one {# not imported} other {# not imported}}",
+      "proposals": "Confirm these swimmers",
+      "proposalsHint": "No matching FPN licence, but the same name and birth date as a student. Only the confirmed ones are imported.",
+      "proposal": "{athlete} ({born}) is the student {student}",
+      "writeLicence": "Save licence {licence} on the student’s record",
+      "results": "What will be written",
+      "was": "was {time}",
+      "unmatched": "{count, plural, one {Not recognised, nothing is written: {names}.} other {Not recognised, nothing is written: {names}.}}",
+      "commit": "{count, plural, one {Import # result} other {Import # results}}",
+      "back": "Back",
+      "done": "{count, plural, one {# result imported.} other {# results imported.}}",
+      "error": {
+        "noFile": "Choose a file.",
+        "type": "Only .lef or .lxf results files.",
+        "tooBig": "The file is too big (10 MB at most, and 40 MB once unpacked).",
+        "notLenex": "This is not a LENEX results file.",
+        "noMeet": "The file does not give the meet’s name or date.",
+        "entity": "The file carries a declaration that is not accepted (DOCTYPE or entity). Ask for a file exported from Meet Manager.",
+        "notZip": "The .lxf file is damaged.",
+        "oneLef": "The .lxf file must hold exactly one .lef file.",
+        "nested": "The .lxf file holds another archive inside. It is not accepted.",
+        "failed": "The import failed. Try again."
+      }
+    },
+    "skip": {
+      "relay": "relays",
+      "dsq": "disqualified",
+      "dns": "did not start",
+      "dnf": "did not finish",
+      "wdr": "withdrawn",
+      "otherStatus": "other status",
+      "noTime": "no time",
+      "yards": "in yards",
+      "stroke": "stroke not recognised"
     }
   }
 }

@@ -3808,3 +3808,7 @@ out-of-order delivery cannot undo a later one; `poolse_platform` may update it.
   `apply_retention()`.
 - **`organization.federation_club_code`** — this club's code in LENEX files, remembered by the
   import (slice 2).
+- **`swim_meet.unmatched`** (slice 2, migration `1791108000000`) — the club's athletes in the last
+  imported file that matched no student, as `[{name, results}]`: names only, replaced by each import.
+- A meet is **restorable** (`RESTORABLE` kind `swim_meet`, cascading `student_record` by `meet_id`):
+  archiving takes its results out of the bests, and the bin brings back exactly those.

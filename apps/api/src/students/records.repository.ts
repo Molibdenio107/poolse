@@ -424,6 +424,33 @@ async function meetFor(
 }
 
 /**
+ * A result's time corrected — POOLSE-81: the organisers fixed a time and the
+ * file was imported again. The record's own path, with its audit entry saying
+ * what it was and what it is; the time is not personal data, so it is valued.
+ */
+export async function updateRecordTimeIn(
+  tx: Tx,
+  recordId: string,
+  studentId: string,
+  timeMs: number,
+): Promise<void> {
+  const { rows } = await tx.query<{ before: number }>(
+    `UPDATE student_record r SET time_ms = $2
+       FROM (SELECT time_ms FROM student_record WHERE id = $1 FOR UPDATE) old
+      WHERE r.id = $1 AND r.archived_at IS NULL
+    RETURNING old.time_ms AS before`,
+    [recordId, timeMs],
+  );
+  if (!rows[0]) return;
+  await recordAudit(tx, {
+    action: 'student_record.updated',
+    entityType: 'student',
+    entityId: studentId,
+    data: { recordId, before: { timeMs: rows[0].before }, after: { timeMs }, withheld: [] },
+  });
+}
+
+/**
  * Archived rather than deleted, like everything else an operator can see.
  *
  * A mistyped time that has already been shown to a parent as a personal best is

@@ -185,6 +185,31 @@ from an official meet, the best at an official meet is shown beside it, because 
 qualifying reads. Owner, admin and instructor record; a family reads its own child's times in
 Progressão and nothing else.
 
+### Provas — importing a meet's results (slice 2)
+
+**Provas** under Alunos lists the meets, newest first, paged. *Importar resultados* takes the
+meet's **LENEX** file — `.lef`, or a `.lxf` holding exactly one `.lef`, up to 10 MB — dropped on the
+page or chosen. The file is read on the Next server (`lib/lenex.ts`) and never leaves it.
+
+1. **The club.** A results file holds every club at the meet; the operator picks this one, and it is
+   remembered (`organization.federation_club_code`) and pre-selected next time. Only its swimmers are
+   sent to the API.
+2. **The preview.** A swimmer whose FPN licence matches a student is matched. One with the same
+   surname, first name and birth date is **proposed** and imported only if confirmed — and gains the
+   file's licence, ticked by default, if they had none. Anybody else is **unmatched**: listed, never
+   created, nothing written. Relays, DSQ/DNS/DNF/WDR, no time (NT), yards and unknown strokes are
+   skipped and counted. Each row says whether it is new, a corrected time, or already there, and
+   whether it is a new personal best.
+3. **The commit** writes all of it in one transaction or none. A heat and a final are two results; a
+   second import of the same file writes nothing, and a corrected time is one audited update.
+
+*Prova oficial* is ticked for an imported meet and can be unticked for a friendly. The meet's page
+shows the club's results with their PB marks and a warning beside a competitive swimmer with no
+licence, and lists the unmatched by name. **Who:** owner, admin and every instructor import and read;
+archiving a meet (with its results) is owner and admin, restorable from Arquivados. The parser
+refuses any DOCTYPE or entity, a `.lxf` with two `.lef`s or a nested archive, and anything that
+inflates past 40 MB.
+
 ## Not built yet
 
 - **AC7 — communications routed to the adult student rather than a guardian.** There is

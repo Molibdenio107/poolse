@@ -11,7 +11,8 @@ test('the registry as shipped is sound', () => {
   assert.doesNotThrow(() => assertRestorableIsSound());
 });
 
-test('the nine kinds Rui chose, and no staff or season', () => {
+// The nine Rui chose on 12-10-2026, and a meet with its results (POOLSE-81).
+test('the ten restorable kinds, and no staff or season', () => {
   assert.deepEqual(RESTORABLE.map((one) => one.kind).sort(), [
     'class_group',
     'facility',
@@ -22,6 +23,7 @@ test('the nine kinds Rui chose, and no staff or season', () => {
     'space',
     'student',
     'student_fee',
+    'swim_meet',
   ]);
 });
 

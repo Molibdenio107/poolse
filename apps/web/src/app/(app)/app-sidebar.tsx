@@ -309,6 +309,8 @@ const SECTIONS: Item[] = [
         key: 'messages.title',
         roles: ['owner', 'admin', 'instructor'],
       },
+      // Provas — POOLSE-81: meets and their results. The endpoint's own roles.
+      { href: '/dashboard/students/provas', key: 'meets.title', roles: TEACHING },
       { href: '/dashboard/students/levels', key: 'students.levels' },
       /*
        * The advancement queue — POOLSE-19. It shipped on 28 August with no way

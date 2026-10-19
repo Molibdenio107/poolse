@@ -15,6 +15,7 @@ import { archiveStudent } from '../students/students.repository.js';
 import { StudentsController } from '../students/students.controller.js';
 import { FacilitiesController } from '../facilities/facilities.controller.js';
 import { FeePeriodsController, FeePlansController } from '../billing/fees.controller.js';
+import { archiveMeet } from '../meets/meets.repository.js';
 import {
   actingAs,
   addMember,
@@ -454,6 +455,23 @@ test('every cascading kind records its cascade on the entry it writes', async ()
       );
       await archiveClassGroup(tenant.organizationId, group!.id);
       return { action: 'class_group.archived', id: group!.id };
+    },
+    // POOLSE-81: a meet takes its results with it.
+    swim_meet: async (tenant) => {
+      const studentId = await addStudent(tenant, 'Inês');
+      const [meet] = await tenant.sql<{ id: string }>(
+        `INSERT INTO swim_meet (organization_id, name, starts_on, ends_on, official)
+         VALUES ($1, 'Torneio', '2026-09-20', '2026-09-20', true) RETURNING id`,
+        [tenant.organizationId],
+      );
+      await tenant.sql(
+        `INSERT INTO student_record (organization_id, student_id, stroke, distance_m, time_ms,
+                                     swum_on, course, meet_id)
+         VALUES ($1, $2, 'freestyle', 50, 31000, '2026-09-20', 'lcm', $3)`,
+        [tenant.organizationId, studentId, meet!.id],
+      );
+      await archiveMeet(tenant.organizationId, meet!.id);
+      return { action: 'swim_meet.archived', id: meet!.id };
     },
   };
 

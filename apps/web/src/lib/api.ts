@@ -2092,6 +2092,88 @@ export interface PersonalBest {
   officialBest: { timeMs: number; swumOn: string; meetName: string } | null;
 }
 
+/** A meet in Provas — POOLSE-81 slice 2. */
+export interface MeetSummary {
+  id: string;
+  name: string;
+  city: string | null;
+  course: Course | null;
+  startsOn: string;
+  endsOn: string;
+  official: boolean;
+  /** Came from a results file (else named by hand on the time form). */
+  imported: boolean;
+  resultCount: number;
+}
+
+export interface MeetList extends Paginated<MeetSummary> {
+  organizationId: string;
+  canImport: boolean;
+  canArchive: boolean;
+  rememberedClubCode: string | null;
+}
+
+export interface MeetResult {
+  recordId: string;
+  studentId: string;
+  studentName: string;
+  stroke: Stroke;
+  distanceM: number;
+  course: Course | null;
+  round: string | null;
+  eventNumber: number | null;
+  timeMs: number;
+  swumOn: string;
+  isPersonalBest: boolean;
+  licenceMissing: boolean;
+}
+
+export interface MeetDetail extends MeetSummary {
+  sourceFileName: string | null;
+  importedAt: string | null;
+  results: MeetResult[];
+  unmatched: { name: string; results: number }[];
+  canArchive: boolean;
+  organizationId: string;
+}
+
+export type MeetSkipReason =
+  | 'relay' | 'dsq' | 'dns' | 'dnf' | 'wdr' | 'otherStatus' | 'noTime' | 'yards' | 'stroke';
+
+export interface MeetPreviewResult {
+  eventNumber: number;
+  round: string;
+  stroke: Stroke;
+  distanceM: number;
+  course: Course | null;
+  swumOn: string;
+  timeMs: number;
+  action: 'new' | 'update' | 'unchanged';
+  previousMs: number | null;
+  newBest: boolean;
+}
+
+export interface MeetPreviewAthlete {
+  key: string;
+  name: string;
+  birthDate: string | null;
+  licence: string | null;
+  match: 'licence' | 'proposed' | 'none';
+  studentId: string | null;
+  studentName: string | null;
+  canWriteLicence: boolean;
+  results: MeetPreviewResult[];
+}
+
+export interface MeetImportPreview {
+  meet: { name: string; startsOn: string; existingMeetId: string | null };
+  rememberedClubCode: string | null;
+  athletes: MeetPreviewAthlete[];
+  skipped: Record<MeetSkipReason, number>;
+  totals: { new: number; update: number; unchanged: number; unmatched: number; newBests: number };
+  meetId?: string;
+}
+
 export interface MeetChoice {
   id: string;
   name: string;
@@ -4484,7 +4566,8 @@ export type ArchiveKind =
   | 'inventory_item'
   | 'maintenance_task'
   | 'partner'
-  | 'student_fee';
+  | 'student_fee'
+  | 'swim_meet';
 
 export interface ArchiveEntry {
   /** The audit entry's id — what *Restaurar* sends. */
