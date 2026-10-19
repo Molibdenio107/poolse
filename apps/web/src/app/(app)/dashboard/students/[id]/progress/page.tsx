@@ -3,6 +3,8 @@ import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import {
   ApiError,
   apiFetch,
+  type Course,
+  type PersonalBest,
   type Progression,
   type Stroke,
   type Student,
@@ -61,23 +63,46 @@ export default async function ProgressPage({
   // every Lisbon summer night. `sv-SE` only because it writes `YYYY-MM-DD`.
   const today = todayOfClub();
 
-  // The chart shows one line, so it has to be one comparable thing: the stroke
-  // and distance this student has raced most. Mixing a 50 m butterfly into a
-  // 400 m freestyle line would draw a shape that means nothing.
+  // The chart shows one line, so it has to be one comparable thing: the stroke,
+  // distance and pool this student has raced most. Mixing a 50 m butterfly into
+  // a 400 m freestyle line would draw a shape that means nothing, and so would
+  // mixing a 25 m pool into a 50 m one (POOLSE-81).
   const groups = new Map<string, SwimRecord[]>();
   for (const record of progression?.records ?? []) {
-    const key = `${record.stroke}|${record.distanceM}`;
+    const key = `${record.stroke}|${record.distanceM}|${record.course ?? ''}`;
     groups.set(key, [...(groups.get(key) ?? []), record]);
   }
 
   // Two points is the minimum that shows a direction; one is not a progression.
-  let headline: { stroke: Stroke; distanceM: number; records: SwimRecord[] } | null = null;
+  let headline: {
+    stroke: Stroke;
+    distanceM: number;
+    course: Course | null;
+    records: SwimRecord[];
+  } | null = null;
   for (const [key, records] of groups) {
     if (records.length >= 2 && (headline === null || records.length > headline.records.length)) {
-      const [stroke, distance] = key.split('|');
-      headline = { stroke: stroke as Stroke, distanceM: Number(distance), records };
+      const [stroke, distance, course] = key.split('|');
+      headline = {
+        stroke: stroke as Stroke,
+        distanceM: Number(distance),
+        course: course === '' ? null : (course as Course),
+        records,
+      };
     }
   }
+
+  // The bests, one table per pool — a 25 m and a 50 m best are two figures,
+  // never one (POOLSE-81). The API already orders them 25, 50, then unsaid.
+  const bestsByCourse: { course: Course | null; bests: PersonalBest[] }[] = [];
+  for (const best of progression?.bests ?? []) {
+    const group = bestsByCourse.find((entry) => entry.course === best.course);
+    if (group === undefined) bestsByCourse.push({ course: best.course, bests: [best] });
+    else group.bests.push(best);
+  }
+  const courseRank = (course: Course | null): number =>
+    course === 'scm' ? 0 : course === 'lcm' ? 1 : 2;
+  bestsByCourse.sort((a, b) => courseRank(a.course) - courseRank(b.course));
 
   const back = { href: `/dashboard/students/${id}`, label: t('sensitive.backToStudent') };
 
@@ -163,7 +188,8 @@ export default async function ProgressPage({
                       {t('progress.chartTitle', {
                         stroke: t(`progress.strokes.${headline.stroke}`),
                         distance: headline.distanceM,
-                      })}
+                      })}{' '}
+                      · {t(`progress.course.${headline.course ?? 'none'}`)}
                     </h2>
                     <ProgressChart
                       label={t('progress.chartLabel')}
@@ -182,29 +208,56 @@ export default async function ProgressPage({
           labelKey: 'progress.bests',
           visible: hasRecords,
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
-              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('progress.bests')}
-              </h2>
-              <ul className="flex flex-col divide-y divide-border">
-                {loaded.bests.map((best) => (
-                  <li
-                    key={`${best.stroke}-${best.distanceM}`}
-                    className="flex items-baseline justify-between gap-4 py-2 first:pt-0 last:pb-0"
-                  >
-                    <span>
-                      {best.distanceM} m {t(`progress.strokes.${best.stroke}`)}
-                    </span>
-                    <span className="flex items-baseline gap-3">
-                      <span className="font-mono text-lg">{formatTime(best.timeMs)}</span>
-                      <span className="text-sm text-foreground-muted">
-                        {formatDate(new Date(best.swumOn))}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <>
+              {bestsByCourse.map((group) => (
+                <section
+                  key={group.course ?? 'none'}
+                  className="rounded border border-border bg-surface p-5"
+                >
+                  <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                    {t('progress.bestsIn', { course: t(`progress.course.${group.course ?? 'none'}`) })}
+                  </h2>
+                  {group.course === null && (
+                    <p className="mb-3 text-sm text-foreground-muted">{t('progress.courseNoneHint')}</p>
+                  )}
+                  <ul className="flex flex-col divide-y divide-border">
+                    {group.bests.map((best) => (
+                      <li
+                        key={`${best.stroke}-${best.distanceM}`}
+                        className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2 first:pt-0 last:pb-0"
+                      >
+                        <span>
+                          {best.distanceM} m {t(`progress.strokes.${best.stroke}`)}
+                        </span>
+                        <span className="flex flex-col items-end gap-0.5">
+                          <span className="flex items-baseline gap-3">
+                            <span className="font-mono text-lg">{formatTime(best.timeMs)}</span>
+                            {best.official && (
+                              <span className="rounded border border-primary/40 px-2 text-sm text-primary">
+                                {t('progress.official')}
+                              </span>
+                            )}
+                            <span className="text-sm text-foreground-muted">
+                              {formatDate(best.swumOn)}
+                            </span>
+                          </span>
+                          {/* The best at an official meet, where it differs — what qualifying reads. */}
+                          {best.officialBest !== null && (
+                            <span className="text-sm text-foreground-muted">
+                              {t('progress.officialBest', {
+                                time: formatTime(best.officialBest.timeMs),
+                                meet: best.officialBest.meetName,
+                                date: formatDate(best.officialBest.swumOn),
+                              })}
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </>
           ),
         },
         {
@@ -232,9 +285,20 @@ export default async function ProgressPage({
                             {t('progress.personalBest')}
                           </span>
                         )}
+                        {record.official && (
+                          <span className="ml-2 rounded border border-primary/40 px-2 text-sm text-primary">
+                            {t('progress.official')}
+                          </span>
+                        )}
                       </span>
                       <span className="text-sm text-foreground-muted">
-                        {[formatDate(new Date(record.swumOn)), record.recordedByName, record.note]
+                        {[
+                          formatDate(record.swumOn),
+                          t(`progress.course.${record.course ?? 'none'}`),
+                          record.meetName,
+                          record.recordedByName,
+                          record.note,
+                        ]
                           .filter(Boolean)
                           .join(' · ')}
                       </span>
@@ -271,6 +335,9 @@ export default async function ProgressPage({
                   organizationId={loaded.organizationId}
                   studentId={id}
                   strokes={loaded.strokes}
+                  courses={loaded.courses}
+                  defaultCourse={loaded.defaultCourse}
+                  meets={loaded.meets}
                   today={today}
                 />
               </section>

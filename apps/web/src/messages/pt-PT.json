@@ -1783,7 +1783,8 @@
         "isSocio": "É sócio",
         "socioNumber": "Número de sócio",
         "gender": "Género",
-        "isPaid": "Pago"
+        "isPaid": "Pago",
+        "federationLicence": "Licença FPN"
       },
       "sheetLabel": "Folha a importar",
       "sheetOption": "{name} — {rows} linhas",
@@ -1979,7 +1980,13 @@
     "retention": {
       "pending": "Este aluno saiu a {left} e não tem inscrição ativa. Pela política de retenção, os dados de saúde são apagados a {health} e a identidade é anonimizada a {identity}. Uma nova inscrição antes disso cancela a contagem.",
       "healthErased": "Este aluno saiu a {left}. Os dados de saúde foram apagados a {erased}, pela política de retenção, e a identidade é anonimizada a {identity}."
-    }
+    },
+    "federationLicence": "Licença FPN",
+    "federationLicenceHint": "O número de licença da Federação Portuguesa de Natação. Opcional.",
+    "licenceTaken": "Esta licença já pertence a outro aluno do clube.",
+    "licenceMissing": "Está num nível de competição ({level}) e não tem licença FPN registada. Pode continuar inscrito e com presenças; sem licença não pode competir.",
+    "levelCompetitive": "Competição",
+    "levelCompetitiveHint": "Os alunos deste nível competem (pré-competição, competição). Avisa quando falta a licença FPN."
   },
   "advancement": {
     "title": "Progressões",
@@ -2039,7 +2046,22 @@
     "favouriteFailed": "Não foi possível guardar o estilo preferido.",
     "chartTitle": "{distance} m {stroke} ao longo do tempo",
     "chartLabel": "Evolução dos tempos. Mais alto é mais rápido.",
-    "chartHint": "Mais alto é mais rápido: a linha sobe quando o aluno melhora."
+    "chartHint": "Mais alto é mais rápido: a linha sobe quando o aluno melhora.",
+    "course": {
+      "scm": "Piscina de 25 m",
+      "lcm": "Piscina de 50 m",
+      "none": "Piscina não indicada"
+    },
+    "courseLabel": "Piscina",
+    "courseNoneHint": "Tempos registados sem dizer o comprimento da piscina. Não contam como recorde de 25 m nem de 50 m.",
+    "bestsIn": "Recordes — {course}",
+    "official": "Oficial",
+    "officialBest": "Melhor em prova oficial: {time} ({meet}, {date})",
+    "meet": "Prova",
+    "meetNone": "Treino (sem prova)",
+    "meetNew": "Outra prova…",
+    "meetName": "Nome da prova",
+    "meetOfficial": "Prova oficial"
   },
   "sensitive": {
     "title": "Saúde e consentimentos",

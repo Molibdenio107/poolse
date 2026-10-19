@@ -41,6 +41,7 @@ function studentBody(formData: FormData): Record<string, unknown> {
     contactEmail: text('contactEmail'),
     contactPhone: text('contactPhone'),
     taxNumber: text('taxNumber'),
+    federationLicence: text('federationLicence'),
     notes: text('notes'),
   };
 }
@@ -198,6 +199,7 @@ function levelBody(formData: FormData): {
   maxAgeMonths: number | null;
   admitsMale: boolean;
   admitsFemale: boolean;
+  competitive: boolean;
   colour: string;
 } {
   return {
@@ -211,6 +213,8 @@ function levelBody(formData: FormData): {
     // API and by the table, which is where that rule belongs.
     admitsMale: formData.get('admitsMale') === 'on',
     admitsFemale: formData.get('admitsFemale') === 'on',
+    // Competição — POOLSE-81.
+    competitive: formData.get('competitive') === 'on',
   };
 }
 

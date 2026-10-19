@@ -1347,6 +1347,8 @@ export interface StudentLevel {
    */
   admitsMale: boolean;
   admitsFemale: boolean;
+  /** Its swimmers compete — POOLSE-81. */
+  competitive: boolean;
   studentCount: number;
 }
 
@@ -1435,6 +1437,10 @@ export interface Student {
    * against the child's number. Unique among the club's living students.
    */
   taxNumber: string | null;
+  /** The FPN licence — POOLSE-81. */
+  federationLicence: string | null;
+  /** In a competitive level with no licence: a warning, never a gate. */
+  licenceMissing: boolean;
   notes: string | null;
   /** Where they stand on paying, for the register's column. Decided by the API. */
   paymentState: 'none' | 'paid' | 'due' | 'overdue';
@@ -2054,23 +2060,43 @@ export interface SensitiveRecord {
 
 export type Stroke = 'freestyle' | 'backstroke' | 'breaststroke' | 'butterfly' | 'medley';
 
+/** 25 m (`scm`) or 50 m (`lcm`) — POOLSE-81. Null is "piscina não indicada". */
+export type Course = 'scm' | 'lcm';
+
 export interface SwimRecord {
   id: string;
   stroke: Stroke;
   distanceM: number;
+  course: Course | null;
   /** Integer milliseconds. Format with formatTime from components/progress-chart. */
   timeMs: number;
   swumOn: string;
   note: string | null;
   recordedByName: string | null;
+  meetId: string | null;
+  meetName: string | null;
+  /** Swum at an official meet. */
+  official: boolean;
+  /** Best over this stroke, distance and course. */
   isPersonalBest: boolean;
 }
 
 export interface PersonalBest {
   stroke: Stroke;
   distanceM: number;
+  course: Course | null;
   timeMs: number;
   swumOn: string;
+  official: boolean;
+  /** The best at an official meet, where that is a different swim. */
+  officialBest: { timeMs: number; swumOn: string; meetName: string } | null;
+}
+
+export interface MeetChoice {
+  id: string;
+  name: string;
+  startsOn: string;
+  official: boolean;
 }
 
 export interface Progression {
@@ -2082,6 +2108,11 @@ export interface Progression {
   /** Declared by a person, never derived. */
   favouriteStroke: Stroke | null;
   strokes: Stroke[];
+  courses: Course[];
+  /** The turma's pool length, as the time form's default. */
+  defaultCourse: Course | null;
+  /** Every live meet, for the time form's picker. */
+  meets: MeetChoice[];
   canRecord: boolean;
   /** Withdrawing a time is owner/admin since round 5's G1 — separate from recording one. */
   canArchive: boolean;

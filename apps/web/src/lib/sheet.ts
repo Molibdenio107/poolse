@@ -45,6 +45,8 @@ export const IMPORT_FIELDS = [
   'guardianTaxNumber',
   'isSocio',
   'socioNumber',
+  // The FPN licence — POOLSE-81, Excel parity with the student form.
+  'federationLicence',
   'gender',
   'isPaid',
 ] as const;
@@ -90,6 +92,7 @@ export const EMPTY_MAPPING: Mapping = {
   guardianTaxNumber: null,
   isSocio: null,
   socioNumber: null,
+  federationLicence: null,
   gender: null,
   isPaid: null,
 };
@@ -250,6 +253,11 @@ const SYNONYMS: [ImportField, string[]][] = [
   ['gender', ['genero', 'sexo', 'm f', 'gender', 'sex']],
   ['isPaid', ['pago', 'pagou', 'esta pago', 'mensalidade paga', 'paid', 'is paid']],
   ['socioNumber', ['numero de socio', 'n socio', 'numero socio', 'membership number']],
+  // Before anything a bare "licença" might be claimed by; the FPN's own word first.
+  [
+    'federationLicence',
+    ['licenca fpn', 'licenca', 'n licenca', 'numero de licenca', 'licenca federativa', 'fpn', 'federation licence', 'licence'],
+  ],
   ['isSocio', ['socio', 'e socio', 'associado', 'member', 'is member']],
   [
     'taxNumber',
@@ -759,6 +767,7 @@ export const EXPORT_FIELDS: ImportField[] = [
   'guardianTaxNumber',
   'isSocio',
   'socioNumber',
+  'federationLicence',
   'gender',
   'isPaid',
 ];

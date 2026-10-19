@@ -20,6 +20,37 @@ import { Dialog } from '@/components/ui/dialog';
 const INITIAL: FormState = { ok: false };
 
 /**
+ * Competição — POOLSE-81. Marks the levels whose swimmers compete
+ * (pré-competição, competição): the same ladder, so advancement proposes
+ * swimmers into them like any other level. It drives the missing-licence
+ * warning; it is never one of the FPN's age groups.
+ */
+function CompetitiveBox({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <label className="flex items-start gap-2 text-sm">
+      <input
+        type="checkbox"
+        name="competitive"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 size-4"
+      />
+      <span>
+        <span className="font-medium">{t('students.levelCompetitive')}</span>
+        <span className="block text-foreground-muted">{t('students.levelCompetitiveHint')}</span>
+      </span>
+    </label>
+  );
+}
+
+/**
  * Who the escalão admits — round 5.
  *
  * Two checkboxes rather than a picker, because "both" is the commonest answer
@@ -125,6 +156,7 @@ export function CreateLevelForm({
   // Stays on screen for the next level, so the name clears after one is added.
   const [nameField, setNameField] = useSeeded<string>('', useSuccessKey(state));
   const [admits, setAdmits] = useState({ admitsMale: true, admitsFemale: true });
+  const [competitive, setCompetitive] = useSeeded<boolean>(false, useSuccessKey(state));
   const [range, setRange] = useState<{
     minAgeMonths: number | null;
     maxAgeMonths: number | null;
@@ -158,6 +190,8 @@ export function CreateLevelForm({
       <AgeInputs onRangeChange={setRange} />
 
       <SexBoxes {...admits} onChange={setAdmits} />
+
+      <CompetitiveBox checked={competitive} onChange={setCompetitive} />
 
       {/*
         The level's colour on the grid — round 6.
@@ -377,6 +411,7 @@ export function EditLevelForm({
     admitsMale: level.admitsMale,
     admitsFemale: level.admitsFemale,
   });
+  const [competitive, setCompetitive] = useSeeded<boolean>(level.competitive);
   const [range, setRange] = useState({
     minAgeMonths: level.minAgeMonths,
     maxAgeMonths: level.maxAgeMonths,
@@ -474,6 +509,8 @@ export function EditLevelForm({
         />
 
         <SexBoxes {...admits} onChange={setAdmits} />
+
+        <CompetitiveBox checked={competitive} onChange={setCompetitive} />
 
         {/* Seeded from what the level already wears — round 6. */}
         <ColourSwatches

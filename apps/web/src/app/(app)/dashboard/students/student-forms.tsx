@@ -44,6 +44,7 @@ export interface StudentFormValues {
   contactEmail?: string | null;
   contactPhone?: string | null;
   taxNumber?: string | null;
+  federationLicence?: string | null;
   notes?: string | null;
 }
 
@@ -210,6 +211,17 @@ export function StudentForm({
           hint={t('students.taxNumberHint')}
           className="max-w-none"
           {...fieldError('taxNumber')}
+        />
+
+        {/* POOLSE-81: optional; warned about, never required, in a competitive level. */}
+        <TextField
+          name="federationLicence"
+          label={t('students.federationLicence')}
+          initial={student?.federationLicence ?? ''}
+          maxLength={40}
+          hint={t('students.federationLicenceHint')}
+          className="max-w-none"
+          {...fieldError('federationLicence')}
         />
       </div>
 

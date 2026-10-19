@@ -3787,3 +3787,24 @@ Seven date defaults move from `current_date` to `club_today()` (`enrollment.join
 `invoice_chase.chased_on`, `lost_and_found_item.found_on`, `invoice.issued_on`).
 `organization.stripe_event_at` is the creation time of the last Stripe event applied, so an
 out-of-order delivery cannot undo a later one; `poolse_platform` may update it.
+
+### The competition pathway — POOLSE-81 slice 1, 19 October 2026
+
+- **`student_record.course`** (`swim_course`: `scm` 25 m, `lcm` 50 m) — the pool a time was swum
+  in. Null is *piscina não indicada*: existing rows stay null and nothing guesses. Bests are per
+  stroke, distance **and** course (null its own group, never folded in); `student_record_best_idx`
+  carries the column.
+- **`swim_meet`** — a meet: name, city, course, first and last day, `official`, and — when it came
+  from a results file — `source_file_name`, `imported_by_membership_id`, `imported_at` (null for a
+  meet named by hand on the time form, which records `created_by_membership_id`). Unique per club
+  on `lower(btrim(name))` + `starts_on` among live rows. Tenant-scoped, RLS, soft-deleted.
+- **`student_record.meet_id`** names the meet (composite FK). A result counts as **official** when
+  its meet is. `lenex_event_number` + `lenex_round` are the re-import key, unique per meet and
+  student among live rows (a heat and a final are two results).
+- **`student_level.competitive`** — the level's swimmers compete. The pathway is the existing
+  ladder; the FPN's age groups are never `student_level` rows.
+- **`student.federation_licence`** — the FPN licence, text, unique per club among live students.
+  Identity: a trigger clears it when `anonymised_at` is set (retention), rather than a copy of
+  `apply_retention()`.
+- **`organization.federation_club_code`** — this club's code in LENEX files, remembered by the
+  import (slice 2).

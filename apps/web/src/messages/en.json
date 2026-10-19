@@ -1783,7 +1783,8 @@
         "isSocio": "Is a member",
         "socioNumber": "Membership number",
         "gender": "Gender",
-        "isPaid": "Paid"
+        "isPaid": "Paid",
+        "federationLicence": "FPN licence"
       },
       "sheetLabel": "Sheet to import",
       "sheetOption": "{name} — {rows} rows",
@@ -1979,7 +1980,13 @@
     "retention": {
       "pending": "This student left on {left} and has no active enrolment. Under the retention policy, their health data is erased on {health} and their identity anonymised on {identity}. A new enrolment before then stops the count.",
       "healthErased": "This student left on {left}. Their health data was erased on {erased} under the retention policy, and their identity is anonymised on {identity}."
-    }
+    },
+    "federationLicence": "FPN licence",
+    "federationLicenceHint": "The Portuguese Swimming Federation licence number. Optional.",
+    "licenceTaken": "Another student of the club already holds this licence.",
+    "licenceMissing": "In a competition level ({level}) with no FPN licence on record. They stay enrolled and marked as before; without a licence they cannot compete.",
+    "levelCompetitive": "Competition",
+    "levelCompetitiveHint": "Swimmers in this level compete (pre-competition, competition). Warns when the FPN licence is missing."
   },
   "advancement": {
     "title": "Advancement",
@@ -2039,7 +2046,22 @@
     "favouriteFailed": "Could not save the favourite stroke.",
     "chartTitle": "{distance} m {stroke} over time",
     "chartLabel": "Times over the season. Higher is faster.",
-    "chartHint": "Higher is faster: the line rises as the swimmer improves."
+    "chartHint": "Higher is faster: the line rises as the swimmer improves.",
+    "course": {
+      "scm": "25 m pool",
+      "lcm": "50 m pool",
+      "none": "Pool not stated"
+    },
+    "courseLabel": "Pool",
+    "courseNoneHint": "Times recorded without the pool length. They count as neither a 25 m nor a 50 m best.",
+    "bestsIn": "Bests — {course}",
+    "official": "Official",
+    "officialBest": "Best at an official meet: {time} ({meet}, {date})",
+    "meet": "Meet",
+    "meetNone": "Training (no meet)",
+    "meetNew": "Another meet…",
+    "meetName": "Meet name",
+    "meetOfficial": "Official meet"
   },
   "sensitive": {
     "title": "Health and consent",

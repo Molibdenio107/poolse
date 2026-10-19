@@ -33,6 +33,14 @@ export async function addRecordAction(
         hundredths: String(formData.get('hundredths') ?? '').trim(),
         swumOn: String(formData.get('swumOn') ?? '').trim(),
         note: String(formData.get('note') ?? '').trim(),
+        // POOLSE-81: the pool, and the meet — an existing one, or one named here.
+        course: String(formData.get('course') ?? '').trim(),
+        ...(String(formData.get('meetId') ?? '') === 'new'
+          ? {
+              meetName: String(formData.get('meetName') ?? '').trim(),
+              meetOfficial: formData.get('meetOfficial') === 'true',
+            }
+          : { meetId: String(formData.get('meetId') ?? '').trim() }),
       },
       { organizationId },
     );

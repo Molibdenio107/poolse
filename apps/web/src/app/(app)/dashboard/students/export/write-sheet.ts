@@ -59,6 +59,7 @@ export function rowFor(student: Student): string[] {
     guardianTaxNumber: guardian?.taxNumber ?? '',
     isSocio: student.isSocio ? 'Sim' : '',
     socioNumber: student.socioNumber ?? '',
+    federationLicence: student.federationLicence ?? '',
     /*
      * Género and payment — round 5.
      *

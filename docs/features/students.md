@@ -165,6 +165,26 @@ Senior levels sit in the **same ladder** as everything else, ordered by the same
 and bounded by the same age range. Not a parallel programme: POOLSE-19's "next level" logic
 walks that one ladder, and a second list would need a branch in it.
 
+## The competition pathway — POOLSE-81
+
+**A level can be marked *Competição*** on the Escalões page (pré-competição, competição). It is the
+same ladder: POOLSE-19's advancement proposes swimmers into it like any level. A student in a
+competitive level with no **Licença FPN** gets a warning on their record — never a gate; they are
+enrolled and marked as before.
+
+**The FPN licence** is on the student form and its General tab, optional, unique per club (a second
+student with the same number is refused with a sentence). It travels in the student import and
+export (*Licença FPN*); an import fills it only where nobody else in the club holds it. It is
+identity: retention clears it, and the activity log names it without its value.
+
+**Every time states its pool** — *Piscina de 25 m*, *de 50 m*, or *não indicada*. The time form
+starts on the length of the turma's pool. Bests are shown one table per pool; a time with no pool is
+its own table and counts as neither. A time may name the **meet** it was swum at — an existing one,
+or a new one named on the form and marked *Prova oficial* (Rui, 19-10-2026). Where the best is not
+from an official meet, the best at an official meet is shown beside it, because that is what
+qualifying reads. Owner, admin and instructor record; a family reads its own child's times in
+Progressão and nothing else.
+
 ## Not built yet
 
 - **AC7 — communications routed to the adult student rather than a guardian.** There is

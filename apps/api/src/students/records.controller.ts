@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Put,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireActsForStudent } from './student-access.js';
@@ -14,9 +15,13 @@ import { canArchive, hasRole, requireCanArchive, requireRole } from '../tenant/r
 import {
   addRecord,
   archiveRecord,
+  COURSES,
+  NoSuchMeetError,
   progressionFor,
   setFavouriteStroke,
   STROKES,
+  type Course,
+  type NewRecord,
   type Progression,
   type Stroke,
 } from './records.repository.js';
@@ -24,6 +29,7 @@ import {
 interface ProgressionResponse extends Progression {
   organizationId: string;
   strokes: Stroke[];
+  courses: Course[];
   canRecord: boolean;
   /** Withdrawing a time, which since G1 is a different permission from recording one. */
   canArchive: boolean;
@@ -58,6 +64,7 @@ export class RecordsController {
       ...progression,
       organizationId,
       strokes: STROKES,
+      courses: COURSES,
       canRecord: hasRole('owner', 'admin', 'instructor'),
       /*
        * Separate from `canRecord` since round 5's G1 — recording a time and
@@ -77,13 +84,26 @@ export class RecordsController {
     requireRole('owner', 'admin', 'instructor');
     const { organizationId } = currentTenant();
 
-    const id = await addRecord(organizationId, studentId, {
-      stroke: parseStroke(body['stroke']),
-      distanceM: parseDistance(body['distanceM']),
-      timeMs: parseTime(body),
-      swumOn: parseDate(body['swumOn']),
-      note: parseNote(body['note']),
-    });
+    let id: string | null;
+    try {
+      id = await addRecord(organizationId, studentId, {
+        stroke: parseStroke(body['stroke']),
+        distanceM: parseDistance(body['distanceM']),
+        course: parseCourse(body['course']),
+        timeMs: parseTime(body),
+        swumOn: parseDate(body['swumOn']),
+        note: parseNote(body['note']),
+        meet: parseMeet(body),
+      });
+    } catch (error) {
+      if (error instanceof NoSuchMeetError) {
+        throw new UnprocessableEntityException({
+          code: 'no_such_meet',
+          message: "That meet is not this club's",
+        });
+      }
+      throw error;
+    }
 
     if (id === null) throw new NotFoundException('No such student');
     return { id };
@@ -154,6 +174,38 @@ function parseStroke(value: unknown): Stroke {
     throw new BadRequestException(`stroke must be one of: ${STROKES.join(', ')}`);
   }
   return value as Stroke;
+}
+
+/**
+ * The pool length — POOLSE-81. Empty is "piscina não indicada", which is a
+ * legitimate answer (nobody guesses it); anything else must be a course.
+ */
+function parseCourse(value: unknown): Course | null {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (raw === '') return null;
+  if (!COURSES.includes(raw as Course)) {
+    throw new BadRequestException(`course must be one of: ${COURSES.join(', ')}`);
+  }
+  return raw as Course;
+}
+
+/**
+ * The meet a typed time was swum at: `meetId` for an existing one, or
+ * `meetName` (with `meetOfficial`) to name one here — Rui, 19-10-2026. Neither
+ * is a training time.
+ */
+function parseMeet(body: Record<string, unknown>): NewRecord['meet'] {
+  const id = typeof body['meetId'] === 'string' ? body['meetId'].trim() : '';
+  if (id !== '') {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new BadRequestException('meetId must be an id');
+    }
+    return { id };
+  }
+  const name = typeof body['meetName'] === 'string' ? body['meetName'].trim() : '';
+  if (name === '') return null;
+  if (name.length > 200) throw new BadRequestException('meetName may be at most 200 characters');
+  return { name, official: body['meetOfficial'] === true || body['meetOfficial'] === 'true' };
 }
 
 function parseDistance(value: unknown): number {

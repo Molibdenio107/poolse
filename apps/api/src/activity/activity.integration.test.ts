@@ -59,6 +59,7 @@ function form(levelId: string | null, phone = '912345678'): StudentInput {
     contactEmail: null,
     contactPhone: phone,
     taxNumber: null,
+  federationLicence: null,
     notes: null,
     gender: null,
     guardians: [],

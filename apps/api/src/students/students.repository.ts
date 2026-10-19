@@ -21,6 +21,11 @@ export interface StudentLevel {
   id: string;
   name: string;
   sortOrder: number;
+  /**
+   * Its swimmers compete — POOLSE-81 (pré-competição, competição). The same
+   * ladder, so advancement proposes swimmers into it as into any level.
+   */
+  competitive: boolean;
   /** The level's own colour, a `class_colour` token. Null means it has none. */
   colour: string | null;
   /**
@@ -167,6 +172,13 @@ export interface Student {
    * guardian's number typed into a child's row is caught when it is typed.
    */
   taxNumber: string | null;
+  /** The FPN licence number — POOLSE-81. Optional; the FPN's own format. */
+  federationLicence: string | null;
+  /**
+   * In a competitive level with no licence — POOLSE-81. A warning on the page,
+   * never a gate: the student is enrolled and marked as before.
+   */
+  licenceMissing: boolean;
   /**
    * Where this student stands on paying, for the register's own column.
    *
@@ -227,6 +239,15 @@ export class DuplicateNameError extends Error {}
  * guardian's number typed into the child's row.
  */
 export class DuplicateTaxNumberError extends Error {}
+
+/** Two living students of this club given the same FPN licence — POOLSE-81. */
+export class DuplicateLicenceError extends Error {}
+
+export function isDuplicateLicence(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  const constraint = (error as { constraint?: string } | null)?.constraint;
+  return code === '23505' && constraint === 'student_federation_licence_uq';
+}
 
 /**
  * The consent gate, written once and used by every query that reads a student.
@@ -313,6 +334,7 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       max_age_months: number | null;
       admits_male: boolean;
       admits_female: boolean;
+      competitive: boolean;
       colour: string | null;
       student_count: string;
     }>(`
@@ -323,6 +345,7 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
              l.max_age_months,
              l.admits_male,
              l.admits_female,
+             l.competitive,
              (
                SELECT count(*)
                  FROM student s
@@ -345,6 +368,7 @@ export async function listLevels(organizationId: string): Promise<StudentLevel[]
       maxAgeMonths: row.max_age_months,
       admitsMale: row.admits_male,
       admitsFemale: row.admits_female,
+      competitive: row.competitive,
       // count() comes back as a string from node-pg; bigint does not fit a JS
       // number in general, and the driver refuses to guess.
       studentCount: Number(row.student_count),
@@ -361,6 +385,8 @@ export interface AgeRange {
 export interface LevelShape extends AgeRange {
   admitsMale: boolean;
   admitsFemale: boolean;
+  /** POOLSE-81. Off unless asked for. */
+  competitive: boolean;
 }
 
 const MIXED: LevelShape = {
@@ -368,6 +394,7 @@ const MIXED: LevelShape = {
   maxAgeMonths: null,
   admitsMale: true,
   admitsFemale: true,
+  competitive: false,
 };
 
 /** Raised when another escalão already covers exactly these ages for this sex. */
@@ -454,11 +481,11 @@ export async function createLevel(
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO student_level (organization_id, name, sort_order,
                                     min_age_months, max_age_months,
-                                    admits_male, admits_female, colour)
+                                    admits_male, admits_female, colour, competitive)
          VALUES (
            $1, $2,
            coalesce((SELECT max(sort_order) + 1 FROM student_level WHERE archived_at IS NULL), 0),
-           $3, $4, $5, $6, $7
+           $3, $4, $5, $6, $7, $8
          )
          RETURNING id`,
         [
@@ -469,6 +496,7 @@ export async function createLevel(
           range.admitsMale,
           range.admitsFemale,
           colour,
+          range.competitive,
         ],
       );
 
@@ -513,7 +541,7 @@ export async function renameLevel(
       const { rows } = await tx.query<{ id: string }>(
         `UPDATE student_level
             SET name = $2, min_age_months = $3, max_age_months = $4,
-                admits_male = $5, admits_female = $6, colour = $7
+                admits_male = $5, admits_female = $6, colour = $7, competitive = $8
           WHERE id = $1 AND archived_at IS NULL
         RETURNING id`,
         [
@@ -524,6 +552,7 @@ export async function renameLevel(
           range.admitsMale,
           range.admitsFemale,
           colour,
+          range.competitive,
         ],
       );
       if (!rows[0]) return false;
@@ -759,6 +788,8 @@ export async function listStudents(
       payment_state: 'none' | 'paid' | 'due' | 'overdue';
       is_socio: boolean;
       socio_number: string | null;
+      federation_licence: string | null;
+      level_competitive: boolean;
       notes: string | null;
       guardians: Guardian[];
       photo_storage_key: string | null;
@@ -783,6 +814,7 @@ export async function listStudents(
              s.contact_email::text AS contact_email,
              s.contact_phone,
              s.tax_number, s.is_socio, s.socio_number,
+             s.federation_licence, coalesce(l.competitive, false) AS level_competitive,
              ${PAYMENT_STATE} AS payment_state,
              s.notes,
              ${GUARDIANS} AS guardians,
@@ -891,6 +923,7 @@ export async function exportStudents(
              s.level_id, l.name AS level_name, s.gender,
              s.contact_email::text AS contact_email, s.contact_phone, s.tax_number,
              s.is_socio, s.socio_number, s.notes,
+             s.federation_licence, coalesce(l.competitive, false) AS level_competitive,
              ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
@@ -948,6 +981,7 @@ export async function findStudent(
              s.level_id, l.name AS level_name, s.gender,
              s.contact_email::text AS contact_email, s.contact_phone, s.tax_number,
              s.is_socio, s.socio_number, s.notes,
+             s.federation_licence, coalesce(l.competitive, false) AS level_competitive,
              ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
              ${PHOTO_KEY} AS photo_storage_key,
@@ -977,6 +1011,8 @@ export interface StudentInput {
   contactEmail: string | null;
   contactPhone: string | null;
   taxNumber: string | null;
+  /** The FPN licence — POOLSE-81. Optional, unique per club among live students. */
+  federationLicence: string | null;
   notes: string | null;
   /** Masculino or feminino. Null is "nobody has recorded it", and is normal. */
   gender: 'male' | 'female' | null;
@@ -1012,6 +1048,7 @@ export async function createStudent(
     return await withOrg(organizationId, (tx) => insertStudent(tx, organizationId, input));
   } catch (error) {
     if (isDuplicateTaxNumber(error)) throw new DuplicateTaxNumberError();
+    if (isDuplicateLicence(error)) throw new DuplicateLicenceError();
     throw error;
   }
 }
@@ -1037,9 +1074,9 @@ export async function insertStudent(
     const { rows } = await tx.query<{ id: string }>(
       `INSERT INTO student (
          organization_id, first_name, last_name, birth_date, level_id,
-         contact_email, contact_phone, tax_number, notes, gender
+         contact_email, contact_phone, tax_number, notes, gender, federation_licence
        )
-       VALUES ($1, $2, $3, $4::date, $5, $6::citext, $7, $8, $9, $10::student_gender)
+       VALUES ($1, $2, $3, $4::date, $5, $6::citext, $7, $8, $9, $10::student_gender, $11)
        RETURNING id`,
       [
         organizationId,
@@ -1052,6 +1089,7 @@ export async function insertStudent(
         input.taxNumber,
         input.notes,
         input.gender,
+        input.federationLicence,
       ],
     );
 
@@ -1099,6 +1137,7 @@ export interface StudentBlanks {
   contactPhone: string | null;
   taxNumber: string | null;
   notes: string | null;
+  federationLicence: string | null;
 }
 
 export async function fillStudentBlanks(
@@ -1116,7 +1155,8 @@ export async function fillStudentBlanks(
             contact_email = coalesce(contact_email, nullif(btrim($4), '')::citext),
             contact_phone = coalesce(contact_phone, nullif(btrim($5), '')),
             tax_number    = coalesce(tax_number, nullif(btrim($6), '')),
-            notes         = coalesce(notes, nullif(btrim($7), ''))
+            notes         = coalesce(notes, nullif(btrim($7), '')),
+            federation_licence = coalesce(federation_licence, nullif(btrim($8), ''))
       WHERE id = $1 AND archived_at IS NULL
         /*
          * Nothing to do is not a write. Without this an import of an unchanged
@@ -1130,6 +1170,7 @@ export async function fillStudentBlanks(
           OR (contact_phone IS NULL AND nullif(btrim($5), '') IS NOT NULL)
           OR (tax_number IS NULL AND nullif(btrim($6), '') IS NOT NULL)
           OR (notes IS NULL AND nullif(btrim($7), '') IS NOT NULL)
+          OR (federation_licence IS NULL AND nullif(btrim($8), '') IS NOT NULL)
         )
     RETURNING id, level_id`,
     [
@@ -1140,6 +1181,7 @@ export async function fillStudentBlanks(
       blanks.contactPhone,
       blanks.taxNumber,
       blanks.notes,
+      blanks.federationLicence,
     ],
   );
 
@@ -1173,6 +1215,7 @@ export async function updateStudent(
     return await updateStudentIn(organizationId, studentId, input);
   } catch (error) {
     if (isDuplicateTaxNumber(error)) throw new DuplicateTaxNumberError();
+    if (isDuplicateLicence(error)) throw new DuplicateLicenceError();
     throw error;
   }
 }
@@ -1193,7 +1236,7 @@ async function updateStudentIn(
       `UPDATE student
           SET first_name = $2, last_name = $3, birth_date = $4::date, level_id = $5,
               contact_email = $6::citext, contact_phone = $7, tax_number = $8, notes = $9,
-              gender = $10::student_gender
+              gender = $10::student_gender, federation_licence = $11
         WHERE id = $1`,
       [
         studentId,
@@ -1206,6 +1249,7 @@ async function updateStudentIn(
         input.taxNumber,
         input.notes,
         input.gender,
+        input.federationLicence,
       ],
     );
 
@@ -1242,6 +1286,8 @@ export const STUDENT_CHANGE = {
     'taxNumber',
     'notes',
     'gender',
+    // Identity: named when it moves, its value never copied into the log.
+    'federationLicence',
   ],
 } as const satisfies ChangeSpec<StudentField>;
 
@@ -1254,7 +1300,8 @@ type StudentField =
   | 'contactPhone'
   | 'taxNumber'
   | 'notes'
-  | 'gender';
+  | 'gender'
+  | 'federationLicence';
 
 function fieldsOf(input: Omit<StudentInput, 'guardians'>): Record<StudentField, unknown> {
   return {
@@ -1267,6 +1314,7 @@ function fieldsOf(input: Omit<StudentInput, 'guardians'>): Record<StudentField, 
     taxNumber: input.taxNumber,
     notes: input.notes,
     gender: input.gender,
+    federationLicence: input.federationLicence,
   };
 }
 
@@ -1279,7 +1327,8 @@ async function lockStudentFields(
     `SELECT first_name AS "firstName", last_name AS "lastName",
             birth_date::text AS "birthDate", level_id AS "levelId",
             contact_email::text AS "contactEmail", contact_phone AS "contactPhone",
-            tax_number AS "taxNumber", notes, gender::text AS gender
+            tax_number AS "taxNumber", notes, gender::text AS gender,
+            federation_licence AS "federationLicence"
        FROM student
       WHERE id = $1 AND archived_at IS NULL
         FOR UPDATE`,
@@ -1383,6 +1432,8 @@ function toStudent(row: {
   payment_state: 'none' | 'paid' | 'due' | 'overdue';
   is_socio: boolean;
   socio_number: string | null;
+  federation_licence: string | null;
+  level_competitive: boolean;
   notes: string | null;
   guardians: Guardian[];
   photo_storage_key: string | null;
@@ -1425,6 +1476,8 @@ function toStudent(row: {
     ),
     contactPhone: row.contact_phone,
     taxNumber: row.tax_number,
+    federationLicence: row.federation_licence,
+    licenceMissing: row.level_competitive && row.federation_licence === null,
     paymentState: row.payment_state,
     isSocio: row.is_socio,
     socioNumber: row.socio_number,

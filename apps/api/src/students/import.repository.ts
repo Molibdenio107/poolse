@@ -103,11 +103,13 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
     contact_email: string | null;
     contact_phone: string | null;
     notes: string | null;
+    federation_licence: string | null;
   }>(
     `SELECT s.id, s.first_name, s.last_name,
             to_char(s.birth_date, 'YYYY-MM-DD') AS birth_date,
             s.tax_number, s.level_id,
             s.contact_email::text AS contact_email, s.contact_phone, s.notes,
+            s.federation_licence,
             ${displayName('s')} AS display_name
        FROM student s
       WHERE s.archived_at IS NULL`,
@@ -125,6 +127,7 @@ async function existingStudents(tx: Tx): Promise<ExistingStudent[]> {
     contactEmail: row.contact_email,
     contactPhone: row.contact_phone,
     notes: row.notes,
+    federationLicence: row.federation_licence,
   }));
 }
 
@@ -242,7 +245,23 @@ export async function runImport(
       order += 1;
     }
 
+    /*
+     * A licence goes on a new student only while nobody holds it — POOLSE-81.
+     * The unique index would otherwise refuse the commit at the last moment and
+     * take the whole file with it; the student is still created, without one.
+     */
+    const { rows: held } = await tx.query<{ licence: string }>(
+      `SELECT federation_licence AS licence FROM student
+        WHERE archived_at IS NULL AND federation_licence IS NOT NULL`,
+    );
+    const takenLicences = new Set(held.map((row) => row.licence));
+
     for (const row of toCreate) {
+      const licence =
+        row.federationLicence !== null && !takenLicences.has(row.federationLicence)
+          ? row.federationLicence
+          : null;
+      if (licence !== null) takenLicences.add(licence);
       const levelId =
         row.levelId ??
         (row.levelName === null
@@ -257,6 +276,7 @@ export async function runImport(
         contactEmail: row.contactEmail,
         contactPhone: row.contactPhone,
         taxNumber: row.taxNumber,
+        federationLicence: licence,
         notes: row.notes,
         // Whatever the sheet said, and null when it said nothing. Never guessed
         // from a first name — that is a guess with a person's identity in it.
@@ -392,6 +412,8 @@ export async function runImport(
           row.updates.find((update) => update.field === 'contactPhone')?.value ?? null,
         taxNumber: row.updates.find((update) => update.field === 'taxNumber')?.value ?? null,
         notes: row.updates.find((update) => update.field === 'notes')?.value ?? null,
+        federationLicence:
+          row.updates.find((update) => update.field === 'federationLicence')?.value ?? null,
       });
       if (filled) updated += 1;
     }

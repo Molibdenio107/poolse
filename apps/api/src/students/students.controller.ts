@@ -48,6 +48,7 @@ import {
   createStudent,
   DuplicateNameError,
   DuplicateRangeError,
+  DuplicateLicenceError,
   DuplicateTaxNumberError,
   findStudent,
   ageOfMajority,
@@ -487,6 +488,7 @@ export class StudentsController {
       id = await createStudent(organizationId, parseStudent(body, majority));
     } catch (error) {
       if (error instanceof DuplicateTaxNumberError) throw taxNumberConflict();
+      if (error instanceof DuplicateLicenceError) throw licenceConflict();
       throw error;
     }
 
@@ -509,6 +511,7 @@ export class StudentsController {
       outcome = await updateStudent(organizationId, id, parseStudent(body, majority));
     } catch (error) {
       if (error instanceof DuplicateTaxNumberError) throw taxNumberConflict();
+      if (error instanceof DuplicateLicenceError) throw licenceConflict();
       throw error;
     }
 
@@ -604,7 +607,10 @@ function ageRange(body: Record<string, unknown>): LevelShape {
     });
   }
 
-  return { minAgeMonths, maxAgeMonths, admitsMale, admitsFemale };
+  // Competição — POOLSE-81. Absent is off, which every level written before was.
+  const competitive = body['competitive'] === true;
+
+  return { minAgeMonths, maxAgeMonths, admitsMale, admitsFemale, competitive };
 }
 
 @Controller('levels')
@@ -739,6 +745,15 @@ function asHttp(error: unknown): unknown {
  * guardian's number typed into the child's row, and the field error points at
  * exactly the box to look at.
  */
+/** Another live student of this club holds that FPN licence — POOLSE-81. */
+export function licenceConflict(): ConflictException {
+  return new ConflictException({
+    code: 'duplicate_federation_licence',
+    message: 'Another student of this club holds that licence',
+    fields: { federationLicence: 'students.licenceTaken' },
+  });
+}
+
 export function taxNumberConflict(): ConflictException {
   return new ConflictException({
     code: 'duplicate_tax_number',
@@ -846,6 +861,8 @@ export function parseStudent(body: Record<string, unknown>, majority: number): S
      * Empty stays allowed. Most students have none recorded.
      */
     taxNumber: readNif(body['taxNumber'], 'taxNumber'),
+    // The FPN licence — POOLSE-81. Text, because its format is the FPN's.
+    federationLicence: optionalText(body['federationLicence'], 'federationLicence', 40),
     notes: optionalText(body['notes'], 'notes', MAX_NOTES),
     // Masculino or feminino, and anything else is "not recorded" — which is the
     // ordinary state of an imported row and must stay representable.

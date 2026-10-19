@@ -72,6 +72,8 @@ export const IMPORT_FIELDS = [
    */
   'isSocio',
   'socioNumber',
+  /** The FPN licence — POOLSE-81, Excel parity with the student form. */
+  'federationLicence',
   /**
    * Género — round 5.
    *
@@ -167,7 +169,14 @@ export interface ImportProblem {
  * actually do with this feature.
  */
 export interface ImportUpdate {
-  field: 'birthDate' | 'levelId' | 'contactEmail' | 'contactPhone' | 'taxNumber' | 'notes';
+  field:
+    | 'birthDate'
+    | 'levelId'
+    | 'contactEmail'
+    | 'contactPhone'
+    | 'taxNumber'
+    | 'notes'
+    | 'federationLicence';
   /** What would be written. `levelId` carries the level's name, for the screen. */
   value: string;
 }
@@ -221,6 +230,7 @@ export interface ImportRow {
   notes: string | null;
   isSocio: boolean;
   socioNumber: string | null;
+  federationLicence: string | null;
   /** Masculino or feminino. Null is "the sheet did not say", which is normal. */
   gender: 'male' | 'female' | null;
   /** True when the file says this student is paid up. */
@@ -269,6 +279,7 @@ export interface ExistingStudent {
   contactEmail: string | null;
   contactPhone: string | null;
   notes: string | null;
+  federationLicence: string | null;
 }
 
 export interface ImportContext {
@@ -563,6 +574,12 @@ function validateRow(
   const taxNumber = capped(text(raw, 'taxNumber'), 'taxNumber', MAX_NIF, problems);
   const notes = capped((raw.notes ?? '').trim(), 'notes', MAX_NOTES, problems);
   const socioNumber = capped(text(raw, 'socioNumber'), 'socioNumber', MAX_NIF, problems);
+  const federationLicence = capped(
+    text(raw, 'federationLicence'),
+    'federationLicence',
+    MAX_NIF,
+    problems,
+  );
   // A number on its own says they are a member. Writing one and leaving the
   // yes-column blank is how half of these sheets are actually filled in.
   const isSocio = readsAsYes(text(raw, 'isSocio')) || socioNumber !== null;
@@ -688,6 +705,10 @@ function validateRow(
    */
   const updates: ImportUpdate[] = [];
   if (matched !== null) {
+    const existingLicences = context.existing.map((other) => ({
+      id: other.id,
+      licence: other.federationLicence,
+    }));
     const fill = (
       field: ImportUpdate['field'],
       existingValue: string | null,
@@ -702,6 +723,15 @@ function validateRow(
     fill('contactEmail', matched.contactEmail, contactEmail);
     fill('contactPhone', matched.contactPhone, contactPhone);
     fill('notes', matched.notes, notes);
+    // A licence only when nobody else in the club holds it — two swimmers cannot
+    // share one, and a commit refused at the unique index would take the whole
+    // file down (the NIF's reasoning below).
+    if (
+      federationLicence !== null &&
+      !existingLicences.some((other) => other.licence === federationLicence && other.id !== matched!.id)
+    ) {
+      fill('federationLicence', matched.federationLicence, federationLicence);
+    }
     // The level carries its *name*, because the screen shows this and an id
     // means nothing to a person. The repository resolves it back.
     fill('levelId', matched.levelId, levelName === '' ? null : levelName);
@@ -744,6 +774,7 @@ function validateRow(
     notes,
     isSocio,
     socioNumber,
+    federationLicence,
     gender,
     isPaid,
     guardian,

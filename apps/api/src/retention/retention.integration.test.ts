@@ -110,6 +110,8 @@ test('a year after leaving the health data goes, five years after the identity g
     const onlyMother = await guardian(tenant, 'Ana', [longGone]);
     const sharedFather = await guardian(tenant, 'Rui', [longGone, enrolled]);
     const accident = await incident(tenant, longGone);
+    // POOLSE-81: the FPN licence is identity too.
+    await tenant.sql(`UPDATE student SET federation_licence = 'FPN-123' WHERE id = $1`, [longGone]);
 
     const run = await new RetentionService().run(tenant.organizationId);
     assert.equal(run.healthErased, 2, 'Rita and Tiago left more than a year ago');
@@ -119,10 +121,11 @@ test('a year after leaving the health data goes, five years after the identity g
     const rita = await one<Record<string, unknown>>(
       tenant,
       `SELECT first_name, last_name, contact_phone, notes, emergency_contact_name,
-              health_erased_at, anonymised_at
+              health_erased_at, anonymised_at, federation_licence
          FROM student WHERE id = $1`,
       [longGone],
     );
+    assert.equal(rita['federation_licence'], null, 'the FPN licence goes with the identity');
     assert.equal(`${rita['first_name']} ${rita['last_name']}`, 'Aluno anonimizado');
     assert.equal(rita['contact_phone'], null);
     assert.equal(rita['notes'], null);

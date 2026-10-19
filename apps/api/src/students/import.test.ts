@@ -58,6 +58,7 @@ function existing(overrides: Partial<ExistingStudent> & { id: string }): Existin
     contactEmail: null,
     contactPhone: null,
     notes: null,
+    federationLicence: null,
     ...overrides,
   };
 }

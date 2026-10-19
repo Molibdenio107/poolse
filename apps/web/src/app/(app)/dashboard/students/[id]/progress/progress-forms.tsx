@@ -4,7 +4,8 @@ import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { CONTROL_LINE, FIELD_LABEL, SelectField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
-import type { Stroke } from '@/lib/api';
+import type { Course, MeetChoice, Stroke } from '@/lib/api';
+import { formatDate } from '@/lib/date-format';
 import type { FormState } from '../../../actions';
 import {
   addRecordAction,
@@ -31,11 +32,18 @@ export function AddRecordForm({
   organizationId,
   studentId,
   strokes,
+  courses,
+  defaultCourse,
+  meets,
   today,
 }: {
   organizationId: string;
   studentId: string;
   strokes: Stroke[];
+  courses: Course[];
+  /** The turma's pool length, when it is 25 or 50 m — POOLSE-81. */
+  defaultCourse: Course | null;
+  meets: MeetChoice[];
   /** Today, resolved on the server so the default does not depend on the client clock. */
   today: string;
 }): React.ReactElement {
@@ -50,6 +58,13 @@ export function AddRecordForm({
   const [secondsField, setSecondsField] = useSeeded<string>('', added);
   const [hundredthsField, setHundredthsField] = useSeeded<string>('', added);
   const [noteField, setNoteField] = useSeeded<string>('', added);
+  // The pool and the meet — POOLSE-81. Empty course is "não indicada", said
+  // rather than guessed; a meet is optional, and a new one can be named here and
+  // marked official (Rui, 19-10-2026).
+  const [courseField, setCourseField] = useSeeded<string>(defaultCourse ?? '', added);
+  const [meetField, setMeetField] = useSeeded<string>('', added);
+  const [meetNameField, setMeetNameField] = useSeeded<string>('', added);
+  const [meetOfficial, setMeetOfficial] = useSeeded<boolean>(false, added);
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -144,6 +159,26 @@ export function AddRecordForm({
         </fieldset>
 
         <div className="flex flex-col gap-1">
+          <label htmlFor="record-course" className={FIELD_LABEL}>
+            {t('progress.courseLabel')}
+          </label>
+          <select
+            id="record-course"
+            name="course"
+            value={courseField}
+            onChange={(event) => setCourseField(event.target.value)}
+            className={CONTROL_LINE}
+          >
+            <option value="">{t('progress.course.none')}</option>
+            {courses.map((course) => (
+              <option key={course} value={course}>
+                {t(`progress.course.${course}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
           <label htmlFor="record-date" className={FIELD_LABEL}>
             {t('progress.swumOn')}
           </label>
@@ -158,6 +193,59 @@ export function AddRecordForm({
             className={CONTROL_LINE}
           />
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="record-meet" className={FIELD_LABEL}>
+            {t('progress.meet')}
+          </label>
+          <select
+            id="record-meet"
+            name="meetId"
+            value={meetField}
+            onChange={(event) => setMeetField(event.target.value)}
+            className={cn(CONTROL_LINE, 'max-w-80')}
+          >
+            <option value="">{t('progress.meetNone')}</option>
+            {meets.map((meet) => (
+              <option key={meet.id} value={meet.id}>
+                {meet.name} · {formatDate(meet.startsOn)}
+                {meet.official ? ` · ${t('progress.official')}` : ''}
+              </option>
+            ))}
+            <option value="new">{t('progress.meetNew')}</option>
+          </select>
+        </div>
+        {meetField === 'new' && (
+          <>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="record-meet-name" className={FIELD_LABEL}>
+                {t('progress.meetName')}
+              </label>
+              <input
+                id="record-meet-name"
+                name="meetName"
+                value={meetNameField}
+                onChange={(event) => setMeetNameField(event.target.value)}
+                maxLength={200}
+                required
+                className={cn(CONTROL_LINE, 'min-w-56')}
+              />
+            </div>
+            <label className="flex h-control items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="meetOfficial"
+                value="true"
+                checked={meetOfficial}
+                onChange={(event) => setMeetOfficial(event.target.checked)}
+                className="size-4"
+              />
+              {t('progress.meetOfficial')}
+            </label>
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3">

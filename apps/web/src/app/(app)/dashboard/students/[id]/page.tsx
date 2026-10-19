@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { ActivityPanel } from '@/components/activity-panel';
 import { readPage } from '@/lib/pagination';
@@ -247,6 +248,17 @@ export default async function StudentPage({
               )}
 
               {/*
+                POOLSE-81: in a competitive level with no FPN licence. A warning,
+                never a gate — the student is enrolled and marked as before.
+              */}
+              {loaded.licenceMissing && (
+                <p className="flex items-start gap-2 rounded border border-warning/40 bg-warning/10 p-3 text-sm">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+                  {t('students.licenceMissing', { level: loaded.levelName ?? '' })}
+                </p>
+              )}
+
+              {/*
                 The record's action area — backlog round 3, story 9.
 
                 Progress and the medical record remain their own screens rather
@@ -337,6 +349,10 @@ export default async function StudentPage({
                       <Row label={t('students.contactEmail')} value={loaded.contactEmail} />
                       <Row label={t('students.contactPhone')} value={loaded.contactPhone} />
                       <Row label={t('students.taxNumber')} value={loaded.taxNumber} />
+                      <Row
+                        label={t('students.federationLicence')}
+                        value={loaded.federationLicence}
+                      />
                       {!family && <Row label={t('students.notes')} value={loaded.notes} />}
                     </dl>
                   </>

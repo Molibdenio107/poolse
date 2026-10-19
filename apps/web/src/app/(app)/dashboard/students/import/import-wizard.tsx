@@ -78,6 +78,7 @@ const FIELD_ORDER: ImportField[] = [
   'guardianTaxNumber',
   'isSocio',
   'socioNumber',
+  'federationLicence',
   'gender',
   'isPaid',
 ];

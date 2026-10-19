@@ -157,6 +157,8 @@ const TENANT_TABLES = [
   'skill_progress',
   'transfer_proposal',
   'student_record',
+  // POOLSE-81. Results name a meet, so the meet goes after them.
+  'swim_meet',
   /*
    * Billing, child-first — POOLSE-42.
    *
