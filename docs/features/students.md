@@ -234,6 +234,16 @@ swimmer's band and, per standard, entry time, best valid time and gap. Families 
 child. **Who:** owner, admin and instructor create and type; archiving a band or a standard (with its
 times) is owner and admin.
 
+**Importing entry times (slice 2).** *Importar tempos* on a standard's Tempos tab reads the FPN's
+table as published — one row per event, one column per age group and gender — from Excel, CSV or,
+with the PDF reader switched on, a PDF. The operator says once whether the file is 25 m or 50 m.
+Columns are matched to the season's age groups: "Juvenis F" is certain, a bare "Juvenis" over two
+bands is asked. The preview says per cell *novo*, *substitui 1:05.00*, *igual* or why it is refused
+(a relay or unknown event, an unreadable time, a band not of this season, the same cell twice). An
+empty cell in the file leaves the existing time alone; clearing is the grid's job. The commit is one
+transaction. *Exportar 50 m / 25 m* writes the same shape back, and a round trip changes nothing
+(`qualifying-sheet.test.ts`, against the catalogue in both languages). Who: owner, admin and instructor.
+
 ## Not built yet
 
 - **AC7 — communications routed to the adult student rather than a guardian.** There is

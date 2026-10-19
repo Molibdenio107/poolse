@@ -64,4 +64,6 @@ export const AI_ROLES = {
   timetable: ['owner', 'admin'],
   water: ['owner', 'admin'],
   energy: ['owner', 'admin', 'maintenance'],
+  // POOLSE-85: whoever may type an entry time may import one.
+  qualifying: ['owner', 'admin', 'instructor'],
 } as const satisfies Record<string, readonly string[]>;

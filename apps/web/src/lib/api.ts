@@ -2245,6 +2245,27 @@ export interface GapRow {
   gapMs: number | null;
 }
 
+/** One cell of an imported entry-times table, as the API judged it — POOLSE-85 slice 2. */
+export interface QualifyingImportCell {
+  row: number;
+  ageGroupId: string;
+  ageGroup: string | null;
+  eventLabel: string;
+  stroke: Stroke | null;
+  distanceM: number | null;
+  time: string;
+  timeMs: number | null;
+  previousMs: number | null;
+  status: 'new' | 'changed' | 'unchanged' | 'refused';
+  reason: 'event' | 'time' | 'ageGroup' | 'duplicate' | null;
+}
+
+export interface QualifyingImportResult {
+  cells: QualifyingImportCell[];
+  summary: Record<QualifyingImportCell['status'], number>;
+  committed: boolean;
+}
+
 export interface StudentQualifying {
   seasonName: string;
   ageGroups: string[];

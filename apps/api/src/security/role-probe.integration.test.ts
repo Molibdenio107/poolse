@@ -642,6 +642,7 @@ test('qualifying standards refuse a guardian and a student (403) — POOLSE-85',
       q.setTimes(NO_SUCH_ID, NO_SUCH_ID, {}),
     );
     await refused('GET qualifying/standards/:id/board', 403, () => q.board(NO_SUCH_ID));
+    await refused('POST qualifying/standards/:id/times/import', 403, () => q.importTimes(NO_SUCH_ID, {}));
   });
 });
 

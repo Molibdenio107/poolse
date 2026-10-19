@@ -223,3 +223,82 @@ test('a name twice in one season is a 409 on the name; another club cannot read 
     });
   });
 });
+
+test('slice 2 QA 3–4 — an import previews per cell, commits whole, and an empty cell leaves a time alone', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { standardId, groupId } = await setUp(tenant);
+    const q = new QualifyingController();
+    // setUp typed 100 free lcm 1:05.00 and 50 fly lcm 31.50.
+    const cells = [
+      { row: 0, ageGroupId: groupId, eventLabel: '100 Livres', stroke: 'freestyle', distanceM: 100, time: '1:04,50' },
+      { row: 1, ageGroupId: groupId, eventLabel: '200 Livres', stroke: 'freestyle', distanceM: 200, time: '2:20.00' },
+      { row: 2, ageGroupId: groupId, eventLabel: '4x100 Livres', stroke: null, distanceM: null, time: '4:10.00' },
+      { row: 3, ageGroupId: groupId, eventLabel: '100 Costas', stroke: 'backstroke', distanceM: 100, time: '1.12.00' },
+      { row: 4, ageGroupId: groupId, eventLabel: '100 Livres', stroke: 'freestyle', distanceM: 100, time: '1:03.00' },
+    ];
+
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      const preview = await q.importTimes(standardId, { course: 'lcm', cells });
+      assert.deepEqual(
+        preview.cells.map((c) => [c.status, c.reason]),
+        [
+          ['changed', null],
+          ['new', null],
+          ['refused', 'event'],
+          ['refused', 'time'],
+          ['refused', 'duplicate'],
+        ],
+      );
+      assert.equal(preview.cells[0]?.previousMs, 65000);
+      assert.equal((await q.standard(standardId)).times.length, 2, 'a preview writes nothing');
+
+      const done = await q.importTimes(standardId, { course: 'lcm', cells, commit: true });
+      assert.equal(done.committed, true);
+      const times = (await q.standard(standardId)).times;
+      const of = (stroke: string, distanceM: number) =>
+        times.find((t) => t.stroke === stroke && t.distanceM === distanceM)?.timeMs;
+      assert.equal(of('freestyle', 100), 64500);
+      assert.equal(of('freestyle', 200), 140000);
+      assert.equal(of('butterfly', 50), 31500, 'a cell the file did not mention is left alone');
+      assert.equal(of('backstroke', 100), undefined);
+
+      // The same file again: nothing new.
+      const again = await q.importTimes(standardId, { course: 'lcm', cells: cells.slice(0, 2) });
+      assert.deepEqual(again.summary, { new: 0, changed: 0, unchanged: 2, refused: 0 });
+
+      // Another pool length is another set of cells.
+      const short = await q.importTimes(standardId, { course: 'scm', cells: cells.slice(0, 1) });
+      assert.equal(short.cells[0]?.status, 'new');
+    });
+  });
+});
+
+test('slice 2 — a group from another season is refused, and a missing standard is a 404', async () => {
+  await withScratchTenant(async (tenant) => {
+    const { standardId } = await setUp(tenant);
+    const q = new QualifyingController();
+    const [old] = await tenant.sql<{ id: string }>(
+      `INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+       VALUES ($1, 'Antiga', '2020-09-01', '2021-07-31', 'archived') RETURNING id`,
+      [tenant.organizationId],
+    );
+    const [band] = await tenant.sql<{ id: string }>(
+      `INSERT INTO federation_age_group (organization_id, season_id, name, gender)
+       VALUES ($1, $2, 'Juvenis', 'female') RETURNING id`,
+      [tenant.organizationId, old!.id],
+    );
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const result = await q.importTimes(standardId, {
+        course: 'lcm',
+        commit: true,
+        cells: [{ ageGroupId: band!.id, eventLabel: '50 Livres', stroke: 'freestyle', distanceM: 50, time: '30.00' }],
+      });
+      assert.equal(result.cells[0]?.reason, 'ageGroup');
+      await expectStatus(() => q.importTimes(standardId, { course: 'yards', cells: [] }), 400);
+      await expectStatus(
+        () => q.importTimes('00000000-0000-4000-8000-000000000000', { course: 'lcm', cells: [] }),
+        404,
+      );
+    });
+  });
+});

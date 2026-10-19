@@ -722,12 +722,13 @@ spreadsheet.** 12 October 2026. `lib/pdf-table-agent.ts` transcribes the documen
 the same header and rows `readSheet` returns for a workbook, and the importer then maps and
 previews them as it does any file. It transcribes and never interprets. It is behind
 `PDF_TABLE_AI_ENABLED` plus `ANTHROPIC_API_KEY`, and with it off the importer says so
-(`pdfDisabled`). It is opt-in per importer: alunos, horário, parcerias, salários and inventário
+(`pdfDisabled`). It is opt-in per importer: alunos, horário, parcerias, salários, inventário and mínimos
 take PDFs, while the water log keeps its own lab-report parser. It uses structured output, not a
 forced tool call, because the current Opus refuses `tool_choice` `tool`.
 
-**An importer is a `MatchSpec`, never a new pipeline.** There are six — the register, the
-store room, the wall timetable, the water log, parcerias and the pay list. A new one is a field list, a
+**An importer is a `MatchSpec`, never a new pipeline.** There are seven — the register, the
+store room, the wall timetable, the water log, parcerias, the pay list and mínimos (whose fields are
+built at read time, one per FPN age group: `lib/qualifying-sheet.ts`). A new one is a field list, a
 synonym list and `matchFields` in `lib/<thing>-sheet.ts`, plus a preview/commit pair on one
 API route with a `commit` flag. Never two routes: what the operator was shown and what gets
 written have to come from one code path. The file is read on the Next server and never

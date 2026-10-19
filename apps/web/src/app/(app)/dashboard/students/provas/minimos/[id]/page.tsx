@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Download, Upload } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { formatSwimTime } from '@poolse/rules';
@@ -95,6 +96,7 @@ export default async function StandardPage({
             const count = (gid: string): number => standard.times.filter((time) => time.ageGroupId === gid).length;
             return (
               <>
+                <TimesToolbar path={path} t={t} />
                 <SectionPills
                   label={t('qualifying.ageGroupPills')}
                   current={groupId}
@@ -253,5 +255,34 @@ async function Board({
         </section>
       )}
     </>
+  );
+}
+
+/**
+ * Import and export of the whole table — slice 2. Links rather than buttons: the
+ * import is its own page and the export is a download.
+ */
+function TimesToolbar({
+  path,
+  t,
+}: {
+  path: string;
+  t: (key: string, values?: Record<string, string | number>) => string;
+}): React.ReactElement {
+  const quiet =
+    'inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted';
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Link href={`${path}/importar`} className={quiet}>
+        <Upload aria-hidden className="size-4" />
+        {t('qualifying.import.open')}
+      </Link>
+      {(['lcm', 'scm'] as const).map((course) => (
+        <a key={course} href={`${path}/export?course=${course}`} className={quiet} download>
+          <Download aria-hidden className="size-4" />
+          {t('qualifying.import.export', { course: t(`qualifying.courseShort.${course}`) })}
+        </a>
+      ))}
+    </div>
   );
 }

@@ -692,3 +692,142 @@ export async function board(organizationId: string, standardId: string, marginMs
     };
   });
 }
+
+// ---------------------------------------------------------------------------
+// Importing entry times — slice 2
+// ---------------------------------------------------------------------------
+
+export interface ImportCell {
+  row: number;
+  ageGroupId: string;
+  eventLabel: string;
+  stroke: Stroke | null;
+  distanceM: number | null;
+  /** Null when the API could not read the typed time. */
+  timeMs: number | null;
+  time: string;
+}
+
+export type ImportStatus = 'new' | 'changed' | 'unchanged' | 'refused';
+export type ImportRefusal = 'event' | 'time' | 'ageGroup' | 'duplicate';
+
+export interface ImportCellResult {
+  row: number;
+  ageGroupId: string;
+  ageGroup: string | null;
+  eventLabel: string;
+  stroke: Stroke | null;
+  distanceM: number | null;
+  time: string;
+  timeMs: number | null;
+  previousMs: number | null;
+  status: ImportStatus;
+  reason: ImportRefusal | null;
+}
+
+export interface ImportResult {
+  cells: ImportCellResult[];
+  summary: Record<ImportStatus, number>;
+  committed: boolean;
+}
+
+/**
+ * The FPN's table, for one pool length — preview and commit on one path.
+ *
+ * A cell is new, changed (with the time it replaces), unchanged or refused (an
+ * event that is not one, a time that cannot be read, a group not of this
+ * season, or the same cell twice in one file). A cell the file leaves empty is
+ * never sent, so an import adds and corrects and never clears. The commit
+ * writes every new and changed cell in this one transaction, or none.
+ *
+ * Null when the standard is not live.
+ */
+export async function importEntryTimes(
+  organizationId: string,
+  standardId: string,
+  course: Course,
+  cells: ImportCell[],
+  commit: boolean,
+): Promise<ImportResult | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: found } = await tx.query<{ season_id: string }>(
+      `SELECT season_id FROM qualifying_standard WHERE id = $1 AND archived_at IS NULL
+       ${commit ? 'FOR UPDATE' : ''}`,
+      [standardId],
+    );
+    const seasonId = found[0]?.season_id;
+    if (seasonId === undefined) return null;
+
+    const groups = new Map((await ageGroupsOf(tx, seasonId)).map((group) => [group.id, group.name]));
+    const { rows: existing } = await tx.query<{
+      id: string;
+      age_group_id: string;
+      stroke: Stroke;
+      distance_m: number;
+      time_ms: number;
+    }>(
+      `SELECT id, age_group_id, stroke, distance_m, time_ms FROM qualifying_time
+        WHERE standard_id = $1 AND course = $2 AND archived_at IS NULL`,
+      [standardId, course],
+    );
+    const key = (group: string, stroke: string, distanceM: number): string => `${group}|${stroke}|${distanceM}`;
+    const before = new Map(existing.map((row) => [key(row.age_group_id, row.stroke, row.distance_m), row]));
+
+    const seen = new Set<string>();
+    const results: ImportCellResult[] = cells.map((cell) => {
+      const base = {
+        row: cell.row,
+        ageGroupId: cell.ageGroupId,
+        ageGroup: groups.get(cell.ageGroupId) ?? null,
+        eventLabel: cell.eventLabel,
+        stroke: cell.stroke,
+        distanceM: cell.distanceM,
+        time: cell.time,
+        timeMs: cell.timeMs,
+        previousMs: null,
+      };
+      const refuse = (reason: ImportRefusal): ImportCellResult => ({ ...base, status: 'refused', reason });
+      if (!groups.has(cell.ageGroupId)) return refuse('ageGroup');
+      if (cell.stroke === null || cell.distanceM === null) return refuse('event');
+      if (cell.timeMs === null) return refuse('time');
+      const cellKey = key(cell.ageGroupId, cell.stroke, cell.distanceM);
+      if (seen.has(cellKey)) return refuse('duplicate');
+      seen.add(cellKey);
+      const previous = before.get(cellKey);
+      if (previous === undefined) return { ...base, status: 'new', reason: null };
+      return {
+        ...base,
+        previousMs: previous.time_ms,
+        status: previous.time_ms === cell.timeMs ? 'unchanged' : 'changed',
+        reason: null,
+      };
+    });
+
+    const summary: Record<ImportStatus, number> = { new: 0, changed: 0, unchanged: 0, refused: 0 };
+    for (const result of results) summary[result.status] += 1;
+
+    if (commit && summary.new + summary.changed > 0) {
+      for (const result of results) {
+        if (result.status === 'new') {
+          await tx.query(
+            `INSERT INTO qualifying_time
+               (organization_id, season_id, standard_id, age_group_id, stroke, distance_m, course, time_ms)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [organizationId, seasonId, standardId, result.ageGroupId, result.stroke, result.distanceM, course, result.timeMs],
+          );
+        } else if (result.status === 'changed') {
+          const previous = before.get(key(result.ageGroupId, result.stroke!, result.distanceM!))!;
+          await tx.query('UPDATE qualifying_time SET time_ms = $2 WHERE id = $1', [previous.id, result.timeMs]);
+        }
+      }
+      await recordAudit(tx, {
+        action: 'qualifying_standard.times_imported',
+        entityType: 'qualifying_standard',
+        entityId: standardId,
+        data: { course, added: summary.new, changed: summary.changed, refused: summary.refused },
+      });
+    }
+
+    return { cells: results, summary, committed: commit };
+  });
+}

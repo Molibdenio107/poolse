@@ -23,6 +23,7 @@ import {
   createAgeGroup,
   createStandard,
   findStandard,
+  importEntryTimes,
   NameTakenError,
   NoSuchSeasonError,
   overview,
@@ -31,6 +32,8 @@ import {
   updateStandard,
   type AgeGroupInput,
   type Board,
+  type ImportCell,
+  type ImportResult,
   type QualifyingOverview,
   type StandardDetail,
   type StandardInput,
@@ -48,6 +51,8 @@ const TEACHING = ['owner', 'admin', 'instructor'] as const;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_TIMES = 200;
 const DEFAULT_MARGIN_MS = 2000;
+const MAX_IMPORT_CELLS = 3000;
+const UUID = /^[0-9a-f-]{36}$/i;
 
 interface Flags {
   organizationId: string;
@@ -199,6 +204,46 @@ export class QualifyingController {
 
     const result = await setEntryTimes(organizationId, id, ageGroupId, times);
     if (result === null) throw new NotFoundException('No such standard or age group');
+    return result;
+  }
+
+  /**
+   * Slice 2 — the FPN's table, read on the Next server and sent as cells for one
+   * pool length. Preview and commit on one path (`commit: true` writes exactly
+   * what the preview showed, in one transaction). Each time is read again here
+   * with `parseSwimTime`, so a cell the browser thought was fine and the API
+   * cannot read is refused by name rather than written.
+   */
+  @Post('standards/:id/times/import')
+  async importTimes(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<ImportResult> {
+    requireRole(...TEACHING);
+    const { organizationId } = currentTenant();
+    const course = body['course'];
+    if (!COURSES.includes(course as Course)) throw new BadRequestException('course must be scm or lcm');
+    const raw = Array.isArray(body['cells']) ? body['cells'] : [];
+    if (raw.length > MAX_IMPORT_CELLS) throw new BadRequestException('Too many cells');
+
+    const cells: ImportCell[] = raw.map((entry, index) => {
+      const cell = (entry ?? {}) as Record<string, unknown>;
+      const distance = Number(cell['distanceM']);
+      const time = typeof cell['time'] === 'string' ? cell['time'].slice(0, 20) : '';
+      const parsed = parseSwimTime(time);
+      return {
+        row: Number.isInteger(cell['row']) ? (cell['row'] as number) : index,
+        ageGroupId: typeof cell['ageGroupId'] === 'string' && UUID.test(cell['ageGroupId']) ? cell['ageGroupId'] : '',
+        eventLabel: typeof cell['eventLabel'] === 'string' ? cell['eventLabel'].slice(0, 80) : '',
+        stroke: STROKES.includes(cell['stroke'] as Stroke) ? (cell['stroke'] as Stroke) : null,
+        distanceM: Number.isInteger(distance) && distance > 0 && distance <= 10000 ? distance : null,
+        timeMs: typeof parsed === 'number' ? parsed : null,
+        time,
+      };
+    });
+
+    const result = await importEntryTimes(organizationId, id, course as Course, cells, body['commit'] === true);
+    if (result === null) throw new NotFoundException('No such standard');
     return result;
   }
 

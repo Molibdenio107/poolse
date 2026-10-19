@@ -5243,6 +5243,41 @@
     }
   },
   "qualifying": {
+    "import": {
+      "ageGroup": "Escalão FPN",
+      "nothingNew": "Nada para importar",
+      "title": "Importar tempos de admissão",
+      "open": "Importar tempos",
+      "export": "Exportar {course}",
+      "fileHint": "A tabela da FPN tal como vem: uma linha por prova e uma coluna por escalão e género (por exemplo «Juvenis F»). Excel, CSV ou PDF.",
+      "course": "Estes tempos são de",
+      "needEventAndGroup": "Indique a coluna da prova (ou a distância e o estilo) e pelo menos uma coluna de escalão.",
+      "unmatched": "Ninguém reconheceu esta coluna — escolha o que é, ou deixe-a de fora.",
+      "confirm": "Confirme: o cabeçalho não diz tudo (por exemplo, falta o género).",
+      "previewTitle": "Antes de importar — {course}",
+      "summary": "{added, plural, one {# novo} other {# novos}} · {changed, plural, one {# alterado} other {# alterados}} · {unchanged, plural, one {# igual} other {# iguais}} · {refused, plural, one {# recusado} other {# recusados}}",
+      "emptyKept": "Uma casa vazia no ficheiro não apaga nada: os tempos que o ficheiro não refere ficam como estão.",
+      "showUnchanged": "Mostrar também os tempos iguais",
+      "row": "Linha",
+      "status": "O que acontece",
+      "new": "Novo",
+      "unchanged": "Igual",
+      "changed": "Substitui {from}",
+      "refused": {
+        "event": "Prova não reconhecida (estafetas não contam)",
+        "time": "Tempo ilegível — escreva m:ss.cc",
+        "ageGroup": "Escalão que não é desta época",
+        "duplicate": "Repetido no ficheiro — conta o primeiro"
+      },
+      "commit": "{count, plural, one {Importar # tempo} other {Importar # tempos}}",
+      "back": "Voltar às colunas",
+      "done": "Importado: {added, plural, one {# tempo novo} other {# tempos novos}} e {changed, plural, one {# alterado} other {# alterados}}.",
+      "toTimes": "Ver os tempos",
+      "nothing": "O ficheiro não tem tempos nas colunas escolhidas.",
+      "errorFailed": "Não foi possível ler ou importar os tempos.",
+      "errorForbidden": "Não tem permissão para importar tempos."
+    },
+    "field": {"event": "Prova", "distance": "Distância", "stroke": "Estilo"},
     "sections": "Secções de Provas",
     "section": {
       "meets": "Provas",

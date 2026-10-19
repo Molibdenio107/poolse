@@ -5243,6 +5243,41 @@
     }
   },
   "qualifying": {
+    "import": {
+      "ageGroup": "FPN age group",
+      "nothingNew": "Nothing to import",
+      "title": "Import entry times",
+      "open": "Import times",
+      "export": "Export {course}",
+      "fileHint": "The FPN's table as it comes: one row per event and one column per age group and gender (for example \"Juvenis F\"). Excel, CSV or PDF.",
+      "course": "These times are for",
+      "needEventAndGroup": "Choose the event column (or distance and stroke) and at least one age-group column.",
+      "unmatched": "Nothing recognised this column — choose what it is, or leave it out.",
+      "confirm": "Please confirm: the heading does not say everything (the gender, for example).",
+      "previewTitle": "Before importing — {course}",
+      "summary": "{added} new · {changed} changed · {unchanged} unchanged · {refused} refused",
+      "emptyKept": "An empty box in the file clears nothing: times the file does not mention stay as they are.",
+      "showUnchanged": "Also show unchanged times",
+      "row": "Row",
+      "status": "What happens",
+      "new": "New",
+      "unchanged": "Unchanged",
+      "changed": "Replaces {from}",
+      "refused": {
+        "event": "Event not recognised (relays do not count)",
+        "time": "Unreadable time — type m:ss.hh",
+        "ageGroup": "Age group not in this season",
+        "duplicate": "Repeated in the file — the first one counts"
+      },
+      "commit": "{count, plural, one {Import # time} other {Import # times}}",
+      "back": "Back to the columns",
+      "done": "Imported: {added} new and {changed} changed.",
+      "toTimes": "See the times",
+      "nothing": "The file has no times in the chosen columns.",
+      "errorFailed": "Could not read or import the times.",
+      "errorForbidden": "You are not allowed to import times."
+    },
+    "field": {"event": "Event", "distance": "Distance", "stroke": "Stroke"},
     "sections": "Meets sections",
     "section": {
       "meets": "Meets",
