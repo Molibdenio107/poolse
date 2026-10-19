@@ -3853,3 +3853,13 @@ columns. `invoice_chase.reminder_id` names it, by CHECK exactly when the channel
 **`email_addresses_today(org, at)`** — messages' addresses plus reminders, the one count both the
 message trigger and the new `invoice_reminder_quota` trigger check against
 `message_daily_address_limit()` under the same advisory lock.
+
+### Opting out of club messages — POOLSE-86 slice 3.0c, 19 October 2026
+
+Migration `1791453600000_message-opt-out`. **`email_preference`** — PK `(organization_id, email)`,
+a unique random `token` (64 hex, from two `gen_random_uuid()`s) and `messages_opted_out_at` (null =
+subscribed). Never deleted. `poolse_app`: SELECT, INSERT, and UPDATE of `messages_opted_out_at` only.
+`public_email_preference(token)` / `set_public_email_preference(token, opted_out)` — `SECURITY
+DEFINER`, the link's whole boundary. `message_recipients()` is now a wrapper over the renamed
+`message_recipients_all()` with one more column, `opted_out` (never true for the `closure` audience);
+`sendMessage` writes the tokens for a general message's addresses in the same statement.

@@ -145,6 +145,12 @@
       "birthDateFuture": "A date of birth cannot be in the future.",
       "localeInvalid": "Unsupported language.",
       "themeInvalid": "Unsupported theme."
+    },
+    "messages": {
+      "title": "Club messages",
+      "label": "Receive general messages from {club} by email",
+      "hint": "To {email}. Closure warnings, payment reminders and account emails always arrive.",
+      "failed": "Could not save the preference."
     }
   },
   "people": {
@@ -4202,7 +4208,8 @@
       "unreachable": "{count, plural, one {# student with no contact will not receive it:} other {# students with no contact will not receive it:}}",
       "notConfigured": "Email sending is not configured yet: the message is recorded, but no email leaves.",
       "send": "Send to {addresses, plural, one {# address} other {# addresses}}",
-      "sending": "Sending…"
+      "sending": "Sending…",
+      "optedOut": "{count, plural, one {# address has opted out of club messages and is left out.} other {# addresses have opted out of club messages and are left out.}}"
     },
     "delivery": {
       "all": "Sent to {count, plural, one {# address} other {all # addresses}}",
@@ -5411,5 +5418,22 @@
     "badYear": "Type a four-digit year.",
     "yearsReversed": "The last year cannot be before the first.",
     "windowReversed": "The end cannot be before the start."
+  },
+  "emailPreference": {
+    "title": "Club messages by email",
+    "isIn": "You receive general messages from {club} by email.",
+    "isOut": "You no longer receive general messages from {club}.",
+    "alwaysSent": "Closure warnings, payment reminders and emails about your account still arrive, because they concern lessons, money owed or access.",
+    "optOut": "Stop receiving",
+    "optIn": "Receive them again",
+    "saved": "Your choice has been saved.",
+    "failed": "Could not save. Please try again in a moment.",
+    "otherLanguage": "Ler em português",
+    "unavailable": "This page is unavailable right now",
+    "unavailableHint": "Please try again in a moment.",
+    "notFound": {
+      "title": "This link is not valid",
+      "hint": "Use the link at the end of a recent email from the club, or contact the club."
+    }
   }
 }

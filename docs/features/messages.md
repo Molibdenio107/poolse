@@ -30,6 +30,14 @@ provider refused) says *Registada — ainda não saiu nenhum email* rather than 
 was told. The text arrives exactly as typed, with one line from Poolse naming the club and
 saying replies do not reach it.
 
+**A family may stop the club's general messages** (POOLSE-86, Rui 19-10-2026). Every general
+message ends with *Para deixar de receber as mensagens gerais de …* and a link that works with no
+login: it names the club, says what stopping covers and what it does not, and offers *Deixar de
+receber* or *Voltar a receber*. A member with a login has the same box on *O meu perfil*, for the
+active club; each club is asked separately. An address that opted out is left out of the next
+message, and the confirmation says how many were. **A closure warning always goes** and carries no
+link, and so do invoice reminders, alerts and account emails.
+
 **An email that did not leave is tried again** (POOLSE-86): every hour, for 48 hours, up to five
 times, for messages and for every other email Poolse sends — water and lab alerts, qualification
 alerts, trial and support notices, platform alerts. Each retry is the same email the first attempt

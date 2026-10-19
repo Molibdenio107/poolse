@@ -23,6 +23,9 @@ const isPublicRoute = createRouteMatcher([
   // POOLSE-69's public sign-up form, linked from a club's own website. It
   // reads and writes through the API's slug-keyed public routes and nothing else.
   '/inscricao/(.*)',
+  // POOLSE-86's opt-out link, opened from a club message by people who have no
+  // account. It reads and writes one token's choice through the API and nothing else.
+  '/email/(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

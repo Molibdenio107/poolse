@@ -96,6 +96,9 @@ export const PLATFORM = { default: { ttl: seconds(60), limit: PLATFORM_LIMIT } }
 export const PUBLIC_WATER_LIMIT = 60;
 export const PUBLIC_WATER = { default: { ttl: seconds(60), limit: PUBLIC_WATER_LIMIT } };
 
+/** The opt-out link — POOLSE-86: per token, because every visitor arrives from the Next server. */
+export const PUBLIC_EMAIL = { default: { ttl: seconds(60), limit: 20 } };
+
 export const throttlerOptions: ThrottlerModuleOptions = {
   throttlers: [{ name: 'default', ttl: seconds(60), limit: DEFAULT_LIMIT }],
 };
@@ -143,6 +146,10 @@ export class UserThrottlerGuard extends ThrottlerGuard {
     const water = publicWaterTracker(request.path);
     if (water !== null) return water;
 
+    // The opt-out link counts per token, for the same reason — POOLSE-86.
+    const email = publicEmailTracker(request.path);
+    if (email !== null) return email;
+
     // The public sign-up form — per club and per visitor, 13-10-2026 sweep. It
     // arrives from the Next server, and an address bucket would be one bucket
     // for every parent of every club in September.
@@ -179,4 +186,10 @@ export function publicRegistrationTracker(request: Pick<Request, 'path' | 'heade
 export function publicWaterTracker(path: string): string | null {
   const match = /^\/public\/water\/([^/]+)\/?$/.exec(path);
   return match === null ? null : `water:${match[1]}`;
+}
+
+/** `email:<token>` for the opt-out link, null for any other path — POOLSE-86. */
+export function publicEmailTracker(path: string): string | null {
+  const match = /^\/public\/email\/([^/]+)\/?$/.exec(path);
+  return match === null ? null : `email:${match[1]}`;
 }

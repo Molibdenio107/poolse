@@ -4456,6 +4456,8 @@ export interface MessagePreview {
   leadCount: number;
   /** Distinct addresses: what will be sent, and what the daily ceiling counts. */
   addressCount: number;
+  /** Addresses left out because they opted out — POOLSE-86. Always 0 for a closure. */
+  optedOutCount: number;
   /** Nobody can be written to for these — named, never only counted. */
   unreachable: { studentId: string; name: string; kind: RecipientKind }[];
   /** False where no email provider is configured: recorded, not sent. */

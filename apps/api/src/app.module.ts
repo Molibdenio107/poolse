@@ -36,6 +36,10 @@ import { MessagesController } from './messages/messages.controller.js';
 import { QualificationsController } from './staff/qualifications.controller.js';
 import { QualificationAlertService } from './staff/qualification-alerts.js';
 import { DeliveryRetryService } from './notifications/delivery-retry.service.js';
+import {
+  OwnEmailPreferenceController,
+  PublicEmailPreferenceController,
+} from './notifications/email-preferences.controller.js';
 import { LeadsController, RegistrationSettingsController } from './leads/leads.controller.js';
 import { PublicLeadsController } from './leads/public-leads.controller.js';
 import { LeadRetentionService } from './leads/lead-retention.service.js';
@@ -164,6 +168,9 @@ const IDENTITY_ONLY_ROUTES = [
     QualificationsController,
     PoolPublicLinkController,
     PublicWaterController,
+    // POOLSE-86 3.0c: opting out of club messages, by link and on the profile.
+    PublicEmailPreferenceController,
+    OwnEmailPreferenceController,
     LabResultsController,
     RegulationsController,
     ComplaintsSettingsController,

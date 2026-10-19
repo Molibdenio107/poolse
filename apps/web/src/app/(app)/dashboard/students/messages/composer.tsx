@@ -232,6 +232,13 @@ export function MessageComposer({
               })}
             </p>
 
+            {result.optedOutCount > 0 && (
+              // POOLSE-86: said, so a smaller count is never a mystery.
+              <p className="text-foreground-muted">
+                {t('messages.confirm.optedOut', { count: result.optedOutCount })}
+              </p>
+            )}
+
             {result.unreachable.length > 0 && (
               <div className="flex flex-col gap-1">
                 <p className="font-medium">

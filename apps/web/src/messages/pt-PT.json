@@ -145,6 +145,12 @@
       "birthDateFuture": "A data de nascimento não pode ser no futuro.",
       "localeInvalid": "Idioma não suportado.",
       "themeInvalid": "Tema não suportado."
+    },
+    "messages": {
+      "title": "Mensagens do clube",
+      "label": "Receber as mensagens gerais de {club} por email",
+      "hint": "Para {email}. Avisos de encerramento, lembretes de pagamento e emails da conta chegam sempre.",
+      "failed": "Não foi possível guardar a preferência."
     }
   },
   "people": {
@@ -4202,7 +4208,8 @@
       "unreachable": "{count, plural, one {# aluno sem contacto não vai receber:} other {# alunos sem contacto não vão receber:}}",
       "notConfigured": "O envio de email ainda não está configurado: a mensagem fica registada, mas não sai nenhum email.",
       "send": "Enviar para {addresses, plural, one {# endereço} other {# endereços}}",
-      "sending": "A enviar…"
+      "sending": "A enviar…",
+      "optedOut": "{count, plural, one {# endereço deixou de receber mensagens do clube e fica de fora.} other {# endereços deixaram de receber mensagens do clube e ficam de fora.}}"
     },
     "delivery": {
       "all": "Enviada para {count, plural, one {# endereço} other {os # endereços}}",
@@ -5411,5 +5418,22 @@
     "badYear": "Escreva um ano com quatro algarismos.",
     "yearsReversed": "O último ano não pode ser anterior ao primeiro.",
     "windowReversed": "O fim não pode ser anterior ao início."
+  },
+  "emailPreference": {
+    "title": "Mensagens do clube por email",
+    "isIn": "Recebe as mensagens gerais de {club} por email.",
+    "isOut": "Deixou de receber as mensagens gerais de {club}.",
+    "alwaysSent": "Avisos de encerramento, lembretes de pagamento e emails sobre a sua conta continuam a chegar, porque dizem respeito às aulas, a valores em dívida ou ao acesso.",
+    "optOut": "Deixar de receber",
+    "optIn": "Voltar a receber",
+    "saved": "A sua escolha foi guardada.",
+    "failed": "Não foi possível guardar. Tente de novo dentro de momentos.",
+    "otherLanguage": "Read in English",
+    "unavailable": "Esta página está indisponível neste momento",
+    "unavailableHint": "Tente de novo dentro de momentos.",
+    "notFound": {
+      "title": "Esta ligação não é válida",
+      "hint": "Use a ligação no fim de um email recente do clube, ou fale com o clube."
+    }
   }
 }

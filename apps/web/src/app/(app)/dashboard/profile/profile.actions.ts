@@ -84,3 +84,20 @@ export async function saveProfileAction(
     };
   }
 }
+
+/**
+ * *Mensagens do clube por email* — POOLSE-86, 3.0c. The member's own address in
+ * the active club; only general club messages listen to it.
+ */
+export async function saveMessagePreferenceAction(
+  _previous: { ok: boolean; errorKey?: string },
+  formData: FormData,
+): Promise<{ ok: boolean; errorKey?: string }> {
+  try {
+    await apiPut('/my/email-preference', { optedOut: formData.get('wantsMessages') !== 'true' });
+  } catch {
+    return { ok: false, errorKey: 'profile.messages.failed' };
+  }
+  revalidatePath('/dashboard/profile');
+  return { ok: true };
+}

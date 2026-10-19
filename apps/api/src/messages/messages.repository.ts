@@ -64,6 +64,8 @@ export interface MessagePreview {
   leadCount: number;
   /** Distinct addresses — what will actually be sent, and what the ceiling counts. */
   addressCount: number;
+  /** Addresses left out because they opted out of club messages — POOLSE-86. Never on a closure. */
+  optedOutCount: number;
   /** Named, never only counted: "3 alunos sem contacto" is something a club acts on. */
   unreachable: UnreachableStudent[];
 }
@@ -183,9 +185,12 @@ export async function previewMessage(
       partner_count: number;
       lead_count: number;
       address_count: number;
+      opted_out_count: number;
       unreachable: UnreachableStudent[] | null;
     }>(
-      `WITH r AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
+      `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
+            -- POOLSE-86: an address that opted out is left out, and counted.
+            r AS (SELECT * FROM everyone WHERE NOT opted_out),
             -- One row per person written *for*: a student, a partner or a lead.
             per_subject AS (
               SELECT coalesce(student_id, partner_id, lead_id) AS subject_id,
@@ -200,6 +205,7 @@ export async function previewMessage(
               (SELECT count(*) FROM per_subject WHERE kind = 'partner')::int AS partner_count,
               (SELECT count(*) FROM per_subject WHERE kind = 'lead')::int AS lead_count,
               (SELECT count(DISTINCT email) FROM r WHERE email IS NOT NULL)::int AS address_count,
+              (SELECT count(DISTINCT email) FROM everyone WHERE opted_out)::int AS opted_out_count,
               (SELECT json_agg(json_build_object('studentId', subject_id, 'name', student_name,
                                                  'kind', kind)
                                ORDER BY student_name)
@@ -212,6 +218,7 @@ export async function previewMessage(
       partnerCount: row.partner_count,
       leadCount: row.lead_count,
       addressCount: row.address_count,
+      optedOutCount: row.opted_out_count,
       unreachable: row.unreachable ?? [],
     };
   });
@@ -235,7 +242,9 @@ export async function sendMessage(
 ): Promise<{ id: string; addressCount: number }> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string | null; address_count: number }>(
-      `WITH r AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
+      `WITH r AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)
+                  -- POOLSE-86: the preview's own filter, so the count confirmed is the count written.
+                  WHERE NOT opted_out),
             n AS (SELECT count(DISTINCT email)::int AS address_count FROM r WHERE email IS NOT NULL),
             m AS (
               INSERT INTO message (organization_id, audience, class_group_id, level_id,
@@ -254,12 +263,24 @@ export async function sendMessage(
                      r.name, r.email, r.partner_id, r.lead_id
                 FROM r CROSS JOIN m
               RETURNING 1
+            ),
+            -- POOLSE-86: the opt-out link's token for every address a general message
+            -- reaches, made here in the send's own transaction so delivery only reads.
+            tok AS (
+              INSERT INTO email_preference (organization_id, email, token)
+              SELECT DISTINCT ON (r.email) $1, r.email,
+                     replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')
+                FROM r CROSS JOIN m
+               WHERE r.email IS NOT NULL AND $2::message_audience <> 'closure'
+              ON CONFLICT (organization_id, email) DO NOTHING
+              RETURNING 1
             )
        SELECT m.id, n.address_count
          FROM n LEFT JOIN m ON true
         -- Forces the recipient insert to run; a CTE nobody reads still runs, but
         -- saying so costs nothing.
-        CROSS JOIN (SELECT count(*) FROM ins) AS written`,
+        CROSS JOIN (SELECT count(*) FROM ins) AS written
+        CROSS JOIN (SELECT count(*) FROM tok) AS tokens`,
       [organizationId, ...targetParams(target), subject, body, sentByMembershipId],
     );
 
@@ -482,6 +503,8 @@ export interface MessageDelivery {
   organizationLocale: string;
   /** Distinct addresses not yet delivered to. */
   pending: string[];
+  /** A closure warning carries no opt-out link: it always goes — POOLSE-86. */
+  optOutAllowed: boolean;
 }
 
 export async function findDelivery(
@@ -495,8 +518,10 @@ export async function findDelivery(
       organization_name: string;
       organization_locale: string;
       pending: string[] | null;
+      audience: string;
     }>(
       `SELECT m.subject, m.body, o.name AS organization_name, o.locale AS organization_locale,
+              m.audience::text AS audience,
               -- DISTINCT on the citext itself, then cast: on text, Ana@x.pt and
               -- ana@x.pt were two emails to one person (13-10-2026 sweep).
               (SELECT array_agg(d.email::text)
@@ -517,6 +542,7 @@ export async function findDelivery(
       organizationName: row.organization_name,
       organizationLocale: row.organization_locale,
       pending: row.pending ?? [],
+      optOutAllowed: row.audience !== 'closure',
     };
   });
 }

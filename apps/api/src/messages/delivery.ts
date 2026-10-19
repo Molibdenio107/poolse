@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { clubMessageEmail } from '../notifications/club-message-email.js';
 import { sendEmail, type Email } from '../notifications/notifier.js';
 import { findDelivery, markDelivered } from './messages.repository.js';
+import { optOutLink } from '../notifications/email-preferences.js';
 
 const logger = new Logger('Messages');
 
@@ -39,6 +40,8 @@ export async function deliverMessage(
           subject: delivery.subject,
           body: delivery.body,
           locale: delivery.organizationLocale,
+          // POOLSE-86: a general message carries the way out; a closure warning does not.
+          optOutLink: delivery.optOutAllowed ? await optOutLink(organizationId, to) : null,
         }),
       );
       if (sent) {

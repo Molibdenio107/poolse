@@ -2,6 +2,7 @@ import { after, before, test } from 'node:test';
 import { MeetsController } from '../meets/meets.controller.js';
 import { QualifyingController } from '../qualifying/qualifying.controller.js';
 import { InvoicesController } from '../billing/invoices.controller.js';
+import { OwnEmailPreferenceController } from '../notifications/email-preferences.controller.js';
 import assert from 'node:assert/strict';
 import { ArchiveController } from '../archive/archive.controller.js';
 import { ActivityController } from '../activity/activity.controller.js';
@@ -615,6 +616,10 @@ test('intended open: seasons, closures and dashboard still answer non-staff', as
 
     const dashboard = await new DashboardController().read();
     assert.ok(dashboard, `${label}: dashboard (registry decides)`);
+
+    // POOLSE-86: a family's own choice about club messages — the people it is for.
+    const preference = await new OwnEmailPreferenceController().read();
+    assert.equal(typeof preference.optedOut, 'boolean', `${label}: own email preference`);
   });
 });
 

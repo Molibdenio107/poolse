@@ -68,7 +68,7 @@ Each slice is one vertical, finished on its own.
 - **Limits:** counted against the club's daily email limit (`message_recipients` trigger figures).
 - **Wording** is in both languages, chosen by the payer's locale where known, else the club's.
 
-#### 3.0c — opting out of club messages (Rui, 19-10-2026)
+#### 3.0c — opting out of club messages (Rui, 19-10-2026) — built 19-10-2026
 
 - **Only general club messages may be opted out of** (Mensagens). Closure warnings, invoice reminders,
   safety alerts, invitations and account mail always go, because they are about the service, money
@@ -92,7 +92,7 @@ Each slice is one vertical, finished on its own.
   - 3.0a: `delivery_attempts` / `last_attempt_at` on each delivery table.
   - 3.0b: the `poolse_email` chase channel, a delivery stamp on `invoice_chase`, and
     `organization.payment_instructions`.
-  - 3.0c: `message_opt_out` (tenant-scoped, keyed on the address as `message_recipients()` resolves
+  - 3.0c (as built): `email_preference` (tenant-scoped, keyed on the club and the address as `message_recipients()` resolves
     it) and the token function.
 - Every new route earns a `requireRole` and a role-probe line. The public opt-out route goes in
   `PUBLIC_ROUTES`, throttled per token.

@@ -1,3 +1,4 @@
+import { MessagePreferenceCard } from './message-preference-card';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, outcome, type LoadFailure, type Outcome } from '@/lib/load-failure';
@@ -144,6 +145,8 @@ export default async function ProfilePage({
                   </div>
                 </div>
               </section>
+
+              {membership !== null && <MessagePreferenceCard clubName={membership.organizationName} />}
 
               {/*
                 Subscrição lives here — 13 September 2026. What Poolse charges

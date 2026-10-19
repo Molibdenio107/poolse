@@ -189,6 +189,8 @@ const TENANT_TABLES = [
   'invoice_chase',
   // POOLSE-86. A chase names its reminder, so the reminder goes after it.
   'invoice_reminder',
+  // POOLSE-86 3.0c: who opted out of a club's messages, per address.
+  'email_preference',
   'invoice_line',
   'pass',
   'pass_product',
