@@ -22,6 +22,7 @@ import {
   updateStaff,
   type StaffRecord,
 } from './staff.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 const MAX_NAME = 120;
 const MAX_PHONE = 40;
@@ -45,6 +46,7 @@ const MAX_NOTES = 2000;
  * second endpoint with its own rules, and two endpoints is how the second one
  * ends up more permissive.
  */
+@CoreRoute()
 @Controller('staff')
 export class StaffController {
   /**

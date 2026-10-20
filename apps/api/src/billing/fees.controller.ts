@@ -42,6 +42,7 @@ import {
   type FeePlan,
   type StudentFees,
 } from './fees.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * The price list already answers this — round 5, 3.1.
@@ -118,6 +119,7 @@ const DUPLICATE_PLAN: Record<
  * through the wrong facility answers 404 and not 403: whether a resource exists
  * at another site is not something an error should confirm.
  */
+@CoreRoute()
 @Controller('facilities/:facilityId/fee-periods')
 export class FeePeriodsController {
   @Get()
@@ -167,6 +169,7 @@ export class FeePeriodsController {
   }
 }
 
+@CoreRoute()
 @Controller('facilities/:facilityId/fee-plans')
 export class FeePlansController {
   @Get()
@@ -225,6 +228,7 @@ export class FeePlansController {
   }
 }
 
+@CoreRoute()
 @Controller('students/:studentId/fees')
 export class StudentFeesController {
   @Get()
@@ -403,6 +407,7 @@ export class StudentFeesController {
  * the student rather than about one line, and because the register calls it
  * without knowing what lines exist.
  */
+@CoreRoute()
 @Controller('students/:studentId/paid')
 export class StudentPaidController {
   @Post()
@@ -417,6 +422,7 @@ export class StudentPaidController {
   }
 }
 
+@CoreRoute()
 @Controller('facilities/:facilityId/billing')
 export class FacilityBillingController {
   @Get()
@@ -460,6 +466,7 @@ export class FacilityBillingController {
   }
 }
 
+@CoreRoute()
 @Controller('students/:studentId/socio')
 export class StudentSocioController {
   @Patch()

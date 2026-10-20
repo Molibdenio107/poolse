@@ -9,6 +9,7 @@ import {
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { DraftSeasonError, readOccupancy, type Occupancy } from './occupancy.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * How much of the water is sold — POOLSE-52.
@@ -24,6 +25,7 @@ import { DraftSeasonError, readOccupancy, type Occupancy } from './occupancy.rep
  * admin and comes back null for everybody else, rather than the whole request
  * being refused for wanting a figure they can have.
  */
+@CoreRoute()
 @Controller('facilities/:facilityId/occupancy')
 export class OccupancyController {
   @Get()

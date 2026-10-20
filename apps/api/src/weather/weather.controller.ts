@@ -1,6 +1,7 @@
 import { requireRole } from '../tenant/roles.js';
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { fetchWeather, searchPlaces, type Place, type Weather } from './open-meteo.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * Weather and city lookup — backlog round 3, story 3.
@@ -65,6 +66,7 @@ interface WeatherResponse {
   weather: Weather | null;
 }
 
+@CoreRoute()
 @Controller('weather')
 export class WeatherController {
   @Get()
@@ -99,6 +101,7 @@ export class WeatherController {
   }
 }
 
+@CoreRoute()
 @Controller('places')
 export class PlacesController {
   /**

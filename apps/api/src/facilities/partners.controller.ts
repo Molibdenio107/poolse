@@ -52,6 +52,7 @@ import {
   type PartnerInput,
   type PartnerRow,
 } from './partners.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * Parcerias, through their endpoints — POOLSE-47.
@@ -72,6 +73,7 @@ import {
  * `numeric`. €14.375 through a float and back is precisely the rounding the
  * column type exists to prevent, and a parse here would undo the schema.
  */
+@CoreRoute()
 @Controller()
 export class PartnersController {
   /**

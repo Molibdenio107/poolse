@@ -25,6 +25,7 @@ import {
   type Progression,
   type Stroke,
 } from './records.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 interface ProgressionResponse extends Progression {
   organizationId: string;
@@ -49,6 +50,7 @@ const MAX_NOTE = 500;
  * medical note is — it is the thing the child's parents are told at the end of
  * term.
  */
+@CoreRoute()
 @Controller('students/:studentId/progression')
 export class RecordsController {
   @Get()

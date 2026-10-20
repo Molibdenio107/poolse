@@ -20,6 +20,7 @@ import {
   type InsurancePolicy,
   type InsurancePolicyInput,
 } from './insurance.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * The apólices a facility holds.
@@ -33,6 +34,7 @@ import {
  * policy addressed through the wrong facility answers 404 rather than 403: that
  * a resource exists at another site is not something an error should confirm.
  */
+@CoreRoute()
 @Controller('facilities/:facilityId/insurance-policies')
 export class InsurancePoliciesController {
   @Get()

@@ -12,6 +12,11 @@ export interface TenantContext {
    * it must not mint access that outlives that grant.
    */
   support?: boolean;
+  /**
+   * The modules this club has switched off (POOLSE-87), read by `ModuleGuard`.
+   * Absent is the full product, which is what a background job's context means.
+   */
+  disabledModules?: readonly string[];
 }
 
 /**

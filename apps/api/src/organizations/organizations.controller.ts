@@ -31,6 +31,7 @@ import {
 } from './organizations.repository.js';
 import { hashSignupIp, isDisposableEmail } from './signup-claim.js';
 import { forwardedClientIp } from '../leads/visitor.js';
+import { CoreRoute, PoolseModule } from '../tenant/modules.js';
 
 interface CreateOrganizationBody {
   name?: unknown;
@@ -152,6 +153,7 @@ export class OrganizationsController {
  * none). These reads and writes are firmly inside a tenant and inside a role
  * check, which is the opposite of that.
  */
+@CoreRoute()
 @Controller('settings')
 export class SettingsController {
   /**
@@ -187,6 +189,7 @@ export class SettingsController {
   }
 
   /** *Como pagar* — POOLSE-86. Owner and admin; an empty box clears it. */
+  @PoolseModule('invoicing')
   @Put('payment-instructions')
   async savePaymentInstructions(@Body() body: { paymentInstructions?: unknown }): Promise<TaxSettings> {
     requireRole('owner', 'admin');

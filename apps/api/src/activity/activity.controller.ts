@@ -24,6 +24,7 @@ import {
   type ActivityKind,
   type Resolution,
 } from './activity.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * *Atividade* and *Reverter* — POOLSE-80.
@@ -32,6 +33,7 @@ import {
  * corrections are what this exists to undo, so an instructor is not the one
  * undoing them, and the tab is absent for them (the screen's `canManage`).
  */
+@CoreRoute()
 @Controller()
 export class ActivityController {
   @Get('students/:id/activity')

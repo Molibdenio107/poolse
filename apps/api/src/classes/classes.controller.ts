@@ -48,6 +48,7 @@ import {
 } from './classes.repository.js';
 import { qualificationRefusal } from '../staff/qualification-refusal.js';
 import { syncSeasonLessons, type LessonSync } from './lesson-sync.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 interface Choice {
   id: string;
@@ -108,6 +109,7 @@ const MAX_NAME = 120;
  * *acting*: marking a register, confirming an advancement, approving a
  * reposição. Those live in `tenant/assignment.ts` and are refused, not hidden.
  */
+@CoreRoute()
 @Controller('class-groups')
 export class ClassesController {
   @Get()
@@ -393,6 +395,7 @@ export class ClassesController {
  * question being asked — "when does João swim?" — and the answer spans every
  * turma he is in.
  */
+@CoreRoute()
 @Controller('students/:studentId/timetable')
 export class TimetableController {
   @Get()

@@ -28,6 +28,7 @@ import {
   type SupportActivity,
   type SupportRequest,
 } from './support.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 function readHours(body: { hours?: unknown } | undefined): GrantHours {
   const hours = Number(body?.hours);
@@ -52,6 +53,7 @@ function liveConflict(error: GrantAlreadyLiveError): ConflictException {
  * not the controller. That includes a support session itself, which is an
  * Admin: support cannot extend its own window.
  */
+@CoreRoute()
 @Controller('support-grants')
 export class SupportGrantsController {
   @Get()

@@ -36,6 +36,7 @@ import {
   type MessageSummary,
   type MessageTarget,
 } from './messages.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Messages to families — POOLSE-67.
@@ -79,6 +80,7 @@ async function turmaScope(): Promise<string[] | null> {
   return myTurmaIds(organizationId, membershipId);
 }
 
+@PoolseModule('messages')
 @Controller('messages')
 export class MessagesController {
   @Get()

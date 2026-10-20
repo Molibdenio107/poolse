@@ -325,6 +325,39 @@ what stands in the way meanwhile.
 **`/admin` also still shares an origin and a cookie with the tenant app** — a known
 limitation with a date and a plan, in `docs/deploy.md`.
 
+## Modules per club — POOLSE-87 (20 October 2026)
+
+Rui switches parts of Poolse on and off per club, from `/admin`. It is a rollout tool,
+not pricing: the pilot goes live with the teaching operation, and each module is switched
+on when the club is ready for it.
+
+- **The list.** `POOLSE_MODULES` in `@poolse/rules` — messages, incidents, reception,
+  competition, water quality, invoicing, maintenance, energy, salaries, vacations,
+  qualifications. The SQL enum `poolse_module` spells the same values, and a test compares
+  them. Everything else is core and cannot be switched off.
+- **Stored as what is off.** `organization.disabled_modules`, empty by default, so a new
+  club and a trial get the full product with nobody setting anything.
+- **Who writes it.** `POST /platform/tenants/:id/modules` with `{ disabled: [...] }`, the
+  whole list each time. It goes through `changeTenant`, so it is audited before and after
+  (`tenant.modules.set`) and raises an alert. It is one click either way, with no typed
+  name. `poolse_platform` holds `UPDATE (disabled_modules)`; `poolse_app` cannot write it.
+- **Dependencies are refused, not resolved.** Reception needs invoicing (a free-swim sale
+  is an invoice line). Switching invoicing off while reception is on is a 409
+  `module_dependency` with `module` and `requires`; the CHECK `modules_consistent()`
+  refuses the same set.
+- **What switching off does.** Every route tagged with the module answers 403
+  `module_disabled` with `module`, reads included. The public water page of a club with
+  water quality off is the same 404 as an unknown link. Nothing is deleted or changed, so
+  switching back on brings everything back as it was.
+- **Every tenant route says its module.** `@PoolseModule('energy')` or `@CoreRoute()` on
+  the controller class, overridable per handler (the water routes in
+  `FacilitiesController` are `water_quality`). The API refuses to boot with an untagged
+  tenant route (`assertEveryRouteHasAModule`); public, identity-only and platform routes
+  are exempt by the lists that already name them.
+
+The club-side half (menu, dashboard, tabs, background jobs) and the *Módulos* card on
+`/admin` are slices 2 and 3.
+
 ## Support access — POOLSE-79 (12 October 2026)
 
 A club's Owner can let Poolse support in for a fixed window, and support then enters the club

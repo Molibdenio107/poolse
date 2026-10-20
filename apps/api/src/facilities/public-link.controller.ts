@@ -21,6 +21,7 @@ import {
   type PublicLink,
   type PublicWaterPage,
 } from './public-link.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Who may put a tank's readings on the wall — POOLSE-71.
@@ -36,6 +37,7 @@ function notFoundOnMissingPool(error: unknown): never {
 }
 
 /** The tenant half: turn a tank's public page on, replace its link, switch it off. */
+@PoolseModule('water_quality')
 @Controller('pools/:poolId/public-link')
 export class PoolPublicLinkController {
   @Get()

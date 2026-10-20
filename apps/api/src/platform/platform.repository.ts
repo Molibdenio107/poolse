@@ -1,4 +1,5 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
+import { moduleDependencyBreaches, POOLSE_MODULES, type PoolseModule } from '@poolse/rules';
 import { withPlatform } from '@poolse/db';
 import { currentAuth } from '../auth/auth.context.js';
 import {
@@ -623,6 +624,8 @@ interface TenantChange {
    * below already names the column, rather than both being remembered.
    */
   archived_at?: string | null;
+  /** POOLSE-87: the modules switched off. One click either way — never named. */
+  disabled_modules?: PoolseModule[];
 }
 
 /**
@@ -645,6 +648,8 @@ const AUDITED: Record<string, string> = {
   billing_mode: 'billing_mode',
   paid_through: 'paid_through::text',
   archived_at: 'archived_at',
+  // An enum array: read as text[], never bare (the slice 4.2 lesson).
+  disabled_modules: 'disabled_modules::text[]',
 };
 
 const AUDITED_KEYS = Object.keys(AUDITED);
@@ -765,7 +770,8 @@ async function changeTenant(
     for (const column of AUDITED_KEYS) {
       const was = normalise(before[0]![column]);
       const now = normalise(after[0]![column]);
-      if (was !== now) changed[column] = { before: was, after: now };
+      // By value: `disabled_modules` is an array, and two arrays are never `===`.
+      if (JSON.stringify(was) !== JSON.stringify(now)) changed[column] = { before: was, after: now };
     }
 
     const detail = { changed, ...(prepared.detail ?? {}) };
@@ -919,6 +925,37 @@ export async function extendTrial(
       detail: { claimsReleased: rows.length },
     };
   });
+}
+
+/**
+ * Switch a club's modules — POOLSE-87.
+ *
+ * The body is the whole list of what is off, so the call is idempotent and the
+ * trail's before-and-after is the two lists. Stored in `POOLSE_MODULES` order so
+ * the same set is always the same array.
+ *
+ * **A dependency is refused, never resolved**: switching invoicing off while
+ * reception is on is a 409 naming both, and Poolse does not switch reception off
+ * on the operator's behalf. The CHECK on the column refuses the same set, so this
+ * is the sentence and that is the guarantee.
+ *
+ * Reversible, so no typed name — `changeTenant` asks for one only when a change
+ * sets `suspended_at`, `pending_delete_at` or `archived_at`.
+ */
+export async function setModules(
+  organizationId: string,
+  disabled: readonly PoolseModule[],
+): Promise<TenantChangeResult | null> {
+  const off = POOLSE_MODULES.filter((module) => disabled.includes(module));
+  const breach = moduleDependencyBreaches(off)[0];
+  if (breach) {
+    throw new ConflictException({
+      code: 'module_dependency',
+      module: breach.module,
+      requires: breach.requires,
+    });
+  }
+  return changeTenant(organizationId, 'tenant.modules.set', { disabled_modules: off });
 }
 
 /**

@@ -151,7 +151,10 @@ organization
   max_facilities,                     -- licence: sites this subscription covers
   max_management_users,               -- soft seat quota; null = unlimited, never 0
   suspended_at, suspension_reason     -- the door, closed by a platform operator
+  disabled_modules poolse_module[]    -- POOLSE-87: modules switched off; '{}' = everything on.
+                                      -- poolse_platform writes it, poolse_app cannot; read ::text[]
   unique (slug) where archived_at is null
+  check modules_consistent(disabled_modules)   -- reception may not stay on without invoicing
   check max_management_users is null or max_management_users > 0
   check (suspended_at is null) = (suspension_reason is null)
   check suspension_reason is null

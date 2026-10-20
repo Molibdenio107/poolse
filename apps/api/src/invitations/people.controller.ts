@@ -21,6 +21,7 @@ import {
 } from './invitations.repository.js';
 import { readPageQuery, type Paginated } from '../common/pagination.js';
 import { readSearch } from '../common/search.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 interface PeopleResponse {
   organizationId: string;
@@ -64,6 +65,7 @@ interface PeopleResponse {
  * Instructors keep the students in their own turmas; this gates colleagues'
  * accounts, not teaching.
  */
+@CoreRoute()
 @Controller('people')
 export class PeopleController {
   @Get()

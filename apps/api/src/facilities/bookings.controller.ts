@@ -30,6 +30,7 @@ import {
 import { MAX_TIMETABLE_ROWS, type RawTimetableRow } from './timetable-import.js';
 import { qualificationRefusal } from '../staff/qualification-refusal.js';
 import { syncSeasonLessons, type LessonSync } from '../classes/lesson-sync.js';
+import { CoreRoute, PoolseModule } from '../tenant/modules.js';
 
 /**
  * What a drag on the lane grid writes — POOLSE-50.
@@ -49,6 +50,7 @@ import { syncSeasonLessons, type LessonSync } from '../classes/lesson-sync.js';
  * Infantis", because the operator is mid-gesture and a Postgres constraint name
  * tells them nothing they can act on.
  */
+@CoreRoute()
 @Controller('bookings')
 export class BookingsController {
   @Post(':scheduleId/move')
@@ -121,6 +123,7 @@ export class BookingsController {
    * offers it beside placing a turma. Owner/admin, like every grid write, and
    * the same named refusals as a drag: a lane already taken, a closed hour.
    */
+  @PoolseModule('reception')
   @Post('free-swim')
   async freeSwim(@Body() body: Record<string, unknown>): Promise<{ id: string; lessons: LessonSync }> {
     requireRole('owner', 'admin');

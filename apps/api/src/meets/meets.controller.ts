@@ -24,6 +24,7 @@ import {
   type MeetSummary,
 } from './meets.repository.js';
 import type { Course, IncomingAthlete, IncomingResult, Stroke } from './meet-import.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Provas — POOLSE-81, slice 2.
@@ -47,6 +48,7 @@ interface MeetsResponse extends Paginated<MeetSummary> {
   rememberedClubCode: string | null;
 }
 
+@PoolseModule('competition')
 @Controller('meets')
 export class MeetsController {
   @Get()

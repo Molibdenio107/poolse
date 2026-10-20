@@ -16,6 +16,7 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import { openFile, RULES, storeFile, type FilePurpose, type StoredFile } from './files.repository.js';
 import { MAX_FILE_BYTES, sniffType, storageConfigured } from './storage.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 const EVERY_ROLE = ['owner', 'admin', 'instructor', 'maintenance', 'student', 'guardian'] as const;
 
@@ -30,6 +31,7 @@ const EVERY_ROLE = ['owner', 'admin', 'instructor', 'maintenance', 'student', 'g
  * **A file is read only through here**, after the purpose's rule: the bucket is
  * private and nothing hands out a link that works without a session.
  */
+@CoreRoute()
 @Controller('files')
 export class FilesController {
   /** Whether storage is configured, so a screen can say so instead of failing. */

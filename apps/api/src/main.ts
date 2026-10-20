@@ -3,10 +3,12 @@ import './load-env.js';
 // the note in instrument.ts — no-op when SENTRY_DSN is absent.
 import './instrument.js';
 import 'reflect-metadata';
+import type { Type } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { assertPlatformRoleIsNarrow, assertRlsApplies } from '@poolse/db';
-import { AppModule } from './app.module.js';
+import { AppModule, IDENTITY_ONLY_ROUTES, PUBLIC_ROUTES } from './app.module.js';
+import { assertEveryRouteHasAModule } from './tenant/modules.js';
 import { BadInputFilter } from './tenant/bad-input.filter.js';
 
 /**
@@ -48,6 +50,18 @@ async function bootstrap(): Promise<void> {
    * the whole schema. Silent when the area is not configured at all.
    */
   await assertPlatformRoleIsNarrow();
+
+  /*
+   * Every tenant route names its module or says it is core — POOLSE-87. An
+   * untagged route would stay reachable in a club that switched its module off,
+   * so the app refuses to start rather than ship one. Public, identity-only and
+   * platform routes run with no club and are exempt by the lists that already
+   * name them.
+   */
+  assertEveryRouteHasAModule(
+    Reflect.getMetadata('controllers', AppModule) as Type[],
+    [...PUBLIC_ROUTES, ...IDENTITY_ONLY_ROUTES],
+  );
 
   // rawBody keeps the exact bytes of the request alongside the parsed body. The
   // Clerk webhook signature is computed over those bytes, and a re-serialised

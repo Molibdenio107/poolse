@@ -3,6 +3,7 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import { IMPORT_FIELDS, MAX_IMPORT_ROWS, type ImportField, type RawImportRow } from './import.js';
 import { runImport, type ImportResult } from './import.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * Slice 1.10 — the import endpoint.
@@ -22,6 +23,7 @@ import { runImport, type ImportResult } from './import.repository.js';
  * columns; this takes rows already keyed by Poolse's field names, because a file
  * format is transport and this is the rule.
  */
+@CoreRoute()
 @Controller('students/import')
 export class StudentImportController {
   @Post()

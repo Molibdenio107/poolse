@@ -100,6 +100,7 @@ import {
   type TransferProposal,
 } from './advancement.repository.js';
 import { clubToday } from '../common/club-day.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 const MAX_NAME = 120;
 const MAX_NOTES = 2000;
@@ -166,6 +167,7 @@ interface StudentsResponse {
  * an instructor needs to know who to hand a child back to. Pessoas stays staff
  * and stays owner/admin.
  */
+@CoreRoute()
 @Controller('guardians')
 export class GuardiansController {
   @Get()
@@ -200,6 +202,7 @@ export class GuardiansController {
  * the interface, touches live tenant data, and is exactly what the conventions
  * mean by permission-sensitive.
  */
+@CoreRoute()
 @Controller('people')
 export class PeopleDedupController {
   @Get('duplicate')
@@ -318,6 +321,7 @@ export class PeopleDedupController {
  * answer is only ever theirs: their children, and themselves as a student. A
  * member of staff with no children gets an empty list, which is the truth.
  */
+@CoreRoute()
 @Controller('family')
 export class FamilyController {
   @Get()
@@ -327,6 +331,7 @@ export class FamilyController {
   }
 }
 
+@CoreRoute()
 @Controller('people-search')
 export class PeopleSearchController {
   @Get()
@@ -357,6 +362,7 @@ export class PeopleSearchController {
   }
 }
 
+@CoreRoute()
 @Controller('students')
 export class StudentsController {
   @Get()
@@ -613,6 +619,7 @@ function ageRange(body: Record<string, unknown>): LevelShape {
   return { minAgeMonths, maxAgeMonths, admitsMale, admitsFemale, competitive };
 }
 
+@CoreRoute()
 @Controller('levels')
 export class LevelsController {
   @Post()
@@ -1122,6 +1129,7 @@ function parseBirthDate(value: unknown): string | null {
  * endpoints, because two endpoint sets is how the second one ends up more
  * permissive — the same argument POOLSE-39 made about role changes.
  */
+@CoreRoute()
 @Controller()
 export class RedemptionController {
   /**
@@ -1262,6 +1270,7 @@ function settle(outcome: DecideOutcome): void {
  * finished their level, and the person who can confirm that is the one who has
  * been watching them do it. Owner and admin confirm anything, as everywhere.
  */
+@CoreRoute()
 @Controller('transfer-proposals')
 export class AdvancementController {
   @Get()

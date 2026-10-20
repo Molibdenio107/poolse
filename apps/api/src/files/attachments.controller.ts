@@ -25,6 +25,7 @@ import {
   WrongFileError,
   type PhotoOwner,
 } from './attachments.repository.js';
+import { CoreRoute, PoolseModule } from '../tenant/modules.js';
 
 /**
  * Attaching uploaded files to what they belong to — 12 October 2026.
@@ -33,6 +34,7 @@ import {
  * the club's logo, the apólice, a partnership's contract and a certificate are
  * all the office's to file. Reading them is `GET /files/:id`'s rule, by purpose.
  */
+@CoreRoute()
 @Controller()
 export class AttachmentsController {
   @Post('facilities/:facilityId/photos')
@@ -101,6 +103,7 @@ export class AttachmentsController {
     return { saved: true };
   }
 
+  @PoolseModule('qualifications')
   @Put('qualifications/:id/document')
   async qualificationDocument(
     @Param('id', new ParseUUIDPipe()) id: string,

@@ -47,6 +47,7 @@ import {
   type InventoryScope,
   type RawInventoryRow,
 } from './inventory.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * The club's kit, at a site — round 6.
@@ -62,6 +63,7 @@ import {
  * `INVENTORY_EDITORS`: owner, admin and, since 15 October 2026 (Rui),
  * maintenance, who keeps the store room. Archiving stays owner and admin.
  */
+@PoolseModule('maintenance')
 @Controller('inventory')
 export class InventoryController {
   /**

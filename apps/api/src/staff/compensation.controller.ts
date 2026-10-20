@@ -47,6 +47,7 @@ import {
   type SalarySummary,
   type Viewer,
 } from './compensation.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Salários — POOLSE-58.
@@ -77,6 +78,7 @@ function viewer(): Viewer {
   return { isOwner: hasRole('owner') };
 }
 
+@PoolseModule('salaries')
 @Controller('staff/salaries')
 export class SalariesController {
   /**
@@ -230,6 +232,7 @@ function readInclude(value: unknown): number[] | null {
   return value.filter((entry): entry is number => typeof entry === 'number' && entry >= 0);
 }
 
+@PoolseModule('salaries')
 @Controller('staff')
 export class CompensationController {
   /** One person's history, newest first. Archived rows included, marked. */

@@ -36,6 +36,7 @@ import {
   type Reception,
   type Sale,
 } from './passes.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Free swim, entry passes and reception check-in — POOLSE-68.
@@ -52,6 +53,7 @@ import {
 const KINDS: readonly PassKind[] = ['single', 'pack', 'period'];
 const MAX_NAME = 60;
 
+@PoolseModule('reception')
 @Controller('facilities/:facilityId/pass-products')
 export class PassProductsController {
   @Get()
@@ -113,6 +115,7 @@ export class PassProductsController {
   }
 }
 
+@PoolseModule('reception')
 @Controller('facilities/:facilityId/reception')
 export class ReceptionController {
   @Get()

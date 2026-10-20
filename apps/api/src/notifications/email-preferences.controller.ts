@@ -21,6 +21,7 @@ import {
   setOwnPreference,
   type PublicEmailPreference,
 } from './email-preferences.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Opting out of a club's general messages — POOLSE-86, slice 3.0c.
@@ -55,6 +56,7 @@ export class PublicEmailPreferenceController {
  * member — a guardian above all, since these are the messages families get.
  * Support has no address of its own here and is refused.
  */
+@PoolseModule('messages')
 @Controller('my/email-preference')
 export class OwnEmailPreferenceController {
   @Get()

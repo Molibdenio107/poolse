@@ -22,6 +22,7 @@ import {
   type Register,
   RegisterRefusedError,
 } from './attendance.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 const STATUSES: AttendanceStatus[] = ['present', 'absent', 'excused'];
 const MAX_NOTE = 200;
@@ -54,6 +55,7 @@ interface RegisterResponse extends Register {
  * for is not. Marking the register is precisely what a substitute is there to
  * do — see `tenant/assignment.ts`.
  */
+@CoreRoute()
 @Controller('sessions')
 export class AttendanceController {
   @Get(':id/attendance')

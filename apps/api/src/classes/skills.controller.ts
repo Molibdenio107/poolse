@@ -25,6 +25,7 @@ import {
   type SkillState,
   type TurmaSkills,
 } from './skills.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 const MAX_NAME = 120;
 const MAX_REASON = 300;
@@ -49,6 +50,7 @@ function isState(value: unknown): value is SkillState {
  * consists of is owner and admin, because it is a decision about the programme
  * rather than about a child.
  */
+@CoreRoute()
 @Controller('skills')
 export class SkillsController {
   /** The grid for one turma: students down, skills across. */

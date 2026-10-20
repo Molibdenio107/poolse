@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { isPoolseModule, type PoolseModule } from '@poolse/rules';
 import type {
   BillingMode,
   PaymentMethod,
@@ -267,4 +268,16 @@ export function readPaymentNote(raw: unknown): string | null {
   if (note === '') return null;
   if (note.length > MAX_NOTE_LENGTH) refuse('note', 'admin.error.noteTooLong');
   return note;
+}
+
+/**
+ * The modules to switch off — POOLSE-87. A list of known module names; an empty
+ * list switches everything on. Anything else is refused rather than dropped,
+ * because silently ignoring a misspelt module would leave it on.
+ */
+export function readDisabledModules(raw: unknown): PoolseModule[] {
+  if (!Array.isArray(raw) || !raw.every(isPoolseModule)) {
+    refuse('disabled', 'admin.error.moduleInvalid');
+  }
+  return [...new Set(raw as PoolseModule[])];
 }

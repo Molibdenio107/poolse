@@ -3947,6 +3947,7 @@
       "dateTooFar": "No máximo dois anos a partir de hoje.",
       "statusInvalid": "Estado de subscrição desconhecido.",
       "atLeastOne": "Mínimo 1.",
+      "moduleInvalid": "Módulo desconhecido.",
       "atLeastOneOrEmpty": "Mínimo 1, ou em branco para sem limite.",
       "reasonRequired": "Escreva o motivo — é o que o cliente vai ler.",
       "reasonTooLong": "No máximo 500 caracteres.",

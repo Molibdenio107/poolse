@@ -57,6 +57,7 @@ import {
 } from './lesson-plans.repository.js';
 import { clubToday } from '../common/club-day.js';
 import { syncSeasonLessons } from './lesson-sync.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * Slices 1.5 and 1.6 — the closure calendar, and the dated sessions around it.
@@ -96,6 +97,7 @@ interface ClosuresResponse {
   halfDayCut: string;
 }
 
+@CoreRoute()
 @Controller('closures')
 export class ClosuresController {
   @Get()
@@ -262,6 +264,7 @@ interface CalendarResponse {
   canTakeRegister?: boolean;
 }
 
+@CoreRoute()
 @Controller('calendar')
 export class CalendarController {
   @Get()
@@ -393,6 +396,7 @@ async function asClash(
   });
 }
 
+@CoreRoute()
 @Controller('sessions')
 export class SessionsCalendarController {
   /**
@@ -786,6 +790,7 @@ export class SessionsCalendarController {
   }
 }
 
+@CoreRoute()
 @Controller('students/:studentId/calendar')
 export class StudentCalendarController {
   @Get()

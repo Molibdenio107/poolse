@@ -29,6 +29,7 @@ import {
   type OrganizationSubscription,
   readBillingMode,
 } from './subscription.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * What the club pays Poolse — slice 2.4, narrowed 13 September 2026.
@@ -108,6 +109,7 @@ export function resetPriceCache(): void {
   priceCache = null;
 }
 
+@CoreRoute()
 @Controller('subscription')
 export class SubscriptionController {
   private readonly logger = new Logger(SubscriptionController.name);

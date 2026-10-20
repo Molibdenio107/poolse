@@ -23,6 +23,7 @@ import {
   type RegulationVersion,
 } from './regulations.repository.js';
 import { LIVRO_RECLAMACOES_URL } from './public-notices.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /** Every staff role reads it — it is on the public page anyway. */
 const CAN_READ = ['owner', 'admin', 'instructor', 'maintenance'] as const;
@@ -38,6 +39,7 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
  * A facility's operating regulation — POOLSE-73. Versions are published, never
  * edited; the version in force is the latest whose day has come.
  */
+@CoreRoute()
 @Controller('facilities/:facilityId/regulations')
 export class RegulationsController {
   @Get()
@@ -109,6 +111,7 @@ export class RegulationsController {
  * Reclamações Eletrónico, the default) or a public service, which names its own
  * platform. Owner and Admin, the people who answer for the club's paperwork.
  */
+@CoreRoute()
 @Controller('settings/complaints')
 export class ComplaintsSettingsController {
   @Get()

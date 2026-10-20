@@ -23,6 +23,7 @@ import {
   type ResetPreview,
   type Season,
 } from './seasons.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 const MAX_NAME = 60;
 
@@ -43,6 +44,7 @@ interface SeasonsResponse {
  * and every screen that filters by it needs to know. Resetting is owner and
  * admin only, refused server-side rather than merely hidden.
  */
+@CoreRoute()
 @Controller('seasons')
 export class SeasonsController {
   @Get()

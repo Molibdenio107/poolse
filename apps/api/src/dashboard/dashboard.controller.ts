@@ -14,6 +14,7 @@ import { composeDashboard, type Dashboard, type FamilyChoice } from './compose.j
 import { familyStudents } from '../students/students.repository.js';
 import { readDashboardShape, rememberDashboardFacility } from './dashboard.repository.js';
 import { ROLES_WITH_DERIVED_FACILITIES, SELECTOR_ROLES } from './widget-registry.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -30,6 +31,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * the reader may not see is **absent from this payload**. A client that renders
  * whatever it is given cannot leak anything, because nothing was sent.
  */
+@CoreRoute()
 @Controller('dashboard')
 export class DashboardController {
   @Get()

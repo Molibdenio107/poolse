@@ -46,6 +46,7 @@ import {
   type ReminderPreview,
   type ReminderSent,
 } from './reminders.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Invoicing — phase 2.2.
@@ -60,6 +61,7 @@ import {
  * facility answers 404 rather than 403: that a resource exists at another site
  * is not something an error should confirm.
  */
+@PoolseModule('invoicing')
 @Controller('facilities/:facilityId/invoices')
 export class InvoicesController {
   @Get()
@@ -314,6 +316,7 @@ export class InvoicesController {
  * one, and because the two answer different questions: this is where a club
  * decides what its numbers look like, once, and never again.
  */
+@PoolseModule('invoicing')
 @Controller('facilities/:facilityId/invoice-series')
 export class InvoiceSeriesController {
   @Get()

@@ -105,6 +105,7 @@ import {
 import { PlatformModule } from './platform/platform.module.js';
 import { RequestStatsInterceptor } from './platform/request-stats.interceptor.js';
 import { TenantMiddleware } from './tenant/tenant.middleware.js';
+import { ModuleGuard } from './tenant/modules.js';
 import { VacationsController } from './vacations/vacations.controller.js';
 import { PlacesController, WeatherController } from './weather/weather.controller.js';
 import { ClimateService } from './weather/climate.service.js';
@@ -117,7 +118,7 @@ import { SubscriptionController } from './billing/subscription.controller.js';
  * authenticate by signature, and `public/(.*)` is POOLSE-71's water page, which
  * reads through one SECURITY DEFINER function and nothing else.
  */
-const PUBLIC_ROUTES = ['health', 'webhooks/(.*)', 'public/(.*)'] as const;
+export const PUBLIC_ROUTES = ['health', 'webhooks/(.*)', 'public/(.*)'] as const;
 
 /**
  * Authenticated, but with no tenant to resolve — every one of these answers a
@@ -132,7 +133,7 @@ const PUBLIC_ROUTES = ['health', 'webhooks/(.*)', 'public/(.*)'] as const;
  * This list should stay short and each addition should be arguable in one
  * sentence. Everything else in the API runs tenant-scoped.
  */
-const IDENTITY_ONLY_ROUTES = [
+export const IDENTITY_ONLY_ROUTES = [
   'me',
   'me/(.*)',
   'organizations',
@@ -268,6 +269,13 @@ const IDENTITY_ONLY_ROUTES = [
      * nothing can opt out of having a ceiling at all.
      */
     { provide: APP_GUARD, useClass: UserThrottlerGuard },
+    /*
+     * Modules per club — POOLSE-87. A club with a module switched off gets 403
+     * `module_disabled` on every route tagged with it. Global for the same
+     * reason as the throttler, and `assertEveryRouteHasAModule` at boot is what
+     * makes sure every route has said which module it is.
+     */
+    { provide: APP_GUARD, useClass: ModuleGuard },
     /*
      * Per-tenant request health — slice 2.
      *

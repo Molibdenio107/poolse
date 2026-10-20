@@ -75,6 +75,11 @@ export interface MembershipSummary {
    * The banner reads it; the role it carries came from the grant, not a row.
    */
   supportExpiresAt: string | null;
+  /**
+   * The modules this club has switched off — POOLSE-87. Empty is the full
+   * product. Carried here so the module guard costs no query.
+   */
+  disabledModules: string[];
 }
 
 /**
@@ -151,6 +156,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       o_read_only_at: Date | null;
       o_pending_delete_at: Date | null;
       o_support_expires_at: Date | null;
+      o_disabled_modules: string[];
     }>('SELECT * FROM resolve_memberships($1)', [clerkUserId]);
 
     return rows.map((row) => ({
@@ -168,6 +174,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       readOnlyAt: row.o_read_only_at?.toISOString() ?? null,
       pendingDeleteAt: row.o_pending_delete_at?.toISOString() ?? null,
       supportExpiresAt: row.o_support_expires_at?.toISOString() ?? null,
+      disabledModules: row.o_disabled_modules,
     }));
   });
 }

@@ -22,6 +22,7 @@ import {
   type LabResultInput,
 } from './lab-results.repository.js';
 import { SampleInFutureError, sampleMoment } from './sample-moment.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /** The people who record analyses record lab results — POOLSE-72. */
 const CAN_RECORD_LAB = ['owner', 'admin', 'maintenance'] as const;
@@ -102,6 +103,7 @@ export function parseLabResult(body: Record<string, unknown>): LabResultInput {
  * `gradeLabResult()`; a não conforme result alerts owner, admin and
  * maintenance after the commit, exactly as a water analysis does.
  */
+@PoolseModule('water_quality')
 @Controller('facilities/pools/:poolId/lab-results')
 export class LabResultsController {
   private readonly logger = new Logger(LabResultsController.name);

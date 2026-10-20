@@ -34,6 +34,7 @@ import {
   type SpaceInput,
   type SpaceSummary,
 } from './spaces.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Espaços — the non-pool parts of a site, and what happens in them.
@@ -171,6 +172,7 @@ function nameTaken(error: unknown): never {
   throw error;
 }
 
+@PoolseModule('maintenance')
 @Controller('spaces')
 export class SpacesController {
   /** The spaces at one site, each with its last cleaning and open-issue count. */

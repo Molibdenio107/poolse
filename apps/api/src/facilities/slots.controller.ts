@@ -25,6 +25,7 @@ import {
   type SlotInput,
   type TimeSlot,
 } from './slots.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * A facility's schedule grid — POOLSE-44.
@@ -38,6 +39,7 @@ import {
  * instructor looking at the week needs it. Writes are owner/admin, like every
  * other change to a facility.
  */
+@CoreRoute()
 @Controller('facilities/:facilityId/slots')
 export class SlotsController {
   /**

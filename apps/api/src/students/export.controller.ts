@@ -3,6 +3,7 @@ import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import { readSearch } from '../common/search.js';
 import { exportStudents, MAX_EXPORT_ROWS, type Student } from './students.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * Slice 1.11 — data leaving.
@@ -25,6 +26,7 @@ import { exportStudents, MAX_EXPORT_ROWS, type Student } from './students.reposi
  * same reason and one more: consent can be withdrawn, and a copy in somebody's
  * downloads folder cannot hear about it.
  */
+@CoreRoute()
 @Controller('exports')
 export class ExportsController {
   @Get('students')

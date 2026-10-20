@@ -86,8 +86,8 @@ meaning is only available to a mouse is a control half the users cannot understa
 **The platform writes through column grants, and a platform write records itself.**
 `poolse_platform` holds `UPDATE` on six *named* columns of `organization` — `trial_ends_at`,
 `subscription_status`, `max_facilities`, `max_management_users`, `suspended_at`,
-`suspension_reason` — plus `read_only_at`, `pending_delete_at` and, **since 14 September
-2026, `archived_at`**. No INSERT and **no DELETE**: signup stays the only way a tenant comes
+`suspension_reason` — plus `read_only_at`, `pending_delete_at`, **since 14 September
+2026, `archived_at`**, and since 20 October 2026 `disabled_modules` (POOLSE-87). No INSERT and **no DELETE**: signup stays the only way a tenant comes
 into being, and *destroying* one is not an operator action. Archiving one now is — that rule
 was reversed deliberately so the trial clock could close its ladder, it is a soft delete the
 same login can undo, and `platform-admin.sql` asserts both halves (the archive allowed, the
@@ -138,6 +138,8 @@ Maintenance may record one water analysis and nothing else on a pool. **Slice 2b
 sites** (`management.repository.ts`, proved by `countStatements` in the test harness), the
 selector is remembered on `membership.dashboard_facility_id`, and **the cap ranks a card with
 something to say before an empty one**. `docs/features/dashboard.md`.
+
+**A module is switched off per club by Rui, and every tenant route says which module it is.** POOLSE-87. `POOLSE_MODULES` in `@poolse/rules` is the one list (equal to the SQL enum `poolse_module` by test); everything else is core. `organization.disabled_modules` stores what is **off**, so empty is the full product and a trial needs nothing set. Only `poolse_platform` writes it, through `changeTenant` (`POST /platform/tenants/:id/modules`, one click, audited, alerted); a dependency left broken is a 409 `module_dependency` and a CHECK, never resolved for the operator — reception needs invoicing. **A new controller carries `@PoolseModule('x')` or `@CoreRoute()`** (`tenant/modules.ts`), with a handler tag overriding the class, or the API refuses to boot; `ModuleGuard` answers 403 `module_disabled` from the membership `resolve_memberships` already returned. Switching off hides and refuses and never deletes. **`poolse_app` holds UPDATE on `organization` column by column since this change**, so a new `organization` column the club writes needs its own `GRANT UPDATE (col)` in its migration. `docs/features/platform.md`.
 
 **An irreversible platform act asks for the club's name, and every platform write and
 refusal raises an alert.** POOLSE-64 slice E1. **Which acts are irreversible is decided by

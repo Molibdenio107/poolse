@@ -148,6 +148,7 @@ export class TenantMiddleware implements NestMiddleware {
       appUserId: membership.appUserId,
       roles: membership.roles,
       support: membership.supportExpiresAt !== null,
+      disabledModules: membership.disabledModules,
     };
 
     /*

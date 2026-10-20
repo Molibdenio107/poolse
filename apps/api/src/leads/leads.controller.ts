@@ -35,6 +35,7 @@ import {
   type RegistrationSettings,
   type TrialOption,
 } from './leads.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /** Who works the queue: the people who already enrol students. */
 const CAN_WORK_LEADS = ['owner', 'admin'] as const;
@@ -70,6 +71,7 @@ function requiredId(body: Record<string, unknown>, key: string): string {
  * lead the student form would refuse (a minor with no reachable guardian, a NIF
  * shared with the parent) is refused here with the same fields.
  */
+@CoreRoute()
 @Controller('leads')
 export class LeadsController {
   @Get()
@@ -233,6 +235,7 @@ const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
  * because the slug is the club's public address and the switch decides whether
  * strangers may send it children's details (decisions, 13-10-2026).
  */
+@CoreRoute()
 @Controller('settings/registration')
 export class RegistrationSettingsController {
   @Get()

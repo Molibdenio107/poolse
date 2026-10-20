@@ -32,6 +32,7 @@ import {
   type TaskInput,
   type TaskTarget,
 } from './maintenance.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Planned maintenance — slice 4.3.
@@ -86,6 +87,7 @@ interface FacilityTaskResponse extends TaskListResponse {
   targets: TaskTarget[];
 }
 
+@PoolseModule('maintenance')
 @Controller('maintenance')
 export class MaintenanceController {
   /**

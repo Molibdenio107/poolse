@@ -30,6 +30,7 @@ import {
 import { invitationEmail } from '../notifications/invitation-email.js';
 import { emailIsConfigured, sendEmail } from '../notifications/notifier.js';
 import { invitationExpiry, issueToken, normaliseEmail } from './invitations.service.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 interface CreateInvitationBody {
   email?: unknown;
@@ -121,6 +122,7 @@ export async function deliver(
   }
 }
 
+@CoreRoute()
 @Controller('invitations')
 export class InvitationsController {
   @Post()

@@ -36,6 +36,7 @@ import {
   type EnrolmentContext,
   type SensitiveNotes,
 } from './sensitive.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 interface SensitiveResponse {
   organizationId: string;
@@ -87,6 +88,7 @@ const MAX_EVIDENCE = 500;
  * a colleague's class at short notice is exactly who would be locked out. The
  * audit log is what makes that safe, and it is unconditional.
  */
+@CoreRoute()
 @Controller('students/:studentId')
 export class SensitiveController {
   @Get('sensitive')

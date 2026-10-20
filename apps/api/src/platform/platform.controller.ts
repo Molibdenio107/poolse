@@ -27,6 +27,7 @@ import {
   setReadOnly,
   readTenant,
   readTenantRequests,
+  setModules,
   setPlanLimits,
   setSubscriptionStatus,
   setSuspension,
@@ -43,6 +44,7 @@ import {
   readAmountCents,
   readBillingMode,
   readConfirmName,
+  readDisabledModules,
   readCoversFrom,
   readCoversTo,
   readMaxFacilities,
@@ -229,6 +231,19 @@ export class PlatformController {
         maxManagementUsers: readMaxManagementUsers(body.maxManagementUsers),
       }),
     );
+  }
+
+  /**
+   * Switch a club's modules — POOLSE-87. The body is the whole list of what is
+   * off; `[]` switches everything on. A dependency left broken is a 409
+   * `module_dependency` naming both modules.
+   */
+  @Post('tenants/:id/modules')
+  async modules(
+    @Param('id') id: string,
+    @Body() body: { disabled?: unknown },
+  ): Promise<TenantChangeResult> {
+    return found(await setModules(id, readDisabledModules(body.disabled)));
   }
 
   /**

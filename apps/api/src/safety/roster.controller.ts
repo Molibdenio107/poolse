@@ -29,6 +29,7 @@ import {
   EndInPastError,
   type LifeguardPeriod,
 } from './periods.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * The lifeguard roster — POOLSE-70 slice 2.
@@ -41,6 +42,7 @@ const STAFF: readonly MemberRole[] = ['owner', 'admin', 'instructor', 'maintenan
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+@PoolseModule('incidents')
 @Controller('facilities/:facilityId/lifeguard-roster')
 export class LifeguardRosterController {
   @Get()
@@ -197,6 +199,7 @@ function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000);
 }
 
+@PoolseModule('incidents')
 @Controller('lifeguard-periods')
 export class LifeguardPeriodsController {
   /** Ends a period from a day on — today or later; the days before stay as they are. */
@@ -227,6 +230,7 @@ export class LifeguardPeriodsController {
   }
 }
 
+@PoolseModule('incidents')
 @Controller('lifeguard-duties')
 export class LifeguardDutiesController {
   @Post(':id/archive')

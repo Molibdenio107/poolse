@@ -22,6 +22,7 @@ import {
   type Restored,
 } from './archive.repository.js';
 import { restorableByKind } from './restorable.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -34,6 +35,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * The bin is not offered to anybody else and the API refuses them, because
  * hiding a menu item is never the control.
  */
+@CoreRoute()
 @Controller('archive')
 export class ArchiveController {
   @Get()

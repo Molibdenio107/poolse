@@ -2,6 +2,7 @@ import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { readGrid, type Grid } from './grid.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 /**
  * The lane grid, read — POOLSE-49.
@@ -16,6 +17,7 @@ import { readGrid, type Grid } from './grid.repository.js';
  * affordances at all. That is a UX detail and never the control — the endpoints
  * that mutate enforce it themselves.
  */
+@CoreRoute()
 @Controller('facilities/:facilityId/grid')
 export class GridController {
   @Get()

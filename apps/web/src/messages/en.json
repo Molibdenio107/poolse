@@ -3947,6 +3947,7 @@
       "dateTooFar": "At most two years from today.",
       "statusInvalid": "Unknown subscription status.",
       "atLeastOne": "Minimum 1.",
+      "moduleInvalid": "Unknown module.",
       "atLeastOneOrEmpty": "Minimum 1, or blank for unlimited.",
       "reasonRequired": "Write the reason — it is what the tenant will read.",
       "reasonTooLong": "At most 500 characters.",

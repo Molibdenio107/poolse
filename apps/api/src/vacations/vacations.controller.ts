@@ -37,6 +37,7 @@ import {
   type LeaveKind,
   type VacationRequest,
 } from './vacations.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /** One request cannot be a whole career. Anything larger is a mistake or an attack. */
 const LEAVE_KINDS = ['vacation', 'medical', 'personal'] as const;
@@ -78,6 +79,7 @@ interface TeamResponse {
  * administration and lives with the people who run the organization — the same
  * line story 8 drew for People.
  */
+@PoolseModule('vacations')
 @Controller('vacations')
 export class VacationsController {
   private readonly logger = new Logger('Vacations');

@@ -36,6 +36,7 @@ import {
   type QualificationType,
   type TypeInput,
 } from './qualifications.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Qualifications with expiry — POOLSE-27, 7b.2.
@@ -54,6 +55,7 @@ interface TypesResponse {
   amberDays: number;
 }
 
+@PoolseModule('qualifications')
 @Controller()
 export class QualificationsController {
   @Get('qualification-types')

@@ -640,4 +640,80 @@ END $$;
 
 RESET ROLE;
 
+-- ---------------------------------------------------------------------------
+-- Test 17 — modules: what is off is the platform's to write — POOLSE-87
+--
+-- A club starts with nothing switched off. The platform may write the list and
+-- still nothing else outside its grant; the club's own login may not write it at
+-- all, although it keeps every column it could write before; and a set that
+-- leaves reception on without invoicing is refused by the CHECK.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE v text[];
+BEGIN
+  SELECT disabled_modules::text[] INTO v FROM organization
+   WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  IF v <> '{}'::text[] THEN
+    RAISE EXCEPTION 'FAIL test 17a: a new club starts with % switched off', v;
+  END IF;
+  RAISE NOTICE 'PASS test 17a: a new club has every module on';
+END $$;
+
+SET LOCAL ROLE poolse_platform;
+
+DO $$
+DECLARE v text[];
+BEGIN
+  UPDATE organization SET disabled_modules = '{energy,salaries}'
+   WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  SELECT disabled_modules::text[] INTO v FROM organization
+   WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  IF v <> '{energy,salaries}'::text[] THEN
+    RAISE EXCEPTION 'FAIL test 17b: the platform write did not land (%)', v;
+  END IF;
+  RAISE NOTICE 'PASS test 17b: the platform role may switch modules';
+
+  BEGIN
+    UPDATE organization SET name = 'Apropriado' WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 17c: the platform role rewrote a name beside the module grant';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 17c: the module grant reaches no other column';
+  END;
+
+  BEGIN
+    UPDATE organization SET disabled_modules = '{invoicing}'
+     WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 17d: reception stayed on with invoicing off';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'PASS test 17d: reception without invoicing is refused';
+  END;
+
+  UPDATE organization SET disabled_modules = '{invoicing,reception}'
+   WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  RAISE NOTICE 'PASS test 17e: both off is consistent';
+END $$;
+
+RESET ROLE;
+SET LOCAL ROLE poolse_app;
+SELECT set_config('app.organization_id', 'cccccccc-cccc-cccc-cccc-cccccccccccc', true);
+
+DO $$
+BEGIN
+  BEGIN
+    UPDATE organization SET disabled_modules = '{}'
+     WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    RAISE EXCEPTION 'FAIL test 17f: a club switched its own modules';
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'PASS test 17f: a club cannot switch its own modules';
+  END;
+
+  -- The narrowed grant kept what the app wrote before: its own settings.
+  UPDATE organization SET payment_instructions = 'MB Way'
+   WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  RAISE NOTICE 'PASS test 17g: the club still writes its own settings';
+END $$;
+
+RESET ROLE;
+
 ROLLBACK;

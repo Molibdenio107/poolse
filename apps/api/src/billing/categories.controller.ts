@@ -23,6 +23,7 @@ import {
   type FeeCategory,
   type FeeCategoryInput,
 } from './categories.repository.js';
+import { CoreRoute } from '../tenant/modules.js';
 
 const MAX_NAME = 60;
 
@@ -45,6 +46,7 @@ const MAX_NAME = 60;
  * beside the price list it modifies, which is where an operator is standing when
  * they think about it — the panel says it is the club's own list.
  */
+@CoreRoute()
 @Controller('fee-categories')
 export class FeeCategoriesController {
   @Get()
@@ -181,6 +183,7 @@ export class FeeCategoriesController {
  * precedence between the two lives in SQL, in `enrolment_fee_category`, so
  * nothing here has to know it.
  */
+@CoreRoute()
 @Controller('enrollments/:enrollmentId')
 export class EnrollmentCategoryController {
   @Patch('fee-category')

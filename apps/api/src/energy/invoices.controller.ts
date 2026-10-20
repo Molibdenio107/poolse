@@ -30,6 +30,7 @@ import {
   type RegisterName,
   type TariffPeriod,
 } from './invoices.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Faturas — slice 5.3, first half.
@@ -62,6 +63,7 @@ interface PreviewResponse extends InvoiceCheck {
   input: InvoiceInput;
 }
 
+@PoolseModule('energy')
 @Controller('energy')
 export class EnergyInvoicesController {
   /** What the club's electricity has cost, month by month — the dashboard's panel. */

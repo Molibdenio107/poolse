@@ -38,6 +38,7 @@ import {
   type StandardDetail,
   type StandardInput,
 } from './qualifying.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Mínimos — POOLSE-85.
@@ -60,6 +61,7 @@ interface Flags {
   canArchive: boolean;
 }
 
+@PoolseModule('competition')
 @Controller('qualifying')
 export class QualifyingController {
   @Get()

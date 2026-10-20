@@ -52,6 +52,7 @@ import {
   type GroupShare,
   type PoolCostReport,
 } from './cost-report.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Energy — slices 5.1 and 5.2.
@@ -108,6 +109,7 @@ interface MeterResponse {
   canPrice: boolean;
 }
 
+@PoolseModule('energy')
 @Controller('energy')
 export class EnergyController {
   @Get('facilities/:facilityId/meters')

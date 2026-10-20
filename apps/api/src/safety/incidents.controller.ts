@@ -32,6 +32,7 @@ import {
   type IncidentInput,
   type IncidentSummary,
 } from './incidents.repository.js';
+import { PoolseModule } from '../tenant/modules.js';
 
 /**
  * Bather incidents — POOLSE-70.
@@ -50,6 +51,7 @@ const STAFF: readonly MemberRole[] = ['owner', 'admin', 'instructor', 'maintenan
 const MAX_TEXT = 5000;
 const MAX_SHORT = 200;
 
+@PoolseModule('incidents')
 @Controller('facilities/:facilityId/incidents')
 export class FacilityIncidentsController {
   @Get()
@@ -89,6 +91,7 @@ export class FacilityIncidentsController {
   }
 }
 
+@PoolseModule('incidents')
 @Controller('incidents')
 export class IncidentsController {
   /** Names for the form's pickers — before `:id`, which would claim the path. */

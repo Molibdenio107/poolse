@@ -70,6 +70,7 @@ import {
 import { SampleInFutureError, sampleMoment, type SampleMoment } from './sample-moment.js';
 import { SITE_PAGE_ROLES } from './site-access.js';
 import { POOL_USES, type PoolContext } from '@poolse/rules';
+import { CoreRoute, PoolseModule } from '../tenant/modules.js';
 
 interface FacilityDetailResponse extends FacilityDetail {
   organizationId: string;
@@ -155,6 +156,7 @@ const CAN_RECORD_ANALYSIS = ['owner', 'admin', 'maintenance'] as const;
 
 const POOL_PAGE_ROLES = ['owner', 'admin', 'instructor', 'maintenance'] as const;
 
+@CoreRoute()
 @Controller('facilities')
 export class FacilitiesController {
   private readonly logger = new Logger(FacilitiesController.name);
@@ -275,6 +277,7 @@ export class FacilitiesController {
    * and the dashboard's "Registar leitura" is for them. Only this write was
    * widened — the import, the archive and the band overrides stay owner/admin.
    */
+  @PoolseModule('water_quality')
   @Post('pools/:poolId/analyses')
   async recordAnalysis(
     @Param('poolId') poolId: string,
@@ -357,6 +360,7 @@ export class FacilitiesController {
    * A literal segment under `pools/:poolId`, so it can never be read as an
    * analysis whose id is the word "import".
    */
+  @PoolseModule('water_quality')
   @Post('pools/:poolId/analyses/import')
   async importAnalyses(
     @Param('poolId') poolId: string,
@@ -384,6 +388,7 @@ export class FacilitiesController {
     return result;
   }
 
+  @PoolseModule('water_quality')
   @Post('analyses/:id/archive')
   async removeAnalysis(@Param('id') id: string): Promise<{ archived: true }> {
     requireCanArchive();
@@ -407,6 +412,7 @@ export class FacilitiesController {
    * different kind of decision from recording a reading — and widening it is a
    * call to take out loud rather than to slip into a UI ticket.
    */
+  @PoolseModule('water_quality')
   @Put('pools/:poolId/ranges')
   async savePoolRanges(
     @Param('poolId') poolId: string,
@@ -475,6 +481,7 @@ export class FacilitiesController {
    * for "not measured", which enforces nothing. Owner and admin, like every
    * other standing rule of a site.
    */
+  @PoolseModule('water_quality')
   @Put(':facilityId/water-threshold')
   async waterThreshold(
     @Param('facilityId') facilityId: string,
