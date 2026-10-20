@@ -103,6 +103,8 @@ export interface TenantRow {
   facilityCount: number;
   maxFacilities: number | null;
   poolCount: number;
+  /** POOLSE-87: the modules switched off; empty is the full product. */
+  disabledModules: PoolseModule[];
   /**
    * The last thing anybody in this tenant did that the product recorded.
    *
@@ -213,6 +215,7 @@ export async function listTenants(
       facility_count: number;
       max_facilities: number | null;
       pool_count: number;
+      disabled_modules: PoolseModule[];
       last_activity_at: Date | null;
       archived_at: Date | null;
       suspended_at: Date | null;
@@ -245,6 +248,8 @@ export async function listTenants(
              o.trial_ends_at,
              o.max_management_users,
              o.max_facilities,
+             -- An enum array: ::text[], never bare (the slice 4.2 lesson).
+             o.disabled_modules::text[] AS disabled_modules,
              o.archived_at,
              o.suspended_at,
              o.read_only_at,
@@ -385,6 +390,7 @@ export async function listTenants(
       facilityCount: Number(row.facility_count),
       maxFacilities: row.max_facilities,
       poolCount: Number(row.pool_count),
+      disabledModules: row.disabled_modules,
       lastActivityAt: row.last_activity_at?.toISOString() ?? null,
       archivedAt: row.archived_at?.toISOString() ?? null,
       suspendedAt: row.suspended_at?.toISOString() ?? null,

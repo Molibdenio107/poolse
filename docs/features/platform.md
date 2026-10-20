@@ -365,7 +365,10 @@ on when the club is ready for it.
   qualifications off, and the climate fetch skips a club with energy off. The delivery retry
   is left alone: it only resends what a live module raised.
 
-The *Módulos* card on `/admin` is slice 3.
+- **The *Módulos* card** (slice 3), on the tenant's Ações tab in `/admin`: one box per module,
+  ticked when it is on, with a line saying what it covers. Saving sends every unticked module as
+  `disabled`. A broken dependency comes back as a toast naming both modules in the reader's
+  language ("Receção precisa de Faturação…"), and the boxes stay as the operator left them.
 
 ## Support access — POOLSE-79 (12 October 2026)
 

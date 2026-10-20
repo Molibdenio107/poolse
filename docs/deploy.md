@@ -231,6 +231,9 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       refactor — that is why those variables exist. Attribution is rendered wherever the data
       is shown. The safe default is what ships today: the history flag **off**, and no archive
       call at all.
+- [ ] **The pilot club's modules set on `/admin`** (POOLSE-87), once it has signed up on
+  production: off are invoicing, reception, maintenance, energy, salaries, vacations and
+  qualifications (Rui, 20-10-2026). Reception needs invoicing, so it waits for POOLSE-76.
 - [ ] **TimescaleDB confirmed** on the production database, or the fallback taken — see below.
 - [ ] **A Cloudflare R2 bucket per environment**, private, with an API token scoped to that one
       bucket, and `S3_ENDPOINT` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` /

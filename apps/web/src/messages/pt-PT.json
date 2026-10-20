@@ -3842,6 +3842,12 @@
     "emailInvalid": "Este endereço de email não é válido."
   },
   "admin": {
+    "modules": {
+      "title": "Módulos",
+      "hint": "Ligado, o clube vê e usa o módulo. Desligar esconde e recusa, e nunca apaga dados: voltar a ligar repõe tudo como estava.",
+      "dependency": "{module} precisa de {requires}. Desligue também {module}, ou mantenha {requires} ligado.",
+      "failed": "Não foi possível guardar os módulos."
+    },
     "mark": "Poolse · Plataforma",
     "backToApp": "Voltar à aplicação",
     "title": "Clientes",
@@ -5442,6 +5448,19 @@
     }
   },
   "modules": {
+    "covers": {
+      "messages": "Mensagens às famílias, e o pedido para deixar de as receber.",
+      "incidents": "Registo de ocorrências e escala de nadadores-salvadores.",
+      "reception": "Natação livre: entradas, passes, check-in e lotação. Precisa de Faturação.",
+      "competition": "Provas e resultados LENEX, mínimos e o que falta para qualificar.",
+      "water_quality": "Análises da água, intervalos, resultados de laboratório e a página pública da água.",
+      "invoicing": "Emissão mensal, documentos, séries, pagamentos, notas de crédito, Em dívida e lembretes.",
+      "maintenance": "Espaços, tarefas e pedidos de manutenção, e inventário.",
+      "energy": "Contadores, leituras, tarifas, faturas de energia e custo por utilização.",
+      "salaries": "Remunerações do staff, com importação e exportação.",
+      "vacations": "Férias e mapa da equipa.",
+      "qualifications": "Qualificações do staff e os alertas de validade."
+    },
     "name": {
       "messages": "Mensagens",
       "incidents": "Ocorrências",

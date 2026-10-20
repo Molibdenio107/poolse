@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Eye, Lock, LockOpen, Pencil, Receipt, Wallet } from 'lucide-react';
-import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
+import { SelectField, TextAreaField, TextField, useSeeded } from '@/components/ui/field';
 import { Dialog } from '@/components/ui/dialog';
+import { POOLSE_MODULES, type PoolseModule } from '@poolse/rules';
 import { useSavedAction } from '@/lib/saved';
 import type { PlatformTenant } from '@/lib/api';
 import type { FormState } from '@/app/(app)/dashboard/actions';
@@ -13,6 +14,7 @@ import { cn } from '@/lib/utils';
 import {
   recordPaymentAction,
   setBillingModeAction,
+  setModulesAction,
   setPlanAction,
   setReadOnlyAction,
   setSubscriptionAction,
@@ -70,6 +72,7 @@ export function TenantActions({ tenant }: { tenant: PlatformTenant }): React.Rea
         <PlanCard tenant={tenant} />
         <ReadOnlyCard tenant={tenant} />
         <SuspensionCard tenant={tenant} />
+        <ModulesCard tenant={tenant} />
       </div>
     </section>
   );
@@ -256,6 +259,68 @@ function PlanCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
       />
       <Submit label={t('common.save')} pending={pending} />
     </Card>
+  );
+}
+
+/**
+ * Módulos — POOLSE-87. One box per module, ticked when it is on, with a line
+ * under each saying what it covers so the switch is never a guess.
+ *
+ * Full width: eleven rows read as a list, and half a grid column would wrap
+ * every description. Reversible, so no dialog and no typed name. A dependency
+ * the operator would break (reception without invoicing) is refused by the API
+ * and explained by the toast; nothing here switches a second module on the
+ * operator's behalf.
+ */
+function ModulesCard({ tenant }: { tenant: PlatformTenant }): React.ReactElement {
+  const t = useTranslations();
+  const [, dispatch, pending] = useSavedAction(setModulesAction, INITIAL);
+
+  return (
+    <div className="md:col-span-2">
+      <Card
+        title={t('admin.modules.title')}
+        hint={t('admin.modules.hint')}
+        action={dispatch}
+        tenantId={tenant.id}
+      >
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {POOLSE_MODULES.map((module) => (
+            <ModuleSwitch
+              key={module}
+              module={module}
+              on={!tenant.disabledModules.includes(module)}
+            />
+          ))}
+        </ul>
+        <Submit label={t('common.save')} pending={pending} />
+      </Card>
+    </div>
+  );
+}
+
+function ModuleSwitch({ module, on }: { module: PoolseModule; on: boolean }): React.ReactElement {
+  const t = useTranslations();
+  // Controlled, re-seeded when the server's answer changes — field.tsx's rule.
+  const [checked, setChecked] = useSeeded(on);
+
+  return (
+    <li>
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          name="enabled"
+          value={module}
+          checked={checked}
+          onChange={(event) => setChecked(event.target.checked)}
+          className="mt-1 size-4 shrink-0 accent-primary"
+        />
+        <span className="flex flex-col gap-1">
+          <span className="text-sm font-medium">{t(`modules.name.${module}`)}</span>
+          <span className="text-sm text-foreground-muted">{t(`modules.covers.${module}`)}</span>
+        </span>
+      </label>
+    </li>
   );
 }
 

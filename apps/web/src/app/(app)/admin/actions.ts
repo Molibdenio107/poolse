@@ -1,7 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { apiPost } from '@/lib/api';
+import { getTranslations } from 'next-intl/server';
+import { isPoolseModule, POOLSE_MODULES } from '@poolse/rules';
+import { ApiError, apiPost } from '@/lib/api';
 import { describeFailure } from '@/lib/form-failure';
 import { parseCents } from '@/lib/money';
 import type { FormState } from '@/app/(app)/dashboard/actions';
@@ -91,6 +93,47 @@ export async function setPlanAction(
     });
   } catch (error) {
     return describeFailure(error, 'admin.error.planFailed');
+  }
+
+  revalidateAdmin(tenantId);
+  return { ok: true };
+}
+
+/**
+ * Switch a club's modules — POOLSE-87.
+ *
+ * The card ticks what is **on**; the API stores what is off, so the list sent is
+ * every module not ticked. One click either way and no typed name: switching
+ * off hides and refuses and never deletes.
+ *
+ * A dependency left broken is a 409 naming both modules. Their names are
+ * translated here, on the server, so the toast reads "Receção precisa de
+ * Faturação" rather than two enum spellings.
+ */
+export async function setModulesAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const tenantId = String(formData.get('tenantId') ?? '');
+  const on = new Set(formData.getAll('enabled').map(String));
+
+  try {
+    await apiPost(`/platform/tenants/${tenantId}/modules`, {
+      disabled: POOLSE_MODULES.filter((module) => !on.has(module)),
+    });
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'module_dependency') {
+      const { module, requires } = (error.details ?? {}) as { module?: unknown; requires?: unknown };
+      if (isPoolseModule(module) && isPoolseModule(requires)) {
+        const t = await getTranslations();
+        return {
+          ok: false,
+          errorKey: 'admin.modules.dependency',
+          values: { module: t(`modules.name.${module}`), requires: t(`modules.name.${requires}`) },
+        };
+      }
+    }
+    return describeFailure(error, 'admin.modules.failed');
   }
 
   revalidateAdmin(tenantId);

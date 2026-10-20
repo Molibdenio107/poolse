@@ -262,6 +262,11 @@ test('QA 10: off and back on leaves every row as it was, and the trail holds bot
     await asOperator(async (clerkUserId) => {
       await platform.modules(tenant.organizationId, { disabled: ['water_quality', 'energy'] });
       assert.equal(await snapshot(), before);
+      // The Módulos card reads the list from the tenant read (slice 3).
+      assert.deepEqual((await platform.tenant(tenant.organizationId)).disabledModules, [
+        'water_quality',
+        'energy',
+      ]);
       const back = await platform.modules(tenant.organizationId, { disabled: [] });
       assert.deepEqual(back.changed['disabled_modules'], {
         before: ['water_quality', 'energy'],

@@ -3782,6 +3782,8 @@ export interface BillingOverview {
 
 export interface PlatformTenant {
   id: string;
+  /** POOLSE-87: the modules switched off; empty is the full product. */
+  disabledModules: PoolseModule[];
   name: string;
   slug: string;
   kind: OrganizationKind;

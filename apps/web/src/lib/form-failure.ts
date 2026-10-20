@@ -36,7 +36,12 @@ export function describeFailure(error: unknown, fallbackKey: string): FormState 
       return {
         ok: false,
         errorKey:
-          error.code === 'no_organization' ? 'common.noOrganization' : 'common.notAllowed',
+          error.code === 'no_organization'
+            ? 'common.noOrganization'
+            : // POOLSE-87: the club has this module off — not the reader's role.
+              error.code === 'module_disabled'
+              ? 'common.moduleDisabled'
+              : 'common.notAllowed',
       };
     }
 

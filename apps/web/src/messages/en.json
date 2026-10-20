@@ -3842,6 +3842,12 @@
     "emailInvalid": "That is not a valid email address."
   },
   "admin": {
+    "modules": {
+      "title": "Modules",
+      "hint": "On, the club sees and uses the module. Switching off hides and refuses and never deletes data: switching back on restores everything as it was.",
+      "dependency": "{module} needs {requires}. Switch {module} off too, or keep {requires} on.",
+      "failed": "The modules could not be saved."
+    },
     "mark": "Poolse · Platform",
     "backToApp": "Back to the app",
     "title": "Tenants",
@@ -5442,6 +5448,19 @@
     }
   },
   "modules": {
+    "covers": {
+      "messages": "Messages to families, and the opt-out from them.",
+      "incidents": "Incident log and lifeguard roster.",
+      "reception": "Free swim: entries, passes, check-in and occupancy. Needs Invoicing.",
+      "competition": "Meets and LENEX results, entry times and the gap to qualify.",
+      "water_quality": "Water analyses, ranges, lab results and the public water page.",
+      "invoicing": "Monthly run, documents, series, payments, credit notes, Overdue and reminders.",
+      "maintenance": "Spaces, maintenance tasks and requests, and inventory.",
+      "energy": "Meters, readings, tariffs, energy invoices and cost per use.",
+      "salaries": "Staff pay, with import and export.",
+      "vacations": "Leave and the team map.",
+      "qualifications": "Staff qualifications and their expiry alerts."
+    },
     "name": {
       "messages": "Messages",
       "incidents": "Incidents",
