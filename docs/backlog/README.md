@@ -109,3 +109,5 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-84](./POOLSE-84-closures-by-facility-and-tank.md) | Closures by facility or by tank, half days, and who is warned | Scheduling / Closures | High | POOLSE-31 | — |
 | [POOLSE-85](./POOLSE-85-gap-to-qualify.md) | Gap to qualify — FPN age groups and entry times | Students / Competition | High | POOLSE-81 | 1 |
 | [POOLSE-86](./POOLSE-86-email-delivery.md) | Email delivery — unsent notices, retries, invoice reminders, opt-outs | Notifications | High | notifier.ts (Resend) | — |
+| [POOLSE-87](./POOLSE-87-modules-per-club.md) | Modules — switching parts of Poolse on and off per club, from `/admin` | Platform / Tenancy | High — blocks the pilot preview | POOLSE-63, 64, 66 | 1 |
+| [POOLSE-88](./POOLSE-88-staff-on-the-phone.md) | Staff on the phone — installable app, the poolside flows, iPhone and Android | Global / Mobile web | High — blocks the pilot preview | POOLSE-87 | 1 |
