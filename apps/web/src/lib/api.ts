@@ -139,7 +139,15 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   // 204, and any other body-less success.
   if (response.status === 204) return undefined as T;
 
-  return (await response.json()) as T;
+  /*
+   * A handler that returns `null` is sent by Nest as a 200 with an **empty
+   * body**, not the text `null` — `/platform/tenants/:id/claim` for a club
+   * provisioned before trial claims existed is one. `response.json()` throws
+   * "Unexpected end of JSON input" on that, which `describeLoad` then reported
+   * as the API being unreachable. Empty means the null it was.
+   */
+  const text = await response.text();
+  return (text === '' ? null : JSON.parse(text)) as T;
 }
 
 /**
