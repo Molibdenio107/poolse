@@ -6,7 +6,7 @@ import { SignIn } from '@clerk/nextjs';
  */
 export default function SignInPage(): React.ReactElement {
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-12">
+    <main className="flex min-h-dvh items-center justify-center px-6 py-12">
       {/*
         `fallbackRedirectUrl`, not `forceRedirectUrl` — POOLSE-37 AC4.
         

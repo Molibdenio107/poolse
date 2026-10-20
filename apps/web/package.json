@@ -10,7 +10,7 @@
     "i18n:check": "node scripts/check-messages.mjs && node scripts/check-formats.mjs",
     "test": "node --test \"src/**/*.test.ts\"",
     "e2e": "playwright test",
-    "e2e:install": "playwright install chromium",
+    "e2e:install": "playwright install chromium webkit",
     "layout:check": "node scripts/check-layout.mjs",
     "contrast:check": "node scripts/check-contrast.mjs",
     "pt:check": "node scripts/check-portuguese.mjs",

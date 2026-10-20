@@ -344,6 +344,53 @@
   }
 
   /*
+   * One control size, two values — POOLSE-88 (Rui, 20-10-2026).
+   *
+   * `h-control` and `text-control` read these, so no component changes a class.
+   * A mouse keeps the 36px / 15px settled on 11-10-2026. A finger gets 44px,
+   * the smallest target a thumb hits without aiming, and 16px text, because iOS
+   * Safari zooms the whole page when a field under 16px takes focus.
+   *
+   * **`pointer: coarse` is for sizing only, never for layout.** A touch laptop
+   * is wide; layout follows width (`md:`), size follows the pointer.
+   */
+  :root {
+    --control-h: 2.25rem;
+    --control-text: 0.9375rem;
+    --control-leading: 1.375rem;
+
+    /*
+     * The notch, the home bar and the rounded corners — POOLSE-88. Zero
+     * everywhere but a phone whose viewport says `viewport-fit=cover`. Every
+     * shell offset reads these variables rather than `env()` directly, so there
+     * is one place to look and a test can stand in for a notch.
+     */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+  }
+
+  @media (pointer: coarse) {
+    :root {
+      --control-h: 2.75rem;
+      --control-text: 1rem;
+      --control-leading: 1.5rem;
+    }
+
+    /*
+     * And a floor under every field, whatever its own classes say: a `text-sm`
+     * input anywhere is a page that jumps when a finger lands on it. Element
+     * plus attribute outranks a single utility class, which is the point.
+     */
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+    select,
+    textarea {
+      font-size: 1rem;
+    }
+  }
+
+  /*
    * Number inputs carry no spinner.
    *
    * The little up/down arrows are a 12px target that changes a value by one —

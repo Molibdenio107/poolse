@@ -46,7 +46,7 @@ export default async function RegistrationPage({
   const shell = (children: React.ReactNode): React.ReactElement => (
     <main
       lang={locale}
-      className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-5 bg-background px-4 py-10 text-foreground"
+      className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 bg-background px-4 py-10 text-foreground"
     >
       <nav className="flex justify-end text-sm">
         <Link href={other.href} className="underline underline-offset-2">

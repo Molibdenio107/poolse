@@ -1,12 +1,14 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { EntityIcon, type EntityKind } from '@/components/entity-icon';
 import type { PoolseModule } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
+import { Dialog } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 /**
@@ -423,32 +425,90 @@ export function AppSidebar({
    * A hidden parent takes its children with it; a hidden child leaves its parent
    * standing. Never inherited: Instalações and Staff have different audiences.
    */
-  const viewer: Viewer = { roles, kind, modules };
-  const sections = SECTIONS.map((section) => prune(section, viewer)).filter(
-    (section): section is Item => section !== null,
-  );
+  const sections = visibleSections({ roles, kind, modules });
 
+  /*
+   * From `md` up only — POOLSE-88. Below it the same list lives in a sheet
+   * behind the app bar's menu button (`MobileMenu`), because a strip of links
+   * scrolling sideways across the top of a phone is a menu nobody can read.
+   */
   return (
-    <aside className="border-b border-border bg-surface md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
-      <div className="flex h-full flex-row items-center gap-3 p-3 md:flex-col md:items-stretch md:gap-6 md:p-5">
-        <Link
-          href="/dashboard"
-          className="hidden px-3 text-lg font-semibold tracking-tight text-primary md:block"
-        >
+    <aside className="hidden border-r border-border bg-surface md:sticky md:top-0 md:block md:h-dvh md:w-60 md:shrink-0">
+      <div className="flex h-full flex-col gap-6 p-5">
+        <Link href="/dashboard" className="px-3 text-lg font-semibold tracking-tight text-primary">
           {t('app.name')}
         </Link>
 
-        <nav
-          aria-label={t('nav.label')}
-          className="flex flex-1 flex-row gap-1 overflow-x-auto md:flex-col md:overflow-x-visible"
-        >
-          {sections.map((section) => (
-            <NavItem key={section.href} item={section} pathname={pathname} depth={0} />
-          ))}
-        </nav>
-
+        <SidebarNav sections={sections} pathname={pathname} />
       </div>
     </aside>
+  );
+}
+
+/** The sections this viewer may see, pruned at every depth. */
+function visibleSections(viewer: Viewer): Item[] {
+  return SECTIONS.map((section) => prune(section, viewer)).filter(
+    (section): section is Item => section !== null,
+  );
+}
+
+/** The one list both the sidebar and the phone's sheet draw, so they cannot drift. */
+function SidebarNav({ sections, pathname }: { sections: Item[]; pathname: string }): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <nav aria-label={t('nav.label')} className="flex flex-1 flex-col gap-1">
+      {sections.map((section) => (
+        <NavItem key={section.href} item={section} pathname={pathname} depth={0} />
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * The phone's menu — POOLSE-88. A button at the start of the app bar, below
+ * `md` only, opening the same navigation in a sheet from the left.
+ *
+ * The sheet is `Dialog` (`placement="start"`), so Escape, the backdrop, the
+ * focus trap and the scroll lock are the ones every dialog has. It closes on
+ * its own when the route changes: a tap on a link is the end of the errand.
+ */
+export function MobileMenu({
+  roles,
+  kind,
+  modules,
+}: {
+  roles: readonly string[];
+  kind: OrganizationKind;
+  modules: readonly PoolseModule[];
+}): React.ReactElement {
+  const t = useTranslations();
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => setOpen(false), [pathname]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t('nav.openMenu')}
+        aria-expanded={open}
+        className="inline-flex h-control w-control shrink-0 items-center justify-center rounded border border-border bg-surface text-foreground hover:bg-surface-muted md:hidden"
+      >
+        <Menu aria-hidden className="size-5" />
+      </button>
+
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t('app.name')}
+        closeLabel={t('common.close')}
+        placement="start"
+      >
+        <SidebarNav sections={visibleSections({ roles, kind, modules })} pathname={pathname} />
+      </Dialog>
+    </>
   );
 }
 
@@ -487,8 +547,8 @@ function NavItem({
           LINK,
           // Each level steps in a little further. Only the top level has an icon,
           // so the indent is what carries the hierarchy below it.
-          depth === 1 && 'md:ml-4 md:py-1.5',
-          depth >= 2 && 'md:ml-8 md:py-1.5',
+          depth === 1 && 'ml-4 py-1.5',
+          depth >= 2 && 'ml-8 py-1.5',
           active ? ACTIVE : IDLE,
         )}
       >

@@ -33,7 +33,7 @@ export default async function AdminLayout({
   const t = await getTranslations();
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-dvh flex-col">
       {/*
         Deliberately not the tenant app's bar. That one is `bg-surface` with an
         empty brand slot waiting for a customer's logo; this one is inverted —

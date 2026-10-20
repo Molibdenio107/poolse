@@ -40,7 +40,7 @@ export default async function EmailPreferencePage({
 
   if (page === undefined) {
     return (
-      <main lang={locale} className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-2 bg-background px-4 py-16 text-foreground">
+      <main lang={locale} className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-2 bg-background px-4 py-16 text-foreground">
         <h1 className="text-xl font-semibold">{t('emailPreference.unavailable')}</h1>
         <p className="text-foreground-muted">{t('emailPreference.unavailableHint')}</p>
       </main>
@@ -50,7 +50,7 @@ export default async function EmailPreferencePage({
 
   const other = locale === 'en' ? 'pt-PT' : 'en';
   return (
-    <main lang={locale} className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-6 bg-background px-4 py-16 text-foreground">
+    <main lang={locale} className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-6 bg-background px-4 py-16 text-foreground">
       <header className="flex flex-col gap-1">
         <p className="text-sm text-foreground-muted">{page.clubName}</p>
         <h1 className="text-2xl font-semibold">{t('emailPreference.title')}</h1>

@@ -75,7 +75,7 @@ export function PageShell({
   width?: 'default' | 'wide';
 }): React.ReactElement {
   return (
-    <main className="flex min-h-screen w-full justify-center px-page py-page-y">
+    <main className="flex min-h-dvh w-full justify-center px-page py-page-y">
       <div
         className={cn(
           'flex w-full flex-col gap-page-gap',
@@ -110,11 +110,27 @@ export function PageShell({
         {tabs === undefined ? (
           <>
             {back !== undefined && (
-              <div className="sticky top-app-bar z-10 -mx-page -mt-2 bg-background px-page py-2">
+              <div className="sticky top-app-bar z-10 -mx-page -mt-2 bg-background px-page py-2 max-md:hidden">
                 <BackLink href={back.href} label={back.label} />
               </div>
             )}
-            <Header title={title} subtitle={subtitle} actions={actions} />
+            {/*
+              On a phone the way back, the title and the page's primary action
+              stick together under the app bar — POOLSE-88. A thumb reaching
+              for "Novo" or "Guardar" should not first scroll to the top. The
+              subtitle is left in the page beneath, because a sticky block that
+              takes a third of the screen is a register nobody can see.
+            */}
+            <div className="sticky top-app-bar z-10 -mx-page -mt-2 flex flex-col gap-1 bg-background px-page py-2 md:hidden">
+              {back !== undefined && <BackLink href={back.href} label={back.label} />}
+              <Header title={title} actions={actions} compact />
+            </div>
+            {subtitle !== undefined && (
+              <p className="-mt-page-gap pt-1 text-sm text-foreground-muted md:hidden">{subtitle}</p>
+            )}
+            <div className="max-md:hidden">
+              <Header title={title} subtitle={subtitle} actions={actions} />
+            </div>
           </>
         ) : (
           <div className="sticky top-app-bar z-10 -mx-page -mt-2 flex flex-col gap-2 bg-background px-page py-2">
@@ -138,20 +154,35 @@ function Header({
   title,
   subtitle,
   actions,
+  compact = false,
 }: {
   title: string;
   subtitle?: string | undefined;
   actions?: React.ReactNode;
+  /** The phone's sticky header: one line of title, no reserved height. */
+  compact?: boolean;
 }): React.ReactElement {
   return (
-    <header className="flex min-h-page-header items-start justify-between gap-4">
+    <header
+      className={cn(
+        'flex items-start justify-between gap-4',
+        compact ? 'items-center' : 'min-h-page-header',
+      )}
+    >
       <div className="min-w-0">
         {/*
           Clamped, not wrapped without limit — 41.10. A long translated title
           has to be allowed to be long without making this page taller than the
           one beside it.
         */}
-        <h1 className="line-clamp-2 text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1
+          className={cn(
+            'font-semibold tracking-tight',
+            compact ? 'line-clamp-1 text-xl' : 'line-clamp-2 text-2xl',
+          )}
+        >
+          {title}
+        </h1>
         {subtitle !== undefined && (
           <p className="line-clamp-2 text-sm text-foreground-muted">{subtitle}</p>
         )}

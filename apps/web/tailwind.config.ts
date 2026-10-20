@@ -34,7 +34,8 @@ export default {
        * for the calendar and the lists. Rui's call, 11 October 2026.
        */
       fontSize: {
-        control: ['0.9375rem', { lineHeight: '1.375rem' }],
+        // POOLSE-88: 15px under a mouse, 16px under a finger — globals.css.
+        control: ['var(--control-text)', { lineHeight: 'var(--control-leading)' }],
       },
       colors: {
         primary: {
@@ -170,7 +171,12 @@ export default {
          * anything wanting to sit underneath had to guess a pixel value that
          * would be wrong the next time somebody changed the padding.
          */
-        'app-bar': '3.5rem',
+        // POOLSE-88: plus the notch, which the bar pads itself clear of.
+        'app-bar': 'calc(3.5rem + var(--safe-top))',
+        'safe-top': 'var(--safe-top)',
+        'safe-right': 'var(--safe-right)',
+        'safe-bottom': 'var(--safe-bottom)',
+        'safe-left': 'var(--safe-left)',
       },
       minHeight: {
         // Sized for a two-line title plus a subtitle, so a page with header
@@ -223,7 +229,12 @@ export default {
          * the same baseline, is the difference between a filter row and three
          * controls that happen to be adjacent.
          */
-        control: '2.25rem',
+        // POOLSE-88: 36px under a mouse, 44px under a finger — globals.css.
+        control: 'var(--control-h)',
+      },
+      // A square control — the phone's menu button — on the same two sizes.
+      width: {
+        control: 'var(--control-h)',
       },
 
       /*

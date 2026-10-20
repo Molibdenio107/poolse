@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import type { PoolseModule } from '@poolse/rules';
-import { AppSidebar } from '../app-sidebar';
+import { AppSidebar, MobileMenu } from '../app-sidebar';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { SuspendedNotice } from './suspended-notice';
@@ -193,7 +193,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
+    // POOLSE-88: clear of a landscape phone's rounded corners and notch.
+    <div className="flex min-h-dvh flex-col pl-safe-left pr-safe-right md:flex-row">
       {/*
         Hidden on paper - round 4. The water-quality report is a real document
         an operator sends to the camara, and a printout with the navigation and
@@ -210,13 +211,18 @@ export default async function DashboardLayout({
         whole page sideways instead of scrolling inside its own container.
       */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-app-bar items-center justify-between gap-3 border-b border-border bg-surface px-6 print:hidden">
+        {/*
+          `h-app-bar` includes the notch and `pt-safe-top` pads the bar clear of
+          it, so the bar's own content is always 3.5rem tall — POOLSE-88.
+        */}
+        <header className="sticky top-0 z-20 flex h-app-bar items-center justify-between gap-3 border-b border-border bg-surface px-4 pt-safe-top md:px-6 print:hidden">
           {/*
             The brand slot — the club's logo and name, never Poolse's own mark,
             because this corner belongs to the customer. The logo is set under
             Faturação → Definições (12 October 2026).
           */}
           <div className="flex min-w-0 items-center gap-2">
+            <MobileMenu roles={roles} kind={kind} modules={modules} />
             {logoFileId !== null && (
               // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
               <img src={`/files/${logoFileId}`} alt="" className="h-8 w-auto max-w-32 object-contain" />
@@ -261,7 +267,8 @@ export default async function DashboardLayout({
           />
         )}
 
-        <div className="min-w-0 flex-1">{children}</div>
+        {/* Nothing under the home bar — POOLSE-88. */}
+        <div className="min-w-0 flex-1 pb-safe-bottom">{children}</div>
       </div>
     </div>
   );

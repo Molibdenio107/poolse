@@ -86,8 +86,11 @@ export function Dialog({
    * Centred asks a question and waits. A sheet is somewhere to work while the
    * week is still visible behind it, which is what a lesson plan wants — an
    * instructor writing Tuesday's plan is looking at Tuesday.
+   *
+   * `start` is a sheet down the left-hand edge: the phone's menu (POOLSE-88),
+   * which slides out from where the sidebar sits on a desk.
    */
-  placement?: 'centre' | 'side';
+  placement?: 'centre' | 'side' | 'start';
   /**
    * The control to start on, when it is not the first one.
    *
@@ -186,7 +189,12 @@ export function Dialog({
         'fixed inset-0 z-50 flex overflow-y-auto bg-black/40 backdrop-blur-[1px]',
         placement === 'side'
           ? 'items-stretch justify-end p-0 sm:p-4'
-          : 'items-start justify-center p-4 sm:items-center sm:p-8',
+          : placement === 'start'
+            ? 'items-stretch justify-start p-0'
+            : 'items-start justify-center p-4 sm:items-center sm:p-8',
+        // POOLSE-88: nothing under the notch or the home bar.
+        'pt-[max(var(--safe-top),theme(spacing.4))] pb-[max(var(--safe-bottom),theme(spacing.4))]',
+        placement === 'centre' ? '' : 'pt-safe-top pb-0',
       )}
     >
       <div
@@ -200,8 +208,10 @@ export function Dialog({
         className={cn(
           'w-full border border-border bg-surface p-5 shadow-lg focus:outline-none',
           placement === 'side'
-            ? 'max-w-md self-stretch overflow-y-auto sm:rounded-lg'
-            : 'max-w-lg rounded-lg',
+            ? 'max-w-md self-stretch overflow-y-auto pb-[calc(theme(spacing.5)+var(--safe-bottom))] sm:rounded-lg'
+            : placement === 'start'
+              ? 'max-w-xs self-stretch overflow-y-auto pb-[calc(theme(spacing.5)+var(--safe-bottom))] pl-[calc(theme(spacing.5)+var(--safe-left))]'
+              : 'max-w-lg rounded-lg',
           className,
         )}
       >

@@ -201,7 +201,7 @@ export function TurmaHoverCard({
             // Never taller than the viewport, and scrollable when the list is
             // long — a thirty-name turma must not run off the bottom of the
             // screen with no way to reach the end of it.
-            'max-h-[min(28rem,calc(100vh-2rem))] overflow-y-auto overscroll-contain',
+            'max-h-[min(28rem,calc(100dvh-2rem))] overflow-y-auto overscroll-contain',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
           )}

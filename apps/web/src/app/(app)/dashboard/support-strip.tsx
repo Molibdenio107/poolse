@@ -117,7 +117,7 @@ export function ClubSupportStrip({
 export function SupportEndedNotice(): React.ReactElement {
   const t = useTranslations();
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-start justify-center gap-4 px-4">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-start justify-center gap-4 px-4">
       <Headset aria-hidden className="size-6 text-foreground-muted" />
       <h1 className="text-lg font-medium">{t('support.endedTitle')}</h1>
       <p className="text-sm text-foreground-muted">{t('support.endedBody')}</p>

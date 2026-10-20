@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { PHONE_SESSION } from './e2e/session';
 
 /**
  * Browser tests — the foundation, set up by POOLSE-58's QA pass.
@@ -44,6 +45,31 @@ export default defineConfig({
   },
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // The desk. Specs that are about the phone skip themselves here.
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /phone-.*\.spec\.ts/ },
+
+    /*
+     * The phone — POOLSE-88. Both are the contract: a tier-1 flow is not done
+     * until it passes on each. WebKit is Safari's engine, which Chrome's
+     * responsive mode is not; `pnpm exec playwright install webkit` once per
+     * machine. Neither proves the keyboard, the safe area or installing on a
+     * real device — the ticket's real-device passes do that.
+     *
+     * `setup` signs the E2E user in once per run and saves the session, so the
+     * phone specs do not each walk Clerk's two-step sign-in.
+     */
+    { name: 'setup', testMatch: /auth\.setup\.ts/, use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'iphone',
+      use: { ...devices['iPhone 14'], storageState: PHONE_SESSION },
+      dependencies: ['setup'],
+      testMatch: /phone-.*\.spec\.ts/,
+    },
+    {
+      name: 'android',
+      use: { ...devices['Pixel 7'], storageState: PHONE_SESSION },
+      dependencies: ['setup'],
+      testMatch: /phone-.*\.spec\.ts/,
+    },
   ],
 });

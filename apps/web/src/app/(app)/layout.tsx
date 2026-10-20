@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { enUS, ptPT } from '@clerk/localizations';
 import { ClerkProvider } from '@clerk/nextjs';
 import { NextIntlClientProvider } from 'next-intl';
@@ -16,7 +16,54 @@ import '../globals.css';
  */
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations();
-  return { title: t('app.name'), description: t('app.tagline') };
+  return {
+    title: t('app.name'),
+    description: t('app.tagline'),
+    // Installable — POOLSE-88. `app/manifest.ts`.
+    manifest: '/manifest.webmanifest',
+    icons: {
+      icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+      // iOS reads this, not the manifest's icons.
+      apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }],
+    },
+    /*
+     * The home-screen app on an iPhone. `default` keeps the system's own status
+     * bar above the app, legible in both themes; `black-translucent` would draw
+     * white clock digits over a white app bar in the light theme.
+     */
+    appleWebApp: { capable: true, title: 'Poolse', statusBarStyle: 'default' },
+  };
+}
+
+/** The light and dark surface tokens, for the browser's own chrome. */
+const SURFACE = { light: '#FFFFFF', dark: '#141B1F' } as const;
+
+/**
+ * The phone's viewport — POOLSE-88.
+ *
+ * `viewport-fit=cover` lets the page reach under the notch and the home bar,
+ * and every shell offset pads itself clear with `--safe-*` (globals.css).
+ * **Zoom is never disabled**: pinching is how somebody with poor sight reads a
+ * register, and the jump iOS makes on focus is answered by 16px fields instead.
+ *
+ * The theme colour follows the person's own choice when they made one, and the
+ * operating system's otherwise — the cookie is the same one the `<html>` class
+ * reads, so the browser bar and the page never disagree.
+ */
+export async function generateViewport(): Promise<Viewport> {
+  const theme = await readTheme();
+  return {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+    themeColor:
+      theme === 'system'
+        ? [
+            { media: '(prefers-color-scheme: light)', color: SURFACE.light },
+            { media: '(prefers-color-scheme: dark)', color: SURFACE.dark },
+          ]
+        : SURFACE[theme],
+  };
 }
 
 /**

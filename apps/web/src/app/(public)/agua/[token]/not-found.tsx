@@ -10,7 +10,7 @@ import en from '@/messages/en.json';
  */
 export default function PublicWaterNotFound(): React.ReactElement {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 bg-background px-4 py-16 text-foreground">
+    <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-6 bg-background px-4 py-16 text-foreground">
       <section lang="pt-PT" className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold">{pt.publicWater.notFound.title}</h1>
         <p className="text-foreground-muted">{pt.publicWater.notFound.hint}</p>

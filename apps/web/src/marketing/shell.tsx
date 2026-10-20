@@ -25,7 +25,7 @@ export function MarketingShell({
   const other = OTHER[locale];
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <Link href={home} className="text-lg font-semibold tracking-tight">

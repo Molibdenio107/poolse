@@ -2295,6 +2295,7 @@
   },
   "nav": {
     "label": "Navegação principal",
+    "openMenu": "Abrir o menu",
     "dashboard": "Painel"
   },
   "dashboard": {

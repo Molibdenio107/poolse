@@ -60,6 +60,12 @@ to a page that a more senior role reaches another way.
 A refusal on a list page reads *not allowed*. *You belong to no organization* is shown only for
 the API's `no_organization` code.
 
+**On a phone the menu is a sheet** (POOLSE-88). Below `md` the sidebar is not drawn; a menu
+button at the start of the app bar (`MobileMenu`) opens the same `SidebarNav` from the left,
+and the sheet closes on its own when a link is followed. The page's title and primary action
+stick under the app bar; its subtitle stays in the page. The tiers that say which screens must be
+good on a phone are slice 3's section here.
+
 **A hidden menu item is never the permission.** Every restricted section's API refuses the
 request as well; the menu is a convenience, and a URL somebody types has to be refused on
 its own. Permissions are not inherited from a parent item — Instalações and Staff have

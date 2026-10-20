@@ -60,7 +60,7 @@ export default async function PublicWaterPage({
     return (
       <main
         lang={locale}
-        className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-2 bg-background px-4 py-16 text-foreground"
+        className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-2 bg-background px-4 py-16 text-foreground"
       >
         {lobby && <meta httpEquiv="refresh" content={String(REFRESH_SECONDS)} />}
         <h1 className="text-xl font-semibold">{t('publicWater.unavailable')}</h1>
@@ -85,7 +85,7 @@ export default async function PublicWaterPage({
     <main
       lang={locale}
       className={cn(
-        'mx-auto flex min-h-screen w-full flex-col gap-6 bg-background px-4 py-8 text-foreground',
+        'mx-auto flex min-h-dvh w-full flex-col gap-6 bg-background px-4 py-8 text-foreground',
         lobby ? 'max-w-5xl text-xl' : 'max-w-2xl',
       )}
     >

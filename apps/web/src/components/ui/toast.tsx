@@ -118,7 +118,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }): Reac
             each toast turns them back on for its own box.
           */
           <div
-            className="pointer-events-none fixed inset-x-0 top-4 z-[60] flex flex-col items-center gap-2 px-4"
+            className="pointer-events-none fixed inset-x-0 top-[calc(1rem+var(--safe-top))] z-[60] flex flex-col items-center gap-2 px-4"
             aria-live="polite"
           >
             {toasts.map((toast) => (
