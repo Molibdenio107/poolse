@@ -49,10 +49,14 @@ export async function raiseQualificationAlerts(organizationId: string): Promise<
     );
     if (!lock[0]?.got) return null;
 
-    const { rows: org } = await tx.query<{ name: string; locale: string }>(
-      'SELECT name, locale FROM organization WHERE id = $1',
+    const { rows: org } = await tx.query<{ name: string; locale: string; off: boolean }>(
+      `SELECT name, locale, 'qualifications' = ANY (disabled_modules) AS off
+         FROM organization WHERE id = $1`,
       [organizationId],
     );
+    // POOLSE-87: a club with qualifications switched off is never emailed
+    // about one, and no alert row is written that it could not see.
+    if (org[0]?.off) return null;
 
     const { rows } = await tx.query<{
       id: string;

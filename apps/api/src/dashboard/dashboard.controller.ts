@@ -121,6 +121,8 @@ export class DashboardController {
       {
         kind: shape.kind,
         family,
+        // POOLSE-87: a switched-off module's cards are never resolved.
+        disabledModules: currentTenant().disabledModules ?? [],
         // The club's own sites, whoever is asking: this is what decides whether
         // the club is bare, and that is a fact about the club.
         sites: shape.facilities,

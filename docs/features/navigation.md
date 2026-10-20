@@ -40,6 +40,20 @@ entry takes the roles of the route its page loads, and the role probe tests that
 | Os meus educandos | guardian |
 | O meu registo | student who is not also a guardian |
 
+**An entry that belongs to a module carries `module`** (POOLSE-87), checked on every item,
+children included, against `/me`'s `modules` (the enabled list): Inventário (maintenance),
+Ocorrências and Nadadores-salvadores (incidents), Férias and As minhas férias (vacations),
+Salários (salaries), Qualificações (qualifications), Energia (energy), Receção (reception),
+Faturação (invoicing), Mensagens (messages), Provas (competition). If `/me` fails the list is
+empty, closed like the roles.
+
+**A module's pages sit behind `ModuleGate`** (`components/module-gate.tsx`), mounted once in the
+`layout.tsx` of each module route segment. Reached by URL with the module off, the page shows its
+module's name and "Este módulo não está ativo para o seu clube." (`common.moduleDisabled`), which
+`describeLoad` also gives a `module_disabled` 403. A tab on a core page that loads a module's
+endpoint through `outcome()` hides by itself, because that 403 is a refusal; the pool page's
+Leituras tab follows `waterQuality` from the pool read and its cost tab follows energy.
+
 `unlessRoles` hides an entry from anybody holding one of the listed roles. It exists for a shortcut
 to a page that a more senior role reaches another way.
 

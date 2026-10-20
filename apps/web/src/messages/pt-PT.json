@@ -26,6 +26,7 @@
     "edit": "Editar",
     "sessionExpired": "A sua sessão expirou. Volte a entrar e tente novamente.",
     "notAllowed": "A sua função não permite esta operação.",
+    "moduleDisabled": "Este módulo não está ativo para o seu clube.",
     "noOrganization": "A sua conta não pertence a nenhuma organização.",
     "notFound": "Já não existe. Pode ter sido removido entretanto.",
     "apiUnreachable": "Não foi possível contactar o servidor. Tente de novo dentro de momentos.",
@@ -5438,6 +5439,21 @@
     "notFound": {
       "title": "Esta ligação não é válida",
       "hint": "Use a ligação no fim de um email recente do clube, ou fale com o clube."
+    }
+  },
+  "modules": {
+    "name": {
+      "messages": "Mensagens",
+      "incidents": "Ocorrências",
+      "reception": "Receção",
+      "competition": "Competição",
+      "water_quality": "Qualidade da água",
+      "invoicing": "Faturação",
+      "maintenance": "Manutenção",
+      "energy": "Energia",
+      "salaries": "Salários",
+      "vacations": "Férias",
+      "qualifications": "Qualificações"
     }
   }
 }

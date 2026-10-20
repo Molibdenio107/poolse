@@ -26,6 +26,7 @@
     "edit": "Edit",
     "sessionExpired": "Your session has expired. Sign in again and retry.",
     "notAllowed": "Your role does not allow this.",
+    "moduleDisabled": "This module is not active for your club.",
     "noOrganization": "Your account does not belong to an organization.",
     "notFound": "This no longer exists. It may have been removed.",
     "apiUnreachable": "Could not reach the server. Try again in a moment.",
@@ -5438,6 +5439,21 @@
     "notFound": {
       "title": "This link is not valid",
       "hint": "Use the link at the end of a recent email from the club, or contact the club."
+    }
+  },
+  "modules": {
+    "name": {
+      "messages": "Messages",
+      "incidents": "Incidents",
+      "reception": "Reception",
+      "competition": "Competition",
+      "water_quality": "Water quality",
+      "invoicing": "Invoicing",
+      "maintenance": "Maintenance",
+      "energy": "Energy",
+      "salaries": "Salaries",
+      "vacations": "Leave",
+      "qualifications": "Qualifications"
     }
   }
 }

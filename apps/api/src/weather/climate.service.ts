@@ -103,11 +103,15 @@ export class ClimateService {
       // A site nobody has placed on the map has no point to ask about. That is
       // ordinary — the location picker is optional — and not an error.
       const located = await withOrg(tenant, async (tx) => {
+        // POOLSE-87: a club with energy switched off is not fetched for — the
+        // climate only ever sits beside its energy figures.
         const { rows } = await tx.query<{ id: string }>(
-          `SELECT id FROM facility
-            WHERE archived_at IS NULL
-              AND latitude IS NOT NULL AND longitude IS NOT NULL
-            ORDER BY id`,
+          `SELECT f.id FROM facility f
+             JOIN organization o ON o.id = f.organization_id
+            WHERE f.archived_at IS NULL
+              AND f.latitude IS NOT NULL AND f.longitude IS NOT NULL
+              AND NOT ('energy' = ANY (o.disabled_modules))
+            ORDER BY f.id`,
         );
         return rows.map((row) => row.id);
       });

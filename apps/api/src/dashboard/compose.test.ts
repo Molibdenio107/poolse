@@ -281,3 +281,25 @@ test('a reader with no child chosen gets no personal band, not a row of empty ca
   assert.deepEqual(page.bands, []);
   assert.equal(page.family, null);
 });
+
+test('POOLSE-87: a switched-off module is filtered before its resolver runs', async () => {
+  let called = false;
+  const page = await compose(
+    [
+      widget({ id: 'mgmt.core' }),
+      widget({
+        id: 'mgmt.pay',
+        module: 'salaries',
+        resolver: () => {
+          called = true;
+          return Promise.resolve({ ok: true });
+        },
+      }),
+    ],
+    { disabledModules: ['salaries'] },
+  );
+
+  assert.equal(called, false, 'never resolved');
+  assert.equal(JSON.stringify(page).includes('mgmt.pay'), false, 'and absent from the payload');
+  assert.equal(card(page, 'mgmt.core')?.state, 'ok');
+});

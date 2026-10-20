@@ -70,7 +70,7 @@ import {
 import { SampleInFutureError, sampleMoment, type SampleMoment } from './sample-moment.js';
 import { SITE_PAGE_ROLES } from './site-access.js';
 import { POOL_USES, type PoolContext } from '@poolse/rules';
-import { CoreRoute, PoolseModule } from '../tenant/modules.js';
+import { CoreRoute, moduleIsOn, PoolseModule } from '../tenant/modules.js';
 
 interface FacilityDetailResponse extends FacilityDetail {
   organizationId: string;
@@ -230,6 +230,12 @@ export class FacilitiesController {
        * hopeful label 2.3's chase list was built to avoid.
        */
       emailConfigured: boolean;
+      /**
+       * Whether this club has water quality on — POOLSE-87. When it is off the
+       * analyses, alerts and overrides are not sent at all, and the page drops
+       * the card rather than drawing an empty water log.
+       */
+      waterQuality: boolean;
     }
   > {
     // Security review, 12 October 2026: this answered any member, a guardian
@@ -240,8 +246,11 @@ export class FacilitiesController {
     const detail = await findPool(organizationId, poolId);
     if (!detail) throw new NotFoundException('No such pool');
 
+    // POOLSE-87: the pool is core and its water log is not.
+    const waterQuality = moduleIsOn('water_quality');
+
     // Read once and used twice — resolved for the screen, raw for the editor.
-    const overrides = await listPoolRanges(organizationId, poolId);
+    const overrides = waterQuality ? await listPoolRanges(organizationId, poolId) : [];
 
     // Carried in the response for the same reason the listings carry it: the
     // client never names its own tenant, it echoes back the one the API resolved.
@@ -252,13 +261,13 @@ export class FacilitiesController {
       // Recording one analysis is maintenance's job too — POOLSE-66 slice 4.
       // Importing a file, deleting an analysis and setting bands stay with
       // `canManage`.
-      canRecordAnalysis: hasRole(...CAN_RECORD_ANALYSIS),
+      canRecordAnalysis: waterQuality && hasRole(...CAN_RECORD_ANALYSIS),
       // The analyses travel with the pool rather than behind their own
       // request: small, always shown, and a second round trip would put a
       // spinner on a panel of four rows. The alerts ride along for the same
       // reason — ten rows at most, rendered in the same panel.
-      analyses: await listAnalyses(organizationId, poolId),
-      alerts: await listPoolAlerts(organizationId, poolId),
+      analyses: waterQuality ? await listAnalyses(organizationId, poolId) : [],
+      alerts: waterQuality ? await listPoolAlerts(organizationId, poolId) : [],
       // POOLSE-72: resolved against the national reference for *this* tank —
       // its kind and use — and that reference beside it, which the band form
       // labels as "referência" rather than a constant the client would have
@@ -266,6 +275,7 @@ export class FacilitiesController {
       ...(await poolBands(organizationId, poolId)),
       bandOverrides: overrides,
       emailConfigured: emailIsConfigured(),
+      waterQuality,
     };
   }
 

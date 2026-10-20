@@ -170,6 +170,8 @@ export async function composeDashboard(
     timeoutMs?: number;
     /** The family picker, echoed back; its choice is `ctx.childStudentId`. */
     family?: FamilyChoice | null;
+    /** What this club has switched off — POOLSE-87. Absent is everything on. */
+    disabledModules?: readonly string[];
   },
 ): Promise<Dashboard> {
   const bare = options.sites.length === 0;
@@ -181,7 +183,7 @@ export async function composeDashboard(
    * control.
    */
   const allowed = widgetsFor(
-    { roles: ctx.roles, kind: options.kind },
+    { roles: ctx.roles, kind: options.kind, disabledModules: options.disabledModules ?? [] },
     options.registry,
   )
     .filter((widget) =>

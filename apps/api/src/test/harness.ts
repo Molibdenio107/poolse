@@ -616,6 +616,11 @@ export async function actingAs<T>(
     'SELECT app_user_id FROM membership WHERE id = $1',
     [membershipId],
   );
+  // What the membership lookup would carry: the club's switched-off modules (POOLSE-87).
+  const [org] = await tenant.sql<{ disabled: string[] }>(
+    'SELECT disabled_modules::text[] AS disabled FROM organization WHERE id = $1',
+    [tenant.organizationId],
+  );
 
   return authStorage.run(
     {
@@ -629,6 +634,7 @@ export async function actingAs<T>(
           membershipId,
           appUserId: row?.app_user_id ?? '',
           roles: options.roles,
+          disabledModules: org?.disabled ?? [],
           ...(options.support === true ? { support: true } : {}),
         },
         fn,

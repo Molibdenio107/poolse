@@ -2,6 +2,7 @@ import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { studentQualifying, type StudentQualifying } from '../qualifying/qualifying.repository.js';
+import { moduleIsOn } from '../tenant/modules.js';
 
 export type Stroke = 'freestyle' | 'backstroke' | 'breaststroke' | 'butterfly' | 'medley';
 export const STROKES: Stroke[] = [
@@ -172,7 +173,8 @@ export async function progressionFor(
     const personalBests = bestsOf(records);
     const defaultCourse = await courseOfTurma(tx, studentId);
     const meets = await meetChoices(tx);
-    const qualifying = await studentQualifying(tx, studentId);
+    // POOLSE-87: the gap to qualify is competition's, the record is core.
+    const qualifying = moduleIsOn('competition') ? await studentQualifying(tx, studentId) : null;
 
     return {
       records,

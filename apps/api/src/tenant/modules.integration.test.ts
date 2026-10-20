@@ -16,7 +16,16 @@ import { PoolPublicLinkController, PublicWaterController } from '../facilities/p
 import { listMemberships } from '../identity/identity.repository.js';
 import { PlatformController } from '../platform/platform.controller.js';
 import { StudentsController } from '../students/students.controller.js';
-import { actingAs, closeHarness, withScratchTenant, type ScratchTenant } from '../test/harness.js';
+import { DashboardController } from '../dashboard/dashboard.controller.js';
+import { QualificationsController } from '../staff/qualifications.controller.js';
+import { raiseQualificationAlerts } from '../staff/qualification-alerts.js';
+import {
+  actingAs,
+  addMember,
+  closeHarness,
+  withScratchTenant,
+  type ScratchTenant,
+} from '../test/harness.js';
 import { ModuleGuard } from './modules.js';
 import { TenantMiddleware } from './tenant.middleware.js';
 
@@ -280,5 +289,105 @@ test('QA 10: off and back on leaves every row as it was, and the trail holds bot
       assert.equal(alerts[0]!.n, 2);
     });
     assert.equal(await snapshot(), before);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Slice 2 — what the club sees
+// ---------------------------------------------------------------------------
+
+/** Set the list directly as the owner login — the platform write is tested above. */
+async function switchOff(tenant: ScratchTenant, modules: PoolseModule[]): Promise<void> {
+  await owner.query('UPDATE organization SET disabled_modules = $2::poolse_module[] WHERE id = $1', [
+    tenant.organizationId,
+    modules,
+  ]);
+}
+
+test('/me lists what is on, computed on the server', async () => {
+  await withScratchTenant(async (tenant) => {
+    await switchOff(tenant, ['energy', 'salaries']);
+    const memberships = await listMemberships(await ownerClerkId(tenant));
+    const mine = memberships.find((m) => m.organizationId === tenant.organizationId)!;
+    assert.deepEqual(
+      mine.modules,
+      POOLSE_MODULES.filter((m) => m !== 'energy' && m !== 'salaries'),
+    );
+  });
+});
+
+test('QA 7: salaries off leaves no staff-cost card in the raw dashboard payload', async () => {
+  await withScratchTenant(async (tenant) => {
+    await switchOff(tenant, ['salaries']);
+    const page = await actingAs(tenant, { roles: ['owner'] }, () => new DashboardController().read());
+    assert.equal(JSON.stringify(page).includes('mgmt.staffcost'), false);
+  });
+});
+
+test('QA 8: maintenance off leaves a maintenance person no maintenance cards, and water stays', async () => {
+  await withScratchTenant(async (tenant) => {
+    const joao = await addMember(tenant, 'João', 'Módulos', ['maintenance']);
+    const read = (): Promise<unknown> =>
+      actingAs(tenant, { membershipId: joao, roles: ['maintenance'] }, () => new DashboardController().read());
+
+    const on = JSON.stringify(await read());
+    assert.ok(on.includes('maint.requests'), 'the control: on, the band is there');
+
+    await switchOff(tenant, ['maintenance']);
+    const off = JSON.stringify(await read());
+    for (const id of ['maint.mytasks', 'maint.requests', 'maint.cleanings.overdue', 'maint.inventory']) {
+      assert.equal(off.includes(id), false, id);
+    }
+    assert.ok(off.includes('maint.waterquality.due'), 'water quality is its own module');
+  });
+});
+
+test('QA 9: qualifications off writes no alert for the club', async () => {
+  await withScratchTenant(async (tenant) => {
+    const [type] = await tenant.sql<{ id: string }>(
+      `SELECT id FROM qualification_type WHERE archived_at IS NULL ORDER BY name LIMIT 1`,
+    );
+    const person = await addMember(tenant, 'Marta', 'Módulos', ['instructor']);
+    const [soon] = await tenant.sql<{ d: string }>(`SELECT to_char(club_today() + 5, 'YYYY-MM-DD') AS d`);
+    await actingAs(tenant, { roles: ['owner'] }, () =>
+      new QualificationsController().add(person, { typeId: type!.id, issuingBody: 'IPDJ', expiresOn: soon!.d }),
+    );
+
+    await switchOff(tenant, ['qualifications']);
+    assert.equal(await raiseQualificationAlerts(tenant.organizationId), null);
+    const rows = await tenant.sql('SELECT 1 FROM qualification_alert');
+    assert.equal(rows.length, 0);
+
+    // The control: switched back on, the same record alerts.
+    await switchOff(tenant, []);
+    assert.equal((await raiseQualificationAlerts(tenant.organizationId))?.raised.length, 1);
+  });
+});
+
+test('the pool page carries no water log while water quality is off', async () => {
+  await withScratchTenant(async (tenant) => {
+    const [pool] = await tenant.sql<{ id: string }>(
+      'INSERT INTO pool (organization_id, facility_id, name) VALUES ($1, $2, $3) RETURNING id',
+      [tenant.organizationId, tenant.facilityId, 'Piscina'],
+    );
+    await tenant.sql(
+      `INSERT INTO pool_analysis (organization_id, pool_id, taken_at) VALUES ($1, $2, now())`,
+      [tenant.organizationId, pool!.id],
+    );
+    const read = () =>
+      actingAs(tenant, { roles: ['owner'] }, () => new FacilitiesController().pool(pool!.id));
+
+    const on = await read();
+    assert.equal(on.waterQuality, true);
+    assert.equal(on.analyses.length, 1);
+
+    await switchOff(tenant, ['water_quality']);
+    const off = await read();
+    assert.equal(off.waterQuality, false);
+    assert.deepEqual(off.analyses, []);
+    assert.deepEqual(off.alerts, []);
+    assert.equal(off.canRecordAnalysis, false);
+    assert.equal(off.name, on.name, 'the pool itself is core');
   });
 });

@@ -1,3 +1,4 @@
+import { enabledModules, type PoolseModule } from '@poolse/rules';
 import { withoutTenantScope } from '@poolse/db';
 
 export interface AppUserSummary {
@@ -80,6 +81,11 @@ export interface MembershipSummary {
    * product. Carried here so the module guard costs no query.
    */
   disabledModules: string[];
+  /**
+   * The modules this club has **on** — what `/me` hands the web app, computed
+   * once here so no client works it out from the list of what is off.
+   */
+  modules: PoolseModule[];
 }
 
 /**
@@ -175,6 +181,7 @@ export async function listMemberships(clerkUserId: string): Promise<MembershipSu
       pendingDeleteAt: row.o_pending_delete_at?.toISOString() ?? null,
       supportExpiresAt: row.o_support_expires_at?.toISOString() ?? null,
       disabledModules: row.o_disabled_modules,
+      modules: enabledModules(row.o_disabled_modules),
     }));
   });
 }

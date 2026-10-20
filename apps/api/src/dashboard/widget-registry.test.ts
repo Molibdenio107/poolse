@@ -124,3 +124,41 @@ test('the four ways a registry entry is wrong are refused', () => {
     assertRegistryIsSound([widget({ id: 'mgmt.one', scope: 'facility', roles: ['owner'] })]),
   );
 });
+
+test('POOLSE-87: a widget whose module the club switched off is not offered', () => {
+  const registry = [
+    widget({ id: 'mgmt.core' }),
+    widget({ id: 'mgmt.pay', module: 'salaries' }),
+    widget({ id: 'mgmt.water', module: 'water_quality' }),
+  ];
+  const ids = (disabledModules?: string[]): string[] =>
+    widgetsFor({ roles: ['owner'], kind: 'business', ...(disabledModules ? { disabledModules } : {}) }, registry)
+      .map((one) => one.id);
+
+  assert.deepEqual(ids(), ['mgmt.core', 'mgmt.pay', 'mgmt.water'], 'absent is everything on');
+  assert.deepEqual(ids(['salaries']), ['mgmt.core', 'mgmt.water']);
+  assert.deepEqual(ids(['salaries', 'water_quality']), ['mgmt.core']);
+});
+
+test('POOLSE-87: a module nobody knows is refused at registration', () => {
+  assert.throws(
+    () => assertRegistryIsSound([widget({ id: 'mgmt.x', module: 'sauna' as never })]),
+    /unknown module "sauna"/,
+  );
+});
+
+test('POOLSE-87: the cards that belong to a module say so', () => {
+  const moduleOf = Object.fromEntries(WIDGETS.map((one) => [one.id, one.module ?? 'core']));
+  assert.equal(moduleOf['mgmt.staffcost'], 'salaries');
+  assert.equal(moduleOf['mgmt.energy.costs'], 'energy');
+  assert.equal(moduleOf['mgmt.freeswim'], 'reception');
+  assert.equal(moduleOf['mgmt.qualifications'], 'qualifications');
+  assert.equal(moduleOf['mgmt.waterquality.alerts'], 'water_quality');
+  assert.equal(moduleOf['me.water'], 'water_quality');
+  for (const id of ['maint.mytasks', 'maint.requests', 'maint.cleanings.overdue', 'maint.inventory', 'mgmt.maintenance.open']) {
+    assert.equal(moduleOf[id], 'maintenance', id);
+  }
+  // Fees are core: both read student_fee, never an invoice.
+  assert.equal(moduleOf['mgmt.money.period'], 'core');
+  assert.equal(moduleOf['me.fees'], 'core');
+});

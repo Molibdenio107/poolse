@@ -1,3 +1,4 @@
+import type { PoolseModule } from '@poolse/rules';
 import { auth } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 import type { SkillState } from './skills';
@@ -319,6 +320,11 @@ export interface Me {
      * closes. The support banner quotes it; the role came from the grant.
      */
     supportExpiresAt: string | null;
+    /**
+     * The modules this club has on — POOLSE-87, computed by the API. The menu,
+     * the site and pool tabs follow it; the API refuses the rest regardless.
+     */
+    modules: PoolseModule[];
     membershipId: string;
     roles: string[];
     /**
@@ -1306,6 +1312,11 @@ export interface PoolDetail extends Pool {
   bandOverrides: BandOverride[];
   /** Whether an alert would actually be sent from this environment. */
   emailConfigured: boolean;
+  /**
+   * Whether this club has water quality on — POOLSE-87. Off, the API sends no
+   * analyses, alerts or overrides and the page drops the Leituras tab.
+   */
+  waterQuality: boolean;
   organizationId: string;
   facilityId: string;
   facilityName: string;

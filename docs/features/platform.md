@@ -355,8 +355,17 @@ on when the club is ready for it.
   tenant route (`assertEveryRouteHasAModule`); public, identity-only and platform routes
   are exempt by the lists that already name them.
 
-The club-side half (menu, dashboard, tabs, background jobs) and the *Módulos* card on
-`/admin` are slices 2 and 3.
+- **What the club sees** (slice 2). `/me` carries `modules`, the enabled list. The menu,
+  the dashboard registry, the pool page's tabs and a `ModuleGate` per module route follow it
+  (`docs/features/navigation.md`, `docs/features/dashboard.md`). A core read that carries a
+  module's data drops it on the server: the pool read sends no water log with water quality
+  off (`waterQuality: false`), and the student progression sends no `qualifying` with
+  competition off.
+- **Background jobs.** The qualification alert job writes nothing for a club with
+  qualifications off, and the climate fetch skips a club with energy off. The delivery retry
+  is left alone: it only resends what a live module raised.
+
+The *Módulos* card on `/admin` is slice 3.
 
 ## Support access — POOLSE-79 (12 October 2026)
 

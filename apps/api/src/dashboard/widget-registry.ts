@@ -1,3 +1,4 @@
+import { isPoolseModule, type PoolseModule } from '@poolse/rules';
 import type { MemberRole } from '../tenant/roles.js';
 import { MEMBER_ROLES } from '../tenant/roles.js';
 import {
@@ -133,6 +134,12 @@ export interface WidgetDefinition {
    * model for one tenant shape. `docs/features/personal.md`.
    */
   kinds?: readonly ('business' | 'personal')[];
+  /**
+   * The module this card belongs to — POOLSE-87. A club with it switched off
+   * never resolves the card, so it is absent from the payload the way a card
+   * for a role the reader lacks is. Omitted means core.
+   */
+  module?: PoolseModule;
   scope: WidgetScope;
   /** Columns, 1 to 3. */
   size: 1 | 2 | 3;
@@ -240,6 +247,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
   {
     id: 'maint.mytasks',
     band: 'operational',
+    module: 'maintenance',
     roles: ['owner', 'admin', 'maintenance', 'instructor'],
     scope: 'self',
     size: 2,
@@ -263,6 +271,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
   {
     id: 'mgmt.energy.costs',
     band: 'management',
+    module: 'energy',
     roles: ['owner', 'admin'],
     scope: 'tenant',
     size: 2,
@@ -310,6 +319,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
   {
     id: 'mgmt.freeswim',
     band: 'management',
+    module: 'reception',
     roles: ['owner', 'admin'],
     kinds: ['business'],
     scope: 'facility',
@@ -322,6 +332,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
   {
     id: 'mgmt.waterquality.alerts',
     band: 'management',
+    module: 'water_quality',
     roles: ['owner', 'admin'],
     scope: 'facility',
     size: 1,
@@ -334,6 +345,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
   {
     id: 'mgmt.maintenance.open',
     band: 'management',
+    module: 'maintenance',
     roles: ['owner', 'admin'],
     scope: 'facility',
     size: 1,
@@ -357,6 +369,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     // `salarySummary` decides and the card states. `docs/features/salaries.md`.
     id: 'mgmt.staffcost',
     band: 'management',
+    module: 'salaries',
     roles: ['owner', 'admin'],
     kinds: ['business'],
     scope: 'tenant',
@@ -382,6 +395,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     // a certificate has actually lapsed.
     id: 'mgmt.qualifications',
     band: 'management',
+    module: 'qualifications',
     roles: ['owner', 'admin'],
     kinds: ['business'],
     scope: 'tenant',
@@ -463,6 +477,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
   {
     id: 'maint.requests',
     band: 'operational',
+    module: 'maintenance',
     roles: ['maintenance'],
     scope: 'facility',
     size: 2,
@@ -474,6 +489,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
   {
     id: 'maint.cleanings.overdue',
     band: 'operational',
+    module: 'maintenance',
     roles: ['maintenance'],
     scope: 'facility',
     size: 1,
@@ -484,6 +500,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     // The owner's water card, read over every site the reader works at.
     id: 'maint.waterquality.due',
     band: 'operational',
+    module: 'water_quality',
     roles: ['maintenance'],
     scope: 'facility',
     size: 1,
@@ -495,6 +512,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
   {
     id: 'maint.inventory',
     band: 'operational',
+    module: 'maintenance',
     roles: ['maintenance'],
     scope: 'facility',
     size: 1,
@@ -561,6 +579,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     // Not `me.pool`: that names the personal tenant's own pool panel.
     id: 'me.water',
     band: 'personal',
+    module: 'water_quality',
     roles: ['guardian', 'student'],
     kinds: ['business'],
     scope: 'self',
@@ -589,7 +608,12 @@ export const WIDGETS: readonly WidgetDefinition[] = [
  * payload" a property of one function rather than of the endpoint.
  */
 export function widgetsFor(
-  ctx: { roles: readonly string[]; kind: 'business' | 'personal' },
+  ctx: {
+    roles: readonly string[];
+    kind: 'business' | 'personal';
+    /** What this club has switched off (POOLSE-87); absent is everything on. */
+    disabledModules?: readonly string[];
+  },
   registry: readonly WidgetDefinition[] = WIDGETS,
   env: NodeJS.ProcessEnv = process.env,
 ): WidgetDefinition[] {
@@ -598,6 +622,9 @@ export function widgetsFor(
   return registry.filter((widget) => {
     if (!widget.roles.some((role) => held.has(role))) return false;
     if (widget.kinds !== undefined && !widget.kinds.includes(ctx.kind)) return false;
+    if (widget.module !== undefined && (ctx.disabledModules ?? []).includes(widget.module)) {
+      return false;
+    }
     if (widget.featureFlag !== undefined && (env[widget.featureFlag] ?? '').trim() !== 'true') {
       return false;
     }
@@ -633,6 +660,10 @@ export function assertRegistryIsSound(registry: readonly WidgetDefinition[] = WI
       if (!(MEMBER_ROLES as readonly string[]).includes(role)) {
         throw new Error(`Widget "${widget.id}" names an unknown role "${role}"`);
       }
+    }
+
+    if (widget.module !== undefined && !isPoolseModule(widget.module)) {
+      throw new Error(`Widget "${widget.id}" names an unknown module "${String(widget.module)}"`);
     }
 
     if (widget.size < 1 || widget.size > 3) {

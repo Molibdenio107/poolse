@@ -69,6 +69,15 @@ export class ModuleGuard implements CanActivate {
   }
 }
 
+/**
+ * Whether the club of this request has `module` on — for a core route that
+ * carries a module's data beside its own (the pool page and its water log).
+ * Outside a tenant request everything is on: a background job asks per club.
+ */
+export function moduleIsOn(module: ModuleName): boolean {
+  return !(tenantStorage.getStore()?.disabledModules ?? []).includes(module);
+}
+
 /** A Nest route pattern (`me/(.*)`) as an anchored regex over a joined path. */
 function patternToRegex(pattern: string): RegExp {
   return new RegExp(`^${pattern}$`);

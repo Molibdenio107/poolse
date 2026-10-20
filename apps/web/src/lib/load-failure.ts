@@ -22,6 +22,10 @@ export function describeLoad(error: unknown): LoadFailure {
   if (error instanceof ApiError) {
     // Cases somebody can act on, and which say nothing useful in a status line.
     if (error.status === 401) return { key: 'common.sessionExpired', detail: '' };
+    // POOLSE-87: the club has this module switched off — not the reader's role.
+    if (error.status === 403 && error.code === 'module_disabled') {
+      return { key: 'common.moduleDisabled', detail: '' };
+    }
     if (error.status === 403) return { key: 'common.notAllowed', detail: '' };
     if (error.status === 404) return { key: 'common.notFound', detail: '' };
 

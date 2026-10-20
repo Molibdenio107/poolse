@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
+import type { PoolseModule } from '@poolse/rules';
 import { AppSidebar } from '../app-sidebar';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
@@ -49,6 +50,8 @@ interface Viewer {
   /** The club this browser chose is gone — a window that ended. */
   clubGone: boolean;
   kind: OrganizationKind;
+  /** POOLSE-87: what this club has on. Empty when `/me` failed — closed, like roles. */
+  modules: readonly PoolseModule[];
   /** The club's name, for the brand slot. Null when there is no membership. */
   organizationName: string | null;
   /**
@@ -100,6 +103,7 @@ async function currentViewer(): Promise<Viewer> {
           : null,
       clubGone: me.requestedOrganizationMissing === true,
       kind: membership?.organizationKind ?? 'business',
+      modules: membership?.modules ?? [],
       organizationName: membership?.organizationName ?? null,
       readOnly:
         membership?.readOnlyAt != null
@@ -135,6 +139,7 @@ async function currentViewer(): Promise<Viewer> {
       support: null,
       clubGone: false,
       kind: 'business',
+      modules: [],
       organizationName: null,
       suspended: null,
       readOnly: null,
@@ -160,7 +165,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const [{ roles, support, clubGone, kind, organizationName, suspended, readOnly }, logoFileId] =
+  const [{ roles, support, clubGone, kind, modules, organizationName, suspended, readOnly }, logoFileId] =
     await Promise.all([currentViewer(), brandLogo()]);
 
   // A support window that ended, with this browser still pointed at its club.
@@ -196,7 +201,7 @@ export default async function DashboardLayout({
         printed today; when something is, it inherits this for free.
       */}
       <div className="contents print:hidden">
-        <AppSidebar roles={roles} kind={kind} />
+        <AppSidebar roles={roles} kind={kind} modules={modules} />
       </div>
 
       {/*

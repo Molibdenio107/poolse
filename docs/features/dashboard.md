@@ -55,6 +55,7 @@ One declaration per widget, in code, no new tables:
   band: 'operational',
   roles: ['instructor'],
   kinds: ['business'],     // omitted means every kind
+  module: 'maintenance',   // POOLSE-87; omitted means core
   scope: 'facility',       // 'tenant' | 'facility' | 'self'
   size: 2,                 // columns, 1–3
   priority: 10,            // higher wins when the band is capped
@@ -70,6 +71,15 @@ One declaration per widget, in code, no new tables:
 personal tenant has no students, no turmas and no mensalidades, so its management band is
 simply the widgets that make sense there — which keeps `organization.kind` read in two places
 rather than branching the band model for one tenant shape.
+
+**`module` drops a card whose module the club has switched off** (POOLSE-87), in
+`widgetsFor`, before any resolver runs — the same place roles are applied, so the card is absent
+from the payload rather than resolved and hidden. Tagged: `mgmt.staffcost` (salaries),
+`mgmt.energy.costs` (energy), `mgmt.freeswim` (reception), `mgmt.qualifications`
+(qualifications), `mgmt.waterquality.alerts`, `maint.waterquality.due` and `me.water` (water
+quality), and `mgmt.maintenance.open`, `maint.mytasks`, `maint.requests`,
+`maint.cleanings.overdue`, `maint.inventory` (maintenance). `mgmt.money.period` and `me.fees`
+read `student_fee`, not invoices, so they are core. An unknown module is refused at registration.
 
 **`assertRegistryIsSound` refuses five mistakes**, every one of which otherwise produces
 *nothing on screen* rather than an error: a duplicate id, an unknown band, an empty `roles`

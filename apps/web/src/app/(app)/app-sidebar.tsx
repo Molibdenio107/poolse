@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { EntityIcon, type EntityKind } from '@/components/entity-icon';
+import type { PoolseModule } from '@poolse/rules';
 import type { OrganizationKind } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -66,6 +67,12 @@ interface Item {
    * the tank, its readings, its kit and its tasks.
    */
   kinds?: readonly OrganizationKind[];
+  /**
+   * The module this entry belongs to — POOLSE-87. Absent means core. Checked on
+   * every item, children included, so Salários disappears from under Staff
+   * while Staff stays.
+   */
+  module?: PoolseModule;
 }
 
 /*
@@ -81,6 +88,8 @@ const OFFICE = ['owner', 'admin'] as const;
 interface Viewer {
   roles: readonly string[];
   kind: OrganizationKind;
+  /** The modules this club has on. */
+  modules: readonly PoolseModule[];
 }
 
 /** Whether this person may see an item — never inherited from a parent. */
@@ -89,7 +98,8 @@ function visible(item: Item, viewer: Viewer): boolean {
   const byKind = item.kinds === undefined || item.kinds.includes(viewer.kind);
   const notExcluded =
     item.unlessRoles === undefined || !item.unlessRoles.some((role) => viewer.roles.includes(role));
-  return byRole && byKind && notExcluded;
+  const byModule = item.module === undefined || viewer.modules.includes(item.module);
+  return byRole && byKind && notExcluded && byModule;
 }
 
 /** The item and its permitted descendants, or null if the item itself is hidden. */
@@ -152,7 +162,7 @@ const SECTIONS: Item[] = [
        * pranchas for a class is not privileged, but it is not a family's
        * question. Owner, admin and maintenance write; the API says so.
        */
-      { href: '/dashboard/facilities/inventory', key: 'inventory.title', roles: STAFF },
+      { href: '/dashboard/facilities/inventory', key: 'inventory.title', roles: STAFF, module: 'maintenance' },
       /*
        * Ocorrências — POOLSE-70. The staff on the deck when something happens;
        * students and guardians are refused by the API, so they are not offered
@@ -163,6 +173,7 @@ const SECTIONS: Item[] = [
         key: 'incidents.title',
         roles: ['owner', 'admin', 'instructor', 'maintenance'],
         kinds: ['business'],
+        module: 'incidents',
       },
       /*
        * Nadadores-salvadores — POOLSE-70 slice 2. Who is on which tank this
@@ -175,6 +186,7 @@ const SECTIONS: Item[] = [
         key: 'roster.title',
         roles: ['owner', 'admin', 'instructor', 'maintenance'],
         kinds: ['business'],
+        module: 'incidents',
       },
       /*
        * The staff's own leave — 15 October 2026 (Rui). Instructors and
@@ -187,6 +199,7 @@ const SECTIONS: Item[] = [
         roles: ['instructor', 'maintenance'],
         unlessRoles: OFFICE,
         kinds: ['business'],
+        module: 'vacations',
       },
       {
         href: '/dashboard/facilities/staff',
@@ -196,7 +209,7 @@ const SECTIONS: Item[] = [
         // Férias is staff leave, so it belongs to Staff — POOLSE-34 as amended.
         // The chain is Instalações → Staff → Férias.
         children: [
-          { href: '/dashboard/facilities/staff/vacations', key: 'vacations.title' },
+          { href: '/dashboard/facilities/staff/vacations', key: 'vacations.title', module: 'vacations' },
           /*
            * Salários — POOLSE-58. Owner and Admin, like its parent.
            *
@@ -204,9 +217,13 @@ const SECTIONS: Item[] = [
            * behind it refuses anybody else, and an Admin is refused the Owner's
            * own rate specifically. Hiding a control was never the control.
            */
-          { href: '/dashboard/facilities/staff/salaries', key: 'salaries.title' },
+          { href: '/dashboard/facilities/staff/salaries', key: 'salaries.title', module: 'salaries' },
           // Qualificações — POOLSE-27, 7b.2. Owner and admin, like its parent.
-          { href: '/dashboard/facilities/staff/qualifications', key: 'qualifications.title' },
+          {
+            href: '/dashboard/facilities/staff/qualifications',
+            key: 'qualifications.title',
+            module: 'qualifications',
+          },
         ],
       },
     ],
@@ -228,6 +245,7 @@ const SECTIONS: Item[] = [
     key: 'energy.section',
     icon: 'energy',
     roles: ['owner', 'admin', 'maintenance'],
+    module: 'energy',
   },
   {
     href: '/dashboard/classes',
@@ -275,6 +293,7 @@ const SECTIONS: Item[] = [
     icon: 'reception',
     roles: ['owner', 'admin'],
     kinds: ['business'],
+    module: 'reception',
   },
   {
     href: '/dashboard/faturacao',
@@ -282,6 +301,7 @@ const SECTIONS: Item[] = [
     icon: 'invoice',
     roles: ['owner', 'admin'],
     kinds: ['business'],
+    module: 'invoicing',
   },
   {
     href: '/dashboard/students',
@@ -308,9 +328,10 @@ const SECTIONS: Item[] = [
         href: '/dashboard/students/messages',
         key: 'messages.title',
         roles: ['owner', 'admin', 'instructor'],
+        module: 'messages',
       },
       // Provas — POOLSE-81: meets and their results. The endpoint's own roles.
-      { href: '/dashboard/students/provas', key: 'meets.title', roles: TEACHING },
+      { href: '/dashboard/students/provas', key: 'meets.title', roles: TEACHING, module: 'competition' },
       { href: '/dashboard/students/levels', key: 'students.levels' },
       /*
        * The advancement queue — POOLSE-19. It shipped on 28 August with no way
@@ -387,9 +408,11 @@ const IDLE = 'text-foreground-muted hover:bg-surface-muted hover:text-foreground
 export function AppSidebar({
   roles,
   kind,
+  modules,
 }: {
   roles: readonly string[];
   kind: OrganizationKind;
+  modules: readonly PoolseModule[];
 }): React.ReactElement {
   const t = useTranslations();
   const pathname = usePathname();
@@ -400,7 +423,7 @@ export function AppSidebar({
    * A hidden parent takes its children with it; a hidden child leaves its parent
    * standing. Never inherited: Instalações and Staff have different audiences.
    */
-  const viewer: Viewer = { roles, kind };
+  const viewer: Viewer = { roles, kind, modules };
   const sections = SECTIONS.map((section) => prune(section, viewer)).filter(
     (section): section is Item => section !== null,
   );

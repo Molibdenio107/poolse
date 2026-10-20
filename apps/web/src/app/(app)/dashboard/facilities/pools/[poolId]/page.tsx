@@ -13,6 +13,7 @@ import { excursions } from '@/lib/water';
 import { CostPerUsePanel } from './cost-per-use-panel';
 import { PublicLinkPanel } from './public-link-panel';
 import { outcome } from '@/lib/load-failure';
+import { moduleIsOn } from '@/lib/modules';
 import { publicLinkView } from '@/lib/public-water-link';
 
 /**
@@ -93,6 +94,7 @@ export default async function PoolPage({
   // The same judgement the readings block and the alert email make — never a
   // second one: `excursions` against the API's resolved bands.
   const outOfBand = latest !== undefined && excursions(latest.values, loaded.bands).length > 0;
+  const energyOn = await moduleIsOn('energy');
 
   return (
     <DetailPage
@@ -208,6 +210,8 @@ export default async function PoolPage({
           */
           slug: 'water',
           labelKey: 'facilities.readings',
+          // POOLSE-87: the water log belongs to water quality, the pool does not.
+          visible: loaded.waterQuality,
           badge: outOfBand ? { kind: 'dot', labelKey: 'detailTabs.badge.waterOutOfBand' } : undefined,
           content: async () => {
             // Laboratory reports — POOLSE-72. A refusal hides the section; a
@@ -252,7 +256,9 @@ export default async function PoolPage({
           */
           slug: 'cost',
           labelKey: 'energy.perUse.section',
-          visible: loaded.canManage,
+          // POOLSE-87: the cost report is energy's; off, the tab is absent
+          // rather than a failed load.
+          visible: loaded.canManage && energyOn,
           content: async () => {
             const report = await apiFetch<PoolCostReport>(
               `/energy/pools/${poolId}/cost-report`,
