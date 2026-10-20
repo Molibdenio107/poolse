@@ -26,6 +26,7 @@ import { bookingKey, slotKey } from '@/lib/slot-key';
 import { GenerateSeason } from './calendar-forms';
 import { PageError, PageShell } from '@/components/page-shell';
 import { TimetableImport } from './import/import-panel';
+import { moduleIsOn } from '@/lib/modules';
 import { formatDate } from '@/lib/date-format';
 
 /**
@@ -475,6 +476,8 @@ export default async function CalendarPage({
                 groups={classes.groups}
                 controls={controls}
                 canManage={calendar.canManage}
+                freeSwimOn={await moduleIsOn('reception')}
+                messagesOn={await moduleIsOn('messages')}
                 // The dashboard's plan card links here with the lesson to open.
                 openPlanFor={
                   typeof plan === 'string' && /^[0-9a-f-]{36}$/i.test(plan) ? plan : undefined

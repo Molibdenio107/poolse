@@ -16,6 +16,13 @@ const twMerge = extendTailwindMerge({
     classGroups: {
       'font-size': [{ text: ['control'] }],
     },
+    /*
+     * POOLSE-88: the safe-area spacing keys, so `pt-safe-top` replaces a
+     * `pt-[…]` from the same class list rather than winning by stylesheet order.
+     */
+    theme: {
+      spacing: ['safe-top', 'safe-right', 'safe-bottom', 'safe-left', 'app-bar', 'page', 'page-y', 'page-gap'],
+    },
   },
 });
 

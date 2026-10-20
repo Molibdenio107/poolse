@@ -6,6 +6,7 @@ import { backTarget } from '@/lib/back';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { cn } from '@/lib/utils';
 import { ClosureCalendar } from './closure-calendar';
+import { moduleIsOn } from '@/lib/modules';
 import { PageError, PageShell } from '@/components/page-shell';
 
 /**
@@ -179,6 +180,7 @@ export default async function ClosuresPage({
             halfDayCut={data.halfDayCut}
             canManage={data.canManage}
             prefill={prefill}
+            messagesOn={await moduleIsOn('messages')}
           />
         </>
       )}

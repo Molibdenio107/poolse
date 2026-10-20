@@ -109,28 +109,39 @@ export function PageShell({
         */}
         {tabs === undefined ? (
           <>
-            {back !== undefined && (
-              <div className="sticky top-app-bar z-10 -mx-page -mt-2 bg-background px-page py-2 max-md:hidden">
-                <BackLink href={back.href} label={back.label} />
-              </div>
-            )}
             {/*
               On a phone the way back, the title and the page's primary action
               stick together under the app bar — POOLSE-88. A thumb reaching
               for "Novo" or "Guardar" should not first scroll to the top. The
               subtitle is left in the page beneath, because a sticky block that
               takes a third of the screen is a register nobody can see.
+
+              **Rendered once**, with the sticking done by breakpoint: from `md`
+              the wrapper is `contents`, so the back link sticks alone and the
+              header scrolls, exactly as before. Rendering the header twice and
+              hiding one copy mounted every action twice — two file-drop
+              listeners, two dialogs, two reads of one file (sweep 20-10-2026).
+
+              The calendar (`wide`) is a desk screen whose actions open an
+              importer in place, so on a phone it does not pin its header.
             */}
-            <div className="sticky top-app-bar z-10 -mx-page -mt-2 flex flex-col gap-1 bg-background px-page py-2 md:hidden">
-              {back !== undefined && <BackLink href={back.href} label={back.label} />}
-              <Header title={title} actions={actions} compact />
+            <div
+              className={cn(
+                'md:contents',
+                width !== 'wide' &&
+                  'max-md:sticky max-md:top-app-bar max-md:z-10 max-md:-mx-page max-md:-mt-2 max-md:flex max-md:flex-col max-md:gap-1 max-md:bg-background max-md:px-page max-md:py-2',
+              )}
+            >
+              {back !== undefined && (
+                <div className="md:sticky md:top-app-bar md:z-10 md:-mx-page md:-mt-2 md:bg-background md:px-page md:py-2">
+                  <BackLink href={back.href} label={back.label} />
+                </div>
+              )}
+              <Header title={title} subtitle={subtitle} actions={actions} subtitleBelowOnPhone={width !== 'wide'} />
             </div>
-            {subtitle !== undefined && (
+            {subtitle !== undefined && width !== 'wide' && (
               <p className="-mt-page-gap pt-1 text-sm text-foreground-muted md:hidden">{subtitle}</p>
             )}
-            <div className="max-md:hidden">
-              <Header title={title} subtitle={subtitle} actions={actions} />
-            </div>
           </>
         ) : (
           <div className="sticky top-app-bar z-10 -mx-page -mt-2 flex flex-col gap-2 bg-background px-page py-2">
@@ -154,42 +165,40 @@ function Header({
   title,
   subtitle,
   actions,
-  compact = false,
+  subtitleBelowOnPhone = false,
 }: {
   title: string;
   subtitle?: string | undefined;
   actions?: React.ReactNode;
-  /** The phone's sticky header: one line of title, no reserved height. */
-  compact?: boolean;
+  /** The page draws the subtitle under the sticky block on a phone. */
+  subtitleBelowOnPhone?: boolean;
 }): React.ReactElement {
+  /*
+   * Below `md` the header is the phone's sticky one (POOLSE-88): one line of
+   * title, no reserved height, its subtitle drawn by the page beneath, and the
+   * actions free to wrap onto a second line rather than squeezing the title to
+   * nothing at 360px.
+   */
   return (
-    <header
-      className={cn(
-        'flex items-start justify-between gap-4',
-        compact ? 'items-center' : 'min-h-page-header',
-      )}
-    >
+    <header className="flex items-start justify-between gap-4 max-md:flex-wrap max-md:items-center max-md:gap-2 md:min-h-page-header">
       <div className="min-w-0">
         {/*
           Clamped, not wrapped without limit — 41.10. A long translated title
           has to be allowed to be long without making this page taller than the
           one beside it.
         */}
-        <h1
-          className={cn(
-            'font-semibold tracking-tight',
-            compact ? 'line-clamp-1 text-xl' : 'line-clamp-2 text-2xl',
-          )}
-        >
+        <h1 className="line-clamp-1 text-xl font-semibold tracking-tight md:line-clamp-2 md:text-2xl">
           {title}
         </h1>
         {subtitle !== undefined && (
-          <p className="line-clamp-2 text-sm text-foreground-muted">{subtitle}</p>
+          <p className={cn('line-clamp-2 text-sm text-foreground-muted', subtitleBelowOnPhone && 'max-md:hidden')}>
+            {subtitle}
+          </p>
         )}
       </div>
 
       {actions !== undefined && (
-        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
       )}
     </header>
   );

@@ -213,6 +213,11 @@ test('QA 3: no text field is under 16px, and focusing one leaves the page unzoom
       .first();
     await field.tap();
     await expect(field).toBeFocused();
+    /*
+     * A sanity check, not the proof: neither engine's emulation zooms on focus
+     * the way a real iPhone does, so the 16px floor above is the assertion
+     * that matters. The real-device pass is slice 3's.
+     */
     expect(await page.evaluate(() => window.visualViewport?.scale ?? 1), `${path} zoomed`).toBe(1);
   }
 });
@@ -257,8 +262,10 @@ async function underTheBars(page: Page, notch: number, homeBar: number, within =
           const r = el.getBoundingClientRect();
           if (r.width === 0 || r.height === 0 || getComputedStyle(el).visibility === 'hidden') return false;
           if (r.bottom <= 0 || r.top >= height) return false; // off screen
-          const inHeader = el.closest('header') !== null;
-          if (!inHeader && r.bottom <= bar) return false; // scrolled under the app bar
+          // Page content scrolled up under the sticky app bar is not on screen.
+          // The menu sheet sits above the app bar, so inside it nothing is.
+          const covered = scope === 'body' && el.closest('header') === null && r.bottom <= bar;
+          if (covered) return false;
           return (top > 0 && r.top < top - 0.5) || (bottom > 0 && r.bottom > height - bottom + 0.5);
         })
         .map((el) => `${el.tagName.toLowerCase()} "${(el.textContent ?? el.getAttribute('aria-label') ?? '').trim().slice(0, 30)}"`);
@@ -289,6 +296,19 @@ for (const scheme of ['light', 'dark'] as const) {
     expect((await menu.boundingBox())!.y).toBeGreaterThanOrEqual(NOTCH);
 
     expect(await underTheBars(page, NOTCH, 0), 'at the top of the page').toEqual([]);
+
+    /*
+     * The content pads itself clear of the home bar — asserted directly,
+     * because the page's own bottom padding (40px) would hide a missing
+     * `pb-safe-bottom` from the position check below.
+     */
+    const contentPadding = await page.evaluate(() => {
+      const main = document.querySelector('main');
+      return main?.parentElement === null || main === null
+        ? 0
+        : parseFloat(getComputedStyle(main.parentElement).paddingBottom);
+    });
+    expect(contentPadding).toBe(HOME_BAR);
 
     // The last thing on the page sits above the home bar once scrolled to.
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));

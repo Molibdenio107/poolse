@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Body,
   ConflictException,
   Controller,
@@ -154,6 +155,17 @@ interface FacilitiesResponse {
 /** Who may record one water analysis — the form, not the importer. */
 const CAN_RECORD_ANALYSIS = ['owner', 'admin', 'maintenance'] as const;
 
+/**
+ * Whether a site's page has anything for this reader — POOLSE-87 sweep. Owner
+ * and admin always do; maintenance sees only Espaços, Manutenção and Energia,
+ * so with maintenance and energy both off its page would be a title and no
+ * tabs. The list's `canOpenSite` and the read itself both ask this.
+ */
+function maySeeSitePage(): boolean {
+  if (!hasRole(...SITE_PAGE_ROLES)) return false;
+  return hasRole('owner', 'admin') || moduleIsOn('maintenance') || moduleIsOn('energy');
+}
+
 const POOL_PAGE_ROLES = ['owner', 'admin', 'instructor', 'maintenance'] as const;
 
 @CoreRoute()
@@ -173,7 +185,7 @@ export class FacilitiesController {
       organizationId,
       facilities,
       canManage: hasRole('owner', 'admin'),
-      canOpenSite: hasRole(...SITE_PAGE_ROLES),
+      canOpenSite: maySeeSitePage(),
       canOpenPools: hasRole(...POOL_PAGE_ROLES),
       timezones: TIMEZONES,
       maxFacilities,
@@ -453,6 +465,14 @@ export class FacilitiesController {
   @Get(':facilityId')
   async one(@Param('facilityId') facilityId: string): Promise<FacilityDetailResponse> {
     requireRole(...SITE_PAGE_ROLES);
+    if (!maySeeSitePage()) {
+      // Maintenance with both of its tabs' modules off: a page with no tabs.
+      throw new ForbiddenException({
+        code: 'module_disabled',
+        module: 'maintenance',
+        message: 'This module is not active for this organization',
+      });
+    }
     const { organizationId } = currentTenant();
 
     const detail = await findFacility(organizationId, facilityId);

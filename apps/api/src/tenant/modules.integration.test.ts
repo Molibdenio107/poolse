@@ -19,10 +19,14 @@ import { StudentsController } from '../students/students.controller.js';
 import { DashboardController } from '../dashboard/dashboard.controller.js';
 import { QualificationsController } from '../staff/qualifications.controller.js';
 import { raiseQualificationAlerts } from '../staff/qualification-alerts.js';
+import { ArchiveController } from '../archive/archive.controller.js';
+import { SpacesController } from '../spaces/spaces.controller.js';
+import { RecordsController } from '../students/records.controller.js';
 import {
   actingAs,
   addMember,
   closeHarness,
+  expectStatus,
   withScratchTenant,
   type ScratchTenant,
 } from '../test/harness.js';
@@ -394,5 +398,82 @@ test('the pool page carries no water log while water quality is off', async () =
     assert.deepEqual(off.alerts, []);
     assert.equal(off.canRecordAnalysis, false);
     assert.equal(off.name, on.name, 'the pool itself is core');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sweep 20-10-2026 — what review found
+// ---------------------------------------------------------------------------
+
+test('sweep: the bin neither lists nor restores a kind whose module is off', async () => {
+  await withScratchTenant(async (tenant) => {
+    const [space] = await tenant.sql<{ id: string }>(
+      `INSERT INTO space (organization_id, facility_id, name) VALUES ($1, $2, 'Balneário') RETURNING id`,
+      [tenant.organizationId, tenant.facilityId],
+    );
+    const { archiveEntryId } = await actingAs(tenant, { roles: ['owner'] }, () =>
+      new SpacesController().archive(space!.id),
+    );
+
+    const listed = (): Promise<string[]> =>
+      actingAs(tenant, { roles: ['owner'] }, async () =>
+        (await new ArchiveController().list()).items.map((item) => item.kind),
+      );
+    assert.ok((await listed()).includes('space'), 'the control: on, the bin offers it');
+
+    await switchOff(tenant, ['maintenance']);
+    assert.equal((await listed()).includes('space'), false);
+    await actingAs(tenant, { roles: ['owner'] }, () =>
+      expectStatus(() => new ArchiveController().restore(archiveEntryId), 404),
+    );
+    const [row] = await tenant.sql<{ archived: boolean }>(
+      'SELECT archived_at IS NOT NULL AS archived FROM space WHERE id = $1',
+      [space!.id],
+    );
+    assert.equal(row!.archived, true, 'still archived');
+  });
+});
+
+test('sweep: with qualifications off a blocking type no longer refuses an assignment', async () => {
+  await withScratchTenant(async (tenant) => {
+    // TPTD: a required type, which a blocking one must be.
+    const [type] = await tenant.sql<{ id: string }>(
+      `SELECT id FROM qualification_type WHERE name LIKE 'TPTD%' AND archived_at IS NULL`,
+    );
+    const lapsed = await addMember(tenant, 'Caducado', 'Módulos', ['instructor']);
+    const [past] = await tenant.sql<{ d: string }>(`SELECT to_char(club_today() - 3, 'YYYY-MM-DD') AS d`);
+    await actingAs(tenant, { roles: ['owner'] }, () =>
+      new QualificationsController().add(lapsed, { typeId: type!.id, issuingBody: 'IPDJ', expiresOn: past!.d }),
+    );
+    await tenant.sql('UPDATE qualification_type SET blocks_assignment = true WHERE id = $1', [type!.id]);
+
+    const assign = (name: string): Promise<unknown> =>
+      tenant.sql(
+        `INSERT INTO class_group (organization_id, season_id, facility_id, name, instructor_membership_id)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [tenant.organizationId, tenant.seasonId, tenant.facilityId, name, lapsed],
+      );
+    await assert.rejects(() => assign('Tubarões'), /expired/, 'the control: on, it blocks');
+
+    await switchOff(tenant, ['qualifications']);
+    await assign('Golfinhos');
+  });
+});
+
+test('sweep: with competition off the progression offers no meets and refuses one', async () => {
+  await withScratchTenant(async (tenant) => {
+    const [student] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name) VALUES ($1, 'Rita', 'Módulos') RETURNING id`,
+      [tenant.organizationId],
+    );
+    await switchOff(tenant, ['competition']);
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const records = new RecordsController();
+      assert.deepEqual((await records.read(student!.id)).meets, []);
+      const time = { stroke: 'freestyle', distanceM: 50, swumOn: '2026-10-01', seconds: 40 };
+      await expectStatus(() => records.add(student!.id, { ...time, meetName: 'Regional' }), 403);
+      // A training time is core and still goes in.
+      assert.ok((await records.add(student!.id, time)).id);
+    });
   });
 });

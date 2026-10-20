@@ -172,7 +172,8 @@ export async function progressionFor(
 
     const personalBests = bestsOf(records);
     const defaultCourse = await courseOfTurma(tx, studentId);
-    const meets = await meetChoices(tx);
+    // POOLSE-87 sweep: no meet picker while competition is off.
+    const meets = moduleIsOn('competition') ? await meetChoices(tx) : [];
     // POOLSE-87: the gap to qualify is competition's, the record is core.
     const qualifying = moduleIsOn('competition') ? await studentQualifying(tx, studentId) : null;
 

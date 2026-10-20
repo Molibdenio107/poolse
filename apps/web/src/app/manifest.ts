@@ -19,12 +19,12 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Poolse',
     short_name: 'Poolse',
-    description: 'Gestão de piscinas',
-    lang: 'pt-PT',
+    // No description: the manifest is one file for both languages, and an
+    // untranslated sentence on Android's install sheet is worse than none.
     start_url: '/dashboard',
     scope: '/',
     display: 'standalone',
-    orientation: 'portrait',
+    // No orientation lock: the calendar is read sideways on a phone (tier 3).
     background_color: '#FAFBFC',
     theme_color: '#FFFFFF',
     icons: [

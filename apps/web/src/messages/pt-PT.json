@@ -2358,7 +2358,8 @@
         "overdue": "Em atraso",
         "students": "{students, plural, one {# aluno} other {# alunos}}, {overdue, plural, =0 {nenhum em atraso} other {# em atraso}}",
         "empty": "Ainda não há mensalidades neste período.",
-        "open": "Ver faturação"
+        "open": "Ver faturação",
+        "openOverdue": "Ver quem tem pagamentos em atraso"
       },
       "today": {
         "title": "Hoje",

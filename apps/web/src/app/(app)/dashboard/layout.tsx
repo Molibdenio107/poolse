@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/nextjs';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import type { PoolseModule } from '@poolse/rules';
 import { AppSidebar, MobileMenu } from '../app-sidebar';
+import { modulesOf } from '@/lib/modules';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { SuspendedNotice } from './suspended-notice';
@@ -103,7 +104,9 @@ async function currentViewer(): Promise<Viewer> {
           : null,
       clubGone: me.requestedOrganizationMissing === true,
       kind: membership?.organizationKind ?? 'business',
-      modules: membership?.modules ?? [],
+      // No membership: nothing to show. A membership from an API that predates
+      // the field: everything on (`modulesOf`).
+      modules: membership === undefined ? [] : modulesOf(membership),
       organizationName: membership?.organizationName ?? null,
       readOnly:
         membership?.readOnlyAt != null

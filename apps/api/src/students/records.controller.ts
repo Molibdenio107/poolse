@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Body,
   Controller,
   Get,
@@ -25,7 +26,7 @@ import {
   type Progression,
   type Stroke,
 } from './records.repository.js';
-import { CoreRoute } from '../tenant/modules.js';
+import { CoreRoute, moduleIsOn } from '../tenant/modules.js';
 
 interface ProgressionResponse extends Progression {
   organizationId: string;
@@ -198,6 +199,19 @@ function parseCourse(value: unknown): Course | null {
  */
 function parseMeet(body: Record<string, unknown>): NewRecord['meet'] {
   const id = typeof body['meetId'] === 'string' ? body['meetId'].trim() : '';
+  const named = typeof body['meetName'] === 'string' && body['meetName'].trim() !== '';
+  /*
+   * A meet is competition's — POOLSE-87 sweep. The record is core and stays
+   * writable as a training time; naming or linking a meet with the module off
+   * would create or reach a `swim_meet` the club cannot see.
+   */
+  if ((id !== '' || named) && !moduleIsOn('competition')) {
+    throw new ForbiddenException({
+      code: 'module_disabled',
+      module: 'competition',
+      message: 'This module is not active for this organization',
+    });
+  }
   if (id !== '') {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
       throw new BadRequestException('meetId must be an id');

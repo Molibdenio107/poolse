@@ -2358,7 +2358,8 @@
         "overdue": "Overdue",
         "students": "{students, plural, one {# student} other {# students}}, {overdue, plural, =0 {none overdue} other {# overdue}}",
         "empty": "No fees in this period yet.",
-        "open": "Open invoicing"
+        "open": "Open invoicing",
+        "openOverdue": "See who has overdue payments"
       },
       "today": {
         "title": "Today",

@@ -60,6 +60,8 @@ export function CalendarWeek({
   controls,
   canManage,
   openPlanFor,
+  freeSwimOn = true,
+  messagesOn = true,
 }: {
   organizationId: string;
   /** The site and season on screen — what a free-swim block is created in. */
@@ -85,6 +87,10 @@ export function CalendarWeek({
    * a session not on this week's grid opens nothing.
    */
   openPlanFor?: string | undefined;
+  /** POOLSE-87 sweep: reception on — free swim is offered on an empty cell. */
+  freeSwimOn?: boolean;
+  /** POOLSE-87 sweep: messages on — a cancellation offers to tell the families. */
+  messagesOn?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const { show } = useToast();
@@ -569,6 +575,7 @@ export function CalendarWeek({
         organizationId={organizationId}
         target={cancelling}
         onClose={() => setCancelling(null)}
+        messagesOn={messagesOn}
       />
 
       <Dialog
@@ -629,7 +636,7 @@ export function CalendarWeek({
           Or hold this lane for the public — POOLSE-68. The title is the club's
           own words, prefilled in the reader's language.
         */}
-        {facilityId !== null && seasonId !== null && (
+        {freeSwimOn && facilityId !== null && seasonId !== null && (
           <form
             onSubmit={(event) => {
               event.preventDefault();

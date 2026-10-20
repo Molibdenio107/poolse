@@ -453,12 +453,21 @@ function visibleSections(viewer: Viewer): Item[] {
 }
 
 /** The one list both the sidebar and the phone's sheet draw, so they cannot drift. */
-function SidebarNav({ sections, pathname }: { sections: Item[]; pathname: string }): React.ReactElement {
+function SidebarNav({
+  sections,
+  pathname,
+  onNavigate,
+}: {
+  sections: Item[];
+  pathname: string;
+  /** The phone's sheet closes on any tap of a link, the page it is on included. */
+  onNavigate?: () => void;
+}): React.ReactElement {
   const t = useTranslations();
   return (
     <nav aria-label={t('nav.label')} className="flex flex-1 flex-col gap-1">
       {sections.map((section) => (
-        <NavItem key={section.href} item={section} pathname={pathname} depth={0} />
+        <NavItem key={section.href} item={section} pathname={pathname} depth={0} onNavigate={onNavigate} />
       ))}
     </nav>
   );
@@ -506,7 +515,11 @@ export function MobileMenu({
         closeLabel={t('common.close')}
         placement="start"
       >
-        <SidebarNav sections={visibleSections({ roles, kind, modules })} pathname={pathname} />
+        <SidebarNav
+          sections={visibleSections({ roles, kind, modules })}
+          pathname={pathname}
+          onNavigate={() => setOpen(false)}
+        />
       </Dialog>
     </>
   );
@@ -530,10 +543,12 @@ function NavItem({
   item,
   pathname,
   depth,
+  onNavigate,
 }: {
   item: Item;
   pathname: string;
   depth: number;
+  onNavigate?: (() => void) | undefined;
 }): React.ReactElement {
   const t = useTranslations();
   const active = isInSection(pathname, item.href);
@@ -543,6 +558,7 @@ function NavItem({
       <Link
         href={item.href}
         aria-current={pathname === item.href ? 'page' : undefined}
+        {...(onNavigate === undefined ? {} : { onClick: onNavigate })}
         className={cn(
           LINK,
           // Each level steps in a little further. Only the top level has an icon,
@@ -558,7 +574,7 @@ function NavItem({
 
       {active &&
         item.children?.map((child) => (
-          <NavItem key={child.href} item={child} pathname={pathname} depth={depth + 1} />
+          <NavItem key={child.href} item={child} pathname={pathname} depth={depth + 1} onNavigate={onNavigate} />
         ))}
     </Fragment>
   );

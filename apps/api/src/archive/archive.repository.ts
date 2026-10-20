@@ -1,3 +1,4 @@
+import { moduleIsOn } from '../tenant/modules.js';
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { TOTAL_COUNT, paginated, totalOf, type PageQuery, type Paginated } from '../common/pagination.js';
@@ -65,7 +66,16 @@ interface EntryRow {
   total_count: number;
 }
 
-const ACTIONS = RESTORABLE.map((one) => one.action);
+/**
+ * The archive actions the bin offers this club — POOLSE-87: a kind whose
+ * module is off is neither listed nor restorable, because restoring an Espaço
+ * is a write to maintenance however it is reached.
+ */
+function offeredActions(): string[] {
+  return RESTORABLE.filter((one) => one.module === undefined || moduleIsOn(one.module)).map(
+    (one) => one.action,
+  );
+}
 
 /**
  * An archive that was the consequence of another change is not offered — sweep,
@@ -100,7 +110,7 @@ export async function listArchive(
         ORDER BY a.created_at DESC, a.id
         LIMIT $6 OFFSET $7`,
       [
-        ACTIONS,
+        offeredActions(),
         filters.kind,
         filters.actorMembershipId,
         filters.from,
@@ -151,7 +161,7 @@ export async function listArchiveActors(
         WHERE a.action = ANY($1::text[]) AND a.actor_membership_id IS NOT NULL
           AND ${NOT_A_CONSEQUENCE}
         ORDER BY 2`,
-      [ACTIONS],
+      [offeredActions()],
     );
     return rows.map((row) => ({ membershipId: row.id, name: row.name }));
   });
@@ -159,6 +169,7 @@ export async function listArchiveActors(
 
 function kindOf(row: { action: string; entity_type: string }): RestorableKind | undefined {
   const kind = restorableByAction(row.action);
+  if (kind?.module !== undefined && !moduleIsOn(kind.module)) return undefined;
   return kind?.kind === row.entity_type ? kind : undefined;
 }
 

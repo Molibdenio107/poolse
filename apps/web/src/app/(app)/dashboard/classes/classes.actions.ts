@@ -542,6 +542,10 @@ export async function createFreeSwimAction(
 async function bookingFailure(
   error: unknown,
 ): Promise<{ ok: false; errorKey: string; detail?: string }> {
+  // POOLSE-87 sweep: the club has the module off — say so, not "could not place".
+  if (error instanceof ApiError && error.status === 403 && error.code === 'module_disabled') {
+    return { ok: false, errorKey: 'common.moduleDisabled' };
+  }
   if (error instanceof ApiError && error.status === 409) {
     const body = (error.details ?? {}) as {
       message?: string;

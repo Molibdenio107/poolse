@@ -33,14 +33,15 @@ export default async function AdminLayout({
   const t = await getTranslations();
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    // POOLSE-88: clear of a landscape phone's notch, like the tenant shell.
+    <div className="flex min-h-dvh flex-col pl-safe-left pr-safe-right">
       {/*
         Deliberately not the tenant app's bar. That one is `bg-surface` with an
         empty brand slot waiting for a customer's logo; this one is inverted —
         the operator should be able to tell which side they are on from the
         corner of their eye, without reading a word.
       */}
-      <header className="sticky top-0 z-20 flex h-app-bar items-center justify-between gap-3 border-b border-border bg-foreground px-6 text-background print:hidden">
+      <header className="sticky top-0 z-20 flex h-app-bar items-center justify-between gap-3 border-b border-border bg-foreground px-6 pt-safe-top text-background print:hidden">
         <div className="flex min-w-0 items-center gap-2">
           <ShieldCheck className="size-4 shrink-0" aria-hidden />
           <span className="truncate text-sm font-semibold tracking-tight">

@@ -328,11 +328,14 @@ export function CancelSessionDialog({
   organizationId,
   target,
   onClose,
+  messagesOn = true,
 }: {
   organizationId: string;
   /** The class being called off, or null when nothing is being asked. */
   target: CancelTarget | null;
   onClose: () => void;
+  /** POOLSE-87 sweep: with messages off there is no composer to point at. */
+  messagesOn?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   /*
@@ -369,7 +372,7 @@ export function CancelSessionDialog({
    * set, because the success effect closes the dialog.
    */
   const notifyHref =
-    target?.classGroupId === null || target?.classGroupId === undefined
+    !messagesOn || target?.classGroupId === null || target?.classGroupId === undefined
       ? null
       : `/dashboard/students/messages/new?${new URLSearchParams({
           audience: 'class_group',

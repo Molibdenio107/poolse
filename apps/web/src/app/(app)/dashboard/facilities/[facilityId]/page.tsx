@@ -43,6 +43,7 @@ import { listMeters } from '../energy.actions';
 import { PageError, PageShell } from '@/components/page-shell';
 import { OccupancyPanel } from '@/components/occupancy-panel';
 import { WaterThresholdForm } from './water-threshold-form';
+import { moduleIsOn } from '@/lib/modules';
 import { backLabelKey, readFrom } from '@/lib/back';
 import { storageConfigured } from '@/lib/storage-status';
 
@@ -556,7 +557,8 @@ export default async function FacilityPage({
                 ) : (
                   <>
                     <TaxPanel settings={tax.data} />
-                    <PaymentInstructionsPanel settings={tax.data} />
+                    {/* Como pagar is read by invoice reminders: invoicing's (POOLSE-87). */}
+                    {(await moduleIsOn('invoicing')) && <PaymentInstructionsPanel settings={tax.data} />}
                   </>
                 )}
                 <LogoPanel />
@@ -623,8 +625,16 @@ async function GeneralTab({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
 
+  // POOLSE-87 sweep: the water rule is water quality's, refused with it off.
+  const waterOn = await moduleIsOn('water_quality');
   const offered = GENERAL_SECTIONS.filter((key: GeneralSection) =>
-    key === 'people' ? site.counts !== undefined : key === 'location' ? site.canManage : true,
+    key === 'people'
+      ? site.counts !== undefined
+      : key === 'location'
+        ? site.canManage
+        : key === 'water'
+          ? waterOn
+          : true,
   );
   const current = pickSection(offered, section, 'weather');
 

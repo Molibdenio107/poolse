@@ -18,6 +18,7 @@ import { GapTable } from '@/components/gap-table';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatDate } from '@/lib/date-format';
 import { today as todayOfClub } from '@/lib/dates';
+import { moduleIsOn } from '@/lib/modules';
 
 /**
  * Backlog story 6 — a student's performances over time.
@@ -127,6 +128,8 @@ export default async function ProgressPage({
   }
 
   const loaded = progression;
+  // POOLSE-87 sweep: meets are competition's.
+  const competitionOn = await moduleIsOn('competition');
   const hasRecords = loaded.records.length > 0;
 
   return (
@@ -383,6 +386,7 @@ export default async function ProgressPage({
                   courses={loaded.courses}
                   defaultCourse={loaded.defaultCourse}
                   meets={loaded.meets}
+                  competitionOn={competitionOn}
                   today={today}
                 />
               </section>

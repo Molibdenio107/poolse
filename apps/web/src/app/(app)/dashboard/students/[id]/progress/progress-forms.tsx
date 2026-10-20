@@ -35,6 +35,7 @@ export function AddRecordForm({
   courses,
   defaultCourse,
   meets,
+  competitionOn = true,
   today,
 }: {
   organizationId: string;
@@ -44,6 +45,11 @@ export function AddRecordForm({
   /** The turma's pool length, when it is 25 or 50 m — POOLSE-81. */
   defaultCourse: Course | null;
   meets: MeetChoice[];
+  /**
+   * POOLSE-87 sweep: meets are competition's. Off, a time is a training time
+   * and the form asks nothing about a meet — the API refuses one regardless.
+   */
+  competitionOn?: boolean;
   /** Today, resolved on the server so the default does not depend on the client clock. */
   today: string;
 }): React.ReactElement {
@@ -195,6 +201,7 @@ export function AddRecordForm({
         </div>
       </div>
 
+      {competitionOn && (
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
           <label htmlFor="record-meet" className={FIELD_LABEL}>
@@ -247,6 +254,7 @@ export function AddRecordForm({
           </>
         )}
       </div>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <input

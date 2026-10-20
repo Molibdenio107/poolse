@@ -1,3 +1,4 @@
+import type { PoolseModule } from '@poolse/rules';
 import type { Tx } from '@poolse/db';
 import { displayName } from '../people/names.js';
 
@@ -58,6 +59,11 @@ export type ArchivedChild = keyof typeof ARCHIVED_CHILDREN;
 
 export interface RestorableKind {
   kind: RestorableKindName;
+  /**
+   * The module the kind belongs to — POOLSE-87. While the club has it off the
+   * bin neither lists nor restores it. Omitted means core.
+   */
+  module?: PoolseModule;
   /** The action the archive path writes. */
   action: string;
   table: string;
@@ -118,6 +124,7 @@ export const RESTORABLE: readonly RestorableKind[] = [
   },
   {
     kind: 'space',
+    module: 'maintenance',
     action: 'space.archived',
     table: 'space',
     labelKey: 'archive.kind.space',
@@ -127,6 +134,7 @@ export const RESTORABLE: readonly RestorableKind[] = [
   },
   {
     kind: 'inventory_item',
+    module: 'maintenance',
     action: 'inventory.item.archived',
     table: 'inventory_item',
     labelKey: 'archive.kind.inventory_item',
@@ -139,6 +147,7 @@ export const RESTORABLE: readonly RestorableKind[] = [
   },
   {
     kind: 'maintenance_task',
+    module: 'maintenance',
     action: 'maintenance.taskArchived',
     table: 'maintenance_task',
     labelKey: 'archive.kind.maintenance_task',
@@ -178,6 +187,7 @@ export const RESTORABLE: readonly RestorableKind[] = [
   {
     // POOLSE-81: a meet, with its results.
     kind: 'swim_meet',
+    module: 'competition',
     action: 'swim_meet.archived',
     table: 'swim_meet',
     labelKey: 'archive.kind.swim_meet',

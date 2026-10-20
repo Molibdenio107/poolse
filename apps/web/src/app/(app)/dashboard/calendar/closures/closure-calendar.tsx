@@ -95,7 +95,10 @@ export function ClosureCalendar({
   halfDayCut,
   canManage,
   prefill = null,
+  messagesOn = true,
 }: {
+  /** POOLSE-87 sweep: the families are warned through messages; off, no offer. */
+  messagesOn?: boolean;
   organizationId: string;
   year: number;
   closures: Closure[];
@@ -323,6 +326,7 @@ export function ClosureCalendar({
           halfDayCut={halfDayCut}
           prefill={prefill}
           onDone={() => setPending(null)}
+          messagesOn={messagesOn}
         />
       )}
 
@@ -388,7 +392,9 @@ function ClosureForm({
   halfDayCut,
   prefill,
   onDone,
+  messagesOn,
 }: {
+  messagesOn: boolean;
   organizationId: string;
   range: [string, string];
   sites: Site[];
@@ -693,6 +699,7 @@ function ClosureForm({
 
           <p className="text-sm text-foreground-muted">{t('calendar.closureEffect')}</p>
 
+          {messagesOn && (
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
@@ -705,6 +712,7 @@ function ClosureForm({
               <span className="block text-foreground-muted">{t('calendar.warn.hint')}</span>
             </span>
           </label>
+          )}
 
           {warn && (
             <div className="flex flex-col gap-3 rounded border border-border p-3">

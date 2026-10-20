@@ -28,6 +28,7 @@ import { withFrom } from '@/lib/back';
 import { WidgetCard } from './widget-card';
 import { QualificationStatus } from '@/components/qualification-status';
 import { MyTurmasCard, NextClassCard, TrainingPlanCard, WeekCard } from './instructor-widgets';
+import { moduleIsOn } from '@/lib/modules';
 import {
   FaultsCard,
   InventoryWatchCard,
@@ -419,6 +420,7 @@ async function MoneyCard({ widget }: { widget: DashboardWidget }): Promise<React
   const locale = await getLocale();
   const data = widget.data as MoneyWidgetData | null;
   const late = (data?.overdueCents ?? 0) > 0;
+  const invoicing = await moduleIsOn('invoicing');
 
   const row = (label: string, cents: number, strong: boolean): React.ReactElement => (
     <div className="flex items-baseline justify-between gap-3">
@@ -433,8 +435,13 @@ async function MoneyCard({ widget }: { widget: DashboardWidget }): Promise<React
     <WidgetCard
       widget={widget}
       title={t('dashboard.widget.money.title')}
-      href="/dashboard/faturacao"
-      linkLabel={t('dashboard.widget.money.open')}
+      /*
+        POOLSE-87 sweep: the figures are fee lines, which are core, and the
+        card links to Faturação only while invoicing is on. Off, it opens the
+        register on the people who owe.
+      */
+      href={invoicing ? '/dashboard/faturacao' : '/dashboard/students?sort=overdue'}
+      linkLabel={t(invoicing ? 'dashboard.widget.money.open' : 'dashboard.widget.money.openOverdue')}
       emptyMessage={t('dashboard.widget.money.empty')}
     >
       {data !== null && (
