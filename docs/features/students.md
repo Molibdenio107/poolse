@@ -187,7 +187,7 @@ Progressão and nothing else.
 
 ### Provas — importing a meet's results (slice 2)
 
-**Provas** under Alunos lists the meets, newest first, paged. *Importar resultados* takes the
+**Competição → Provas** under Alunos (renamed 20-10-2026) lists the meets, newest first, paged. *Importar resultados* takes the
 meet's **LENEX** file — `.lef`, or a `.lxf` holding exactly one `.lef`, up to 10 MB — dropped on the
 page or chosen. The file is read on the Next server (`lib/lenex.ts`) and never leaves it.
 
@@ -212,8 +212,8 @@ inflates past 40 MB.
 
 ## Mínimos — gap to qualify (POOLSE-85)
 
-**The club types the FPN's tables** (Rui, 19-10-2026); Poolse ships none. Under **Provas**, two more
-sections:
+**The club types the FPN's tables** (Rui, 19-10-2026); Poolse ships none. Under **Competição**, two more
+entries, each its own route (`/provas/minimos`, `/provas/escaloes`):
 
 - **Escalões FPN** — the FPN's age groups for a season: a name, a gender (or both) and the birth years.
   Girls a year earlier is two rows, not a rule. They are not the club's levels and change nobody's

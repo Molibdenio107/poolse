@@ -332,8 +332,24 @@ const SECTIONS: Item[] = [
         roles: ['owner', 'admin', 'instructor'],
         module: 'messages',
       },
-      // Provas — POOLSE-81: meets and their results. The endpoint's own roles.
-      { href: '/dashboard/students/provas', key: 'meets.title', roles: TEACHING, module: 'competition' },
+      /*
+        Competição — POOLSE-81 and 85, its own branch since 20-10-2026 (Rui):
+        the meets, the qualifying times and the FPN's escalões, which make
+        sense only to a club that competes, so the whole branch follows the
+        competition module. The endpoint's own roles. Each part is a route, so
+        the entry that lights up is the one being read.
+      */
+      {
+        href: '/dashboard/students/provas',
+        key: 'competition.title',
+        roles: TEACHING,
+        module: 'competition',
+        children: [
+          { href: '/dashboard/students/provas', key: 'qualifying.section.meets' },
+          { href: '/dashboard/students/provas/minimos', key: 'qualifying.section.minimos' },
+          { href: '/dashboard/students/provas/escaloes', key: 'qualifying.section.escaloes' },
+        ],
+      },
       { href: '/dashboard/students/levels', key: 'students.levels' },
       /*
        * The advancement queue — POOLSE-19. It shipped on 28 August with no way
@@ -544,20 +560,35 @@ function NavItem({
   pathname,
   depth,
   onNavigate,
+  siblings,
 }: {
   item: Item;
   pathname: string;
   depth: number;
   onNavigate?: (() => void) | undefined;
+  /** The other entries at this depth, for "the most specific match wins". */
+  siblings?: Item[] | undefined;
 }): React.ReactElement {
   const t = useTranslations();
-  const active = isInSection(pathname, item.href);
+  /*
+   * Among siblings the most specific match wins: Competição's first child
+   * shares its parent's address, and `/provas/minimos` is inside `/provas`, so
+   * without this Provas would light up while Mínimos is being read.
+   */
+  const active =
+    isInSection(pathname, item.href) &&
+    !(siblings ?? []).some(
+      (other) => other.href.length > item.href.length && isInSection(pathname, other.href),
+    );
+  // The page is named once: by the child that shares its parent's address.
+  const current =
+    pathname === item.href && !(item.children ?? []).some((child) => child.href === item.href);
 
   return (
     <Fragment key={item.href}>
       <Link
         href={item.href}
-        aria-current={pathname === item.href ? 'page' : undefined}
+        aria-current={current ? 'page' : undefined}
         {...(onNavigate === undefined ? {} : { onClick: onNavigate })}
         className={cn(
           LINK,
@@ -574,7 +605,14 @@ function NavItem({
 
       {active &&
         item.children?.map((child) => (
-          <NavItem key={child.href} item={child} pathname={pathname} depth={depth + 1} onNavigate={onNavigate} />
+          <NavItem
+            key={`${child.href}:${child.key}`}
+            item={child}
+            pathname={pathname}
+            depth={depth + 1}
+            onNavigate={onNavigate}
+            siblings={item.children}
+          />
         ))}
     </Fragment>
   );

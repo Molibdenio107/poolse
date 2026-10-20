@@ -36,6 +36,7 @@ entry takes the roles of the route its page loads, and the role probe tests that
 | Receção, Faturação | owner, admin |
 | Alunos, Encarregados, Níveis, Avanço | owner, admin, instructor |
 | — Mensagens | owner, admin, instructor |
+| — Competição, and Provas, Mínimos, Escalões under it | owner, admin, instructor; competition module |
 | — Pedidos de inscrição, Reposições | owner, admin |
 | Os meus educandos | guardian |
 | O meu registo | student who is not also a guardian |
@@ -44,7 +45,7 @@ entry takes the roles of the route its page loads, and the role probe tests that
 children included, against `/me`'s `modules` (the enabled list): Inventário (maintenance),
 Ocorrências and Nadadores-salvadores (incidents), Férias and As minhas férias (vacations),
 Salários (salaries), Qualificações (qualifications), Energia (energy), Receção (reception),
-Faturação (invoicing), Mensagens (messages), Provas (competition). If `/me` fails the list is
+Faturação (invoicing), Mensagens (messages), Competição and its three entries (competition). If `/me` fails the list is
 empty, closed like the roles.
 
 **A module's pages sit behind `ModuleGate`** (`components/module-gate.tsx`), mounted once in the
@@ -65,6 +66,11 @@ button at the start of the app bar (`MobileMenu`) opens the same `SidebarNav` fr
 and the sheet closes on its own when a link is followed. The page's title and primary action
 stick under the app bar; its subtitle stays in the page. The tiers that say which screens must be
 good on a phone are slice 3's section here.
+
+**Within a section the most specific entry lights up** (20-10-2026). Competição's first child, Provas,
+shares its parent's address, and Mínimos (`/provas/minimos`) and Escalões (`/provas/escaloes`) sit
+inside it, so among siblings only the longest matching address is active, and the page is named
+(`aria-current`) once, by the child. An old `?section=minimos` link redirects to its route.
 
 **A hidden menu item is never the permission.** Every restricted section's API refuses the
 request as well; the menu is a convenience, and a URL somebody types has to be refused on

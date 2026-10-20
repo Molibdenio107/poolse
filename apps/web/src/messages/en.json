@@ -5338,7 +5338,7 @@
     "section": {
       "meets": "Meets",
       "minimos": "Qualifying times",
-      "escaloes": "FPN age groups"
+      "escaloes": "Age groups"
     },
     "season": "Season",
     "noSeason": "There is no season yet. Create one under Classes › Seasons to record age groups and qualifying times.",
@@ -5351,7 +5351,7 @@
     "seasonEnd": "season end",
     "addStandard": "Add qualifying times",
     "noAgeGroupsYet": "This season has no FPN age groups yet. Times are entered per age group, so add those first.",
-    "goToAgeGroups": "Go to FPN age groups",
+    "goToAgeGroups": "Go to Age groups",
     "genderBoth": "Girls and boys",
     "genderFemale": "Girls",
     "genderMale": "Boys",
@@ -5476,5 +5476,9 @@
       "vacations": "Leave",
       "qualifications": "Qualifications"
     }
+  },
+  "competition": {
+    "title": "Competition",
+    "subtitle": "The club's meets, each championship's qualifying times and the FPN age groups."
   }
 }

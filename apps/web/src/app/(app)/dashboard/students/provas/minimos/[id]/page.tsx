@@ -52,7 +52,7 @@ export default async function StandardPage({
       title={standard.name}
       subtitle={`${standard.seasonName} · ${windowText(t, standard.windowFrom, standard.windowTo)}`}
       back={{
-        href: `/dashboard/students/provas?section=minimos&season=${standard.seasonId}`,
+        href: `/dashboard/students/provas/minimos?season=${standard.seasonId}`,
         label: t('qualifying.backToStandards'),
       }}
       requested={tab}
@@ -85,7 +85,7 @@ export default async function StandardPage({
                 <section className="flex flex-col gap-2 rounded border border-border bg-surface p-5">
                   <p>{t('qualifying.noAgeGroupsYet')}</p>
                   <Link
-                    href="/dashboard/students/provas?section=escaloes"
+                    href="/dashboard/students/provas/escaloes"
                     className="text-primary underline underline-offset-4"
                   >
                     {t('qualifying.goToAgeGroups')}

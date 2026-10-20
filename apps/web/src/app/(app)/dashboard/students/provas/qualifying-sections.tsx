@@ -17,11 +17,10 @@ const LINK =
 export async function SeasonChooser({
   overview,
   path,
-  section,
 }: {
   overview: QualifyingOverview;
+  /** The part being read — Mínimos or Escalões each has its own route. */
   path: string;
-  section: string;
 }): Promise<React.ReactElement | null> {
   const t = await getTranslations();
   if (overview.seasons.length < 2) return null;
@@ -36,7 +35,7 @@ export async function SeasonChooser({
         ) : (
           <Link
             key={season.id}
-            href={`${path}?section=${section}&season=${season.id}`}
+            href={`${path}?season=${season.id}`}
             scroll={false}
             className="text-primary underline underline-offset-4"
           >

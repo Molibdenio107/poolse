@@ -50,7 +50,7 @@ export async function createAgeGroupAction(_previous: FormState, formData: FormD
   } catch (error) {
     return failure(error, 'qualifying.saveFailed');
   }
-  revalidatePath(PROVAS);
+  revalidatePath(PROVAS, 'layout');
   return { ok: true };
 }
 
@@ -61,7 +61,7 @@ export async function updateAgeGroupAction(_previous: FormState, formData: FormD
   } catch (error) {
     return failure(error, 'qualifying.saveFailed');
   }
-  revalidatePath(PROVAS);
+  revalidatePath(PROVAS, 'layout');
   return { ok: true };
 }
 
@@ -72,7 +72,7 @@ export async function archiveAgeGroupAction(_previous: FormState, formData: Form
   } catch (error) {
     return failure(error, 'qualifying.archiveFailed');
   }
-  revalidatePath(PROVAS);
+  revalidatePath(PROVAS, 'layout');
   return { ok: true, toastKey: 'qualifying.archivedToast' };
 }
 
@@ -88,7 +88,7 @@ export async function createStandardAction(_previous: FormState, formData: FormD
   } catch (error) {
     return failure(error, 'qualifying.saveFailed');
   }
-  revalidatePath(PROVAS);
+  revalidatePath(PROVAS, 'layout');
   // Straight to its times: a standard is created to be filled in.
   return { ok: true, redirectTo: `${PROVAS}/minimos/${created.id}?tab=times` };
 }
@@ -102,7 +102,7 @@ export async function updateStandardAction(_previous: FormState, formData: FormD
     return failure(error, 'qualifying.saveFailed');
   }
   revalidatePath(`${PROVAS}/minimos/${id}`);
-  revalidatePath(PROVAS);
+  revalidatePath(PROVAS, 'layout');
   return { ok: true };
 }
 
@@ -113,8 +113,8 @@ export async function archiveStandardAction(_previous: FormState, formData: Form
   } catch (error) {
     return failure(error, 'qualifying.archiveFailed');
   }
-  revalidatePath(PROVAS);
-  return { ok: true, toastKey: 'qualifying.archivedToast', redirectTo: `${PROVAS}?section=minimos` };
+  revalidatePath(PROVAS, 'layout');
+  return { ok: true, toastKey: 'qualifying.archivedToast', redirectTo: `${PROVAS}/minimos` };
 }
 
 /**
