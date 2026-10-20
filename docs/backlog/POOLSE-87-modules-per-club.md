@@ -48,7 +48,7 @@ switch, and that is a later ticket.
 |---|---|---|
 | `messages` | Messages to families, opt-outs | on |
 | `incidents` | Incident log, lifeguard roster | on |
-| `reception` | Free swim, passes, check-in, occupancy | **Open 1** |
+| `reception` | Free swim, passes, check-in, occupancy | off (needs `invoicing`) |
 | `competition` | Meets, LENEX import, entry times, gap to qualify | on |
 | `water_quality` | Pool analyses and import, ranges, lab results, water threshold, the public water page | on |
 | `invoicing` | Faturação: monthly run, documents, series, payments on documents, credit notes, *Em dívida*, reminders | off |
@@ -78,7 +78,7 @@ in the ticket that builds it.
 - **Personal tenants** carry the same column. `kinds` keeps pruning as it does today, and both
   filters apply.
 
-**Open 1 — reception without invoicing.** A free-swim sale is an `invoice_line` (POOLSE-68), and
+**Answered 1 — reception without invoicing** (Rui, 20-10-2026: the recommended default — `reception` requires `invoicing`, and the pilot starts with both off). A free-swim sale is an `invoice_line` (POOLSE-68), and
 voiding a pass is a credit note. So reception cannot work with invoicing off. **Recommended
 default:** declare `reception` requires `invoicing`. The pilot then starts with reception **off**,
 because the club already sells entries on its own certified till and Poolse's documents are
