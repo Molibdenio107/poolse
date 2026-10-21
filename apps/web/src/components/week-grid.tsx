@@ -207,9 +207,16 @@ export function WeekGrid({
         <p className="text-sm text-foreground-muted">{emptyLabel}</p>
       )}
 
+      {/*
+        One column per day from `md`; below it, one column in all — POOLSE-88
+        phone views. Seven columns at 360px crushed every card to a letter a
+        line, so on a phone each day is a heading with its turmas under it, read
+        top to bottom. The count lives in a variable so the desk keeps exactly
+        the template it had.
+      */}
       <div
-        className="grid gap-3"
-        style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
+        className="grid gap-5 md:gap-3 md:[grid-template-columns:repeat(var(--week-days),minmax(0,1fr))]"
+        style={{ '--week-days': days.length } as React.CSSProperties}
       >
         {days.map((day) => (
           <div

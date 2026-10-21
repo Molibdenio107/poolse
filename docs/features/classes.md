@@ -40,3 +40,7 @@ own numbers — lanes 1, 3 and 4 read `1.` `3.` `4.`, not `1.` `2.` `3.`, becaus
 that counts the items would name the wrong lanes.
 
 The numbers are the lanes' own positions at the tank, not positions within this booking.
+
+## On a phone
+
+The weekly board (`WeekGrid`) is one column below `md`: each day is a heading with its turmas under it. From `md` up it keeps one column per day (POOLSE-88 phone views).

@@ -1,0 +1,109 @@
+import { expect, test, type Page } from '@playwright/test';
+import { E2E_EMAIL, E2E_PASSWORD, NO_TEST_USER } from './session';
+import { poolsideLesson } from './poolside-fixture';
+
+/**
+ * The backoffice's desk-shaped screens on a phone — POOLSE-88 phone views
+ * (Rui, 21-10-2026). Below `md` the calendar is a day agenda, the Turmas board
+ * is a day-by-day list and Faturação's tables are cards; from `md` up every one
+ * of them is exactly the desk screen it was. Both halves are asserted, because
+ * "don't break the desktop" was the condition of doing this at all.
+ */
+
+test.skip(E2E_EMAIL === undefined || E2E_PASSWORD === undefined, NO_TEST_USER);
+
+const PHONE = { width: 360, height: 740 };
+const DESK = { width: 1280, height: 900 };
+
+async function visit(page: Page, path: string): Promise<void> {
+  try {
+    await page.goto(path, { waitUntil: 'load' });
+  } catch (error) {
+    if (!String(error).includes('interrupted by another navigation')) throw error;
+    await page.goto(path, { waitUntil: 'load' });
+  }
+  await page.locator('main').first().waitFor();
+}
+
+/** Boxes inside the page that scroll sideways — a table wider than its card. */
+async function sidewaysScrollers(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>('main *'))
+      .filter((el) => {
+        const style = getComputedStyle(el);
+        return (
+          (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
+          el.getBoundingClientRect().width > 0 &&
+          el.scrollWidth > el.clientWidth + 4 &&
+          el.closest('[role=tablist]') === null
+        );
+      })
+      .map((el) => `${el.tagName.toLowerCase()} ${el.clientWidth}/${el.scrollWidth}`),
+  );
+}
+
+test.describe('on a phone', () => {
+  test.use({ viewport: PHONE });
+
+  test('the calendar is a day agenda, and a lesson opens its own page', async ({ page }) => {
+    const lesson = await poolsideLesson();
+    await visit(page, '/dashboard/calendar');
+
+    const days = page.getByRole('navigation', { name: /dias da semana|days of the week/i });
+    await expect(days).toBeVisible();
+    await expect(days.getByRole('link')).toHaveCount(7);
+    // The lane grid's pool picker belongs to the desk view and is not shown.
+    await expect(page.getByText(/escolha uma piscina|choose a pool/i).first()).toBeHidden();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+
+    // Today's poolside lesson is in today's agenda, and tapping it opens the lesson.
+    const card = page.locator(`a[href^="/dashboard/calendar/sessions/${lesson.sessionId}"]`);
+    await expect(card).toBeVisible();
+    const box = await card.boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    await card.tap();
+    await expect(page).toHaveURL(new RegExp(`/sessions/${lesson.sessionId}`));
+  });
+
+  test('the Turmas board reads a day at a time, no card squeezed', async ({ page }) => {
+    await poolsideLesson();
+    await visit(page, '/dashboard/classes');
+    const narrow = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>('main h3'))
+        .filter((h) => /segunda|terça|monday|tuesday/i.test(h.textContent ?? ''))
+        .map((h) => Math.round(h.getBoundingClientRect().width))
+        .filter((width) => width < 200),
+    );
+    expect(narrow, 'a day column narrower than 200px').toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+  });
+
+  test('Faturação scrolls no table sideways', async ({ page }) => {
+    await poolsideLesson();
+    for (const path of ['/dashboard/faturacao', '/dashboard/faturacao?view=owing']) {
+      await visit(page, path);
+      expect(await sidewaysScrollers(page), path).toEqual([]);
+    }
+  });
+});
+
+test.describe('on a desk, the same pages are unchanged', () => {
+  test.use({ viewport: DESK });
+
+  test('the calendar keeps its lane grid, and the Turmas board its seven columns', async ({ page }) => {
+    await poolsideLesson();
+    await visit(page, '/dashboard/calendar');
+    await expect(page.getByLabel(/piscina|pool/i).first()).toBeVisible();
+    await expect(page.getByRole('navigation', { name: /dias da semana|days of the week/i })).toBeHidden();
+
+    await visit(page, '/dashboard/classes');
+    const columns = await page.evaluate(() => {
+      const monday = Array.from(document.querySelectorAll<HTMLElement>('main h3')).find((h) =>
+        /segunda|monday/i.test(h.textContent ?? ''),
+      );
+      const grid = monday?.parentElement?.parentElement;
+      return grid === null || grid === undefined ? 0 : getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+    });
+    expect(columns).toBeGreaterThanOrEqual(6);
+  });
+});

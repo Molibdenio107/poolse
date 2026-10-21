@@ -1064,6 +1064,7 @@
       "trends": "Trends",
       "history": "History",
       "alerts": "Alerts",
+      "lab": "Lab results",
       "record": "Record",
       "ranges": "Ranges"
     },
@@ -1380,6 +1381,15 @@
     "5": "Friday",
     "6": "Saturday",
     "7": "Sunday"
+  },
+  "weekShort": {
+    "1": "Mon",
+    "2": "Tue",
+    "3": "Wed",
+    "4": "Thu",
+    "5": "Fri",
+    "6": "Sat",
+    "7": "Sun"
   },
   "fees": {
     "pricesTitle": "Prices",
@@ -2880,7 +2890,18 @@
     "editImpact": "{count, plural, one {The change cancels # more lesson.} other {The change cancels # more lessons.}}",
     "editGivesBack": "Days the closure no longer covers get their lessons back as soon as you save.",
     "noSites": "To close, the club first needs a site.",
-    "noSitesLink": "Add one in Sites"
+    "noSitesLink": "Add one in Sites",
+    "agenda": {
+      "label": "The day's lessons",
+      "days": "Days of the week",
+      "dayLink": "{day}, {date}: {count, plural, =0 {no lessons} one {# lesson} other {# lessons}}",
+      "empty": "There are no lessons on this day.",
+      "closed": "Closed: {reason}",
+      "standIn": "{name} (stand-in)",
+      "cancelled": "Cancelled",
+      "registerTaken": "Register taken",
+      "moved": "Moved for this week only"
+    }
   },
   "inventory": {
     "title": "Inventory",

@@ -1017,7 +1017,9 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
         */}
         <div
           ref={scroller}
-          className="relative overflow-x-auto rounded border border-border bg-surface"
+          // `isolate`: the gutter and header rows stack (z-20…40) against each
+          // other only, never against the app bar — they slid over it on scroll.
+          className="relative isolate overflow-x-auto rounded border border-border bg-surface"
         >
           <div className="min-w-max">
             <Header

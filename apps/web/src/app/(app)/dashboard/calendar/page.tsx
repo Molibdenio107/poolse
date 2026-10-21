@@ -22,6 +22,7 @@ import {
 } from '@/lib/dates';
 import type { SessionControls } from '../classes/schedule-board';
 import { CalendarWeek } from './calendar-week';
+import { CalendarAgenda } from './calendar-agenda';
 import { bookingKey, slotKey } from '@/lib/slot-key';
 import { GenerateSeason } from './calendar-forms';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -45,11 +46,11 @@ import { formatDate } from '@/lib/date-format';
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string; plan?: string }>;
+  searchParams: Promise<{ week?: string; plan?: string; day?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
-  const { week, plan } = await searchParams;
+  const { week, plan, day } = await searchParams;
 
   // Whatever lands in the query string, the grid gets a Monday. Someone pasting
   // a link to a Thursday should see that Thursday's week, not a week starting
@@ -65,6 +66,14 @@ export default async function CalendarPage({
   const thisWeek = mondayOf(today()) === monday;
   const todayWeekday = thisWeek ? isoWeekday(today()) : undefined;
   const sunday = addDays(monday, 6);
+  // The phone agenda's day: the one asked for if it is in this week, else today
+  // if it is, else the Monday (POOLSE-88 phone views).
+  const agendaDay =
+    isDate(day) && day >= monday && day <= sunday
+      ? day
+      : today() >= monday && today() <= sunday
+        ? today()
+        : monday;
   const season = seasonOf(today());
 
   let calendar: Calendar | null = null;
@@ -422,8 +431,10 @@ export default async function CalendarPage({
                 label matters most. dd-MM-yyyy is short enough to need no narrow
                 form, which the month-in-words version did.
               */}
-              <p className="text-center text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                <span className="whitespace-nowrap">
+              {/* On a phone the two dates may break onto two lines: between two 44px
+                  arrows, "dd-MM-yyyy a dd-MM-yyyy" is wider than 360px allows. */}
+              <p className="text-center text-base font-semibold tracking-tight text-foreground sm:text-xl">
+                <span className="sm:whitespace-nowrap">
                   {t('calendar.range', {
                     from: formatDate(monday),
                     to: formatDate(sunday),
@@ -442,6 +453,24 @@ export default async function CalendarPage({
               <WeekLink week={today()} label={t('calendar.today')} />
             </div>
 
+            {/*
+              On a phone, the week is a day at a time — POOLSE-88 phone views.
+              Below `md` the lane grid is seven unreadable slivers, so the agenda
+              stands in for it and the grid is not shown. They are two different
+              components, so nothing is rendered twice: the agenda is read-only
+              links, and the grid keeps every control it has on a desk.
+            */}
+            {calendar !== null && (
+              <CalendarAgenda
+                className="md:hidden"
+                monday={monday}
+                day={agendaDay}
+                sessions={calendar.sessions}
+                closures={closedDays}
+              />
+            )}
+
+            <div className="hidden md:contents">
             {classes !== null ? (
               /*
                 The dated week — round 6.
@@ -495,6 +524,7 @@ export default async function CalendarPage({
                 todayWeekday={todayWeekday}
               />
             )}
+            </div>
 
             {/*
               The same range again, under the grid — round 5.

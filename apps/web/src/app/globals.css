@@ -444,3 +444,71 @@
     outline-offset: 2px;
   }
 }
+
+/*
+ * A table that becomes cards on a phone — POOLSE-88 phone views.
+ *
+ * Below `md` a wide table scrolled sideways inside its box, which the ticket
+ * calls a defect. `.table-stack` turns each row into a card and each cell into a
+ * "label  value" line, the label read from the cell's `data-label` — so the
+ * table is rendered once, its checkboxes and buttons are the same elements, and
+ * from `md` up none of this applies. A cell with no `data-label` (a checkbox,
+ * an action) stands alone on its line.
+ */
+@media (max-width: 767.98px) {
+  .table-stack {
+    min-width: 0 !important;
+  }
+  .table-stack caption,
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tfoot,
+  .table-stack tr,
+  .table-stack td,
+  .table-stack th[scope='row'] {
+    display: block;
+    width: 100%;
+  }
+  .table-stack tbody tr,
+  .table-stack tfoot tr {
+    border: 1px solid rgb(var(--border));
+    border-radius: 0.375rem;
+    background: rgb(var(--surface));
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .table-stack td,
+  .table-stack th[scope='row'] {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    column-gap: 1rem;
+    row-gap: 0.125rem;
+    padding: 0.25rem 0 !important;
+    text-align: right !important;
+    border: 0 !important;
+  }
+  .table-stack td[data-label]::before,
+  .table-stack th[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    text-align: left;
+    color: rgb(var(--foreground-muted));
+  }
+  .table-stack td:not([data-label]),
+  .table-stack th[scope='row']:not([data-label]) {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left !important;
+  }
+}

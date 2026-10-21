@@ -102,6 +102,8 @@ Both Playwright phone projects (`iphone`, WebKit; `android`, Chromium) run every
 keyboard, put a real notch on screen or install the app. So the ticket's real-device passes, one
 iPhone and one Android, are recorded in the ticket and are not replaced by these specs.
 
+**Desk-shaped screens have a phone view** (Rui, 21-10-2026). The calendar is a day agenda below `md`. The Turmas weekly board (`WeekGrid`) is one column, a day at a time. Faturação's tables stack into cards through `.table-stack` (globals.css), which reads each cell's label from `data-label`. Each one is proved on both sides by `phone-views.spec.ts`: the phone view on a phone, and the unchanged desk screen at 1280 px. Inventário, Salários and the energy faturas still scroll sideways inside their box; they are desk tools and stay so until a club asks.
+
 **Rules a new screen keeps on a phone.**
 - Sizes come from `h-control`/`text-control` and the `coarse:` variant.
 - Layout follows width (`md:`, `sm:`), never the pointer.

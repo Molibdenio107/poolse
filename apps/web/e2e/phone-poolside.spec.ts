@@ -72,6 +72,18 @@ async function tapUntil(page: Page, tap: () => Promise<void>, landed: () => Prom
   }).toPass({ timeout: 15_000 });
 }
 
+/**
+ * Tap a link and land on `url`. Retried only while still on the page the link
+ * is on: a tap before hydration can be lost, but once the navigation has begun
+ * the link is gone, and tapping it again would wait for ever on a slow compile.
+ */
+async function tapToNavigate(page: Page, link: Locator, url: RegExp): Promise<void> {
+  await expect(async () => {
+    if (!url.test(page.url())) await link.tap({ timeout: 5_000 });
+    await expect(page).toHaveURL(url, { timeout: 10_000 });
+  }).toPass({ timeout: 45_000 });
+}
+
 async function markAllPresent(page: Page): Promise<void> {
   await tapUntil(
     page,
@@ -189,11 +201,7 @@ test.describe('the lesson, as the instructor', () => {
     const lesson = await poolsideLesson();
     await visit(page, '/dashboard', 'domcontentloaded');
     const link = page.locator(`a[href^="/dashboard/calendar/sessions/${lesson.sessionId}"]`).first();
-    await tapUntil(
-      page,
-      () => link.tap(),
-      () => expect(page).toHaveURL(new RegExp(`/sessions/${lesson.sessionId}`), { timeout: 2_000 }),
-    );
+    await tapToNavigate(page, link, new RegExp(`/sessions/${lesson.sessionId}`));
     await page.getByRole('button', { name: /guardar presenças|save the register/i }).waitFor();
   });
 
@@ -262,11 +270,8 @@ test.describe('the lesson, as the instructor', () => {
     await poolsideLesson();
     await visit(page, '/dashboard/students?search=Ana%20Poolside', 'domcontentloaded');
     const ana = page.getByRole('link', { name: /^Ana Poolside$/ }).first();
-    await tapUntil(
-      page,
-      () => ana.tap(),
-      () => expect(page.getByRole('heading', { level: 1, name: /Ana Poolside/ })).toBeVisible({ timeout: 2_000 }),
-    );
+    await tapToNavigate(page, ana, /\/dashboard\/students\/[0-9a-f-]{36}/);
+    await expect(page.getByRole('heading', { level: 1, name: /Ana Poolside/ })).toBeVisible();
 
     const call = page.locator(`a[href="tel:${POOLSIDE_GUARDIAN_PHONE.replace(/\s/g, '')}"]`);
     await expect(call).toBeVisible();

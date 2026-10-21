@@ -105,7 +105,7 @@ export function OutstandingList({
         <p className="text-sm text-foreground-muted">{t('invoices.nothingOwed')}</p>
       ) : (
         <div className="relative overflow-x-auto">
-          <table className="w-full min-w-[52rem] text-sm">
+          <table className="table-stack w-full min-w-[52rem] text-sm">
             <caption className="sr-only">{t('invoices.owingTitle')}</caption>
             <thead>
               <tr className="border-b border-border text-left text-foreground-muted">
@@ -154,7 +154,7 @@ export function OutstandingList({
                       className="ml-2"
                     />
                   </td>
-                  <td className="py-3">
+                  <td className="py-3" data-label={t('invoices.payer')}>
                     {invoice.payerName ?? t('invoices.finalConsumer')}
                     {invoice.payerEmail !== null && (
                       // Visible, not a tooltip: it is what the operator needs in
@@ -162,10 +162,10 @@ export function OutstandingList({
                       <span className="block text-foreground-muted">{invoice.payerEmail}</span>
                     )}
                   </td>
-                  <td className="py-3">
+                  <td className="py-3" data-label={t('invoices.dueLabel')}>
                     {formatDate(new Date(`${invoice.dueOn}T12:00:00Z`))}
                   </td>
-                  <td className="py-3">
+                  <td className="py-3" data-label={t('invoices.lastChased')}>
                     {invoice.lastChasedOn === null ? (
                       <span className="text-foreground-muted">{t('invoices.neverChased')}</span>
                     ) : (
@@ -177,7 +177,7 @@ export function OutstandingList({
                       </>
                     )}
                   </td>
-                  <td className="py-3 text-right tabular-nums">
+                  <td className="py-3 text-right tabular-nums" data-label={t('invoices.outstanding')}>
                     {formatCents(locale, invoice.outstandingCents)}
                     {invoice.paidCents > 0 && (
                       // A family that has paid half owes half, and the total on

@@ -1064,6 +1064,7 @@
       "trends": "Tendências",
       "history": "Histórico",
       "alerts": "Alertas",
+      "lab": "Laboratório",
       "record": "Registar",
       "ranges": "Limites"
     },
@@ -1380,6 +1381,15 @@
     "5": "Sexta",
     "6": "Sábado",
     "7": "Domingo"
+  },
+  "weekShort": {
+    "1": "Seg",
+    "2": "Ter",
+    "3": "Qua",
+    "4": "Qui",
+    "5": "Sex",
+    "6": "Sáb",
+    "7": "Dom"
   },
   "fees": {
     "pricesTitle": "Preços",
@@ -2880,7 +2890,18 @@
     "editImpact": "{count, plural, one {A alteração cancela mais # aula.} other {A alteração cancela mais # aulas.}}",
     "editGivesBack": "Os dias que o encerramento deixar de cobrir recuperam as suas aulas assim que guardar.",
     "noSites": "Para encerrar, o clube precisa primeiro de uma instalação.",
-    "noSitesLink": "Criar em Instalações"
+    "noSitesLink": "Criar em Instalações",
+    "agenda": {
+      "label": "Aulas do dia",
+      "days": "Dias da semana",
+      "dayLink": "{day}, {date}: {count, plural, =0 {sem aulas} one {# aula} other {# aulas}}",
+      "empty": "Não há aulas neste dia.",
+      "closed": "Encerrado: {reason}",
+      "standIn": "{name} (substituto)",
+      "cancelled": "Cancelada",
+      "registerTaken": "Presenças marcadas",
+      "moved": "Mudou só esta semana"
+    }
   },
   "inventory": {
     "title": "Inventário",

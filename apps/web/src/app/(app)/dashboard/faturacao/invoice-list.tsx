@@ -45,7 +45,7 @@ export function InvoiceList({
         </p>
       ) : (
         <div className="relative overflow-x-auto">
-          <table className="w-full min-w-[40rem] text-sm">
+          <table className="table-stack w-full min-w-[40rem] text-sm">
             <caption className="sr-only">{t('invoices.issuedTitle')}</caption>
             <thead>
               <tr className="border-b border-border text-left text-foreground-muted">
@@ -91,11 +91,11 @@ export function InvoiceList({
                       </span>
                     )}
                   </td>
-                  <td className="py-3">{invoice.payerName ?? t('invoices.finalConsumer')}</td>
-                  <td className="py-3">
+                  <td className="py-3" data-label={t('invoices.payer')}>{invoice.payerName ?? t('invoices.finalConsumer')}</td>
+                  <td className="py-3" data-label={t('invoices.issuedOn')}>
                     {formatDate(new Date(`${invoice.issuedOn}T12:00:00Z`))}
                   </td>
-                  <td className="py-3 text-right tabular-nums">
+                  <td className="py-3 text-right tabular-nums" data-label={t('invoices.total')}>
                     {formatCents(locale, invoice.totalCents)}
                   </td>
                 </tr>

@@ -116,7 +116,7 @@ export function InvoiceRunPanel({
             shell's `min-w-0` exists to hold up.
           */}
           <div className="relative overflow-x-auto">
-            <table className="w-full min-w-[52rem] text-sm">
+            <table className="table-stack w-full min-w-[52rem] text-sm">
               <caption className="sr-only">{t('invoices.runTitle')}</caption>
               <thead>
                 <tr className="border-b border-border text-left text-foreground-muted">
@@ -167,8 +167,8 @@ export function InvoiceRunPanel({
                         </span>
                       )}
                     </td>
-                    <td className="py-3">
-                      <ul className="flex flex-col gap-1">
+                    <td className="py-3" data-label={t('invoices.lines')}>
+                      <ul className="flex flex-col gap-1 text-left">
                         {draft.lines.map((line) => (
                           <li key={`${line.studentFeeId}-${line.periodStart}`}>
                             <span className="font-medium">{line.studentName}</span>
@@ -182,7 +182,7 @@ export function InvoiceRunPanel({
                         ))}
                       </ul>
                     </td>
-                    <td className="py-3 text-right tabular-nums">
+                    <td className="py-3 text-right tabular-nums" data-label={t('invoices.total')}>
                       {formatCents(locale, draft.totalCents)}
                     </td>
                   </tr>
