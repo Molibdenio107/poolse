@@ -3,9 +3,12 @@ import { dirname } from 'node:path';
 import { test as setup, type Page } from '@playwright/test';
 import {
   E2E_EMAIL,
+  E2E_GUARDIAN_EMAIL,
+  E2E_GUARDIAN_PASSWORD,
   E2E_INSTRUCTOR_EMAIL,
   E2E_INSTRUCTOR_PASSWORD,
   E2E_PASSWORD,
+  GUARDIAN_SESSION,
   INSTRUCTOR_SESSION,
   PHONE_SESSION,
 } from './session';
@@ -31,6 +34,12 @@ setup('sign in the E2E user', async ({ page }) => {
 setup('sign in the E2E instructor', async ({ page }) => {
   setup.setTimeout(90_000);
   await signIn(page, E2E_INSTRUCTOR_EMAIL, E2E_INSTRUCTOR_PASSWORD, INSTRUCTOR_SESSION);
+});
+
+// The guardian, for app mode — POOLSE-90.
+setup('sign in the E2E guardian', async ({ page }) => {
+  setup.setTimeout(90_000);
+  await signIn(page, E2E_GUARDIAN_EMAIL, E2E_GUARDIAN_PASSWORD, GUARDIAN_SESSION);
 });
 
 async function signIn(

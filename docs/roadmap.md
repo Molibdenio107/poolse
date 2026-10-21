@@ -435,12 +435,12 @@ login.
 | # | Slice | Done when |
 |---|---|---|
 | 3.0 | Notification subsystem — records, preferences, push + email delivery | A cancellation reaches a phone |
-| 3.1 | Mobile shell, auth, sportier theme | Login works on a real device |
+| 3.1 | Mobile shell, auth, sportier theme | ◐ **Pulled forward by POOLSE-90 as a PWA** (21-10-2026): app mode is `/app` in the same Next.js app, installed as the same PWA, in the mobile palette. Real-device passes outstanding |
 | 3.2 | Student and guardian accounts via invitation | A parent logs in and sees their child |
-| 3.3 | My classes, schedule, cancellations | A student sees whether there is class today |
+| 3.3 | My classes, schedule, cancellations | ✅ **POOLSE-90 slice 1.** The family agenda: every child's real sessions for two weeks, cancelled, closed and moved said in words, each lesson its own page with the plan |
 | 3.4 | Payment status and invoice view | A student sees what they owe |
 | 3.5 | Student pays operator — mandate capture, SEPA DD / MB WAY | Automated collection works for one real turma |
-| 3.6 | Water temperature for their pool | Requires module 2 readings — see note |
+| 3.6 | Water temperature for their pool | ✅ **POOLSE-90 slice 1.** The tank's latest temperature on each lesson, always with its age, and none when water quality is off |
 
 **3.5 is where open question 1 gets answered** — Stripe Connect or direct. Answer it before
 starting the slice, not during.

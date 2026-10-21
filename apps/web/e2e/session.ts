@@ -26,3 +26,15 @@ export const E2E_INSTRUCTOR_PASSWORD = process.env['E2E_INSTRUCTOR_PASSWORD'];
 
 export const NO_INSTRUCTOR =
   'Set E2E_INSTRUCTOR_EMAIL and E2E_INSTRUCTOR_PASSWORD to run the instructor half of the poolside specs.';
+
+/**
+ * A guardian of two of the poolside children (Ana and Bruno) — POOLSE-90's
+ * family agenda is theirs. Dev Clerk instance only, like the other two.
+ */
+export const GUARDIAN_SESSION = resolve(__dirname, '.auth/guardian.json');
+
+export const E2E_GUARDIAN_EMAIL = process.env['E2E_GUARDIAN_EMAIL'];
+export const E2E_GUARDIAN_PASSWORD = process.env['E2E_GUARDIAN_PASSWORD'];
+
+export const NO_GUARDIAN =
+  'Set E2E_GUARDIAN_EMAIL and E2E_GUARDIAN_PASSWORD to run the family half of the app-mode specs.';

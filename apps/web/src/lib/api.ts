@@ -4941,3 +4941,56 @@ export interface LabResult {
   /** Null when the report raised no alert. */
   alert: { raisedAt: string; recipients: string[]; deliveredAt: string | null } | null;
 }
+
+/* -------------------------------------------------------------------------- */
+/* App mode — POOLSE-90                                                         */
+/* -------------------------------------------------------------------------- */
+
+/** One child's lesson on the family agenda — a `class_session`, never the pattern. */
+export interface AppAgendaEntry {
+  studentId: string;
+  sessionId: string;
+  className: string;
+  levelName: string | null;
+  siteName: string | null;
+  poolId: string | null;
+  poolName: string | null;
+  lanes: number[];
+  /** Where the week lands, on the site's clock. */
+  localDate: string;
+  localTime: string;
+  durationMinutes: number;
+  instructorFirstName: string | null;
+  standIn: boolean;
+  status: 'scheduled' | 'cancelled' | 'completed';
+  byClosure: boolean;
+  cancellationReason: string | null;
+  moved: boolean;
+}
+
+export interface AppWater {
+  poolId: string;
+  celsius: string;
+  /** An instant: the screen says how long ago. */
+  takenAt: string;
+}
+
+export interface AppChild {
+  id: string;
+  name: string;
+  relationship: string | null;
+  self: boolean;
+  /** From the fee read's `balance`; null when nothing is agreed. */
+  fees: (FeeBalance & { lines: number }) | null;
+}
+
+export interface AppAgenda {
+  children: AppChild[];
+  entries: AppAgendaEntry[];
+  water: AppWater[];
+}
+
+export interface AppLesson {
+  entries: AppAgendaEntry[];
+  water: AppWater[];
+}

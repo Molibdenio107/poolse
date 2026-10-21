@@ -227,7 +227,13 @@ test.describe('the lesson, as the instructor', () => {
     const save = page.getByRole('dialog').getByRole('button', { name: /^(guardar|save)$/i });
     await expectTouchSized(save);
     // Wait for the save itself: navigating away mid-flight aborts the action.
-    const saved = page.waitForResponse((response) => response.request().method() === 'POST');
+    const saved = page.waitForResponse(
+      (response) =>
+        // The server action's own POST — not one of Clerk's, which a page makes too.
+        response.request().method() === 'POST' &&
+        response.request().headers()['next-action'] !== undefined &&
+        new URL(response.url()).origin === new URL(page.url()).origin,
+    );
     await save.tap();
     await saved;
 

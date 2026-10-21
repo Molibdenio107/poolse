@@ -57,6 +57,10 @@ const EXEMPT = [
   'faturacao/[id]/print',
   // One incident, printed for the insurer — POOLSE-70 slice 3. A document too.
   'incidents/[id]/print',
+  // App mode — POOLSE-90. A second front door for families, instructors and
+  // maintenance, with its own shell (`(app)/app/layout.tsx`): no sidebar, the
+  // mobile palette, a column a phone wide. Its layout is the shell its pages share.
+  '(app)/app/',
 ];
 
 /** Outer-layout classes on a page root — the thing the shell now owns. */

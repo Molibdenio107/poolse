@@ -1,3 +1,4 @@
+import { AppController } from './app/app.controller.js';
 import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -208,6 +209,7 @@ export const IDENTITY_ONLY_ROUTES = [
     SeasonsController,
     PeopleSearchController,
     FamilyController,
+    AppController,
     GuardiansController,
     PeopleDedupController,
     StudentImportController,

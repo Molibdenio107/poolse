@@ -60,6 +60,7 @@ import {
   type ScratchTenant,
 } from '../test/harness.js';
 import type { MemberRole } from '../tenant/roles.js';
+import { AppController } from '../app/app.controller.js';
 
 /**
  * Role probe — security review, 12-10-2026, inverted into a regression test.
@@ -900,6 +901,49 @@ test("a guardian reads their own child's record, without the club's notes", asyn
     assert.equal(alice.cover?.covered, false);
     assert.equal(Object.keys(alice.cover ?? {}).some((key) => /cents|amount/i.test(key)), false);
   });
+});
+
+test("app mode: a family reads its own agenda and lessons, and nobody else's (POOLSE-90)", async () => {
+  await as(fixture.martaId, ['guardian'], async () => {
+    const agenda = await new AppController().agenda();
+    assert.deepEqual(agenda.children.map((child) => child.id), [fixture.aliceId]);
+    assert.ok(
+      agenda.entries.some((entry) => entry.sessionId === fixture.sessionId && entry.studentId === fixture.aliceId),
+      "Alice's lesson next week is on her mother's agenda",
+    );
+    const lesson = await new AppController().lesson(fixture.sessionId);
+    assert.equal(lesson.entries[0]?.studentId, fixture.aliceId);
+
+    await refused('GET app/agenda?child=:bruno as Marta', 404, () =>
+      new AppController().agenda(fixture.brunoStudentId),
+    );
+  });
+
+  // Linked to nobody: an empty agenda, and no lesson.
+  await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
+    const agenda = await new AppController().agenda();
+    assert.deepEqual(agenda.children, []);
+    assert.deepEqual(agenda.entries, []);
+    await refused('GET app/lessons/:id as a stranger', 404, () => new AppController().lesson(fixture.sessionId));
+    await refused('GET app/lessons/not-a-uuid', 404, () => new AppController().lesson('not-a-uuid'));
+  });
+
+  // A student reads themselves.
+  await as(fixture.studentMemberId, ['student'], async () => {
+    const agenda = await new AppController().agenda();
+    assert.deepEqual(agenda.children.map((child) => [child.id, child.self]), [[fixture.brunoStudentId, true]]);
+  });
+
+  // Staff are not a family: the backoffice is theirs.
+  for (const [id, roles] of [
+    [fixture.instructorId, ['instructor']],
+    [fixture.adminId, ['admin']],
+  ] as const) {
+    await as(id, [...roles], async () => {
+      await refused('GET app/agenda as staff', 403, () => new AppController().agenda());
+      await refused('GET app/lessons/:id as staff', 403, () => new AppController().lesson(fixture.sessionId));
+    });
+  }
 });
 
 test('a student finds their own record through /family', async () => {

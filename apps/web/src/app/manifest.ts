@@ -21,7 +21,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Poolse',
     // No description: the manifest is one file for both languages, and an
     // untranslated sentence on Android's install sheet is worse than none.
-    start_url: '/dashboard',
+    // App mode's front door (POOLSE-90): it routes every role to its own home.
+    start_url: '/app',
     scope: '/',
     display: 'standalone',
     // No orientation lock: the calendar is read sideways on a phone (tier 3).

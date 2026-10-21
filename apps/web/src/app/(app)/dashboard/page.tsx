@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+import { familyOnly } from '@/lib/app-hats';
 import Link from 'next/link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -78,6 +80,10 @@ export default async function DashboardPage({
   }
 
   const membership = me?.memberships[0] ?? null;
+
+  // A family and nothing else has its own home now — POOLSE-90 AC 1. Staff
+  // who are also parents keep this page, and reach the family agenda by switching.
+  if (membership !== null && familyOnly(membership.roles)) redirect('/app');
   const personal = membership?.organizationKind === 'personal';
 
   /*

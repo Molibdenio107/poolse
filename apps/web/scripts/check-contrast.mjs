@@ -133,6 +133,14 @@ const PAIRS = [
   ['weather-thunderstorm', 'surface', 3, 'the thunderstorm glyph'],
   ['weather-wind', 'surface', 3, 'the wind glyph'],
 
+  // App mode's palette — POOLSE-90. Its own tokens, so they are read here.
+  ['app-primary-foreground', 'app-primary', 4.5, 'text on an app-mode button'],
+  ['app-primary-ink', 'background', 4.5, 'app-mode links on the page'],
+  ['app-primary-ink', 'surface', 4.5, 'app-mode links on a card'],
+  ['app-accent-foreground', 'app-accent', 4.5, 'text on the orange accent'],
+  ['app-accent-ink', 'surface', 4.5, 'orange words on a card'],
+  ['app-primary', 'surface', 3, 'app-mode focus ring and selected shapes'],
+
   ['border-strong', 'background', 3, 'a form control against the page'],
   ['border-strong', 'surface', 3, 'a form control on a card'],
   ['primary', 'background', 3, 'the focus ring'],

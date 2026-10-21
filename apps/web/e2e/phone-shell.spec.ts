@@ -84,7 +84,7 @@ async function smallFields(page: Page): Promise<string[]> {
 // QA 1 — installable
 // ---------------------------------------------------------------------------
 
-test('QA 1: the manifest makes Poolse an app that opens standalone on the dashboard', async ({ request }) => {
+test('QA 1: the manifest makes Poolse an app that opens standalone at its front door', async ({ request }) => {
   const response = await request.get('/manifest.webmanifest');
   expect(response.status()).toBe(200);
   const manifest = (await response.json()) as {
@@ -99,7 +99,8 @@ test('QA 1: the manifest makes Poolse an app that opens standalone on the dashbo
 
   expect(manifest.short_name).toBe('Poolse');
   expect(manifest.display).toBe('standalone');
-  expect(manifest.start_url).toBe('/dashboard');
+  // App mode's front door since POOLSE-90: it sends each role to its own home.
+  expect(manifest.start_url).toBe('/app');
   expect(manifest.theme_color).toMatch(/^#[0-9A-F]{6}$/i);
   expect(manifest.background_color).toMatch(/^#[0-9A-F]{6}$/i);
 

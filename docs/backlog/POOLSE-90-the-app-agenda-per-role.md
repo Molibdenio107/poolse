@@ -96,7 +96,7 @@ new fill gets an ink and a line in `contrast:check`'s `PAIRS`. The mobile palett
   who gave it and when.
 - **Who may answer:**
   - a live guardian of the student
-  - the student themselves when on the adult path (`student_is_adult_path`)
+  - the student themselves when on the adult path (`student_is_adult_path`), or aged 12 or more with their own login (Decided 2)
 - **When:** only for a session the student is enrolled in that day (the `familyMayReadPlan`
   predicate). Only until the session starts, in the facility's time zone. After that it is a 409
   `notice_closed`.
@@ -234,7 +234,7 @@ Every one of them calls the endpoint the backoffice already uses.
 6. **Given** a tank's last temperature taken four days ago, **then** it reads *medida há 4 dias*. **Given** water quality switched off for the club, **then** no temperature appears and the API carries none.
 7. **Given** a guardian, **when** they tap *Não vou* before the lesson, **then** the instructor's register shows *Avisou que não vem* beside that child and the count reads 1. Nothing is marked in `attendance`.
 8. **Given** the lesson has started, **when** a guardian answers, **then** 409 `notice_closed` and the toggle explains why.
-9. **Given** a minor's own student login, **when** they answer, **then** it is refused. **Given** an adult-path student, **then** it is accepted.
+9. **Given** an 11-year-old's own student login, **when** they answer, **then** it is refused; a 12-year-old's is accepted, and so is an adult-path student's. A student with no birth date is refused.
 10. **Given** a cancelled lesson or a parceria, **then** no toggle is offered and the endpoint refuses.
 11. **Given** a stand-in named for Thursday, **then** the lesson appears on the stand-in's home and not on the regular instructor's.
 12. **Given** a maintenance user at two sites, **then** the to-do covers both. *Limpo* clears the overdue warning on that Espaço. They can record a water analysis but nothing else on the pool.
@@ -259,5 +259,5 @@ Every one of them calls the endpoint the backoffice already uses.
 
 ### Open
 
-- **Open 1:** Does a family see past lessons with the register's mark (*presente / faltou*) in v1? **Default: no.** It comes with the record views later, and v1 stays about what is coming.
-- **Open 2:** May a minor with their own login answer *Vou / Não vou*? **Default: no.** The guardian answers for a minor; the student on the adult path answers for themselves.
+- **Decided 1** (Rui, 21-10-2026): **no** — v1 shows coming lessons only; past lessons with the register's mark come with the record views later.
+- **Decided 2** (Rui, 21-10-2026): **a student aged 12 or more with their own login may answer** *Vou / Não vou* for themselves; under 12 only a guardian answers. With no birth date it is the guardian, never a guess — the rule `student_is_adult_path` already follows. The age is one constant, `SELF_NOTICE_MIN_AGE = 12` in `@poolse/rules`, not a column, until a club asks for another.

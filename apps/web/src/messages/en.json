@@ -1,7 +1,37 @@
 {
   "app": {
     "name": "Poolse",
-    "tagline": "Pool management"
+    "tagline": "Pool management",
+    "openBackoffice": "Open the backoffice",
+    "switcher": "My areas",
+    "home": {
+      "family": "Family",
+      "teaching": "My lessons",
+      "maintenance": "Maintenance"
+    },
+    "family": {
+      "title": "Schedule",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "water": "Water at {celsius} °C · taken {ago}",
+      "standIn": "{name} (stand-in)",
+      "closed": "Closed",
+      "cancelled": "Cancelled",
+      "moved": "Moved for this week only",
+      "feesTitle": "Monthly fees",
+      "owing": "Overdue: {amount}",
+      "toPay": "To pay: {amount}",
+      "toPayBy": "To pay: {amount}, by {date}",
+      "upToDate": "Up to date",
+      "nobody": "No student is linked to this account yet. Please speak to the club.",
+      "childFilter": "Show the lessons of",
+      "everyone": "Everyone",
+      "empty": "There are no lessons in the next two weeks.",
+      "backToAgenda": "Back to the agenda",
+      "alsoComing": "{count, plural, one {# of your children is in this lesson.} other {# of your children are in this lesson.}}",
+      "planTitle": "Lesson plan",
+      "noPlan": "The instructor has not written this lesson's plan yet."
+    }
   },
   "common": {
     "working": "Working…",

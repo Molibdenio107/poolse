@@ -1,7 +1,37 @@
 {
   "app": {
     "name": "Poolse",
-    "tagline": "Gestão de piscinas"
+    "tagline": "Gestão de piscinas",
+    "openBackoffice": "Abrir o backoffice",
+    "switcher": "As minhas áreas",
+    "home": {
+      "family": "Família",
+      "teaching": "As minhas aulas",
+      "maintenance": "Manutenção"
+    },
+    "family": {
+      "title": "Agenda",
+      "today": "Hoje",
+      "tomorrow": "Amanhã",
+      "water": "Água a {celsius} °C · medida {ago}",
+      "standIn": "{name} (substituto)",
+      "closed": "Encerrado",
+      "cancelled": "Cancelada",
+      "moved": "Mudou só esta semana",
+      "feesTitle": "Mensalidades",
+      "owing": "Em dívida: {amount}",
+      "toPay": "Por pagar: {amount}",
+      "toPayBy": "Por pagar: {amount}, até {date}",
+      "upToDate": "Em dia",
+      "nobody": "Ainda não há nenhum aluno associado a esta conta. Fale com o clube.",
+      "childFilter": "Mostrar as aulas de",
+      "everyone": "Todos",
+      "empty": "Não há aulas nas próximas duas semanas.",
+      "backToAgenda": "Voltar à agenda",
+      "alsoComing": "{count, plural, one {# dos seus educandos está nesta aula.} other {# dos seus educandos estão nesta aula.}}",
+      "planTitle": "Plano da aula",
+      "noPlan": "O professor ainda não escreveu o plano desta aula."
+    }
   },
   "common": {
     "working": "A processar…",

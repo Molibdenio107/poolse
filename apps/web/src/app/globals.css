@@ -82,6 +82,20 @@
      * still read the fills, so no button, chip or rule changes colour.
      */
     --primary-ink: 70 113 124;
+
+    /*
+     * App mode's palette — POOLSE-90. Sportier than the backoffice: pool blue
+     * for the actions, soft orange for what wants a glance. Named tokens rather
+     * than overrides, so `contrast:check` reads them like any other; app mode's
+     * root (`[data-surface='app']`) points `--primary` and its kin at them, and
+     * the desktop palette is untouched. CLAUDE.md lets this one move.
+     */
+    --app-primary: 14 116 144;
+    --app-primary-foreground: 255 255 255;
+    --app-primary-ink: 14 116 144;
+    --app-accent: 251 146 60;
+    --app-accent-foreground: 28 25 23;
+    --app-accent-ink: 194 65 12;
     --success-ink: 56 118 81;
     --warning-ink: 138 100 32;
     --danger-ink: 175 65 57;
@@ -273,6 +287,13 @@
 
     /* On the dark ground the fills already read 5.4–8.5:1, so the ink is the fill. */
     --primary-ink: 126 186 201;
+
+    --app-primary: 56 189 248;
+    --app-primary-foreground: 8 47 73;
+    --app-primary-ink: 103 232 249;
+    --app-accent: 251 146 60;
+    --app-accent-foreground: 28 25 23;
+    --app-accent-ink: 253 186 116;
     --success-ink: 106 187 138;
     --warning-ink: 222 174 84;
     --danger-ink: 224 110 100;
@@ -511,4 +532,15 @@
     justify-content: flex-start;
     text-align: left !important;
   }
+}
+
+/*
+ * App mode — POOLSE-90. Inside it, the shared components read the mobile
+ * palette through the tokens they already use, so nothing is restyled by hand.
+ */
+[data-surface='app'] {
+  --primary: var(--app-primary);
+  --primary-foreground: var(--app-primary-foreground);
+  --primary-ink: var(--app-primary-ink);
+  --ring: var(--app-primary);
 }
