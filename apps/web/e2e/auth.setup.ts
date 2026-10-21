@@ -1,7 +1,14 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { test as setup } from '@playwright/test';
-import { E2E_EMAIL, E2E_PASSWORD, PHONE_SESSION } from './session';
+import { test as setup, type Page } from '@playwright/test';
+import {
+  E2E_EMAIL,
+  E2E_INSTRUCTOR_EMAIL,
+  E2E_INSTRUCTOR_PASSWORD,
+  E2E_PASSWORD,
+  INSTRUCTOR_SESSION,
+  PHONE_SESSION,
+} from './session';
 
 /**
  * Sign the E2E user in once and save the session for the phone projects —
@@ -17,18 +24,33 @@ import { E2E_EMAIL, E2E_PASSWORD, PHONE_SESSION } from './session';
  */
 setup('sign in the E2E user', async ({ page }) => {
   setup.setTimeout(90_000);
-  mkdirSync(dirname(PHONE_SESSION), { recursive: true });
-  if (E2E_EMAIL === undefined || E2E_PASSWORD === undefined) {
-    writeFileSync(PHONE_SESSION, JSON.stringify({ cookies: [], origins: [] }));
+  await signIn(page, E2E_EMAIL, E2E_PASSWORD, PHONE_SESSION);
+});
+
+// The instructor, the same way — POOLSE-88 slice 2.
+setup('sign in the E2E instructor', async ({ page }) => {
+  setup.setTimeout(90_000);
+  await signIn(page, E2E_INSTRUCTOR_EMAIL, E2E_INSTRUCTOR_PASSWORD, INSTRUCTOR_SESSION);
+});
+
+async function signIn(
+  page: Page,
+  email: string | undefined,
+  password: string | undefined,
+  path: string,
+): Promise<void> {
+  mkdirSync(dirname(path), { recursive: true });
+  if (email === undefined || password === undefined) {
+    writeFileSync(path, JSON.stringify({ cookies: [], origins: [] }));
     return;
   }
 
   const submit = page.getByRole('button', { name: /^(continuar|continue)$/i });
 
   await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
-  await page.getByLabel(/e-?mail/i).first().fill(E2E_EMAIL);
+  await page.getByLabel(/e-?mail/i).first().fill(email);
   await submit.click();
-  await page.getByLabel(/palavra-passe|password/i).first().fill(E2E_PASSWORD);
+  await page.getByLabel(/palavra-passe|password/i).first().fill(password);
   await submit.click();
 
   await page.waitForURL(/\/dashboard|client-trust|factor/, { timeout: 30_000 });
@@ -41,5 +63,5 @@ setup('sign in the E2E user', async ({ page }) => {
     await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
   }
 
-  await page.context().storageState({ path: PHONE_SESSION });
-});
+  await page.context().storageState({ path });
+}

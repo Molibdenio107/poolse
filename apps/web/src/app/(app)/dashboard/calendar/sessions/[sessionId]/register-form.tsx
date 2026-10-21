@@ -74,42 +74,64 @@ export function RegisterForm({ register }: { register: Register & { organization
       <input type="hidden" name="organizationId" value={register.organizationId} />
       <input type="hidden" name="sessionId" value={register.sessionId} />
 
-      <div className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface p-4">
+      {/*
+        One toolbar on a desk, two pieces on a phone — POOLSE-88.
+
+        From `md` up this wrapper is the toolbar row it always was. Below `md` it
+        is `contents`, so its two children become items of the form itself: the
+        quick marks stay above the list, and the count and Save are pushed after
+        it (`order-last`) and stick to the bottom of the screen, where a thumb
+        reaches them and where the count stays in sight as the list scrolls.
+        Rendered once and moved by CSS, never rendered twice and hidden — a
+        second Save is a second submit button a test or a screen reader finds.
+      */}
+      <div className="contents md:flex md:flex-wrap md:items-center md:gap-3 md:rounded md:border md:border-border md:bg-surface md:p-4">
+        <div className="flex flex-wrap items-center gap-3 rounded border border-border bg-surface p-4 md:contents">
+          {/*
+            The one-tap start. Marking a class is mostly "everybody came except
+            two", and making an instructor tap fifteen times to say so is how a
+            register stops getting filled in.
+          */}
+          <button
+            type="button"
+            onClick={() => setAll('present')}
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary"
+          >
+            {t('attendance.allPresent')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setAll('')}
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded text-foreground-muted hover:text-foreground"
+          >
+            {t('attendance.clearAll')}
+          </button>
+
+          {/* Several states on one screen, so the ticket asks for a legend. */}
+          <AttendanceLegend className="w-full sm:w-auto" />
+        </div>
+
         {/*
-          The one-tap start. Marking a class is mostly "everybody came except
-          two", and making an instructor tap fifteen times to say so is how a
-          register stops getting filled in.
+          The home bar is added to the bar's own padding, because a bar stuck to
+          the bottom of the screen sits over it — the shell's `pb-safe-bottom`
+          only clears the end of the page.
         */}
-        <button
-          type="button"
-          onClick={() => setAll('present')}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary"
+        <div
+          data-register-actions
+          className="sticky bottom-0 z-10 order-last -mx-page flex items-center gap-3 border-t border-border bg-background px-page pt-3 pb-[calc(0.75rem+var(--safe-bottom))] md:static md:order-none md:mx-0 md:ml-auto md:border-0 md:bg-transparent md:p-0"
         >
-          {t('attendance.allPresent')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setAll('')}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded text-foreground-muted hover:text-foreground"
-        >
-          {t('attendance.clearAll')}
-        </button>
+          <span className="text-sm text-foreground-muted" aria-live="polite">
+            {t('attendance.markedOf', { marked, total: register.entries.length })}
+          </span>
 
-        <span className="text-sm text-foreground-muted">
-          {t('attendance.markedOf', { marked, total: register.entries.length })}
-        </span>
-
-        {/* Several states on one screen, so the ticket asks for a legend. */}
-        <AttendanceLegend className="w-full sm:w-auto" />
-
-        <button
-          type="submit"
-          disabled={pending}
-          className="inline-flex h-control items-center justify-center px-4 text-control gap-2 ml-auto rounded bg-primary text-primary-foreground disabled:opacity-60"
-        >
-          {pending ? t('common.working') : t('attendance.save')}
-        </button>
-
+          <button
+            type="submit"
+            disabled={pending}
+            className="inline-flex h-control items-center justify-center px-4 text-control gap-2 ml-auto rounded bg-primary text-primary-foreground disabled:opacity-60 max-md:flex-1"
+          >
+            {pending ? t('common.working') : t('attendance.save')}
+          </button>
+        </div>
       </div>
 
       <ul className="flex flex-col divide-y divide-border rounded border border-border bg-surface">
@@ -168,7 +190,14 @@ export function RegisterForm({ register }: { register: Register & { organization
                 )}
               </span>
 
-              <fieldset className="flex flex-wrap gap-1">
+              {/*
+                On a phone the three states are one full-width row of equal
+                thirds — about 96px each at 360px, which "Falta justificada"
+                fills only by wrapping onto two lines and dropping its icon.
+                The word carries the state, so the icon is the part that can go;
+                `min-h-control` keeps a wrapped segment at 44px or taller.
+              */}
+              <fieldset className="grid w-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:flex-wrap">
                 <legend className="sr-only">
                   {t('attendance.statusFor', { name: entry.displayName })}
                 </legend>
@@ -176,7 +205,7 @@ export function RegisterForm({ register }: { register: Register & { organization
                   <label
                     key={status}
                     className={cn(
-                      'inline-flex h-control items-center justify-center px-4 text-control cursor-pointer gap-1.5 rounded border transition-colors',
+                      'inline-flex min-h-control items-center justify-center px-1.5 text-center text-control leading-tight cursor-pointer gap-1.5 rounded border transition-colors sm:h-control sm:px-4',
                       // The label and the glyph render whether or not the state
                       // is chosen, so colour is never the only thing carrying it.
                       marks[entry.studentId] === status
@@ -194,7 +223,9 @@ export function RegisterForm({ register }: { register: Register & { organization
                       }
                       className="sr-only"
                     />
-                    <AttendanceIcon status={status} />
+                    <span className="inline-flex max-sm:hidden">
+                      <AttendanceIcon status={status} />
+                    </span>
                     {t(`attendance.${status}`)}
                   </label>
                 ))}

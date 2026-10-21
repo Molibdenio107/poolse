@@ -67,6 +67,11 @@ and the sheet closes on its own when a link is followed. The page's title and pr
 stick under the app bar; its subtitle stays in the page. The tiers that say which screens must be
 good on a phone are slice 3's section here.
 
+The tier-1 screens are proved by `e2e/phone-*.spec.ts` as two users. One is the E2E owner. The
+other is an instructor in the same club, `E2E_INSTRUCTOR_EMAIL` / `E2E_INSTRUCTOR_PASSWORD`, on
+the dev Clerk instance only. `auth.setup.ts` signs both in. A spec that needs its own data writes
+it through `DATABASE_URL` from a fixture under `e2e/`, never into the reference seed's classes.
+
 **Within a section the most specific entry lights up** (20-10-2026). Competição's first child, Provas,
 shares its parent's address, and Mínimos (`/provas/minimos`) and Escalões (`/provas/escaloes`) sit
 inside it, so among siblings only the longest matching address is active, and the page is named

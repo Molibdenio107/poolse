@@ -236,6 +236,10 @@ export default {
       width: {
         control: 'var(--control-h)',
       },
+      // A control whose words may wrap on a phone — the register's states.
+      minHeight: {
+        control: 'var(--control-h)',
+      },
 
       /*
        * "Today" says where it took you — round 5.

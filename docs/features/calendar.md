@@ -17,6 +17,14 @@ call off.
 
 Every write is refused by the API for anyone else. Hiding a control is never the control.
 
+**The register on a phone** (POOLSE-88 slice 2). Below `md` each student is a card. The first line holds
+the name and its warnings, and the second holds the three states as equal thirds across the
+screen. Each third is at least 44 px tall, and *Falta justificada* wraps onto two lines without
+its icon. The count and *Guardar presenças* stick to the bottom of the screen above the home bar.
+On a desk they are back in the toolbar row. A refused save keeps every mark and says why in a toast.
+`e2e/phone-poolside.spec.ts` proves this at 360 px on WebKit and Chromium, as the instructor and as
+the owner. It runs against its own turma, *E2E · Poolside*, which has 15 students.
+
 ## The week grid
 
 The calendar draws its own grid (`calendar/calendar-grid.tsx`), not the turma board. The
