@@ -140,6 +140,15 @@ somebody's encarregada. Asking "does this person have any guardian edges at all"
 she holds over her granddaughter, which would take her off the adult path and address her own
 consent form to a parent she does not have.
 
+## On a phone: who to ring, and the seguro (POOLSE-88)
+
+A student's General tab opens with two things an instructor at the poolside needs. Both are for staff only.
+
+- **The seguro line.** It reads covered until a date, the cover ran out, or never insured. It is the fees read's own `readCover`, carried on `GET /students/:id` as `cover`. An instructor sees it without seeing what anybody pays, and the field holds no amounts. A family's `cover` is null, because its fees tab says it.
+- **Contactos.** The guardians, the primary contact first, then the student's own contacts. Each phone is a `tel:` link and each address a `mailto:`. It is read-only: the editing form below changes the numbers.
+
+The facts list stacks label over value below `sm`. A NIF field opens the numeric keypad, and a phone field is `type="tel"`.
+
 ## A family reads its own record
 
 Since 15 October 2026 (Rui), a guardian opens *Os meus educandos* and a student opens *O meu

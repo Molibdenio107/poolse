@@ -1954,6 +1954,10 @@
     "guardianNoMatches": "Nobody found. Add a new person.",
     "guardianAddNew": "Add a new person",
     "guardiansTitle": "Guardians",
+    "contactsTitle": "Contacts",
+    "contactSelf": "The student",
+    "callName": "Call {name}, {phone}",
+    "emailName": "Email {name}",
     "guardiansSubtitle": "Who is responsible for each student. One guardian can have several students.",
     "noGuardians": "No guardians recorded yet.",
     "noGuardiansHint": "They are created from the record of a student under the age of majority.",
@@ -2411,7 +2415,7 @@
         "partnerHeadcount": "{count, plural, one {# participant} other {# participants}}, as the partner reported",
         "covering": "You are covering for {name}.",
         "registerTaken": "Register taken",
-        "openTurma": "Open class group",
+        "openLesson": "Open the lesson",
         "openCalendar": "Open in the calendar"
       },
       "week": {

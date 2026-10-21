@@ -305,7 +305,7 @@ export default async function StudentsPage({
                       <span className="flex min-w-0 flex-wrap items-center gap-2">
                         <Link
                           href={`/dashboard/students/${student.id}`}
-                          className="truncate text-primary hover:underline"
+                          className="truncate text-primary hover:underline coarse:-my-3 coarse:py-3"
                           title={student.displayName}
                         >
                           {student.shortName}

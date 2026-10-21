@@ -98,7 +98,7 @@ export function RegistrationForm({
             autoComplete="off" maxLength={100} error={error('swimmerLastName')} />
           <TextField name="swimmerBirthDate" type="date" label={labels.swimmerBirthDate}
             required error={error('swimmerBirthDate')} />
-          <TextField name="swimmerTaxNumber" label={labels.swimmerTaxNumber}
+          <TextField inputMode="numeric" name="swimmerTaxNumber" label={labels.swimmerTaxNumber}
             hint={labels.optional} maxLength={20} error={error('swimmerTaxNumber')} />
         </div>
       </fieldset>
@@ -112,7 +112,7 @@ export function RegistrationForm({
           <TextField name="guardianRelationship" label={labels.guardianRelationship}
             hint={labels.guardianRelationshipHint} maxLength={80}
             error={error('guardianRelationship')} />
-          <TextField name="guardianTaxNumber" label={labels.guardianTaxNumber}
+          <TextField inputMode="numeric" name="guardianTaxNumber" label={labels.guardianTaxNumber}
             hint={labels.optional} maxLength={20} error={error('guardianTaxNumber')} />
         </div>
       </fieldset>

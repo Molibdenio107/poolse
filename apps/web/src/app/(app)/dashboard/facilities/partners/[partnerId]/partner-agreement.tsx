@@ -122,6 +122,7 @@ export function PartnerAgreementPanel({
 
             <TextField
               name="unitPrice"
+              inputMode="decimal"
               label={t('partners.unitPrice')}
               initial={agreement?.unitPrice ?? ''}
               required

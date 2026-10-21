@@ -48,14 +48,19 @@ export function dayPhrase(
 }
 
 /** Where a class's own page is: its turma, or — for a parceria — its week. */
-function classHref(one: { classGroupId: string | null; localDate: string }): string {
+/**
+ * Where one lesson opens — POOLSE-88 slice 2: its own page, which carries the
+ * register, the plan, the stand-in and Cancelar aula, and is the screen that
+ * works one-handed. A parceria has no register page, so it opens on the week.
+ */
+function lessonHref(one: { sessionId: string; classGroupId: string | null; localDate: string }): string {
   return one.classGroupId === null
     ? `/dashboard/calendar?week=${one.localDate}`
-    : `/dashboard/classes/${one.classGroupId}`;
+    : `/dashboard/calendar/sessions/${one.sessionId}`;
 }
 
 const LINK =
-  'font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'font-medium hover:text-primary coarse:-my-3 coarse:py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const ACTION_BUTTON =
    'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 self-start rounded bg-primary font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
@@ -74,11 +79,11 @@ export async function NextClassCard({
     <WidgetCard
       widget={widget}
       title={t('dashboard.widget.next.title')}
-      href={data === null ? '/dashboard/calendar' : classHref(data)}
+      href={data === null ? '/dashboard/calendar' : lessonHref(data)}
       linkLabel={
         data === null || data.partner
           ? t('dashboard.widget.next.openCalendar')
-          : t('dashboard.widget.next.openTurma')
+          : t('dashboard.widget.next.openLesson')
       }
       emptyMessage={t('dashboard.widget.next.empty')}
     >
@@ -177,7 +182,7 @@ export async function WeekCard({ widget }: { widget: DashboardWidget }): Promise
                   {dayPhrase(t, one)} · {one.localTime}
                 </span>
                 <Link
-                  href={withFrom(classHref(one), '/dashboard')}
+                  href={withFrom(lessonHref(one), '/dashboard')}
                   className={cn(LINK, one.cancelled && 'line-through')}
                 >
                   {one.className}
@@ -220,11 +225,14 @@ export async function TrainingPlanCard({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const data = widget.data as TrainingPlanWidgetData | null;
-  // The calendar opens the plan sheet for `plan=` on the week that holds it.
+  // The lesson's page opens with the plan sheet up (POOLSE-88 slice 2); a
+  // parceria's plan still opens on the calendar, which holds its sheet.
   const sheet =
     data === null
       ? '/dashboard/calendar'
-      : `/dashboard/calendar?week=${data.next.localDate}&plan=${data.next.sessionId}`;
+      : data.next.classGroupId === null
+        ? `/dashboard/calendar?week=${data.next.localDate}&plan=${data.next.sessionId}`
+        : `/dashboard/calendar/sessions/${data.next.sessionId}?plan=open`;
 
   return (
     <WidgetCard

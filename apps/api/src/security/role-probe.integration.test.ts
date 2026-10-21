@@ -879,6 +879,8 @@ test("a guardian reads their own child's record, without the club's notes", asyn
     assert.equal(alice.notes, null, 'internal notes stay with the club');
     assert.equal(alice.canViewSensitive, false);
     assert.equal(alice.canViewProgress, true);
+    // The seguro line is staff's; a family reads its fees tab instead (POOLSE-88).
+    assert.equal(alice.cover, null);
     const own = alice.guardians.find((g) => g.membershipId === fixture.martaId);
     assert.equal(own?.phone, '961111222', 'her own entry is whole');
 
@@ -894,6 +896,9 @@ test("a guardian reads their own child's record, without the club's notes", asyn
     const alice = await new StudentsController().one(fixture.aliceId);
     assert.equal(alice.familyView, false);
     assert.equal(alice.notes, 'Nota interna sobre a Alice');
+    // An instructor sees whether she is insured, and nothing of what anybody pays.
+    assert.equal(alice.cover?.covered, false);
+    assert.equal(Object.keys(alice.cover ?? {}).some((key) => /cents|amount/i.test(key)), false);
   });
 });
 

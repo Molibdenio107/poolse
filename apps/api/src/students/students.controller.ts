@@ -39,6 +39,13 @@ interface StudentDetail extends Student {
    * without the club's internal notes or another guardian's details.
    */
   familyView: boolean;
+  /**
+   * The seguro warning, for staff — POOLSE-88 slice 2. An instructor at the
+   * poolside needs "sem seguro" on the child's own page and may not read what
+   * anybody pays, so this is the cover alone, through the fees read's own
+   * definition (`readCover`). Null for a family, whose fees tab says it.
+   */
+  cover: StudentCover | null;
 }
 import {
   archiveLevel,
@@ -101,6 +108,7 @@ import {
 } from './advancement.repository.js';
 import { clubToday } from '../common/club-day.js';
 import { CoreRoute } from '../tenant/modules.js';
+import { studentCover, type StudentCover } from '../billing/fees.repository.js';
 
 const MAX_NAME = 120;
 const MAX_NOTES = 2000;
@@ -421,7 +429,13 @@ export class StudentsController {
     // and would refuse the request anyway. This only stops the screen offering a
     // door that opens onto a refusal.
     if (hasRole('owner', 'admin', 'instructor')) {
-      return { ...student, canViewSensitive: true, canViewProgress: true, familyView: false };
+      return {
+        ...student,
+        canViewSensitive: true,
+        canViewProgress: true,
+        familyView: false,
+        cover: await studentCover(organizationId, id),
+      };
     }
 
     /*
@@ -442,6 +456,7 @@ export class StudentsController {
       canViewSensitive: false,
       canViewProgress: true,
       familyView: true,
+      cover: null,
     };
   }
 

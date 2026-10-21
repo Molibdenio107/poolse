@@ -3,12 +3,19 @@ import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Register } from '@/lib/api';
 import { RegisterForm } from './register-form';
+import { SessionActions } from './session-actions';
+import { moduleIsOn } from '@/lib/modules';
 import { PageError, PageShell } from '@/components/page-shell';
 import { laneLabel } from '@/lib/lanes';
 import { formatDate } from '@/lib/date-format';
 import { backLabelKey, readFrom } from '@/lib/back';
 
-type RegisterResponse = Register & { organizationId: string; canRecord: boolean };
+type RegisterResponse = Register & {
+  organizationId: string;
+  canRecord: boolean;
+  canCancel: boolean;
+  canEndSeries: boolean;
+};
 
 /**
  * Marking one class — slice 1.8.
@@ -23,12 +30,12 @@ export default async function AttendancePage({
   searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
-  searchParams: Promise<{ week?: string; from?: string }>;
+  searchParams: Promise<{ week?: string; from?: string; plan?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
   const { sessionId } = await params;
-  const { week, from } = await searchParams;
+  const { week, from, plan } = await searchParams;
 
   let register: RegisterResponse | null = null;
   let failure: LoadFailure | null = null;
@@ -87,6 +94,26 @@ export default async function AttendancePage({
 
       {register !== null && (
         <>
+          {/*
+            The plan, the stand-in and Cancelar aula — POOLSE-88 slice 2. On a
+            phone this page is the lesson's page; the calendar's hover card is a
+            desk tool. Above the roll, because a stand-in or a cancellation is
+            decided before anybody is marked.
+          */}
+          <SessionActions
+            organizationId={register.organizationId}
+            sessionId={register.sessionId}
+            className={register.className}
+            when={`${formatDate(register.localDate)}, ${register.localTime}`}
+            date={formatDate(register.localDate)}
+            classGroupId={register.classGroupId}
+            cancelled={register.status === 'cancelled'}
+            canCancel={register.canCancel}
+            management={register.canEndSeries}
+            messagesOn={await moduleIsOn('messages')}
+            openPlan={plan === 'open'}
+          />
+
           {/*
             Aulas experimentais — POOLSE-69. Above the roll and outside the form:
             nothing here is marked, and a trial guest is not a student. Words, so

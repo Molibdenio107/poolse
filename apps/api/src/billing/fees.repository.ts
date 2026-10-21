@@ -273,6 +273,62 @@ export interface StudentCover {
 }
 
 /**
+ * The student's seguro cover today — one definition, read by the fees read and,
+ * since POOLSE-88 slice 2, by the student's own record, so an instructor at the
+ * poolside sees the warning without being shown what anybody pays.
+ */
+export async function readCover(tx: Tx, studentId: string): Promise<StudentCover> {
+  /*
+   * Is this student insured today?
+   *
+   * One row, ordered so a live cover answers before a lapsed one and the most
+   * recent lapsed one answers before an older one. That ordering is the whole
+   * query: the screen needs three different sentences — covered until a date,
+   * cover ran out on a date, no cover ever recorded — and they are told apart
+   * by whether a row came back and whether it covers today.
+   *
+   * Against the database's own `current_date`, like every other "is it true
+   * today" here. A page held open overnight would otherwise still be showing
+   * yesterday's answer with no way to know.
+   */
+  const { rows: coverRows } = await tx.query<{
+    covered: boolean;
+    covers_from: string;
+    covers_to: string;
+    insurer_name: string | null;
+  }>(
+    `SELECT (club_today() BETWEEN sf.covers_from AND sf.covers_to) AS covered,
+            to_char(sf.covers_from, 'YYYY-MM-DD') AS covers_from,
+            to_char(sf.covers_to, 'YYYY-MM-DD') AS covers_to,
+            ip.insurer AS insurer_name
+       FROM student_fee sf
+       LEFT JOIN insurance_policy ip
+              ON ip.id = sf.insurance_policy_id AND ip.organization_id = sf.organization_id
+      WHERE sf.student_id = $1 AND sf.archived_at IS NULL AND sf.kind = 'seguro'
+      ORDER BY (club_today() BETWEEN sf.covers_from AND sf.covers_to) DESC,
+               sf.covers_to DESC
+      LIMIT 1`,
+    [studentId],
+  );
+
+  const coverRow = coverRows[0];
+  return {
+    covered: coverRow?.covered ?? false,
+    coversFrom: coverRow?.covers_from ?? null,
+    coversTo: coverRow?.covers_to ?? null,
+    insurerName: coverRow?.insurer_name ?? null,
+    // A lapsed cover and none at all are different problems: one is a renewal,
+    // the other is a student nobody ever insured.
+    lapsed: coverRow !== undefined && !coverRow.covered,
+  };
+}
+
+/** `readCover` in its own transaction, for a caller outside billing. */
+export async function studentCover(organizationId: string, studentId: string): Promise<StudentCover> {
+  return withOrg(organizationId, (tx) => readCover(tx, studentId));
+}
+
+/**
  * A season charge this student could be given, and what it needs to be given.
  *
  * The joining fee and the insurance fee, offered from the student's own page
@@ -1100,49 +1156,7 @@ async function readStudentFees(
       quotaCents: penaltyRows[0]?.quota ?? 0,
     };
 
-    /*
-     * Is this student insured today?
-     *
-     * One row, ordered so a live cover answers before a lapsed one and the most
-     * recent lapsed one answers before an older one. That ordering is the whole
-     * query: the screen needs three different sentences — covered until a date,
-     * cover ran out on a date, no cover ever recorded — and they are told apart
-     * by whether a row came back and whether it covers today.
-     *
-     * Against the database's own `current_date`, like every other "is it true
-     * today" here. A page held open overnight would otherwise still be showing
-     * yesterday's answer with no way to know.
-     */
-    const { rows: coverRows } = await tx.query<{
-      covered: boolean;
-      covers_from: string;
-      covers_to: string;
-      insurer_name: string | null;
-    }>(
-      `SELECT (club_today() BETWEEN sf.covers_from AND sf.covers_to) AS covered,
-              to_char(sf.covers_from, 'YYYY-MM-DD') AS covers_from,
-              to_char(sf.covers_to, 'YYYY-MM-DD') AS covers_to,
-              ip.insurer AS insurer_name
-         FROM student_fee sf
-         LEFT JOIN insurance_policy ip
-                ON ip.id = sf.insurance_policy_id AND ip.organization_id = sf.organization_id
-        WHERE sf.student_id = $1 AND sf.archived_at IS NULL AND sf.kind = 'seguro'
-        ORDER BY (club_today() BETWEEN sf.covers_from AND sf.covers_to) DESC,
-                 sf.covers_to DESC
-        LIMIT 1`,
-      [studentId],
-    );
-
-    const coverRow = coverRows[0];
-    const cover: StudentCover = {
-      covered: coverRow?.covered ?? false,
-      coversFrom: coverRow?.covers_from ?? null,
-      coversTo: coverRow?.covers_to ?? null,
-      insurerName: coverRow?.insurer_name ?? null,
-      // A lapsed cover and none at all are different problems: one is a renewal,
-      // the other is a student nobody ever insured.
-      lapsed: coverRow !== undefined && !coverRow.covered,
-    };
+    const cover = await readCover(tx, studentId);
 
     /*
      * Which joining price to offer, and whether this student is returning.

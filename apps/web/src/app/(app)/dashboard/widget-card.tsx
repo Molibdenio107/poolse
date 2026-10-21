@@ -73,7 +73,7 @@ export async function WidgetCard({
 
       <Link
         href={withFrom(href, '/dashboard')}
-        className="mt-auto self-start text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="mt-auto self-start text-sm text-primary hover:underline coarse:-mb-3 coarse:py-3 coarse:pr-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {linkLabel}
       </Link>

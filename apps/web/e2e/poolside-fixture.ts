@@ -29,9 +29,14 @@ export const POOLSIDE_NAMES = [
 ] as const;
 export const POOLSIDE_STUDENTS = POOLSIDE_NAMES.length;
 
+/** Ana's mother's number, as typed — the card dials it without the spaces. */
+export const POOLSIDE_GUARDIAN_PHONE = '912 345 678';
+
 export interface PoolsideLesson {
   sessionId: string;
   studentIds: string[];
+  /** The tank the lesson is in — the water reading's page. */
+  poolId: string;
 }
 
 async function connect(): Promise<Client> {
@@ -144,6 +149,48 @@ export async function poolsideLesson(): Promise<PoolsideLesson> {
       ).rows[0]!.id;
     }
 
+    // Ana's mother, with a phone — the contact an instructor taps (QA 7).
+    const ana = studentIds[0]!;
+    const hasGuardian = await db.query(
+      `SELECT 1 FROM guardian_link WHERE organization_id = $1 AND student_id = $2 AND archived_at IS NULL`,
+      [org, ana],
+    );
+    if (hasGuardian.rowCount === 0) {
+      const mother = await db.query<{ id: string }>(
+        `INSERT INTO membership (organization_id, status, first_name, last_name, phone, email)
+         VALUES ($1, 'active', 'Rita', 'Poolside', $2, 'rita.poolside@example.com') RETURNING id`,
+        [org, POOLSIDE_GUARDIAN_PHONE],
+      );
+      await db.query(
+        `INSERT INTO membership_role (organization_id, membership_id, role) VALUES ($1, $2, 'guardian')`,
+        [org, mother.rows[0]!.id],
+      );
+      await db.query(
+        `INSERT INTO guardian_link (organization_id, student_id, guardian_membership_id, relationship, is_primary)
+         VALUES ($1, $2, $3, 'Mãe', true)`,
+        [org, ana, mother.rows[0]!.id],
+      );
+    }
+
+    // Ana's mensalidade, from the first of this month, monthly — the line flow 9 marks paid.
+    const hasFee = await db.query(
+      `SELECT 1 FROM student_fee WHERE organization_id = $1 AND student_id = $2 AND archived_at IS NULL`,
+      [org, ana],
+    );
+    if (hasFee.rowCount === 0) {
+      await db.query(
+        `INSERT INTO student_fee (organization_id, student_id, fee_plan_id, fee_period_id, amount_cents, kind, starts_on)
+         SELECT $1, $2, plan.id, period.id, plan.amount_cents, 'mensalidade',
+                date_trunc('month', (now() AT TIME ZONE 'Europe/Lisbon'))::date
+           FROM (SELECT id, amount_cents FROM fee_plan
+                  WHERE organization_id = $1 AND kind = 'mensalidade' AND archived_at IS NULL
+                  ORDER BY amount_cents LIMIT 1) plan,
+                (SELECT id FROM fee_period
+                  WHERE organization_id = $1 AND months = 1 AND archived_at IS NULL LIMIT 1) period`,
+        [org, ana],
+      );
+    }
+
     await db.query(`DELETE FROM attendance WHERE organization_id = $1 AND class_session_id = $2`, [org, sessionId]);
     await db.query(
       `UPDATE class_session
@@ -154,7 +201,7 @@ export async function poolsideLesson(): Promise<PoolsideLesson> {
     );
 
     await db.query('COMMIT');
-    return { sessionId, studentIds };
+    return { sessionId, studentIds, poolId: at.pool_id };
   } catch (error) {
     await db.query('ROLLBACK');
     throw error;

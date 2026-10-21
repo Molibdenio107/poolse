@@ -22,7 +22,8 @@ import { photoUrlFor } from '@/lib/photo';
 import { StudentForm } from '../student-forms';
 import { CreditBooking } from './credit-booking';
 import { StudentWeek } from './student-week';
-import { FeesBlock, type FeesSection } from './fees-block';
+import { CoverBadge, FeesBlock, type FeesSection } from './fees-block';
+import { ContactsCard } from './contacts-card';
 import { FamilyFees } from './family-fees';
 import { pickSection } from '@/components/section-pills';
 import { loadFees } from './fees.actions';
@@ -290,6 +291,24 @@ export default async function StudentPage({
                     </>
                   )}
                 </div>
+              )}
+
+              {/*
+                The seguro, and who to ring — POOLSE-88 slice 2. On the record
+                itself rather than only under Pagamentos, because an instructor
+                has no Pagamentos tab and is the person at the poolside who
+                needs both. A warning, never a gate.
+              */}
+              {!family && loaded.cover !== undefined && loaded.cover !== null && (
+                <CoverBadge cover={loaded.cover} />
+              )}
+              {!family && (
+                <ContactsCard
+                  guardians={loaded.guardians}
+                  studentName={loaded.displayName}
+                  studentPhone={loaded.contactPhone}
+                  studentEmail={loaded.contactEmail}
+                />
               )}
 
               {/*
@@ -596,9 +615,11 @@ export default async function StudentPage({
 
 function Row({ label, value }: { label: string; value: string | null }): React.ReactElement {
   return (
-    <div className="flex items-baseline justify-between gap-4">
+    // Stacked on a phone, where a long address beside its label squeezed the
+    // label into one word a line (POOLSE-88); side by side from `sm`.
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
       <dt className="text-foreground-muted">{label}</dt>
-      <dd className="text-right">{value ?? '—'}</dd>
+      <dd className="min-w-0 break-words sm:text-right">{value ?? '—'}</dd>
     </div>
   );
 }

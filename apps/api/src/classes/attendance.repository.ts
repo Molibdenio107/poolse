@@ -49,6 +49,8 @@ export interface RegisterEntry {
 export interface Register {
   sessionId: string;
   className: string;
+  /** The turma — always one, since a parceria has no register. Cancelar aula's message link reads it. */
+  classGroupId: string;
   poolName: string | null;
   /** Every lane the class occupies, by position. Empty when none was chosen. */
   lanes: number[];
@@ -102,6 +104,7 @@ export async function findRegister(
   return withOrg(organizationId, async (tx) => {
     const { rows: sessions } = await tx.query<{
       class_name: string;
+      class_group_id: string;
       pool_name: string | null;
       lanes: number[] | null;
       local_date: string;
@@ -112,6 +115,7 @@ export async function findRegister(
     }>(
       `
       SELECT cg.name AS class_name,
+             cs.class_group_id,
              p.name  AS pool_name,
              /*
               * Every lane the class is in — POOLSE-46. A register for a squad
@@ -283,6 +287,7 @@ export async function findRegister(
     return {
       sessionId,
       className: session.class_name,
+      classGroupId: session.class_group_id,
       poolName: session.pool_name,
       lanes: session.lanes ?? [],
       localDate: session.local_date,

@@ -1,5 +1,6 @@
 import type { Config } from 'tailwindcss';
 import animate from 'tailwindcss-animate';
+import plugin from 'tailwindcss/plugin';
 
 /**
  * Colours are declared as CSS variables holding bare RGB channels, so Tailwind
@@ -272,5 +273,17 @@ export default {
     },
   },
   // shadcn components use animate-in / fade-in / zoom-in utilities.
-  plugins: [animate],
+  plugins: [
+    animate,
+    /*
+     * `coarse:` — sizing under a finger, POOLSE-88. For a target that is not a
+     * control (a back link, a card's link) and so does not read `--control-h`.
+     * Sizing only: layout follows width (`md:`), because a touch laptop is wide.
+     * A variant and not a `screens` entry, because an object in `screens` turns
+     * off Tailwind's `max-md:` variants, which the shell depends on.
+     */
+    plugin(({ addVariant }) => {
+      addVariant('coarse', '@media (pointer: coarse)');
+    }),
+  ],
 } satisfies Config;

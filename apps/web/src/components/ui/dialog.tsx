@@ -191,7 +191,9 @@ export function Dialog({
           ? 'items-stretch justify-end p-0 sm:p-4'
           : placement === 'start'
             ? 'items-stretch justify-start p-0'
-            : 'items-start justify-center p-4 sm:items-center sm:p-8',
+            : // Full-screen on a phone (POOLSE-88): a box floating 16px in from
+              // every edge leaves a keyboard and a form fighting for half a screen.
+              'items-start justify-center p-4 max-sm:p-0 sm:items-center sm:p-8',
         // POOLSE-88: nothing under the notch or the home bar.
         'pt-[max(var(--safe-top),theme(spacing.4))] pb-[max(var(--safe-bottom),theme(spacing.4))]',
         placement === 'centre' ? '' : 'pt-safe-top pb-0',
@@ -211,7 +213,7 @@ export function Dialog({
             ? 'max-w-md self-stretch overflow-y-auto pb-[calc(theme(spacing.5)+var(--safe-bottom))] sm:rounded-lg'
             : placement === 'start'
               ? 'max-w-xs self-stretch overflow-y-auto pb-[calc(theme(spacing.5)+var(--safe-bottom))] pl-[calc(theme(spacing.5)+var(--safe-left))]'
-              : 'max-w-lg rounded-lg',
+              : 'max-w-lg rounded-lg max-sm:min-h-dvh max-sm:max-w-none max-sm:rounded-none max-sm:border-0 max-sm:pt-[calc(theme(spacing.5)+var(--safe-top))] max-sm:pb-[calc(theme(spacing.5)+var(--safe-bottom))]',
           className,
         )}
       >
@@ -230,7 +232,9 @@ export function Dialog({
             type="button"
             onClick={close}
             aria-label={closeLabel}
-            className="rounded p-1 hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            // A control-sized square, pulled back by its own margin so the title
+            // row does not grow: 36px to a mouse, 44px to a finger (POOLSE-88).
+            className="-m-2 inline-flex h-control w-control shrink-0 items-center justify-center rounded hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <X aria-hidden className="size-4" />
           </button>

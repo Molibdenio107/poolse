@@ -432,7 +432,7 @@ export async function myWeek(ctx: ResolverContext): Promise<WeekWidget | null> {
 export interface TrainingPlanWidget {
   next: Pick<
     NextClass,
-    'sessionId' | 'className' | 'localDate' | 'localTime' | 'dayOffset' | 'weekday'
+    'sessionId' | 'classGroupId' | 'className' | 'localDate' | 'localTime' | 'dayOffset' | 'weekday'
   >;
   written: boolean;
   /** The first line of what is written, so the card says what Tuesday holds. */
@@ -469,6 +469,8 @@ export async function nextTrainingPlan(ctx: ResolverContext): Promise<TrainingPl
   return {
     next: {
       sessionId: next.sessionId,
+      // Null for a parceria the club runs: its plan opens on the calendar, not the register's page.
+      classGroupId: next.classGroupId,
       className: next.className,
       localDate: next.localDate,
       localTime: next.localTime,

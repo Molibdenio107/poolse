@@ -1954,6 +1954,10 @@
     "guardianNoMatches": "Ninguém encontrado. Adicione uma pessoa nova.",
     "guardianAddNew": "Adicionar pessoa nova",
     "guardiansTitle": "Encarregados de educação",
+    "contactsTitle": "Contactos",
+    "contactSelf": "O próprio aluno",
+    "callName": "Ligar a {name}, {phone}",
+    "emailName": "Enviar um email a {name}",
     "guardiansSubtitle": "Quem é responsável por cada aluno. Um encarregado pode ter vários alunos.",
     "noGuardians": "Ainda não há encarregados de educação registados.",
     "noGuardiansHint": "São criados a partir da ficha de um aluno menor de idade.",
@@ -2411,7 +2415,7 @@
         "partnerHeadcount": "{count, plural, one {# participante} other {# participantes}}, segundo a parceria",
         "covering": "Está a substituir {name}.",
         "registerTaken": "Presenças marcadas",
-        "openTurma": "Ver turma",
+        "openLesson": "Abrir a aula",
         "openCalendar": "Ver no calendário"
       },
       "week": {

@@ -90,6 +90,7 @@ export function PartnerIdentity({
 
             <TextField
               name="nif"
+              inputMode="numeric"
               label={t('partners.nif')}
               initial={partner.nif ?? ''}
               maxLength={9}

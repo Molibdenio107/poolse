@@ -17,6 +17,8 @@ call off.
 
 Every write is refused by the API for anyone else. Hiding a control is never the control.
 
+**The lesson's page is the lesson on a phone** (POOLSE-88 slice 2). `/dashboard/calendar/sessions/:id` carries the register and, above it, *Plano de treino*, the stand-in picker and *Cancelar aula*. These are the same three components as the calendar's hover card. The dashboard's lessons open it: *Abrir a aula*, the week list, and the plan card with `?plan=open`. A parceria has no register page, so it still opens on the calendar. *Cancelar aula* shows when the register read's `canCancel` is true, which uses the cancel endpoint's own test: owner, admin, or the instructor teaching it. An instructor gets no scope question and no *Anular*. Ending the series and putting a lesson back are owner and admin (`canEndSeries`), as the endpoints have always said.
+
 **The register on a phone** (POOLSE-88 slice 2). Below `md` each student is a card. The first line holds
 the name and its warnings, and the second holds the three states as equal thirds across the
 screen. Each third is at least 44 px tall, and *Falta justificada* wraps onto two lines without

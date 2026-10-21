@@ -196,6 +196,7 @@ export function StudentForm({
 
         <TextField
           name="contactPhone"
+          type="tel"
           label={t('students.contactPhone')}
           initial={student?.contactPhone ?? ''}
           maxLength={40}
@@ -205,6 +206,7 @@ export function StudentForm({
 
         <TextField
           name="taxNumber"
+          inputMode="numeric"
           label={t('students.taxNumber')}
           initial={student?.taxNumber ?? ''}
           maxLength={40}

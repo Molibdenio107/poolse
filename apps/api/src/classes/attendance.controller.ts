@@ -10,7 +10,8 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
-import { requireRole } from '../tenant/roles.js';
+import { hasRole, requireRole } from '../tenant/roles.js';
+import { isOwnClass } from './sessions.repository.js';
 import { isMySession, requireMySession } from '../tenant/assignment.js';
 import {
   findRegister,
@@ -33,6 +34,14 @@ const MAX_MARKS = 200;
 interface RegisterResponse extends Register {
   organizationId: string;
   canRecord: boolean;
+  /**
+   * Cancelar aula, asked the way `POST /sessions/:id/cancel` asks it — owner,
+   * admin, or the instructor teaching it (POOLSE-88 slice 2: the session page is
+   * the lesson's page on a phone). Only management may end every later week
+   * or put a cancelled lesson back, so `canEndSeries` answers both.
+   */
+  canCancel: boolean;
+  canEndSeries: boolean;
 }
 
 /**
@@ -61,7 +70,7 @@ export class AttendanceController {
   @Get(':id/attendance')
   async register(@Param('id') id: string): Promise<RegisterResponse> {
     requireRole('owner', 'admin', 'instructor');
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId } = currentTenant();
 
     const register = await findRegister(organizationId, id);
     if (!register) throw new NotFoundException('No such class');
@@ -72,7 +81,14 @@ export class AttendanceController {
      * child is getting on is ordinary; editing it is not, so `canRecord` says
      * which of the two this is and the POST enforces it regardless.
      */
-    return { ...register, organizationId, canRecord: await isMySession(id) };
+    const management = hasRole('owner', 'admin');
+    return {
+      ...register,
+      organizationId,
+      canRecord: await isMySession(id),
+      canCancel: management || (await isOwnClass(organizationId, id, membershipId)),
+      canEndSeries: management,
+    };
   }
 
   /**

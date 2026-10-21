@@ -148,7 +148,7 @@ export function SearchInput({
             if (timer.current !== null) clearTimeout(timer.current);
             commit(term);
           }}
-          className="w-full bg-transparent outline-none"
+          className="h-full w-full bg-transparent outline-none"
         />
 
         {/*

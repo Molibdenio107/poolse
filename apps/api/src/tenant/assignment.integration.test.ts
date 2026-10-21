@@ -2,6 +2,7 @@ import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ClassesController } from '../classes/classes.controller.js';
 import { AttendanceController } from '../classes/attendance.controller.js';
+import { SessionsCalendarController } from '../classes/sessions.controller.js';
 import { actingAs, addMember, closeHarness, expectStatus, withScratchTenant } from '../test/harness.js';
 import type { ScratchTenant } from '../test/harness.js';
 
@@ -265,6 +266,45 @@ test('an owner or admin is never refused a register', async () => {
 
     await actingAs(tenant, { roles: ['owner'] }, async () => {
       await attendance.record(fix.sandrasSession, { marks: [] });
+    });
+  });
+});
+
+/*
+ * POOLSE-88 slice 2: the lesson page offers Cancelar aula from `canCancel`, so
+ * it must be the answer the cancel endpoint gives — and "every later week" and
+ * Anular (`canEndSeries`) are management's alone, as the endpoints say.
+ */
+test('the register says who may call the lesson off, and the endpoint agrees', async () => {
+  await withScratchTenant(async (tenant) => {
+    let fix: Fixture;
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      fix = await twoTurmas(tenant);
+    });
+
+    const attendance = new AttendanceController();
+    const sessions = new SessionsCalendarController();
+
+    await actingAs(tenant, { membershipId: fix!.sandra, roles: ['instructor'] }, async () => {
+      const mine = await attendance.register(fix.sandrasSession);
+      assert.equal(mine.canCancel, true);
+      assert.equal(mine.canEndSeries, false);
+
+      const his = await attendance.register(fix.nunosSession);
+      assert.equal(his.canCancel, false);
+      await expectStatus(() => sessions.cancel(fix.nunosSession, {}), 403);
+
+      await expectStatus(() => sessions.cancel(fix.sandrasSession, { scope: 'future' }), 403);
+      await sessions.cancel(fix.sandrasSession, {});
+      // Putting it back stays management's (round 5) — hence no Anular for her.
+      await expectStatus(() => sessions.restore(fix.sandrasSession), 403);
+    });
+
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const any = await attendance.register(fix.nunosSession);
+      assert.equal(any.canCancel, true);
+      assert.equal(any.canEndSeries, true);
+      await sessions.restore(fix.sandrasSession);
     });
   });
 });

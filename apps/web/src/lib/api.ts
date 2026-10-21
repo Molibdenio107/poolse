@@ -1503,6 +1503,8 @@ export interface Student {
   canViewProgress?: boolean;
   /** Read by the child's own family: the family's tabs, read-only. */
   familyView?: boolean;
+  /** The seguro warning, for staff (POOLSE-88). Null for a family; absent on the list. */
+  cover?: StudentCover | null;
 }
 
 export interface Students {
@@ -2688,6 +2690,7 @@ export interface RegisterEntry {
 export interface Register {
   sessionId: string;
   className: string;
+  classGroupId: string;
   poolName: string | null;
   /** Every lane it occupies, by position — POOLSE-46. Empty when none was chosen. */
   lanes: number[];
@@ -4367,6 +4370,7 @@ export interface WeekWidgetData {
 export interface TrainingPlanWidgetData {
   next: {
     sessionId: string;
+    classGroupId: string | null;
     className: string;
     localDate: string;
     localTime: string;

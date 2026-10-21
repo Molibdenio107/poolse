@@ -340,6 +340,7 @@ function GuardianRow({
             />
             <TextField
               name={`guardianTaxNumber-${index}`}
+              inputMode="numeric"
               label={t('students.guardianTaxNumber')}
               initial={draft.taxNumber}
               hint={t('students.guardianTaxNumberHint')}

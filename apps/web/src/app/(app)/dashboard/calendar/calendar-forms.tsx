@@ -329,6 +329,7 @@ export function CancelSessionDialog({
   target,
   onClose,
   messagesOn = true,
+  management = true,
 }: {
   organizationId: string;
   /** The class being called off, or null when nothing is being asked. */
@@ -336,6 +337,15 @@ export function CancelSessionDialog({
   onClose: () => void;
   /** POOLSE-87 sweep: with messages off there is no composer to point at. */
   messagesOn?: boolean;
+  /**
+   * Owner or admin — POOLSE-88 slice 2. The calendar shows Cancelar aula to
+   * management only; the session page shows it to the instructor teaching the
+   * class too, whom the API lets call off one lesson and nothing more: the
+   * series is refused (`future_needs_management`) and so is putting a lesson
+   * back (restore is owner and admin by design — round 5). So without it the
+   * scope is not asked and the toast offers no Anular it would refuse.
+   */
+  management?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   /*
@@ -396,17 +406,21 @@ export function CancelSessionDialog({
       text: t('calendar.cancelled'),
       attempt: attempt.current,
       ...(notifyHref === null ? {} : { link: { label: t('messages.notifyFamilies'), href: notifyHref } }),
-      action: {
-        label: t('common.undo'),
-        onAct: () => {
-          const form = new FormData();
-          form.set('organizationId', organizationId);
-          form.set('sessionId', sessionId);
-          startTransition(() => restore(form));
-        },
-      },
+      ...(management
+        ? {
+            action: {
+              label: t('common.undo'),
+              onAct: () => {
+                const form = new FormData();
+                form.set('organizationId', organizationId);
+                form.set('sessionId', sessionId);
+                startTransition(() => restore(form));
+              },
+            },
+          }
+        : {}),
     });
-  }, [state, sessionId, notifyHref, organizationId, restore, onClose, router, t]);
+  }, [state, sessionId, notifyHref, organizationId, restore, onClose, router, t, management]);
 
   /*
    * A successful undo has to redraw the week — October 2026 sweep. The action
@@ -470,23 +484,28 @@ export function CancelSessionDialog({
             either way, which the hint says out loud because it is the question
             an operator would otherwise have to guess at.
           */}
-          <fieldset className="flex flex-col gap-1">
-            <legend className="sr-only">{t('calendar.removeScope')}</legend>
-            {(['occurrence', 'future'] as const).map((option) => (
-              <label key={option} className="flex items-start gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="scope"
-                  value={option}
-                  checked={scope === option}
-                  onChange={() => setScope(option)}
-                  className="mt-0.5 size-4 accent-primary"
-                />
-                <span>{t(`calendar.removalScope.${option}`)}</span>
-              </label>
-            ))}
-            <p className="mt-1 text-sm text-foreground-muted">{t('calendar.scopeHint')}</p>
-          </fieldset>
+          {/* One lesson is the only answer an instructor has, so it is not asked. */}
+          {management ? (
+            <fieldset className="flex flex-col gap-1">
+              <legend className="sr-only">{t('calendar.removeScope')}</legend>
+              {(['occurrence', 'future'] as const).map((option) => (
+                <label key={option} className="flex items-start gap-2 text-sm coarse:min-h-control coarse:items-center">
+                  <input
+                    type="radio"
+                    name="scope"
+                    value={option}
+                    checked={scope === option}
+                    onChange={() => setScope(option)}
+                    className="mt-0.5 size-4 accent-primary"
+                  />
+                  <span>{t(`calendar.removalScope.${option}`)}</span>
+                </label>
+              ))}
+              <p className="mt-1 text-sm text-foreground-muted">{t('calendar.scopeHint')}</p>
+            </fieldset>
+          ) : (
+            <input type="hidden" name="scope" value="occurrence" />
+          )}
 
           <input
             name="reason"
@@ -509,7 +528,7 @@ export function CancelSessionDialog({
             <button
               type="button"
               onClick={onClose}
-              className="text-sm text-foreground-muted hover:underline"
+              className="inline-flex h-control items-center justify-center px-4 text-control text-foreground-muted hover:underline"
             >
               {t('calendar.keep')}
             </button>

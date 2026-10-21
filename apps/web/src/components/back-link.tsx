@@ -49,6 +49,9 @@ export async function BackLink({
       className={cn(
         'inline-flex items-center gap-1.5 self-start rounded text-sm text-primary',
         'hover:underline',
+        // 44px to a finger without moving a line: the padding and the negative
+        // margin cancel, so the target grows and the layout does not (POOLSE-88).
+        'coarse:-my-3 coarse:py-3 coarse:pr-4',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
         className,
       )}

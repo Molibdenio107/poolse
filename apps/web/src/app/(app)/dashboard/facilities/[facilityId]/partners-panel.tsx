@@ -215,6 +215,7 @@ export function PartnersPanel({
 
             <TextField
               name="nif"
+              inputMode="numeric"
               label={t('partners.nif')}
               maxLength={9}
               hint={t('partners.nifHint')}
