@@ -80,7 +80,7 @@ function SexBoxes({
         {t('students.admits')}
       </legend>
       <div className="flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm coarse:min-h-control">
           <input
             type="checkbox"
             name="admitsMale"
@@ -90,7 +90,7 @@ function SexBoxes({
           />
           {t('students.genderMale')}
         </label>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm coarse:min-h-control">
           <input
             type="checkbox"
             name="admitsFemale"

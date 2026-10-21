@@ -103,7 +103,7 @@ export function ProfileForm({ me }: { me: Me }): React.ReactElement {
       <div className={FIELD_COLUMN}>
         <span className={FIELD_LABEL}>{t('profile.email')}</span>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="font-medium">{me.user.email ?? t('account.noEmail')}</span>
+          <span className="min-w-0 break-all font-medium">{me.user.email ?? t('account.noEmail')}</span>
           <button
             type="button"
             onClick={() => openUserProfile()}

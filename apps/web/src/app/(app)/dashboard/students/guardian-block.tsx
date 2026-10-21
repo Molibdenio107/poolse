@@ -77,7 +77,7 @@ function draftOf(guardian: Guardian): Draft {
  * (`h-control px-2.5 text-sm`) with the focus-within variant instead.
  */
 const TYPEAHEAD_SHELL =
-  'flex h-control w-full items-center gap-2 rounded border border-border-strong bg-background px-2.5 text-sm ' +
+  'flex h-control w-full items-center gap-2 rounded border border-border-strong bg-background px-2.5 text-control ' +
   'focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary';
 
 const BLANK: Draft = {
@@ -160,7 +160,7 @@ export function GuardianBlock({
           <button
             type="button"
             onClick={() => setReopened((current) => !current)}
-            className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="rounded text-sm text-primary hover:underline coarse:-my-3 coarse:py-3 coarse:pl-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {open ? t('students.guardianCollapse') : t('students.guardianExpand')}
           </button>
@@ -267,7 +267,7 @@ function GuardianRow({
             first" has one answer. A radio across the group is the control that
             matches the constraint the database enforces.
           */}
-          <label className="flex items-center gap-1.5 text-sm">
+          <label className="flex items-center gap-1.5 text-sm coarse:min-h-control">
             <input
               type="radio"
               name="guardianPrimary"
@@ -282,7 +282,7 @@ function GuardianRow({
             type="button"
             onClick={onRemove}
             aria-label={t('students.guardianRemove', { name: draft.name })}
-            className="rounded p-1 text-foreground-muted hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="-m-2 inline-flex h-control w-control shrink-0 items-center justify-center rounded text-foreground-muted hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <X className="size-4" aria-hidden />
           </button>
@@ -485,7 +485,7 @@ function PersonPicker({ onPick }: { onPick: (draft: Draft) => void }): React.Rea
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t('students.guardianFindPlaceholder')}
-            className="w-full bg-transparent outline-none"
+            className="h-full min-w-0 flex-1 bg-transparent outline-none"
           />
         </span>
       </label>

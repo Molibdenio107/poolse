@@ -140,7 +140,7 @@ export default async function ProfilePage({
                     label={t('students.photoUpload')}
                     reason={t('students.photoNoStorage')}
                   />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-64">
                     <ProfileForm me={account} />
                   </div>
                 </div>

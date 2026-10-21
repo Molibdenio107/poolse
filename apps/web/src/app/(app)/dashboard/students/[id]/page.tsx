@@ -331,7 +331,9 @@ export default async function StudentPage({
                           : t('students.photoNoConsent')
                       }
                     />
-                    <div className="min-w-0 flex-1">
+                    {/* A 16rem basis, so on a phone the form wraps under the photo
+                        rather than shrinking beside it to a 138px column (POOLSE-88). */}
+                    <div className="min-w-0 flex-1 basis-64">
                       <StudentForm
                         organizationId={reg.organizationId}
                         levels={reg.levels}

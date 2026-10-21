@@ -233,7 +233,7 @@ export function Reorderable<T extends ReorderableItem>({
       type="button"
       // `touch-none` stops the page scrolling under a finger that is dragging a
       // row, which otherwise makes touch reordering unusable.
-      className="cursor-grab touch-none rounded p-1 text-foreground-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:cursor-grabbing"
+      className="cursor-grab touch-none rounded p-1 coarse:p-3.5 text-foreground-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:cursor-grabbing"
       aria-label={t('common.reorderGrip', { name: item.label })}
       aria-pressed={grabbed === item.id}
       aria-describedby="reorder-help"

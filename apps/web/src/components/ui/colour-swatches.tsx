@@ -87,7 +87,7 @@ export function ColourSwatches({
               title={nameOf(colour)}
               aria-label={nameOf(colour)}
               className={cn(
-                'flex size-7 items-center justify-center rounded-full transition-shadow duration-150',
+                'flex size-7 coarse:size-11 items-center justify-center rounded-full transition-shadow duration-150',
                 SWATCH[colour],
                 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                 chosen && 'ring-2 ring-foreground ring-offset-2 ring-offset-surface',
@@ -109,7 +109,7 @@ export function ColourSwatches({
           title={clearLabel}
           aria-label={clearLabel}
           className={cn(
-            'flex size-7 items-center justify-center rounded-full border border-border-strong text-foreground-muted transition-shadow duration-150',
+            'flex size-7 coarse:size-11 items-center justify-center rounded-full border border-border-strong text-foreground-muted transition-shadow duration-150',
             'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
             value === '' && 'ring-2 ring-foreground ring-offset-2 ring-offset-surface',
           )}

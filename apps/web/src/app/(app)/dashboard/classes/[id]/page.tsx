@@ -306,7 +306,7 @@ export default async function ClassPage({
                               criterion 2. The full name is on the detail page. */}
                           <Link
                             href={`/dashboard/students/${student.studentId}`}
-                            className="truncate text-primary hover:underline"
+                            className="truncate text-primary hover:underline coarse:-my-3 coarse:py-3"
                             title={student.displayName}
                           >
                             {student.shortName}

@@ -139,7 +139,7 @@ export default async function StaffMemberPage({
                   label={t('students.photoUpload')}
                   reason={t('students.photoNoStorage')}
                 />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-64">
                   <StaffForm
                     organizationId={viewer.organizationId}
                     staff={record}

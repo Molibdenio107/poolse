@@ -85,6 +85,31 @@ its own. Permissions are not inherited from a parent item — Instalações and 
 different audiences, and Staff disappears for somebody who may see the site but not its
 people.
 
+## Telemóvel — what a phone is promised (POOLSE-88)
+
+The same web app runs on iPhone (Safari, and installed to the home screen) and on Android (Chrome
+and Samsung Internet, and installed). It must work from 360 px to 430 px wide, in portrait. Every
+screen sits in one of three tiers, and each tier promises a different thing.
+
+| Tier | Promise | Screens | Proved by |
+|---|---|---|---|
+| 1 — poolside | Good one-handed: every target 44 px, no sideways scroll, the right keypad | The week and the next lesson; the lesson's page (register, plan, stand-in, Cancelar aula); finding a student and ringing home; a fee paid; an incident; a water reading; a message to a turma | `phone-poolside.spec.ts`, `phone-shell.spec.ts` |
+| 2 — plainly | Works: no sideways scroll, no field squeezed to unreadable | Student and turma pages, every tab; enrolling one student; closures; levels and skills; the dashboard's bands; *O meu perfil* | `phone-tier2.spec.ts` |
+| 3 — desk | Readable, nothing broken; not optimised | The calendar's drag and series moves, importers, prices and site settings, `/admin`, meet imports, print views | by eye |
+
+Both Playwright phone projects (`iphone`, WebKit; `android`, Chromium) run every
+`e2e/phone-*.spec.ts` at 360 px, as the E2E owner and as the E2E instructor. Emulation cannot raise a real
+keyboard, put a real notch on screen or install the app. So the ticket's real-device passes, one
+iPhone and one Android, are recorded in the ticket and are not replaced by these specs.
+
+**Rules a new screen keeps on a phone.**
+- Sizes come from `h-control`/`text-control` and the `coarse:` variant.
+- Layout follows width (`md:`, `sm:`), never the pointer.
+- Use `dvh`, never `vh`.
+- A bar stuck to the bottom adds `var(--safe-bottom)`.
+- A control that moves between a desk position and a phone position is rendered once and moved by CSS.
+- A column beside a photo or a picture takes a `basis-64` so it wraps instead of shrinking.
+
 ## The page shell
 
 Every page under `(app)` renders through `PageShell`. `pnpm layout:check` fails the build if

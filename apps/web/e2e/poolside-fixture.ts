@@ -37,6 +37,8 @@ export interface PoolsideLesson {
   studentIds: string[];
   /** The tank the lesson is in — the water reading's page. */
   poolId: string;
+  /** The turma itself — tier 2's turma pages. */
+  classGroupId: string;
 }
 
 async function connect(): Promise<Client> {
@@ -201,7 +203,7 @@ export async function poolsideLesson(): Promise<PoolsideLesson> {
     );
 
     await db.query('COMMIT');
-    return { sessionId, studentIds, poolId: at.pool_id };
+    return { sessionId, studentIds, poolId: at.pool_id, classGroupId: groupId };
   } catch (error) {
     await db.query('ROLLBACK');
     throw error;
