@@ -84,8 +84,10 @@ for (const path of await pages(ROOT)) {
 
   // `DetailPage` renders `PageShell` itself — a tabbed record's page is on the
   // shell by construction, and is held to the same rules from its own root.
-  const shell = source.includes('<PageShell') ? '<PageShell' : '<DetailPage';
-  if (!source.includes(shell)) {
+  // So does `CompetitionPage`, the one page Competição's three routes share
+  // (20-10-2026), and it renders `PageShell` at its own root.
+  const shell = ['<PageShell', '<DetailPage', '<CompetitionPage'].find((name) => source.includes(name));
+  if (shell === undefined) {
     failures.push(`${shown}: does not use PageShell`);
     continue;
   }
