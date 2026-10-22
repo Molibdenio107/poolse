@@ -245,7 +245,12 @@ export default async function FacilitiesPage({
                   The site's photographs, back on the card — Rui, 12 October
                   2026: the picture of the place is part of what the card is.
                 */}
-                <div className="border-t border-border pt-4">
+                {/*
+                  A clear break before the photographs — POOLSE-92 D. `mt-4` on top
+                  of the card's `gap-4` makes 32 px above the rule, enough to read
+                  the gallery as its own block rather than the end of the tank list.
+                */}
+                <div className="mt-4 border-t border-border pt-4">
                   <h3 className="mb-3 text-sm text-foreground-muted">
                     {t('facilities.sitePhotos')}
                   </h3>
