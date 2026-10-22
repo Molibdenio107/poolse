@@ -155,6 +155,14 @@ Voltar.
 - **After a form saves and redirects** (create, archive), the landing list has no `from`,
   so Voltar never returns to the form.
 
+## Section pills stay in view
+
+POOLSE-92 E. A `SectionPills` row sticks beneath the page's own sticky header (back link, title
+and tab strip), so a long section keeps the way to the others on screen. `StickyUnderHeader`
+measures whichever `PageShell` block is sticky at that width (`data-page-sticky`) rather than
+assuming a height. Below `md` the row is one horizontally scrolling line, so the frozen part of a
+phone stays a header (about a third of a 740 px screen on a site's Preços tab).
+
 ## Detail pages are tabs
 
 A record's page — a site, a tank, a student, a turma — renders through `DetailPage`

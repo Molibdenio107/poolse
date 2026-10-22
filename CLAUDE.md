@@ -858,7 +858,7 @@ Rui's standing call, 12 October 2026: the reader scrolls as little as possible. 
 is not offered. One flow (a summary above the list it sums, a document, a form) stays whole, and
 so does an overview meant to be read at a glance: the dashboard bands and the calendar are
 deliberately not split. A page that already has a view switch (Faturação's `ViewTabs`) extends
-it rather than adding a second row.
+it rather than adding a second row. **The pill row sticks under the page's header** (POOLSE-92): `StickyUnderHeader` measures whichever `PageShell` block is sticky (`data-page-sticky`) and parks beneath it, and below `md` the row is one scrolling line. A new sticky header block in `PageShell` carries `data-page-sticky` too.
 
 **One content width, and the calendar is the single exception.** `PageShell` caps every page
 at `max-w-page`; `width="wide"` exists for a screen whose content is a grid rather than prose,

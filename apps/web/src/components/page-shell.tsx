@@ -126,6 +126,7 @@ export function PageShell({
               importer in place, so on a phone it does not pin its header.
             */}
             <div
+              data-page-sticky
               className={cn(
                 'md:contents',
                 width !== 'wide' &&
@@ -133,7 +134,10 @@ export function PageShell({
               )}
             >
               {back !== undefined && (
-                <div className="md:sticky md:top-app-bar md:z-10 md:-mx-page md:-mt-2 md:bg-background md:px-page md:py-2">
+                <div
+                  data-page-sticky
+                  className="md:sticky md:top-app-bar md:z-10 md:-mx-page md:-mt-2 md:bg-background md:px-page md:py-2"
+                >
                   <BackLink href={back.href} label={back.label} />
                 </div>
               )}
@@ -144,7 +148,7 @@ export function PageShell({
             )}
           </>
         ) : (
-          <div className="sticky top-app-bar z-10 -mx-page -mt-2 flex flex-col gap-2 bg-background px-page py-2">
+          <div data-page-sticky className="sticky top-app-bar z-10 -mx-page -mt-2 flex flex-col gap-2 bg-background px-page py-2">
             {back !== undefined && <BackLink href={back.href} label={back.label} />}
             <Header title={title} subtitle={subtitle} actions={actions} />
             {tabs}
