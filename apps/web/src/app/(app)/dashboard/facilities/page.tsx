@@ -231,6 +231,16 @@ export default async function FacilitiesPage({
                   </ul>
                 )}
 
+                {/* Under the tanks it adds to, before the photographs — POOLSE-92 C. */}
+                {data.canManage && (
+                  <FromLink
+                    href={`/dashboard/facilities/pools/new?facilityId=${facility.id}`}
+                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:bg-surface-muted"
+                  >
+                    {t('facilities.addPool')}
+                  </FromLink>
+                )}
+
                 {/*
                   The site's photographs, back on the card — Rui, 12 October
                   2026: the picture of the place is part of what the card is.
@@ -248,14 +258,6 @@ export default async function FacilitiesPage({
                   />
                 </div>
 
-                {data.canManage && (
-                  <FromLink
-                    href={`/dashboard/facilities/pools/new?facilityId=${facility.id}`}
-                    className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:bg-surface-muted"
-                  >
-                    {t('facilities.addPool')}
-                  </FromLink>
-                )}
               </section>
             ))
           )}
