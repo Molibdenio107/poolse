@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { formatDate } from '@/lib/date-format';
-import { ComplaintsForm, PublishRegulationForm, WithdrawRegulationButton } from './regulation-forms';
+import { ComplaintsForm, PublishRegulation, WithdrawRegulationButton } from './regulation-forms';
 
 export interface RegulationVersionView {
   id: string;
@@ -21,8 +21,8 @@ export interface ComplaintsSettingsView {
  * The facility's operating regulation and where complaints go — POOLSE-73.
  *
  * The version in force first, in full; then every version with its day, so
- * "what did the rules say on the day of the incident" has an answer; then the
- * form for the next one. The club's complaints setting sits below, said to be
+ * "what did the rules say on the day of the incident" has an answer. The next
+ * one is published from a button beside the header (POOLSE-92 G). The club's complaints setting sits below, said to be
  * club-wide, because it changes every public page and not this site's alone.
  */
 export async function RegulationPanel({
@@ -46,7 +46,13 @@ export async function RegulationPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-sm text-foreground-muted">{t('regulation.hint')}</p>
+      {/* The tab's header: what this is, and — for owner and admin — its one action. */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="min-w-0 flex-1 basis-64 text-sm text-foreground-muted">{t('regulation.hint')}</p>
+        {canManage && (
+          <PublishRegulation facilityId={facilityId} currentBody={current?.body ?? ''} today={today} />
+        )}
+      </div>
 
       {current === null ? (
         <p className="rounded border border-dashed border-border p-4 text-sm text-foreground-muted">
@@ -99,10 +105,6 @@ export async function RegulationPanel({
             ))}
           </ul>
         </section>
-      )}
-
-      {canManage && (
-        <PublishRegulationForm facilityId={facilityId} currentBody={current?.body ?? ''} today={today} />
       )}
 
       {complaints !== null && (

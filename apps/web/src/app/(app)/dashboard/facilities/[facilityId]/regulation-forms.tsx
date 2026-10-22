@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SelectField, TextAreaField, TextField, useFocusFirstError } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
+import { Plus } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import { publishRegulationAction, saveComplaintsAction, withdrawRegulationAction } from './regulation.actions';
 
@@ -19,8 +21,12 @@ const BUTTON =
  * Publish a new version — POOLSE-73. Seeded with the version in force, because
  * a new version is nearly always the last one with a paragraph changed; the
  * one in force is never edited. Controlled fields, so a refusal keeps the text.
+ *
+ * A primary button beside the tab's header that opens the form in a side
+ * sheet — POOLSE-92 G. The version history stays the body of the tab; the form
+ * used to sit under it as a disclosure that read as part of the history.
  */
-export function PublishRegulationForm({
+export function PublishRegulation({
   facilityId,
   currentBody,
   today,
@@ -30,45 +36,65 @@ export function PublishRegulationForm({
   today: string;
 }): React.ReactElement {
   const t = useTranslations();
+  const [open, setOpen] = useState(false);
   const [state, dispatch, pending] = useSavedAction(publishRegulationAction, INITIAL);
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state.fields, state);
+  // A version that published closes the sheet; a refusal keeps it, and the text.
+  useEffect(() => {
+    if (state.ok) setOpen(false);
+  }, [state]);
   const error = (field: string): string | undefined => {
     const key = state.fields?.[field];
     return key === undefined ? undefined : t(key);
   };
   return (
-    <details className="rounded border border-border">
-      <summary className="cursor-pointer list-none p-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={cn(PRIMARY, 'shrink-0 gap-2')}>
+        <Plus aria-hidden className="size-4" />
         {t('regulation.publishNew')}
-      </summary>
-      <form ref={formRef} action={dispatch} className="flex flex-col gap-4 border-t border-border p-4">
-        <input type="hidden" name="facilityId" value={facilityId} />
-        <p className="text-sm text-foreground-muted">{t('regulation.publishHint')}</p>
-        <TextField
-          name="effectiveFrom"
-          type="date"
-          label={t('regulation.effectiveFrom')}
-          hint={t('regulation.effectiveFromHint')}
-          initial={today}
-          required
-          error={error('effectiveFrom')}
-        />
-        <TextAreaField
-          name="body"
-          label={t('regulation.body')}
-          initial={currentBody}
-          maxLength={50000}
-          error={error('body')}
-          className="max-w-none"
-        />
-        <div>
-          <button type="submit" disabled={pending} className={PRIMARY}>
-            {pending ? t('common.working') : t('regulation.publish')}
-          </button>
-        </div>
-      </form>
-    </details>
+      </button>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        placement="side"
+        title={t('regulation.publishNew')}
+        description={t('regulation.publishHint')}
+        closeLabel={t('common.close')}
+      >
+        <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
+          <input type="hidden" name="facilityId" value={facilityId} />
+          <TextField
+            name="effectiveFrom"
+            type="date"
+            label={t('regulation.effectiveFrom')}
+            hint={t('regulation.effectiveFromHint')}
+            initial={today}
+            required
+            error={error('effectiveFrom')}
+          />
+          <TextAreaField
+            name="body"
+            label={t('regulation.body')}
+            initial={currentBody}
+            // Ten lines and it scrolls inside itself, so Publicar stays on a
+            // phone's screen however long the regulation is.
+            rows={10}
+            maxLength={50000}
+            error={error('body')}
+            className="max-w-none"
+          />
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button type="button" onClick={() => setOpen(false)} className={BUTTON}>
+              {t('common.cancel')}
+            </button>
+            <button type="submit" disabled={pending} className={PRIMARY}>
+              {pending ? t('common.working') : t('regulation.publish')}
+            </button>
+          </div>
+        </form>
+      </Dialog>
+    </>
   );
 }
 

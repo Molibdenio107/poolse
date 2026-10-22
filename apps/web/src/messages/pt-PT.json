@@ -5081,7 +5081,7 @@
     "current": "em vigor",
     "scheduled": "agendada",
     "publishedBy": "Publicada a {date} por {name}",
-    "publishNew": "Publicar uma versão nova",
+    "publishNew": "Publicar nova versão",
     "publishHint": "O texto começa como a versão em vigor. Altere o que mudou e escolha a data em que a nova versão entra em vigor.",
     "effectiveFrom": "Em vigor a partir de",
     "effectiveFromHint": "Pode ser uma data futura, por exemplo o início da época.",

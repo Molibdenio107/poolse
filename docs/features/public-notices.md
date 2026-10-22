@@ -26,6 +26,9 @@ both carry:
 - The version in force is the latest one whose day has come, in the site's timezone.
 - **A version is never edited.** A correction is a new version, and the form starts from the
   text in force.
+- Owner and admin publish from **Publicar nova versão**, a primary button beside the tab's
+  header that opens the form in a side sheet (POOLSE-92). The tab's body is the version in force
+  and the history.
 - A version can be published ahead of time, for example for the next season; it shows as
   *agendada*.
 - *Retirar* withdraws a version published by mistake. It is archived and the previous one comes
