@@ -45,7 +45,8 @@ export function SectionPills({
     // the others in view (POOLSE-92 E). One scrolling line on a phone, so the
     // frozen part of a small screen stays a header and not half the page.
     <StickyUnderHeader>
-      <nav aria-label={label} className="flex flex-wrap gap-2 max-md:-m-1 max-md:flex-nowrap max-md:overflow-x-auto max-md:p-1">
+      {/* `data-scroll-row`: a chip row that scrolls on purpose, like the tab strip. */}
+      <nav aria-label={label} data-scroll-row className="flex flex-wrap gap-2 max-md:-m-1 max-md:flex-nowrap max-md:overflow-x-auto max-md:p-1">
         {items.map((item) => {
           const on = item.key === current;
           return (

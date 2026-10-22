@@ -35,7 +35,10 @@ async function sidewaysScrollers(page: Page): Promise<string[]> {
           (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
           el.getBoundingClientRect().width > 0 &&
           el.scrollWidth > el.clientWidth + 4 &&
-          el.closest('[role=tablist]') === null
+          el.closest('[role=tablist]') === null &&
+          // A section pill row is one scrolling line on a phone by design
+          // (POOLSE-92 E), as the tab strip is; a table or a card is not.
+          el.closest('[data-scroll-row]') === null
         );
       })
       .map((el) => `${el.tagName.toLowerCase()} ${el.clientWidth}/${el.scrollWidth}`),
