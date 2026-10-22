@@ -108,7 +108,22 @@ export default async function FacilitiesPage({
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-col">
-                    <h2 className="text-lg font-medium">{facility.name}</h2>
+                    {/*
+                      The name also opens the site (POOLSE-103 A) — a second way
+                      in beside the labelled control, never instead of it.
+                    */}
+                    <h2 className="text-lg font-medium">
+                      {data.canOpenSite ? (
+                        <FromLink
+                          href={`/dashboard/facilities/${facility.id}`}
+                          className="rounded hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
+                          {facility.name}
+                        </FromLink>
+                      ) : (
+                        facility.name
+                      )}
+                    </h2>
                     {/* What is behind the button, so it reads as the place to go. */}
                     {data.canManage && (
                       <span className="text-sm text-foreground-muted">
@@ -124,7 +139,8 @@ export default async function FacilitiesPage({
                     {/*
                       Story 2 asks for "a clearly labelled control", not a title
                       that turns out to be clickable. A heading that navigates is
-                      a heading half the people reading it never try.
+                      a heading half the people reading it never try — so the
+                      name's link (POOLSE-103 A) is an extra, and this stays.
                     */}
                     {/*
                       The site's page is where it is configured — hours, prices,
