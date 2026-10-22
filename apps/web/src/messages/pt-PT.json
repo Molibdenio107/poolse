@@ -128,7 +128,14 @@
     "toggle": "Alternar tema",
     "light": "Claro",
     "dark": "Escuro",
-    "system": "Segue o sistema"
+    "system": "Segue o sistema",
+    "label": "Tema",
+    "current": "{label}: {theme}",
+    "option": {
+      "system": "Sistema",
+      "light": "Claro",
+      "dark": "Escuro"
+    }
   },
   "locale": {
     "label": "Idioma",

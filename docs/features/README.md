@@ -11,6 +11,7 @@ looks for it.
 | Page | Covers |
 |---|---|
 | [navigation.md](navigation.md) | The home route, the menu, the shared page shell |
+| [preferences.md](preferences.md) | Language and theme: the header controls, and how a choice follows the person |
 | [facilities.md](facilities.md) | Sites, tanks, lanes, capacity |
 | [personal.md](personal.md) | One person and their own pool: the signup choice, and what the app hides |
 | [spaces.md](spaces.md) | Espaços, the cleaning log, maintenance requests |

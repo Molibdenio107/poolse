@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { applyTheme } from '../../../lib/apply-theme';
+import { isTheme } from '../../../lib/theme';
 import { syncPreferencesAction } from '../preferences.actions';
 
 /**
@@ -40,7 +42,13 @@ export function PreferenceSync({
     // the layout, which re-renders this component, which would otherwise line up
     // a second call against the freshly-written cookies.
     attempted.current = true;
-    void syncPreferencesAction(storedLocale, storedTheme);
+    // The layout no longer renders the `dark` class (POOLSE-99), so the stored
+    // theme is put on this page here, after the server has seeded the cookie
+    // and revalidated — the menu then reads the same answer.
+    const theme = storedTheme !== activeTheme && isTheme(storedTheme) ? storedTheme : null;
+    void syncPreferencesAction(storedLocale, storedTheme).finally(() => {
+      if (theme !== null) applyTheme(theme);
+    });
   }, [storedLocale, storedTheme, activeLocale, activeTheme]);
 
   return null;

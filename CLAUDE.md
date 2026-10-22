@@ -828,7 +828,7 @@ and `lane_level_capacity` is a separate teaching judgement. A null ceiling means
 measured" and enforces nothing — never treat it as zero.
 
 **Light and dark mode in every app**, from the first component. Colors come from tokens;
-no literal hex in components.
+no literal hex in components. **The `dark` class on `<html>` has one owner** (POOLSE-99): the pre-paint `ThemeScript` on a load and `applyTheme` on a choice — never a root layout's `className`, which a stale render puts back. The header's theme control is a three-option menu (`theme-toggle.tsx`), and `setThemeAction` always revalidates. `docs/features/preferences.md`.
 
 **Palette.** Backoffice and desktop web: primary `rgb(103, 166, 182)`, complementary
 `rgb(179, 212, 157)`. Mobile apps run sportier — soft orange with pool blue. Mobile

@@ -15,7 +15,7 @@ export async function PreferenceControls(): Promise<React.ReactElement> {
   return (
     <>
       <LocaleSwitcher />
-      <ThemeToggle label={t('theme.toggle')} theme={theme} />
+      <ThemeToggle label={t('theme.label')} theme={theme} />
     </>
   );
 }

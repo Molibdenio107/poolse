@@ -128,7 +128,14 @@
     "toggle": "Toggle theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "Follow the system"
+    "system": "Follow the system",
+    "label": "Theme",
+    "current": "{label}: {theme}",
+    "option": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    }
   },
   "locale": {
     "label": "Language",

@@ -95,23 +95,21 @@ export default async function AppLayout({
 }): Promise<React.ReactElement> {
   const locale = await getLocale();
   const messages = await getMessages();
-  const theme = await readTheme();
 
   return (
     <ClerkProvider localization={clerkLocalization(locale)}>
       {/*
-        This layout is force-dynamic, so unlike the marketing pages it can read
-        the cookie and put the class in the markup — which means a fresh load is
-        correct before a single line of script runs. The script still ships, for
-        `system`: only the browser knows what the operating system is set to.
+        No `className` here, on purpose — POOLSE-99. The `dark` class has one
+        owner: the pre-paint script on a load, and `applyTheme` on a choice.
+        When this layout rendered it too, a cached or stale render put the old
+        class back on navigation, and `system` on a dark OS lost its class on
+        every server re-render, because only the browser knows the OS. React
+        never writes an attribute it was never given, so now nothing fights.
       */}
-      <html
-        lang={locale}
-        className={theme === 'dark' ? 'dark' : undefined}
-        data-theme-preference={theme}
-        suppressHydrationWarning
-      >
-        <head>{theme === 'system' && <ThemeScript />}</head>
+      <html lang={locale} suppressHydrationWarning>
+        <head>
+          <ThemeScript />
+        </head>
         {/*
           Suppressed on the body as well as the html, and for a different
           reason than the theme.

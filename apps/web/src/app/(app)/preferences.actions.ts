@@ -27,7 +27,15 @@ async function persist(locale?: string, theme?: string): Promise<void> {
   const store = await cookies();
 
   const newLocale = locale !== undefined && isLocale(locale) && store.get(LOCALE_COOKIE)?.value !== locale;
-  const newTheme = theme !== undefined && isTheme(theme) && store.get(THEME_COOKIE)?.value !== theme;
+  /*
+   * A theme choice always counts as a change — POOLSE-99. The menu writes the
+   * cookie in the browser (`applyTheme`) before this request leaves, so
+   * comparing against the cookie always said "unchanged", the layout was never
+   * revalidated, and the router cache handed the old theme back on the next
+   * navigation. It is a person's click, not a loop; the loop guard that matters
+   * is `syncPreferencesAction`'s, below.
+   */
+  const newTheme = theme !== undefined && isTheme(theme);
   if (newLocale) store.set(LOCALE_COOKIE, locale, localeCookieOptions);
   if (newTheme) store.set(THEME_COOKIE, theme, themeCookieOptions);
 
