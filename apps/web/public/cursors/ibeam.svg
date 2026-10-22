@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="24" viewBox="0 0 16 24" shape-rendering="crispEdges">
+  <!-- POOLSE-95: an I-beam that carries its own outline, so it reads over any surface. Hotspot 8 12 is the stem's centre. -->
+  <path fill="#ffffff" d="M4 1H12V5H10V19H12V23H4V19H6V5H4Z"/>
+  <path fill="#1a1f24" d="M5 2H11V4H9V20H11V22H5V20H7V4H5Z"/>
+</svg>

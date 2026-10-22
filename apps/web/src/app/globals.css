@@ -450,6 +450,23 @@
   }
 
   /*
+   * Our own I-beam over every text field — POOLSE-95.
+   *
+   * Windows draws its default I-beam inverted against the pixels under it:
+   * black over pure white, but pale or white over `--surface-muted`, the
+   * `--input` border, a focus ring or a tinted fill — so in light mode the
+   * pointer seemed to vanish all over the app. The SVG is a dark I-beam with a
+   * white outline, which reads on any surface; `text` stays as the fallback.
+   * Buttons, toggles and a disabled field keep the browser's own pointer, and
+   * the typing caret is untouched.
+   */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='submit']):not([type='button']):not([type='reset']):not([type='image']):not([type='hidden']):not(:disabled),
+  textarea:not(:disabled),
+  [contenteditable='true'] {
+    cursor: url('/cursors/ibeam.svg') 8 12, text;
+  }
+
+  /*
    * A focus ring every interactive element gets, whether or not its classes
    * remember to ask for one — October 2026 sweep.
    *
