@@ -12,6 +12,7 @@ import { PageError, PageShell } from '@/components/page-shell';
 import { pickSection, SectionPills, sectionHref } from '@/components/section-pills';
 import { ArchiveButton, EditStandardForm, EntryTimesGrid } from '../../qualifying-forms';
 import { bandText, windowText } from '../../qualifying-sections';
+import { DownloadLink } from '@/components/download-link';
 
 /**
  * One qualifying standard — POOLSE-85.
@@ -279,10 +280,10 @@ function TimesToolbar({
         {t('qualifying.import.open')}
       </FromLink>
       {(['lcm', 'scm'] as const).map((course) => (
-        <a key={course} href={`${path}/export?course=${course}`} className={quiet} download>
+        <DownloadLink key={course} href={`${path}/export?course=${course}`} className={quiet} download>
           <Download aria-hidden className="size-4" />
           {t('qualifying.import.export', { course: t(`qualifying.courseShort.${course}`) })}
-        </a>
+        </DownloadLink>
       ))}
     </div>
   );

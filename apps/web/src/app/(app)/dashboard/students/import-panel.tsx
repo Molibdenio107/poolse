@@ -8,6 +8,7 @@ import type { StudentLevel } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { ImportWizard } from './import/import-wizard';
 import { Dialog } from '@/components/ui/dialog';
+import { DownloadLink } from '@/components/download-link';
 
 /**
  * The import, on the register itself.
@@ -243,7 +244,7 @@ export function StudentActions({
                 and leaves the register where it was — `lib/print-table.ts`.
               */}
               {(['xlsx', 'csv', 'pdf'] as const).map((choice) => (
-                <a
+                <DownloadLink
                   key={choice}
                   role="menuitem"
                   href={`${exportHref}${exportHref.includes('?') ? '&' : '?'}format=${choice}`}
@@ -256,7 +257,7 @@ export function StudentActions({
                     : choice === 'csv'
                       ? t('students.export.formatCsv')
                       : t('export.pdf.option')}
-                </a>
+                </DownloadLink>
               ))}
             </div>
           )}

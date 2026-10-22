@@ -6,6 +6,7 @@ import { ChevronDown, Download, Upload } from 'lucide-react';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
 import { Dialog } from '@/components/ui/dialog';
 import { SalaryImportWizard } from './import-wizard';
+import { DownloadLink } from '@/components/download-link';
 
 /**
  * Getting the pay list in and out — POOLSE-59, in the page header since
@@ -120,7 +121,7 @@ export function SalaryFileActions({
                 would prefetch a spreadsheet. The PDF is a page, so its own tab.
               */}
               {(['xlsx', 'csv', 'pdf'] as const).map((choice) => (
-                <a
+                <DownloadLink
                   key={choice}
                   role="menuitem"
                   href={choice === 'xlsx' ? EXPORT : `${EXPORT}?format=${choice}`}
@@ -129,7 +130,7 @@ export function SalaryFileActions({
                   className="whitespace-nowrap px-4 py-2 text-left text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   {choice === 'pdf' ? t('export.pdf.option') : t(`salaries.export.${choice}`)}
-                </a>
+                </DownloadLink>
               ))}
             </div>
           )}

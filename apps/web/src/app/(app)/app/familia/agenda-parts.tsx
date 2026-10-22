@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Ban, ChevronRight, Lock, MoveRight, Thermometer, UserRound } from 'lucide-react';
 import type { AppAgendaEntry, AppChild, AppWater } from '@/lib/api';
@@ -122,6 +123,7 @@ export async function EntryCard({
       )}
     >
       {body}
+      <LinkBusy />
     </Link>
   );
 }
@@ -164,6 +166,7 @@ export async function FeeStatus({ children }: { children: AppChild[] }): Promise
               ) : (
                 <span className="text-sm text-success">{t('app.family.upToDate')}</span>
               )}
+              <LinkBusy />
             </Link>
           </li>
         ))}

@@ -13,6 +13,7 @@ import type { FormState } from '../../actions';
 import { addItemAction, archiveItemAction, updateItemAction } from './inventory.actions';
 import { InventoryImportWizard } from './import-wizard';
 import { Dialog } from '@/components/ui/dialog';
+import { DownloadLink } from '@/components/download-link';
 
 /**
  * What the club owns, at one site — round 6.
@@ -363,7 +364,7 @@ export function InventoryPanel({
               >
                 {/* The PDF is a page rather than a file, so it opens in its own tab. */}
                 {(['xlsx', 'csv', 'pdf'] as const).map((choice) => (
-                  <a
+                  <DownloadLink
                     key={choice}
                     role="menuitem"
                     href={`${exportHref}&format=${choice}`}
@@ -376,7 +377,7 @@ export function InventoryPanel({
                       : choice === 'csv'
                         ? t('students.export.formatCsv')
                         : t('export.pdf.option')}
-                  </a>
+                  </DownloadLink>
                 ))}
               </div>
             )}

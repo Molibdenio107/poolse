@@ -118,6 +118,7 @@ export function RegisterForm({ register }: { register: Register & { organization
         */}
         <div
           data-register-actions
+          data-bottom-bar
           className="sticky bottom-0 z-10 order-last -mx-page flex items-center gap-3 border-t border-border bg-background px-page pt-3 pb-[calc(0.75rem+var(--safe-bottom))] md:static md:order-none md:mx-0 md:ml-auto md:border-0 md:bg-transparent md:p-0"
         >
           <span className="text-sm text-foreground-muted" aria-live="polite">

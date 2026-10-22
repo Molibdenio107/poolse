@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { ArrowLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { cn } from '@/lib/utils';
@@ -58,6 +59,7 @@ export async function BackLink({
     >
       <ArrowLeft className="size-4" aria-hidden />
       {t('common.back')}
+      <LinkBusy />
     </Link>
   );
 }

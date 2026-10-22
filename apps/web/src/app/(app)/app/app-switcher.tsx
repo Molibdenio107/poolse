@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
@@ -47,6 +48,7 @@ export function AppSwitcher({ homes }: { homes: AppHat[] }): React.ReactElement 
           )}
         >
           {t(`app.home.${hat}`)}
+          <LinkBusy />
         </Link>
       ))}
     </nav>

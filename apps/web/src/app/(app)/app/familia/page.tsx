@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type AppAgenda, type AppAgendaEntry } from '@/lib/api';
@@ -68,6 +69,7 @@ export default async function FamilyAgenda({
                     )}
                   >
                     {one.name}
+                    <LinkBusy />
                   </Link>
                 );
               })}

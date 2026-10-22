@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -453,6 +454,7 @@ export function AppSidebar({
       <div className="flex h-full flex-col gap-6 p-5">
         <Link href="/dashboard" className="px-3 text-lg font-semibold tracking-tight text-primary">
           {t('app.name')}
+          <LinkBusy />
         </Link>
 
         <SidebarNav sections={sections} pathname={pathname} />
@@ -601,6 +603,7 @@ function NavItem({
       >
         {item.icon !== undefined && <EntityIcon kind={item.icon} />}
         {t(item.key)}
+        <LinkBusy />
       </Link>
 
       {active &&

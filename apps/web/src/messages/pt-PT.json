@@ -1,4 +1,10 @@
 {
+  "busy": {
+    "load": "A carregar…",
+    "save": "A guardar…",
+    "export": "A exportar…",
+    "exportFailed": "Não foi possível descarregar o ficheiro. Tente novamente."
+  },
   "back": {
     "toQualifications": "Voltar às qualificações",
     "toSalaries": "Voltar aos salários",

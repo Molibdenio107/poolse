@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ArrowLeft, NotebookPen } from 'lucide-react';
@@ -44,6 +45,7 @@ export default async function FamilyLesson({
       >
         <ArrowLeft className="size-4" aria-hidden />
         {t('app.family.backToAgenda')}
+        <LinkBusy />
       </Link>
 
       <h1 className="text-xl font-semibold tracking-tight">{dayHeading(t, first.localDate)}</h1>

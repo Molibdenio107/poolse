@@ -97,6 +97,7 @@ import {
   placeSlotAction,
   setInstructorStatusAction,
 } from './classes.actions';
+import { DownloadLink } from '@/components/download-link';
 
 /**
  * The week: what is happening, and how to change it — POOLSE-49.
@@ -2260,10 +2261,10 @@ function ExportLinks({
         {t('grid.export.print')}
       </a>
 
-      <a href={`/dashboard/calendar/export?${query}`} className={style}>
+      <DownloadLink href={`/dashboard/calendar/export?${query}`} className={style}>
         <Download aria-hidden className="size-4" />
         {t('grid.export.excel')}
-      </a>
+      </DownloadLink>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 
@@ -46,6 +47,7 @@ export default function DashboardError({
           className="inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('common.backToDashboard')}
+          <LinkBusy />
         </Link>
       </div>
     </section>

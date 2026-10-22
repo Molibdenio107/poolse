@@ -15,6 +15,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { resolveTab, tabHref, type TabBadge } from '@/lib/detail-tabs';
 import { cn } from '@/lib/utils';
+import { useBusyWhile } from '@/lib/busy';
 
 /**
  * The client half of a tabbed detail page. `DetailPage` is the server half and
@@ -84,6 +85,8 @@ export function DetailTabs({
   const pathname = usePathname();
   const search = useSearchParams();
   const [pending, startTransition] = useTransition();
+  // A tab rendered on the server takes a round trip: say so in the corner (POOLSE-98).
+  useBusyWhile(pending, 'load');
   const [chosen, setChosen] = useState(rendered);
   const [dirty, setDirty] = useState(false);
   const [resetKey, setResetKey] = useState(0);

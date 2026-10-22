@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/toast';
 import { visibleDetail } from '@/components/feedback';
 import { undoArchive } from '@/app/(app)/dashboard/arquivados/archive.actions';
+import { useBusyWhile } from './busy';
 
 /**
  * `useActionState`, and then the screen actually shows the save — round 5.
@@ -51,6 +52,8 @@ export function useSavedAction<State extends { ok?: boolean }, Payload>(
   permalink?: string,
 ): [state: Awaited<State>, dispatch: (payload: Payload) => void, isPending: boolean] {
   const [state, dispatch, isPending] = useActionState(action, initialState, permalink);
+  // The corner's "A guardar…" for every form that saves — POOLSE-98.
+  useBusyWhile(isPending, 'save');
   const router = useRouter();
   const toast = useToast();
   const t = useTranslations();

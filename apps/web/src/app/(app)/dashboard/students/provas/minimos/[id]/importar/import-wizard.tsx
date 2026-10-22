@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, Check, CircleHelp, Upload } from 'lucide-react';
 import { formatSwimTime } from '@poolse/rules';
@@ -225,6 +226,7 @@ export function QualifyingImportWizard({
           </p>
           <Link href={`/dashboard/students/provas/minimos/${standardId}?tab=times`} className={BUTTON}>
             {t('qualifying.import.toTimes')}
+            <LinkBusy />
           </Link>
         </section>
       )}

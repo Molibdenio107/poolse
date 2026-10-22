@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { apiFetch, type Me } from '@/lib/api';
@@ -68,6 +69,7 @@ export default async function AppModeLayout({
                 className="ml-auto inline-flex h-control items-center justify-center rounded px-3 text-control text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('app.openBackoffice')}
+                <LinkBusy />
               </Link>
             )}
           </div>

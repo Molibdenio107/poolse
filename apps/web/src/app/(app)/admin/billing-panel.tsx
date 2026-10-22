@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, CalendarClock } from 'lucide-react';
 import type { BillingOverview } from '@/lib/api';
@@ -101,6 +102,7 @@ export async function BillingPanel({
                     className="font-medium underline-offset-2 hover:underline"
                   >
                     {renewal.name}
+                    <LinkBusy />
                   </Link>
 
                   <span className="text-foreground-muted">

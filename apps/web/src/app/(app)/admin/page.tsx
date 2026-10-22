@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Building2, User } from 'lucide-react';
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { ApiError, apiFetch, type BillingOverview, type PlatformTenant } from '@/lib/api';
 import { DataTable, type Column } from '@/components/data-table';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
@@ -288,6 +289,7 @@ function tenantColumns(
               className="block truncate font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {tenant.name}
+              <LinkBusy />
             </Link>
             <div className="truncate font-mono text-xs text-foreground-muted">
               {tenant.slug}
@@ -491,6 +493,7 @@ function FilterLinks({
         )}
       >
         {label}
+        <LinkBusy />
       </Link>
     );
   };
@@ -539,6 +542,7 @@ function SortLinks({
         )}
       >
         {label}
+        <LinkBusy />
       </Link>
     );
   };

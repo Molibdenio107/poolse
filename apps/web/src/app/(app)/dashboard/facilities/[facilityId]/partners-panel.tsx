@@ -11,6 +11,7 @@ import { SelectField, TextField } from '@/components/ui/field';
 import { PartnerImportWizard } from './partner-import-wizard';
 import type { FormState } from '../../actions';
 import { savePartnerAction } from './partners.actions';
+import { DownloadLink } from '@/components/download-link';
 
 /**
  * Parcerias, on the facility page — POOLSE-47.
@@ -121,20 +122,20 @@ export function PartnersPanel({
           */}
           {canManage && partners.length > 0 && (
             <>
-              <a
+              <DownloadLink
                 href={`/dashboard/facilities/${facilityId}/partners/export?format=xlsx`}
                 className={BUTTON_QUIET}
               >
                 <Download className="size-4" aria-hidden />
                 {t('partnerImport.exportXlsx')}
-              </a>
-              <a
+              </DownloadLink>
+              <DownloadLink
                 href={`/dashboard/facilities/${facilityId}/partners/export?format=csv`}
                 className={BUTTON_QUIET}
               >
                 <Download className="size-4" aria-hidden />
                 {t('partnerImport.exportCsv')}
-              </a>
+              </DownloadLink>
               {/* A page rather than a file, so its own tab. */}
               <a
                 href={`/dashboard/facilities/${facilityId}/partners/export?format=pdf`}

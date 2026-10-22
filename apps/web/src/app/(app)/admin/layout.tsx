@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { getTranslations } from 'next-intl/server';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { PreferenceControls } from '../preference-controls';
@@ -61,6 +62,7 @@ export default async function AdminLayout({
           >
             <ArrowLeft className="size-4" aria-hidden />
             {t('admin.backToApp')}
+            <LinkBusy />
           </Link>
 
           {/*

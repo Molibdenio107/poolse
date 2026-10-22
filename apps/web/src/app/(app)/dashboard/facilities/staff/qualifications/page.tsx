@@ -21,6 +21,7 @@ import { storageConfigured } from '@/lib/storage-status';
 import { cn } from '@/lib/utils';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import { TypesPanel } from './types-panel';
+import { DownloadLink } from '@/components/download-link';
 
 /**
  * Qualificações — POOLSE-27, 7b.2.
@@ -172,7 +173,7 @@ export default async function QualificationsPage({
                     <QualificationStatus status={row.status} expiresOn={row.expiresOn} />
                     {row.documentFileId !== null ? (
                       // Through the app, never a bucket link; `download` keeps its name.
-                      <a
+                      <DownloadLink
                         href={`/files/${row.documentFileId}`}
                         download={row.documentName ?? true}
                         aria-label={t('qualifications.certificate.downloadLabel', {
@@ -183,7 +184,7 @@ export default async function QualificationsPage({
                       >
                         <Paperclip aria-hidden className="size-4" />
                         {t('qualifications.certificate.download')}
-                      </a>
+                      </DownloadLink>
                     ) : (
                       row.qualificationId !== null && (
                         <FileUpload

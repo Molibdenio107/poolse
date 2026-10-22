@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, startTransition } from 'react';
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, Check, Copy, RefreshCw, Sparkles, Upload } from 'lucide-react';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
@@ -259,6 +260,7 @@ export function ImportWizard({
           {onClose === undefined ? (
             <Link href="/dashboard/students" className={BUTTON}>
               {t('students.import.toRegister')}
+              <LinkBusy />
             </Link>
           ) : (
             <button type="button" onClick={onClose} className={BUTTON}>

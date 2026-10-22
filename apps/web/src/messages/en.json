@@ -1,4 +1,10 @@
 {
+  "busy": {
+    "load": "Loading…",
+    "save": "Saving…",
+    "export": "Exporting…",
+    "exportFailed": "The file could not be downloaded. Try again."
+  },
   "back": {
     "toQualifications": "Back to qualifications",
     "toSalaries": "Back to salaries",

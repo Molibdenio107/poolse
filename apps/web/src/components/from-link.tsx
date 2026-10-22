@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { ComponentProps } from 'react';
 import { currentHref, stampFrom } from '@/lib/back';
+import { LinkBusy } from '@/components/link-busy';
 
 /**
  * The page somebody is on — path, tab, section, page and filters — as the
@@ -29,8 +30,13 @@ export function useCurrentHref(): string {
  * plain `Link`. An href outside `/dashboard`, or one that already names its
  * `from`, is passed through untouched.
  */
-export function FromLink({ href, ...props }: ComponentProps<typeof Link> & { href: string }) {
+export function FromLink({ href, children, ...props }: ComponentProps<typeof Link> & { href: string }) {
   const pathname = usePathname();
   const search = useSearchParams();
-  return <Link href={stampFrom(href, pathname, search ?? new URLSearchParams())} {...props} />;
+  return (
+    <Link href={stampFrom(href, pathname, search ?? new URLSearchParams())} {...props}>
+      {children}
+      <LinkBusy />
+    </Link>
+  );
 }

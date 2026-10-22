@@ -1,5 +1,6 @@
 import { formatDate, formatStamp } from '@/lib/date-format';
 import Link from 'next/link';
+import { LinkBusy } from '@/components/link-busy';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { Printer } from 'lucide-react';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -182,6 +183,7 @@ export default async function InvoicePage({
             className="text-sm text-primary hover:underline"
           >
             {t('invoices.backToList')}
+            <LinkBusy />
           </Link>
 
           {/*
