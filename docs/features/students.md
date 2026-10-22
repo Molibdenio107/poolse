@@ -168,6 +168,16 @@ The record is the staff page in a read-only family mode (`familyView` from `GET 
 Never shown: the medical record, the identity document, any form. Somebody else's child is a
 404. An instructor is still refused a family's fees with a 403.
 
+## The Semana tab — a student's dated week
+
+The week the student is actually in, Monday to Sunday, with *Semana anterior*, *Esta semana*
+and *Semana seguinte*. The heading writes the week out — *16 a 22 de novembro de 2026* /
+*16–22 November 2026* — and each day is its weekday over its date (POOLSE-108). Stepping
+fetches only the week and changes only `?week=` in the address: the tab, the way back
+(`?from=`) and anything else stay, so a reload comes back to the same tab and week, and
+Voltar still returns to the screen the page was opened from. Browser Back leaves the page
+rather than stepping back a week.
+
 ## Levels
 
 Senior levels sit in the **same ladder** as everything else, ordered by the same `sort_order`

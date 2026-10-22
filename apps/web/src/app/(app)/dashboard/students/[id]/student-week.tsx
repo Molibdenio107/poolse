@@ -8,7 +8,8 @@ import { addDays, mondayOf, today } from '@/lib/dates';
 import type { CalendarSession, TimetableEntry } from '@/lib/api';
 import { studentWeekAction } from '../students.actions';
 import { laneLabel } from '@/lib/lanes';
-import { formatDate } from '@/lib/date-format';
+import { formatDateRange, formatDayMonth } from '@/lib/date-format';
+import { withWeek } from '@/lib/week-url';
 import { FamilyPlans } from './family-plans';
 
 /**
@@ -85,7 +86,8 @@ export function StudentWeek({
       setFailed(false);
       setSessions(result);
       setMonday(target);
-      window.history.replaceState(null, '', `/dashboard/students/${studentId}?week=${target}`);
+      // Only the week changes; the tab and the way back stay (POOLSE-108).
+      window.history.replaceState(null, '', withWeek(window.location.href, target));
     });
   }
 
@@ -96,7 +98,7 @@ export function StudentWeek({
           {t('students.week')}
         </h2>
         <p className="text-sm text-foreground-muted">
-          {t('calendar.range', { from: formatDate(monday), to: formatDate(sunday) })}
+          {formatDateRange(monday, sunday, locale)}
         </p>
       </div>
 
@@ -160,7 +162,8 @@ export function StudentWeek({
         dayNames={Object.fromEntries(
           [0, 1, 2, 3, 4, 5, 6].map((offset) => [
             offset + 1,
-            `${t(`week.${offset + 1}`)} · ${formatDate(addDays(monday, offset))}`,
+            // Two lines, the weekday over its date, as the lifeguard week (POOLSE-96).
+            `${t(`week.${offset + 1}`)}\n${formatDayMonth(addDays(monday, offset), locale)}`,
           ]),
         )}
         emptyLabel={t('students.noClassesThisWeek')}

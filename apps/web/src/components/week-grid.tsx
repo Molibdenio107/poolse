@@ -229,7 +229,8 @@ export function WeekGrid({
           >
             <h3
               className={cn(
-                'text-sm font-medium uppercase tracking-wider',
+                // pre-line: a dated header is two lines, the weekday over its date (POOLSE-108).
+                'whitespace-pre-line text-sm font-medium uppercase tracking-wider',
                 day === todayWeekday ? 'text-primary' : 'text-foreground-muted',
               )}
             >
