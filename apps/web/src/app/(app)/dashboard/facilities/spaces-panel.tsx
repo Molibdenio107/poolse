@@ -72,19 +72,24 @@ export function SpacesPanel({
   spaces,
   canManage,
   variant = 'card',
+  defaultOpen = false,
 }: {
   facilityId: string;
   spaces: Space[];
   canManage: boolean;
   /** `block` sits inside a site card on Instalações; `card` stands alone. */
   variant?: 'card' | 'block';
+  /** Open on arrival — the site's own Espaços tab, where the rooms *are* the page. */
+  defaultOpen?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
   const [adding, setAdding] = useState(false);
 
   /*
-   * Shut to begin with, on both screens.
+   * Shut to begin with as a summary, open on the site's Espaços tab — POOLSE-92
+   * F: a tab named after the rooms that then hides them behind a click reads as
+   * an empty tab. The reasoning below is the summary's.
    *
    * A site card already carries its tanks, its photographs and its counts; a
    * seven-row list of rooms under all of that is a lot of page for something
@@ -93,7 +98,7 @@ export function SpacesPanel({
    * two things worth acting on are legible without opening anything, which is
    * the whole reason the feature exists.
    */
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   const overdue = spaces.filter((space) => space.overdue).length;
   const issues = spaces.reduce((total, space) => total + space.openIssues, 0);

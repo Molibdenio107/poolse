@@ -443,6 +443,7 @@ export default async function FacilityPage({
                   facilityId={facilityId}
                   spaces={spaces.data.items}
                   canManage={spaces.data.canManage}
+                  defaultOpen
                 />
               )
             ),
