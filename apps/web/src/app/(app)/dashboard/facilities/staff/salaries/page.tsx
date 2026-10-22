@@ -8,7 +8,7 @@ import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { backProp, originBack } from '@/lib/back';
 import { formatCents } from '@/lib/money';
 import { SalaryTable } from './salary-table';
-import { SalaryFilePanel } from './salary-file-panel';
+import { SalaryFileActions } from './salary-file-panel';
 
 /**
  * Salários — POOLSE-58.
@@ -70,6 +70,9 @@ export default async function SalariesPage({
       title={t('salaries.title')}
       subtitle={t('salaries.subtitle')}
       back={backProp(back, t)}
+      // In the header, one click each — POOLSE-97 (Rui, 22-10-2026). Folded into
+      // a <details> after the table on 12-10, they read as switched off.
+      actions={data === null ? undefined : <SalaryFileActions canEdit={data.canEdit} locale={locale} />}
     >
       {notPermitted && <PageError message={t('salaries.notPermitted')} />}
       {failure !== null && (
@@ -191,15 +194,6 @@ export default async function SalariesPage({
 
           <Pagination page={data.salaries} basePath="/dashboard/facilities/staff/salaries" query={{ from }} />
 
-          {/*
-            * Below the list, deliberately. What a club does here every week is
-            * read the figures; importing a file is what it does in December, and
-            * putting a dropzone above the thing everybody came for would make the
-            * screen about the spreadsheet rather than about the pay. Folded into
-            * a `<details>` inside the panel (12 October 2026). Not section pills:
-            * the roll-up summarises the table, so the two are one flow.
-            */}
-          <SalaryFilePanel canEdit={data.canEdit} locale={locale} />
         </>
       )}
     </PageShell>

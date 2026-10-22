@@ -369,10 +369,16 @@
     "dateRequired": "Enter the start date.",
     "kindRequired": "Choose the contract type.",
     "endBeforeStart": "The last day cannot be before the start.",
-    "exportXlsx": "Export (Excel)",
-    "exportCsv": "Export (CSV)",
     "exportFailed": "The list could not be exported.",
+    "export": {
+      "action": "Export",
+      "formatLabel": "File format",
+      "xlsx": "Excel (.xlsx)",
+      "csv": "CSV (.csv)",
+      "pdf": "PDF"
+    },
     "import": {
+      "title": "Import the pay list",
       "open": "Import a file",
       "dropHere": "Drop the pay list here",
       "fileHint": "Excel or CSV. The file is read on the Poolse server and never leaves it.",
@@ -427,10 +433,6 @@
       "contracted": "An agreed figure, not yet paid.",
       "estimated": "Worked out from other data, not agreed.",
       "assumed": "A guess. Good for a sense of the shape, not for counting on."
-    },
-    "file": {
-      "summary": "Import or export the pay list",
-      "summaryHint": "Excel or CSV. Export it to correct in a spreadsheet, then import it back."
     }
   },
   "subscription": {

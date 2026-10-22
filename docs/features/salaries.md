@@ -163,11 +163,14 @@ than discovered.
 
 ## The file — export and import
 
-[POOLSE-59](../backlog/POOLSE-59-importing-and-exporting-salaries.md). Both live at the
-bottom of the Salários page, below the list: what a club does here every week is read the
-figures, and importing a file is what it does in December.
+[POOLSE-59](../backlog/POOLSE-59-importing-and-exporting-salaries.md). Both are the page header's
+actions since POOLSE-97 (Rui, 22-10-2026): **Exportar ▾** (Excel, CSV, or PDF in its own tab) and
+**Importar ficheiro**, which opens the wizard in a dialog over the list. A file dropped anywhere
+on the page opens it too, already read. Owner and Admin only, as before; the export endpoint is
+the permission. They were folded into a closed box below the list on 12-10-2026, which in testing
+read as "not switched on".
 
-**Exportar (Excel)** and **Exportar (CSV)** hand over the pay list. The file holds the
+**Exportar** hands over the pay list. The file holds the
 *contract* — name, e-mail, NIF, type, gross amount, contracted hours, pay periods, the date
 it started and the note — and **not** the derived monthly and hourly figures, because one of
 those is always an estimate and re-importing an estimate as an amount would turn a rounding

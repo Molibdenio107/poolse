@@ -1,47 +1,51 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronRight, Download, Printer, Upload } from 'lucide-react';
+import { ChevronDown, Download, Upload } from 'lucide-react';
 import { DropOverlay, useFileDrop } from '@/components/file-drop';
+import { Dialog } from '@/components/ui/dialog';
 import { SalaryImportWizard } from './import-wizard';
 
 /**
- * Getting the pay list in and out — POOLSE-59.
+ * Getting the pay list in and out — POOLSE-59, in the page header since
+ * POOLSE-97 (Rui, 22-10-2026).
+ *
+ * **In plain sight, not folded away.** On 12 October 2026 these went into a
+ * closed `<details>` after the table, on the reasoning that a club does this
+ * about once a year. In testing that read as "import and export are not
+ * switched on" — a feature nobody can find is a feature that is off. They are
+ * now the header's actions: *Exportar ▾* and *Importar*, one click each.
  *
  * **The drop target is the screen**, not a bordered rectangle somewhere down the
  * page: a zone people miss is a zone the browser wins, and losing that race
  * means navigating away to render the spreadsheet as a download. `useFileDrop`
  * listens on the window and counts depth, which is the part that is easy to get
- * wrong.
+ * wrong. **A dropped file opens the wizard already read** — asking somebody to
+ * choose the file they just dropped would be the screen not believing them.
  *
- * **A dropped file opens the wizard already read.** The upload step is skipped
- * for it — they have chosen the file, and asking them to choose it again would
- * be the screen not believing what they just did.
+ * The wizard opens in the shared dialog, over the list it changes, rather than
+ * below a table somebody would have to scroll past to find it.
  *
- * The export is two ordinary links: a route handler answers with a file, the
- * browser does what browsers do with an attachment, and it works with no
- * JavaScript at all. Neither link is the permission — the endpoint refuses
- * anybody but an Owner or an Admin, and an Admin's file omits the Owner.
- *
- * **Folded away by default** (12 October 2026): a club does this about once a
- * year, so it is a `<details>` after the table with a summary line that says
- * what is inside, rather than three buttons everybody scrolls past every week.
- * A file dropped anywhere on the screen unfolds it — the wizard it opens must
- * not be hidden inside a closed box.
+ * The export is plain links: a route handler answers with a file, the browser
+ * does what browsers do with an attachment, and it works with no JavaScript at
+ * all. Neither link is the permission — the endpoint refuses anybody but an
+ * Owner or an Admin, and an Admin's file omits the Owner.
  */
 
 const ACCEPTED = ['.xlsx', '.csv', '.pdf'];
 
+const EXPORT = '/dashboard/facilities/staff/salaries/export';
+
 const BUTTON_QUIET =
-   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 function isAccepted(file: File): boolean {
   const name = file.name.toLowerCase();
   return ACCEPTED.some((extension) => name.endsWith(extension));
 }
 
-export function SalaryFilePanel({
+export function SalaryFileActions({
   canEdit,
   locale,
 }: {
@@ -50,69 +54,94 @@ export function SalaryFilePanel({
 }): React.ReactElement {
   const t = useTranslations();
 
-  const [open, setOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [dropped, setDropped] = useState<File | null>(null);
-  const [unfolded, setUnfolded] = useState(false);
+  const [formats, setFormats] = useState(false);
+  const menu = useRef<HTMLDivElement | null>(null);
 
   const onFile = useCallback(
     (file: File) => {
       if (!canEdit || !isAccepted(file)) return;
       setDropped(file);
-      setOpen(true);
-      setUnfolded(true);
+      setImporting(true);
     },
     [canEdit],
   );
 
   const { dragging } = useFileDrop(onFile);
 
+  // The format menu closes on Escape and on a click anywhere else, as the
+  // register's does: a menu that has to be closed by its own button traps you.
+  useEffect(() => {
+    if (!formats) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setFormats(false);
+    };
+    const onClick = (event: MouseEvent): void => {
+      if (!menu.current?.contains(event.target as Node)) setFormats(false);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('click', onClick, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('click', onClick, true);
+    };
+  }, [formats]);
+
+  const close = (): void => {
+    setImporting(false);
+    setDropped(null);
+  };
+
   return (
     <>
-    <details
-      open={unfolded}
-      onToggle={(event) => setUnfolded(event.currentTarget.open)}
-      className="group rounded border border-border bg-surface"
-    >
-      <summary className="flex cursor-pointer list-none items-start gap-2 rounded p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
-        <ChevronRight
-          aria-hidden
-          className="mt-0.5 size-4 shrink-0 transition-transform group-open:rotate-90"
-        />
-        <span className="flex flex-col">
-          <span className="font-medium">{t('salaries.file.summary')}</span>
-          <span className="text-sm text-foreground-muted">{t('salaries.file.summaryHint')}</span>
-        </span>
-      </summary>
-
-      <div className="flex flex-col gap-4 border-t border-border p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <a href="/dashboard/facilities/staff/salaries/export" className={BUTTON_QUIET}>
-          <Download aria-hidden className="size-4" />
-          {t('salaries.exportXlsx')}
-        </a>
-        <a href="/dashboard/facilities/staff/salaries/export?format=csv" className={BUTTON_QUIET}>
-          <Download aria-hidden className="size-4" />
-          {t('salaries.exportCsv')}
-        </a>
-        {/* A page rather than a file, so its own tab. */}
-        <a
-          href="/dashboard/facilities/staff/salaries/export?format=pdf"
-          target="_blank"
-          rel="noopener"
-          className={BUTTON_QUIET}
-        >
-          <Printer aria-hidden className="size-4" />
-          {t('export.pdf.option')}
-        </a>
+        <div ref={menu} className="relative">
+          <button
+            type="button"
+            onClick={() => setFormats((open) => !open)}
+            aria-expanded={formats}
+            aria-haspopup="menu"
+            className={BUTTON_QUIET}
+          >
+            <Download aria-hidden className="size-4" />
+            {t('salaries.export.action')}
+            <ChevronDown aria-hidden className="size-4" />
+          </button>
+
+          {formats && (
+            <div
+              role="menu"
+              aria-label={t('salaries.export.formatLabel')}
+              className="absolute right-0 top-full z-20 mt-1 flex min-w-full flex-col rounded border border-border bg-surface py-1 shadow-lg"
+            >
+              {/*
+                Plain anchors, not `Link`: the answer is a file, and `Link`
+                would prefetch a spreadsheet. The PDF is a page, so its own tab.
+              */}
+              {(['xlsx', 'csv', 'pdf'] as const).map((choice) => (
+                <a
+                  key={choice}
+                  role="menuitem"
+                  href={choice === 'xlsx' ? EXPORT : `${EXPORT}?format=${choice}`}
+                  {...(choice === 'pdf' ? { target: '_blank', rel: 'noopener' } : {})}
+                  onClick={() => setFormats(false)}
+                  className="whitespace-nowrap px-4 py-2 text-left text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {t(`salaries.export.${choice}`)}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
 
         {canEdit && (
           <button
             type="button"
             onClick={() => {
               setDropped(null);
-              setOpen((was) => !was);
+              setImporting(true);
             }}
-            aria-expanded={open}
             className={BUTTON_QUIET}
           >
             <Upload aria-hidden className="size-4" />
@@ -121,30 +150,31 @@ export function SalaryFilePanel({
         )}
       </div>
 
-      {open && canEdit && (
-        <div className="rounded border border-border bg-surface-muted p-4">
-          <SalaryImportWizard
-            /*
-              Remounted per opening and per dropped file, so a second import
-              never starts on the first one's leftovers. `restart()` inside the
-              wizard clears its own state; the key clears everything, including
-              the action states React holds outside it.
-            */
-            key={dropped?.name ?? 'picker'}
-            initialFile={dropped}
-            locale={locale}
-            onClose={() => {
-              setOpen(false);
-              setDropped(null);
-            }}
-          />
-        </div>
+      {canEdit && (
+        <Dialog
+          open={importing}
+          onClose={close}
+          title={t('salaries.import.title')}
+          closeLabel={t('common.close')}
+          className="max-w-4xl"
+        >
+          {importing && (
+            <SalaryImportWizard
+              /*
+                Remounted per opening and per dropped file, so a second import
+                never starts on the first one's leftovers — the action states
+                React holds outside the wizard included.
+              */
+              key={dropped?.name ?? 'picker'}
+              initialFile={dropped}
+              locale={locale}
+              onClose={close}
+            />
+          )}
+        </Dialog>
       )}
-      </div>
-    </details>
 
-    {/* Outside the box: a closed <details> draws nothing but its summary. */}
-    <DropOverlay shown={canEdit && dragging} label={t('salaries.import.dropHere')} />
+      <DropOverlay shown={canEdit && dragging} label={t('salaries.import.dropHere')} />
     </>
   );
 }

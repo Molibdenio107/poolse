@@ -369,10 +369,16 @@
     "dateRequired": "Indique a data de início.",
     "kindRequired": "Escolha o tipo de contrato.",
     "endBeforeStart": "O último dia não pode ser anterior ao início.",
-    "exportXlsx": "Exportar (Excel)",
-    "exportCsv": "Exportar (CSV)",
     "exportFailed": "Não foi possível exportar a lista.",
+    "export": {
+      "action": "Exportar",
+      "formatLabel": "Formato do ficheiro",
+      "xlsx": "Excel (.xlsx)",
+      "csv": "CSV (.csv)",
+      "pdf": "PDF"
+    },
     "import": {
+      "title": "Importar a lista de salários",
       "open": "Importar ficheiro",
       "dropHere": "Largue aqui a lista de salários",
       "fileHint": "Excel ou CSV. O ficheiro é lido no servidor da Poolse e não sai dele.",
@@ -427,10 +433,6 @@
       "contracted": "Um valor acordado, ainda não pago.",
       "estimated": "Calculado a partir de outros dados, não acordado.",
       "assumed": "Um palpite. Serve para ter uma ideia, não para contar como certo."
-    },
-    "file": {
-      "summary": "Importar ou exportar a lista de salários",
-      "summaryHint": "Excel ou CSV. Exporte para corrigir numa folha de cálculo e importe de volta."
     }
   },
   "subscription": {
