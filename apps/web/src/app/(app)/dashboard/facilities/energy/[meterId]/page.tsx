@@ -57,7 +57,7 @@ export default async function MeterPage({
   if (loaded.state !== 'ok') notFound();
   const { meter, readings, monthly, pools, tariffs, canPlan, canRecord, canPrice } = loaded.data;
 
-  const back = backTarget(from, `/dashboard/facilities/${meter.facilityId}`);
+  const back = backTarget(from, '/dashboard/energy');
 
   const subtitle = [
     t(`energy.kind.${meter.kind}`),

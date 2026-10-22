@@ -42,7 +42,7 @@ export default async function NewInvoicePage({
   if (!loaded.data.canRecord) notFound();
   const { meter } = loaded.data;
 
-  const back = backTarget(from, `/dashboard/facilities/energy/${meterId}`);
+  const back = backTarget(from, '/dashboard/energy');
   const importAvailable = await invoiceImportAvailable();
 
   return (

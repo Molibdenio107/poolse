@@ -43,7 +43,7 @@ export default async function InvoicePage({
   if (loaded.data.invoice.meterId !== meterId) notFound();
   const { invoice, canArchive } = loaded.data;
 
-  const back = backTarget(from, `/dashboard/facilities/energy/${meterId}`);
+  const back = backTarget(from, '/dashboard/energy');
   const euros = (cents: number | null): string => (cents === null ? '—' : `${centsToText(cents)} €`);
   const day = (iso: string | null): string => (iso === null ? '—' : formatDate(iso));
 

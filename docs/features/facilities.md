@@ -7,7 +7,7 @@ Schema in `docs/data-model.md`.
 | Action | Roles |
 |---|---|
 | Read the Instalações list: sites, tanks, photographs | everybody |
-| Open a site's page (its configuration) | owner, admin; maintenance sees only Espaços, Manutenção and Energia |
+| Open a site's page (its configuration) | owner, admin; maintenance sees only Espaços and Manutenção |
 | Open a tank's page | owner, admin, instructor, maintenance |
 | Create, edit or archive a site or a tank; add a photograph | owner, admin |
 | Read the inventory | everybody |
@@ -273,12 +273,14 @@ list), *Adicionar instalação* is replaced by a sentence saying the plan is ful
 extend it. The licence trigger is still what refuses a site over the limit.
 
 Each card also shows the site's **photographs** (restored the same day). Since POOLSE-92 the card
-no longer links to the site's Espaços, Manutenção and Energia tabs: they are reached from the
-site's own page (Rui, 22-10-2026).
+no longer links to the site's Espaços and Manutenção tabs: they are reached from the
+site's own page (Rui, 22-10-2026). Since POOLSE-103 the site's name is a link to that page too,
+for whoever may open it (`canOpenSite`), beside the labelled control rather than instead of it.
+The site's page has **no Energia tab** (POOLSE-103): meters live on the Energia screen.
 
 **Since 15 October 2026 the site's page is owner and admin only** (Rui), with Poolse support
 counted as admin inside a grant's window. `GET /facilities/:id` refuses everybody else except
-maintenance, which opens the page for its Espaços, Manutenção and Energia tabs and sees no
+maintenance, which opens the page for its Espaços and Manutenção tabs and sees no
 other tab. On the list, *Configurar instalação* is drawn for owner and admin only. Whoever may open the
 page but not configure it (`canOpenSite && !canManage`, which is maintenance) gets a quiet
 *Abrir* instead — its only way into the site page.

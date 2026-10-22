@@ -37,8 +37,6 @@ import { SpacesPanel } from '../spaces-panel';
 import { listSpaces } from '../spaces.actions';
 import { MaintenancePanel } from '../maintenance-panel';
 import { listTasks } from '../maintenance.actions';
-import { EnergyPanel } from '../energy-panel';
-import { listMeters } from '../energy.actions';
 import { PageError, PageShell } from '@/components/page-shell';
 import { OccupancyPanel } from '@/components/occupancy-panel';
 import { WaterThresholdForm } from './water-threshold-form';
@@ -61,8 +59,9 @@ import { storageConfigured } from '@/lib/storage-status';
  *
  * **Owner and admin configure the site here; maintenance works here** —
  * 15 October 2026, Rui's call. The API answers owner, admin and maintenance
- * (`SITE_PAGE_ROLES`), and maintenance is shown Espaços, Manutenção and
- * Energia only — its daily work, not the club's set-up. Everybody else has
+ * (`SITE_PAGE_ROLES`), and maintenance is shown Espaços and Manutenção
+ * only — its daily work, not the club's set-up. Energia is its own page
+ * (POOLSE-103), not a tab here. Everybody else has
  * the Instalações list, photographs included.
  */
 
@@ -155,7 +154,7 @@ export default async function FacilityPage({
     because a 500 is not a permission — it used to be the same null, and on a
     bad night an owner's Manutenção tab simply was not there.
   */
-  const [partners, spaces, tasks, meters, prices, categories, policies, passes] = await Promise.all([
+  const [partners, spaces, tasks, prices, categories, policies, passes] = await Promise.all([
     // Parcerias — POOLSE-47. Page 1; the panel pages itself.
     listPartners(facilityId, 1),
     // Espaços — round 6.
@@ -166,8 +165,6 @@ export default async function FacilityPage({
      * would say this site has no maintenance plan when in fact nobody knows.
      */
     listTasks(facilityId),
-    // The meters, same terms — slice 5.1.
-    listMeters(facilityId),
     /*
      * The price list — POOLSE-42. Null for an instructor: AC10 says they see no
      * amounts at all.
@@ -472,28 +469,6 @@ export default async function FacilityPage({
                     {t('maintenance.section')}
                   </h2>
                   <MaintenancePanel facilityId={facilityId} list={tasks.data} />
-                </section>
-              )
-            ),
-        },
-        {
-          // Energy — slice 5.1: what running the site costs.
-          slug: 'energy',
-          labelKey: 'energy.section',
-          visible: meters.state !== 'refused',
-          content: () =>
-            meters.state === 'failed' ? (
-              <PageError message={t(meters.failure.key)} />
-            ) : (
-              meters.state === 'ok' && (
-                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-                  <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                    {t('energy.section')}
-                  </h2>
-                  <EnergyPanel
-                    facilityId={facilityId}
-                    list={meters.data}
-                  />
                 </section>
               )
             ),
