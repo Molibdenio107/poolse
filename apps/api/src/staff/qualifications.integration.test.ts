@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { QualificationsController } from './qualifications.controller.js';
+import { AttachmentsController } from '../files/attachments.controller.js';
 import {
   deliverQualificationAlerts,
   raiseQualificationAlerts,
@@ -152,6 +153,109 @@ test('27.3 — the list is worst first: expired, then âmbar, then em falta', as
         ['red', 'amber', 'missing'],
       );
     });
+  });
+});
+
+/**
+ * A certificate on file, without the object store: the stored row is what the
+ * attach route checks (its purpose), and the list reads only the row.
+ */
+async function certificateFor(tenant: ScratchTenant, qualificationId: string, name: string): Promise<string> {
+  const [row] = await tenant.sql<{ id: string }>(
+    `INSERT INTO stored_file (organization_id, purpose, storage_key, content_type, byte_size, original_name, uploaded_by)
+     VALUES ($1::uuid, 'qualification_document', $1::text || '/e2e/' || gen_random_uuid(), 'application/pdf', 10, $2, $3)
+     RETURNING id`,
+    [tenant.organizationId, name, tenant.ownerMembershipId],
+  );
+  await actingAs(tenant, { roles: ['owner'] }, () =>
+    new AttachmentsController().qualificationDocument(qualificationId, { fileId: row!.id }),
+  );
+  return row!.id;
+}
+
+test('97b — every row says whether a certificate is on file, and em falta never has one', async () => {
+  await withScratchTenant(async (tenant) => {
+    const sbv = await typeNamed(tenant, 'SBV');
+    const filed = await addMember(tenant, 'Com', 'Cartão', ['admin']);
+    const bare = await addMember(tenant, 'Sem', 'Cartão', ['admin']);
+    const withCard = await file(tenant, filed, sbv, await inDays(tenant, -3));
+    await file(tenant, bare, sbv, await inDays(tenant, -2));
+    await addMember(tenant, 'Falta', 'TPTD', ['instructor']);
+    const card = await certificateFor(tenant, withCard, 'cartao-sbv.pdf');
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const list = await new QualificationsController().expiring();
+      const byPerson = new Map(list.items.map((row) => [row.membershipId, row]));
+      assert.equal(byPerson.get(filed)?.documentFileId, card);
+      assert.equal(byPerson.get(filed)?.documentName, 'cartao-sbv.pdf', 'the download keeps its own name');
+      assert.equal(byPerson.get(bare)?.documentFileId, null);
+      const missing = list.items.find((row) => row.status === 'missing');
+      assert.equal(missing?.documentFileId, null, 'em falta has no record to carry one');
+    });
+  });
+});
+
+test('97b — Sem certificado narrows the list inside the page, so paging still adds up', async () => {
+  await withScratchTenant(async (tenant) => {
+    const sbv = await typeNamed(tenant, 'SBV');
+    const filed = await addMember(tenant, 'Com', 'Cartão', ['admin']);
+    const first = await addMember(tenant, 'Primeiro', 'Sem', ['admin']);
+    const second = await addMember(tenant, 'Segundo', 'Sem', ['admin']);
+    await certificateFor(tenant, await file(tenant, filed, sbv, await inDays(tenant, -5)), 'a.pdf');
+    await file(tenant, first, sbv, await inDays(tenant, -4));
+    await file(tenant, second, sbv, await inDays(tenant, -3));
+    await addMember(tenant, 'Falta', 'TPTD', ['instructor']);
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const controller = new QualificationsController();
+      const all = await controller.expiring(undefined, undefined, 'missing');
+      assert.deepEqual(
+        all.items.map((row) => row.membershipId),
+        [first, second],
+        'only records with no file — not the filed one, not em falta',
+      );
+      assert.equal(all.total, 2);
+
+      // One a page: page 2 is the second of *that* list, and the total agrees.
+      const one = await controller.expiring('1', '1', 'missing');
+      const two = await controller.expiring('2', '1', 'missing');
+      assert.deepEqual([one.items[0]?.membershipId, two.items[0]?.membershipId], [first, second]);
+      assert.deepEqual([one.total, two.total], [2, 2]);
+
+      // An unknown filter value is the whole list, never an empty one.
+      assert.equal(
+        (await controller.expiring(undefined, undefined, 'nonsense')).total,
+        (await controller.expiring()).total,
+      );
+    });
+  });
+});
+
+test('97 QA 4 — an instructor reads no list and attaches no certificate', async () => {
+  await withScratchTenant(async (tenant) => {
+    const sbv = await typeNamed(tenant, 'SBV');
+    const coach = await addMember(tenant, 'Treinador', 'Piscina', ['instructor']);
+    const record = await file(tenant, coach, sbv, await inDays(tenant, 400));
+    const [stored] = await tenant.sql<{ id: string }>(
+      `INSERT INTO stored_file (organization_id, purpose, storage_key, content_type, byte_size, original_name, uploaded_by)
+       VALUES ($1::uuid, 'qualification_document', $1::text || '/e2e/' || gen_random_uuid(), 'application/pdf', 10, 'x.pdf', $2)
+       RETURNING id`,
+      [tenant.organizationId, tenant.ownerMembershipId],
+    );
+
+    await actingAs(tenant, { membershipId: coach, roles: ['instructor'] }, async () => {
+      await expectStatus(() => new QualificationsController().expiring(), 403);
+      await expectStatus(
+        () => new AttachmentsController().qualificationDocument(record, { fileId: stored!.id }),
+        403,
+      );
+    });
+
+    const [after] = await tenant.sql<{ document_file_id: string | null }>(
+      `SELECT document_file_id FROM qualification WHERE id = $1`,
+      [record],
+    );
+    assert.equal(after!.document_file_id, null, 'the refusal wrote nothing');
   });
 });
 

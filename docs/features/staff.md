@@ -67,5 +67,10 @@ record is kept either way.
 | Manage types and the window | ✓ | ✓ | — | — |
 | See the list and the dashboard card | ✓ | ✓ | — | — |
 
-**Not built yet:** the certificate upload (present and disabled until file storage lands), so
-27.7–27.8's document access is waiting on it.
+**Certificates.** A record carries one scanned certificate, attached once (`qualification_document_once`):
+a different scan is a different record, i.e. a renewal. It is attached on the person's Qualificações tab
+or, since POOLSE-97, from its row on **Staff → Qualificações**, which shows 📎 *Certificado* (a download
+through `/files/:id`, under the file's own read rule) or *Anexar* (the same upload and the same route,
+`PUT qualifications/:id/document`, Owner and Admin). An *em falta* row has no record and shows neither.
+The list's **Sem certificado** filter (`?certificate=missing` on `GET /qualifications/expiring`) narrows it
+on the server, before paging, to records with no certificate; *em falta* rows are not among them.

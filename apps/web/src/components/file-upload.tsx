@@ -38,9 +38,15 @@ export function FileUpload({
   unavailable,
   variant = 'button',
   className,
+  ariaLabel,
 }: {
   target: FileTarget;
   label: string;
+  /**
+   * The button's full name where the visible label repeats down a list — "Anexar"
+   * on every row of Qualificações says nothing about which row (POOLSE-97).
+   */
+  ariaLabel?: string | undefined;
   /** What will be accepted, said beside the control. */
   hint?: string | undefined;
   unavailable?: string | null;
@@ -81,6 +87,7 @@ export function FileUpload({
       type="button"
       disabled={off || busy}
       onClick={() => input.current?.click()}
+      aria-label={ariaLabel}
       className={cn(
         'inline-flex h-control items-center justify-center gap-2 rounded border border-border bg-surface px-4 text-control text-foreground hover:bg-surface-muted',
         (off || busy) && 'cursor-not-allowed opacity-60',

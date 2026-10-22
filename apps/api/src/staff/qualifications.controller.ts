@@ -159,14 +159,21 @@ export class QualificationsController {
     return { ok: true };
   }
 
-  /** Everybody âmbar, vermelho or em falta — worst first. */
+  /**
+   * Everybody âmbar, vermelho or em falta — worst first. `certificate=missing`
+   * narrows it to records with no certificate on file (POOLSE-97); any other
+   * value is the whole list, as an unknown filter should be.
+   */
   @Get('qualifications/expiring')
   async expiring(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('certificate') certificate?: string,
   ): Promise<Paginated<ExpiringRow>> {
     requireRole(...MANAGERS);
-    return listExpiring(currentTenant().organizationId, readPageQuery(page, limit));
+    return listExpiring(currentTenant().organizationId, readPageQuery(page, limit), {
+      withoutCertificate: certificate === 'missing',
+    });
   }
 }
 

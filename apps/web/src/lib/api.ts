@@ -4592,6 +4592,9 @@ export interface PersonQualifications {
 export interface ExpiringQualification extends Standing {
   membershipId: string;
   personName: string | null;
+  /** The record's certificate, read through `/files/:id`; null for none and for em falta — POOLSE-97. */
+  documentFileId: string | null;
+  documentName: string | null;
 }
 
 export interface QualificationsWidgetData {

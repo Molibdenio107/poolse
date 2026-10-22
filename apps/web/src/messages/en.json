@@ -4397,6 +4397,16 @@
     }
   },
   "qualifications": {
+    "certificate": {
+      "filterLabel": "Certificates",
+      "allFilter": "All",
+      "missingFilter": "No certificate",
+      "noneMissing": "Every qualification on this list has its certificate.",
+      "download": "Certificate",
+      "downloadLabel": "Download {name}'s certificate — {type}",
+      "attach": "Attach",
+      "attachLabel": "Attach {name}'s certificate — {type}"
+    },
     "title": "Qualifications",
     "subtitle": "Who holds which qualifications, and until when. Green is current, amber expires soon, red has expired.",
     "badge": "Qualifications need attention",

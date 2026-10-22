@@ -26,6 +26,7 @@ import { OccupancyController } from '../facilities/occupancy.controller.js';
 import { PartnersController } from '../facilities/partners.controller.js';
 import { SlotsController } from '../facilities/slots.controller.js';
 import { AttachmentsController } from '../files/attachments.controller.js';
+import { QualificationsController } from '../staff/qualifications.controller.js';
 import { FilesController } from '../files/files.controller.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
@@ -757,6 +758,16 @@ test('file uploads and attachments refuse a guardian and a student (403)', async
       new AttachmentsController().qualificationDocument(NO_SUCH_ID, { fileId: NO_SUCH_ID }),
     );
     await refused('PUT settings/logo', 403, () => new AttachmentsController().setLogo({ fileId: null }));
+  });
+});
+
+test('the qualifications list and its certificate filter refuse a guardian and a student (403) — POOLSE-97', async () => {
+  await asEach(async () => {
+    const qualifications = new QualificationsController();
+    await refused('GET qualifications/expiring', 403, () => qualifications.expiring());
+    await refused('GET qualifications/expiring?certificate=missing', 403, () =>
+      qualifications.expiring(undefined, undefined, 'missing'),
+    );
   });
 });
 

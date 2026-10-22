@@ -4397,6 +4397,16 @@
     }
   },
   "qualifications": {
+    "certificate": {
+      "filterLabel": "Certificados",
+      "allFilter": "Todas",
+      "missingFilter": "Sem certificado",
+      "noneMissing": "Todas as qualificações desta lista têm certificado.",
+      "download": "Certificado",
+      "downloadLabel": "Descarregar o certificado de {name} — {type}",
+      "attach": "Anexar",
+      "attachLabel": "Anexar o certificado de {name} — {type}"
+    },
     "title": "Qualificações",
     "subtitle": "Quem tem que qualificações e até quando. Verde está em dia, âmbar expira em breve, vermelho expirou.",
     "badge": "Há qualificações a tratar",

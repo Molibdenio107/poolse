@@ -59,6 +59,24 @@ export interface PersonQualifications {
 export interface ExpiringRow extends Standing {
   membershipId: string;
   personName: string | null;
+  /**
+   * The record's certificate, served by `GET /files/:id` under its own read
+   * rule — POOLSE-97. Null when none is on file, and always for *em falta*,
+   * which has no record to carry one.
+   */
+  documentFileId: string | null;
+  /** The file's own name, so a download is called what was uploaded. */
+  documentName: string | null;
+}
+
+/** What the attention list can be narrowed to. */
+export interface ExpiringFilter {
+  /**
+   * Only records with no certificate on file — POOLSE-97 *Sem certificado*.
+   * An *em falta* row is not one: it has no record to attach a scan to, and
+   * what is missing there is the qualification itself.
+   */
+  withoutCertificate?: boolean;
 }
 
 /** Type input, already validated by the controller. */
@@ -396,16 +414,20 @@ interface ExpiringDbRow {
   qualification_id: string | null;
   expires_on: Date | null;
   issuing_body: string | null;
+  document_file_id: string | null;
+  document_name: string | null;
 }
 
 /**
  * Everybody amber or red, worst first — expired by how long ago, then amber by
  * how soon — and then the instructors missing a required type. One statement,
- * paged inside it.
+ * paged inside it, the certificate joined in and the filter applied before the
+ * LIMIT, so page 2 of *Sem certificado* is page 2 of that list (POOLSE-97).
  */
 export async function listExpiring(
   organizationId: string,
   page: PageQuery,
+  filter: ExpiringFilter = {},
 ): Promise<Paginated<ExpiringRow>> {
   return withOrg(organizationId, (tx) =>
     windowed(
@@ -431,13 +453,18 @@ export async function listExpiring(
            )
            SELECT f.membership_id, person_name(f.membership_id) AS person_name,
                   f.type_id, t.name AS type_name, f.status, f.qualification_id,
-                  f.expires_on, f.issuing_body, ${TOTAL_COUNT}
+                  f.expires_on, f.issuing_body,
+                  q.document_file_id, sf.original_name AS document_name, ${TOTAL_COUNT}
              FROM flagged f
              JOIN qualification_type t ON t.id = f.type_id
+             LEFT JOIN qualification q ON q.id = f.qualification_id
+             LEFT JOIN stored_file sf ON sf.id = q.document_file_id AND sf.archived_at IS NULL
+            WHERE NOT $3::boolean
+               OR (f.qualification_id IS NOT NULL AND q.document_file_id IS NULL)
             ORDER BY CASE f.status WHEN 'red' THEN 0 WHEN 'amber' THEN 1 ELSE 2 END,
                      f.expires_on NULLS LAST, lower(t.name), f.membership_id
             LIMIT $1 OFFSET $2`,
-          [limit, offset],
+          [limit, offset, filter.withoutCertificate === true],
         ),
       (row: ExpiringDbRow): ExpiringRow => ({
         membershipId: row.membership_id,
@@ -448,6 +475,8 @@ export async function listExpiring(
         qualificationId: row.qualification_id,
         expiresOn: day(row.expires_on),
         issuingBody: row.issuing_body,
+        documentFileId: row.document_file_id,
+        documentName: row.document_name,
       }),
     ),
   );
