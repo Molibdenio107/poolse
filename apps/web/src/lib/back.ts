@@ -51,37 +51,85 @@ const APP_ROOT = '/dashboard';
  */
 const LABELS: readonly (readonly [string, string])[] = [
   ['/dashboard/facilities/staff/vacations', 'vacations.backToVacations'],
+  ['/dashboard/facilities/staff/qualifications', 'back.toQualifications'],
+  ['/dashboard/facilities/staff/salaries', 'back.toSalaries'],
   ['/dashboard/facilities/staff', 'staff.backToStaff'],
   ['/dashboard/facilities/inventory', 'inventory.backToInventory'],
+  ['/dashboard/facilities/incidents', 'incidents.backToList'],
+  ['/dashboard/facilities/lifeguards', 'back.toLifeguards'],
+  ['/dashboard/facilities/tasks', 'back.toTask'],
+  ['/dashboard/facilities/spaces', 'back.toSpace'],
+  ['/dashboard/facilities/partners', 'back.toPartner'],
   ['/dashboard/facilities/energy', 'energy.backToMeter'],
   ['/dashboard/facilities/pools', 'facilities.backToFacilities'],
   ['/dashboard/facilities', 'facilities.backToSites'],
   ['/dashboard/energy', 'energy.backToEnergy'],
   ['/dashboard/students/guardians', 'students.backToGuardians'],
+  ['/dashboard/students/pedidos', 'back.toRequests'],
+  ['/dashboard/students/messages', 'back.toMessages'],
+  ['/dashboard/students/provas/minimos', 'back.toStandards'],
+  ['/dashboard/students/provas', 'back.toMeets'],
+  ['/dashboard/students/levels', 'back.toLevels'],
+  ['/dashboard/students/advancement', 'back.toAdvancement'],
   ['/dashboard/students', 'students.backToRegister'],
+  ['/dashboard/classes/reposicoes', 'back.toMakeups'],
+  ['/dashboard/classes/seasons', 'back.toSeasons'],
   ['/dashboard/classes', 'classes.backToClasses'],
+  ['/dashboard/calendar/closures', 'back.toClosures'],
+  ['/dashboard/calendar/sessions', 'back.toLesson'],
   ['/dashboard/calendar', 'calendar.backToCalendar'],
+  ['/dashboard/faturacao', 'invoices.backToList'],
+  ['/dashboard/rececao', 'back.toReception'],
+  ['/dashboard/arquivados', 'back.toArchive'],
+  ['/dashboard/family', 'family.back'],
+  ['/dashboard/profile/subscription', 'back.toSubscription'],
+  ['/dashboard/profile', 'back.toProfile'],
   ['/dashboard', 'common.backToDashboard'],
 ];
 
 /**
- * A specific site, as opposed to the list of them.
+ * One record, as opposed to the list it sits in.
  *
  * `/dashboard/facilities/<id>` and `/dashboard/facilities` share a prefix and
  * mean different things, and the prefix table cannot tell them apart on length
  * alone. Anything with one more segment that is not a known sub-section is a
- * site.
+ * record — so a sub-section missing from its set is announced as a record,
+ * which is how a task once read "Voltar à instalação" (POOLSE-91).
  */
-const SUBSECTIONS = new Set(['staff', 'pools', 'inventory', 'energy', 'new']);
+const RECORDS: readonly (readonly [string, ReadonlySet<string>, string])[] = [
+  [
+    '/dashboard/facilities',
+    new Set([
+      'staff', 'pools', 'inventory', 'energy', 'new', 'tasks', 'spaces',
+      'incidents', 'lifeguards', 'partners',
+    ]),
+    'facilities.backToSite',
+  ],
+  [
+    '/dashboard/students',
+    new Set([
+      'guardians', 'pedidos', 'messages', 'provas', 'levels', 'advancement',
+      'import', 'export', 'new',
+    ]),
+    'back.toStudent',
+  ],
+  ['/dashboard/classes', new Set(['reposicoes', 'seasons', 'new']), 'back.toClass'],
+  ['/dashboard/faturacao', new Set<string>(), 'back.toInvoice'],
+];
 
-function isFacilityDetail(path: string): boolean {
-  const rest = path.slice('/dashboard/facilities/'.length).split(/[/?]/)[0] ?? '';
-  return path.startsWith('/dashboard/facilities/') && rest !== '' && !SUBSECTIONS.has(rest);
+function recordKey(path: string): string | null {
+  for (const [section, subsections, key] of RECORDS) {
+    if (!path.startsWith(`${section}/`)) continue;
+    const rest = path.slice(section.length + 1).split(/[/?]/)[0] ?? '';
+    if (rest !== '' && !subsections.has(rest)) return key;
+  }
+  return null;
 }
 
 /** The i18n key naming this destination. Never throws; falls back to "Voltar". */
 export function backLabelKey(href: string): string {
-  if (isFacilityDetail(href)) return 'facilities.backToSite';
+  const record = recordKey(href);
+  if (record !== null) return record;
 
   for (const [prefix, key] of LABELS) {
     if (href === prefix || href.startsWith(`${prefix}/`) || href.startsWith(`${prefix}?`)) {
@@ -135,12 +183,96 @@ export function backTarget(from: string | undefined, fallback: string): BackTarg
 }
 
 /**
+ * Voltar for a page the main menu opens (POOLSE-91, Rui 22-10-2026): shown only
+ * when the page was linked into with a usable origin, and absent otherwise —
+ * a menu destination reached from the menu has nowhere to go back to.
+ */
+export function originBack(from: string | undefined): BackTarget | undefined {
+  const origin = readFrom(from);
+  return origin === null ? undefined : { href: origin, labelKey: backLabelKey(origin) };
+}
+
+/**
+ * `back` as `PageShell` and `DetailPage` take it: the label translated by the
+ * page's own `t`, since this module never sees a translator. Undefined stays
+ * undefined, which is a menu page reached from the menu.
+ */
+export function backProp(target: BackTarget, t: (key: string) => string): { href: string; label: string };
+export function backProp(
+  target: BackTarget | undefined,
+  t: (key: string) => string,
+): { href: string; label: string } | undefined;
+export function backProp(
+  target: BackTarget | undefined,
+  t: (key: string) => string,
+): { href: string; label: string } | undefined {
+  return target === undefined ? undefined : { href: target.href, label: t(target.labelKey) };
+}
+
+/**
+ * The page somebody is on, path and query, as a `from` value.
+ *
+ * The query is the point: the tab, the section, the page and the filters are
+ * the context Voltar has to bring back. It keeps the page's own `from`, which
+ * is what makes a chain walk back one hop at a time.
+ */
+export function currentHref(
+  path: string,
+  params: Record<string, string | string[] | undefined> | URLSearchParams,
+): string {
+  const query =
+    params instanceof URLSearchParams ? new URLSearchParams(params) : new URLSearchParams();
+  if (!(params instanceof URLSearchParams)) {
+    for (const [name, value] of Object.entries(params)) {
+      if (value === undefined) continue;
+      for (const one of Array.isArray(value) ? value : [value]) query.append(name, one);
+    }
+  }
+  const search = query.toString();
+  return search === '' ? path : `${path}?${search}`;
+}
+
+/**
+ * Past this length a chain forgets its oldest hops. Each hop nests the last
+ * one's `from`, encoded again, so A → B → A → B… would grow a URL without
+ * bound; dropping the origin's own `from` keeps the hop that matters — the
+ * page somebody just left — and loses only the way back from there.
+ */
+const MAX_FROM = 1500;
+
+function trimmed(from: string): string {
+  if (from.length <= MAX_FROM) return from;
+  const at = from.indexOf('?');
+  if (at < 0) return from;
+  const query = new URLSearchParams(from.slice(at + 1));
+  query.delete('from');
+  const search = query.toString();
+  return search === '' ? from.slice(0, at) : `${from.slice(0, at)}?${search}`;
+}
+
+/**
  * Stamps a link with where it is being followed from.
  *
- * Only for links that cross into another section — a link within a section
- * already lands somewhere whose default parent is right, and a `from` on every
- * link in the app would put a query string on screens that never needed one.
+ * Every link that opens a record or another section carries it (POOLSE-91);
+ * a link that only changes the page's own query — a tab, a page, a filter —
+ * does not, and keeps the `from` the page already has instead.
  */
 export function withFrom(href: string, from: string): string {
-  return `${href}${href.includes('?') ? '&' : '?'}from=${encodeURIComponent(from)}`;
+  return `${href}${href.includes('?') ? '&' : '?'}from=${encodeURIComponent(trimmed(from))}`;
+}
+
+/** The href a link should really point at, given the page it sits on. */
+export function stampFrom(href: string, pathname: string, search: URLSearchParams): string {
+  if (!href.startsWith('/dashboard') || /[?&]from=/.test(href)) return href;
+
+  // The same page with another query — a tab, a page of results, a filter.
+  // This page is not its own origin; it hands on the origin it was given, so
+  // paging through a list reached from a site keeps its way back to the site.
+  const path = href.split(/[?#]/)[0];
+  if (path === pathname) {
+    const from = search.get('from');
+    return from === null ? href : withFrom(href, from);
+  }
+
+  return withFrom(href, currentHref(pathname, search));
 }

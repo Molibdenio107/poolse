@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
 import { WeekGrid, type WeekEntry } from '@/components/week-grid';
 import { addDays, mondayOf, today } from '@/lib/dates';
@@ -14,7 +14,7 @@ import { FamilyPlans } from './family-plans';
 /**
  * "This student's week", stepping without reloading the page — round 6.
  *
- * The stepper used to be three `<Link>`s to `?week=…`, which is the right idea
+ * The stepper used to be three `<FromLink>`s to `?week=…`, which is the right idea
  * carried one level too far: the week genuinely belongs in the URL, but a link
  * re-runs the whole route to get it there. The student page fetches five things,
  * so stepping one week re-fetched the record, the register, the timetable and
@@ -186,9 +186,9 @@ export function StudentWeek({
             ) : (
               <>
                 {t('students.noSessionsHint')}{' '}
-                <Link href="/dashboard/calendar" className="text-primary hover:underline">
+                <FromLink href="/dashboard/calendar" className="text-primary hover:underline">
                   {t('calendar.title')}
-                </Link>
+                </FromLink>
               </>
             )}
           </p>

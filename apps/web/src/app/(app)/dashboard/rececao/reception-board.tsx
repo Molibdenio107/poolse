@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
 import { LogOut, Ticket, Undo2, Waves } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
@@ -105,13 +105,13 @@ export function ReceptionBoard({
       {reception.products.length === 0 ? (
         <p className="rounded border border-border bg-surface-muted p-4 text-sm text-foreground-muted">
           {t('reception.noProducts')}{' '}
-          <Link
+          <FromLink
             // Straight to the Natação livre section, not the tab's first one.
             href={`/dashboard/facilities/${facilityId}?tab=prices&section=freeSwim`}
             className="text-primary underline underline-offset-2"
           >
             {t('reception.noProductsLink')}
-          </Link>
+          </FromLink>
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

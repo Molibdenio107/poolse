@@ -1,7 +1,8 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
+import { backProp, originBack } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { readReception } from './reception.actions';
 import { ReceptionBoard } from './reception-board';
@@ -20,10 +21,11 @@ import { ReceptionBoard } from './reception-board';
 export default async function ReceptionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ site?: string }>;
+  searchParams: Promise<{ site?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { site: requested = '' } = await searchParams;
+  const { site: requested = '', from } = await searchParams;
+  const back = originBack(from);
 
   const sites = await outcome(apiFetch<Facilities>('/facilities'));
   if (sites.state !== 'ok' || sites.data.facilities.length === 0) {
@@ -47,12 +49,12 @@ export default async function ReceptionPage({
   const reception = await readReception(chosen.id);
 
   return (
-    <PageShell title={t('reception.title')} subtitle={t('reception.hint')}>
+    <PageShell title={t('reception.title')} subtitle={t('reception.hint')} back={backProp(back, t)}>
       <div className="flex flex-col gap-6">
         {list.length > 1 && (
           <nav aria-label={t('reception.sites')} className="flex flex-wrap gap-2">
             {list.map((site) => (
-              <Link
+              <FromLink
                 key={site.id}
                 href={`/dashboard/rececao?site=${site.id}`}
                 aria-current={site.id === chosen.id ? 'page' : undefined}
@@ -63,7 +65,7 @@ export default async function ReceptionPage({
                 }
               >
                 {site.name}
-              </Link>
+              </FromLink>
             ))}
           </nav>
         )}

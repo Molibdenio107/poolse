@@ -842,6 +842,8 @@ place this bites; get it right once in the scheduling layer.
 task) — never `new Date(raw)` on a UTC server. In SQL, a day is `club_today()`, never
 `current_date`, including column defaults. 13-10-2026 sweep.
 
+**Voltar goes back to where you came from, and every in-app link is a `FromLink`.** POOLSE-91 (Rui, 22-10-2026). `components/from-link.tsx` stamps the current path and query as `?from=` on a link to another page, and carries the page's own `from` on a link to itself (a tab, a page, a filter). A record or form page sets `back` with `backProp(backTarget(from, parent), t)`; a page the sidebar opens uses `originBack(from)` and has **no** Voltar when opened from the menu. A new destination earns a label in `LABELS` / `RECORDS` in `lib/back.ts`. A plain `Link` is left only where the link *is* a way back or a menu entry (`BackLink`, the sidebar, a wizard's closing button). `docs/features/navigation.md`.
+
 **A record's page uses `DetailPage`; one card is one tab, and the first is General.** The tab
 is `?tab=<slug>`; each tab's `content` is a function and only the active one is called, so a
 tab nobody opens costs nothing — except a list whose null-on-refusal decides whether its tab

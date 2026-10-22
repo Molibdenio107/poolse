@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Me, type MessageDetail } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backTarget } from '@/lib/back';
 import { formatStamp } from '@/lib/date-format';
 import { PageError, PageShell, ScrollX } from '@/components/page-shell';
 import { DetailPage } from '@/components/detail-page';
@@ -24,11 +25,13 @@ export default async function MessagePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { id } = await params;
-  const { tab } = await searchParams;
+  const { tab, from } = await searchParams;
+  const target = backTarget(from, '/dashboard/students/messages');
+  const back = { href: target.href, label: t(target.labelKey) };
 
   let message: MessageDetail | null = null;
   let organizationId = '';
@@ -54,7 +57,7 @@ export default async function MessagePage({
     return (
       <PageShell
         title={t('messages.title')}
-        back={{ href: '/dashboard/students/messages', label: t('messages.backToList') }}
+        back={back}
       >
         {failure !== null && (
           <PageError
@@ -72,7 +75,7 @@ export default async function MessagePage({
   return (
     <DetailPage
       title={loaded.subject}
-      back={{ href: '/dashboard/students/messages', label: t('messages.backToList') }}
+      back={back}
       actions={
         loaded.canArchive ? (
           <ArchiveMessage organizationId={organizationId} messageId={loaded.id} />

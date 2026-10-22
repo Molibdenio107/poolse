@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { EntityIcon, type EntityKind } from '@/components/entity-icon';
 import { cn } from '@/lib/utils';
 
@@ -33,7 +33,7 @@ export function ActionButton({
   className?: string;
 }): React.ReactElement {
   return (
-    <Link
+    <FromLink
       href={href}
       className={cn(
         'inline-flex h-control items-center justify-center gap-2 rounded border px-4 text-control font-medium transition-colors',
@@ -49,6 +49,6 @@ export function ActionButton({
     >
       <EntityIcon kind={icon} />
       {label}
-    </Link>
+    </FromLink>
   );
 }

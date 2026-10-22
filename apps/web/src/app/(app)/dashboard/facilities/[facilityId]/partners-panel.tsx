@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
 import { Download, Plus, Printer, Upload } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
@@ -9,7 +9,6 @@ import { formatCents } from '@/lib/money';
 import type { PartnerRow, PartnerType } from '@/lib/api';
 import { SelectField, TextField } from '@/components/ui/field';
 import { PartnerImportWizard } from './partner-import-wizard';
-import { withFrom } from '@/lib/back';
 import type { FormState } from '../../actions';
 import { savePartnerAction } from './partners.actions';
 
@@ -282,11 +281,8 @@ export function PartnersPanel({
               {partners.map((partner) => (
                 <tr key={partner.id}>
                   <td className="py-2 pr-4">
-                    <Link
-                      href={withFrom(
-                        `/dashboard/facilities/partners/${partner.id}`,
-                        `/dashboard/facilities/${facilityId}`,
-                      )}
+                    <FromLink
+                      href={`/dashboard/facilities/partners/${partner.id}`}
                       className="inline-flex items-center gap-2 rounded font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       {/*
@@ -301,7 +297,7 @@ export function PartnersPanel({
                         style={{ backgroundColor: partner.color }}
                       />
                       {partner.name}
-                    </Link>
+                    </FromLink>
                   </td>
 
                   <td className="py-2 pr-4 text-foreground-muted">

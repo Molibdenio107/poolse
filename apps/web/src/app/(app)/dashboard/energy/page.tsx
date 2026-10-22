@@ -1,8 +1,8 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { apiFetch, type Facilities } from '@/lib/api';
-import { withFrom } from '@/lib/back';
+import { backProp, originBack } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PageError, PageShell } from '@/components/page-shell';
 import { EnergyPanel } from '../facilities/energy-panel';
@@ -33,8 +33,13 @@ import { dataOf } from '@/lib/load-failure';
  * new club has somewhere to land. The panel on each site's page stays, for a
  * technician who is already looking at the site.
  */
-export default async function EnergyPage(): Promise<React.ReactElement> {
+export default async function EnergyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const back = originBack((await searchParams).from);
 
   let sites: Facilities | null = null;
   let failure: LoadFailure | null = null;
@@ -73,6 +78,7 @@ export default async function EnergyPage(): Promise<React.ReactElement> {
 
   return (
     <PageShell
+      back={backProp(back, t)}
       title={t('energy.title')}
       subtitle={t('energy.subtitle')}
       actions={<EntityIcon kind="energy" className="size-6 text-primary" />}
@@ -107,12 +113,12 @@ export default async function EnergyPage(): Promise<React.ReactElement> {
         >
           <h2 className="flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-foreground-muted">
             <EntityIcon kind="facility" />
-            <Link
-              href={withFrom(`/dashboard/facilities/${site.id}`, '/dashboard/energy')}
+            <FromLink
+              href={`/dashboard/facilities/${site.id}`}
               className="hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {site.name}
-            </Link>
+            </FromLink>
           </h2>
 
           {/*
@@ -123,7 +129,7 @@ export default async function EnergyPage(): Promise<React.ReactElement> {
           {list === null ? (
             <p className="text-sm text-foreground-muted">{t('energy.siteUnavailable')}</p>
           ) : (
-            <EnergyPanel facilityId={site.id} list={list} backTo="/dashboard/energy" />
+            <EnergyPanel facilityId={site.id} list={list} />
           )}
         </section>
       ))}

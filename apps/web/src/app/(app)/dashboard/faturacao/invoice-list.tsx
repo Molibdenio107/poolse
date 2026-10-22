@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { formatCents } from '@/lib/money';
 import type { Invoice } from '@/lib/api';
@@ -67,12 +67,12 @@ export function InvoiceList({
               {invoices.map((invoice) => (
                 <tr key={invoice.id}>
                   <td className="py-3">
-                    <Link
+                    <FromLink
                       href={`/dashboard/faturacao/${invoice.id}?facilityId=${facilityId}`}
                       className="font-medium text-primary hover:underline"
                     >
                       {invoice.documentNo}
-                    </Link>
+                    </FromLink>
                     {/*
                       Both states said in words, never by colour alone: a credit
                       note and a credited invoice are two different documents and

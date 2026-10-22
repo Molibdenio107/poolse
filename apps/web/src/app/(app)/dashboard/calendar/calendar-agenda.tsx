@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import { Ban, Check, ChevronRight, Lock, MoveRight, UserRound } from 'lucide-react';
 import type { CalendarClosure, CalendarSession } from '@/lib/api';
@@ -59,7 +59,7 @@ export async function CalendarAgenda({
           const count = sessions.filter((session) => session.localDate === date && session.status !== 'cancelled').length;
           const chosen = date === day;
           return (
-            <Link
+            <FromLink
               key={date}
               href={`/dashboard/calendar?week=${monday}&day=${date}`}
               scroll={false}
@@ -74,7 +74,7 @@ export async function CalendarAgenda({
               <span>{t(`weekShort.${index + 1}`)}</span>
               <span className="tabular-nums">{date.slice(8, 10)}</span>
               <span className={cn('text-xs tabular-nums', count === 0 ? 'text-foreground-muted' : '')}>{count}</span>
-            </Link>
+            </FromLink>
           );
         })}
       </nav>
@@ -175,7 +175,7 @@ function AgendaCard({
   return href === null ? (
     <div className={card}>{body}</div>
   ) : (
-    <Link
+    <FromLink
       href={href}
       className={cn(
         card,
@@ -183,7 +183,7 @@ function AgendaCard({
       )}
     >
       {body}
-    </Link>
+    </FromLink>
   );
 }
 

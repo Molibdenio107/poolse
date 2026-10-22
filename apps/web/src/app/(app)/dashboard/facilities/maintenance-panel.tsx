@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, CalendarClock, Check, PauseCircle, Plus } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { timeAgo } from '@/lib/relative-time';
-import { withFrom } from '@/lib/back';
 import type { MaintenanceTask, TaskList, TaskOption, TaskTarget } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
@@ -145,15 +144,12 @@ export function MaintenancePanel({
             <li key={task.id} className="flex flex-col gap-2 p-3">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <span className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={withFrom(
-                      `/dashboard/facilities/tasks/${task.id}`,
-                      `/dashboard/facilities/${facilityId}`,
-                    )}
+                  <FromLink
+                    href={`/dashboard/facilities/tasks/${task.id}`}
                     className="font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {task.title}
-                  </Link>
+                  </FromLink>
                   <StateBadge
                     state={task.state}
                     label={

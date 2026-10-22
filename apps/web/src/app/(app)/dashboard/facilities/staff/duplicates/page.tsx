@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backTarget } from '@/lib/back';
 import { getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -30,10 +31,11 @@ import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 export default async function DuplicatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, from } = await searchParams;
+  const back = backTarget(from, '/dashboard/facilities/staff');
   const page = readPage(pageParam);
 
   let report: Paginated<MergeCandidate> | null = null;
@@ -72,7 +74,7 @@ export default async function DuplicatesPage({
     <PageShell
       title={t('people.duplicates')}
       subtitle={t('people.duplicatesSubtitle')}
-      back={{ href: "/dashboard/facilities/staff", label: t('staff.backToStaff') }}
+      back={{ href: back.href, label: t(back.labelKey) }}
     >
 
 

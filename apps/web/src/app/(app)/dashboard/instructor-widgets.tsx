@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import { AlertTriangle, Ban, Check, ClipboardCheck } from 'lucide-react';
 import type {
@@ -11,7 +11,6 @@ import type {
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/date-format';
 import { laneLabel } from '@/lib/lanes';
-import { withFrom } from '@/lib/back';
 import { WidgetCard } from './widget-card';
 import { CopyPlanButton } from './copy-plan-button';
 
@@ -133,13 +132,13 @@ export async function NextClassCard({
             </p>
           ) : (
             data.registerOpen && (
-              <Link
-                href={withFrom(`/dashboard/calendar/sessions/${data.sessionId}`, '/dashboard')}
+              <FromLink
+                href={`/dashboard/calendar/sessions/${data.sessionId}`}
                 className={ACTION_BUTTON}
               >
                 <ClipboardCheck className="size-4" aria-hidden="true" />
                 {t('attendance.mark')}
-              </Link>
+              </FromLink>
             )
           )}
         </>
@@ -181,12 +180,12 @@ export async function WeekCard({ widget }: { widget: DashboardWidget }): Promise
                 <span className="text-xs uppercase tracking-wider text-foreground-muted">
                   {dayPhrase(t, one)} · {one.localTime}
                 </span>
-                <Link
-                  href={withFrom(lessonHref(one), '/dashboard')}
+                <FromLink
+                  href={lessonHref(one)}
                   className={cn(LINK, one.cancelled && 'line-through')}
                 >
                   {one.className}
-                </Link>
+                </FromLink>
                 {one.poolName !== null && <span>{one.poolName}</span>}
                 {/* Each state in words with its icon — never the strike or the colour alone. */}
                 {one.cancelled ? (
@@ -309,9 +308,9 @@ export async function MyTurmasCard({
           <ul className="flex flex-col gap-1.5 text-sm">
             {data.turmas.map((turma) => (
               <li key={turma.id} className="flex items-baseline justify-between gap-3">
-                <Link href={withFrom(`/dashboard/classes/${turma.id}`, '/dashboard')} className={LINK}>
+                <FromLink href={`/dashboard/classes/${turma.id}`} className={LINK}>
                   {turma.name}
-                </Link>
+                </FromLink>
                 <span className="tabular-nums text-foreground-muted">
                   {turma.capacity === null
                     ? t('dashboard.widget.turmas.students', { students: turma.students })

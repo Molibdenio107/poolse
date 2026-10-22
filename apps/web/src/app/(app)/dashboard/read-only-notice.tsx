@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import { AlertTriangle } from 'lucide-react';
 import { formatDate } from '@/lib/date-format';
@@ -64,12 +64,12 @@ export async function ReadOnlyNotice({
       </div>
 
       {isOwner && (
-        <Link
+        <FromLink
           href="/dashboard/profile/subscription"
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('readOnly.pay')}
-        </Link>
+        </FromLink>
       )}
     </div>
   );

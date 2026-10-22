@@ -1,5 +1,6 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backTarget } from '@/lib/back';
 import { getTranslations } from 'next-intl/server';
 import {
   ApiError,
@@ -37,12 +38,12 @@ export default async function StaffMemberPage({
   searchParams,
 }: {
   params: Promise<{ membershipId: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { membershipId } = await params;
   const storageReady = await storageConfigured();
-  const { tab } = await searchParams;
+  const { tab, from } = await searchParams;
 
   let staff: StaffRecord | null = null;
   let people: People | null = null;
@@ -64,7 +65,8 @@ export default async function StaffMemberPage({
   // The full legal name: this is a record, not a row — POOLSE-32 criterion 3.
   const name = staff?.displayName ?? '';
 
-  const back = { href: '/dashboard/facilities/staff', label: t('staff.backToStaff') };
+  const target = backTarget(from, '/dashboard/facilities/staff');
+  const back = { href: target.href, label: t(target.labelKey) };
 
   if (staff === null || people === null) {
     return (
@@ -119,12 +121,12 @@ export default async function StaffMemberPage({
               {record.studentId !== null && (
                 <p className="text-sm text-foreground-muted">
                   {t('staff.alsoAStudent')}{' '}
-                  <Link
+                  <FromLink
                     href={`/dashboard/students/${record.studentId}`}
                     className="text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('staff.openStudentRecord')}
-                  </Link>
+                  </FromLink>
                 </p>
               )}
 

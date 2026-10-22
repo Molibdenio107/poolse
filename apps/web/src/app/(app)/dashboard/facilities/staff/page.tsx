@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -8,7 +8,7 @@ import { PersonAvatar } from '@/components/person-avatar';
 import { BirthdayFlag } from '@/components/birthday-flag';
 import { RoleBadge, RoleBadges } from '@/components/role-badge';
 import { STAFF_ROLES } from '@/lib/roles';
-import { backTarget } from '@/lib/back';
+import { backProp, originBack } from '@/lib/back';
 import { Pagination } from '@/components/pagination';
 import { SearchInput, SearchStatus } from '@/components/search-input';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
@@ -74,11 +74,11 @@ export default async function PeoplePage({
    *
    * A facility's people counts link straight into this list, and the fixed
    * "Voltar ao painel" then dropped somebody two screens from the site they were
-   * reading. Arrive here any other way and there is no `from`, so this is
-   * `/dashboard` exactly as before. Validated in `lib/back.ts`: an unchecked
-   * back target is an open redirect.
+   * reading. Arrive here any other way — the menu — and there is no `from`, so
+   * there is no Voltar either (POOLSE-91). Validated in `lib/back.ts`: an
+   * unchecked back target is an open redirect.
    */
-  const back = backTarget(from, '/dashboard');
+  const back = originBack(from);
 
   let people: People | null = null;
   let failure: LoadFailure | null = null;
@@ -133,13 +133,13 @@ export default async function PeoplePage({
     <PageShell
       title={t('staff.title')}
       subtitle={t('staff.subtitle')}
-      back={{ href: back.href, label: t(back.labelKey) }}
-      actions={<Link
+      back={backProp(back, t)}
+      actions={<FromLink
           href="/dashboard/facilities/staff/duplicates"
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('people.duplicates')}
-        </Link>}
+        </FromLink>}
     >
 
       {noOrganization && (
@@ -246,7 +246,7 @@ export default async function PeoplePage({
                 {ROLES.map((staffRole) => {
                   const active = role === staffRole;
                   return (
-                    <Link
+                    <FromLink
                       key={staffRole}
                       href={active ? '/dashboard/facilities/staff' : `/dashboard/facilities/staff?role=${staffRole}`}
                       aria-pressed={active}
@@ -257,7 +257,7 @@ export default async function PeoplePage({
                       }`}
                     >
                       {t(`roles.${staffRole}`)} {people.counts.byRole[staffRole] ?? 0}
-                    </Link>
+                    </FromLink>
                   );
                 })}
               </div>
@@ -281,21 +281,21 @@ export default async function PeoplePage({
               <div className="flex flex-col items-start gap-1 py-2">
                 <p>{t('search.noResults', { term })}</p>
                 <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
-                <Link
+                <FromLink
                   href={role === null ? '/dashboard/facilities/staff' : `/dashboard/facilities/staff?role=${role}`}
                   className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   {t('search.clearSearch')}
-                </Link>
+                </FromLink>
               </div>
             )}
 
             {role !== null && (
               <p className="mb-4 flex flex-wrap items-center gap-3 text-sm">
                 <RoleBadge role={role} />
-                <Link href="/dashboard/facilities/staff" className="text-primary hover:underline">
+                <FromLink href="/dashboard/facilities/staff" className="text-primary hover:underline">
                   {t('people.showAll')}
-                </Link>
+                </FromLink>
               </p>
             )}
 
@@ -314,12 +314,12 @@ export default async function PeoplePage({
                     <div className="flex min-w-0 flex-col">
                       {/* The record is where a name is corrected — POOLSE-39. */}
                       <span className="flex min-w-0 flex-wrap items-center gap-2">
-                        <Link
+                        <FromLink
                           href={`/dashboard/facilities/staff/${member.membershipId}`}
                           className="truncate rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         >
                           {displayName(member) ?? t('account.noName')}
-                        </Link>
+                        </FromLink>
                         <BirthdayFlag birthDate={member.birthDate} />
                       </span>
                       {member.email !== null && (

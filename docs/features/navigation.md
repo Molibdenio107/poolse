@@ -124,6 +124,37 @@ it** — content passes under an opaque background while scrolling, without a di
 Three pages render a `BackLink` in their body rather than through the shell's prop; those
 never had one either.
 
+## Voltar goes back to where you came from
+
+POOLSE-91 (Rui, 22-10-2026). Voltar returns to the screen and the state the person left: the
+same tab, section, page of results and filters. A page opened from the main menu has **no**
+Voltar.
+
+- **Every in-app link is a `FromLink`** (`components/from-link.tsx`). It stamps the page it
+  sits on, path and query, as `?from=` on any link to another page. A link to the *same* page
+  (a tab, a page of results, a filter) instead carries this page's own `from` on, so paging
+  through a list keeps its way back. `ActionButton`, `WidgetCard`, `Pagination` and
+  `SectionPills` are `FromLink`s already.
+- **A destination reads it through `lib/back.ts`.** A record or form page uses
+  `backTarget(from, parent)`: the origin if it is valid, else its own parent. A page the
+  sidebar opens uses `originBack(from)`: Voltar only when it was linked into. `backProp`
+  turns either into the shell's `back`, with the label translated.
+- **Chains work hop by hop**, because the origin keeps its own `from`: dashboard → site →
+  task → Voltar → site, on its tab → Voltar → dashboard. Past 1,500 characters the oldest
+  hops are dropped, so a loop between two pages cannot grow a URL without end.
+- **`from` is untrusted.** `readFrom` accepts only a path inside `/dashboard`; anything else
+  falls back to the parent and never leaves the app.
+- **The label names the destination** for a screen reader ("Voltar às qualificações"),
+  from the `LABELS` and `RECORDS` tables in `lib/back.ts`. A new section adds a line there.
+- **Plain `Link`, on purpose:** `BackLink` itself, the menu (sidebar and user menu), the
+  closing button of the student and mínimos import wizards, the invoice's "back to
+  Faturação" link, and the crash page's way to the dashboard. Each of those *is* a way
+  back or a menu entry, and a `from` on it would point Voltar at the page being left.
+  Exports, downloads, print pages in a new tab, `mailto:`/`tel:` and external links take
+  no `from` either.
+- **After a form saves and redirects** (create, archive), the landing list has no `from`,
+  so Voltar never returns to the form.
+
 ## Detail pages are tabs
 
 A record's page — a site, a tank, a student, a turma — renders through `DetailPage`

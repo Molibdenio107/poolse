@@ -1,8 +1,9 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import { ChevronLeft, ChevronRight, TriangleAlert } from 'lucide-react';
 import { apiFetch, type Facilities, type LifeguardDuty, type RosterGap } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
+import { backProp, originBack } from '@/lib/back';
 import { APP_TIME_ZONE, formatDate, formatTime, wallClockNow } from '@/lib/date-format';
 import { addDays, isDate, isoWeekday, mondayOf, weekOf } from '@/lib/dates';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
@@ -38,10 +39,11 @@ const QUIET =
 export default async function LifeguardsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ site?: string; week?: string; pool?: string; view?: string }>;
+  searchParams: Promise<{ site?: string; week?: string; pool?: string; view?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { site: requested = '', week, pool: requestedPool, view: requestedView } = await searchParams;
+  const { site: requested = '', week, pool: requestedPool, view: requestedView, from } = await searchParams;
+  const back = originBack(from);
 
   // Today on the club's wall clock, not the server's — at 00:30 in Lisbon a
   // server on UTC would still be showing yesterday's week.
@@ -84,7 +86,7 @@ export default async function LifeguardsPage({
   };
 
   return (
-    <PageShell title={t('roster.title')} subtitle={t('roster.subtitle')}>
+    <PageShell title={t('roster.title')} subtitle={t('roster.subtitle')} back={backProp(back, t)}>
       <div className="flex flex-col gap-6">
         <SiteLinks
           sites={list}
@@ -149,18 +151,18 @@ export default async function LifeguardsPage({
                 aria-label={t('roster.weekNav')}
                 className="flex flex-wrap items-center gap-2"
               >
-                <Link href={weekHref(addDays(monday, -7))} className={QUIET}>
+                <FromLink href={weekHref(addDays(monday, -7))} className={QUIET}>
                   <ChevronLeft aria-hidden className="size-4" />
                   {t('roster.previousWeek')}
-                </Link>
-                <Link href={weekHref(addDays(monday, 7))} className={QUIET}>
+                </FromLink>
+                <FromLink href={weekHref(addDays(monday, 7))} className={QUIET}>
                   {t('roster.nextWeek')}
                   <ChevronRight aria-hidden className="size-4" />
-                </Link>
+                </FromLink>
                 {mondayOf(today) !== monday && (
-                  <Link href={weekHref(mondayOf(today))} className={QUIET}>
+                  <FromLink href={weekHref(mondayOf(today))} className={QUIET}>
                     {t('roster.thisWeek')}
-                  </Link>
+                  </FromLink>
                 )}
                 <span className="text-sm text-foreground-muted">
                   {t('roster.weekRange', {

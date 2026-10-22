@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type AudienceOptions, type Me } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backProp, backTarget } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { MessageComposer } from '../composer';
 
@@ -17,7 +18,7 @@ import { MessageComposer } from '../composer';
 export default async function NewMessagePage({
   searchParams,
 }: {
-  searchParams: Promise<{ audience?: string; targetId?: string; subject?: string }>;
+  searchParams: Promise<{ audience?: string; targetId?: string; subject?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const query = await searchParams;
@@ -45,7 +46,7 @@ export default async function NewMessagePage({
     <PageShell
       title={t('messages.new')}
       subtitle={t('messages.compose.subtitle')}
-      back={{ href: '/dashboard/students/messages', label: t('messages.backToList') }}
+      back={backProp(backTarget(query.from, '/dashboard/students/messages'), t)}
     >
       {notPermitted && (
         <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">

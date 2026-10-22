@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import type { TransferProposal } from '@/lib/api';
 import { confirmAdvancementAction, dismissAdvancementAction } from './advancement.actions';
 import { useToast } from '@/components/ui/toast';
@@ -51,12 +51,12 @@ export function ProposalCard({
   return (
     <li className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <Link
+        <FromLink
           href={`/dashboard/students/${proposal.studentId}`}
           className="font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {proposal.studentName}
-        </Link>
+        </FromLink>
         <span className="text-sm text-foreground-muted">
           {t('advancement.fromTo', {
             from: proposal.fromLevelName,

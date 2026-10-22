@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import {
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { ApprovalQueue } from './approval-queue';
 import { Pagination } from '@/components/pagination';
 import { readPage } from '@/lib/pagination';
+import { backProp, originBack } from '@/lib/back';
 import { MyVacations } from './my-vacations';
 import { TeamMap } from './team-map';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -36,10 +37,11 @@ function isTab(value: string | undefined): value is Tab {
 export default async function VacationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; year?: string; page?: string }>;
+  searchParams: Promise<{ tab?: string; year?: string; page?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { tab: rawTab, year: rawYear, page: rawPage } = await searchParams;
+  const { tab: rawTab, year: rawYear, page: rawPage, from } = await searchParams;
+  const back = originBack(from);
   const queuePage = readPage(rawPage);
 
   const tab: Tab = isTab(rawTab) ? rawTab : 'mine';
@@ -85,13 +87,8 @@ export default async function VacationsPage({
     <PageShell
       title={t('vacations.title')}
       subtitle={t('vacations.subtitle')}
-      // Staff is the office's; an instructor or maintenance came from the menu
-      // and goes back to the dashboard rather than to a page that refuses them.
-      back={
-        mine?.canApprove === false
-          ? { href: '/dashboard', label: t('common.backToDashboard') }
-          : { href: '/dashboard/facilities/staff', label: t('staff.backToStaff') }
-      }
+      // A menu page: Voltar only when it was linked into (POOLSE-91).
+      back={backProp(back, t)}
     >
 
 
@@ -137,7 +134,7 @@ export default async function VacationsPage({
             {tab !== 'queue' && (
               <nav aria-label={t('vacations.yearNav')} className="flex flex-wrap gap-1">
                 {years.map((option) => (
-                  <Link
+                  <FromLink
                     key={option}
                     href={`/dashboard/facilities/staff/vacations?tab=${tab}&year=${option}`}
                     aria-current={option === chosenYear ? 'page' : undefined}
@@ -150,7 +147,7 @@ export default async function VacationsPage({
                     )}
                   >
                     {option}
-                  </Link>
+                  </FromLink>
                 ))}
               </nav>
             )}
@@ -203,7 +200,7 @@ function TabLink({
   const active = tab === current;
 
   return (
-    <Link
+    <FromLink
       href={`/dashboard/facilities/staff/vacations?tab=${tab}&year=${year}`}
       aria-current={active ? 'page' : undefined}
       className={cn(
@@ -215,6 +212,6 @@ function TabLink({
       )}
     >
       {label}
-    </Link>
+    </FromLink>
   );
 }

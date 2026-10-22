@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, CalendarClock, Check, Circle } from 'lucide-react';
 import type {
@@ -24,7 +24,6 @@ import { cn } from '@/lib/utils';
 import { ConsumptionBars } from '@/components/consumption-bars';
 import { centsToText } from '@/lib/energy-invoice';
 import { formatDate } from '@/lib/date-format';
-import { withFrom } from '@/lib/back';
 import { WidgetCard } from './widget-card';
 import { QualificationStatus } from '@/components/qualification-status';
 import { MyTurmasCard, NextClassCard, TrainingPlanCard, WeekCard } from './instructor-widgets';
@@ -208,7 +207,7 @@ async function TasksCard({ widget }: { widget: DashboardWidget }): Promise<React
   const [first] = data?.tasks ?? [];
   const href =
     data !== null && !data.canOpenSite && first !== undefined
-      ? withFrom(`/dashboard/facilities/tasks/${first.id}`, '/dashboard')
+      ? `/dashboard/facilities/tasks/${first.id}`
       : sites.size === 1 && only !== undefined
         ? `/dashboard/facilities/${only}?tab=maintenance`
         : '/dashboard/facilities';
@@ -234,12 +233,12 @@ async function TasksCard({ widget }: { widget: DashboardWidget }): Promise<React
                 className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-3"
               >
                 <span className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={withFrom(`/dashboard/facilities/tasks/${task.id}`, '/dashboard')}
+                  <FromLink
+                    href={`/dashboard/facilities/tasks/${task.id}`}
                     className="text-sm font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {task.title}
-                  </Link>
+                  </FromLink>
 
                   {/* Icon and words together, never colour alone. */}
                   {task.state === 'due' ? (
@@ -314,12 +313,12 @@ async function ChecklistCard({ widget }: { widget: DashboardWidget }): Promise<R
               ) : (
                 <Circle className="size-4 shrink-0 text-foreground-muted" aria-hidden="true" />
               )}
-              <Link
-                href={withFrom(CHECKLIST_HREF[step.id], '/dashboard')}
+              <FromLink
+                href={CHECKLIST_HREF[step.id]}
                 className="text-sm hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t(`dashboard.widget.checklist.step.${step.id}`)}
-              </Link>
+              </FromLink>
               <span className="text-sm text-foreground-muted">
                 {step.done
                   ? t('dashboard.widget.checklist.done')
@@ -617,12 +616,12 @@ async function WaterCard({
           <ul className="flex flex-col gap-2">
             {data.flagged.map((pool) => (
               <li key={pool.poolId} className="flex flex-col gap-0.5 text-sm">
-                <Link
-                  href={withFrom(`/dashboard/facilities/pools/${pool.poolId}?tab=water`, '/dashboard')}
+                <FromLink
+                  href={`/dashboard/facilities/pools/${pool.poolId}?tab=water`}
                   className="font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   {pool.poolName}
-                </Link>
+                </FromLink>
                 {pool.outOfRange.length > 0 && (
                   <span className="flex items-center gap-1.5 text-danger">
                     <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />

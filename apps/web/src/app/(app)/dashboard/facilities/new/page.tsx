@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backProp, backTarget } from '@/lib/back';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { CreateFacilityForm } from '../facility-forms';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -12,8 +13,13 @@ import { PageError, PageShell } from '@/components/page-shell';
  * day, and a create form parked at the top of it is a form they read past every
  * day. Adding a site is a once-a-year job.
  */
-export default async function NewFacilityPage(): Promise<React.ReactElement> {
+export default async function NewFacilityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { from } = await searchParams;
 
   let data: Facilities | null = null;
   let failure: LoadFailure | null = null;
@@ -28,7 +34,7 @@ export default async function NewFacilityPage(): Promise<React.ReactElement> {
     <PageShell
       title={t('facilities.addSite')}
       subtitle={t('facilities.addSiteHint')}
-      back={{ href: "/dashboard/facilities", label: t('facilities.backToSites') }}
+      back={backProp(backTarget(from, '/dashboard/facilities'), t)}
     >
 
 

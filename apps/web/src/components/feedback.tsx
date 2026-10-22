@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -210,13 +210,13 @@ export function Feedback({
           {(message.link !== undefined || message.action !== undefined) && (
             <div className="-ml-2 mt-1 flex flex-wrap gap-x-1 gap-y-1">
               {message.link !== undefined && (
-                <Link
+                <FromLink
                   href={message.link.href}
                   onClick={onDismiss}
                   className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded font-medium underline underline-offset-2 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-current"
                 >
                   {message.link.label}
-                </Link>
+                </FromLink>
               )}
               {message.action !== undefined && (
                 <button

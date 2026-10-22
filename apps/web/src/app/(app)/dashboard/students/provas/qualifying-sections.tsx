@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import type { FederationAgeGroup, QualifyingOverview } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
@@ -33,14 +33,14 @@ export async function SeasonChooser({
             {season.name}
           </span>
         ) : (
-          <Link
+          <FromLink
             key={season.id}
             href={`${path}?season=${season.id}`}
             scroll={false}
             className="text-primary underline underline-offset-4"
           >
             {season.name}
-          </Link>
+          </FromLink>
         ),
       )}
     </nav>
@@ -65,9 +65,9 @@ export async function StandardList({
           <ul className="flex flex-col divide-y divide-border">
             {overview.standards.map((standard) => (
               <li key={standard.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
-                <Link href={`/dashboard/students/provas/minimos/${standard.id}`} className={LINK}>
+                <FromLink href={`/dashboard/students/provas/minimos/${standard.id}`} className={LINK}>
                   {standard.name}
-                </Link>
+                </FromLink>
                 <p className="text-sm text-foreground-muted">
                   {[
                     t('qualifying.timeCount', { count: standard.timeCount }),

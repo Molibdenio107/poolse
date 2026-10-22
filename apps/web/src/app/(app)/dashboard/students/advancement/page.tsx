@@ -11,6 +11,7 @@ import {
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
+import { backProp, originBack } from '@/lib/back';
 import { ProposalCard } from './proposal-card';
 
 /**
@@ -26,10 +27,11 @@ import { ProposalCard } from './proposal-card';
 export default async function AdvancementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, from } = await searchParams;
+  const back = originBack(from);
   const page = readPage(pageParam);
 
   let proposals: Paginated<TransferProposal> | null = null;
@@ -61,7 +63,7 @@ export default async function AdvancementPage({
     <PageShell
       title={t('advancement.title')}
       subtitle={t('advancement.subtitle')}
-      back={{ href: '/dashboard/students', label: t('students.backToRegister') }}
+      back={backProp(back, t)}
     >
       {notPermitted && (
         <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
@@ -100,7 +102,7 @@ export default async function AdvancementPage({
             ))}
           </ul>
 
-          <Pagination page={proposals} basePath="/dashboard/students/advancement" />
+          <Pagination page={proposals} basePath="/dashboard/students/advancement" query={{ from }} />
         </>
       )}
     </PageShell>

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -29,6 +29,7 @@ import { PageError, PageShell } from '@/components/page-shell';
 import { TimetableImport } from './import/import-panel';
 import { moduleIsOn } from '@/lib/modules';
 import { formatDate } from '@/lib/date-format';
+import { backProp, originBack } from '@/lib/back';
 
 /**
  * The dated calendar — slices 1.5 and 1.6.
@@ -46,11 +47,12 @@ import { formatDate } from '@/lib/date-format';
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string; plan?: string; day?: string }>;
+  searchParams: Promise<{ week?: string; plan?: string; day?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
-  const { week, plan, day } = await searchParams;
+  const { week, plan, day, from } = await searchParams;
+  const back = originBack(from);
 
   // Whatever lands in the query string, the grid gets a Monday. Someone pasting
   // a link to a Thursday should see that Thursday's week, not a week starting
@@ -351,6 +353,7 @@ export default async function CalendarPage({
 
   return (
     <PageShell
+      back={backProp(back, t)}
       title={t('calendar.title')}
       subtitle={t('calendar.subtitle')}
       width="wide"
@@ -576,12 +579,12 @@ export default async function CalendarPage({
                 to={season.to}
               />
 
-              <Link
+              <FromLink
                 href="/dashboard/calendar/closures"
                 className="self-start text-sm text-primary hover:underline"
               >
                 {t('calendar.manageClosures')}
-              </Link>
+              </FromLink>
             </section>
           )}
         </>
@@ -599,12 +602,12 @@ export default async function CalendarPage({
  */
 function WeekLink({ week, label }: { week: string; label: string }): React.ReactElement {
   return (
-    <Link
+    <FromLink
       href={`/dashboard/calendar?week=${week}`}
       className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {label}
-    </Link>
+    </FromLink>
   );
 }
 
@@ -628,12 +631,12 @@ function WeekArrow({
   const Arrow = direction === 'previous' ? ChevronLeft : ChevronRight;
 
   return (
-    <Link
+    <FromLink
       href={`/dashboard/calendar?week=${week}`}
       aria-label={label}
       className="inline-flex size-9 coarse:size-11 items-center justify-center rounded border border-border transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       <Arrow className="size-5" aria-hidden />
-    </Link>
+    </FromLink>
   );
 }

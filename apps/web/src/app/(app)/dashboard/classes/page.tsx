@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { dataOf, describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
@@ -14,6 +14,7 @@ import { PageError, PageShell } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
 import { classColourVar } from '@/lib/calendar-scale';
 import { cn } from '@/lib/utils';
+import { backProp, originBack } from '@/lib/back';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 
 /**
@@ -28,7 +29,7 @@ import { SectionPills, pickSection, sectionHref } from '@/components/section-pil
 export default async function ClassesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scope?: string; section?: string }>;
+  searchParams: Promise<{ scope?: string; section?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -42,7 +43,8 @@ export default async function ClassesPage({
     roles, so an absent parameter is not "all" — it is "whichever is useful to
     you", and the answer comes back in `scope`.
   */
-  const { scope, section } = await searchParams;
+  const { scope, section, from } = await searchParams;
+  const back = originBack(from);
   const asked = scope === 'mine' || scope === 'all' ? `?scope=${scope}` : '';
 
   let data: Classes | null = null;
@@ -328,14 +330,15 @@ export default async function ClassesPage({
 
   return (
     <PageShell
+      back={backProp(back, t)}
       title={t('classes.title')}
       subtitle={t('classes.subtitle')}
-      actions={<Link
+      actions={<FromLink
           href="/dashboard/classes/seasons"
           className="text-sm text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('seasons.title')}
-        </Link>}
+        </FromLink>}
     >
 
       {noOrganization && (
@@ -402,7 +405,7 @@ export default async function ClassesPage({
                   {(['all', 'mine'] as const).map((option) => {
                     const on = data.scope === option;
                     return (
-                      <Link
+                      <FromLink
                         key={option}
                         href={scopeLink(option)}
                         aria-current={on ? 'page' : undefined}
@@ -415,7 +418,7 @@ export default async function ClassesPage({
                         )}
                       >
                         {t(option === 'all' ? 'classes.scopeAll' : 'classes.scopeMine')}
-                      </Link>
+                      </FromLink>
                     );
                   })}
                 </nav>
@@ -431,12 +434,12 @@ export default async function ClassesPage({
               )}
 
               {data.canManage && (
-                <Link
+                <FromLink
                   href="/dashboard/classes/new"
                   className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   {t('classes.create')}
-                </Link>
+                </FromLink>
               )}
             </div>
           )}
@@ -488,12 +491,12 @@ export default async function ClassesPage({
               <ul className="flex flex-col gap-2">
                 {unscheduled.map((group) => (
                   <li key={group.id}>
-                    <Link
+                    <FromLink
                       href={`/dashboard/classes/${group.id}`}
                       className="text-primary hover:underline"
                     >
                       {group.name}
-                    </Link>
+                    </FromLink>
                   </li>
                 ))}
               </ul>

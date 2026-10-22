@@ -8,7 +8,7 @@ import { CompetitionPage, sectionPath } from './competition-page';
 export default async function MeetsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; section?: string; season?: string }>;
+  searchParams: Promise<{ page?: string; section?: string; season?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const params = await searchParams;
   if (params.section === 'minimos' || params.section === 'escaloes') {

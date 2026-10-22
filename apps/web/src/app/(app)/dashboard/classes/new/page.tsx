@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backProp, backTarget } from '@/lib/back';
 import { apiFetch, type Classes } from '@/lib/api';
 import { ClassForm } from '../class-forms';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -13,8 +14,13 @@ import { PageError, PageShell } from '@/components/page-shell';
  * feel like the whole job. Submitting lands on the turma's page, where the days
  * and the students go.
  */
-export default async function NewClassPage(): Promise<React.ReactElement> {
+export default async function NewClassPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { from } = await searchParams;
 
   let data: Classes | null = null;
   let failure: LoadFailure | null = null;
@@ -29,7 +35,7 @@ export default async function NewClassPage(): Promise<React.ReactElement> {
     <PageShell
       title={t('classes.create')}
       subtitle={t('classes.createHint')}
-      back={{ href: "/dashboard/classes", label: t('classes.backToClasses') }}
+      back={backProp(backTarget(from, '/dashboard/classes'), t)}
     >
 
 

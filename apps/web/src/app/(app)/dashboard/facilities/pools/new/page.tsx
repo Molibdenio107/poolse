@@ -1,5 +1,6 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backTarget } from '@/lib/back';
 import { getTranslations } from 'next-intl/server';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { EntityIcon } from '@/components/entity-icon';
@@ -18,10 +19,11 @@ import { PageError, PageShell } from '@/components/page-shell';
 export default async function NewPoolPage({
   searchParams,
 }: {
-  searchParams: Promise<{ facilityId?: string }>;
+  searchParams: Promise<{ facilityId?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { facilityId = '' } = await searchParams;
+  const { facilityId = '', from } = await searchParams;
+  const back = backTarget(from, '/dashboard/facilities');
 
   let data: Facilities | null = null;
   let failure: LoadFailure | null = null;
@@ -41,7 +43,7 @@ export default async function NewPoolPage({
     <PageShell
       title={t('facilities.newPool')}
       subtitle={facility === null ? '' : t('facilities.newPoolAt', { facility: facility.name })}
-      back={{ href: "/dashboard/facilities", label: t('facilities.backToFacilities') }}
+      back={{ href: back.href, label: t(back.labelKey) }}
       actions={<EntityIcon kind="pool" className="size-6 text-primary" />}
     >
 
@@ -59,12 +61,12 @@ export default async function NewPoolPage({
           <ul className="mt-3 flex flex-col gap-2">
             {data.facilities.map((candidate) => (
               <li key={candidate.id}>
-                <Link
+                <FromLink
                   href={`/dashboard/facilities/pools/new?facilityId=${candidate.id}`}
                   className="text-primary hover:underline"
                 >
                   {candidate.name}
-                </Link>
+                </FromLink>
               </li>
             ))}
           </ul>

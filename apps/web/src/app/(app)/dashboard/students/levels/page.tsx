@@ -1,9 +1,10 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { ApiError, apiFetch, type Students, type StudentLevel } from '../../../../../lib/api';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { backProp, originBack } from '@/lib/back';
 import { CreateLevelForm } from './level-forms';
 import { LevelList } from './level-list';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -38,10 +39,12 @@ function byAge(levels: StudentLevel[]): StudentLevel[] {
 export default async function LevelsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const byAgeOrder = (await searchParams).sort === 'age';
+  const params = await searchParams;
+  const byAgeOrder = params.sort === 'age';
+  const back = originBack(params.from);
 
   let data: Students | null = null;
   let failure: LoadFailure | null = null;
@@ -59,7 +62,7 @@ export default async function LevelsPage({
     <PageShell
       title={t('students.levels')}
       subtitle={t('students.levelsSubtitle')}
-      back={{ href: "/dashboard/students", label: t('students.backToRegister') }}
+      back={backProp(back, t)}
     >
 
 
@@ -109,7 +112,7 @@ export default async function LevelsPage({
           */}
           {levels.length > 0 && (
             <nav className="flex flex-wrap gap-2">
-              <Link
+              <FromLink
                 href="/dashboard/students/levels"
                 aria-current={byAgeOrder ? undefined : 'true'}
                 className={cn(
@@ -120,8 +123,8 @@ export default async function LevelsPage({
                 )}
               >
                 {t('students.sortByLadder')}
-              </Link>
-              <Link
+              </FromLink>
+              <FromLink
                 href="/dashboard/students/levels?sort=age"
                 aria-current={byAgeOrder ? 'true' : undefined}
                 className={cn(
@@ -132,7 +135,7 @@ export default async function LevelsPage({
                 )}
               >
                 {t('students.sortByAge')}
-              </Link>
+              </FromLink>
             </nav>
           )}
 

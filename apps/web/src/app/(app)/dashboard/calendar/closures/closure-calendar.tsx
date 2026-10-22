@@ -21,6 +21,7 @@ import {
   type ClosureState,
 } from './closures.actions';
 import { formatDate } from '@/lib/date-format';
+import { FromLink } from '@/components/from-link';
 
 /**
  * Encerramentos as a year — POOLSE-31.
@@ -572,9 +573,9 @@ function ClosureForm({
       {sites.length === 0 ? (
         <p className="text-sm">
           {t('calendar.noSites')}{' '}
-          <a href="/dashboard/facilities" className="text-primary underline underline-offset-2">
+          <FromLink href="/dashboard/facilities" className="text-primary underline underline-offset-2">
             {t('calendar.noSitesLink')}
-          </a>
+          </FromLink>
         </p>
       ) : warning === null ? (
         <form action={action} className="flex flex-col gap-4">

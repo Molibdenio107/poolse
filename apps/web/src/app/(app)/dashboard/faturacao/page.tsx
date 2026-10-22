@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { outcome, type Outcome } from '@/lib/load-failure';
+import { backProp, originBack } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { InvoiceFilters } from './invoice-filters';
 import { InvoiceRunPanel } from './invoice-run-panel';
@@ -8,7 +9,7 @@ import { InvoiceList } from './invoice-list';
 import { SeriesPanel } from './series-panel';
 import { OutstandingList } from './outstanding-list';
 import { ViewTabs, type InvoiceView } from './view-tabs';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { listInvoices, listOutstanding, listSeries, previewRun } from './invoices.actions';
 
 /**
@@ -37,10 +38,11 @@ function thisMonth(): string {
 export default async function InvoicingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ facilityId?: string; month?: string; view?: string }>;
+  searchParams: Promise<{ facilityId?: string; month?: string; view?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { facilityId: requested = '', month: monthParam, view } = await searchParams;
+  const { facilityId: requested = '', month: monthParam, view, from } = await searchParams;
+  const back = originBack(from);
 
   /*
    * Three views, one page, and the view is in the URL like every other filter
@@ -122,7 +124,7 @@ export default async function InvoicingPage({
   const current: InvoiceView = asked === 'settings' && !settingsOffered ? 'month' : asked;
 
   return (
-    <PageShell title={t('invoices.title')} subtitle={t('invoices.hint')}>
+    <PageShell title={t('invoices.title')} subtitle={t('invoices.hint')} back={backProp(back, t)}>
       <div className="flex flex-col gap-6">
         {/*
           What these documents are, said on the page rather than assumed.
@@ -185,12 +187,12 @@ export default async function InvoicingPage({
             */}
             <p className="text-sm text-foreground-muted">
               {t('invoices.clubDataMoved')}{' '}
-              <Link
+              <FromLink
                 href={`/dashboard/facilities/${chosen}?tab=club`}
                 className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('invoices.clubDataLink')}
-              </Link>
+              </FromLink>
             </p>
           </>
         )}

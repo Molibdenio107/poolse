@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useTranslations } from 'next-intl';
 import { useSavedAction } from '@/lib/saved';
 import type { FacilityDay, GridBooking, GridLane, GridSlot } from '@/lib/api';
 import { withinHours } from '@/lib/opening-hours';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { Hint } from '@/components/ui/tooltip';
-import { withFrom } from '@/lib/back';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../actions';
@@ -376,15 +375,12 @@ function PartnerCard({
         />
         <span className="font-medium">{booking.name}</span>
         {booking.partnerId !== null && (
-          <Link
-            href={withFrom(
-              `/dashboard/facilities/partners/${booking.partnerId}`,
-              '/dashboard/classes',
-            )}
+          <FromLink
+            href={`/dashboard/facilities/partners/${booking.partnerId}`}
             className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {booking.subtitle}
-          </Link>
+          </FromLink>
         )}
         {booking.groupTag !== null && (
           <span className="rounded border border-border px-1.5 py-0.5 text-xs text-foreground-muted">

@@ -7,6 +7,7 @@ import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
+import { backProp, originBack } from '@/lib/back';
 import { InventoryPanel } from './inventory-panel';
 import { LostAndFoundPanel } from './lost-and-found-panel';
 
@@ -41,7 +42,7 @@ const BASE = '/dashboard/facilities/inventory';
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ facilityId?: string; search?: string; page?: string; section?: string }>;
+  searchParams: Promise<{ facilityId?: string; search?: string; page?: string; section?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const {
@@ -49,7 +50,9 @@ export default async function InventoryPage({
     search = '',
     page: pageParam,
     section,
+    from,
   } = await searchParams;
+  const back = originBack(from);
 
   const page = readPage(pageParam);
 
@@ -114,7 +117,7 @@ export default async function InventoryPage({
     <PageShell
       title={t('inventory.title')}
       subtitle={t('inventory.subtitle')}
-      back={{ href: '/dashboard/facilities', label: t('facilities.backToSites') }}
+      back={backProp(back, t)}
       actions={<EntityIcon kind="facility" className="size-6 text-primary" />}
     >
       {noOrganization && (
@@ -208,7 +211,7 @@ export default async function InventoryPage({
                     <Pagination
                       page={data.items}
                       basePath={BASE}
-                      query={{ facilityId: data.facilityId, search }}
+                      query={{ facilityId: data.facilityId, search, from }}
                     />
                   </>
                 )}

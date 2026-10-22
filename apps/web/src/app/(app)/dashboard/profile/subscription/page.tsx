@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backProp, backTarget } from '@/lib/back';
 import { ApiError, apiFetch, type SubscriptionView } from '@/lib/api';
 import { PageError, PageShell } from '@/components/page-shell';
 import { PlanPicker } from './plan-picker';
@@ -27,8 +28,13 @@ import { formatDate } from '@/lib/date-format';
  * that, it is an operator's decision, and a suspended club never reaches this
  * page — it sees the notice instead.
  */
-export default async function SubscriptionPage(): Promise<React.ReactElement> {
+export default async function SubscriptionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { from } = await searchParams;
   const locale = await getLocale();
 
   let view: SubscriptionView | null = null;
@@ -45,7 +51,11 @@ export default async function SubscriptionPage(): Promise<React.ReactElement> {
   const day = (value: string): string => formatDate(new Date(value));
 
   return (
-    <PageShell title={t('subscription.title')} subtitle={t('subscription.subtitle')}>
+    <PageShell
+      title={t('subscription.title')}
+      subtitle={t('subscription.subtitle')}
+      back={backProp(backTarget(from, '/dashboard/profile'), t)}
+    >
       {notPermitted && <PageError message={t('subscription.notPermitted')} />}
       {failure !== null && <PageError message={t(failure.key)} detail={failure.detail} />}
 

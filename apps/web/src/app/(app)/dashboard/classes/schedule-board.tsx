@@ -1,5 +1,6 @@
 'use client';
 
+import { FromLink } from '@/components/from-link';
 import {
   createContext,
   Fragment,
@@ -1991,12 +1992,12 @@ export function ScheduleBoard({
             <p className="text-sm font-medium">{t('grid.noSlots')}</p>
             <p className="mt-1 text-sm text-foreground-muted">{t('grid.noSlotsHint')}</p>
             {facility !== undefined && canManage && (
-              <a
+              <FromLink
                 href={`/dashboard/facilities/${facility.id}`}
                 className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-3 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('grid.buildGrid')}
-              </a>
+              </FromLink>
             )}
           </section>
         ) : (
@@ -2193,12 +2194,12 @@ export function ScheduleBoard({
         <p className="text-sm">{t('slots.confirmGenerate')}</p>
 
         <div className="mt-4 flex items-center gap-3">
-          <a
+          <FromLink
             href={facility === undefined ? '#' : `/dashboard/facilities/${facility.id}`}
             className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('common.continue')}
-          </a>
+          </FromLink>
           <button
             type="button"
             onClick={() => setAdjustingGrid(false)}
@@ -3725,13 +3726,13 @@ function BookingChip({
         )}
 
         {booking.controls.mark !== undefined && (
-          <a
+          <FromLink
             href={booking.controls.mark.href}
             className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
           >
             <ClipboardCheck aria-hidden className="size-3.5" />
             {booking.controls.mark.label}
-          </a>
+          </FromLink>
         )}
 
         {booking.controls.cancel !== undefined && (

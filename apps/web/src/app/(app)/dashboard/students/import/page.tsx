@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backProp, backTarget } from '@/lib/back';
 import { apiFetch, type Students } from '@/lib/api';
 import { PageError, PageShell } from '@/components/page-shell';
 import { ImportWizard } from './import-wizard';
@@ -17,8 +18,13 @@ import { ImportWizard } from './import-wizard';
  * wizard whose last button would 403 — and the endpoint refuses them anyway,
  * because hiding a control is never the control.
  */
-export default async function ImportStudentsPage(): Promise<React.ReactElement> {
+export default async function ImportStudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { from } = await searchParams;
 
   let data: Students | null = null;
   let failure: LoadFailure | null = null;
@@ -35,7 +41,7 @@ export default async function ImportStudentsPage(): Promise<React.ReactElement> 
     <PageShell
       title={t('students.import.title')}
       subtitle={t('students.import.subtitle')}
-      back={{ href: '/dashboard/students', label: t('students.backToRegister') }}
+      back={backProp(backTarget(from, '/dashboard/students'), t)}
     >
       {failure !== null && (
         <PageError

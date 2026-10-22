@@ -2,7 +2,7 @@
 
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { FileText, FileUp, Trash2 } from 'lucide-react';
 import type { MedicalLeave } from '@/lib/api';
 import {
@@ -159,12 +159,12 @@ export function MedicalLeavePanel({
       */}
       {canManage && leave.length > 0 && (
         <div>
-          <Link
+          <FromLink
             href="/dashboard/classes/reposicoes"
             className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-complementary/60 bg-complementary/25 font-medium text-foreground transition-colors hover:bg-complementary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('sensitive.leaveToReposicoes')}
-          </Link>
+          </FromLink>
         </div>
       )}
 

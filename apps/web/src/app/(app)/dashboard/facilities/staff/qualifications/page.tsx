@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
+import { backProp, originBack } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { QualificationStatus } from '@/components/qualification-status';
@@ -32,10 +33,11 @@ import { TypesPanel } from './types-panel';
 export default async function QualificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; section?: string }>;
+  searchParams: Promise<{ page?: string; section?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { page: pageParam, section } = await searchParams;
+  const { page: pageParam, section, from } = await searchParams;
+  const back = originBack(from);
   const page = readPage(pageParam);
   const current = pickSection(['attention', 'types'] as const, section, 'attention');
 
@@ -70,7 +72,7 @@ export default async function QualificationsPage({
     <PageShell
       title={t('qualifications.title')}
       subtitle={t('qualifications.subtitle')}
-      back={{ href: '/dashboard/facilities/staff', label: t('staff.backToStaff') }}
+      back={backProp(back, t)}
     >
       {notPermitted && (
         <section className="rounded border border-border bg-surface p-5">
@@ -88,10 +90,10 @@ export default async function QualificationsPage({
             {
               key: 'attention',
               label: t('qualifications.attention'),
-              href: sectionHref(base, {}, 'attention'),
+              href: sectionHref(base, { from }, 'attention'),
               count: list.total,
             },
-            { key: 'types', label: t('qualifications.section.types'), href: sectionHref(base, {}, 'types') },
+            { key: 'types', label: t('qualifications.section.types'), href: sectionHref(base, { from }, 'types') },
           ]}
         />
       )}
@@ -109,12 +111,12 @@ export default async function QualificationsPage({
                   className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0"
                 >
                   <span className="flex flex-col">
-                    <Link
+                    <FromLink
                       href={`/dashboard/facilities/staff/${row.membershipId}?tab=qualifications`}
                       className="font-medium underline underline-offset-4 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       {row.personName ?? t('qualifications.unnamed')}
-                    </Link>
+                    </FromLink>
                     <span className="text-sm text-foreground-muted">{row.typeName}</span>
                   </span>
                   <QualificationStatus status={row.status} expiresOn={row.expiresOn} />
@@ -122,7 +124,7 @@ export default async function QualificationsPage({
               ))}
             </ul>
           )}
-          <Pagination page={list} basePath={base} />
+          <Pagination page={list} basePath={base} query={{ section, from }} />
         </section>
       )}
 

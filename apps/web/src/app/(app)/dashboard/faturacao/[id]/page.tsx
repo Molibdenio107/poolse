@@ -4,6 +4,7 @@ import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { Printer } from 'lucide-react';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
+import { backTarget } from '@/lib/back';
 import { DocumentLines } from './document-lines';
 import { SettlementPanel } from './settlement-panel';
 import { StatusBadge } from '../status-badge';
@@ -31,13 +32,13 @@ export default async function InvoicePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ facilityId?: string }>;
+  searchParams: Promise<{ facilityId?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
   const format = await getFormatter();
   const { id } = await params;
-  const { facilityId: requested = '' } = await searchParams;
+  const { facilityId: requested = '', from } = await searchParams;
 
   const { facilityId, loaded } = await loadInvoice(id, requested);
 
@@ -177,7 +178,7 @@ export default async function InvoicePage({
 
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            href={`/dashboard/faturacao?facilityId=${facilityId}&month=${invoice.issuedOn.slice(0, 7)}`}
+            href={backTarget(from, `/dashboard/faturacao?facilityId=${facilityId}&month=${invoice.issuedOn.slice(0, 7)}`).href}
             className="text-sm text-primary hover:underline"
           >
             {t('invoices.backToList')}

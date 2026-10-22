@@ -1,11 +1,10 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, CircleCheck } from 'lucide-react';
 import type { PoolDetail } from '@/lib/api';
 import { excursions } from '@/lib/water';
 import { excursionText } from '@/lib/excursion-text';
 import { timeAgo } from '@/lib/relative-time';
-import { withFrom } from '@/lib/back';
 import { formatStamp } from '@/lib/date-format';
 import { formatReading } from '@/lib/pool-metrics';
 
@@ -35,7 +34,7 @@ export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React
   const latest = pool.analyses[pool.analyses.length - 1];
   const bad = latest === undefined ? [] : excursions(latest.values, pool.bands);
   const badFor = (metric: string) => bad.find((excursion) => excursion.metric === metric);
-  const href = withFrom(`/dashboard/facilities/pools/${pool.id}`, '/dashboard');
+  const href = `/dashboard/facilities/pools/${pool.id}`;
 
   return (
     <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
@@ -106,14 +105,14 @@ export async function MyPoolPanel({ pool }: { pool: PoolDetail }): Promise<React
       )}
 
       <div className="flex flex-wrap gap-3">
-        <Link
+        <FromLink
           href={href}
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {latest === undefined
             ? t('facilities.recordAnalysisTitle')
             : t('dashboard.openPool')}
-        </Link>
+        </FromLink>
       </div>
     </section>
   );

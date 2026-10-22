@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, MailWarning } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
@@ -178,9 +178,9 @@ export function ReminderDialog({
             {preview.paymentInstructions === null ? (
               <p className="text-foreground-muted">
                 {t('invoices.reminders.noInstructions')}{' '}
-                <Link href={`/dashboard/facilities/${facilityId}?tab=club`} className="text-primary underline">
+                <FromLink href={`/dashboard/facilities/${facilityId}?tab=club`} className="text-primary underline">
                   {t('invoices.reminders.setInstructions')}
-                </Link>
+                </FromLink>
               </p>
             ) : (
               <p className="whitespace-pre-line text-foreground-muted">{preview.paymentInstructions}</p>

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -178,7 +178,7 @@ export default async function StudentsPage({
               colleague — and it works before any JavaScript has loaded, which a
               real checkbox with an onChange would not.
             */}
-            <Link
+            <FromLink
               href={
                 overdueOnly
                   ? pageHref('/dashboard/students', { search, levelId }, 1)
@@ -205,15 +205,15 @@ export default async function StudentsPage({
                 {overdueOnly && <Check className="size-3" />}
               </span>
               {t('fees.showOverdueOnly')}
-            </Link>
+            </FromLink>
 
             {filtering && (
-              <Link
+              <FromLink
                 href="/dashboard/students"
                 className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('students.clear')}
-              </Link>
+              </FromLink>
             )}
           </section>
 
@@ -256,12 +256,12 @@ export default async function StudentsPage({
                   <>
                     <p>{t('search.noResults', { term: search.trim() })}</p>
                     <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
-                    <Link
+                    <FromLink
                       href={levelId.trim() === '' ? '/dashboard/students' : `/dashboard/students?levelId=${levelId.trim()}`}
                       className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       {t('search.clearSearch')}
-                    </Link>
+                    </FromLink>
                   </>
                 ) : (
                   <>
@@ -303,13 +303,13 @@ export default async function StudentsPage({
                         detail page this links to.
                       */}
                       <span className="flex min-w-0 flex-wrap items-center gap-2">
-                        <Link
+                        <FromLink
                           href={`/dashboard/students/${student.id}`}
                           className="truncate text-primary hover:underline coarse:-my-3 coarse:py-3"
                           title={student.displayName}
                         >
                           {student.shortName}
-                        </Link>
+                        </FromLink>
                         {/* Beside the name, on the day — round 4. */}
                         <BirthdayFlag birthDate={student.birthDate} />
                         {/*

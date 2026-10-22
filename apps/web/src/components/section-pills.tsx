@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { cn } from '@/lib/utils';
 
 /**
@@ -44,7 +44,7 @@ export function SectionPills({
       {items.map((item) => {
         const on = item.key === current;
         return (
-          <Link
+          <FromLink
             key={item.key}
             href={item.href}
             aria-current={on ? 'page' : undefined}
@@ -63,7 +63,7 @@ export function SectionPills({
                 {item.count}
               </span>
             )}
-          </Link>
+          </FromLink>
         );
       })}
     </nav>

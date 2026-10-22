@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 
 /**
  * The site row Receção draws, for the incident list and its form.
@@ -22,7 +22,7 @@ export function SiteLinks({
   return (
     <nav aria-label={label} className="flex flex-wrap gap-2">
       {sites.map((site) => (
-        <Link
+        <FromLink
           key={site.id}
           href={`${basePath}?site=${site.id}`}
           aria-current={site.id === chosenId ? 'page' : undefined}
@@ -33,7 +33,7 @@ export function SiteLinks({
           }
         >
           {site.name}
-        </Link>
+        </FromLink>
       ))}
     </nav>
   );

@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { Gauge, Plus } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { timeAgo } from '@/lib/relative-time';
-import { withFrom } from '@/lib/back';
 import type { EnergyMeter, MeterList } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
@@ -36,12 +35,9 @@ export const METER_KINDS = ['total', 'pump', 'heating', 'lighting', 'other'] as 
 export function EnergyPanel({
   facilityId,
   list,
-  backTo,
 }: {
   facilityId: string;
   list: MeterList;
-  /** Where a meter's Voltar lands: the site page by default, or Energia. */
-  backTo?: string;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -71,7 +67,6 @@ export function EnergyPanel({
             <MeterRow
               key={meter.id}
               meter={meter}
-              backTo={backTo ?? `/dashboard/facilities/${facilityId}`}
               locale={locale}
               format={format}
             />
@@ -93,12 +88,10 @@ export function EnergyPanel({
 
 function MeterRow({
   meter,
-  backTo,
   locale,
   format,
 }: {
   meter: EnergyMeter;
-  backTo: string;
   locale: string;
   format: ReturnType<typeof useFormatter>;
 }): React.ReactElement {
@@ -110,12 +103,12 @@ function MeterRow({
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="flex flex-wrap items-center gap-2">
           <Gauge className="size-4 shrink-0 text-foreground-muted" aria-hidden="true" />
-          <Link
-            href={withFrom(`/dashboard/facilities/energy/${meter.id}`, backTo)}
+          <FromLink
+            href={`/dashboard/facilities/energy/${meter.id}`}
             className="text-sm font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {meter.name}
-          </Link>
+          </FromLink>
           <span className="text-xs text-foreground-muted">
             {t(`energy.kind.${meter.kind}`)}
             {meter.poolName !== null && ` · ${meter.poolName}`}

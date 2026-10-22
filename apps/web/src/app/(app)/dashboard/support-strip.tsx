@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useTranslations } from 'next-intl';
 import { Headset, LogOut } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
@@ -98,12 +98,12 @@ export function ClubSupportStrip({
       <Headset aria-hidden className="size-4 shrink-0 text-foreground-muted" />
       <p className="min-w-0 flex-1">{sentence}</p>
       {isOwner && (
-        <Link
+        <FromLink
           href="/dashboard/profile?tab=support"
           className={`${BUTTON} border-border bg-surface hover:border-primary/50 hover:text-primary`}
         >
           {liveUntil !== null ? t('support.manage') : t('support.answer')}
-        </Link>
+        </FromLink>
       )}
     </div>
   );

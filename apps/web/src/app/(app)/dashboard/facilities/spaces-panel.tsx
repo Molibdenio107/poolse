@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, ChevronRight, Plus, Wrench } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { timeAgo } from '@/lib/relative-time';
-import { withFrom } from '@/lib/back';
 import type { Space, SpaceType } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
@@ -73,21 +72,12 @@ export function SpacesPanel({
   spaces,
   canManage,
   variant = 'card',
-  backTo,
 }: {
   facilityId: string;
   spaces: Space[];
   canManage: boolean;
   /** `block` sits inside a site card on Instalações; `card` stands alone. */
   variant?: 'card' | 'block';
-  /**
-   * Where a space's own screen should send somebody back to.
-   *
-   * The panel appears on two screens and the way back is different from each.
-   * It used to be hardcoded to the site's page, so opening a space from
-   * Instalações and pressing Voltar landed you somewhere you had never been.
-   */
-  backTo: string;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -208,12 +198,12 @@ export function SpacesPanel({
             return (
               <li key={space.id} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                  <Link
-                    href={withFrom(`/dashboard/facilities/spaces/${space.id}`, backTo)}
+                  <FromLink
+                    href={`/dashboard/facilities/spaces/${space.id}`}
                     className="rounded font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {space.name}
-                  </Link>
+                  </FromLink>
 
                   <span className="text-sm text-foreground-muted">
                     {t(`spaces.type.${space.type}`)}

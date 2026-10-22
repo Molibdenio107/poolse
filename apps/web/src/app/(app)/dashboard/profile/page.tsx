@@ -1,8 +1,9 @@
 import { MessagePreferenceCard } from './message-preference-card';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, outcome, type LoadFailure, type Outcome } from '@/lib/load-failure';
 import { apiFetch, type ActiveSession, type Me, type People } from '@/lib/api';
+import { backTarget } from '@/lib/back';
 import { ProfileForm } from './profile-form';
 import { TransferOwnership } from './transfer-ownership';
 import { SupportAccess } from './support-access';
@@ -41,10 +42,10 @@ import { formatStamp } from '@/lib/date-format';
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { tab } = await searchParams;
+  const { tab, from } = await searchParams;
 
   let me: Me | null = null;
   let failure: LoadFailure | null = null;
@@ -98,7 +99,8 @@ export default async function ProfilePage({
       ? null
       : Math.ceil((new Date(membership.trialEndsAt).getTime() - Date.now()) / 86_400_000);
 
-  const back = { href: '/dashboard', label: t('common.backToDashboard') };
+  const target = backTarget(from, '/dashboard');
+  const back = { href: target.href, label: t(target.labelKey) };
 
   if (me === null) {
     return (
@@ -164,12 +166,12 @@ export default async function ProfilePage({
                     </h2>
                     <p className="mt-1 text-sm text-foreground-muted">{t('subscription.subtitle')}</p>
                   </div>
-                  <Link
+                  <FromLink
                     href="/dashboard/profile/subscription"
                     className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('subscription.open')}
-                  </Link>
+                  </FromLink>
                 </section>
               )}
 

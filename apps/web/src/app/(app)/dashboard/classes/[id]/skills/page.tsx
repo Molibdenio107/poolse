@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backTarget } from '@/lib/back';
 import { apiFetch, type TurmaSkills } from '@/lib/api';
 import { BackLink } from '@/components/back-link';
 import { SkillsGrid } from './skills-grid';
@@ -14,11 +15,15 @@ import { PageError, PageShell } from '@/components/page-shell';
  */
 export default async function SkillsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { from } = await searchParams;
   const { id } = await params;
+  const back = backTarget(from, `/dashboard/classes/${id}`);
 
   let data: TurmaSkills | null = null;
   let failure: LoadFailure | null = null;
@@ -36,7 +41,7 @@ export default async function SkillsPage({
             ? t('skills.subtitle')
             : [data.className, data.levelName].filter(Boolean).join(' · ')}
     >
-      <BackLink href={`/dashboard/classes/${id}`} label={t('skills.backToClass')} />
+      <BackLink href={back.href} label={t(back.labelKey)} />
 
 
       {failure !== null && (

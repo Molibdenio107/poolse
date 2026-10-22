@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { apiFetch } from '@/lib/api';
@@ -61,7 +61,7 @@ export default async function FamilyPage(): Promise<React.ReactElement> {
         <ul className="flex flex-col divide-y divide-border rounded border border-border bg-surface">
           {students.map((student) => (
             <li key={student.id}>
-              <Link
+              <FromLink
                 href={`/dashboard/students/${student.id}`}
                 className="flex items-center gap-3 p-4 hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
@@ -70,7 +70,7 @@ export default async function FamilyPage(): Promise<React.ReactElement> {
                 <span className="text-sm text-foreground-muted">
                   {student.self ? t('family.yourself') : (student.relationship ?? '')}
                 </span>
-              </Link>
+              </FromLink>
             </li>
           ))}
         </ul>

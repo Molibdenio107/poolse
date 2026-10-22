@@ -1,10 +1,11 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type MessageList } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { formatStamp } from '@/lib/date-format';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
+import { backProp, originBack } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { audienceKey, deliveryKey } from './delivery-text';
@@ -23,10 +24,11 @@ import { audienceKey, deliveryKey } from './delivery-text';
 export default async function MessagesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, from } = await searchParams;
+  const back = originBack(from);
   const page = readPage(pageParam);
 
   let data: MessageList | null = null;
@@ -48,15 +50,15 @@ export default async function MessagesPage({
     <PageShell
       title={t('messages.title')}
       subtitle={t('messages.subtitle')}
-      back={{ href: '/dashboard/students', label: t('students.backToRegister') }}
+      back={backProp(back, t)}
       actions={
         data?.canSend ? (
-          <Link
+          <FromLink
             href="/dashboard/students/messages/new"
             className="inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded bg-primary text-primary-foreground"
           >
             {t('messages.new')}
-          </Link>
+          </FromLink>
         ) : null
       }
     >
@@ -88,12 +90,12 @@ export default async function MessagesPage({
                 return (
                   <li key={message.id} className="flex flex-col gap-1 py-4 first:pt-0 last:pb-0">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                      <Link
+                      <FromLink
                         href={`/dashboard/students/messages/${message.id}`}
                         className="font-medium underline underline-offset-4 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         {message.subject}
-                      </Link>
+                      </FromLink>
                       <span className="text-sm text-foreground-muted">
                         {formatStamp(message.sentAt)}
                       </span>
@@ -113,7 +115,7 @@ export default async function MessagesPage({
               })}
             </ul>
           )}
-          <Pagination page={data} basePath="/dashboard/students/messages" />
+          <Pagination page={data} basePath="/dashboard/students/messages" query={{ from }} />
         </section>
       )}
     </PageShell>

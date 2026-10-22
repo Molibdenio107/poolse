@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backProp, originBack } from '@/lib/back';
 import { ApiError, apiFetch, type Me, type ReposicaoSettings } from '@/lib/api';
 import { PageError, PageShell } from '@/components/page-shell';
 import { ReposicaoSettingsForm } from './reposicoes-form';
@@ -24,8 +25,13 @@ import { ReposicaoSettingsForm } from './reposicoes-form';
  * screen that shows settings it will not save is a screen that lies about what
  * it is for.
  */
-export default async function ReposicoesPage(): Promise<React.ReactElement> {
+export default async function ReposicoesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const back = originBack((await searchParams).from);
 
   let settings: ReposicaoSettings | null = null;
   let organizationId = '';
@@ -48,7 +54,7 @@ export default async function ReposicoesPage(): Promise<React.ReactElement> {
     <PageShell
       title={t('reposicao.title')}
       subtitle={t('reposicao.subtitle')}
-      back={{ href: '/dashboard/students', label: t('students.backToRegister') }}
+      back={backProp(back, t)}
     >
       {/*
         A refusal in words rather than a blank page — the same rule as Staff.

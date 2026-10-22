@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import {
   ChevronLeft,
   ChevronRight,
@@ -69,13 +69,13 @@ export async function Pagination<T>({
         {icon}
       </span>
     ) : (
-      <Link
+      <FromLink
         href={pageHref(basePath, query, target)}
         aria-label={label}
         className="inline-flex size-9 coarse:size-11 items-center justify-center rounded border border-transparent text-foreground-muted hover:border-border hover:bg-surface-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {icon}
-      </Link>
+      </FromLink>
     );
 
   return (

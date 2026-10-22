@@ -2,6 +2,7 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { AlertTriangle } from 'lucide-react';
 import type { Occupancy, TimeBand } from '@/lib/api';
 import { OccupancyBars } from './occupancy-bars';
+import { FromLink } from '@/components/from-link';
 
 /**
  * The season, in figures — POOLSE-52, criterion 6.
@@ -113,12 +114,12 @@ export async function OccupancyPanel({
               route to removing it. A lane's capacity is set in the lane editor.
             */}
             {facilityId !== undefined && facilityId !== null && (
-              <a
+              <FromLink
                 href={`/dashboard/facilities/${facilityId}`}
                 className="rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('occupancy.setCapacity')}
-              </a>
+              </FromLink>
             )}
           </div>
         </div>

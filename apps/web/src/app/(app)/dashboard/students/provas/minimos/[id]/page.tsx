@@ -1,10 +1,11 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { Download, Upload } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { formatSwimTime } from '@poolse/rules';
 import { apiFetch, type QualifyingBoard, type QualifyingStandard } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
+import { backProp, backTarget } from '@/lib/back';
 import { DetailPage } from '@/components/detail-page';
 import { GapCell } from '@/components/gap-table';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -27,10 +28,10 @@ export default async function StandardPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string | string[]; section?: string | string[]; margin?: string }>;
+  searchParams: Promise<{ tab?: string | string[]; section?: string | string[]; margin?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const { id } = await params;
-  const { tab, section, margin } = await searchParams;
+  const { tab, section, margin, from } = await searchParams;
   const t = await getTranslations();
   const path = `/dashboard/students/provas/minimos/${id}`;
 
@@ -51,10 +52,7 @@ export default async function StandardPage({
     <DetailPage
       title={standard.name}
       subtitle={`${standard.seasonName} · ${windowText(t, standard.windowFrom, standard.windowTo)}`}
-      back={{
-        href: `/dashboard/students/provas/minimos?season=${standard.seasonId}`,
-        label: t('qualifying.backToStandards'),
-      }}
+      back={backProp(backTarget(from, `/dashboard/students/provas/minimos?season=${standard.seasonId}`), t)}
       requested={tab}
       tabs={[
         {
@@ -84,12 +82,12 @@ export default async function StandardPage({
               return (
                 <section className="flex flex-col gap-2 rounded border border-border bg-surface p-5">
                   <p>{t('qualifying.noAgeGroupsYet')}</p>
-                  <Link
+                  <FromLink
                     href="/dashboard/students/provas/escaloes"
                     className="text-primary underline underline-offset-4"
                   >
                     {t('qualifying.goToAgeGroups')}
-                  </Link>
+                  </FromLink>
                 </section>
               );
             }
@@ -174,14 +172,14 @@ async function Board({
               {t('qualifying.marginSeconds', { seconds: seconds(value) })}
             </span>
           ) : (
-            <Link
+            <FromLink
               key={value}
               href={`${path}?tab=swimmers&margin=${value}`}
               scroll={false}
               className="text-primary underline underline-offset-4"
             >
               {t('qualifying.marginSeconds', { seconds: seconds(value) })}
-            </Link>
+            </FromLink>
           ),
         )}
       </nav>
@@ -195,12 +193,12 @@ async function Board({
             {board.swimmers.map((swimmer) => (
               <li key={`${swimmer.studentId}-${swimmer.ageGroupId}`} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <Link
+                  <FromLink
                     href={`/dashboard/students/${swimmer.studentId}/progress`}
                     className="font-medium underline underline-offset-4 hover:text-primary"
                   >
                     {swimmer.name}
-                  </Link>
+                  </FromLink>
                   <span className="text-sm text-foreground-muted">{swimmer.ageGroup}</span>
                 </div>
                 {[...swimmer.qualified, ...swimmer.close].length > 0 && (
@@ -243,12 +241,12 @@ async function Board({
           <ul className="flex flex-col gap-1 text-sm">
             {board.unplaced.map((swimmer) => (
               <li key={swimmer.studentId}>
-                <Link
+                <FromLink
                   href={`/dashboard/students/${swimmer.studentId}`}
                   className="underline underline-offset-4 hover:text-primary"
                 >
                   {swimmer.name}
-                </Link>{' '}
+                </FromLink>{' '}
                 <span className="text-foreground-muted">
                   — {t(swimmer.reason === 'birthDate' ? 'qualifying.noBirthDate' : 'qualifying.noBandFits')}
                 </span>
@@ -276,10 +274,10 @@ function TimesToolbar({
     'inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:bg-surface-muted';
   return (
     <div className="flex flex-wrap gap-2">
-      <Link href={`${path}/importar`} className={quiet}>
+      <FromLink href={`${path}/importar`} className={quiet}>
         <Upload aria-hidden className="size-4" />
         {t('qualifying.import.open')}
-      </Link>
+      </FromLink>
       {(['lcm', 'scm'] as const).map((course) => (
         <a key={course} href={`${path}/export?course=${course}`} className={quiet} download>
           <Download aria-hidden className="size-4" />

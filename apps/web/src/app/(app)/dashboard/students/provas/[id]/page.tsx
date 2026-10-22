@@ -1,9 +1,10 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { AlertTriangle } from 'lucide-react';
 import { ApiError, apiFetch, type MeetDetail } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backTarget } from '@/lib/back';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { formatTime } from '@/components/progress-chart';
 import { PageError, PageShell, ScrollX } from '@/components/page-shell';
@@ -16,10 +17,13 @@ import { ArchiveMeetButton } from '../archive-meet';
  */
 export default async function MeetPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { from } = await searchParams;
   const { id } = await params;
 
   let meet: MeetDetail | null = null;
@@ -31,7 +35,8 @@ export default async function MeetPage({
     failure = describeLoad(error);
   }
 
-  const back = { href: '/dashboard/students/provas', label: t('meets.back') };
+  const target = backTarget(from, '/dashboard/students/provas');
+  const back = { href: target.href, label: t(target.labelKey) };
   if (meet === null) {
     return (
       <PageShell title={t('meets.title')} back={back}>
@@ -89,12 +94,12 @@ export default async function MeetPage({
                 {meet.results.map((result) => (
                   <tr key={result.recordId}>
                     <td className="py-2 pr-4">
-                      <Link
+                      <FromLink
                         href={`/dashboard/students/${result.studentId}/progress`}
                         className="underline underline-offset-4 hover:text-primary"
                       >
                         {result.studentName}
-                      </Link>
+                      </FromLink>
                     </td>
                     <td className="py-2 pr-4">
                       {result.distanceM} m {t(`progress.strokes.${result.stroke}`)}

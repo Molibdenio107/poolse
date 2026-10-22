@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle } from 'lucide-react';
 import type { PoolAnalysis } from '@/lib/api';
@@ -95,12 +95,12 @@ export function UnsafeWaterNotice({
         </div>
       </div>
 
-      <Link
+      <FromLink
         href={target}
         className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-warning/60 transition-colors hover:bg-warning/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {t('facilities.closePool')}
-      </Link>
+      </FromLink>
 
       {/*
         What the link is about to do, as visible text. "Fechar temporariamente"

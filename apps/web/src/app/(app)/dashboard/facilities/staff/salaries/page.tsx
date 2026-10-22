@@ -5,6 +5,7 @@ import { ApiError, apiFetch, type Salaries, type SalarySummary } from '@/lib/api
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
+import { backProp, originBack } from '@/lib/back';
 import { formatCents } from '@/lib/money';
 import { SalaryTable } from './salary-table';
 import { SalaryFilePanel } from './salary-file-panel';
@@ -26,12 +27,13 @@ import { SalaryFilePanel } from './salary-file-panel';
 export default async function SalariesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
 
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, from } = await searchParams;
+  const back = originBack(from);
   const page = readPage(pageParam);
 
   let data: Salaries | null = null;
@@ -67,7 +69,7 @@ export default async function SalariesPage({
     <PageShell
       title={t('salaries.title')}
       subtitle={t('salaries.subtitle')}
-      back={{ href: '/dashboard/facilities/staff', label: t('staff.backToStaff') }}
+      back={backProp(back, t)}
     >
       {notPermitted && <PageError message={t('salaries.notPermitted')} />}
       {failure !== null && (
@@ -187,7 +189,7 @@ export default async function SalariesPage({
             locale={locale}
           />
 
-          <Pagination page={data.salaries} basePath="/dashboard/facilities/staff/salaries" />
+          <Pagination page={data.salaries} basePath="/dashboard/facilities/staff/salaries" query={{ from }} />
 
           {/*
             * Below the list, deliberately. What a club does here every week is

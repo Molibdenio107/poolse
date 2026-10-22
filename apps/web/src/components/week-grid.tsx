@@ -2,6 +2,7 @@ import { Handshake } from 'lucide-react';
 import { Hint } from '@/components/ui/tooltip';
 import { TurmaHoverCard, type TurmaDetail } from '@/components/turma-card';
 import { cn } from '@/lib/utils';
+import { FromLink } from '@/components/from-link';
 
 export interface WeekEntry {
   key: string;
@@ -301,7 +302,7 @@ function Slot({
         the detail a click used to.
       */}
       {linkTitle && entry.href !== undefined ? (
-        <a
+        <FromLink
           href={entry.href}
           className={cn(
             'line-clamp-2 break-words rounded font-medium text-primary underline-offset-4 hover:underline',
@@ -310,7 +311,7 @@ function Slot({
           )}
         >
           {entry.title}
-        </a>
+        </FromLink>
       ) : (
         <span
           className={cn(
@@ -393,7 +394,8 @@ function Slot({
     accent !== null && 'border-l-[3px]',
   );
 
-  const Wrapper = linkCard && entry.href !== undefined ? 'a' : 'div';
+  // An element type rather than a union: `FromLink` requires the `href` the div never gets.
+  const Wrapper: React.ElementType = linkCard && entry.href !== undefined ? FromLink : 'div';
 
   const plain = (
     <Wrapper
@@ -423,12 +425,12 @@ function Slot({
       {(entry.mark !== undefined || entry.action !== undefined) && (
         <div className="relative z-10 mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/60 pt-2">
           {entry.mark !== undefined && (
-            <a
+            <FromLink
               href={entry.mark.href}
               className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {entry.mark.label}
-            </a>
+            </FromLink>
           )}
           {entry.action}
         </div>

@@ -1,10 +1,11 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type MeetList, type QualifyingOverview } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { formatDate } from '@/lib/date-format';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
+import { backProp, originBack } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { SectionPills } from '@/components/section-pills';
@@ -41,10 +42,11 @@ export async function CompetitionPage({
   params,
 }: {
   section: Section;
-  params: { page?: string; season?: string };
+  params: { page?: string; season?: string; from?: string };
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const page = readPage(params.page);
+  const back = originBack(params.from);
 
   let meets: MeetList | null = null;
   let qualifying: QualifyingOverview | null = null;
@@ -71,7 +73,7 @@ export async function CompetitionPage({
     <PageShell
       title={t('competition.title')}
       subtitle={t('competition.subtitle')}
-      back={{ href: '/dashboard/students', label: t('students.backToRegister') }}
+      back={backProp(back, t)}
       actions={
         meets?.canImport ? (
           <ImportMeet organizationId={meets.organizationId} rememberedClubCode={meets.rememberedClubCode} />
@@ -112,12 +114,12 @@ export async function CompetitionPage({
               {meets.items.map((meet) => (
                 <li key={meet.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <Link
+                    <FromLink
                       href={`${PATH}/${meet.id}`}
                       className="font-medium underline underline-offset-4 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       {meet.name}
-                    </Link>
+                    </FromLink>
                     <span className="text-sm text-foreground-muted">
                       {meet.startsOn === meet.endsOn
                         ? formatDate(meet.startsOn)

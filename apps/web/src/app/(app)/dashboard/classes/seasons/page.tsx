@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { ApiError, apiFetch, type Seasons } from '../../../../../lib/api';
 import { cn } from '@/lib/utils';
+import { backProp, originBack } from '@/lib/back';
 import { SeasonReset } from './season-reset';
 import { SeasonDrafts } from './season-drafts';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -23,10 +24,11 @@ import { SectionPills, pickSection, sectionHref } from '@/components/section-pil
 export default async function SeasonsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ section?: string }>;
+  searchParams: Promise<{ section?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { section } = await searchParams;
+  const { section, from } = await searchParams;
+  const back = originBack(from);
   const locale = await getLocale();
 
   let data: Seasons | null = null;
@@ -65,7 +67,7 @@ export default async function SeasonsPage({
     <PageShell
       title={t('seasons.title')}
       subtitle={t('seasons.subtitle')}
-      back={{ href: "/dashboard/classes", label: t('seasons.backToClasses') }}
+      back={backProp(back, t)}
     >
 
 

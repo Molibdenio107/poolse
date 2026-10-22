@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backProp, backTarget } from '@/lib/back';
 import { apiFetch, type Students } from '@/lib/api';
 import { StudentForm } from '../student-forms';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -14,8 +15,13 @@ import { PageError, PageShell } from '@/components/page-shell';
  * Submitting lands on the new student's own page, where the photograph, the
  * consents and the swim times live — the things you fill in next.
  */
-export default async function NewStudentPage(): Promise<React.ReactElement> {
+export default async function NewStudentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { from } = await searchParams;
 
   let data: Students | null = null;
   let failure: LoadFailure | null = null;
@@ -32,7 +38,7 @@ export default async function NewStudentPage(): Promise<React.ReactElement> {
     <PageShell
       title={t('students.add')}
       subtitle={t('students.addHint')}
-      back={{ href: "/dashboard/students", label: t('students.backToRegister') }}
+      back={backProp(backTarget(from, '/dashboard/students'), t)}
     >
 
 

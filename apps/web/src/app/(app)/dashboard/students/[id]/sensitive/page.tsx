@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backTarget } from '@/lib/back';
 import {
   ApiError,
   apiFetch,
@@ -37,11 +38,11 @@ export default async function SensitivePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { id } = await params;
-  const { tab } = await searchParams;
+  const { tab, from } = await searchParams;
 
   let student: Student | null = null;
   let record: SensitiveRecord | null = null;
@@ -63,7 +64,8 @@ export default async function SensitivePage({
   const live = record?.consent.filter((entry) => entry.withdrawnAt === null) ?? [];
   const past = record?.consent.filter((entry) => entry.withdrawnAt !== null) ?? [];
 
-  const back = { href: `/dashboard/students/${id}`, label: t('sensitive.backToStudent') };
+  const target = backTarget(from, `/dashboard/students/${id}`);
+  const back = { href: target.href, label: t(target.labelKey) };
 
   if (record === null) {
     return (

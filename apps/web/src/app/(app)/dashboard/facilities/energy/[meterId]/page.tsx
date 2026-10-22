@@ -4,9 +4,9 @@ import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { PageError, PageShell } from '@/components/page-shell';
 import { DetailPage } from '@/components/detail-page';
 import { ConsumptionBars } from '@/components/consumption-bars';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { Plus } from 'lucide-react';
-import { backTarget, withFrom } from '@/lib/back';
+import { backTarget } from '@/lib/back';
 import { centsToText } from '@/lib/energy-invoice';
 import { getMeter } from '../../energy.actions';
 import { listInvoices } from '../invoice.actions';
@@ -317,13 +317,13 @@ export default async function MeterPage({
                     {t('energy.invoice.section')}
                   </h2>
                   {bills.canRecord && !meter.archived && (
-                    <Link
-                      href={withFrom(`${here}/invoices/new`, `${here}?tab=invoices`)}
+                    <FromLink
+                      href={`${here}/invoices/new`}
                       className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       <Plus className="size-4" aria-hidden="true" />
                       {t('energy.invoice.add')}
-                    </Link>
+                    </FromLink>
                   )}
                 </div>
 
@@ -350,13 +350,13 @@ export default async function MeterPage({
                         {bills.invoices.map((bill) => (
                           <tr key={bill.id} className="border-t border-border">
                             <td className="py-1.5 pr-2">
-                              <Link
-                                href={withFrom(`${here}/invoices/${bill.id}`, `${here}?tab=invoices`)}
+                              <FromLink
+                                href={`${here}/invoices/${bill.id}`}
                                 className="font-medium hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                               >
                                 {formatDate(bill.periodStart)} –{' '}
                                 {formatDate(bill.periodEnd)}
-                              </Link>
+                              </FromLink>
                               <span className="block text-xs text-foreground-muted">
                                 {t('energy.invoice.days', { days: bill.days })} · {bill.supplier}
                               </span>

@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backTarget } from '@/lib/back';
 import {
   ApiError,
   apiFetch,
@@ -35,11 +36,11 @@ export default async function ProgressPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[]; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const { id } = await params;
-  const { tab } = await searchParams;
+  const { tab, from } = await searchParams;
 
   let student: Student | null = null;
   let progression: Progression | null = null;
@@ -106,7 +107,8 @@ export default async function ProgressPage({
     course === 'scm' ? 0 : course === 'lcm' ? 1 : 2;
   bestsByCourse.sort((a, b) => courseRank(a.course) - courseRank(b.course));
 
-  const back = { href: `/dashboard/students/${id}`, label: t('sensitive.backToStudent') };
+  const target = backTarget(from, `/dashboard/students/${id}`);
+  const back = { href: target.href, label: t(target.labelKey) };
 
   if (progression === null) {
     return (

@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { apiFetch, type Classes, type Lead, type Leads, type Me, type RegistrationSettings } from '@/lib/api';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { outcome } from '@/lib/load-failure';
+import { backProp, originBack } from '@/lib/back';
 import { appOrigin } from '@/lib/public-water-link';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
@@ -30,6 +31,7 @@ export default async function LeadsPage({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const params = await searchParams;
+  const back = originBack(typeof params.from === 'string' ? params.from : undefined);
   const section: Section = pickSection(SECTIONS, params['section'], 'open');
 
   const [openLeads, doneLeads, settings, me] = await Promise.all([
@@ -43,7 +45,7 @@ export default async function LeadsPage({
     <PageShell
       title={t('leads.title')}
       subtitle={t('leads.subtitle')}
-      back={{ href: '/dashboard/students', label: t('students.backToRegister') }}
+      back={backProp(back, t)}
     >
       {children}
     </PageShell>

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, CalendarClock, PackageOpen, Search, Wrench } from 'lucide-react';
 import type {
@@ -11,7 +11,6 @@ import type {
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/date-format';
 import { timeAgo } from '@/lib/relative-time';
-import { withFrom } from '@/lib/back';
 import { WidgetCard } from './widget-card';
 import { QuickCleanButton } from './quick-clean-button';
 
@@ -74,9 +73,9 @@ export async function FaultsCard({ widget }: { widget: DashboardWidget }): Promi
                       <Wrench className="size-3.5" aria-hidden="true" />
                       {t('spaces.severity.chip', { severity: t(`spaces.severity.${fault.severity}`) })}
                     </span>
-                    <Link href={withFrom(href, '/dashboard')} className={LINK}>
+                    <FromLink href={href} className={LINK}>
                       {fault.description}
-                    </Link>
+                    </FromLink>
                   </span>
                   <span className="text-foreground-muted">
                     {where} · {timeAgo(fault.reportedAt, locale)}
@@ -116,12 +115,12 @@ export async function OverdueCleaningsCard({
             {data.spaces.map((space) => (
               <li key={space.id} className="flex items-start justify-between gap-3">
                 <span className="flex flex-col">
-                  <Link
-                    href={withFrom(`/dashboard/facilities/spaces/${space.id}`, '/dashboard')}
+                  <FromLink
+                    href={`/dashboard/facilities/spaces/${space.id}`}
                     className={LINK}
                   >
                     {space.name}
-                  </Link>
+                  </FromLink>
                   <span className="flex items-center gap-1 text-xs text-warning">
                     <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
                     {space.lastCleanedAt === null
@@ -182,12 +181,12 @@ export async function WaterDueCard({ widget }: { widget: DashboardWidget }): Pro
                     : t('dashboard.widget.water.due', { on: formatDate(pool.takenAt) })}
                 </span>
               )}
-              <Link
-                href={withFrom(`/dashboard/facilities/pools/${pool.poolId}?tab=water`, '/dashboard')}
+              <FromLink
+                href={`/dashboard/facilities/pools/${pool.poolId}?tab=water`}
                 className="self-start text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {t('dashboard.widget.waterDue.record')}
-              </Link>
+              </FromLink>
             </li>
           ))}
         </ul>

@@ -3,7 +3,7 @@ import { PaymentInstructionsPanel, TaxPanel } from './tax-panel';
 import { LogoPanel } from './logo-panel';
 import { readTaxSettings } from './club.actions';
 import { wallClockNow } from '@/lib/date-format';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { SectionPills, pickSection, sectionHref as sectionUrl } from '@/components/section-pills';
 import { describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
 import { notFound } from 'next/navigation';
@@ -16,7 +16,6 @@ import {
   type PeopleCounts,
   type Students,
 } from '@/lib/api';
-import { withFrom } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PoolClosureNote } from '@/components/pool-closure-note';
 import { PhotoGallery } from '@/components/photo-gallery';
@@ -79,7 +78,7 @@ import { storageConfigured } from '@/lib/storage-status';
  * and admins — and the whole block only renders for those two, so no link here
  * ends in a refusal.
  *
- * Each link is stamped with this site's path — R4. Both destinations are real
+ * Each link carries this page as its origin (`FromLink`, R4 and POOLSE-91). Both destinations are real
  * sections with their own back targets, so without it "Voltar" from the staff
  * list lands on the dashboard rather than on the site somebody was reading, and
  * the only way back to it is the browser's own button. See `lib/back.ts`.
@@ -381,8 +380,8 @@ export default async function FacilityPage({
                 <ul className="flex flex-col divide-y divide-border">
                   {loaded.pools.map((pool) => (
                     <li key={pool.id} className="py-3 first:pt-0 last:pb-0">
-                      <Link
-                        href={withFrom(`/dashboard/facilities/pools/${pool.id}`, `${path}?tab=pools`)}
+                      <FromLink
+                        href={`/dashboard/facilities/pools/${pool.id}`}
                         className="flex items-center gap-3 rounded hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         <EntityIcon kind="pool" />
@@ -390,7 +389,7 @@ export default async function FacilityPage({
                         <span className="text-sm text-foreground-muted">
                           {t(`facilities.kind.${pool.kind}`)}
                         </span>
-                      </Link>
+                      </FromLink>
                       <PoolClosureNote closure={pool.closure} className="mt-1" />
                     </li>
                   ))}
@@ -444,7 +443,6 @@ export default async function FacilityPage({
                   facilityId={facilityId}
                   spaces={spaces.data.items}
                   canManage={spaces.data.canManage}
-                  backTo={`${path}?tab=spaces`}
                 />
               )
             ),
@@ -494,7 +492,6 @@ export default async function FacilityPage({
                   <EnergyPanel
                     facilityId={facilityId}
                     list={meters.data}
-                    backTo={`${path}?tab=energy`}
                   />
                 </section>
               )
@@ -673,8 +670,8 @@ async function GeneralTab({
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {GROUPS.map((group) => (
               <li key={group.key}>
-                <Link
-                  href={withFrom(group.href, path)}
+                <FromLink
+                  href={group.href}
                   className="flex flex-col gap-0.5 rounded border border-border p-3 transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   {/*
@@ -684,7 +681,7 @@ async function GeneralTab({
                   */}
                   <span className="text-2xl font-semibold">{site.counts?.[group.key] ?? 0}</span>
                   <span className="text-sm text-foreground-muted">{t(group.label)}</span>
-                </Link>
+                </FromLink>
               </li>
             ))}
           </ul>
@@ -725,12 +722,12 @@ async function GeneralTab({
               Closures live in the calendar and stay there: a second place to enter
               them would be a second place for them to disagree.
             */}
-            <Link
-              href={withFrom('/dashboard/calendar/closures', path)}
+            <FromLink
+              href={'/dashboard/calendar/closures'}
               className="rounded text-sm text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {t('facilities.manageClosures')}
-            </Link>
+            </FromLink>
           </div>
 
           <HoursPanel

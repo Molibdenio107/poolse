@@ -1,8 +1,8 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { getTranslations } from 'next-intl/server';
 import { ApiError, apiFetch, type Closures } from '@/lib/api';
-import { backTarget } from '@/lib/back';
+import { backProp, originBack } from '@/lib/back';
 import { POOL_METRICS } from '@/lib/pool-metrics';
 import { cn } from '@/lib/utils';
 import { ClosureCalendar } from './closure-calendar';
@@ -106,13 +106,13 @@ export default async function ClosuresPage({
    * this calendar from a pool's water panel should land on that pool again, not
    * on the week view they never visited.
    */
-  const back = backTarget(from, '/dashboard/calendar');
+  const back = originBack(from);
 
   return (
     <PageShell
       title={t('calendar.closures')}
       subtitle={t('calendar.closuresSubtitle')}
-      back={{ href: back.href, label: t(back.labelKey) }}
+      back={backProp(back, t)}
     >
 
 
@@ -139,7 +139,7 @@ export default async function ClosuresPage({
           <div className="flex flex-wrap items-center justify-between gap-4">
             <nav aria-label={t('calendar.year')} className="flex flex-wrap gap-1">
               {years.map((option) => (
-                <Link
+                <FromLink
                   key={option}
                   href={`/dashboard/calendar/closures?year=${option}`}
                   aria-current={option === year ? 'page' : undefined}
@@ -152,7 +152,7 @@ export default async function ClosuresPage({
                   )}
                 >
                   {option}
-                </Link>
+                </FromLink>
               ))}
             </nav>
           </div>

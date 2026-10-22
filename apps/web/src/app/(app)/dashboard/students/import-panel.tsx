@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useTranslations } from 'next-intl';
 import { FileSpreadsheet, Upload, X } from 'lucide-react';
 import type { StudentLevel } from '@/lib/api';
@@ -191,9 +191,9 @@ export function StudentActions({
   return (
     <>
       <div className="flex flex-wrap gap-3">
-        <Link href="/dashboard/students/new" className={BUTTON}>
+        <FromLink href="/dashboard/students/new" className={BUTTON}>
           {t('students.add')}
-        </Link>
+        </FromLink>
 
         <button
           type="button"

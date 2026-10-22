@@ -1,7 +1,6 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import type { DashboardWidget, WidgetState } from '@/lib/api';
-import { withFrom } from '@/lib/back';
 import { cn } from '@/lib/utils';
 
 /**
@@ -21,7 +20,7 @@ import { cn } from '@/lib/utils';
  * **Every card links to its real page**, in all three states. A card that has
  * failed is still the way to the thing it failed to summarise, and a card with
  * nothing to show is often exactly where somebody wants to go and add the first
- * one. The link carries `withFrom` so the back link on the far side comes home.
+ * one. The link is a `FromLink`, so the back link on the far side comes home.
  */
 
 /** Column span inside a band's grid — the registry's `size`, as a class. */
@@ -71,12 +70,12 @@ export async function WidgetCard({
         {children}
       </Body>
 
-      <Link
-        href={withFrom(href, '/dashboard')}
+      <FromLink
+        href={href}
         className="mt-auto self-start text-sm text-primary hover:underline coarse:-mb-3 coarse:py-3 coarse:pr-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {linkLabel}
-      </Link>
+      </FromLink>
     </section>
   );
 }

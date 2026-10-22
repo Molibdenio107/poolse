@@ -1,9 +1,10 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { Siren } from 'lucide-react';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
+import { backProp, originBack } from '@/lib/back';
 import { formatStamp } from '@/lib/date-format';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
@@ -29,10 +30,11 @@ import { SiteLinks } from './site-links';
 export default async function IncidentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ site?: string; page?: string }>;
+  searchParams: Promise<{ site?: string; page?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { site: requested = '', page: pageParam } = await searchParams;
+  const { site: requested = '', page: pageParam, from } = await searchParams;
+  const back = originBack(from);
   const page = readPage(pageParam);
 
   const sites = await outcome(apiFetch<Facilities>('/facilities'));
@@ -70,16 +72,17 @@ export default async function IncidentsPage({
 
   return (
     <PageShell
+      back={backProp(back, t)}
       title={t('incidents.title')}
       subtitle={t('incidents.subtitle')}
       actions={
         incidents.state === 'ok' ? (
-          <Link
+          <FromLink
             href={newHref}
             className="inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('incidents.new')}
-          </Link>
+          </FromLink>
         ) : null
       }
     >
@@ -112,14 +115,14 @@ export default async function IncidentsPage({
               {incidents.data.items.map((incident) => (
                 <li key={incident.id} className="flex flex-col gap-1 py-4 first:pt-0 last:pb-0">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <Link
+                    <FromLink
                       href={`/dashboard/facilities/incidents/${incident.id}`}
                       className="font-medium underline underline-offset-4 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       {formatStamp(incident.occurredAt)}
                       {' · '}
                       {incident.placeName ?? t('incidents.elsewhere')}
-                    </Link>
+                    </FromLink>
                     {/* Said in words with an icon; the colour only repeats it. */}
                     {incident.emergencyCalled ? (
                       <span className="inline-flex items-center gap-1.5 text-sm font-medium text-danger">
@@ -158,7 +161,7 @@ export default async function IncidentsPage({
             <Pagination
               page={incidents.data}
               basePath="/dashboard/facilities/incidents"
-              query={{ site: chosen.id }}
+              query={{ site: chosen.id, from }}
             />
           </section>
         )}

@@ -1,7 +1,8 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
+import { backProp, originBack } from '@/lib/back';
 import { ApiError, apiFetch, type Facilities } from '../../../../lib/api';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { Settings } from 'lucide-react';
 import { EntityIcon } from '@/components/entity-icon';
 import { PoolClosureNote } from '@/components/pool-closure-note';
@@ -23,8 +24,13 @@ import { PageError, PageShell } from '@/components/page-shell';
  * link away, which also drops the per-site `listSpaces` loop this page ran on
  * every visit. The photo gallery went with it and came back the same day.
  */
-export default async function FacilitiesPage(): Promise<React.ReactElement> {
+export default async function FacilitiesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const back = originBack((await searchParams).from);
   const format = await getFormatter();
 
   let data: Facilities | null = null;
@@ -43,6 +49,7 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
 
   return (
     <PageShell
+      back={backProp(back, t)}
       title={t('facilities.title')}
       subtitle={t('facilities.subtitle')}
     >
@@ -78,12 +85,12 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                 {t('facilities.planFull', { max: data.maxFacilities })}
               </p>
             ) : (
-              <Link
+              <FromLink
                 href="/dashboard/facilities/new"
                 className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:bg-surface-muted"
               >
                 {t('facilities.addSite')}
-              </Link>
+              </FromLink>
             ))}
 
           {data.facilities.length === 0 ? (
@@ -128,13 +135,13 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                       card is everybody's, configuring the site is not.
                     */}
                     {data.canManage && (
-                      <Link
+                      <FromLink
                         href={`/dashboard/facilities/${facility.id}`}
                         className="inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         <Settings aria-hidden className="size-4" />
                         {t('facilities.configure')}
-                      </Link>
+                      </FromLink>
                     )}
                     {data.canManage && (
                       <ArchiveButton
@@ -160,12 +167,12 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                           <div className="flex min-w-0 flex-col">
                           {/* A tank's page is staff only; a family reads the name. */}
                           {data.canOpenPools ? (
-                            <Link
+                            <FromLink
                               href={`/dashboard/facilities/pools/${pool.id}`}
                               className="truncate text-primary hover:underline"
                             >
                               {pool.name}
-                            </Link>
+                            </FromLink>
                           ) : (
                             <span className="truncate">{pool.name}</span>
                           )}
@@ -243,24 +250,24 @@ export default async function FacilitiesPage(): Promise<React.ReactElement> {
                         ['energy', 'energy.section'],
                       ] as const
                     ).map(([tab, key]) => (
-                      <Link
+                      <FromLink
                         key={tab}
                         href={`/dashboard/facilities/${facility.id}?tab=${tab}`}
                         className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         {t(key)}
-                      </Link>
+                      </FromLink>
                     ))}
                   </nav>
                 )}
 
                 {data.canManage && (
-                  <Link
+                  <FromLink
                     href={`/dashboard/facilities/pools/new?facilityId=${facility.id}`}
                     className="inline-flex h-control items-center justify-center px-4 text-control gap-2 self-start rounded border border-border hover:bg-surface-muted"
                   >
                     {t('facilities.addPool')}
-                  </Link>
+                  </FromLink>
                 )}
               </section>
             ))

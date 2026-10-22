@@ -5,6 +5,7 @@ import { Siren, TriangleAlert } from 'lucide-react';
 import { apiFetch, type IncidentFacts } from '@/lib/api';
 import { isMissing, outcome } from '@/lib/load-failure';
 import { formatStamp } from '@/lib/date-format';
+import { backProp, backTarget } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { ClinicalDetail } from './clinical-detail';
 import { ArchiveIncident } from './archive-incident';
@@ -25,10 +26,13 @@ import { ArchiveIncident } from './archive-incident';
  */
 export default async function IncidentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const { from } = await searchParams;
   const { id } = await params;
 
   const loaded = await outcome(apiFetch<IncidentFacts>(`/incidents/${encodeURIComponent(id)}`));
@@ -39,7 +43,7 @@ export default async function IncidentPage({
     return (
       <PageShell
         title={t('incidents.title')}
-        back={{ href: '/dashboard/facilities/incidents', label: t('incidents.backToList') }}
+        back={backProp(backTarget(from, '/dashboard/facilities/incidents'), t)}
       >
         {loaded.state === 'failed' && (
           <PageError
@@ -58,7 +62,7 @@ export default async function IncidentPage({
     <PageShell
       title={t('incidents.oneTitle', { when: formatStamp(incident.occurredAt) })}
       subtitle={incident.facilityName}
-      back={{ href: listHref, label: t('incidents.backToList') }}
+      back={backProp(backTarget(from, listHref), t)}
       actions={
         <div className="flex flex-wrap gap-2">
           {/*

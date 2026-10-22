@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
@@ -98,12 +98,12 @@ export default async function GuardiansPage({
                 <>
                   <p>{t('search.noResults', { term })}</p>
                   <p className="text-sm text-foreground-muted">{t('search.noResultsHint')}</p>
-                  <Link
+                  <FromLink
                     href="/dashboard/students/guardians"
                     className="inline-flex h-control items-center justify-center px-4 text-control gap-2 mt-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     {t('search.clearSearch')}
-                  </Link>
+                  </FromLink>
                 </>
               ) : (
                 <>
@@ -131,13 +131,13 @@ export default async function GuardiansPage({
                           {guardian.shortName}
                         </span>
                       ) : (
-                        <Link
+                        <FromLink
                           href={`/dashboard/students/${guardian.studentId}`}
                           title={guardian.name}
                           className="rounded font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         >
                           {guardian.shortName}
-                        </Link>
+                        </FromLink>
                       )}
 
                       {/*
@@ -177,12 +177,12 @@ export default async function GuardiansPage({
                     <ul className="flex flex-col gap-1 pl-4 text-sm">
                       {guardian.students.map((student) => (
                         <li key={student.id}>
-                          <Link
+                          <FromLink
                             href={`/dashboard/students/${student.id}`}
                             className="rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                           >
                             {student.name}
-                          </Link>
+                          </FromLink>
                         </li>
                       ))}
                     </ul>

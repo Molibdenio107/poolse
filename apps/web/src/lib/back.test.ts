@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { backLabelKey, backTarget, readFrom, withFrom } from './back.ts';
+import {
+  backLabelKey,
+  backTarget,
+  currentHref,
+  originBack,
+  readFrom,
+  stampFrom,
+  withFrom,
+} from './back.ts';
 
 /**
  * Where "Voltar" goes — R4.
@@ -108,4 +116,91 @@ test('stamping a link keeps whatever query it already had', () => {
   const stamped = withFrom('/dashboard/students', '/dashboard/facilities/abc');
   const value = new URL(stamped, 'https://poolse.test').searchParams.get('from') ?? undefined;
   assert.equal(readFrom(value), '/dashboard/facilities/abc');
+});
+
+test('the destinations POOLSE-91 added are named, and a sub-section is never a record', () => {
+  // The six the ticket names.
+  assert.equal(backLabelKey('/dashboard/profile'), 'back.toProfile');
+  assert.equal(backLabelKey('/dashboard/profile?tab=support'), 'back.toProfile');
+  assert.equal(backLabelKey('/dashboard/profile/subscription'), 'back.toSubscription');
+  assert.equal(backLabelKey('/dashboard/students/pedidos?section=queue'), 'back.toRequests');
+  assert.equal(
+    backLabelKey('/dashboard/facilities/staff/qualifications?section=attention&page=2'),
+    'back.toQualifications',
+  );
+  assert.equal(backLabelKey('/dashboard/facilities/incidents?site=abc'), 'incidents.backToList');
+
+  // A task, a space and an incident were once announced as "the site": the
+  // record rule read any unknown segment under /facilities as a site id.
+  assert.equal(backLabelKey('/dashboard/facilities/tasks/6f2a-1b'), 'back.toTask');
+  assert.equal(backLabelKey('/dashboard/facilities/spaces/6f2a-1b'), 'back.toSpace');
+  assert.equal(backLabelKey('/dashboard/facilities/incidents/6f2a-1b'), 'incidents.backToList');
+  assert.equal(backLabelKey('/dashboard/facilities/6f2a-1b?tab=maintenance'), 'facilities.backToSite');
+
+  // One student, one turma, one document — and their sections are not records.
+  assert.equal(backLabelKey('/dashboard/students/6f2a-1b?tab=fees'), 'back.toStudent');
+  assert.equal(backLabelKey('/dashboard/students/guardians'), 'students.backToGuardians');
+  assert.equal(backLabelKey('/dashboard/classes/6f2a-1b'), 'back.toClass');
+  assert.equal(backLabelKey('/dashboard/classes/seasons'), 'back.toSeasons');
+  assert.equal(backLabelKey('/dashboard/faturacao/6f2a-1b'), 'back.toInvoice');
+  assert.equal(backLabelKey('/dashboard/faturacao?view=outstanding'), 'invoices.backToList');
+});
+
+test('a menu page has a way back only when it was linked into', () => {
+  assert.equal(originBack(undefined), undefined, 'opened from the menu');
+  assert.equal(originBack('https://evil.example'), undefined, 'a forged origin is no origin');
+  assert.deepEqual(originBack('/dashboard/facilities/abc?tab=people'), {
+    href: '/dashboard/facilities/abc?tab=people',
+    labelKey: 'facilities.backToSite',
+  });
+});
+
+test('the origin is the whole page: path, tab, section, page, filters and its own from', () => {
+  assert.equal(currentHref('/dashboard', {}), '/dashboard');
+  assert.equal(
+    currentHref('/dashboard/facilities/staff/qualifications', { section: 'attention', page: '2' }),
+    '/dashboard/facilities/staff/qualifications?section=attention&page=2',
+  );
+  assert.equal(
+    currentHref('/dashboard/facilities/abc', new URLSearchParams('tab=maintenance&from=%2Fdashboard')),
+    '/dashboard/facilities/abc?tab=maintenance&from=%2Fdashboard',
+  );
+});
+
+test('a link to another page carries this one; a link to this page carries its origin on', () => {
+  const here = new URLSearchParams('tab=maintenance&from=%2Fdashboard');
+
+  // dashboard → site → task: the task learns the site, tab and the site's own origin.
+  const task = stampFrom('/dashboard/facilities/tasks/t1', '/dashboard/facilities/abc', here);
+  const back = new URL(task, 'https://poolse.test').searchParams.get('from') ?? undefined;
+  assert.equal(readFrom(back), '/dashboard/facilities/abc?tab=maintenance&from=%2Fdashboard');
+  // … and Voltar from the site, once back on it, is the dashboard.
+  const site = new URL(back ?? '', 'https://poolse.test').searchParams.get('from') ?? undefined;
+  assert.equal(readFrom(site), '/dashboard');
+
+  // Another tab, or page 2, of the same page: not its own origin.
+  assert.equal(
+    stampFrom('/dashboard/facilities/abc?tab=pools', '/dashboard/facilities/abc', here),
+    '/dashboard/facilities/abc?tab=pools&from=%2Fdashboard',
+  );
+  assert.equal(
+    stampFrom('/dashboard/students?page=2', '/dashboard/students', new URLSearchParams()),
+    '/dashboard/students?page=2',
+  );
+
+  // Untouched: outside the app, or a link that already says where it is from.
+  assert.equal(stampFrom('mailto:a@b.pt', '/dashboard', here), 'mailto:a@b.pt');
+  assert.equal(stampFrom('/files/x', '/dashboard', here), '/files/x');
+  assert.equal(stampFrom('/dashboard/x?from=%2Fdashboard', '/dashboard/y', here), '/dashboard/x?from=%2Fdashboard');
+});
+
+test('a chain that loops forgets its oldest hops instead of growing without end', () => {
+  let origin = '/dashboard';
+  for (let hop = 0; hop < 40; hop++) {
+    const page = hop % 2 === 0 ? '/dashboard/facilities/abc' : '/dashboard/facilities/staff';
+    const href = withFrom(page, origin);
+    origin = currentHref(page, new URL(href, 'https://poolse.test').searchParams);
+  }
+  assert.ok(origin.length < 6000, `grew to ${origin.length}`);
+  assert.notEqual(readFrom(origin), null, 'still a usable origin');
 });

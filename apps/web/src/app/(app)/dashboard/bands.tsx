@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
 import type { Dashboard } from '@/lib/api';
 import { renderWidget } from './widgets';
@@ -65,7 +65,7 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
               {family.children.map((child) => {
                 const current = child.id === family.selectedId;
                 return (
-                  <Link
+                  <FromLink
                     key={child.id}
                     href={`/dashboard?child=${child.id}`}
                     aria-current={current ? 'page' : undefined}
@@ -76,7 +76,7 @@ export async function Bands({ dashboard }: { dashboard: Dashboard }): Promise<Re
                     }
                   >
                     {child.self ? t('family.yourselfShort', { name: child.name }) : child.name}
-                  </Link>
+                  </FromLink>
                 );
               })}
             </nav>

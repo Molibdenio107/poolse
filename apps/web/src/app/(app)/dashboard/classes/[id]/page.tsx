@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { ActivityPanel } from '@/components/activity-panel';
 import { readPage } from '@/lib/pagination';
 import { ChevronRight } from 'lucide-react';
@@ -109,12 +109,12 @@ export default async function ClassPage({
       actions={
         // Only for whoever the skills grid answers — maintenance is refused it.
         loaded.canMarkSkills && (
-        <Link
+        <FromLink
           href={`/dashboard/classes/${id}/skills`}
           className="inline-flex h-control items-center justify-center px-4 text-control gap-2 shrink-0 rounded border border-border hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('skills.title')}
-        </Link>
+        </FromLink>
         )
       }
       requested={tab}
@@ -304,13 +304,13 @@ export default async function ClassPage({
                           <PersonAvatar id={student.studentId} name={student.displayName} size="sm" />
                           {/* A roster is the narrowest column in the app — POOLSE-32
                               criterion 2. The full name is on the detail page. */}
-                          <Link
+                          <FromLink
                             href={`/dashboard/students/${student.studentId}`}
                             className="truncate text-primary hover:underline coarse:-my-3 coarse:py-3"
                             title={student.displayName}
                           >
                             {student.shortName}
-                          </Link>
+                          </FromLink>
                         </span>
                         <span className="flex shrink-0 items-center gap-2">
                           {/*

@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { apiFetch, type Facilities } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
 import { wallClockNow } from '@/lib/date-format';
+import { backProp, backTarget } from '@/lib/back';
 import { PageError, PageShell } from '@/components/page-shell';
 import { listSpaces } from '../../spaces.actions';
 import { IncidentForm } from '../incident-form';
@@ -22,17 +23,17 @@ import { SiteLinks } from '../site-links';
 export default async function NewIncidentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ site?: string }>;
+  searchParams: Promise<{ site?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { site: requested = '' } = await searchParams;
+  const { site: requested = '', from } = await searchParams;
 
   const sites = await outcome(apiFetch<Facilities>('/facilities'));
   if (sites.state !== 'ok' || sites.data.facilities.length === 0) {
     return (
       <PageShell
         title={t('incidents.new')}
-        back={{ href: '/dashboard/facilities/incidents', label: t('incidents.backToList') }}
+        back={backProp(backTarget(from, '/dashboard/facilities/incidents'), t)}
       >
         <PageError
           message={t(
@@ -62,10 +63,7 @@ export default async function NewIncidentPage({
     <PageShell
       title={t('incidents.new')}
       subtitle={t('incidents.newSubtitle', { site: chosen.name })}
-      back={{
-        href: `/dashboard/facilities/incidents?site=${chosen.id}`,
-        label: t('incidents.backToList'),
-      }}
+      back={backProp(backTarget(from, `/dashboard/facilities/incidents?site=${chosen.id}`), t)}
     >
       <div className="flex flex-col gap-6">
         <SiteLinks

@@ -1,7 +1,8 @@
 import { AlertTriangle } from 'lucide-react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { ActivityPanel } from '@/components/activity-panel';
 import { readPage } from '@/lib/pagination';
+import { backTarget } from '@/lib/back';
 import { describeLoad, outcome, type LoadFailure, type Outcome } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
@@ -59,12 +60,13 @@ export default async function StudentPage({
     tab?: string | string[];
     section?: string | string[];
     page?: string;
+    from?: string;
   }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
   const { id } = await params;
-  const { week, tab, section, page } = await searchParams;
+  const { week, tab, section, page, from } = await searchParams;
 
   const monday = mondayOf(isDate(week) ? week : today());
   const sunday = addDays(monday, 6);
@@ -170,11 +172,12 @@ export default async function StudentPage({
         .then((answer) => answer.students.length)
         .catch(() => 0)
     : 0;
-  const back = readerIsFamily
-    ? familyRecords > 1
-      ? { href: '/dashboard/family', label: t('family.back') }
-      : { href: '/dashboard', label: t('common.backToDashboard') }
-    : { href: '/dashboard/students', label: t('students.backToRegister') };
+  // Where the link was followed from wins, for a family as for staff (POOLSE-91).
+  const target = backTarget(
+    from,
+    readerIsFamily ? (familyRecords > 1 ? '/dashboard/family' : '/dashboard') : '/dashboard/students',
+  );
+  const back = { href: target.href, label: t(target.labelKey) };
 
   if (student === null || (register === null && !family)) {
     return (
@@ -476,12 +479,12 @@ export default async function StudentPage({
                         // A turma's page is staff only.
                         <span className="font-medium">{entry.className}</span>
                       ) : (
-                        <Link
+                        <FromLink
                           href={`/dashboard/classes/${entry.classGroupId}`}
                           className="rounded font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         >
                           {entry.className}
-                        </Link>
+                        </FromLink>
                       )}
                       {entry.status === 'waiting' && (
                         <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-foreground-muted">

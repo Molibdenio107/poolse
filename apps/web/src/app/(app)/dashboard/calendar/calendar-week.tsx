@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/toast';
@@ -206,13 +206,13 @@ export function CalendarWeek({
             )}
 
             {session.mark !== undefined && (
-              <Link
+              <FromLink
                 href={session.mark.href}
                 className="inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-primary/40 font-medium text-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
               >
                 <ClipboardCheck className="size-4" aria-hidden="true" />
                 {session.mark.label}
-              </Link>
+              </FromLink>
             )}
 
             {session.cancel !== undefined && session.sessionId !== undefined && (
@@ -625,12 +625,12 @@ export function CalendarWeek({
         */}
         <p className="mt-3 text-sm text-foreground-muted">{t('calendar.laneAfterwards')}</p>
 
-        <Link
+        <FromLink
           href="/dashboard/classes/new"
           className="mt-3 inline-block text-sm text-primary underline-offset-4 hover:underline"
         >
           {t('calendar.createTurma')}
-        </Link>
+        </FromLink>
 
         {/*
           Or hold this lane for the public — POOLSE-68. The title is the club's

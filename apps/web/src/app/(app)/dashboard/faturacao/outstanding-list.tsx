@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { FromLink } from '@/components/from-link';
 import { Mail } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatCents } from '@/lib/money';
@@ -142,12 +142,12 @@ export function OutstandingList({
                     />
                   </td>
                   <td className="py-3">
-                    <Link
+                    <FromLink
                       href={`/dashboard/faturacao/${invoice.id}?facilityId=${facilityId}`}
                       className="font-medium text-primary hover:underline"
                     >
                       {invoice.documentNo}
-                    </Link>
+                    </FromLink>
                     <StatusBadge
                       status={invoice.status}
                       daysOverdue={invoice.daysOverdue}
