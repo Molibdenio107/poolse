@@ -4304,6 +4304,8 @@ export interface WaterWidgetData {
 export interface MaintenanceWidgetData {
   open: { type: IssueType; severity: Severity; count: number }[];
   overdueCleanings: number;
+  /** Per site, only those with something outstanding — most overdue rooms first. */
+  bySite: { facilityId: string; overdueCleanings: number; openRequests: number }[];
 }
 
 /** `mgmt.people` — the club's people. Club-wide: no site owns a person. */

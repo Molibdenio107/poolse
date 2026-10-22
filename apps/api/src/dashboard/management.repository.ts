@@ -250,12 +250,18 @@ export interface MaintenanceOpen {
   open: { type: 'fault' | 'restock'; severity: Severity; count: number }[];
   /** Espaços past their cleaning interval, by `OVERDUE`. */
   overdueCleanings: number;
+  /**
+   * The same two figures per site, for the sites that have either — most
+   * overdue rooms first, then most open requests. POOLSE-92: on *all sites*
+   * the card links to the site that needs it, never to the list of sites.
+   */
+  bySite: { facilityId: string; overdueCleanings: number; openRequests: number }[];
 }
 
 /**
  * Open avarias and reposições, and rooms overdue for cleaning.
  *
- * Two counts in one statement. The requests are grouped by kind and severity in
+ * Two counts in one statement, and the same two per site. The requests are grouped by kind and severity in
  * the database; the overdue rooms reuse `OVERDUE` and `SPACE_JOINS` exactly, so
  * the card and the Espaços screen are one rule read twice — out of service is
  * never overdue, no interval is never overdue, never cleaned is.
@@ -268,6 +274,7 @@ export async function readMaintenanceOpen(
     const { rows } = await tx.query<{
       open: MaintenanceOpen['open'];
       overdue_cleanings: number;
+      by_site: MaintenanceOpen['bySite'];
     }>(
       `SELECT
          (SELECT coalesce(json_agg(json_build_object('type', g.type, 'severity', g.severity,
@@ -284,12 +291,36 @@ export async function readMaintenanceOpen(
             ${SPACE_JOINS}
            WHERE s.archived_at IS NULL
              AND s.facility_id = ANY($1::uuid[])
-             AND (${OVERDUE}))                                      AS overdue_cleanings`,
+             AND (${OVERDUE}))                                      AS overdue_cleanings,
+         (SELECT coalesce(json_agg(json_build_object('facilityId', x.id,
+                                                     'overdueCleanings', x.overdue,
+                                                     'openRequests', x.requests)
+                                   ORDER BY x.overdue DESC, x.requests DESC, x.name, x.id), '[]'::json)
+            FROM (SELECT f.id, f.name,
+                         coalesce(o.n, 0) AS overdue,
+                         coalesce(q.n, 0) AS requests
+                    FROM facility f
+                    LEFT JOIN (SELECT s.facility_id, count(*)::int AS n
+                                 FROM space s
+                                 ${SPACE_JOINS}
+                                WHERE s.archived_at IS NULL
+                                  AND s.facility_id = ANY($1::uuid[])
+                                  AND (${OVERDUE})
+                                GROUP BY s.facility_id) o ON o.facility_id = f.id
+                    LEFT JOIN (SELECT mr.facility_id, count(*)::int AS n
+                                 FROM maintenance_request mr
+                                WHERE mr.status = 'open'
+                                  AND mr.archived_at IS NULL
+                                  AND mr.facility_id = ANY($1::uuid[])
+                                GROUP BY mr.facility_id) q ON q.facility_id = f.id
+                   WHERE f.id = ANY($1::uuid[])
+                     AND f.archived_at IS NULL) x
+           WHERE x.overdue > 0 OR x.requests > 0)                   AS by_site`,
       [facilityIds],
     );
 
     const row = rows[0]!;
-    return { open: row.open, overdueCleanings: row.overdue_cleanings };
+    return { open: row.open, overdueCleanings: row.overdue_cleanings, bySite: row.by_site };
   });
 }
 

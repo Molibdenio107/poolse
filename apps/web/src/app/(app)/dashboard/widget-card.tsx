@@ -23,6 +23,9 @@ import { cn } from '@/lib/utils';
  * one. The link is a `FromLink`, so the back link on the far side comes home.
  */
 
+const LINK =
+  'text-sm text-primary hover:underline coarse:py-3 coarse:pr-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+
 /** Column span inside a band's grid — the registry's `size`, as a class. */
 const SPAN: Record<1 | 2 | 3, string> = {
   1: 'lg:col-span-1',
@@ -35,6 +38,7 @@ export async function WidgetCard({
   title,
   href,
   linkLabel,
+  links,
   emptyMessage,
   children,
 }: {
@@ -43,6 +47,12 @@ export async function WidgetCard({
   /** Where this card's subject actually lives. Always offered. */
   href: string;
   linkLabel: string;
+  /**
+   * Several destinations in place of the one — a card whose subject lives on
+   * each site's own page offers each site rather than the list of them
+   * (POOLSE-92). When given, `href` and `linkLabel` are not drawn.
+   */
+  links?: readonly { href: string; label: string }[] | undefined;
   /**
    * What "there is nothing here" means for *this* widget, in its own voice.
    *
@@ -70,12 +80,21 @@ export async function WidgetCard({
         {children}
       </Body>
 
-      <FromLink
-        href={href}
-        className="mt-auto self-start text-sm text-primary hover:underline coarse:-mb-3 coarse:py-3 coarse:pr-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      >
-        {linkLabel}
-      </FromLink>
+      {links !== undefined && links.length > 1 ? (
+        <ul className="mt-auto flex flex-col gap-1">
+          {links.map((link) => (
+            <li key={link.href}>
+              <FromLink href={link.href} className={cn('coarse:-my-3', LINK)}>
+                {link.label}
+              </FromLink>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <FromLink href={links?.[0]?.href ?? href} className={cn('mt-auto self-start coarse:-mb-3', LINK)}>
+          {links?.[0]?.label ?? linkLabel}
+        </FromLink>
+      )}
     </section>
   );
 }

@@ -402,6 +402,29 @@ async function EnergyCostsCard({ widget }: { widget: DashboardWidget }): Promise
 /* The management band's aggregates — slice 2b                                */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Where the maintenance card sends somebody: a site's Espaços tab, never the
+ * list of sites — POOLSE-92 A. Avarias, reposições and the cleaning rota all
+ * live there, which is what the card counts and what "Ver espaços" promises.
+ *
+ * One site selected: that site. All sites: each of them when there are three
+ * or fewer (Rui, 22-10-2026), else the one with the most overdue rooms, and
+ * the first site when nothing is outstanding anywhere. Undefined leaves the
+ * card its single `href`, which is right for one selected site.
+ */
+function spacesLinks(
+  scope: DashboardScope,
+  data: MaintenanceWidgetData | null,
+  label: (site: string) => string,
+): { href: string; label: string }[] | undefined {
+  if (scope.mode === 'facility' && scope.facilityId !== null) return undefined;
+  const tab = (id: string) => `/dashboard/facilities/${id}?tab=spaces`;
+  const sites = scope.facilities;
+  if (sites.length <= 3) return sites.map((site) => ({ href: tab(site.id), label: label(site.name) }));
+  const worst = sites.find((site) => site.id === data?.bySite[0]?.facilityId) ?? sites[0]!;
+  return [{ href: tab(worst.id), label: label(worst.name) }];
+}
+
 /** The selected site's own page, or every site — where a site-scoped card links. */
 function siteHref(scope: DashboardScope, tab?: string): string {
   if (scope.mode === 'facility' && scope.facilityId !== null) {
@@ -681,6 +704,7 @@ async function MaintenanceCard({
       title={t('maintenance.section')}
       href={siteHref(scope, 'spaces')}
       linkLabel={t('dashboard.widget.maintenance.open')}
+      links={spacesLinks(scope, data, (site) => t('dashboard.widget.maintenance.openSite', { site }))}
       emptyMessage={t('dashboard.widget.maintenance.empty')}
     >
       {data !== null && (

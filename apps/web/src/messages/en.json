@@ -2453,6 +2453,7 @@
         "split": "{count} {severity}",
         "overdue": "{count, plural, one {# space overdue for cleaning} other {# spaces overdue for cleaning}}",
         "empty": "Nothing open.",
+        "openSite": "Open {site} spaces",
         "open": "Open spaces"
       },
       "people": {

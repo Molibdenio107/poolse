@@ -271,6 +271,12 @@ test('66.2b occupancy — today, at the site, without the cancelled class', asyn
 
 test('66.2b maintenance — open requests by kind and severity, and overdue rooms', async () => {
   await withScratchTenant(async (tenant) => {
+    // A second site with nothing outstanding, so the per-site figures have a site to leave out.
+    await tenant.sql('UPDATE organization SET max_facilities = 2 WHERE id = $1', [tenant.organizationId]);
+    await tenant.sql(`INSERT INTO facility (organization_id, name) VALUES ($1, 'Polo Quieto')`, [
+      tenant.organizationId,
+    ]);
+
     const [space] = await tenant.sql<{ id: string }>(
       `INSERT INTO space (organization_id, facility_id, name, expected_cleaning_interval_hours)
        VALUES ($1, $2, 'Balneário Norte', 24) RETURNING id`,
@@ -298,6 +304,12 @@ test('66.2b maintenance — open requests by kind and severity, and overdue room
       'a report that sends no severity is normal',
     );
     assert.equal(open!.data.overdueCleanings, 1, 'a room with a schedule and no cleaning is overdue');
+
+    // POOLSE-92 A: the same figures per site, and only for a site that has any —
+    // the card on *all sites* links to the site that needs it, not to the list.
+    assert.deepEqual(open!.data.bySite, [
+      { facilityId: tenant.facilityId, overdueCleanings: 1, openRequests: 2 },
+    ]);
   });
 });
 

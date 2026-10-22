@@ -2453,6 +2453,7 @@
         "split": "{count} {severity}",
         "overdue": "{count, plural, one {# espaço com limpeza em atraso} other {# espaços com limpeza em atraso}}",
         "empty": "Nada em aberto.",
+        "openSite": "Ver espaços de {site}",
         "open": "Ver espaços"
       },
       "people": {
