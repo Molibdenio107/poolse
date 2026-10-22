@@ -29,6 +29,9 @@ time, shown under the original in order. It is encrypted and read under the same
 detail, since a correction is as likely to be about the injury as about the time. Owner and
 admin can **archive** an incident; the record stays.
 
+After recording, the form returns to the list for that site with a success toast, and the new
+incident's row is lit for a moment (`?new=<id>`) so it is seen to have landed (POOLSE-92).
+
 ## Who can do it
 
 | | Owner | Admin | Author | Other staff | Student / guardian |

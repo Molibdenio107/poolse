@@ -133,7 +133,10 @@ export function IncidentForm({
     seen.current = state;
     if (state.ok && state.id !== undefined) {
       toast.show('success', t('incidents.recorded'));
-      router.push(`/dashboard/facilities/incidents/${state.id}`);
+      // To the list, on this site, with the new row lit for a moment — POOLSE-92
+      // H. The incident's own page is one click away; the list is where somebody
+      // recording several in a row needs to be.
+      router.push(`/dashboard/facilities/incidents?site=${facilityId}&new=${state.id}`);
       return;
     }
     if (state.ok) return;

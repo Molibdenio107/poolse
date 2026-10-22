@@ -6,6 +6,7 @@ import { apiFetch, type Facilities } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
 import { backProp, originBack } from '@/lib/back';
 import { formatStamp } from '@/lib/date-format';
+import { cn } from '@/lib/utils';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
@@ -30,10 +31,10 @@ import { SiteLinks } from './site-links';
 export default async function IncidentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ site?: string; page?: string; from?: string }>;
+  searchParams: Promise<{ site?: string; page?: string; from?: string; new?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const { site: requested = '', page: pageParam, from } = await searchParams;
+  const { site: requested = '', page: pageParam, from, new: recorded } = await searchParams;
   const back = originBack(from);
   const page = readPage(pageParam);
 
@@ -113,7 +114,15 @@ export default async function IncidentsPage({
           <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
             <ul className="flex flex-col divide-y divide-border">
               {incidents.data.items.map((incident) => (
-                <li key={incident.id} className="flex flex-col gap-1 py-4 first:pt-0 last:pb-0">
+                <li
+                  key={incident.id}
+                  className={cn(
+                    'flex flex-col gap-1 py-4 first:pt-0 last:pb-0',
+                    // The one just recorded, lit for a moment so it is seen to
+                    // have landed (POOLSE-92 H). The toast says it in words.
+                    incident.id === recorded && '-mx-2 rounded px-2 motion-safe:animate-flash-today',
+                  )}
+                >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <FromLink
                       href={`/dashboard/facilities/incidents/${incident.id}`}
