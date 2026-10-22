@@ -1,17 +1,16 @@
 import { FromLink } from '@/components/from-link';
-import { getTranslations } from 'next-intl/server';
-import { ChevronLeft, ChevronRight, TriangleAlert } from 'lucide-react';
-import { apiFetch, type Facilities, type LifeguardDuty, type RosterGap } from '@/lib/api';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { apiFetch, type Facilities } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
 import { backProp, originBack } from '@/lib/back';
-import { APP_TIME_ZONE, formatDate, formatTime, wallClockNow } from '@/lib/date-format';
-import { addDays, isDate, isoWeekday, mondayOf, weekOf } from '@/lib/dates';
+import { APP_TIME_ZONE, formatDateRange, wallClockNow } from '@/lib/date-format';
+import { addDays, isDate, mondayOf, weekOf } from '@/lib/dates';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { SectionPills, pickSection } from '@/components/section-pills';
 import { SiteLinks } from '../incidents/site-links';
 import { readRoster } from './roster.actions';
-import { AddDuty } from './add-duty';
-import { RemoveDuty } from './remove-duty';
+import { RosterGrid } from './roster-grid';
 import { PeriodsPanel } from './periods';
 
 const QUIET =
@@ -23,9 +22,11 @@ const QUIET =
  * Who is the lifeguard on which tank, a week at a time. One site via `?site=`,
  * as on Ocorrências; one week via `?week=` (any day, read as its Monday); and,
  * where the site has several tanks, **one tank at a time** behind pills — Rui's
- * standing rule that the reader scrolls as little as possible. Seven rows, one a
- * day, each with its duties, its uncovered windows and, for owner and admin, a
- * way to add one.
+ * standing rule that the reader scrolls as little as possible. The week is a
+ * grid — days across, hours down, each duty a block placed to the minute —
+ * since POOLSE-96 (`roster-grid.tsx`), and its heading is written out in
+ * words ("16 a 22 de novembro de 2026"), the one deliberate exception to
+ * dd-MM-yyyy (`formatDateRange`).
  *
  * **Two warnings and no gate.** A duty whose person held no valid lifeguard
  * qualification that day, and an open window with nobody on it, are both
@@ -42,6 +43,7 @@ export default async function LifeguardsPage({
   searchParams: Promise<{ site?: string; week?: string; pool?: string; view?: string; from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  const locale = await getLocale();
   const { site: requested = '', week, pool: requestedPool, view: requestedView, from } = await searchParams;
   const back = originBack(from);
 
@@ -164,12 +166,10 @@ export default async function LifeguardsPage({
                     {t('roster.thisWeek')}
                   </FromLink>
                 )}
-                <span className="text-sm text-foreground-muted">
-                  {t('roster.weekRange', {
-                    from: formatDate(monday),
-                    to: formatDate(addDays(monday, 6)),
-                  })}
-                </span>
+                {/* The week in words — POOLSE-96. Intl says the shared month once. */}
+                <h2 className="text-sm font-medium">
+                  {formatDateRange(monday, addDays(monday, 6), locale)}
+                </h2>
               </nav>
 
               <SectionPills
@@ -183,125 +183,22 @@ export default async function LifeguardsPage({
               />
 
               <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-                <p className="text-sm text-foreground-muted">{t('roster.hint')}</p>
-                <ul className="flex flex-col divide-y divide-border">
-                  {days.map((day) => (
-                    <DayRow
-                      key={day}
-                      day={day}
-                      today={day === today}
-                      facilityId={chosen.id}
-                      poolId={poolId}
-                      duties={duties.filter(
-                        (duty) => duty.poolId === poolId && dayOf(duty.startsAt) === day,
-                      )}
-                      gaps={gaps.filter((gap) => gap.poolId === poolId && gap.day === day)}
-                      canManage={canManage}
-                    />
-                  ))}
-                </ul>
+                <RosterGrid
+                  // A new week or tank starts on its own today and its own dialogs.
+                  key={`${monday}-${poolId}`}
+                  days={days}
+                  today={today}
+                  facilityId={chosen.id}
+                  poolId={poolId}
+                  duties={duties.filter((duty) => duty.poolId === poolId)}
+                  gaps={gaps.filter((gap) => gap.poolId === poolId)}
+                  canManage={canManage}
+                />
               </section>
             </>
           );
         })()}
       </div>
     </PageShell>
-  );
-}
-
-/** The `YYYY-MM-DD` an instant falls on, on the club's wall clock. */
-function dayOf(instant: string): string {
-  return wallClockNow(APP_TIME_ZONE, new Date(instant)).slice(0, 10);
-}
-
-async function DayRow({
-  day,
-  today,
-  facilityId,
-  poolId,
-  duties,
-  gaps,
-  canManage,
-}: {
-  day: string;
-  today: boolean;
-  facilityId: string;
-  poolId: string;
-  duties: LifeguardDuty[];
-  gaps: RosterGap[];
-  canManage: boolean;
-}): Promise<React.ReactElement> {
-  const t = await getTranslations();
-  const closed = duties.length === 0 && gaps.length === 0;
-
-  return (
-    <li className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0">
-      <h2 className="font-medium">
-        {t('roster.dayHeading', {
-          weekday: t(`week.${isoWeekday(day)}` as never),
-          date: formatDate(day),
-        })}
-        {today && <span className="font-normal text-foreground-muted"> · {t('roster.today')}</span>}
-      </h2>
-
-      {closed && <p className="text-sm text-foreground-muted">{t('roster.closed')}</p>}
-
-      {duties.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {duties.map((duty) => (
-            <li key={duty.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-              <span className="font-medium">{duty.name ?? t('roster.unknownPerson')}</span>
-              {duty.periodId !== null && (
-                <span className="text-foreground-muted">{t('roster.fromPeriod')}</span>
-              )}
-              <span className="tabular-nums">
-                {t('roster.dutyTimes', {
-                  from: formatTime(duty.startsAt),
-                  to: formatTime(duty.endsAt),
-                })}
-              </span>
-              {!duty.licensed && (
-                <span className="inline-flex items-center gap-1.5">
-                  <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" />
-                  {t('roster.notLicensed')}
-                </span>
-              )}
-              {canManage && (
-                <RemoveDuty
-                  dutyId={duty.id}
-                  description={t('roster.removeHint', {
-                    name: duty.name ?? t('roster.unknownPerson'),
-                    from: formatTime(duty.startsAt),
-                    to: formatTime(duty.endsAt),
-                    date: formatDate(day),
-                  })}
-                />
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {gaps.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {gaps.map((gap) => (
-            <li key={gap.from} className="inline-flex items-center gap-1.5 text-sm">
-              <TriangleAlert aria-hidden className="size-4 shrink-0 text-warning" />
-              {t('roster.gap', { from: formatTime(gap.from), to: formatTime(gap.to) })}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {canManage && (
-        // Keyed by the day's duty count, so a saved duty empties the form.
-        <AddDuty
-          key={duties.length}
-          facilityId={facilityId}
-          poolId={poolId}
-          day={day}
-        />
-      )}
-    </li>
   );
 }

@@ -54,6 +54,19 @@ sees none of it.
 - **Two warnings, neither a gate.** A rostered person with no valid lifeguard qualification on
   that day is said beside their duty. An open window with nobody on duty is said as exact times
   ("sem nadador-salvador das 11:00 às 13:00"), from the site's opening hours minus the duties.
+- **The week is a grid** (POOLSE-96): days across, hourly rows down, each duty a block placed to
+  the minute, two people at once side by side. A gap is a hatched block with its times in words;
+  a day with no duty and no gap is closed (*Fechado*), greyed; today's column is tinted. The rows
+  are the hours the tank opens that week (the duties and gaps together), and their height fits
+  the window, so a 07:00–22:00 tank shows whole on a 1080p screen. One tank at a time, behind
+  pills.
+- **Adding and removing are on the grid.** An empty hour opens *Acrescentar turno* for that day
+  and hour; a gap opens it at the hour clicked (from the keyboard, the whole gap); a duty opens
+  its details and *Remover turno*. *Acrescentar turno* in the header is the keyboard's way in and
+  can change the day. Owner and admin; the cells are not there for anybody else.
+- **The week is written out** — "16 a 22 de novembro de 2026", "16–22 November 2026" — and each
+  column is its weekday over "16 de novembro". On a phone, one day at a time with ‹ ›, the hours
+  beside it.
 - **A new incident pre-fills the lifeguard** from the roster for that tank and moment, and the
   writer can change it. The incident page says if the recorded lifeguard did not hold a valid
   qualification on the incident's day. It is a warning, and the incident is saved regardless.

@@ -1,8 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus } from 'lucide-react';
 import { TextField, useFocusFirstError } from '@/components/ui/field';
 import { useSavedAction } from '@/lib/saved';
 import { PersonPicker } from '../incidents/person-picker';
@@ -18,32 +17,46 @@ const PRIMARY =
 /**
  * Acrescentar — one duty on one day of one tank. Owner and admin.
  *
- * Closed until asked for: seven open forms a week is a page of boxes nobody is
- * filling in. The day and the tank are the row's, bound into the action, so the
- * form asks only who and from when to when. A duty that runs past midnight is
- * a `to` earlier than its `from`, which the API reads as the next day.
+ * Opened from the week's grid (POOLSE-96) in a dialog, already holding the day
+ * and the hour that was clicked — or a gap's window, so covering it is one
+ * name away. The day and the tank are bound into the action, so the form asks
+ * only who and from when to when. A duty that runs past midnight is a `to`
+ * earlier than its `from`, which the API reads as the next day.
  *
  * The outcome is `useSavedAction`'s toast, the double-booking refusal included;
- * a field the API named is said beside that field.
+ * a field the API named is said beside that field. A saved duty closes the
+ * dialog; a refused one keeps it, and what was typed.
  */
-export function AddDuty({
+export function AddDutyForm({
   facilityId,
   poolId,
   day,
+  initialFrom,
+  initialTo,
+  onClose,
 }: {
   facilityId: string;
   poolId: string;
   day: string;
+  /** `HH:mm`, the hour clicked or the gap's start. */
+  initialFrom: string;
+  initialTo: string;
+  onClose: () => void;
 }): React.ReactElement {
   const t = useTranslations();
   const form = useRef<HTMLFormElement>(null);
-  const [open, setOpen] = useState(false);
-  const [state, submit, pending] = useSavedAction<FormState, FormData>(
-    addDutyAction.bind(null, facilityId, poolId, day),
-    { ok: false },
+  const action = useMemo(
+    () => addDutyAction.bind(null, facilityId, poolId, day),
+    [facilityId, poolId, day],
   );
+  const [state, submit, pending] = useSavedAction<FormState, FormData>(action, { ok: false });
 
   useFocusFirstError(form, state.fields, state);
+
+  // A duty that saved closes the dialog; its block is on the grid behind it.
+  useEffect(() => {
+    if (state.ok) onClose();
+  }, [state, onClose]);
 
   const fieldError = (name: string): string | undefined => {
     const key = state.fields?.[name];
@@ -53,23 +66,8 @@ export function AddDuty({
   // said beneath it rather than beside a field that is not there.
   const rowError = fieldError('poolId') ?? fieldError('day');
 
-  if (!open) {
-    return (
-      <div>
-        <button type="button" onClick={() => setOpen(true)} className={QUIET}>
-          <Plus aria-hidden className="size-4" />
-          {t('roster.add')}
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <form
-      ref={form}
-      action={submit}
-      className="flex flex-col gap-3 rounded border border-border p-4"
-    >
+    <form ref={form} action={submit} className="flex flex-col gap-3">
       <PersonPicker
         name="membershipId"
         label={t('roster.field.person')}
@@ -82,6 +80,7 @@ export function AddDuty({
           name="from"
           type="time"
           label={t('roster.field.from')}
+          initial={initialFrom}
           required
           error={fieldError('from')}
           className="max-w-40"
@@ -91,6 +90,7 @@ export function AddDuty({
           type="time"
           label={t('roster.field.to')}
           hint={t('roster.field.toHint')}
+          initial={initialTo}
           required
           error={fieldError('to')}
           className="max-w-40"
@@ -101,12 +101,12 @@ export function AddDuty({
           {rowError}
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={onClose} className={QUIET}>
+          {t('common.cancel')}
+        </button>
         <button type="submit" disabled={pending} className={PRIMARY}>
           {pending ? t('roster.adding') : t('roster.add')}
-        </button>
-        <button type="button" onClick={() => setOpen(false)} className={QUIET}>
-          {t('common.cancel')}
         </button>
       </div>
     </form>

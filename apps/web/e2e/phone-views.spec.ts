@@ -88,6 +88,33 @@ test.describe('on a phone', () => {
       expect(await sidewaysScrollers(page), path).toEqual([]);
     }
   });
+
+  test('the lifeguard week is one day at a time, the hours beside it — POOLSE-96', async ({ page }) => {
+    await visit(page, '/dashboard/facilities/lifeguards');
+    const grid = page.locator('[data-roster-grid]');
+    await expect(grid).toBeVisible();
+    const shown = () =>
+      page.evaluate(() =>
+        Array.from(document.querySelectorAll('[data-roster-grid] > [role=group]'))
+          .filter((day) => day.getBoundingClientRect().width > 0)
+          .map((day) => day.getAttribute('aria-label')),
+      );
+    const first = await shown();
+    expect(first, 'one day column on a phone').toHaveLength(1);
+    // The hour column stays, beside the day.
+    const hours = await grid.evaluate((el) => (el.children[8] as HTMLElement).getBoundingClientRect().width);
+    expect(hours).toBeGreaterThan(30);
+
+    // › moves to another day, still one.
+    const next = page.getByRole('button', { name: /dia seguinte|next day/i });
+    if (await next.isEnabled()) {
+      await next.tap();
+      const after = await shown();
+      expect(after).toHaveLength(1);
+      expect(after[0]).not.toBe(first[0]);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
+  });
 });
 
 test.describe('on a desk, the same pages are unchanged', () => {
@@ -108,5 +135,18 @@ test.describe('on a desk, the same pages are unchanged', () => {
       return grid === null || grid === undefined ? 0 : getComputedStyle(grid).gridTemplateColumns.split(' ').length;
     });
     expect(columns).toBeGreaterThanOrEqual(6);
+  });
+
+  test('the lifeguard week shows all seven days, with no day stepper — POOLSE-96', async ({ page }) => {
+    await visit(page, '/dashboard/facilities/lifeguards');
+    await expect(page.locator('[data-roster-grid]')).toBeVisible();
+    const days = await page.evaluate(
+      () =>
+        Array.from(document.querySelectorAll('[data-roster-grid] > [role=group]')).filter(
+          (day) => day.getBoundingClientRect().width > 0,
+        ).length,
+    );
+    expect(days).toBe(7);
+    await expect(page.getByRole('button', { name: /dia seguinte|next day/i })).toBeHidden();
   });
 });

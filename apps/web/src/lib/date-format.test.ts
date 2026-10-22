@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatDate, formatStamp, formatTime } from './date-format.ts';
+import { formatDate, formatDateLong, formatDateRange, formatDayMonth, formatStamp, formatTime } from './date-format.ts';
 
 /**
  * Every date in one shape — `dd-MM-yyyy`, decided 13 September 2026.
@@ -89,4 +89,38 @@ test('a day is the same day whatever clock the code runs on', () => {
   assert.equal(formatDate('2026-10-01'), '01-10-2026');
   assert.equal(formatDate('2026-03-29'), '29-03-2026'); // the spring-forward Sunday
   assert.equal(formatDate('2026-10-25'), '25-10-2026'); // and the fall-back one
+});
+
+/*
+ * Dates in words — POOLSE-96. The week heading and the day columns of the
+ * lifeguard roster, and only those; the strings are the ticket's own examples.
+ */
+/** ICU puts thin spaces (U+2009) round a dash between two whole dates. */
+const THIN = String.fromCharCode(0x2009);
+
+test('a week in words says what its ends share once — QA 4 and 5', () => {
+  // QA 4: one month.
+  assert.equal(formatDateRange('2026-11-16', '2026-11-22', 'pt-PT'), '16 a 22 de novembro de 2026');
+  assert.equal(formatDateRange('2026-11-16', '2026-11-22', 'en'), '16–22 November 2026');
+
+  // QA 5: across a month, and across a year.
+  assert.equal(
+    formatDateRange('2026-11-30', '2026-12-06', 'pt-PT'),
+    '30 de novembro a 6 de dezembro de 2026',
+  );
+  assert.equal(formatDateRange('2026-11-30', '2026-12-06', 'en'), `30 November${THIN}–${THIN}6 December 2026`);
+  assert.equal(
+    formatDateRange('2026-12-28', '2027-01-03', 'pt-PT'),
+    '28 de dezembro de 2026 a 3 de janeiro de 2027',
+  );
+  assert.equal(formatDateRange('2026-12-28', '2027-01-03', 'en'), `28 December 2026${THIN}–${THIN}3 January 2027`);
+});
+
+test('a day in words, long and as a column heading', () => {
+  assert.equal(formatDateLong('2026-11-16', 'pt-PT'), 'segunda-feira, 16 de novembro de 2026');
+  assert.equal(formatDateLong('2026-11-16', 'en'), 'Monday, 16 November 2026');
+  assert.equal(formatDayMonth('2026-11-16', 'pt-PT'), '16 de novembro');
+  assert.equal(formatDayMonth('2026-11-16', 'en'), '16 November');
+  // A day is the day it says, in the club's zone, at any hour of the server.
+  assert.equal(formatDayMonth('2026-03-29', 'pt-PT'), '29 de março');
 });

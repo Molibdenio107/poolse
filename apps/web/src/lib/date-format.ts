@@ -154,3 +154,74 @@ export function wallClockNow(timeZone: string, now: Date = new Date()): string {
   );
   return `${parts['year']}-${parts['month']}-${parts['day']}T${parts['hour']}:${parts['minute']}`;
 }
+
+/* ------------------------------------------------------- dates in words */
+
+/*
+ * **A deliberate exception to `dd-MM-yyyy`, for headings only** — POOLSE-96
+ * (Rui, 22-10-2026). A week's heading and a day's column read better written
+ * out ("16 a 22 de novembro de 2026") than as two strings of digits, and here
+ * `Intl` *is* the right tool: `formatRange` knows to say the shared month and
+ * year once, which no concatenation of two `formatDate`s can. Everything else
+ * — tables, prose, `/admin` — stays `formatDate`. `docs/decisions.md` says so,
+ * so this does not spread unasked.
+ *
+ * English is written as `en-GB` — "16–22 November 2026", day before month, as
+ * the ticket and every other date in the product have it. Plain `en` is the
+ * American order.
+ */
+
+function wordsLocale(locale: string): string {
+  return locale.startsWith('en') ? 'en-GB' : 'pt-PT';
+}
+
+const WORDS: Record<string, Intl.DateTimeFormat> = {};
+
+function words(locale: string, kind: 'long' | 'dayMonth' | 'range'): Intl.DateTimeFormat {
+  const tag = wordsLocale(locale);
+  const key = `${tag}:${kind}`;
+  WORDS[key] ??= new Intl.DateTimeFormat(tag, {
+    ...(kind === 'long' ? { weekday: 'long' } : {}),
+    day: 'numeric',
+    month: 'long',
+    ...(kind === 'dayMonth' ? {} : { year: 'numeric' }),
+    timeZone: APP_TIME_ZONE,
+  });
+  return WORDS[key];
+}
+
+/** "segunda-feira, 16 de novembro de 2026" / "Monday, 16 November 2026". */
+export function formatDateLong(value: DateLike, locale: string): string {
+  const date = asDate(value);
+  return Number.isNaN(date.getTime()) ? '' : words(locale, 'long').format(date);
+}
+
+/** "16 de novembro" / "16 November" — a column heading that sits under its weekday. */
+export function formatDayMonth(value: DateLike, locale: string): string {
+  const date = asDate(value);
+  return Number.isNaN(date.getTime()) ? '' : words(locale, 'dayMonth').format(date);
+}
+
+/**
+ * A span of days in words, with what the two ends share said once.
+ *
+ * pt-PT: "16 a 22 de novembro de 2026", "30 de novembro a 6 de dezembro de
+ * 2026". en: "16–22 November 2026", "30 November – 6 December 2026". `Intl`
+ * collapses the month and year; for Portuguese the one thing changed is the
+ * range's own separator, which CLDR writes as a dash and prose writes as "a" —
+ * swapped part by part, never by searching the string.
+ */
+export function formatDateRange(from: DateLike, to: DateLike, locale: string): string {
+  const start = asDate(from);
+  const end = asDate(to);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
+
+  const parts = words(locale, 'range').formatRangeToParts(start, end);
+  if (wordsLocale(locale) !== 'pt-PT') return parts.map((part) => part.value).join('');
+
+  return parts
+    .map((part) =>
+      part.type === 'literal' && part.source === 'shared' && /[–—-]/.test(part.value) ? ' a ' : part.value,
+    )
+    .join('');
+}

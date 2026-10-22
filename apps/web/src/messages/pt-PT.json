@@ -4621,6 +4621,16 @@
     }
   },
   "roster": {
+    "addDuty": "Acrescentar turno",
+    "previousDay": "Dia anterior",
+    "nextDay": "Dia seguinte",
+    "coverGap": "{gap} — acrescentar turno",
+    "dutyLabel": "{name} de serviço {times}",
+    "dutyLabelUnlicensed": "{name} de serviço {times}, sem habilitação válida",
+    "dutyWhen": "{day}, {times}",
+    "fromPeriodLong": "Escrito por um período de vigilância.",
+    "removeKeepsHistory": "Remover tira o turno da escala; fica no histórico.",
+    "removeDuty": "Remover turno",
     "title": "Nadadores-salvadores",
     "subtitle": "Quem está de serviço em cada tanque, semana a semana.",
     "sites": "Locais",
@@ -4631,10 +4641,8 @@
     "previousWeek": "Semana anterior",
     "nextWeek": "Semana seguinte",
     "thisWeek": "Esta semana",
-    "weekRange": "De {from} a {to}",
     "pools": "Tanques",
     "hint": "Podem estar várias pessoas de serviço no mesmo tanque ao mesmo tempo. Os avisos servem para reparar a tempo e nunca impedem nada.",
-    "dayHeading": "{weekday}, {date}",
     "today": "hoje",
     "closed": "Fechado",
     "unknownPerson": "Pessoa sem nome",
@@ -4648,10 +4656,9 @@
       "personHint": "Qualquer pessoa da equipa. Escreva pelo menos duas letras do nome.",
       "from": "Das",
       "to": "Às",
-      "toHint": "Uma hora anterior à de início termina no dia seguinte."
+      "toHint": "Uma hora anterior à de início termina no dia seguinte.",
+      "day": "Dia"
     },
-    "removeTitle": "Retirar este turno da escala?",
-    "removeHint": "{name}, das {from} às {to} de {date}. O turno sai da escala mas fica no histórico.",
     "removed": "Turno retirado da escala.",
     "error": {
       "poolRequired": "Escolha um tanque deste local.",
@@ -4670,7 +4677,6 @@
       "periodFailed": "Não foi possível guardar o período.",
       "endFailed": "Não foi possível terminar o período."
     },
-    "fromPeriod": "· do período",
     "view": {
       "label": "Vista",
       "week": "Escala da semana",

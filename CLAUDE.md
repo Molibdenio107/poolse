@@ -76,7 +76,7 @@ formatter and next-intl cannot disagree — and a `YYYY-MM-DD` string is parsed 
 as a UTC instant, which is the off-by-one that made a rate effective on 1 October read as
 30 September. `asDate` makes it noon UTC, so the browser's own zone cannot move it either, and
 `lib/dates.ts` no longer writes a date at all — `shortDate`, `mediumDate` and `longDate` are gone,
-day-column headers included.
+day-column headers included. **One exception, for headings only** (POOLSE-96): `formatDateRange`, `formatDateLong` and `formatDayMonth` in the same file write a week or a day out in words through `Intl` (`en` as `en-GB`) — the lifeguard week's heading and columns, and nothing else unless Rui asks.
 
 **Tooltips explain, they never inform.** A tooltip may clarify what a control does. It may
 never be the only place a piece of information appears — anything the operator needs is

@@ -4621,6 +4621,16 @@
     }
   },
   "roster": {
+    "addDuty": "Add a duty",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "coverGap": "{gap} — add a duty",
+    "dutyLabel": "{name} on duty {times}",
+    "dutyLabelUnlicensed": "{name} on duty {times}, without a valid licence",
+    "dutyWhen": "{day} {times}",
+    "fromPeriodLong": "Written by a vigilance period.",
+    "removeKeepsHistory": "Removing takes the duty off the roster; it stays in the history.",
+    "removeDuty": "Remove duty",
     "title": "Lifeguards",
     "subtitle": "Who is on duty at each tank, week by week.",
     "sites": "Sites",
@@ -4631,10 +4641,8 @@
     "previousWeek": "Previous week",
     "nextWeek": "Next week",
     "thisWeek": "This week",
-    "weekRange": "From {from} to {to}",
     "pools": "Tanks",
     "hint": "Several people may be on duty at the same tank at once. The warnings are there so you notice in time, and they never block anything.",
-    "dayHeading": "{weekday}, {date}",
     "today": "today",
     "closed": "Closed",
     "unknownPerson": "Unnamed person",
@@ -4648,10 +4656,9 @@
       "personHint": "Anyone on the staff. Type at least two letters of their name.",
       "from": "From",
       "to": "To",
-      "toHint": "A time earlier than the start ends on the next day."
+      "toHint": "A time earlier than the start ends on the next day.",
+      "day": "Day"
     },
-    "removeTitle": "Take this shift off the roster?",
-    "removeHint": "{name}, from {from} to {to} on {date}. The shift leaves the roster but stays in the history.",
     "removed": "Shift taken off the roster.",
     "error": {
       "poolRequired": "Choose a tank at this site.",
@@ -4670,7 +4677,6 @@
       "periodFailed": "The period could not be saved.",
       "endFailed": "The period could not be ended."
     },
-    "fromPeriod": "· from a period",
     "view": {
       "label": "View",
       "week": "Week roster",
