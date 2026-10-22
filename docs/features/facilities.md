@@ -272,13 +272,15 @@ club has as many sites as its licence allows (`organization.max_facilities`, now
 list), *Adicionar instalação* is replaced by a sentence saying the plan is full and how to
 extend it. The licence trigger is still what refuses a site over the limit.
 
-Each card also shows the site's **photographs** (restored the same day); its espaços are a link to
-the site's Espaços tab.
+Each card also shows the site's **photographs** (restored the same day). Since POOLSE-92 the card
+no longer links to the site's Espaços, Manutenção and Energia tabs: they are reached from the
+site's own page (Rui, 22-10-2026).
 
 **Since 15 October 2026 the site's page is owner and admin only** (Rui), with Poolse support
 counted as admin inside a grant's window. `GET /facilities/:id` refuses everybody else except
 maintenance, which opens the page for its Espaços, Manutenção and Energia tabs and sees no
-other tab. On the list, *Configurar instalação* is drawn for owner and admin only. The
-Espaços · Manutenção · Energia links are drawn for whoever may open the page (`canOpenSite`).
+other tab. On the list, *Configurar instalação* is drawn for owner and admin only. Whoever may open the
+page but not configure it (`canOpenSite && !canManage`, which is maintenance) gets a quiet
+*Abrir* instead — its only way into the site page.
 A tank's name links to its page only for staff (`canOpenPools`). An instructor, a guardian and a
 student see the cards, tanks and photographs and nothing to change.

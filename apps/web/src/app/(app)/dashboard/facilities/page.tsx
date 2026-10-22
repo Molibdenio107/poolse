@@ -143,6 +143,21 @@ export default async function FacilitiesPage({
                         {t('facilities.configure')}
                       </FromLink>
                     )}
+                    {/*
+                      Maintenance may open a site's page (Espaços, Manutenção,
+                      Energia) but not configure it, and has no Configurar —
+                      so a quiet Abrir is its way in, now that the card no
+                      longer lists those tabs (POOLSE-92 B, Rui 22-10-2026).
+                    */}
+                    {data.canOpenSite && !data.canManage && (
+                      <FromLink
+                        href={`/dashboard/facilities/${facility.id}`}
+                        aria-label={t('facilities.openSite', { name: facility.name })}
+                        className="inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        {t('facilities.open')}
+                      </FromLink>
+                    )}
                     {data.canManage && (
                       <ArchiveButton
                         organizationId={data.organizationId}
@@ -232,34 +247,6 @@ export default async function FacilitiesPage({
                     uploadLabel={t('facilities.uploadSitePhoto')}
                   />
                 </div>
-
-                {/*
-                  The site page's working tabs, one link away — for whoever may
-                  open it. Maintenance has no Configurar button, so these are
-                  its way in.
-                */}
-                {data.canOpenSite && (
-                  <nav
-                    aria-label={t('facilities.cardMore', { name: facility.name })}
-                    className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-4 text-sm"
-                  >
-                    {(
-                      [
-                        ['spaces', 'spaces.title'],
-                        ['maintenance', 'maintenance.section'],
-                        ['energy', 'energy.section'],
-                      ] as const
-                    ).map(([tab, key]) => (
-                      <FromLink
-                        key={tab}
-                        href={`/dashboard/facilities/${facility.id}?tab=${tab}`}
-                        className="rounded text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                      >
-                        {t(key)}
-                      </FromLink>
-                    ))}
-                  </nav>
-                )}
 
                 {data.canManage && (
                   <FromLink

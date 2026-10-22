@@ -1112,7 +1112,8 @@
       "hours": "Horário",
       "water": "Água"
     },
-    "cardMore": "Mais sobre {name}",
+    "open": "Abrir",
+    "openSite": "Abrir {name}",
     "waterSection": {
       "nav": "Secções da qualidade da água",
       "latest": "Última análise",
