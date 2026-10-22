@@ -83,6 +83,8 @@ const TENANT_TABLES = [
   // POOLSE-27. An alert points at a record, a record at its type and its
   // person's membership; every business tenant is seeded with types.
   'qualification_alert',
+  // POOLSE-94: an IBAN change told to the owners; it names the member who made it.
+  'payment_change_notice',
   'qualification',
   'qualification_type',
   /*

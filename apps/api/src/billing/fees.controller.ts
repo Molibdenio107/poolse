@@ -1,3 +1,4 @@
+import { payToFor, type PayTo } from './payment-destinations.js';
 import {
   BadRequestException,
   Body,
@@ -234,10 +235,10 @@ export class StudentFeesController {
   @Get()
   async list(
     @Param('studentId') studentId: string,
-  ): Promise<StudentFees & { familyView: boolean }> {
+  ): Promise<StudentFees & { familyView: boolean; payTo: PayTo | null }> {
     const { organizationId, membershipId } = currentTenant();
     if (hasRole('owner', 'admin')) {
-      return { ...(await studentFees(organizationId, studentId)), familyView: false };
+      return { ...(await studentFees(organizationId, studentId)), familyView: false, payTo: null };
     }
 
     /*
@@ -262,6 +263,9 @@ export class StudentFeesController {
       suggestedCategoryId: null,
       inscricao: { suggestedPlanId: null, returning: fees.inscricao.returning },
       familyView: true,
+      // Where to pay and what to give as the reference — POOLSE-94. Null when the
+      // club has filled in nothing, or its invoicing is off.
+      payTo: await payToFor(organizationId, studentId),
     };
   }
 

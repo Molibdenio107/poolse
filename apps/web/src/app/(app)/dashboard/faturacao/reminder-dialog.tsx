@@ -8,7 +8,8 @@ import { Dialog } from '@/components/ui/dialog';
 import { formatDate } from '@/lib/date-format';
 import { formatCents } from '@/lib/money';
 import { useSavedAction } from '@/lib/saved';
-import type { ReminderPreview } from '@/lib/api';
+import { formatIban, formatMbwayPhone } from '@poolse/rules';
+import type { PaymentDestinations, ReminderPreview } from '@/lib/api';
 import type { FormState } from '../actions';
 import { previewRemindersAction, sendRemindersAction } from './invoices.actions';
 
@@ -175,7 +176,7 @@ export function ReminderDialog({
 
           <div className="rounded border border-border bg-surface-muted p-3 text-sm">
             <p className="font-medium">{t('invoices.reminders.howToPay')}</p>
-            {preview.paymentInstructions === null ? (
+            {preview.payment === null ? (
               <p className="text-foreground-muted">
                 {t('invoices.reminders.noInstructions')}{' '}
                 <FromLink href={`/dashboard/facilities/${facilityId}?tab=club`} className="text-primary underline">
@@ -183,7 +184,7 @@ export function ReminderDialog({
                 </FromLink>
               </p>
             ) : (
-              <p className="whitespace-pre-line text-foreground-muted">{preview.paymentInstructions}</p>
+              <PaymentMethodsSummary payment={preview.payment} />
             )}
           </div>
 
@@ -204,5 +205,26 @@ export function ReminderDialog({
         </form>
       )}
     </Dialog>
+  );
+}
+
+/**
+ * *Como pagar* as the email will say it — POOLSE-94: the transfer, MB WAY, then
+ * the club's words. Each payer's reference is their own documents, which the
+ * list above already shows, so it is described rather than repeated.
+ */
+function PaymentMethodsSummary({ payment }: { payment: PaymentDestinations }): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <div className="flex flex-col gap-0.5 text-foreground-muted">
+      {payment.iban !== null && (
+        <p>
+          {t('payTo.transferLine', { iban: formatIban(payment.iban), holder: payment.accountHolder ?? '' })}
+        </p>
+      )}
+      {payment.mbwayPhone !== null && <p>{t('payTo.mbwayLine', { phone: formatMbwayPhone(payment.mbwayPhone) })}</p>}
+      {(payment.iban !== null || payment.mbwayPhone !== null) && <p>{t('invoices.reminders.referenceIsDocuments')}</p>}
+      {payment.instructions !== null && <p className="whitespace-pre-line">{payment.instructions}</p>}
+    </div>
   );
 }

@@ -38,6 +38,7 @@ import {
   LifeguardRosterController,
 } from '../safety/roster.controller.js';
 import { SpacesController } from '../spaces/spaces.controller.js';
+import { SettingsController } from '../organizations/organizations.controller.js';
 import { LeadsController, RegistrationSettingsController } from '../leads/leads.controller.js';
 import { LabResultsController } from '../facilities/lab-results.controller.js';
 import { ComplaintsSettingsController, RegulationsController } from '../facilities/regulations.controller.js';
@@ -847,6 +848,14 @@ test('regulations and the complaints setting refuse a guardian and a student (40
     const complaints = new ComplaintsSettingsController();
     await refused('GET settings/complaints', 403, () => complaints.read());
     await refused('PUT settings/complaints', 403, () => complaints.update({ regime: 'private' }));
+  });
+});
+
+test('where the club is paid refuses a guardian and a student (403) — POOLSE-94', async () => {
+  await asEach(async () => {
+    await refused('PUT settings/payment-details', 403, () =>
+      new SettingsController().savePaymentDetails({ iban: 'PT50000201231234567890154' }),
+    );
   });
 });
 

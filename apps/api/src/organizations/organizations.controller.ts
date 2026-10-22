@@ -1,3 +1,6 @@
+import { ibanChecksumOk, normalizeIban, normalizeMbwayPhone } from '@poolse/rules';
+import { savePaymentDetails } from '../billing/payment-destinations.js';
+import { deliverPaymentChangeNotice } from '../billing/payment-change-delivery.js';
 import {
   BadRequestException,
   Body,
@@ -203,6 +206,50 @@ export class SettingsController {
       throw new BadRequestException({ fields: { paymentInstructions: 'clubData.paymentTooLong' } });
     }
     return savePaymentInstructions(organizationId, raw === '' ? null : raw);
+  }
+
+  /**
+   * Where families pay — POOLSE-94. Owner and admin, gated by invoicing like
+   * *Como pagar* beside it. Each field may be empty, which clears it; one that
+   * is filled must be a Portuguese IBAN with a good checksum, or a Portuguese
+   * mobile — `@poolse/rules`, the definition the form shares. An IBAN that
+   * moved is emailed to every owner after the commit.
+   */
+  @PoolseModule('invoicing')
+  @Put('payment-details')
+  async savePaymentDetails(
+    @Body() body: { iban?: unknown; accountHolder?: unknown; mbwayPhone?: unknown },
+  ): Promise<TaxSettings> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+    const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+    const fields: Record<string, string> = {};
+    const ibanRaw = text(body.iban);
+    let iban: string | null = null;
+    if (ibanRaw !== '') {
+      iban = normalizeIban(ibanRaw);
+      if (iban === null) fields['iban'] = 'clubData.payment.ibanShape';
+      else if (!ibanChecksumOk(iban)) fields['iban'] = 'clubData.payment.ibanChecksum';
+    }
+    const holderRaw = text(body.accountHolder);
+    if (holderRaw.length > 70) fields['accountHolder'] = 'clubData.payment.holderTooLong';
+    const phoneRaw = text(body.mbwayPhone);
+    let mbwayPhone: string | null = null;
+    if (phoneRaw !== '') {
+      mbwayPhone = normalizeMbwayPhone(phoneRaw);
+      if (mbwayPhone === null) fields['mbwayPhone'] = 'clubData.payment.mbwayShape';
+    }
+    if (Object.keys(fields).length > 0) throw new BadRequestException({ fields });
+
+    const { noticeId } = await savePaymentDetails(organizationId, membershipId, {
+      iban,
+      // A holder means nothing without an account to hold.
+      accountHolder: iban === null || holderRaw === '' ? null : holderRaw,
+      mbwayPhone,
+    });
+    if (noticeId !== null) void deliverPaymentChangeNotice(organizationId, noticeId);
+    return readTaxSettings(organizationId);
   }
 
   @Put('tax')

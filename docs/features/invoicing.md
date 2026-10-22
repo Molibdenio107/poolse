@@ -168,6 +168,36 @@ request has answered (sweep 19-10b), so a long list never times out the page. It
 shared daily address ceiling with messages (2,000), and a failed send is retried hourly.
 *Como pagar* is the club's own text on the site page's *Clube* tab.
 
+**Where families pay (POOLSE-94).** *Como pagar* on *Dados do clube* is three cards: **Transferência
+bancária** (IBAN and account holder), **MB WAY** (a mobile number) and **Outras instruções** (the
+free text above). One account for the whole club, not per site (Rui, 22-10-2026); owner and admin
+set it, and it is behind the invoicing module like the rest of *Como pagar*. Every field may be
+left empty, which clears it. An IBAN must be Portuguese (`PT50` + 21 digits, spaces allowed) and
+pass the mod-97 check; an MB WAY number must be a Portuguese mobile (`9…`, with or without +351).
+Both are judged by `@poolse/rules` (`normalizeIban`, `ibanChecksumOk`, `normalizeMbwayPhone`) and
+refused beside the field. A holder left empty shows the club's name; a holder with no IBAN is not
+kept.
+
+A family reads the result on the child's **Mensalidades** tab and on app mode's fee card,
+whenever something is owed: the IBAN and the MB WAY number with a copy button each, and *Indique
+como referência* — the child's open documents (`FT 2026/14, FT 2026/31`) or, with nothing
+invoiced yet, the child's name (Rui, 22-10-2026). The office's own read carries none of it. A
+payment reminder's *Como pagar* says the same, in the same order: transfer, MB WAY, the
+reference (that email's documents), then the club's words; with nothing filled in it still says
+to contact the club.
+
+**An IBAN change is told to every owner.** Saving a different IBAN (including the first one, and
+clearing it) writes a `payment_change_notice` and emails every active owner after the commit:
+who changed it, when, and the account's **last four digits** before and after — enough to
+recognise, not enough to use. The full values are in *Atividade*
+(`organization.payment_details_changed`, before and after of the fields that moved). A change to
+MB WAY or the holder alone is audited and emails nobody. A notice that did not leave is retried
+hourly like every email.
+
+**Not yet: online payments into this IBAN** (BA rule 5). When Stripe/débito direto/MB WAY
+payments arrive with slice 3.5, the money a club collects through Poolse is meant to settle into
+this same account. Nothing reads these columns for that today.
+
 Each record carries the channel (email, telephone, message, in person, letter), the date and
 an optional note of what was said or answered. The **Em dívida** list shows when each family
 was last asked and how many times.

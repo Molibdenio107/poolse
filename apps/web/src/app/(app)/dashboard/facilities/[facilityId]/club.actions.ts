@@ -41,6 +41,27 @@ export async function saveTaxNumberAction(
   return { ok: true };
 }
 
+/**
+ * Where families pay — POOLSE-94. Each box may be left empty, which clears it;
+ * the API judges the rest (`@poolse/rules`) and names the field it refused.
+ */
+export async function savePaymentDetailsAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  try {
+    await apiPut('/settings/payment-details', {
+      iban: String(formData.get('iban') ?? ''),
+      accountHolder: String(formData.get('accountHolder') ?? ''),
+      mbwayPhone: String(formData.get('mbwayPhone') ?? ''),
+    });
+  } catch (error) {
+    return describeFailure(error, 'clubData.payment.saveFailed');
+  }
+  revalidatePath('/dashboard/facilities', 'layout');
+  return { ok: true };
+}
+
 /** *Como pagar* — POOLSE-86. Blank clears it, and the reminder then says to contact the club. */
 export async function savePaymentInstructionsAction(
   _previous: FormState,

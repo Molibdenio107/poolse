@@ -3,6 +3,7 @@ import { recordAudit } from '../audit/audit.js';
 import { emailIsConfigured } from '../notifications/notifier.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { JOINS_SQL, TOTALS_SQL } from './invoices.repository.js';
+import { readPaymentDestinations, type PaymentDestinations } from './payment-destinations.js';
 
 /**
  * Invoice reminders by email — POOLSE-86, slice 3.0b.
@@ -44,7 +45,8 @@ export interface ReminderPreview {
   payers: ReminderPayer[];
   /** Ticked payers who owe nothing overdue here — said, not silently dropped. */
   nothingOverdue: string[];
-  paymentInstructions: string | null;
+  /** *Como pagar* as the email will say it — POOLSE-94; null is "contact the club". */
+  payment: PaymentDestinations | null;
   emailConfigured: boolean;
 }
 
@@ -164,14 +166,10 @@ export async function previewReminders(
 ): Promise<ReminderPreview> {
   return withOrg(organizationId, async (tx) => {
     const { rows, nothingOverdue } = await payersOf(tx, facilityId, invoiceIds);
-    const { rows: org } = await tx.query<{ payment_instructions: string | null }>(
-      'SELECT payment_instructions FROM organization WHERE id = $1',
-      [organizationId],
-    );
     return {
       payers: rows.map(toPayer),
       nothingOverdue,
-      paymentInstructions: org[0]?.payment_instructions ?? null,
+      payment: await readPaymentDestinations(tx, organizationId),
       emailConfigured: emailIsConfigured(),
     };
   });

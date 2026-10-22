@@ -505,6 +505,8 @@ channel; a reminder sent from Em dívida (POOLSE-86) is an `invoice_reminder` �
 documents snapshotted, retried like every email — plus a chase per document with channel
 `poolse_email`, which a person cannot record by hand. The history says whether the email left.
 
+**Where families pay is one account per club, and an IBAN change is told to every owner.** POOLSE-94. `organization.payment_iban` / `payment_account_holder` / `payment_mbway_phone`, judged by `normalizeIban` + `ibanChecksumOk` and `normalizeMbwayPhone` in `@poolse/rules`, written only through `savePaymentDetails` (`billing/payment-destinations.ts`), which audits the before and after and, when the IBAN moved, writes a `payment_change_notice` emailed to the owners by its last four digits. A family reads `payTo` — destinations plus the reference, its open document numbers else the child's name — on its fee read and `/app`; `PaymentDestinations` (`components/payment-destinations.tsx`) is the one web rendering and `paymentMethodLines` the email's, in the same order. `docs/features/invoicing.md`.
+
 **A fee line with no `fee_period_id` is charged once**, and only an inscrição or a seguro may
 be one. The period is how a recurring line knows what an occurrence is worth and when the next
 falls due; a fee paid once has neither, and forcing it to name one makes the arithmetic wrong

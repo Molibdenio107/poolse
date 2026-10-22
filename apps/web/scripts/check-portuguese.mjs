@@ -46,6 +46,11 @@ const BRAZILIAN = [
  * probably needs translating.
  */
 const SAME_ON_PURPOSE = new Map([
+  // A payment method's own name and a number — POOLSE-94.
+  ['payTo.mbwayLine', 'MB WAY is the name of the service in both languages'],
+  ['clubData.payment.iban', 'IBAN and MB WAY are the same names in both languages'],
+  ['clubData.payment.mbwayTitle', 'IBAN and MB WAY are the same names in both languages'],
+  ['payTo.mbway', 'IBAN and MB WAY are the same names in both languages'],
   ['app.name', 'the product is called Poolse in every language'],
   ['marketing.pricing.planName', 'the one plan is named after the product — POOLSE-60'],
   // A colour whose name is the same word in both languages, like "beige".

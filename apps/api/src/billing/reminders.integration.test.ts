@@ -103,7 +103,7 @@ test('a reminder is written as a chase per document, sent after the commit, and 
       assert.deepEqual(payer.documents.map((d) => d.documentNo), [late.documentNo]);
       assert.equal(payer.documents[0]!.outstandingCents, 4500);
       assert.equal(payer.recentlyReminded, false);
-      assert.match(preview.paymentInstructions ?? '', /MB WAY/);
+      assert.match(preview.payment?.instructions ?? '', /MB WAY/);
 
       const sent = (await invoices.remind(tenant.facilityId, {
         invoiceIds: [late.invoiceId],

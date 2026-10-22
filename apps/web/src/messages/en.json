@@ -3771,7 +3771,7 @@
       "notLateYet": "Still within the due date, so no reminder: {names}.",
       "howToPay": "How to pay (goes in the email)",
       "noInstructions": "The club has not written how to pay yet; the email asks them to contact the club.",
-      "setInstructions": "Write the payment instructions",
+      "setInstructions": "Say where to pay",
       "send": "{count, plural, =0 {Send} one {Send # reminder} other {Send # reminders}}",
       "open": "{count, plural, =0 {Send a reminder by email} one {Send a reminder by email (# document)} other {Send a reminder by email (# documents)}}",
       "tickOverdue": "{count, plural, =0 {Nothing overdue} one {Choose the overdue (#)} other {Choose the overdue (#)}}",
@@ -3785,7 +3785,8 @@
       "recordedToast": "{count, plural, one {Reminder recorded} other {# reminders recorded}}; email sending is not configured, so none leaves.",
       "chaseSent": "Reminder sent by Poolse.",
       "chaseNotSent": "Reminder recorded — the email has not gone yet.",
-      "nothingSent": "Nothing to send: the people chosen no longer owe anything overdue, or have no email address."
+      "nothingSent": "Nothing to send: the people chosen no longer owe anything overdue, or have no email address.",
+      "referenceIsDocuments": "The email asks each person to give their own overdue documents as the reference."
     }
   },
   "reception": {
@@ -5147,11 +5148,27 @@
     "tab": "Club details",
     "hint": "Tax details and the logo belong to the club and apply to every site, not just this one.",
     "paymentTitle": "How to pay",
-    "paymentHint": "Goes, exactly as written, at the end of every payment reminder Poolse sends: IBAN, MB WAY number, office hours. Left empty, the reminder asks them to contact the club.",
-    "paymentLabel": "Payment instructions",
-    "paymentPlaceholder": "IBAN PT50 …\nMB WAY 9…\nOffice: weekdays, 9:00–12:00",
+    "paymentPlaceholder": "Cash or card at reception\nOffice: weekdays, 9:00–12:00",
     "paymentTooLong": "1000 characters at most.",
-    "paymentFailed": "Could not save the payment instructions."
+    "paymentFailed": "Could not save the payment instructions.",
+    "payment": {
+      "hint": "Where families pay the club — one account for the whole club, not per site. Shown on each family's Fees tab and at the end of every payment reminder Poolse sends. Empty fields are not shown.",
+      "transferTitle": "Bank transfer",
+      "iban": "IBAN",
+      "ibanHint": "A Portuguese IBAN (PT50…), with or without spaces. Every IBAN change is emailed to all the owners.",
+      "holder": "Account holder",
+      "holderHint": "Left empty, the club's name is shown.",
+      "mbwayTitle": "MB WAY",
+      "mbway": "Mobile number",
+      "mbwayHint": "A Portuguese mobile, with or without +351.",
+      "otherTitle": "Other instructions",
+      "otherHint": "Exactly as written, after the transfer and MB WAY: cash at reception, office hours.",
+      "saveFailed": "Could not save the payment details.",
+      "ibanShape": "Give a Portuguese IBAN: PT50 followed by 21 digits.",
+      "ibanChecksum": "This IBAN is not valid — its check digits do not match. Look for a mistyped digit.",
+      "holderTooLong": "70 characters at most.",
+      "mbwayShape": "Give a Portuguese mobile: 9 digits starting with 9."
+    }
   },
   "family": {
     "recordSubtitle": "The record the club keeps.",
@@ -5205,7 +5222,8 @@
     "planFailed": "The plan could not be loaded.",
     "planEmpty": "The instructor has not written this lesson's plan yet.",
     "retry": "Try again",
-    "noSessionsHint": "This season's lessons are not on the calendar yet. Until then, this is the weekly timetable:"
+    "noSessionsHint": "This season's lessons are not on the calendar yet. Until then, this is the weekly timetable:",
+    "feesHintPayTo": "What is agreed with the club and what is still to pay. Below, where to pay."
   },
   "activity": {
     "tab": "Activity",
@@ -5588,5 +5606,18 @@
   "competition": {
     "title": "Competition",
     "subtitle": "The club's meets, each championship's qualifying times and the FPN age groups."
+  },
+  "payTo": {
+    "title": "Where to pay",
+    "transfer": "Bank transfer",
+    "holder": "Account holder: {name}",
+    "mbway": "MB WAY",
+    "reference": "Give as the reference",
+    "referenceFor": "Reference for {name}",
+    "copyIban": "Copy the IBAN",
+    "copyMbway": "Copy the MB WAY number",
+    "copyReference": "Copy the reference",
+    "transferLine": "Bank transfer: {iban} (account holder: {holder})",
+    "mbwayLine": "MB WAY: {phone}"
   }
 }

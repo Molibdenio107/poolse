@@ -3859,6 +3859,18 @@ columns. `invoice_chase.reminder_id` names it, by CHECK exactly when the channel
 message trigger and the new `invoice_reminder_quota` trigger check against
 `message_daily_address_limit()` under the same advisory lock.
 
+### Where families pay — POOLSE-94, 22 October 2026
+
+Migration `1791972000000_payment-details`. On `organization`, one account per club:
+`payment_iban` (CHECK `^PT50[0-9]{21}$`, stored without spaces), `payment_account_holder` (non-blank,
+≤ 70) and `payment_mbway_phone` (CHECK `^\+3519[0-9]{8}$`). All nullable; null is "not offered". The
+mod-97 check is `@poolse/rules`, not SQL. `poolse_app` gets `GRANT UPDATE` on the three columns.
+**`payment_change_notice`** — an IBAN change to tell the owners about: `changed_by` (composite FK to
+`membership`), `changed_at`, `old_iban_end` / `new_iban_end` (last four digits, null = none),
+`recipients` (the owners' addresses at the time), `delivered_at`, `delivery_attempts`,
+`last_attempt_at`. Tenant RLS; `poolse_app` holds SELECT and INSERT and UPDATE on the three delivery
+columns only. In `TENANT_TABLES` and `TENANT_KINDS` (`payment_change`).
+
 ### Opting out of club messages — POOLSE-86 slice 3.0c, 19 October 2026
 
 Migration `1791453600000_message-opt-out`. **`email_preference`** — PK `(organization_id, email)`,

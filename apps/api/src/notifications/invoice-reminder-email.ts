@@ -1,12 +1,17 @@
 import type { Email } from './notifier.js';
+import type { PaymentDestinations } from '../billing/payment-destinations.js';
+import { paymentMethodLines } from './payment-methods-text.js';
 
 export interface InvoiceReminderEmailInput {
   to: string;
   organizationName: string;
   payerName: string;
   documents: { documentNo: string; issuedOn: string; dueOn: string; outstandingCents: number }[];
-  /** The club's own words, verbatim; null says to contact the club. */
-  paymentInstructions: string | null;
+  /**
+   * Where to pay — POOLSE-94: the transfer and MB WAY, then the club's own
+   * words. Null says to contact the club.
+   */
+  payment: PaymentDestinations | null;
   locale: string;
 }
 
@@ -77,7 +82,9 @@ export function invoiceReminderEmail(input: InvoiceReminderEmailInput): Email {
     copy.line(d.documentNo, day(d.issuedOn), day(d.dueOn), money(d.outstandingCents)),
   );
   const total = copy.total(money(input.documents.reduce((sum, d) => sum + d.outstandingCents, 0)));
-  const instructions = input.paymentInstructions?.trim() ?? '';
+  // The documents in this reminder are what the transfer should name (POOLSE-94 BA 4).
+  const reference = input.documents.map((d) => d.documentNo).join(', ');
+  const howToPay = input.payment === null ? [] : paymentMethodLines(input.payment, reference, input.locale);
 
   const text = [
     copy.greeting(input.payerName),
@@ -87,7 +94,7 @@ export function invoiceReminderEmail(input: InvoiceReminderEmailInput): Email {
     '',
     total,
     '',
-    ...(instructions === '' ? [copy.noInstructions] : [copy.howToPay, instructions]),
+    ...(howToPay.length === 0 ? [copy.noInstructions] : [copy.howToPay, ...howToPay]),
     '',
     copy.paid,
     '',
@@ -99,9 +106,9 @@ export function invoiceReminderEmail(input: InvoiceReminderEmailInput): Email {
     `<p>${escapeHtml(copy.intro(input.organizationName))}</p>`,
     `<ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`,
     `<p><strong>${escapeHtml(total)}</strong></p>`,
-    instructions === ''
+    howToPay.length === 0
       ? `<p>${escapeHtml(copy.noInstructions)}</p>`
-      : `<p>${escapeHtml(copy.howToPay)}<br>${escapeHtml(instructions).replace(/\n/g, '<br>')}</p>`,
+      : `<p>${escapeHtml(copy.howToPay)}<br>${howToPay.map(escapeHtml).join('<br>')}</p>`,
     `<p>${escapeHtml(copy.paid)}</p>`,
     `<p style="color:#6b7280;font-size:12px">${escapeHtml(copy.signature(input.organizationName))}</p>`,
   ].join('\n');

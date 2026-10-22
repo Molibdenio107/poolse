@@ -8,6 +8,7 @@ import { feeTotals } from '@/lib/fee-totals';
 import { formatDate } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { CoverBadge, lineLabel } from './fees-block';
+import { PaymentDestinations } from '@/components/payment-destinations';
 
 /**
  * What a family owes, read-only — 15 October 2026 (Rui).
@@ -15,7 +16,8 @@ import { CoverBadge, lineLabel } from './fees-block';
  * The office's fee block is a page of forms; a family needs the lines, whether
  * each is paid, and the two totals. The totals come from `feeTotals`, the same
  * function the office's block reads, so a parent and the office never see two
- * balances. Nothing here writes: paying is done at the club.
+ * balances. Nothing here writes; where to pay is the club's own account,
+ * when it has given one (POOLSE-94).
  */
 export function FamilyFees({ fees }: { fees: StudentFees }): React.ReactElement {
   const t = useTranslations();
@@ -27,7 +29,9 @@ export function FamilyFees({ fees }: { fees: StudentFees }): React.ReactElement 
       <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
         {t('detailTabs.fees')}
       </h2>
-      <p className="text-sm text-foreground-muted">{t('family.feesHint')}</p>
+      <p className="text-sm text-foreground-muted">
+        {t(fees.payTo == null ? 'family.feesHint' : 'family.feesHintPayTo')}
+      </p>
 
       <CoverBadge cover={fees.cover} />
 
@@ -110,6 +114,12 @@ export function FamilyFees({ fees }: { fees: StudentFees }): React.ReactElement 
               </p>
             )}
           </dl>
+          {outstanding > 0 && fees.payTo != null && (
+            <PaymentDestinations
+              destinations={fees.payTo.destinations}
+              references={[{ reference: fees.payTo.reference }]}
+            />
+          )}
         </>
       )}
     </section>

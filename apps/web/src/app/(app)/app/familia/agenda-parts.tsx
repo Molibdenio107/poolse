@@ -9,6 +9,7 @@ import { laneLabel } from '@/lib/lanes';
 import { formatCents } from '@/lib/money';
 import { timeAgo } from '@/lib/relative-time';
 import { cn } from '@/lib/utils';
+import { PaymentDestinations } from '@/components/payment-destinations';
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
 
@@ -137,6 +138,9 @@ export async function FeeStatus({ children }: { children: AppChild[] }): Promise
   const locale = await getLocale();
   const owing = children.filter((child) => child.fees !== null);
   if (owing.length === 0) return null;
+  // One account per club, so one block; the reference is each child's own.
+  const paying = owing.filter((child) => child.payTo !== null);
+  const destinations = paying[0]?.payTo?.destinations ?? null;
 
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
@@ -171,6 +175,15 @@ export async function FeeStatus({ children }: { children: AppChild[] }): Promise
           </li>
         ))}
       </ul>
+      {destinations !== null && (
+        <PaymentDestinations
+          destinations={destinations}
+          references={paying.map((child) => ({
+            label: paying.length > 1 ? child.name : undefined,
+            reference: child.payTo!.reference,
+          }))}
+        />
+      )}
     </section>
   );
 }

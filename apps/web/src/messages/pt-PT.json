@@ -3771,7 +3771,7 @@
       "notLateYet": "Ainda dentro do prazo, por isso sem lembrete: {names}.",
       "howToPay": "Como pagar (vai no email)",
       "noInstructions": "O clube ainda não escreveu como se paga; o email pede para contactar o clube.",
-      "setInstructions": "Escrever as instruções de pagamento",
+      "setInstructions": "Indicar onde se paga",
       "send": "{count, plural, =0 {Enviar} one {Enviar # lembrete} other {Enviar # lembretes}}",
       "open": "{count, plural, =0 {Enviar lembrete por email} one {Enviar lembrete por email (# documento)} other {Enviar lembrete por email (# documentos)}}",
       "tickOverdue": "{count, plural, =0 {Nada em atraso} one {Escolher o que está em atraso (#)} other {Escolher o que está em atraso (#)}}",
@@ -3785,7 +3785,8 @@
       "recordedToast": "{count, plural, one {Lembrete registado} other {# lembretes registados}}; o envio de email não está configurado, por isso não sai nenhum.",
       "chaseSent": "Lembrete enviado pelo Poolse.",
       "chaseNotSent": "Lembrete registado — o email ainda não saiu.",
-      "nothingSent": "Não há nada a enviar: as pessoas escolhidas já não têm valores em atraso ou não têm endereço de email."
+      "nothingSent": "Não há nada a enviar: as pessoas escolhidas já não têm valores em atraso ou não têm endereço de email.",
+      "referenceIsDocuments": "O email pede a cada pessoa que indique como referência os seus documentos em atraso."
     }
   },
   "reception": {
@@ -5147,11 +5148,27 @@
     "tab": "Dados do clube",
     "hint": "Os dados fiscais e o logotipo são do clube e aplicam-se a todas as instalações, não só a esta.",
     "paymentTitle": "Como pagar",
-    "paymentHint": "Vai, tal como está escrito, no fim de cada lembrete de pagamento que o Poolse envia: IBAN, número MB WAY, horário da secretaria. Em branco, o lembrete pede para contactar o clube.",
-    "paymentLabel": "Instruções de pagamento",
-    "paymentPlaceholder": "IBAN PT50 …\nMB WAY 9…\nSecretaria: dias úteis, 9h–12h",
+    "paymentPlaceholder": "Numerário ou multibanco na receção\nSecretaria: dias úteis, 9h–12h",
     "paymentTooLong": "No máximo 1000 caracteres.",
-    "paymentFailed": "Não foi possível guardar as instruções de pagamento."
+    "paymentFailed": "Não foi possível guardar as instruções de pagamento.",
+    "payment": {
+      "hint": "Onde as famílias pagam ao clube — uma conta para todo o clube, não por instalação. Aparece no separador Mensalidades de cada família e no fim de cada lembrete de pagamento que o Poolse envia. Os campos em branco não aparecem.",
+      "transferTitle": "Transferência bancária",
+      "iban": "IBAN",
+      "ibanHint": "Um IBAN português (PT50…), com ou sem espaços. Cada alteração do IBAN é comunicada por email a todos os proprietários.",
+      "holder": "Titular da conta",
+      "holderHint": "Em branco, aparece o nome do clube.",
+      "mbwayTitle": "MB WAY",
+      "mbway": "Número de telemóvel",
+      "mbwayHint": "Um telemóvel português, com ou sem +351.",
+      "otherTitle": "Outras instruções",
+      "otherHint": "Tal como está escrito, depois da transferência e do MB WAY: numerário na receção, horário da secretaria.",
+      "saveFailed": "Não foi possível guardar os dados de pagamento.",
+      "ibanShape": "Indique um IBAN português: PT50 seguido de 21 algarismos.",
+      "ibanChecksum": "Este IBAN não é válido — os algarismos de controlo não conferem. Verifique se não há um algarismo trocado.",
+      "holderTooLong": "No máximo 70 caracteres.",
+      "mbwayShape": "Indique um telemóvel português: 9 algarismos a começar por 9."
+    }
   },
   "family": {
     "recordSubtitle": "A ficha que o clube tem.",
@@ -5205,7 +5222,8 @@
     "planFailed": "Não foi possível carregar o plano.",
     "planEmpty": "O professor ainda não escreveu o plano desta aula.",
     "retry": "Tentar de novo",
-    "noSessionsHint": "As aulas desta época ainda não foram marcadas no calendário. Até lá, este é o horário semanal:"
+    "noSessionsHint": "As aulas desta época ainda não foram marcadas no calendário. Até lá, este é o horário semanal:",
+    "feesHintPayTo": "O que está acordado com o clube e o que falta pagar. Em baixo, onde pagar."
   },
   "activity": {
     "tab": "Atividade",
@@ -5588,5 +5606,18 @@
   "competition": {
     "title": "Competição",
     "subtitle": "As provas do clube, os mínimos de cada campeonato e os escalões da FPN."
+  },
+  "payTo": {
+    "title": "Onde pagar",
+    "transfer": "Transferência bancária",
+    "holder": "Titular: {name}",
+    "mbway": "MB WAY",
+    "reference": "Indique como referência",
+    "referenceFor": "Referência para {name}",
+    "copyIban": "Copiar o IBAN",
+    "copyMbway": "Copiar o número MB WAY",
+    "copyReference": "Copiar a referência",
+    "transferLine": "Transferência bancária: {iban} (titular: {holder})",
+    "mbwayLine": "MB WAY: {phone}"
   }
 }

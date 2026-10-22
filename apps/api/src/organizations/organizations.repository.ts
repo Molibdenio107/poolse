@@ -228,20 +228,37 @@ export class TaxNumberTakenError extends Error {
 export interface TaxSettings {
   /** Nine digits, normalised, or null where nobody has filled it in. */
   taxNumber: string | null;
-  /** *Como pagar* — POOLSE-86: shown verbatim under an invoice reminder. */
+  /** *Como pagar* — POOLSE-86: the club's own words, the third card since POOLSE-94. */
   paymentInstructions: string | null;
+  /** POOLSE-94: where families pay. `PT50…` without spaces, `+3519…`. */
+  paymentIban: string | null;
+  paymentAccountHolder: string | null;
+  paymentMbwayPhone: string | null;
+}
+
+const TAX_COLUMNS =
+  'vat_number, payment_instructions, payment_iban, payment_account_holder, payment_mbway_phone';
+
+function toTaxSettings(row: {
+  vat_number: string | null;
+  payment_instructions: string | null;
+  payment_iban: string | null;
+  payment_account_holder: string | null;
+  payment_mbway_phone: string | null;
+} | undefined): TaxSettings {
+  return {
+    taxNumber: row?.vat_number ?? null,
+    paymentInstructions: row?.payment_instructions ?? null,
+    paymentIban: row?.payment_iban ?? null,
+    paymentAccountHolder: row?.payment_account_holder ?? null,
+    paymentMbwayPhone: row?.payment_mbway_phone ?? null,
+  };
 }
 
 export async function readTaxSettings(organizationId: string): Promise<TaxSettings> {
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ vat_number: string | null; payment_instructions: string | null }>(
-      'SELECT vat_number, payment_instructions FROM organization WHERE id = $1',
-      [organizationId],
-    );
-    return {
-      taxNumber: rows[0]?.vat_number ?? null,
-      paymentInstructions: rows[0]?.payment_instructions ?? null,
-    };
+    const { rows } = await tx.query(`SELECT ${TAX_COLUMNS} FROM organization WHERE id = $1`, [organizationId]);
+    return toTaxSettings(rows[0]);
   });
 }
 
@@ -282,11 +299,8 @@ export async function saveTaxNumber(
         data: { taxNumber },
       });
 
-      const { rows } = await tx.query<{ payment_instructions: string | null }>(
-        'SELECT payment_instructions FROM organization WHERE id = $1',
-        [organizationId],
-      );
-      return { taxNumber, paymentInstructions: rows[0]?.payment_instructions ?? null };
+      const { rows } = await tx.query(`SELECT ${TAX_COLUMNS} FROM organization WHERE id = $1`, [organizationId]);
+      return toTaxSettings(rows[0]);
     });
   } catch (error) {
     const { code, constraint } = error as { code?: string; constraint?: string };

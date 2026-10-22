@@ -1,3 +1,4 @@
+import { payToFor, type PayTo } from '../billing/payment-destinations.js';
 import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
@@ -17,6 +18,8 @@ interface Child {
   self: boolean;
   /** What is owed, from the fee read's `balance`; null when nothing is agreed. */
   fees: (FeeBalance & { lines: number }) | null;
+  /** Where to pay, when something is owed and the club says where — POOLSE-94. */
+  payTo: PayTo | null;
 }
 
 interface AgendaResponse {
@@ -96,7 +99,12 @@ async function withFees(
     children.map(async (child) => {
       const fees = await studentFees(organizationId, child.id);
       const lines = fees.lines.filter((line) => line.endsOn === null).length;
-      return { ...child, fees: lines === 0 ? null : { ...fees.balance, lines } };
+      const owing = fees.balance.outstandingCents > 0;
+      return {
+        ...child,
+        fees: lines === 0 ? null : { ...fees.balance, lines },
+        payTo: owing ? await payToFor(organizationId, child.id) : null,
+      };
     }),
   );
 }

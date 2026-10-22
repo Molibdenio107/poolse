@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { withOrg, withPlatform } from '@poolse/db';
 import { deliverLabAlert, deliverWaterAlert } from '../facilities/alert-delivery.js';
 import { deliverInvoiceReminder } from '../billing/reminder-delivery.js';
+import { deliverPaymentChangeNotice } from '../billing/payment-change-delivery.js';
 import { deliverMessage } from '../messages/delivery.js';
 import { deliverSupportNotice, deliverTrialNotice } from '../platform/owner-notices.js';
 import { alertRecipients, redeliverAlert } from '../platform/platform-alert.js';
@@ -96,6 +97,14 @@ const TENANT_KINDS: TenantKind[] = [
     pending: `SELECT id FROM invoice_reminder WHERE delivered_at IS NULL AND ${due('created_at')}`,
     bump: `UPDATE invoice_reminder SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
     deliver: deliverInvoiceReminder,
+  },
+  {
+    // POOLSE-94: the club's IBAN changed, told to every owner.
+    key: 'payment_change',
+    pending: `SELECT id FROM payment_change_notice
+               WHERE delivered_at IS NULL AND cardinality(recipients) > 0 AND ${due('created_at')}`,
+    bump: `UPDATE payment_change_notice SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
+    deliver: deliverPaymentChangeNotice,
   },
 ];
 

@@ -1948,6 +1948,8 @@ export interface FeeBalance {
 export interface StudentFees {
   /** Read by the child's own family; offers and the office's reasons are empty. */
   familyView?: boolean;
+  /** POOLSE-94: where the family pays. Only on the family's read; null when the club says nowhere. */
+  payTo?: PayTo | null;
   /** What their turmas come to, before anything is charged. */
   currentPlans: CurrentPlan[];
   /** The joining fee and the insurance fee, offered per season. */
@@ -3497,7 +3499,8 @@ export interface ReminderPayer {
 export interface ReminderPreview {
   payers: ReminderPayer[];
   nothingOverdue: string[];
-  paymentInstructions: string | null;
+  /** *Como pagar* as the email will say it — POOLSE-94; null is "contact the club". */
+  payment: PaymentDestinations | null;
   emailConfigured: boolean;
 }
 
@@ -3758,8 +3761,27 @@ export interface ManualPayment {
 export interface TaxSettings {
   /** Nine digits, normalised, or null where nobody has filled it in. */
   taxNumber: string | null;
-  /** *Como pagar* — POOLSE-86: the club's words under an invoice reminder. */
+  /** *Como pagar* — POOLSE-86: the club's own words, the third card since POOLSE-94. */
   paymentInstructions: string | null;
+  /** POOLSE-94: `PT50…` without spaces, the holder, and `+3519…` for MB WAY. */
+  paymentIban: string | null;
+  paymentAccountHolder: string | null;
+  paymentMbwayPhone: string | null;
+}
+
+/** Where families pay the club — POOLSE-94. Null fields were left empty. */
+export interface PaymentDestinations {
+  iban: string | null;
+  /** The club's name where an IBAN is set and nobody typed a holder. */
+  accountHolder: string | null;
+  mbwayPhone: string | null;
+  instructions: string | null;
+}
+
+/** Where to pay, and what to give as the reference: open document numbers, else the student's name. */
+export interface PayTo {
+  destinations: PaymentDestinations;
+  reference: string;
 }
 
 /**
@@ -5008,6 +5030,8 @@ export interface AppChild {
   self: boolean;
   /** From the fee read's `balance`; null when nothing is agreed. */
   fees: (FeeBalance & { lines: number }) | null;
+  /** Where to pay, when something is owed and the club says where — POOLSE-94. */
+  payTo: PayTo | null;
 }
 
 export interface AppAgenda {
