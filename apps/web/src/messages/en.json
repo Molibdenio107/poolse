@@ -374,8 +374,7 @@
       "action": "Export",
       "formatLabel": "File format",
       "xlsx": "Excel (.xlsx)",
-      "csv": "CSV (.csv)",
-      "pdf": "PDF"
+      "csv": "CSV (.csv)"
     },
     "import": {
       "title": "Import the pay list",

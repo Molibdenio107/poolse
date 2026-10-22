@@ -128,7 +128,7 @@ export function SalaryFileActions({
                   onClick={() => setFormats(false)}
                   className="whitespace-nowrap px-4 py-2 text-left text-sm hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
-                  {t(`salaries.export.${choice}`)}
+                  {choice === 'pdf' ? t('export.pdf.option') : t(`salaries.export.${choice}`)}
                 </a>
               ))}
             </div>

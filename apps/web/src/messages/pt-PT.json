@@ -374,8 +374,7 @@
       "action": "Exportar",
       "formatLabel": "Formato do ficheiro",
       "xlsx": "Excel (.xlsx)",
-      "csv": "CSV (.csv)",
-      "pdf": "PDF"
+      "csv": "CSV (.csv)"
     },
     "import": {
       "title": "Importar a lista de salários",
