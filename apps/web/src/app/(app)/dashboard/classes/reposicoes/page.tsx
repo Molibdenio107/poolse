@@ -13,11 +13,9 @@ import { ReposicaoSettingsForm } from './reposicoes-form';
  * general settings area yet, and inventing one for a single feature would put
  * the rule two clicks further from the thing it governs.
  *
- * It began under Turmas and moved in round 5; the back link did not move with
- * it, so arriving from Alunos and pressing Voltar landed on Turmas — a screen
- * the reader had not come from and had no reason to be on. Back points at the
- * register now, which is both where the menu entry lives and where the only
- * other link here comes from (a student's medical leave). The URL stays
+ * It began under Turmas, moved to Alunos in round 5 and came back to Turmas in
+ * POOLSE-103. Voltar follows where the reader came from (`originBack`), so a
+ * menu move never strands it again; opened from the menu it has none. The URL stays
  * `/dashboard/classes/reposicoes`: renaming a route to match a menu is a
  * redirect and a round of broken bookmarks for no gain the reader can see.
  *

@@ -33,11 +33,12 @@ entry takes the roles of the route its page loads, and the role probe tests that
 | — Staff, and Férias, Salários, Qualificações under it | owner, admin |
 | Energia | owner, admin, maintenance |
 | Turmas (Épocas), Calendário (Encerramentos) | owner, admin, instructor, maintenance |
+| — Aulas de reposição, under Turmas after Épocas (POOLSE-103) | owner, admin |
 | Receção, Faturação | owner, admin |
 | Alunos, Encarregados, Níveis, Avanço | owner, admin, instructor |
 | — Mensagens | owner, admin, instructor |
 | — Competição, and Provas, Mínimos, Escalões under it | owner, admin, instructor; competition module |
-| — Pedidos de inscrição, Reposições | owner, admin |
+| — Pedidos de inscrição | owner, admin |
 | Os meus educandos | guardian |
 | O meu registo | student who is not also a guardian |
 

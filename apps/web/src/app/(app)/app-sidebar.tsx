@@ -266,6 +266,9 @@ const SECTIONS: Item[] = [
       // missed and a class made up. There is no general settings area, and
       // inventing one for a single feature would put the rule two clicks further
       // from the thing it governs — POOLSE-21.
+      // Aulas de reposição came back here from Alunos in POOLSE-103 (Rui,
+      // 22-10-2026): the route lives under /classes, and a make-up is a class.
+      { href: '/dashboard/classes/reposicoes', key: 'reposicao.title', roles: OFFICE },
     ],
   },
   {
@@ -315,8 +318,7 @@ const SECTIONS: Item[] = [
     // Ordered by how close each one sits to a student — round 6. Encarregados
     // first, directly under Alunos, because a guardian is a person attached to a
     // student and the two lists are read together; Níveis next, being what a
-    // student is in; Reposições last, because a make-up class is an exception
-    // somebody goes looking for deliberately, not a list they browse.
+    // student is in. Reposições moved to Turmas in POOLSE-103.
     children: [
       // Encarregados de educação belong with the families, not with the staff —
       // POOLSE-35.
@@ -371,9 +373,6 @@ const SECTIONS: Item[] = [
        * register — so it is a panel on the site's page, under Preços, and the
        * old route redirects to Instalações.
        */
-      // Reposicoes moved here in round 5: a make-up class is something a
-      // student is owed, and the person looking for one is looking at a student.
-      { href: '/dashboard/classes/reposicoes', key: 'reposicao.title', roles: OFFICE },
     ],
   },
   /*
