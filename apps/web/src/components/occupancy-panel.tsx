@@ -1,231 +1,355 @@
-import { getTranslations, getLocale } from 'next-intl/server';
-import { AlertTriangle } from 'lucide-react';
-import type { Occupancy, TimeBand } from '@/lib/api';
-import { OccupancyBars } from './occupancy-bars';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
+import type { Occupancy, OccupancyDayBand } from '@/lib/api';
+import { formatDateRange } from '@/lib/date-format';
 import { FromLink } from '@/components/from-link';
+import { cn } from '@/lib/utils';
 
 /**
- * The season, in figures — POOLSE-52, criterion 6.
+ * Ocupação — a site's season, as three questions. POOLSE-93, option B
+ * (Rui, 22-10-2026); the figures are POOLSE-52's and unchanged.
  *
- * **This component performs no arithmetic.** Every number arrives computed by
- * Postgres; all that happens here is formatting for the locale. That is
- * criterion 8, and it is not fussiness: two implementations of "lane-hours" is
- * two answers to one question, and the one on screen would be the one nobody
- * could reproduce when a manager queried it.
+ * The tab used to put three numbers with three different units beside a table,
+ * a time-of-day split and a weekday chart, and say nowhere which answered what.
+ * Now it reads top to bottom as the questions a manager has:
  *
- * A server component, because it renders what it is given and holds nothing.
+ * 1. **How full is the site?** Two gauges, each with a sentence that says what
+ *    the percentage is *of*: the water (lane-hours) and the places (swimmers).
+ *    The capacity gap sits inside the second, where it applies.
+ * 2. **Where is there room to sell?** The five day-and-part-of-day cells with the
+ *    most free lane-hours a week, ranked by the server, closed cells never.
+ * 3. **Who uses the water, and when?** A bar a weekday: turmas, parcerias and
+ *    what is left, with the day's percentage at the end.
  *
- * **It lives on the dashboard now, not on the facility page.** Rui's third
- * report: this is one of the core things a dashboard is for, and a manager
- * opening Poolse should see how much of the water is sold before they see
- * anything else. It moved wholesale rather than being copied — two of these
- * would be two answers to one question the day somebody edited one.
+ * **The figures arrive computed by Postgres** and are formatted here for the
+ * locale. The one thing worked out on this side is how wide to draw a share of
+ * a bar, and the season's split for the legend — proportions of two figures
+ * the server sent, for drawing, never a figure of their own.
  *
- * **Lane-hours, not classes.** It is the unit the club actually sells: a booking
- * over three lanes for 45 minutes is 2.25 lane-hours, and "37% occupancy" in
- * those terms is something a manager can act on in a way that "eleven classes"
- * is not.
- *
- * **No money.** Contracted partnership value comes down the same endpoint for
- * the dashboards module and is deliberately rendered nowhere here — criterion 9,
- * and POOLSE-47's decision that partnership billing is its own flow.
+ * **Colour never carries meaning alone.** Each bar ends with its percentage,
+ * the legend names each colour, and every gauge and bar has an `aria-label`
+ * with its numbers. Turmas and parcerias keep `--chart-1` / `--chart-2`.
  */
-
-const BANDS: readonly TimeBand[] = ['manha', 'tarde', 'noite'];
 
 export async function OccupancyPanel({
   occupancy,
   facilityId,
 }: {
   occupancy: Occupancy;
-  /**
-   * The site these figures are of, so the warning below can point at the lane
-   * editor. Null where the caller has none, and the warning then states the
-   * problem without a link rather than linking nowhere.
-   */
+  /** The site, for the capacity link; null where the caller has none. */
   facilityId?: string | null;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
 
-  /** A decimal string, in the reader's locale. Formatting, never calculation. */
-  const hours = (value: string): string =>
-    new Intl.NumberFormat(locale, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(Number(value));
+  const hours = (value: string | number): string =>
+    new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Number(value));
+  const percent = (value: number): string =>
+    new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 }).format(value / 100);
 
-  const percent = (value: number | null): string =>
-    value === null
-      ? '—'
-      : new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value) + '%';
+  const available = Number(occupancy.total.availableLaneHours);
+  const hasGrid = occupancy.laneHourOccupancy !== null && available > 0;
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-      <div>
-        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          {t('occupancy.title')}
-        </h2>
-        <p className="mt-1 text-sm text-foreground-muted">
-          {t('occupancy.hint', { season: occupancy.seasonName })}
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      {/* 0 — which season these are. */}
+      <p className="text-sm font-medium">
+        {t('occupancy.seasonLine', {
+          season: occupancy.seasonName,
+          period: formatDateRange(occupancy.seasonStartsOn, occupancy.seasonEndsOn, locale),
+        })}
+      </p>
 
-      {/* The three headline figures. */}
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Figure
-          label={t('occupancy.sold')}
-          value={t('occupancy.laneHours', { hours: hours(occupancy.total.soldLaneHours) })}
-          note={t('occupancy.ofAvailable', {
-            hours: hours(occupancy.total.availableLaneHours),
-          })}
-        />
-        <Figure
-          label={t('occupancy.utilisation')}
-          value={percent(occupancy.laneHourOccupancy)}
-          note={
-            occupancy.laneHourOccupancy === null ? t('occupancy.noGrid') : t('occupancy.ofWater')
-          }
-        />
-        <Figure
-          label={t('occupancy.fullness')}
-          value={percent(occupancy.seatOccupancy)}
-          note={
-            occupancy.seatOccupancy === null ? t('occupancy.noCapacity') : t('occupancy.ofPlaces')
-          }
-        />
-      </dl>
-
-      {/*
-        The asterisk, said out loud — criterion 3.
-
-        `lane.default_capacity` is nullable by design, so the fullness figure can
-        only cover the lanes somebody has sized. A percentage with a hidden
-        exclusion is worse than one that names it.
-      */}
-      {occupancy.lanesWithoutCapacity > 0 && (
-        <div className="flex items-start gap-2 rounded border border-warning/40 bg-warning/5 p-3 text-sm">
-          <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
-          <div className="flex flex-col items-start gap-2">
-            <span>{t('occupancy.uncovered', { count: occupancy.lanesWithoutCapacity })}</span>
-            {/*
-              And the way to fix it. This said "the percentage excludes N lanes"
-              and stopped there — a figure explaining its own asterisk with no
-              route to removing it. A lane's capacity is set in the lane editor.
-            */}
-            {facilityId !== undefined && facilityId !== null && (
-              <FromLink
-                href={`/dashboard/facilities/${facilityId}`}
-                className="rounded text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                {t('occupancy.setCapacity')}
-              </FromLink>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Turmas against parcerias — the split the ticket exists to expose. */}
-      <div className="flex flex-col gap-2 border-t border-border pt-4">
-        <h3 className="text-sm font-medium">{t('occupancy.split')}</h3>
-        <div className="relative overflow-x-auto">
-          <table className="w-full min-w-[26rem] text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-foreground-muted">
-                <th scope="col" className="py-2 pr-4 font-medium">{t('occupancy.subject')}</th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
-                  {t('occupancy.laneHoursShort')}
-                </th>
-                <th scope="col" className="py-2 text-right font-medium">
-                  {t('occupancy.swimmers')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              <tr>
-                <td className="py-2 pr-4">{t('occupancy.turmas')}</td>
-                <td className="py-2 pr-4 text-right tabular-nums">
-                  {hours(occupancy.total.turmaLaneHours)}
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {occupancy.total.turmaHeadcount}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-2 pr-4">{t('occupancy.parcerias')}</td>
-                <td className="py-2 pr-4 text-right tabular-nums">
-                  {hours(occupancy.total.parceriaLaneHours)}
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {occupancy.total.parceriaHeadcount}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* By time band. Three fixed bands — nobody has asked to move them. */}
-      <div className="flex flex-col gap-2 border-t border-border pt-4">
-        <h3 className="text-sm font-medium">{t('occupancy.byBand')}</h3>
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {BANDS.map((band) => {
-            const slice = occupancy.byBand.find((entry) => entry.band === band);
-            return (
-              <li key={band} className="rounded border border-border p-3">
-                <p className="text-sm font-medium">{t(`occupancy.band.${band}`)}</p>
-                <p className="mt-0.5 text-sm text-foreground-muted">
-                  {t('occupancy.laneHours', {
-                    hours: hours(slice?.soldLaneHours ?? '0'),
-                  })}
+      {/* 1 — how full. */}
+      <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+        <h2 className="font-medium">{t('occupancy.q1')}</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Gauge
+            title={t('occupancy.water.title')}
+            value={occupancy.laneHourOccupancy}
+            label={(shown) => t('occupancy.water.aria', { percent: shown })}
+            percent={percent}
+          >
+            {hasGrid ? (
+              <>
+                <p className="text-sm">
+                  {t('occupancy.water.sentence', { percent: percent(occupancy.laneHourOccupancy!) })}
                 </p>
-                {/*
-                  The split again, per band — this is where the club's actual
-                  shape shows: mornings are schools, evenings are families.
-                */}
                 <p className="text-sm text-foreground-muted">
-                  {t('occupancy.bandSplit', {
-                    turmas: hours(slice?.turmaLaneHours ?? '0'),
-                    parcerias: hours(slice?.parceriaLaneHours ?? '0'),
+                  {t('occupancy.water.hours', {
+                    sold: hours(occupancy.total.soldLaneHours),
+                    available: hours(occupancy.total.availableLaneHours),
                   })}
                 </p>
-              </li>
-            );
-          })}
-        </ul>
+              </>
+            ) : (
+              <p className="text-sm text-foreground-muted">{t('occupancy.noGrid')}</p>
+            )}
+          </Gauge>
+
+          <Gauge
+            title={t('occupancy.seats.title')}
+            value={occupancy.seatOccupancy}
+            label={(shown) => t('occupancy.seats.aria', { percent: shown })}
+            percent={percent}
+          >
+            {occupancy.seatOccupancy !== null ? (
+              <p className="text-sm">
+                {t('occupancy.seats.sentence', { percent: percent(occupancy.seatOccupancy) })}
+              </p>
+            ) : (
+              // No lane has a capacity: the whole figure is missing, so say that
+              // and where to fix it — "partial" would be the wrong word.
+              <p className="flex flex-wrap items-start gap-x-2 gap-y-1 text-sm text-foreground-muted">
+                <span>{t('occupancy.noCapacity')}</span>
+                {facilityId !== undefined && facilityId !== null && (
+                  <FromLink
+                    href={`/dashboard/facilities/${facilityId}`}
+                    className="rounded text-primary underline underline-offset-4 coarse:-my-3 coarse:py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('occupancy.seats.define')}
+                  </FromLink>
+                )}
+              </p>
+            )}
+            {/*
+              The asterisk, where it applies — POOLSE-52 criterion 3. A lane
+              nobody has sized is outside this percentage, and it says so here
+              rather than in a block of its own the reader has to connect.
+            */}
+            {occupancy.seatOccupancy !== null && occupancy.lanesWithoutCapacity > 0 && (
+              <p className="flex flex-wrap items-start gap-x-2 gap-y-1 text-sm">
+                <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warning" />
+                <span>{t('occupancy.seats.partial', { count: occupancy.lanesWithoutCapacity })}</span>
+                {facilityId !== undefined && facilityId !== null && (
+                  <FromLink
+                    href={`/dashboard/facilities/${facilityId}`}
+                    className="rounded text-primary underline underline-offset-4 coarse:-my-3 coarse:py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('occupancy.seats.define')}
+                  </FromLink>
+                )}
+              </p>
+            )}
+          </Gauge>
+        </div>
+      </section>
+
+      {/* 2 and 3, side by side on a desk and in order on a phone. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <h2 className="font-medium">{t('occupancy.q2')}</h2>
+          {!hasGrid ? (
+            <p className="text-sm text-foreground-muted">{t('occupancy.unavailable')}</p>
+          ) : occupancy.mostFree.length === 0 ? (
+            <p className="text-sm text-foreground-muted">{t('occupancy.free.none')}</p>
+          ) : (
+            <ol className="flex flex-col divide-y divide-border">
+              {occupancy.mostFree.map((cell) => (
+                <FreeRow key={`${cell.weekday}-${cell.band}`} cell={cell} hours={hours} percent={percent} />
+              ))}
+            </ol>
+          )}
+          {hasGrid && (
+            <FromLink
+              href="/dashboard/calendar"
+              className="inline-flex items-center gap-1.5 self-start rounded text-sm text-primary hover:underline coarse:-my-3 coarse:py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {t('occupancy.free.openGrid')}
+              <ArrowRight aria-hidden className="size-4" />
+            </FromLink>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+          <h2 className="font-medium">{t('occupancy.q3')}</h2>
+          {!hasGrid ? (
+            <p className="text-sm text-foreground-muted">{t('occupancy.unavailable')}</p>
+          ) : (
+            <WeekBars occupancy={occupancy} hours={hours} percent={percent} />
+          )}
+        </section>
       </div>
 
-      {/*
-        By day, as a chart — Rui's third report asked for a graphic here.
-        
-        It replaces the plain progress bar this block used to hold rather than
-        joining it: two pictures of one dataset is noise, and the old one could
-        not show the split between the club's own turmas and the water sold to
-        organisations, which is the second question every one of these figures
-        raises. See `occupancy-bars.tsx` for why the colours are what they are.
-      */}
-      <div className="border-t border-border pt-4">
-        <OccupancyBars occupancy={occupancy} locale={locale} />
-      </div>
-
-    </section>
+      {/* 4 — what the figures count. */}
+      <p className="text-sm text-foreground-muted">{t('occupancy.note')}</p>
+    </div>
   );
 }
 
-function Figure({
-  label,
+/** A ring gauge and its words. The ring is the primary ink, its track the border. */
+async function Gauge({
+  title,
   value,
-  note,
+  label,
+  percent,
+  children,
 }: {
-  label: string;
-  value: string;
-  note: string;
-}): React.ReactElement {
+  title: string;
+  value: number | null;
+  label: (shown: string) => string;
+  percent: (value: number) => string;
+  children: React.ReactNode;
+}): Promise<React.ReactElement> {
+  const R = 28;
+  const C = 2 * Math.PI * R;
+  const share = value === null ? 0 : Math.max(0, Math.min(100, value)) / 100;
   return (
-    <div className="rounded border border-border p-3">
-      <dt className="text-sm text-foreground-muted">{label}</dt>
-      <dd className="mt-0.5 text-2xl font-semibold tabular-nums">{value}</dd>
-      <p className="mt-0.5 text-sm text-foreground-muted">{note}</p>
+    <div className="flex items-start gap-4 rounded border border-border p-4">
+      {value !== null && (
+        <svg
+          viewBox="0 0 72 72"
+          className="size-20 shrink-0"
+          role="img"
+          aria-label={label(percent(value))}
+        >
+          <circle cx="36" cy="36" r={R} fill="none" strokeWidth="8" className="stroke-border" />
+          <circle
+            cx="36"
+            cy="36"
+            r={R}
+            fill="none"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={`${share * C} ${C}`}
+            transform="rotate(-90 36 36)"
+            className="stroke-[rgb(var(--primary-ink))]"
+          />
+          <text
+            x="36"
+            y="36"
+            textAnchor="middle"
+            dominantBaseline="central"
+            className="fill-foreground text-[15px] font-semibold tabular-nums"
+          >
+            {percent(value)}
+          </text>
+        </svg>
+      )}
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <h3 className="font-medium">{title}</h3>
+        {children}
+      </div>
     </div>
+  );
+}
+
+async function FreeRow({
+  cell,
+  hours,
+  percent,
+}: {
+  cell: OccupancyDayBand;
+  hours: (value: string | number) => string;
+  percent: (value: number) => string;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  return (
+    <li className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-2.5 first:pt-0 last:pb-0">
+      <span className="flex flex-col">
+        <span className="text-sm font-medium">
+          {t('occupancy.free.slot', { day: t(`week.${cell.weekday}` as never), band: cell.band })}
+        </span>
+        <span className="text-sm tabular-nums text-foreground-muted">
+          {t('occupancy.free.window', {
+            from: cell.opensAt ?? '',
+            to: cell.closesAt ?? '',
+            percent: percent(cell.freePercent ?? 0),
+          })}
+        </span>
+      </span>
+      <span className="text-sm font-medium tabular-nums">
+        {t('occupancy.free.perWeek', { hours: hours(cell.freeLaneHoursPerWeek) })}
+      </span>
+    </li>
+  );
+}
+
+/** One bar a weekday — turmas, parcerias, free — and the season's legend. */
+async function WeekBars({
+  occupancy,
+  hours,
+  percent,
+}: {
+  occupancy: Occupancy;
+  hours: (value: string | number) => string;
+  percent: (value: number) => string;
+}): Promise<React.ReactElement> {
+  const t = await getTranslations();
+  const sold = Number(occupancy.total.soldLaneHours);
+  // The season's split, for the legend: shares of what was sold. A lane held
+  // for maintenance is occupied in POOLSE-52's figures and is neither a turma
+  // nor a parceria, so it is drawn and named as the other uses rather than
+  // left as a gap the percentages cannot explain.
+  const turmaShare = sold > 0 ? (Number(occupancy.total.turmaLaneHours) / sold) * 100 : 0;
+  const parceriaShare = sold > 0 ? (Number(occupancy.total.parceriaLaneHours) / sold) * 100 : 0;
+  const otherShare = Math.max(0, 100 - turmaShare - parceriaShare);
+  const hasOther = sold > 0 && otherShare >= 0.5;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <ul className="flex flex-col gap-2">
+        {occupancy.byDay.map((day) => {
+          const available = Number(day.availableLaneHours);
+          const name = t(`weekShort.${day.weekday}` as never);
+          if (available <= 0) {
+            return (
+              <li key={day.weekday} className="grid grid-cols-[2.5rem_1fr] items-center gap-2 text-sm">
+                <span className="font-medium">{name}</span>
+                <span className="text-foreground-muted">{t('occupancy.closed')}</span>
+              </li>
+            );
+          }
+          // Shares of the day's own available hours, for drawing.
+          const turma = (Number(day.turmaLaneHours) / available) * 100;
+          const parceria = (Number(day.parceriaLaneHours) / available) * 100;
+          const used = Math.min(100, (Number(day.soldLaneHours) / available) * 100);
+          const other = Math.max(0, used - turma - parceria);
+          return (
+            <li key={day.weekday} className="grid grid-cols-[2.5rem_1fr_3rem] items-center gap-2 text-sm">
+              <span className="font-medium">{name}</span>
+              <span
+                role="img"
+                aria-label={t('occupancy.dayAria', {
+                  day: t(`week.${day.weekday}` as never),
+                  percent: percent(used),
+                  turmas: hours(day.turmaLaneHours),
+                  parcerias: hours(day.parceriaLaneHours),
+                  other: hours(Math.max(0, Number(day.soldLaneHours) - Number(day.turmaLaneHours) - Number(day.parceriaLaneHours))),
+                  available: hours(day.availableLaneHours),
+                })}
+                className="flex h-4 overflow-hidden rounded bg-surface-muted"
+              >
+                <span className="h-full bg-chart-1" style={{ width: `${Math.min(100, turma)}%` }} />
+                <span
+                  className="h-full bg-chart-2"
+                  style={{ width: `${Math.max(0, Math.min(100 - turma, parceria))}%` }}
+                />
+                <span className="h-full bg-foreground-muted" style={{ width: `${other}%` }} />
+              </span>
+              <span className="text-right tabular-nums">{percent(used)}</span>
+            </li>
+          );
+        })}
+      </ul>
+      {/* The legend names each colour; the bars' percentages need no colour at all. */}
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <Swatch className="bg-chart-1" label={t('occupancy.legend.turmas', { percent: percent(turmaShare) })} />
+        <Swatch className="bg-chart-2" label={t('occupancy.legend.parcerias', { percent: percent(parceriaShare) })} />
+        {hasOther && (
+          <Swatch className="bg-foreground-muted" label={t('occupancy.legend.other', { percent: percent(otherShare) })} />
+        )}
+        <Swatch className="bg-surface-muted ring-1 ring-inset ring-border" label={t('occupancy.legend.free')} />
+      </p>
+    </div>
+  );
+}
+
+function Swatch({ className, label }: { className: string; label: string }): React.ReactElement {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span aria-hidden className={cn('inline-block size-3 rounded-sm', className)} />
+      {label}
+    </span>
   );
 }

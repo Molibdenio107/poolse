@@ -3397,39 +3397,42 @@
     "lane": "Lane {lane}:"
   },
   "occupancy": {
-    "title": "Occupancy",
-    "hint": "Season {season}, from the classes that actually happened. Closures and closed days reduce both sides of the sum.",
-    "sold": "Sold",
-    "laneHours": "{hours} lane-hours",
-    "laneHoursShort": "Lane-hours",
-    "ofAvailable": "of {hours} available",
-    "utilisation": "Utilisation",
-    "ofWater": "of the water available",
-    "noGrid": "No schedule grid defined",
-    "fullness": "Fullness",
-    "ofPlaces": "of the lanes' places",
-    "noCapacity": "No lane has a capacity recorded",
-    "uncovered": "{count, plural, one {One booked lane has no capacity recorded and is outside this percentage} other {# booked lanes have no capacity recorded and are outside this percentage}}.",
-    "split": "Class groups and partnerships",
-    "subject": "Kind",
-    "swimmers": "Swimmers",
-    "turmas": "Classes",
-    "parcerias": "Partnerships",
-    "byBand": "By time of day",
-    "bandSplit": "Class groups {turmas} · partnerships {parcerias}",
-    "byDay": "By weekday",
-    "dayFigure": "{sold} of {available}",
-    "closed": "Closed",
-    "band": {
-      "manha": "Morning",
-      "tarde": "Afternoon",
-      "noite": "Evening"
+    "seasonLine": "Season {season} · {period}",
+    "q1": "1. How full is the site?",
+    "water": {
+      "title": "Water in use",
+      "sentence": "Of the hours the pool is open, {percent} have a class group or a partnership in a lane.",
+      "hours": "{sold} of {available} lane-hours",
+      "aria": "Water in use: {percent}"
     },
-    "byDayChart": "Lane-hours sold, by day of the week",
-    "ofHours": "{sold} of {available}",
-    "free": "Free",
-    "unavailable": "No occupancy figures yet. This needs a published season, a slot grid and some bookings.",
-    "setCapacity": "Set the lanes' capacity"
+    "seats": {
+      "title": "Places taken",
+      "sentence": "In the booked lanes, {percent} of the places have a swimmer.",
+      "partial": "{count, plural, one {Partial: one lane has no capacity.} other {Partial: # lanes have no capacity.}}",
+      "define": "Set it",
+      "aria": "Places taken: {percent}"
+    },
+    "q2": "2. Where is there room to sell?",
+    "free": {
+      "slot": "{day} {band, select, manha {morning} tarde {afternoon} other {evening}}",
+      "window": "{from}–{to} · {percent} free",
+      "perWeek": "{hours} h a week",
+      "none": "No free hours this season.",
+      "openGrid": "Open in the lane grid"
+    },
+    "q3": "3. Who uses the water, and when?",
+    "dayAria": "{day}: {percent} in use — class groups {turmas}, partnerships {parcerias} and other uses {other} of {available} lane-hours",
+    "legend": {
+      "turmas": "Class groups ({percent})",
+      "parcerias": "Partnerships ({percent})",
+      "other": "Other uses ({percent})",
+      "free": "Free"
+    },
+    "closed": "Closed",
+    "note": "Counted from the lessons that actually took place. Closures and closed days reduce both sides of the sum.",
+    "noGrid": "No schedule grid defined",
+    "noCapacity": "No lane has a capacity recorded",
+    "unavailable": "No occupancy figures yet. This needs a published season, a slot grid and some bookings."
   },
   "timetableImport": {
     "warning": {

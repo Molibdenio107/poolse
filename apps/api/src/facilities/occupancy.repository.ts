@@ -42,6 +42,9 @@ export interface OccupancySlice {
 export interface Occupancy {
   seasonId: string;
   seasonName: string;
+  /** The season's first and last day, `YYYY-MM-DD` — the tab's header line (POOLSE-93). */
+  seasonStartsOn: string;
+  seasonEndsOn: string;
   /** Sold and available across the whole season. */
   total: OccupancySlice & { availableLaneHours: string };
   /**
@@ -66,12 +69,46 @@ export interface Occupancy {
   byDay: (OccupancySlice & { weekday: number; availableLaneHours: string })[];
   byBand: (OccupancySlice & { band: TimeBand })[];
   /**
+   * Each day of the week × each part of the day, all 21 — POOLSE-93.
+   *
+   * What a club can still sell, said the way it sells it: "Friday mornings have
+   * 21 lane-hours free a week". A fixed window (7 × 3), so never paginated.
+   */
+  byDayBand: DayBandCell[];
+  /**
+   * The five cells with the most free lane-hours a week, most first — ranked
+   * here, never on the client. A cell the site never opens is never in it, nor
+   * one with nothing free. Fewer than five when fewer have room.
+   */
+  mostFree: DayBandCell[];
+  /**
    * What the partnerships are contracted for, in integer minor units.
    *
    * Exposed for the dashboards module and rendered nowhere in this ticket —
    * criterion 9. Null for a caller who may not see money.
    */
   contractedCents: number | null;
+}
+
+export interface DayBandCell {
+  weekday: number;
+  band: TimeBand;
+  /** Over the whole season, as `total` is. Decimal strings. */
+  availableLaneHours: string;
+  soldLaneHours: string;
+  /**
+   * The days of the season this cell was actually open: its weekday, with slots
+   * in this part of the day, not shut by a closure or the site's hours, and with
+   * at least one tank open. What "a week" divides by.
+   */
+  openDays: number;
+  /** (available − sold, never below zero) ÷ `openDays`. "0" for a closed cell. */
+  freeLaneHoursPerWeek: string;
+  /** Free as a share of available, 0–100; null for a closed cell. */
+  freePercent: number | null;
+  /** The cell's slots on the club's clock, `HH:MM`; null for a closed cell. */
+  opensAt: string | null;
+  closesAt: string | null;
 }
 
 /** Raised for a season that has no dated sessions to measure. */
@@ -95,11 +132,11 @@ export class DraftSeasonError extends Error {
 async function seasonFor(
   tx: Tx,
   requested: string | null,
-): Promise<{ id: string; name: string } | null> {
-  const { rows } = await tx.query<{ id: string; name: string; status: string }>(
+): Promise<{ id: string; name: string; startsOn: string; endsOn: string } | null> {
+  const { rows } = await tx.query<{ id: string; name: string; status: string; starts_on: string; ends_on: string }>(
     requested === null
-      ? `SELECT id, name, status FROM season WHERE status = 'published' LIMIT 1`
-      : `SELECT id, name, status FROM season WHERE id = $1`,
+      ? `SELECT id, name, status, starts_on::text, ends_on::text FROM season WHERE status = 'published' LIMIT 1`
+      : `SELECT id, name, status, starts_on::text, ends_on::text FROM season WHERE id = $1`,
     requested === null ? [] : [requested],
   );
 
@@ -107,7 +144,7 @@ async function seasonFor(
   if (season === undefined) return null;
   if (season.status === 'draft') throw new DraftSeasonError(season.name);
 
-  return { id: season.id, name: season.name };
+  return { id: season.id, name: season.name, startsOn: season.starts_on, endsOn: season.ends_on };
 }
 
 /**
@@ -355,6 +392,124 @@ export async function readOccupancy(
     );
 
     /*
+     * Where there is room to sell — POOLSE-93.
+     *
+     * The same two halves as `byDay`, cut by part of the day as well, plus what
+     * neither of them can say: how many days of the season the cell was really
+     * open. That is counted date by date from the same calendar as the hours, so
+     * a closure that shut a Friday takes that Friday out of "per week" exactly as
+     * it takes its hours out of the total — dividing by a count of weeks in the
+     * season would spread the free hours over days nobody could sell.
+     *
+     * Free is floored at zero: a session's part of the day is read from its own
+     * start and a slot's from the slot's, so a cell can show more sold than
+     * offered, and "minus three hours free" is not a thing a club can act on.
+     */
+    const dayBand = await tx.query<{
+      weekday: number;
+      band: TimeBand;
+      availabl: string;
+      sold: string;
+      open_days: number;
+      free_per_week: string;
+      free_percent: string | null;
+      opens_at: string | null;
+      closes_at: string | null;
+      rank: number | null;
+    }>(
+      `WITH sess AS (${sessions}),
+       dated AS (
+         SELECT d::date AS day,
+                extract(ISODOW FROM d)::int AS weekday,
+                CASE
+                  WHEN fts.start_time < '12:00' THEN 'manha'
+                  WHEN fts.start_time < '18:00' THEN 'tarde'
+                  ELSE 'noite'
+                END AS band,
+                sum((extract(epoch FROM (fts.end_time - fts.start_time)) / 3600.0) * lanes.n)
+                  AS lane_hours,
+                min(fts.start_time) AS opens,
+                max(fts.end_time) AS closes
+           FROM season se
+           CROSS JOIN LATERAL generate_series(se.starts_on, se.ends_on, interval '1 day') AS d
+           JOIN facility_hours fh
+             ON fh.facility_id = $1
+            AND fh.organization_id = se.organization_id
+            AND fh.weekday = extract(ISODOW FROM d)::int
+            AND fh.available
+           JOIN facility_time_slot fts
+             ON fts.facility_id = $1
+            AND fts.season_id = se.id
+            AND fts.archived_at IS NULL
+            AND fts.day_group = (
+              CASE
+                WHEN extract(ISODOW FROM d) BETWEEN 1 AND 5 THEN 'weekday'
+                WHEN extract(ISODOW FROM d) = 6 THEN 'saturday'
+                ELSE 'sunday'
+              END
+            )::day_group
+           CROSS JOIN LATERAL (
+             SELECT count(*)::int AS n
+               FROM lane l
+               JOIN pool p ON p.id = l.pool_id AND p.organization_id = l.organization_id
+              WHERE p.facility_id = $1
+                AND l.archived_at IS NULL
+                AND p.archived_at IS NULL
+                AND NOT closure_day_shut(p.organization_id, $1, ARRAY[p.id], d::date)
+           ) lanes
+          WHERE se.id = $2
+            AND NOT closure_day_shut(se.organization_id, $1, '{}'::uuid[], d::date)
+          GROUP BY 1, 2, 3
+       ),
+       grid AS (
+         SELECT w AS weekday, b.band, b.ord
+           FROM generate_series(1, 7) AS w
+           CROSS JOIN unnest(ARRAY['manha', 'tarde', 'noite']) WITH ORDINALITY AS b(band, ord)
+       ),
+       cells AS (
+         SELECT g.weekday, g.band, g.ord,
+                coalesce((SELECT sum(lane_hours) FROM dated
+                           WHERE dated.weekday = g.weekday AND dated.band = g.band), 0) AS availabl,
+                coalesce((SELECT sum(duration_minutes / 60.0 * lanes) FROM sess
+                           WHERE sess.weekday = g.weekday AND sess.band = g.band), 0) AS sold,
+                (SELECT count(*)::int FROM dated
+                  WHERE dated.weekday = g.weekday AND dated.band = g.band
+                    AND dated.lane_hours > 0) AS open_days,
+                (SELECT to_char(min(opens), 'HH24:MI') FROM dated
+                  WHERE dated.weekday = g.weekday AND dated.band = g.band
+                    AND dated.lane_hours > 0) AS opens_at,
+                (SELECT to_char(max(closes), 'HH24:MI') FROM dated
+                  WHERE dated.weekday = g.weekday AND dated.band = g.band
+                    AND dated.lane_hours > 0) AS closes_at
+           FROM grid g
+       ),
+       freed AS (
+         SELECT *,
+                CASE WHEN open_days > 0
+                     THEN greatest(availabl - sold, 0) / open_days
+                     ELSE 0 END AS free_per_week,
+                CASE WHEN availabl > 0
+                     THEN greatest(availabl - sold, 0) / availabl * 100 END AS free_percent
+           FROM cells
+       )
+       SELECT weekday, band,
+              availabl::text AS availabl,
+              sold::text AS sold,
+              open_days,
+              free_per_week::text AS free_per_week,
+              free_percent::text AS free_percent,
+              opens_at, closes_at,
+              CASE WHEN availabl > 0 AND free_per_week > 0
+                   THEN row_number() OVER (
+                          PARTITION BY (availabl > 0 AND free_per_week > 0)
+                          ORDER BY free_per_week DESC, weekday, ord)
+              END::int AS rank
+         FROM freed
+        ORDER BY weekday, ord`,
+      [facilityId, season.id],
+    );
+
+    /*
      * Seat occupancy, and the lanes it could not account for.
      *
      * Only lanes that carry a booking *and* have a capacity go into the
@@ -406,6 +561,21 @@ export async function readOccupancy(
       contractedCents = money.rows[0]?.cents ?? 0;
     }
 
+    const cells = dayBand.rows.map((cell) => ({
+      rank: cell.rank,
+      cell: {
+        weekday: cell.weekday,
+        band: cell.band,
+        availableLaneHours: cell.availabl,
+        soldLaneHours: cell.sold,
+        openDays: cell.open_days,
+        freeLaneHoursPerWeek: cell.free_per_week,
+        freePercent: cell.free_percent === null ? null : Number(cell.free_percent),
+        opensAt: cell.opens_at,
+        closesAt: cell.closes_at,
+      } satisfies DayBandCell,
+    }));
+
     const row = totals.rows[0]!;
     const sold = Number(row.sold);
     const availableHours = Number(row.availabl);
@@ -414,6 +584,8 @@ export async function readOccupancy(
     return {
       seasonId: season.id,
       seasonName: season.name,
+      seasonStartsOn: season.startsOn,
+      seasonEndsOn: season.endsOn,
       total: {
         soldLaneHours: row.sold,
         turmaLaneHours: row.turma,
@@ -447,6 +619,11 @@ export async function readOccupancy(
         turmaHeadcount: band.turma_headcount,
         parceriaHeadcount: band.parceria_headcount,
       })),
+      byDayBand: cells.map((one) => one.cell),
+      mostFree: cells
+        .filter((one) => one.rank !== null && one.rank <= 5)
+        .sort((a, b) => a.rank! - b.rank!)
+        .map((one) => one.cell),
       contractedCents,
     };
   });

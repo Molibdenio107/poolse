@@ -527,3 +527,140 @@ test('another tenant reads nothing', async () => {
     });
   });
 });
+
+/*
+ * Where there is room to sell — POOLSE-93's `byDayBand` and `mostFree`.
+ *
+ * Two weeks, so "per week" has something to divide; a site closure on one
+ * Friday, so the divisor has to be the days the cell was really open; and a
+ * Sunday with a morning slot and no afternoon, so one band is closed outright.
+ */
+async function twoWeeksWithBands(tenant: ScratchTenant): Promise<{ morning: string; lanes: number }> {
+  await tenant.sql(
+    `UPDATE season SET starts_on = '2026-09-07', ends_on = '2026-09-20' WHERE id = $1`,
+    [tenant.seasonId],
+  );
+  const slots = await tenant.sql<{ id: string }>(
+    `INSERT INTO facility_time_slot
+       (organization_id, facility_id, season_id, day_group, start_time, end_time)
+     VALUES ($1, $2, $3, 'weekday', '09:00', '10:00'),
+            ($1, $2, $3, 'weekday', '14:00', '15:00'),
+            ($1, $2, $3, 'sunday',  '10:00', '11:00')
+     RETURNING id`,
+    [tenant.organizationId, tenant.facilityId, tenant.seasonId],
+  );
+  const [count] = await tenant.sql<{ n: number }>(
+    `SELECT count(*)::int AS n FROM lane l JOIN pool p ON p.id = l.pool_id
+      WHERE p.facility_id = $1 AND l.archived_at IS NULL AND p.archived_at IS NULL`,
+    [tenant.facilityId],
+  );
+  return { morning: slots[0]!.id, lanes: count!.n };
+}
+
+test('93 — byDayBand counts the days a cell was open, closures and closed bands included', async () => {
+  await withScratchTenant(async (tenant) => {
+    const occupancy = new OccupancyController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await pool(tenant);
+      const { morning, lanes: n } = await twoWeeksWithBands(tenant);
+      // The site shut on the first Friday.
+      await tenant.sql(
+        `INSERT INTO closure (organization_id, facility_id, starts_on, ends_on, reason, blocks_generation)
+         VALUES ($1, $2, '2026-09-11', '2026-09-11', 'Obras', true)`,
+        [tenant.organizationId, tenant.facilityId],
+      );
+      // 45 minutes on two lanes, ten swimmers, the first Monday morning.
+      const booking = await parceriaBooking(tenant, morning, 10, 1, '09:00');
+      await session(tenant, booking, '2026-09-07', '2026-09-07 09:00:00+01', 45, [lanes[0]!, lanes[1]!]);
+
+      const result = await occupancy.read(tenant.facilityId);
+      const cell = (weekday: number, band: string) =>
+        result.byDayBand.find((one) => one.weekday === weekday && one.band === band)!;
+
+      assert.equal(result.byDayBand.length, 21, 'seven days × three parts, always');
+
+      // Monday morning: two Mondays × 1 h × n lanes, 1.5 sold.
+      const monday = cell(1, 'manha');
+      assert.equal(Number(monday.availableLaneHours), 2 * n);
+      assert.equal(Number(monday.soldLaneHours), 1.5);
+      assert.equal(monday.openDays, 2);
+      assert.equal(Number(monday.freeLaneHoursPerWeek), (2 * n - 1.5) / 2);
+      assert.equal(Math.round(monday.freePercent! * 100) / 100, Math.round(((2 * n - 1.5) / (2 * n)) * 10000) / 100);
+      assert.deepEqual([monday.opensAt, monday.closesAt], ['09:00', '10:00']);
+
+      // Friday morning: the closure took one Friday, so "per week" divides by one.
+      const friday = cell(5, 'manha');
+      assert.equal(friday.openDays, 1, 'the closed Friday is not a day on offer');
+      assert.equal(Number(friday.availableLaneHours), n);
+      assert.equal(Number(friday.freeLaneHoursPerWeek), n);
+
+      // Sunday afternoon has no slot, and Saturday none at all: closed cells.
+      for (const closed of [cell(7, 'tarde'), cell(6, 'manha')]) {
+        assert.equal(Number(closed.availableLaneHours), 0);
+        assert.equal(closed.openDays, 0);
+        assert.equal(Number(closed.freeLaneHoursPerWeek), 0);
+        assert.equal(closed.freePercent, null);
+        assert.equal(closed.opensAt, null);
+      }
+
+      // The free list: five, most first, never a closed cell; Monday morning,
+      // the one with a booking, has less room than the rest and is not in it.
+      assert.equal(result.mostFree.length, 5);
+      const ranked = result.mostFree.map((one) => Number(one.freeLaneHoursPerWeek));
+      assert.deepEqual(ranked, [...ranked].sort((a, b) => b - a), 'most free first');
+      assert.ok(result.mostFree.every((one) => one.openDays > 0 && Number(one.availableLaneHours) > 0));
+      assert.ok(!result.mostFree.some((one) => one.weekday === 1 && one.band === 'manha'));
+      assert.ok(!result.mostFree.some((one) => one.weekday === 7 && one.band === 'tarde'));
+
+      // The cells add up to the whole, to the hour.
+      const sum = (key: 'availableLaneHours' | 'soldLaneHours') =>
+        result.byDayBand.reduce((total, one) => total + Number(one[key]), 0);
+      assert.equal(sum('availableLaneHours'), Number(result.total.availableLaneHours));
+      assert.equal(sum('soldLaneHours'), Number(result.total.soldLaneHours));
+
+      // POOLSE-93 criterion 2: the existing figures, from first principles.
+      // Weekdays: ten dates less the closed Friday, two 1 h slots; Sundays: two, one slot.
+      assert.equal(Number(result.total.availableLaneHours), (9 * 2 + 2) * n);
+      assert.equal(Number(result.total.soldLaneHours), 1.5);
+      assert.equal(result.laneHourOccupancy, (1.5 / ((9 * 2 + 2) * n)) * 100);
+      // Ten swimmers on two booked lanes of ten places each.
+      assert.equal(result.seatOccupancy, 50);
+    });
+  });
+});
+
+test('93 QA 5 — a fully booked week has nowhere free to list', async () => {
+  await withScratchTenant(async (tenant) => {
+    const occupancy = new OccupancyController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await pool(tenant);
+      const slot = await oneWeek(tenant);
+      // Every weekday's one 45-minute slot, every lane.
+      const dates = ['2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11'];
+      // One partner group, its booking copied to each weekday: the helper names a
+      // partner by its start time, and five at 09:00 would be one name five times.
+      const monday = await parceriaBooking(tenant, slot, 8, 1, '09:00');
+      for (const [i, date] of dates.entries()) {
+        const [booking] =
+          i === 0
+            ? [{ id: monday }]
+            : await tenant.sql<{ id: string }>(
+                `INSERT INTO class_schedule
+                   (organization_id, facility_id, subject_type, partner_group_id, season_id,
+                    slot_id, weekday, start_time, duration_minutes)
+                 SELECT organization_id, facility_id, subject_type, partner_group_id, season_id,
+                        slot_id, $2, start_time, duration_minutes
+                   FROM class_schedule WHERE id = $1 RETURNING id`,
+                [monday, i + 1],
+              );
+        await session(tenant, booking!.id, date, `${date} 09:00:00+01`, 45, lanes);
+      }
+
+      const result = await occupancy.read(tenant.facilityId);
+      assert.equal(Number(result.total.soldLaneHours), Number(result.total.availableLaneHours));
+      assert.deepEqual(result.mostFree, [], 'nothing free is listed');
+    });
+  });
+});

@@ -3394,9 +3394,26 @@ export interface OccupancySlice {
   parceriaHeadcount: number;
 }
 
+/** One day of the week × one part of the day — POOLSE-93. Mirrors `occupancy.repository.ts`. */
+export interface OccupancyDayBand {
+  weekday: number;
+  band: TimeBand;
+  availableLaneHours: string;
+  soldLaneHours: string;
+  /** Days of the season this cell was open, after closures. */
+  openDays: number;
+  freeLaneHoursPerWeek: string;
+  /** 0–100; null for a cell the site never opens. */
+  freePercent: number | null;
+  opensAt: string | null;
+  closesAt: string | null;
+}
+
 export interface Occupancy {
   seasonId: string;
   seasonName: string;
+  seasonStartsOn: string;
+  seasonEndsOn: string;
   total: OccupancySlice & { availableLaneHours: string };
   /** Sold ÷ available. Null when the club has no slot grid to divide by. */
   laneHourOccupancy: number | null;
@@ -3406,6 +3423,10 @@ export interface Occupancy {
   lanesWithoutCapacity: number;
   byDay: (OccupancySlice & { weekday: number; availableLaneHours: string })[];
   byBand: (OccupancySlice & { band: TimeBand })[];
+  /** All 21 cells, Monday morning first. */
+  byDayBand: OccupancyDayBand[];
+  /** Up to five cells with the most free lane-hours a week, ranked by the server. */
+  mostFree: OccupancyDayBand[];
   /** Owner/admin only; null otherwise. Rendered nowhere yet — POOLSE-52 AC9. */
   contractedCents: number | null;
 }
