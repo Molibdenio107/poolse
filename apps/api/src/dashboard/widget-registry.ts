@@ -35,7 +35,6 @@ import {
   setupChecklist,
   staffCost,
   subscriptionState,
-  trialIsClosing,
   waterIsOutOfRange,
   waterQuality,
 } from './resolvers.js';
@@ -158,6 +157,13 @@ export interface WidgetDefinition {
   escalate?: (data: unknown) => boolean;
   escalatedPriority?: number;
   /**
+   * A one-line card drawn after the band's capped cards and outside the cap —
+   * POOLSE-103 C. For a fact the reader should be able to find on the home page
+   * but that is not what the page is about: the subscription. It is never cut
+   * and never pushes a card about the pool out.
+   */
+  trailing?: true;
+  /**
    * An environment variable that must read `true` for this widget to exist.
    *
    * Every flag in this product is an environment variable at the API —
@@ -220,17 +226,20 @@ export const WIDGETS: readonly WidgetDefinition[] = [
    * ticket's catalogue files this under "owner, admin"; the narrower rule wins,
    * and an admin is not left uninformed by it: the standing banner about a trial
    * running out or a club going read-only comes from `/me` and reaches everyone.
+   *
+   * A quiet line at the end of the band since POOLSE-103 (Rui, 22-10-2026): the
+   * dashboard is about the pool. It no longer escalates to the top — a trial
+   * running out turns the line to the warning tone instead (`needsAttention`),
+   * and the `/me` banner is what nobody can miss.
    */
   {
     id: 'mgmt.subscription',
     band: 'management',
     roles: ['owner'],
     scope: 'tenant',
-    size: 1,
-    priority: 40,
-    // A trial with four days left is the most important thing on the page.
-    escalate: trialIsClosing,
-    escalatedPriority: 90,
+    size: 3,
+    priority: 0,
+    trailing: true,
     resolver: subscriptionState,
   },
 

@@ -26,7 +26,7 @@ re-declared here. Seniority governs ordering only, never permissions.
   "scope": { "mode": "all", "facilityId": null, "facilities": [{ "id": "…", "name": "Sede" }] },
   "bands": [
     { "id": "management", "order": 0,
-      "widgets": [{ "id": "mgmt.subscription", "size": 1, "priority": 40,
+      "widgets": [{ "id": "mgmt.subscription", "size": 3, "priority": 0,
                     "state": "ok", "data": { } }] }
   ]
 }
@@ -60,6 +60,7 @@ One declaration per widget, in code, no new tables:
   size: 2,                 // columns, 1–3
   priority: 10,            // higher wins when the band is capped
   escalate: (data) => …,   // lifts it to escalatedPriority, on the resolved data
+  trailing: true,          // POOLSE-103: a one-line card after the band, outside the cap
   featureFlag: 'DASHBOARD_PERSONAL_BAND',
   resolver: (ctx) => data,
 }
@@ -118,12 +119,15 @@ the dashboard is a launcher, not a replacement for the pages.
 cards first, because maintenance now outranks instructor in `MEMBER_ROLES`. Owner and admin
 are left out of that rank, so an owner who also teaches keeps the order priority gives them.
 
-**`escalate` runs after the resolvers and before the cap.** "Boost the subscription widget when
-the trial has fewer than five days left" is a predicate on the *resolved* data — nothing about
+**`escalate` runs after the resolvers and before the cap.** "Boost this widget when the water
+is out of range" is a predicate on the *resolved* data — nothing about
 a declaration can know how many days are left — so every allowed widget is resolved rather than
 only the four that would have survived a cap decided in advance. The cost is a few aggregates a
-reader will not see, in parallel, under one ceiling; the alternative is a trial with three days
-left being cut by a priority set before anybody counted.
+reader will not see, in parallel, under one ceiling; the alternative is an urgent card being cut
+by a priority set before anybody looked.
+
+**A `trailing` widget is one line at the end of its band and outside the cap** (POOLSE-103). It
+is never cut and never ranked above a card about the pool. The subscription is the only one.
 
 ## The empty club, and the selector
 
@@ -167,6 +171,12 @@ when it moved Subscrição under *O meu perfil* and out of the menu — the same
 keeps the owner's salary from an admin. An admin is not left uninformed by it: the standing
 banner about a trial running out or a club going read-only comes from `/me` and reaches
 everybody.
+
+**Since POOLSE-103 (Rui, 22-10-2026) it is one quiet line at the end of the management band**:
+the interval, the status and the next date, then *Ver subscrição*, in muted text. It no longer
+escalates to the top of the band. When `needsAttention` is set (a trial under five days, or a
+status of `past_due` or `expired`, decided by the resolver), the line takes the warning tone and
+its icon.
 
 **`maint.mytasks` sits in the operational band although an owner may hold it.** That is the
 band model working rather than a mistake: a task is "my work today", and an owner who fixes the

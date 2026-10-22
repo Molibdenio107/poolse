@@ -303,3 +303,16 @@ test('POOLSE-87: a switched-off module is filtered before its resolver runs', as
   assert.equal(JSON.stringify(page).includes('mgmt.pay'), false, 'and absent from the payload');
   assert.equal(card(page, 'mgmt.core')?.state, 'ok');
 });
+
+test('a trailing line comes after the cards and outside the cap', async () => {
+  // POOLSE-103 C: the subscription is a quiet line at the band's end. It is
+  // never cut by four cards about the pool, and never ranked above them.
+  const registry = [
+    widget({ id: 'mgmt.line', priority: 100, trailing: true }),
+    ...[1, 2, 3, 4, 5].map((n) => widget({ id: `mgmt.w${n}`, priority: 50 })),
+  ];
+  const ids = (await compose(registry)).bands[0]!.widgets.map((one) => one.id);
+
+  assert.equal(ids.length, 5, 'four cards and the line');
+  assert.equal(ids.at(-1), 'mgmt.line');
+});

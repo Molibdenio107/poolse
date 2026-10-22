@@ -81,12 +81,20 @@ function daysLeft(iso: string | null): number | null {
 
 export interface SubscriptionWidget {
   status: string | null;
+  /** Mensal or anual — the line's "plan". Null until they subscribe. */
+  interval: string | null;
   trialEndsAt: string | null;
   trialDaysLeft: number | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   /** True once the club is paying through Stripe — the card lives there. */
   hasSubscription: boolean;
+  /**
+   * A trial under five days, or a payment that failed — POOLSE-103 C. The one
+   * case the quiet line takes the warning tone, decided here so the card does
+   * not keep its own list of statuses that matter.
+   */
+  needsAttention: boolean;
 }
 
 /**
@@ -103,27 +111,31 @@ export async function subscriptionState(ctx: ResolverContext): Promise<Subscript
   // failure rather than an absence — the reader is inside it.
   if (subscription === null) throw new Error('The organization behind this request is missing');
 
+  const trialDaysLeft = daysLeft(subscription.trialEndsAt);
   return {
     status: subscription.status,
+    interval: subscription.interval,
     trialEndsAt: subscription.trialEndsAt,
-    trialDaysLeft: daysLeft(subscription.trialEndsAt),
+    trialDaysLeft,
     currentPeriodEnd: subscription.currentPeriodEnd,
     cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
     hasSubscription: subscription.hasSubscription,
+    needsAttention:
+      trialIsClosing({ trialDaysLeft }) ||
+      subscription.status === 'past_due' ||
+      subscription.status === 'expired',
   };
 }
 
 /**
- * Is this trial close enough to matter more than everything else in the band?
+ * Is this trial close enough to need the owner's attention?
  *
- * The ticket asks for the priority to be boosted under five days. It is a
- * predicate on the *resolved* data rather than a number in the registry, because
- * nothing about a declaration can know how many days are left — and it runs
- * after the resolvers precisely so an escalation can still change what survives
- * the band's cap.
+ * It used to lift the card to the top of the band. Since POOLSE-103 the card is
+ * a quiet line at the band's end, outside the cap, and this is half of what
+ * turns that line to the warning tone (`needsAttention`).
  */
 export function trialIsClosing(data: unknown): boolean {
-  const days = (data as SubscriptionWidget | null)?.trialDaysLeft;
+  const days = (data as Pick<SubscriptionWidget, 'trialDaysLeft'> | null)?.trialDaysLeft;
   return typeof days === 'number' && days < 5;
 }
 

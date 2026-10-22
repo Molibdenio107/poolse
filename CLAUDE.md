@@ -114,9 +114,10 @@ it, so a personal tenant needs no second architecture. **A resolver answers `nul
 here" (→ `empty`) and throws for "that went wrong" (→ `error`)**; resolvers run in parallel with
 a 2s ceiling each and one failure costs one card, never the page — and the error card carries
 no message, because a resolver's text names columns. **Every allowed widget is resolved, then
-escalated, then capped at four per band**: "boost this when the trial is under five days" is a
+escalated, then capped at four per band**: "boost this when the water is out of range" is a
 predicate on resolved data, and a cap decided in advance would cut the thing that was about to
-become urgent. **A club with no sites gets the onboarding checklist and nothing else; a club
+become urgent. A `trailing` widget (the subscription, POOLSE-103) is one line after the cap, never
+cut and never ranked above the pool. **A club with no sites gets the onboarding checklist and nothing else; a club
 with sites never gets it** — one branch, both directions. **Aggregates are one grouped query
 each, never a loop over facilities**, and `assertRegistryIsSound` refuses the five registry
 mistakes that would otherwise render nothing at all rather than fail. **On the web a band is a

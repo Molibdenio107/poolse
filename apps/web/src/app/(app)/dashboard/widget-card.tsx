@@ -40,6 +40,7 @@ export async function WidgetCard({
   linkLabel,
   links,
   emptyMessage,
+  compact = false,
   children,
 }: {
   widget: DashboardWidget;
@@ -61,9 +62,38 @@ export async function WidgetCard({
    * make the good news unreadable.
    */
   emptyMessage: string;
+  /**
+   * One line rather than a card — title, body and link side by side, wrapping
+   * on a phone. For a registry `trailing` widget (POOLSE-103 C), which is
+   * something to find on the page rather than something the page is about.
+   */
+  compact?: boolean;
   children?: React.ReactNode;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+
+  if (compact) {
+    return (
+      <section
+        className={cn(
+          'flex flex-wrap items-center gap-x-4 gap-y-1 rounded border border-border bg-surface px-5 py-3',
+          SPAN[widget.size],
+        )}
+      >
+        <h3 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {title}
+        </h3>
+        <div className="min-w-0 flex-1">
+          <Body state={widget.state} emptyMessage={emptyMessage} errorMessage={t('dashboard.widgetFailed')}>
+            {children}
+          </Body>
+        </div>
+        <FromLink href={href} className={cn('coarse:-my-3', LINK)}>
+          {linkLabel}
+        </FromLink>
+      </section>
+    );
+  }
 
   return (
     <section

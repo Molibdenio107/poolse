@@ -226,8 +226,9 @@ export async function composeDashboard(
   const bands: ComposedBand[] = [];
 
   for (const [order, band] of BANDS.entries()) {
-    const widgets = composed
-      .filter(({ widget }) => widget.band === band)
+    const inBand = composed.filter(({ widget }) => widget.band === band);
+    const widgets = inBand
+      .filter(({ widget }) => widget.trailing !== true)
       /*
        * A card with something to say before an empty one, then highest priority
        * first, ties broken on id so the page does not quietly reorder itself
@@ -251,7 +252,14 @@ export async function composeDashboard(
           a.card.id.localeCompare(b.card.id),
       )
       .slice(0, BAND_CAP)
-      .map(({ card }) => card);
+      .map(({ card }) => card)
+      // A trailing line comes after the cards, outside the cap — POOLSE-103 C.
+      .concat(
+        inBand
+          .filter(({ widget }) => widget.trailing === true)
+          .sort((a, b) => a.card.id.localeCompare(b.card.id))
+          .map(({ card }) => card),
+      );
 
     // A band the reader holds no role in is absent, not present and empty: the
     // client should not have to tell "you are not an instructor" from "you have
