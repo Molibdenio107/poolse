@@ -113,3 +113,25 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-88](./POOLSE-88-staff-on-the-phone.md) | Staff on the phone — installable app, the poolside flows, iPhone and Android | Global / Mobile web | High — blocks the pilot preview | POOLSE-87 | 1 |
 | [POOLSE-89](./POOLSE-89-backups-and-a-tested-restore.md) | Backups, and a restore that is proved rather than hoped for | Platform / Data | High — blocks the pilot preview | 0.10 to switch on | 0 |
 | [POOLSE-90](./POOLSE-90-the-app-agenda-per-role.md) | The app — an agenda per role, "Vou / Não vou", and push | Mobile app / Notifications | High — blocks the pilot preview | POOLSE-88, 84, 86, 66 | 2 |
+| [POOLSE-91](./POOLSE-91-back-returns-to-where-you-came-from.md) | Voltar always returns to where you came from | Global / Navigation | High | lib/back.ts | 1 |
+| [POOLSE-92](./POOLSE-92-facilities-round-of-fixes.md) | Instalações: a round of fixes from the 22-10 test pass | Instalações / Dashboard / Incidentes | Medium | POOLSE-91 | 2 |
+| [POOLSE-93](./POOLSE-93-occupancy-tab-restructured.md) | Ocupação: a tab that says what it is telling you | Instalações / Reporting | Medium | POOLSE-52 | 0 |
+| [POOLSE-94](./POOLSE-94-club-payment-details-iban-mbway.md) | How families pay the club: IBAN and MB WAY as real fields | Club data / Billing | High | POOLSE-86, 87 | 1 |
+| [POOLSE-95](./POOLSE-95-text-cursor-disappears-in-inputs.md) | The text cursor disappears (or turns white) over inputs | Global / Forms | High | — | 0 |
+| [POOLSE-96](./POOLSE-96-lifeguard-week-as-a-grid.md) | Nadadores-salvadores: the week as a grid, dates in words | Safety / Lifeguard roster | Medium | POOLSE-70 | 1 |
+| [POOLSE-97](./POOLSE-97-staff-files-salaries-and-certificates.md) | Staff files: salaries import/export in sight, certificates on the list | Staff / Payroll / Qualifications | Medium | POOLSE-59, 27 | 0 |
+| [POOLSE-98](./POOLSE-98-loading-feedback.md) | Subtle loading feedback, bottom right | Global / Layout | Medium | — | 1 |
+| [POOLSE-99](./POOLSE-99-theme-toggle-does-not-apply.md) | The theme toggle doesn't change the theme until something else re-renders | Global / Preferences | High | — | 1 |
+| [POOLSE-100](./POOLSE-100-staff-record-birth-date-and-id-number.md) | Staff record: date of birth and Cartão de Cidadão number | Staff / Personal data | Medium | POOLSE-17, 39 | 0 |
+| [POOLSE-101](./POOLSE-101-pool-water-tab-record-vs-lab-results.md) | A tank's water: record vs laboratory, and where a report lands | Instalações / Water quality | Medium | POOLSE-72 | 0 |
+| [POOLSE-102](./POOLSE-102-cost-per-use-demo-data.md) | Cost per use shows real figures in the demo club | Energy / Demo | Low | POOLSE-28, 55 | 0 |
+| [POOLSE-103](./POOLSE-103-small-fixes-sites-dashboard-menu-cursor.md) | Small fixes: site name link, no Energia tab, quiet subscription card, make-up menu, lighter I-beam | Instalações / Dashboard / Navigation | Medium | POOLSE-91, 95 | 0 |
+| [POOLSE-104](./POOLSE-104-faturacao-fixes-back-settings-logo-select-all.md) | Faturação: Voltar, settings with the club, logo with photos, select all overdue | Billing / Club data | Medium | POOLSE-91, 94 | 0 |
+| [POOLSE-105](./POOLSE-105-partner-signed-contract-upload.md) | The signed contract on a partnership, PDF or Word, from day one | Partnerships / Files | Medium | stored files, POOLSE-47 | 0 |
+| [POOLSE-106](./POOLSE-106-energy-page-dashboard-collapsible-import-bill-reading.md) | Energia: running-cost dashboard, collapsible import, bills read automatically | Energy | Medium | 5.1–5.3, POOLSE-102 | 0 |
+| [POOLSE-107](./POOLSE-107-calendar-dates-in-words-and-today-in-view.md) | Calendar: the week written out, today's column marked | Calendar | Low | POOLSE-96 | 0 |
+| [POOLSE-108](./POOLSE-108-student-week-tab-dates-and-previous-week-bug.md) | A student's week: dates written out, previous week keeps the tab | Students | Medium | POOLSE-96 | 0 |
+| [POOLSE-109](./POOLSE-109-emergency-contact-picker-and-atestado-upload.md) | Emergency contact by name search, and the atestado attached | Students / Sensitive data | Medium | stored files, POOLSE-21 | 0 |
+| [POOLSE-110](./POOLSE-110-registration-requests-clearer-class-picker.md) | Pedidos de inscrição: a grouped, searchable turma picker | Students / Registration | Medium | POOLSE-69, 82 | 0 |
+| [POOLSE-111](./POOLSE-111-competition-times-events-year-picker-import-formats.md) | Competição: the times table you can see, a year wheel, and what import can read | Students / Competition | Low | POOLSE-81, 85 | 0 |
+| [POOLSE-112](./POOLSE-112-advancement-by-age-at-season-end.md) | Advancement by age at season end, and a queue worth opening | Levels / Turmas | Medium | POOLSE-19, 45 | 0 |
