@@ -1,7 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiPost, apiPut } from '../../../../../../lib/api';
+import { getTranslations } from 'next-intl/server';
+import { ApiError, apiFetch, apiPost, apiPut } from '../../../../../../lib/api';
+import type { PickOption } from '../../../facilities/incidents/incidents.actions';
 import type { FormState } from '../../../actions';
 
 function failure(error: unknown, errorKey: string): FormState {
@@ -200,4 +202,29 @@ export async function saveEmergencyContactAction(
 
   revalidatePath(`/dashboard/students/${studentId}/sensitive`);
   return { ok: true };
+}
+
+/**
+ * The emergency contact's search — POOLSE-109. People in the club whose name
+ * matches, each with their roles, so two Marias can be told apart. Null when the
+ * search failed, which the picker says rather than showing "nobody".
+ */
+export async function searchEmergencyContactsAction(
+  studentId: string,
+  query: string,
+): Promise<PickOption[] | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(studentId)) return null;
+  try {
+    const t = await getTranslations();
+    const result = await apiFetch<{ people: { id: string; name: string; roles: string[] }[] }>(
+      `/students/${studentId}/emergency-contact/candidates?q=${encodeURIComponent(query)}`,
+    );
+    return result.people.map((person) => ({
+      id: person.id,
+      name: person.name,
+      detail: person.roles.map((role) => t(`roles.${role}` as never)).join(' · '),
+    }));
+  } catch {
+    return null;
+  }
 }

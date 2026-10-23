@@ -20,6 +20,8 @@ export type FileTarget =
   | `policy:${string}:${string}`
   | `agreement:${string}`
   | `qualification:${string}`
+  /** `medical-certificate:<student>:<leave>` — POOLSE-109. */
+  | `medical-certificate:${string}:${string}`
   | 'logo';
 
 export type FilePurpose =
@@ -28,7 +30,8 @@ export type FilePurpose =
   | 'agreement_document'
   | 'facility_photo'
   | 'pool_photo'
-  | 'logo';
+  | 'logo'
+  | 'medical_certificate';
 
 export function purposeOf(target: FileTarget): FilePurpose {
   if (target === 'logo') return 'logo';
@@ -42,6 +45,8 @@ export function purposeOf(target: FileTarget): FilePurpose {
       return 'policy_document';
     case 'agreement':
       return 'agreement_document';
+    case 'medical-certificate':
+      return 'medical_certificate';
     default:
       return 'qualification_document';
   }

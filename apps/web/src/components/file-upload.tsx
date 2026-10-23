@@ -276,7 +276,9 @@ export function AttachedDocument({
               ? undefined
               : purposeOf(target) === 'agreement_document'
                 ? t('files.contractHint')
-                : t('files.documentHint')
+                : purposeOf(target) === 'medical_certificate'
+                  ? t('files.certificateHint')
+                  : t('files.documentHint')
           }
           unavailable={storageReady ? null : t('files.notConfigured')}
         />

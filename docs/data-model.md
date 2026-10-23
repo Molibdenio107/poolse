@@ -1727,7 +1727,20 @@ student_medical_leave
                       daterange(starts_on, coalesce(ends_on + 1, 'infinity'), '[)') with &&)
     where (archived_at is null)
   check (ends_on is null or ends_on >= starts_on)
+  document_file_id uuid  -- POOLSE-109: the atestado in force (stored_file, medical_certificate)
+
+medical_leave_certificate                                -- POOLSE-109
+  id, organization_id, leave_id, file_id (stored_file), attached_by, attached_at,
+  replaced_at?, replaced_by?   -- both or neither
+  partial unique (organization_id, leave_id) where replaced_at is null  -- one current
+  unique (organization_id, file_id)
+  poolse_app: SELECT, INSERT, UPDATE (replaced_at, replaced_by) — history written once
 ```
+
+`retention_certificate_period()` is 24 months. `apply_retention()` shreds the atestados of a
+leave archived longer than that. The trigger `student_erased_shreds_certificates` (through the
+definer `medical_certificates_shred`) shreds every atestado of a student whose
+`health_erased_at` or `anonymised_at` is set. Migration `1792231200000_medical-certificate.sql`.
 
 **It defaults the register; it never writes attendance.** The tempting shape is a job that
 inserts `excused` rows for every future session in the range, and it is wrong twice over:
@@ -3619,9 +3632,13 @@ from, days)` subtracts the duties' `range_agg` from each tank's opening window
 
 `stored_file` is the registry of every object in the bucket: `organization_id`, `purpose`
 (`file_purpose` enum: `policy_document`, `qualification_document`, `agreement_document`,
-`facility_photo`, `pool_photo`, `logo`, `student_photo`, `incident_attachment` — the last two
-named, not yet switched on), `storage_key`, `content_type`, `byte_size`, `original_name`,
-`uploaded_by`, `created_at`, `archived_at`. RLS by tenant; `poolse_app` holds SELECT and INSERT
+`facility_photo`, `pool_photo`, `logo`, `student_photo`, `incident_attachment` — those two
+named, not yet switched on — and `medical_certificate`, POOLSE-109), `storage_key`,
+`content_type`, `byte_size`, `original_name`, `uploaded_by`, `created_at`, `archived_at`, and
+since POOLSE-109 `wrapped_key` and `key_shredded_at`. A **sealed** purpose
+(`medical_certificate`, `incident_attachment`) stores ciphertext in the bucket, and its row
+holds the file's own data key, wrapped (`v1.iv.tag.ct`). CHECK `stored_file_sealed`: a sealed
+purpose has a wrapped key or a shredded one, never neither; any other purpose has neither. RLS by tenant; `poolse_app` holds SELECT and INSERT
 and `UPDATE (archived_at)` only. CHECKs: the key starts with the club's own id, size 1 B–10 MB,
 type one of PDF/JPEG/PNG/WebP, or Word (`.docx`) for `agreement_document` only (POOLSE-105). Unique `(organization_id, id)` and `(organization_id, storage_key)`.
 

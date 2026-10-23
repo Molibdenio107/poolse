@@ -61,7 +61,15 @@
       "backToAgenda": "Voltar à agenda",
       "alsoComing": "{count, plural, one {# dos seus educandos está nesta aula.} other {# dos seus educandos estão nesta aula.}}",
       "planTitle": "Plano da aula",
-      "noPlan": "O professor ainda não escreveu o plano desta aula."
+      "noPlan": "O professor ainda não escreveu o plano desta aula.",
+      "certificatesTitle": "Atestados médicos",
+      "certificatesHint": "Envie aqui o atestado de uma baixa que o clube registou. Só a secretaria do clube e a família o podem abrir; o treinador sabe apenas que foi entregue.",
+      "certificateFor": "Baixa de {name}",
+      "certificateSend": "Enviar atestado",
+      "certificateReplace": "Substituir atestado",
+      "certificateSent": "Atestado enviado em {date}.",
+      "certificateMissing": "Ainda sem atestado.",
+      "certificatesFailed": "Não foi possível carregar as baixas médicas."
     }
   },
   "common": {
@@ -2262,9 +2270,6 @@
     "leaveJustificationPlaceholder": "ex.: atestado 2026/114",
     "leaveJustificationHint": "Opcional. Onde está guardado o atestado — um número ou uma localização, não o próprio documento nem um diagnóstico.",
     "atestado": "Atestado",
-    "atestadoImport": "Importar",
-    "atestadoExport": "Exportar",
-    "atestadoNoStorage": "O armazenamento de ficheiros ainda não está configurado — indique acima onde está guardado o documento.",
     "leaveToReposicoes": "Ir para as reposições",
     "medicalLabel": "Notas médicas",
     "mobilityLabel": "Mobilidade e limitações físicas",
@@ -2276,12 +2281,18 @@
     "emergencyHintAdult": "Quem contactar se acontecer alguma coisa durante a aula. Num aluno adulto é o único contacto do registo.",
     "emergencyNone": "Sem contacto de emergência.",
     "emergencyPerson": "Pessoa do clube",
-    "emergencyNotInClub": "Não está no clube — escrever abaixo",
     "emergencyName": "Nome",
     "emergencyPhone": "Telefone",
     "emergencyRelationship": "Relação",
     "emergencyRelationshipHint": "Ex.: filho, vizinha, cônjuge.",
-    "emergencyNotGuardian": "Um contacto de emergência não é encarregado de educação: não dá acesso ao registo do aluno, nem função, nem conta."
+    "emergencyNotGuardian": "Um contacto de emergência não é encarregado de educação: não dá acesso ao registo do aluno, nem função, nem conta.",
+    "certificateAttachedOn": "Atestado anexado em {date}.",
+    "certificateNone": "Sem atestado anexado.",
+    "certificateBy": "juntado por {name} em {date}.",
+    "certificatePrevious": "Atestados anteriores",
+    "certificatePreviousLine": "Juntado por {attachedBy} em {attachedAt}; substituído ou retirado em {replacedAt}, por {replacedBy}.",
+    "certificateAfterSave": "Depois de registar a baixa, junte o atestado na baixa, na lista acima.",
+    "emergencySearchHint": "Escreva pelo menos duas letras do nome. Se a pessoa não estiver no clube, deixe em branco e escreva o nome e o telefone abaixo."
   },
   "invite": {
     "open": "Convidar utilizador",
@@ -4809,7 +4820,8 @@
     "logoReplace": "Substituir logótipo",
     "logoRemove": "Retirar logótipo",
     "contractHint": "PDF, Word (.docx) ou fotografia do contrato, até 10 MB.",
-    "downloadDocument": "Descarregar documento"
+    "downloadDocument": "Descarregar documento",
+    "certificateHint": "PDF ou fotografia, até 10 MB. Guardado cifrado e apagado 24 meses depois de a baixa ser removida, ou quando os dados de saúde do aluno são apagados."
   },
   "archive": {
     "title": "Arquivados",

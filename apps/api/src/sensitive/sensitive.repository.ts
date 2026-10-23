@@ -509,26 +509,50 @@ export async function writeEmergencyContact(
  * student's notes has no need for the club's staff list, and this travels on the
  * same response.
  */
+/**
+ * People in the club whose name matches — the emergency contact's search,
+ * POOLSE-109. A list of every member was unusable at 300 people; this answers
+ * twenty at a time, with each person's roles so two Marias can be told apart.
+ */
 export async function contactCandidates(
   organizationId: string,
-): Promise<{ id: string; name: string }[]> {
+  query: string,
+): Promise<{ id: string; name: string; roles: string[] }[]> {
+  const words = query
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word !== '')
+    .slice(0, 4);
+  if (words.length === 0) return [];
   return withOrg(organizationId, async (tx) => {
-    const { rows } = await tx.query<{ id: string; name: string }>(
-      `SELECT m.id,
-              coalesce(
-                display_name(u.cached_first_name, u.cached_last_name),
-                display_name(m.first_name, m.last_name)
-              ) AS name
-         FROM membership m
-         LEFT JOIN app_user u ON u.id = m.app_user_id
-        WHERE m.status = 'active'
-          -- Not an archived person, and never Poolse support — sweep of 15-10-2026
-          -- (POOLSE-79: a read over every membership leaves support out).
-          AND m.archived_at IS NULL
-          AND m.support_grant_id IS NULL
-        ORDER BY lower(strip_accents(coalesce(m.last_name, ''))),
-                 lower(strip_accents(coalesce(m.first_name, '')))`,
+    const { rows } = await tx.query<{ id: string; name: string | null; roles: string[] }>(
+      `SELECT p.id, p.name, p.roles
+         FROM (
+           SELECT m.id,
+                  coalesce(
+                    display_name(u.cached_first_name, u.cached_last_name),
+                    display_name(m.first_name, m.last_name)
+                  ) AS name,
+                  coalesce((SELECT array_agg(r.role::text ORDER BY r.role)
+                              FROM membership_role r
+                             WHERE r.membership_id = m.id AND r.organization_id = m.organization_id
+                               AND r.archived_at IS NULL), '{}') AS roles
+             FROM membership m
+             LEFT JOIN app_user u ON u.id = m.app_user_id
+            WHERE m.status = 'active'
+              -- Not an archived person, and never Poolse support — sweep of 15-10-2026
+              -- (POOLSE-79: a read over every membership leaves support out).
+              AND m.archived_at IS NULL
+              AND m.support_grant_id IS NULL
+         ) p
+        WHERE p.name IS NOT NULL
+          -- Every word somewhere in the name, accents and case aside.
+          AND (SELECT bool_and(lower(strip_accents(p.name)) LIKE '%' || lower(strip_accents(w)) || '%')
+                 FROM unnest($1::text[]) AS w)
+        ORDER BY lower(strip_accents(p.name))
+        LIMIT 20`,
+      [words.map((word) => word.replace(/[\\%_]/g, (c) => `\\${c}`))],
     );
-    return rows.filter((row) => row.name !== null && row.name.trim() !== '');
+    return rows.map((row) => ({ id: row.id, name: row.name ?? '', roles: row.roles }));
   });
 }

@@ -59,9 +59,36 @@ contact is three columns on `student`, touching neither `membership_role` nor `g
 so there is no path by which it could confer anything. The form says so in words, because a
 contact block under a medical page looks exactly like the guardian block one screen over.
 
-The picker lists **every** active membership rather than a page of them: a picker built from
-one page offers only the people who happened to land on it, and the operator concludes the
-person is not in the system and types the name in by hand.
+The person is **found by name** (POOLSE-109): type two letters and the club's people whose
+name contains them appear, accents and case aside, each with their roles, twenty at most
+(`GET /students/:id/emergency-contact/candidates?q=`, owner and admin). It replaced a list of
+every member, which was unusable at 300 people. *Alterar* clears the person and brings back the
+typed name and phone, for somebody outside the club. Support logins are never offered.
+
+## The atestado on a medical leave
+
+POOLSE-109. Each medical leave takes **one atestado** — PDF or a photograph, 10 MB — and
+replacing it keeps the earlier file.
+
+| Action | Who |
+|---|---|
+| Attach or replace | owner, admin; and the child's own family (the student, or a live encarregado) from app mode |
+| Remove | owner, admin |
+| Open the file, see earlier ones | owner, admin; the family opens its own child's current one |
+| Know it is attached, and when | the coach (instructor) — never the file or its name |
+
+- **Encrypted at rest**, with a key of its own per file, and read only through `GET /files/:id`.
+  Every download is in the audit log (`file.read`: who, which student, when).
+- **On the staff page** (Saúde e consentimentos → Baixa médica) the office files it on the
+  leave once the leave is saved, and sees who attached each version and who replaced it.
+- **In app mode** a family sees *Atestados médicos* on `/app/familia`. It lists the leaves the
+  club recorded for its children, current or ended in the last 90 days, with the dates and its
+  file, never the reason. A family records no leave itself; the office does.
+- **Retention**: an atestado is destroyed 24 months after its leave is removed, or as soon as
+  the student's health data is erased or the student is anonymised. Its key is deleted, so the
+  stored bytes can never be read again. The upload control says so.
+- **Export**: the Excel student export carries no atestado. A GDPR data export does not exist
+  yet; when one is built it must include the file.
 
 ## The fee category
 

@@ -7,6 +7,8 @@ import { familyStudents } from '../students/students.repository.js';
 import { studentFees } from '../billing/fees.repository.js';
 import type { FeeBalance } from '../billing/fee-balance.js';
 import { readAgenda, readWater, type AgendaEntry, type WaterReading } from './agenda.repository.js';
+import { listMedicalLeave, type CertificateFile } from '../students/medical-leave.repository.js';
+import { clubToday } from '../common/club-day.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -28,6 +30,19 @@ interface AgendaResponse {
   /** Latest temperature per tank in the entries; empty with water quality off. */
   water: WaterReading[];
 }
+
+/** A leave as a family reads it: the dates and the atestado, never the club's reason or reference. */
+interface FamilyLeave {
+  id: string;
+  studentId: string;
+  startsOn: string;
+  endsOn: string | null;
+  active: boolean;
+  certificate: CertificateFile | null;
+}
+
+/** How long after it ends a leave still shows, so a late atestado can be sent. */
+const LEAVE_SHOWN_DAYS = 90;
 
 /**
  * App mode's family reads — POOLSE-90 slice 1.
@@ -60,6 +75,34 @@ export class AppController {
       entries,
       water: await waterFor(organizationId, entries),
     };
+  }
+
+  /**
+   * The children's medical leaves, for sending the atestado — POOLSE-109.
+   * Leaves the club recorded, current or ended in the last 90 days; the family
+   * sees the dates and its own atestado, never the reason the office typed.
+   */
+  @Get('medical-leave')
+  async medicalLeave(): Promise<{ leaves: FamilyLeave[] }> {
+    requireRole('guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    const mine = await familyStudents(organizationId, membershipId);
+    const since = shiftDays(clubToday(), -LEAVE_SHOWN_DAYS);
+    const leaves: FamilyLeave[] = [];
+    for (const child of mine) {
+      for (const leave of await listMedicalLeave(organizationId, child.id, true)) {
+        if (leave.endsOn !== null && leave.endsOn < since) continue;
+        leaves.push({
+          id: leave.id,
+          studentId: child.id,
+          startsOn: leave.startsOn,
+          endsOn: leave.endsOn,
+          active: leave.active,
+          certificate: leave.certificate?.file ?? null,
+        });
+      }
+    }
+    return { leaves };
   }
 
   /**
@@ -107,4 +150,11 @@ async function withFees(
       };
     }),
   );
+}
+
+/** A calendar day moved by whole days, as text — never through a timezone. */
+function shiftDays(day: string, days: number): string {
+  const at = new Date(`${day}T12:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString().slice(0, 10);
 }

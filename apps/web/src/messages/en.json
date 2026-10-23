@@ -61,7 +61,15 @@
       "backToAgenda": "Back to the agenda",
       "alsoComing": "{count, plural, one {# of your children is in this lesson.} other {# of your children are in this lesson.}}",
       "planTitle": "Lesson plan",
-      "noPlan": "The instructor has not written this lesson's plan yet."
+      "noPlan": "The instructor has not written this lesson's plan yet.",
+      "certificatesTitle": "Medical certificates",
+      "certificatesHint": "Send the certificate for a medical leave the club has recorded. Only the club’s office and the family can open it; the coach only knows it was handed in.",
+      "certificateFor": "{name}’s leave",
+      "certificateSend": "Send certificate",
+      "certificateReplace": "Replace certificate",
+      "certificateSent": "Certificate sent on {date}.",
+      "certificateMissing": "No certificate yet.",
+      "certificatesFailed": "The medical leaves could not be loaded."
     }
   },
   "common": {
@@ -2262,9 +2270,6 @@
     "leaveJustificationPlaceholder": "e.g. atestado 2026/114",
     "leaveJustificationHint": "Optional. Where the certificate is filed — a number or a location, not the document itself and not a diagnosis.",
     "atestado": "Medical certificate",
-    "atestadoImport": "Import",
-    "atestadoExport": "Export",
-    "atestadoNoStorage": "File storage is not configured yet — record where the document is filed in the field above.",
     "leaveToReposicoes": "Go to make-up classes",
     "medicalLabel": "Medical notes",
     "mobilityLabel": "Mobility and physical limitations",
@@ -2276,12 +2281,18 @@
     "emergencyHintAdult": "Who to call if something happens during a class. For an adult student it is the only contact on the record.",
     "emergencyNone": "No emergency contact.",
     "emergencyPerson": "Someone in the club",
-    "emergencyNotInClub": "Not in the club — type below",
     "emergencyName": "Name",
     "emergencyPhone": "Phone",
     "emergencyRelationship": "Relationship",
     "emergencyRelationshipHint": "e.g. son, neighbour, spouse.",
-    "emergencyNotGuardian": "An emergency contact is not a guardian: it grants no access to the student record, no role and no account."
+    "emergencyNotGuardian": "An emergency contact is not a guardian: it grants no access to the student record, no role and no account.",
+    "certificateAttachedOn": "Medical certificate attached on {date}.",
+    "certificateNone": "No medical certificate attached.",
+    "certificateBy": "attached by {name} on {date}.",
+    "certificatePrevious": "Earlier certificates",
+    "certificatePreviousLine": "Attached by {attachedBy} on {attachedAt}; replaced or removed on {replacedAt} by {replacedBy}.",
+    "certificateAfterSave": "Once the leave is recorded, attach the certificate to it in the list above.",
+    "emergencySearchHint": "Type at least two letters of the name. If the person is not in the club, leave this empty and type their name and phone below."
   },
   "invite": {
     "open": "Invite user",
@@ -4809,7 +4820,8 @@
     "logoReplace": "Replace logo",
     "logoRemove": "Remove logo",
     "contractHint": "A PDF, a Word file (.docx) or a photo of the contract, up to 10 MB.",
-    "downloadDocument": "Download document"
+    "downloadDocument": "Download document",
+    "certificateHint": "A PDF or a photo, up to 10 MB. Stored encrypted, and deleted 24 months after the leave is removed, or when the student’s health data is erased."
   },
   "archive": {
     "title": "Archive",

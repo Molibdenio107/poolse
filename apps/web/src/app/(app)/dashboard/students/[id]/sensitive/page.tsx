@@ -10,6 +10,7 @@ import {
 import { DetailPage } from '@/components/detail-page';
 import { ChevronRight } from 'lucide-react';
 import { MedicalLeavePanel } from './medical-leave';
+import { storageConfigured } from '@/lib/storage-status';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import {
@@ -93,6 +94,7 @@ export default async function SensitivePage({
   }
 
   const loaded = record;
+  const storageReady = await storageConfigured();
 
   return (
     <DetailPage
@@ -193,7 +195,6 @@ export default async function SensitivePage({
                   organizationId={loaded.organizationId}
                   studentId={id}
                   contact={loaded.emergencyContact}
-                  people={loaded.contactCandidates}
                 />
               ) : loaded.emergencyContact?.name === null ? (
                 <p className="text-foreground-muted">{t('sensitive.emergencyNone')}</p>
@@ -305,6 +306,7 @@ export default async function SensitivePage({
                   studentId={id}
                   leave={loaded.medicalLeave}
                   canManage={loaded.canManage}
+                  storageReady={storageReady}
                 />
               </div>
             </details>

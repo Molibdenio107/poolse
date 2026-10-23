@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { CONTROL_BLOCK, CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
+import { CONTROL_BLOCK, CONTROL_LINE, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { ConsentKind, EmergencyContact } from '../../../../../../lib/api';
 import type { FormState } from '../../../actions';
@@ -11,9 +11,12 @@ import {
   recordConsentAction,
   saveEmergencyContactAction,
   saveNotesAction,
+  searchEmergencyContactsAction,
   withdrawConsentAction,
 } from './sensitive.actions';
 import { Dialog } from '@/components/ui/dialog';
+import { PersonPicker } from '../../../facilities/incidents/person-picker';
+import type { PickOption } from '../../../facilities/incidents/incidents.actions';
 
 const INITIAL: FormState = { ok: false };
 
@@ -274,19 +277,20 @@ export function EmergencyContactForm({
   organizationId,
   studentId,
   contact,
-  people,
 }: {
   organizationId: string;
   studentId: string;
   contact: EmergencyContact | null;
-  /** Everybody in the club, for the link. Empty is fine — the free text remains. */
-  people: { id: string; name: string }[];
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(saveEmergencyContactAction, INITIAL);
-  const [membershipId, setMembershipId] = useState(contact?.membershipId ?? '');
+  // Found by name since POOLSE-109 — a list of every member was unusable at 300.
+  const [person, setPerson] = useState<PickOption | null>(
+    contact?.membershipId == null ? null : { id: contact.membershipId, name: contact.name ?? '', detail: null },
+  );
+  const search = useCallback((query: string) => searchEmergencyContactsAction(studentId, query), [studentId]);
 
-  const linked = membershipId !== '';
+  const linked = person !== null;
   const fields = state.fields ?? {};
 
   return (
@@ -294,25 +298,18 @@ export function EmergencyContactForm({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="studentId" value={studentId} />
 
-      <div className={cn(FIELD_COLUMN, 'max-w-none')}>
-        <label htmlFor="emergency-person" className={FIELD_LABEL}>
-          {t('sensitive.emergencyPerson')}
-        </label>
-        <select
-          id="emergency-person"
-          name="membershipId"
-          value={membershipId}
-          onChange={(event) => setMembershipId(event.target.value)}
-          className={CONTROL_LINE}
-        >
-          <option value="">{t('sensitive.emergencyNotInClub')}</option>
-          {people.map((person) => (
-            <option key={person.id} value={person.id}>
-              {person.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/*
+        Clearing the person (Alterar) brings the typed name and phone back, so
+        "somebody outside the club" is always one click away.
+      */}
+      <PersonPicker
+        name="membershipId"
+        label={t('sensitive.emergencyPerson')}
+        hint={t('sensitive.emergencySearchHint')}
+        search={search}
+        chosen={person}
+        onChosenChange={setPerson}
+      />
 
       {/*
         The typed pair, offered only when nobody is linked. Hidden rather than

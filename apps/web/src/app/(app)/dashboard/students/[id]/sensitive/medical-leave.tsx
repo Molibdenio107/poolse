@@ -3,8 +3,9 @@
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
 import { FromLink } from '@/components/from-link';
-import { FileText, FileUp, Trash2 } from 'lucide-react';
+import { FileCheck, FileText, Trash2 } from 'lucide-react';
 import type { MedicalLeave } from '@/lib/api';
+import { AttachedDocument, DocumentLink } from '@/components/file-upload';
 import {
   CONTROL_LINE,
   FIELD_COLUMN,
@@ -14,7 +15,7 @@ import {
 } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { addMedicalLeaveAction, removeMedicalLeaveAction } from './sensitive.actions';
-import { formatDate } from '@/lib/date-format';
+import { formatDate, formatStamp } from '@/lib/date-format';
 
 const INITIAL: FormState = { ok: false };
 
@@ -41,11 +42,13 @@ export function MedicalLeavePanel({
   studentId,
   leave,
   canManage,
+  storageReady,
 }: {
   organizationId: string;
   studentId: string;
   leave: MedicalLeave[];
   canManage: boolean;
+  storageReady: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(addMedicalLeaveAction, INITIAL);
@@ -117,6 +120,13 @@ export function MedicalLeavePanel({
                   />
                 )}
               </span>
+
+              <Certificate
+                studentId={studentId}
+                period={period}
+                canManage={canManage}
+                storageReady={storageReady}
+              />
             </li>
           ))}
         </ul>
@@ -245,34 +255,10 @@ export function MedicalLeavePanel({
 
 
           {/*
-            The atestado itself — present, styled and switched off, the same
-            treatment the photo and the Cartao de Cidadao get and for the same
-            reason: object storage is deferred, and a button that opened a file
-            picker and then discarded a medical certificate would be far worse
-            than one that plainly says it is not ready. The reference field above
-            is what works today.
+            The atestado itself is filed on the leave once it exists (POOLSE-109):
+            a file belongs to a record, and the record is what this form makes.
           */}
-          <div className="flex flex-wrap items-center gap-2 rounded border border-dashed border-border bg-surface p-3">
-            <FileUp aria-hidden className="size-4 shrink-0 text-foreground-muted" />
-            <span className="text-sm font-medium">{t('sensitive.atestado')}</span>
-            <button
-              type="button"
-              disabled
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 cursor-not-allowed rounded border border-border text-foreground-muted opacity-60"
-            >
-              {t('sensitive.atestadoImport')}
-            </button>
-            <button
-              type="button"
-              disabled
-              className="inline-flex h-control items-center justify-center px-4 text-control gap-2 cursor-not-allowed rounded border border-border text-foreground-muted opacity-60"
-            >
-              {t('sensitive.atestadoExport')}
-            </button>
-            <span className="w-full text-xs text-foreground-muted">
-              {t('sensitive.atestadoNoStorage')}
-            </span>
-          </div>
+          <p className="text-sm text-foreground-muted">{t('sensitive.certificateAfterSave')}</p>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -317,5 +303,87 @@ function RemoveLeave({
         <Trash2 aria-hidden className="size-4" />
       </button>
     </form>
+  );
+}
+
+/**
+ * The atestado on one leave — POOLSE-109. The office files, replaces, opens and
+ * removes it, and sees the earlier ones. A coach is told it is attached and
+ * when, and nothing else: not the document, not its name.
+ */
+function Certificate({
+  studentId,
+  period,
+  canManage,
+  storageReady,
+}: {
+  studentId: string;
+  period: MedicalLeave;
+  canManage: boolean;
+  storageReady: boolean;
+}): React.ReactElement {
+  const t = useTranslations();
+  const current = period.certificate;
+
+  if (!canManage) {
+    return (
+      <span className="flex w-full items-center gap-1.5 text-sm text-foreground-muted">
+        <FileCheck aria-hidden className="size-4" />
+        {current === null
+          ? t('sensitive.certificateNone')
+          : t('sensitive.certificateAttachedOn', { date: formatDate(current.attachedAt) })}
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2 pt-1">
+      <span className="text-sm font-medium">{t('sensitive.atestado')}</span>
+      {current?.file != null && (
+        <p className="text-sm">
+          <span className="font-medium">{current.file.originalName}</span>
+          <span className="text-foreground-muted">
+            {' — '}
+            {t('sensitive.certificateBy', {
+              name: current.file.attachedBy,
+              date: formatStamp(current.file.attachedAt),
+            })}
+          </span>
+        </p>
+      )}
+      <AttachedDocument
+        fileId={current?.file?.fileId ?? null}
+        target={`medical-certificate:${studentId}:${period.id}`}
+        canManage
+        storageReady={storageReady}
+        contentType={current?.file?.contentType}
+        fileName={current?.file?.originalName}
+      />
+      {period.previousCertificates.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm text-foreground-muted">{t('sensitive.certificatePrevious')}</span>
+          <ul className="flex flex-col gap-1.5">
+            {period.previousCertificates.map((version) => (
+              <li key={`${version.fileId}-${version.replacedAt}`} className="flex flex-col gap-0.5 text-sm">
+                <DocumentLink
+                  fileId={version.fileId}
+                  contentType={version.contentType}
+                  fileName={version.originalName}
+                  quiet
+                />
+                <span className="text-foreground-muted">
+                  {t('sensitive.certificatePreviousLine', {
+                    attachedBy: version.attachedBy,
+                    attachedAt: formatStamp(version.attachedAt),
+                    replacedBy: version.replacedBy,
+                    replacedAt: formatStamp(version.replacedAt),
+                  })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }

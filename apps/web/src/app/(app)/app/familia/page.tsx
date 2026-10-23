@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiFetch, type AppAgenda, type AppAgendaEntry } from '@/lib/api';
+import { ApiError, apiFetch, type AppAgenda, type AppAgendaEntry, type FamilyLeave } from '@/lib/api';
+import { outcome } from '@/lib/load-failure';
+import { storageConfigured } from '@/lib/storage-status';
+import { FamilyCertificates } from './certificates';
 import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
 import { cn } from '@/lib/utils';
@@ -34,6 +37,10 @@ export default async function FamilyAgenda({
     const failure = describeLoad(error);
     return <PageError message={t(failure.key)} {...(failure.detail === '' ? {} : { detail: failure.detail })} />;
   }
+
+  // Best-effort: a failed read of the leaves says so and costs the agenda nothing.
+  const leaves = await outcome(apiFetch<{ leaves: FamilyLeave[] }>('/app/medical-leave'));
+  const storageReady = await storageConfigured();
 
   const several = agenda.children.length > 1;
   const nameOf = new Map(agenda.children.map((one) => [one.id, one.name]));
@@ -77,6 +84,16 @@ export default async function FamilyAgenda({
           )}
 
           <FeeStatus children={agenda.children} />
+
+          {leaves.state === 'ok' ? (
+            <FamilyCertificates
+              leaves={leaves.data.leaves.filter((leave) => child === undefined || leave.studentId === child)}
+              names={several ? nameOf : null}
+              storageReady={storageReady}
+            />
+          ) : leaves.state === 'failed' ? (
+            <PageError message={t('app.family.certificatesFailed')} />
+          ) : null}
 
           {agenda.entries.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-4 text-sm text-foreground-muted">

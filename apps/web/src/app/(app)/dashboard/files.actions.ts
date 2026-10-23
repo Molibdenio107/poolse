@@ -17,6 +17,19 @@ export async function uploadFileAction(_previous: FormState, formData: FormData)
   if (!(file instanceof File) || file.size === 0) return { ok: false, errorKey: 'files.chooseFile' };
   if (file.size > MAX_FILE_BYTES) return { ok: false, errorKey: 'files.tooLarge' };
 
+  // An atestado is sealed, filed and attached by its leave's own route in one
+  // step — a family may send one and must not leave orphan health files (POOLSE-109).
+  const certificate = certificatePath(target);
+  if (certificate !== null) {
+    try {
+      const query = new URLSearchParams({ name: file.name });
+      await apiUpload(`${certificate}?${query.toString()}`, await file.arrayBuffer());
+    } catch (error) {
+      return refusal(error);
+    }
+    return { ok: true };
+  }
+
   const route = attachRoute(target);
   if (route === null) return { ok: false, errorKey: 'files.uploadFailed' };
 
@@ -38,6 +51,15 @@ export async function uploadFileAction(_previous: FormState, formData: FormData)
 /** Takes a document off its record, or the logo off the club. The file stays on record. */
 export async function detachFileAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const target = String(formData.get('target') ?? '') as FileTarget;
+  const certificate = certificatePath(target);
+  if (certificate !== null) {
+    try {
+      await apiDelete(certificate);
+    } catch (error) {
+      return refusal(error);
+    }
+    return { ok: true };
+  }
   const route = attachRoute(target);
   if (route === null || route.method !== 'PUT') return { ok: false, errorKey: 'files.uploadFailed' };
   try {
@@ -65,6 +87,13 @@ export async function removePhotoAction(_previous: FormState, formData: FormData
 }
 
 const ID = /^[0-9a-f-]{36}$/i;
+
+/** The leave's own atestado route, for a `medical-certificate:<student>:<leave>` target. */
+function certificatePath(target: FileTarget): string | null {
+  const [kind, student = '', leave = ''] = target.split(':');
+  if (kind !== 'medical-certificate' || !ID.test(student) || !ID.test(leave)) return null;
+  return `/students/${student}/medical-leave/${leave}/certificate`;
+}
 
 function attachRoute(target: FileTarget): { method: 'POST' | 'PUT'; path: string } | null {
   if (target === 'logo') return { method: 'PUT', path: '/settings/logo' };

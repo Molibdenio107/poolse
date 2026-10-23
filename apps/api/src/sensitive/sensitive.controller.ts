@@ -3,21 +3,28 @@ import {
   Body,
   ConflictException,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
+  Query,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import {
   archiveMedicalLeave,
+  attachCertificate,
   createMedicalLeave,
+  detachCertificate,
   listMedicalLeave,
   type MedicalLeave,
 } from '../students/medical-leave.repository.js';
+import { mayActForStudent } from '../students/redemption.repository.js';
+import { judgeUpload } from '../files/upload-check.js';
 import {
   ConsentAlreadyRecordedError,
   CONSENT_KINDS,
@@ -55,8 +62,6 @@ interface SensitiveResponse {
    */
   enrolment: EnrolmentContext | null;
   emergencyContact: EmergencyContact | null;
-  /** Complete, never a page — a partial picker sends people to the free text. */
-  contactCandidates: { id: string; name: string }[];
 }
 
 const MAX_NOTES = 4000;
@@ -117,16 +122,69 @@ export class SensitiveController {
        */
       enrolment: await enrolmentContext(organizationId, studentId),
       emergencyContact: await readEmergencyContact(organizationId, studentId),
-      // Only for somebody who may set it. An instructor reading a student's
-      // notes has no business with the club's staff list.
-      contactCandidates: hasRole('owner', 'admin')
-        ? await contactCandidates(organizationId)
-        : [],
       // Travels with the medical page rather than behind its own request: it is
       // three rows, always shown, and a second round trip would put a loading
-      // state on a panel that is usually empty.
-      medicalLeave: await listMedicalLeave(organizationId, studentId),
+      // state on a panel that is usually empty. A coach is told an atestado is
+      // attached and when, never given it (POOLSE-109).
+      medicalLeave: await listMedicalLeave(organizationId, studentId, hasRole('owner', 'admin')),
     };
+  }
+
+  /**
+   * Who may be named as the emergency contact, by name — POOLSE-109. Only for
+   * somebody who may set it: an instructor reading a student's notes has no
+   * business searching the club's people.
+   */
+  @Get('emergency-contact/candidates')
+  async candidates(
+    @Param('studentId') _studentId: string,
+    @Query('q') q?: string,
+  ): Promise<{ people: { id: string; name: string; roles: string[] }[] }> {
+    requireRole('owner', 'admin');
+    const query = (q ?? '').trim();
+    if (query.length < 2) return { people: [] };
+    return { people: await contactCandidates(currentTenant().organizationId, query.slice(0, 80)) };
+  }
+
+  /**
+   * The atestado on a leave — POOLSE-109. The office, or the child's own family
+   * (the student, or a live encarregado) from the app. A coach is refused: they
+   * are told it exists, and that is all. A stranger's child is a 404, as on
+   * every family route.
+   *
+   * One step, not `POST /files` then an attach: a family may not leave orphan
+   * health files in the bucket, and the file is sealed, registered and attached
+   * in one transaction.
+   */
+  @Post('medical-leave/:leaveId/certificate')
+  async attachCertificate(
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('leaveId', new ParseUUIDPipe()) leaveId: string,
+    @Query('name') name: string | undefined,
+    @Body() body: unknown,
+  ): Promise<{ fileId: string }> {
+    requireRole('owner', 'admin', 'guardian', 'student');
+    const { organizationId, membershipId } = currentTenant();
+    if (!hasRole('owner', 'admin') && !(await mayActForStudent(organizationId, membershipId, studentId))) {
+      throw new NotFoundException('No such student');
+    }
+    const { bytes, contentType, originalName } = judgeUpload('medical_certificate', body, name);
+    const attached = await attachCertificate(organizationId, studentId, leaveId, bytes, contentType, originalName);
+    if (attached === null) throw new NotFoundException('No such medical leave');
+    return attached;
+  }
+
+  /** Takes the atestado off a leave — the office only. The file stays in the history. */
+  @Delete('medical-leave/:leaveId/certificate')
+  async detachCertificate(
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('leaveId', new ParseUUIDPipe()) leaveId: string,
+  ): Promise<{ removed: true }> {
+    requireRole('owner', 'admin');
+    if (!(await detachCertificate(currentTenant().organizationId, studentId, leaveId))) {
+      throw new NotFoundException('No atestado on this leave');
+    }
+    return { removed: true };
   }
 
   /**

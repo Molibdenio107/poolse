@@ -28,6 +28,7 @@ import { SlotsController } from '../facilities/slots.controller.js';
 import { AttachmentsController } from '../files/attachments.controller.js';
 import { QualificationsController } from '../staff/qualifications.controller.js';
 import { FilesController } from '../files/files.controller.js';
+import { SensitiveController } from '../sensitive/sensitive.controller.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
 import { InvitationsController } from '../invitations/invitations.controller.js';
 import { MaintenanceController } from '../maintenance/maintenance.controller.js';
@@ -1031,5 +1032,62 @@ test('a partner\'s agreement is not offered to staff who are sent none', async (
     const partner = await new PartnersController().detail(fixture.partnerId);
     assert.equal(partner.canManage, false);
     assert.equal(partner.agreement, null);
+  });
+});
+
+test('the atestado and the emergency-contact search — POOLSE-109: a family reaches only its own child, a coach never the file', async () => {
+  // A leave on Alice with an atestado, written as the owner straight into the
+  // tables: the refusals below all happen before the bucket is asked.
+  const org = tenantRef.organizationId;
+  const [leave] = await tenantRef.sql<{ id: string }>(
+    `INSERT INTO student_medical_leave (organization_id, student_id, starts_on, ends_on)
+     VALUES ($1, $2, DATE '2026-10-01', DATE '2026-10-20') RETURNING id`,
+    [org, fixture.aliceId],
+  );
+  const [file] = await tenantRef.sql<{ id: string }>(
+    `INSERT INTO stored_file (organization_id, purpose, storage_key, content_type, byte_size, original_name,
+                              uploaded_by, wrapped_key)
+     VALUES ($1, 'medical_certificate', $3, 'application/pdf', 10,
+             'atestado.pdf', $2, 'v1.aa.bb.cc') RETURNING id`,
+    [org, fixture.adminId, `${org}/medical_certificate/probe.sealed`],
+  );
+  await tenantRef.sql(
+    `INSERT INTO medical_leave_certificate (organization_id, leave_id, file_id, attached_by) VALUES ($1, $2, $3, $4)`,
+    [org, leave!.id, file!.id, fixture.adminId],
+  );
+
+  await asEach(async () => {
+    const sensitive = new SensitiveController();
+    await refused('GET students/:id/emergency-contact/candidates', 403, () => sensitive.candidates(fixture.aliceId, 'ana'));
+    // Not their child: the family routes' 404, never a hint the student exists.
+    await refused('POST students/:id/medical-leave/:id/certificate', 404, () =>
+      sensitive.attachCertificate(fixture.aliceId, leave!.id, 'x.pdf', Buffer.from('%PDF-1.4')),
+    );
+    await refused('DELETE students/:id/medical-leave/:id/certificate', 403, () =>
+      sensitive.detachCertificate(fixture.aliceId, leave!.id),
+    );
+    await refused('GET files/:id (atestado)', 403, () => new FilesController().read(file!.id));
+  });
+
+  // The coach: told the atestado exists, refused the file and every write.
+  await as(fixture.instructorId, ['instructor'], async () => {
+    const sensitive = new SensitiveController();
+    const seen = (await sensitive.read(fixture.aliceId)).medicalLeave.find((one) => one.id === leave!.id);
+    assert.ok(seen?.certificate !== null && seen?.certificate !== undefined, 'atestado anexado');
+    assert.equal(seen.certificate.file, null);
+    await refused('GET files/:id (atestado) as a coach', 403, () => new FilesController().read(file!.id));
+    await refused('POST …/certificate as a coach', 403, () =>
+      sensitive.attachCertificate(fixture.aliceId, leave!.id, 'x.pdf', Buffer.from('%PDF-1.4')),
+    );
+    await refused('DELETE …/certificate as a coach', 403, () => sensitive.detachCertificate(fixture.aliceId, leave!.id));
+    await refused('GET …/emergency-contact/candidates as a coach', 403, () => sensitive.candidates(fixture.aliceId, 'ana'));
+  });
+
+  // Maintenance reaches none of it.
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    await refused('GET files/:id (atestado) as maintenance', 403, () => new FilesController().read(file!.id));
+    await refused('POST …/certificate as maintenance', 403, () =>
+      new SensitiveController().attachCertificate(fixture.aliceId, leave!.id, 'x.pdf', Buffer.from('%PDF-1.4')),
+    );
   });
 });

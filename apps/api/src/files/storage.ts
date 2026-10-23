@@ -61,6 +61,13 @@ export async function getObject(key: string): Promise<Readable> {
   return result.Body as Readable;
 }
 
+/** The whole object in memory — for a sealed file, which is opened before it is served (10 MB at most). */
+export async function getObjectBytes(key: string): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of await getObject(key)) chunks.push(Buffer.from(chunk as Uint8Array));
+  return Buffer.concat(chunks);
+}
+
 /**
  * What a file really is, from its first bytes — never from its name or the
  * browser's claim. A PDF named `foto.jpg` is a PDF; an executable named

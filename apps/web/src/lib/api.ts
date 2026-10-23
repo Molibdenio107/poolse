@@ -2102,14 +2102,38 @@ export interface MedicalLeave {
   endsOn: string | null;
   reason: string | null;
   /**
-   * Where the atestado is filed — a document number or a location.
-   *
-   * Deliberately a reference and not a file: object storage is deferred, and a
-   * medical certificate is not the document to bring it forward for.
+   * Where the atestado is filed — a document number or a location. Still
+   * offered beside the file itself (POOLSE-109), for paper kept at the desk.
    */
   justificationReference: string | null;
   recordedByName: string | null;
   active: boolean;
+  /**
+   * The atestado — POOLSE-109. `file` is null for a coach: told it is attached
+   * and when, never the document or its name.
+   */
+  certificate: { attachedAt: string; file: MedicalCertificateFile | null } | null;
+  /** Earlier atestados, newest first — owner and admin only. */
+  previousCertificates: (MedicalCertificateFile & { replacedAt: string; replacedBy: string })[];
+}
+
+/** An atestado file, sealed at rest and read through `/files/:id` — POOLSE-109. */
+export interface MedicalCertificateFile {
+  fileId: string;
+  originalName: string;
+  contentType: string;
+  attachedAt: string;
+  attachedBy: string;
+}
+
+/** A leave as a family reads it in app mode: the dates and its atestado — POOLSE-109. */
+export interface FamilyLeave {
+  id: string;
+  studentId: string;
+  startsOn: string;
+  endsOn: string | null;
+  active: boolean;
+  certificate: MedicalCertificateFile | null;
 }
 
 export interface SensitiveRecord {
@@ -2123,8 +2147,6 @@ export interface SensitiveRecord {
   /** Which path this student is on — the one answer the screen branches on. */
   enrolment: EnrolmentContext | null;
   emergencyContact: EmergencyContact | null;
-  /** Complete, never a page — a partial picker sends people to the free text. */
-  contactCandidates: { id: string; name: string }[];
 }
 
 export type Stroke = 'freestyle' | 'backstroke' | 'breaststroke' | 'butterfly' | 'medley';

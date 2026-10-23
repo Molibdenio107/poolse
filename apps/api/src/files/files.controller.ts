@@ -9,13 +9,13 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
-  ServiceUnavailableException,
   StreamableFile,
 } from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import { openFile, RULES, storeFile, type FilePurpose, type StoredFile } from './files.repository.js';
-import { MAX_FILE_BYTES, sniffType, storageConfigured, WORD } from './storage.js';
+import { storageConfigured, WORD } from './storage.js';
+import { judgeUpload } from './upload-check.js';
 import { CoreRoute } from '../tenant/modules.js';
 
 const EVERY_ROLE = ['owner', 'admin', 'instructor', 'maintenance', 'student', 'guardian'] as const;
@@ -50,10 +50,6 @@ export class FilesController {
     // Every purpose switched on today is written by the office; the table
     // below is the finer answer, and the one a later purpose changes.
     requireRole('owner', 'admin');
-    if (!storageConfigured()) {
-      throw new ServiceUnavailableException({ code: 'storage_not_configured', message: 'File storage is not configured' });
-    }
-
     if (!isPurpose(purpose)) throw new BadRequestException('purpose is not a file purpose');
     const rule = RULES[purpose];
     if (rule.write === null) {
@@ -61,27 +57,8 @@ export class FilesController {
     }
     requireRole(...rule.write);
 
-    if (!Buffer.isBuffer(body) || body.length === 0) {
-      throw new BadRequestException({ code: 'file_empty', message: 'No file was sent' });
-    }
-    if (body.length > MAX_FILE_BYTES) {
-      throw new BadRequestException({ code: 'file_too_large', message: 'A file may be at most 10 MB' });
-    }
-    const contentType = sniffType(body);
-    if (contentType === null) {
-      throw new BadRequestException({ code: 'file_type', message: 'Only PDF, Word, JPEG, PNG and WebP files are accepted' });
-    }
-    // A Word document is a contract and nothing else — POOLSE-105.
-    if (contentType === WORD && purpose !== 'agreement_document') {
-      throw new BadRequestException({ code: 'file_type', message: 'A Word document is accepted only as a signed contract' });
-    }
-    // Photos and the logo are images; a document may also be a photograph of one.
-    if (IMAGE_ONLY.has(purpose) && contentType === 'application/pdf') {
-      throw new BadRequestException({ code: 'file_type', message: 'This needs an image' });
-    }
-
-    const originalName = (name ?? '').trim().slice(0, 200) || `file.${contentType.split('/')[1]}`;
-    return storeFile(currentTenant().organizationId, purpose, body, contentType, originalName);
+    const { bytes, contentType, originalName } = judgeUpload(purpose, body, name);
+    return storeFile(currentTenant().organizationId, purpose, bytes, contentType, originalName);
   }
 
   @Get(':id')
@@ -104,8 +81,6 @@ export class FilesController {
     });
   }
 }
-
-const IMAGE_ONLY = new Set<FilePurpose>(['facility_photo', 'pool_photo', 'logo', 'student_photo']);
 
 function isPurpose(value: unknown): value is FilePurpose {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(RULES, value);

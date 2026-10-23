@@ -1,5 +1,8 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { personName } from '../people/names.js';
+import { currentTenant } from '../tenant/tenant.context.js';
+import { storeFile } from '../files/files.repository.js';
 
 /**
  * Medical leave — round 5.
@@ -21,11 +24,29 @@ export interface MedicalLeave {
   recordedByName: string | null;
   /** Whether it covers today, computed by the database so no clock disagrees. */
   active: boolean;
+  /**
+   * The atestado — POOLSE-109. `file` is null for a reader who may know it
+   * exists but not open it (a coach): *atestado anexado* and the date, never
+   * the document or its name, which can carry a diagnosis.
+   */
+  certificate: { attachedAt: string; file: CertificateFile | null } | null;
+  /** Earlier atestados, newest first — only for a reader who may open them. */
+  previousCertificates: (CertificateFile & { replacedAt: string; replacedBy: string })[];
+}
+
+export interface CertificateFile {
+  fileId: string;
+  originalName: string;
+  contentType: string;
+  attachedAt: string;
+  attachedBy: string;
 }
 
 export async function listMedicalLeave(
   organizationId: string,
   studentId: string,
+  /** Whether the reader may open an atestado, or only be told there is one. */
+  mayOpenCertificates: boolean,
 ): Promise<MedicalLeave[]> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
@@ -73,15 +94,153 @@ export async function listMedicalLeave(
       [studentId],
     );
 
-    return rows.map((row) => ({
-      id: row.id,
-      startsOn: row.starts_on,
-      endsOn: row.ends_on,
-      reason: row.reason,
-      justificationReference: row.justification_reference,
-      recordedByName: row.recorded_by_name,
-      active: row.active,
-    }));
+    const versions = await tx.query<{
+      leave_id: string;
+      file_id: string;
+      original_name: string;
+      content_type: string;
+      attached_at: Date;
+      attached_by: string;
+      replaced_at: Date | null;
+      replaced_by: string | null;
+    }>(
+      `SELECT c.leave_id, c.file_id, f.original_name, f.content_type, c.attached_at,
+              ${personName('c.attached_by')} AS attached_by,
+              c.replaced_at,
+              CASE WHEN c.replaced_by IS NULL THEN NULL ELSE ${personName('c.replaced_by')} END AS replaced_by
+         FROM medical_leave_certificate c
+         JOIN student_medical_leave l ON l.organization_id = c.organization_id AND l.id = c.leave_id
+         JOIN stored_file f ON f.organization_id = c.organization_id AND f.id = c.file_id
+        WHERE l.student_id = $1
+          AND f.key_shredded_at IS NULL
+        ORDER BY c.replaced_at DESC NULLS FIRST, c.attached_at DESC`,
+      [studentId],
+    );
+    const fileOf = (row: (typeof versions.rows)[number]): CertificateFile => ({
+      fileId: row.file_id,
+      originalName: row.original_name,
+      contentType: row.content_type,
+      attachedAt: row.attached_at.toISOString(),
+      attachedBy: row.attached_by,
+    });
+
+    return rows.map((row) => {
+      const mine = versions.rows.filter((version) => version.leave_id === row.id);
+      const current = mine.find((version) => version.replaced_at === null);
+      return {
+        id: row.id,
+        startsOn: row.starts_on,
+        endsOn: row.ends_on,
+        reason: row.reason,
+        justificationReference: row.justification_reference,
+        recordedByName: row.recorded_by_name,
+        active: row.active,
+        certificate:
+          current === undefined
+            ? null
+            : {
+                attachedAt: current.attached_at.toISOString(),
+                file: mayOpenCertificates ? fileOf(current) : null,
+              },
+        previousCertificates: mayOpenCertificates
+          ? mine
+              .filter((version) => version.replaced_at !== null)
+              .map((version) => ({
+                ...fileOf(version),
+                replacedAt: version.replaced_at!.toISOString(),
+                replacedBy: version.replaced_by ?? '',
+              }))
+          : [],
+      };
+    });
+  });
+}
+
+/** Whether a live leave belongs to this student — asked before a file is put in the bucket. */
+export async function leaveOfStudent(organizationId: string, studentId: string, leaveId: string): Promise<boolean> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query(
+      `SELECT 1 FROM student_medical_leave WHERE id = $1 AND student_id = $2 AND archived_at IS NULL`,
+      [leaveId, studentId],
+    );
+    return rows.length > 0;
+  });
+}
+
+/**
+ * Files an atestado on a leave — POOLSE-109. The file is sealed, registered and
+ * attached in one transaction; the atestado it replaces stays in the history.
+ * False when the leave is not this student's live leave.
+ */
+export async function attachCertificate(
+  organizationId: string,
+  studentId: string,
+  leaveId: string,
+  bytes: Buffer,
+  contentType: string,
+  originalName: string,
+): Promise<{ fileId: string } | null> {
+  if (!(await leaveOfStudent(organizationId, studentId, leaveId))) return null;
+  const { membershipId } = currentTenant();
+  const stored = await storeFile(organizationId, 'medical_certificate', bytes, contentType, originalName, async (tx, fileId) => {
+    const leave = await tx.query(
+      `SELECT 1 FROM student_medical_leave WHERE id = $1 AND student_id = $2 AND archived_at IS NULL FOR UPDATE`,
+      [leaveId, studentId],
+    );
+    if (leave.rows.length === 0) throw new LeaveGone();
+    const closed = await tx.query(
+      `UPDATE medical_leave_certificate SET replaced_at = now(), replaced_by = $2
+        WHERE leave_id = $1 AND replaced_at IS NULL
+       RETURNING id`,
+      [leaveId, membershipId],
+    );
+    await tx.query(
+      `INSERT INTO medical_leave_certificate (organization_id, leave_id, file_id, attached_by)
+       VALUES ($1, $2, $3, $4)`,
+      [organizationId, leaveId, fileId, membershipId],
+    );
+    await tx.query(`UPDATE student_medical_leave SET document_file_id = $2 WHERE id = $1`, [leaveId, fileId]);
+    // Who and which leave — never the file's name, which can carry a diagnosis.
+    await recordAudit(tx, {
+      action: 'student.medicalCertificateAttached',
+      entityType: 'student_medical_leave',
+      entityId: leaveId,
+      data: { studentId, fileId, replaced: closed.rows.length > 0 },
+    });
+  }).catch((error: unknown) => {
+    if (error instanceof LeaveGone) return null;
+    throw error;
+  });
+  return stored === null ? null : { fileId: stored.id };
+}
+
+class LeaveGone extends Error {}
+
+/** Takes the atestado off a leave; the file stays in the history. False when there was none. */
+export async function detachCertificate(
+  organizationId: string,
+  studentId: string,
+  leaveId: string,
+): Promise<boolean> {
+  const { membershipId } = currentTenant();
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query(
+      `UPDATE medical_leave_certificate c SET replaced_at = now(), replaced_by = $3
+         FROM student_medical_leave l
+        WHERE l.organization_id = c.organization_id AND l.id = c.leave_id
+          AND c.leave_id = $1 AND l.student_id = $2 AND c.replaced_at IS NULL
+       RETURNING c.id`,
+      [leaveId, studentId, membershipId],
+    );
+    if (rows.length === 0) return false;
+    await tx.query(`UPDATE student_medical_leave SET document_file_id = NULL WHERE id = $1`, [leaveId]);
+    await recordAudit(tx, {
+      action: 'student.medicalCertificateRemoved',
+      entityType: 'student_medical_leave',
+      entityId: leaveId,
+      data: { studentId },
+    });
+    return true;
   });
 }
 
