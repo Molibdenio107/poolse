@@ -3619,7 +3619,7 @@
   },
   "invoices": {
     "title": "Faturação",
-    "hint": "O que há a faturar este mês, o que já foi emitido, e os livros de numeração por baixo.",
+    "hint": "O que há a faturar este mês, o que já foi emitido e o que está em dívida.",
     "internalOnly": "Estes são registos internos, não faturas legais. O Poolse não é software certificado ao abrigo do Decreto-Lei 28/2019: cada documento é numerado, imutável e pronto a entregar ao programa que emite as faturas do clube.",
     "notPermitted": "Não tem permissão para ver a faturação deste clube.",
     "notFound": "Não foi possível encontrar esse documento.",
@@ -3763,9 +3763,8 @@
     "noSites": "Ainda não há instalações. Crie a primeira em Instalações para poder faturar.",
     "freeSwim": "Natação livre",
     "finalConsumer": "Consumidor final",
-    "viewSettings": "Configuração",
-    "clubDataMoved": "Os dados fiscais e o logotipo do clube passaram para a configuração da instalação.",
-    "clubDataLink": "Abrir os dados do clube",
+    "settingsMoved": "A configuração da faturação — livros de numeração, NIPC e como pagar — está agora em Instalações → Dados do clube.",
+    "settingsLink": "Abrir os dados do clube",
     "reminders": {
       "title": "Enviar lembrete por email",
       "loading": "A ver o que está em atraso…",
@@ -5153,7 +5152,7 @@
   },
   "clubData": {
     "tab": "Dados do clube",
-    "hint": "Os dados fiscais e o logotipo são do clube e aplicam-se a todas as instalações, não só a esta.",
+    "hint": "Os dados fiscais, a forma de pagar e o logotipo são do clube e aplicam-se a todas as instalações. Os livros de numeração são só desta instalação.",
     "paymentTitle": "Como pagar",
     "paymentPlaceholder": "Numerário ou multibanco na receção\nSecretaria: dias úteis, 9h–12h",
     "paymentTooLong": "No máximo 1000 caracteres.",

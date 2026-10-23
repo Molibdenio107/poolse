@@ -300,7 +300,8 @@ export async function saveSeriesAction(
     return failure(error, 'invoices.saveFailed');
   }
 
-  revalidatePath(PATH);
+  // The books are a card on the site's Dados do clube tab (POOLSE-104 B).
+  revalidatePath(`/dashboard/facilities/${facilityId}`);
   return { ok: true };
 }
 

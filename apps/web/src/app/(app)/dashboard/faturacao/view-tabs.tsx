@@ -6,8 +6,7 @@ import { useTranslations } from 'next-intl';
 import { SectionPills } from '@/components/section-pills';
 
 /**
- * Three views of one page: this month, what is still owed, and the settings
- * the documents are issued under.
+ * Two views of one page: this month, and what is still owed.
  *
  * Real links rather than buttons, so each view is a URL that can be bookmarked,
  * sent to a colleague and reached by the browser's back button — the same reason
@@ -21,21 +20,12 @@ import { SectionPills } from '@/components/section-pills';
  * the same either way. `aria-current`, a fill and the label carry which one is
  * open; colour never does it alone.
  *
- * **Configuração** holds the series, which used to sit under both lists and
- * pushed the one somebody came for off the screen. Offered only when the reader
- * may read them. The club's NIPC and logo moved to the site's *Dados do clube*
- * tab on 13 October 2026.
+ * A third, **Configuração**, held the numbering books until 23 October 2026;
+ * they are a card on the site's *Dados do clube* tab now (POOLSE-104 B).
  */
-export type InvoiceView = 'month' | 'owing' | 'settings';
+export type InvoiceView = 'month' | 'owing';
 
-export function ViewTabs({
-  view,
-  settings,
-}: {
-  view: InvoiceView;
-  /** Whether the Configuração view is offered. */
-  settings: boolean;
-}): React.ReactElement | null {
+export function ViewTabs({ view }: { view: InvoiceView }): React.ReactElement | null {
   const t = useTranslations();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -50,11 +40,10 @@ export function ViewTabs({
     return query.size > 0 ? `${pathname}?${query}` : pathname;
   }
 
-  const views: InvoiceView[] = settings ? ['month', 'owing', 'settings'] : ['month', 'owing'];
+  const views: InvoiceView[] = ['month', 'owing'];
   const labels: Record<InvoiceView, string> = {
     month: t('invoices.viewMonth'),
     owing: t('invoices.viewOwing'),
-    settings: t('invoices.viewSettings'),
   };
 
   return (

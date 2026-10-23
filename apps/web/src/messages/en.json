@@ -3619,7 +3619,7 @@
   },
   "invoices": {
     "title": "Invoicing",
-    "hint": "What there is to bill this month, what has been issued, and the numbering books underneath.",
+    "hint": "What there is to bill this month, what has been issued and what is still owed.",
     "internalOnly": "These are internal records, not legal invoices. Poolse is not certified software under Decreto-Lei 28/2019: each document is numbered, immutable and ready to hand to whatever issues the club's invoices.",
     "notPermitted": "You do not have permission to see this club's invoicing.",
     "notFound": "That document could not be found.",
@@ -3763,9 +3763,8 @@
     "noSites": "There are no sites yet. Create the first under Facilities to start invoicing.",
     "freeSwim": "Free swim",
     "finalConsumer": "Final consumer",
-    "viewSettings": "Settings",
-    "clubDataMoved": "The club's tax details and logo have moved to the site settings.",
-    "clubDataLink": "Open the club details",
+    "settingsMoved": "Invoicing settings — numbering books, tax number and how to pay — are now under Facilities → Club details.",
+    "settingsLink": "Open the club details",
     "reminders": {
       "title": "Send a reminder by email",
       "loading": "Checking what is overdue…",
@@ -5153,7 +5152,7 @@
   },
   "clubData": {
     "tab": "Club details",
-    "hint": "Tax details and the logo belong to the club and apply to every site, not just this one.",
+    "hint": "Tax details, how to pay and the logo belong to the club and apply to every site. The numbering books are this site's alone.",
     "paymentTitle": "How to pay",
     "paymentPlaceholder": "Cash or card at reception\nOffice: weekdays, 9:00–12:00",
     "paymentTooLong": "1000 characters at most.",

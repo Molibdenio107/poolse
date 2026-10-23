@@ -6,15 +6,17 @@ import { Pencil } from 'lucide-react';
 import { useSavedAction } from '@/lib/saved';
 import { FIELD_COLUMN, FIELD_LABEL, TextField } from '@/components/ui/field';
 import type { InvoiceSeries } from '@/lib/api';
-import type { FormState } from '../actions';
-import { saveSeriesAction } from './invoices.actions';
+import type { FormState } from '../../actions';
+import { saveSeriesAction } from '../../faturacao/invoices.actions';
 
 /**
  * The numbering books this site holds.
  *
  * A settings block rather than a screen of its own: a club decides what its
  * numbers look like once and then never again, and a page for that would be a
- * page nobody visits twice.
+ * page nobody visits twice. On the site's *Dados do clube* tab, under the NIPC
+ * and *Como pagar*, since POOLSE-104 B — set-once configuration lives with the
+ * site, and Faturação keeps the month and what is owed.
  *
  * **The letter is fixed once a document has been issued under it.** Renaming it
  * would leave `FT A/1` and `FT B/2` in one series, neither of them wrong and
@@ -43,12 +45,11 @@ export function SeriesPanel({
   if (series.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+    // Drawn as its neighbours on Dados do clube are (TaxPanel, Como pagar).
+    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
       <div>
-        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-          {t('invoices.seriesTitle')}
-        </h2>
-        <p className="mt-2 text-sm text-foreground-muted">{t('invoices.seriesHint')}</p>
+        <h2 className="text-sm font-medium">{t('invoices.seriesTitle')}</h2>
+        <p className="text-sm text-foreground-muted">{t('invoices.seriesHint')}</p>
       </div>
 
       <ul className="flex flex-col divide-y divide-border">

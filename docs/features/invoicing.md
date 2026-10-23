@@ -43,6 +43,8 @@ document type, the book's letter, and the sequential number within that book.
 - A book's letter is unique across the whole club, so two sites cannot issue two different
   documents under one number.
 
+The books are a card on the site page's **Dados do clube** tab, under the NIPC and *Como pagar*, shown while the invoicing module is on (POOLSE-104 B). Faturação itself has two views, *Este mês* and *Em dívida*, and one line saying where *Configuração* went, with a link — to be removed after the pilot.
+
 ## What a run bills
 
 A month at a time. Each live fee line contributes the occurrence that falls in that month —

@@ -1,6 +1,8 @@
 import { RegulationPanel, type ComplaintsSettingsView, type RegulationVersionView } from './regulation-panel';
 import { PaymentInstructionsPanel, TaxPanel } from './tax-panel';
 import { LogoPanel } from './logo-panel';
+import { SeriesPanel } from './series-panel';
+import { listSeries } from '../../faturacao/invoices.actions';
 import { readTaxSettings } from './club.actions';
 import { wallClockNow } from '@/lib/date-format';
 import { FromLink } from '@/components/from-link';
@@ -514,13 +516,19 @@ export default async function FacilityPage({
             → Configuração on 13 October 2026 (Rui): they are defined for the
             club, and this page is where the club is configured. Club-wide, as
             the complaints setting on the Regulamento tab is, and the tab says
-            so. Owner and admin, as the endpoints are.
+            so. Owner and admin, as the endpoints are. The numbering books
+            followed on 23 October 2026 (POOLSE-104 B) — those are this site's.
           */
           slug: 'club',
           labelKey: 'clubData.tab',
           visible: loaded.canManage,
           content: async () => {
-            const tax = await readTaxSettings();
+            const invoicing = await moduleIsOn('invoicing');
+            // The numbering books are invoicing's, and this site's own (POOLSE-104 B).
+            const [tax, books] = await Promise.all([
+              readTaxSettings(),
+              invoicing ? listSeries(facilityId) : Promise.resolve(null),
+            ]);
             if (tax.state === 'refused') return <PageError message={t('common.notAllowed')} />;
             return (
               <div className="flex flex-col gap-4">
@@ -531,9 +539,15 @@ export default async function FacilityPage({
                   <>
                     <TaxPanel settings={tax.data} />
                     {/* Como pagar is read by invoice reminders: invoicing's (POOLSE-87). */}
-                    {(await moduleIsOn('invoicing')) && <PaymentInstructionsPanel settings={tax.data} />}
+                    {invoicing && <PaymentInstructionsPanel settings={tax.data} />}
                   </>
                 )}
+                {/*
+                  Moved here from Faturação's Configuração view (POOLSE-104 B). A
+                  refusal hides the card; a failure says so in its place.
+                */}
+                {books?.state === 'failed' && <PageError message={t(books.failure.key)} />}
+                {books?.state === 'ok' && <SeriesPanel facilityId={facilityId} series={books.data.series} />}
                 <LogoPanel />
               </div>
             );

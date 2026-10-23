@@ -271,7 +271,7 @@ cannot see is not offered, and one pill alone is not drawn. Where:
 | Aluno → Mensalidade | Mensalidades (with the period total) · Inscrição e seguro · Quota de sócio |
 | Turmas | Semana · Sem horário · Parcerias |
 | Épocas | Épocas · Planeamento · Iniciar nova época |
-| Faturação | Este mês · Em dívida · Configuração (the existing view switch, extended) |
+| Faturação | Este mês · Em dívida (the existing view switch; Configuração went to the site's *Dados do clube* tab, POOLSE-104) |
 | `/admin` | Clientes · Faturação |
 
 Not split, on purpose: the dashboard (an overview read at a glance), the calendar, documents
