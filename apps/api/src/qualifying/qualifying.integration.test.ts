@@ -236,6 +236,16 @@ test('a name twice in one season is a 409 on the name; another club cannot read 
         () => q.addAgeGroup({ seasonId: tenant.seasonId, name: 'X', bornFrom: 2012, bornTo: 2010 }),
         422,
       );
+      // POOLSE-111: a birth year within the last hundred years, and not in the future.
+      const thisYear = new Date().getUTCFullYear();
+      await expectStatus(
+        () => q.addAgeGroup({ seasonId: tenant.seasonId, name: 'Y', bornFrom: thisYear - 101 }),
+        422,
+      );
+      await expectStatus(
+        () => q.addAgeGroup({ seasonId: tenant.seasonId, name: 'Z', bornTo: thisYear + 1 }),
+        422,
+      );
     });
 
     await withScratchTenant(async (other) => {

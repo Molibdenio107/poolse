@@ -10,7 +10,7 @@ import { DetailPage } from '@/components/detail-page';
 import { GapCell } from '@/components/gap-table';
 import { PageError, PageShell } from '@/components/page-shell';
 import { pickSection, SectionPills, sectionHref } from '@/components/section-pills';
-import { ArchiveButton, EditStandardForm, EntryTimesGrid } from '../../qualifying-forms';
+import { ArchiveButton, EditStandardForm, EntryTimesGrid, FpnAgeGroupsButton } from '../../qualifying-forms';
 import { bandText, windowText } from '../../qualifying-sections';
 import { DownloadLink } from '@/components/download-link';
 
@@ -20,6 +20,10 @@ import { DownloadLink } from '@/components/download-link';
  * General (name, window, archive), Tempos (one age group's column of entry
  * times at a time) and Nadadores (the coach's board: who has qualified and who
  * is within a margin). Owner, admin and instructor.
+ *
+ * **Tempos is always a table** (POOLSE-111): with no age groups yet it draws
+ * every event greyed, says why, and offers the FPN's groups in one click. Once
+ * the season has groups it is the tab a standard opens on; Geral stays first.
  */
 
 const MARGINS = [1000, 2000, 5000] as const;
@@ -54,7 +58,8 @@ export default async function StandardPage({
       title={standard.name}
       subtitle={`${standard.seasonName} · ${windowText(t, standard.windowFrom, standard.windowTo)}`}
       back={backProp(backTarget(from, `/dashboard/students/provas/minimos?season=${standard.seasonId}`), t)}
-      requested={tab}
+      // Tempos once there is a group to fill in; Geral stays first in the strip.
+      requested={tab ?? (standard.ageGroups.length > 0 ? 'times' : undefined)}
       tabs={[
         {
           slug: 'general',
@@ -80,15 +85,31 @@ export default async function StandardPage({
           labelKey: 'qualifying.tab.times',
           content: () => {
             if (standard.ageGroups.length === 0) {
+              // The table first, greyed, then why and the way out — never one
+              // sentence where a grid should be (POOLSE-111).
               return (
-                <section className="flex flex-col gap-2 rounded border border-border bg-surface p-5">
-                  <p>{t('qualifying.noAgeGroupsYet')}</p>
-                  <FromLink
-                    href="/dashboard/students/provas/escaloes"
-                    className="text-primary underline underline-offset-4"
-                  >
-                    {t('qualifying.goToAgeGroups')}
-                  </FromLink>
+                <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+                  <div role="status" className="flex flex-col gap-3 rounded border border-border bg-surface-muted p-4">
+                    <p className="font-medium">{t('qualifying.noAgeGroupsYet')}</p>
+                    <FpnAgeGroupsButton
+                      organizationId={standard.organizationId}
+                      seasonId={standard.seasonId}
+                      returnTo={path}
+                    />
+                    <FromLink
+                      href="/dashboard/students/provas/escaloes"
+                      className="self-start text-sm text-primary underline underline-offset-4"
+                    >
+                      {t('qualifying.goToAgeGroups')}
+                    </FromLink>
+                  </div>
+                  <EntryTimesGrid
+                    organizationId={standard.organizationId}
+                    standardId={standard.id}
+                    ageGroupId=""
+                    times={[]}
+                    disabled
+                  />
                 </section>
               );
             }
@@ -99,6 +120,8 @@ export default async function StandardPage({
             return (
               <>
                 <TimesToolbar path={path} t={t} />
+                {/* The table is per group, and the pills say so in words. */}
+                <p className="-mb-2 text-sm text-foreground-muted">{t('qualifying.ageGroupPillsLead')}</p>
                 <SectionPills
                   label={t('qualifying.ageGroupPills')}
                   current={groupId}

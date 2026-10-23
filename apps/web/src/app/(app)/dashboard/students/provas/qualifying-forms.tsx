@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { YearWheel } from '@/components/year-wheel';
+import { today } from '@/lib/dates';
 import { useTranslations } from 'next-intl';
 import { formatSwimTime, INDIVIDUAL_EVENTS, parseSwimTime, type SwimEvent } from '@poolse/rules';
 import { Dialog } from '@/components/ui/dialog';
@@ -11,6 +13,7 @@ import { cn } from '@/lib/utils';
 import type { FormState } from '../../actions';
 import {
   archiveAgeGroupAction,
+  createFpnAgeGroupsAction,
   archiveStandardAction,
   createAgeGroupAction,
   createStandardAction,
@@ -20,9 +23,14 @@ import {
 } from './qualifying.actions';
 
 /**
- * Mínimos — POOLSE-85. The club types the FPN's age groups and each
- * championship's entry times (Rui, 19-10-2026); nothing here is FPN data.
+ * Mínimos — POOLSE-85. The club types each championship's entry times (Rui,
+ * 19-10-2026). The FPN's age groups are the one FPN table Poolse ships, since
+ * POOLSE-111 (Rui, 23-10-2026): one click on `FpnAgeGroupsButton`, then the
+ * club's own to edit.
  */
+
+/** The club's year — the wheels' last one. */
+const THIS_YEAR = Number(today().slice(0, 4));
 
 const INITIAL: FormState = { ok: false };
 const PRIMARY =
@@ -76,21 +84,28 @@ function AgeGroupFields({ state, group }: { state: FormState; group?: Federation
           { value: 'male', label: t('qualifying.genderMale') },
         ]}
       />
-      <TextField
+      {/*
+        Two year wheels — POOLSE-111. The last hundred years, and *Sem limite*
+        for an open end ("Seniores, 2007 e anteriores"). The API checks the
+        same range and that the first is not after the last.
+      */}
+      <YearWheel
         name="bornFrom"
         label={t('qualifying.bornFrom')}
-        initial={group?.bornFrom === null || group === undefined ? '' : String(group.bornFrom)}
-        inputMode="numeric"
-        maxLength={4}
+        initial={group?.bornFrom ?? null}
+        min={THIS_YEAR - 100}
+        max={THIS_YEAR}
+        emptyLabel={t('qualifying.yearOpen')}
         hint={t('qualifying.bornHint')}
         error={fieldError(t, state, 'bornFrom')}
       />
-      <TextField
+      <YearWheel
         name="bornTo"
         label={t('qualifying.bornTo')}
-        initial={group?.bornTo === null || group === undefined ? '' : String(group.bornTo)}
-        inputMode="numeric"
-        maxLength={4}
+        initial={group?.bornTo ?? null}
+        min={THIS_YEAR - 100}
+        max={THIS_YEAR}
+        emptyLabel={t('qualifying.yearOpen')}
         error={fieldError(t, state, 'bornTo')}
       />
     </div>
@@ -327,11 +342,17 @@ export function EntryTimesGrid({
   standardId,
   ageGroupId,
   times,
+  disabled = false,
 }: {
   organizationId: string;
   standardId: string;
   ageGroupId: string;
   times: EntryTime[];
+  /**
+   * Drawn but not editable — POOLSE-111: a season with no age groups still
+   * shows every event, greyed, so the table is visible before it can be used.
+   */
+  disabled?: boolean;
 }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(setEntryTimesAction, INITIAL);
@@ -358,8 +379,8 @@ export function EntryTimesGrid({
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="standardId" value={standardId} />
       <input type="hidden" name="ageGroupId" value={ageGroupId} />
-      <p className="text-sm text-foreground-muted">{t('qualifying.gridHint')}</p>
-      <div className="overflow-x-auto">
+      {!disabled && <p className="text-sm text-foreground-muted">{t('qualifying.gridHint')}</p>}
+      <div className={cn('overflow-x-auto', disabled && 'text-foreground-muted')} aria-disabled={disabled || undefined}>
         <table className="w-full min-w-[20rem] text-sm">
           <thead>
             <tr className="border-b border-border text-left text-foreground-muted">
@@ -404,8 +425,9 @@ export function EntryTimesGrid({
                         inputMode="decimal"
                         placeholder="0:00.00"
                         maxLength={10}
+                        disabled={disabled}
                         className={cn(
-                          'h-control w-28 rounded border bg-surface px-3 font-mono text-control placeholder:text-foreground-muted/60',
+                          'h-control w-28 rounded border bg-surface px-3 font-mono text-control placeholder:text-foreground-muted/60 disabled:cursor-not-allowed disabled:bg-surface-muted',
                           invalid ? 'border-danger' : 'border-border',
                         )}
                       />
@@ -423,11 +445,46 @@ export function EntryTimesGrid({
         </table>
       </div>
       <FormError state={state} />
+      {!disabled && (
+        <div>
+          <button type="submit" disabled={pending || unreadable} className={PRIMARY}>
+            {pending ? t('common.working') : t('qualifying.saveTimes')}
+          </button>
+        </div>
+      )}
+    </form>
+  );
+}
+
+/**
+ * *Criar os escalões FPN desta época* — POOLSE-111. One click, the federation's
+ * nine groups for the season (`fpnAgeGroups`), names the season already has
+ * left alone. On a standard's Tempos tab it lands back on the first group.
+ */
+export function FpnAgeGroupsButton({
+  organizationId,
+  seasonId,
+  returnTo,
+}: {
+  organizationId: string;
+  seasonId: string;
+  /** The page to land on, on its Tempos tab, with the first group chosen. */
+  returnTo?: string | undefined;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [state, action, pending] = useSavedAction(createFpnAgeGroupsAction, INITIAL);
+  return (
+    <form action={action} className="flex flex-col gap-2">
+      <input type="hidden" name="organizationId" value={organizationId} />
+      <input type="hidden" name="seasonId" value={seasonId} />
+      {returnTo !== undefined && <input type="hidden" name="returnTo" value={returnTo} />}
       <div>
-        <button type="submit" disabled={pending || unreadable} className={PRIMARY}>
-          {pending ? t('common.working') : t('qualifying.saveTimes')}
+        <button type="submit" disabled={pending} className={PRIMARY}>
+          {pending ? t('common.working') : t('qualifying.fpnCreate')}
         </button>
       </div>
+      <p className="text-sm text-foreground-muted">{t('qualifying.fpnCreateHint')}</p>
+      <FormError state={state} />
     </form>
   );
 }

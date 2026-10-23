@@ -19,6 +19,13 @@ const BUTTON =
 const BUTTON_QUIET =
   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
+/**
+ * Where a club finds a meet's LENEX file: the FPN's site, whose competitions
+ * publish their results — POOLSE-111. One constant, so a better address (a
+ * results page, a ranking export) is a one-line change.
+ */
+const FPN_RESULTS_URL = 'https://fpnatacao.pt/';
+
 const SKIPS: MeetSkipReason[] = ['relay', 'dsq', 'dns', 'dnf', 'wdr', 'otherStatus', 'noTime', 'yards', 'stroke'];
 
 /**
@@ -134,10 +141,31 @@ export function ImportMeet({
   return (
     <>
       <DropOverlay shown={dragging} label={t('meets.import.drop')} />
-      <button type="button" className={BUTTON} onClick={() => input.current?.click()}>
-        <Upload className="size-4" aria-hidden />
-        {t('meets.import.button')}
-      </button>
+      <div className="flex flex-col gap-1">
+        <div>
+          <button type="button" className={BUTTON} onClick={() => input.current?.click()} aria-describedby="meet-import-format">
+            <Upload className="size-4" aria-hidden />
+            {t('meets.import.button')}
+          </button>
+        </div>
+        {/*
+          What the import reads, in one line, and where the file comes from —
+          POOLSE-111. LENEX alone (Rui, 22-10-2026): it is the one format that
+          carries the licence, the event, the course and the exact time in a
+          shape a swimmer can be matched by. A results PDF is a picture of it.
+        */}
+        <p id="meet-import-format" className="max-w-xs text-sm text-foreground-muted">
+          {t('meets.import.formatHint')}{' '}
+          <a
+            href={FPN_RESULTS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded text-primary underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {t('meets.import.howToGet')}
+          </a>
+        </p>
+      </div>
       <input
         ref={input}
         type="file"

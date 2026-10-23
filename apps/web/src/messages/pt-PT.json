@@ -5460,7 +5460,9 @@
         "oneLef": "O ficheiro .lxf tem de conter exatamente um ficheiro .lef.",
         "nested": "O ficheiro .lxf contém outro ficheiro compactado dentro. Não é aceite.",
         "failed": "Não foi possível importar. Tente de novo."
-      }
+      },
+      "formatHint": "Ficheiro LENEX (.lef/.lxf), o formato que a FPN e o ranking nacional exportam.",
+      "howToGet": "Como obter o ficheiro"
     },
     "skip": {
       "relay": "estafetas",
@@ -5530,7 +5532,7 @@
     "seasonStart": "início da época",
     "seasonEnd": "fim da época",
     "addStandard": "Acrescentar mínimos",
-    "noAgeGroupsYet": "Esta época ainda não tem escalões FPN. Os tempos são escritos por escalão, por isso acrescente-os primeiro.",
+    "noAgeGroupsYet": "Esta época ainda não tem escalões FPN. Os tempos são por escalão.",
     "goToAgeGroups": "Ir para Escalões",
     "genderBoth": "Femininos e masculinos",
     "genderFemale": "Femininos",
@@ -5551,7 +5553,7 @@
     "gender": "Género",
     "bornFrom": "Nascidos desde",
     "bornTo": "Nascidos até",
-    "bornHint": "Anos de nascimento, inclusive. Deixe um em branco para um escalão aberto.",
+    "bornHint": "Anos de nascimento, inclusive. «Sem limite» deixa esse lado do escalão em aberto.",
     "archive": "Arquivar",
     "confirmArchiveAgeGroup": "Os tempos de admissão deste escalão saem com ele de todos os mínimos da época.",
     "confirmArchiveStandard": "Estes mínimos e todos os seus tempos deixam de aparecer aos nadadores e às famílias.",
@@ -5606,11 +5608,17 @@
     "ageGroupTaken": "Já existe um escalão com este nome e género nesta época.",
     "standardTaken": "Já existem mínimos com este nome nesta época.",
     "nameRequired": "Escreva um nome.",
-    "badYear": "Escreva um ano com quatro algarismos.",
+    "badYear": "Escolha um ano dos últimos cem anos, até este.",
     "yearsReversed": "O último ano não pode ser anterior ao primeiro.",
     "windowReversed": "O fim não pode ser anterior ao início.",
     "studentNoGender": "O género deste nadador não está indicado e os escalões FPN da época {season} são por género, por isso não há mínimos para comparar.",
-    "badDate": "Escolha uma data válida."
+    "badDate": "Escolha uma data válida.",
+    "fpnTitle": "Escalões da FPN",
+    "fpnCreate": "Criar os escalões FPN desta época",
+    "fpnCreateHint": "Os nove escalões de natação pura da FPN, de Cadetes C a Seniores, com os anos de nascimento desta época. Os que a época já tiver ficam como estão, e todos se podem alterar depois em Escalões.",
+    "fpnCreated": "{count, plural, =0 {A época já tinha os escalões FPN} one {# escalão FPN criado} other {# escalões FPN criados}}",
+    "ageGroupPillsLead": "Escalão:",
+    "yearOpen": "Sem limite"
   },
   "emailPreference": {
     "title": "Mensagens do clube por email",

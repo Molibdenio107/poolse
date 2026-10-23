@@ -3,7 +3,13 @@ import { getTranslations } from 'next-intl/server';
 import type { FederationAgeGroup, QualifyingOverview } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
-import { ArchiveButton, CreateAgeGroupForm, CreateStandardForm, EditAgeGroupButton } from './qualifying-forms';
+import {
+  ArchiveButton,
+  CreateAgeGroupForm,
+  CreateStandardForm,
+  EditAgeGroupButton,
+  FpnAgeGroupsButton,
+} from './qualifying-forms';
 
 /**
  * The Mínimos and Escalões FPN sections of Provas — POOLSE-85. Server
@@ -168,6 +174,13 @@ export async function AgeGroupList({
           </ul>
         )}
       </section>
+      {overview.canEdit && (
+        // The FPN's set in one click (POOLSE-111) — the same as a standard's Tempos tab offers.
+        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
+          <h2 className="font-medium">{t('qualifying.fpnTitle')}</h2>
+          <FpnAgeGroupsButton organizationId={overview.organizationId} seasonId={seasonId} />
+        </section>
+      )}
       {overview.canEdit && (
         <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
           <h2 className="font-medium">{t('qualifying.addAgeGroup')}</h2>

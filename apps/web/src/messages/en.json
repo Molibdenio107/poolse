@@ -5460,7 +5460,9 @@
         "oneLef": "The .lxf file must hold exactly one .lef file.",
         "nested": "The .lxf file holds another archive inside. It is not accepted.",
         "failed": "The import failed. Try again."
-      }
+      },
+      "formatHint": "A LENEX file (.lef/.lxf), the format the FPN and the national ranking export.",
+      "howToGet": "How to get the file"
     },
     "skip": {
       "relay": "relays",
@@ -5530,7 +5532,7 @@
     "seasonStart": "season start",
     "seasonEnd": "season end",
     "addStandard": "Add qualifying times",
-    "noAgeGroupsYet": "This season has no FPN age groups yet. Times are entered per age group, so add those first.",
+    "noAgeGroupsYet": "This season has no FPN age groups yet. Entry times are per age group.",
     "goToAgeGroups": "Go to Age groups",
     "genderBoth": "Girls and boys",
     "genderFemale": "Girls",
@@ -5551,7 +5553,7 @@
     "gender": "Gender",
     "bornFrom": "Born from",
     "bornTo": "Born up to",
-    "bornHint": "Birth years, inclusive. Leave one empty for an open group.",
+    "bornHint": "Birth years, inclusive. \"No limit\" leaves that end of the group open.",
     "archive": "Archive",
     "confirmArchiveAgeGroup": "This age group's entry times leave every qualifying standard in the season with it.",
     "confirmArchiveStandard": "These qualifying times and all their entries stop showing to swimmers and families.",
@@ -5606,11 +5608,17 @@
     "ageGroupTaken": "There is already an age group with this name and gender in this season.",
     "standardTaken": "There are already qualifying times with this name in this season.",
     "nameRequired": "Type a name.",
-    "badYear": "Type a four-digit year.",
+    "badYear": "Choose a year within the last hundred years, up to this one.",
     "yearsReversed": "The last year cannot be before the first.",
     "windowReversed": "The end cannot be before the start.",
     "studentNoGender": "This swimmer's gender is not recorded and the FPN age groups of the {season} season are by gender, so there are no qualifying times to compare.",
-    "badDate": "Choose a valid date."
+    "badDate": "Choose a valid date.",
+    "fpnTitle": "FPN age groups",
+    "fpnCreate": "Create this season's FPN age groups",
+    "fpnCreateHint": "The FPN's nine swimming age groups, Cadetes C to Seniores, with this season's birth years. Any the season already has are left as they are, and all can be changed afterwards under Age groups.",
+    "fpnCreated": "{count, plural, =0 {The season already had the FPN age groups} one {# FPN age group created} other {# FPN age groups created}}",
+    "ageGroupPillsLead": "Age group:",
+    "yearOpen": "No limit"
   },
   "emailPreference": {
     "title": "Club messages by email",

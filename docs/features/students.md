@@ -231,7 +231,7 @@ inflates past 40 MB.
 
 ## Mínimos — gap to qualify (POOLSE-85)
 
-**The club types the FPN's tables** (Rui, 19-10-2026); Poolse ships none. Under **Competição**, two more
+**The club types each championship's entry times; the FPN's age groups come in one click** (POOLSE-111, Rui 23-10-2026, reversing "Poolse ships none" of 19-10 for this one table). *Criar os escalões FPN desta época* — on Escalões, and on a standard's Tempos tab while the season has none — creates the federation's nine natação pura groups, Cadetes C (9 and under) to Seniores (19 and over), one ladder for both sexes, as birth years for the year the season ends in: for 2025/2026, Cadetes A is born 2014 and Juniores 2008–2009 (FPN Comunicado 26/25). Groups the season already has are left alone; all are edited or archived like any other. Under **Competição**, two more
 entries, each its own route (`/provas/minimos`, `/provas/escaloes`):
 
 - **Escalões FPN** — the FPN's age groups for a season: a name, a gender (or both) and the birth years.
@@ -243,6 +243,12 @@ entries, each its own route (`/provas/minimos`, `/provas/escaloes`):
   (`@poolse/rules`) the API uses — and **Nadadores**, the coach's board: swimmers in competitive
   levels or with an official time, what each has qualified for and what is within 1, 2 or 5 s, and
   the competitive swimmers no band admits (no birth date, or no band fits).
+
+**Tempos is always a table** (POOLSE-111). A standard opens on *Tempos* once the season has groups (*Geral* stays first in the strip). With none, the tab still draws every FPN event, greyed and disabled, under *"Esta época ainda não tem escalões FPN. Os tempos são por escalão."*, with the one-click button and a link to Escalões; the click lands back on Tempos on the first group. The group pills are led by *Escalão:*.
+
+**Born from / born up to are year wheels** (`YearWheel`): a five-row listbox, newest year first, with *Sem limite* for an open end — scroll, arrows (PageUp/PageDown five), Home/End, or type a year to jump to it; a plain number field before the page's script runs. The API takes a year within the last hundred years up to this one, and refuses *from* after *to*.
+
+**Results are imported from LENEX only** (Rui, 22-10-2026): the import says *"Ficheiro LENEX (.lef/.lxf), o formato que a FPN e o ranking nacional exportam."* and links *Como obter o ficheiro* to the FPN's site. A results PDF is a picture of that data and an Excel is whatever the organiser typed; neither carries the licence, event, course and exact time a swimmer is matched by.
 
 **What counts** is the best time at an **official** meet, in the **same pool length**, inside the
 window. 25 m and 50 m are never converted; no valid time is said in words and is never a gap. A

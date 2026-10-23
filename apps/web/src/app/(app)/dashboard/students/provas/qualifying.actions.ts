@@ -54,6 +54,36 @@ export async function createAgeGroupAction(_previous: FormState, formData: FormD
   return { ok: true };
 }
 
+/**
+ * The FPN's age groups for a season in one click — POOLSE-111. From a standard's
+ * Tempos tab it lands back there on the first group (`returnTo` names the page);
+ * from Escalões it stays put.
+ */
+export async function createFpnAgeGroupsAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const organizationId = text(formData, 'organizationId');
+  let result: { created: number; ids: string[] };
+  try {
+    result = await apiPost<{ created: number; ids: string[] }>(
+      '/qualifying/age-groups/fpn',
+      { seasonId: text(formData, 'seasonId') },
+      { organizationId },
+    );
+  } catch (error) {
+    return failure(error, 'qualifying.saveFailed');
+  }
+  const returnTo = text(formData, 'returnTo');
+  const first = result.ids[0];
+  const toast = { ok: true, toastKey: 'qualifying.fpnCreated', values: { count: result.created } };
+  if (returnTo.startsWith(PROVAS) && first !== undefined) {
+    // No revalidation here: it would redraw the tab with its groups in the same
+    // answer and unmount this button before its redirect and its toast ran.
+    // The redirect renders the page afresh.
+    return { ...toast, redirectTo: `${returnTo}?tab=times&section=${first}` };
+  }
+  revalidatePath(PROVAS, 'layout');
+  return toast;
+}
+
 export async function updateAgeGroupAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const organizationId = text(formData, 'organizationId');
   try {

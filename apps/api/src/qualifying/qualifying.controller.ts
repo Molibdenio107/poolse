@@ -40,6 +40,7 @@ import {
   type StandardInput,
 } from './qualifying.repository.js';
 import { PoolseModule } from '../tenant/modules.js';
+import { clubToday } from '../common/club-day.js';
 
 /**
  * Mínimos — POOLSE-85.
@@ -310,10 +311,15 @@ function name(value: unknown, max: number, key: string): string {
   return text;
 }
 
+/**
+ * A birth year: within the last hundred years and not after this one —
+ * POOLSE-111, the range the year wheel offers. The club's year, not the server's.
+ */
 function year(value: unknown, field: string): number | null {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1900 || parsed > 2200) {
+  const thisYear = Number(clubToday().slice(0, 4));
+  if (!Number.isInteger(parsed) || parsed < thisYear - 100 || parsed > thisYear) {
     throw new UnprocessableEntityException({
       code: 'bad_year',
       message: `${field} is not a year`,
