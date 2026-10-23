@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useSavedAction } from '@/lib/saved';
-import type { BillingModel, PartnerAgreement } from '@/lib/api';
-import { AttachedDocument } from '@/components/file-upload';
+import type { BillingModel, ContractFile, PartnerAgreement } from '@/lib/api';
+import { AttachedDocument, DocumentLink } from '@/components/file-upload';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
 import { saveAgreementAction } from '../../[facilityId]/partners.actions';
-import { formatDate } from '@/lib/date-format';
+import { formatDate, formatStamp } from '@/lib/date-format';
 
 /**
  * What the partner pays — POOLSE-47, criteria 5 and 6.
@@ -27,7 +27,12 @@ import { formatDate } from '@/lib/date-format';
  *
  * **A new agreement is a new row.** Recording next year's price does not
  * overwrite this year's, so last season's invoices still have something that
- * explains them.
+ * explains them — except a *termos por preencher* one (POOLSE-105), which only
+ * held the signed contract and is filled in rather than followed.
+ *
+ * **The signed contract is there from the partner's first day**, and staff who
+ * are not the office see that and nothing else: the file to download, never the
+ * price (Rui, 23-10-2026).
  */
 
 const INITIAL: FormState = { ok: false };
@@ -67,11 +72,13 @@ function vatPercent(locale: string, fraction: string): string {
 export function PartnerAgreementPanel({
   partnerId,
   agreement,
+  contract,
   canManage,
   storageReady,
 }: {
   partnerId: string;
   agreement: PartnerAgreement | null;
+  contract: ContractFile | null;
   canManage: boolean;
   storageReady: boolean;
 }): React.ReactElement {
@@ -79,6 +86,23 @@ export function PartnerAgreementPanel({
   const locale = useLocale();
   const [editing, setEditing] = useState(false);
   const [state, save, pending] = useSavedAction(saveAgreementAction, INITIAL);
+
+  if (!canManage) {
+    return (
+      <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {t('partners.contract')}
+        </h2>
+        <p className="text-sm text-foreground-muted">{t('partners.contractStaff')}</p>
+        <ContractCard
+          partnerId={partnerId}
+          contract={contract}
+          canManage={false}
+          storageReady={storageReady}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
@@ -100,7 +124,11 @@ export function PartnerAgreementPanel({
 
         {canManage && !editing && (
           <button type="button" onClick={() => setEditing(true)} className={BUTTON_QUIET}>
-            {agreement === null ? t('partners.recordAgreement') : t('partners.newAgreement')}
+            {agreement === null
+              ? t('partners.recordAgreement')
+              : agreement.termsPending
+                ? t('partners.recordTerms')
+                : t('partners.newAgreement')}
           </button>
         )}
       </div>
@@ -189,11 +217,19 @@ export function PartnerAgreementPanel({
       {!editing &&
         (agreement === null ? (
           <p className="text-sm text-foreground-muted">{t('partners.noAgreement')}</p>
+        ) : agreement.termsPending ? (
+          // The contract came first. The words carry it; the colour only echoes them.
+          <div className="flex flex-col items-start gap-1.5">
+            <span className="inline-flex items-center rounded border border-warning px-2 py-0.5 text-sm font-medium text-warning">
+              {t('partners.termsPending')}
+            </span>
+            <p className="text-sm text-foreground-muted">{t('partners.termsPendingHint')}</p>
+          </div>
         ) : (
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-sm text-foreground-muted">{t('partners.billingModel')}</dt>
-              <dd className="mt-0.5">{t(`partners.billing.${agreement.billingModel}`)}</dd>
+              <dd className="mt-0.5">{t(`partners.billing.${agreement.billingModel!}`)}</dd>
             </div>
 
             <div>
@@ -203,8 +239,8 @@ export function PartnerAgreementPanel({
                   // Three decimal places kept, because that is the point of the
                   // column. €14,375 shown as €14,38 would be the screen quietly
                   // disagreeing with the contract.
-                  price: formatDecimal(locale, agreement.unitPrice, 3),
-                  unit: t(`partners.unitOf.${agreement.billingModel}`),
+                  price: formatDecimal(locale, agreement.unitPrice!, 3),
+                  unit: t(`partners.unitOf.${agreement.billingModel!}`),
                 })}
               </dd>
             </div>
@@ -227,9 +263,9 @@ export function PartnerAgreementPanel({
               <dt className="text-sm text-foreground-muted">{t('partners.term')}</dt>
               <dd className="mt-0.5">
                 {agreement.endDate === null
-                  ? t('partners.openEnded', { start: formatDate(agreement.startDate) })
+                  ? t('partners.openEnded', { start: formatDate(agreement.startDate!) })
                   : t('partners.termRange', {
-                      start: formatDate(agreement.startDate),
+                      start: formatDate(agreement.startDate!),
                       end: formatDate(agreement.endDate),
                     })}
               </dd>
@@ -245,23 +281,85 @@ export function PartnerAgreementPanel({
         ))}
 
       {/*
-        The signed contract — criterion 6, live since 12 October 2026. It
-        belongs to the agreement in force, so there is nothing to attach it to
-        until one is recorded.
+        The signed contract — from the partner's first day (POOLSE-105). With no
+        agreement yet, attaching one makes a *termos por preencher* agreement to
+        hold it; replacing one keeps the old file, listed below.
       */}
       <div className="border-t border-border pt-4">
         <h3 className="mb-3 text-sm font-medium">{t('partners.contract')}</h3>
-        {agreement === null ? (
-          <p className="text-sm text-foreground-muted">{t('files.agreementFirst')}</p>
-        ) : (
-          <AttachedDocument
-            fileId={agreement.documentFileId}
-            target={`agreement:${partnerId}`}
-            canManage={canManage}
-            storageReady={storageReady}
-          />
+        <ContractCard
+          partnerId={partnerId}
+          contract={contract}
+          canManage={canManage}
+          storageReady={storageReady}
+        />
+        {agreement !== null && agreement.previousContracts.length > 0 && (
+          <div className="mt-4">
+            <h4 className="mb-2 text-sm font-medium text-foreground-muted">
+              {t('partners.previousContracts')}
+            </h4>
+            <ul className="flex flex-col gap-2">
+              {agreement.previousContracts.map((version) => (
+                <li key={`${version.fileId}-${version.replacedAt}`} className="flex flex-col gap-0.5 text-sm">
+                  <DocumentLink
+                    fileId={version.fileId}
+                    contentType={version.contentType}
+                    fileName={version.originalName}
+                    quiet
+                  />
+                  <span className="text-foreground-muted">
+                    {t('partners.previousContractLine', {
+                      attachedBy: version.attachedBy,
+                      attachedAt: formatStamp(version.attachedAt),
+                      replacedBy: version.replacedBy,
+                      replacedAt: formatStamp(version.replacedAt),
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </section>
+  );
+}
+
+/** The contract in force: its name, who filed it, and the controls for the office. */
+function ContractCard({
+  partnerId,
+  contract,
+  canManage,
+  storageReady,
+}: {
+  partnerId: string;
+  contract: ContractFile | null;
+  canManage: boolean;
+  storageReady: boolean;
+}): React.ReactElement {
+  const t = useTranslations();
+  return (
+    <div className="flex flex-col gap-2">
+      {contract !== null && (
+        <p className="text-sm">
+          <span className="font-medium">{contract.originalName}</span>
+          <span className="text-foreground-muted">
+            {' — '}
+            {t('partners.contractAttached', {
+              name: contract.attachedBy,
+              date: formatStamp(contract.attachedAt),
+            })}
+          </span>
+        </p>
+      )}
+      <AttachedDocument
+        fileId={contract?.fileId ?? null}
+        target={`agreement:${partnerId}`}
+        canManage={canManage}
+        storageReady={storageReady}
+        contentType={contract?.contentType}
+        fileName={contract?.originalName}
+      />
+    </div>
   );
 }

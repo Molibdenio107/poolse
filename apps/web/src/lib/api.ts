@@ -3258,17 +3258,40 @@ export interface PartnerContact {
 export interface PartnerAgreement {
   id: string;
   seasonId: string | null;
-  startDate: string;
+  /**
+   * The contract came before the terms — POOLSE-105. Start date, billing model
+   * and price are then all null, never one without the others.
+   */
+  termsPending: boolean;
+  startDate: string | null;
   endDate: string | null;
-  billingModel: BillingModel;
-  /** Decimal string. Never parsed — see the note above. */
-  unitPrice: string;
+  billingModel: BillingModel | null;
+  /** Decimal string. Never parsed — see the note above. Null while the terms are pending. */
+  unitPrice: string | null;
   /** A fraction as a string: '0.2300' is 23%. Null is isento. */
   vatRate: string | null;
   paymentPeriod: string | null;
   notes: string | null;
   /** The signed contract, read at `/files/:id`; null when none is filed. */
   documentFileId: string | null;
+  /** The contracts this one replaced, newest first — POOLSE-105. */
+  previousContracts: ContractVersion[];
+}
+
+/** A signed-contract file — POOLSE-105. */
+export interface ContractFile {
+  fileId: string;
+  originalName: string;
+  contentType: string;
+  attachedAt: string;
+  /** The person's name, composed by the API. */
+  attachedBy: string;
+}
+
+/** A contract that was replaced or removed, and by whom. */
+export interface ContractVersion extends ContractFile {
+  replacedAt: string;
+  replacedBy: string;
 }
 
 export interface PartnerGroup {
@@ -3311,7 +3334,13 @@ export interface PartnerDetail {
    */
   managedLessons: boolean;
   contacts: PartnerContact[];
+  /** The typed terms — owner and admin only; null for everybody else. */
   agreement: PartnerAgreement | null;
+  /**
+   * The signed contract on its own: staff may download it (Rui, 23-10-2026)
+   * while the terms stay the office's — POOLSE-105.
+   */
+  contract: ContractFile | null;
   groups: PartnerGroup[];
   bookings: PartnerBooking[];
   canManage: boolean;

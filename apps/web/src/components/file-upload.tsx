@@ -10,14 +10,12 @@ import {
 } from '@/app/(app)/dashboard/files.actions';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 import { EntityIcon } from '@/components/entity-icon';
-import { isImagePurpose, MAX_FILE_BYTES, purposeOf, type FileTarget } from '@/lib/files';
+import { acceptFor, isImagePurpose, MAX_FILE_BYTES, purposeOf, WORD_TYPE, type FileTarget } from '@/lib/files';
 import { useSavedAction } from '@/lib/saved';
 import { cn } from '@/lib/utils';
 
 const INITIAL: FormState = { ok: false };
 
-const ACCEPT_IMAGES = 'image/jpeg,image/png,image/webp';
-const ACCEPT_DOCUMENTS = 'application/pdf,image/jpeg,image/png,image/webp';
 
 /**
  * Choosing a file and filing it — 12 October 2026.
@@ -107,7 +105,7 @@ export function FileUpload({
       ref={input}
       type="file"
       className="hidden"
-      accept={isImagePurpose(purpose) ? ACCEPT_IMAGES : ACCEPT_DOCUMENTS}
+      accept={acceptFor(purpose)}
       onChange={(event) => chosen(event.target.files)}
     />
   );
@@ -237,6 +235,10 @@ async function shrink(file: File, longestEdge: number): Promise<File> {
  * certificate. Shows a link when there is one and, for whoever may file it,
  * the control to add, replace or remove it. `once` is the certificate's rule:
  * attached once, never swapped (a different scan is a different record).
+ *
+ * A Word file (a contract, POOLSE-105) is a download — no browser shows one —
+ * so its link says so and carries the file's own name; `contentType` and
+ * `fileName` say which it is when the caller knows.
  */
 export function AttachedDocument({
   fileId,
@@ -244,12 +246,16 @@ export function AttachedDocument({
   canManage,
   storageReady,
   once = false,
+  contentType,
+  fileName,
 }: {
   fileId: string | null;
   target: FileTarget;
   canManage: boolean;
   storageReady: boolean;
   once?: boolean;
+  contentType?: string | undefined;
+  fileName?: string | undefined;
 }): React.ReactElement | null {
   const t = useTranslations();
   if (fileId === null && !canManage) return null;
@@ -257,15 +263,7 @@ export function AttachedDocument({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {fileId !== null ? (
-        <a
-          href={`/files/${fileId}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-control items-center justify-center gap-2 rounded border border-border bg-surface px-4 text-control text-primary hover:bg-surface-muted"
-        >
-          <Paperclip className="size-4" aria-hidden="true" />
-          {t('files.viewDocument')}
-        </a>
+        <DocumentLink fileId={fileId} contentType={contentType} fileName={fileName} />
       ) : (
         <span className="text-sm text-foreground-muted">{t('files.noDocument')}</span>
       )}
@@ -273,7 +271,13 @@ export function AttachedDocument({
         <FileUpload
           target={target}
           label={fileId === null ? t('files.attachDocument') : t('files.replaceDocument')}
-          hint={fileId === null ? t('files.documentHint') : undefined}
+          hint={
+            fileId !== null
+              ? undefined
+              : purposeOf(target) === 'agreement_document'
+                ? t('files.contractHint')
+                : t('files.documentHint')
+          }
           unavailable={storageReady ? null : t('files.notConfigured')}
         />
       )}
@@ -281,5 +285,44 @@ export function AttachedDocument({
         <DetachFileButton target={target} label={t('files.removeDocument')} />
       )}
     </div>
+  );
+}
+
+/**
+ * One stored document as a link: opened in a new tab, or — for Word — saved
+ * under its own name (the API serves it as an attachment).
+ */
+export function DocumentLink({
+  fileId,
+  contentType,
+  fileName,
+  quiet = false,
+}: {
+  fileId: string;
+  contentType?: string | undefined;
+  fileName?: string | undefined;
+  /** A plain text link, for a line in a list rather than a button. */
+  quiet?: boolean;
+}): React.ReactElement {
+  const t = useTranslations();
+  const word = contentType === WORD_TYPE;
+  const label = quiet && fileName !== undefined
+    ? fileName
+    : word
+      ? t('files.downloadDocument')
+      : t('files.viewDocument');
+  return (
+    <a
+      href={`/files/${fileId}`}
+      {...(word ? { download: fileName ?? true } : { target: '_blank', rel: 'noreferrer' })}
+      className={
+        quiet
+          ? 'inline-flex items-center gap-1.5 text-primary underline-offset-2 hover:underline coarse:-my-3 coarse:py-3'
+          : 'inline-flex h-control items-center justify-center gap-2 rounded border border-border bg-surface px-4 text-control text-primary hover:bg-surface-muted'
+      }
+    >
+      <Paperclip className="size-4" aria-hidden="true" />
+      {label}
+    </a>
   );
 }

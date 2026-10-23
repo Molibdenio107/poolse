@@ -3297,7 +3297,14 @@
       "contactPhone": "Telefone",
       "notes": "Notas"
     },
-    "nifInvalid": "Este NIF não é possível — verifique os nove dígitos."
+    "nifInvalid": "Este NIF não é possível — verifique os nove dígitos.",
+    "termsPending": "Termos por preencher",
+    "termsPendingHint": "O contrato está guardado, mas o preço e as datas ainda não foram registados. Até lá, esta parceria não conta para nenhum valor contratado.",
+    "recordTerms": "Registar os termos",
+    "contractAttached": "Juntado por {name} em {date}.",
+    "previousContracts": "Versões anteriores",
+    "previousContractLine": "Juntado por {attachedBy} em {attachedAt}; deixou de estar em vigor em {replacedAt}, por {replacedBy}.",
+    "contractStaff": "O contrato assinado com esta entidade. Os termos e os preços são da secretaria."
   },
   "grid": {
     "partnership": "Parceria",
@@ -4778,7 +4785,7 @@
     "photoNumber": "Fotografia {number}",
     "chooseFile": "Escolha um ficheiro.",
     "tooLarge": "O ficheiro tem mais de 10 MB.",
-    "wrongType": "Só são aceites PDF, JPEG, PNG e WebP — e, para fotografias, só imagens.",
+    "wrongType": "Só são aceites PDF, JPEG, PNG e WebP — e Word (.docx) para contratos. Para fotografias, só imagens.",
     "uploadFailed": "Não foi possível guardar o ficheiro.",
     "removeFailed": "Não foi possível retirar a fotografia.",
     "notConfigured": "O armazenamento de ficheiros ainda não está configurado nesta instalação.",
@@ -4794,14 +4801,15 @@
     "attachDocument": "Juntar documento",
     "replaceDocument": "Substituir documento",
     "removeDocument": "Retirar documento",
-    "agreementFirst": "Registe primeiro o acordo; o contrato assinado fica junto dele.",
     "certificateAfterSave": "Depois de guardar, junte o certificado digitalizado ao registo, no histórico abaixo.",
     "logoTitle": "Logótipo do clube",
     "logoHint": "É do clube e o mesmo em todas as instalações. Aparece no canto superior de todos os ecrãs, ao lado do nome do clube, e no topo dos documentos impressos.",
     "logoAlt": "Logótipo do clube",
     "logoUpload": "Carregar logótipo",
     "logoReplace": "Substituir logótipo",
-    "logoRemove": "Retirar logótipo"
+    "logoRemove": "Retirar logótipo",
+    "contractHint": "PDF, Word (.docx) ou fotografia do contrato, até 10 MB.",
+    "downloadDocument": "Descarregar documento"
   },
   "archive": {
     "title": "Arquivados",

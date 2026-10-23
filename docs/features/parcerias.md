@@ -13,6 +13,9 @@ is what lands on the lane grid: `ES D. Dinis` never has a booking; `6A` does.
 |---|---|
 | Read the list | everybody who can read the site |
 | Add or edit a partnership, a contact, an agreement or a group | owner, admin |
+| Attach, replace or remove the signed contract | owner, admin |
+| Download the signed contract | owner, admin, instructor, maintenance |
+| See the agreement's terms and the contract's earlier versions | owner, admin |
 | Import a partnerships sheet | owner, admin |
 | Export the partner list | owner, admin |
 
@@ -20,6 +23,26 @@ Bulk creation takes the role single creation takes, and the export takes the sam
 a partner sheet carries every school the club works with and its coordinators' telephone
 numbers, which is not a list an instructor needs in order to teach. All three are enforced in
 the API; hiding the control is never the control.
+
+## The signed contract
+
+POOLSE-105. The **Acordo** tab takes the signed contract from the day the partner exists —
+PDF, Word (.docx) or a photograph, up to 10 MB.
+
+- **Before any terms.** With no agreement yet, attaching the contract creates one with no
+  start date, billing model or price, shown as **Termos por preencher**. It counts towards no
+  contracted figure. *Registar os termos* fills that same agreement in rather than adding a
+  second one. The three terms are set together or not at all (a CHECK).
+- **Replacing keeps the old one.** Each file attached to an agreement is a row in
+  `partner_contract_version`, with who attached it and when. Replacing or removing it records
+  who did that and when. *Versões anteriores* lists the earlier files, each still downloadable.
+  The history is insert-only for the app, bar closing a version.
+- **Staff download, the office decides** (Rui, 23-10-2026). Instructors and maintenance see
+  the tab only when there is a contract. They see the file and a download link — never the
+  price, the terms or the earlier versions, which the API leaves out for them. A family is
+  refused the file.
+- **Word is a download.** No browser shows a .docx, so the link says *Descarregar documento*
+  and the file arrives under its own name. A PDF or a photograph opens in a new tab.
 
 ## Importing a partnerships sheet
 

@@ -10,7 +10,7 @@ Built 12 October 2026. What a club can upload, who can see it, and how it is kep
 | A tank's page | Photographs of the tank | Owner, admin | All staff |
 | A site's page → Fotografias, above the site's photographs (POOLSE-104; Dados do clube 13–23-10-2026, Faturação before) | The club's logo, shown in the top corner of every screen beside the club's name and at the head of a printed invoice | Owner, admin | Every member, families included |
 | A site's apólices (Seguros) | The policy document, one per apólice, replaceable | Owner, admin | Owner, admin |
-| A partnership's Acordo tab | The signed contract, on the agreement in force | Owner, admin | Owner, admin |
+| A partnership's Acordo tab | The signed contract, from the partner's first day; PDF, Word or a photograph; earlier versions kept (POOLSE-105) | Owner, admin | All staff (since 23-10-2026) |
 | A staff member's qualifications | The scanned certificate, one per record, **attached once** | Owner, admin | Owner, admin, and the person it certifies |
 
 **Not yet:** student photographs (they wait for the photo-consent rule: staff and the family,
@@ -20,7 +20,10 @@ only with consent), the identity document on a student's page, and incident atta
 ## Rules
 
 - **10 MB a file. PDF, JPEG, PNG or WebP**, judged by the file's first bytes, never its name.
-  A photograph or a logo must be an image.
+  A photograph or a logo must be an image. **A partnership's contract may also be Word
+  (.docx)** — a ZIP whose parts include `word/document.xml`, so a .pptx or .xlsx is refused —
+  and only a contract: the schema's CHECK says so too. A Word file is served as a download
+  under its own name; everything else opens in the browser.
 - **Photographs are shrunk in the browser** before they are sent (longest edge 2000 px; a
   logo 1000 px), so a phone picture becomes a few hundred KB.
 - **A file is only ever opened through the app** (`/files/<id>`), which asks the API, which

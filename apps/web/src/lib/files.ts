@@ -53,3 +53,16 @@ export function isImagePurpose(purpose: FilePurpose): boolean {
 }
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+/** A Word document — accepted for a partnership's contract only (POOLSE-105). */
+export const WORD_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+/**
+ * What the picker offers for a purpose. The API judges the bytes either way;
+ * this only spares somebody choosing a file that will be refused.
+ */
+export function acceptFor(purpose: FilePurpose): string {
+  if (isImagePurpose(purpose)) return 'image/jpeg,image/png,image/webp';
+  const documents = 'application/pdf,image/jpeg,image/png,image/webp';
+  return purpose === 'agreement_document' ? `${documents},.docx,${WORD_TYPE}` : documents;
+}

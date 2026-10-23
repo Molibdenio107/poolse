@@ -446,6 +446,8 @@ shown as a panel under Preços on each site's page** — an instructor reads the
 values (`canSeeValues`), because the price list refuses them outright and a concession must not
 be the way round it. `docs/features/students.md`.
 
+**A partnership's contract comes before its terms and keeps its versions.** POOLSE-105. Attaching one with no agreement makes a *termos por preencher* agreement: start date, model and price all null, by CHECK, and filled in place by *Registar os termos*. `partner_contract_version` is the history (insert-only bar closing one), and `document_key` stays the current pointer. Staff download it through `PartnerDetail.contract`, outside the withheld `agreement`. Word is a contract-only type, sniffed by content, served as an attachment; `acceptFor(purpose)` in `lib/files.ts` is the picker's list and `DocumentLink` the link. `docs/features/parcerias.md`.
+
 **One price list, four `fee_kind`s — never a table per fee type.** `mensalidade`,
 `inscricao`, `seguro`, `quota`, all on `fee_plan`, each with its shape held by a CHECK: only
 a mensalidade is priced by a level and a frequency, only a quota is banded by age, and
