@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, useFocusFirstError } from '@/components/ui/field';
+import { TurmaPicker, type TurmaOption } from '@/components/turma-picker';
 import { formatStamp } from '@/lib/date-format';
 import type { Lead, TrialOption } from '@/lib/api';
 import { useSavedAction } from '@/lib/saved';
@@ -18,14 +19,6 @@ import {
 
 const INITIAL: FormState = { ok: false };
 
-export interface TurmaChoice {
-  id: string;
-  name: string;
-  levelName: string | null;
-  capacity: number | null;
-  active: number;
-}
-
 const BUTTON =
   'inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted';
 const PRIMARY =
@@ -35,44 +28,22 @@ const PRIMARY =
  * The four answers to one request — POOLSE-69. Each opens a question in a
  * dialog and is one call; the API does the rest in one transaction.
  *
- * The turma list puts the requested level's turmas first, because that is the
- * answer reception is usually about to give, and says how full each is in
- * words so "why not this one" is on the screen.
+ * The turma is chosen in `TurmaPicker` (POOLSE-110): grouped by level with the
+ * requested level first, searchable, each row its slots, instructor and fill.
+ * A full turma is pickable for the waiting list only.
  */
 export function LeadActions({
   lead,
   turmas,
 }: {
   lead: Lead;
-  turmas: TurmaChoice[];
+  turmas: TurmaOption[];
 }): React.ReactElement {
-  const t = useTranslations();
-  const ordered = [...turmas].sort((a, b) => {
-    const wantA = lead.levelName !== null && a.levelName === lead.levelName ? 0 : 1;
-    const wantB = lead.levelName !== null && b.levelName === lead.levelName ? 0 : 1;
-    return wantA - wantB || a.name.localeCompare(b.name);
-  });
-  const options = [
-    { value: '', label: t('leads.pickTurma') },
-    ...ordered.map((g) => ({
-      value: g.id,
-      label: [
-        g.name,
-        g.levelName,
-        g.capacity === null
-          ? t('leads.turmaUncapped', { active: g.active })
-          : t('leads.turmaFill', { active: g.active, capacity: g.capacity }),
-      ]
-        .filter(Boolean)
-        .join(' · '),
-    })),
-  ];
-
   return (
     <div className="flex flex-wrap gap-2">
-      <PlaceDialog lead={lead} options={options} kind="convert" />
-      <PlaceDialog lead={lead} options={options} kind="waitlist" />
-      <TrialDialog lead={lead} options={options} />
+      <PlaceDialog lead={lead} turmas={turmas} kind="convert" />
+      <PlaceDialog lead={lead} turmas={turmas} kind="waitlist" />
+      <TrialDialog lead={lead} turmas={turmas} />
       <DismissDialog lead={lead} />
     </div>
   );
@@ -155,11 +126,11 @@ function Buttons({
 
 function PlaceDialog({
   lead,
-  options,
+  turmas,
   kind,
 }: {
   lead: Lead;
-  options: { value: string; label: string }[];
+  turmas: TurmaOption[];
   kind: 'convert' | 'waitlist';
 }): React.ReactElement {
   const t = useTranslations();
@@ -172,20 +143,20 @@ function PlaceDialog({
       title={t(kind === 'convert' ? 'leads.convertTitle' : 'leads.waitlistTitle', { name })}
       description={t(kind === 'convert' ? 'leads.convertHint' : 'leads.waitlistHint')}
     >
-      {(done) => <PlaceForm lead={lead} options={options} kind={kind} verb={verb} done={done} />}
+      {(done) => <PlaceForm lead={lead} turmas={turmas} kind={kind} verb={verb} done={done} />}
     </Question>
   );
 }
 
 function PlaceForm({
   lead,
-  options,
+  turmas,
   kind,
   verb,
   done,
 }: {
   lead: Lead;
-  options: { value: string; label: string }[];
+  turmas: TurmaOption[];
   kind: 'convert' | 'waitlist';
   verb: string;
   done: () => void;
@@ -199,14 +170,19 @@ function PlaceForm({
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state.fields, state);
   const turmaKey = state.fields?.['classGroupId'];
+  const [picked, setPicked] = useState('');
 
   return (
     <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
       <input type="hidden" name="leadId" value={lead.id} />
-      <SelectField
+      <TurmaPicker
         name="classGroupId"
         label={t('leads.turma')}
-        options={options}
+        turmas={turmas}
+        requestedLevelName={lead.levelName}
+        // A full turma is a waiting list's answer and nobody else's.
+        allowFull={kind === 'waitlist'}
+        onChange={setPicked}
         error={turmaKey === undefined ? undefined : t(turmaKey, state.values ?? {})}
       />
       {/*
@@ -221,17 +197,17 @@ function PlaceForm({
             {t(key, state.values ?? {})}
           </p>
         ))}
-      <Buttons onCancel={done} pending={pending} submitLabel={verb} />
+      <Buttons onCancel={done} pending={pending} submitLabel={verb} disabled={picked === ''} />
     </form>
   );
 }
 
 function TrialDialog({
   lead,
-  options,
+  turmas,
 }: {
   lead: Lead;
-  options: { value: string; label: string }[];
+  turmas: TurmaOption[];
 }): React.ReactElement {
   const t = useTranslations();
   const name = `${lead.swimmerFirstName} ${lead.swimmerLastName}`;
@@ -241,7 +217,7 @@ function TrialDialog({
       title={t('leads.trialTitle', { name })}
       description={t('leads.trialHint')}
     >
-      {(done) => <TrialForm lead={lead} options={options} done={done} />}
+      {(done) => <TrialForm lead={lead} turmas={turmas} done={done} />}
     </Question>
   );
 }
@@ -254,11 +230,11 @@ type Sessions =
 
 function TrialForm({
   lead,
-  options,
+  turmas,
   done,
 }: {
   lead: Lead;
-  options: { value: string; label: string }[];
+  turmas: TurmaOption[];
   done: () => void;
 }): React.ReactElement {
   const t = useTranslations();
@@ -294,11 +270,13 @@ function TrialForm({
   return (
     <form ref={formRef} action={dispatch} className="flex flex-col gap-4">
       <input type="hidden" name="leadId" value={lead.id} />
-      <SelectField
+      <TurmaPicker
         name="classGroupId"
         label={t('leads.turma')}
-        options={options}
-        onValueChange={setGroupId}
+        turmas={turmas}
+        requestedLevelName={lead.levelName}
+        allowFull={false}
+        onChange={setGroupId}
       />
       {sessions.state === 'idle' && (
         <p className="text-sm text-foreground-muted">{t('leads.trialPickTurmaFirst')}</p>

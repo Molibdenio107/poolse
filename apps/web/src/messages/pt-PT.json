@@ -4971,10 +4971,7 @@
     "consentLabel": "Consentimento",
     "consentGiven": "Dado a {when} (texto de {version})",
     "turma": "Turma",
-    "pickTurma": "Escolha uma turma",
     "pickRequired": "Escolha uma opção.",
-    "turmaFill": "{active} de {capacity} lugares ocupados",
-    "turmaUncapped": "{active} inscritos, sem lotação definida",
     "convert": "Inscrever",
     "convertTitle": "Inscrever {name}",
     "convertHint": "Cria o aluno e o encarregado de educação com os dados do pedido e inscreve-o na turma. Se o NIF já pertencer a um aluno do clube, o pedido fica associado a esse aluno.",
@@ -5676,5 +5673,21 @@
     "copyReference": "Copiar a referência",
     "transferLine": "Transferência bancária: {iban} (titular: {holder})",
     "mbwayLine": "MB WAY: {phone}"
+  },
+  "turmaPicker": {
+    "search": "Procurar por turma, nível ou professor",
+    "keyboardHint": "Setas para mover, Enter para escolher, Esc para fechar.",
+    "requestedLevel": "Nível pedido — {level}",
+    "noLevel": "Sem nível",
+    "noMatch": "Nenhuma turma corresponde à pesquisa.",
+    "noSlots": "Sem horário",
+    "noInstructor": "Sem professor",
+    "fill": "{active} / {capacity}",
+    "uncapped": "{active} · sem limite",
+    "full": "Cheia",
+    "fullWaitlist": "Cheia — só lista de espera",
+    "picked": "Escolhida: {name}",
+    "change": "Alterar",
+    "changeLabel": "Alterar a turma ({name})"
   }
 }

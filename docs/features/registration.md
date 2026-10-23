@@ -67,6 +67,18 @@ one call:
     off.
 - **Dispensar** needs a reason. Nothing is sent to the family.
 
+**Choosing the turma** (POOLSE-110) is `TurmaPicker` (`components/turma-picker.tsx`) in Inscrever, Lista de espera and Aula experimental — a list, not a dropdown:
+
+- grouped by level, the requested level first under *Nível pedido*, then the ladder in order, then turmas with no level;
+- each row the turma's name, its weekly slots, its instructor and how full it is, a bar *and* "8 / 12" (or *sem limite*);
+- a full turma is shown, in muted ink and marked *Cheia*, and can be picked only for the waiting list (*Cheia — só lista de espera*); within a level it comes after the ones that can be picked;
+- a search box filters as you type, by turma, level or instructor, ignoring accents and case;
+- keyboard: the search box owns the list — arrows move through the pickable rows, Enter picks, Escape closes the list back to an earlier choice (the dialog lets it), and the choice is announced;
+- the choice is said back as one line with *Alterar*; Inscrever and Lista de espera stay disabled until a turma is chosen, and Aula experimental lists the turma's next dates only then;
+- on a phone the dialog is a full-height sheet, so the picker is too.
+
+The new-student enrolment form and the app's enrolment (POOLSE-82) still use their own controls; swapping them to the picker is a follow-up.
+
 Waitlisting and enrolling go through the student form's own rules (`parseStudent`):
 
 - the club's age of majority and the guardian requirement;

@@ -119,6 +119,10 @@ export function Dialog({
 
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
+        // A control inside that closes itself on Escape — the turma picker
+        // over an earlier choice (POOLSE-110) — marks itself, and the key is
+        // its own: Escape then closes that control and not the whole question.
+        if (event.target instanceof Element && event.target.closest('[data-own-escape]') !== null) return;
         event.stopPropagation();
         close();
         return;

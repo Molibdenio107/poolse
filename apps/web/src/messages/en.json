@@ -4971,10 +4971,7 @@
     "consentLabel": "Consent",
     "consentGiven": "Given {when} (text of {version})",
     "turma": "Class",
-    "pickTurma": "Choose a class",
     "pickRequired": "Choose an option.",
-    "turmaFill": "{active} of {capacity} places taken",
-    "turmaUncapped": "{active} enrolled, no capacity set",
     "convert": "Enrol",
     "convertTitle": "Enrol {name}",
     "convertHint": "Creates the student and the guardian from the request and enrols them in the class. If the NIF already belongs to one of the club's students, the request is linked to that student.",
@@ -5676,5 +5673,21 @@
     "copyReference": "Copy the reference",
     "transferLine": "Bank transfer: {iban} (account holder: {holder})",
     "mbwayLine": "MB WAY: {phone}"
+  },
+  "turmaPicker": {
+    "search": "Search by class, level or instructor",
+    "keyboardHint": "Arrows to move, Enter to choose, Esc to close.",
+    "requestedLevel": "Level requested — {level}",
+    "noLevel": "No level",
+    "noMatch": "No class matches the search.",
+    "noSlots": "No timetable",
+    "noInstructor": "No instructor",
+    "fill": "{active} / {capacity}",
+    "uncapped": "{active} · no limit",
+    "full": "Full",
+    "fullWaitlist": "Full — waiting list only",
+    "picked": "Chosen: {name}",
+    "change": "Change",
+    "changeLabel": "Change the class ({name})"
   }
 }

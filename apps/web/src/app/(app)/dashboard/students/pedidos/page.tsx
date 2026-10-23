@@ -6,7 +6,8 @@ import { backProp, originBack } from '@/lib/back';
 import { appOrigin } from '@/lib/public-water-link';
 import { PageEmpty, PageError, PageShell } from '@/components/page-shell';
 import { SectionPills, pickSection, sectionHref } from '@/components/section-pills';
-import { LeadActions, type TurmaChoice } from './lead-actions';
+import { LeadActions } from './lead-actions';
+import type { TurmaOption } from '@/components/turma-picker';
 import { RegistrationSettingsForm } from './registration-settings';
 
 const PATH = '/dashboard/students/pedidos';
@@ -103,14 +104,22 @@ export default async function LeadsPage({
       );
   } else {
     const classes = await outcome(apiFetch<Classes>('/class-groups'));
-    const turmas: TurmaChoice[] =
+    // The picker's rows (POOLSE-110): slots and instructor are already on the
+    // turma, and the levels come in ladder order, which orders the groups.
+    const ladder = classes.state === 'ok' ? classes.data.options.levels.map((level) => level.id) : [];
+    const turmas: TurmaOption[] =
       classes.state === 'ok'
         ? classes.data.groups.map((g) => ({
             id: g.id,
             name: g.name,
             levelName: g.levelName,
+            levelOrder: g.levelId === null || !ladder.includes(g.levelId) ? null : ladder.indexOf(g.levelId),
             capacity: g.capacity,
             active: g.students.filter((s) => s.status === 'active').length,
+            slots: [...g.schedules]
+              .sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime))
+              .map((slot) => ({ weekday: slot.weekday, startTime: slot.startTime })),
+            instructorName: g.instructorName,
           }))
         : [];
     const open = openLeads.data.leads;
