@@ -8,7 +8,7 @@ import type { EnergyMeter } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/field';
 import type { FormState } from '../../../actions';
-import { METER_KINDS } from '../../energy-panel';
+import { METER_CARRIER_OPTIONS, METER_KINDS } from '../../energy-panel';
 import { archiveMeter, recordReading, removeReading, updateMeter } from '../../energy.actions';
 
 /**
@@ -176,6 +176,12 @@ export function MeterAdmin({
             label={t('energy.kindLabel')}
             initial={meter.kind}
             options={METER_KINDS.map((kind) => ({ value: kind, label: t(`energy.kind.${kind}`) }))}
+          />
+          <SelectField
+            name="carrier"
+            label={t('energy.carrierLabel')}
+            initial={meter.carrier}
+            options={METER_CARRIER_OPTIONS.map((carrier) => ({ value: carrier, label: t(`energy.carrier.${carrier}`) }))}
           />
           <TextField name="unit" label={t('energy.unit')} initial={meter.unit} className="w-28" />
         </div>

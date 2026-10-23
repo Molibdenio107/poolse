@@ -100,6 +100,8 @@ export function InvoiceForm({
   importAvailable,
   collapsed = false,
   dropAnywhere = false,
+  initialMeterId,
+  onDropped,
 }: {
   /** Fixed, on a meter's page. Absent when `meters` offers the choice. */
   meterId?: string;
@@ -122,11 +124,15 @@ export function InvoiceForm({
    * keeps to the file chooser, so the facility screens never swallow a drop.
    */
   dropAnywhere?: boolean;
+  /** The meter chosen when the form opens — a missing bill's link names it (POOLSE-106). */
+  initialMeterId?: string | undefined;
+  /** Told of every file dropped on the page, read or not, so the card holding the form opens. */
+  onDropped?: (() => void) | undefined;
 }): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
 
-  const [selectedId, setSelectedId] = useState(meterId ?? '');
+  const [selectedId, setSelectedId] = useState(meterId ?? initialMeterId ?? '');
   const [newMeterFacilityId, setNewMeterFacilityId] = useState(
     facilities !== undefined && facilities.length === 1 ? facilities[0]!.id : '',
   );
@@ -156,6 +162,7 @@ export function InvoiceForm({
   const readForm = useRef<HTMLFormElement>(null);
   const { dragging } = useFileDrop((file) => {
     if (!dropAnywhere) return;
+    onDropped?.();
     if (!importAvailable) {
       setDropNote('energy.invoice.importDisabled');
       return;

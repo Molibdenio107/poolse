@@ -861,6 +861,9 @@ export interface TaskTarget extends TaskOption {
 // ---------------------------------------------------------------------------
 
 export type MeterKind = 'pump' | 'heating' | 'lighting' | 'total' | 'other';
+/** What a meter measures — POOLSE-106. */
+export type MeterCarrier = 'electricity' | 'gas' | 'water';
+export const METER_CARRIERS: readonly MeterCarrier[] = ['electricity', 'gas', 'water'];
 /** Whether a value is the dial (ever increasing) or a consumption in itself. */
 export type MeterReads = 'cumulative_index' | 'interval_consumption';
 
@@ -872,6 +875,7 @@ export interface EnergyMeter {
   poolName: string | null;
   name: string;
   kind: MeterKind;
+  carrier: MeterCarrier;
   unit: string;
   reads: MeterReads;
   initialIndex: number | null;
@@ -1118,6 +1122,48 @@ export interface MonthlyCost {
   totalCents: number | null;
   kwh: number | null;
   bills: number;
+}
+
+/** One carrier's bills in one month — POOLSE-106. `cents` is null when none, or withheld. */
+export interface CarrierMonth {
+  cents: number | null;
+  quantity: number | null;
+  bills: number;
+}
+
+/** A total, and the same months a year earlier — only months billed in both years. */
+export interface ComparedTotal {
+  cents: number | null;
+  quantity: number | null;
+  previousCents: number | null;
+  currentComparedCents: number | null;
+  comparedMonths: number;
+}
+
+/** `GET /energy/summary` — the Energia page's dashboard. */
+export interface EnergySummary {
+  canSeeMoney: boolean;
+  months: { month: string; carriers: Record<MeterCarrier, CarrierMonth> }[];
+  metered: Record<MeterCarrier, number>;
+  thisMonth: { month: string; carriers: Record<MeterCarrier, ComparedTotal> };
+  lastTwelve: Record<MeterCarrier, ComparedTotal>;
+  lastBilledMonth: string | null;
+  perUse: {
+    allocatedCents: number;
+    lessonHours: number;
+    bathers: number;
+    perLessonHourCents: number | null;
+    perBatherCents: number | null;
+    poolsCounted: number;
+    pools: number;
+  } | null;
+  missing: {
+    meterId: string;
+    meterName: string;
+    facilityName: string;
+    carrier: MeterCarrier;
+    lastPeriodEnd: string | null;
+  }[];
 }
 
 export interface EnergyCosts {
@@ -3830,6 +3876,8 @@ export interface BillingOverview {
   manualCentsAllTime: number;
   manualCentsLast12Months: number;
   manualPaymentCount: number;
+  /** Bills read by the model, per month, newest last — POOLSE-106. */
+  energyReads: { month: string; reads: number; unread: number }[];
   renewals: RenewalDue[];
   renewalsWindowDays: number;
 }

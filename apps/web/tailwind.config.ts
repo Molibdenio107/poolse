@@ -139,6 +139,7 @@ export default {
         chart: {
           1: rgb('--chart-1'),
           2: rgb('--chart-2'),
+          3: rgb('--chart-3'),
         },
         // POOLSE-18. Tokens rather than per-component literals, so a role reads
         // the same in the People list, a filter chip and the invite dialog.

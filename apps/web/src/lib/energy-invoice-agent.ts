@@ -39,12 +39,60 @@ import {
  * tool schema is the contract.
  */
 
-const MODEL = process.env['POOLSE_ENERGY_INVOICE_MODEL'] ?? 'claude-opus-5';
+const MODEL = process.env['POOLSE_ENERGY_INVOICE_MODEL'] ?? 'claude-opus-5-5';
 
 /** A bill is a handful of pages; anything past this is not one. */
-const MAX_BYTES = 12 * 1024 * 1024;
+export const MAX_BYTES = 12 * 1024 * 1024;
 
-const TOOL_NAME = 'record_invoice';
+/**
+ * The reply's shape — structured output rather than a forced tool call
+ * (POOLSE-106, before switching the reading on): the current Opus refuses a
+ * forced `tool_choice`, the move the PDF and water readers already made.
+ */
+function invoiceSchema(): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: {
+      ...HEADER_PROPERTIES,
+      registers: {
+        type: 'array',
+        description: 'One entry per register on the dial. Omit fields not printed.',
+        items: {
+          type: 'object',
+          properties: Object.fromEntries(
+            REGISTER_FIELDS.map((field) =>
+              field === 'register'
+                ? [field, { type: 'string', enum: [...REGISTERS] }]
+                : [field, { type: 'string' }],
+            ),
+          ),
+          required: ['register'],
+          additionalProperties: false,
+        },
+      },
+      lines: {
+        type: 'array',
+        description: 'Every billed row of the electricity fatura, in order.',
+        items: {
+          type: 'object',
+          properties: Object.fromEntries(
+            LINE_FIELDS.map((field) =>
+              field === 'kind'
+                ? [field, { type: 'string', enum: [...LINE_KINDS] }]
+                : field === 'period'
+                  ? [field, { type: 'string', enum: [...TARIFF_PERIODS] }]
+                  : [field, { type: 'string' }],
+            ),
+          ),
+          required: ['kind', 'description'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['registers', 'lines'],
+    additionalProperties: false,
+  };
+}
 
 const SYSTEM = [
   'You read Portuguese electricity bills (faturas de eletricidade) and extract',
@@ -116,9 +164,13 @@ export class ClaudeEnergyInvoiceParser implements EnergyInvoiceParser {
     try {
       const client = new Anthropic();
 
-      const response = await client.messages.create(
+      const response = await client.beta.messages.create(
         {
           model: MODEL,
+          // A declined read is retried on the model the API picks, inside the
+          // same call — as the PDF table reader does.
+          betas: ['server-side-fallback-2026-07-01'],
+          fallbacks: 'default',
           max_tokens: 8192,
           thinking: { type: 'adaptive' },
           system: SYSTEM,
@@ -131,68 +183,22 @@ export class ClaudeEnergyInvoiceParser implements EnergyInvoiceParser {
               ],
             },
           ],
-          tools: [
-            {
-              name: TOOL_NAME,
-              description: 'Record the electricity bill found in the document.',
-              strict: true,
-              input_schema: {
-                type: 'object',
-                properties: {
-                  ...HEADER_PROPERTIES,
-                  registers: {
-                    type: 'array',
-                    description: 'One entry per register on the dial. Omit fields not printed.',
-                    items: {
-                      type: 'object',
-                      properties: Object.fromEntries(
-                        REGISTER_FIELDS.map((field) =>
-                          field === 'register'
-                            ? [field, { type: 'string', enum: [...REGISTERS] }]
-                            : [field, { type: 'string' }],
-                        ),
-                      ),
-                      required: ['register'],
-                      additionalProperties: false,
-                    },
-                  },
-                  lines: {
-                    type: 'array',
-                    description: 'Every billed row of the electricity fatura, in order.',
-                    items: {
-                      type: 'object',
-                      properties: Object.fromEntries(
-                        LINE_FIELDS.map((field) =>
-                          field === 'kind'
-                            ? [field, { type: 'string', enum: [...LINE_KINDS] }]
-                            : field === 'period'
-                              ? [field, { type: 'string', enum: [...TARIFF_PERIODS] }]
-                              : [field, { type: 'string' }],
-                        ),
-                      ),
-                      required: ['kind', 'description'],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ['registers', 'lines'],
-                additionalProperties: false,
-              },
-            },
-          ],
-          tool_choice: { type: 'tool', name: TOOL_NAME },
+          output_config: { format: { type: 'json_schema', schema: invoiceSchema() } },
         },
         // A five-page bill with thinking is a bigger read than a lab sheet.
         { timeout: 120_000 },
       );
 
-      const call = response.content.find(
-        (block): block is Anthropic.ToolUseBlock =>
-          block.type === 'tool_use' && block.name === TOOL_NAME,
-      );
-      if (call === undefined) return { error: 'nothingFound' };
+      if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
+        return { error: 'unreadable' };
+      }
+      const text = response.content
+        .filter((block): block is Anthropic.Beta.BetaTextBlock => block.type === 'text')
+        .map((block) => block.text)
+        .join('');
+      if (text.trim() === '') return { error: 'nothingFound' };
 
-      const draft = readInvoiceDraft(call.input);
+      const draft = readInvoiceDraft(JSON.parse(text));
       return draft === null ? { error: 'nothingFound' } : { draft };
     } catch {
       // Rate limited, timed out, misconfigured key, network, a PDF the API
@@ -208,7 +214,7 @@ export function energyInvoiceParser(): EnergyInvoiceParser {
   return new ClaudeEnergyInvoiceParser();
 }
 
-function documentBlock(file: ReportFile): Anthropic.ContentBlockParam {
+function documentBlock(file: ReportFile): Anthropic.Beta.BetaContentBlockParam {
   const data = file.bytes.toString('base64');
   return file.mediaType === 'application/pdf'
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } }

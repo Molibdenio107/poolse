@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, CalendarClock } from 'lucide-react';
 import type { BillingOverview } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
@@ -30,6 +30,7 @@ export async function BillingPanel({
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
   const locale = await getLocale();
+  const format = await getFormatter();
 
   return (
     <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
@@ -69,6 +70,33 @@ export async function BillingPanel({
           running: overview.trialsStillRunning,
         })}
       </p>
+
+      {/*
+        Bills read by the model — POOLSE-106. Each is a paid call, so the count
+        is the cost Rui accepted for the pilot, kept in view: six months, every
+        month present, and the calls that found nothing said beside them.
+      */}
+      <div className="flex flex-col gap-1">
+        <h3 className="text-sm font-medium">{t('admin.billing.energyReadsTitle')}</h3>
+        <p className="text-sm text-foreground-muted">{t('admin.billing.energyReadsHint')}</p>
+        <dl className="grid grid-cols-3 gap-x-3 gap-y-1 sm:grid-cols-6">
+          {overview.energyReads.map((month) => (
+            <div key={month.month} className="flex flex-col">
+              <dt className="text-xs text-foreground-muted">
+                {format.dateTime(new Date(`${month.month}-01T12:00:00Z`), 'month')}
+              </dt>
+              <dd className="tabular-nums">
+                <span className="text-lg font-medium">{month.reads}</span>
+                {month.unread > 0 && (
+                  <span className="block text-xs text-foreground-muted">
+                    {t('admin.billing.energyReadsUnread', { count: month.unread })}
+                  </span>
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
 
       {/*
         Said in visible text rather than left to be assumed. An operator reading

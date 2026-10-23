@@ -158,6 +158,11 @@ const PAIRS = [
   ['border-strong', 'surface', 3, 'a form control on a card'],
   ['primary', 'background', 3, 'the focus ring'],
 
+  // Chart marks on a card: shapes, so 3:1 (POOLSE-106 adds the third).
+  ['chart-1', 'surface', 3, 'chart series 1 — electricity, turmas'],
+  ['chart-2', 'surface', 3, 'chart series 2 — gas, parcerias'],
+  ['chart-3', 'surface', 3, 'chart series 3 — water'],
+
   // Today's column on the calendar (POOLSE-107): the brand at 6 % over the card.
   // `bg+fg@alpha` is composited before it is measured; nothing else is.
   ['foreground', 'surface+primary@0.06', 4.5, "text in today's tinted calendar column"],
@@ -217,6 +222,7 @@ if (JSON.stringify(light) === JSON.stringify(dark)) {
 const KNOWN = new Map([
   ['light:primary:background:3', 'the focus ring, same brand colour, same decision'],
   ['light:primary-foreground:primary:4.5', 'white on brand primary, on every primary button'],
+  ['light:chart-3:surface:3', 'aqua at 2.8:1, the validated slot 3: the Energia chart carries a table of its figures (relief rule)'],
   ['light:role-guardian:surface:4.5', '4.24:1, a hair under, on a badge that carries its own text'],
 ]);
 

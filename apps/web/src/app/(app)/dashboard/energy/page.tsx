@@ -1,7 +1,7 @@
 import { FromLink } from '@/components/from-link';
 import { getTranslations } from 'next-intl/server';
-import { describeLoad, type LoadFailure } from '@/lib/load-failure';
-import { apiFetch, type Facilities } from '@/lib/api';
+import { describeLoad, outcome, type LoadFailure } from '@/lib/load-failure';
+import { apiFetch, type EnergySummary, type Facilities } from '@/lib/api';
 import { backProp, originBack } from '@/lib/back';
 import { EntityIcon } from '@/components/entity-icon';
 import { PageError, PageShell } from '@/components/page-shell';
@@ -9,11 +9,12 @@ import { EnergyPanel } from '../facilities/energy-panel';
 import { listMeters } from '../facilities/energy.actions';
 import { invoiceImportAvailable } from '../facilities/energy/invoice.actions';
 import {
-  InvoiceForm,
   type FacilityOption,
   type MeterOption,
 } from '../facilities/energy/[meterId]/invoices/invoice-form';
 import { dataOf } from '@/lib/load-failure';
+import { EnergyDashboard } from './energy-dashboard';
+import { ImportBillCard } from './import-bill-card';
 
 /**
  * Energia — the module's own front door, at Rui's ask.
@@ -32,14 +33,21 @@ import { dataOf } from '@/lib/load-failure';
  * them. A CPE no meter carries yet makes a meter, so the very first bill of a
  * new club has somewhere to land. The panel on each site's page stays, for a
  * technician who is already looking at the site.
+ *
+ * **POOLSE-106 reorders it**: the bill is a folded card in the header area
+ * (*Importar fatura*, remembered per browser, opened by a drop or a missing
+ * bill's link), then the club-wide dashboard of running costs, then each site
+ * as before. The dashboard is best-effort: a summary that will not load says
+ * so in its place and costs neither the card nor the meters.
  */
 export default async function EnergyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; import?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
-  const back = originBack((await searchParams).from);
+  const query = await searchParams;
+  const back = originBack(query.from);
 
   let sites: Facilities | null = null;
   let failure: LoadFailure | null = null;
@@ -75,6 +83,9 @@ export default async function EnergyPage({
   const facilities: FacilityOption[] = panels.map(({ site }) => ({ id: site.id, name: site.name }));
   const canRecord = panels.some(({ list }) => list !== null && list.canRecord);
   const importAvailable = await invoiceImportAvailable();
+  const summary = sites === null || sites.facilities.length === 0 ? null : await outcome(apiFetch<EnergySummary>('/energy/summary'));
+  // A missing bill's link names its meter; one this club has, or nothing.
+  const linkedMeter = meters.some((meter) => meter.id === query.import) ? query.import : undefined;
 
   return (
     <PageShell
@@ -97,14 +108,16 @@ export default async function EnergyPage({
       )}
 
       {canRecord && facilities.length > 0 && (
-        <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
-            {t('energy.invoice.importPageTitle')}
-          </h2>
-          <p className="text-sm text-foreground-muted">{t('energy.invoice.importPageSubtitle')}</p>
-          <InvoiceForm meters={meters} facilities={facilities} importAvailable={importAvailable} collapsed dropAnywhere />
-        </section>
+        <ImportBillCard
+          meters={meters}
+          facilities={facilities}
+          importAvailable={importAvailable}
+          meterId={linkedMeter}
+        />
       )}
+
+      {summary !== null && summary.state === 'ok' && <EnergyDashboard summary={summary.data} />}
+      {summary !== null && summary.state === 'failed' && <PageError message={t(summary.failure.key)} />}
 
       {panels.map(({ site, list }) => (
         <section

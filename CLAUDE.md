@@ -564,6 +564,8 @@ the day feeds arrive, and deliberately not a hypertable until then (decisions, 2
 A dial running backwards is a trigger refusal carrying the neighbour in DETAIL, like
 `pool_capacity`. `docs/features/energy.md`.
 
+**The Energia page opens on a folded *Importar fatura* card and the club's dashboard (`GET /energy/summary`), and a meter says what it measures.** POOLSE-106. `energy_meter.carrier` (electricity | gas | water) splits bills; *this month* is the month a billing period ends in; cost per lesson hour and per swimmer are POOLSE-28's per-tank reports summed, never re-derived, and never added to billed euros; maintenance gets the dashboard with every euro withheld by the API. A chart of a few series is `StackedMonthBars` (`--chart-1/2/3`, legend, tooltip on focus, table view). Every automatic bill read is a row in `energy_invoice_read`, counted per month on /admin. `docs/features/energy.md`.
+
 **Outside air temperature is stored context, and it never corrects a figure.** Slice 5.4b,
 which closes POOLSE-28 AC 7. `facility_climate_month` caches the monthly mean per *site* — air
 and not the water in `pool_analysis`, which sits at a setpoint all year and would correlate

@@ -299,3 +299,22 @@ into a feature.
 ## Demo data (development only)
 
 `pnpm db:seed` gives the demo club's first site a year of energy (`packages/db/src/seed-energy.ts`): the *Geral* electricity supply (CPE) with readings and EDP-shaped bills, and for the first tank (POOLSE-102) a heat-pump sub-meter and a gas boiler meter (CUI) of its own with readings, Galp bills, and a rate on each — the gas at its bills' contracted €0.0905/kWh, the heat pump an *estimated* €0.1712/kWh from the general supply — so the tank's *Custo por utilização* resolves. A month's consumption is a function of the calendar month, so the figures are the same whenever the seed runs; readings continue from the meter's latest stored one, and a bill is matched by supply and period. A rerun the same month writes nothing, and a rerun a month later adds that month and nothing else. There is no water meter in the model, so none is seeded. The rows are demo data by the seed's own account (its comment and its output), not by anything a screen shows.
+
+## The Energia page — POOLSE-106
+
+The page opens on **Importar fatura**, a folded card (*Importar fatura — PDF ou valores à mão*), then the **club's dashboard**, then each site's meters as before.
+
+**The card** is a `<details>`: closed by default, opened and closed by its summary, and remembered per browser (`localStorage`, wrapped so a private window just starts closed). A file dropped anywhere on the page opens it — read, or with the sentence saying why not — and a missing bill's link (`?import=<meter>#importar`) opens it on that meter.
+
+**The dashboard** reads `GET /energy/summary` (owner, admin, maintenance; one fixed window, exempt from paging):
+
+- **This month** and **the last 12 months**, by carrier — electricity, gas, water — from bills, each against the same months a year earlier. A bill counts in the month its period ends, so the current month usually has none yet and the tile says which month was billed last. A change compares only the months billed in both years and says how many; with none it says there is no comparison. A carrier with no meter says *Sem contador*, never €0.
+- **Cost per lesson hour** and **per swimmer** for the club: POOLSE-28's per-tank reports, read off and summed (each tank whose window is fully priced counts, and the coverage says how many of how many). They are estimates from tariffs and say so; they are never added to the bills.
+- **A twelve-month chart**, stacked by carrier (`StackedMonthBars`: `--chart-1/2/3`, a named legend, a tooltip per month on hover and keyboard focus, and the figures as a table one click away — water's aqua is under 3:1 on white, so the table is required).
+- **Missing bills**: a supply (a meter with a CPE/CUI, or one billed before) with no bill ending in the last 45 days, each with a link that opens the card. A sub-meter behind the general supply is never listed.
+
+**Maintenance** sees the same dashboard in kWh: the API withholds every euro and the cost per use, and the page says the euros are the owner's and admins'.
+
+**A meter says what it measures** — *Mede*: electricity, gas or water (`energy_meter.carrier`), on the add and edit forms. An edit that does not send it keeps it.
+
+**Bills are read automatically** (Rui, 22-10-2026): `ENERGY_INVOICE_AI_ENABLED=true` in every deployed environment (`docs/deploy.md`). Each read is a paid call and leaves a row in `energy_invoice_read` — read or not, never for a file refused before the call — and `/admin` → Faturação shows the count for the last six months. The reader uses structured output, not a forced tool call, which the current Opus refuses. It still reads the **electricity** fatura only; a gas bill is typed.

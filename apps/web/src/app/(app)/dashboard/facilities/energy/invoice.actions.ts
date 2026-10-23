@@ -4,7 +4,7 @@ import { AI_ROLES, guardAiCall } from '@/lib/ai-guard';
 import { revalidatePath } from 'next/cache';
 import { ApiError, apiFetch, apiPost, type EnergyInvoiceCheck, type EnergyInvoiceDetail, type EnergyInvoiceList } from '@/lib/api';
 import { draftToBody, reportMediaType, type InvoiceDraft } from '@/lib/energy-invoice';
-import { energyInvoiceParser } from '@/lib/energy-invoice-agent';
+import { MAX_BYTES, energyInvoiceParser } from '@/lib/energy-invoice-agent';
 import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../../actions';
 import { getTranslations } from 'next-intl/server';
@@ -51,11 +51,17 @@ export async function readInvoiceFileAction(
 
   // The bytes go to the model call and no further: nothing is stored. File
   // storage is the deferred decision the photo controls also wait on.
-  const result = await parser.parse({
-    name: file.name,
-    mediaType,
-    bytes: Buffer.from(await file.arrayBuffer()),
-  });
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const result = await parser.parse({ name: file.name, mediaType, bytes });
+
+  // Every call the model was sent is counted, found or not — it was paid for
+  // (POOLSE-106, shown per month on /admin). A file the agent refused before
+  // calling, empty or too large, cost nothing and is not. Never awaited past a
+  // failure: a count that did not land must not cost the operator their bill.
+  const called = bytes.byteLength > 0 && bytes.byteLength <= MAX_BYTES && !('error' in result && result.error === 'disabled');
+  if (called) {
+    await apiPost('/energy/invoice-reads', { succeeded: !('error' in result) }).catch(() => undefined);
+  }
 
   if ('error' in result) {
     if (result.error === 'disabled') return { ok: false, disabled: true, fileName: file.name, attempt };

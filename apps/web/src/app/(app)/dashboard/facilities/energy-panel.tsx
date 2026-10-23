@@ -31,6 +31,8 @@ const BUTTON =
    'inline-flex h-control items-center justify-center px-4 text-control gap-1.5 rounded border border-border-strong transition-colors hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export const METER_KINDS = ['total', 'pump', 'heating', 'lighting', 'other'] as const;
+/** What a meter measures — POOLSE-106. Electricity first, as most meters are. */
+export const METER_CARRIER_OPTIONS = ['electricity', 'gas', 'water'] as const;
 
 export function EnergyPanel({
   facilityId,
@@ -186,6 +188,12 @@ function MeterDialog({
             label={t('energy.kindLabel')}
             initial="total"
             options={METER_KINDS.map((kind) => ({ value: kind, label: t(`energy.kind.${kind}`) }))}
+          />
+          <SelectField
+            name="carrier"
+            label={t('energy.carrierLabel')}
+            initial="electricity"
+            options={METER_CARRIER_OPTIONS.map((carrier) => ({ value: carrier, label: t(`energy.carrier.${carrier}`) }))}
           />
           <TextField name="unit" label={t('energy.unit')} initial="kWh" className="w-28" />
         </div>

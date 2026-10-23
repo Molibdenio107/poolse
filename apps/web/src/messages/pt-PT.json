@@ -820,6 +820,44 @@
       "consumption": "Consumo",
       "yearOnYear": "Ano a ano",
       "cost": "Custo estimado"
+    },
+    "carrierLabel": "Mede",
+    "carrier": {
+      "electricity": "Eletricidade",
+      "gas": "Gás",
+      "water": "Água"
+    },
+    "importCard": {
+      "summary": "Importar fatura — PDF ou valores à mão"
+    },
+    "dashboard": {
+      "title": "Custos de funcionamento",
+      "hint": "Todo o clube, a partir das faturas. Cada fatura conta no mês em que termina o seu período.",
+      "noMoney": "Os valores em euros são visíveis para o proprietário e os administradores; aqui vê os consumos.",
+      "missingTitle": "Sem fatura há mais de {days} dias",
+      "missingLine": "{carrier} — {meter}, {site}.",
+      "neverBilled": "Ainda não tem nenhuma fatura.",
+      "lastBilled": "Última fatura até {date}.",
+      "importIt": "Importar fatura",
+      "thisMonth": "Este mês — {month}",
+      "noBillsYet": "Ainda não há faturas registadas.",
+      "noBillThisMonth": "Ainda não há faturas deste mês: chegam quando o período termina. A última é de {month}.",
+      "noBill": "Sem fatura",
+      "unmetered": "Sem contador",
+      "lastTwelve": "Últimos 12 meses",
+      "noComparison": "Sem comparação: não há faturas dos mesmos meses do ano anterior.",
+      "change": "{percent, number, ::sign-always}% face {months, plural, one {ao mesmo mês} other {aos mesmos # meses}} do ano anterior",
+      "perLessonHour": "Custo por hora de aula",
+      "perLessonHourExplain": "Estimativa: o aquecimento das piscinas, às tarifas dos seus contadores, a dividir pelas horas de aula dos meses com aulas.",
+      "perSwimmer": "Custo por nadador",
+      "perSwimmerExplain": "Estimativa: o mesmo aquecimento a dividir pelas presenças registadas nesses meses.",
+      "coverage": "Com base em {counted} de {pools} {pools, plural, one {piscina} other {piscinas}} com contador e tarifa.",
+      "perUseNone": "Sem dados suficientes",
+      "chartCaption": "Custo das faturas por mês, por tipo de energia (com IVA).",
+      "chartCaptionKwh": "Consumo faturado por mês, em kWh, por tipo de energia.",
+      "chartMax": "Máximo: {value}",
+      "showTable": "Ver os valores em tabela",
+      "month": "Mês"
     }
   },
   "maintenance": {
@@ -4165,7 +4203,10 @@
       "lateBy": "{days, plural, one {Em atraso há # dia} other {Em atraso há # dias}}",
       "dueIn": "{days, plural, =0 {Vence hoje} one {Falta # dia} other {Faltam # dias}}",
       "readOnly": "em leitura",
-      "trials": "{started} períodos experimentais começados · {converted} converteram · {running} a decorrer."
+      "trials": "{started} períodos experimentais começados · {converted} converteram · {running} a decorrer.",
+      "energyReadsTitle": "Faturas de energia lidas automaticamente",
+      "energyReadsHint": "Cada leitura é uma chamada paga à API da Anthropic, encontre ou não a fatura.",
+      "energyReadsUnread": "{count, plural, one {# sem resultado} other {# sem resultado}}"
     },
     "payments": "Pagamentos recebidos",
     "paymentsHint": "Fora do Stripe. Um pagamento não se edita nem se apaga — uma correção é outro registo.",

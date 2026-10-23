@@ -47,6 +47,8 @@ function meterBody(formData: FormData): Record<string, unknown> {
   return {
     name: String(formData.get('name') ?? '').trim(),
     kind: String(formData.get('kind') ?? ''),
+    // POOLSE-106: electricity, gas or water. Absent keeps a meter's own on an edit.
+    carrier: formData.get('carrier') === null ? undefined : String(formData.get('carrier')),
     unit: String(formData.get('unit') ?? '').trim(),
     reads: String(formData.get('reads') ?? 'cumulative_index'),
     initialIndex: initial === '' ? null : Number(initial),

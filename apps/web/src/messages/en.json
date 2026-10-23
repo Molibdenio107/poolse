@@ -820,6 +820,44 @@
       "consumption": "Consumption",
       "yearOnYear": "Year on year",
       "cost": "Estimated cost"
+    },
+    "carrierLabel": "Measures",
+    "carrier": {
+      "electricity": "Electricity",
+      "gas": "Gas",
+      "water": "Water"
+    },
+    "importCard": {
+      "summary": "Import a bill — PDF or values by hand"
+    },
+    "dashboard": {
+      "title": "Running costs",
+      "hint": "The whole club, from its bills. Each bill counts in the month its period ends.",
+      "noMoney": "Euro figures are visible to the owner and the admins; here you see consumption.",
+      "missingTitle": "No bill for more than {days} days",
+      "missingLine": "{carrier} — {meter}, {site}.",
+      "neverBilled": "It has no bill yet.",
+      "lastBilled": "Last bill up to {date}.",
+      "importIt": "Import a bill",
+      "thisMonth": "This month — {month}",
+      "noBillsYet": "No bills have been recorded yet.",
+      "noBillThisMonth": "No bills for this month yet: they arrive when the period ends. The latest is for {month}.",
+      "noBill": "No bill",
+      "unmetered": "No meter",
+      "lastTwelve": "Last 12 months",
+      "noComparison": "No comparison: there are no bills for the same months a year earlier.",
+      "change": "{percent, number, ::sign-always}% on {months, plural, one {the same month} other {the same # months}} a year earlier",
+      "perLessonHour": "Cost per lesson hour",
+      "perLessonHourExplain": "Estimate: the pools' heating, at their meters' tariffs, divided by the lesson hours of the months with lessons.",
+      "perSwimmer": "Cost per swimmer",
+      "perSwimmerExplain": "Estimate: the same heating divided by the attendance recorded in those months.",
+      "coverage": "Based on {counted} of {pools} {pools, plural, one {pool} other {pools}} with a meter and a tariff.",
+      "perUseNone": "Not enough data",
+      "chartCaption": "What the bills cost each month, by kind of energy (VAT included).",
+      "chartCaptionKwh": "Consumption billed each month, in kWh, by kind of energy.",
+      "chartMax": "Highest: {value}",
+      "showTable": "Show the figures as a table",
+      "month": "Month"
     }
   },
   "maintenance": {
@@ -4165,7 +4203,10 @@
       "lateBy": "{days, plural, one {# day late} other {# days late}}",
       "dueIn": "{days, plural, =0 {Due today} one {# day left} other {# days left}}",
       "readOnly": "read-only",
-      "trials": "{started} trials started · {converted} converted · {running} running now."
+      "trials": "{started} trials started · {converted} converted · {running} running now.",
+      "energyReadsTitle": "Energy bills read automatically",
+      "energyReadsHint": "Each read is a paid call to Anthropic's API, whether or not it found the bill.",
+      "energyReadsUnread": "{count, plural, one {# found nothing} other {# found nothing}}"
     },
     "payments": "Payments received",
     "paymentsHint": "Outside Stripe. A payment is never edited or deleted — a correction is another record.",
