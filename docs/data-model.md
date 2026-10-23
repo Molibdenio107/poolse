@@ -2717,7 +2717,7 @@ faults extend that table; they do not get one of their own.
 
 ```
 energy_meter    id, organization_id, facility_id, pool_id (nullable),
-                kind ('pump'|'heating'|'lighting'|'total'), unit,
+                kind ('pump'|'heating'|'lighting'|'total'), carrier ('electricity'|'gas'|'water'), unit,
                 reads ('cumulative_index'|'interval_consumption'),
                 initial_index numeric, replaced_meter_id (nullable), archived_at
 energy_reading  organization_id, meter_id, taken_at, value numeric(14,3), source,
@@ -2738,6 +2738,8 @@ extension is the hosting constraint the phase-0 note calls the half that cannot 
 Converting is one migration — `create_hypertable('energy_reading', 'taken_at',
 migrate_data => true)` — with no application change, and its trigger is automated feeds
 (roadmap, "Deferred"). `archived_at` is a column a hypertable carries without complaint.
+
+**Carrier and the read log — POOLSE-106** (`1792058400000_energy-dashboard.sql`). `energy_meter.carrier` is a closed enum, `electricity | gas | water`, default electricity: `kind` says what a meter is *for*, and a gas boiler and a heat pump are both `heating`. The Energia dashboard splits bills by it. `energy_invoice_read` (id, organization_id, read_at, succeeded) is one row per bill the model read, paid for whether or not it found anything: `poolse_app` may only INSERT its own club's rows (no SELECT, UPDATE or DELETE), `poolse_platform` reads every club's and writes none — the `tenant_request_stats` arrangement. It holds no file, supplier or figure; /admin counts it per month.
 
 **Faturas — 5.3, first half** (`1788516000000_energy-invoices.sql`). `energy_meter` gained
 `cpe` (compact, `^[A-Z]{2}[A-Z0-9]{14,20}$`, unique per tenant among live meters) and

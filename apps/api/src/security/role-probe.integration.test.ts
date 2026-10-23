@@ -41,6 +41,7 @@ import { SpacesController } from '../spaces/spaces.controller.js';
 import { SettingsController } from '../organizations/organizations.controller.js';
 import { LeadsController, RegistrationSettingsController } from '../leads/leads.controller.js';
 import { LabResultsController } from '../facilities/lab-results.controller.js';
+import { EnergyInvoicesController } from '../energy/invoices.controller.js';
 import { ComplaintsSettingsController, RegulationsController } from '../facilities/regulations.controller.js';
 import { RecordsController } from '../students/records.controller.js';
 import {
@@ -819,6 +820,14 @@ test('the pre-registration queue refuses a guardian and a student (403)', async 
     const settings = new RegistrationSettingsController();
     await refused('GET settings/registration', 403, () => settings.read());
     await refused('PUT settings/registration', 403, () => settings.update({ slug: 'abc', open: true }));
+  });
+});
+
+test('the energy dashboard and the read log refuse a guardian and a student (403) — POOLSE-106', async () => {
+  await asEach(async () => {
+    const energy = new EnergyInvoicesController();
+    await refused('GET energy/summary', 403, () => energy.summary());
+    await refused('POST energy/invoice-reads', 403, () => energy.recordRead({ succeeded: true }));
   });
 });
 

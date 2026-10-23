@@ -21,6 +21,9 @@ import { liveTariffJoin } from './tariffs.repository.js';
  */
 
 export type MeterKind = 'pump' | 'heating' | 'lighting' | 'total' | 'other';
+/** What a meter measures — POOLSE-106. `kind` is what it is for; a gas boiler and a heat pump are both `heating`. */
+export type MeterCarrier = 'electricity' | 'gas' | 'water';
+export const CARRIERS: readonly MeterCarrier[] = ['electricity', 'gas', 'water'];
 export type MeterReads = 'cumulative_index' | 'interval_consumption';
 
 export interface EnergyMeter {
@@ -31,6 +34,8 @@ export interface EnergyMeter {
   poolName: string | null;
   name: string;
   kind: MeterKind;
+  /** Electricity, gas or water — what the meter measures (POOLSE-106). */
+  carrier: MeterCarrier;
   unit: string;
   reads: MeterReads;
   initialIndex: number | null;
@@ -54,6 +59,7 @@ export interface MeterInput {
   poolId: string | null;
   name: string;
   kind: MeterKind;
+  carrier: MeterCarrier;
   unit: string;
   reads: MeterReads;
   initialIndex: number | null;
@@ -225,7 +231,7 @@ const METER_JOINS = `
 const METER_COLUMNS = `
   m.id, m.facility_id, f.name AS facility_name,
   m.pool_id, p.name AS pool_name,
-  m.name, m.kind::text AS kind, m.unit, m.reads::text AS reads,
+  m.name, m.kind::text AS kind, m.carrier::text AS carrier, m.unit, m.reads::text AS reads,
   -- ::float8, or numeric arrives as a string and the form shows "18402.000".
   m.initial_index::float8 AS initial_index,
   m.replaced_meter_id, rm.name AS replaced_meter_name,
@@ -242,6 +248,7 @@ interface MeterRow {
   pool_name: string | null;
   name: string;
   kind: MeterKind;
+  carrier: MeterCarrier;
   unit: string;
   reads: MeterReads;
   initial_index: number | null;
@@ -265,6 +272,7 @@ function meterOf(row: MeterRow): EnergyMeter {
     poolName: row.pool_name,
     name: row.name,
     kind: row.kind,
+    carrier: row.carrier,
     unit: row.unit,
     reads: row.reads,
     initialIndex: row.initial_index,
@@ -374,8 +382,9 @@ export async function addMeter(organizationId: string, input: MeterInput): Promi
       .query<{ id: string }>(
         `INSERT INTO energy_meter
            (organization_id, facility_id, pool_id, name, kind, unit, reads,
-            initial_index, replaced_meter_id, cpe, serial, notes)
-         VALUES ($1, $2, $3, $4, $5::energy_meter_kind, $6, $7::energy_meter_reads, $8, $9, $10, $11, $12)
+            initial_index, replaced_meter_id, cpe, serial, notes, carrier)
+         VALUES ($1, $2, $3, $4, $5::energy_meter_kind, $6, $7::energy_meter_reads, $8, $9, $10, $11, $12,
+                 $13::energy_carrier)
          RETURNING id`,
         [
           organizationId,
@@ -390,6 +399,7 @@ export async function addMeter(organizationId: string, input: MeterInput): Promi
           input.cpe,
           input.serial,
           input.notes,
+          input.carrier,
         ],
       )
       .catch(asMeterError);
@@ -417,18 +427,22 @@ export async function addMeter(organizationId: string, input: MeterInput): Promi
 export async function updateMeter(
   organizationId: string,
   meterId: string,
-  input: Pick<MeterInput, 'poolId' | 'name' | 'kind' | 'unit' | 'initialIndex' | 'cpe' | 'serial' | 'notes'>,
+  input: Pick<MeterInput, 'poolId' | 'name' | 'kind' | 'unit' | 'initialIndex' | 'cpe' | 'serial' | 'notes'> & {
+    /** Null keeps the meter's carrier: an edit that did not ask about it changes nothing. */
+    carrier: MeterCarrier | null;
+  },
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const { rowCount } = await tx
       .query(
         `UPDATE energy_meter
             SET pool_id = $3, name = $4, kind = $5::energy_meter_kind, unit = $6,
-                initial_index = $7, cpe = $8, serial = $9, notes = $10
+                initial_index = $7, cpe = $8, serial = $9, notes = $10,
+                carrier = coalesce($11::energy_carrier, carrier)
           WHERE organization_id = $1 AND id = $2 AND archived_at IS NULL`,
         [
           organizationId, meterId, input.poolId, input.name, input.kind, input.unit,
-          input.initialIndex, input.cpe, input.serial, input.notes,
+          input.initialIndex, input.cpe, input.serial, input.notes, input.carrier,
         ],
       )
       .catch(asMeterError);

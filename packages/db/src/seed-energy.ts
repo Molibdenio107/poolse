@@ -134,20 +134,32 @@ export async function seedEnergy(
     forPool: boolean,
     cpe: string | null,
     serial: string | null,
+    carrier: 'electricity' | 'gas' = 'electricity',
   ): Promise<string> {
     const existing = await client.query<{ id: string }>(
       `SELECT id FROM energy_meter
         WHERE organization_id = $1 AND facility_id = $2 AND lower(name) = lower($3) AND archived_at IS NULL`,
       [organizationId, facilityId, name],
     );
-    if (existing.rows[0] !== undefined) return existing.rows[0].id;
+    if (existing.rows[0] !== undefined) {
+      // A meter seeded before meters said what they measure (POOLSE-106) took
+      // the default; the gas boiler is put right once.
+      if (carrier !== 'electricity') {
+        await client.query(
+          `UPDATE energy_meter SET carrier = $2::energy_carrier
+            WHERE id = $1 AND carrier = 'electricity'`,
+          [existing.rows[0].id, carrier],
+        );
+      }
+      return existing.rows[0].id;
+    }
 
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO energy_meter
-         (organization_id, facility_id, pool_id, name, kind, unit, reads, initial_index, cpe, serial)
-       VALUES ($1, $2, $3, $4, $5::energy_meter_kind, 'kWh', $6::energy_meter_reads, $7, $8, $9)
+         (organization_id, facility_id, pool_id, name, kind, unit, reads, initial_index, cpe, serial, carrier)
+       VALUES ($1, $2, $3, $4, $5::energy_meter_kind, 'kWh', $6::energy_meter_reads, $7, $8, $9, $10::energy_carrier)
        RETURNING id`,
-      [organizationId, facilityId, forPool ? poolId : null, name, kind, reads, initialIndex, cpe, serial],
+      [organizationId, facilityId, forPool ? poolId : null, name, kind, reads, initialIndex, cpe, serial, carrier],
     );
     counts.meters += 1;
     return inserted.rows[0]!.id;
@@ -160,7 +172,7 @@ export async function seedEnergy(
   const gas =
     poolId === null
       ? null
-      : await meter('Gás natural — caldeira', 'heating', 'cumulative_index', GAS_INITIAL, true, CUI, GAS_SERIAL);
+      : await meter('Gás natural — caldeira', 'heating', 'cumulative_index', GAS_INITIAL, true, CUI, GAS_SERIAL, 'gas');
 
   // -------------------------------------------------------------------------
   // Thirteen monthly readings on the two dials, first of each month at 08:00

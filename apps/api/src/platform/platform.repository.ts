@@ -1324,6 +1324,13 @@ export interface BillingOverview {
   manualPaymentCount: number;
   renewals: RenewalDue[];
   renewalsWindowDays: number;
+  /**
+   * Bills read by the model, per month — POOLSE-106. Each is a paid call, so
+   * this is what the automatic reading costs, counted rather than estimated:
+   * the last six months by the Lisbon calendar, every month present, newest
+   * last. `unread` is the calls that brought nothing back, paid for all the same.
+   */
+  energyReads: { month: string; reads: number; unread: number }[];
 }
 
 /**
@@ -1405,6 +1412,21 @@ export async function readBillingOverview(): Promise<BillingOverview> {
       [RENEWALS_WINDOW_DAYS],
     );
 
+    const { rows: reads } = await tx.query<{ month: string; reads: number; unread: number }>(
+      `WITH months AS (
+         SELECT to_char(date_trunc('month', club_today()) - (n || ' months')::interval, 'YYYY-MM') AS month
+           FROM generate_series(5, 0, -1) AS n
+       )
+       SELECT months.month,
+              count(r.id)::int AS reads,
+              count(r.id) FILTER (WHERE NOT r.succeeded)::int AS unread
+         FROM months
+         LEFT JOIN energy_invoice_read r
+           ON to_char(r.read_at AT TIME ZONE 'Europe/Lisbon', 'YYYY-MM') = months.month
+        GROUP BY months.month
+        ORDER BY months.month`,
+    );
+
     const tenantsByMode: Record<BillingMode, number> = { stripe: 0, manual: 0, comped: 0 };
     for (const row of modes) tenantsByMode[row.billing_mode] = Number(row.tenants);
 
@@ -1416,6 +1438,7 @@ export async function readBillingOverview(): Promise<BillingOverview> {
       manualCentsAllTime: Number(money[0]?.all_time ?? 0),
       manualCentsLast12Months: Number(money[0]?.last_year ?? 0),
       manualPaymentCount: Number(money[0]?.payments ?? 0),
+      energyReads: reads,
       renewals: renewals.map((row) => ({
         organizationId: row.id,
         name: row.name,

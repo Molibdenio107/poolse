@@ -148,7 +148,7 @@ const ACTOR_NAME = (alias: string, user: string): string =>
      coalesce(${user}.cached_last_name,  ${alias}.last_name))), '')`;
 
 /** The billed energy, summed from the lines — the one definition. */
-const BILLED_KWH = `
+export const BILLED_KWH = `
   (SELECT coalesce(sum(l.quantity), 0)::float8
      FROM energy_invoice_line l
     WHERE l.invoice_id = i.id AND l.organization_id = i.organization_id

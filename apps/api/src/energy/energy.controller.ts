@@ -13,6 +13,7 @@ import { localInstant, sampleMoment } from '../facilities/sample-moment.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireCanArchive, requireRole } from '../tenant/roles.js';
 import {
+  CARRIERS,
   addMeter,
   addReading,
   archiveMeter,
@@ -30,6 +31,7 @@ import {
   type EnergyReading,
   type MeterInput,
   type MeterKind,
+  type MeterCarrier,
   type MeterReads,
   type ConsumptionSeries,
   type Option,
@@ -177,9 +179,11 @@ export class EnergyController {
 
     // `reads` and `replacedMeterId` are not editable — see `updateMeter`.
     const { facilityId: _f, reads: _r, replacedMeterId: _m, ...input } = readMeter(body, '');
+    // An edit that does not send a carrier keeps the meter's (POOLSE-106).
+    const carrier = body['carrier'] === undefined ? null : input.carrier;
 
     try {
-      if (!(await updateMeter(organizationId, meterId, input))) {
+      if (!(await updateMeter(organizationId, meterId, { ...input, carrier }))) {
         throw new NotFoundException('No such meter');
       }
       return { updated: true };
@@ -400,6 +404,12 @@ function readMeter(body: Record<string, unknown>, facilityId: string): MeterInpu
     throw new BadRequestException({ message: 'What does this meter feed?', field: 'kind' });
   }
 
+  // Absent means electricity: every meter before POOLSE-106 was one.
+  const carrier = body['carrier'] === undefined || body['carrier'] === '' ? 'electricity' : body['carrier'];
+  if (!CARRIERS.includes(carrier as MeterCarrier)) {
+    throw new BadRequestException({ message: 'Electricity, gas or water?', field: 'carrier' });
+  }
+
   // Absent means a dial, which is what a physical meter is. A club typing its
   // monthly bill in says so explicitly.
   const reads = body['reads'] === undefined ? 'cumulative_index' : body['reads'];
@@ -430,6 +440,7 @@ function readMeter(body: Record<string, unknown>, facilityId: string): MeterInpu
     poolId: id(body['poolId']),
     name,
     kind: kind as MeterKind,
+    carrier: carrier as MeterCarrier,
     unit: text(body['unit'], MAX_UNIT, 'unit') ?? 'kWh',
     reads: reads as MeterReads,
     initialIndex,

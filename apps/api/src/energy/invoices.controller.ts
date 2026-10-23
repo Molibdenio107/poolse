@@ -31,6 +31,8 @@ import {
   type TariffPeriod,
 } from './invoices.repository.js';
 import { PoolseModule } from '../tenant/modules.js';
+import { withOrg } from '@poolse/db';
+import { energySummary, type EnergySummary } from './summary.repository.js';
 
 /**
  * Faturas — slice 5.3, first half.
@@ -66,6 +68,37 @@ interface PreviewResponse extends InvoiceCheck {
 @PoolseModule('energy')
 @Controller('energy')
 export class EnergyInvoicesController {
+  /**
+   * The Energia page's dashboard — POOLSE-106: twelve months of bills by
+   * carrier, this month, POOLSE-28's cost per lesson hour and per swimmer, and
+   * the supplies with no recent bill. A fixed window, so nothing pages.
+   * Maintenance reads it with every euro withheld by the query.
+   */
+  @Get('summary')
+  async summary(): Promise<EnergySummary> {
+    requireRole(...ENERGY);
+    const { organizationId } = currentTenant();
+    return energySummary(organizationId, hasRole('owner', 'admin'));
+  }
+
+  /**
+   * One bill read by the model — POOLSE-106. Called by the web app after every
+   * call it made, read or not, because the call is what costs; counted per
+   * month on /admin. The roles that may read a bill.
+   */
+  @Post('invoice-reads')
+  async recordRead(@Body() body: Record<string, unknown>): Promise<{ recorded: true }> {
+    requireRole(...ENERGY);
+    const { organizationId } = currentTenant();
+    await withOrg(organizationId, (tx) =>
+      tx.query(`INSERT INTO energy_invoice_read (organization_id, succeeded) VALUES ($1, $2)`, [
+        organizationId,
+        body['succeeded'] === true,
+      ]),
+    );
+    return { recorded: true };
+  }
+
   /** What the club's electricity has cost, month by month — the dashboard's panel. */
   @Get('costs')
   async costs(): Promise<EnergyCosts> {
