@@ -7,11 +7,12 @@ import { storageConfigured } from '@/lib/storage-status';
 /**
  * The club's logo — 12 October 2026.
  *
- * Beside the NIPC on the site's *Dados do clube* tab (moved from Faturação on
- * 13 October 2026) because both are how the club appears as itself: on its own
- * documents, and in the corner of every screen (the app bar's brand slot,
- * which belongs to the customer rather than to Poolse). Owner and admin, as the
- * rest of this tab.
+ * At the top of the site's *Fotografias* tab, above the site's photographs
+ * (POOLSE-104 C; before that beside the NIPC on *Dados do clube*): both are how
+ * the club looks — in the corner of every screen (the app bar's brand slot,
+ * which belongs to the customer rather than to Poolse) and on a printed
+ * document. It is the club's, not the site's, and the hint says so. Owner and
+ * admin, as the rest of the page.
  */
 export async function LogoPanel(): Promise<React.ReactElement> {
   const t = await getTranslations();
@@ -22,10 +23,12 @@ export async function LogoPanel(): Promise<React.ReactElement> {
   const url = fileUrl(fileId);
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+    <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
       <div>
-        <h2 className="text-sm font-medium">{t('files.logoTitle')}</h2>
-        <p className="text-sm text-foreground-muted">{t('files.logoHint')}</p>
+        <h2 className="text-sm font-medium uppercase tracking-wider text-foreground-muted">
+          {t('files.logoTitle')}
+        </h2>
+        <p className="mt-2 text-sm text-foreground-muted">{t('files.logoHint')}</p>
       </div>
       {url !== null && (
         // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id

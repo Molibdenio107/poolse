@@ -512,8 +512,9 @@ export default async function FacilityPage({
         },
         {
           /*
-            The club's own data — its NIPC and logo — moved here from Faturação
-            → Configuração on 13 October 2026 (Rui): they are defined for the
+            The club's own data — its NIPC, and its logo until POOLSE-104 C took
+            that to Fotografias — moved here from Faturação → Configuração on
+            13 October 2026 (Rui): they are defined for the
             club, and this page is where the club is configured. Club-wide, as
             the complaints setting on the Regulamento tab is, and the tab says
             so. Owner and admin, as the endpoints are. The numbering books
@@ -548,7 +549,6 @@ export default async function FacilityPage({
                 */}
                 {books?.state === 'failed' && <PageError message={t(books.failure.key)} />}
                 {books?.state === 'ok' && <SeriesPanel facilityId={facilityId} series={books.data.series} />}
-                <LogoPanel />
               </div>
             );
           },
@@ -558,24 +558,32 @@ export default async function FacilityPage({
           visible: loaded.canManage,
           labelKey: 'facilities.photos',
           content: () => (
-            <section className="rounded border border-border bg-surface p-5">
-              <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
-                {t('facilities.sitePhotos')}
-              </h2>
+            <div className="flex flex-col gap-4">
               {/*
-                The upload control is present, styled and visibly inert, exactly
-                as it is for pool and student photographs. One storage decision
-                unblocks all three; until then a control that opened a picker and
-                then lost the file would be worse than one that says so.
+                The club's logo first, then this site's photographs (POOLSE-104
+                C): both are how the club looks, and the logo's card says it is
+                the club's, not this site's.
               */}
-              <PhotoGallery
-                photos={loaded.photos}
-                target={`facility-photo:${loaded.id}`}
-                canManage={loaded.canManage}
-                emptyLabel={t('facilities.noSitePhotos')}
-                uploadLabel={t('facilities.uploadSitePhoto')}
-              />
-            </section>
+              <LogoPanel />
+              <section className="rounded border border-border bg-surface p-5">
+                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                  {t('facilities.sitePhotos')}
+                </h2>
+                {/*
+                  The upload control is present, styled and visibly inert, exactly
+                  as it is for pool and student photographs. One storage decision
+                  unblocks all three; until then a control that opened a picker and
+                  then lost the file would be worse than one that says so.
+                */}
+                <PhotoGallery
+                  photos={loaded.photos}
+                  target={`facility-photo:${loaded.id}`}
+                  canManage={loaded.canManage}
+                  emptyLabel={t('facilities.noSitePhotos')}
+                  uploadLabel={t('facilities.uploadSitePhoto')}
+                />
+              </section>
+            </div>
           ),
         },
       ]}

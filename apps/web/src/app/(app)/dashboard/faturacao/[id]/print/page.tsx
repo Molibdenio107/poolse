@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { formatCents } from '@/lib/money';
 import { isMissing } from '@/lib/load-failure';
+import { apiFetch } from '@/lib/api';
+import { fileUrl } from '@/lib/files';
 import { PageError } from '@/components/page-shell';
 import { LineLabel } from '../../line-label';
 import { PrintButton } from '../../../facilities/pools/[poolId]/report/print-button';
@@ -32,6 +34,18 @@ import { AutoPrint } from './auto-print';
  * the same thing here as there. A refusal or a missing document is a 404; a
  * failure says it failed, rather than printing an empty document.
  */
+/**
+ * The club's logo at the head of the document (POOLSE-104 C), read as the app
+ * bar reads it: a failure is no logo, never a document that did not print.
+ */
+async function clubLogo(): Promise<string | null> {
+  try {
+    return fileUrl((await apiFetch<{ fileId: string | null }>('/settings/logo')).fileId);
+  } catch {
+    return null;
+  }
+}
+
 export default async function InvoicePrintPage({
   params,
   searchParams,
@@ -43,7 +57,7 @@ export default async function InvoicePrintPage({
   const { id } = await params;
   const { facilityId: requested = '' } = await searchParams;
 
-  const { loaded } = await loadInvoice(id, requested);
+  const [{ loaded }, logo] = await Promise.all([loadInvoice(id, requested), clubLogo()]);
   if (loaded === null || isMissing(loaded)) notFound();
   if (loaded.state !== 'ok') {
     return (
@@ -87,6 +101,10 @@ export default async function InvoicePrintPage({
 
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-black/40 pb-3">
         <div>
+          {logo !== null && (
+            // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
+            <img src={logo} alt={t('files.logoAlt')} className="mb-2 h-12 w-auto max-w-40 object-contain" />
+          )}
           <h1 className="text-[16pt] font-bold">
             {kind} {invoice.documentNo}
           </h1>

@@ -4746,7 +4746,7 @@
     "agreementFirst": "Record the agreement first; the signed contract is filed with it.",
     "certificateAfterSave": "Once saved, attach the scanned certificate to the record in the history below.",
     "logoTitle": "Club logo",
-    "logoHint": "Shown in the top corner of every screen, beside the club's name.",
+    "logoHint": "It belongs to the club and is the same at every site. Shown in the top corner of every screen, beside the club's name, and at the head of printed documents.",
     "logoAlt": "Club logo",
     "logoUpload": "Upload logo",
     "logoReplace": "Replace logo",
@@ -5152,7 +5152,7 @@
   },
   "clubData": {
     "tab": "Club details",
-    "hint": "Tax details, how to pay and the logo belong to the club and apply to every site. The numbering books are this site's alone.",
+    "hint": "Tax details and how to pay belong to the club and apply to every site. The numbering books are this site's alone.",
     "paymentTitle": "How to pay",
     "paymentPlaceholder": "Cash or card at reception\nOffice: weekdays, 9:00–12:00",
     "paymentTooLong": "1000 characters at most.",

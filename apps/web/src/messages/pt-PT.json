@@ -4746,7 +4746,7 @@
     "agreementFirst": "Registe primeiro o acordo; o contrato assinado fica junto dele.",
     "certificateAfterSave": "Depois de guardar, junte o certificado digitalizado ao registo, no histórico abaixo.",
     "logoTitle": "Logótipo do clube",
-    "logoHint": "Aparece no canto superior de todos os ecrãs, ao lado do nome do clube.",
+    "logoHint": "É do clube e o mesmo em todas as instalações. Aparece no canto superior de todos os ecrãs, ao lado do nome do clube, e no topo dos documentos impressos.",
     "logoAlt": "Logótipo do clube",
     "logoUpload": "Carregar logótipo",
     "logoReplace": "Substituir logótipo",
@@ -5152,7 +5152,7 @@
   },
   "clubData": {
     "tab": "Dados do clube",
-    "hint": "Os dados fiscais, a forma de pagar e o logotipo são do clube e aplicam-se a todas as instalações. Os livros de numeração são só desta instalação.",
+    "hint": "Os dados fiscais e a forma de pagar são do clube e aplicam-se a todas as instalações. Os livros de numeração são só desta instalação.",
     "paymentTitle": "Como pagar",
     "paymentPlaceholder": "Numerário ou multibanco na receção\nSecretaria: dias úteis, 9h–12h",
     "paymentTooLong": "No máximo 1000 caracteres.",
