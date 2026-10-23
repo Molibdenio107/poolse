@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./seed-energy": {
+      "types": "./dist/seed-energy.d.ts",
+      "default": "./dist/seed-energy.js"
     }
   },
   "scripts": {

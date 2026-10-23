@@ -1618,7 +1618,7 @@ async function main(): Promise<void> {
     // unjudgeable without a year of bills.
     const energy = await seedEnergy(client, org.id);
     console.log(
-      `  energia: ${energy.meters} contadores, ${energy.readings} leituras, ${energy.invoices} faturas`,
+      `  energia (demonstração): ${energy.meters} contadores, ${energy.readings} leituras, ${energy.invoices} faturas, ${energy.tariffs} tarifas`,
     );
 
     await client.query('COMMIT');

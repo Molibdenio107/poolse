@@ -295,3 +295,7 @@ into a feature.
   built yet — proposed, not done.
 - Seeding a new club's history from the twelve months of consumption printed on its first
   bill — page 4 of an EDP document has them.
+
+## Demo data (development only)
+
+`pnpm db:seed` gives the demo club's first site a year of energy (`packages/db/src/seed-energy.ts`): the *Geral* electricity supply (CPE) with readings and EDP-shaped bills, and for the first tank (POOLSE-102) a heat-pump sub-meter and a gas boiler meter (CUI) of its own with readings, Galp bills, and a rate on each — the gas at its bills' contracted €0.0905/kWh, the heat pump an *estimated* €0.1712/kWh from the general supply — so the tank's *Custo por utilização* resolves. A month's consumption is a function of the calendar month, so the figures are the same whenever the seed runs; readings continue from the meter's latest stored one, and a bill is matched by supply and period. A rerun the same month writes nothing, and a rerun a month later adds that month and nothing else. There is no water meter in the model, so none is seeded. The rows are demo data by the seed's own account (its comment and its output), not by anything a screen shows.
