@@ -134,4 +134,4 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-109](./POOLSE-109-emergency-contact-picker-and-atestado-upload.md) | Emergency contact by name search, and the atestado attached | Students / Sensitive data | Medium | stored files, POOLSE-21 | 0 |
 | [POOLSE-110](./POOLSE-110-registration-requests-clearer-class-picker.md) | Pedidos de inscrição: a grouped, searchable turma picker | Students / Registration | Medium | POOLSE-69, 82 | 0 |
 | [POOLSE-111](./POOLSE-111-competition-times-events-year-picker-import-formats.md) | Competição: the times table you can see, a year wheel, and what import can read | Students / Competition | Low | POOLSE-81, 85 | 0 |
-| [POOLSE-112](./POOLSE-112-advancement-by-age-at-season-end.md) | Advancement by age at season end, and a queue worth opening | Levels / Turmas | Medium | POOLSE-19, 45 | 0 |
+| [POOLSE-112](./POOLSE-112-advancement-by-age-at-season-end.md) | Advancement by age at season end, and a queue worth opening — **built 23-10-2026** | Levels / Turmas | Medium | POOLSE-19, 45 | 0 |

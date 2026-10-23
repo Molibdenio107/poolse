@@ -104,8 +104,13 @@ import {
   dismissProposal,
   listProposals,
   readyNoSeat,
+  advancementOutlook,
+  proposeByAgeNow,
+  setAdvancementMode,
+  type AdvancementOutlook,
   type TransferProposal,
 } from './advancement.repository.js';
+import { deliverLevelChangeNotice } from './level-change-delivery.js';
 import { clubToday } from '../common/club-day.js';
 import { CoreRoute } from '../tenant/modules.js';
 import { studentCover, type StudentCover } from '../billing/fees.repository.js';
@@ -672,6 +677,23 @@ export class LevelsController {
         maxAgeMonths: age(max, 'maxAgeMonths'),
       }),
     };
+  }
+
+  /**
+   * How the club handles an age proposal at the season change — POOLSE-112
+   * BA 2. *Propor* (default) queues for a person; *Aplicar automaticamente*
+   * moves the level on the season's first day. Owner and admin.
+   */
+  @Patch('advancement-mode')
+  async advancementMode(@Body() body: Record<string, unknown>): Promise<{ mode: string }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const mode = body['mode'];
+    if (mode !== 'propose' && mode !== 'apply') {
+      throw new BadRequestException('mode must be propose or apply');
+    }
+    return { mode: await setAdvancementMode(organizationId, mode) };
   }
 
   @Patch(':id')
@@ -1347,7 +1369,7 @@ export class AdvancementController {
       throw new BadRequestException('effectiveOn must be a real date');
     }
 
-    const outcome = await confirmProposal(
+    const { outcome, noticeId } = await confirmProposal(
       organizationId,
       id,
       classGroupId,
@@ -1377,7 +1399,39 @@ export class AdvancementController {
       );
     }
 
+    // The family is told after the commit — POOLSE-112 BA 4; the hourly retry
+    // picks it up if this send does not leave.
+    if (noticeId !== null) void deliverLevelChangeNotice(organizationId, noticeId);
+
     return { confirmed: true };
+  }
+
+  /**
+   * What the queue shows even when empty — POOLSE-112 BA 3: who is outside
+   * their level's age band today, and what the next season change will do
+   * under the club's setting. Read by everybody who reads the queue.
+   */
+  @Get('outlook')
+  async outlook(): Promise<{ outlook: AdvancementOutlook }> {
+    requireRole('owner', 'admin', 'instructor');
+    const { organizationId } = currentTenant();
+    return { outlook: await advancementOutlook(organizationId) };
+  }
+
+  /**
+   * *Propor* — queue age proposals now, for one level or every level, judged
+   * on the season the club is running. Owner and admin: it is the office
+   * deciding to open the question, not a coach's call about one child.
+   */
+  @Post('propose-by-age')
+  async proposeByAge(@Body() body: Record<string, unknown>): Promise<{ queued: number }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+
+    const levelId = typeof body['levelId'] === 'string' ? body['levelId'].trim() : '';
+    const queued = await proposeByAgeNow(organizationId, levelId === '' ? null : levelId);
+    if (queued === null) throw new ConflictException('No published season to judge ages on');
+    return { queued };
   }
 
   @Post(':id/dismiss')

@@ -1,5 +1,6 @@
 import { withOrg } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { proposeForSeasonIn } from '../students/advancement.repository.js';
 
 /**
  * Seasons — POOLSE-07.
@@ -383,10 +384,19 @@ export async function publishSeason(
 
     if (!published) return false;
 
+    /*
+     * The season change is when a child who has outgrown their level's age band
+     * is proposed for the next — POOLSE-112 BA 1. Inside this transaction, so a
+     * publish that fails leaves no proposals naming a season that is not there.
+     * Idempotent in SQL, so re-publishing the same season proposes nobody twice.
+     */
+    const proposedByAge = await proposeForSeasonIn(tx, organizationId, seasonId);
+
     await recordAudit(tx, {
       action: 'season.published',
       entityType: 'season',
       entityId: seasonId,
+      data: { proposedByAge },
     });
 
     return true;

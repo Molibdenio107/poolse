@@ -44,7 +44,13 @@ export async function recordAudit(tx: Tx, entry: AuditEntry): Promise<string> {
      RETURNING id`,
     [
       organizationId,
-      membershipId,
+      /*
+       * Null for a system pass — a nightly job acting inside a tenant context it
+       * built itself (`systemTenant`), which names no membership. `audit_log`
+       * says null is "the system did this on nobody's behalf", and the activity
+       * screen reads it as *Sistema*. Never '' — the column is a uuid.
+       */
+      membershipId === '' ? null : membershipId,
       /*
        * Null rather than an empty string when there is no app_user behind the
        * membership.

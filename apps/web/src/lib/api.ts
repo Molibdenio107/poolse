@@ -2956,7 +2956,34 @@ export interface TransferProposal {
   fromLevelName: string;
   toLevelName: string;
   generatedAt: string;
+  /** Why — POOLSE-112: every required skill, or the age band at the season change. */
+  reason: 'skills' | 'age';
+  seasonName: string | null;
+  /** Set when the club's automatic mode already moved the level; only the turma is left. */
+  appliedAt: string | null;
   candidates: TransferCandidate[];
+}
+
+/** What the queue shows when it is empty — POOLSE-112 BA 3. */
+export type AdvancementMode = 'propose' | 'apply';
+
+export interface LevelStanding {
+  levelId: string;
+  levelName: string;
+  minAgeMonths: number | null;
+  maxAgeMonths: number | null;
+  aboveNow: number;
+  movableNow: number;
+  belowNow: number;
+  movableNext: number;
+}
+
+export interface AdvancementOutlook {
+  mode: AdvancementMode;
+  currentSeason: { id: string; name: string; startsOn: string } | null;
+  nextSeason: { id: string; name: string; startsOn: string; status: string } | null;
+  willMove: number;
+  levels: LevelStanding[];
 }
 
 /** The club's rules for reposições — POOLSE-21, criteria 1, 4, 6 and 9. */

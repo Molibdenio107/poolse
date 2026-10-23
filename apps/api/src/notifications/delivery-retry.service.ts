@@ -4,6 +4,7 @@ import { withOrg, withPlatform } from '@poolse/db';
 import { deliverLabAlert, deliverWaterAlert } from '../facilities/alert-delivery.js';
 import { deliverInvoiceReminder } from '../billing/reminder-delivery.js';
 import { deliverPaymentChangeNotice } from '../billing/payment-change-delivery.js';
+import { deliverLevelChangeNotice } from '../students/level-change-delivery.js';
 import { deliverMessage } from '../messages/delivery.js';
 import { deliverSupportNotice, deliverTrialNotice } from '../platform/owner-notices.js';
 import { alertRecipients, redeliverAlert } from '../platform/platform-alert.js';
@@ -105,6 +106,14 @@ const TENANT_KINDS: TenantKind[] = [
                WHERE delivered_at IS NULL AND cardinality(recipients) > 0 AND ${due('created_at')}`,
     bump: `UPDATE payment_change_notice SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
     deliver: deliverPaymentChangeNotice,
+  },
+  {
+    // POOLSE-112: a child's level changed, told to the family.
+    key: 'level_change',
+    pending: `SELECT id FROM level_change_notice
+               WHERE delivered_at IS NULL AND cardinality(recipients) > 0 AND ${due('created_at')}`,
+    bump: `UPDATE level_change_notice SET delivery_attempts = delivery_attempts + 1, last_attempt_at = now() WHERE id = $1`,
+    deliver: deliverLevelChangeNotice,
   },
 ];
 

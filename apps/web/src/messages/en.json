@@ -2154,6 +2154,36 @@
       "same_slot": "Same day and time",
       "same_instructor": "Same instructor",
       "available": "Has a place"
+    },
+    "bySkills": "Completed every skill in the level",
+    "byAge": "By age, at the change to the {season} season",
+    "applied": "Level already changed on {date} — only the class group is left to choose",
+    "noSeason": "There is no published season to judge ages on.",
+    "outlook": {
+      "noNextSeason": "No next season is planned yet. When you publish one, students above their level's age band are proposed by age.",
+      "willPropose": "At the season change on {date} ({season}), {count, plural, =0 {no students move} one {1 student moves} other {# students move}} up a level by age — they wait here for confirmation.",
+      "willApply": "At the season change on {date} ({season}), {count, plural, =0 {no students move} one {1 student moves} other {# students move}} up a level by age, automatically; only the class groups are left to choose.",
+      "modeIs": {
+        "propose": "Current mode: propose, and a person confirms.",
+        "apply": "Current mode: apply automatically on the season's first day."
+      },
+      "changeMode": "Change under Levels",
+      "todayTitle": "Outside the age band today",
+      "above": "{count, plural, one {1 student above the maximum age} other {# students above the maximum age}} ({movable, plural, =0 {none with a fitting next level} one {1 with a fitting next level} other {# with a fitting next level}})",
+      "below": "{count, plural, one {1 student below the minimum age} other {# students below the minimum age}} — flagged, never proposed down",
+      "propose": "Propose",
+      "proposeAll": "Propose for every level",
+      "proposing": "Proposing…",
+      "proposed": "{count, plural, one {1 advancement proposed} other {# advancements proposed}}.",
+      "proposedNone": "Nothing new to propose: they are already queued, or were dismissed this season."
+    },
+    "mode": {
+      "title": "Advancement by age",
+      "hint": "At the season change, a student whose age is past their level's age band moves to the first following level that admits it.",
+      "propose": "Propose",
+      "proposeHint": "Proposals wait under Advancement and a person confirms each one, with the class group.",
+      "apply": "Apply automatically",
+      "applyHint": "On the season's first day the level is changed, recorded in Activity (reversible) and the family is told; only the class group is left to choose."
     }
   },
   "progress": {
@@ -5402,6 +5432,10 @@
       },
       "class_session": {
         "removed_future": "Future lessons removed"
+      },
+      "advancement": {
+        "confirmed": "Advancement confirmed",
+        "applied": "Advancement applied by age, at the season change"
       }
     }
   },

@@ -211,6 +211,40 @@ Senior levels sit in the **same ladder** as everything else, ordered by the same
 and bounded by the same age range. Not a parallel programme: POOLSE-19's "next level" logic
 walks that one ladder, and a second list would need a branch in it.
 
+### Advancement by age — POOLSE-112
+
+A child advances for two reasons. **By skills**, mid-season, when every required skill of
+their level is attained (POOLSE-19: a trigger proposes, a person confirms into a turma). **By
+age**, at the season change: when a season is published, every student whose age **on its
+first day** is above their level's maximum is proposed, reason *idade*, into the **first level
+after theirs in the ladder whose band admits that age** (and their sex) — a nine-year-old
+skips a level that also stops at eight. A child below a level's minimum is flagged on the
+queue and never proposed down. A child who has left (`student_left_on()`), or has no birth
+date, is never proposed. Both reasons share one queue (`transfer_proposal.reason`), one card
+and one confirm path; the card says which it was.
+
+**The club chooses how automatic it is**, on the Níveis page (owner and admin;
+`PATCH /levels/advancement-mode`): *Propor* (default) queues for a person to confirm with the
+turma; *Aplicar automaticamente* moves the level on the season's first day — a nightly pass
+(`AdvancementApplyService`, 04:20 Lisbon, per-tenant advisory lock) acting as *sistema*
+through `setStudentLevelIn`, so the student's Atividade records it with no actor and
+*Reverter* (POOLSE-80) puts it back. The proposal stays in the queue marked *nível já
+alterado* and only the turma is left to pick; confirming it then moves the enrolment and
+nothing else.
+
+**The queue is informative when empty** (`GET /transfer-proposals/outlook`): the next season
+change — the earliest season starting after today, draft or published — with how many will
+move under the current mode; and per level, who is above or below the band *today*, with
+*Propor* (owner and admin, `POST /transfer-proposals/propose-by-age`, one level or all) to
+queue the ones above now, judged on the running season. Pressing it twice queues nothing new,
+and a dismissal is kept for that season.
+
+**The family is told** whenever a level changes through the queue — a person's confirmation
+or the automatic pass — by `level_change_notice`, the `payment_change_notice` pattern: written
+in the transaction, the live guardians' addresses (else the student's) snapshotted, emailed
+after the commit by `deliverLevelChangeNotice` and retried hourly. It is account mail about one
+child, not a club *message*: no daily quota and no opt-out reads it.
+
 ## The competition pathway — POOLSE-81
 
 **A level can be marked *Competição*** on the Escalões page (pré-competição, competição). It is the

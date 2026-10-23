@@ -1,7 +1,15 @@
 import { getTranslations } from 'next-intl/server';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { FromLink } from '@/components/from-link';
-import { ApiError, apiFetch, type Students, type StudentLevel } from '../../../../../lib/api';
+import {
+  ApiError,
+  apiFetch,
+  type AdvancementOutlook,
+  type Students,
+  type StudentLevel,
+} from '../../../../../lib/api';
+import { outcome } from '@/lib/load-failure';
+import { AdvancementModeCard } from '../advancement/advancement-mode-card';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { backProp, originBack } from '@/lib/back';
@@ -48,6 +56,12 @@ export default async function LevelsPage({
 
   let data: Students | null = null;
   let failure: LoadFailure | null = null;
+
+  // The mode card — POOLSE-112 BA 2. Best effort beside the ladder: a coach
+  // is refused the outlook and simply gets no card.
+  const outlookLoad = await outcome(
+    apiFetch<{ outlook: AdvancementOutlook }>('/transfer-proposals/outlook'),
+  );
 
   try {
     data = await apiFetch<Students>('/students');
@@ -137,6 +151,14 @@ export default async function LevelsPage({
                 {t('students.sortByAge')}
               </FromLink>
             </nav>
+          )}
+
+          {outlookLoad.state === 'ok' && (
+            <AdvancementModeCard
+              organizationId={data.organizationId}
+              mode={outlookLoad.data.outlook.mode}
+              canManage={data.canManage}
+            />
           )}
 
           <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">

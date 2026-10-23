@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { setStudentLevelIn } from './students.repository.js';
 import { nameOrder, shortName } from '../people/names.js';
@@ -35,6 +35,15 @@ export interface TransferProposal {
   fromLevelName: string;
   toLevelName: string;
   generatedAt: string;
+  /** Why — POOLSE-112. `skills` is POOLSE-19's trigger; `age` the season change. */
+  reason: 'skills' | 'age';
+  /** The season an age proposal was judged on. Null for a skill proposal. */
+  seasonName: string | null;
+  /**
+   * When the club's automatic mode already moved the level — POOLSE-112 BA 2.
+   * The card then asks only for the turma. Null when nothing moved yet.
+   */
+  appliedAt: string | null;
   /**
    * The ranked turmas, computed now rather than when the proposal was made.
    *
@@ -66,6 +75,9 @@ export async function listProposals(
         from_level_name: string;
         to_level_name: string;
         generated_at: Date;
+        reason: 'skills' | 'age';
+        season_name: string | null;
+        applied_at: Date | null;
         candidates: TransferCandidate[];
       }>(
         `SELECT ${TOTAL_COUNT},
@@ -75,6 +87,9 @@ export async function listProposals(
                 fl.name AS from_level_name,
                 tl.name AS to_level_name,
                 p.generated_at,
+                p.reason::text AS reason,
+                se.name AS season_name,
+                p.applied_at,
                 coalesce((
                   SELECT jsonb_agg(
                            jsonb_build_object(
@@ -91,6 +106,7 @@ export async function listProposals(
            JOIN student s        ON s.id = p.student_id AND s.organization_id = p.organization_id
            JOIN student_level fl ON fl.id = p.from_level_id AND fl.organization_id = p.organization_id
            JOIN student_level tl ON tl.id = p.to_level_id AND tl.organization_id = p.organization_id
+           LEFT JOIN season se   ON se.id = p.season_id AND se.organization_id = p.organization_id
           WHERE p.status = 'pending'
             AND p.archived_at IS NULL
             AND s.archived_at IS NULL
@@ -106,6 +122,9 @@ export async function listProposals(
       fromLevelName: row.from_level_name,
       toLevelName: row.to_level_name,
       generatedAt: row.generated_at.toISOString(),
+      reason: row.reason,
+      seasonName: row.season_name,
+      appliedAt: row.applied_at === null ? null : row.applied_at.toISOString(),
       candidates: row.candidates,
     }));
   });
@@ -136,21 +155,34 @@ export type ConfirmOutcome =
  * March" is a question about the turma she was in in March, and moving the rows
  * would make it unanswerable.
  */
+export interface Confirmed {
+  outcome: ConfirmOutcome;
+  /**
+   * The family's notice, to email after the commit — POOLSE-112 BA 4. Null
+   * when nothing was confirmed, or when the level had already moved under the
+   * club's automatic mode and the family was told then.
+   */
+  noticeId: string | null;
+}
+
 export async function confirmProposal(
   organizationId: string,
   proposalId: string,
   classGroupId: string,
   effectiveOn: string,
   actorMembershipId: string,
-): Promise<ConfirmOutcome> {
+): Promise<Confirmed> {
   return withOrg(organizationId, async (tx) => {
     const { rows: found } = await tx.query<{
       status: string;
       student_id: string;
       from_level_id: string;
       to_level_id: string;
+      reason: 'skills' | 'age';
+      applied_at: Date | null;
     }>(
-      `SELECT status::text AS status, student_id, from_level_id, to_level_id
+      `SELECT status::text AS status, student_id, from_level_id, to_level_id,
+              reason::text AS reason, applied_at
          FROM transfer_proposal
         WHERE id = $1 AND archived_at IS NULL
           FOR UPDATE`,
@@ -158,8 +190,8 @@ export async function confirmProposal(
     );
 
     const proposal = found[0];
-    if (!proposal) return 'not_found';
-    if (proposal.status !== 'pending') return 'not_pending';
+    if (!proposal) return { outcome: 'not_found', noticeId: null };
+    if (proposal.status !== 'pending') return { outcome: 'not_pending', noticeId: null };
 
     /*
      * Lock the turma, then count. The order matters: counting first and locking
@@ -175,7 +207,9 @@ export async function confirmProposal(
     const turma = turmas[0];
     // Also the answer for a turma at the wrong level: the proposal is to advance,
     // and a confirmation into some other level is not that.
-    if (!turma || turma.level_id !== proposal.to_level_id) return 'no_such_turma';
+    if (!turma || turma.level_id !== proposal.to_level_id) {
+      return { outcome: 'no_such_turma', noticeId: null };
+    }
 
     const { rows: seats } = await tx.query<{ free: number | null }>(
       'SELECT class_group_free_seats($1) AS free',
@@ -183,7 +217,7 @@ export async function confirmProposal(
     );
     // Null capacity is an unlimited turma, which always has room.
     const free = seats[0]?.free;
-    if (free !== null && free !== undefined && free <= 0) return 'no_seat';
+    if (free !== null && free !== undefined && free <= 0) return { outcome: 'no_seat', noticeId: null };
 
     /*
      * **Only the enrolments at the level being left.**
@@ -218,7 +252,7 @@ export async function confirmProposal(
        * mistake rather than a server fault, and both are better said than
        * guessed at.
        */
-      return 'bad_effective_date';
+      return { outcome: 'bad_effective_date', noticeId: null };
     }
 
     /*
@@ -234,16 +268,27 @@ export async function confirmProposal(
         [organizationId, classGroupId, proposal.student_id, effectiveOn],
       );
     } catch (error) {
-      if ((error as { code?: string }).code === '23505') return 'already_in_turma';
+      if ((error as { code?: string }).code === '23505') {
+        return { outcome: 'already_in_turma', noticeId: null };
+      }
       throw error;
     }
 
     // The student's own level moves with them, so every screen that filters by
     // level — including POOLSE-21's redemption filter — follows from here.
     // Through the level's own write path, so the student's history records the
-    // move with the level it came from — POOLSE-80.
-    const moved = await setStudentLevelIn(tx, proposal.student_id, proposal.to_level_id);
-    if (moved !== 'updated') throw new Error(`Advancement could not move the student: ${moved}`);
+    // move with the level it came from — POOLSE-80. Unless the club's automatic
+    // mode already moved it on the season's first day (POOLSE-112), in which
+    // case this confirmation is the turma alone and the family was told then.
+    let noticeId: string | null = null;
+    if (proposal.applied_at === null) {
+      const moved = await setStudentLevelIn(tx, proposal.student_id, proposal.to_level_id, {
+        reason: proposal.reason,
+        proposalId,
+      });
+      if (moved !== 'updated') throw new Error(`Advancement could not move the student: ${moved}`);
+      noticeId = await writeLevelChangeNotice(tx, organizationId, proposalId);
+    }
 
     await tx.query(
       `UPDATE transfer_proposal
@@ -260,11 +305,39 @@ export async function confirmProposal(
       action: 'advancement.confirmed',
       entityType: 'transfer_proposal',
       entityId: proposalId,
-      data: { studentId: proposal.student_id, classGroupId, effectiveOn },
+      data: { studentId: proposal.student_id, classGroupId, effectiveOn, reason: proposal.reason },
     });
 
-    return 'confirmed';
+    return { outcome: 'confirmed', noticeId };
   });
+}
+
+/**
+ * The family's record of a level change — POOLSE-112 BA 4. Written inside the
+ * transaction that moved the level, with the addresses and the level names
+ * snapshotted; the email leaves after the commit (`deliverLevelChangeNotice`).
+ * Null when nobody has an address: a row that can never be delivered would sit
+ * in the retry for ever.
+ */
+async function writeLevelChangeNotice(
+  tx: Tx,
+  organizationId: string,
+  proposalId: string,
+): Promise<string | null> {
+  const { rows } = await tx.query<{ id: string }>(
+    `INSERT INTO level_change_notice
+       (organization_id, student_id, proposal_id, from_level_name, to_level_name, reason, recipients)
+     SELECT p.organization_id, p.student_id, p.id, fl.name, tl.name, p.reason,
+            level_change_recipients(p.organization_id, p.student_id)
+       FROM transfer_proposal p
+       JOIN student_level fl ON fl.id = p.from_level_id AND fl.organization_id = p.organization_id
+       JOIN student_level tl ON tl.id = p.to_level_id AND tl.organization_id = p.organization_id
+      WHERE p.id = $1 AND p.organization_id = $2
+        AND cardinality(level_change_recipients(p.organization_id, p.student_id)) > 0
+     RETURNING id`,
+    [proposalId, organizationId],
+  );
+  return rows[0]?.id ?? null;
 }
 
 /**
@@ -340,4 +413,275 @@ export async function readyNoSeat(
     page: page.page,
     limit: page.limit,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Advancement by age — POOLSE-112
+//
+// The second reason a child advances: the season turns and they have outgrown
+// their level's age band. Generation is `propose_age_advancements()` in SQL,
+// run when a season is published and from the queue's *Propor* button; what is
+// here is the outlook the queue shows, the club's mode, and the nightly pass
+// that applies proposals when the club asked for that.
+// ---------------------------------------------------------------------------
+
+export type AdvancementMode = 'propose' | 'apply';
+
+export interface LevelStanding {
+  levelId: string;
+  levelName: string;
+  minAgeMonths: number | null;
+  maxAgeMonths: number | null;
+  /** Older than the band today. */
+  aboveNow: number;
+  /** Of those, how many have a level above that fits — the ones *Propor* queues. */
+  movableNow: number;
+  /** Younger than the band today — flagged, never proposed down (BA 5). */
+  belowNow: number;
+  /** Older than the band on the next season's first day, with a level that fits. */
+  movableNext: number;
+}
+
+export interface AdvancementOutlook {
+  mode: AdvancementMode;
+  /** The season the club is running, which *Propor* judges against. Null with none. */
+  currentSeason: { id: string; name: string; startsOn: string } | null;
+  /**
+   * The next season change: the earliest season starting after today, draft or
+   * published. Null when the club has not planned one yet.
+   */
+  nextSeason: { id: string; name: string; startsOn: string; status: string } | null;
+  /** Students who will move at that change, under the current setting. */
+  willMove: number;
+  levels: LevelStanding[];
+}
+
+/**
+ * What the queue shows even when it is empty — BA rule 3. Every count is
+ * derived now, in SQL, by `age_band_standing()`; nothing here is stored, so a
+ * corrected birth date or a re-banded level is reflected on the next read.
+ */
+export async function advancementOutlook(organizationId: string): Promise<AdvancementOutlook> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: org } = await tx.query<{ mode: AdvancementMode }>(
+      `SELECT advancement_mode::text AS mode FROM organization WHERE id = $1`,
+      [organizationId],
+    );
+
+    const { rows: seasons } = await tx.query<{
+      id: string;
+      name: string;
+      starts_on: string;
+      status: string;
+      which: 'current' | 'next';
+    }>(
+      `(SELECT id, name, starts_on::text AS starts_on, status::text AS status, 'current' AS which
+          FROM season WHERE status = 'published' AND archived_at IS NULL LIMIT 1)
+       UNION ALL
+       (SELECT id, name, starts_on::text, status::text, 'next'
+          FROM season
+         WHERE archived_at IS NULL AND status <> 'archived' AND starts_on > club_today()
+         ORDER BY starts_on LIMIT 1)`,
+    );
+    const current = seasons.find((row) => row.which === 'current') ?? null;
+    const next = seasons.find((row) => row.which === 'next') ?? null;
+
+    const { rows: levels } = await tx.query<{
+      level_id: string;
+      level_name: string;
+      min_age_months: number | null;
+      max_age_months: number | null;
+      above_now: string;
+      movable_now: string;
+      below_now: string;
+      movable_next: string;
+    }>(
+      `WITH today AS (SELECT * FROM age_band_standing($1, club_today())),
+            next_day AS (SELECT * FROM age_band_standing($1, $2::date))
+       SELECT l.id AS level_id, l.name AS level_name, l.min_age_months, l.max_age_months,
+              (SELECT count(*) FROM today t WHERE t.level_id = l.id AND t.standing = 'above') AS above_now,
+              (SELECT count(*) FROM today t WHERE t.level_id = l.id AND t.standing = 'above' AND t.fits IS NOT NULL) AS movable_now,
+              (SELECT count(*) FROM today t WHERE t.level_id = l.id AND t.standing = 'below') AS below_now,
+              (SELECT count(*) FROM next_day n WHERE n.level_id = l.id AND n.standing = 'above' AND n.fits IS NOT NULL) AS movable_next
+         FROM student_level l
+        WHERE l.organization_id = $1 AND l.archived_at IS NULL
+        ORDER BY l.sort_order, l.name`,
+      // With no next season the "next" column is judged on today, and `willMove`
+      // below says nothing about it because `nextSeason` is null.
+      [organizationId, next?.starts_on ?? null],
+    );
+
+    const standing: LevelStanding[] = levels.map((row) => ({
+      levelId: row.level_id,
+      levelName: row.level_name,
+      minAgeMonths: row.min_age_months,
+      maxAgeMonths: row.max_age_months,
+      aboveNow: Number(row.above_now),
+      movableNow: Number(row.movable_now),
+      belowNow: Number(row.below_now),
+      movableNext: next === null ? 0 : Number(row.movable_next),
+    }));
+
+    return {
+      mode: org[0]?.mode ?? 'propose',
+      currentSeason: current === null ? null : { id: current.id, name: current.name, startsOn: current.starts_on },
+      nextSeason:
+        next === null
+          ? null
+          : { id: next.id, name: next.name, startsOn: next.starts_on, status: next.status },
+      willMove: standing.reduce((sum, level) => sum + level.movableNext, 0),
+      levels: standing,
+    };
+  });
+}
+
+/**
+ * The queue's *Propor* button — BA rule 3. Judged on the season the club is
+ * running, today being inside it; `propose_age_advancements()` is idempotent,
+ * so pressing it twice queues nothing new. Null when the club has no published
+ * season to judge against.
+ */
+export async function proposeByAgeNow(
+  organizationId: string,
+  levelId: string | null,
+): Promise<number | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: season } = await tx.query<{ id: string }>(
+      `SELECT id FROM season WHERE status = 'published' AND archived_at IS NULL LIMIT 1`,
+    );
+    const seasonId = season[0]?.id;
+    if (seasonId === undefined) return null;
+
+    const { rows } = await tx.query<{ queued: number }>(
+      'SELECT propose_age_advancements($1, $2, $3) AS queued',
+      [organizationId, seasonId, levelId],
+    );
+    const queued = rows[0]?.queued ?? 0;
+
+    if (queued > 0) {
+      await recordAudit(tx, {
+        action: 'advancement.proposed_by_age',
+        entityType: 'season',
+        entityId: seasonId,
+        data: { queued, levelId },
+      });
+    }
+    return queued;
+  });
+}
+
+/**
+ * Queues this season's age proposals — called by the publish, inside its
+ * transaction. Returns how many it queued so the audit entry can say.
+ */
+export async function proposeForSeasonIn(
+  tx: Tx,
+  organizationId: string,
+  seasonId: string,
+): Promise<number> {
+  const { rows } = await tx.query<{ queued: number }>(
+    'SELECT propose_age_advancements($1, $2) AS queued',
+    [organizationId, seasonId],
+  );
+  return rows[0]?.queued ?? 0;
+}
+
+/** The club's choice — BA rule 2. Owner and admin; audited, because it changes what a machine does. */
+export async function setAdvancementMode(
+  organizationId: string,
+  mode: AdvancementMode,
+): Promise<AdvancementMode> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ before: AdvancementMode }>(
+      `SELECT advancement_mode::text AS before FROM organization WHERE id = $1 FOR UPDATE`,
+      [organizationId],
+    );
+    const before = rows[0]?.before ?? 'propose';
+    if (before === mode) return before;
+
+    await tx.query(`UPDATE organization SET advancement_mode = $2 WHERE id = $1`, [
+      organizationId,
+      mode,
+    ]);
+    await recordAudit(tx, {
+      action: 'advancement.mode_changed',
+      entityType: 'organization',
+      entityId: organizationId,
+      data: { before, after: mode },
+    });
+    return mode;
+  });
+}
+
+export interface AppliedProposal {
+  proposalId: string;
+  noticeId: string | null;
+}
+
+/**
+ * The automatic half of BA rule 2 — run nightly by `AdvancementApplyService`
+ * for a club whose mode is `apply`, inside a system tenant context (no
+ * membership, so the audit entry's actor is null: *sistema*).
+ *
+ * An age proposal whose season has begun has its level moved through
+ * `setStudentLevelIn`, the same write path a person's confirmation takes, so
+ * the student's history records it and `POST /activity/:id/revert` undoes it.
+ * The proposal stays pending with `applied_at` set — the turma is still a
+ * person's to pick — and the family is told now rather than at the turma.
+ */
+export async function applyDueAgeProposals(organizationId: string): Promise<AppliedProposal[]> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows: lock } = await tx.query<{ got: boolean }>(
+      `SELECT pg_try_advisory_xact_lock(hashtextextended('advancement_apply:' || $1, 0)) AS got`,
+      [organizationId],
+    );
+    if (!lock[0]?.got) return [];
+
+    const { rows: org } = await tx.query<{ mode: AdvancementMode }>(
+      `SELECT advancement_mode::text AS mode FROM organization WHERE id = $1`,
+      [organizationId],
+    );
+    if (org[0]?.mode !== 'apply') return [];
+
+    const { rows: due } = await tx.query<{ id: string; student_id: string; to_level_id: string }>(
+      `SELECT p.id, p.student_id, p.to_level_id
+         FROM transfer_proposal p
+         JOIN season se ON se.id = p.season_id AND se.organization_id = p.organization_id
+         JOIN student s ON s.id = p.student_id AND s.organization_id = p.organization_id
+        WHERE p.reason = 'age'
+          AND p.status = 'pending'
+          AND p.applied_at IS NULL
+          AND p.archived_at IS NULL
+          AND s.archived_at IS NULL
+          AND se.archived_at IS NULL
+          AND se.starts_on <= club_today()
+        ORDER BY p.generated_at
+        FOR UPDATE OF p`,
+    );
+
+    const applied: AppliedProposal[] = [];
+    for (const proposal of due) {
+      const moved = await setStudentLevelIn(tx, proposal.student_id, proposal.to_level_id, {
+        reason: 'age',
+        proposalId: proposal.id,
+        automatic: true,
+      });
+      // A level archived since, or a student gone: the proposal is left for a
+      // person rather than failing the whole pass over one row.
+      if (moved !== 'updated') continue;
+
+      await tx.query(`UPDATE transfer_proposal SET applied_at = now() WHERE id = $1`, [
+        proposal.id,
+      ]);
+      const noticeId = await writeLevelChangeNotice(tx, organizationId, proposal.id);
+      await recordAudit(tx, {
+        action: 'advancement.applied',
+        entityType: 'transfer_proposal',
+        entityId: proposal.id,
+        data: { studentId: proposal.student_id, toLevelId: proposal.to_level_id },
+      });
+      applied.push({ proposalId: proposal.id, noticeId });
+    }
+    return applied;
+  });
 }

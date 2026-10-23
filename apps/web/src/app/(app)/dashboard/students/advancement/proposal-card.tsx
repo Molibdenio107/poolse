@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import { CONTROL_LINE } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { today } from '@/lib/dates';
+import { formatDate } from '@/lib/date-format';
 
 /**
  * One student who has finished their level — POOLSE-19, criteria 3, 5 and 6.
@@ -64,6 +65,19 @@ export function ProposalCard({
           })}
         </span>
       </div>
+
+      {/*
+        Why the child is here — POOLSE-112. Said in words, because a queue that
+        mixes "finished every skill" with "turned nine" without saying which
+        makes the coach re-derive it from the record.
+      */}
+      <p className="text-sm text-foreground-muted">
+        {proposal.reason === 'age'
+          ? t('advancement.byAge', { season: proposal.seasonName ?? '' })
+          : t('advancement.bySkills')}
+        {proposal.appliedAt !== null &&
+          ` · ${t('advancement.applied', { date: formatDate(proposal.appliedAt) })}`}
+      </p>
 
       {proposal.candidates.length === 0 ? (
         /*

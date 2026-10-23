@@ -584,3 +584,25 @@ export async function markStudentPaidAction(
   return { ok: true };
 }
 
+
+/**
+ * How the club handles age proposals at the season change — POOLSE-112 BA 2.
+ * Owner and admin; one control on Níveis.
+ */
+export async function setAdvancementModeAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const mode = String(formData.get('mode') ?? '');
+
+  try {
+    await apiPatch('/levels/advancement-mode', { mode }, { organizationId });
+  } catch (error) {
+    return failure(error, 'common.notSaved');
+  }
+
+  revalidatePath('/dashboard/students/levels');
+  revalidatePath('/dashboard/students/advancement');
+  return { ok: true };
+}

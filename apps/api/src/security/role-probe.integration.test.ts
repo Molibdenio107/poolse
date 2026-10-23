@@ -46,8 +46,10 @@ import { EnergyInvoicesController } from '../energy/invoices.controller.js';
 import { ComplaintsSettingsController, RegulationsController } from '../facilities/regulations.controller.js';
 import { RecordsController } from '../students/records.controller.js';
 import {
+  AdvancementController,
   FamilyController,
   GuardiansController,
+  LevelsController,
   PeopleDedupController,
   PeopleSearchController,
   StudentsController,
@@ -343,6 +345,20 @@ test('people, register and guardian lists refuse a guardian and a student (403)'
     await refused('GET guardians', 403, () => new GuardiansController().list());
     await refused('GET people-search/:marta/students', 403, () =>
       new PeopleSearchController().students(fixture.martaId),
+    );
+  });
+});
+
+test('the advancement queue, its outlook, Propor and the mode refuse a guardian and a student (403)', async () => {
+  // POOLSE-112. The queue was never probed; the three new routes join it here.
+  await asEach(async () => {
+    await refused('GET transfer-proposals', 403, () => new AdvancementController().list());
+    await refused('GET transfer-proposals/outlook', 403, () => new AdvancementController().outlook());
+    await refused('POST transfer-proposals/propose-by-age', 403, () =>
+      new AdvancementController().proposeByAge({}),
+    );
+    await refused('PATCH levels/advancement-mode', 403, () =>
+      new LevelsController().advancementMode({ mode: 'apply' }),
     );
   });
 });

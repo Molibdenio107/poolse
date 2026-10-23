@@ -51,3 +51,31 @@ export async function dismissAdvancementAction(
   revalidatePath('/dashboard/students/advancement');
   return { ok: true };
 }
+
+/**
+ * *Propor* — queue age proposals now, for one level or all — POOLSE-112 BA 3.
+ * Owner and admin; the API refuses the rest. Says how many it queued, because
+ * "nothing new" and "it did not work" are different sentences.
+ */
+export async function proposeByAgeAction(
+  organizationId: string,
+  levelId: string | null,
+): Promise<{ ok: boolean; queued?: number; errorKey?: string }> {
+  try {
+    const { queued } = await apiPost<{ queued: number }>(
+      '/transfer-proposals/propose-by-age',
+      levelId === null ? {} : { levelId },
+      { organizationId },
+    );
+    revalidatePath('/dashboard/students/advancement');
+    return { ok: true, queued };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      return { ok: false, errorKey: 'advancement.notPermitted' };
+    }
+    if (error instanceof ApiError && error.status === 409) {
+      return { ok: false, errorKey: 'advancement.noSeason' };
+    }
+    return { ok: false, errorKey: 'common.notSaved' };
+  }
+}

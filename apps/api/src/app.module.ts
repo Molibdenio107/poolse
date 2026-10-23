@@ -45,6 +45,7 @@ import { LeadsController, RegistrationSettingsController } from './leads/leads.c
 import { PublicLeadsController } from './leads/public-leads.controller.js';
 import { LeadRetentionService } from './leads/lead-retention.service.js';
 import { RetentionService } from './retention/retention.service.js';
+import { AdvancementApplyService } from './students/advancement-apply.service.js';
 import { LabResultsController } from './facilities/lab-results.controller.js';
 import { ComplaintsSettingsController, RegulationsController } from './facilities/regulations.controller.js';
 import {
@@ -308,6 +309,7 @@ export const IDENTITY_ONLY_ROUTES = [
     LeadRetentionService,
     // 7b.8 — health data a year after leaving, identity after five.
     RetentionService,
+    AdvancementApplyService,
   ],
 })
 export class AppModule implements NestModule {

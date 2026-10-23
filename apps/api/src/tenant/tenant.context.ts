@@ -40,6 +40,20 @@ export function currentTenant(): TenantContext {
   return context;
 }
 
+/**
+ * Runs a job's work for one tenant as *the system* — POOLSE-112's nightly
+ * apply, which writes through the same repository functions a request does
+ * (`setStudentLevelIn`, `recordAudit`). No membership, no roles: a function that
+ * calls `requireRole` inside it refuses, which is right — a job is not a person
+ * and must not inherit one's permissions. `recordAudit` writes a null actor.
+ */
+export function asSystem<T>(organizationId: string, fn: () => Promise<T>): Promise<T> {
+  return tenantStorage.run(
+    { organizationId, membershipId: '', appUserId: '', roles: [] },
+    fn,
+  );
+}
+
 export function currentOrganizationId(): string {
   return currentTenant().organizationId;
 }

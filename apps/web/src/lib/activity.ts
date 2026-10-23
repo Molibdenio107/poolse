@@ -63,4 +63,8 @@ export const LABELLED_ACTIONS: ReadonlySet<string> = new Set([
   'class_schedule.moved',
   'class_schedule.removed',
   'class_session.removed_future',
+  // POOLSE-112: a level moved by the queue — a person's confirmation, or the
+  // season's first day under the club's automatic mode.
+  'advancement.confirmed',
+  'advancement.applied',
 ]);

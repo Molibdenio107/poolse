@@ -3907,3 +3907,25 @@ subscribed). Never deleted. `poolse_app`: SELECT, INSERT, and UPDATE of `message
 DEFINER`, the link's whole boundary. `message_recipients()` is now a wrapper over the renamed
 `message_recipients_all()` with one more column, `opted_out` (never true for the `closure` audience);
 `sendMessage` writes the tokens for a general message's addresses in the same statement.
+
+### Advancement by age — POOLSE-112, 23 October 2026
+
+Migration `1792317600000_advancement-by-age`. On `transfer_proposal`: `reason transfer_reason`
+(`skills` | `age`, default `skills`), `season_id` (composite FK to `season`; CHECK that exactly an
+`age` proposal names one), and `applied_at` — set by the club's automatic mode when the level moved
+on the season's first day and only the turma is left; the row stays `pending`, so every reader of
+the queue is unchanged. The live unique index on `(student_id, from_level_id)` makes generation
+idempotent for both reasons. On `organization`: `advancement_mode advancement_mode` (`propose` |
+`apply`, default `propose`), `GRANT UPDATE` to `poolse_app`. Functions: `age_fit_level(org, from,
+age_months, gender)` — the first level after `from` in `sort_order` whose band admits the age and
+the sex, null when none; `age_band_standing(org, on)` — every live student (not archived,
+`student_left_on()` null, with a birth date) against their level's band on a day: `above` /
+`below` / `within` and the level an `above` child would move to; `propose_age_advancements(org,
+season, level?)` — queues an `age` proposal for every `above` child with a fit, judged on the
+season's `starts_on`, `ON CONFLICT DO NOTHING`, and never over a `dismissed` row for that season;
+`level_change_recipients(org, student)` — the live guardians' addresses, else the student's own.
+**`level_change_notice`** — a child's level changed and the family told: `student_id`,
+`proposal_id` (composite FKs), `from_level_name` / `to_level_name` (snapshots), `reason`,
+`recipients`, `delivered_at`, `delivery_attempts`, `last_attempt_at`. Tenant RLS; `poolse_app`
+holds SELECT and INSERT and UPDATE on the three delivery columns only. In `TENANT_TABLES` and
+`TENANT_KINDS` (`level_change`). Asserted in `test/advancement-by-age.sql`.

@@ -4,10 +4,13 @@ import { getTranslations } from 'next-intl/server';
 import {
   ApiError,
   apiFetch,
+  type AdvancementOutlook,
   type Me,
   type Paginated,
   type TransferProposal,
 } from '@/lib/api';
+import { outcome, type Outcome } from '@/lib/load-failure';
+import { AgeOutlook } from './age-outlook';
 import { PageError, PageShell } from '@/components/page-shell';
 import { Pagination } from '@/components/pagination';
 import { isPastEnd, lastPage, pageHref, readPage } from '@/lib/pagination';
@@ -36,18 +39,26 @@ export default async function AdvancementPage({
 
   let proposals: Paginated<TransferProposal> | null = null;
   let organizationId = '';
+  let canPropose = false;
   let failure: LoadFailure | null = null;
   let notPermitted = false;
+  // Best effort: the outlook is the empty queue's content, and the queue
+  // itself still renders if it does not load — POOLSE-112.
+  let outlookLoad: Outcome<{ outlook: AdvancementOutlook }> | null = null;
 
   try {
-    const [queue, me] = await Promise.all([
+    const [queue, me, loaded] = await Promise.all([
       apiFetch<{ proposals: Paginated<TransferProposal> }>(
         `/transfer-proposals${page > 1 ? `?page=${page}` : ''}`,
       ),
       apiFetch<Me>('/me'),
+      outcome(apiFetch<{ outlook: AdvancementOutlook }>('/transfer-proposals/outlook')),
     ]);
     proposals = queue.proposals;
-    organizationId = me.memberships[0]?.organizationId ?? '';
+    outlookLoad = loaded;
+    const membership = me.memberships[0];
+    organizationId = membership?.organizationId ?? '';
+    canPropose = (membership?.roles ?? []).some((role) => role === 'owner' || role === 'admin');
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) notPermitted = true;
     else failure = describeLoad(error);
@@ -79,15 +90,31 @@ export default async function AdvancementPage({
         />
       )}
 
-      {proposals !== null && proposals.total === 0 && (
+      {/*
+        The outlook comes first, queue or no queue — POOLSE-112 BA 3. An empty
+        queue is the normal state, not a problem, and this is what makes the
+        page say something useful in it: who is outside their band today, and
+        what the next season change will do.
+      */}
+      {proposals !== null && outlookLoad?.state === 'ok' && (
+        <AgeOutlook
+          organizationId={organizationId}
+          outlook={outlookLoad.data.outlook}
+          canPropose={canPropose}
+          queueEmpty={proposals.total === 0}
+        />
+      )}
+      {proposals !== null && proposals.total === 0 && outlookLoad?.state !== 'ok' && (
         <section className="flex flex-col gap-1 rounded border border-border bg-surface p-5">
           <p>{t('advancement.none')}</p>
-          {/*
-            An empty queue is the normal state, not a problem. The hint says so,
-            because an empty screen with no explanation reads as broken.
-          */}
           <p className="text-sm text-foreground-muted">{t('advancement.noneHint')}</p>
         </section>
+      )}
+      {outlookLoad?.state === 'failed' && (
+        <PageError
+          message={t(outlookLoad.failure.key)}
+          {...(outlookLoad.failure.detail === '' ? {} : { detail: outlookLoad.failure.detail })}
+        />
       )}
 
       {proposals !== null && proposals.total > 0 && (

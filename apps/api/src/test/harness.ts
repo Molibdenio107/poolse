@@ -157,6 +157,7 @@ const TENANT_TABLES = [
   'reposicao_credit',
   'attendance',
   'skill_progress',
+  'level_change_notice',
   'transfer_proposal',
   'student_record',
   // POOLSE-81. Results name a meet, so the meet goes after them.

@@ -58,4 +58,12 @@ export function describeChange<F extends string>(
  */
 export interface ChangeContext {
   revertOf?: string;
+  /**
+   * An advancement's context — POOLSE-112: why the level moved, which proposal
+   * asked, and whether a machine did it on the season's first day (`automatic`,
+   * actor null — *sistema*) rather than a person confirming.
+   */
+  reason?: 'skills' | 'age';
+  proposalId?: string;
+  automatic?: boolean;
 }
