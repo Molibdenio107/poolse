@@ -219,6 +219,8 @@ A document's page has a **PDF** link. It opens the document laid out for A4 in a
 brings up the print dialog, where *Guardar como PDF* saves it. The printout shows what the
 screen shows, including the notice that it is an internal record and not a legal fatura.
 
+Its **Voltar** is the page shell's, like every record's (POOLSE-104 A): back to the view and month the document was opened from — *Em dívida* to *Em dívida*, a month to that month — else the month it was issued in.
+
 ## On a phone
 
 Below `md` the three tables — the month's run, the issued documents and *Em dívida* — become one card per row through `.table-stack`. Each cell is a "label  value" line, and the label comes from its `data-label`. The table is the same element, so the run's checkboxes and the reminder ticks work as on a desk. From `md` up nothing changes (POOLSE-88 phone views).

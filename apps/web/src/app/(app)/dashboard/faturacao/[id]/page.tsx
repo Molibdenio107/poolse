@@ -1,11 +1,9 @@
 import { formatDate, formatStamp } from '@/lib/date-format';
-import Link from 'next/link';
-import { LinkBusy } from '@/components/link-busy';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { Printer } from 'lucide-react';
 import { PageError, PageShell } from '@/components/page-shell';
 import { formatCents } from '@/lib/money';
-import { backTarget } from '@/lib/back';
+import { backProp, backTarget } from '@/lib/back';
 import { DocumentLines } from './document-lines';
 import { SettlementPanel } from './settlement-panel';
 import { StatusBadge } from '../status-badge';
@@ -79,7 +77,16 @@ export default async function InvoicePage({
   };
 
   return (
-    <PageShell title={invoice.documentNo} subtitle={t(`invoices.kind.${invoice.kind}`)}>
+    <PageShell
+      title={invoice.documentNo}
+      subtitle={t(`invoices.kind.${invoice.kind}`)}
+      // The shell's Voltar, back to the view and month the document was opened
+      // from (POOLSE-104 A); with no origin, the month it was issued in.
+      back={backProp(
+        backTarget(from, `/dashboard/faturacao?facilityId=${facilityId}&month=${invoice.issuedOn.slice(0, 7)}`),
+        t,
+      )}
+    >
       <div className="flex flex-col gap-6">
         {/*
           The state first, because it is what somebody opening this page came to
@@ -178,14 +185,6 @@ export default async function InvoicePage({
         )}
 
         <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href={backTarget(from, `/dashboard/faturacao?facilityId=${facilityId}&month=${invoice.issuedOn.slice(0, 7)}`).href}
-            className="text-sm text-primary hover:underline"
-          >
-            {t('invoices.backToList')}
-            <LinkBusy />
-          </Link>
-
           {/*
             The document on paper — the browser's "Guardar como PDF", no PDF
             library (12 October 2026). A page rather than a file, so its own tab;
