@@ -13,7 +13,9 @@ import {
 } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 import { readPoolContext } from './analyses.repository.js';
-import { resolveSample, type SampleMoment } from './sample-moment.js';
+import { poolTimezone, resolveSample, sampleMoment, type SampleMoment } from './sample-moment.js';
+import { checkLabRows, type LabImportRow } from './lab-import.js';
+import type { AnalysisImportSummary } from './analysis-import.js';
 
 /**
  * Laboratory results — POOLSE-72.
@@ -152,57 +154,156 @@ export async function createLabResult(
   input: LabResultInput,
   recordedBy: string,
 ): Promise<{ id: string; alertId: string | null } | null> {
-  return withOrg(organizationId, async (tx) => {
-    const { rows: pools } = await tx.query('SELECT 1 FROM pool WHERE id = $1 AND archived_at IS NULL', [
+  return withOrg(organizationId, (tx) => createLabResultIn(tx, organizationId, poolId, input, recordedBy));
+}
+
+/**
+ * The write itself, inside a caller's transaction — the form's path and the
+ * report import's (POOLSE-101) are this one function, so an imported result is
+ * audited, graded and alerted exactly as a typed one.
+ */
+export async function createLabResultIn(
+  tx: Tx,
+  organizationId: string,
+  poolId: string,
+  input: LabResultInput,
+  recordedBy: string | null,
+): Promise<{ id: string; alertId: string | null } | null> {
+  const { rows: pools } = await tx.query('SELECT 1 FROM pool WHERE id = $1 AND archived_at IS NULL', [
+    poolId,
+  ]);
+  if (pools.length === 0) return null;
+  const sampledAt = await resolveSample(tx, poolId, input.sampledAt);
+  if (sampledAt === null) return null;
+
+  const { rows } = await tx.query<{ id: string }>(
+    `INSERT INTO lab_result (
+       organization_id, pool_id, sampled_at, laboratory, report_reference,
+       sample_point, sample_depth, notes, recorded_by_membership_id
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7::lab_sample_depth, $8, $9)
+     RETURNING id`,
+    [
+      organizationId,
       poolId,
-    ]);
-    if (pools.length === 0) return null;
-    const sampledAt = await resolveSample(tx, poolId, input.sampledAt);
-    if (sampledAt === null) return null;
+      sampledAt,
+      input.laboratory,
+      input.reportReference,
+      input.samplePoint,
+      input.sampleDepth,
+      input.notes,
+      recordedBy,
+    ],
+  );
+  const id = rows[0]!.id;
 
-    const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO lab_result (
-         organization_id, pool_id, sampled_at, laboratory, report_reference,
-         sample_point, sample_depth, notes, recorded_by_membership_id
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7::lab_sample_depth, $8, $9)
-       RETURNING id`,
-      [
-        organizationId,
-        poolId,
-        sampledAt,
-        input.laboratory,
-        input.reportReference,
-        input.samplePoint,
-        input.sampleDepth,
-        input.notes,
-        recordedBy,
-      ],
+  const values = input.values.map((v) => ({ ...v, unit: unitOf(v.parameter) }));
+  await tx.query(
+    `INSERT INTO lab_result_value (organization_id, lab_result_id, parameter, value, unit)
+     SELECT $1, $2, p::lab_parameter, v, u
+       FROM unnest($3::text[], $4::numeric[], $5::text[]) AS t(p, v, u)`,
+    [
+      organizationId,
+      id,
+      values.map((v) => v.parameter),
+      values.map((v) => v.value),
+      values.map((v) => v.unit),
+    ],
+  );
+
+  await recordAudit(tx, {
+    action: 'lab_result.recorded',
+    entityType: 'pool',
+    entityId: poolId,
+    data: { labResultId: id, parameters: values.map((v) => v.parameter) },
+  });
+
+  const alertId = await raiseLabAlert(tx, organizationId, poolId, id, values);
+  return { id, alertId };
+}
+
+export interface LabImportResult {
+  rows: LabImportRow[];
+  summary: AnalysisImportSummary;
+  /** Present only on a commit. */
+  created?: number;
+  skipped?: number;
+  /** Alerts the commit raised, sent by the controller after it. */
+  alertIds?: string[];
+}
+
+/**
+ * A report's lab rows: preview, or write — POOLSE-101.
+ *
+ * One path with a `commit` flag, like the readings import beside it, and one
+ * transaction for the commit: a report half-filed is a report nobody can tell
+ * is half-filed. Each included row is written by `createLabResultIn`, the
+ * form's own function. Null when the pool is not this club's.
+ */
+export async function runLabImport(
+  organizationId: string,
+  membershipId: string | null,
+  request: { poolId: string; rows: Record<string, string>[]; commit: boolean; include: number[] | null },
+): Promise<LabImportResult | null> {
+  return withOrg(organizationId, async (tx) => {
+    const pool = await tx.query<{ name: string }>(
+      `SELECT name FROM pool WHERE id = $1 AND archived_at IS NULL`,
+      [request.poolId],
     );
-    const id = rows[0]!.id;
+    const poolName = pool.rows[0]?.name;
+    if (poolName === undefined) return null;
 
-    const values = input.values.map((v) => ({ ...v, unit: unitOf(v.parameter) }));
-    await tx.query(
-      `INSERT INTO lab_result_value (organization_id, lab_result_id, parameter, value, unit)
-       SELECT $1, $2, p::lab_parameter, v, u
-         FROM unnest($3::text[], $4::numeric[], $5::text[]) AS t(p, v, u)`,
-      [
-        organizationId,
-        id,
-        values.map((v) => v.parameter),
-        values.map((v) => v.value),
-        values.map((v) => v.unit),
-      ],
+    const timezone = await poolTimezone(tx, request.poolId);
+    const { rows: clock } = await tx.query<{ now: string }>(
+      `SELECT to_char(now() AT TIME ZONE $1, 'YYYY-MM-DD HH24:MI') AS now`,
+      [timezone],
     );
+    const { rows: onFile } = await tx.query<{ moment: string; day: string }>(
+      `SELECT to_char(sampled_at AT TIME ZONE $2, 'YYYY-MM-DD HH24:MI') AS moment,
+              to_char(sampled_at AT TIME ZONE $2, 'YYYY-MM-DD') AS day
+         FROM lab_result
+        WHERE pool_id = $1 AND archived_at IS NULL`,
+      [request.poolId, timezone],
+    );
+    // Both keys, as the readings import holds them: a row with no time is
+    // compared by day, one with a time by the minute.
+    const existing = new Set(onFile.flatMap((row) => [row.moment, row.day]));
+    const checked = checkLabRows(request.rows, { poolName, existing, now: clock[0]!.now });
+    if (!request.commit) return checked;
 
-    await recordAudit(tx, {
-      action: 'lab_result.recorded',
-      entityType: 'pool',
-      entityId: poolId,
-      data: { labResultId: id, parameters: values.map((v) => v.parameter) },
-    });
-
-    const alertId = await raiseLabAlert(tx, organizationId, poolId, id, values);
-    return { id, alertId };
+    const wanted = request.include === null ? null : new Set(request.include);
+    let created = 0;
+    let skipped = 0;
+    const alertIds: string[] = [];
+    for (const row of checked.rows) {
+      if (!row.importable) continue;
+      if (wanted !== null && !wanted.has(row.index)) {
+        skipped += 1;
+        continue;
+      }
+      // Midnight when the report gives no time, as a reading imported without
+      // one is: the day is what the report says, and inventing an hour is not.
+      const sampledAt = sampleMoment(`${row.takenOn}T${row.takenTime ?? '00:00'}`);
+      if (sampledAt === null) throw new Error('A checked row produced an unreadable moment');
+      const result = await createLabResultIn(
+        tx,
+        organizationId,
+        request.poolId,
+        {
+          sampledAt,
+          laboratory: row.laboratory,
+          reportReference: row.reportReference,
+          samplePoint: null,
+          sampleDepth: null,
+          notes: row.notes,
+          values: row.values,
+        },
+        membershipId,
+      );
+      if (result === null) return null;
+      if (result.alertId !== null) alertIds.push(result.alertId);
+      created += 1;
+    }
+    return { ...checked, created, skipped, alertIds };
   });
 }
 

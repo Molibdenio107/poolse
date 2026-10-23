@@ -17,11 +17,14 @@ import {
   archiveLabResult,
   createLabResult,
   listLabResults,
+  runLabImport,
+  type LabImportResult,
   type LabParameter,
   type LabResult,
   type LabResultInput,
 } from './lab-results.repository.js';
 import { SampleInFutureError, sampleMoment } from './sample-moment.js';
+import { readLabInclude, readLabRows } from './lab-import.js';
 import { PoolseModule } from '../tenant/modules.js';
 
 /** The people who record analyses record lab results — POOLSE-72. */
@@ -136,6 +139,32 @@ export class LabResultsController {
     // After the commit, and unable to undo it.
     if (created.alertId !== null) await this.notify(organizationId, created.alertId);
     return { id: created.id };
+  }
+
+  /**
+   * A laboratory's report, as lab results — POOLSE-101. Preview and commit on
+   * one path with a `commit` flag, as the readings import is; the web sends
+   * here the rows whose parser found an organism count. Owner and admin, the
+   * roles that may import readings.
+   */
+  @Post('import')
+  async importReport(
+    @Param('poolId', new ParseUUIDPipe()) poolId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<LabImportResult> {
+    requireRole('owner', 'admin');
+    const { organizationId, membershipId } = currentTenant();
+    const result = await runLabImport(organizationId, membershipId, {
+      poolId,
+      rows: readLabRows(body['rows']),
+      commit: body['commit'] === true,
+      include: readLabInclude(body['include']),
+    });
+    if (result === null) throw new NotFoundException('No such pool');
+
+    // After the whole commit, one at a time — never able to undo it.
+    for (const alertId of result.alertIds ?? []) await this.notify(organizationId, alertId);
+    return result;
   }
 
   @Post(':labResultId/archive')

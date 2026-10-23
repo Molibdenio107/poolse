@@ -231,7 +231,7 @@ export function checkAnalysisRows(
 }
 
 /** Case- and accent-insensitive, the same fold the search and the sort use. */
-function sameName(left: string, right: string): boolean {
+export function sameName(left: string, right: string): boolean {
   return fold(left) === fold(right);
 }
 

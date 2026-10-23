@@ -832,6 +832,9 @@ test('lab results refuse a guardian and a student (403)', async () => {
     await refused('POST facilities/pools/:poolId/lab-results/:id/archive', 403, () =>
       lab.archive(NO_SUCH_ID, NO_SUCH_ID),
     );
+    await refused('POST facilities/pools/:poolId/lab-results/import', 403, () =>
+      lab.importReport(NO_SUCH_ID, { rows: [{ e_coli: '0' }], commit: false }),
+    );
   });
 });
 
