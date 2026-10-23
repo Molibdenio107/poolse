@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatDate, formatDateLong, formatDateRange, formatDayMonth, formatStamp, formatTime } from './date-format.ts';
+import {
+  formatDate,
+  formatDateLong,
+  formatDateRange,
+  formatDayMonth,
+  formatDayMonthShort,
+  formatStamp,
+  formatTime,
+} from './date-format.ts';
 
 /**
  * Every date in one shape — `dd-MM-yyyy`, decided 13 September 2026.
@@ -123,4 +131,11 @@ test('a day in words, long and as a column heading', () => {
   assert.equal(formatDayMonth('2026-11-16', 'en'), '16 November');
   // A day is the day it says, in the club's zone, at any hour of the server.
   assert.equal(formatDayMonth('2026-03-29', 'pt-PT'), '29 de março');
+});
+
+test('a narrow calendar column abbreviates the month, never as a slashed date — POOLSE-107', () => {
+  assert.equal(formatDayMonthShort('2026-11-16', 'pt-PT'), '16 nov.');
+  assert.equal(formatDayMonthShort('2026-11-16', 'en'), '16 Nov');
+  assert.equal(formatDayMonthShort('2026-05-01', 'pt-PT'), '1 mai.');
+  assert.doesNotMatch(formatDayMonthShort('2026-11-16', 'pt-PT'), /\//);
 });

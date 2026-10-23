@@ -74,6 +74,8 @@ The grid opens scrolled to the first class of the week, and on the week containi
 draws a line at the current time. Today's column carries a faint tint that stays, and pulses
 once for two seconds when the week is opened — dropped entirely under `prefers-reduced-motion`.
 
+**The week and its days are written out** (POOLSE-107). The heading is `formatDateRange` — *16 a 22 de novembro de 2026*, *16–22 November 2026*, the month and year said once when the ends share them. Each day header is its short weekday and `formatDayMonth` — *Seg, 16 de novembro* — and a day too narrow for that takes the widest of *Seg 16 nov.* (`formatDayMonthShort`), *Seg 16* and *16* that fits, chosen by `dayHeaderLabel` in the grid; the full name is always there for a screen reader. **Today's header carries a *Hoje* pill** beside its primary-coloured name, so the word marks it, never the colour alone; on a day one pista wide the pill stands alone. The tint is the one it already had. Nothing scrolls, re-centres or changes width, and every day header is the same height, so the grid below does not move. On other weeks no column is marked. The phone agenda is unchanged.
+
 While a block is being dragged it shows the time it would land at, not the time it came from:
 the block is under the pointer and the gutter is a week away on the left.
 

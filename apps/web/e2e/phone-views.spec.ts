@@ -159,6 +159,28 @@ test.describe('on a desk, the same pages are unchanged', () => {
     expect(columns).toBeGreaterThanOrEqual(6);
   });
 
+  test('the calendar writes its week out and marks today with a Hoje pill, on this week only — POOLSE-107', async ({ page }) => {
+    await poolsideLesson();
+    await visit(page, '/dashboard/calendar');
+    // "16 a 22 de novembro de 2026": the month in words, no dd-MM-yyyy.
+    const heading = page.locator('main p.font-semibold').first();
+    await expect(heading).toHaveText(/^\d{1,2} (de [a-zç]+ (de \d{4} )?)?a \d{1,2} de [a-zç]+ de \d{4}$/);
+    // The lane grid draws once a pool is chosen — a client choice, so it is
+    // made again until React has hydrated the select and the grid is drawn.
+    const pills = page.locator('[data-today-pill]');
+    await expect(async () => {
+      await page.getByRole('combobox', { name: /^(piscina|pool)$/i }).selectOption({ label: 'Tanque Grande' });
+      await expect(pills).toHaveCount(1, { timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+    await expect(pills).toHaveText(/^(hoje|today)$/i);
+
+    await page.getByRole('link', { name: /semana seguinte|next week/i }).first().click();
+    await expect(heading).not.toHaveText((await heading.textContent()) ?? '');
+    // The next week, same pool: the grid is drawn and no column is today.
+    await expect(page.getByText(/^lanes?$|^pistas$/i).first()).toBeVisible();
+    await expect(page.locator('[data-today-pill]')).toHaveCount(0);
+  });
+
   test('Em dívida keeps its header row, the select-all in the checkbox column — POOLSE-104 D', async ({ page }) => {
     const owed = await owedDocuments(E2E_EMAIL!);
     await visit(page, `/dashboard/faturacao?facilityId=${owed.facilityId}&view=owing`);

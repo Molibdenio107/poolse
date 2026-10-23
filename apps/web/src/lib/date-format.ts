@@ -203,6 +203,22 @@ export function formatDayMonth(value: DateLike, locale: string): string {
 }
 
 /**
+ * "16 nov." / "16 Nov" — a calendar day column too narrow for the month in
+ * full (POOLSE-107). Composed from the day and the month's own abbreviation,
+ * because `Intl` asked for both at once writes pt-PT as 16/11 — a slashed date,
+ * which is the one shape Poolse does not write.
+ */
+export function formatDayMonthShort(value: DateLike, locale: string): string {
+  const date = asDate(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const tag = wordsLocale(locale);
+  const key = `${tag}:monthShort`;
+  WORDS[key] ??= new Intl.DateTimeFormat(tag, { month: 'short', timeZone: APP_TIME_ZONE });
+  const day = new Intl.DateTimeFormat(tag, { day: 'numeric', timeZone: APP_TIME_ZONE }).format(date);
+  return `${day} ${WORDS[key].format(date)}`;
+}
+
+/**
  * A span of days in words, with what the two ends share said once.
  *
  * pt-PT: "16 a 22 de novembro de 2026", "30 de novembro a 6 de dezembro de

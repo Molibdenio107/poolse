@@ -41,6 +41,19 @@ function luminance([r, g, b]) {
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }
 
+/**
+ * A token, or `base+tint@alpha` — a fill laid over a surface at an opacity,
+ * as `bg-primary/[0.06]` is on today's calendar column (POOLSE-107).
+ */
+function colour(tokens, name) {
+  const tinted = /^([a-z0-9-]+)\+([a-z0-9-]+)@([\d.]+)$/.exec(name);
+  if (!tinted) return tokens[name];
+  const [, base, tint, alpha] = tinted;
+  if (!tokens[base] || !tokens[tint]) return undefined;
+  const a = Number(alpha);
+  return tokens[base].map((channel, i) => Math.round(channel * (1 - a) + tokens[tint][i] * a));
+}
+
 function ratio(a, b) {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
@@ -144,6 +157,11 @@ const PAIRS = [
   ['border-strong', 'background', 3, 'a form control against the page'],
   ['border-strong', 'surface', 3, 'a form control on a card'],
   ['primary', 'background', 3, 'the focus ring'],
+
+  // Today's column on the calendar (POOLSE-107): the brand at 6 % over the card.
+  // `bg+fg@alpha` is composited before it is measured; nothing else is.
+  ['foreground', 'surface+primary@0.06', 4.5, "text in today's tinted calendar column"],
+  ['foreground-muted', 'surface+primary@0.06', 4.5, "muted text in today's tinted calendar column"],
 ];
 
 const css = await readFile(CSS, 'utf8');
@@ -216,10 +234,11 @@ for (const [themeName, tokens] of [
 
   for (const [fg, bg, min, what] of PAIRS) {
     if (!tokens[fg]) { missing.add(fg); continue; }
-    if (!tokens[bg]) { missing.add(bg); continue; }
+    const under = colour(tokens, bg);
+    if (!under) { missing.add(bg); continue; }
 
     checked += 1;
-    const value = ratio(tokens[fg], tokens[bg]);
+    const value = ratio(tokens[fg], under);
     if (value >= min) continue;
 
     const line = `  ${what}\n    ${fg} on ${bg} — ${value.toFixed(2)}:1, needs ${min}:1`;

@@ -28,7 +28,7 @@ import { GenerateSeason } from './calendar-forms';
 import { PageError, PageShell } from '@/components/page-shell';
 import { TimetableImport } from './import/import-panel';
 import { moduleIsOn } from '@/lib/modules';
-import { formatDate } from '@/lib/date-format';
+import { formatDate, formatDateRange, formatDayMonth, formatDayMonthShort } from '@/lib/date-format';
 import { backProp, originBack } from '@/lib/back';
 
 /**
@@ -210,15 +210,36 @@ export default async function CalendarPage({
     }
   }
 
-  // "Terça · 15 dez" — the same seven columns as the turma timetable, but
-  // naming real days. The dot is what tells a reader at a glance which of the
-  // two weeks they are looking at.
+  // "Seg, 16 de novembro" — the same seven columns as the turma timetable,
+  // but naming real days, written out (POOLSE-107). A day only a few pistas
+  // wide takes a shorter form — "Seg 16 nov.", "Seg 16", "16" — and the grid
+  // chooses the widest that fits.
   const dayNames = Object.fromEntries(
     [0, 1, 2, 3, 4, 5, 6].map((offset) => [
       offset + 1,
-      `${t(`week.${offset + 1}`)} · ${formatDate(addDays(monday, offset))}`,
+      t('calendar.dayHeading', {
+        day: t(`weekShort.${offset + 1}`),
+        date: formatDayMonth(addDays(monday, offset), locale),
+      }),
     ]),
   );
+  const dayNamesNarrow = Object.fromEntries(
+    [0, 1, 2, 3, 4, 5, 6].map((offset) => {
+      const date = addDays(monday, offset);
+      const day = t(`weekShort.${offset + 1}`);
+      const dayNumber = String(Number(date.slice(8, 10)));
+      return [
+        offset + 1,
+        [
+          t('calendar.dayHeadingShort', { day, date: formatDayMonthShort(date, locale) }),
+          t('calendar.dayHeadingShort', { day, date: dayNumber }),
+          dayNumber,
+        ],
+      ];
+    }),
+  );
+  // "16 a 22 de novembro de 2026" — the week in words, POOLSE-107.
+  const weekInWords = formatDateRange(monday, sunday, locale);
 
   /*
     The two controls, keyed by the slot they belong to.
@@ -429,20 +450,15 @@ export default async function CalendarPage({
               />
 
               {/*
-                Always dated, and never wrapped. "Esta semana" alone cannot say
-                which week once you have moved off it, which is the moment the
-                label matters most. dd-MM-yyyy is short enough to need no narrow
-                form, which the month-in-words version did.
+                Always dated. "Esta semana" alone cannot say which week once you
+                have moved off it, which is the moment the label matters most.
+                Written out since POOLSE-107 — "16 a 22 de novembro de 2026",
+                with the month and year said once when the ends share them.
               */}
-              {/* On a phone the two dates may break onto two lines: between two 44px
-                  arrows, "dd-MM-yyyy a dd-MM-yyyy" is wider than 360px allows. */}
+              {/* On a phone it may break onto two lines: between two 44px arrows a
+                  week across two months is wider than 360px allows. */}
               <p className="text-center text-base font-semibold tracking-tight text-foreground sm:text-xl">
-                <span className="sm:whitespace-nowrap">
-                  {t('calendar.range', {
-                    from: formatDate(monday),
-                    to: formatDate(sunday),
-                  })}
-                </span>
+                <span className="sm:whitespace-nowrap">{weekInWords}</span>
               </p>
 
               <WeekArrow
@@ -492,6 +508,7 @@ export default async function CalendarPage({
                 seasonId={grid?.seasonStatus === 'published' ? (grid.seasonId ?? null) : null}
                 weekStart={monday}
                 dayNames={dayNames}
+                dayNamesNarrow={dayNamesNarrow}
                 todayWeekday={todayWeekday}
                 closures={closedDays}
                 /*
@@ -542,10 +559,7 @@ export default async function CalendarPage({
               aria-hidden
               className="text-center text-sm font-medium text-foreground-muted"
             >
-              {t('calendar.range', {
-                from: formatDate(monday),
-                to: formatDate(sunday),
-              })}
+              {weekInWords}
             </p>
 
             {/*

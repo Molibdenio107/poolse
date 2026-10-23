@@ -107,11 +107,31 @@ export const SEP = '\0';
 
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
+/**
+ * A day header's name, the widest of its forms that fits the column — POOLSE-107.
+ * The header row is one line whatever the width, so nothing below it moves:
+ * "Seg, 16 de novembro" on a wide day, down to "Seg 16" or "16" on a day one
+ * pista wide. Measured by characters at the header's 13px — an estimate, and
+ * `truncate` stays as the floor. Null when not even the shortest fits beside
+ * the *Hoje* pill, which then stands alone.
+ */
+const HEADER_PADDING = 16;
+const HEADER_CHAR = 7;
+const TODAY_PILL = 46;
+function dayHeaderLabel(forms: string[], width: number, today: boolean): string | null {
+  const room = width - HEADER_PADDING - (today ? TODAY_PILL : 0);
+  const fits = forms.find((form) => form.length * HEADER_CHAR <= room);
+  if (fits !== undefined) return fits;
+  return today ? null : (forms[forms.length - 1] ?? '');
+}
+
 export interface CalendarGridProps {
   /** Monday of the week on screen, ISO. */
   weekStart: string;
-  /** Dated headers — "Ter · 25 ago". */
+  /** Dated headers — "Ter, 25 de agosto" (POOLSE-107). */
   dayNames: Record<number, string>;
+  /** Shorter names, widest first — "Ter 25 ago.", "Ter 25", "25" — for a narrow day. */
+  dayNamesNarrow?: Record<number, string[]> | undefined;
   /** Set only on the week containing today. Drives the now-line and the fade. */
   todayWeekday?: number | undefined;
   /** The site's closures this week — whole days, tanks and half days (POOLSE-84). */
@@ -180,6 +200,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
   const t = useTranslations();
   const {
     dayNames,
+    dayNamesNarrow,
     todayWeekday,
     closures,
     slots,
@@ -1025,6 +1046,7 @@ export function CalendarGrid(props: CalendarGridProps): React.ReactElement {
             <Header
               days={days}
               dayNames={dayNames}
+              dayNamesNarrow={dayNamesNarrow}
               lanes={shownLanes}
               todayWeekday={todayWeekday}
               closureOf={closureOf}
@@ -1302,12 +1324,14 @@ function Toolbar({
 const Header = memo(function Header({
   days,
   dayNames,
+  dayNamesNarrow,
   lanes,
   todayWeekday,
   closureOf,
 }: {
   days: readonly number[];
   dayNames: Record<number, string>;
+  dayNamesNarrow?: Record<number, string[]> | undefined;
   lanes: GridLane[];
   todayWeekday?: number | undefined;
   closureOf: (weekday: number) => { reason: string } | null;
@@ -1332,16 +1356,55 @@ const Header = memo(function Header({
       </div>
       {days.map((weekday) => (
         <div key={weekday} className="shrink-0 border-l-2 border-border-strong">
+          {/*
+            The day in words (POOLSE-107), short when the day is narrow: a
+            month in full does not fit one or two pistas. Today adds the *Hoje*
+            pill beside the primary-coloured name — the word carries it, never
+            the colour alone. Same height either way, so nothing below moves.
+          */}
           <div
             className={cn(
-              'truncate border-b border-border px-2 py-1 text-center text-[0.8125rem] font-medium',
+              // One height for every day: a 20px line, and the pill is 20px with its border.
+              'flex items-center justify-center gap-1.5 border-b border-border px-2 py-1 text-[0.8125rem] leading-5 font-medium',
               todayWeekday === weekday ? 'text-primary' : 'text-foreground-muted',
             )}
             style={{ width: lanes.length * COL_WIDTH }}
             title={closureOf(weekday)?.reason}
           >
-            {dayNames[weekday] ?? ''}
-            {closureOf(weekday) !== null && ' · ' + closureOf(weekday)!.reason}
+            {(() => {
+              const full = dayNames[weekday] ?? '';
+              const label = dayHeaderLabel(
+                [full, ...(dayNamesNarrow?.[weekday] ?? [])],
+                lanes.length * COL_WIDTH,
+                todayWeekday === weekday,
+              );
+              const closed = closureOf(weekday) !== null ? ' · ' + closureOf(weekday)!.reason : '';
+              // Too narrow for any name beside the pill: the day is still said
+              // to a screen reader, and the pill says which one it is.
+              return label === null ? (
+                <span className="sr-only">{full + closed}</span>
+              ) : (
+                <span className="truncate">
+                  {label === full ? (
+                    label
+                  ) : (
+                    <>
+                      <span aria-hidden>{label}</span>
+                      <span className="sr-only">{full}</span>
+                    </>
+                  )}
+                  {closed}
+                </span>
+              );
+            })()}
+            {todayWeekday === weekday && (
+              <span
+                data-today-pill
+                className="shrink-0 rounded-full border border-primary px-1.5 text-[0.6875rem] leading-[1.125rem]"
+              >
+                {t('calendar.today')}
+              </span>
+            )}
           </div>
           <div className="flex">
             {/*

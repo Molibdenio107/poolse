@@ -48,6 +48,7 @@ export function CalendarWeek({
   seasonId,
   weekStart,
   dayNames,
+  dayNamesNarrow,
   todayWeekday,
   closures,
   hours,
@@ -69,6 +70,8 @@ export function CalendarWeek({
   seasonId: string | null;
   weekStart: string;
   dayNames: Record<number, string>;
+  /** Shorter names for the same days, widest first, for a narrow column (POOLSE-107). */
+  dayNamesNarrow?: Record<number, string[]> | undefined;
   todayWeekday?: number | undefined;
   closures: CalendarClosure[];
   hours: FacilityDay[];
@@ -528,6 +531,7 @@ export function CalendarWeek({
       <CalendarGrid
         weekStart={weekStart}
         dayNames={dayNames}
+        dayNamesNarrow={dayNamesNarrow}
         todayWeekday={todayWeekday}
         closures={closures}
         hours={hours}
