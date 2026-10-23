@@ -974,6 +974,8 @@ test("app mode: a family reads its own agenda and lessons, and nobody else's (PO
     const agenda = await new AppController().agenda();
     assert.deepEqual(agenda.children, []);
     assert.deepEqual(agenda.entries, []);
+    // POOLSE-109: no child, no leave to send an atestado for.
+    assert.deepEqual((await new AppController().medicalLeave()).leaves, []);
     await refused('GET app/lessons/:id as a stranger', 404, () => new AppController().lesson(fixture.sessionId));
     await refused('GET app/lessons/not-a-uuid', 404, () => new AppController().lesson('not-a-uuid'));
   });
@@ -992,6 +994,7 @@ test("app mode: a family reads its own agenda and lessons, and nobody else's (PO
     await as(id, [...roles], async () => {
       await refused('GET app/agenda as staff', 403, () => new AppController().agenda());
       await refused('GET app/lessons/:id as staff', 403, () => new AppController().lesson(fixture.sessionId));
+      await refused('GET app/medical-leave as staff', 403, () => new AppController().medicalLeave());
     });
   }
 });

@@ -3921,8 +3921,9 @@ age_months, gender)` — the first level after `from` in `sort_order` whose band
 the sex, null when none; `age_band_standing(org, on)` — every live student (not archived,
 `student_left_on()` null, with a birth date) against their level's band on a day: `above` /
 `below` / `within` and the level an `above` child would move to; `propose_age_advancements(org,
-season, level?)` — queues an `age` proposal for every `above` child with a fit, judged on the
-season's `starts_on`, `ON CONFLICT DO NOTHING`, and never over a `dismissed` row for that season;
+season, level?, on?)` — queues an `age` proposal for every `above` child with a fit, judged on
+`on`, else the season's `starts_on` (the queue's *Propor* passes `club_today()`; migration
+`1792404000000_advancement-sweep.sql`), `ON CONFLICT DO NOTHING`, and never over a `dismissed` row for that season;
 `level_change_recipients(org, student)` — the live guardians' addresses, else the student's own.
 **`level_change_notice`** — a child's level changed and the family told: `student_id`,
 `proposal_id` (composite FKs), `from_level_name` / `to_level_name` (snapshots), `reason`,

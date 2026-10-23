@@ -67,4 +67,5 @@ export const LABELLED_ACTIONS: ReadonlySet<string> = new Set([
   // season's first day under the club's automatic mode.
   'advancement.confirmed',
   'advancement.applied',
+  'advancement.invalidated',
 ]);

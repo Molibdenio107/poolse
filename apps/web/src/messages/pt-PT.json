@@ -5437,7 +5437,8 @@
       },
       "advancement": {
         "confirmed": "Progressão confirmada",
-        "applied": "Progressão aplicada por idade, na mudança de época"
+        "applied": "Progressão aplicada por idade, na mudança de época",
+        "invalidated": "Proposta de progressão por idade retirada: o nível do aluno mudou entretanto"
       }
     }
   },

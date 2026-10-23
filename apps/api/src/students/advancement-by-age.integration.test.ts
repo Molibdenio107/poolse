@@ -368,3 +368,110 @@ test('POOLSE-113 QA 1, 2, 4: candidates come ranked with what the picker shows; 
     assert.equal(await notices(), before, 'the family was told when the level moved, not again for the turma');
   });
 });
+
+test('sweep 23-10-2026: a skill keeps an age proposal; the nightly pass follows where the child is; a reverted move is moved again; Propor judges on today', async () => {
+  await withScratchTenant(async (tenant) => {
+    const fixture = await seed(tenant);
+    const org = tenant.organizationId;
+    const seasons = new SeasonsController();
+    const advancement = new AdvancementController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await new LevelsController().advancementMode({ mode: 'apply' });
+      const { season } = await seasons.draft({ ...NEXT });
+      await seasons.publish(season.id);
+    });
+    const proposal = await pending(tenant, fixture.childId);
+    assert.equal(proposal?.reason, 'age');
+
+    // 1. A coach marks a skill at the old level, which is not complete: the age
+    //    proposal stays — it never rested on the level being complete.
+    const [skill] = await tenant.sql<{ id: string }>(
+      `INSERT INTO skill (organization_id, level_id, name, sort_order, required) VALUES ($1, $2, 'Imersão', 1, true) RETURNING id`,
+      [org, fixture.lower],
+    );
+    await tenant.sql(
+      `INSERT INTO skill_progress (organization_id, student_id, skill_id, state, recorded_by_membership_id)
+       VALUES ($1, $2, $3, 'started', $4)`,
+      [org, fixture.childId, skill!.id, tenant.ownerMembershipId],
+    );
+    assert.equal((await pending(tenant, fixture.childId))?.id, proposal!.id, 'the age proposal is still pending');
+
+    // 2. Before the first day a person moves her by hand to a third level: the
+    //    pass must not move her from a level she is not in, nor tell the family.
+    const [other] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student_level (organization_id, name, sort_order) VALUES ($1, 'Adaptação', 3) RETURNING id`,
+      [org],
+    );
+    await tenant.sql(`UPDATE student SET level_id = $2 WHERE id = $1`, [fixture.childId, other!.id]);
+    await tenant.sql(`UPDATE season SET starts_on = club_today() WHERE name = $1 AND organization_id = $2`, [NEXT.name, org]);
+    const pass = new AdvancementApplyService();
+    assert.equal((await pass.run(org)).applied, 0);
+    assert.equal(await levelOf(tenant, fixture.childId), other!.id);
+    assert.equal(await pending(tenant, fixture.childId), null, 'the stale proposal left the queue');
+    const notices = await tenant.sql(`SELECT 1 FROM level_change_notice WHERE student_id = $1`, [fixture.childId]);
+    assert.equal(notices.length, 0, 'no email about a move that did not happen');
+
+    // A child already at the target: the level is done, only the turma is left, no email.
+    const [ten] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name, level_id, birth_date)
+       VALUES ($1, 'Tomás', 'Dez', $2, DATE '2017-03-01') RETURNING id`,
+      [org, fixture.lower],
+    );
+    const [nextSeason] = await tenant.sql<{ id: string }>(`SELECT id FROM season WHERE name = $1 AND organization_id = $2`, [
+      NEXT.name,
+      org,
+    ]);
+    const [done] = await tenant.sql<{ id: string }>(
+      `INSERT INTO transfer_proposal (organization_id, student_id, from_level_id, to_level_id, reason, season_id)
+       VALUES ($1, $2, $3, $4, 'age', $5) RETURNING id`,
+      [org, ten!.id, fixture.lower, fixture.upper, nextSeason!.id],
+    );
+    await tenant.sql(`UPDATE student SET level_id = $2 WHERE id = $1`, [ten!.id, fixture.upper]);
+    await pass.run(org);
+    const [marked] = await tenant.sql<{ applied_at: Date | null; status: string }>(
+      `SELECT applied_at, status::text AS status FROM transfer_proposal WHERE id = $1`,
+      [done!.id],
+    );
+    assert.ok(marked!.applied_at !== null);
+    assert.equal(marked!.status, 'pending');
+    assert.equal((await tenant.sql(`SELECT 1 FROM level_change_notice WHERE student_id = $1`, [ten!.id])).length, 0);
+
+    // 3. An applied proposal whose move was reverted: confirming moves the level again.
+    await tenant.sql(`UPDATE student SET level_id = $2 WHERE id = $1`, [ten!.id, fixture.lower]);
+    const [upperTurma] = await tenant.sql<{ id: string }>(
+      `INSERT INTO class_group (organization_id, facility_id, season_id, name, capacity, level_id)
+       VALUES ($1, $2, $3, 'Aperfeiçoamento A', 8, $4) RETURNING id`,
+      [org, tenant.facilityId, tenant.seasonId, fixture.upper],
+    );
+    const [lowerTurma] = await tenant.sql<{ id: string }>(`SELECT id FROM class_group WHERE name = 'Iniciação A' AND organization_id = $1`, [org]);
+    await tenant.sql(
+      `INSERT INTO enrollment (organization_id, class_group_id, student_id, status) VALUES ($1, $2, $3, 'active')`,
+      [org, lowerTurma!.id, ten!.id],
+    );
+    await actingAs(tenant, { roles: ['owner'] }, () =>
+      advancement.confirm(done!.id, { classGroupId: upperTurma!.id, effectiveOn: '2026-10-26' }),
+    );
+    assert.equal(await levelOf(tenant, ten!.id), fixture.upper, 'never left in a turma above their level');
+
+    // 4. Propor judges on today, the day the outlook counts on: a child who
+    //    passed the band after the running season began is queued.
+    await tenant.sql(`UPDATE season SET starts_on = club_today() - 60 WHERE name = $1 AND organization_id = $2`, [
+      NEXT.name,
+      org,
+    ]);
+    const [recent] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name, level_id, birth_date)
+       VALUES ($1, 'Rita', 'Recente', $2, (club_today() - interval '97 months' - interval '2 days')::date) RETURNING id`,
+      [org, fixture.lower],
+    );
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const { outlook } = await advancement.outlook();
+      const lower = outlook.levels.find((level) => level.levelId === fixture.lower)!;
+      assert.ok(lower.movableNow >= 1);
+      await advancement.proposeByAge({ levelId: fixture.lower });
+      await expectStatus(() => advancement.proposeByAge({ levelId: 'not-a-uuid' }), 400);
+    });
+    assert.equal((await pending(tenant, recent!.id))?.reason, 'age');
+  });
+});

@@ -1429,6 +1429,10 @@ export class AdvancementController {
     const { organizationId } = currentTenant();
 
     const levelId = typeof body['levelId'] === 'string' ? body['levelId'].trim() : '';
+    // A malformed id is the caller's mistake, not a 500 from the uuid cast.
+    if (levelId !== '' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(levelId)) {
+      throw new BadRequestException('levelId is not a level');
+    }
     const queued = await proposeByAgeNow(organizationId, levelId === '' ? null : levelId);
     if (queued === null) throw new ConflictException('No published season to judge ages on');
     return { queued };

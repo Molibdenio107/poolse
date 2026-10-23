@@ -212,12 +212,15 @@ export async function confirmProposal(
       to_level_id: string;
       reason: 'skills' | 'age';
       applied_at: Date | null;
+      student_level_id: string | null;
     }>(
-      `SELECT status::text AS status, student_id, from_level_id, to_level_id,
-              reason::text AS reason, applied_at
-         FROM transfer_proposal
-        WHERE id = $1 AND archived_at IS NULL
-          FOR UPDATE`,
+      `SELECT p.status::text AS status, p.student_id, p.from_level_id, p.to_level_id,
+              p.reason::text AS reason, p.applied_at,
+              (SELECT s.level_id FROM student s
+                WHERE s.id = p.student_id AND s.organization_id = p.organization_id) AS student_level_id
+         FROM transfer_proposal p
+        WHERE p.id = $1 AND p.archived_at IS NULL
+          FOR UPDATE OF p`,
       [proposalId],
     );
 
@@ -312,8 +315,12 @@ export async function confirmProposal(
     // move with the level it came from — POOLSE-80. Unless the club's automatic
     // mode already moved it on the season's first day (POOLSE-112), in which
     // case this confirmation is the turma alone and the family was told then.
+    // Decided by where the student *is*, not by `applied_at` alone (sweep
+    // 23-10-2026): an automatic move reverted through Atividade leaves
+    // `applied_at` set with the child back at the old level, and confirming must
+    // then move them again rather than put them in a turma above their level.
     let noticeId: string | null = null;
-    if (proposal.applied_at === null) {
+    if (proposal.student_level_id !== proposal.to_level_id) {
       const moved = await setStudentLevelIn(tx, proposal.student_id, proposal.to_level_id, {
         reason: proposal.reason,
         proposalId,
@@ -538,8 +545,8 @@ export async function advancementOutlook(organizationId: string): Promise<Advanc
          FROM student_level l
         WHERE l.organization_id = $1 AND l.archived_at IS NULL
         ORDER BY l.sort_order, l.name`,
-      // With no next season the "next" column is judged on today, and `willMove`
-      // below says nothing about it because `nextSeason` is null.
+      // With no next season the "next" column is judged on a null date — it
+      // counts nobody — and `movableNext` is zeroed below anyway.
       [organizationId, next?.starts_on ?? null],
     );
 
@@ -584,8 +591,10 @@ export async function proposeByAgeNow(
     const seasonId = season[0]?.id;
     if (seasonId === undefined) return null;
 
+    // Judged on today — the day the outlook counts and offers the button on
+    // (sweep 23-10-2026); the publish judges on the season's first day.
     const { rows } = await tx.query<{ queued: number }>(
-      'SELECT propose_age_advancements($1, $2, $3) AS queued',
+      'SELECT propose_age_advancements($1, $2, $3, club_today()) AS queued',
       [organizationId, seasonId, levelId],
     );
     const queued = rows[0]?.queued ?? 0;
@@ -675,8 +684,14 @@ export async function applyDueAgeProposals(organizationId: string): Promise<Appl
     );
     if (org[0]?.mode !== 'apply') return [];
 
-    const { rows: due } = await tx.query<{ id: string; student_id: string; to_level_id: string }>(
-      `SELECT p.id, p.student_id, p.to_level_id
+    const { rows: due } = await tx.query<{
+      id: string;
+      student_id: string;
+      from_level_id: string;
+      to_level_id: string;
+      level_id: string | null;
+    }>(
+      `SELECT p.id, p.student_id, p.from_level_id, p.to_level_id, s.level_id
          FROM transfer_proposal p
          JOIN season se ON se.id = p.season_id AND se.organization_id = p.organization_id
          JOIN student s ON s.id = p.student_id AND s.organization_id = p.organization_id
@@ -693,6 +708,27 @@ export async function applyDueAgeProposals(organizationId: string): Promise<Appl
 
     const applied: AppliedProposal[] = [];
     for (const proposal of due) {
+      /*
+       * Where the child is now decides it (sweep 23-10-2026). Moved by a person
+       * since the proposal was made: already at the target, the level is done
+       * and only the turma is left, with no second email; anywhere else, the
+       * proposal no longer describes the child and leaves the queue, rather
+       * than moving them from a level they are not in and telling the family so.
+       */
+      if (proposal.level_id === proposal.to_level_id) {
+        await tx.query(`UPDATE transfer_proposal SET applied_at = now() WHERE id = $1`, [proposal.id]);
+        continue;
+      }
+      if (proposal.level_id !== proposal.from_level_id) {
+        await tx.query(`UPDATE transfer_proposal SET status = 'invalidated' WHERE id = $1`, [proposal.id]);
+        await recordAudit(tx, {
+          action: 'advancement.invalidated',
+          entityType: 'transfer_proposal',
+          entityId: proposal.id,
+          data: { studentId: proposal.student_id, reason: 'level_changed' },
+        });
+        continue;
+      }
       const moved = await setStudentLevelIn(tx, proposal.student_id, proposal.to_level_id, {
         reason: 'age',
         proposalId: proposal.id,

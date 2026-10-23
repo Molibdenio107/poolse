@@ -58,7 +58,8 @@ export default async function LevelsPage({
   let failure: LoadFailure | null = null;
 
   // The mode card — POOLSE-112 BA 2. Best effort beside the ladder: a coach
-  // is refused the outlook and simply gets no card.
+  // reads the outlook too, and the card is read-only for anyone who cannot
+  // manage it; a reader the API refuses simply gets no card.
   const outlookLoad = await outcome(
     apiFetch<{ outlook: AdvancementOutlook }>('/transfer-proposals/outlook'),
   );

@@ -5437,7 +5437,8 @@
       },
       "advancement": {
         "confirmed": "Advancement confirmed",
-        "applied": "Advancement applied by age, at the season change"
+        "applied": "Advancement applied by age, at the season change",
+        "invalidated": "Age advancement withdrawn: the student’s level had changed in the meantime"
       }
     }
   },

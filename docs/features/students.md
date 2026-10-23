@@ -240,13 +240,17 @@ turma; *Aplicar automaticamente* moves the level on the season's first day — a
 through `setStudentLevelIn`, so the student's Atividade records it with no actor and
 *Reverter* (POOLSE-80) puts it back. The proposal stays in the queue marked *nível já
 alterado* and only the turma is left to pick; confirming it then moves the enrolment and
-nothing else.
+nothing else — unless the move was reverted since, in which case confirming moves the level
+again. The pass acts only on a child still at the level being left: one a person already moved
+to the target is marked done with no second email, and one moved anywhere else leaves the queue
+(*retirada*, in Atividade). A skill marked at the old level never withdraws an age proposal.
 
 **The queue is informative when empty** (`GET /transfer-proposals/outlook`): the next season
 change — the earliest season starting after today, draft or published — with how many will
 move under the current mode; and per level, who is above or below the band *today*, with
 *Propor* (owner and admin, `POST /transfer-proposals/propose-by-age`, one level or all) to
-queue the ones above now, judged on the running season. Pressing it twice queues nothing new,
+queue the ones above now, judged on today — the day the counts beside it use — and filed under
+the running season. Pressing it twice queues nothing new,
 and a dismissal is kept for that season.
 
 **The family is told** whenever a level changes through the queue — a person's confirmation
