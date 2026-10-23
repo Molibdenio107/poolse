@@ -98,8 +98,9 @@ export class AttachmentsController {
     const done = await refuseWrongFile(() =>
       setAgreementDocument(currentTenant().organizationId, partnerId, fileId),
     );
-    // A partner with no agreement yet has nothing to attach a contract to.
-    if (!done) throw new NotFoundException('No agreement to attach to');
+    // A partner with no agreement yet gets one with no terms (POOLSE-105); only
+    // a partner that does not exist is not found.
+    if (!done) throw new NotFoundException('No such partner');
     return { saved: true };
   }
 

@@ -36,7 +36,9 @@ const ANYONE: readonly MemberRole[] = ['owner', 'admin', 'instructor', 'maintena
  */
 export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; read: readonly MemberRole[] }> = {
   policy_document: { write: OFFICE, read: OFFICE },
-  agreement_document: { write: OFFICE, read: OFFICE },
+  // Staff may read the signed contract (Rui, 23-10-2026, POOLSE-105): a coach
+  // needs the paper the school signed; the typed terms stay the office's.
+  agreement_document: { write: OFFICE, read: STAFF },
   qualification_document: { write: OFFICE, read: OFFICE },
   // Every member since 15 October 2026 (Rui): the Instalações list is
   // everybody's, families included, and the picture of the place is part of

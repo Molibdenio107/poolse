@@ -240,6 +240,8 @@ const TENANT_TABLES = [
    */
   'partner_group_member',
   'partner_group',
+  // A contract's versions point at the agreement and the file (POOLSE-105).
+  'partner_contract_version',
   'partner_agreement',
   'partner_contact',
   'partner',

@@ -80,14 +80,24 @@ export function sniffType(bytes: Buffer): string | null {
   ) {
     return 'image/webp';
   }
+  // A Word document is a ZIP whose parts include `word/document.xml` — POOLSE-105.
+  // A spreadsheet or a deck is also a ZIP, with `xl/` or `ppt/` instead, and is
+  // refused: the name inside the archive says what it is, not the file's own.
+  if (bytes.length >= 4 && bytes.readUInt32LE(0) === 0x04034b50 && bytes.includes('word/document.xml', 0, 'latin1')) {
+    return WORD;
+  }
   return null;
 }
+
+/** A Word document's type — a contract may be one (POOLSE-105), nothing else may. */
+export const WORD = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 export const EXTENSION: Record<string, string> = {
   'application/pdf': 'pdf',
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  [WORD]: 'docx',
 };
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;

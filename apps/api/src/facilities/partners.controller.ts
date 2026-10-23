@@ -165,6 +165,8 @@ export class PartnersController {
     if (partner === null) throw new NotFoundException('No such partner');
 
     const canManage = hasRole('owner', 'admin');
+    // The contract file itself is staff's to download (POOLSE-105); the typed
+    // terms and the earlier versions are the office's.
     return { ...partner, agreement: canManage ? partner.agreement : null, canManage };
   }
 

@@ -15,7 +15,7 @@ import {
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import { openFile, RULES, storeFile, type FilePurpose, type StoredFile } from './files.repository.js';
-import { MAX_FILE_BYTES, sniffType, storageConfigured } from './storage.js';
+import { MAX_FILE_BYTES, sniffType, storageConfigured, WORD } from './storage.js';
 import { CoreRoute } from '../tenant/modules.js';
 
 const EVERY_ROLE = ['owner', 'admin', 'instructor', 'maintenance', 'student', 'guardian'] as const;
@@ -69,7 +69,11 @@ export class FilesController {
     }
     const contentType = sniffType(body);
     if (contentType === null) {
-      throw new BadRequestException({ code: 'file_type', message: 'Only PDF, JPEG, PNG and WebP files are accepted' });
+      throw new BadRequestException({ code: 'file_type', message: 'Only PDF, Word, JPEG, PNG and WebP files are accepted' });
+    }
+    // A Word document is a contract and nothing else — POOLSE-105.
+    if (contentType === WORD && purpose !== 'agreement_document') {
+      throw new BadRequestException({ code: 'file_type', message: 'A Word document is accepted only as a signed contract' });
     }
     // Photos and the logo are images; a document may also be a photograph of one.
     if (IMAGE_ONLY.has(purpose) && contentType === 'application/pdf') {
@@ -94,8 +98,9 @@ export class FilesController {
       type: opened.contentType,
       length: opened.byteSize,
       // Inline, so a PDF opens in the browser's viewer and an image draws in an
-      // <img>; the name is what the club uploaded, for "Guardar como".
-      disposition: `inline; filename*=UTF-8''${encodeURIComponent(opened.originalName)}`,
+      // <img>; the name is what the club uploaded, for "Guardar como". A Word
+      // document is always a download (POOLSE-105): no browser shows one.
+      disposition: `${opened.contentType === WORD ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(opened.originalName)}`,
     });
   }
 }

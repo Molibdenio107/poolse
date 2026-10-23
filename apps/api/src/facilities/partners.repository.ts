@@ -1,5 +1,6 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
+import { personName } from '../people/names.js';
 import { cascadeAt, restorableKind } from '../archive/restorable.js';
 import { TOTAL_COUNT, windowed, type Paginated, type PageQuery } from '../common/pagination.js';
 import {
@@ -100,18 +101,52 @@ export interface PartnerContact {
 export interface PartnerAgreement {
   id: string;
   seasonId: string | null;
-  startDate: string;
+  /**
+   * True when the contract came before the terms (POOLSE-105): the agreement
+   * exists to hold the signed paper, and the start date, the billing model and
+   * the price are all null — never one without the others.
+   */
+  termsPending: boolean;
+  startDate: string | null;
   endDate: string | null;
-  billingModel: BillingModel;
-  /** A decimal string, never a JS number — see `readNumeric`. */
-  unitPrice: string;
+  billingModel: BillingModel | null;
+  /** A decimal string, never a JS number — see `readNumeric`. Null while the terms are pending. */
+  unitPrice: string | null;
   /** Null means isento. Not "unknown". */
   vatRate: string | null;
   paymentPeriod: string | null;
   notes: string | null;
   /** The signed contract, served at `/files/:id` — null when none is filed. */
   documentFileId: string | null;
+  /** The contracts this one replaced, newest first — POOLSE-105. Owner and admin. */
+  previousContracts: ContractVersion[];
 }
+
+/** A signed-contract file, as the agreement holds it — POOLSE-105. */
+export interface ContractFile {
+  fileId: string;
+  originalName: string;
+  contentType: string;
+  attachedAt: string;
+  attachedBy: string;
+}
+
+/** A contract that was replaced or removed, and by whom. */
+export interface ContractVersion extends ContractFile {
+  replacedAt: string;
+  replacedBy: string;
+}
+
+/**
+ * The agreement in force: the most recently started that is not archived, and
+ * a terms-pending one only when there is nothing else (POOLSE-105). One
+ * definition, read by the partner's page and by attaching a contract.
+ */
+export const CURRENT_AGREEMENT = `
+  SELECT id FROM partner_agreement
+   WHERE partner_id = $1 AND archived_at IS NULL
+   ORDER BY start_date DESC NULLS LAST, created_at DESC
+   LIMIT 1`;
 
 export interface PartnerGroup {
   id: string;
@@ -155,6 +190,12 @@ export interface PartnerDetail {
   managedLessons: boolean;
   contacts: PartnerContact[];
   agreement: PartnerAgreement | null;
+  /**
+   * The signed contract on its own — POOLSE-105. Staff may download it (Rui,
+   * 23-10-2026) while the agreement's typed terms stay the office's, so it
+   * travels outside `agreement`, which the controller withholds from them.
+   */
+  contract: ContractFile | null;
   groups: PartnerGroup[];
   bookings: PartnerBooking[];
 }
@@ -470,10 +511,10 @@ export async function getPartner(
     const agreements = await tx.query<{
       id: string;
       season_id: string | null;
-      start_date: string;
+      start_date: string | null;
       end_date: string | null;
-      billing_model: BillingModel;
-      unit_price: string;
+      billing_model: BillingModel | null;
+      unit_price: string | null;
       vat_rate: string | null;
       payment_period: string | null;
       notes: string | null;
@@ -485,11 +526,38 @@ export async function getPartner(
                 WHERE sf.organization_id = partner_agreement.organization_id
                   AND sf.storage_key = partner_agreement.document_key) AS document_file_id
          FROM partner_agreement
-        WHERE partner_id = $1 AND archived_at IS NULL
-        ORDER BY start_date DESC
-        LIMIT 1`,
+        WHERE id = (${CURRENT_AGREEMENT})`,
       [partnerId],
     );
+
+    // Every contract the agreement in force has held, current one first.
+    const versions = await tx.query<{
+      file_id: string;
+      original_name: string;
+      content_type: string;
+      attached_at: Date;
+      attached_by: string;
+      replaced_at: Date | null;
+      replaced_by: string | null;
+    }>(
+      `SELECT v.file_id, sf.original_name, sf.content_type, v.attached_at,
+              ${personName('v.attached_by')} AS attached_by,
+              v.replaced_at,
+              CASE WHEN v.replaced_by IS NULL THEN NULL ELSE ${personName('v.replaced_by')} END AS replaced_by
+         FROM partner_contract_version v
+         JOIN stored_file sf ON sf.id = v.file_id AND sf.organization_id = v.organization_id
+        WHERE v.agreement_id = (${CURRENT_AGREEMENT})
+        ORDER BY v.replaced_at DESC NULLS FIRST, v.attached_at DESC`,
+      [partnerId],
+    );
+    const fileOf = (row: (typeof versions.rows)[number]): ContractFile => ({
+      fileId: row.file_id,
+      originalName: row.original_name,
+      contentType: row.content_type,
+      attachedAt: row.attached_at.toISOString(),
+      attachedBy: row.attached_by,
+    });
+    const currentVersion = versions.rows.find((row) => row.replaced_at === null);
 
     const groups = await tx.query<{
       id: string;
@@ -575,6 +643,7 @@ export async function getPartner(
           : {
               id: agreement.id,
               seasonId: agreement.season_id,
+              termsPending: agreement.start_date === null,
               startDate: agreement.start_date,
               endDate: agreement.end_date,
               billingModel: agreement.billing_model,
@@ -583,7 +652,15 @@ export async function getPartner(
               paymentPeriod: agreement.payment_period,
               notes: agreement.notes,
               documentFileId: agreement.document_file_id,
+              previousContracts: versions.rows
+                .filter((row) => row.replaced_at !== null)
+                .map((row) => ({
+                  ...fileOf(row),
+                  replacedAt: row.replaced_at!.toISOString(),
+                  replacedBy: row.replaced_by ?? '',
+                })),
             },
+      contract: currentVersion === undefined ? null : fileOf(currentVersion),
       groups: groups.rows.map((row) => ({
         id: row.id,
         name: row.name,
@@ -837,13 +914,32 @@ export async function setAgreement(
   return withOrg(organizationId, async (tx) => {
     if (!(await partnerExists(tx, partnerId))) return null;
 
+    /*
+     * A contract uploaded before the terms made an agreement with none
+     * (POOLSE-105). Recording the terms fills that one in, so the signed paper
+     * stays on the agreement it was filed against; otherwise a new agreement
+     * replaces the old, as it always has.
+     */
+    const pending = await tx.query<{ id: string }>(
+      `SELECT id FROM partner_agreement
+        WHERE partner_id = $1 AND archived_at IS NULL AND start_date IS NULL
+        ORDER BY created_at DESC LIMIT 1`,
+      [partnerId],
+    );
     const { rows } = await tx.query<{ id: string }>(
-      `INSERT INTO partner_agreement
-         (organization_id, partner_id, season_id, start_date, end_date,
-          billing_model, unit_price, vat_rate, payment_period, notes)
-       VALUES ($1, $2, $3, $4::date, $5::date, $6::partner_billing_model,
-               $7::numeric, $8::numeric, $9, $10)
-       RETURNING id`,
+      pending.rows[0] !== undefined
+        ? `UPDATE partner_agreement
+              SET season_id = $3, start_date = $4::date, end_date = $5::date,
+                  billing_model = $6::partner_billing_model, unit_price = $7::numeric,
+                  vat_rate = $8::numeric, payment_period = $9, notes = $10
+            WHERE id = $11 AND organization_id = $1 AND partner_id = $2
+            RETURNING id`
+        : `INSERT INTO partner_agreement
+             (organization_id, partner_id, season_id, start_date, end_date,
+              billing_model, unit_price, vat_rate, payment_period, notes)
+           VALUES ($1, $2, $3, $4::date, $5::date, $6::partner_billing_model,
+                   $7::numeric, $8::numeric, $9, $10)
+           RETURNING id`,
       [
         organizationId,
         partnerId,
@@ -855,6 +951,7 @@ export async function setAgreement(
         input.vatRate,
         input.paymentPeriod,
         input.notes,
+        ...(pending.rows[0] !== undefined ? [pending.rows[0].id] : []),
       ],
     );
 

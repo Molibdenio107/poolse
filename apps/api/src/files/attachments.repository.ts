@@ -2,6 +2,7 @@ import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import type { FilePurpose } from './files.repository.js';
+import { CURRENT_AGREEMENT } from '../facilities/partners.repository.js';
 
 /**
  * Attaching an uploaded file to the thing it belongs to — 12 October 2026.
@@ -136,28 +137,60 @@ export async function setPolicyDocument(
   });
 }
 
-/** The signed contract, on the agreement in force (the most recently started). */
+/**
+ * The signed contract, on the agreement in force — POOLSE-105.
+ *
+ * **Available from the partner's first day:** with no agreement yet, the
+ * upload makes one with no terms (*termos por preencher*), so the paper is
+ * filed before the rates are typed. **Replacing keeps the old file:** the
+ * current version is closed with who replaced it and when, the new one opened,
+ * and `document_key` moved to it. Removing closes the current version and
+ * opens none. Null when there is no such partner.
+ */
 export async function setAgreementDocument(
   organizationId: string,
   partnerId: string,
   fileId: string | null,
 ): Promise<boolean> {
+  const { membershipId } = currentTenant();
   return withOrg(organizationId, async (tx) => {
+    const partner = await tx.query('SELECT 1 FROM partner WHERE id = $1 AND archived_at IS NULL', [partnerId]);
+    if (partner.rowCount === 0) return false;
+
     const key = fileId === null ? null : await fileKey(tx, fileId, 'agreement_document');
-    const { rows } = await tx.query<{ id: string }>(
-      `UPDATE partner_agreement SET document_key = $2
-        WHERE id = (SELECT id FROM partner_agreement
-                     WHERE partner_id = $1 AND archived_at IS NULL
-                     ORDER BY start_date DESC LIMIT 1)
-        RETURNING id`,
-      [partnerId, key],
+
+    let agreementId = (await tx.query<{ id: string }>(CURRENT_AGREEMENT, [partnerId])).rows[0]?.id;
+    let createdPending = false;
+    if (agreementId === undefined) {
+      if (fileId === null) return true; // nothing filed, nothing to remove
+      agreementId = (
+        await tx.query<{ id: string }>(
+          `INSERT INTO partner_agreement (organization_id, partner_id) VALUES ($1, $2) RETURNING id`,
+          [organizationId, partnerId],
+        )
+      ).rows[0]!.id;
+      createdPending = true;
+    }
+
+    await tx.query(
+      `UPDATE partner_contract_version SET replaced_at = now(), replaced_by = $2
+        WHERE agreement_id = $1 AND replaced_at IS NULL`,
+      [agreementId, membershipId],
     );
-    if (rows[0] === undefined) return false;
+    if (fileId !== null) {
+      await tx.query(
+        `INSERT INTO partner_contract_version (organization_id, agreement_id, file_id, attached_by)
+         VALUES ($1, $2, $3, $4)`,
+        [organizationId, agreementId, fileId, membershipId],
+      );
+    }
+    await tx.query(`UPDATE partner_agreement SET document_key = $2 WHERE id = $1`, [agreementId, key]);
+
     await recordAudit(tx, {
       action: fileId === null ? 'partner.agreement.document_removed' : 'partner.agreement.document_attached',
       entityType: 'partner',
       entityId: partnerId,
-      data: { agreementId: rows[0].id, fileId },
+      data: { agreementId, fileId, ...(createdPending ? { termsPending: true } : {}) },
     });
     return true;
   });

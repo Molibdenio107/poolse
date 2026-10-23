@@ -1790,10 +1790,18 @@ partner_contact
   check: email or phone present
 
 partner_agreement
-  id, organization_id, partner_id, season_id?, start_date, end_date?,
-  billing_model ('por_hora_pista'|'por_bloco'|'por_participante'|'mensal_fixo'),
-  unit_price numeric(12,6), vat_rate numeric(5,4)?, payment_period, notes,
+  id, organization_id, partner_id, season_id?, start_date?, end_date?,
+  billing_model? ('por_hora_pista'|'por_bloco'|'por_participante'|'mensal_fixo'),
+  unit_price? numeric(12,6), vat_rate numeric(5,4)?, payment_period, notes,
   document_key?, archived_at
+  check partner_agreement_terms_whole: start_date, billing_model, unit_price all set
+    or all null (null = "termos por preencher", a contract filed first — POOLSE-105)
+
+partner_contract_version                                -- POOLSE-105
+  id, organization_id, agreement_id, file_id (stored_file), attached_by, attached_at,
+  replaced_at?, replaced_by?   -- both or neither
+  partial unique (organization_id, agreement_id) where replaced_at is null  -- one current
+  poolse_app: SELECT, INSERT, UPDATE (replaced_at, replaced_by) — history written once
 
 partner_group
   id, organization_id, partner_id, name, participant_count, level_id?,
@@ -3615,7 +3623,7 @@ from, days)` subtracts the duties' `range_agg` from each tank's opening window
 named, not yet switched on), `storage_key`, `content_type`, `byte_size`, `original_name`,
 `uploaded_by`, `created_at`, `archived_at`. RLS by tenant; `poolse_app` holds SELECT and INSERT
 and `UPDATE (archived_at)` only. CHECKs: the key starts with the club's own id, size 1 B–10 MB,
-type one of PDF/JPEG/PNG/WebP. Unique `(organization_id, id)` and `(organization_id, storage_key)`.
+type one of PDF/JPEG/PNG/WebP, or Word (`.docx`) for `agreement_document` only (POOLSE-105). Unique `(organization_id, id)` and `(organization_id, storage_key)`.
 
 What points at it: `insurance_policy.document_file_id`; `qualification.document_file_id` (settable
 once, from empty — `GRANT UPDATE (document_file_id)` plus the trigger
