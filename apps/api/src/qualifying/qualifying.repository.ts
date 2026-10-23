@@ -1,4 +1,5 @@
 import { withOrg, type Tx } from '@poolse/db';
+import { fpnAgeGroups } from '@poolse/rules';
 import { recordAudit } from '../audit/audit.js';
 import { displayName } from '../people/names.js';
 import type { Course, Stroke } from '../students/records.repository.js';
@@ -239,6 +240,57 @@ export async function createAgeGroup(
       data: { ...input },
     });
     return id;
+  });
+}
+
+/**
+ * The FPN's age groups for a season, in one click — POOLSE-111.
+ *
+ * The bands are `fpnAgeGroups` for the year the season ends in (2026 for
+ * 2025/2026). One transaction; a group whose name the season already has is
+ * left as it is, so a second click, or a club that typed some itself, adds
+ * only what is missing. Answers the season's groups in the FPN's order, the
+ * first being the one the times grid opens on.
+ */
+export async function createFpnAgeGroups(
+  organizationId: string,
+  seasonId: string,
+): Promise<{ created: number; ids: string[] }> {
+  return withOrg(organizationId, async (tx) => {
+    const season = await tx.query<{ end_year: number }>(
+      `SELECT extract(year FROM ends_on)::int AS end_year FROM season WHERE id = $1`,
+      [seasonId],
+    );
+    const endYear = season.rows[0]?.end_year;
+    if (endYear === undefined) throw new NoSuchSeasonError();
+
+    let created = 0;
+    const ids: string[] = [];
+    for (const group of fpnAgeGroups(endYear)) {
+      const existing = await tx.query<{ id: string }>(
+        `SELECT id FROM federation_age_group
+          WHERE season_id = $1 AND lower(name) = lower($2) AND archived_at IS NULL`,
+        [seasonId, group.name],
+      );
+      if (existing.rows[0] !== undefined) {
+        ids.push(existing.rows[0].id);
+        continue;
+      }
+      const { rows } = await tx.query<{ id: string }>(
+        `INSERT INTO federation_age_group (organization_id, season_id, name, gender, born_from, born_to)
+         VALUES ($1, $2, $3, NULL, $4, $5) RETURNING id`,
+        [organizationId, seasonId, group.name, group.bornFrom, group.bornTo],
+      );
+      ids.push(rows[0]!.id);
+      created += 1;
+    }
+    await recordAudit(tx, {
+      action: 'federation_age_group.fpnSeeded',
+      entityType: 'season',
+      entityId: seasonId,
+      data: { created, endYear },
+    });
+    return { created, ids };
   });
 }
 

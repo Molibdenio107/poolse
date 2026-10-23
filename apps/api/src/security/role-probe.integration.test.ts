@@ -651,6 +651,7 @@ test('qualifying standards refuse a guardian and a student (403) — POOLSE-85',
     const q = new QualifyingController();
     await refused('GET qualifying', 403, () => q.read());
     await refused('POST qualifying/age-groups', 403, () => q.addAgeGroup({}));
+    await refused('POST qualifying/age-groups/fpn', 403, () => q.addFpnAgeGroups({}));
     await refused('PUT qualifying/age-groups/:id', 403, () => q.editAgeGroup(NO_SUCH_ID, {}));
     await refused('POST qualifying/age-groups/:id/archive', 403, () => q.removeAgeGroup(NO_SUCH_ID));
     await refused('POST qualifying/standards', 403, () => q.addStandard({}));

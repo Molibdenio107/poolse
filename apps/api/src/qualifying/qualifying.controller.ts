@@ -21,6 +21,7 @@ import {
   archiveStandard,
   board,
   createAgeGroup,
+  createFpnAgeGroups,
   createStandard,
   findStandard,
   importEntryTimes,
@@ -79,6 +80,23 @@ export class QualifyingController {
     const seasonId = uuid(body['seasonId'], 'seasonId');
     try {
       return { id: await createAgeGroup(organizationId, seasonId, parseAgeGroup(body)) };
+    } catch (error) {
+      throw refusal(error, 'qualifying.ageGroupTaken');
+    }
+  }
+
+  /**
+   * The FPN's nine age groups for a season, in one click — POOLSE-111. The
+   * people who may add one group may add the federation's set; names the
+   * season already has are skipped.
+   */
+  @Post('age-groups/fpn')
+  async addFpnAgeGroups(@Body() body: Record<string, unknown>): Promise<{ created: number; ids: string[] }> {
+    requireRole(...TEACHING);
+    const { organizationId } = currentTenant();
+    const seasonId = uuid(body['seasonId'], 'seasonId');
+    try {
+      return await createFpnAgeGroups(organizationId, seasonId);
     } catch (error) {
       throw refusal(error, 'qualifying.ageGroupTaken');
     }

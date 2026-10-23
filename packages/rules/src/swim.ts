@@ -82,3 +82,45 @@ export function formatGap(gapMs: number): string {
   const sign = gapMs > 0 ? '+' : gapMs < 0 ? '−' : '±';
   return `${sign}${formatSwimTime(Math.abs(gapMs))}`;
 }
+
+/**
+ * The FPN's age groups for natação pura, 2025/2026 — POOLSE-111.
+ *
+ * **This reverses "Poolse ships none" (Rui, 19-10-2026) for this one table**
+ * (Rui, 23-10-2026): a club on its first visit to Mínimos needs a live grid,
+ * and every Portuguese club types the same nine rows. They are the federation's
+ * *Política Desportiva — Enquadramento Territorial NP 2025-2026* ages, one ladder
+ * for both sexes, and the age is the one reached in the **second** calendar year
+ * of the season: FPN Comunicado 26/25 puts Cadetes A (12) at born 2014 and
+ * Juniores (17–18) at born 2008–2009 for 2025/2026. Seeded rows are ordinary
+ * groups afterwards — renamed, re-banded or archived on Escalões like any other.
+ *
+ * Ages, inclusive; null is open-ended (Cadetes C, 9 and under; Seniores, 19 and over).
+ */
+export const FPN_AGE_GROUPS: readonly { name: string; minAge: number | null; maxAge: number | null }[] = [
+  { name: 'Cadetes C', minAge: null, maxAge: 9 },
+  { name: 'Cadetes B', minAge: 10, maxAge: 11 },
+  { name: 'Cadetes A', minAge: 12, maxAge: 12 },
+  { name: 'Infantis B', minAge: 13, maxAge: 13 },
+  { name: 'Infantis A', minAge: 14, maxAge: 14 },
+  { name: 'Juvenis B', minAge: 15, maxAge: 15 },
+  { name: 'Juvenis A', minAge: 16, maxAge: 16 },
+  { name: 'Juniores', minAge: 17, maxAge: 18 },
+  { name: 'Seniores', minAge: 19, maxAge: null },
+];
+
+/**
+ * The FPN's groups as birth years for a season ending in `seasonEndYear` (2026
+ * for 2025/2026). Born from is the youngest age's birth year read backwards:
+ * aged 12 in 2026 is born 2014. Gender is null — the FPN's bands are the same
+ * for both.
+ */
+export function fpnAgeGroups(
+  seasonEndYear: number,
+): { name: string; bornFrom: number | null; bornTo: number | null }[] {
+  return FPN_AGE_GROUPS.map((group) => ({
+    name: group.name,
+    bornFrom: group.maxAge === null ? null : seasonEndYear - group.maxAge,
+    bornTo: group.minAge === null ? null : seasonEndYear - group.minAge,
+  }));
+}

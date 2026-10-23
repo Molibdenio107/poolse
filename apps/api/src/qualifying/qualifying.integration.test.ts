@@ -325,3 +325,36 @@ test('slice 2 — a group from another season is refused, and a missing standard
     });
   });
 });
+
+test('POOLSE-111 — one click creates the FPN groups for the season; a second click adds nothing', async () => {
+  await withScratchTenant(async (tenant) => {
+    const q = new QualifyingController();
+    const [season] = await tenant.sql<{ end_year: number }>(
+      `SELECT extract(year FROM ends_on)::int AS end_year FROM season WHERE id = $1`,
+      [tenant.seasonId],
+    );
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      // A club that already typed one keeps it.
+      await q.addAgeGroup({ seasonId: tenant.seasonId, name: 'juniores', bornFrom: 2000, bornTo: 2001 });
+      const first = await q.addFpnAgeGroups({ seasonId: tenant.seasonId });
+      assert.equal(first.created, 8, 'the nine, less the one the club had');
+      assert.equal(first.ids.length, 9);
+      const again = await q.addFpnAgeGroups({ seasonId: tenant.seasonId });
+      assert.equal(again.created, 0);
+      assert.deepEqual(again.ids, first.ids, 'the same groups, in the same order');
+
+      const { ageGroups } = await q.read(tenant.seasonId);
+      const byName = Object.fromEntries(ageGroups.map((g) => [g.name, g]));
+      const year = season!.end_year;
+      assert.equal(byName['Cadetes A']?.bornFrom, year - 12);
+      assert.equal(byName['Cadetes A']?.bornTo, year - 12);
+      assert.equal(byName['Seniores']?.bornFrom, null);
+      assert.equal(byName['Seniores']?.bornTo, year - 19);
+      assert.equal(byName['Cadetes A']?.gender, null, 'the FPN bands are the same for both');
+      assert.equal(byName['juniores']?.bornFrom, 2000, "the club's own group is left as it was");
+    });
+    await actingAs(tenant, { roles: ['instructor'] }, () =>
+      expectStatus(() => q.addFpnAgeGroups({ seasonId: '00000000-0000-4000-8000-000000000000' }), 404),
+    );
+  });
+});
