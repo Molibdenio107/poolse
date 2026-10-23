@@ -2184,7 +2184,9 @@
       "proposeHint": "As propostas ficam em Progressões e uma pessoa confirma cada uma, com a turma.",
       "apply": "Aplicar automaticamente",
       "applyHint": "No primeiro dia da época o nível é alterado, registado em Atividade (reversível) e a família é avisada; só falta escolher a turma."
-    }
+    },
+    "chooseTurma": "Turma",
+    "pickTurma": "Escolha a turma antes de confirmar."
   },
   "progress": {
     "title": "Progressão",

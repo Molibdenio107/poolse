@@ -712,7 +712,7 @@ records who changed whose rate, and the effective-dated table is the record of t
 `weekly_hours` is a dash that contributes nothing — a total that reads unknown hours as free is
 one an owner would act on. `docs/features/salaries.md`.
 
-**A turma is chosen in `TurmaPicker` (`components/turma-picker.tsx`), never a `<select>` of joined strings.** POOLSE-110: grouped by level with the requested level first, searchable, a row per turma with slots, instructor and a fill bar with its figure, a full turma pickable only where `allowFull`. Used by Pedidos; the enrolment form and the app swap to it next. A control inside a dialog that closes itself on Escape marks itself `data-own-escape`, and `Dialog` leaves the key to it.
+**A turma is chosen in `TurmaPicker` (`components/turma-picker.tsx`), never a `<select>` of joined strings.** POOLSE-110: grouped by level with the requested level first, searchable, a row per turma with slots, instructor and a fill bar with its figure, a full turma pickable only where `allowFull`. A caller with a better grouping than level gives every row `group: { key, label, order }`; the rows then keep their given order (POOLSE-113, the advancement queue's rank reasons). Used by Pedidos and the advancement queue; the app's enrolment swaps to it next. A control inside a dialog that closes itself on Escape marks itself `data-own-escape`, and `Dialog` leaves the key to it.
 
 **A question asked in the middle of the page uses `components/ui/dialog.tsx`.** It portals
 to the body, so no ancestor's `overflow`, `transform` or `z-index` can clip it; it closes on

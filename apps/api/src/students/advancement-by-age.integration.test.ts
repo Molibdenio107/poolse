@@ -242,3 +242,129 @@ test('Propor queues against the running season; roles hold on every new route', 
     });
   });
 });
+
+test('POOLSE-113 QA 1, 2, 4: candidates come ranked with what the picker shows; confirm enrols, a seat gone is a 409, an applied proposal moves only the enrolment', async () => {
+  await withScratchTenant(async (tenant) => {
+    const fixture = await seed(tenant);
+    const org = tenant.organizationId;
+    const coach = await addMember(tenant, 'Rui', 'Treinador', ['instructor']);
+
+    // Inês's turma: Monday 17:00, with Rui.
+    const [current] = await tenant.sql<{ id: string }>(
+      `UPDATE class_group SET instructor_membership_id = $2 WHERE name = 'Iniciação A' AND organization_id = $1 RETURNING id`,
+      [org, coach],
+    );
+    const turma = async (name: string, capacity: number, instructor: string | null, weekday: number, at: string) => {
+      const [row] = await tenant.sql<{ id: string }>(
+        `INSERT INTO class_group (organization_id, facility_id, season_id, name, capacity, level_id, instructor_membership_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        [org, tenant.facilityId, tenant.seasonId, name, capacity, fixture.upper, instructor],
+      );
+      await tenant.sql(
+        `INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
+         VALUES ($1, $2, $3, $4::time, 45)`,
+        [org, row!.id, weekday, at],
+      );
+      return row!.id;
+    };
+    await tenant.sql(
+      `INSERT INTO class_schedule (organization_id, class_group_id, weekday, start_time, duration_minutes)
+       VALUES ($1, $2, 1, TIME '17:00', 45)`,
+      [org, current!.id],
+    );
+    const sameSlot = await turma('Aperf. Segunda', 8, null, 1, '17:00');
+    const sameCoach = await turma('Aperf. Rui', 8, coach, 3, '18:00');
+    const available = await turma('Aperf. Sexta', 2, null, 5, '10:00');
+
+    const [proposal] = await tenant.sql<{ id: string }>(
+      `INSERT INTO transfer_proposal (organization_id, student_id, from_level_id, to_level_id)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [org, fixture.childId, fixture.lower, fixture.upper],
+    );
+
+    const controller = new AdvancementController();
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const card = (await controller.list()).proposals.items.find((one) => one.id === proposal!.id)!;
+      // QA 1: three reasons, in rank order, each row carrying what the picker draws.
+      assert.deepEqual(
+        card.candidates.map((one) => [one.classGroupId, one.rankReason]),
+        [
+          [sameSlot, 'same_slot'],
+          [sameCoach, 'same_instructor'],
+          [available, 'available'],
+        ],
+      );
+      const first = card.candidates[0]!;
+      assert.deepEqual(first.slots, [{ weekday: 1, startTime: '17:00' }]);
+      assert.equal(first.capacity, 8);
+      assert.equal(first.active, 0);
+      assert.equal(first.freeSeats, 8);
+      // Rui has no login, and is still named — never read as "no instructor".
+      assert.match(card.candidates[1]!.instructorName ?? '', /^Rui/);
+
+      // QA 2: the last-ranked turma fills between the page load and the click.
+      for (const name of ['Um', 'Dois']) {
+        const [other] = await tenant.sql<{ id: string }>(
+          `INSERT INTO student (organization_id, first_name, last_name) VALUES ($1, $2, 'Outro') RETURNING id`,
+          [org, name],
+        );
+        await tenant.sql(
+          `INSERT INTO enrollment (organization_id, class_group_id, student_id, status) VALUES ($1, $2, $3, 'active')`,
+          [org, available, other!.id],
+        );
+      }
+      await expectStatus(
+        () => controller.confirm(proposal!.id, { classGroupId: available, effectiveOn: '2026-10-26' }),
+        409,
+      );
+      assert.ok(await pending(tenant, fixture.childId), 'the proposal stays pending');
+
+      // QA 1: picking the first and confirming enrols into it.
+      assert.deepEqual(
+        await controller.confirm(proposal!.id, { classGroupId: sameSlot, effectiveOn: '2026-10-26' }),
+        { confirmed: true },
+      );
+    });
+    const [enrolled] = await tenant.sql<{ class_group_id: string }>(
+      `SELECT class_group_id FROM enrollment WHERE student_id = $1 AND status = 'active'`,
+      [fixture.childId],
+    );
+    assert.equal(enrolled!.class_group_id, sameSlot);
+    assert.equal(await levelOf(tenant, fixture.childId), fixture.upper);
+
+    // QA 4: an applied (age) proposal — the level already moved — confirms the turma only.
+    const [second] = await tenant.sql<{ id: string }>(
+      `INSERT INTO student (organization_id, first_name, last_name, level_id, birth_date)
+       VALUES ($1, 'Rita', 'Aplicada', $2, DATE '2018-02-01') RETURNING id`,
+      [org, fixture.upper],
+    );
+    await tenant.sql(
+      `INSERT INTO enrollment (organization_id, class_group_id, student_id, status) VALUES ($1, $2, $3, 'active')`,
+      [org, current!.id, second!.id],
+    );
+    const [applied] = await tenant.sql<{ id: string }>(
+      `INSERT INTO transfer_proposal (organization_id, student_id, from_level_id, to_level_id, reason, applied_at, season_id)
+       VALUES ($1, $2, $3, $4, 'age', now(), $5) RETURNING id`,
+      [org, second!.id, fixture.lower, fixture.upper, tenant.seasonId],
+    );
+    const notices = async () =>
+      Number(
+        (await tenant.sql<{ n: string }>(`SELECT count(*) AS n FROM level_change_notice WHERE student_id = $1`, [second!.id]))[0]!
+          .n,
+      );
+    const before = await notices();
+    await actingAs(tenant, { roles: ['admin'] }, async () => {
+      const card = (await controller.list()).proposals.items.find((one) => one.id === applied!.id)!;
+      assert.ok(card.appliedAt !== null);
+      assert.equal(card.candidates[0]!.rankReason, 'same_slot');
+      await controller.confirm(applied!.id, { classGroupId: sameCoach, effectiveOn: '2026-10-26' });
+    });
+    const [moved] = await tenant.sql<{ class_group_id: string }>(
+      `SELECT class_group_id FROM enrollment WHERE student_id = $1 AND status = 'active'`,
+      [second!.id],
+    );
+    assert.equal(moved!.class_group_id, sameCoach);
+    assert.equal(await levelOf(tenant, second!.id), fixture.upper, 'the level was already moved and stays');
+    assert.equal(await notices(), before, 'the family was told when the level moved, not again for the turma');
+  });
+});

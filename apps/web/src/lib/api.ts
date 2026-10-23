@@ -2939,6 +2939,11 @@ export interface TransferCandidate {
   levelName: string | null;
   freeSeats: number | null;
   rankReason: 'same_slot' | 'same_instructor' | 'available';
+  /** What the turma picker shows on every row — POOLSE-113. */
+  slots: { weekday: number; startTime: string }[];
+  instructorName: string | null;
+  capacity: number | null;
+  active: number;
 }
 
 /**

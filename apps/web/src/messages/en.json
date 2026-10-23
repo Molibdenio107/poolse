@@ -2184,7 +2184,9 @@
       "proposeHint": "Proposals wait under Advancement and a person confirms each one, with the class group.",
       "apply": "Apply automatically",
       "applyHint": "On the season's first day the level is changed, recorded in Activity (reversible) and the family is told; only the class group is left to choose."
-    }
+    },
+    "chooseTurma": "Class group",
+    "pickTurma": "Choose the class group before confirming."
   },
   "progress": {
     "title": "Progression",

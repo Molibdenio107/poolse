@@ -223,6 +223,16 @@ queue and never proposed down. A child who has left (`student_left_on()`), or ha
 date, is never proposed. Both reasons share one queue (`transfer_proposal.reason`), one card
 and one confirm path; the card says which it was.
 
+**The card picks its turma in `TurmaPicker`** (POOLSE-113), the same component as Pedidos: one
+picker, the *A partir de* date and one *Confirmar* per card. The rows are the proposal's
+candidates only — turmas at the level being advanced to, with a seat — **grouped by why they
+rank, in rank order**: *Mesmo dia e hora*, *Mesmo instrutor*, *Com vaga*. Each row shows its
+slots, its instructor (named from their own record when they have no login) and how full it is.
+A full turma is not offered; if one fills between loading the page and confirming, the card says
+the seat went and the proposal stays pending. With no candidates there is no picker, only the
+*sem vaga* sentence. On an applied proposal the picker sits under *nível já alterado*, and
+confirming moves only the enrolment.
+
 **The club chooses how automatic it is**, on the Níveis page (owner and admin;
 `PATCH /levels/advancement-mode`): *Propor* (default) queues for a person to confirm with the
 turma; *Aplicar automaticamente* moves the level on the season's first day — a nightly pass

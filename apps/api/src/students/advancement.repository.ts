@@ -26,6 +26,16 @@ export interface TransferCandidate {
   freeSeats: number | null;
   /** Why it ranks where it does — 'same_slot' | 'same_instructor' | 'available'. */
   rankReason: string;
+  /**
+   * What the turma picker shows on every row (POOLSE-113): its live weekly
+   * slots, its instructor's short name, and how full it is. Read beside the
+   * ranking rather than inside `transfer_candidates()`, which stays exactly as
+   * `advancement.sql` pins it.
+   */
+  slots: { weekday: number; startTime: string }[];
+  instructorName: string | null;
+  capacity: number | null;
+  active: number;
 }
 
 export interface TransferProposal {
@@ -97,10 +107,32 @@ export async function listProposals(
                              'className',    c.class_name,
                              'levelName',    c.level_name,
                              'freeSeats',    c.free_seats,
-                             'rankReason',   c.rank_reason
+                             'rankReason',   c.rank_reason,
+                             'slots', coalesce((
+                               SELECT jsonb_agg(jsonb_build_object('weekday', cs.weekday,
+                                                                   'startTime', to_char(cs.start_time, 'HH24:MI'))
+                                                ORDER BY cs.weekday, cs.start_time)
+                                 FROM class_schedule cs
+                                WHERE cs.organization_id = p.organization_id
+                                  AND cs.class_group_id = c.class_group_id
+                                  AND cs.archived_at IS NULL
+                             ), '[]'::jsonb),
+                             -- A staff member with no login is still named: their own record's name.
+                             'instructorName', coalesce(short_name(iu.cached_first_name, iu.cached_last_name),
+                                                        short_name(im.first_name, im.last_name)),
+                             'capacity',     cg.capacity,
+                             'active', (
+                               SELECT count(*)::int FROM enrollment e
+                                WHERE e.organization_id = p.organization_id
+                                  AND e.class_group_id = c.class_group_id
+                                  AND e.status = 'active'
+                             )
                            ) ORDER BY c.rank_order
                          )
                     FROM transfer_candidates(p.id) c
+                    JOIN class_group cg ON cg.id = c.class_group_id AND cg.organization_id = p.organization_id
+                    LEFT JOIN membership im ON im.id = cg.instructor_membership_id AND im.organization_id = cg.organization_id
+                    LEFT JOIN app_user iu ON iu.id = im.app_user_id
                 ), '[]'::jsonb) AS candidates
            FROM transfer_proposal p
            JOIN student s        ON s.id = p.student_id AND s.organization_id = p.organization_id

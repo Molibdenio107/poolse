@@ -9,6 +9,7 @@ import {
   NO_TEST_USER,
 } from './session';
 import { poolsideLesson, type PoolsideLesson } from './poolside-fixture';
+import { advancementFixture, QUEUE_STUDENT, SAME_SLOT } from './advancement-fixture';
 
 /**
  * Tier 2 on a phone — POOLSE-88 slice 3: "must work on a phone, plainly".
@@ -100,4 +101,20 @@ test.describe('as the instructor', () => {
     const lesson = await poolsideLesson();
     for (const path of tier2(lesson)) await plainly(page, path);
   });
+});
+
+// POOLSE-113 QA 5: the queue's picker, one-handed. The list closes on a pick,
+// so Confirmar sits under the choice and is never pushed below the fold.
+test('the advancement queue — a turma picked on a phone leaves Confirmar on screen', async ({ page }) => {
+  await advancementFixture(E2E_EMAIL!);
+  await plainly(page, '/dashboard/students/advancement');
+  const card = page.locator('main li').filter({ has: page.getByRole('link', { name: QUEUE_STUDENT }) }).first();
+  const option = card.getByRole('option', { name: new RegExp(SAME_SLOT) });
+  await option.scrollIntoViewIfNeeded();
+  expect((await option.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await option.tap();
+  await expect(card.getByRole('listbox')).toHaveCount(0);
+  const confirm = card.getByRole('button', { name: /^confirmar$|^confirm$/i });
+  await expect(confirm).toBeInViewport();
+  expect((await confirm.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });

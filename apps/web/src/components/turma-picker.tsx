@@ -27,8 +27,14 @@ import { cn } from '@/lib/utils';
  * confirms what they chose. Inside a dialog, a phone gets it full height for
  * free: the dialog is a full-screen sheet below `sm`.
  *
- * Built for the three Pedidos dialogs; the enrolment form and the app's
- * enrolment are meant to swap to it next (POOLSE-110 dev notes).
+ * **Grouped by something else when the caller says so** (POOLSE-113): rows that
+ * all carry `group` are grouped by it, in its order, and keep the order they
+ * came in — the advancement queue groups its candidates by rank reason, since
+ * every one of them is at the same level and a level heading would hide the
+ * ranking. Rows without it are grouped by level, as above.
+ *
+ * Used by the three Pedidos dialogs and the advancement queue; the app's
+ * enrolment is meant to swap to it next (POOLSE-110 dev notes).
  */
 
 export interface TurmaOption {
@@ -42,6 +48,12 @@ export interface TurmaOption {
   /** ISO weekday (Monday 1) and "HH:MM", in the order they run. */
   slots: { weekday: number; startTime: string }[];
   instructorName: string | null;
+  /**
+   * A grouping that replaces the level's, when every row has one — POOLSE-113.
+   * `label` is the heading in words; `order` places the group. Within a group
+   * the rows keep the order they were given.
+   */
+  group?: { key: string; label: string; order: number } | undefined;
 }
 
 interface Group {
@@ -103,16 +115,20 @@ export function TurmaPicker({
         needle === '' ||
         [turma.name, turma.levelName ?? '', turma.instructorName ?? ''].some((text) => fold(text).includes(needle)),
     );
+    // The caller's grouping when every row has one, else the level's.
+    const callerGroups = turmas.length > 0 && turmas.every((turma) => turma.group !== undefined);
     const byLevel = new Map<string, Group & { order: number }>();
     for (const turma of matching) {
-      const key = turma.levelName ?? '';
-      const requested = requestedLevelName !== null && turma.levelName === requestedLevelName;
+      const own = callerGroups ? turma.group! : null;
+      const key = own?.key ?? turma.levelName ?? '';
+      const requested = own === null && requestedLevelName !== null && turma.levelName === requestedLevelName;
       const group = byLevel.get(key) ?? {
         key,
-        label: turma.levelName ?? t('turmaPicker.noLevel'),
+        label: own?.label ?? turma.levelName ?? t('turmaPicker.noLevel'),
         requested,
-        // The requested level first, then the ladder, then turmas with no level.
-        order: requested ? -1 : (turma.levelOrder ?? Number.MAX_SAFE_INTEGER),
+        // The caller's order; else the requested level first, then the ladder,
+        // then turmas with no level.
+        order: own?.order ?? (requested ? -1 : (turma.levelOrder ?? Number.MAX_SAFE_INTEGER)),
         turmas: [],
       };
       group.turmas.push(turma);
@@ -120,11 +136,14 @@ export function TurmaPicker({
     }
     return [...byLevel.values()]
       .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
-      // Within a level, the turmas that can be picked first; a full one after them.
+      // Within a group, the turmas that can be picked first; a full one after
+      // them. A level's are alphabetical; a caller's keep the order given.
       .map((group) => ({
         ...group,
         turmas: group.turmas.sort(
-          (a, b) => Number(isFull(a) && !allowFull) - Number(isFull(b) && !allowFull) || a.name.localeCompare(b.name),
+          (a, b) =>
+            Number(isFull(a) && !allowFull) - Number(isFull(b) && !allowFull) ||
+            (callerGroups ? 0 : a.name.localeCompare(b.name)),
         ),
       }));
   }, [turmas, query, requestedLevelName, allowFull, t]);

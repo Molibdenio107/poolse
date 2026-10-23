@@ -135,3 +135,4 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-110](./POOLSE-110-registration-requests-clearer-class-picker.md) | Pedidos de inscrição: a grouped, searchable turma picker | Students / Registration | Medium | POOLSE-69, 82 | 0 |
 | [POOLSE-111](./POOLSE-111-competition-times-events-year-picker-import-formats.md) | Competição: the times table you can see, a year wheel, and what import can read | Students / Competition | Low | POOLSE-81, 85 | 0 |
 | [POOLSE-112](./POOLSE-112-advancement-by-age-at-season-end.md) | Advancement by age at season end, and a queue worth opening — **built 23-10-2026** | Levels / Turmas | Medium | POOLSE-19, 45 | 0 |
+| [POOLSE-113](./POOLSE-113-advancement-queue-turma-picker.md) | The advancement queue picks a turma in `TurmaPicker`, grouped by rank reason | Levels / Turmas | Medium | POOLSE-19, 110, 112 | 0 |
