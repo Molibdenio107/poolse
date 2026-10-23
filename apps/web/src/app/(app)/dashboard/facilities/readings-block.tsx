@@ -143,7 +143,8 @@ export async function ReadingsBlock({
       ['alerts', alerts.length > 0],
       // Where reports are added as well as read, so offered empty — like Registar.
       ['lab', labResults !== null || labFailed],
-      ['record', canRecord || canManage],
+      // The club's own readings only, since POOLSE-101 — so the roles that may type one.
+      ['record', canRecord],
       ['ranges', canManage],
     ] as const
   )
@@ -392,14 +393,15 @@ export async function ReadingsBlock({
       )}
 
       {/*
-        Registar — the form and the import, the two ways an analysis gets in.
+        Registar — the club's own reading, typed. Only the form since POOLSE-101:
+        the report import beneath it read as a second way to enter a laboratory's
+        analysis, so it moved to Laboratório.
 
         The form still folds (round 5), but it opens already unfolded: choosing
         this pill *is* the click that used to open it, and a second one would be
         ceremony. `<details>` rather than a state hook because the browser's own
         disclosure is keyboard-operable, announced as one, and works before any
-        JavaScript arrives — and folding it away is still how somebody reaches
-        the import beneath without scrolling past nine inputs.
+        JavaScript arrives.
       */}
       {current === 'record' && canRecord && (
         <details open className="group rounded border border-border">
@@ -408,33 +410,13 @@ export async function ReadingsBlock({
               aria-hidden
               className="size-4 transition-transform group-open:rotate-90"
             />
-            {t('facilities.recordAnalysisTitle')}
+            {t('facilities.recordOwnTitle')}
           </summary>
           <div className="flex flex-col gap-4 border-t border-border p-4">
+            <p className="text-sm text-foreground-muted">{t('facilities.recordOwnHint')}</p>
             <AnalysisForm organizationId={organizationId} poolId={poolId} poolName={poolName} />
           </div>
         </details>
-      )}
-
-      {/*
-        Importing a report — round 6, ticket 1.
-
-        Directly under "Record an analysis" and outside its disclosure, so it is
-        visible whether or not the form is open. The two are alternatives to each
-        other: type four numbers, or hand over the document they came on. Burying
-        one inside the other would make the choice depend on somebody having
-        already opened the wrong half.
-
-        It replaces the disabled placeholder that stood here for two phases
-        naming the two things it waited on. One of them — parsing — has arrived.
-        The other, keeping the original file, has not: file storage is still a
-        deferred decision, and this would be its fourth caller.
-
-        The wizard renders nothing for somebody who may not write, so a
-        read-only visitor sees the readings and no control the API would refuse.
-      */}
-      {current === 'record' && canManage && (
-        <WaterImport poolId={poolId} canManage={canManage} />
       )}
 
       {current === 'lab' && labFailed && <PageError message={t('detailTabs.loadFailed')} />}
@@ -448,6 +430,18 @@ export async function ReadingsBlock({
           emailConfigured={emailConfigured}
         />
       )}
+
+      {/*
+        Importing a laboratory's report — round 6, ticket 1; under Laboratório
+        since POOLSE-101, beside *Registar um resultado*. Its rows are filed by
+        what they hold: an organism count makes a row the laboratory's, graded
+        here, and chemistry alone goes to the readings — the preview says which,
+        row by row, before anything is written.
+
+        The wizard renders nothing for somebody who may not write, so a
+        read-only visitor sees the results and no control the API would refuse.
+      */}
+      {current === 'lab' && canManage && <WaterImport poolId={poolId} canManage={canManage} />}
 
       {/*
         What this tank's water is supposed to look like — slice 4.2, second half.

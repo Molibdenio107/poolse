@@ -182,22 +182,28 @@ export function WaterImport({
       <DropOverlay shown={dragging} label={t('facilities.waterImport.drop')} />
 
       {/*
-        Always visible, primary, in the Water quality card directly under
-        "Record an analysis" — round 6, ticket 1.
+        Always visible, primary, on the Laboratório section beside *Registar um
+        resultado* — POOLSE-101, which moved it from Registar, where it read as a
+        second way to type a lab analysis. It still takes the club's own .xlsx
+        log too, and the preview says where each row lands.
 
-        Round 5 put it in the page header, which was the wrong half of a right
-        instinct: the control needed to stop being a text link nobody scrolled
-        to, but a page header is about the *page* and this is about the readings.
-        Beside the form it complements is where somebody with a report in hand is
-        already looking.
+        `self-start`: its parent is a flex column, which stretches a child to
+        the card's width unless the child says otherwise (POOLSE-101).
 
         `bg-primary` with `text-primary-foreground` is a token pair, so it
         carries its own contrast in both themes rather than being a colour that
         happens to work in one.
       */}
-      <button type="button" className={BUTTON} onClick={() => setStep('reading')}>
-        <Upload aria-hidden className="size-4" />
-        {t('facilities.waterImport.action')}
+      <button
+        type="button"
+        // Short on the button, which sits under Laboratório already; the dialog
+        // it opens carries the whole name. `min-h-control` for a phone, where
+        // the words may still wrap.
+        className={cn(BUTTON, 'self-start h-auto min-h-control py-1')}
+        onClick={() => setStep('reading')}
+      >
+        <Upload aria-hidden className="size-4 shrink-0" />
+        {t('facilities.waterImport.open')}
       </button>
 
       <form ref={formRef} action={readAction} className="hidden">
@@ -479,13 +485,25 @@ function Preview({
   return (
     <div className="flex flex-col gap-3">
       {created === undefined ? (
-        <p className="text-sm">
-          {t('facilities.waterImport.summary', {
-            total: summary?.total ?? 0,
-            importable: summary?.importable ?? 0,
-            refused: summary?.refused ?? 0,
-          })}
-        </p>
+        <>
+          <p className="text-sm">
+            {t('facilities.waterImport.summary', {
+              total: summary?.total ?? 0,
+              importable: summary?.importable ?? 0,
+              refused: summary?.refused ?? 0,
+            })}
+          </p>
+          {/*
+            Where the rows go, before anything is written — POOLSE-101. A row
+            with an organism count is the laboratory's; the rest are readings.
+          */}
+          <p className="text-sm text-foreground-muted">
+            {t('facilities.waterImport.destinations', {
+              lab: rows.filter((row) => row.destination === 'lab').length,
+              readings: rows.filter((row) => row.destination === 'readings').length,
+            })}
+          </p>
+        </>
       ) : (
         <p className="flex items-center gap-2 rounded border border-success/40 bg-success/10 p-3 text-sm">
           <Check aria-hidden className="size-4 shrink-0" />
@@ -507,6 +525,9 @@ function Preview({
                 {t('facilities.waterImport.readings')}
               </th>
               <th scope="col" className="p-2 font-medium">
+                {t('facilities.waterImport.destination')}
+              </th>
+              <th scope="col" className="p-2 font-medium">
                 {t('facilities.waterImport.state')}
               </th>
             </tr>
@@ -526,9 +547,12 @@ function Preview({
                     : row.values
                         .map(
                           (value) =>
-                            `${t(`facilities.metric.${value.metric}`)} ${formatReading(value.value, locale)}`,
+                            `${t(`labResults.parameter.${value.parameter}`)} ${formatReading(value.value, locale)}`,
                         )
                         .join(' · ')}
+                </td>
+                <td className="p-2">
+                  {t(`facilities.waterImport.goesTo.${row.destination}`)}
                 </td>
                 <td className="p-2">
                   {/*
@@ -542,8 +566,8 @@ function Preview({
                         .map((problem) =>
                           problem === 'valueInvalid'
                             ? t('facilities.waterImport.problem.valueInvalid', {
-                                metrics: row.badMetrics
-                                  .map((metric) => t(`facilities.metric.${metric}`))
+                                metrics: row.badParameters
+                                  .map((parameter) => t(`labResults.parameter.${parameter}`))
                                   .join(', '),
                               })
                             : t(`facilities.waterImport.problem.${problem}`),

@@ -1,3 +1,4 @@
+import { ORGANISMS, type Organism } from '@poolse/rules';
 import { POOL_METRICS, type PoolMetric } from './pool-metrics.ts';
 
 /**
@@ -30,8 +31,20 @@ import { POOL_METRICS, type PoolMetric } from './pool-metrics.ts';
  * implement this interface to get it.
  */
 
-/** The fields a report can fill — the water importer's own, minus nothing. */
-export type ReportField = 'takenOn' | 'takenTime' | 'pool' | 'notes' | PoolMetric;
+/**
+ * The fields a report can fill — the water importer's own, plus what only a
+ * laboratory writes (POOLSE-101): its organism counts, its name and the
+ * report's reference.
+ */
+export type ReportField =
+  | 'takenOn'
+  | 'takenTime'
+  | 'pool'
+  | 'notes'
+  | 'laboratory'
+  | 'reportReference'
+  | PoolMetric
+  | Organism;
 
 /** One extracted analysis, keyed exactly as `applyWaterMapping` keys a row. */
 export type ReportRow = Partial<Record<ReportField, string>>;
@@ -41,8 +54,28 @@ export const REPORT_FIELDS: ReportField[] = [
   'takenTime',
   'pool',
   'notes',
+  'laboratory',
+  'reportReference',
   ...POOL_METRICS,
+  ...ORGANISMS,
 ];
+
+export type ReportDestination = 'lab' | 'readings';
+
+/**
+ * Where one extracted analysis is filed — POOLSE-101.
+ *
+ * **An organism count makes it a laboratory's.** Only a laboratory counts
+ * coliforms; a club with a photometer measures pH and chlorine. So a row with
+ * any of the seven organisms goes to `lab_result`, chemistry and all, and is
+ * graded under NP 4542; a row with chemistry alone is the club's own reading.
+ * One row, one place — a lab's pH is part of its graded report and is never
+ * filed a second time as a reading. A spreadsheet row can carry no organism,
+ * so the club's own log always lands in readings.
+ */
+export function reportDestination(row: Partial<Record<string, string>>): ReportDestination {
+  return ORGANISMS.some((organism) => (row[organism] ?? '').trim() !== '') ? 'lab' : 'readings';
+}
 
 /**
  * What a document may be.

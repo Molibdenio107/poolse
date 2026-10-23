@@ -8,7 +8,16 @@ import { reportMediaType, type ReportRow } from '@/lib/analysis-report';
 import { analysisReportParser } from '@/lib/analysis-report-agent';
 import { describeFailure } from '@/lib/form-failure';
 import type { NamedSheet } from '@/lib/sheet';
-import type { PoolMetric } from '@/lib/pool-metrics';
+import {
+  mergeAnswers,
+  splitByDestination,
+  type ImportAnswer,
+  type LabAnswerRow,
+  type Part,
+  type ReadingsAnswerRow,
+  type WaterImportRow,
+  type WaterImportSummary,
+} from '@/lib/water-import-routing';
 import type { FormState } from '../../../actions';
 
 /**
@@ -149,26 +158,7 @@ async function readReport(
   return { ok: true, report: result.rows, fileName: file.name, attempt };
 }
 
-/** One row of the preview, as the API describes it. */
-export interface WaterImportRow {
-  index: number;
-  line: number;
-  takenOn: string;
-  takenTime: string | null;
-  notes: string | null;
-  values: { metric: PoolMetric; value: number }[];
-  badMetrics: PoolMetric[];
-  problems: string[];
-  warnings: string[];
-  importable: boolean;
-}
-
-export interface WaterImportSummary {
-  total: number;
-  importable: number;
-  refused: number;
-  duplicates: number;
-}
+export type { WaterImportRow, WaterImportSummary } from '@/lib/water-import-routing';
 
 export interface WaterImportState extends FormState {
   rows?: WaterImportRow[];
@@ -179,19 +169,18 @@ export interface WaterImportState extends FormState {
   attempt: number;
 }
 
-interface ImportResponse {
-  rows: WaterImportRow[];
-  summary: WaterImportSummary;
-  created?: number;
-  skipped?: number;
-}
-
 /**
  * Steps two and three: check what the file says, then write it.
  *
  * One action with a `commit` flag rather than two, mirroring the API. What the
  * operator was shown and what gets written have to be produced by the same code
  * path, or the preview is a promise the commit does not keep.
+ *
+ * **Two tables behind it since POOLSE-101.** A row with an organism count is a
+ * laboratory's and goes to `/lab-results/import`, graded under NP 4542; the
+ * rest are readings and go to `/analyses/import`, as every row did before. The
+ * split (`splitByDestination`) runs on preview and commit alike, so a row is
+ * filed where the preview said it would be.
  */
 export async function runWaterImportAction(
   previous: WaterImportState,
@@ -213,14 +202,30 @@ export async function runWaterImportAction(
     return { ok: false, errorKey: 'facilities.waterImport.failed', attempt };
   }
 
-  let response: ImportResponse;
+  const parts = splitByDestination(rows, include);
+  const send = <Row>(path: string, part: Part): Promise<ImportAnswer<Row> | null> =>
+    part.rows.length === 0
+      ? Promise.resolve(null)
+      : apiPost<ImportAnswer<Row>>(`/facilities/pools/${poolId}/${path}`, {
+          rows: part.rows,
+          commit,
+          ...(part.include === null ? {} : { include: part.include }),
+        });
+
+  let merged: ImportAnswer<WaterImportRow>;
   try {
-    response = await apiPost<ImportResponse>(`/facilities/pools/${poolId}/analyses/import`, {
-      rows,
-      commit,
-      ...(include === null ? {} : { include }),
-    });
+    // Readings, then the laboratory: two endpoints, two transactions. A
+    // report almost always holds one kind, so the pair rarely both run; when
+    // they do and the second fails, the failure is said and the page is
+    // revalidated below, so the readings that were written show at once.
+    const readings = await send<ReadingsAnswerRow>('analyses/import', parts.readings);
+    const lab = await send<LabAnswerRow>('lab-results/import', parts.lab);
+    merged = mergeAnswers(
+      readings === null ? null : { answer: readings, origin: parts.readings.origin },
+      lab === null ? null : { answer: lab, origin: parts.lab.origin },
+    );
   } catch (error) {
+    if (commit) revalidatePath(`/dashboard/facilities/pools/${poolId}`);
     return { ...describeFailure(error, 'facilities.waterImport.failed'), attempt };
   }
 
@@ -230,10 +235,10 @@ export async function runWaterImportAction(
 
   return {
     ok: true,
-    rows: response.rows,
-    summary: response.summary,
-    ...(response.created === undefined ? {} : { created: response.created }),
-    ...(response.skipped === undefined ? {} : { skipped: response.skipped }),
+    rows: merged.rows,
+    summary: merged.summary,
+    ...(merged.created === undefined ? {} : { created: merged.created }),
+    ...(merged.skipped === undefined ? {} : { skipped: merged.skipped }),
     attempt,
   };
 }

@@ -43,6 +43,19 @@ labels the reference option with the national band for that tank. A pool with no
 own moved to these values on 13-10-2026. The earlier values (pH 7.2–7.6, a flat 0.5–2 for
 chlorine, 25–29 °C) cited no source.
 
+## The water tab: own readings and the laboratory (POOLSE-101)
+
+A tank's water tab says it in one line above its pills: *own readings every day; the laboratory's results every month*. The two are different records, made by different people, and each has one place:
+
+- **Registar leitura** is the club's own reading — pH, chlorine, temperature, typed by somebody at the pool. It holds the form and nothing else, and is offered to whoever may record an analysis.
+- **Laboratório** is the accredited laboratory's monthly analysis, graded below. It holds the results, *Registar um resultado* and *Importar um relatório do laboratório*.
+
+**Where an imported row is filed is decided by what it holds** (`reportDestination` in `lib/analysis-report.ts`). A row with any organism count is the laboratory's and becomes a lab result — its chemistry with it, never filed a second time as a reading — through `POST …/lab-results/import`, which writes each row with the form's own function, so it is audited, graded and alerted like a typed one. A row with chemistry alone is a reading and goes through the readings import as before; the club's own .xlsx/.csv log can carry no organism, so it always lands there. The preview has a *Vai para* column and a count per destination, and nothing is written before the person ticks and confirms. A lab row with no time is filed at midnight, as a reading is; a sample later than now on the facility's clock is refused on the preview.
+
+**A colony count written as "<1" or as a word of absence (*Ausência*, *não detetado*) is read as 0**: counts are whole numbers, so both mean exactly none. Any other "<N" is a detection limit, not a count, and the row is refused with the parameter named. Importing is owner and admin, as the readings import is.
+
+The parser (`analysis-report-agent.ts`, behind `WATER_REPORT_AI_ENABLED` and `ANTHROPIC_API_KEY`) asks for the seven organisms, the laboratory and the report reference beside the chemistry, and replies through structured output rather than a forced tool call.
+
 ## Laboratory results
 
 *Laboratório* records a report from the lab:
@@ -83,6 +96,7 @@ transaction and emailed after it. The report shows whether the email went out, o
 | | Owner | Admin | Maintenance | Instructor, guardian, student |
 |---|---|---|---|---|
 | Read and record lab results | ✓ | ✓ | ✓ | — |
+| Import a laboratory report | ✓ | ✓ | — | — |
 | Archive a lab result | ✓ | ✓ | — | — |
 | Set a pool's use, set bands | ✓ | ✓ | — | — |
 

@@ -984,7 +984,7 @@
     "hoursSaveFailed": "The hours could not be saved.",
     "manageClosures": "Manage closures",
     "readings": "Water quality",
-    "readingsHint": "pH, temperature and analysis readings for this pool.",
+    "readingsHint": "Your own readings every day; the laboratory's results every month.",
     "readingPh": "pH",
     "readingTemperature": "Temperature",
     "readingAnalysis": "Latest analysis",
@@ -1049,6 +1049,8 @@
     "matchWeek": "Match week",
     "matchWeekFrom": "Apply {day}’s times to the rest of the week",
     "recordAnalysisTitle": "Record an analysis",
+    "recordOwnTitle": "Record your own reading",
+    "recordOwnHint": "The pH, chlorine and temperature tests the club does itself.",
     "closePoolHint": "Opens the closures calendar, where you pick the days.",
     "lanesInUse": "The lanes cannot be reduced: some of them have classes on them.",
     "lanesHint": "Increasing adds lanes at the end. Reducing is only possible when they have no classes.",
@@ -1057,8 +1059,9 @@
     "maxCapacityHint": "Students allowed in the water at once, across every class.",
     "maxCapacityUnlimited": "No limit set — classes in this tank are not capped.",
     "waterImport": {
-      "action": "Import an analysis report",
-      "hint": "An .xlsx or .csv water log, or a report as a PDF or a photograph. You can also drag one onto this page.",
+      "action": "Import a laboratory report",
+      "open": "Import report",
+      "hint": "A laboratory report as a PDF or a photograph, or the club's readings log as .xlsx or .csv. You can also drag one onto this page.",
       "drop": "Drop the file to import it",
       "choose": "Choose a file, or drag one anywhere onto this page. It takes .xlsx, .csv, PDFs and images.",
       "pick": "Choose a file",
@@ -1067,19 +1070,25 @@
       "column": "Column {at}",
       "needBoth": "Point at least a date and one reading at a column before checking the file.",
       "check": "Check the file",
-      "commit": "{count, plural, =0 {Import nothing} one {Import # reading} other {Import # readings}}",
+      "commit": "{count, plural, =0 {Import nothing} one {Import # row} other {Import # rows}}",
       "summary": "{total} rows read. {importable} can be imported, {refused} cannot.",
-      "done": "{created, plural, one {# reading imported} other {# readings imported}}. {skipped, plural, =0 {} one {# left out} other {# left out}}",
+      "done": "{created, plural, one {# row imported} other {# rows imported}}. {skipped, plural, =0 {} one {# left out} other {# left out}}",
       "line": "Line",
-      "readings": "Readings",
+      "readings": "Values",
+      "destination": "Goes to",
+      "destinations": "To the laboratory results: {lab}. To your own readings: {readings}.",
+      "goesTo": {
+        "lab": "Laboratory results",
+        "readings": "Own readings"
+      },
       "state": "Will import",
       "willImport": "Will import",
-      "failed": "The readings could not be imported.",
+      "failed": "The file could not be imported.",
       "report": {
         "disabled": "Report parsing is not enabled yet.",
-        "disabledHint": "Ask for it to be switched on, or import an .xlsx or .csv — or record the analysis by hand in the form above.",
+        "disabledHint": "Ask for it to be switched on, or record the result by hand under Record a result. The club's readings log as .xlsx or .csv still imports.",
         "unreadable": "This report could not be read. Check that the file opens and try again.",
-        "nothingFound": "No readings were found in this report."
+        "nothingFound": "No values were found in this report."
       },
       "problem": {
         "dateMissing": "No date",
@@ -1087,7 +1096,8 @@
         "timeInvalid": "The time could not be read",
         "noReadings": "No readings on this line",
         "valueInvalid": "Not a number: {metrics}",
-        "otherPool": "Belongs to another tank"
+        "otherPool": "Belongs to another tank",
+        "dateInFuture": "Date or time still to come"
       },
       "warning": {
         "duplicateInFile": "Repeats an earlier line",
@@ -1134,8 +1144,8 @@
       "trends": "Trends",
       "history": "History",
       "alerts": "Alerts",
-      "lab": "Lab results",
-      "record": "Record",
+      "lab": "Laboratory",
+      "record": "Record reading",
       "ranges": "Ranges"
     },
     "configure": "Set up this site",
@@ -5028,7 +5038,7 @@
     "ceilingReached": "The public form received too many requests in a short time ({when}) and turned away those over the limit without telling the sender. It may have been an attack; if you were expecting sign-ups then, reach the families another way."
   },
   "labResults": {
-    "hint": "The laboratory's reports, graded by NP 4542:2017. A non-compliant result alerts the owner, the admins and maintenance.",
+    "hint": "The monthly analyses by an accredited laboratory, graded against the national reference (NP 4542:2017). A non-compliant result alerts the owner, the admins and maintenance.",
     "empty": "No laboratory analyses recorded for this pool yet.",
     "noValues": "Fill in at least one value from the report.",
     "sampledAt": "Sample of {when}",
@@ -5074,7 +5084,7 @@
       "turbidity": "Turbidity",
       "salt": "Salt"
     },
-    "record": "Record a laboratory analysis",
+    "record": "Record a result",
     "sampledAtLabel": "Date and time of sampling",
     "laboratory": "Laboratory",
     "reportReference": "Report reference",

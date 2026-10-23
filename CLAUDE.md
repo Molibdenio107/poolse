@@ -735,7 +735,7 @@ parser that answers in the *same field names* the mapping step produces and join
 ordinary validate–preview–commit path. Two ways in, one pipeline. Every such parser is
 optional and off unless its own flag and `ANTHROPIC_API_KEY` are both set, sends the
 document and nothing else about the tenant, and has everything it extracts confirmed by a
-person on the preview. `lib/analysis-report.ts` is the contract; `-agent.ts` is the model.
+person on the preview. `lib/analysis-report.ts` is the contract; `-agent.ts` is the model. A water report's row is filed by what it holds (`reportDestination`, POOLSE-101): an organism count makes it a lab result through `/lab-results/import`, chemistry alone a reading.
 
 **A list importer takes a PDF by `readSheet(file, { pdf: true })`, and the PDF becomes a
 spreadsheet.** 12 October 2026. `lib/pdf-table-agent.ts` transcribes the document's tables into

@@ -31,7 +31,7 @@ import {
  */
 
 /** The model, overridable so the choice stays an operator's rather than a build's. */
-const MODEL = process.env['POOLSE_ANALYSIS_REPORT_MODEL'] ?? 'claude-opus-5';
+const MODEL = process.env['POOLSE_ANALYSIS_REPORT_MODEL'] ?? 'claude-opus-5-5';
 
 /**
  * The ceiling on a report.
@@ -42,7 +42,28 @@ const MODEL = process.env['POOLSE_ANALYSIS_REPORT_MODEL'] ?? 'claude-opus-5';
  */
 const MAX_BYTES = 8 * 1024 * 1024;
 
-const TOOL_NAME = 'record_analyses';
+/**
+ * The reply's shape — structured output rather than a forced tool call
+ * (POOLSE-101), because the current Opus refuses a forced `tool_choice`; the
+ * same move `pdf-table-agent.ts` made. Every field optional, every value text.
+ */
+const SCHEMA = {
+  type: 'object',
+  properties: {
+    analyses: {
+      type: 'array',
+      description: 'One entry per analysis. Omit any field not on the document.',
+      items: {
+        type: 'object',
+        properties: Object.fromEntries(REPORT_FIELDS.map((field) => [field, { type: 'string' }])),
+        required: [],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['analyses'],
+  additionalProperties: false,
+};
 
 const SYSTEM = [
   'You read water-analysis reports for swimming pools and extract the readings.',
@@ -62,8 +83,24 @@ const SYSTEM = [
   'Free chlorine and combined chlorine are different measurements and must never',
   'be swapped. A report showing a single unqualified "cloro" is free chlorine.',
   '',
-  'Dates as they appear on the document. Times as HH:MM in 24 hours.',
+  'Dates as they appear on the document: the date the sample was collected,',
+  'not the date the report was issued. Times as HH:MM in 24 hours.',
   'Put a tank name in "pool" only when the document names one.',
+  '',
+  'Field names: ph, temperature, free_chlorine, combined_chlorine,',
+  'total_alkalinity, calcium_hardness, cyanuric_acid, turbidity, salt.',
+  '',
+  'A laboratory report may also count micro-organisms. Copy each count exactly',
+  'as written, including "<1" or "Ausência":',
+  '- colonies_37c: colónias / microrganismos cultiváveis a 37 °C',
+  '- total_coliforms: bactérias coliformes / coliformes totais',
+  '- e_coli: Escherichia coli',
+  '- enterococci: enterococos (intestinais)',
+  '- pseudomonas_aeruginosa: Pseudomonas aeruginosa',
+  '- staphylococcus_coagulase_positive: estafilococos coagulase positiva',
+  '- staphylococcus_total: estafilococos totais',
+  'Put the name of the laboratory in "laboratory" and the report or bulletin number',
+  'in "reportReference" when the document shows them.',
 ].join('\n');
 
 export class ClaudeAnalysisReportParser implements AnalysisReportParser {
@@ -83,9 +120,13 @@ export class ClaudeAnalysisReportParser implements AnalysisReportParser {
     try {
       const client = new Anthropic();
 
-      const response = await client.messages.create(
+      const response = await client.beta.messages.create(
         {
           model: MODEL,
+          // A declined read is retried on the model the API picks, inside the
+          // same call — as the PDF table reader does.
+          betas: ['server-side-fallback-2026-07-01'],
+          fallbacks: 'default',
           max_tokens: 4096,
           system: SYSTEM,
           messages: [
@@ -97,33 +138,7 @@ export class ClaudeAnalysisReportParser implements AnalysisReportParser {
               ],
             },
           ],
-          tools: [
-            {
-              name: TOOL_NAME,
-              description: 'Record the readings found in a water-analysis report.',
-              strict: true,
-              input_schema: {
-                type: 'object',
-                properties: {
-                  analyses: {
-                    type: 'array',
-                    description: 'One entry per analysis. Omit any field not on the document.',
-                    items: {
-                      type: 'object',
-                      properties: Object.fromEntries(
-                        REPORT_FIELDS.map((field) => [field, { type: 'string' }]),
-                      ),
-                      required: [],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ['analyses'],
-                additionalProperties: false,
-              },
-            },
-          ],
-          tool_choice: { type: 'tool', name: TOOL_NAME },
+          output_config: { format: { type: 'json_schema', schema: SCHEMA } },
         },
         /*
          * Longer than the column matcher's twenty seconds, because reading a
@@ -134,13 +149,14 @@ export class ClaudeAnalysisReportParser implements AnalysisReportParser {
         { timeout: 60_000 },
       );
 
-      const call = response.content.find(
-        (block): block is Anthropic.ToolUseBlock =>
-          block.type === 'tool_use' && block.name === TOOL_NAME,
-      );
-      if (call === undefined) return { error: 'nothingFound' };
-
-      const rows = readRows(call.input);
+      if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') {
+        return { error: 'unreadable' };
+      }
+      const text = response.content
+        .filter((block): block is Anthropic.Beta.BetaTextBlock => block.type === 'text')
+        .map((block) => block.text)
+        .join('');
+      const rows = readRows(JSON.parse(text));
       return rows.length === 0 ? { error: 'nothingFound' } : { rows };
     } catch {
       // Rate limited, timed out, misconfigured key, network, a PDF the API
@@ -162,7 +178,7 @@ export function analysisReportParser(): AnalysisReportParser {
   return new ClaudeAnalysisReportParser();
 }
 
-function documentBlock(file: ReportFile): Anthropic.ContentBlockParam {
+function documentBlock(file: ReportFile): Anthropic.Beta.BetaContentBlockParam {
   const data = file.bytes.toString('base64');
 
   return file.mediaType === 'application/pdf'
