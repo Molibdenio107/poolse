@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FromLink } from '@/components/from-link';
 import { Mail } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -27,7 +27,15 @@ import { ReminderDialog } from './reminder-dialog';
  *
  * **Ticking documents sends a reminder by email** — POOLSE-86, 3.0b: the
  * dialog groups them by payer and each payer gets one email of everything of
- * theirs that is overdue. "Select the overdue" ticks the late ones in a click.
+ * theirs that is overdue.
+ *
+ * **The header checkbox selects every overdue row shown** — POOLSE-104 D. Not
+ * the open-but-not-yet-due ones, because a reminder is about what is late; a
+ * row ticked by hand stays ticked. Indeterminate while only some are, and a
+ * click with every overdue row ticked clears the lot. It is a real labelled
+ * `<input>`, and below `md`, where `.table-stack` clips the header row, this
+ * table un-clips that one cell as a line above the cards — the same element,
+ * moved by CSS, never a second copy.
  */
 export function OutstandingList({
   facilityId,
@@ -53,6 +61,16 @@ export function OutstandingList({
     else next.delete(id);
     setTicked(next);
   };
+  const allOverdue = overdue.length > 0 && overdue.every((id) => ticked.has(id));
+  const someTicked = ticked.size > 0 && !allOverdue;
+  const tickAll = useRef<HTMLInputElement>(null);
+  // `indeterminate` is a property with no attribute, so React cannot render it.
+  useEffect(() => {
+    if (tickAll.current !== null) tickAll.current.indeterminate = someTicked;
+  }, [someTicked]);
+  const toggleAll = (): void => {
+    setTicked(allOverdue ? new Set() : new Set([...ticked, ...overdue]));
+  };
 
   return (
     <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
@@ -74,18 +92,10 @@ export function OutstandingList({
             type="button"
             disabled={ticked.size === 0}
             onClick={() => setReminding(true)}
-            className="inline-flex h-control items-center justify-center gap-2 rounded bg-primary px-4 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            className="inline-flex min-h-control items-center justify-center gap-2 rounded bg-primary px-4 py-1 text-control text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
             <Mail aria-hidden className="size-4" />
             {t('invoices.reminders.open', { count: ticked.size })}
-          </button>
-          <button
-            type="button"
-            disabled={overdue.length === 0}
-            onClick={() => setTicked(new Set(overdue))}
-            className="inline-flex h-control items-center justify-center rounded border border-border px-4 text-control hover:bg-surface-muted disabled:opacity-60"
-          >
-            {t('invoices.reminders.tickOverdue', { count: overdue.length })}
           </button>
         </div>
       )}
@@ -107,24 +117,39 @@ export function OutstandingList({
         <div className="relative overflow-x-auto">
           <table className="table-stack w-full min-w-[52rem] text-sm">
             <caption className="sr-only">{t('invoices.owingTitle')}</caption>
-            <thead>
-              <tr className="border-b border-border text-left text-foreground-muted">
-                <th scope="col" className="w-8 pb-2 font-medium">
-                  <span className="sr-only">{t('invoices.reminders.tickColumn')}</span>
+            {/*
+              Below md `.table-stack` clips the header row; this one keeps its
+              select-all cell on screen as a line above the cards and drops the
+              column titles, which every card already carries as data-labels.
+            */}
+            <thead className="max-md:!static max-md:!block max-md:!h-auto max-md:!w-auto max-md:!overflow-visible max-md:![clip:auto] max-md:!whitespace-normal">
+              <tr className="border-b border-border text-left text-foreground-muted max-md:mb-2 max-md:block max-md:border-0">
+                <th scope="col" className="w-8 pb-2 font-medium max-md:block max-md:w-auto max-md:pb-0">
+                  <label className="inline-flex items-center gap-2 max-md:min-h-control max-md:font-normal max-md:text-foreground">
+                    <input
+                      ref={tickAll}
+                      type="checkbox"
+                      checked={allOverdue}
+                      disabled={overdue.length === 0}
+                      onChange={toggleAll}
+                      className="size-4"
+                    />
+                    <span className="md:sr-only">{t('invoices.reminders.tickAllOverdue')}</span>
+                  </label>
                 </th>
-                <th scope="col" className="pb-2 font-medium">
+                <th scope="col" className="pb-2 font-medium max-md:hidden">
                   {t('invoices.documentNo')}
                 </th>
-                <th scope="col" className="pb-2 font-medium">
+                <th scope="col" className="pb-2 font-medium max-md:hidden">
                   {t('invoices.payer')}
                 </th>
-                <th scope="col" className="pb-2 font-medium">
+                <th scope="col" className="pb-2 font-medium max-md:hidden">
                   {t('invoices.dueLabel')}
                 </th>
-                <th scope="col" className="pb-2 font-medium">
+                <th scope="col" className="pb-2 font-medium max-md:hidden">
                   {t('invoices.lastChased')}
                 </th>
-                <th scope="col" className="pb-2 text-right font-medium">
+                <th scope="col" className="pb-2 text-right font-medium max-md:hidden">
                   {t('invoices.outstanding')}
                 </th>
               </tr>

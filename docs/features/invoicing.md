@@ -156,8 +156,7 @@ A chase records that a person telephoned, wrote or spoke to a family on a day �
 makes a second chase a different conversation from the first, and what somebody needs to know
 before picking up the telephone. A person never records a Poolse email by hand.
 
-**A reminder by email (POOLSE-86).** On **Em dívida**, owner or admin ticks documents (or *Escolher
-o que está em atraso*) and presses *Enviar lembrete por email*. The ticked documents name their
+**A reminder by email (POOLSE-86).** On **Em dívida**, owner or admin ticks documents and presses *Enviar lembrete por email*. The ticked documents name their
 payers, and the dialog shows, before anything is written, each payer's **overdue** documents at
 this site with the total, the address, anyone with no address (named, sent nothing), anyone whose
 ticked documents are not late yet, and the club's *Como pagar*. A payer reminded by email in the
@@ -226,3 +225,5 @@ Its **Voltar** is the page shell's, like every record's (POOLSE-104 A): back to 
 ## On a phone
 
 Below `md` the three tables — the month's run, the issued documents and *Em dívida* — become one card per row through `.table-stack`. Each cell is a "label  value" line, and the label comes from its `data-label`. The table is the same element, so the run's checkboxes and the reminder ticks work as on a desk. From `md` up nothing changes (POOLSE-88 phone views).
+
+**Selecting the overdue (POOLSE-104 D).** The checkbox column's header, *Selecionar todos em atraso*, ticks every overdue row shown — never one that is open but not yet due — keeping any row ticked by hand. It is indeterminate while only some are ticked, and a click with every overdue row ticked clears the selection. It replaced the *Escolher o que está em atraso* button. Below `md` the table un-clips that one header cell as a labelled line above the cards (the same element, moved by CSS) and hides the column titles the cards already carry.

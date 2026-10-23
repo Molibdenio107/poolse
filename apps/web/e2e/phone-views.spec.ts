@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { E2E_EMAIL, E2E_PASSWORD, NO_TEST_USER } from './session';
 import { poolsideLesson } from './poolside-fixture';
+import { owedDocuments } from './invoicing-fixture';
 
 /**
  * The backoffice's desk-shaped screens on a phone — POOLSE-88 phone views
@@ -89,6 +90,27 @@ test.describe('on a phone', () => {
     }
   });
 
+  test('Em dívida keeps its select-all on a phone, above the cards — POOLSE-104 D', async ({ page }) => {
+    const owed = await owedDocuments(E2E_EMAIL!);
+    await visit(page, `/dashboard/faturacao?facilityId=${owed.facilityId}&view=owing`);
+    const all = page.getByRole('checkbox', { name: /selecionar todos em atraso|select all overdue/i });
+    await expect(all).toBeVisible();
+    // Its words are on screen, not only in the accessible name.
+    await expect(page.getByText(/selecionar todos em atraso|select all overdue/i)).toBeVisible();
+    // The column titles are not: each card carries them as labels.
+    await expect(page.locator('thead th').nth(1)).toBeHidden();
+    await all.tap();
+    for (const doc of owed.overdue) {
+      await expect(page.getByRole('checkbox', { name: new RegExp(doc.documentNo) })).toBeChecked();
+    }
+    for (const doc of owed.open) {
+      await expect(page.getByRole('checkbox', { name: new RegExp(doc.documentNo) })).not.toBeChecked();
+    }
+    await all.tap();
+    await expect(page.getByRole('checkbox', { checked: true })).toHaveCount(0);
+    expect(await sidewaysScrollers(page)).toEqual([]);
+  });
+
   test('the lifeguard week is one day at a time, the hours beside it — POOLSE-96', async ({ page }) => {
     await visit(page, '/dashboard/facilities/lifeguards');
     const grid = page.locator('[data-roster-grid]');
@@ -135,6 +157,19 @@ test.describe('on a desk, the same pages are unchanged', () => {
       return grid === null || grid === undefined ? 0 : getComputedStyle(grid).gridTemplateColumns.split(' ').length;
     });
     expect(columns).toBeGreaterThanOrEqual(6);
+  });
+
+  test('Em dívida keeps its header row, the select-all in the checkbox column — POOLSE-104 D', async ({ page }) => {
+    const owed = await owedDocuments(E2E_EMAIL!);
+    await visit(page, `/dashboard/faturacao?facilityId=${owed.facilityId}&view=owing`);
+    const all = page.getByRole('checkbox', { name: /selecionar todos em atraso|select all overdue/i });
+    await expect(all).toBeVisible();
+    await expect(page.locator('thead th').nth(1)).toBeVisible();
+    // In the header cell above the rows' boxes, its words for a screen reader only.
+    const header = (await all.boundingBox())!;
+    const first = (await page.locator('tbody input[type=checkbox]').first().boundingBox())!;
+    expect(Math.abs(header.x - first.x)).toBeLessThan(4);
+    expect(header.y).toBeLessThan(first.y);
   });
 
   test('the lifeguard week shows all seven days, with no day stepper — POOLSE-96', async ({ page }) => {
