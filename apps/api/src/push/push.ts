@@ -117,8 +117,19 @@ type Sender = (
   payload: string,
 ) => Promise<unknown>;
 
-const defaultSender: Sender = (subscription, payload) =>
+const realSender: Sender = (subscription, payload) =>
   webpush.sendNotification(subscription, payload, { TTL: 60 * 60 * 24 });
+
+let defaultSender: Sender = realSender;
+
+/**
+ * For tests: route every push through `sender` (null restores the real one), so
+ * the paths that push on their own — a stand-in, a closure — can be proved
+ * without a push service.
+ */
+export function usePushSenderForTests(sender: Sender | null): void {
+  defaultSender = sender ?? realSender;
+}
 
 /**
  * Pushes one notice to these people's live devices. Best effort, once, never
@@ -129,7 +140,7 @@ export async function pushTo(
   organizationId: string,
   membershipIds: readonly string[],
   payload: PushPayload,
-  send: Sender = defaultSender,
+  send: Sender | null = null,
 ): Promise<number> {
   if (pushConfig() === null || membershipIds.length === 0) return 0;
   const subscriptions = await withOrg(organizationId, async (tx) => {
@@ -147,7 +158,7 @@ export async function pushTo(
   await Promise.all(
     subscriptions.map(async (row) => {
       try {
-        await send({ endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } }, body);
+        await (send ?? defaultSender)({ endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } }, body);
         delivered.push(row.id);
       } catch (error) {
         const status = (error as { statusCode?: number }).statusCode;

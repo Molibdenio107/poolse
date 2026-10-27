@@ -37,6 +37,7 @@ import {
   type MessageTarget,
 } from './messages.repository.js';
 import { PoolseModule } from '../tenant/modules.js';
+import { pushMessage } from '../notices/cancellation-notice.js';
 
 /**
  * Messages to families — POOLSE-67.
@@ -149,6 +150,13 @@ export class MessagesController {
       // minutes of sending, and the record is already true. The page reads the
       // delivery state as it lands.
       void deliverMessage(organizationId, id);
+      // POOLSE-90 4b: a closure's warning is also pushed to the phones of the
+      // people it reached — a second channel on the same record.
+      if (target.audience === 'closure') {
+        void pushMessage(organizationId, id, { title: subject, body: firstLine(text), url: '/app/familia' }).catch(
+          () => undefined,
+        );
+      }
       return { ...preview, id, emailConfigured: emailIsConfigured() };
     } catch (error) {
       if (error instanceof NoRecipientsError) {
@@ -214,4 +222,10 @@ function readWords(body: Record<string, unknown>): { subject: string; text: stri
     throw new BadRequestException({ message: 'subject and body are required', fields });
   }
   return { subject, text };
+}
+
+/** A notification's body: the message's first line, short enough for a lock screen. */
+function firstLine(text: string): string {
+  const line = text.split(/\r?\n/).find((one) => one.trim() !== '')?.trim() ?? '';
+  return line.length > 140 ? `${line.slice(0, 139)}…` : line;
 }

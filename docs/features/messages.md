@@ -103,3 +103,7 @@ audience uses.
 - The email is delivered and retried like every message. A push goes once to the same people's
   phones (`docs/features/app.md`).
 - It is never offered in the composer: `MESSAGE_AUDIENCES` is what a person may write to.
+- **A one-week move** of a lesson within the club's next seven days records a `session` message
+  too (slice 4b): *Aula mudou: Golfinhos, 28-10-2026*, from when to when, only this week. Later
+  moves record nothing.
+- **A closure's warning is also pushed** to the people it reached, when it is sent.

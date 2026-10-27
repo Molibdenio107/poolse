@@ -1311,6 +1311,8 @@ export async function moveOccurrence(
    * duration since POOLSE-50.
    */
   durationMinutes: number | null = null,
+  /** Runs in the same transaction once the week has moved — its families' notice (POOLSE-90 4b). */
+  alsoIn?: (tx: Tx) => Promise<void>,
 ): Promise<MoveOccurrence> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
@@ -1468,6 +1470,7 @@ export async function moveOccurrence(
       },
     });
 
+    if (alsoIn !== undefined) await alsoIn(tx);
     return { outcome: 'moved' };
   });
 }

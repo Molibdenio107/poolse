@@ -58,7 +58,15 @@ import {
 import { clubToday } from '../common/club-day.js';
 import { syncSeasonLessons } from './lesson-sync.js';
 import { CoreRoute } from '../tenant/modules.js';
-import { deliverNotice, recordNoticeIn, wasAnnouncedIn, type RecordedNotice } from '../notices/cancellation-notice.js';
+import {
+  deliverNotice,
+  lessonMoment,
+  moveIsNearIn,
+  pushStandIn,
+  recordNoticeIn,
+  wasAnnouncedIn,
+  type RecordedNotice,
+} from '../notices/cancellation-notice.js';
 
 /**
  * Slices 1.5 and 1.6 — the closure calendar, and the dated sessions around it.
@@ -477,6 +485,8 @@ export class SessionsCalendarController {
     if (result === 'not_instructor') {
       throw new BadRequestException({ code: 'not_an_instructor', message: 'calendar.standIn.notInstructor' });
     }
+    // POOLSE-90 4b: "you are the stand-in" — push only, on the assignment's own record.
+    if (membershipId !== null) void pushStandIn(organizationId, id, membershipId).catch(() => undefined);
     return { ok: true };
   }
 
@@ -486,7 +496,7 @@ export class SessionsCalendarController {
     @Body() body: Record<string, unknown>,
   ): Promise<{ moved: true }> {
     requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId } = currentTenant();
 
     const date = body['date'];
     const startTime = body['startTime'];
@@ -531,6 +541,10 @@ export class SessionsCalendarController {
       durationMinutes = minutes;
     }
 
+    // POOLSE-90 4b: a week moved within the next seven days tells its families
+    // (Rui, 27-10-2026), recorded in the move's own transaction.
+    const from = await lessonMoment(organizationId, id);
+    let notice: RecordedNotice | null = null;
     const result = await moveOccurrence(
       organizationId,
       id,
@@ -538,6 +552,11 @@ export class SessionsCalendarController {
       startTime,
       laneIds,
       durationMinutes,
+      async (tx) => {
+        if (from !== null && (await moveIsNearIn(tx, id, from))) {
+          notice = await recordNoticeIn(tx, organizationId, membershipId, id, 'moved', null, from);
+        }
+      },
     );
 
     if (result.outcome === 'not_found') throw new NotFoundException('No such class');
@@ -573,6 +592,7 @@ export class SessionsCalendarController {
       });
     }
 
+    if (notice !== null) deliverNotice(organizationId, notice);
     return { moved: true };
   }
 

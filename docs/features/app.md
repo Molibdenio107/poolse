@@ -147,12 +147,19 @@ says so. Production keys are a go-live item (`docs/deploy.md`).
   handler**, so it can never serve a stale page. Tapping a notification opens its lesson.
 - **Storage.** `push_subscription` holds one row per device. It is revoked, never deleted: by the
   person, or on a 404 or 410 from the push service.
-- **Push is a second channel on a recorded notice.** In this slice that notice is the cancelled
-  lesson (`docs/features/messages.md`). It is pushed once, to the people the message reached, and
-  the email is what is retried.
+- **Push is a second channel on a recorded notice.** It is pushed once, to the people the notice
+  reached, and the email is what is retried. The four kinds are:
+  1. **A cancelled lesson.** A `session` message (slice 4a, `docs/features/messages.md`).
+  2. **A closure's warning,** pushed when the closure message is sent, to the people it reached
+     (slice 4b).
+  3. **A lesson moved for one week,** within the club's next seven days, old day or new
+     (`moveIsNearIn`). It is a `session` message, *Aula mudou: … passa para … só nesta semana*,
+     recorded in the move's own transaction. A move further ahead is planning, shows as *Mudou* on
+     the agenda, and tells nobody (Rui, 27-10-2026).
+  4. ***É o professor substituto*** goes to the stand-in when they are named. It is push only: the
+     record is the assignment on the session and its audit entry (Rui, 27-10-2026). It opens the
+     lesson's page.
 
 ## Not yet
 
-- Push for the other three kinds (slice 4b): a closure reaching a lesson, a one-week move, and
-  *you are the stand-in*.
-- The real-device passes (slice 5).
+- The real-device passes (slice 5): one installed iPhone and one Android, recorded here.

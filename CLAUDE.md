@@ -722,7 +722,8 @@ one an owner would act on. `docs/features/salaries.md`.
 - Push (`push/push.ts`) is off unless the three `VAPID_*` variables are set. It goes once, to the people the message reached, and the email is what is retried.
 - `public/sw.js` has no `fetch` handler, ever.
 - The switch prompts only on a tap.
-- A new pushed kind is a recorded notice first, then `pushTo`.
+- The four pushed kinds (slice 4b) are: a cancelled lesson; a closure warning; a one-week move within the next 7 days (`moveIsNearIn`); and the stand-in, which is push only on its assignment.
+- A new pushed kind is a recorded notice first, then `pushTo`. Tests route pushes through `usePushSenderForTests`.
 `docs/features/app.md`, `docs/features/messages.md`.
 
 **Who answers for a child is `family_may_answer()`, and *Vou / Não vou* is a notice, never a mark.** POOLSE-90 slice 2. The rule is a live guardian, or the student's own login from `self_answer_min_age()` (12) or on the adult path. With no birth date it is never a guess. Both `session_notice` and lesson feedback read it. A notice is one row per (session, student), audited. Its trigger refuses a lesson that has started, a cancelled one and one with no turma (409 with its code). The register shows a notice as a neutral chip and a count, and pre-marks nothing. The instructor home `/app/aulas` reads the dashboard band's `readMyWeek`. The maintenance home `/app/manutencao` (slice 3) reads the band's own queries whole (`limit: null`), and its one-tap actions call the backoffice's endpoints. **A one-tap action whose row leaves the list returns its toast and does not `revalidatePath`**: the re-render would unmount the button before its toast. `docs/features/app.md`.
