@@ -14,7 +14,7 @@ definition, also read by the switcher and the dashboard's redirect):
 | Owner or admin | `/dashboard`, the backoffice |
 | Guardian or student | `/app/familia`, the family agenda |
 | Instructor | `/app/aulas`, their lessons (slice 2) |
-| Maintenance | the backoffice until their home is built (slice 3) |
+| Maintenance | `/app/manutencao`, their to-do list (slice 3) |
 | Several homes | the one last used on this device (`localStorage`, best effort) |
 
 A reader who is only a family and opens `/dashboard` is sent to `/app`. Staff who are also
@@ -108,10 +108,32 @@ rest of the week. Each lesson shows its time, turma, tank and *15 inscritos · 3
 opens the existing lesson page. *Voltar* there returns to `/app/aulas` (`readFrom` accepts
 `/app` paths since this slice).
 
+## The maintenance home (`/app/manutencao`, slice 3)
+
+A to-do list rather than a calendar. `GET /app/maintenance` (maintenance only) covers every live
+site, because maintenance is assigned to no site. It gathers what the dashboard band already
+derives and computes nothing itself:
+
+- **Tasks** due or overdue, assigned to the reader or to nobody (`listMyTasks`, due only), each
+  saying how late it is or that it was never done.
+- **Espaços overdue for cleaning**, from the band's `readOverdueSpaces`, read whole.
+- **Open issues**: the band's `readOpenFaults`, read whole, with reposições included alongside the
+  avarias.
+- The pools, so a water analysis can be recorded.
+
+The actions are one tap each, on the backoffice's own endpoints:
+- *Concluir* records a task completion.
+- *Limpo* logs a cleaning.
+- *Reportar* is a short form (space, type, severity, description) posting to `/spaces/:id/issues`.
+- *Registar análise* opens the pool's *water* tab in the backoffice, the one place an analysis is
+  recorded. Its *Voltar* returns to `/app/manutencao`.
+
+A one-tap row leaves the list on `useSavedAction`'s refresh, after its toast. The action does not
+revalidate the path itself, because that would unmount the button before the toast was raised.
+
 ## Not yet
 
-These are slices 3 to 5 of POOLSE-90:
+These are slices 4 and 5 of POOLSE-90:
 
-- The maintenance home.
 - Web push.
 - The real-device passes.

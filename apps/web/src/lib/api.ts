@@ -5176,6 +5176,36 @@ export interface SessionNotice {
   answeredByName: string | null;
 }
 
+/** The maintenance home's to-do — POOLSE-90 slice 3 (`GET /app/maintenance`). */
+export interface MaintenanceHome {
+  tasks: {
+    id: string;
+    facilityName: string;
+    title: string;
+    spaceName: string | null;
+    poolName: string | null;
+    inventoryItemName: string | null;
+    assignedTo: string | null;
+    lastDoneAt: string | null;
+    daysOverdue: number;
+  }[];
+  overdueSpaces: { id: string; name: string; facilityName: string; lastCleanedAt: string | null; intervalHours: number }[];
+  issues: {
+    id: string;
+    type: 'fault' | 'restock';
+    description: string;
+    severity: 'low' | 'normal' | 'high';
+    reportedAt: string;
+    mine: boolean;
+    facilityName: string;
+    spaceId: string | null;
+    spaceName: string | null;
+    poolName: string | null;
+  }[];
+  spaces: { id: string; name: string; facilityName: string }[];
+  pools: { id: string; name: string; facilityName: string }[];
+}
+
 /** One lesson on the instructor's home — the dashboard band's own week. */
 export interface TeachingLesson {
   sessionId: string;

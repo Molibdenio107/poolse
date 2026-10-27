@@ -53,6 +53,7 @@ const APP_MODE_ROOT = '/app';
  */
 const LABELS: readonly (readonly [string, string])[] = [
   ['/app/aulas', 'app.teaching.backTo'],
+  ['/app/manutencao', 'app.maintenance.backTo'],
   ['/dashboard/facilities/staff/vacations', 'vacations.backToVacations'],
   ['/dashboard/facilities/staff/qualifications', 'back.toQualifications'],
   ['/dashboard/facilities/staff/salaries', 'back.toSalaries'],

@@ -6,14 +6,14 @@
  * Roles are the active club's (`memberships[0]`), and the roles are a set: an
  * instructor who is also a parent wears two hats.
  *
- * `built` is which homes exist yet. Slice 1 built the family's and slice 2 the
- * instructor's (`/app/aulas`); maintenance's arrives in slice 3, and until then
- * that hat is sent to the backoffice, where its work already is.
+ * `built` is which homes exist: the family's (slice 1), the instructor's
+ * (`/app/aulas`, slice 2) and maintenance's (`/app/manutencao`, slice 3). A hat
+ * whose home is not built is sent to the backoffice, where its work already is.
  */
 
 export type AppHat = 'family' | 'teaching' | 'maintenance';
 
-export const BUILT_HATS: readonly AppHat[] = ['family', 'teaching'];
+export const BUILT_HATS: readonly AppHat[] = ['family', 'teaching', 'maintenance'];
 
 export interface Hats {
   /** The homes this person may switch between, in switcher order, built only. */

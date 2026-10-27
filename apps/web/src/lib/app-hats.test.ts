@@ -24,9 +24,9 @@ test('an instructor who is a parent has both homes, teaching first (QA 2)', () =
   assert.equal(familyOnly(['instructor', 'guardian']), false);
 });
 
-test('an instructor alone lands on their lessons; maintenance, until its home exists, on the backoffice', () => {
+test('an instructor lands on their lessons, maintenance on the to-do list (slices 2 and 3)', () => {
   assert.equal(appHome(['instructor']), '/app/aulas');
-  assert.equal(appHome(['maintenance']), '/dashboard');
+  assert.equal(appHome(['maintenance']), '/app/manutencao');
 });
 
 test('a family and nothing else is family-only', () => {
