@@ -35,6 +35,7 @@ import {
 import { listMedicalLeave, type CertificateFile } from '../students/medical-leave.repository.js';
 import { clubToday } from '../common/club-day.js';
 import { readMyWeek, type WeekClass } from '../dashboard/instructor.repository.js';
+import { readMaintenanceHome, type MaintenanceHome } from './maintenance-home.repository.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -185,6 +186,19 @@ export class AppController {
     requireRole('instructor');
     const { organizationId, membershipId } = currentTenant();
     return { lessons: await readMyWeek(organizationId, membershipId) };
+  }
+
+  /**
+   * The maintenance home — POOLSE-90 slice 3: due tasks (the reader's or
+   * nobody's), overdue Espaços and open issues across every site, plus where an
+   * issue can be reported and an analysis recorded. Maintenance only; an owner
+   * who also fixes the showers has the backoffice for this.
+   */
+  @Get('maintenance')
+  async maintenance(): Promise<MaintenanceHome> {
+    requireRole('maintenance');
+    const { organizationId, membershipId } = currentTenant();
+    return readMaintenanceHome(organizationId, membershipId);
   }
 
   /**

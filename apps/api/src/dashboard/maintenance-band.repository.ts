@@ -22,8 +22,23 @@ import type { Severity } from './management.repository.js';
 /** How many rows a card lists before its link takes over. */
 const SHOWN = 5;
 
+/**
+ * The app's maintenance home (POOLSE-90 slice 3) reads the same statements
+ * whole: `limit: null` lists every row, and `restock` adds the reposições a
+ * to-do list needs and the band leaves to the inventory card.
+ */
+export interface BandReadOptions {
+  limit?: number | null;
+  restock?: boolean;
+}
+
+const limitOf = (options: BandReadOptions): string =>
+  options.limit === null ? 'ALL' : String(Math.max(0, Math.trunc(options.limit ?? SHOWN)));
+
 export interface OpenFault {
   id: string;
+  /** `fault` (avaria) or `restock` (reposição) — the band reads faults only. */
+  type: 'fault' | 'restock';
   description: string;
   severity: Severity;
   reportedAt: string;
@@ -56,6 +71,7 @@ export async function readOpenFaults(
   organizationId: string,
   membershipId: string,
   facilityIds: readonly string[],
+  options: BandReadOptions = {},
 ): Promise<OpenFaults> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
@@ -63,6 +79,7 @@ export async function readOpenFaults(
       high: number;
       faults: {
         id: string;
+        type: 'fault' | 'restock';
         description: string;
         severity: Severity;
         reported_at: string;
@@ -76,7 +93,7 @@ export async function readOpenFaults(
       }[];
     }>(
       `WITH open AS (
-         SELECT mr.id, mr.description, mr.severity, mr.reported_at,
+         SELECT mr.id, mr.type::text AS type, mr.description, mr.severity, mr.reported_at,
                 (mr.reported_by = $2) AS mine,
                 f.id AS facility_id, f.name AS facility_name,
                 s.id AS space_id, s.name AS space_name,
@@ -89,7 +106,7 @@ export async function readOpenFaults(
            LEFT JOIN pool p
                   ON p.id = mr.pool_id AND p.organization_id = mr.organization_id
           WHERE mr.status = 'open'
-            AND mr.type = 'fault'
+            AND (mr.type = 'fault' OR ($3::boolean AND mr.type = 'restock'))
             AND mr.archived_at IS NULL
             AND mr.facility_id = ANY($1::uuid[])
        )
@@ -99,9 +116,9 @@ export async function readOpenFaults(
                 SELECT json_agg(row_to_json(t))
                   FROM (SELECT * FROM open
                          ORDER BY severity DESC, reported_at, id
-                         LIMIT ${SHOWN}) t
+                         LIMIT ${limitOf(options)}) t
               ), '[]'::json)                                            AS faults`,
-      [facilityIds, membershipId],
+      [facilityIds, membershipId, options.restock === true],
     );
 
     const row = rows[0]!;
@@ -110,6 +127,7 @@ export async function readOpenFaults(
       high: row.high,
       faults: row.faults.map((f) => ({
         id: f.id,
+        type: f.type,
         description: f.description,
         severity: f.severity,
         // json_agg renders a timestamptz as text; normalise it to ISO.
@@ -148,6 +166,7 @@ export interface OverdueSpaces {
 export async function readOverdueSpaces(
   organizationId: string,
   facilityIds: readonly string[],
+  options: BandReadOptions = {},
 ): Promise<OverdueSpaces> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{
@@ -174,7 +193,7 @@ export async function readOverdueSpaces(
                 SELECT json_agg(row_to_json(t))
                   FROM (SELECT * FROM overdue
                          ORDER BY last_cleaned_at NULLS FIRST, name, id
-                         LIMIT ${SHOWN}) t
+                         LIMIT ${limitOf(options)}) t
               ), '[]'::json) AS spaces`,
       [facilityIds],
     );

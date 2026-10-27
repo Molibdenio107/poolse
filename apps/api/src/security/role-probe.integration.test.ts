@@ -694,6 +694,12 @@ test('Vou / Não vou and the instructor home: families only write their own, sta
   await as(fixture.maintenanceId, ['maintenance'], async () => {
     await refused('GET app/teaching as maintenance', 403, () => new AppController().teaching());
   });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('GET app/maintenance as an instructor', 403, () => new AppController().maintenance());
+  });
+  await asEach(async () => {
+    await refused('GET app/maintenance as a family', 403, () => new AppController().maintenance());
+  });
   await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
     await refused('PUT sessions/:id/notices/:studentId as a stranger', 404, () =>
       new NoticesController().answer(fixture.sessionId, fixture.aliceId, { going: false }),
