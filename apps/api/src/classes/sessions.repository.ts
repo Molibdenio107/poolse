@@ -988,6 +988,8 @@ export async function cancelSession(
   organizationId: string,
   sessionId: string,
   reason: string | null,
+  /** Runs in the same transaction once the lesson is cancelled — the families' notice (POOLSE-90). */
+  alsoIn?: (tx: Tx) => Promise<void>,
 ): Promise<boolean> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ id: string }>(
@@ -1005,6 +1007,7 @@ export async function cancelSession(
       entityId: sessionId,
       data: { reason },
     });
+    if (alsoIn !== undefined) await alsoIn(tx);
     return true;
   });
 }
@@ -1030,6 +1033,8 @@ export async function cancelSession(
 export async function restoreSession(
   organizationId: string,
   sessionId: string,
+  /** Runs in the same transaction once the lesson is back — "a aula mantém-se" (POOLSE-90). */
+  alsoIn?: (tx: Tx) => Promise<void>,
 ): Promise<'restored' | 'not_cancelled' | 'closure'> {
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<{ closure_id: string | null }>(
@@ -1054,6 +1059,7 @@ export async function restoreSession(
       entityType: 'class_session',
       entityId: sessionId,
     });
+    if (alsoIn !== undefined) await alsoIn(tx);
     return 'restored';
   });
 }

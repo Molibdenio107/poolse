@@ -69,6 +69,7 @@ import type { MemberRole } from '../tenant/roles.js';
 import { AppController } from '../app/app.controller.js';
 import { FeedbackController } from '../feedback/feedback.controller.js';
 import { NoticesController } from '../notices/notices.controller.js';
+import { PushController } from '../push/push.controller.js';
 
 /**
  * Role probe — security review, 12-10-2026, inverted into a regression test.
@@ -643,6 +644,10 @@ test('intended open: seasons, closures and dashboard still answer non-staff', as
     // POOLSE-86: a family's own choice about club messages — the people it is for.
     const preference = await new OwnEmailPreferenceController().read();
     assert.equal(typeof preference.optedOut, 'boolean', `${label}: own email preference`);
+
+    // POOLSE-90 slice 4: their own phone's push switch — own device only.
+    assert.equal(typeof new PushController().config().available, 'boolean', `${label}: push config`);
+    assert.ok(Array.isArray((await new PushController().mine()).subscriptions), `${label}: own devices`);
   });
 });
 

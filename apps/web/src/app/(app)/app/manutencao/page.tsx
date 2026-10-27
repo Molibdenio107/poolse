@@ -7,6 +7,7 @@ import { timeAgo } from '@/lib/relative-time';
 import { LinkBusy } from '@/components/link-busy';
 import { PageError } from '@/components/page-shell';
 import { OneTap } from './one-tap';
+import { PushCard } from '../push-card';
 
 /**
  * The maintenance home — POOLSE-90 slice 3. A to-do list over every site:
@@ -168,6 +169,8 @@ export default async function MaintenanceHomePage(): Promise<React.ReactElement>
           </ul>
         </section>
       )}
+
+      <PushCard />
     </>
   );
 }

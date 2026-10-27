@@ -1,4 +1,4 @@
-import { withOrg } from '@poolse/db';
+import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { TOTAL_COUNT, windowed, type PageQuery, type Paginated } from '../common/pagination.js';
 
@@ -26,8 +26,13 @@ import { TOTAL_COUNT, windowed, type PageQuery, type Paginated } from '../common
  * `closure` (12 October 2026) is the families of turmas a closure took a lesson
  * from. It is written from the closure itself, never offered in the composer.
  */
-export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure';
+export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure' | 'session';
 
+/**
+ * What a person may address a message to. `session` is not here: a cancellation
+ * notice is written by Poolse when a lesson is cancelled (POOLSE-90 slice 4),
+ * through `sendSessionNoticeIn`, never composed by hand.
+ */
 export const MESSAGE_AUDIENCES: readonly MessageAudience[] = [
   'class_group',
   'level',
@@ -257,6 +262,55 @@ export async function sendMessage(
   body: string,
 ): Promise<{ id: string; addressCount: number }> {
   return withOrg(organizationId, async (tx) => {
+    const params = targetParams(target);
+    return insertMessageIn(tx, organizationId, sentByMembershipId, params, params[1], null, subject, body, {
+      audience: target.audience,
+      targetId: target.targetId,
+    });
+  });
+}
+
+/**
+ * A cancelled lesson's notice — POOLSE-90 slice 4, written by Poolse inside the
+ * cancelling transaction. Recipients are the lesson's turma's families
+ * (`message_recipients()`'s `session` branch); the row names the lesson. Exempt
+ * from the daily ceiling and from the opt-out, by the database. Throws
+ * `NoRecipientsError` when nobody is reachable — the caller ignores it.
+ */
+export async function sendSessionNoticeIn(
+  tx: Tx,
+  organizationId: string,
+  sentByMembershipId: string,
+  sessionId: string,
+  classGroupId: string,
+  subject: string,
+  body: string,
+): Promise<{ id: string; addressCount: number }> {
+  return insertMessageIn(
+    tx,
+    organizationId,
+    sentByMembershipId,
+    ['session', classGroupId, null, null, null],
+    null,
+    sessionId,
+    subject,
+    body,
+    { audience: 'session', targetId: sessionId },
+  );
+}
+
+async function insertMessageIn(
+  tx: Tx,
+  organizationId: string,
+  sentByMembershipId: string,
+  recipientParams: [string, string | null, string | null, string | null, string | null],
+  rowClassGroupId: string | null,
+  rowSessionId: string | null,
+  subject: string,
+  body: string,
+  audit: { audience: MessageAudience; targetId: string | null },
+): Promise<{ id: string; addressCount: number }> {
+  {
     const { rows } = await tx.query<{ id: string | null; address_count: number }>(
       `WITH everyone AS (SELECT * FROM message_recipients($1, $2::message_audience, $3, $4, $5, $6)),
             -- Who is written to: REACHED, above, shared by the preview and the send.
@@ -264,9 +318,9 @@ export async function sendMessage(
             n AS (SELECT count(DISTINCT email)::int AS address_count FROM r WHERE email IS NOT NULL),
             m AS (
               INSERT INTO message (organization_id, audience, class_group_id, level_id,
-                                   facility_id, closure_id, subject, body,
+                                   facility_id, closure_id, class_session_id, subject, body,
                                    sent_by_membership_id, address_count)
-              SELECT $1, $2::message_audience, $3, $4, $5, $6, $7, $8, $9, n.address_count
+              SELECT $1, $2::message_audience, $10, $4, $5, $6, $11, $7, $8, $9, n.address_count
                 FROM n
                WHERE n.address_count > 0
               RETURNING id, address_count
@@ -287,7 +341,7 @@ export async function sendMessage(
               SELECT DISTINCT ON (r.email) $1, r.email,
                      replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')
                 FROM r CROSS JOIN m
-               WHERE r.email IS NOT NULL AND $2::message_audience <> 'closure'
+               WHERE r.email IS NOT NULL AND $2::message_audience NOT IN ('closure', 'session')
               ON CONFLICT (organization_id, email) DO NOTHING
               RETURNING 1
             )
@@ -297,7 +351,7 @@ export async function sendMessage(
         -- saying so costs nothing.
         CROSS JOIN (SELECT count(*) FROM ins) AS written
         CROSS JOIN (SELECT count(*) FROM tok) AS tokens`,
-      [organizationId, ...targetParams(target), subject, body, sentByMembershipId],
+      [organizationId, ...recipientParams, subject, body, sentByMembershipId, rowClassGroupId, rowSessionId],
     );
 
     const row = rows[0]!;
@@ -307,11 +361,11 @@ export async function sendMessage(
       action: 'message.sent',
       entityType: 'message',
       entityId: row.id,
-      data: { audience: target.audience, targetId: target.targetId, addressCount: row.address_count },
+      data: { audience: audit.audience, targetId: audit.targetId, addressCount: row.address_count },
     });
 
     return { id: row.id, addressCount: row.address_count };
-  });
+  }
 }
 
 interface SummaryRow {
@@ -330,8 +384,8 @@ interface SummaryRow {
 
 const SUMMARY_COLUMNS = `
   m.id, m.audience,
-  coalesce(m.class_group_id, m.level_id, m.facility_id, m.closure_id) AS target_id,
-  coalesce(cg.name, lv.name, f.name, cl.reason) AS target_name,
+  coalesce(m.class_group_id, m.level_id, m.facility_id, m.closure_id, m.class_session_id) AS target_id,
+  coalesce(cg.name, lv.name, f.name, cl.reason, scg.name) AS target_name,
   m.subject, m.sent_at,
   person_name(m.sent_by_membership_id) AS sent_by_name,
   m.address_count,
@@ -347,7 +401,10 @@ const SUMMARY_JOINS = `
   LEFT JOIN class_group cg ON cg.id = m.class_group_id AND cg.organization_id = m.organization_id
   LEFT JOIN student_level lv ON lv.id = m.level_id AND lv.organization_id = m.organization_id
   LEFT JOIN facility f ON f.id = m.facility_id AND f.organization_id = m.organization_id
-  LEFT JOIN closure cl ON cl.id = m.closure_id AND cl.organization_id = m.organization_id`;
+  LEFT JOIN closure cl ON cl.id = m.closure_id AND cl.organization_id = m.organization_id
+  -- A cancellation notice is named by its lesson's turma (POOLSE-90 slice 4).
+  LEFT JOIN class_session ms ON ms.id = m.class_session_id AND ms.organization_id = m.organization_id
+  LEFT JOIN class_group scg ON scg.id = ms.class_group_id AND scg.organization_id = ms.organization_id`;
 
 function toSummary(row: Omit<SummaryRow, 'total_count'>): MessageSummary {
   return {

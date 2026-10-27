@@ -169,6 +169,15 @@
       "spaceRequired": "Choose the space.",
       "send": "Report",
       "noSpaces": "No spaces have been recorded yet."
+    },
+    "push": {
+      "title": "Notifications on this phone",
+      "on": "On: cancelled lessons are announced here. Email still arrives.",
+      "off": "Off. Notices still arrive by email.",
+      "unavailable": "Phone notifications are not available at this club yet.",
+      "unsupported": "This browser cannot receive notifications. Notices still arrive by email.",
+      "install": "Add Poolse to your home screen to receive notifications: in Safari, tap Share, then Add to Home Screen.",
+      "blocked": "Notifications for Poolse are blocked in the browser settings."
     }
   },
   "common": {
@@ -4488,7 +4497,8 @@
       "level": "Level: {name}",
       "facility": "Site: {name}",
       "organization": "The whole club",
-      "closure": "Closure: {name}"
+      "closure": "Closure: {name}",
+      "session": "Lesson notice: {name}"
     },
     "audience": {
       "class_group": "A class group",

@@ -4662,7 +4662,7 @@ export interface EnergyCostsWidgetData {
  * Messages to families — POOLSE-67
  * ------------------------------------------------------------------------- */
 
-export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure';
+export type MessageAudience = 'class_group' | 'level' | 'facility' | 'organization' | 'closure' | 'session';
 
 /** Who a message is written for — a closure's warning also reaches partners and leads. */
 export type RecipientKind = 'student' | 'partner' | 'lead';

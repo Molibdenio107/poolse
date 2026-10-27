@@ -25,7 +25,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "stripe": "^22.6.2",
-    "svix": "^2.1.0"
+    "svix": "^2.1.0",
+    "web-push": "3.6.7"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",
@@ -33,6 +34,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.11.10",
+    "@types/web-push": "3.6.4",
     "pg": "^8.13.1",
     "typescript": "^5.7.2"
   }

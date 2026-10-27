@@ -192,6 +192,11 @@ on sequences, and production is not somewhere to find out you were wrong about t
 Things that are deliberately **not** done on a development instance and must be done before a
 real club depends on Poolse. Each one is here because doing it early breaks something today.
 
+- [ ] **Production VAPID keys for push** (POOLSE-90 slice 4): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`
+      and `VAPID_SUBJECT` (`mailto:` an address you read) on Railway. Generate a fresh pair with
+      `npx web-push generate-vapid-keys`, never the dev pair in a local `.env`. Changing the pair
+      later silently orphans every phone already subscribed, so set it once. Absent means push is
+      off and the app says so, which is safe.
 - [ ] **A production Clerk instance**, separate from the development one. Everything below hangs
       off it, and it is the reason none of them are done yet — noted 13 September 2026.
 - [ ] **MFA on the operator's own Clerk account**, then ship the `PlatformAdminGuard` MFA check

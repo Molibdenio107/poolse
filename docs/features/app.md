@@ -131,9 +131,28 @@ The actions are one tap each, on the backoffice's own endpoints:
 A one-tap row leaves the list on `useSavedAction`'s refresh, after its toast. The action does not
 revalidate the path itself, because that would unmount the button before the toast was raised.
 
+## Push (slice 4a)
+
+Web Push, sent from the API with `web-push`: no provider and no cost. **It is off unless
+`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` are all set**, and then the switch
+says so. Production keys are a go-live item (`docs/deploy.md`).
+
+- **The switch.** *Avisos neste telemóvel* sits at the foot of every home, own device only.
+  - The permission prompt is raised only by tapping it, never on load.
+  - On an iPhone where Poolse is not on the home screen, it explains how to add it instead of
+    asking.
+  - Blocked, unsupported and unavailable each have their own sentence.
+  - The state is always said in words.
+- **The worker.** `public/sw.js` has `push` and `notificationclick` handlers and **no `fetch`
+  handler**, so it can never serve a stale page. Tapping a notification opens its lesson.
+- **Storage.** `push_subscription` holds one row per device. It is revoked, never deleted: by the
+  person, or on a 404 or 410 from the push service.
+- **Push is a second channel on a recorded notice.** In this slice that notice is the cancelled
+  lesson (`docs/features/messages.md`). It is pushed once, to the people the message reached, and
+  the email is what is retried.
+
 ## Not yet
 
-These are slices 4 and 5 of POOLSE-90:
-
-- Web push.
-- The real-device passes.
+- Push for the other three kinds (slice 4b): a closure reaching a lesson, a one-week move, and
+  *you are the stand-in*.
+- The real-device passes (slice 5).

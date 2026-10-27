@@ -9,7 +9,7 @@ import { audienceKey } from './delivery-text.ts';
  * closure listed as its raw key; `check-messages` proves a computed prefix
  * exists, never each leaf.
  */
-const AUDIENCES = ['class_group', 'level', 'facility', 'organization', 'closure'] as const;
+const AUDIENCES = ['class_group', 'level', 'facility', 'organization', 'closure', 'session'] as const;
 
 for (const locale of ['pt-PT', 'en']) {
   test(`every message audience is translated (${locale})`, () => {

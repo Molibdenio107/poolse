@@ -7,6 +7,7 @@ import { LinkBusy } from '@/components/link-busy';
 import { PageError } from '@/components/page-shell';
 import { cn } from '@/lib/utils';
 import { dayHeading, endTime } from '../familia/agenda-parts';
+import { PushCard } from '../push-card';
 
 /**
  * The instructor's home — POOLSE-90 slice 2.
@@ -72,6 +73,8 @@ export default async function TeachingHome(): Promise<React.ReactElement> {
           </section>
         ))
       )}
+
+      <PushCard />
     </>
   );
 }

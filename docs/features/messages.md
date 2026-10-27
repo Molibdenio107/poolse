@@ -83,3 +83,23 @@ partner — one row per live contact with an e-mail, or one row with none so the
 counted as unreachable — and every `trial_booked` lead whose session the closure cancelled. On
 those rows `student_id` is null and `partner_id` or `lead_id` is set; the recipient list labels
 them *Parceiro* and *Aula experimental*. No other audience ever reaches a partner or a lead.
+
+## Written by Poolse when a lesson is cancelled — POOLSE-90 slice 4, 27 October 2026
+
+When one lesson of a turma is cancelled, Poolse writes a `session` message
+(`message.class_session_id`) inside the cancelling transaction (Rui: always, automatically). It
+reaches that turma's families through `message_recipients()`, the same definition every other
+audience uses.
+
+- It is written in the club's language: *Aula cancelada: Golfinhos, 28-10-2026*, then the reason
+  the canceller typed.
+- It is sent by the person who cancelled.
+- Like a closure warning it ignores the opt-out.
+- Unlike anything else it is **exempt from the daily ceiling and not counted in it**, so a rainy
+  Saturday's cancellations all go out. The ceiling exists to stop a person mass-mailing.
+- *Anular* on the cancel toast puts the lesson back. When the cancellation had been announced, a
+  second notice says the lesson is on after all.
+- A parceria or free-swim block has no families and records nothing.
+- The email is delivered and retried like every message. A push goes once to the same people's
+  phones (`docs/features/app.md`).
+- It is never offered in the composer: `MESSAGE_AUDIENCES` is what a person may write to.

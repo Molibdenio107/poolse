@@ -155,6 +155,8 @@ const TENANT_TABLES = [
   // them, and attendance points at the session. Child first, all the way down.
   'reposicao_booking',
   'reposicao_credit',
+  // POOLSE-90 slice 4: a device's push subscription, on its membership.
+  'push_subscription',
   // POOLSE-90 slice 2: a family's Vou / Não vou, on the session and the student.
   'session_notice',
   // POOLSE-116: points at the session, the student and its author.

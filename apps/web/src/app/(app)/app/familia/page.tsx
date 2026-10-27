@@ -11,6 +11,7 @@ import { PageError } from '@/components/page-shell';
 import { cn } from '@/lib/utils';
 import { EntryCard, FeeStatus, dayHeading } from './agenda-parts';
 import { RecentLessons } from './feedback';
+import { PushCard } from '../push-card';
 
 /**
  * The family agenda — POOLSE-90 slice 1 (roadmap 3.3 and 3.6).
@@ -124,6 +125,8 @@ export default async function FamilyAgenda({
           <RecentLessons recent={agenda.recent} names={several && child === undefined ? nameOf : null} />
         </>
       )}
+
+      <PushCard />
     </>
   );
 }

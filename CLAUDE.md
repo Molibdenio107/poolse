@@ -716,6 +716,15 @@ one an owner would act on. `docs/features/salaries.md`.
 
 **A document on paper is a route with print styles, never a PDF library** (POOLSE-54, -115): black on white, `@page` for A4 and its margin footer, `PrintButton` and `AutoPrint` from `components/`, its own components rather than the screen's with a print patch, and an entry in `check-layout.mjs`. A print page with options opens the dialog only on `?print=1`, so changing an option does not reopen it.
 
+**A cancelled lesson tells its families, and push is a second channel on a recorded notice.** POOLSE-90 slice 4.
+- The cancel records a `session` message in its own transaction (`recordNoticeIn`) and delivers it after commit (`deliverNotice`).
+- That message is exempt from the daily ceiling and the opt-out. *Anular* announces *a aula mantém-se*.
+- Push (`push/push.ts`) is off unless the three `VAPID_*` variables are set. It goes once, to the people the message reached, and the email is what is retried.
+- `public/sw.js` has no `fetch` handler, ever.
+- The switch prompts only on a tap.
+- A new pushed kind is a recorded notice first, then `pushTo`.
+`docs/features/app.md`, `docs/features/messages.md`.
+
 **Who answers for a child is `family_may_answer()`, and *Vou / Não vou* is a notice, never a mark.** POOLSE-90 slice 2. The rule is a live guardian, or the student's own login from `self_answer_min_age()` (12) or on the adult path. With no birth date it is never a guess. Both `session_notice` and lesson feedback read it. A notice is one row per (session, student), audited. Its trigger refuses a lesson that has started, a cancelled one and one with no turma (409 with its code). The register shows a notice as a neutral chip and a count, and pre-marks nothing. The instructor home `/app/aulas` reads the dashboard band's `readMyWeek`. The maintenance home `/app/manutencao` (slice 3) reads the band's own queries whole (`limit: null`), and its one-tap actions call the backoffice's endpoints. **A one-tap action whose row leaves the list returns its toast and does not `revalidatePath`**: the re-render would unmount the button before its toast. `docs/features/app.md`.
 
 **What a family says after a lesson is `lesson_feedback`, admitted by its trigger and read by who taught it.** POOLSE-116. The trigger refuses feedback on a lesson that was cancelled, has not ended, or where the student is not marked present, and refuses it after `lesson_feedback_window()` (7 days). Each refusal carries its code in DETAIL, which the API answers as a 409. It is keyed on `(session, student)`, never on `attendance.id`, so a register correction never fails over a comment. Staff read it under `resolved_instructor_id` (owner and admin read all), and the office archives it through the bin. A mood is `MoodFace` (`components/mood.tsx`): an outlined face plus its word, never a fifth colour system. `docs/features/app.md`, `docs/features/students.md`.

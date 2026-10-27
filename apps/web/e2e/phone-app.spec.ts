@@ -144,6 +144,38 @@ test.describe('as a guardian, before a lesson', () => {
   });
 });
 
+test.describe('push, as a guardian', () => {
+  test.use({ storageState: GUARDIAN_SESSION });
+
+  test('POOLSE-90 QA 13 — the switch never prompts on load; an iPhone not installed is told how', async ({ page }, info) => {
+    let prompted = false;
+    await page.addInitScript(() => {
+      if (window.Notification === undefined) return;
+      // Headless Chromium answers "denied" whatever is granted; a phone that was
+      // never asked says "default", which is the state this test is about.
+      Object.defineProperty(window.Notification, 'permission', { get: () => 'default' });
+      // A prompt raised on load would call this; the switch only calls it on a tap.
+      window.Notification.requestPermission = () => {
+        (window as unknown as { __prompted: boolean }).__prompted = true;
+        return Promise.resolve('default');
+      };
+    });
+    await visit(page, '/app/familia');
+    await expect(page.getByText(/avisos neste telemóvel|notifications on this phone/i)).toBeVisible();
+    if (info.project.name === 'iphone') {
+      await expect(page.getByText(/adicione a poolse ao ecrã principal|add poolse to your home screen/i)).toBeVisible();
+      await expect(page.getByRole('switch')).toHaveCount(0);
+    } else {
+      const toggle = page.getByRole('switch', { name: /avisos neste telemóvel|notifications on this phone/i });
+      await expect(toggle).toHaveAttribute('aria-checked', 'false');
+      expect((await toggle.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    prompted = await page.evaluate(() => (window as unknown as { __prompted?: boolean }).__prompted === true);
+    expect(prompted).toBe(false);
+    await noSidewaysScroll(page);
+  });
+});
+
 test.describe('as an instructor', () => {
   test.skip(E2E_INSTRUCTOR_EMAIL === undefined, NO_INSTRUCTOR);
   test.use({ storageState: INSTRUCTOR_SESSION });

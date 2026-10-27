@@ -58,6 +58,7 @@ import {
 import { clubToday } from '../common/club-day.js';
 import { syncSeasonLessons } from './lesson-sync.js';
 import { CoreRoute } from '../tenant/modules.js';
+import { deliverNotice, recordNoticeIn, wasAnnouncedIn, type RecordedNotice } from '../notices/cancellation-notice.js';
 
 /**
  * Slices 1.5 and 1.6 — the closure calendar, and the dated sessions around it.
@@ -633,8 +634,14 @@ export class SessionsCalendarController {
       return { cancelled: true, removed: outcome.removed, keptMarked: outcome.keptMarked };
     }
 
+    // POOLSE-90 slice 4: the families are told, recorded in the cancel's own
+    // transaction and sent after it commits (Rui, 27-10-2026: always).
+    let notice: RecordedNotice | null = null;
     try {
-      if (!(await cancelSession(organizationId, id, reason || null))) {
+      const cancelled = await cancelSession(organizationId, id, reason || null, async (tx) => {
+        notice = await recordNoticeIn(tx, organizationId, membershipId, id, 'cancelled', reason || null);
+      });
+      if (!cancelled) {
         throw new NotFoundException('No such class, or it is already cancelled');
       }
     } catch (error) {
@@ -650,6 +657,7 @@ export class SessionsCalendarController {
       throw error;
     }
 
+    if (notice !== null) deliverNotice(organizationId, notice);
     return { cancelled: true };
   }
 
@@ -676,9 +684,15 @@ export class SessionsCalendarController {
   @Post(':id/restore')
   async restore(@Param('id') id: string): Promise<{ restored: true }> {
     requireRole('owner', 'admin');
-    const { organizationId } = currentTenant();
+    const { organizationId, membershipId } = currentTenant();
 
-    const outcome = await restoreSession(organizationId, id);
+    // A lesson whose cancellation was announced is announced as on again.
+    let notice: RecordedNotice | null = null;
+    const outcome = await restoreSession(organizationId, id, async (tx) => {
+      if (await wasAnnouncedIn(tx, id)) {
+        notice = await recordNoticeIn(tx, organizationId, membershipId, id, 'reinstated', null);
+      }
+    });
 
     if (outcome === 'not_cancelled') {
       throw new NotFoundException('No such class, or it is not cancelled');
@@ -689,6 +703,7 @@ export class SessionsCalendarController {
         message: 'This class is cancelled by a closure — remove the closure instead',
       });
     }
+    if (notice !== null) deliverNotice(organizationId, notice);
     return { restored: true };
   }
 

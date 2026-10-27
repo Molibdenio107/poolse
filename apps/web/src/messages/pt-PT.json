@@ -169,6 +169,15 @@
       "spaceRequired": "Escolha o espaço.",
       "send": "Reportar",
       "noSpaces": "Ainda não há espaços registados."
+    },
+    "push": {
+      "title": "Avisos neste telemóvel",
+      "on": "Ligado: recebe aqui os avisos das aulas canceladas. O email continua a chegar.",
+      "off": "Desligado. Os avisos continuam a chegar por email.",
+      "unavailable": "Os avisos no telemóvel ainda não estão disponíveis neste clube.",
+      "unsupported": "Este navegador não recebe avisos. Os avisos continuam a chegar por email.",
+      "install": "Adicione a Poolse ao ecrã principal para receber avisos: no Safari, toque em Partilhar e depois em Adicionar ao ecrã principal.",
+      "blocked": "Os avisos estão bloqueados nas definições do navegador para a Poolse."
     }
   },
   "common": {
@@ -4488,7 +4497,8 @@
       "level": "Nível: {name}",
       "facility": "Instalação: {name}",
       "organization": "Todo o clube",
-      "closure": "Encerramento: {name}"
+      "closure": "Encerramento: {name}",
+      "session": "Aviso de aula: {name}"
     },
     "audience": {
       "class_group": "Uma turma",

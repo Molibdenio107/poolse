@@ -3914,6 +3914,22 @@ DEFINER`, the link's whole boundary. `message_recipients()` is now a wrapper ove
 `message_recipients_all()` with one more column, `opted_out` (never true for the `closure` audience);
 `sendMessage` writes the tokens for a general message's addresses in the same statement.
 
+### Cancellation notice and push — POOLSE-90 slice 4, 27 October 2026
+
+Migrations `1792836000000_session-audience` (the enum value, alone) and
+`1792836000001_cancellation-notice-and-push`.
+
+- **`message.class_session_id`** belongs to the new `session` audience, and the CHECK
+  `message_audience_target` gains that pairing.
+- **`message_recipients_all()`** gains `WHEN 'session' THEN cg.id = p_class_group_id`: the
+  lesson's turma, passed by the caller.
+- **`message_recipients()`** exempts `session` from the opt-out, as it does `closure`.
+- **`message_quota_respected()`** returns at once for `session`, and both it and
+  `email_addresses_today()` leave `session` out of the day's counts.
+- **`push_subscription`** holds the membership, the endpoint, the keys, a label, `last_success_at`
+  and `revoked_at`. It is unique on (organization, membership, endpoint) where not revoked, and
+  has no DELETE.
+
 ### Vou / Não vou — POOLSE-90 slice 2, 27 October 2026
 
 Migration `1792749600000_session-notice`. `session_notice`: one row per
