@@ -29,7 +29,8 @@ export type RestorableKindName =
   | 'maintenance_task'
   | 'partner'
   | 'student_fee'
-  | 'swim_meet';
+  | 'swim_meet'
+  | 'lesson_feedback';
 
 /**
  * One child of an archive action, as recorded in `audit_log.data.cascade`.
@@ -195,6 +196,21 @@ export const RESTORABLE: readonly RestorableKind[] = [
     parents: [],
     cascades: ['student_record'],
   },
+  {
+    // POOLSE-116: archived by the office (abuse, another child named); the
+    // family's box reopens, and this brings the words back.
+    kind: 'lesson_feedback',
+    action: 'lesson_feedback.archived',
+    table: 'lesson_feedback',
+    labelKey: 'archive.kind.lesson_feedback',
+    label: {
+      from: `lesson_feedback t
+             JOIN student s ON s.id = t.student_id AND s.organization_id = t.organization_id`,
+      name: displayName('s'),
+    },
+    parents: [{ kind: 'student', column: 'student_id' }],
+    cascades: [],
+  },
 ];
 
 /**
@@ -217,6 +233,8 @@ export const UNIQUE_FIELDS: Record<string, { field: string; column: string }> = 
   partner_group_name_uq: { field: 'name', column: 'name' },
   student_fee_one_seguro_uq: { field: 'kind', column: 'kind::text' },
   student_fee_one_inscricao_uq: { field: 'kind', column: 'kind::text' },
+  // The family wrote again after it was archived: one live answer per lesson.
+  lesson_feedback_one_uq: { field: 'feedback', column: 'mood::text' },
 };
 
 export function restorableByKind(kind: string): RestorableKind | undefined {

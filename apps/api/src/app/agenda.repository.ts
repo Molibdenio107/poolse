@@ -18,7 +18,9 @@ import { withOrg } from '@poolse/db';
  * free-swim block have no turma and no students, and never appear.
  *
  * Coming lessons only (Rui, 21-10-2026, Open 1): from now, on the club's clock,
- * for two weeks.
+ * for two weeks. **One lesson by id also answers once it is over**, inside the
+ * feedback window (POOLSE-116), so a family can say how it went; the list
+ * itself stays coming lessons, and the past ones are `readRecent`'s.
  */
 
 const TZ = `coalesce(f.timezone, 'Europe/Lisbon')`;
@@ -102,9 +104,14 @@ export async function readAgenda(
          LEFT JOIN membership im
                 ON im.id = cs.resolved_instructor_id AND im.organization_id = cs.organization_id
          LEFT JOIN app_user iu ON iu.id = im.app_user_id
-        WHERE cs.occurs_on BETWEEN club_today() AND club_today() + ${AGENDA_DAYS - 1}
-          AND cs.ends_at > now()
-          AND ($2::uuid IS NULL OR cs.id = $2::uuid)
+        WHERE (
+                ($2::uuid IS NULL
+                  AND cs.occurs_on BETWEEN club_today() AND club_today() + ${AGENDA_DAYS - 1}
+                  AND cs.ends_at > now())
+             OR (cs.id = $2::uuid
+                  AND cs.occurs_on BETWEEN club_today() - lesson_feedback_window()
+                                       AND club_today() + ${AGENDA_DAYS - 1})
+              )
         ORDER BY cs.starts_at, s.first_name, cs.id`,
       [studentIds, sessionId],
     );
@@ -140,6 +147,60 @@ export async function readWater(organizationId: string, poolIds: string[]): Prom
         WHERE pa.pool_id = ANY($1::uuid[]) AND pa.archived_at IS NULL
         ORDER BY pa.pool_id, pa.taken_at DESC`,
       [poolIds],
+    );
+    return rows;
+  });
+}
+
+export interface RecentLesson {
+  studentId: string;
+  sessionId: string;
+  className: string;
+  /** `YYYY-MM-DD` and `HH:MM` on the site's clock. */
+  localDate: string;
+  localTime: string;
+  /** The mood given, 1–5, or null when nobody has answered yet. */
+  mood: number | null;
+  /** Still inside the window — *Dar feedback* when there is no mood yet. */
+  open: boolean;
+}
+
+/**
+ * *Últimas aulas* — POOLSE-116: the lessons these students attended (marked
+ * present) inside the feedback window, newest first. A lesson the child missed
+ * is not here: there is nothing to say about it.
+ */
+export async function readRecent(organizationId: string, studentIds: string[]): Promise<RecentLesson[]> {
+  if (studentIds.length === 0) return [];
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<RecentLesson>(
+      `SELECT s.id AS "studentId",
+              cs.id AS "sessionId",
+              cg.name AS "className",
+              to_char(cs.starts_at AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS "localDate",
+              to_char(cs.starts_at AT TIME ZONE ${TZ}, 'HH24:MI')    AS "localTime",
+              fb.mood,
+              club_today() <= cs.occurs_on + lesson_feedback_window() AS open
+         FROM unnest($1::uuid[]) AS chosen(id)
+         JOIN student s ON s.id = chosen.id AND s.archived_at IS NULL
+         JOIN attendance a
+           ON a.organization_id = s.organization_id AND a.student_id = s.id AND a.status = 'present'
+         JOIN class_session cs
+           ON cs.id = a.class_session_id AND cs.organization_id = a.organization_id
+          AND cs.status <> 'cancelled'
+         JOIN class_group cg
+           ON cg.id = cs.class_group_id AND cg.organization_id = cs.organization_id
+         LEFT JOIN pool p
+                ON p.id = cs.pool_id AND p.organization_id = cs.organization_id
+         LEFT JOIN facility f
+                ON f.id = coalesce(p.facility_id, cg.facility_id) AND f.organization_id = cs.organization_id
+         LEFT JOIN lesson_feedback fb
+                ON fb.organization_id = cs.organization_id AND fb.class_session_id = cs.id
+               AND fb.student_id = s.id AND fb.archived_at IS NULL
+        WHERE cs.occurs_on >= club_today() - lesson_feedback_window()
+          AND cs.ends_at <= now()
+        ORDER BY cs.starts_at DESC, s.first_name, cs.id`,
+      [studentIds],
     );
     return rows;
   });

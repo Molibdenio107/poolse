@@ -116,10 +116,14 @@ test('the agenda shows coming lessons where they land, with their states, and th
 
       assert.deepEqual(agenda.children.map((one) => one.id), [child!.id]);
 
-      // The lesson's own read answers for this family, and only for a coming lesson.
+      // The lesson's own read answers for this family — and, since POOLSE-116,
+      // for a lesson already over inside the feedback window, so they can say
+      // how it went. Further back it is a 404 again.
       const one = await new AppController().lesson(moved);
       assert.equal(one.entries[0]?.sessionId, moved);
-      await expectStatus(() => new AppController().lesson(past!.id), 404);
+      assert.equal((await new AppController().lesson(past!.id)).entries[0]?.sessionId, past!.id);
+      const longAgo = await lesson(-20, '18:00');
+      await expectStatus(() => new AppController().lesson(longAgo), 404);
     });
 
     // QA 6: with water quality switched off for the club, no temperature at all.

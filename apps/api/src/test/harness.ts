@@ -155,6 +155,8 @@ const TENANT_TABLES = [
   // them, and attendance points at the session. Child first, all the way down.
   'reposicao_booking',
   'reposicao_credit',
+  // POOLSE-116: points at the session, the student and its author.
+  'lesson_feedback',
   'attendance',
   'skill_progress',
   'level_change_notice',

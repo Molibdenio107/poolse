@@ -67,6 +67,7 @@ import {
 } from '../test/harness.js';
 import type { MemberRole } from '../tenant/roles.js';
 import { AppController } from '../app/app.controller.js';
+import { FeedbackController } from '../feedback/feedback.controller.js';
 
 /**
  * Role probe — security review, 12-10-2026, inverted into a regression test.
@@ -651,6 +652,32 @@ test('meets refuse a guardian and a student (403) — POOLSE-81', async () => {
     await refused('GET meets/:id', 403, () => meets.one(NO_SUCH_ID));
     await refused('POST meets/import', 403, () => meets.import({}));
     await refused('POST meets/:id/archive', 403, () => meets.archive(NO_SUCH_ID));
+  });
+});
+
+test('lesson feedback: staff routes refuse families (403), a stranger and staff cannot write it — POOLSE-116', async () => {
+  await asEach(async () => {
+    const feedback = new FeedbackController();
+    await refused('GET students/:id/feedback', 403, () => feedback.forStudent(fixture.aliceId));
+    await refused('POST feedback/:id/archive', 403, () => feedback.archive(NO_SUCH_ID));
+  });
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    await refused('GET students/:id/feedback as maintenance', 403, () =>
+      new FeedbackController().forStudent(fixture.aliceId),
+    );
+  });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('POST feedback/:id/archive as an instructor', 403, () =>
+      new FeedbackController().archive(NO_SUCH_ID),
+    );
+    await refused('PUT app/lessons/:id/feedback as staff', 403, () =>
+      new AppController().feedback(fixture.sessionId, { studentId: fixture.aliceId, mood: 4 }),
+    );
+  });
+  await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
+    await refused('PUT app/lessons/:id/feedback as a stranger', 404, () =>
+      new AppController().feedback(fixture.sessionId, { studentId: fixture.aliceId, mood: 4 }),
+    );
   });
 });
 

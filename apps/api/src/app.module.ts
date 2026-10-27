@@ -72,6 +72,7 @@ import { SensitiveController } from './sensitive/sensitive.controller.js';
 import { RecordsController } from './students/records.controller.js';
 import { LevelsController, StudentsController } from './students/students.controller.js';
 import { MeetsController } from './meets/meets.controller.js';
+import { FeedbackController } from './feedback/feedback.controller.js';
 import { QualifyingController } from './qualifying/qualifying.controller.js';
 import { StudentImportController } from './students/import.controller.js';
 import { ExportsController } from './students/export.controller.js';
@@ -256,6 +257,7 @@ export const IDENTITY_ONLY_ROUTES = [
     StudentsController,
     LevelsController,
     MeetsController,
+    FeedbackController,
     QualifyingController,
     SensitiveController,
     WeatherController,

@@ -1,12 +1,37 @@
 import { payToFor, type PayTo } from '../billing/payment-destinations.js';
-import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  ConflictException,
+  Controller,
+  ForbiddenException,
+  Get,
+  NotFoundException,
+  Param,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { requireRole } from '../tenant/roles.js';
 import { CoreRoute, moduleIsOn } from '../tenant/modules.js';
 import { familyStudents } from '../students/students.repository.js';
 import { studentFees } from '../billing/fees.repository.js';
 import type { FeeBalance } from '../billing/fee-balance.js';
-import { readAgenda, readWater, type AgendaEntry, type WaterReading } from './agenda.repository.js';
+import {
+  readAgenda,
+  readRecent,
+  readWater,
+  type AgendaEntry,
+  type RecentLesson,
+  type WaterReading,
+} from './agenda.repository.js';
+import {
+  familyFeedback,
+  FeedbackRefusedError,
+  saveFeedback,
+  type FamilyFeedback,
+  type LessonFeedback,
+} from '../feedback/feedback.repository.js';
 import { listMedicalLeave, type CertificateFile } from '../students/medical-leave.repository.js';
 import { clubToday } from '../common/club-day.js';
 
@@ -29,7 +54,12 @@ interface AgendaResponse {
   entries: AgendaEntry[];
   /** Latest temperature per tank in the entries; empty with water quality off. */
   water: WaterReading[];
+  /** *Últimas aulas* — attended lessons inside the feedback window (POOLSE-116). */
+  recent: RecentLesson[];
 }
+
+/** A comment's ceiling — the table's CHECK says the same. */
+const MAX_COMMENT = 500;
 
 /** A leave as a family reads it: the dates and the atestado, never the club's reason or reference. */
 interface FamilyLeave {
@@ -74,6 +104,10 @@ export class AppController {
       children: await withFees(organizationId, mine),
       entries,
       water: await waterFor(organizationId, entries),
+      recent: await readRecent(
+        organizationId,
+        chosen.map((one) => one.id),
+      ),
     };
   }
 
@@ -110,7 +144,9 @@ export class AppController {
    * reader's children. Not theirs, not coming, or not a turma lesson: 404.
    */
   @Get('lessons/:sessionId')
-  async lesson(@Param('sessionId') sessionId: string): Promise<Omit<AgendaResponse, 'children'>> {
+  async lesson(
+    @Param('sessionId') sessionId: string,
+  ): Promise<Omit<AgendaResponse, 'children' | 'recent'> & { feedback: FamilyFeedback[] }> {
     requireRole('guardian', 'student');
     if (!UUID.test(sessionId)) throw new NotFoundException('No such lesson');
     const { organizationId, membershipId } = currentTenant();
@@ -122,8 +158,82 @@ export class AppController {
       sessionId,
     );
     if (entries.length === 0) throw new NotFoundException('No such lesson');
-    return { entries, water: await waterFor(organizationId, entries) };
+    return {
+      entries,
+      water: await waterFor(organizationId, entries),
+      feedback: await familyFeedback(
+        organizationId,
+        membershipId,
+        sessionId,
+        [...new Set(entries.map((entry) => entry.studentId))],
+      ),
+    };
   }
+
+  /**
+   * How the lesson went — POOLSE-116. One child's mood and a few words, written
+   * or rewritten inside the window. The child must be the reader's and in this
+   * lesson (else 404, as a stranger's lesson is), the reader must be the one who
+   * answers for them (else 403), and the database decides whether the lesson
+   * takes feedback at all (else 409 with its code).
+   */
+  @Put('lessons/:sessionId/feedback')
+  async feedback(
+    @Param('sessionId') sessionId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<LessonFeedback> {
+    requireRole('guardian', 'student');
+    if (!UUID.test(sessionId)) throw new NotFoundException('No such lesson');
+    const { organizationId, membershipId } = currentTenant();
+    const input = parseFeedback(body);
+
+    const mine = await familyStudents(organizationId, membershipId);
+    if (!mine.some((one) => one.id === input.studentId)) throw new NotFoundException('No such lesson');
+    const [standing] = await familyFeedback(organizationId, membershipId, sessionId, [input.studentId]);
+    if (standing === undefined) throw new NotFoundException('No such lesson');
+    if (!standing.mayAnswer) {
+      throw new ForbiddenException({ code: 'feedback_guardian_answers', message: 'app.feedback.guardianAnswers' });
+    }
+
+    try {
+      return await saveFeedback(organizationId, membershipId, sessionId, input.studentId, {
+        mood: input.mood,
+        comment: input.comment,
+      });
+    } catch (error) {
+      if (error instanceof FeedbackRefusedError) {
+        throw new ConflictException({
+          code: error.code,
+          message: `app.feedback.refused.${error.code}`,
+          ...(error.code === 'feedback_window_closed' ? { closesOn: error.value } : {}),
+        });
+      }
+      throw error;
+    }
+  }
+}
+
+function parseFeedback(body: Record<string, unknown>): { studentId: string; mood: number; comment: string | null } {
+  const studentId = body['studentId'];
+  if (typeof studentId !== 'string' || !UUID.test(studentId)) {
+    throw new BadRequestException({ message: 'studentId is required', fields: { studentId: 'app.feedback.error.student' } });
+  }
+  const mood = body['mood'];
+  if (typeof mood !== 'number' || !Number.isInteger(mood) || mood < 1 || mood > 5) {
+    throw new BadRequestException({ message: 'mood is 1 to 5', fields: { mood: 'app.feedback.error.mood' } });
+  }
+  const raw = body['comment'];
+  if (raw !== undefined && raw !== null && typeof raw !== 'string') {
+    throw new BadRequestException({ message: 'comment is text', fields: { comment: 'app.feedback.error.comment' } });
+  }
+  const comment = typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
+  if (comment !== null && [...comment].length > MAX_COMMENT) {
+    throw new BadRequestException({
+      message: `comment is at most ${MAX_COMMENT} characters`,
+      fields: { comment: 'app.feedback.error.tooLong' },
+    });
+  }
+  return { studentId, mood, comment };
 }
 
 /** The water at the tanks these lessons are in — never when the module is off. */

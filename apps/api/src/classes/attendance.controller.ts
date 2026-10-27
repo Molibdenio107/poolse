@@ -24,6 +24,7 @@ import {
   RegisterRefusedError,
 } from './attendance.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
+import { sessionFeedback, type LessonFeedback } from '../feedback/feedback.repository.js';
 
 const STATUSES: AttendanceStatus[] = ['present', 'absent', 'excused'];
 const MAX_NOTE = 200;
@@ -42,6 +43,12 @@ interface RegisterResponse extends Register {
    */
   canCancel: boolean;
   canEndSeries: boolean;
+  /**
+   * What the students said about this lesson — POOLSE-116. Every one for
+   * owner and admin; for an instructor, only on a lesson they taught (the
+   * stand-in's night is the stand-in's), else empty.
+   */
+  feedback: LessonFeedback[];
 }
 
 /**
@@ -82,12 +89,14 @@ export class AttendanceController {
      * which of the two this is and the POST enforces it regardless.
      */
     const management = hasRole('owner', 'admin');
+    const mine = await isMySession(id);
     return {
       ...register,
       organizationId,
-      canRecord: await isMySession(id),
+      canRecord: mine,
       canCancel: management || (await isOwnClass(organizationId, id, membershipId)),
       canEndSeries: management,
+      feedback: management || mine ? await sessionFeedback(organizationId, id, management ? null : membershipId) : [],
     };
   }
 

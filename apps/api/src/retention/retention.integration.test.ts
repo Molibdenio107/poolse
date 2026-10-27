@@ -132,8 +132,32 @@ test('a year after leaving the health data goes, five years after the identity g
        RETURNING id`,
       [tenant.organizationId, tenant.facilityId, tenant.ownerMembershipId, onlyMother],
     );
+    // POOLSE-116: what Rita's mother said about a lesson. Today's lesson, so the
+    // trigger admits it; Rita's leaving is her archive date, which it does not move.
+    const [lessonRow] = await tenant.sql<{ id: string }>(
+      `INSERT INTO class_session (organization_id, class_group_id, occurs_on, starts_at, duration_minutes)
+       VALUES ($1, $2, club_today(), now() - interval '3 hours', 45) RETURNING id`,
+      [tenant.organizationId, group!.id],
+    );
+    await tenant.sql(
+      `INSERT INTO attendance (organization_id, class_session_id, student_id, status, recorded_by_membership_id)
+       VALUES ($1, $2, $3, 'present', $4)`,
+      [tenant.organizationId, lessonRow!.id, longGone, tenant.ownerMembershipId],
+    );
+    await tenant.sql(
+      `INSERT INTO lesson_feedback (organization_id, class_session_id, student_id, mood, comment, author_membership_id)
+       VALUES ($1, $2, $3, 2, 'A Rita teve frio.', $4)`,
+      [tenant.organizationId, lessonRow!.id, longGone, onlyMother],
+    );
+
     const run = await new RetentionService().run(tenant.organizationId);
     assert.equal(run.healthErased, 2, 'Rita and Tiago left more than a year ago');
+    const [said] = await tenant.sql<{ mood: number; comment: string | null; author: string | null; anon: boolean }>(
+      `SELECT mood, comment, author_membership_id AS author, anonymised_at IS NOT NULL AS anon
+         FROM lesson_feedback WHERE student_id = $1`,
+      [longGone],
+    );
+    assert.deepEqual(said, { mood: 2, comment: null, author: null, anon: true }, 'the mood stays; the words and the author go');
     assert.equal(run.anonymised, 1, 'only Rita left more than five years ago');
 
     // --- Rita: everything personal is gone, the record itself stays.
