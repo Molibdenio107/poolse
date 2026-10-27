@@ -409,3 +409,4 @@ export * from './compensation.js';
 export * from './swim.js';
 export * from './modules.js';
 export * from './payment.js';
+export * from './identity.js';

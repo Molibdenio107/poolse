@@ -67,6 +67,7 @@ import {
 } from '../test/harness.js';
 import type { MemberRole } from '../tenant/roles.js';
 import { AppController } from '../app/app.controller.js';
+import { StaffController } from '../staff/staff.controller.js';
 import { FeedbackController } from '../feedback/feedback.controller.js';
 import { NoticesController } from '../notices/notices.controller.js';
 import { PushController } from '../push/push.controller.js';
@@ -709,6 +710,18 @@ test('Vou / Não vou and the instructor home: families only write their own, sta
     await refused('PUT sessions/:id/notices/:studentId as a stranger', 404, () =>
       new NoticesController().answer(fixture.sessionId, fixture.aliceId, { going: false }),
     );
+  });
+});
+
+test('a staff identity refuses families and a colleague — POOLSE-100', async () => {
+  await asEach(async () => {
+    await refused('GET staff/:id/identity as a family', 403, () => new StaffController().identity(fixture.instructorId));
+    await refused('PATCH staff/:id/identity as a family', 403, () =>
+      new StaffController().editIdentity(fixture.instructorId, { birthDate: '1990-01-01' }),
+    );
+  });
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    await refused('GET staff/:id/identity as a colleague', 403, () => new StaffController().identity(fixture.instructorId));
   });
 });
 

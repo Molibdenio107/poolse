@@ -7,9 +7,19 @@ import {
   Get,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
 } from '@nestjs/common';
+import { isIdDocumentType, isValidCcNumber, normalizeCcNumber } from '@poolse/rules';
+import { clubToday } from '../common/club-day.js';
+import {
+  BirthDateIsTheirsError,
+  readIdentity,
+  writeIdentity,
+  type IdentityEdit,
+  type StaffIdentity,
+} from './identity.repository.js';
 import { currentTenant } from '../tenant/tenant.context.js';
 import { hasRole, requireRole } from '../tenant/roles.js';
 import { updateClerkName } from '../identity/identity.service.js';
@@ -49,6 +59,44 @@ const MAX_NOTES = 2000;
 @CoreRoute()
 @Controller('staff')
 export class StaffController {
+  /**
+   * Date of birth and identity document — POOLSE-100. Owner and admin, and the
+   * person on their own record; anybody else is a 403 here as it is on the
+   * record. Its own route, so the number is never in the record, the list, the
+   * export or the import. A read by anybody but the person is audited.
+   */
+  @Get(':membershipId/identity')
+  async identity(@Param('membershipId', new ParseUUIDPipe()) membershipId: string): Promise<StaffIdentity> {
+    const actor = requireOwnOrManaged(membershipId);
+    const found = await readIdentity(currentTenant().organizationId, membershipId, actor);
+    if (found === null) throw new NotFoundException('No such staff member');
+    return found;
+  }
+
+  @Patch(':membershipId/identity')
+  async editIdentity(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<StaffIdentity> {
+    const actor = requireOwnOrManaged(membershipId);
+    const { organizationId } = currentTenant();
+    try {
+      if (!(await writeIdentity(organizationId, membershipId, parseIdentity(body)))) {
+        throw new NotFoundException('No such staff member');
+      }
+    } catch (error) {
+      if (error instanceof BirthDateIsTheirsError) {
+        throw new ConflictException({
+          code: 'birth_date_is_theirs',
+          message: 'A login holder sets their own date of birth in their profile',
+          fields: { birthDate: 'staffIdentity.errors.birthDateIsTheirs' },
+        });
+      }
+      throw error;
+    }
+    return (await readIdentity(organizationId, membershipId, actor))!;
+  }
+
   /**
    * One staff record.
    *
@@ -244,4 +292,54 @@ function text(value: unknown, field: string, max: number): string | null {
     throw new BadRequestException(`${field} may be at most ${max} characters`);
   }
   return trimmed;
+}
+
+/** Owner or admin for anyone; any member of staff for themself. Answers the reader's membership. */
+function requireOwnOrManaged(membershipId: string): string {
+  requireRole('owner', 'admin', 'instructor', 'maintenance');
+  const { membershipId: actor } = currentTenant();
+  if (!hasRole('owner', 'admin') && membershipId !== actor) {
+    throw new ForbiddenException('That record is not yours');
+  }
+  return actor;
+}
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseIdentity(body: Record<string, unknown>): IdentityEdit {
+  const fields: Record<string, string> = {};
+  const edit: IdentityEdit = {};
+
+  if (body['birthDate'] !== undefined) {
+    const raw = typeof body['birthDate'] === 'string' ? body['birthDate'].trim() : body['birthDate'];
+    if (raw === null || raw === '') edit.birthDate = null;
+    else if (typeof raw !== 'string' || !ISO_DAY.test(raw) || Number.isNaN(Date.parse(`${raw}T12:00:00Z`))) {
+      fields['birthDate'] = 'staffIdentity.errors.birthDateInvalid';
+    } else if (raw < '1900-01-01' || raw > clubToday()) {
+      fields['birthDate'] = 'staffIdentity.errors.birthDateRange';
+    } else edit.birthDate = raw;
+  }
+
+  if (body['idDocumentType'] !== undefined || body['idDocumentNumber'] !== undefined) {
+    const type = body['idDocumentType'];
+    const rawNumber = typeof body['idDocumentNumber'] === 'string' ? body['idDocumentNumber'].trim() : '';
+    if ((type === null || type === '') && rawNumber === '') {
+      // An empty box clears the document; anything half-typed is refused below.
+      edit.idDocument = null;
+    } else if (!isIdDocumentType(type)) {
+      fields['idDocumentType'] = 'staffIdentity.errors.typeRequired';
+    } else if (rawNumber === '') {
+      fields['idDocumentNumber'] = 'staffIdentity.errors.numberRequired';
+    } else if (type === 'cc') {
+      if (!isValidCcNumber(rawNumber)) fields['idDocumentNumber'] = 'staffIdentity.errors.ccInvalid';
+      else edit.idDocument = { type, number: normalizeCcNumber(rawNumber) };
+    } else if (!/^[A-Za-z0-9 -]{3,30}$/.test(rawNumber)) {
+      fields['idDocumentNumber'] = 'staffIdentity.errors.numberInvalid';
+    } else edit.idDocument = { type, number: rawNumber.toUpperCase() };
+  }
+
+  if (Object.keys(fields).length > 0) {
+    throw new BadRequestException({ message: 'Some fields are not valid', fields });
+  }
+  return edit;
 }
