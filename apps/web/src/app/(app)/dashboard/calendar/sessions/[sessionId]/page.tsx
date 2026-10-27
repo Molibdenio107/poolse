@@ -9,6 +9,7 @@ import { PageError, PageShell } from '@/components/page-shell';
 import { laneLabel } from '@/lib/lanes';
 import { formatDate } from '@/lib/date-format';
 import { backLabelKey, readFrom } from '@/lib/back';
+import { FeedbackList } from '@/components/feedback-list';
 
 type RegisterResponse = Register & {
   organizationId: string;
@@ -151,6 +152,22 @@ export default async function AttendancePage({
           ) : (
             <section className="rounded border border-border bg-surface p-5">
               <p className="text-sm text-foreground-muted">{t('attendance.readOnly')}</p>
+            </section>
+          )}
+
+          {/*
+            What the students said — POOLSE-116. Below the roll: it is read after
+            the lesson, never before marking. Only for whoever taught it (and
+            the office); a colleague's register carries none, so no strip.
+          */}
+          {register.status !== 'cancelled' && (register.canRecord || register.canEndSeries) && (
+            <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+              <h2 className="font-medium">{t('feedback.title')}</h2>
+              {(register.feedback ?? []).length === 0 ? (
+                <p className="text-sm text-foreground-muted">{t('feedback.noneForLesson')}</p>
+              ) : (
+                <FeedbackList items={register.feedback ?? []} by="student" canArchive={register.canEndSeries} />
+              )}
             </section>
           )}
         </>

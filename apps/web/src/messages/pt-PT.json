@@ -70,6 +70,43 @@
       "certificateSent": "Atestado enviado em {date}.",
       "certificateMissing": "Ainda sem atestado.",
       "certificatesFailed": "Não foi possível carregar as baixas médicas."
+    },
+    "feedback": {
+      "title": "Como correu",
+      "titleFor": "Como correu · {name}",
+      "prompt": "Como correu a aula?",
+      "commentLabel": "Quer dizer mais alguma coisa? (opcional)",
+      "commentHint": "{used} de {max} caracteres",
+      "notAnonymous": "O professor e a secretaria vão ler isto.",
+      "send": "Enviar",
+      "update": "Guardar alteração",
+      "editableUntil": "Pode alterar até {date}.",
+      "none": "Não foi dado feedback a esta aula.",
+      "frozen": "Já não pode ser alterado.",
+      "guardianAnswers": "Quem responde por este aluno é o encarregado de educação.",
+      "recentTitle": "Últimas aulas",
+      "give": "Dar feedback",
+      "saved": "Feedback enviado",
+      "failed": "Não foi possível enviar o feedback. Tente de novo.",
+      "state": {
+        "cancelled": "Esta aula foi cancelada.",
+        "notEnded": "Pode dizer como correu quando a aula terminar.",
+        "notMarked": "A presença ainda não foi registada.",
+        "absent": "Faltou a esta aula.",
+        "excused": "Falta justificada nesta aula."
+      },
+      "error": {
+        "mood": "Escolha uma das caras.",
+        "student": "Não foi possível saber de que aluno se trata.",
+        "comment": "O texto não é válido.",
+        "tooLong": "No máximo 500 caracteres."
+      },
+      "refused": {
+        "feedback_cancelled": "Esta aula foi cancelada.",
+        "feedback_too_early": "A aula ainda não terminou.",
+        "feedback_not_present": "A presença nesta aula não está registada.",
+        "feedback_window_closed": "Já não pode ser alterado: o prazo terminou a {date}."
+      }
     }
   },
   "common": {
@@ -4883,7 +4920,8 @@
       "partner": "Parceria",
       "partner_group": "Grupo de parceria",
       "class_schedule": "Horário de turma",
-      "swim_meet": "Prova"
+      "swim_meet": "Prova",
+      "lesson_feedback": "Feedback de aula"
     },
     "children": {
       "pool": "{count, plural, one {# tanque} other {# tanques}}",
@@ -4911,7 +4949,8 @@
         "name": "Já existe outro registo com o nome «{value}» ({kind}). Mude o nome a um deles para restaurar.",
         "taxNumber": "Já existe outro aluno com o NIF {value}. Corrija o NIF de um deles para restaurar.",
         "socioNumber": "Já existe outro aluno com o n.º de sócio {value}. Mude o número de um deles para restaurar.",
-        "kind": "Este aluno já tem outra linha «{value}» nesta época. Arquive-a para restaurar esta."
+        "kind": "Este aluno já tem outra linha «{value}» nesta época. Arquive-a para restaurar esta.",
+        "feedback": "Este aluno já deu outro feedback sobre esta aula. Arquive-o para restaurar este."
       },
       "licence": "O plano permite {allowed, plural, one {# instalação} other {# instalações}} e já {current, plural, one {há # ativa} other {há # ativas}}. Arquive outra ou peça um plano maior para restaurar esta.",
       "poolFull": "O tanque leva {max} pessoas e as turmas nesse horário já somam {taken}. Liberte lugares para restaurar esta turma.",
@@ -4927,7 +4966,8 @@
       "maintenance_task": "Tarefa arquivada",
       "partner": "Parceria arquivada",
       "student_fee": "Linha de pagamento arquivada",
-      "swim_meet": "Prova arquivada"
+      "swim_meet": "Prova arquivada",
+      "lesson_feedback": "Feedback arquivado"
     },
     "restoredKeptToast": "Restaurado: {name}. {kept, plural, one {# registo ligado não voltou} other {# registos ligados não voltaram}}, porque mudaram entretanto. Uma mensalidade de dias já passados fica terminada; acrescente uma a partir de hoje."
   },
@@ -5787,5 +5827,25 @@
     "picked": "Escolhida: {name}",
     "change": "Alterar",
     "changeLabel": "Alterar a turma ({name})"
+  },
+  "feedback": {
+    "tab": "Feedback",
+    "title": "Feedback dos alunos",
+    "noneForLesson": "Ainda ninguém deu feedback sobre esta aula.",
+    "noneForStudent": "Ainda não há feedback deste aluno sobre as aulas que pode ver.",
+    "byStudent": "Pelo aluno",
+    "byGuardian": "Por {name}, encarregado de educação",
+    "byNobody": "Autor anonimizado",
+    "ago": "Escrito {ago}",
+    "archive": "Arquivar",
+    "notPermitted": "Só o proprietário e os administradores podem arquivar feedback.",
+    "archiveFailed": "Não foi possível arquivar o feedback.",
+    "mood": {
+      "1": "Muito mal",
+      "2": "Mal",
+      "3": "Assim-assim",
+      "4": "Bem",
+      "5": "Muito bem"
+    }
   }
 }

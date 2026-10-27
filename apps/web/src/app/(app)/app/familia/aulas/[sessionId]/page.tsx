@@ -8,11 +8,15 @@ import type { LessonPlan } from '../../../../dashboard/calendar/lesson-plan.acti
 import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
 import { EntryCard, dayHeading } from '../../agenda-parts';
+import { FeedbackPanel } from '../../feedback';
 
 /**
  * One lesson, for a family — POOLSE-90 slice 1. The time and the place, the
  * water, and the training plan where `familyMayReadPlan` lets the family read it
  * (the plan endpoint's own rule, unchanged). *Vou / Não vou* joins it in slice 2.
+ *
+ * Since POOLSE-116 it also opens for a lesson already over, inside the feedback
+ * window, with each child's *Como correu a aula?* under the plan.
  */
 export default async function FamilyLesson({
   params,
@@ -69,6 +73,15 @@ export default async function FamilyLesson({
           <p className="text-sm text-foreground-muted">{t('app.family.noPlan')}</p>
         )}
       </section>
+
+      {lesson.feedback.map((standing) => (
+        <FeedbackPanel
+          key={standing.studentId}
+          sessionId={sessionId}
+          standing={standing}
+          named={lesson.feedback.length > 1}
+        />
+      ))}
     </>
   );
 }

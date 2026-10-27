@@ -1,7 +1,7 @@
 import { withOrg, type Tx } from '@poolse/db';
 import { recordAudit } from '../audit/audit.js';
 import { cascadeAt, restorableKind } from '../archive/restorable.js';
-import { displayName, personShortName } from '../people/names.js';
+import { displayName, personShortName, shortName } from '../people/names.js';
 import { TOTAL_COUNT, windowed, type PageQuery, type Paginated } from '../common/pagination.js';
 
 /**
@@ -62,6 +62,8 @@ export type FeedbackState =
 
 export interface FamilyFeedback {
   studentId: string;
+  /** The child's short name — the page names them when siblings share a lesson. */
+  studentName: string;
   state: FeedbackState;
   /** The last day it may be written or changed — the lesson's day plus the window. */
   closesOn: string;
@@ -134,6 +136,7 @@ async function familyFeedbackIn(
 ): Promise<FamilyFeedback[]> {
   const { rows } = await tx.query<{
     student_id: string;
+    student_name: string;
     status: string;
     ended: boolean;
     mark: string | null;
@@ -142,7 +145,7 @@ async function familyFeedbackIn(
     may_answer: boolean;
     feedback_id: string | null;
   }>(
-    `SELECT s.id AS student_id, cs.status::text AS status, cs.ends_at <= now() AS ended,
+    `SELECT s.id AS student_id, ${shortName('s')} AS student_name, cs.status::text AS status, cs.ends_at <= now() AS ended,
             a.status::text AS mark,
             to_char(cs.occurs_on + lesson_feedback_window(), 'YYYY-MM-DD') AS closes_on,
             club_today() <= cs.occurs_on + lesson_feedback_window() AS open,
@@ -177,6 +180,7 @@ async function familyFeedbackIn(
 
   return rows.map((row) => ({
     studentId: row.student_id,
+    studentName: row.student_name,
     state: stateOf(row),
     closesOn: row.closes_on,
     mayAnswer: row.may_answer,

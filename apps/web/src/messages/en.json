@@ -70,6 +70,43 @@
       "certificateSent": "Certificate sent on {date}.",
       "certificateMissing": "No certificate yet.",
       "certificatesFailed": "The medical leaves could not be loaded."
+    },
+    "feedback": {
+      "title": "How it went",
+      "titleFor": "How it went · {name}",
+      "prompt": "How did the lesson go?",
+      "commentLabel": "Anything else to say? (optional)",
+      "commentHint": "{used} of {max} characters",
+      "notAnonymous": "The instructor and the office will read this.",
+      "send": "Send",
+      "update": "Save change",
+      "editableUntil": "You can change it until {date}.",
+      "none": "No feedback was given on this lesson.",
+      "frozen": "It can no longer be changed.",
+      "guardianAnswers": "This student's guardian answers for them.",
+      "recentTitle": "Recent lessons",
+      "give": "Give feedback",
+      "saved": "Feedback sent",
+      "failed": "The feedback could not be sent. Try again.",
+      "state": {
+        "cancelled": "This lesson was cancelled.",
+        "notEnded": "You can say how it went once the lesson has ended.",
+        "notMarked": "Attendance has not been recorded yet.",
+        "absent": "Missed this lesson.",
+        "excused": "Excused from this lesson."
+      },
+      "error": {
+        "mood": "Choose one of the faces.",
+        "student": "We could not tell which student this is for.",
+        "comment": "The text is not valid.",
+        "tooLong": "At most 500 characters."
+      },
+      "refused": {
+        "feedback_cancelled": "This lesson was cancelled.",
+        "feedback_too_early": "The lesson has not ended yet.",
+        "feedback_not_present": "Attendance at this lesson is not recorded.",
+        "feedback_window_closed": "It can no longer be changed: the deadline was {date}."
+      }
     }
   },
   "common": {
@@ -4883,7 +4920,8 @@
       "partner": "Partnership",
       "partner_group": "Partner group",
       "class_schedule": "Class time slot",
-      "swim_meet": "Meet"
+      "swim_meet": "Meet",
+      "lesson_feedback": "Lesson feedback"
     },
     "children": {
       "pool": "{count, plural, one {# pool} other {# pools}}",
@@ -4911,7 +4949,8 @@
         "name": "Another record is already called “{value}” ({kind}). Rename one of them to restore this.",
         "taxNumber": "Another student already has the NIF {value}. Correct one of them to restore this.",
         "socioNumber": "Another student already has member number {value}. Change one of them to restore this.",
-        "kind": "This student already has another “{value}” line this season. Archive it to restore this one."
+        "kind": "This student already has another “{value}” line this season. Archive it to restore this one.",
+        "feedback": "This student has already given other feedback on this lesson. Archive it to restore this one."
       },
       "licence": "The plan allows {allowed, plural, one {# site} other {# sites}} and {current, plural, one {# is} other {# are}} already active. Archive another or ask for a bigger plan to restore this one.",
       "poolFull": "The pool holds {max} people and the classes in that slot already total {taken}. Free some places to restore this class.",
@@ -4927,7 +4966,8 @@
       "maintenance_task": "Task archived",
       "partner": "Partnership archived",
       "student_fee": "Fee line archived",
-      "swim_meet": "Meet archived"
+      "swim_meet": "Meet archived",
+      "lesson_feedback": "Feedback archived"
     },
     "restoredKeptToast": "Restored: {name}. {kept, plural, one {# linked record did not come back} other {# linked records did not come back}} because they changed since. A fee line for days already gone stays ended; add one from today."
   },
@@ -5787,5 +5827,25 @@
     "picked": "Chosen: {name}",
     "change": "Change",
     "changeLabel": "Change the class ({name})"
+  },
+  "feedback": {
+    "tab": "Feedback",
+    "title": "Students' feedback",
+    "noneForLesson": "Nobody has given feedback on this lesson yet.",
+    "noneForStudent": "No feedback from this student yet on the lessons you can see.",
+    "byStudent": "By the student",
+    "byGuardian": "By {name}, guardian",
+    "byNobody": "Author anonymised",
+    "ago": "Written {ago}",
+    "archive": "Archive",
+    "notPermitted": "Only the owner and administrators can archive feedback.",
+    "archiveFailed": "The feedback could not be archived.",
+    "mood": {
+      "1": "Very bad",
+      "2": "Bad",
+      "3": "So-so",
+      "4": "Good",
+      "5": "Very good"
+    }
   }
 }

@@ -1,7 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { FromLink } from '@/components/from-link';
 import { ActivityPanel } from '@/components/activity-panel';
-import { readPage } from '@/lib/pagination';
+import { readPage, type Paginated } from '@/lib/pagination';
 import { backTarget } from '@/lib/back';
 import { describeLoad, outcome, type LoadFailure, type Outcome } from '@/lib/load-failure';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -9,6 +9,7 @@ import {
   ApiError,
   apiFetch,
   type Calendar,
+  type LessonFeedback,
   type Student,
   type StudentFees,
   type Students,
@@ -31,6 +32,8 @@ import { loadFees } from './fees.actions';
 import { ActionButton } from '@/components/action-button';
 import { PageError, PageShell } from '@/components/page-shell';
 import { DetailPage } from '@/components/detail-page';
+import { FeedbackList } from '@/components/feedback-list';
+import { Pagination } from '@/components/pagination';
 import { formatDate } from '@/lib/date-format';
 
 /**
@@ -598,6 +601,33 @@ export default async function StudentPage({
               </ul>
             </section>
           ),
+        },
+        {
+          /*
+            What the student said after their lessons — POOLSE-116. Staff only;
+            an instructor's list holds the lessons they taught, decided by the
+            API. Its own tab, paginated, because it grows with every lesson.
+          */
+          slug: 'feedback',
+          labelKey: 'feedback.tab',
+          visible: !family,
+          content: async () => {
+            const list = await apiFetch<Paginated<LessonFeedback>>(
+              `/students/${id}/feedback?page=${readPage(page)}`,
+            ).catch(() => null);
+            if (list === null) return <PageError message={t('detailTabs.loadFailed')} />;
+            return (
+              <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
+                <h2 className="font-medium">{t('feedback.title')}</h2>
+                {list.items.length === 0 ? (
+                  <p className="text-sm text-foreground-muted">{t('feedback.noneForStudent')}</p>
+                ) : (
+                  <FeedbackList items={list.items} by="lesson" canArchive={reg.canManage} />
+                )}
+                <Pagination page={list} basePath={`/dashboard/students/${id}`} query={{ tab: 'feedback' }} />
+              </section>
+            );
+          },
         },
         {
           // POOLSE-80 — who changed what, and Reverter. Owner and Admin.

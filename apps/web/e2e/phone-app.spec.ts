@@ -8,7 +8,7 @@ import {
   NO_GUARDIAN,
   NO_TEST_USER,
 } from './session';
-import { poolsideLesson } from './poolside-fixture';
+import { poolsideLesson, poolsideYesterday } from './poolside-fixture';
 
 /**
  * App mode on a phone — POOLSE-90 slice 1, QA 1, 3 and the lesson page, as a
@@ -85,6 +85,35 @@ test.describe('as a guardian', () => {
     await expect(page.getByRole('heading', { name: /plano da aula|lesson plan/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /voltar à agenda|back to the agenda/i })).toBeVisible();
     await noSidewaysScroll(page);
+  });
+
+  test('POOLSE-116 — yesterday from Últimas aulas: a face, a few words, sent one-handed', async ({ page }) => {
+    const { sessionId } = await poolsideYesterday();
+    await visit(page, '/app/familia');
+    const recent = page.getByRole('heading', { name: /últimas aulas|recent lessons/i });
+    await expect(recent).toBeVisible();
+    const link = page.locator(`a[href="/app/familia/aulas/${sessionId}"]`).first();
+    await expect(link).toContainText(/dar feedback|give feedback/i);
+    await expect(async () => {
+      if (!page.url().includes('/aulas/')) await link.tap({ timeout: 5_000 });
+      await expect(page).toHaveURL(/\/app\/familia\/aulas\//, { timeout: 10_000 });
+    }).toPass({ timeout: 45_000 });
+
+    await expect(page.getByText(/como correu a aula\?|how did the lesson go\?/i)).toBeVisible();
+    const good = page.locator('label').filter({ hasText: /^(bem|good)$/i });
+    expect((await good.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect((await good.boundingBox())!.width).toBeGreaterThanOrEqual(44);
+    await good.tap();
+    await page.getByRole('textbox').fill('Gostou muito da aula.');
+    await expect(page.getByText(/o professor e a secretaria vão ler isto|the instructor and the office will read this/i)).toBeVisible();
+    const send = page.getByRole('button', { name: /^(enviar|send)$/i });
+    await expect(send).toBeInViewport();
+    await send.tap();
+    await expect(page.getByText(/feedback enviado|feedback sent/i)).toBeVisible({ timeout: 15_000 });
+    await noSidewaysScroll(page);
+
+    await visit(page, '/app/familia');
+    await expect(page.locator(`a[href="/app/familia/aulas/${sessionId}"]`).first()).toContainText(/^.*(bem|good)/i);
   });
 });
 

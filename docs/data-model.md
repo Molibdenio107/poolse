@@ -3914,6 +3914,28 @@ DEFINER`, the link's whole boundary. `message_recipients()` is now a wrapper ove
 `message_recipients_all()` with one more column, `opted_out` (never true for the `closure` audience);
 `sendMessage` writes the tokens for a general message's addresses in the same statement.
 
+### Lesson feedback — POOLSE-116, 27 October 2026
+
+Migration `1792576800000_lesson-feedback`. `lesson_feedback`: one live row per
+`(class_session_id, student_id)` (partial unique `lesson_feedback_one_uq`), `mood smallint` 1–5,
+`comment` optional, non-blank, at most 500 characters, `author_membership_id` (null only once
+anonymised), `anonymised_at`, `archived_at`. Composite foreign keys to `class_session`, `student`
+and `membership`.
+
+- **Keyed on the session and the student, not on `attendance.id`.** Clearing a register mark
+  DELETEs the attendance row, so a foreign key would make an instructor's correction fail
+  because of a family's comment.
+- **`lesson_feedback_admissible`** (BEFORE INSERT OR UPDATE) refuses, with its code in DETAIL: a
+  cancelled session (`feedback_cancelled`), one not yet ended (`feedback_too_early|<ends_at>`), a
+  student not marked present (`feedback_not_present|<mark or none>`), and a lesson past the window
+  (`feedback_window_closed|<closes_on>`). Archiving, restoring and anonymising pass.
+- **`lesson_feedback_window()`** = 7, the one definition of the window, read by the trigger and by
+  the API, counted from `occurs_on` and judged on `club_today()`.
+- `poolse_app` holds SELECT and INSERT, and UPDATE on `mood`, `comment`, `author_membership_id` and
+  `archived_at`. It holds no DELETE, and `anonymised_at` is retention's alone.
+- `apply_retention()` clears `comment` and `author_membership_id` and sets `anonymised_at` with
+  identity, 5 years after the student left. The mood stays.
+
 ### Advancement by age — POOLSE-112, 23 October 2026
 
 Migration `1792317600000_advancement-by-age`. On `transfer_proposal`: `reason transfer_reason`

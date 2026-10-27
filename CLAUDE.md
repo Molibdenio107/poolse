@@ -716,6 +716,8 @@ one an owner would act on. `docs/features/salaries.md`.
 
 **A document on paper is a route with print styles, never a PDF library** (POOLSE-54, -115): black on white, `@page` for A4 and its margin footer, `PrintButton` and `AutoPrint` from `components/`, its own components rather than the screen's with a print patch, and an entry in `check-layout.mjs`. A print page with options opens the dialog only on `?print=1`, so changing an option does not reopen it.
 
+**What a family says after a lesson is `lesson_feedback`, admitted by its trigger and read by who taught it.** POOLSE-116. The trigger refuses feedback on a lesson that was cancelled, has not ended, or where the student is not marked present, and refuses it after `lesson_feedback_window()` (7 days). Each refusal carries its code in DETAIL, which the API answers as a 409. It is keyed on `(session, student)`, never on `attendance.id`, so a register correction never fails over a comment. Staff read it under `resolved_instructor_id` (owner and admin read all), and the office archives it through the bin. A mood is `MoodFace` (`components/mood.tsx`): an outlined face plus its word, never a fifth colour system. `docs/features/app.md`, `docs/features/students.md`.
+
 **A question asked in the middle of the page uses `components/ui/dialog.tsx`.** It portals
 to the body, so no ancestor's `overflow`, `transform` or `z-index` can clip it; it closes on
 Escape and on the backdrop, moves focus in and gives it back, and keeps Tab inside itself.

@@ -14,7 +14,7 @@ definition (corrected in the 16-10-2026 sweep, which found the first version too
 | When | What goes | What stays |
 |---|---|---|
 | **1 year after leaving** (`retention_health_period()`) | Medical and mobility notes (`student_sensitive`), every consent, the emergency contact, register notes, medical-leave reason and justification reference | The student, their attendance, fees and invoices |
-| **5 years after leaving** (`retention_identity_period()`) | Name (becomes *Aluno anonimizado*), birth date, contacts, NIF, notes, gender, photo, sócio number, swim-record notes; the words of their incidents (`incident_detail`, addenda); their names in message snapshots and in the audit trail; their converted lead; a guardian or person record that existed only for them | Attendance, counts, the incident's facts (when, where, emergency, lifeguard), every figure |
+| **5 years after leaving** (`retention_identity_period()`) | Name (becomes *Aluno anonimizado*), birth date, contacts, NIF, notes, gender, photo, sócio number, swim-record notes; the words of their incidents (`incident_detail`, addenda); their names in message snapshots and in the audit trail; their converted lead; a guardian or person record that existed only for them; the words and the author of their lesson feedback (POOLSE-116) | The feedback's mood, attendance, counts, the incident's facts (when, where, emergency, lifeguard), every figure |
 | **5 years after archiving** an unconverted lead | The child's and guardian's details on the lead | The lead row and its status |
 
 **Invoices are not touched.** A fatura keeps its own snapshot of the payer's name and NIF for

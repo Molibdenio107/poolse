@@ -7,7 +7,8 @@ All three slices are built: the API, the *Arquivados* page and the toast's *Anul
 ## What can come back
 
 Nine kinds, chosen by Rui on 12-10-2026: student, turma, site, tank, space, inventory item,
-maintenance task, partner and fee line. The list is `RESTORABLE` in
+maintenance task, partner and fee line, then a meet (POOLSE-81) and a lesson feedback
+(POOLSE-116). The list is `RESTORABLE` in
 `apps/api/src/archive/restorable.ts`.
 
 These are excluded:

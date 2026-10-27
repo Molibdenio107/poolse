@@ -2779,6 +2779,12 @@ export interface Register {
    * marks a trial, but the instructor is told who to expect.
    */
   trialGuests: { leadId: string; name: string; ageYears: number | null }[];
+  /**
+   * What the students said about this lesson — POOLSE-116. Every one for
+   * management; for an instructor only a lesson they taught. Present on the
+   * register read (`GET /sessions/:id/attendance`).
+   */
+  feedback?: LessonFeedback[];
 }
 
 export interface Calendar {
@@ -5176,9 +5182,55 @@ export interface AppAgenda {
   children: AppChild[];
   entries: AppAgendaEntry[];
   water: AppWater[];
+  /** *Últimas aulas* — POOLSE-116. */
+  recent: RecentLesson[];
 }
 
 export interface AppLesson {
   entries: AppAgendaEntry[];
   water: AppWater[];
+  /** Each of the reader's children in this lesson, and where their feedback stands. */
+  feedback: FamilyFeedback[];
+}
+
+/**
+ * A student's feedback after a lesson — POOLSE-116. `authoredBy` is derived
+ * from who wrote it; null once anonymised.
+ */
+export interface LessonFeedback {
+  id: string;
+  sessionId: string;
+  studentId: string;
+  studentName: string;
+  /** 1 (muito mal) to 5 (muito bem). */
+  mood: number;
+  comment: string | null;
+  authoredBy: 'student' | 'guardian' | null;
+  authorName: string | null;
+  lessonDate: string;
+  className: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type FeedbackState = 'open' | 'closed' | 'cancelled' | 'notEnded' | 'notMarked' | 'absent' | 'excused';
+
+export interface FamilyFeedback {
+  studentId: string;
+  studentName: string;
+  state: FeedbackState;
+  /** The last day it may be written or changed. */
+  closesOn: string;
+  mayAnswer: boolean;
+  feedback: LessonFeedback | null;
+}
+
+export interface RecentLesson {
+  studentId: string;
+  sessionId: string;
+  className: string;
+  localDate: string;
+  localTime: string;
+  mood: number | null;
+  open: boolean;
 }

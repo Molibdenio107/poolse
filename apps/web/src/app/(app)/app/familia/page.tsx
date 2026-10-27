@@ -10,6 +10,7 @@ import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
 import { cn } from '@/lib/utils';
 import { EntryCard, FeeStatus, dayHeading } from './agenda-parts';
+import { RecentLessons } from './feedback';
 
 /**
  * The family agenda — POOLSE-90 slice 1 (roadmap 3.3 and 3.6).
@@ -18,7 +19,8 @@ import { EntryCard, FeeStatus, dayHeading } from './agenda-parts';
  * date", for every child the reader is a guardian of — or the reader, on the
  * adult path — in one list by day, two weeks ahead, each entry naming its child.
  * A child filter narrows it (`?child=`; a stranger's id is the API's 404).
- * Coming lessons only (Rui, Open 1).
+ * Coming lessons only (Rui, Open 1) — and, under them, *Últimas aulas*: the
+ * ones attended in the last week, to say how they went (POOLSE-116).
  */
 export default async function FamilyAgenda({
   searchParams,
@@ -118,6 +120,8 @@ export default async function FamilyAgenda({
               </section>
             ))
           )}
+
+          <RecentLessons recent={agenda.recent} names={several && child === undefined ? nameOf : null} />
         </>
       )}
     </>

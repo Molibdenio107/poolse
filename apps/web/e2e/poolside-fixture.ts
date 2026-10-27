@@ -241,3 +241,63 @@ export async function storedMarks(sessionId: string): Promise<Record<string, str
     await db.end();
   }
 }
+
+/**
+ * Yesterday's poolside lesson, Ana marked present and nothing said about it yet —
+ * POOLSE-116's feedback flow. Any earlier run's answer is archived, the office's
+ * own path, so the family meets an empty form every time.
+ */
+export async function poolsideYesterday(): Promise<{ sessionId: string; anaId: string }> {
+  const { classGroupId, poolId, studentIds } = await poolsideLesson();
+  const ana = studentIds[0]!;
+  const db = await connect();
+  try {
+    await db.query('BEGIN');
+    const group = await db.query<{ organization_id: string; instructor_membership_id: string }>(
+      `SELECT organization_id, instructor_membership_id FROM class_group WHERE id = $1`,
+      [classGroupId],
+    );
+    const { organization_id: org, instructor_membership_id: instructor } = group.rows[0]!;
+    let sessionId = (
+      await db.query<{ id: string }>(
+        `SELECT id FROM class_session
+          WHERE organization_id = $1 AND class_group_id = $2
+            AND occurs_on = (now() AT TIME ZONE 'Europe/Lisbon')::date - 1`,
+        [org, classGroupId],
+      )
+    ).rows[0]?.id;
+    if (sessionId === undefined) {
+      sessionId = (
+        await db.query<{ id: string }>(
+          `INSERT INTO class_session
+             (organization_id, class_group_id, pool_id, instructor_membership_id, occurs_on, starts_at, duration_minutes)
+           SELECT $1, $2, $3, $4, d, (d + TIME '18:00') AT TIME ZONE 'Europe/Lisbon', 45
+             FROM (SELECT (now() AT TIME ZONE 'Europe/Lisbon')::date - 1 AS d) yesterday
+           RETURNING id`,
+          [org, classGroupId, poolId, instructor],
+        )
+      ).rows[0]!.id;
+    }
+    await db.query(`UPDATE class_session SET status = 'scheduled', cancellation_reason = NULL WHERE id = $1`, [
+      sessionId,
+    ]);
+    await db.query(
+      `INSERT INTO attendance (organization_id, class_session_id, student_id, status, recorded_by_membership_id)
+       VALUES ($1, $2, $3, 'present', $4)
+       ON CONFLICT (organization_id, class_session_id, student_id) DO UPDATE SET status = 'present'`,
+      [org, sessionId, ana, instructor],
+    );
+    await db.query(
+      `UPDATE lesson_feedback SET archived_at = now()
+        WHERE organization_id = $1 AND class_session_id = $2 AND archived_at IS NULL`,
+      [org, sessionId],
+    );
+    await db.query('COMMIT');
+    return { sessionId, anaId: ana };
+  } catch (error) {
+    await db.query('ROLLBACK');
+    throw error;
+  } finally {
+    await db.end();
+  }
+}

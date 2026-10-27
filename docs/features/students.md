@@ -205,6 +205,24 @@ fetches only the week and changes only `?week=` in the address: the tab, the way
 Voltar still returns to the screen the page was opened from. Browser Back leaves the page
 rather than stepping back a week.
 
+## Feedback after a lesson — staff side (POOLSE-116)
+
+What a student or their guardian said about a lesson they attended (the family side is in
+`docs/features/app.md`). Each entry shows a face with its word, the comment, who wrote it
+(*Pelo aluno*, or *Por {name}, encarregado de educação*, derived from the author's relation to the
+student and never stored) and when.
+
+- **On the lesson's register**, below the roll: every answer for the lesson. Owner and admin see
+  them all. An instructor sees them only for a lesson they taught (`resolved_instructor_id`), so a
+  stand-in reads the night they covered and the regular instructor does not. A colleague's
+  register shows no strip.
+- **On the student's record**, its own *Feedback* tab (staff only), newest lesson first, paginated
+  (`GET /students/:id/feedback`) under the same rule. It has its own tab rather than sitting on
+  *Semana*, because one card is one tab and the week tab is a calendar.
+- **Arquivar** (owner and admin, `POST /feedback/:id/archive`) removes an answer from both views
+  and reopens the family's box. The toast offers *Anular*, and Arquivados restores it. Maintenance
+  and families are refused, and another club's student is a 404.
+
 ## Levels
 
 Senior levels sit in the **same ladder** as everything else, ordered by the same `sort_order`
