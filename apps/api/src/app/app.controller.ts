@@ -34,6 +34,7 @@ import {
 } from '../feedback/feedback.repository.js';
 import { listMedicalLeave, type CertificateFile } from '../students/medical-leave.repository.js';
 import { clubToday } from '../common/club-day.js';
+import { readMyWeek, type WeekClass } from '../dashboard/instructor.repository.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -98,6 +99,7 @@ export class AppController {
 
     const entries = await readAgenda(
       organizationId,
+      membershipId,
       chosen.map((one) => one.id),
     );
     return {
@@ -155,6 +157,7 @@ export class AppController {
     const mine = await familyStudents(organizationId, membershipId);
     const entries = await readAgenda(
       organizationId,
+      membershipId,
       mine.map((one) => one.id),
       sessionId,
     );
@@ -169,6 +172,19 @@ export class AppController {
         [...new Set(entries.map((entry) => entry.studentId))],
       ),
     };
+  }
+
+  /**
+   * The instructor's home — POOLSE-90 slice 2: this week's lessons where they
+   * are `resolved_instructor_id`, so a stand-in sees the night they cover and the
+   * regular instructor does not. The dashboard band's own query, one definition,
+   * with the enrolled count and the *Não vou* count beside each.
+   */
+  @Get('teaching')
+  async teaching(): Promise<{ lessons: WeekClass[] }> {
+    requireRole('instructor');
+    const { organizationId, membershipId } = currentTenant();
+    return { lessons: await readMyWeek(organizationId, membershipId) };
   }
 
   /**

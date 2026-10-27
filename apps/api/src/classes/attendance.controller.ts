@@ -25,6 +25,7 @@ import {
 } from './attendance.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
 import { sessionFeedback, type LessonFeedback } from '../feedback/feedback.repository.js';
+import { sessionNotices, type SessionNotice } from '../notices/notices.repository.js';
 
 const STATUSES: AttendanceStatus[] = ['present', 'absent', 'excused'];
 const MAX_NOTE = 200;
@@ -49,6 +50,11 @@ interface RegisterResponse extends Register {
    * stand-in's night is the stand-in's), else empty.
    */
   feedback: LessonFeedback[];
+  /**
+   * *Vou / Não vou* — POOLSE-90 slice 2: what the families said before the
+   * lesson, beside each child on the register. A notice, never a mark.
+   */
+  notices: SessionNotice[];
 }
 
 /**
@@ -97,6 +103,7 @@ export class AttendanceController {
       canCancel: management || (await isOwnClass(organizationId, id, membershipId)),
       canEndSeries: management,
       feedback: management || mine ? await sessionFeedback(organizationId, id, management ? null : membershipId) : [],
+      notices: await sessionNotices(organizationId, id),
     };
   }
 

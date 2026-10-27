@@ -68,6 +68,7 @@ import {
 import type { MemberRole } from '../tenant/roles.js';
 import { AppController } from '../app/app.controller.js';
 import { FeedbackController } from '../feedback/feedback.controller.js';
+import { NoticesController } from '../notices/notices.controller.js';
 
 /**
  * Role probe — security review, 12-10-2026, inverted into a regression test.
@@ -677,6 +678,25 @@ test('lesson feedback: staff routes refuse families (403), a stranger and staff 
   await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
     await refused('PUT app/lessons/:id/feedback as a stranger', 404, () =>
       new AppController().feedback(fixture.sessionId, { studentId: fixture.aliceId, mood: 4 }),
+    );
+  });
+});
+
+test('Vou / Não vou and the instructor home: families only write their own, staff only read — POOLSE-90 slice 2', async () => {
+  await asEach(async () => {
+    await refused('GET app/teaching as a family', 403, () => new AppController().teaching());
+  });
+  await as(fixture.instructorId, ['instructor'], async () => {
+    await refused('PUT sessions/:id/notices/:studentId as staff', 403, () =>
+      new NoticesController().answer(fixture.sessionId, fixture.aliceId, { going: false }),
+    );
+  });
+  await as(fixture.maintenanceId, ['maintenance'], async () => {
+    await refused('GET app/teaching as maintenance', 403, () => new AppController().teaching());
+  });
+  await as(fixture.unlinkedGuardianId, ['guardian'], async () => {
+    await refused('PUT sessions/:id/notices/:studentId as a stranger', 404, () =>
+      new NoticesController().answer(fixture.sessionId, fixture.aliceId, { going: false }),
     );
   });
 });

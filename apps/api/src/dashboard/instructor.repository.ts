@@ -221,6 +221,10 @@ export interface WeekClass {
   registerTaken: boolean;
   /** Already over on the site's clock. */
   past: boolean;
+  /** Enrolled that day — null for a parceria, which counts heads, not students. */
+  enrolled: number | null;
+  /** *Não vou* answers on this lesson — POOLSE-90 slice 2. */
+  notComing: number;
 }
 
 /**
@@ -252,6 +256,8 @@ export async function readMyWeek(
       cancelled: boolean;
       register_taken: boolean;
       past: boolean;
+      enrolled: number | null;
+      not_coming: number;
     }>(
       `SELECT cs.id,
               cs.class_group_id,
@@ -266,7 +272,16 @@ export async function readMyWeek(
               cs.duration_minutes,
               (cs.status = 'cancelled') AS cancelled,
               ${REGISTER_TAKEN} AS register_taken,
-              (cs.ends_at <= now()) AS past
+              (cs.ends_at <= now()) AS past,
+              CASE WHEN cs.class_group_id IS NULL THEN NULL ELSE (
+                SELECT count(*)::int FROM enrollment e
+                 WHERE e.organization_id = cs.organization_id AND e.class_group_id = cs.class_group_id
+                   AND e.status <> 'waiting'
+                   AND e.joined_on <= cs.occurs_on AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on)
+              ) END AS enrolled,
+              (SELECT count(*)::int FROM session_notice sn
+                WHERE sn.organization_id = cs.organization_id AND sn.class_session_id = cs.id
+                  AND NOT sn.going) AS not_coming
          ${JOINS}
         WHERE cs.resolved_instructor_id = $1
           AND cs.starts_at >= now() - interval '8 days'
@@ -291,6 +306,8 @@ export async function readMyWeek(
       cancelled: row.cancelled,
       registerTaken: row.register_taken,
       past: row.past,
+      enrolled: row.enrolled,
+      notComing: row.not_coming,
     }));
   });
 }

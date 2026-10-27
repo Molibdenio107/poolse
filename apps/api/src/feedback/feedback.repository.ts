@@ -15,17 +15,14 @@ import { TOTAL_COUNT, windowed, type PageQuery, type Paginated } from '../common
  * answers as a 409. The window is `lesson_feedback_window()`, read from SQL.
  *
  * **Who answers** is the family's own child (the controller's
- * `familyStudents`), and of those: a guardian always; the student's own login
- * from `SELF_ANSWER_AGE`, or at any age on the adult path (no live guardian),
- * because otherwise nobody could answer for an adult with no birth date.
+ * `familyStudents`), and of those whoever `family_may_answer()` admits: a live
+ * guardian, or the student's own login from 12 or on the adult path — POOLSE-90's
+ * Decided 2, one SQL definition for this and *Vou / Não vou*.
  *
  * **Who reads** — owner and admin everything; an instructor the lessons they
  * taught, by `resolved_instructor_id`, so the stand-in reads the night they
  * covered and the regular instructor does not. Decided per row here.
  */
-
-/** A student answers for themselves from this age (POOLSE-90's *Vou / Não vou* rule). */
-export const SELF_ANSWER_AGE = 12;
 
 export type AuthoredBy = 'student' | 'guardian';
 
@@ -85,19 +82,13 @@ export class FeedbackRefusedError extends Error {
 const TZ = `coalesce(f.timezone, 'Europe/Lisbon')`;
 
 /**
- * Whether the reader (`membership`, a SQL parameter) answers for the student
- * aliased `student` — rule 2, the one definition, read by the lesson page and by
- * *Últimas aulas* so the list never offers what the page will not take.
+ * Whether the reader (`membership`, a SQL expression) answers for the student
+ * aliased `student`: `family_may_answer()`, the one definition, shared with
+ * POOLSE-90's *Vou / Não vou*. Read by the lesson page and by *Últimas aulas*,
+ * so the list never offers what the page will not take.
  */
-export const mayAnswer = (student: string, membership: string): string => `(
-  EXISTS (SELECT 1 FROM guardian_link gl
-           WHERE gl.student_id = ${student}.id AND gl.organization_id = ${student}.organization_id
-             AND gl.guardian_membership_id = ${membership} AND gl.archived_at IS NULL)
-  OR (${student}.membership_id = ${membership} AND (
-        date_part('year', age(club_today(), ${student}.birth_date)) >= ${SELF_ANSWER_AGE}
-        OR NOT EXISTS (SELECT 1 FROM guardian_link gl
-                        WHERE gl.student_id = ${student}.id AND gl.organization_id = ${student}.organization_id
-                          AND gl.archived_at IS NULL))))`;
+export const mayAnswer = (student: string, membership: string): string =>
+  `family_may_answer(${student}.organization_id, ${student}.id, ${membership})`;
 
 /** The columns of a `LessonFeedback`, over `lesson_feedback fb` joined as `FROM_FEEDBACK` joins it. */
 const FEEDBACK_COLUMNS = `

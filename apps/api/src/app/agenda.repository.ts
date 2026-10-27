@@ -51,10 +51,23 @@ export interface AgendaEntry {
   cancellationReason: string | null;
   /** Moved for this week only — *Mudou*. */
   moved: boolean;
+  /**
+   * *Vou / Não vou* — POOLSE-90 slice 2: the last answer (true *Vou*, false
+   * *Não vou*) or null when nobody has answered.
+   */
+  going: boolean | null;
+  /** This reader answers for this child (`family_may_answer()`). */
+  mayAnswer: boolean;
+  /**
+   * The lesson still takes an answer: a turma's, not cancelled, not started.
+   * The trigger on `session_notice` is the guard; this only says it in advance.
+   */
+  noticeOpen: boolean;
 }
 
 export async function readAgenda(
   organizationId: string,
+  membershipId: string,
   studentIds: string[],
   sessionId: string | null = null,
 ): Promise<AgendaEntry[]> {
@@ -82,7 +95,10 @@ export async function readAgenda(
               cs.status::text AS status,
               cs.closure_id IS NOT NULL AS "byClosure",
               cs.cancellation_reason AS "cancellationReason",
-              cs.moved_at IS NOT NULL AS moved
+              cs.moved_at IS NOT NULL AS moved,
+              sn.going,
+              ${mayAnswer('s', '$3::uuid')} AS "mayAnswer",
+              (cs.status <> 'cancelled' AND cs.starts_at > now()) AS "noticeOpen"
          FROM unnest($1::uuid[]) AS chosen(id)
          JOIN student s ON s.id = chosen.id AND s.archived_at IS NULL
          JOIN enrollment e
@@ -105,6 +121,8 @@ export async function readAgenda(
          LEFT JOIN membership im
                 ON im.id = cs.resolved_instructor_id AND im.organization_id = cs.organization_id
          LEFT JOIN app_user iu ON iu.id = im.app_user_id
+         LEFT JOIN session_notice sn
+                ON sn.organization_id = cs.organization_id AND sn.class_session_id = cs.id AND sn.student_id = s.id
         WHERE (
                 ($2::uuid IS NULL
                   AND cs.occurs_on BETWEEN club_today() AND club_today() + ${AGENDA_DAYS - 1}
@@ -114,7 +132,7 @@ export async function readAgenda(
                   AND lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at) >= club_today())
               )
         ORDER BY cs.starts_at, s.first_name, cs.id`,
-      [studentIds, sessionId],
+      [studentIds, sessionId, membershipId],
     );
     return rows;
   });
