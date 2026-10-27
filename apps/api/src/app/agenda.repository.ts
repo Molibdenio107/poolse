@@ -1,4 +1,5 @@
 import { withOrg } from '@poolse/db';
+import { mayAnswer } from '../feedback/feedback.repository.js';
 
 /**
  * The family agenda — POOLSE-90 slice 1.
@@ -109,8 +110,8 @@ export async function readAgenda(
                   AND cs.occurs_on BETWEEN club_today() AND club_today() + ${AGENDA_DAYS - 1}
                   AND cs.ends_at > now())
              OR (cs.id = $2::uuid
-                  AND cs.occurs_on BETWEEN club_today() - lesson_feedback_window()
-                                       AND club_today() + ${AGENDA_DAYS - 1})
+                  AND cs.occurs_on <= club_today() + ${AGENDA_DAYS - 1}
+                  AND lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at) >= club_today())
               )
         ORDER BY cs.starts_at, s.first_name, cs.id`,
       [studentIds, sessionId],
@@ -163,6 +164,8 @@ export interface RecentLesson {
   mood: number | null;
   /** Still inside the window — *Dar feedback* when there is no mood yet. */
   open: boolean;
+  /** The reader answers for this child; else the list offers nothing to do. */
+  mayAnswer: boolean;
 }
 
 /**
@@ -170,7 +173,11 @@ export interface RecentLesson {
  * present) inside the feedback window, newest first. A lesson the child missed
  * is not here: there is nothing to say about it.
  */
-export async function readRecent(organizationId: string, studentIds: string[]): Promise<RecentLesson[]> {
+export async function readRecent(
+  organizationId: string,
+  membershipId: string,
+  studentIds: string[],
+): Promise<RecentLesson[]> {
   if (studentIds.length === 0) return [];
   return withOrg(organizationId, async (tx) => {
     const { rows } = await tx.query<RecentLesson>(
@@ -180,7 +187,8 @@ export async function readRecent(organizationId: string, studentIds: string[]): 
               to_char(cs.starts_at AT TIME ZONE ${TZ}, 'YYYY-MM-DD') AS "localDate",
               to_char(cs.starts_at AT TIME ZONE ${TZ}, 'HH24:MI')    AS "localTime",
               fb.mood,
-              club_today() <= cs.occurs_on + lesson_feedback_window() AS open
+              club_today() <= lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at) AS open,
+              ${mayAnswer('s', '$2::uuid')} AS "mayAnswer"
          FROM unnest($1::uuid[]) AS chosen(id)
          JOIN student s ON s.id = chosen.id AND s.archived_at IS NULL
          JOIN attendance a
@@ -197,10 +205,18 @@ export async function readRecent(organizationId: string, studentIds: string[]): 
          LEFT JOIN lesson_feedback fb
                 ON fb.organization_id = cs.organization_id AND fb.class_session_id = cs.id
                AND fb.student_id = s.id AND fb.archived_at IS NULL
-        WHERE cs.occurs_on >= club_today() - lesson_feedback_window()
+        WHERE lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at) >= club_today()
           AND cs.ends_at <= now()
+          -- Enrolled that day, as the lesson page and the write require: a
+          -- reposição guest is marked present too, but the family app has never
+          -- shown a make-up lesson, and listing one that 404s is worse (sweep 27-10).
+          AND EXISTS (
+                SELECT 1 FROM enrollment e
+                 WHERE e.organization_id = cs.organization_id AND e.student_id = s.id
+                   AND e.class_group_id = cs.class_group_id AND e.status <> 'waiting'
+                   AND e.joined_on <= cs.occurs_on AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on))
         ORDER BY cs.starts_at DESC, s.first_name, cs.id`,
-      [studentIds],
+      [studentIds, membershipId],
     );
     return rows;
   });

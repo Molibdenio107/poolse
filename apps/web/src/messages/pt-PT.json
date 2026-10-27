@@ -106,7 +106,9 @@
         "feedback_too_early": "A aula ainda não terminou.",
         "feedback_not_present": "A presença nesta aula não está registada.",
         "feedback_window_closed": "Já não pode ser alterado: o prazo terminou a {date}."
-      }
+      },
+      "notAllowed": "Não é possível enviar o feedback neste momento.",
+      "noneYet": "Ainda não foi dado feedback a esta aula."
     }
   },
   "common": {
@@ -5846,6 +5848,7 @@
       "3": "Assim-assim",
       "4": "Bem",
       "5": "Muito bem"
-    }
+    },
+    "archiveNamed": "Arquivar o feedback: {name}"
   }
 }

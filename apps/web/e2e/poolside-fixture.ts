@@ -281,6 +281,13 @@ export async function poolsideYesterday(): Promise<{ sessionId: string; anaId: s
     await db.query(`UPDATE class_session SET status = 'scheduled', cancellation_reason = NULL WHERE id = $1`, [
       sessionId,
     ]);
+    // Only Ana marked: today's lesson becomes yesterday's overnight, and the
+    // poolside suite marks all fifteen present on it — Bruno would then be a
+    // second form on the guardian's page (sweep 27-10).
+    await db.query(
+      `DELETE FROM attendance WHERE organization_id = $1 AND class_session_id = $2 AND student_id <> $3`,
+      [org, sessionId, ana],
+    );
     await db.query(
       `INSERT INTO attendance (organization_id, class_session_id, student_id, status, recorded_by_membership_id)
        VALUES ($1, $2, $3, 'present', $4)

@@ -41,9 +41,12 @@ desktop palette is not touched.
 - **Fees**: one line per child from `balance` on the fee read. *Em dívida* when something is
   overdue, *Por pagar … até* before its date, *Em dia* when nothing is owed. It links to the
   child's fee page.
-- **Últimas aulas** (POOLSE-116, `recent` on the agenda): the lessons each child was marked
-  *present* at inside the feedback window, newest first, each with its mood (face and word) or
-  *Dar feedback*. A lesson the child missed is not listed. The strip is absent when it is empty.
+- **Últimas aulas** (POOLSE-116, `recent` on the agenda): the lessons each child was enrolled in
+  and marked *present* at inside the feedback window, newest first, each with its mood (face and
+  word), or *Dar feedback* when the reader answers for that child. A missed lesson and a reposição
+  (no enrolment, so the lesson page would not open) are not listed. The strip is absent when empty.
+- **The window counts from the day the lesson happened** (`lesson_feedback_closes_on()`, on the
+  site's clock), never from `occurs_on`, which a one-week move does not change.
 
 ## The lesson's page (`/app/familia/aulas/:sessionId`)
 

@@ -624,7 +624,7 @@ export default async function StudentPage({
                 ) : (
                   <FeedbackList items={list.items} by="lesson" canArchive={reg.canManage} />
                 )}
-                <Pagination page={list} basePath={`/dashboard/students/${id}`} query={{ tab: 'feedback' }} />
+                <Pagination page={list} basePath={`/dashboard/students/${id}`} query={{ tab: 'feedback', from }} />
               </section>
             );
           },

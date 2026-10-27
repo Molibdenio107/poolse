@@ -334,8 +334,11 @@ and *Obs.* The *Escalão* column appears only when the club has set that season'
 *Obs.* is words, never colour: **RP** for a time that is still the swimmer's best, and **Mín.**
 followed by the standard's name for each live standard whose entry time the swim met
 (`qualifying_attempts()`). A friendly or 25 m swim is never a mínimo. A swimmer's block stays on one
-page when it fits, and its heading repeats on a page it continues onto. Every page carries
-*Gerado pelo Poolse em …* and *n / N* in its margin, where the browser supports it.
+page when it fits, and its heading repeats on a page it continues onto. The sheet ends with
+*Gerado pelo Poolse em …*, in the body so every browser prints it, and every page carries *n / N*
+in its margin where the browser supports margin boxes. A result swum in another pool than the
+meet's names its course in the event's title. *Escalão* reads one season: the meet's, and the
+published one where a draft overlaps it.
 
 The options *Todos os nadadores / Só com recorde pessoal / Só com mínimos* and *Por nadador / Por
 prova* filter the **results** (a swimmer appears if they have one) and live in the address, so the tab

@@ -212,6 +212,22 @@ test('POOLSE-116 — a family answers for a lesson its child attended, and staff
       assert.equal((await attendance.register(yesterday)).feedback.length, 2, 'restored from Arquivados');
     });
 
+    // Sweep 27-10: the window counts from the day it was taught. A lesson whose
+    // pattern day was ten days ago, moved to yesterday for that week only, is
+    // inside it, and it is on Últimas aulas.
+    const [moved] = await tenant.sql<{ id: string }>(
+      `INSERT INTO class_session (organization_id, class_group_id, pool_id, instructor_membership_id, occurs_on, starts_at, duration_minutes, moved_at)
+       SELECT $1, $2, $3, $4, club_today() - 10, ((club_today() - 1) + TIME '19:00') AT TIME ZONE 'Europe/Lisbon', 45, now()
+       RETURNING id`,
+      [org, group!.id, pool!.id, teacher],
+    );
+    await mark(moved!.id, alice!.id, 'present');
+    await actingAs(tenant, { membershipId: mother, roles: ['guardian'] }, async () => {
+      assert.equal((await app.lesson(moved!.id)).feedback[0]?.state, 'open', 'moved: open from the day it happened');
+      assert.equal((await app.feedback(moved!.id, { studentId: alice!.id, mood: 4 })).mood, 4);
+      assert.ok((await app.agenda()).recent.some((one) => one.sessionId === moved!.id));
+    });
+
     // QA 9: another club reads none of it.
     await withScratchTenant(async (other) => {
       await actingAs(other, { roles: ['owner'] }, async () => {

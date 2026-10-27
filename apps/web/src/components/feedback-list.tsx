@@ -47,7 +47,14 @@ export async function FeedbackList({
               ].join(' · ')}
             </p>
           </div>
-          {canArchive && <ArchiveFeedbackButton feedbackId={item.id} />}
+          {canArchive && (
+            <ArchiveFeedbackButton
+              feedbackId={item.id}
+              label={t('feedback.archiveNamed', {
+                name: by === 'student' ? item.studentName : formatDate(item.lessonDate),
+              })}
+            />
+          )}
         </li>
       ))}
     </ul>

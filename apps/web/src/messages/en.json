@@ -106,7 +106,9 @@
         "feedback_too_early": "The lesson has not ended yet.",
         "feedback_not_present": "Attendance at this lesson is not recorded.",
         "feedback_window_closed": "It can no longer be changed: the deadline was {date}."
-      }
+      },
+      "notAllowed": "The feedback cannot be sent right now.",
+      "noneYet": "No feedback has been given on this lesson yet."
     }
   },
   "common": {
@@ -5846,6 +5848,7 @@
       "3": "So-so",
       "4": "Good",
       "5": "Very good"
-    }
+    },
+    "archiveNamed": "Archive the feedback: {name}"
   }
 }

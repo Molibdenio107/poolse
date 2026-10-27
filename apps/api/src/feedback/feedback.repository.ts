@@ -84,6 +84,21 @@ export class FeedbackRefusedError extends Error {
 
 const TZ = `coalesce(f.timezone, 'Europe/Lisbon')`;
 
+/**
+ * Whether the reader (`membership`, a SQL parameter) answers for the student
+ * aliased `student` — rule 2, the one definition, read by the lesson page and by
+ * *Últimas aulas* so the list never offers what the page will not take.
+ */
+export const mayAnswer = (student: string, membership: string): string => `(
+  EXISTS (SELECT 1 FROM guardian_link gl
+           WHERE gl.student_id = ${student}.id AND gl.organization_id = ${student}.organization_id
+             AND gl.guardian_membership_id = ${membership} AND gl.archived_at IS NULL)
+  OR (${student}.membership_id = ${membership} AND (
+        date_part('year', age(club_today(), ${student}.birth_date)) >= ${SELF_ANSWER_AGE}
+        OR NOT EXISTS (SELECT 1 FROM guardian_link gl
+                        WHERE gl.student_id = ${student}.id AND gl.organization_id = ${student}.organization_id
+                          AND gl.archived_at IS NULL))))`;
+
 /** The columns of a `LessonFeedback`, over `lesson_feedback fb` joined as `FROM_FEEDBACK` joins it. */
 const FEEDBACK_COLUMNS = `
   fb.id, fb.class_session_id AS "sessionId", fb.student_id AS "studentId",
@@ -147,31 +162,25 @@ async function familyFeedbackIn(
   }>(
     `SELECT s.id AS student_id, ${shortName('s')} AS student_name, cs.status::text AS status, cs.ends_at <= now() AS ended,
             a.status::text AS mark,
-            to_char(cs.occurs_on + lesson_feedback_window(), 'YYYY-MM-DD') AS closes_on,
-            club_today() <= cs.occurs_on + lesson_feedback_window() AS open,
-            (
-              EXISTS (SELECT 1 FROM guardian_link gl
-                       WHERE gl.student_id = s.id AND gl.organization_id = s.organization_id
-                         AND gl.guardian_membership_id = $1 AND gl.archived_at IS NULL)
-              OR (s.membership_id = $1 AND (
-                    date_part('year', age(club_today(), s.birth_date)) >= ${SELF_ANSWER_AGE}
-                    OR NOT EXISTS (SELECT 1 FROM guardian_link gl
-                                    WHERE gl.student_id = s.id AND gl.organization_id = s.organization_id
-                                      AND gl.archived_at IS NULL)))
-            ) AS may_answer,
+            to_char(lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at), 'YYYY-MM-DD') AS closes_on,
+            club_today() <= lesson_feedback_closes_on(cs.organization_id, cs.pool_id, cs.starts_at) AS open,
+            ${mayAnswer('s', '$1')} AS may_answer,
             fb.id AS feedback_id
        FROM unnest($3::uuid[]) AS chosen(id)
        JOIN student s ON s.id = chosen.id AND s.archived_at IS NULL
        JOIN class_session cs ON cs.id = $2 AND cs.organization_id = s.organization_id
-       JOIN enrollment e
-         ON e.organization_id = s.organization_id AND e.student_id = s.id
-        AND e.class_group_id = cs.class_group_id AND e.status <> 'waiting'
-        AND e.joined_on <= cs.occurs_on AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on)
        LEFT JOIN attendance a
               ON a.organization_id = cs.organization_id AND a.class_session_id = cs.id AND a.student_id = s.id
        LEFT JOIN lesson_feedback fb
               ON fb.organization_id = cs.organization_id AND fb.class_session_id = cs.id
-             AND fb.student_id = s.id AND fb.archived_at IS NULL`,
+             AND fb.student_id = s.id AND fb.archived_at IS NULL
+       -- EXISTS, not a join: an enrolment ended and restarted on the lesson's
+       -- day is two rows, and the child would get two panels (sweep 27-10).
+       WHERE EXISTS (
+              SELECT 1 FROM enrollment e
+               WHERE e.organization_id = s.organization_id AND e.student_id = s.id
+                 AND e.class_group_id = cs.class_group_id AND e.status <> 'waiting'
+                 AND e.joined_on <= cs.occurs_on AND (e.ended_on IS NULL OR e.ended_on >= cs.occurs_on))`,
     [membershipId, sessionId, studentIds],
   );
 

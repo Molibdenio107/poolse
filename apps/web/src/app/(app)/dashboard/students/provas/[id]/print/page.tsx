@@ -95,6 +95,12 @@ export default async function MeetPrintPage({
 
   const event = (result: MeetResult): string =>
     `${result.distanceM} m ${t(`progress.strokes.${result.stroke}`)}`;
+  // A result swum in another pool than the meet's says so, or two event groups
+  // would carry the same title (sweep 27-10).
+  const eventTitle = (result: MeetResult): string =>
+    result.course !== null && result.course !== meet.course
+      ? `${event(result)} · ${t(`progress.course.${result.course}`)}`
+      : event(result);
   const round = (result: MeetResult): string | null =>
     result.round === null || result.round === 'TIM' ? null : t(`meets.round.${roundKey(result.round)}`);
   const marks = (result: MeetResult): string[] => [
@@ -105,7 +111,7 @@ export default async function MeetPrintPage({
   const kept = meet.results.filter((result) =>
     show === 'pb' ? result.isPersonalBest : show === 'min' ? result.qualifies.length > 0 : true,
   );
-  const groups = grouping === 'swimmer' ? bySwimmer(kept) : byEvent(kept, event);
+  const groups = grouping === 'swimmer' ? bySwimmer(kept) : byEvent(kept, eventTitle);
   const showAgeGroups = kept.some((result) => result.ageGroups.length > 0);
   const swimmers = new Set(meet.results.map((result) => result.studentId)).size;
   const unmatched = meet.unmatched.reduce((sum, athlete) => sum + athlete.results, 0);
@@ -140,7 +146,6 @@ export default async function MeetPrintPage({
         @page {
           size: A4 portrait;
           margin: 14mm 14mm 18mm;
-          @bottom-left { content: ${JSON.stringify(generated)}; font-size: 8pt; }
           @bottom-right { content: counter(page) " / " counter(pages); font-size: 8pt; }
         }
         @media print {
@@ -251,8 +256,12 @@ export default async function MeetPrintPage({
       <footer className="mt-6 flex flex-col gap-1 border-t border-black/40 pt-2 text-[9pt]">
         {unmatched > 0 && <p>{t('meets.print.unmatched', { count: unmatched })}</p>}
         <p>{t('meets.print.legend')}</p>
-        {/* On paper the page's margin carries this line; on screen it is here. */}
-        <p className="print:hidden">{generated}</p>
+        {/*
+          In the body, not a margin box: Firefox prints no margin boxes, and a
+          sheet that silently drops its date is worse than one that says it once
+          (sweep 27-10). The page numbers stay in the margin, where supported.
+        */}
+        <p>{generated}</p>
       </footer>
     </main>
   );

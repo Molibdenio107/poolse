@@ -106,6 +106,7 @@ export class AppController {
       water: await waterFor(organizationId, entries),
       recent: await readRecent(
         organizationId,
+        membershipId,
         chosen.map((one) => one.id),
       ),
     };

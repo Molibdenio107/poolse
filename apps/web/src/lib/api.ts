@@ -5233,4 +5233,6 @@ export interface RecentLesson {
   localTime: string;
   mood: number | null;
   open: boolean;
+  /** The reader answers for this child; else *Dar feedback* is not offered. */
+  mayAnswer: boolean;
 }

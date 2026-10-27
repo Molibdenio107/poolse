@@ -12,7 +12,14 @@ const INITIAL: FormState = { ok: false };
  * Arquivar, on one feedback — owner and admin (POOLSE-116). No dialog: it is
  * one click back through the toast's *Anular* and from Arquivados.
  */
-export function ArchiveFeedbackButton({ feedbackId }: { feedbackId: string }): React.ReactElement {
+export function ArchiveFeedbackButton({
+  feedbackId,
+  label,
+}: {
+  feedbackId: string;
+  /** Whose answer this archives — a row of buttons all called "Arquivar" says nothing to a screen reader. */
+  label: string;
+}): React.ReactElement {
   const t = useTranslations();
   const path = usePathname();
   const [, action, pending] = useSavedAction(archiveFeedbackAction, INITIAL);
@@ -23,6 +30,7 @@ export function ArchiveFeedbackButton({ feedbackId }: { feedbackId: string }): R
       <button
         type="submit"
         disabled={pending}
+        aria-label={label}
         className="inline-flex h-control items-center justify-center rounded border border-border px-4 text-control text-foreground-muted hover:border-danger/50 hover:text-danger disabled:opacity-60"
       >
         {t('feedback.archive')}

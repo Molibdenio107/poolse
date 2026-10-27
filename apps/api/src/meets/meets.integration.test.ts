@@ -231,14 +231,16 @@ test('POOLSE-115 — a result is marked with the standards whose entry time it m
   await withScratchTenant(async (tenant) => {
     await student(tenant, 'Inês', 'Sousa', '2012-04-03', '204117');
     const org = tenant.organizationId;
-    const [season] = await tenant.sql<{ id: string }>(
-      `INSERT INTO season (organization_id, name, starts_on, ends_on, status)
-       VALUES ($1, '2026/2027 (provas)', '2026-09-01', '2027-07-31', 'draft') RETURNING id`,
-      [org],
+    // The club's published season holds the meet's dates; a draft overlapping it
+    // (next year planned early) has its own bands, which must not leak in.
+    await tenant.sql(
+      `UPDATE season SET starts_on = '2026-09-01', ends_on = '2027-07-31', status = 'published' WHERE id = $1`,
+      [tenant.seasonId],
     );
+    const season = { id: tenant.seasonId };
     const [last] = await tenant.sql<{ id: string }>(
       `INSERT INTO season (organization_id, name, starts_on, ends_on, status)
-       VALUES ($1, '2025/2026', '2025-09-01', '2026-07-31', 'archived') RETURNING id`,
+       VALUES ($1, '2027/2028 (rascunho)', '2026-12-01', '2027-08-31', 'draft') RETURNING id`,
       [org],
     );
     const [group] = await tenant.sql<{ id: string }>(
@@ -246,7 +248,7 @@ test('POOLSE-115 — a result is marked with the standards whose entry time it m
        VALUES ($1, $2, 'Infantis A', 2012, 2012) RETURNING id`,
       [org, season!.id],
     );
-    // Last season's band admits her too; the meet is not in last season.
+    // The overlapping draft's band admits her too; the published season wins.
     await tenant.sql(
       `INSERT INTO federation_age_group (organization_id, season_id, name, born_from, born_to)
        VALUES ($1, $2, 'Infantis B', 2012, 2012)`,
@@ -277,7 +279,7 @@ test('POOLSE-115 — a result is marked with the standards whose entry time it m
       const byRound = Object.fromEntries(detail.results.map((r) => [r.round, r]));
       assert.deepEqual(byRound['FIN']!.qualifies, ['Nacionais de Infantis'], 'the final met the entry time');
       assert.deepEqual(byRound['PRE']!.qualifies, [], 'the heat did not');
-      assert.deepEqual(byRound['FIN']!.ageGroups, ['Infantis A'], 'this season\'s band, not last season\'s');
+      assert.deepEqual(byRound['FIN']!.ageGroups, ['Infantis A'], 'the published season\'s band, not the overlapping draft\'s');
 
       // A friendly meet is never a mínimo, however fast.
       const friendly = await meets.import({

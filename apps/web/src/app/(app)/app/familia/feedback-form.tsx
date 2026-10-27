@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { TextAreaField, useSeeded } from '@/components/ui/field';
 import { MOODS, MOOD_ICONS } from '@/components/mood';
@@ -33,6 +33,9 @@ export function FeedbackForm({
   const [state, action, pending] = useSavedAction(saveFeedbackAction, INITIAL);
   const [mood, setMood] = useSeeded(savedMood === null ? '' : String(savedMood));
   const [length, setLength] = useState((savedComment ?? '').length);
+  // The box re-seeds to what was saved (trimmed by the API) without telling
+  // `onValueChange`, so the counter follows the saved text too (sweep 27-10).
+  useEffect(() => setLength((savedComment ?? '').length), [savedComment]);
 
   return (
     <form action={action} className="flex flex-col gap-3">

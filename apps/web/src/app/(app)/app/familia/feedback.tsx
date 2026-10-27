@@ -48,7 +48,9 @@ export async function FeedbackPanel({
     body = (
       <>
         {feedback === null ? (
-          <p className="text-sm text-foreground-muted">{t('app.feedback.none')}</p>
+          <p className="text-sm text-foreground-muted">
+            {state === 'open' ? t('app.feedback.noneYet') : t('app.feedback.none')}
+          </p>
         ) : (
           <div className="flex flex-col gap-1">
             <MoodFace mood={feedback.mood} className="font-medium" />
@@ -113,7 +115,7 @@ export async function RecentLessons({
                 <span className="flex shrink-0 items-center gap-1 text-sm">
                   {lesson.mood !== null ? (
                     <MoodFace mood={lesson.mood} />
-                  ) : lesson.open ? (
+                  ) : lesson.open && lesson.mayAnswer ? (
                     <span className="font-medium text-primary">{t('app.feedback.give')}</span>
                   ) : null}
                   <ChevronRight className="size-4 text-foreground-muted" aria-hidden />

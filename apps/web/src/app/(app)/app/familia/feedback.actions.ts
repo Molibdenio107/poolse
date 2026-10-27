@@ -25,7 +25,14 @@ export async function saveFeedbackAction(_previous: FormState, formData: FormDat
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 400 && Object.keys(error.fields).length > 0) return { ok: false, fields: error.fields };
-      if (error.status === 403) return { ok: false, errorKey: 'app.feedback.guardianAnswers' };
+      // Only the rule-2 refusal is about who answers; a read-only or closed club
+      // is a 403 too, and the standing banner already says why (sweep 27-10).
+      if (error.status === 403) {
+        return {
+          ok: false,
+          errorKey: error.code === 'feedback_guardian_answers' ? 'app.feedback.guardianAnswers' : 'app.feedback.notAllowed',
+        };
+      }
       if (error.status === 409 && error.code !== null && error.code.startsWith('feedback_')) {
         const closesOn = (error.details as { closesOn?: unknown } | null)?.closesOn;
         return {

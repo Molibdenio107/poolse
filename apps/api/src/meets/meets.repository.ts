@@ -553,12 +553,16 @@ export async function findMeet(organizationId: string, meetId: string): Promise<
               coalesce(made.qualifies, '{}') AS qualifies,
               coalesce((
                 SELECT array_agg(DISTINCT g.name ORDER BY g.name)
-                  FROM season se
-                  JOIN federation_age_group g ON g.season_id = se.id
-                                             AND g.organization_id = se.organization_id
-                                             AND g.archived_at IS NULL
-                 WHERE se.organization_id = r.organization_id
-                   AND (SELECT starts_on FROM swim_meet WHERE id = $1) BETWEEN se.starts_on AND se.ends_on
+                  FROM federation_age_group g
+                 -- One season: the meet's, and where a draft overlaps the one
+                 -- running, the published one, else the latest (sweep 27-10).
+                 WHERE g.season_id = (
+                         SELECT se.id FROM season se
+                          WHERE se.organization_id = r.organization_id
+                            AND (SELECT starts_on FROM swim_meet WHERE id = $1) BETWEEN se.starts_on AND se.ends_on
+                          ORDER BY (se.status = 'published') DESC, se.starts_on DESC
+                          LIMIT 1)
+                   AND g.archived_at IS NULL
                    AND federation_age_group_admits(g.gender, g.born_from, g.born_to, s.birth_date, s.gender)
               ), '{}') AS age_groups
          FROM student_record r

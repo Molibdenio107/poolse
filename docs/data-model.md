@@ -3929,8 +3929,11 @@ and `membership`.
   cancelled session (`feedback_cancelled`), one not yet ended (`feedback_too_early|<ends_at>`), a
   student not marked present (`feedback_not_present|<mark or none>`), and a lesson past the window
   (`feedback_window_closed|<closes_on>`). Archiving, restoring and anonymising pass.
-- **`lesson_feedback_window()`** = 7, the one definition of the window, read by the trigger and by
-  the API, counted from `occurs_on` and judged on `club_today()`.
+- **`lesson_feedback_window()`** = 7 days, and **`lesson_feedback_closes_on(org, pool, starts_at)`**
+  (migration `1792663200000_lesson-feedback-lesson-day`, sweep 27-10) is the last day a lesson's
+  feedback may be written: the day it happened on the site's clock (`session_local_date()`) plus
+  the window, judged on `club_today()`. It is never `occurs_on`, which a one-week move does not
+  change. The trigger and the API both read it.
 - `poolse_app` holds SELECT and INSERT, and UPDATE on `mood`, `comment`, `author_membership_id` and
   `archived_at`. It holds no DELETE, and `anonymised_at` is retention's alone.
 - `apply_retention()` clears `comment` and `author_membership_id` and sets `anonymised_at` with
