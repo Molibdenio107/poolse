@@ -5,10 +5,13 @@ import {
   E2E_GUARDIAN_PASSWORD,
   E2E_PASSWORD,
   GUARDIAN_SESSION,
+  INSTRUCTOR_SESSION,
+  NO_INSTRUCTOR,
+  E2E_INSTRUCTOR_EMAIL,
   NO_GUARDIAN,
   NO_TEST_USER,
 } from './session';
-import { poolsideLesson, poolsideYesterday } from './poolside-fixture';
+import { poolsideLesson, poolsideTomorrow, poolsideYesterday } from './poolside-fixture';
 
 /**
  * App mode on a phone — POOLSE-90 slice 1, QA 1, 3 and the lesson page, as a
@@ -114,6 +117,50 @@ test.describe('as a guardian', () => {
 
     await visit(page, '/app/familia');
     await expect(page.locator(`a[href="/app/familia/aulas/${sessionId}"]`).first()).toContainText(/^.*(bem|good)/i);
+  });
+});
+
+test.describe('as a guardian, before a lesson', () => {
+  test.use({ storageState: GUARDIAN_SESSION });
+
+  test("POOLSE-90 QA 7 — Não vou for Ana on tomorrow's lesson, one tap, and the agenda says so", async ({ page }) => {
+    const { sessionId } = await poolsideTomorrow();
+    await visit(page, `/app/familia/aulas/${sessionId}`);
+    // Two of hers are in the lesson, so each question names its child.
+    const ana = page.locator('section').filter({ has: page.getByRole('heading', { name: /ana poolside/i }) }).filter({
+      has: page.getByRole('button', { name: /^(não vou|i'm not coming)$/i }),
+    });
+    const notGoing = ana.getByRole('button', { name: /^(não vou|i'm not coming)$/i });
+    expect((await notGoing.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await notGoing.tap();
+    await expect(page.getByText(/avisado: não vem à aula|sent: not coming to the lesson/i)).toBeVisible({ timeout: 15_000 });
+    await expect(notGoing).toHaveAttribute('aria-pressed', 'true');
+    await noSidewaysScroll(page);
+
+    await visit(page, '/app/familia');
+    await expect(
+      page.locator(`a[href="/app/familia/aulas/${sessionId}"]`).filter({ hasText: 'Ana Poolside' }),
+    ).toContainText(/avisou que não vem|said they are not coming/i);
+  });
+});
+
+test.describe('as an instructor', () => {
+  test.skip(E2E_INSTRUCTOR_EMAIL === undefined, NO_INSTRUCTOR);
+  test.use({ storageState: INSTRUCTOR_SESSION });
+
+  test('POOLSE-90 QA 11 — /app is their lessons, and a lesson opens its register', async ({ page }) => {
+    const { sessionId } = await poolsideTomorrow();
+    await visit(page, '/app');
+    await expect(page).toHaveURL(/\/app\/aulas$/);
+    await expect(page.getByRole('heading', { level: 1, name: /^(as minhas aulas|my lessons)$/i })).toBeVisible();
+    const lesson = page.locator(`a[href^="/dashboard/calendar/sessions/${sessionId}"]`);
+    await expect(lesson).toContainText(/inscrit|enrolled/i);
+    await noSidewaysScroll(page);
+    await expect(async () => {
+      if (!page.url().includes('/calendar/sessions/')) await lesson.tap({ timeout: 5_000 });
+      await expect(page).toHaveURL(/\/calendar\/sessions\//, { timeout: 10_000 });
+    }).toPass({ timeout: 45_000 });
+    await expect(page.getByRole('link', { name: /voltar às minhas aulas|back to my lessons/i })).toBeVisible();
   });
 });
 

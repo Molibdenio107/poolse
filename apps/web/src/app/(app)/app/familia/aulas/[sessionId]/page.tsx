@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { ArrowLeft, NotebookPen } from 'lucide-react';
+import { ArrowLeft, CalendarCheck, NotebookPen } from 'lucide-react';
 import { ApiError, apiFetch, type AppLesson } from '@/lib/api';
 import type { LessonPlan } from '../../../../dashboard/calendar/lesson-plan.actions';
 import { describeLoad } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
 import { EntryCard, dayHeading } from '../../agenda-parts';
 import { FeedbackPanel } from '../../feedback';
+import { NoticeToggle } from '../../notice-toggle';
 
 /**
  * One lesson, for a family — POOLSE-90 slice 1. The time and the place, the
@@ -54,13 +55,46 @@ export default async function FamilyLesson({
 
       <h1 className="text-xl font-semibold tracking-tight">{dayHeading(t, first.localDate)}</h1>
 
-      <EntryCard entry={first} childName={null} water={water} href={null} />
+      {/* With siblings the answer is per child, said in each one's panel below, not on the shared card. */}
+      <EntryCard entry={several ? { ...first, going: null } : first} childName={null} water={water} href={null} />
 
       {several && (
         <p className="text-sm text-foreground-muted">
           {t('app.family.alsoComing', { count: lesson.entries.length })}
         </p>
       )}
+
+      {/*
+        Vou / Não vou — POOLSE-90 slice 2: one per child, only while the lesson
+        still takes an answer. A notice to the club, never a register mark.
+      */}
+      {lesson.entries
+        .filter((entry) => entry.noticeOpen)
+        .map((entry) => {
+          const name = lesson.feedback.find((one) => one.studentId === entry.studentId)?.studentName ?? null;
+          return (
+            <section
+              key={`notice-${entry.studentId}`}
+              className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3"
+            >
+              <h2 className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-foreground-muted">
+                <CalendarCheck className="size-4" aria-hidden />
+                {several && name !== null ? t('app.notice.titleFor', { name }) : t('app.notice.question')}
+              </h2>
+              {entry.mayAnswer ? (
+                <NoticeToggle sessionId={sessionId} studentId={entry.studentId} going={entry.going} />
+              ) : (
+                <p className="text-sm text-foreground-muted">
+                  {entry.going === null
+                    ? t('app.notice.guardianAnswers')
+                    : entry.going
+                      ? t('app.notice.saidGoing')
+                      : t('app.notice.saidNotGoing')}
+                </p>
+              )}
+            </section>
+          );
+        })}
 
       <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
         <h2 className="flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider text-foreground-muted">
@@ -74,14 +108,20 @@ export default async function FamilyLesson({
         )}
       </section>
 
-      {lesson.feedback.map((standing) => (
-        <FeedbackPanel
-          key={standing.studentId}
-          sessionId={sessionId}
-          standing={standing}
-          named={lesson.feedback.length > 1}
-        />
-      ))}
+      {/*
+        How it went — only once there is something to say it about. A coming
+        lesson has *Vem à aula?* above; a cancelled one says so on its card.
+      */}
+      {lesson.feedback
+        .filter((standing) => standing.state !== 'notEnded' && standing.state !== 'cancelled')
+        .map((standing) => (
+          <FeedbackPanel
+            key={standing.studentId}
+            sessionId={sessionId}
+            standing={standing}
+            named={lesson.feedback.length > 1}
+          />
+        ))}
     </>
   );
 }

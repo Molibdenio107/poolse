@@ -308,3 +308,56 @@ export async function poolsideYesterday(): Promise<{ sessionId: string; anaId: s
     await db.end();
   }
 }
+
+/**
+ * Tomorrow's poolside lesson with nobody's *Vou / Não vou* on it yet — POOLSE-90
+ * slice 2. Tomorrow, so it is still answerable at any hour the suite runs.
+ */
+export async function poolsideTomorrow(): Promise<{ sessionId: string; anaId: string }> {
+  const { classGroupId, poolId, studentIds } = await poolsideLesson();
+  const db = await connect();
+  try {
+    await db.query('BEGIN');
+    const group = await db.query<{ organization_id: string; instructor_membership_id: string }>(
+      `SELECT organization_id, instructor_membership_id FROM class_group WHERE id = $1`,
+      [classGroupId],
+    );
+    const { organization_id: org, instructor_membership_id: instructor } = group.rows[0]!;
+    let sessionId = (
+      await db.query<{ id: string }>(
+        `SELECT id FROM class_session
+          WHERE organization_id = $1 AND class_group_id = $2
+            AND occurs_on = (now() AT TIME ZONE 'Europe/Lisbon')::date + 1`,
+        [org, classGroupId],
+      )
+    ).rows[0]?.id;
+    if (sessionId === undefined) {
+      sessionId = (
+        await db.query<{ id: string }>(
+          `INSERT INTO class_session
+             (organization_id, class_group_id, pool_id, instructor_membership_id, occurs_on, starts_at, duration_minutes)
+           SELECT $1, $2, $3, $4, d, (d + TIME '18:00') AT TIME ZONE 'Europe/Lisbon', 45
+             FROM (SELECT (now() AT TIME ZONE 'Europe/Lisbon')::date + 1 AS d) tomorrow
+           RETURNING id`,
+          [org, classGroupId, poolId, instructor],
+        )
+      ).rows[0]!.id;
+    }
+    await db.query(
+      `UPDATE class_session
+          SET status = 'scheduled', cancellation_reason = NULL,
+              instructor_membership_id = $2, substitute_instructor_membership_id = NULL
+        WHERE id = $1`,
+      [sessionId, instructor],
+    );
+    // The owner's login may delete what the app's may not: a clean slate per run.
+    await db.query(`DELETE FROM session_notice WHERE class_session_id = $1`, [sessionId]);
+    await db.query('COMMIT');
+    return { sessionId, anaId: studentIds[0]! };
+  } catch (error) {
+    await db.query('ROLLBACK');
+    throw error;
+  } finally {
+    await db.end();
+  }
+}

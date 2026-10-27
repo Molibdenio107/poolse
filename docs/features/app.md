@@ -13,7 +13,8 @@ definition, also read by the switcher and the dashboard's redirect):
 |---|---|
 | Owner or admin | `/dashboard`, the backoffice |
 | Guardian or student | `/app/familia`, the family agenda |
-| Instructor or maintenance | the backoffice until their homes are built (slices 2 and 3) |
+| Instructor | `/app/aulas`, their lessons (slice 2) |
+| Maintenance | the backoffice until their home is built (slice 3) |
 | Several homes | the one last used on this device (`localStorage`, best effort) |
 
 A reader who is only a family and opens `/dashboard` is sent to `/app`. Staff who are also
@@ -77,13 +78,40 @@ Under the plan, one panel per child in the lesson, from `feedback` on the lesson
 Feedback is never deleted. The office archives it, and the family's box reopens. Staff read it on
 the lesson's register and on the student's *Feedback* tab (`docs/features/students.md`).
 
+## Vou / Não vou (slice 2)
+
+A family's notice to the club about one coming lesson, **never attendance**: nothing is
+pre-marked on the register.
+
+- **Where:** the lesson page has one *Vem à aula?* panel per child while the lesson still takes an
+  answer, with two buttons (*Vou*, *Não vou*), the chosen one pressed and said in words. Each agenda
+  card shows the answer given (*Avisou que vem / que não vem*). With siblings, the shared card at
+  the top of the lesson page leaves it to each child's panel.
+- **Who answers:** `family_may_answer()`, the one rule for this and lesson feedback. That is a live
+  guardian, or the student's own login from 12 (`self_answer_min_age()`) or on the adult path.
+  With no birth date, the guardian answers (Rui, 21-10-2026). Anyone else is 403
+  `notice_guardian_answers`; another family's child, or a lesson the child is not in, is 404.
+- **When:** only for a turma's lesson, not cancelled and not yet started. The `session_notice`
+  trigger refuses the rest with 409 `notice_closed` or `notice_not_offered`.
+- One row per lesson and student, the last answer, who gave it and when. Every change goes to the
+  audit log. It is keyed by session, so a moved week keeps its answers.
+- **The register** shows a chip beside each child who answered (*Confirmou* / *Avisou que não
+  vem*), in neutral colours with an icon so it is never read as a mark, and a count above the roll
+  (*3 avisaram que não vêm*).
+
+## The instructor home (`/app/aulas`, slice 2)
+
+`GET /app/teaching` (instructors) is the dashboard band's own `readMyWeek`: this week's lessons
+where the reader is `resolved_instructor_id`. A stand-in sees the night they cover, and the
+regular instructor does not. The page shows registers still owed first, then today, then the
+rest of the week. Each lesson shows its time, turma, tank and *15 inscritos · 3 não vêm*, and
+opens the existing lesson page. *Voltar* there returns to `/app/aulas` (`readFrom` accepts
+`/app` paths since this slice).
+
 ## Not yet
 
-These are slices 2 to 5 of POOLSE-90:
+These are slices 3 to 5 of POOLSE-90:
 
-- *Vou / Não vou*. A student aged 12 or more with their own login may answer; under 12, a
-  guardian answers (Rui, 21-10-2026).
-- The instructor home.
 - The maintenance home.
 - Web push.
 - The real-device passes.

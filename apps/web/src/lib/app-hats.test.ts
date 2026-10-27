@@ -17,16 +17,15 @@ test('a guardian or a student lands on the family agenda', () => {
   assert.equal(appHome(['student']), '/app/familia');
 });
 
-test('an instructor who is a parent has the family home, and the backoffice for the rest', () => {
+test('an instructor who is a parent has both homes, teaching first (QA 2)', () => {
   const hats = hatsOf(['instructor', 'guardian']);
-  // Teaching is not built yet (slice 2), so it is not offered.
-  assert.deepEqual(hats.homes, ['family']);
+  assert.deepEqual(hats.homes, ['teaching', 'family']);
   assert.equal(hats.staff, true);
   assert.equal(familyOnly(['instructor', 'guardian']), false);
 });
 
-test('an instructor alone, until their home exists, goes to the backoffice', () => {
-  assert.equal(appHome(['instructor']), '/dashboard');
+test('an instructor alone lands on their lessons; maintenance, until its home exists, on the backoffice', () => {
+  assert.equal(appHome(['instructor']), '/app/aulas');
   assert.equal(appHome(['maintenance']), '/dashboard');
 });
 

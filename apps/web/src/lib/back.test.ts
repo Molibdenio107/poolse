@@ -30,6 +30,10 @@ import {
 
 test('a back target is accepted only if it is a path inside the app', () => {
   assert.equal(readFrom('/dashboard'), '/dashboard');
+  // POOLSE-90 slice 2: app mode's own pages, and nothing that merely starts like them.
+  assert.equal(readFrom('/app/aulas'), '/app/aulas');
+  assert.equal(readFrom('/appendix'), null);
+  assert.equal(backLabelKey('/app/aulas'), 'app.teaching.backTo');
   assert.equal(readFrom('/dashboard/facilities/abc'), '/dashboard/facilities/abc');
   assert.equal(readFrom('/dashboard/facilities/staff?role=admin'), '/dashboard/facilities/staff?role=admin');
 

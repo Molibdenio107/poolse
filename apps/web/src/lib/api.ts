@@ -2785,6 +2785,8 @@ export interface Register {
    * register read (`GET /sessions/:id/attendance`).
    */
   feedback?: LessonFeedback[];
+  /** *Vou / Não vou* answers — on the register read. */
+  notices?: SessionNotice[];
 }
 
 export interface Calendar {
@@ -5158,6 +5160,41 @@ export interface AppAgendaEntry {
   byClosure: boolean;
   cancellationReason: string | null;
   moved: boolean;
+  /** *Vou / Não vou* — POOLSE-90 slice 2: the last answer, or null. */
+  going: boolean | null;
+  /** This reader answers for this child. */
+  mayAnswer: boolean;
+  /** Still takes an answer: a turma's, not cancelled, not started. */
+  noticeOpen: boolean;
+}
+
+/** One answer on a lesson, for its register — POOLSE-90 slice 2. */
+export interface SessionNotice {
+  studentId: string;
+  going: boolean;
+  answeredAt: string;
+  answeredByName: string | null;
+}
+
+/** One lesson on the instructor's home — the dashboard band's own week. */
+export interface TeachingLesson {
+  sessionId: string;
+  classGroupId: string | null;
+  partner: boolean;
+  className: string;
+  poolName: string | null;
+  localDate: string;
+  localTime: string;
+  weekday: number;
+  /** Days from the site's today: 0 today, negative past. */
+  dayOffset: number;
+  durationMinutes: number;
+  cancelled: boolean;
+  registerTaken: boolean;
+  past: boolean;
+  /** Enrolled that day; null for a parceria. */
+  enrolled: number | null;
+  notComing: number;
 }
 
 export interface AppWater {

@@ -3914,6 +3914,21 @@ DEFINER`, the link's whole boundary. `message_recipients()` is now a wrapper ove
 `message_recipients_all()` with one more column, `opted_out` (never true for the `closure` audience);
 `sendMessage` writes the tokens for a general message's addresses in the same statement.
 
+### Vou / Não vou — POOLSE-90 slice 2, 27 October 2026
+
+Migration `1792749600000_session-notice`. `session_notice`: one row per
+`(organization_id, class_session_id, student_id)` (unique), `going boolean`,
+`answered_by_membership_id` and `answered_at`. No row means not answered. It is a notice and never
+attendance. Composite foreign keys to the session, the student and the membership.
+
+- `session_notice_admissible` refuses a lesson with no turma or a cancelled one
+  (`notice_not_offered|…`) and one that has started (`notice_closed|<starts_at>`).
+- `poolse_app` holds SELECT and INSERT, and UPDATE on `going`, `answered_by_membership_id` and
+  `answered_at`. It holds no DELETE. Changes are in `audit_log` (`session_notice.answered`).
+- **`family_may_answer(org, student, membership)`** is the one rule for who answers for a child,
+  read by notices and by lesson feedback. That is a live guardian, or the student's own login on
+  the adult path or aged `self_answer_min_age()` (12) or more. A missing birth date is never a guess.
+
 ### Lesson feedback — POOLSE-116, 27 October 2026
 
 Migration `1792576800000_lesson-feedback`. `lesson_feedback`: one live row per

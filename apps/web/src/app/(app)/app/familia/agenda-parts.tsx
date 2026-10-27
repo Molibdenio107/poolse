@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { LinkBusy } from '@/components/link-busy';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { Ban, ChevronRight, Lock, MoveRight, Thermometer, UserRound } from 'lucide-react';
+import { Ban, Check, ChevronRight, Lock, MoveRight, Thermometer, UserRound, X } from 'lucide-react';
 import type { AppAgendaEntry, AppChild, AppWater } from '@/lib/api';
 import { formatDate } from '@/lib/date-format';
 import { addDays, today } from '@/lib/dates';
@@ -107,6 +107,17 @@ export async function EntryCard({
           </span>
         )}
         {water !== null && !cancelled && <WaterLine water={water} />}
+        {/* What the family told the club — POOLSE-90 slice 2. Words and an icon. */}
+        {!cancelled && entry.going !== null && (
+          <span className="flex items-center gap-1 text-sm font-medium">
+            {entry.going ? (
+              <Check className="size-3.5 shrink-0" aria-hidden />
+            ) : (
+              <X className="size-3.5 shrink-0" aria-hidden />
+            )}
+            {entry.going ? t('app.notice.saidGoing') : t('app.notice.saidNotGoing')}
+          </span>
+        )}
       </div>
       {href !== null && <ChevronRight className="mt-1 size-4 shrink-0 text-foreground-muted" aria-hidden />}
     </div>

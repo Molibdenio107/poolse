@@ -109,6 +109,36 @@
       },
       "notAllowed": "The feedback cannot be sent right now.",
       "noneYet": "No feedback has been given on this lesson yet."
+    },
+    "notice": {
+      "question": "Coming to the lesson?",
+      "titleFor": "Coming to the lesson? · {name}",
+      "going": "I'm coming",
+      "notGoing": "I'm not coming",
+      "unanswered": "Not answered yet. Answering helps the instructor plan the lesson.",
+      "saidGoing": "Said they are coming",
+      "saidNotGoing": "Said they are not coming",
+      "savedGoing": "Sent: coming to the lesson",
+      "savedNotGoing": "Sent: not coming to the lesson",
+      "guardianAnswers": "This student's guardian answers for them.",
+      "notAllowed": "You cannot answer right now.",
+      "failed": "The answer could not be saved. Try again.",
+      "refused": {
+        "notice_closed": "The lesson has started: it can no longer be answered.",
+        "notice_not_offered": "This lesson does not take an answer."
+      },
+      "error": {
+        "going": "Choose I'm coming or I'm not coming."
+      }
+    },
+    "teaching": {
+      "title": "My lessons",
+      "backTo": "Back to my lessons",
+      "empty": "No more lessons this week.",
+      "owed": "{count, plural, one {# register still to take} other {# registers still to take}}",
+      "registerOwed": "Attendance still to mark",
+      "enrolled": "{enrolled, plural, one {# enrolled} other {# enrolled}}",
+      "enrolledNotComing": "{enrolled, plural, one {# enrolled} other {# enrolled}} · {notComing, plural, one {# not coming} other {# not coming}}"
     }
   },
   "common": {
@@ -2859,7 +2889,10 @@
       "cancelled": "This class was cancelled, so there is no register to take.",
       "partnership": "A partnership class has no register.",
       "credited": "This attendance has already been used for a make-up lesson and cannot be changed."
-    }
+    },
+    "notComingCount": "{count, plural, one {# said they are not coming} other {# said they are not coming}}",
+    "noticeGoing": "Confirmed",
+    "noticeNotGoing": "Said not coming"
   },
   "calendar": {
     "resizeLanes": "Drag to change how many lanes it uses",

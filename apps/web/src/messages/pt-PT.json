@@ -109,6 +109,36 @@
       },
       "notAllowed": "Não é possível enviar o feedback neste momento.",
       "noneYet": "Ainda não foi dado feedback a esta aula."
+    },
+    "notice": {
+      "question": "Vem à aula?",
+      "titleFor": "Vem à aula? · {name}",
+      "going": "Vou",
+      "notGoing": "Não vou",
+      "unanswered": "Ainda não respondeu. Responder ajuda o professor a preparar a aula.",
+      "saidGoing": "Avisou que vem",
+      "saidNotGoing": "Avisou que não vem",
+      "savedGoing": "Avisado: vem à aula",
+      "savedNotGoing": "Avisado: não vem à aula",
+      "guardianAnswers": "Quem responde por este aluno é o encarregado de educação.",
+      "notAllowed": "Não é possível responder neste momento.",
+      "failed": "Não foi possível guardar a resposta. Tente de novo.",
+      "refused": {
+        "notice_closed": "A aula já começou: já não é possível responder.",
+        "notice_not_offered": "Esta aula não aceita resposta."
+      },
+      "error": {
+        "going": "Escolha Vou ou Não vou."
+      }
+    },
+    "teaching": {
+      "title": "As minhas aulas",
+      "backTo": "Voltar às minhas aulas",
+      "empty": "Não tem mais aulas esta semana.",
+      "owed": "{count, plural, one {# registo de presenças em falta} other {# registos de presenças em falta}}",
+      "registerOwed": "Falta marcar as presenças",
+      "enrolled": "{enrolled, plural, one {# inscrito} other {# inscritos}}",
+      "enrolledNotComing": "{enrolled, plural, one {# inscrito} other {# inscritos}} · {notComing, plural, one {# não vem} other {# não vêm}}"
     }
   },
   "common": {
@@ -2859,7 +2889,10 @@
       "cancelled": "Esta aula foi cancelada, por isso não há presenças a marcar.",
       "partnership": "Uma aula de parceria não tem registo de presenças.",
       "credited": "Esta presença já deu origem a uma reposição e não pode ser alterada."
-    }
+    },
+    "notComingCount": "{count, plural, one {# avisou que não vem} other {# avisaram que não vêm}}",
+    "noticeGoing": "Confirmou",
+    "noticeNotGoing": "Avisou que não vem"
   },
   "calendar": {
     "resizeLanes": "Arraste para alterar as pistas ocupadas",

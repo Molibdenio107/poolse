@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSavedAction } from '@/lib/saved';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, CalendarX } from 'lucide-react';
 import type { Register } from '@/lib/api';
 import {
   ATTENDANCE_STATES,
@@ -40,6 +40,9 @@ const INITIAL: FormState = { ok: false };
 export function RegisterForm({ register }: { register: Register & { organizationId: string } }): React.ReactElement {
   const t = useTranslations();
   const [state, action, pending] = useSavedAction(recordAttendanceAction, INITIAL);
+  // Vou / Não vou by student, and how many said they are not coming.
+  const notices = new Map((register.notices ?? []).map((one) => [one.studentId, one.going]));
+  const notComing = [...notices.values()].filter((going) => !going).length;
 
   /*
    * Seeded from what is already stored, so reopening a marked class shows what
@@ -135,6 +138,18 @@ export function RegisterForm({ register }: { register: Register & { organization
         </div>
       </div>
 
+      {/*
+        Vou / Não vou — POOLSE-90 slice 2. What families said before the class,
+        counted above the roll and named beside each child. A notice, never a
+        mark: nothing below is pre-set by it.
+      */}
+      {notComing > 0 && (
+        <p className="flex items-center gap-1.5 text-sm font-medium" aria-live="polite">
+          <CalendarX aria-hidden className="size-4" />
+          {t('attendance.notComingCount', { count: notComing })}
+        </p>
+      )}
+
       <ul className="flex flex-col divide-y divide-border rounded border border-border bg-surface">
         {register.entries.map((entry) => (
           <li key={entry.studentId} className="flex flex-col gap-2 p-4">
@@ -183,6 +198,16 @@ export function RegisterForm({ register }: { register: Register & { organization
                   Words and an icon, not a colour: the warning tone is a hint and
                   never the message.
                 */}
+                {notices.has(entry.studentId) && (
+                  <span className="flex items-center gap-1 rounded border border-border px-2 py-0.5 text-sm font-normal">
+                    {notices.get(entry.studentId) ? (
+                      <CalendarCheck aria-hidden className="size-3.5" />
+                    ) : (
+                      <CalendarX aria-hidden className="size-3.5" />
+                    )}
+                    {notices.get(entry.studentId) ? t('attendance.noticeGoing') : t('attendance.noticeNotGoing')}
+                  </span>
+                )}
                 {!entry.insured && (
                   <span className="flex items-center gap-1 rounded border border-warning/40 bg-warning/10 px-2 py-0.5 text-sm font-normal text-warning">
                     <AlertTriangle aria-hidden className="size-3.5" />

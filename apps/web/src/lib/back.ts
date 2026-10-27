@@ -35,6 +35,8 @@
  */
 
 const APP_ROOT = '/dashboard';
+/** App mode's own front door (POOLSE-90): a lesson opened from the instructor's home goes back there. */
+const APP_MODE_ROOT = '/app';
 
 /**
  * The accessible name for a destination, by the path it points at.
@@ -50,6 +52,7 @@ const APP_ROOT = '/dashboard';
  * string in a URL, and wrong the moment somebody changes locale mid-journey.
  */
 const LABELS: readonly (readonly [string, string])[] = [
+  ['/app/aulas', 'app.teaching.backTo'],
   ['/dashboard/facilities/staff/vacations', 'vacations.backToVacations'],
   ['/dashboard/facilities/staff/qualifications', 'back.toQualifications'],
   ['/dashboard/facilities/staff/salaries', 'back.toSalaries'],
@@ -150,13 +153,14 @@ export function backLabelKey(href: string): string {
  */
 export function readFrom(from: string | undefined): string | null {
   if (from === undefined || from === '') return null;
-  if (!from.startsWith(APP_ROOT)) return null;
+  const root = [APP_ROOT, APP_MODE_ROOT].find((one) => from.startsWith(one));
+  if (root === undefined) return null;
   if (from.startsWith('//') || from.includes('\\')) return null;
   // Whitespace and control characters: a newline in a redirect target is how
   // a header-splitting payload starts, and a space is never in a path we wrote.
   if (/[\s\u0000-\u001f\u007f]/.test(from)) return null;
-  // `/dashboardish` is not inside `/dashboard`.
-  if (from !== APP_ROOT && !from.startsWith(`${APP_ROOT}/`) && !from.startsWith(`${APP_ROOT}?`)) {
+  // `/dashboardish` is not inside `/dashboard`, nor `/appendix` inside `/app`.
+  if (from !== root && !from.startsWith(`${root}/`) && !from.startsWith(`${root}?`)) {
     return null;
   }
   return from;
