@@ -3,7 +3,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ApiError, apiFetch, type PoolDetail } from '@/lib/api';
 import { POOL_METRICS, type PoolMetric } from '@/lib/pool-metrics';
-import { PrintButton } from './print-button';
+import { PrintButton } from '@/components/print-button';
 
 /**
  * The water-quality report — round 4.

@@ -19,7 +19,7 @@ import {
   toTime,
   type PlacedCell,
 } from '@/lib/grid-layout';
-import { PrintButton } from '../../facilities/pools/[poolId]/report/print-button';
+import { PrintButton } from '@/components/print-button';
 import { formatStamp } from '@/lib/date-format';
 
 /**

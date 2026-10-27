@@ -1,7 +1,7 @@
 import { FromLink } from '@/components/from-link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Printer } from 'lucide-react';
 import { ApiError, apiFetch, type MeetDetail } from '@/lib/api';
 import { describeLoad, type LoadFailure } from '@/lib/load-failure';
 import { backTarget } from '@/lib/back';
@@ -9,6 +9,7 @@ import { formatDate, formatStamp } from '@/lib/date-format';
 import { formatTime } from '@/components/progress-chart';
 import { PageError, PageShell, ScrollX } from '@/components/page-shell';
 import { ArchiveMeetButton } from '../archive-meet';
+import { roundKey } from '../round-key';
 
 /**
  * One meet — POOLSE-81: the club's results, each marked when it is still the
@@ -62,9 +63,24 @@ export default async function MeetPage({
         .join(' · ')}
       back={back}
       actions={
-        meet.canArchive ? (
-          <ArchiveMeetButton organizationId={meet.organizationId} meetId={meet.id} results={meet.resultCount} />
-        ) : null
+        <>
+          {/*
+            The sheet on paper — POOLSE-115. Its own tab, a plain anchor because
+            `Link` would prefetch it, and `print=1` so arriving opens the dialog.
+          */}
+          <a
+            href={`/dashboard/students/provas/${meet.id}/print?print=1`}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex h-control items-center justify-center gap-2 rounded border border-border px-4 text-control transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <Printer aria-hidden className="size-4" />
+            {t('meets.print.button')}
+          </a>
+          {meet.canArchive && (
+            <ArchiveMeetButton organizationId={meet.organizationId} meetId={meet.id} results={meet.resultCount} />
+          )}
+        </>
       }
     >
       {meet.sourceFileName !== null && meet.importedAt !== null && (
@@ -146,9 +162,4 @@ export default async function MeetPage({
       )}
     </PageShell>
   );
-}
-
-/** LENEX rounds Poolse names; any other code reads as itself. */
-function roundKey(round: string): string {
-  return ['PRE', 'SEM', 'FIN', 'SOP', 'SOS', 'QUA'].includes(round) ? round.toLowerCase() : 'other';
 }

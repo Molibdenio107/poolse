@@ -2217,6 +2217,10 @@ export interface MeetResult {
   swumOn: string;
   isPersonalBest: boolean;
   licenceMissing: boolean;
+  /** Live standards whose entry time this swim met, by name (POOLSE-115). */
+  qualifies: string[];
+  /** FPN age groups admitting the swimmer in the meet's season; empty when none are set. */
+  ageGroups: string[];
 }
 
 export interface MeetDetail extends MeetSummary {

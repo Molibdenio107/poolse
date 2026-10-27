@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import { formatDate, formatStamp } from '@/lib/date-format';
 import { isMissing } from '@/lib/load-failure';
 import { PageError } from '@/components/page-shell';
-import { PrintButton } from '../../../pools/[poolId]/report/print-button';
-import { AutoPrint } from '../../../../faturacao/[id]/print/auto-print';
+import { PrintButton } from '@/components/print-button';
+import { AutoPrint } from '@/components/auto-print';
 import { exportIncidentAction } from '../../incidents.actions';
 
 /**

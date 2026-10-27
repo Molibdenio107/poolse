@@ -133,6 +133,33 @@ BEGIN
     RAISE EXCEPTION 'FAIL test 8: an archived meet''s result still qualified';
   END IF;
   RAISE NOTICE 'PASS test 8: an archived meet no longer qualifies anybody';
+
+  -- POOLSE-115 — a time can make the entry without being the best, and the
+  -- printed meet marks it. Two official swims under 1:05.00: the gap reads the
+  -- faster, and both are attempts that made it.
+  INSERT INTO swim_meet (organization_id, name, course, starts_on, ends_on, official)
+  VALUES (v_org, 'Torneio de Fevereiro', 'lcm', DATE '2027-02-01', DATE '2027-02-01', true)
+  RETURNING id INTO v_official;
+  INSERT INTO student_record (organization_id, student_id, stroke, distance_m, course, time_ms, swum_on, meet_id)
+  VALUES (v_org, v_ana, 'freestyle', 100, 'lcm', 64800, DATE '2027-02-01', v_official);
+  INSERT INTO swim_meet (organization_id, name, course, starts_on, ends_on, official)
+  VALUES (v_org, 'Torneio de Março', 'lcm', DATE '2027-03-01', DATE '2027-03-01', true)
+  RETURNING id INTO v_friendly;
+  INSERT INTO student_record (organization_id, student_id, stroke, distance_m, course, time_ms, swum_on, meet_id)
+  VALUES (v_org, v_ana, 'freestyle', 100, 'lcm', 64500, DATE '2027-03-01', v_friendly);
+
+  SELECT count(*) INTO v_count FROM qualifying_attempts(v_std, v_ana) a
+   WHERE a.stroke = 'freestyle' AND a.time_ms <= a.entry_ms;
+  IF v_count <> 2 THEN
+    RAISE EXCEPTION 'FAIL test 9: expected two attempts under the entry time, got %', v_count;
+  END IF;
+  SELECT count(*) INTO v_count FROM qualifying_gaps(v_std, v_ana);
+  SELECT * INTO v_row FROM qualifying_gaps(v_std, v_ana) WHERE stroke = 'freestyle';
+  IF v_count <> 2 OR v_row.best_ms IS DISTINCT FROM 64500 OR v_row.best_meet <> 'Torneio de Março' THEN
+    RAISE EXCEPTION 'FAIL test 9b: the gap is not one row per entry with the fastest attempt (% rows, best %)',
+      v_count, v_row.best_ms;
+  END IF;
+  RAISE NOTICE 'PASS test 9: every valid swim under the entry is an attempt; the gap keeps the fastest';
 END $$;
 
 ROLLBACK;

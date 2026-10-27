@@ -304,6 +304,30 @@ archiving a meet (with its results) is owner and admin, restorable from Arquivad
 refuses any DOCTYPE or entity, a `.lxf` with two `.lef`s or a nested archive, and anything that
 inflates past 40 MB.
 
+### A meet on paper (POOLSE-115)
+
+*Imprimir / Guardar PDF* on a meet's page opens `provas/[id]/print` in its own tab with the print
+dialog: the browser's "Guardar como PDF", like every other print page. A4 portrait, black on white in
+either theme. The header has the club's name and logo, the meet, its dates, city and course, whether it
+was *Oficial* or *Particular*, and how many swimmers and results it holds. Results are grouped
+**by swimmer**, alphabetically by the name as the club writes it, with events in FPN order. They can
+instead be grouped **by event**, with swimmers by time. The columns are *Prova*, *Tempo*, *Escalão*
+and *Obs.* The *Escalão* column appears only when the club has set that season's FPN age groups.
+*Obs.* is words, never colour: **RP** for a time that is still the swimmer's best, and **Mín.**
+followed by the standard's name for each live standard whose entry time the swim met
+(`qualifying_attempts()`). A friendly or 25 m swim is never a mínimo. A swimmer's block stays on one
+page when it fits, and its heading repeats on a page it continues onto. Every page carries
+*Gerado pelo Poolse em …* and *n / N* in its margin, where the browser supports it.
+
+The options *Todos os nadadores / Só com recorde pessoal / Só com mínimos* and *Por nadador / Por
+prova* filter the **results** (a swimmer appears if they have one) and live in the address, so the tab
+reloads and is shared as it is. Only the meet page's button adds `print=1`, which opens the dialog;
+changing an option does not. The unmatched swimmers are not listed: one line says how many of the
+file's results matched nobody, so the sheet never passes for the whole file. DSQ and DNS do not
+appear, because the import skips them and they are never stored. **Who:** whoever can read the meet
+(owner, admin, every instructor), because the sheet reads `GET /meets/:id`. Another club's meet is
+a 404.
+
 ## Mínimos — gap to qualify (POOLSE-85)
 
 **The club types each championship's entry times; the FPN's age groups come in one click** (POOLSE-111, Rui 23-10-2026, reversing "Poolse ships none" of 19-10 for this one table). *Criar os escalões FPN desta época* — on Escalões, and on a standard's Tempos tab while the season has none — creates the federation's nine natação pura groups, Cadetes C (9 and under) to Seniores (19 and over), one ladder for both sexes, as birth years for the year the season ends in: for 2025/2026, Cadetes A is born 2014 and Juniores 2008–2009 (FPN Comunicado 26/25). Groups the season already has are left alone; all are edited or archived like any other. Under **Competição**, two more

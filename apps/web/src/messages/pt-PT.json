@@ -5531,6 +5531,39 @@
       "noTime": "sem tempo",
       "yards": "em jardas",
       "stroke": "estilo não reconhecido"
+    },
+    "print": {
+      "button": "Imprimir / Guardar PDF",
+      "showLabel": "Mostrar",
+      "show": {
+        "all": "Todos os nadadores",
+        "pb": "Só com recorde pessoal",
+        "min": "Só com mínimos"
+      },
+      "groupLabel": "Agrupar",
+      "group": {
+        "swimmer": "Por nadador",
+        "event": "Por prova"
+      },
+      "showing": {
+        "all": "Todos os resultados",
+        "pb": "Só resultados com recorde pessoal",
+        "min": "Só resultados com mínimos"
+      },
+      "counts": "{swimmers, plural, one {# nadador} other {# nadadores}} · {results, plural, one {# resultado} other {# resultados}}",
+      "empty": "Sem resultados associados.",
+      "emptyFiltered": {
+        "all": "Sem resultados associados.",
+        "pb": "Nenhum resultado desta prova é recorde pessoal.",
+        "min": "Nenhum resultado desta prova cumpre um tempo de qualificação."
+      },
+      "ageGroup": "Escalão",
+      "obs": "Obs.",
+      "pb": "RP",
+      "min": "Mín. {name}",
+      "unmatched": "{count, plural, one {# resultado do ficheiro não foi associado a nenhum aluno.} other {# resultados do ficheiro não foram associados a nenhum aluno.}}",
+      "legend": "RP: recorde pessoal. Mín.: cumpre o tempo de qualificação indicado.",
+      "generated": "Gerado pelo Poolse em {at}"
     }
   },
   "qualifying": {

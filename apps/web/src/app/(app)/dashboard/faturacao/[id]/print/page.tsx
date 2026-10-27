@@ -7,9 +7,9 @@ import { apiFetch } from '@/lib/api';
 import { fileUrl } from '@/lib/files';
 import { PageError } from '@/components/page-shell';
 import { LineLabel } from '../../line-label';
-import { PrintButton } from '../../../facilities/pools/[poolId]/report/print-button';
+import { PrintButton } from '@/components/print-button';
 import { loadInvoice } from '../load-invoice';
-import { AutoPrint } from './auto-print';
+import { AutoPrint } from '@/components/auto-print';
 
 /**
  * One document, on paper — 12 October 2026.

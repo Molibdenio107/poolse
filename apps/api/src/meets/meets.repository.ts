@@ -464,6 +464,18 @@ export interface MeetResult {
   isPersonalBest: boolean;
   /** In a competitive level with no FPN licence — the ticket's warning, here too. */
   licenceMissing: boolean;
+  /**
+   * The live standards whose entry time this swim met, by name — POOLSE-115's
+   * *Mín.* Read from `qualifying_attempts()`, the one definition of a time
+   * that counts, so a friendly or a 25 m swim is never marked.
+   */
+  qualifies: string[];
+  /**
+   * The FPN age groups that admit the swimmer in the season the meet falls in,
+   * derived by `federation_age_group_admits()` and never stored. Empty when the
+   * club has not set that season's groups, or the swimmer has no birth date.
+   */
+  ageGroups: string[];
 }
 
 export interface MeetDetail extends MeetSummary {
@@ -509,6 +521,8 @@ export async function findMeet(organizationId: string, meetId: string): Promise<
       swum_on: string;
       is_best: boolean;
       licence_missing: boolean;
+      qualifies: string[];
+      age_groups: string[];
     }>(
       `WITH bests AS (
          SELECT r.id,
@@ -521,13 +535,35 @@ export async function findMeet(organizationId: string, meetId: string): Promise<
           WHERE r.archived_at IS NULL
             AND (r.meet_id IS NULL OR sm.archived_at IS NULL)
             AND r.student_id IN (SELECT student_id FROM student_record WHERE meet_id = $1)
+       ),
+       -- One call per swimmer in this meet, never per row and never per club.
+       made AS (
+         SELECT a.record_id, array_agg(DISTINCT qs.name ORDER BY qs.name) AS qualifies
+           FROM (SELECT DISTINCT student_id FROM student_record
+                  WHERE meet_id = $1 AND archived_at IS NULL) m
+          CROSS JOIN LATERAL qualifying_attempts(NULL, m.student_id) a
+           JOIN qualifying_standard qs ON qs.id = a.standard_id
+          WHERE a.time_ms <= a.entry_ms
+          GROUP BY a.record_id
        )
        SELECT r.id, r.student_id, ${displayName('s')} AS student_name, r.stroke, r.distance_m,
               r.course, r.lenex_round AS round, r.lenex_event_number AS event, r.time_ms,
               to_char(r.swum_on, 'YYYY-MM-DD') AS swum_on, b.is_best,
-              (coalesce(l.competitive, false) AND s.federation_licence IS NULL) AS licence_missing
+              (coalesce(l.competitive, false) AND s.federation_licence IS NULL) AS licence_missing,
+              coalesce(made.qualifies, '{}') AS qualifies,
+              coalesce((
+                SELECT array_agg(DISTINCT g.name ORDER BY g.name)
+                  FROM season se
+                  JOIN federation_age_group g ON g.season_id = se.id
+                                             AND g.organization_id = se.organization_id
+                                             AND g.archived_at IS NULL
+                 WHERE se.organization_id = r.organization_id
+                   AND (SELECT starts_on FROM swim_meet WHERE id = $1) BETWEEN se.starts_on AND se.ends_on
+                   AND federation_age_group_admits(g.gender, g.born_from, g.born_to, s.birth_date, s.gender)
+              ), '{}') AS age_groups
          FROM student_record r
          JOIN bests b ON b.id = r.id
+         LEFT JOIN made ON made.record_id = r.id
          JOIN student s ON s.id = r.student_id AND s.organization_id = r.organization_id
          LEFT JOIN student_level l ON l.id = s.level_id AND l.organization_id = s.organization_id
         WHERE r.meet_id = $1 AND r.archived_at IS NULL AND s.archived_at IS NULL
@@ -561,6 +597,8 @@ export async function findMeet(organizationId: string, meetId: string): Promise<
         swumOn: row.swum_on,
         isPersonalBest: row.is_best,
         licenceMissing: row.licence_missing,
+        qualifies: row.qualifies,
+        ageGroups: row.age_groups,
       })),
     };
   });

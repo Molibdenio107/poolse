@@ -226,3 +226,71 @@ test('QA 13–14 — families are refused; archiving a meet takes its results ou
     });
   });
 });
+
+test('POOLSE-115 — a result is marked with the standards whose entry time it met, and the swimmer with the season\'s age group', async () => {
+  await withScratchTenant(async (tenant) => {
+    await student(tenant, 'Inês', 'Sousa', '2012-04-03', '204117');
+    const org = tenant.organizationId;
+    const [season] = await tenant.sql<{ id: string }>(
+      `INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+       VALUES ($1, '2026/2027 (provas)', '2026-09-01', '2027-07-31', 'draft') RETURNING id`,
+      [org],
+    );
+    const [last] = await tenant.sql<{ id: string }>(
+      `INSERT INTO season (organization_id, name, starts_on, ends_on, status)
+       VALUES ($1, '2025/2026', '2025-09-01', '2026-07-31', 'archived') RETURNING id`,
+      [org],
+    );
+    const [group] = await tenant.sql<{ id: string }>(
+      `INSERT INTO federation_age_group (organization_id, season_id, name, born_from, born_to)
+       VALUES ($1, $2, 'Infantis A', 2012, 2012) RETURNING id`,
+      [org, season!.id],
+    );
+    // Last season's band admits her too; the meet is not in last season.
+    await tenant.sql(
+      `INSERT INTO federation_age_group (organization_id, season_id, name, born_from, born_to)
+       VALUES ($1, $2, 'Infantis B', 2012, 2012)`,
+      [org, last!.id],
+    );
+    const [standard] = await tenant.sql<{ id: string }>(
+      `INSERT INTO qualifying_standard (organization_id, season_id, name)
+       VALUES ($1, $2, 'Nacionais de Infantis') RETURNING id`,
+      [org, season!.id],
+    );
+    await tenant.sql(
+      `INSERT INTO qualifying_time (organization_id, season_id, standard_id, age_group_id, stroke, distance_m, course, time_ms)
+       VALUES ($1, $2, $3, $4, 'freestyle', 100, 'lcm', 62000)`,
+      [org, season!.id, standard!.id, group!.id],
+    );
+
+    const ines = (results: unknown[]) => [
+      { key: 'CST:1', clubCode: 'CST', firstName: 'Inês', lastName: 'Sousa', birthDate: '2012-04-03', licence: '204117', results },
+    ];
+
+    await actingAs(tenant, { roles: ['instructor'] }, async () => {
+      const meets = new MeetsController();
+      const official = await meets.import({
+        ...file(ines([result({ round: 'PRE', timeMs: 62340 }), result({ round: 'FIN', timeMs: 61900 })])),
+        commit: true,
+      });
+      const detail = await meets.one(official.meetId!);
+      const byRound = Object.fromEntries(detail.results.map((r) => [r.round, r]));
+      assert.deepEqual(byRound['FIN']!.qualifies, ['Nacionais de Infantis'], 'the final met the entry time');
+      assert.deepEqual(byRound['PRE']!.qualifies, [], 'the heat did not');
+      assert.deepEqual(byRound['FIN']!.ageGroups, ['Infantis A'], 'this season\'s band, not last season\'s');
+
+      // A friendly meet is never a mínimo, however fast.
+      const friendly = await meets.import({
+        ...file(ines([result({ eventNumber: 4, timeMs: 60000, swumOn: '2027-01-09' })]), {
+          fileName: 'convivio.lxf',
+          official: false,
+          meet: { name: 'Convívio', city: null, course: 'lcm', startsOn: '2027-01-09', endsOn: '2027-01-09' },
+        }),
+        commit: true,
+      });
+      const [fast] = (await meets.one(friendly.meetId!)).results;
+      assert.deepEqual(fast!.qualifies, []);
+      assert.deepEqual(fast!.ageGroups, ['Infantis A']);
+    });
+  });
+});

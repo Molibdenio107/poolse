@@ -3861,8 +3861,14 @@ club (Poolse ships no FPN data), soft-deleted, with RLS and composite keys.
   cell archives the row.
 - **`federation_age_group_admits()`** — the one definition of who a band admits: birth *year*,
   gender, and no birth date admits nobody. A swimmer's band is derived, never stored.
-- **`qualifying_gaps(standard, student)`** — the one definition of a valid time and the gap: same
-  course, an official live meet, inside the window. Read by Progressão and the Mínimos board.
+- **`qualifying_attempts(standard, student)`** — the one definition of a valid time (POOLSE-115,
+  migration `1792490400000_qualifying-attempts`): same course, an official live meet, inside the
+  window, else the season. One row per entry time asked of a swimmer × each valid swim for it, and
+  a row with a null record when there is none.
+- **`qualifying_gaps(standard, student)`** — the gap: the fastest row of `qualifying_attempts()` per
+  entry time and swimmer, unchanged in output. Read by Progressão and the Mínimos board. The meet
+  read marks every attempt at or under its entry time (`MeetResult.qualifies`), because a swim can
+  make a mínimo without being the swimmer's best.
 
 ### Email delivery retry — POOLSE-86 slice 3.0a, 19 October 2026
 
