@@ -6,6 +6,9 @@ import { AdvancementController, LevelsController } from './students.controller.j
 import { AdvancementApplyService } from './advancement-apply.service.js';
 import { deliverLevelChangeNotice } from './level-change-delivery.js';
 import type { Email } from '../notifications/notifier.js';
+// The fixtures enrol on the club's today, so a move dated before it is refused:
+// a literal date here went stale four days after it was written (27-10-2026).
+import { clubToday } from '../common/club-day.js';
 import {
   actingAs,
   addMember,
@@ -314,14 +317,14 @@ test('POOLSE-113 QA 1, 2, 4: candidates come ranked with what the picker shows; 
         );
       }
       await expectStatus(
-        () => controller.confirm(proposal!.id, { classGroupId: available, effectiveOn: '2026-10-26' }),
+        () => controller.confirm(proposal!.id, { classGroupId: available, effectiveOn: clubToday() }),
         409,
       );
       assert.ok(await pending(tenant, fixture.childId), 'the proposal stays pending');
 
       // QA 1: picking the first and confirming enrols into it.
       assert.deepEqual(
-        await controller.confirm(proposal!.id, { classGroupId: sameSlot, effectiveOn: '2026-10-26' }),
+        await controller.confirm(proposal!.id, { classGroupId: sameSlot, effectiveOn: clubToday() }),
         { confirmed: true },
       );
     });
@@ -357,7 +360,7 @@ test('POOLSE-113 QA 1, 2, 4: candidates come ranked with what the picker shows; 
       const card = (await controller.list()).proposals.items.find((one) => one.id === applied!.id)!;
       assert.ok(card.appliedAt !== null);
       assert.equal(card.candidates[0]!.rankReason, 'same_slot');
-      await controller.confirm(applied!.id, { classGroupId: sameCoach, effectiveOn: '2026-10-26' });
+      await controller.confirm(applied!.id, { classGroupId: sameCoach, effectiveOn: clubToday() });
     });
     const [moved] = await tenant.sql<{ class_group_id: string }>(
       `SELECT class_group_id FROM enrollment WHERE student_id = $1 AND status = 'active'`,
@@ -450,7 +453,7 @@ test('sweep 23-10-2026: a skill keeps an age proposal; the nightly pass follows 
       [org, lowerTurma!.id, ten!.id],
     );
     await actingAs(tenant, { roles: ['owner'] }, () =>
-      advancement.confirm(done!.id, { classGroupId: upperTurma!.id, effectiveOn: '2026-10-26' }),
+      advancement.confirm(done!.id, { classGroupId: upperTurma!.id, effectiveOn: clubToday() }),
     );
     assert.equal(await levelOf(tenant, ten!.id), fixture.upper, 'never left in a turma above their level');
 
