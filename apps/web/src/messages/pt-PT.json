@@ -5923,5 +5923,35 @@
       "5": "Muito bem"
     },
     "archiveNamed": "Arquivar o feedback: {name}"
+  },
+  "staffIdentity": {
+    "title": "Identificação",
+    "visibility": "Só o proprietário, os administradores e a própria pessoa veem estes dados.",
+    "birthDate": "Data de nascimento",
+    "birthDateTheirs": "Indicada pela própria pessoa no perfil dela.",
+    "birthDateOwnProfile": "Altere-a em O meu perfil.",
+    "documentType": "Documento de identificação",
+    "noDocument": "Nenhum",
+    "documentNumber": "Número do documento",
+    "purpose": "O clube regista-o para identificar quem trabalha consigo. É apagado {months, plural, one {# mês} other {# meses}} depois de a pessoa sair do clube.",
+    "save": "Guardar",
+    "loadFailed": "Não foi possível carregar a identificação.",
+    "notAllowed": "Não pode alterar estes dados.",
+    "failed": "Não foi possível guardar. Tente de novo.",
+    "type": {
+      "cc": "Cartão de Cidadão",
+      "passport": "Passaporte",
+      "residence_permit": "Título de residência",
+      "other": "Outro"
+    },
+    "errors": {
+      "birthDateInvalid": "Indique uma data válida.",
+      "birthDateRange": "A data tem de ser depois de 1900 e não pode ser no futuro.",
+      "birthDateIsTheirs": "Esta pessoa indica a data de nascimento no próprio perfil.",
+      "typeRequired": "Escolha o tipo de documento.",
+      "numberRequired": "Indique o número do documento.",
+      "ccInvalid": "Este número de Cartão de Cidadão não é válido. Confira os 12 caracteres, por exemplo 12345678 9 ZZ1.",
+      "numberInvalid": "Use só letras, números e hífenes (3 a 30 caracteres)."
+    }
   }
 }

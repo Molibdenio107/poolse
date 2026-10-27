@@ -8,6 +8,8 @@ import {
   type People,
   type PersonQualifications,
   type QualificationTypes,
+  type Me,
+  type StaffIdentity,
   type StaffRecord,
 } from '@/lib/api';
 import { outcome } from '@/lib/load-failure';
@@ -18,6 +20,7 @@ import { RoleBadges } from '@/components/role-badge';
 import { DetailPage } from '@/components/detail-page';
 import { Reinvite, RoleEditor, StaffForm } from './staff-form';
 import { storageConfigured } from '@/lib/storage-status';
+import { IdentityCard } from './identity-card';
 
 /**
  * One staff member — POOLSE-39.
@@ -112,7 +115,17 @@ export default async function StaffMemberPage({
         {
           slug: 'general',
           labelKey: 'detailTabs.general',
-          content: () => (
+          content: async () => {
+            /*
+              Identificação — POOLSE-100. Asked with the tab: the API answers the
+              owner, an admin and the person, and a refusal is no card at all.
+              Every answer to somebody else is an audited read of the number.
+            */
+            const [identity, me] = await Promise.all([
+              outcome(apiFetch<StaffIdentity>(`/staff/${membershipId}/identity`)),
+              apiFetch<Me>('/me').catch(() => null),
+            ]);
+            return (
             <>
               {/*
                 One Person, two sections — AC7. A phone number corrected here is
@@ -149,8 +162,18 @@ export default async function StaffMemberPage({
                   />
                 </div>
               </div>
+
+              {identity.state === 'ok' && (
+                <IdentityCard
+                  membershipId={membershipId}
+                  identity={identity.data}
+                  own={me?.memberships[0]?.membershipId === membershipId}
+                />
+              )}
+              {identity.state === 'failed' && <PageError message={t('staffIdentity.loadFailed')} />}
             </>
-          ),
+            );
+          },
         },
         {
           slug: 'qualifications',

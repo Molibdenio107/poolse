@@ -3914,6 +3914,19 @@ DEFINER`, the link's whole boundary. `message_recipients()` is now a wrapper ove
 `message_recipients_all()` with one more column, `opted_out` (never true for the `closure` audience);
 `sendMessage` writes the tokens for a general message's addresses in the same statement.
 
+### Staff identity — POOLSE-100, 27 October 2026
+
+Migration `1792922400000_staff-identity`.
+
+- **`membership.id_document_type`** is one of `cc`, `passport`, `residence_permit` or `other`.
+- **`membership.id_document_number_encrypted`** is ciphertext only, by CHECK.
+- The two columns are set together or both null.
+- **`organization.id_document_retention_months`** defaults to 12 (range 1 to 120), with its own
+  column grant.
+- **`apply_retention()`** clears the document once the membership has been archived that long.
+- The date of birth did not move: a login's is `app_user.birth_date` (theirs), and a no-login
+  person's is `membership.birth_date`.
+
 ### Cancellation notice and push — POOLSE-90 slice 4, 27 October 2026
 
 Migrations `1792836000000_session-audience` (the enum value, alone) and

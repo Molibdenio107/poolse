@@ -405,6 +405,15 @@ export interface StaffCounts {
   byRole: Record<string, number>;
 }
 
+/** A staff member's date of birth and ID document — POOLSE-100 (`GET /staff/:id/identity`). */
+export interface StaffIdentity {
+  birthDate: string | null;
+  /** `login`: theirs, set in O meu perfil. `record`: the club's, edited on the staff record. */
+  birthDateSource: 'login' | 'record';
+  idDocument: { type: 'cc' | 'passport' | 'residence_permit' | 'other'; number: string } | null;
+  retentionMonths: number;
+}
+
 export interface People {
   organizationId: string;
   /** One page of the staff list — POOLSE-29. */

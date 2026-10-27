@@ -1115,6 +1115,14 @@ overshoot. Exactly one Owner per tenant, enforced; transfer is the only way to c
 
 **A person merge never takes the Owner, two logins or support.** `merge_memberships` refuses all three (409 from `POST /people/merge`), because absorbing the Owner's record handed an Admin the club, and it repoints only columns the app may update — the insert-only history keeps the absorbed id, which `merged_into` resolves. `people-merge.integration.test.ts` runs it as `poolse_app`; a SQL test run as the owner proves nothing about a function the app calls.
 
+**A staff member's ID document is encrypted, behind its own route, and read aloud to the audit log.** POOLSE-100.
+- `GET/PATCH /staff/:id/identity` answers the Owner, an Admin or the person.
+- A read by anybody else writes `membership.id_document_read`.
+- The number is ciphertext by CHECK.
+- A CC number is `isValidCcNumber` in `@poolse/rules`.
+- `apply_retention()` erases the document 12 months after the person leaves.
+- A login's date of birth is theirs (`birth_date_is_theirs`), like their name.
+
 **A login's name is the person's own.** `PATCH /staff/:id` refuses (`name_is_theirs`) a rename by anybody but the person: Clerk holds one name for them across every club.
 
 **Today in TypeScript is `clubToday()` from `apps/api/src/common/club-day.ts`**, the twin of `club_today()` — never `new Date().toISOString().slice(0, 10)`, which is yesterday between midnight and one in a Lisbon summer. In the web app it is `today()` from `lib/dates.ts`, which is the club's day wherever it runs (16-10-2026 sweep).

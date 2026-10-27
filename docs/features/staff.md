@@ -18,6 +18,26 @@ Sweep of 15 October 2026:
   (`POST /people/merge` answers 409). History stays with the absorbed record, which points at the
   survivor (`merged_into`).
 
+## Date of birth and identity document (POOLSE-100)
+
+An *Identificação* card on the staff record's General tab. It is read and edited by the Owner, an
+Admin, or the person on their own record. Anyone else gets a 403, and the card is not shown.
+
+- **The date of birth.**
+  - For a person with a login it is theirs: set in *O meu perfil*, shown here read-only. The
+    office cannot overwrite it (`birth_date_is_theirs`, 409).
+  - For a person without a login it is the club's, edited here.
+- **The identity document** (Cartão de Cidadão, passaporte, título de residência or outro) is a
+  type and a number.
+  - A Cartão de Cidadão number must pass its check digit (`isValidCcNumber` in `@poolse/rules`).
+  - It is stored encrypted, and every read by anybody but the person is in the audit log
+    (`membership.id_document_read`).
+  - The field says why the club records it and that it is deleted the club's
+    `id_document_retention_months` (12) after the person leaves. `apply_retention()` does the
+    deleting.
+- **It has its own route** (`GET/PATCH /staff/:id/identity`), so the number is never in the staff
+  record, the list, the export or an import.
+
 ## Qualifications
 
 POOLSE-27, brought forward as roadmap 7b.2. Who holds which qualification, and until when.

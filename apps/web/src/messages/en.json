@@ -5923,5 +5923,35 @@
       "5": "Very good"
     },
     "archiveNamed": "Archive the feedback: {name}"
+  },
+  "staffIdentity": {
+    "title": "Identification",
+    "visibility": "Only the owner, administrators and the person themself see this.",
+    "birthDate": "Date of birth",
+    "birthDateTheirs": "Set by the person in their own profile.",
+    "birthDateOwnProfile": "Change it in My profile.",
+    "documentType": "Identity document",
+    "noDocument": "None",
+    "documentNumber": "Document number",
+    "purpose": "The club records it to identify who works with it. It is deleted {months, plural, one {# month} other {# months}} after the person leaves the club.",
+    "save": "Save",
+    "loadFailed": "The identification could not be loaded.",
+    "notAllowed": "You cannot change this.",
+    "failed": "Could not save. Try again.",
+    "type": {
+      "cc": "Citizen card (Cartão de Cidadão)",
+      "passport": "Passport",
+      "residence_permit": "Residence permit",
+      "other": "Other"
+    },
+    "errors": {
+      "birthDateInvalid": "Enter a valid date.",
+      "birthDateRange": "The date must be after 1900 and not in the future.",
+      "birthDateIsTheirs": "This person sets their date of birth in their own profile.",
+      "typeRequired": "Choose the document type.",
+      "numberRequired": "Enter the document number.",
+      "ccInvalid": "This Cartão de Cidadão number is not valid. Check the 12 characters, for example 12345678 9 ZZ1.",
+      "numberInvalid": "Use only letters, digits and hyphens (3 to 30 characters)."
+    }
   }
 }
