@@ -859,7 +859,7 @@ no literal hex in components. **The `dark` class on `<html>` has one owner** (PO
 
 **Palette.** Backoffice and desktop web: primary `rgb(103, 166, 182)`, complementary
 `rgb(179, 212, 157)`. Mobile apps run sportier — soft orange with pool blue. Mobile
-palette is explicitly allowed to move during development; the desktop one is not. **Text reads an ink, fills read the token** (Rui, 15 October 2026): `--primary-ink`, `--success-ink`, `--warning-ink` and `--danger-ink` are each fill's own hue darkened past 4.6:1 on white, and `theme.extend.textColor` maps `text-primary` and friends to them, so links and warnings are AA while every button, chip and border keeps the settled fill. A new status colour gets its ink in the same change.
+palette is explicitly allowed to move during development; the desktop one is not. **Text reads an ink, fills read the token** (Rui, 15 October 2026): `--primary-ink`, `--success-ink`, `--warning-ink` and `--danger-ink` are each fill's own hue darkened past 4.6:1 on white, and `theme.extend.textColor` maps `text-primary` and friends to them, so links and warnings are AA while every button, chip and border keeps the settled fill. **Text on the primary fill is the dark foreground ink** (`--primary-foreground`, 6.6:1; Rui, 28-10-2026), in both themes — white on it was 2.7:1. A new status colour gets its ink in the same change.
 
 **Money and readings are never floats.** Amounts in integer minor units. Sensor readings
 in `numeric` with an explicit unit column — pH, °C, ppm and kWh do not share a type.
