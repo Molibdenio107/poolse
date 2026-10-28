@@ -145,7 +145,7 @@ export async function transferCandidates(
              ${personName('m.id')} AS display_name,
              ${personShortName('m.id')} AS short_name,
              coalesce(u.cached_email::text, m.email::text) AS email,
-             u.cached_avatar_url AS avatar_url,
+             coalesce(u.cached_avatar_url, '/files/' || m.photo_file_id::text) AS avatar_url,
              u.birth_date AS birth_date
         FROM membership m
         LEFT JOIN app_user u ON u.id = m.app_user_id
@@ -317,7 +317,7 @@ export async function listMembers(
              -- — POOLSE-32.
              ${personName('m.id')} AS display_name,
              ${personShortName('m.id')} AS short_name,
-             u.cached_avatar_url AS avatar_url,
+             coalesce(u.cached_avatar_url, '/files/' || m.photo_file_id::text) AS avatar_url,
              -- Poolse's own column, not a Clerk cache: birth date is ours and is
              -- written directly. Needed here so the staff list can flag a
              -- birthday without a second round trip per row — round 4.

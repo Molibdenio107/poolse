@@ -58,11 +58,7 @@ export function StaffForm({
   };
 
   return (
-    <form
-      ref={formRef}
-      action={action}
-      className="flex flex-col gap-4 rounded border border-border bg-surface p-5"
-    >
+    <form ref={formRef} action={action} className="flex flex-col gap-4">
       <input type="hidden" name="organizationId" value={organizationId} />
       <input type="hidden" name="membershipId" value={staff.membershipId} />
 

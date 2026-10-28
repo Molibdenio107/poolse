@@ -99,8 +99,10 @@ test('a file is judged by its bytes: an executable named .pdf, an empty body and
       await expectStatus(() => upload('policy_document', Buffer.alloc(0)), 400);
       await expectStatus(() => upload('facility_photo', PDF), 400);
       await expectStatus(() => upload('not_a_purpose', PDF), 400);
-      // Named in the enum, switched on in a later slice (photo consent).
-      await expectStatus(() => upload('student_photo', PNG), 400);
+      // Named in the enum, never switched on through this route (encrypted, POOLSE-70).
+      await expectStatus(() => upload('incident_attachment', PNG), 400);
+      // A photograph of a person is an image (28-10-2026).
+      await expectStatus(() => upload('student_photo', PDF), 400);
       await expectStatus(() => upload('policy_document', Buffer.alloc(10 * 1024 * 1024 + 1, 0x25)), 400);
 
       const [{ count } = { count: -1 }] = await tenant.sql<{ count: number }>(

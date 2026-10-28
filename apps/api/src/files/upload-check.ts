@@ -2,7 +2,7 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import type { FilePurpose } from './files.repository.js';
 import { MAX_FILE_BYTES, sniffType, storageConfigured, WORD } from './storage.js';
 
-const IMAGE_ONLY = new Set<FilePurpose>(['facility_photo', 'pool_photo', 'logo', 'student_photo']);
+const IMAGE_ONLY = new Set<FilePurpose>(['facility_photo', 'pool_photo', 'logo', 'student_photo', 'staff_photo']);
 
 /**
  * What an uploaded body is, or the refusal — one judgement for `POST /files`

@@ -9,7 +9,7 @@ import { TransferOwnership } from './transfer-ownership';
 import { SupportAccess } from './support-access';
 import { loadSupportAccess } from '../support.actions';
 import { Sessions } from '../sessions';
-import { PhotoUpload } from '@/components/photo-upload';
+import { IdPhoto } from '@/components/id-photo';
 import { PageError, PageShell } from '@/components/page-shell';
 import { DetailPage } from '@/components/detail-page';
 import { formatStamp } from '@/lib/date-format';
@@ -138,15 +138,14 @@ export default async function ProfilePage({
               <section className="rounded border border-border bg-surface p-5">
                 {/*
                   The same ID square as the student and staff records — round 5.
-                  Clerk holds an avatar for anybody who signed in with one, and
-                  this is where a person would replace it; it waits on the same
-                  object storage everything else does, and says so.
+                  Your photograph is Clerk's, as your name is (28-10-2026): it is
+                  the avatar at the top right, and in every club you belong to.
                 */}
                 <div className="flex flex-wrap items-start gap-5">
-                  <PhotoUpload
-                    variant="id"
-                    label={t('students.photoUpload')}
-                    reason={t('students.photoNoStorage')}
+                  <IdPhoto
+                    url={account.user.avatarUrl}
+                    name={[account.user.firstName, account.user.lastName].filter(Boolean).join(' ')}
+                    target="own-photo"
                   />
                   <div className="min-w-0 flex-1 basis-64">
                     <ProfileForm me={account} />

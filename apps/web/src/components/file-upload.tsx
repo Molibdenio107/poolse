@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useRef, useState } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Paperclip } from 'lucide-react';
 import {
@@ -10,11 +10,14 @@ import {
 } from '@/app/(app)/dashboard/files.actions';
 import type { FormState } from '@/app/(app)/dashboard/actions';
 import { EntityIcon } from '@/components/entity-icon';
-import { acceptFor, isImagePurpose, MAX_FILE_BYTES, purposeOf, WORD_TYPE, type FileTarget } from '@/lib/files';
+import { acceptFor, isImagePurpose, MAX_FILE_BYTES, purposeOf, WORD_TYPE, type FilePurpose, type FileTarget } from '@/lib/files';
 import { useSavedAction } from '@/lib/saved';
 import { cn } from '@/lib/utils';
 
 const INITIAL: FormState = { ok: false };
+
+/** A person's face: an ID square, never a gallery picture. */
+const PORTRAITS = new Set<FilePurpose>(['student_photo', 'staff_photo', 'own_photo']);
 
 
 /**
@@ -37,9 +40,12 @@ export function FileUpload({
   variant = 'button',
   className,
   ariaLabel,
+  onSaved,
 }: {
   target: FileTarget;
   label: string;
+  /** After an upload that worked — the avatar's own refresh, for `own-photo`. */
+  onSaved?: () => void;
   /**
    * The button's full name where the visible label repeats down a list — "Anexar"
    * on every row of Qualificações says nothing about which row (POOLSE-97).
@@ -53,8 +59,13 @@ export function FileUpload({
 }): React.ReactElement {
   const t = useTranslations();
   const input = useRef<HTMLInputElement>(null);
-  const [, dispatch, isPending] = useSavedAction(uploadFileAction, INITIAL);
+  const [state, dispatch, isPending] = useSavedAction(uploadFileAction, INITIAL);
   const [preparing, setPreparing] = useState(false);
+  useEffect(() => {
+    if (state.ok) onSaved?.();
+    // Once per answer, not per render of the caller.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
   const [dragging, setDragging] = useState(false);
   const purpose = purposeOf(target);
   const off = unavailable !== undefined && unavailable !== null;
@@ -64,7 +75,11 @@ export function FileUpload({
     setPreparing(true);
     let ready = file;
     try {
-      if (isImagePurpose(purpose)) ready = await shrink(file, purpose === 'logo' ? 1000 : 2000);
+      if (isImagePurpose(purpose)) {
+        // A face needs far less than a gallery picture (28-10-2026).
+        const edge = purpose === 'logo' ? 1000 : PORTRAITS.has(purpose) ? 800 : 2000;
+        ready = await shrink(file, edge);
+      }
     } finally {
       setPreparing(false);
     }
@@ -181,8 +196,22 @@ export function RemovePhotoButton({
 }
 
 /** Takes a document off its record. */
-export function DetachFileButton({ target, label }: { target: FileTarget; label: string }): React.ReactElement {
-  const [, dispatch, isPending] = useSavedAction(detachFileAction, INITIAL);
+export function DetachFileButton({
+  target,
+  label,
+  className,
+  onSaved,
+}: {
+  target: FileTarget;
+  label: string;
+  className?: string;
+  onSaved?: () => void;
+}): React.ReactElement {
+  const [state, dispatch, isPending] = useSavedAction(detachFileAction, INITIAL);
+  useEffect(() => {
+    if (state.ok) onSaved?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
   return (
     <button
       type="button"
@@ -192,7 +221,10 @@ export function DetachFileButton({ target, label }: { target: FileTarget; label:
         data.set('target', target);
         startTransition(() => dispatch(data));
       }}
-      className="inline-flex h-control items-center justify-center rounded border border-border bg-surface px-4 text-control text-foreground hover:bg-surface-muted disabled:opacity-60"
+      className={cn(
+        'inline-flex h-control items-center justify-center rounded border border-border bg-surface px-4 text-control text-foreground hover:bg-surface-muted disabled:opacity-60',
+        className,
+      )}
     >
       {label}
     </button>

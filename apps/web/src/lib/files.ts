@@ -22,6 +22,10 @@ export type FileTarget =
   | `qualification:${string}`
   /** `medical-certificate:<student>:<leave>` — POOLSE-109. */
   | `medical-certificate:${string}:${string}`
+  /** A person's photograph — Rui, 28-10-2026. `own-photo` is yours, through Clerk. */
+  | `student-photo:${string}`
+  | `staff-photo:${string}`
+  | 'own-photo'
   | 'logo';
 
 export type FilePurpose =
@@ -31,10 +35,14 @@ export type FilePurpose =
   | 'facility_photo'
   | 'pool_photo'
   | 'logo'
-  | 'medical_certificate';
+  | 'medical_certificate'
+  | 'student_photo'
+  | 'staff_photo'
+  | 'own_photo';
 
 export function purposeOf(target: FileTarget): FilePurpose {
   if (target === 'logo') return 'logo';
+  if (target === 'own-photo') return 'own_photo';
   const kind = target.split(':')[0];
   switch (kind) {
     case 'facility-photo':
@@ -47,6 +55,10 @@ export function purposeOf(target: FileTarget): FilePurpose {
       return 'agreement_document';
     case 'medical-certificate':
       return 'medical_certificate';
+    case 'student-photo':
+      return 'student_photo';
+    case 'staff-photo':
+      return 'staff_photo';
     default:
       return 'qualification_document';
   }
@@ -54,7 +66,14 @@ export function purposeOf(target: FileTarget): FilePurpose {
 
 /** Photographs and the logo are images, shrunk in the browser before upload. */
 export function isImagePurpose(purpose: FilePurpose): boolean {
-  return purpose === 'facility_photo' || purpose === 'pool_photo' || purpose === 'logo';
+  return (
+    purpose === 'facility_photo' ||
+    purpose === 'pool_photo' ||
+    purpose === 'logo' ||
+    purpose === 'student_photo' ||
+    purpose === 'staff_photo' ||
+    purpose === 'own_photo'
+  );
 }
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;

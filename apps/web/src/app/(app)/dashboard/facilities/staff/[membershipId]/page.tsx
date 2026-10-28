@@ -15,7 +15,8 @@ import {
 import { outcome } from '@/lib/load-failure';
 import { QualificationsPanel } from './qualifications-panel';
 import { PageShell, PageError } from '@/components/page-shell';
-import { PhotoUpload } from '@/components/photo-upload';
+import { IdPhoto } from '@/components/id-photo';
+import { fileUrl } from '@/lib/files';
 import { RoleBadges } from '@/components/role-badge';
 import { DetailPage } from '@/components/detail-page';
 import { Reinvite, RoleEditor, StaffForm } from './staff-form';
@@ -144,15 +145,35 @@ export default async function StaffMemberPage({
               )}
 
               {/*
-                The same ID square the student record has — round 5. Disabled for
-                the same reason and saying the same thing, because a photograph
-                of a member of staff waits on exactly the storage a student's does.
+                The photograph inside the person's card, beside the form — as on
+                O meu perfil (Rui, 28-10-2026). The club files one for somebody
+                with no login; somebody with a login sets their own, as with
+                their name, and their own record offers them that here too.
               */}
-              <div className="flex flex-wrap items-start gap-5">
-                <PhotoUpload
-                  variant="id"
-                  label={t('students.photoUpload')}
-                  reason={t('students.photoNoStorage')}
+              <section className="flex flex-wrap items-start gap-5 rounded border border-border bg-surface p-5">
+                <IdPhoto
+                  url={record.photoFileId !== null ? fileUrl(record.photoFileId) : record.avatarUrl}
+                  name={record.displayName ?? ''}
+                  target={
+                    record.appUserId === null
+                      ? viewer.canArchive
+                        ? `staff-photo:${record.membershipId}`
+                        : null
+                      : me?.memberships[0]?.membershipId === membershipId
+                        ? 'own-photo'
+                        : null
+                  }
+                  reason={
+                    record.appUserId === null
+                      ? viewer.canArchive && !storageReady
+                        ? t('files.notConfigured')
+                        : null
+                      : me?.memberships[0]?.membershipId === membershipId
+                        ? null
+                        : viewer.canArchive
+                          ? t('photo.theirOwn')
+                          : null
+                  }
                 />
                 <div className="min-w-0 flex-1 basis-64">
                   <StaffForm
@@ -161,7 +182,7 @@ export default async function StaffMemberPage({
                     canManage={viewer.canArchive}
                   />
                 </div>
-              </div>
+              </section>
 
               {identity.state === 'ok' && (
                 <IdentityCard

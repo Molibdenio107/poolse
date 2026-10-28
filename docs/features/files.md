@@ -12,10 +12,19 @@ Built 12 October 2026. What a club can upload, who can see it, and how it is kep
 | A site's apólices (Seguros) | The policy document, one per apólice, replaceable | Owner, admin | Owner, admin |
 | A partnership's Acordo tab | The signed contract, from the partner's first day; PDF, Word or a photograph; earlier versions kept (POOLSE-105) | Owner, admin | All staff (since 23-10-2026) |
 | A staff member's qualifications | The scanned certificate, one per record, **attached once** | Owner, admin | Owner, admin, and the person it certifies |
+| A student's page, beside the name (28-10-2026) | The student's photograph — **only with a photo consent** granted and not withdrawn | Owner, admin | All staff and the child's own family, while the consent stands; a withdrawal hides it at once |
+| A staff member's page, inside the person's card (28-10-2026) | The photograph of somebody **with no login** | Owner, admin | All staff |
+| *O meu perfil* (28-10-2026) | Your own photograph. It is Clerk's, like your name: the avatar at the top right, in every club | You | Wherever your avatar shows |
 
-**Not yet:** student photographs (they wait for the photo-consent rule: staff and the family,
-only with consent), the identity document on a student's page, and incident attachments
-(health data, which need encryption). Those controls stay visibly disabled.
+**Not yet:** the identity document on a student's page, and incident attachments (health
+data, which need encryption). Those controls stay visibly disabled.
+
+**A person's photograph** sits in one square beside their name (`IdPhoto`,
+`components/id-photo.tsx`), with *Carregar fotografia* / *Alterar* / *Remover* for whoever may
+change it and the reason in words for anybody who may not. A student's is refused without a
+photo consent (409 `photo_no_consent`); a staff member with a login sets their own, and the
+office is told so (409 `photo_is_theirs`). Your own goes to Clerk through `PUT /me/photo`, and
+the cache is re-read from Clerk, never written from the upload. A face is shrunk to 800 px.
 
 ## Rules
 

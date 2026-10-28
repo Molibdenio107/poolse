@@ -30,6 +30,16 @@ export async function uploadFileAction(_previous: FormState, formData: FormData)
     return { ok: true };
   }
 
+  // Your own photograph goes to Clerk, through the API, in one step (28-10-2026).
+  if (target === 'own-photo') {
+    try {
+      await apiUpload('/me/photo', await file.arrayBuffer());
+    } catch (error) {
+      return refusal(error);
+    }
+    return { ok: true, toastKey: 'files.photoSaved' };
+  }
+
   const route = attachRoute(target);
   if (route === null) return { ok: false, errorKey: 'files.uploadFailed' };
 
@@ -51,6 +61,14 @@ export async function uploadFileAction(_previous: FormState, formData: FormData)
 /** Takes a document off its record, or the logo off the club. The file stays on record. */
 export async function detachFileAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const target = String(formData.get('target') ?? '') as FileTarget;
+  if (target === 'own-photo') {
+    try {
+      await apiDelete('/me/photo');
+    } catch (error) {
+      return refusal(error);
+    }
+    return { ok: true };
+  }
   const certificate = certificatePath(target);
   if (certificate !== null) {
     try {
@@ -112,6 +130,10 @@ function attachRoute(target: FileTarget): { method: 'POST' | 'PUT'; path: string
       return { method: 'PUT', path: `/partners/${first}/agreement/document` };
     case 'qualification':
       return { method: 'PUT', path: `/qualifications/${first}/document` };
+    case 'student-photo':
+      return { method: 'PUT', path: `/students/${first}/photo` };
+    case 'staff-photo':
+      return { method: 'PUT', path: `/staff/${first}/photo` };
     default:
       return null;
   }
@@ -124,6 +146,8 @@ const CODES: Record<string, string> = {
   file_too_large: 'files.tooLarge',
   file_empty: 'files.chooseFile',
   qualification_document_set: 'files.certificateAttached',
+  photo_no_consent: 'files.photoNoConsent',
+  photo_is_theirs: 'files.photoIsTheirs',
 };
 
 function refusal(error: unknown, fallback = 'files.uploadFailed'): FormState {

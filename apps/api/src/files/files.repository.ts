@@ -24,6 +24,7 @@ export type FilePurpose =
   | 'pool_photo'
   | 'logo'
   | 'student_photo'
+  | 'staff_photo'
   | 'incident_attachment'
   | 'medical_certificate'
   | 'meet_results';
@@ -59,7 +60,11 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   facility_photo: { write: OFFICE, read: ANYONE },
   pool_photo: { write: OFFICE, read: STAFF },
   logo: { write: OFFICE, read: ANYONE },
-  student_photo: { write: null, read: OFFICE },
+  // Rui, 28-10-2026. A student's photograph: staff, and the child's own family
+  // (a question about a row, see openFile) — and only while the photo consent
+  // stands, checked again on every read. A staff member's: staff.
+  student_photo: { write: OFFICE, read: STAFF },
+  staff_photo: { write: OFFICE, read: STAFF },
   incident_attachment: { write: null, read: OFFICE },
   // Never through POST /files: an atestado is uploaded by its leave's own route,
   // which a family may use for its own child (POOLSE-109). Read by the office,
@@ -169,6 +174,9 @@ export async function openFile(
       own_certificate: boolean;
       leave_student_id: string | null;
       own_child_certificate: boolean;
+      photo_attached: boolean;
+      photo_consented: boolean;
+      own_child_photo: boolean;
     }>(
       `SELECT f.purpose::text AS purpose, f.storage_key, f.content_type, f.original_name,
               f.byte_size, f.uploaded_by, f.wrapped_key,
@@ -183,8 +191,23 @@ export async function openFile(
                           WHERE s.id = l.student_id AND s.membership_id = $2 AND s.archived_at IS NULL)
                  OR EXISTS (SELECT 1 FROM guardian_link gl
                              WHERE gl.student_id = l.student_id AND gl.guardian_membership_id = $2
-                               AND gl.archived_at IS NULL))) AS own_child_certificate
+                               AND gl.archived_at IS NULL))) AS own_child_certificate,
+              -- A student's photograph (Rui, 28-10-2026): shown only while its
+              -- photo consent stands, and to the child's own family as to staff.
+              sp.id IS NOT NULL AS photo_attached,
+              (sp.id IS NOT NULL AND EXISTS (
+                 SELECT 1 FROM consent pc
+                  WHERE pc.organization_id = sp.organization_id AND pc.student_id = sp.id
+                    AND pc.kind = 'photo' AND pc.granted AND pc.withdrawn_at IS NULL)) AS photo_consented,
+              (sp.id IS NOT NULL AND (
+                 sp.membership_id = $2
+                 OR EXISTS (SELECT 1 FROM guardian_link gl
+                             WHERE gl.student_id = sp.id AND gl.guardian_membership_id = $2
+                               AND gl.archived_at IS NULL))) AS own_child_photo
          FROM stored_file f
+         LEFT JOIN student sp
+           ON sp.organization_id = f.organization_id AND sp.photo_file_id = f.id
+          AND sp.archived_at IS NULL
          LEFT JOIN medical_leave_certificate c
            ON c.organization_id = f.organization_id AND c.file_id = f.id
          LEFT JOIN student_medical_leave l
@@ -197,7 +220,11 @@ export async function openFile(
   if (row === null) return null;
 
   const sealed = SEALED_PURPOSES.has(row.purpose);
-  const allowed = sealed
+  const allowed = row.purpose === 'student_photo'
+    ? row.photo_attached
+      ? row.photo_consented && (hasRole(...RULES.student_photo.read) || row.own_child_photo)
+      : row.uploaded_by === membershipId
+    : sealed
     ? hasRole(...RULES[row.purpose].read) || row.own_child_certificate
     : hasRole(...RULES[row.purpose].read) ||
       // A certificate is readable by the person it certifies.

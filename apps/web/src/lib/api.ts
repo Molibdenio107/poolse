@@ -1534,7 +1534,7 @@ export interface Student {
   isGuardian: boolean;
   socioNumber: string | null;
   /** Null unless a live `photo` consent exists — the API decides, not the caller. */
-  photoStorageKey: string | null;
+  photoFileId: string | null;
   photoConsent: boolean;
   /**
    * Every encarregado de educação, primary first — POOLSE-04, POOLSE-17.
@@ -3161,6 +3161,10 @@ export interface StaffRecord {
   pendingInvite: { id: string; email: string; expiresAt: string } | null;
   /** The Alunos side of the same Person, where they are also a student. */
   studentId: string | null;
+  /** The club's photograph of somebody with no login (28-10-2026); read at `/files/<id>`. */
+  photoFileId: string | null;
+  /** The avatar their own account holds in Clerk. */
+  avatarUrl: string | null;
 }
 
 /**

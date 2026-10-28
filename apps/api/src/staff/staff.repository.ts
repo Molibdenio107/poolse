@@ -34,6 +34,13 @@ export interface StaffRecord {
   pendingInvite: { id: string; email: string; expiresAt: string } | null;
   /** So the Alunos side of one Person is reachable from here — AC7. */
   studentId: string | null;
+  /**
+   * Their photograph (Rui, 28-10-2026): the club's file for somebody with no
+   * login (`photoFileId`, read at `/files/<id>`), else the avatar their own
+   * account holds in Clerk. Somebody with a login sets theirs on *O meu perfil*.
+   */
+  photoFileId: string | null;
+  avatarUrl: string | null;
 }
 
 export async function findStaff(
@@ -59,6 +66,8 @@ export async function findStaff(
       pending_expires: Date | null;
       student_id: string | null;
       away_kind: string | null;
+      photo_file_id: string | null;
+      avatar_url: string | null;
     }>(
       `SELECT m.id AS membership_id,
               m.app_user_id,
@@ -75,6 +84,8 @@ export async function findStaff(
               -- admin's edit saved and then showed the old number (13-10-2026 sweep).
               coalesce(m.phone, u.contact_phone) AS phone,
               m.notes,
+              m.photo_file_id,
+              u.cached_avatar_url AS avatar_url,
               m.status::text AS status,
               coalesce((
                 SELECT array_agg(mr.role::text ORDER BY mr.role)
@@ -169,6 +180,8 @@ export async function findStaff(
               expiresAt: (row.pending_expires ?? new Date()).toISOString(),
             },
       studentId: row.student_id,
+      photoFileId: row.app_user_id === null ? row.photo_file_id : null,
+      avatarUrl: row.avatar_url,
     };
   });
 }

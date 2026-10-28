@@ -262,3 +262,91 @@ export async function logoFileId(organizationId: string): Promise<string | null>
     return rows[0]?.logo_file_id ?? null;
   });
 }
+
+
+// ---------------------------------------------------------------------------
+// A person's photograph — Rui, 28-10-2026
+// ---------------------------------------------------------------------------
+
+/** A student's photograph needs a live photo consent first: it could not be shown without one. */
+export class PhotoNeedsConsentError extends Error {
+  constructor() {
+    super('This student has no photo consent');
+  }
+}
+
+/** Somebody with a login sets their own photograph, as they set their own name. */
+export class PhotoIsTheirsError extends Error {
+  constructor() {
+    super('This person sets their own photograph');
+  }
+}
+
+/**
+ * A student's photograph, or none. Null when the student is not this club's.
+ * Filing one is refused without a live photo consent: a photograph the club
+ * may not show is a photograph it should not be keeping. Removing one never is.
+ */
+export async function setStudentPhoto(
+  organizationId: string,
+  studentId: string,
+  fileId: string | null,
+): Promise<boolean | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ consented: boolean }>(
+      `SELECT EXISTS (
+                SELECT 1 FROM consent c
+                 WHERE c.organization_id = s.organization_id AND c.student_id = s.id
+                   AND c.kind = 'photo' AND c.granted AND c.withdrawn_at IS NULL
+              ) AS consented
+         FROM student s
+        WHERE s.id = $1 AND s.archived_at IS NULL AND s.anonymised_at IS NULL
+        FOR UPDATE OF s`,
+      [studentId],
+    );
+    if (rows[0] === undefined) return null;
+    if (fileId !== null) {
+      await fileKey(tx, fileId, 'student_photo');
+      if (!rows[0].consented) throw new PhotoNeedsConsentError();
+    }
+    await tx.query(`UPDATE student SET photo_file_id = $2 WHERE id = $1`, [studentId, fileId]);
+    await recordAudit(tx, {
+      action: fileId === null ? 'student.photo_removed' : 'student.photo_set',
+      entityType: 'student',
+      entityId: studentId,
+      data: { fileId },
+    });
+    return true;
+  });
+}
+
+/**
+ * A staff member's photograph, or none — only for somebody with no login.
+ * Null when the person is not this club's staff.
+ */
+export async function setStaffPhoto(
+  organizationId: string,
+  membershipId: string,
+  fileId: string | null,
+): Promise<boolean | null> {
+  return withOrg(organizationId, async (tx) => {
+    const { rows } = await tx.query<{ has_login: boolean }>(
+      `SELECT m.app_user_id IS NOT NULL AS has_login
+         FROM membership m
+        WHERE m.id = $1 AND m.archived_at IS NULL AND m.support_grant_id IS NULL
+        FOR UPDATE`,
+      [membershipId],
+    );
+    if (rows[0] === undefined) return null;
+    if (rows[0].has_login) throw new PhotoIsTheirsError();
+    if (fileId !== null) await fileKey(tx, fileId, 'staff_photo');
+    await tx.query(`UPDATE membership SET photo_file_id = $2 WHERE id = $1`, [membershipId, fileId]);
+    await recordAudit(tx, {
+      action: fileId === null ? 'membership.photo_removed' : 'membership.photo_set',
+      entityType: 'membership',
+      entityId: membershipId,
+      data: { fileId },
+    });
+    return true;
+  });
+}

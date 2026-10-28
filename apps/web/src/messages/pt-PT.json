@@ -4935,12 +4935,22 @@
       "ended": "{removed, plural, =0 {Período terminado.} one {Período terminado · # turno retirado.} other {Período terminado · # turnos retirados.}}"
     }
   },
+  "photo": {
+    "of": "Fotografia de {name}",
+    "upload": "Carregar fotografia",
+    "change": "Alterar",
+    "remove": "Remover",
+    "theirOwn": "Esta pessoa escolhe a sua fotografia em O meu perfil."
+  },
   "files": {
     "photoNumber": "Fotografia {number}",
     "chooseFile": "Escolha um ficheiro.",
     "tooLarge": "O ficheiro tem mais de 10 MB.",
     "wrongType": "Só são aceites PDF, JPEG, PNG e WebP — e Word (.docx) para contratos. Para fotografias, só imagens.",
     "uploadFailed": "Não foi possível guardar o ficheiro.",
+    "photoNoConsent": "Sem consentimento para fotografias: registe-o primeiro.",
+    "photoIsTheirs": "Esta pessoa tem conta e escolhe a sua própria fotografia.",
+    "photoSaved": "Fotografia guardada.",
     "removeFailed": "Não foi possível retirar a fotografia.",
     "notConfigured": "O armazenamento de ficheiros ainda não está configurado nesta instalação.",
     "notAllowed": "Não tem permissão para guardar este ficheiro.",

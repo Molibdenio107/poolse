@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, Patch, Put } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, Patch, Put } from '@nestjs/common';
 import { currentAuth } from '../auth/auth.context.js';
 import {
   listMemberships,
@@ -8,7 +8,8 @@ import {
   type MembershipSummary,
   type Preferences,
 } from './identity.repository.js';
-import { ensureAppUser, updateClerkName } from './identity.service.js';
+import { ensureAppUser, removeClerkPhoto, updateClerkName, updateClerkPhoto } from './identity.service.js';
+import { MAX_FILE_BYTES, sniffType } from '../files/storage.js';
 import { clubToday } from '../common/club-day.js';
 
 interface MeResponse {
@@ -180,6 +181,39 @@ export class MeController {
     const memberships = await listMemberships(clerkUserId);
 
     return { user: { ...user, ...saved }, memberships };
+  }
+
+  /**
+   * Your own photograph — Rui, 28-10-2026. Clerk owns it, as it owns the name:
+   * it is the avatar at the top right and on every club this person belongs
+   * to. The bytes go to Clerk and the cache is re-read from Clerk, never
+   * written from here. An image only, 10 MB at most.
+   */
+  @Put('photo')
+  async setPhoto(@Body() body: unknown): Promise<{ avatarUrl: string | null }> {
+    const { clerkUserId } = currentAuth();
+    if (!Buffer.isBuffer(body) || body.length === 0) {
+      throw new BadRequestException({ code: 'file_empty', message: 'No file was sent' });
+    }
+    if (body.length > MAX_FILE_BYTES) {
+      throw new BadRequestException({ code: 'file_too_large', message: 'A file may be at most 10 MB' });
+    }
+    const type = sniffType(body);
+    if (type === null || !type.startsWith('image/')) {
+      throw new BadRequestException({ code: 'file_type', message: 'This needs an image' });
+    }
+    await ensureAppUser(clerkUserId);
+    const user = await updateClerkPhoto(clerkUserId, body, type);
+    return { avatarUrl: user?.avatarUrl ?? null };
+  }
+
+  /** Back to Clerk's own initials. */
+  @Delete('photo')
+  async removePhoto(): Promise<{ avatarUrl: string | null }> {
+    const { clerkUserId } = currentAuth();
+    await ensureAppUser(clerkUserId);
+    const user = await removeClerkPhoto(clerkUserId);
+    return { avatarUrl: user?.avatarUrl ?? null };
   }
 }
 

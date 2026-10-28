@@ -93,3 +93,23 @@ export async function updateClerkName(
 
   return refreshFromClerk(clerkUserId);
 }
+
+/**
+ * A person's own photograph — Rui, 28-10-2026. The same order as the name:
+ * Clerk first, then the cache re-read from Clerk.
+ */
+export async function updateClerkPhoto(
+  clerkUserId: string,
+  bytes: Buffer,
+  contentType: string,
+): Promise<AppUserSummary | null> {
+  await clerk().users.updateUserProfileImage(clerkUserId, {
+    file: new Blob([new Uint8Array(bytes)], { type: contentType }),
+  });
+  return refreshFromClerk(clerkUserId);
+}
+
+export async function removeClerkPhoto(clerkUserId: string): Promise<AppUserSummary | null> {
+  await clerk().users.deleteUserProfileImage(clerkUserId);
+  return refreshFromClerk(clerkUserId);
+}

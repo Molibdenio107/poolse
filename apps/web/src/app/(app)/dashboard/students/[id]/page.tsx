@@ -19,7 +19,8 @@ import {
 import { addDays, isDate, mondayOf, today } from '@/lib/dates';
 import { DocumentUpload } from '@/components/document-upload';
 import { PersonAvatar } from '@/components/person-avatar';
-import { PhotoUpload } from '@/components/photo-upload';
+import { IdPhoto } from '@/components/id-photo';
+import { storageConfigured } from '@/lib/storage-status';
 import { photoUrlFor } from '@/lib/photo';
 import { StudentForm } from '../student-forms';
 import { CreditBooking } from './credit-booking';
@@ -213,6 +214,8 @@ export default async function StudentPage({
   // is one enrolment, and listing it twice would read as two.
   const turmas = [...new Map(timetable.map((entry) => [entry.classGroupId, entry])).values()];
 
+  const storageReady = await storageConfigured();
+
   return (
     <DetailPage
       title={loaded.displayName}
@@ -222,7 +225,7 @@ export default async function StudentPage({
         <PersonAvatar
           id={loaded.id}
           name={loaded.displayName}
-          photoUrl={photoUrlFor(loaded.photoStorageKey)}
+          photoUrl={photoUrlFor(loaded.photoFileId)}
           size="lg"
         />
       }
@@ -328,13 +331,17 @@ export default async function StudentPage({
               <section className="flex flex-col gap-4 rounded border border-border bg-surface p-5">
                 {reg.canManage ? (
                   <div className="flex flex-wrap items-start gap-5">
-                    <PhotoUpload
-                      variant="id"
-                      label={t('students.photoUpload')}
+                    {/* Filed only with a photo consent, as it is shown (28-10-2026). */}
+                    <IdPhoto
+                      url={photoUrlFor(loaded.photoFileId)}
+                      name={loaded.displayName}
+                      target={`student-photo:${loaded.id}`}
                       reason={
-                        loaded.photoConsent
-                          ? t('students.photoNoStorage')
-                          : t('students.photoNoConsent')
+                        !loaded.photoConsent
+                          ? t('students.photoNoConsent')
+                          : !storageReady
+                            ? t('files.notConfigured')
+                            : null
                       }
                     />
                     {/* A 16rem basis, so on a phone the form wraps under the photo

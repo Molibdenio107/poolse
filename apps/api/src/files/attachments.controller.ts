@@ -17,11 +17,15 @@ import {
   addPhoto,
   CertificateAlreadyAttachedError,
   logoFileId,
+  PhotoIsTheirsError,
+  PhotoNeedsConsentError,
   removePhoto,
   setAgreementDocument,
   setLogo,
   setPolicyDocument,
   setQualificationDocument,
+  setStaffPhoto,
+  setStudentPhoto,
   WrongFileError,
   type PhotoOwner,
 } from './attachments.repository.js';
@@ -141,6 +145,55 @@ export class AttachmentsController {
     requireRole('owner', 'admin');
     const fileId = optionalFileId(body);
     await refuseWrongFile(() => setLogo(currentTenant().organizationId, fileId));
+    return { saved: true };
+  }
+
+  /**
+   * A student's photograph — Rui, 28-10-2026. The office files it, and only
+   * with a live photo consent (409 `photo_no_consent`); null takes it off.
+   */
+  @Put('students/:studentId/photo')
+  async setStudentPhoto(
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ saved: true }> {
+    requireRole('owner', 'admin');
+    const fileId = optionalFileId(body);
+    let saved: boolean | null;
+    try {
+      saved = await refuseWrongFile(() => setStudentPhoto(currentTenant().organizationId, studentId, fileId));
+    } catch (error) {
+      if (error instanceof PhotoNeedsConsentError) {
+        throw new ConflictException({ code: 'photo_no_consent', message: error.message });
+      }
+      throw error;
+    }
+    if (saved === null) throw new NotFoundException();
+    return { saved: true };
+  }
+
+  /**
+   * A staff member's photograph, for somebody with no login. A person with a
+   * login sets their own on *O meu perfil* (409 `photo_is_theirs`), as with
+   * their name.
+   */
+  @Put('staff/:membershipId/photo')
+  async setStaffPhoto(
+    @Param('membershipId', new ParseUUIDPipe()) membershipId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ saved: true }> {
+    requireRole('owner', 'admin');
+    const fileId = optionalFileId(body);
+    let saved: boolean | null;
+    try {
+      saved = await refuseWrongFile(() => setStaffPhoto(currentTenant().organizationId, membershipId, fileId));
+    } catch (error) {
+      if (error instanceof PhotoIsTheirsError) {
+        throw new ConflictException({ code: 'photo_is_theirs', message: error.message });
+      }
+      throw error;
+    }
+    if (saved === null) throw new NotFoundException();
     return { saved: true };
   }
 }

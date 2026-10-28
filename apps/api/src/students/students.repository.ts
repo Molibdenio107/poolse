@@ -212,7 +212,7 @@ export interface Student {
    * Present only when a `photo` consent is granted and not withdrawn. The query
    * decides that, not the caller — see the note on PHOTO_KEY below.
    */
-  photoStorageKey: string | null;
+  photoFileId: string | null;
   /** So the interface can explain why there is no photograph, without implying there is one. */
   photoConsent: boolean;
   /**
@@ -273,7 +273,7 @@ const PHOTO_CONSENT = `
        AND c.withdrawn_at IS NULL
   )`;
 
-const PHOTO_KEY = `CASE WHEN ${PHOTO_CONSENT} THEN s.photo_storage_key ELSE NULL END`;
+const PHOTO_KEY = `CASE WHEN ${PHOTO_CONSENT} THEN s.photo_file_id ELSE NULL END`;
 
 /**
  * Every encarregado de educação of the student aliased `s`, primary first.
@@ -792,7 +792,7 @@ export async function listStudents(
       level_competitive: boolean;
       notes: string | null;
       guardians: Guardian[];
-      photo_storage_key: string | null;
+      photo_file_id: string | null;
       photo_consent: boolean;
       is_adult_student: boolean;
       is_guardian: boolean;
@@ -818,7 +818,7 @@ export async function listStudents(
              ${PAYMENT_STATE} AS payment_state,
              s.notes,
              ${GUARDIANS} AS guardians,
-             ${PHOTO_KEY} AS photo_storage_key,
+             ${PHOTO_KEY} AS photo_file_id,
              ${PHOTO_CONSENT} AS photo_consent,
              ${IS_ADULT_STUDENT} AS is_adult_student,
              ${IS_GUARDIAN} AS is_guardian
@@ -926,7 +926,7 @@ export async function exportStudents(
              s.federation_licence, coalesce(l.competitive, false) AS level_competitive,
              ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
-             ${PHOTO_KEY} AS photo_storage_key,
+             ${PHOTO_KEY} AS photo_file_id,
              ${PHOTO_CONSENT} AS photo_consent
         FROM student s
         LEFT JOIN student_level l
@@ -984,7 +984,7 @@ export async function findStudent(
              s.federation_licence, coalesce(l.competitive, false) AS level_competitive,
              ${PAYMENT_STATE} AS payment_state,
              ${GUARDIANS} AS guardians,
-             ${PHOTO_KEY} AS photo_storage_key,
+             ${PHOTO_KEY} AS photo_file_id,
              ${PHOTO_CONSENT} AS photo_consent,
              student_left_on(s.id)::text AS left_on,
              (student_left_on(s.id) + retention_health_period())::date::text AS health_erases_on,
@@ -1436,7 +1436,7 @@ function toStudent(row: {
   level_competitive: boolean;
   notes: string | null;
   guardians: Guardian[];
-  photo_storage_key: string | null;
+  photo_file_id: string | null;
   photo_consent: boolean;
   is_adult_student: boolean;
   is_guardian: boolean;
@@ -1482,7 +1482,7 @@ function toStudent(row: {
     isSocio: row.is_socio,
     socioNumber: row.socio_number,
     notes: row.notes,
-    photoStorageKey: row.photo_storage_key,
+    photoFileId: row.photo_file_id,
     photoConsent: row.photo_consent,
     isAdultStudent: row.is_adult_student,
     isGuardian: row.is_guardian,

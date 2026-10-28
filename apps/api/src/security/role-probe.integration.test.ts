@@ -870,6 +870,8 @@ test('file uploads and attachments refuse a guardian and a student (403)', async
       new AttachmentsController().qualificationDocument(NO_SUCH_ID, { fileId: NO_SUCH_ID }),
     );
     await refused('PUT settings/logo', 403, () => new AttachmentsController().setLogo({ fileId: null }));
+    await refused('PUT students/:id/photo', 403, () => new AttachmentsController().setStudentPhoto(NO_SUCH_ID, { fileId: null }));
+    await refused('PUT staff/:id/photo', 403, () => new AttachmentsController().setStaffPhoto(NO_SUCH_ID, { fileId: null }));
   });
 });
 

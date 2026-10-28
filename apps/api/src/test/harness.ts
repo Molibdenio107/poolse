@@ -451,7 +451,7 @@ async function sweepStaleScratchTenants(): Promise<void> {
           // The remembered dashboard site points at a facility — clear it first,
           // as `removeTenant` does, or every stale tenant refuses to be swept.
           await client.query(
-            'UPDATE membership SET dashboard_facility_id = NULL, support_grant_id = NULL WHERE organization_id = $1',
+            'UPDATE membership SET dashboard_facility_id = NULL, support_grant_id = NULL, photo_file_id = NULL WHERE organization_id = $1',
             [id],
           );
           await client.query('UPDATE organization SET logo_file_id = NULL WHERE id = $1', [id]);
@@ -593,7 +593,7 @@ export async function removeTenant(organizationId: string, clerkUserId: string):
     // A remembered dashboard site (POOLSE-66 slice 2b) points from membership at
     // facility, so it goes first — whatever order the tables are deleted in.
     await client.query(
-      'UPDATE membership SET dashboard_facility_id = NULL, support_grant_id = NULL WHERE organization_id = $1',
+      'UPDATE membership SET dashboard_facility_id = NULL, support_grant_id = NULL, photo_file_id = NULL WHERE organization_id = $1',
       [organizationId],
     );
     // The club's logo points at a stored file, which is deleted in the loop.

@@ -3649,6 +3649,14 @@ once, from empty — `GRANT UPDATE (document_file_id)` plus the trigger
 `pool_photo.storage_key` and `partner_agreement.document_key` to
 `stored_file (organization_id, storage_key)`. Migration `1790157600000_stored-files.sql`.
 
+**Photographs of people — 28 October 2026** (`1793181600000_photos.sql`). `file_purpose` gains
+`staff_photo`, and `student_photo` is switched on. `student.photo_file_id` and
+`membership.photo_file_id` are composite FKs to `stored_file (organization_id, id)`; the old,
+never-written `student.photo_storage_key` is dropped. A student's is read through the photo
+consent (`PHOTO_KEY` in `students.repository.ts`, and again in `openFile`); a membership's is
+only for somebody with no login, whose own face is Clerk's. `apply_retention()` clears
+`student.photo_file_id` with the rest of a student's identity.
+
 
 ### Vigilance periods — 12 October 2026
 

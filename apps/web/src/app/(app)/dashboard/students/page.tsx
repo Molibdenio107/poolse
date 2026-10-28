@@ -289,7 +289,7 @@ export default async function StudentsPage({
                         name={student.displayName}
                         // Already null unless consent is live: the API gates the
                         // key, this only turns a key into a URL.
-                        photoUrl={photoUrlFor(student.photoStorageKey)}
+                        photoUrl={photoUrlFor(student.photoFileId)}
                       />
                       <div className="flex min-w-0 flex-col">
                       {/*

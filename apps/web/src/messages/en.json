@@ -4935,12 +4935,22 @@
       "ended": "{removed, plural, =0 {Period ended.} one {Period ended · # duty removed.} other {Period ended · # duties removed.}}"
     }
   },
+  "photo": {
+    "of": "Photograph of {name}",
+    "upload": "Upload photo",
+    "change": "Change",
+    "remove": "Remove",
+    "theirOwn": "This person chooses their own photograph under My profile."
+  },
   "files": {
     "photoNumber": "Photo {number}",
     "chooseFile": "Choose a file.",
     "tooLarge": "The file is larger than 10 MB.",
     "wrongType": "Only PDF, JPEG, PNG and WebP are accepted — and Word (.docx) for contracts. Only images for photographs.",
     "uploadFailed": "The file could not be saved.",
+    "photoNoConsent": "No photography consent: record it first.",
+    "photoIsTheirs": "This person has an account and chooses their own photograph.",
+    "photoSaved": "Photograph saved.",
     "removeFailed": "The photograph could not be removed.",
     "notConfigured": "File storage is not configured on this installation yet.",
     "notAllowed": "You do not have permission to save this file.",
