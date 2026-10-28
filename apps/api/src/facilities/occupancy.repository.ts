@@ -55,7 +55,8 @@ export interface Occupancy {
    */
   laneHourOccupancy: number | null;
   /**
-   * Swimmers ÷ places, over the booked lanes that have a capacity.
+   * Swimmers ÷ places, session by session, over the booked lanes that have a
+   * capacity — each session's swimmers against its own lanes' places, summed.
    *
    * **The one that carries an asterisk.** `lane.default_capacity` is nullable by
    * design (POOLSE-43) — a club that has not decided how many fit in a lane must
@@ -512,9 +513,21 @@ export async function readOccupancy(
     /*
      * Seat occupancy, and the lanes it could not account for.
      *
-     * Only lanes that carry a booking *and* have a capacity go into the
-     * fraction. The uncovered ones are counted so the screen can print the
-     * asterisk rather than imply there isn't one — criterion 3.
+     * **Per session, then summed.** Each turma or parceria session counts its
+     * swimmers against the places of its own lanes that have a capacity, and
+     * the season's figure is the sum of the one over the sum of the other. The
+     * first version summed every session's swimmers over each booked lane's
+     * places counted *once*, so a lane used thirty times in a season offered its
+     * places once against thirty sessions of swimmers — the E2E club read about
+     * 3 000 % (POOLSE-52's formula, found by POOLSE-93, fixed 28-10-2026). A test
+     * with one session cannot see that; the regression test has five.
+     *
+     * Only turmas and parcerias, because only they have swimmers: a free-swim,
+     * maintenance or event block holds lanes with no headcount, and counting its
+     * places would quietly pull the figure down. A session with no lane that has
+     * a capacity contributes neither half. The lanes without one are counted so
+     * the screen can print the asterisk rather than imply there isn't one —
+     * criterion 3.
      */
     const seats = await tx.query<{
       swimmers: number;
@@ -522,19 +535,27 @@ export async function readOccupancy(
       uncovered: number;
     }>(
       `WITH sess AS (${sessions}),
-       booked AS (
+       seated AS (
+         SELECT sess.id, sess.headcount, sum(l.default_capacity) AS places
+           FROM sess
+           JOIN class_session_lane csl ON csl.session_id = sess.id AND NOT csl.cancelled
+           JOIN lane l ON l.id = csl.lane_id AND l.organization_id = csl.organization_id
+          WHERE sess.subject_type IN ('turma', 'parceria')
+            AND l.default_capacity IS NOT NULL
+          GROUP BY sess.id, sess.headcount
+       ),
+       uncovered AS (
          SELECT DISTINCT csl.lane_id
            FROM class_session_lane csl
            JOIN sess ON sess.id = csl.session_id
+           JOIN lane l ON l.id = csl.lane_id AND l.organization_id = csl.organization_id
           WHERE NOT csl.cancelled
+            AND sess.subject_type IN ('turma', 'parceria')
+            AND l.default_capacity IS NULL
        )
-       SELECT coalesce((SELECT sum(headcount) FROM sess), 0)::int AS swimmers,
-              coalesce((SELECT sum(l.default_capacity) FROM booked b
-                          JOIN lane l ON l.id = b.lane_id
-                         WHERE l.default_capacity IS NOT NULL), 0)::int AS places,
-              (SELECT count(*)::int FROM booked b
-                 JOIN lane l ON l.id = b.lane_id
-                WHERE l.default_capacity IS NULL) AS uncovered`,
+       SELECT coalesce((SELECT sum(headcount) FROM seated), 0)::int AS swimmers,
+              coalesce((SELECT sum(places) FROM seated), 0)::int AS places,
+              (SELECT count(*)::int FROM uncovered) AS uncovered`,
       [facilityId, season.id],
     );
 

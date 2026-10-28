@@ -269,6 +269,32 @@ test('a booking with nothing to count is zero, and is reported rather than dropp
   });
 });
 
+test('places are counted per session: the same booking all week is not thirty times full', async () => {
+  await withScratchTenant(async (tenant) => {
+    const occupancy = new OccupancyController();
+
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      const lanes = await pool(tenant);
+      const slot = await oneWeek(tenant);
+
+      // One weekly booking, eight swimmers on Pista 1 (ten places), across a
+      // five-week season — five sessions on one lane. Per session 8 of 10; the
+      // season, 40 of 50.
+      await tenant.sql(`UPDATE season SET ends_on = '2026-10-11' WHERE id = $1`, [tenant.seasonId]);
+      const booking = await parceriaBooking(tenant, slot, 8, 1, '09:00');
+      for (const day of ['2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28', '2026-10-05']) {
+        await session(tenant, booking, day, `${day} 09:00:00+01`, 45, [lanes[0]!]);
+      }
+
+      const result = await occupancy.read(tenant.facilityId);
+      assert.equal(result.total.headcount, 40);
+      // The first formula offered Pista 1's ten places once against all forty: 400 %.
+      assert.equal(result.seatOccupancy, 80);
+      assert.equal(result.lanesWithoutCapacity, 0);
+    });
+  });
+});
+
 test('a lane with no capacity contributes lane-hours and is reported as uncovered', async () => {
   await withScratchTenant(async (tenant) => {
     const occupancy = new OccupancyController();
