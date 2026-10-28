@@ -262,11 +262,12 @@ function NavItem({
         {item.icon !== undefined && <EntityIcon kind={item.icon} />}
         {t(item.key)}
         {/*
-          A small circle, never a number — Rui, 28-10-2026: discreet, and it
-          pulses as it appears. The count is still said to a screen reader.
+          A small soft dot, never a number — Rui, 28-10-2026: discreet, in the
+          palette's colour, blinking gently (`.attention-dot`). The count is
+          still said to a screen reader.
         */}
         {count > 0 && (
-          <span className="attention ml-auto size-2 shrink-0 rounded-full bg-warning">
+          <span className="attention-dot ml-auto">
             <span className="sr-only">
               {item.badge === 'meetInbox'
                 ? t('meetInbox.menuBadge', { count })
@@ -275,7 +276,7 @@ function NavItem({
           </span>
         )}
         {inside > 0 && (
-          <span className="attention ml-auto size-2 shrink-0 rounded-full bg-warning">
+          <span className="attention-dot ml-auto">
             <span className="sr-only">{t('attention.menuBadge', { count: inside })}</span>
           </span>
         )}

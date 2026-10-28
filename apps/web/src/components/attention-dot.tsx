@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils';
 
 /**
- * A small circle that says something here needs doing — POOLSE-120. It pulses
- * three times as it appears, then stays (`.attention`); the words are for a
- * screen reader, because the item's own text says what it is about.
+ * A small dot that says something here needs doing — POOLSE-120. The shared
+ * `.attention-dot`: six pixels, the palette's colour, blinking gently for as
+ * long as it is there (Rui, 28-10-2026). The words are for a screen reader,
+ * because the item's own text says what it is about.
  */
 export function AttentionDot({
   count,
@@ -18,7 +19,7 @@ export function AttentionDot({
 }): React.ReactElement | null {
   if (count === undefined || count <= 0) return null;
   return (
-    <span className={cn('attention inline-block size-2.5 shrink-0 rounded-full bg-warning align-middle', className)}>
+    <span className={cn('attention-dot align-middle', className)}>
       <span className="sr-only">{label}</span>
     </span>
   );

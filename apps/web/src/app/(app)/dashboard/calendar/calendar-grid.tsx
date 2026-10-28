@@ -1916,9 +1916,9 @@ function Block({
     >
       <p className="truncate pr-6 text-[0.75rem] font-medium leading-tight">{booking.name}</p>
       {(card.attention ?? 0) > 0 && (
-        // White ringed in the block's own ink, so it reads on every tint; the
-        // card says what it is in words.
-        <span className="attention absolute right-1.5 top-1.5 size-2 rounded-full bg-white ring-1 ring-black/40">
+        // The shared dot in white: the palette's colour would vanish on the
+        // block's own tint. The card says what it is in words.
+        <span className="attention-dot absolute right-1.5 top-1.5 !bg-white">
           <span className="sr-only">{t('attention.dot', { count: card.attention ?? 0 })}</span>
         </span>
       )}
