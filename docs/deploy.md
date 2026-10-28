@@ -224,6 +224,10 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       (the attachments are fetched with it). Without the secret the webhook answers 503; without
       the domain the Competição dialog says receiving is off. `INBOUND_DEV_SECRET` is for staging
       only (`POST /webhooks/inbound-dev`) and **never set in production**.
+- [ ] **Backups** (POOLSE-89), before the pilot preview: the age key pair (two copies, offline),
+      the `poolse-backups-production` bucket and its write-only-there token, the GitHub
+      `production` environment's secrets, `PG_TOOLS_IMAGE`, then `BACKUPS_ENABLED=true`; one
+      manual run of each workflow and one passing drill. *Backups and restoring*, below.
 - [ ] **`DATABASE_PLATFORM_URL` audited**: API environment only, never the web app's, never
       `NEXT_PUBLIC_`. The rotation procedure is below; a test now fails if a `NEXT_PUBLIC_`
       variable ever looks like a database URL — POOLSE-64.
@@ -365,6 +369,96 @@ it should not have been, if a machine holding it is lost, or once a year on prin
 
 There is no second consumer to coordinate with, which is the property worth keeping: if this
 credential ever needs to be set in two places, that is the change to argue about.
+
+## Backups and restoring
+
+POOLSE-89. **What runs:** every night at 02:30 UTC GitHub Actions (`.github/workflows/backup.yml`)
+takes one `pg_dump` of production. The row counts, migrations, RLS tables and app grants are read
+from the same snapshot. The dump is encrypted with `age` to a public key, and it is uploaded with
+its manifest to the backups' own bucket. Backups older than 30 days are deleted. At midday UTC,
+`backup-check.yml` checks, without any key, that the newest backup is under 36 hours old and whole.
+Either failure emails `PLATFORM_ALERT_EMAIL`. **Nothing in GitHub can open a backup** (Rui,
+28-10-2026). Opening one takes the age secret key and `SENSITIVE_DATA_KEY`, which live in Rui's
+password manager, so the restore drill runs on Rui's machine.
+
+Local runs use `PG_TOOLS=docker`, so `pg_dump`/`pg_restore` come from the `postgres:16` image and
+no Postgres client is needed. `PG_TOOLS_IMAGE` must match production's major version.
+
+### Setting it up (once, when production exists)
+
+1. **The key pair.** `pnpm --filter @poolse/db backup:keygen ~/poolse-backup-key.txt`. It prints
+   the public key (`age1…`). Put the file in the password manager. **Make a second copy**, printed
+   or on a USB stick kept somewhere other than the laptop. Then delete the file. A backup with no
+   key is a file nobody can open.
+2. **`SENSITIVE_DATA_KEY`.** The same value as on Railway, also in the password manager. Without
+   it a restore brings back every child except their medical notes.
+3. **The bucket.** In Cloudflare R2, create `poolse-backups-production`, private, separate from
+   the uploads bucket. Create an API token with **Object Read & Write on that bucket only**.
+   Check it by hand (QA 7): with that token, listing the uploads bucket must be refused.
+4. **GitHub.** Add a `production` environment with these secrets:
+   - `BACKUP_SOURCE_URL`: the owner connection string, never the app's.
+   - `BACKUP_AGE_RECIPIENT`: the `age1…` public key.
+   - `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`.
+   - `PLATFORM_ALERT_EMAIL`, `RESEND_API_KEY`, `EMAIL_FROM`, for the alerts.
+
+   Set the repository variables `PG_TOOLS_IMAGE=postgres:<production major>` and, last,
+   `BACKUPS_ENABLED=true`. Until that variable is set, both workflows skip.
+5. **Prove it.** Run *Nightly backup* by hand from the Actions tab, then *Backup check*, then the
+   drill below. Write the date of the first passing drill here.
+
+GitHub stops scheduled workflows in a repository with no commits for 60 days. If the Actions tab
+says so, re-enable both. The daily check exists so that a stopped backup is noticed the next day.
+
+### The restore drill (monthly, and before any risky migration)
+
+With the production backups bucket in `BACKUP_S3_*` (the same token is enough), the age key file
+and production's `SENSITIVE_DATA_KEY` in the environment:
+
+```
+PG_TOOLS=docker BACKUP_AGE_IDENTITY_FILE=~/poolse-backup-key.txt \
+  pnpm --filter @poolse/db restore-drill
+```
+
+It downloads the newest backup, checks its checksum, decrypts it, and restores it into a stock
+Postgres in a throwaway container. It then checks:
+
+1. every migration in the repo is applied;
+2. every table's row count matches the manifest;
+3. RLS is on for every `TENANT_TABLES` table;
+4. the `poolse_app` / `poolse_platform` grants are as they were;
+5. a medical note decrypts;
+6. the backup is under 36 h old.
+
+Each check prints PASS or FAIL with what it found, and the container is removed. Delete the key
+file afterwards if it came out of the password manager for the drill.
+
+### Restoring production into a new database
+
+Never over the existing one. `restore.ts` refuses a database that already has tables.
+
+1. **Stop writes.** Suspend the API service on Railway, so nothing writes to a database that is
+   about to be replaced.
+2. **A new, empty database:** a new Postgres on Railway, same major version. Note its owner
+   connection string.
+3. **Restore.** Pick the backup: the newest, or a stamp (`2026-10-28T023000Z`) from the bucket.
+   ```
+   RESTORE_TARGET_URL=<new owner URL> BACKUP_AGE_IDENTITY_FILE=~/poolse-backup-key.txt \
+   BACKUP_S3_…=<as above> PG_TOOLS=docker pnpm --filter @poolse/db restore [stamp]
+   ```
+   This creates `poolse_app` and `poolse_platform` with no password, restores with `--no-owner`,
+   and writes `restore-manifest.json`.
+4. **Prove it.** `RESTORE_TARGET_URL=<…> SENSITIVE_DATA_KEY=<…> pnpm --filter @poolse/db
+   verify-restore restore-manifest.json`. Every line must be PASS.
+5. **Passwords.** Run `pnpm db:bootstrap` with `DATABASE_URL` and `DATABASE_APP_URL` pointing at
+   the new database: it sets `poolse_app`'s password and checks that the role cannot bypass RLS.
+   Then `ALTER ROLE poolse_platform WITH PASSWORD '<new>';` as in *Rotating
+   `DATABASE_PLATFORM_URL`* above.
+6. **Point the API at it.** On Railway, set `DATABASE_URL`, `DATABASE_APP_URL` and
+   `DATABASE_PLATFORM_URL` to the new database. Leave `SENSITIVE_DATA_KEY` **unchanged**.
+   Redeploy, then check `/health`, sign in, open a student with medical notes, and open `/admin`.
+7. **Then** update `BACKUP_SOURCE_URL` in GitHub, or tonight's backup dumps the old database.
+
+Up to one day of writes is lost: a nightly dump has no point-in-time recovery, by decision.
 
 ## When something is wrong
 

@@ -1,0 +1,65 @@
+# The nightly backup — POOLSE-89.
+#
+# One encrypted pg_dump of production, with its manifest, into the backups'
+# own bucket; backups older than 30 days are deleted (Rui, 21-10-2026). The
+# age public key is the only key here: nothing in GitHub can open a backup.
+# Whether it restores is proved by `pnpm --filter @poolse/db restore-drill`
+# on Rui's machine (docs/deploy.md, "Backups and restoring").
+#
+# Secrets, on the `production` environment:
+#   BACKUP_SOURCE_URL              the owner connection string (never DATABASE_APP_URL)
+#   BACKUP_AGE_RECIPIENT           age1… — the public key
+#   BACKUP_S3_ENDPOINT / BACKUP_S3_BUCKET / BACKUP_S3_ACCESS_KEY_ID / BACKUP_S3_SECRET_ACCESS_KEY
+#   PLATFORM_ALERT_EMAIL / RESEND_API_KEY / EMAIL_FROM   for the failure alert
+# Variable: PG_TOOLS_IMAGE — postgres:<production's major>, e.g. postgres:16
+
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: '30 2 * * *' # 02:30 UTC, the quiet hours in Lisbon
+  workflow_dispatch:
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    # Off until production exists and Rui sets the repository variable BACKUPS_ENABLED=true.
+    if: vars.BACKUPS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      PG_TOOLS: docker
+      PG_TOOLS_IMAGE: ${{ vars.PG_TOOLS_IMAGE || 'postgres:16' }}
+      BACKUP_SOURCE_URL: ${{ secrets.BACKUP_SOURCE_URL }}
+      BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Back up
+        run: pnpm --filter @poolse/db backup
+      - name: Check what was written
+        run: pnpm --filter @poolse/db check-backups
+      - name: Alert
+        if: failure()
+        env:
+          EMAIL_PROVIDER: resend
+          PLATFORM_ALERT_EMAIL: ${{ secrets.PLATFORM_ALERT_EMAIL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+        run: pnpm --filter @poolse/db backup:alert "cópia de segurança noturna" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

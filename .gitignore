@@ -34,3 +34,6 @@ blob-report/
 .playwright/
 # POOLSE-88: the signed-in session the phone specs share. A live cookie.
 apps/web/e2e/.auth/
+
+# POOLSE-89: written by `restore`, read by `verify-restore`
+restore-manifest.json

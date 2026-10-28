@@ -111,7 +111,7 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-86](./POOLSE-86-email-delivery.md) | Email delivery — unsent notices, retries, invoice reminders, opt-outs | Notifications | High | notifier.ts (Resend) | — |
 | [POOLSE-87](./POOLSE-87-modules-per-club.md) | Modules — switching parts of Poolse on and off per club, from `/admin` | Platform / Tenancy | High — blocks the pilot preview | POOLSE-63, 64, 66 | 1 |
 | [POOLSE-88](./POOLSE-88-staff-on-the-phone.md) | Staff on the phone — installable app, the poolside flows, iPhone and Android | Global / Mobile web | High — blocks the pilot preview | POOLSE-87 | 1 |
-| [POOLSE-89](./POOLSE-89-backups-and-a-tested-restore.md) | Backups, and a restore that is proved rather than hoped for | Platform / Data | High — blocks the pilot preview | 0.10 to switch on | 0 |
+| [POOLSE-89](./POOLSE-89-backups-and-a-tested-restore.md) | Backups, and a restore that is proved rather than hoped for — **built 28-10-2026**, switched on with production | Platform / Data | High — blocks the pilot preview | 0.10 to switch on | 0 |
 | [POOLSE-90](./POOLSE-90-the-app-agenda-per-role.md) | The app — an agenda per role, "Vou / Não vou", and push | Mobile app / Notifications | High — blocks the pilot preview | POOLSE-88, 84, 86, 66 | 2 |
 | [POOLSE-91](./POOLSE-91-back-returns-to-where-you-came-from.md) | Voltar always returns to where you came from | Global / Navigation | High | lib/back.ts | 1 |
 | [POOLSE-92](./POOLSE-92-facilities-round-of-fixes.md) | Instalações: a round of fixes from the 22-10 test pass | Instalações / Dashboard / Incidentes | Medium | POOLSE-91 | 2 |
