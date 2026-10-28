@@ -35,7 +35,10 @@ import { toCsv } from '@/lib/csv';
  * order by hand. Adding a column then cannot silently shift every value one
  * place to the left.
  */
-export function rowFor(row: PartnerExportRow): string[] {
+/** A weekday's name in the reader's language, for the Dias column — POOLSE-117. */
+export type DayNamer = (weekday: number) => string;
+
+export function rowFor(row: PartnerExportRow, dayName: DayNamer): string[] {
   const values: Record<PartnerField, string> = {
     partnerName: row.partnerName,
     partnerType: row.partnerType,
@@ -51,6 +54,9 @@ export function rowFor(row: PartnerExportRow): string[] {
     contactEmail: row.contactEmail ?? '',
     contactPhone: row.contactPhone ?? '',
     notes: row.notes ?? '',
+    weekdays: row.weekdays.map(dayName).join(', '),
+    startTime: row.startTime ?? '',
+    durationMinutes: row.durationMinutes === null ? '' : String(row.durationMinutes),
   };
 
   return PARTNER_EXPORT_FIELDS.map((field) => values[field]);
@@ -68,6 +74,7 @@ export async function partnerWorkbook(
   headers: string[],
   rows: PartnerExportRow[],
   sheetName: string,
+  dayName: DayNamer,
 ): Promise<ArrayBuffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Poolse';
@@ -80,7 +87,7 @@ export async function partnerWorkbook(
   worksheet.views = [{ state: 'frozen', ySplit: 1 }];
 
   for (const row of rows) {
-    worksheet.addRow(rowFor(row));
+    worksheet.addRow(rowFor(row, dayName));
   }
 
   worksheet.columns.forEach((column) => {
@@ -100,6 +107,6 @@ export async function partnerWorkbook(
  * is where it is going. Our own importer sniffs the delimiter and strips the
  * mark, so the round trip survives either way; Excel is the fussy one.
  */
-export function partnerCsv(headers: string[], rows: PartnerExportRow[]): string {
-  return toCsv([headers, ...rows.map(rowFor)]);
+export function partnerCsv(headers: string[], rows: PartnerExportRow[], dayName: DayNamer): string {
+  return toCsv([headers, ...rows.map((row) => rowFor(row, dayName))]);
 }

@@ -3289,6 +3289,14 @@ export interface PartnerImportRowResult {
   existing: boolean;
   /** An earlier line of the same file naming the same group. */
   repeatOfLine: number | null;
+  /** POOLSE-117: the days this row books — `newDays` are *novo*, `sameDays` *igual*. */
+  weekdays: number[];
+  startTime: string | null;
+  durationMinutes: number | null;
+  newDays: number[];
+  sameDays: number[];
+  /** The earlier row that brought this group, when this row only adds days. */
+  moreDaysOf: number | null;
   importable: boolean;
 }
 
@@ -3323,6 +3331,8 @@ export interface PartnerImportResult {
   createdGroups?: number;
   updatedGroups?: number;
   skipped?: number;
+  /** POOLSE-117: days booked, in Sem pista. */
+  bookedDays?: number;
 }
 
 /** One line per group, in the importer's own vocabulary — criterion 10. */
@@ -3338,6 +3348,10 @@ export interface PartnerExportRow {
   contactEmail: string | null;
   contactPhone: string | null;
   notes: string | null;
+  /** POOLSE-117: the days this line books, at one hour and length. */
+  weekdays: number[];
+  startTime: string | null;
+  durationMinutes: number | null;
 }
 
 export interface PartnerExport {

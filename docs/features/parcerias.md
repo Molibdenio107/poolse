@@ -142,6 +142,15 @@ columns and a partnership with three contacts cannot be flattened into them with
 a rule about which one matters; a re-import neither duplicates that one nor deletes the other
 two.
 
+## A group on several days — POOLSE-117
+
+A school's class may swim on more than one day. Each day is its own booking (one per group, weekday and hour), and **one write path creates them**: `POST /partners/groups/:groupId/bookings` with `{ weekdays[], startTime, durationMinutes, laneIds[] }`, owner and admin only. Every chosen day is judged before anything is kept — the lane check a drag uses, the group already there at that day and hour, and the opening-hours and tank triggers under a savepoint — and **if any day is refused, nothing is written**; the 409 `partner_days_clash` lists every refused day, which the screen says as *Quarta 10:00 · Pista 2 já tem 6A*. With no published season it is a 409 `no_published_season`.
+
+- **The calendar's *Colocar aqui*** lists the site's partnership groups that have no day yet, beside the turmas. Choosing one ticks the day clicked and offers the site's other open days; all go at the clicked hour, lane and the slot's length.
+- **Turmas → Parcerias** draws **one card per group**: the headcount once (the group's), then a line per day with its day, hour, first lane and number of lanes, and *Remover este dia* (`DELETE /partners/groups/bookings/:scheduleId`: the booking is archived and its future, untaught lessons cancelled). *Adicionar dia* books one more day through the same path. A group whose last day is removed reappears in *Colocar aqui*.
+- **The sheet carries days**: *Dias*, *Hora* and *Duração (min)* columns, all optional. Days are read in either language (*Seg, Qua*, *2ª e 4ª*, *segunda-feira e quinta*, *Mon/Wed*); **a range such as *Seg a Qua* is refused, never guessed**. The length is the cell, else the site's slot that starts at that hour; a row with neither is refused with its reason. A group on several rows with other days **adds days**; the same day and hour twice is still a duplicate. Imported days land in **Sem pista**, and a day already booked reads *igual* and is not written again. The commit stays one transaction.
+- **The export writes the days back**, one line per hour and length a group swims at, so a round trip books nothing.
+
 ## Not in scope here
 
 The importer brings in partnerships and their groups. **It does not create bookings** — where

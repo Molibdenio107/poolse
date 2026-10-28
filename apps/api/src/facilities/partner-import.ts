@@ -28,6 +28,8 @@
  * participant counts side by side, unticked by default.
  */
 
+import { readClock, readDays, readMinutes } from './partner-days-sheet.js';
+
 export const PARTNER_IMPORT_FIELDS = [
   'partnerName',
   'partnerType',
@@ -40,6 +42,10 @@ export const PARTNER_IMPORT_FIELDS = [
   'contactEmail',
   'contactPhone',
   'notes',
+  // A group's days at the pool — POOLSE-117. Optional, all three.
+  'weekdays',
+  'startTime',
+  'durationMinutes',
 ] as const;
 
 export type PartnerImportField = (typeof PARTNER_IMPORT_FIELDS)[number];
@@ -69,7 +75,19 @@ export type PartnerProblemCode =
   | 'partnerRequired'
   | 'groupRequired'
   | 'tooLong'
-  | 'badCount';
+  | 'badCount'
+  /** POOLSE-117: the Dias cell names something that is not a day. */
+  | 'badDays'
+  /** A range (*Seg a Qua*) — refused rather than guessed. */
+  | 'dayRange'
+  /** Days with no hour. */
+  | 'timeRequired'
+  | 'badTime'
+  | 'badDuration'
+  /** No Duração, and no slot of the site starts at that hour. */
+  | 'durationRequired'
+  /** Days, and no published season to write them in. */
+  | 'noSeason';
 
 /**
  * Worth saying, never worth refusing over.
@@ -145,8 +163,20 @@ export interface PartnerImportRow {
   updates: PartnerUpdate[];
   /** True when this row names a group the club already has — a stocktake. */
   existing: boolean;
-  /** An earlier row of the same file naming the same group. */
+  /** An earlier row of the same file naming the same group, at a day and hour it already gave. */
   repeatOfLine: number | null;
+  /**
+   * POOLSE-117: the days this row books, at `startTime` for `durationMinutes`.
+   * `newDays` are not booked yet (*novo*); `sameDays` already are (*igual*).
+   * A group repeated on another row with other days adds days, and
+   * `moreDaysOf` names the row that brought the group.
+   */
+  weekdays: number[];
+  startTime: string | null;
+  durationMinutes: number | null;
+  newDays: number[];
+  sameDays: number[];
+  moreDaysOf: number | null;
 
   importable: boolean;
 }
@@ -184,6 +214,8 @@ export interface PartnerSummary {
   /** Existing groups a commit would actually change. */
   groupsToUpdate: number;
   flagged: number;
+  /** POOLSE-117: days a commit would book, all in *Sem pista*. */
+  daysToBook: number;
 }
 
 /** A partner already at the site, with the groups a row could match. */
@@ -199,6 +231,8 @@ export interface ExistingPartner {
     ownInstructorName: string | null;
     levelId: string | null;
     notes: string | null;
+    /** POOLSE-117: the days already booked, so a re-import says *igual*. */
+    days?: { weekday: number; startTime: string }[];
   }[];
 }
 
@@ -206,6 +240,12 @@ export interface PartnerImportContext {
   existing: ExistingPartner[];
   /** The organization's levels, so a `Nível` column can resolve to one. */
   levels: { id: string; name: string }[];
+  /**
+   * POOLSE-117: the published season's slots at this site, so a row with no
+   * Duração takes the length of the slot that starts at its hour. Null when no
+   * season is published — days are then refused in words.
+   */
+  slots?: { dayGroup: 'weekday' | 'saturday' | 'sunday'; startTime: string; minutes: number }[] | null;
 }
 
 /**
@@ -371,13 +411,13 @@ export function previewPartners(
   const levelsByKey = new Map<string, { id: string; name: string }>();
   for (const level of context.levels) levelsByKey.set(normaliseKey(level.name), level);
 
-  /** Group key -> the earlier row of this file that already claimed it. */
-  const seenGroups = new Map<string, number>();
+  /** Group key -> the earlier row of this file that brought it, and the days it gave. */
+  const seenGroups = new Map<string, { line: number; days: Set<string> }>();
   /** Partner key -> the tree node, so a partner appears once however many rows. */
   const trees = new Map<string, PartnerGroupTree>();
 
   const rows: PartnerImportRow[] = raw.map((row, index) =>
-    validateRow(row, index, partnersByKey, levelsByKey, seenGroups, trees),
+    validateRow(row, index, partnersByKey, levelsByKey, seenGroups, trees, context.slots),
   );
 
   return { rows, partners: [...trees.values()], summary: summarise(rows, trees) };
@@ -388,8 +428,9 @@ function validateRow(
   index: number,
   partnersByKey: Map<string, ExistingPartner>,
   levelsByKey: Map<string, { id: string; name: string }>,
-  seenGroups: Map<string, number>,
+  seenGroups: Map<string, { line: number; days: Set<string> }>,
   trees: Map<string, PartnerGroupTree>,
+  slots: PartnerImportContext['slots'],
 ): PartnerImportRow {
   const problems: PartnerProblem[] = [];
   const warnings: PartnerWarning[] = [];
@@ -493,10 +534,32 @@ function validateRow(
       ? undefined
       : known.groups.find((group) => normaliseKey(group.name) === normaliseKey(groupName));
 
-  const repeatOfLine = groupName === '' ? null : (seenGroups.get(groupKey) ?? null);
+  /*
+   * The days — POOLSE-117. A cell of days at one hour; the length is Duração,
+   * else the slot that starts at that hour (every day's must agree), else the
+   * row is refused with its reason. Nothing guesses a lane: days land in
+   * *Sem pista*.
+   */
+  const { weekdays, startTime, durationMinutes } = readRowDays(raw, slots, problems);
+  const slotKeys = weekdays.map((day) => `${day}|${startTime ?? ''}`);
+  const booked = new Set((existingGroupDays(partnersByKey.get(normaliseKey(partnerName)), groupName)).map(
+    (day) => `${day.weekday}|${day.startTime}`,
+  ));
+
+  /*
+   * A group repeated in the file: with other days it adds days; at a day and
+   * hour an earlier row already gave, it is the duplicate it always was.
+   */
+  const earlier = groupName === '' ? undefined : seenGroups.get(groupKey);
+  const overlaps = earlier !== undefined && (slotKeys.length === 0 || slotKeys.some((key) => earlier.days.has(key)));
+  const repeatOfLine = overlaps ? earlier.line : null;
+  const moreDaysOf = earlier !== undefined && !overlaps ? earlier.line : null;
   if (groupName !== '' && partnerName !== '' && repeatOfLine === null) {
-    seenGroups.set(groupKey, line);
+    if (earlier === undefined) seenGroups.set(groupKey, { line, days: new Set(slotKeys) });
+    else for (const key of slotKeys) earlier.days.add(key);
   }
+  const newDays = weekdays.filter((day) => !booked.has(`${day}|${startTime ?? ''}`));
+  const sameDays = weekdays.filter((day) => booked.has(`${day}|${startTime ?? ''}`));
 
   const updates: PartnerUpdate[] = [];
   if (existingGroup !== undefined && !('error' in count)) {
@@ -567,8 +630,83 @@ function validateRow(
     updates,
     existing: existingGroup !== undefined,
     repeatOfLine,
+    weekdays,
+    startTime,
+    durationMinutes,
+    newDays,
+    sameDays,
+    moreDaysOf,
     importable,
   };
+}
+
+/** The days already booked for a group of a recorded partner, by the index's own matching. */
+function existingGroupDays(
+  partner: ExistingPartner | undefined,
+  groupName: string,
+): { weekday: number; startTime: string }[] {
+  if (partner === undefined || groupName === '') return [];
+  return partner.groups.find((group) => normaliseKey(group.name) === normaliseKey(groupName))?.days ?? [];
+}
+
+/** Dias, Hora and Duração, read and judged — POOLSE-117. */
+function readRowDays(
+  raw: RawPartnerRow,
+  slots: PartnerImportContext['slots'],
+  problems: PartnerProblem[],
+): { weekdays: number[]; startTime: string | null; durationMinutes: number | null } {
+  const none = { weekdays: [], startTime: null, durationMinutes: null };
+  const daysCell = cell(raw.weekdays);
+  if (daysCell === null) return none;
+
+  const read = readDays(daysCell);
+  if ('error' in read) {
+    problems.push({ field: 'weekdays', code: read.error, value: daysCell });
+    return none;
+  }
+  if (read.days.length === 0) return none;
+
+  const timeCell = cell(raw.startTime);
+  if (timeCell === null) {
+    problems.push({ field: 'startTime', code: 'timeRequired' });
+    return none;
+  }
+  const startTime = readClock(timeCell);
+  if (startTime === null) {
+    problems.push({ field: 'startTime', code: 'badTime', value: timeCell });
+    return none;
+  }
+  if (slots === null || slots === undefined) {
+    problems.push({ field: 'weekdays', code: 'noSeason' });
+    return none;
+  }
+
+  const durationCell = cell(raw.durationMinutes);
+  if (durationCell !== null) {
+    const minutes = readMinutes(durationCell);
+    if (minutes === null) {
+      problems.push({ field: 'durationMinutes', code: 'badDuration', value: durationCell });
+      return none;
+    }
+    return { weekdays: read.days, startTime, durationMinutes: minutes };
+  }
+
+  // The club's slot that starts at that hour, on every chosen day, and one length.
+  const lengths = new Set<number>();
+  for (const day of read.days) {
+    const group = day === 6 ? 'saturday' : day === 7 ? 'sunday' : 'weekday';
+    const slot = slots.find((one) => one.dayGroup === group && one.startTime === startTime);
+    if (slot === undefined) {
+      problems.push({ field: 'durationMinutes', code: 'durationRequired', value: startTime });
+      return none;
+    }
+    lengths.add(slot.minutes);
+  }
+  if (lengths.size !== 1) {
+    problems.push({ field: 'durationMinutes', code: 'durationRequired', value: startTime });
+    return none;
+  }
+  return { weekdays: read.days, startTime, durationMinutes: [...lengths][0]! };
 }
 
 function pushUpdate(
@@ -607,9 +745,10 @@ function summarise(rows: PartnerImportRow[], trees: Map<string, PartnerGroupTree
     refused: rows.length - importable.length,
     partnersToCreate: [...trees.values()].filter((node) => node.isNew).length,
     partnersExisting: [...trees.values()].filter((node) => !node.isNew).length,
-    groupsToCreate: importable.filter((row) => !row.existing).length,
+    groupsToCreate: importable.filter((row) => !row.existing && row.moreDaysOf === null).length,
     groupsExisting: importable.filter((row) => row.existing).length,
     groupsToUpdate: importable.filter((row) => row.updates.length > 0).length,
     flagged: importable.filter((row) => row.warnings.length > 0).length,
+    daysToBook: importable.reduce((sum, row) => sum + row.newDays.length, 0),
   };
 }

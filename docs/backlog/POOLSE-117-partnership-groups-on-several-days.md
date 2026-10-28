@@ -38,7 +38,7 @@ The data already allows it: each weekly slot is its own `class_schedule` row, un
 - **One write path for a partnership group's days**: `POST /partner-groups/:id/bookings` `{ weekdays[], startTime, durationMinutes, laneIds[] }` → creates one `class_schedule` per weekday (+ `booking_lane`) in one transaction, after judging every day with `evaluate` against the grid *and* each other; any clash → 409 with the clashes as structured fields, nothing written. Rules 1, 3 (*Adicionar dia*) and 7 (the import's commit) all call it — the importer through its repository function, with `laneIds = []`.
 - `class_session` generation follows as it does for every booking (`syncSeasonLessons`).
 - *Remover este dia* reuses the existing booking removal (future, untaught sessions cancelled, never deleted).
-- Partner sheet: three new `PARTNER_FIELDS` with synonyms; a day parser in `lib/partner-sheet.ts` (pt-PT and en day names, *2ª…6ª*, *sáb*, *dom*, ranges *Seg a Qua* refused rather than guessed? — **Open**, default: refused with its reason); rows grouped by (partnership, group) before the API.
+- Partner sheet: three new `PARTNER_FIELDS` with synonyms; a day parser in `lib/partner-sheet.ts` (pt-PT and en day names, *2ª…6ª*, *sáb*, *dom*, ranges *Seg a Qua* refused with their reason, never guessed — the default, taken 28-10-2026 when Rui said go); rows grouped by (partnership, group) before the API.
 - `PartnerClasses` groups bookings by `partnerGroupId`; one `PartnerCard` per group renders the day lines.
 
 ### QA — scenarios

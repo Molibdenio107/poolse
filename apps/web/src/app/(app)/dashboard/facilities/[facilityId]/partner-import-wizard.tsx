@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Building2, Check, Copy, RefreshCw, Upload } from 'lucide-react';
+import { AlertTriangle, Building2, CalendarDays, Check, Copy, RefreshCw, Upload } from 'lucide-react';
 import { CONTROL_LINE, FIELD_COLUMN, FIELD_LABEL } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { PartnerImportTree } from '@/lib/api';
@@ -85,9 +85,12 @@ const FIELD_ORDER: PartnerField[] = [
 function Problem({
   errorKey,
   detail,
+  values,
 }: {
   errorKey?: string;
   detail?: string;
+  /** Figures for the sentence — the line whose days were refused (POOLSE-117). */
+  values?: Record<string, string | number>;
 }): React.ReactElement | null {
   const t = useTranslations();
   if (errorKey === undefined) return null;
@@ -96,7 +99,7 @@ function Problem({
     <p role="alert" className="flex items-start gap-2 text-sm text-danger">
       <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
       <span>
-        {t(errorKey)}
+        {t(errorKey, values)}
         {detail !== undefined && detail !== '' && (
           <span className="ml-2 font-mono text-xs text-foreground-muted">{detail}</span>
         )}
@@ -248,6 +251,12 @@ export function PartnerImportWizard({
             <p className="flex items-center gap-2 text-sm">
               <RefreshCw aria-hidden className="size-4 text-primary" />
               {t('partnerImport.doneUpdated', { count: updated })}
+            </p>
+          )}
+          {(runState.bookedDays ?? 0) > 0 && (
+            <p className="flex items-center gap-2 text-sm">
+              <CalendarDays aria-hidden className="size-4 text-primary" />
+              {t('partnerImport.doneDays', { count: runState.bookedDays ?? 0 })}
             </p>
           )}
           <p className="text-sm text-foreground-muted">{t('partnerImport.doneHint')}</p>
@@ -565,6 +574,7 @@ function MappingStep({
 
       <Problem
         {...(state.errorKey !== undefined ? { errorKey: state.errorKey } : {})}
+        {...(state.values !== undefined ? { values: state.values } : {})}
         {...(state.detail !== undefined ? { detail: state.detail } : {})}
       />
 
@@ -776,6 +786,7 @@ function PreviewStep({
 
       <Problem
         {...(state.errorKey !== undefined ? { errorKey: state.errorKey } : {})}
+        {...(state.values !== undefined ? { values: state.values } : {})}
         {...(state.detail !== undefined ? { detail: state.detail } : {})}
       />
 
@@ -948,6 +959,29 @@ function RowNotes({ row }: { row: PartnerPreviewRow }): React.ReactElement {
           {t(`partnerImport.warning.${warning.code}`, { value: warning.value ?? '' })}
         </span>
       ))}
+
+      {/* POOLSE-117: the days this row books, each novo or igual. */}
+      {row.weekdays.length > 0 && row.startTime !== null && (
+        <span className="flex flex-wrap items-center gap-1.5 text-foreground">
+          <CalendarDays aria-hidden className="size-3.5 shrink-0 text-foreground-muted" />
+          {row.weekdays.map((day) => (
+            <span key={day} className="rounded border border-border px-1.5 py-0.5 text-xs">
+              {t(`week.${day}`)} ·{' '}
+              {row.newDays.includes(day) ? t('partnerImport.dayNew') : t('partnerImport.daySame')}
+            </span>
+          ))}
+          <span className="text-foreground-muted">
+            {t('partnerImport.dayTime', { time: row.startTime, minutes: row.durationMinutes ?? 0 })}
+          </span>
+        </span>
+      )}
+
+      {row.moreDaysOf !== null && (
+        <span className="flex items-start gap-1.5 text-foreground-muted">
+          <CalendarDays aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          {t('partnerImport.moreDaysOf', { line: row.moreDaysOf })}
+        </span>
+      )}
 
       {row.repeatOfLine !== null && (
         <span className="flex items-start gap-1.5 text-foreground-muted">

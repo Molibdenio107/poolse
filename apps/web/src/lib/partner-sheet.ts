@@ -37,6 +37,10 @@ export const PARTNER_FIELDS = [
   'contactEmail',
   'contactPhone',
   'notes',
+  // A group's days — POOLSE-117.
+  'weekdays',
+  'startTime',
+  'durationMinutes',
 ] as const;
 
 export type PartnerField = (typeof PARTNER_FIELDS)[number];
@@ -55,6 +59,9 @@ export const EMPTY_PARTNER_MAPPING: PartnerMapping = {
   contactEmail: null,
   contactPhone: null,
   notes: null,
+  weekdays: null,
+  startTime: null,
+  durationMinutes: null,
 };
 
 /**
@@ -173,6 +180,10 @@ const SYNONYMS: [PartnerField, string[]][] = [
     ['telefone', 'telemovel', 'telemóvel', 'contacto telefonico', 'tlf', 'tlm', 'phone', 'mobile'],
   ],
   ['notes', ['notas', 'observacoes', 'observações', 'obs', 'notes', 'remarks', 'comments']],
+  // POOLSE-117: when the group swims. Read in either language by the API.
+  ['weekdays', ['dias', 'dia', 'dias da semana', 'dias de aula', 'days', 'day', 'weekdays', 'week days']],
+  ['startTime', ['hora', 'hora de inicio', 'hora de início', 'inicio', 'início', 'time', 'start', 'start time']],
+  ['durationMinutes', ['duracao', 'duração', 'minutos', 'duracao (min)', 'duração (min)', 'duration', 'length', 'minutes']],
 ];
 
 /**
@@ -256,4 +267,7 @@ export const PARTNER_EXPORT_FIELDS: PartnerField[] = [
   'contactEmail',
   'contactPhone',
   'notes',
+  'weekdays',
+  'startTime',
+  'durationMinutes',
 ];

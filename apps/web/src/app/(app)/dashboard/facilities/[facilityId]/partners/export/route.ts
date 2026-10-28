@@ -85,6 +85,8 @@ export async function GET(
    * itself when it comes back.
    */
   const headers = PARTNER_EXPORT_FIELDS.map((field) => t(`partners.field.${field}`));
+  // POOLSE-117: days in the reader's words; the importer reads either language.
+  const dayName = (weekday: number): string => t(`week.${weekday}`);
 
   if (url.searchParams.get('format') === 'pdf') {
     // Which site, said on the paper — partnerships are per site. Best effort: a
@@ -107,7 +109,7 @@ export async function GET(
       // The file writes the enum's own spelling so it re-imports in either
       // language; paper is read by a person, so the type is said in their words.
       rows: data.rows.map((row) => {
-        const out = rowFor(row);
+        const out = rowFor(row, dayName);
         const at = PARTNER_EXPORT_FIELDS.indexOf('partnerType');
         if (at >= 0) out[at] = t(`partners.kind.${row.partnerType}`);
         return out;
@@ -120,8 +122,8 @@ export async function GET(
 
   const body =
     format === 'csv'
-      ? partnerCsv(headers, data.rows)
-      : await partnerWorkbook(headers, data.rows, t('partners.title'));
+      ? partnerCsv(headers, data.rows, dayName)
+      : await partnerWorkbook(headers, data.rows, t('partners.title'), dayName);
 
   return new Response(body, {
     headers: {

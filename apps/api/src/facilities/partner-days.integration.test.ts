@@ -145,3 +145,83 @@ test('with no published season, days are refused in words', async () => {
     });
   });
 });
+
+async function slots(tenant: ScratchTenant): Promise<void> {
+  await tenant.sql(
+    `INSERT INTO facility_time_slot (organization_id, facility_id, season_id, day_group, start_time, end_time)
+     VALUES ($1, $2, $3, 'weekday', '10:00', '10:45'), ($1, $2, $3, 'weekday', '14:00', '15:00')`,
+    [tenant.organizationId, tenant.facilityId, tenant.seasonId],
+  );
+}
+
+test('QA 4–7: the sheet books days in Sem pista, adds days on a second row, refuses an unknown length, and a round trip changes nothing', async () => {
+  await withScratchTenant(async (tenant) => {
+    await actingAs(tenant, { roles: ['owner'] }, async () => {
+      await fixture(tenant);
+      await slots(tenant);
+      const partners = new PartnersController();
+      const row = (group: string, weekdays: string, startTime: string, extra: Record<string, string> = {}) => ({
+        partnerName: 'Colégio Novo',
+        groupName: group,
+        participantCount: '20',
+        weekdays,
+        startTime,
+        ...extra,
+      });
+
+      // QA 6: 10:20 has no slot and no Duração — that row is refused with its reason.
+      const preview = await partners.import(tenant.facilityId, {
+        rows: [row('3A', 'Seg, Qua', '10:00'), row('3A', 'Qui', '14:00'), row('3B', 'Ter', '10:20'), row('3C', 'Seg a Qua', '10:00')],
+        commit: false,
+      });
+      assert.deepEqual(preview.rows[0]!.newDays, [1, 3]);
+      assert.equal(preview.rows[0]!.durationMinutes, 45, "the slot's length");
+      assert.equal(preview.rows[1]!.moreDaysOf, 2, 'QA 5: more days, not a duplicate');
+      assert.equal(preview.rows[1]!.importable, true);
+      assert.equal(preview.rows[2]!.problems[0]?.code, 'durationRequired');
+      assert.equal(preview.rows[3]!.problems[0]?.code, 'dayRange');
+      assert.equal(preview.summary.daysToBook, 3);
+
+      // The same day and hour twice is still the duplicate it always was.
+      const twice = await partners.import(tenant.facilityId, {
+        rows: [row('3A', 'Seg', '10:00'), row('3A', 'Seg', '10:00')],
+        commit: false,
+      });
+      assert.equal(twice.rows[1]!.repeatOfLine, 2);
+
+      // QA 4: commit the good rows — two days and one more, all in Sem pista.
+      const committed = await partners.import(tenant.facilityId, {
+        rows: [row('3A', 'Seg, Qua', '10:00'), row('3A', 'Qui', '14:00', { durationMinutes: '60' })],
+        commit: true,
+      });
+      assert.equal(committed.bookedDays, 3);
+      const [group] = await tenant.sql<{ id: string }>(`SELECT id FROM partner_group WHERE name = '3A'`);
+      assert.deepEqual(await days(tenant, group!.id), [
+        { weekday: 1, start: '10:00', lanes: 0 },
+        { weekday: 3, start: '10:00', lanes: 0 },
+        { weekday: 4, start: '14:00', lanes: 0 },
+      ]);
+
+      // QA 7: what the export writes, the import reads back as igual — and writes nothing.
+      const exported = await partners.exportAll(tenant.facilityId);
+      const back = exported.rows
+        .filter((line) => line.groupName === '3A')
+        .map((line) => ({
+          partnerName: line.partnerName,
+          groupName: line.groupName,
+          participantCount: String(line.participantCount),
+          weekdays: line.weekdays.map((day) => ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][day]).join(', '),
+          startTime: line.startTime ?? '',
+          durationMinutes: String(line.durationMinutes ?? ''),
+        }));
+      assert.equal(back.length, 2, 'one line per hour');
+      const again = await partners.import(tenant.facilityId, { rows: back, commit: false });
+      assert.equal(again.summary.daysToBook, 0);
+      assert.ok(again.rows.every((one) => one.newDays.length === 0 && one.sameDays.length > 0));
+      const recommit = await partners.import(tenant.facilityId, { rows: back, commit: true });
+      assert.equal(recommit.bookedDays, 0);
+      assert.equal(recommit.createdGroups, 0);
+      assert.equal((await days(tenant, group!.id)).length, 3);
+    });
+  });
+});

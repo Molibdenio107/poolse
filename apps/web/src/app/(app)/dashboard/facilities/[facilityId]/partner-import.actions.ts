@@ -73,7 +73,11 @@ export interface ImportState {
   committed?: boolean;
   /** Partnerships created, as distinct from groups — only on a commit. */
   createdPartners?: number;
+  /** POOLSE-117: days booked by a commit. */
+  bookedDays?: number;
   errorKey?: string;
+  /** Figures for the error sentence — the line whose days were refused. */
+  values?: Record<string, string | number>;
   detail?: string;
   attempt: number;
 }
@@ -250,9 +254,16 @@ export async function runImportAction(
       summary: result.summary,
       committed: request.commit,
       createdPartners: result.createdPartners ?? 0,
+      bookedDays: result.bookedDays ?? 0,
       attempt,
     };
   } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      const body = (error.details ?? {}) as { code?: string; line?: number };
+      if (body.code === 'partner_import_days') {
+        return { ok: false, errorKey: 'partnerImport.daysRefused', values: { line: body.line ?? 0 }, attempt };
+      }
+    }
     if (error instanceof ApiError) {
       return {
         ok: false,

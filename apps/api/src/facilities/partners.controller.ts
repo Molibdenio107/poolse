@@ -38,6 +38,7 @@ import {
   listBookablePartners,
   listPartners,
   runPartnerImport,
+  PartnerImportDaysError,
   type PartnerImportResult,
   PARTNER_TYPES,
   PartnerInUseError,
@@ -300,12 +301,26 @@ export class PartnersController {
     requireRole('owner', 'admin');
     const { organizationId } = currentTenant();
 
-    const result = await runPartnerImport(organizationId, {
-      facilityId,
-      rows: readImportRows(body['rows']),
-      commit: body['commit'] === true,
-      include: readInclude(body['include']),
-    });
+    let result: PartnerImportResult | null;
+    try {
+      result = await runPartnerImport(organizationId, {
+        facilityId,
+        rows: readImportRows(body['rows']),
+        commit: body['commit'] === true,
+        include: readInclude(body['include']),
+      });
+    } catch (error) {
+      // POOLSE-117: a row's days refused at the commit — nothing was written.
+      if (error instanceof PartnerImportDaysError) {
+        throw new ConflictException({
+          code: 'partner_import_days',
+          message: 'partner_import_days',
+          line: error.line,
+          clashes: error.clashes,
+        });
+      }
+      throw error;
+    }
 
     if (result === null) throw new NotFoundException('No such site');
     return result;

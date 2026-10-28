@@ -12,6 +12,7 @@ import {
   type PartnerSummary,
   type RawPartnerRow,
 } from './partner-import.js';
+import { placePartnerDaysIn, PartnerDaysClashError, type PartnerDayClash } from './partner-days.repository.js';
 
 /**
  * Parcerias — POOLSE-47.
@@ -1111,6 +1112,8 @@ export interface PartnerImportResult {
   createdGroups?: number;
   updatedGroups?: number;
   skipped?: number;
+  /** POOLSE-117: days booked, in Sem pista. */
+  bookedDays?: number;
 }
 
 /** The partners already at this site, with everything a row could match or change. */
@@ -1128,6 +1131,7 @@ async function existingPartners(tx: Tx, facilityId: string): Promise<ExistingPar
           own_instructor_name: string | null;
           level_id: string | null;
           notes: string | null;
+          days: { weekday: number; start_time: string }[] | null;
         }[]
       | null;
   }>(
@@ -1139,7 +1143,15 @@ async function existingPartners(tx: Tx, facilityId: string): Promise<ExistingPar
                       'tag', g.tag,
                       'own_instructor_name', g.own_instructor_name,
                       'level_id', g.level_id,
-                      'notes', g.notes) ORDER BY g.name)
+                      'notes', g.notes,
+                      -- POOLSE-117: the days already booked, so a re-import says igual.
+                      'days', (SELECT json_agg(json_build_object(
+                                        'weekday', cs.weekday,
+                                        'start_time', to_char(cs.start_time, 'HH24:MI')))
+                                 FROM class_schedule cs
+                                WHERE cs.partner_group_id = g.id
+                                  AND cs.organization_id = g.organization_id
+                                  AND cs.archived_at IS NULL)) ORDER BY g.name)
                FROM partner_group g
               WHERE g.partner_id = p.id
                 AND g.organization_id = p.organization_id
@@ -1161,8 +1173,38 @@ async function existingPartners(tx: Tx, facilityId: string): Promise<ExistingPar
       ownInstructorName: group.own_instructor_name,
       levelId: group.level_id,
       notes: group.notes,
+      days: (group.days ?? []).map((day) => ({ weekday: day.weekday, startTime: day.start_time })),
     })),
   }));
+}
+
+/** The published season's slots at a site, for a row with no Duração — POOLSE-117. Null with no season. */
+async function seasonSlots(
+  tx: Tx,
+  facilityId: string,
+): Promise<NonNullable<PartnerImportContext['slots']> | null> {
+  const { rows: seasons } = await tx.query<{ id: string }>(
+    `SELECT id FROM season WHERE status = 'published' AND archived_at IS NULL LIMIT 1`,
+  );
+  if (seasons[0] === undefined) return null;
+  const { rows } = await tx.query<{ day_group: 'weekday' | 'saturday' | 'sunday'; start_time: string; minutes: number }>(
+    `SELECT day_group::text AS day_group, to_char(start_time, 'HH24:MI') AS start_time,
+            (extract(epoch FROM (end_time - start_time)) / 60)::int AS minutes
+       FROM facility_time_slot
+      WHERE facility_id = $1 AND season_id = $2 AND archived_at IS NULL`,
+    [facilityId, seasons[0].id],
+  );
+  return rows.map((row) => ({ dayGroup: row.day_group, startTime: row.start_time, minutes: row.minutes }));
+}
+
+/** A row's days were refused at the last moment; the whole file is rolled back (POOLSE-117). */
+export class PartnerImportDaysError extends Error {
+  constructor(
+    readonly line: number,
+    readonly clashes: PartnerDayClash[],
+  ) {
+    super('partner import days refused');
+  }
 }
 
 /**
@@ -1196,6 +1238,7 @@ export async function runPartnerImport(
     const context: PartnerImportContext = {
       existing: await existingPartners(tx, request.facilityId),
       levels: levels.rows,
+      slots: await seasonSlots(tx, request.facilityId),
     };
 
     const { rows, partners, summary } = previewPartners(request.rows, context);
@@ -1207,6 +1250,26 @@ export async function runPartnerImport(
     let createdGroups = 0;
     let updatedGroups = 0;
     let skipped = 0;
+    let bookedDays = 0;
+    /** Line of the row that brought a group -> its id, for the rows that add days to it. */
+    const groupIdByLine = new Map<number, string>();
+
+    /** POOLSE-117: book a row's new days in Sem pista, through the one write path. */
+    const bookDays = async (row: PartnerImportRow, groupId: string): Promise<void> => {
+      if (row.newDays.length === 0 || row.startTime === null || row.durationMinutes === null) return;
+      try {
+        await placePartnerDaysIn(tx, organizationId, groupId, {
+          weekdays: row.newDays,
+          startTime: row.startTime,
+          durationMinutes: row.durationMinutes,
+          laneIds: [],
+        });
+      } catch (error) {
+        if (error instanceof PartnerDaysClashError) throw new PartnerImportDaysError(row.line, error.clashes);
+        throw error;
+      }
+      bookedDays += row.newDays.length;
+    };
 
     /** Partner key to id, filled as partners are found or created. */
     const partnerIds = new Map<string, string>();
@@ -1223,7 +1286,8 @@ export async function runPartnerImport(
        * screen, so the two agree by construction rather than by memory —
        * criterion 5's "unticked by default", enforced on this side too.
        */
-      const wanted = ticked === null ? !row.existing : ticked.has(row.index);
+      // New days are worth booking by default; a stocktake alone is not (POOLSE-117).
+      const wanted = ticked === null ? !row.existing || row.newDays.length > 0 : ticked.has(row.index);
       if (!wanted) {
         skipped += 1;
         continue;
@@ -1236,6 +1300,16 @@ export async function runPartnerImport(
        * the operator unticked is never created at all. A school in the list with
        * no classes under it is a row nobody asked for.
        */
+      /*
+       * A row that only adds days to a group an earlier row brought — POOLSE-117.
+       * The group is written once; this row books its days and nothing else.
+       */
+      if (row.moreDaysOf !== null) {
+        const groupId = row.groupId ?? groupIdByLine.get(row.moreDaysOf);
+        if (groupId !== undefined) await bookDays(row, groupId);
+        continue;
+      }
+
       let partnerId = partnerIds.get(row.partnerKey);
       if (partnerId === undefined) {
         const made = await tx.query<{ id: string }>(
@@ -1311,14 +1385,17 @@ export async function runPartnerImport(
           ],
         );
         updatedGroups += 1;
+        groupIdByLine.set(row.line, row.groupId);
+        await bookDays(row, row.groupId);
         continue;
       }
 
-      await tx.query(
+      const createdGroup = await tx.query<{ id: string }>(
         `INSERT INTO partner_group
            (organization_id, partner_id, name, participant_count, level_id,
             brings_own_instructor, own_instructor_name, tag, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id`,
         [
           organizationId,
           partnerId,
@@ -1332,16 +1409,18 @@ export async function runPartnerImport(
         ],
       );
       createdGroups += 1;
+      groupIdByLine.set(row.line, createdGroup.rows[0]!.id);
+      await bookDays(row, createdGroup.rows[0]!.id);
     }
 
     await recordAudit(tx, {
       action: 'partners.imported',
       entityType: 'facility',
       entityId: request.facilityId,
-      data: { createdPartners, createdGroups, updatedGroups, skipped },
+      data: { createdPartners, createdGroups, updatedGroups, skipped, bookedDays },
     });
 
-    return { rows, partners, summary, createdPartners, createdGroups, updatedGroups, skipped };
+    return { rows, partners, summary, createdPartners, createdGroups, updatedGroups, skipped, bookedDays };
   });
 }
 
@@ -1382,6 +1461,14 @@ export interface PartnerExportRow {
   contactEmail: string | null;
   contactPhone: string | null;
   notes: string | null;
+  /**
+   * POOLSE-117: the days this line books, at one hour and length. A group on
+   * two hours is two lines, which the importer reads back as more days for the
+   * same group. Empty for a group with no timetable.
+   */
+  weekdays: number[];
+  startTime: string | null;
+  durationMinutes: number | null;
 }
 
 export async function exportPartners(
@@ -1401,6 +1488,7 @@ export async function exportPartners(
      * subtraction the calendar's join to `class_group` made three times.
      */
     const { rows } = await tx.query<{
+      group_id: string | null;
       partner_name: string;
       partner_type: PartnerType;
       group_name: string | null;
@@ -1413,7 +1501,8 @@ export async function exportPartners(
       contact_phone: string | null;
       notes: string | null;
     }>(
-      `SELECT p.name                AS partner_name,
+      `SELECT g.id                  AS group_id,
+              p.name                AS partner_name,
               p.type                AS partner_type,
               g.name                AS group_name,
               g.participant_count,
@@ -1447,7 +1536,7 @@ export async function exportPartners(
       [facilityId],
     );
 
-    return rows.map((row) => ({
+    const lines = rows.map((row) => ({
       partnerName: row.partner_name,
       partnerType: row.partner_type,
       groupName: row.group_name ?? '',
@@ -1462,5 +1551,37 @@ export async function exportPartners(
       contactPhone: row.contact_phone,
       notes: row.notes,
     }));
+
+    // The days, one line per hour and length a group swims at (POOLSE-117).
+    const { rows: days } = await tx.query<{
+      group_id: string;
+      start_time: string;
+      duration_minutes: number;
+      weekdays: number[];
+    }>(
+      `SELECT cs.partner_group_id AS group_id, to_char(cs.start_time, 'HH24:MI') AS start_time,
+              cs.duration_minutes, array_agg(cs.weekday ORDER BY cs.weekday) AS weekdays
+         FROM class_schedule cs
+         JOIN partner_group g ON g.id = cs.partner_group_id AND g.organization_id = cs.organization_id
+         JOIN partner p ON p.id = g.partner_id AND p.organization_id = g.organization_id
+        WHERE p.facility_id = $1 AND cs.archived_at IS NULL
+        GROUP BY cs.partner_group_id, cs.start_time, cs.duration_minutes
+        ORDER BY cs.start_time`,
+      [facilityId],
+    );
+    const daysOf = new Map<string, typeof days>();
+    for (const day of days) daysOf.set(day.group_id, [...(daysOf.get(day.group_id) ?? []), day]);
+
+    return lines.flatMap((line, index): PartnerExportRow[] => {
+      const groupId = rows[index]!.group_id;
+      const hours = groupId === null ? [] : (daysOf.get(groupId) ?? []);
+      if (hours.length === 0) return [{ ...line, weekdays: [], startTime: null, durationMinutes: null }];
+      return hours.map((hour) => ({
+        ...line,
+        weekdays: hour.weekdays,
+        startTime: hour.start_time,
+        durationMinutes: hour.duration_minutes,
+      }));
+    });
   });
 }
