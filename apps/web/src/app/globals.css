@@ -42,7 +42,12 @@
     color-scheme: light;
 
     --primary: 103 166 182;
-    --primary-foreground: 255 255 255;
+    /*
+     * Dark ink on the brand fill, 6.6:1 — Rui, 28-10-2026. White was 2.7:1 on
+     * every primary button. The fill is settled and unchanged; the text on it
+     * is the foreground ink, as dark mode already had it.
+     */
+    --primary-foreground: 17 24 28;
     --complementary: 179 212 157;
 
     --background: 250 251 252;
