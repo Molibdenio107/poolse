@@ -4005,3 +4005,11 @@ season, level?, on?)` — queues an `age` proposal for every `above` child with 
 `recipients`, `delivered_at`, `delivery_attempts`, `last_attempt_at`. Tenant RLS; `poolse_app`
 holds SELECT and INSERT and UPDATE on the three delivery columns only. In `TENANT_TABLES` and
 `TENANT_KINDS` (`level_change`). Asserted in `test/advancement-by-age.sql`.
+
+### Restorable functions — POOLSE-89, 28 October 2026
+
+Migration `1793095200000_restorable-functions`. `pg_restore` rebuilds indexes and constraints
+with an empty `search_path`, so a function used by one must call our other functions as
+`public.<name>()`: `closure_span` → `closure_half_day_cut`, `name_sort_key` → `surname_units` →
+`strip_accents`. Qualified rather than `SET search_path`, which would stop the SQL functions
+being inlined. `test/restorable.sql` rebuilds every expression and partial index that way.

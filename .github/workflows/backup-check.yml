@@ -1,0 +1,51 @@
+# The daily backup check — POOLSE-89.
+#
+# Separate from the backup on purpose: if the nightly run fails, is skipped or
+# stops being scheduled, this one still runs and says "no backup since <date>".
+# It needs no key — freshness (36 h), the dump's checksum against its
+# manifest, and a manifest that describes a real database. Whether the backup
+# restores is the drill on Rui's machine.
+#
+# GitHub stops scheduled workflows in a repository with no activity for 60
+# days; the runbook says to re-enable both if that happens.
+
+name: Backup check
+
+on:
+  schedule:
+    - cron: '0 12 * * *' # midday UTC, well after the nightly run
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # Off until production exists and Rui sets the repository variable BACKUPS_ENABLED=true.
+    if: vars.BACKUPS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check the newest backup
+        run: pnpm --filter @poolse/db check-backups
+      - name: Alert
+        if: failure()
+        env:
+          EMAIL_PROVIDER: resend
+          PLATFORM_ALERT_EMAIL: ${{ secrets.PLATFORM_ALERT_EMAIL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+        run: pnpm --filter @poolse/db backup:alert "verificação das cópias de segurança" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

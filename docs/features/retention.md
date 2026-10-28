@@ -44,6 +44,13 @@ already went. A new enrolment before then stops the count, because the student h
 still live in the club holds the same address, and an invoice reminder's payer name and address,
 with the payer's name stripped from its audit entry.
 
+## Backups
+
+**An erasure is complete 30 days after it runs**, when the oldest backup that still holds the
+data expires (POOLSE-89; Rui, 21-10-2026: thirty daily copies and nothing older). The backups
+are encrypted and their key is held offline, but the data is in them until then. The privacy
+notice can quote this sentence.
+
 ## Not covered yet
 
 Staff records, incident reports about visitors or staff, the words of a message body, files in

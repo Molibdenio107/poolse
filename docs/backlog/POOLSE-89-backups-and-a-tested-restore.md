@@ -4,6 +4,11 @@
 
 **Type:** Operations · **Area:** Platform / Data · **Priority:** High — blocks the pilot preview · **Depends on** nothing in code; the production database (0.10) to switch it on · **Written** 21-10-2026
 
+> **Built 28-10-2026**, with two changes from this text (`docs/decisions.md`). The drill runs on
+> Rui's machine (`restore-drill`), because it needs keys that are never in GitHub; GitHub runs the
+> backup and a daily keyless check. `age` is the `age-encryption` npm package (the same format),
+> and the Postgres tools come from the `postgres:<major>` image. The runbook is in `docs/deploy.md`.
+
 ### PO — why this exists
 
 The pilot preview runs on production, because the club enters real children's names, guardians'
