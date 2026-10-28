@@ -9,8 +9,9 @@ POOLSE-93's option B (Rui, 22-10-2026): three numbered questions, top to bottom.
 1. **Quão cheia está a instalação?** Two gauges, each with a sentence saying what it is a share of.
    - **Água ocupada** — of the lane-hours the pool is open, the share with a turma, a parceria or
      another booking in a lane (`laneHourOccupancy`), with the lane-hours under it.
-   - **Lugares ocupados** — swimmers over places, on the booked lanes that have a capacity
-     (`seatOccupancy`). Lanes with no capacity are said here (*Parcial: N pistas sem
+   - **Lugares ocupados** — swimmers over places, session by session: each turma or parceria
+     session's swimmers against the places of its own lanes that have a capacity, summed over the
+     season (`seatOccupancy`). Free swim, maintenance and events have no swimmers and are left out. Lanes with no capacity are said here (*Parcial: N pistas sem
      capacidade*, with *Definir*); with none at all, the gauge is replaced by *Nenhuma pista tem
      lotação definida*.
    - With no slot grid, *Água ocupada* says so and sections 2 and 3 say there is no data yet.
@@ -42,9 +43,9 @@ A cell's part of the day is read from a slot's start for what was available and 
 session's start for what was sold, as POOLSE-52 does; free is floored at zero so the difference
 never reads as a negative.
 
-## Known issue — *Lugares ocupados* over a season
+## Fixed 28-10-2026 — *Lugares ocupados* over a season
 
-`seatOccupancy` divides the swimmers of **every session of the season** by the places of each
-booked lane counted **once**, so over more than a session or two it climbs past 100 % (the E2E
-club reads about 3 000 %). POOLSE-93 was asked to keep the figures identical, so it is shown
-as computed; the formula needs its own ticket.
+Until then `seatOccupancy` divided the swimmers of **every session of the season** by the places
+of each booked lane counted **once**, so it climbed past 100 % after a few sessions (the E2E club
+read about 3 000 %). It is now computed per session and summed. The regression test runs one
+booking over five weeks, because a test with a single session cannot see the difference.
