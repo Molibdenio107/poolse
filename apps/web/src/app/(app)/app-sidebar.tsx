@@ -261,9 +261,12 @@ function NavItem({
       >
         {item.icon !== undefined && <EntityIcon kind={item.icon} />}
         {t(item.key)}
+        {/*
+          A small circle, never a number — Rui, 28-10-2026: discreet, and it
+          pulses as it appears. The count is still said to a screen reader.
+        */}
         {count > 0 && (
-          <span className="attention ml-auto rounded-full bg-primary px-2 text-xs font-medium text-primary-foreground">
-            <span aria-hidden>{count}</span>
+          <span className="attention ml-auto size-2 shrink-0 rounded-full bg-warning">
             <span className="sr-only">
               {item.badge === 'meetInbox'
                 ? t('meetInbox.menuBadge', { count })
@@ -272,7 +275,7 @@ function NavItem({
           </span>
         )}
         {inside > 0 && (
-          <span className="attention ml-auto size-2 shrink-0 rounded-full bg-primary">
+          <span className="attention ml-auto size-2 shrink-0 rounded-full bg-warning">
             <span className="sr-only">{t('attention.menuBadge', { count: inside })}</span>
           </span>
         )}

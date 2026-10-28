@@ -305,9 +305,9 @@ A small circle says **something here needs doing**, and it clears when it is don
 
 | What | Who sees it | Where it shows |
 |---|---|---|
-| A pre-registration waiting for an answer | owner, admin | *Pedidos* (count); *Alunos* while closed (dot) |
-| A pool's latest reading out of its band, or its latest lab report *não conforme* | owner, admin, maintenance | the pool's name, its site's name, *Instalações* (count) |
+| A pre-registration waiting for an answer | owner, admin | *Pedidos*; *Alunos* while closed |
+| A pool's latest reading out of its band, or its latest lab report *não conforme* | owner, admin, maintenance | the pool's name, its site's name, *Instalações* |
 | A recurring task due, or an open high-severity fault | owner, admin, maintenance | the pool or space, its site, *Instalações* |
-| A *Não vou* on a lesson still to come, or feedback this week | the lesson's teacher; owner and admin see all | the lesson's block on the calendar (and a line on its card), *Calendário* (count) |
+| A *Não vou* on a lesson still to come, or feedback this week | the lesson's teacher; owner and admin see all | the lesson's block on the calendar (and a line on its card), *Calendário* |
 
-Every verdict is the existing one: `excursions`/`resolveBands`, `gradeLabResult`, the maintenance module's `TASK_STATE`, and the Pedidos count. A guardian or a student gets an empty map, not a 403. A closed menu section shows a dot when an entry under it has a count. Every circle, the tab dots and the *Recebidos* count included, carries `.attention`: three pulses, then still. The words are on the item; the circle's own sentence is for a screen reader (`AttentionDot`).
+Every verdict is the existing one: `excursions`/`resolveBands`, `gradeLabResult`, the maintenance module's `TASK_STATE`, and the Pedidos count. A guardian or a student gets an empty map, not a 403. **The menu shows a small amber dot, never a number** (Rui, 28-10-2026), *Recebidos* included; the count is said only to a screen reader. A closed section shows the dot when an entry under it has one. Every circle, the tab dots and the *Recebidos* count included, carries `.attention`: three pulses, then still. The words are on the item; the circle's own sentence is for a screen reader (`AttentionDot`).
