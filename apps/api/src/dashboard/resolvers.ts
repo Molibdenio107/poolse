@@ -1,4 +1,3 @@
-import { readSubscription } from '../billing/subscription.repository.js';
 import { energyCosts } from '../energy/invoices.repository.js';
 import { listMyTasks } from '../maintenance/maintenance.repository.js';
 import { SITE_PAGE_ROLES } from '../facilities/site-access.js';
@@ -64,80 +63,6 @@ import { readLeadsWidget, type LeadsWidget } from '../leads/leads.repository.js'
  * second into `state: 'error'`, and the difference is the whole point: a club
  * with no tasks outstanding and a broken query must not look the same.
  */
-
-/** How many days are left on a trial. Null when there is no trial date. */
-function daysLeft(iso: string | null): number | null {
-  if (iso === null) return null;
-  const ends = Date.parse(iso);
-  if (Number.isNaN(ends)) return null;
-  /*
-   * Rounded up, and floored at zero. A trial ending in four hours has "1 day
-   * left" rather than none — the figure is a warning, and rounding a warning
-   * down is how it arrives after the thing it warned about. The exact wording
-   * belongs to the client, which has the reader's language.
-   */
-  return Math.max(0, Math.ceil((ends - Date.now()) / 86_400_000));
-}
-
-export interface SubscriptionWidget {
-  status: string | null;
-  /** Mensal or anual — the line's "plan". Null until they subscribe. */
-  interval: string | null;
-  trialEndsAt: string | null;
-  trialDaysLeft: number | null;
-  currentPeriodEnd: string | null;
-  cancelAtPeriodEnd: boolean;
-  /** True once the club is paying through Stripe — the card lives there. */
-  hasSubscription: boolean;
-  /**
-   * A trial under five days, or a payment that failed — POOLSE-103 C. The one
-   * case the quiet line takes the warning tone, decided here so the card does
-   * not keep its own list of statuses that matter.
-   */
-  needsAttention: boolean;
-}
-
-/**
- * Where this club stands with Poolse — the owner's own question.
- *
- * Reuses `readSubscription`, which is what `/subscription` answers from, so the
- * widget and the Subscrição page cannot disagree about a status. It carries **no
- * price and no card**: those are Stripe's pages, and this is a state, not a
- * receipt.
- */
-export async function subscriptionState(ctx: ResolverContext): Promise<SubscriptionWidget | null> {
-  const subscription = await readSubscription(ctx.organizationId);
-  // Null means the organization is gone from under the request, which is a
-  // failure rather than an absence — the reader is inside it.
-  if (subscription === null) throw new Error('The organization behind this request is missing');
-
-  const trialDaysLeft = daysLeft(subscription.trialEndsAt);
-  return {
-    status: subscription.status,
-    interval: subscription.interval,
-    trialEndsAt: subscription.trialEndsAt,
-    trialDaysLeft,
-    currentPeriodEnd: subscription.currentPeriodEnd,
-    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-    hasSubscription: subscription.hasSubscription,
-    needsAttention:
-      trialIsClosing({ trialDaysLeft }) ||
-      subscription.status === 'past_due' ||
-      subscription.status === 'expired',
-  };
-}
-
-/**
- * Is this trial close enough to need the owner's attention?
- *
- * It used to lift the card to the top of the band. Since POOLSE-103 the card is
- * a quiet line at the band's end, outside the cap, and this is half of what
- * turns that line to the warning tone (`needsAttention`).
- */
-export function trialIsClosing(data: unknown): boolean {
-  const days = (data as Pick<SubscriptionWidget, 'trialDaysLeft'> | null)?.trialDaysLeft;
-  return typeof days === 'number' && days < 5;
-}
 
 export interface TasksWidget {
   total: number;

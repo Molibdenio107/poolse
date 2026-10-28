@@ -30,6 +30,7 @@ import {
   readBillingMode,
 } from './subscription.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
+import { readSubscriptionAlert, type SubscriptionAlert } from './subscription-alert.js';
 
 /**
  * What the club pays Poolse — slice 2.4, narrowed 13 September 2026.
@@ -140,6 +141,19 @@ export class SubscriptionController {
        */
       canManage: hasRole('owner'),
     };
+  }
+
+  /**
+   * The avatar's warning — Rui, 28-10-2026. Owner and admin: the admin is told
+   * the subscription is ending and that only the owner can renew, and is never
+   * shown the page itself (`canOpen` false), which stays the owner's alone.
+   * Null when there is nothing to warn about. The decision is
+   * `subscriptionAlert`, one definition.
+   */
+  @Get('alert')
+  async alert(): Promise<{ alert: SubscriptionAlert | null; canOpen: boolean }> {
+    requireRole('owner', 'admin');
+    return { alert: await readSubscriptionAlert(currentTenant().organizationId), canOpen: hasRole('owner') };
   }
 
   /**

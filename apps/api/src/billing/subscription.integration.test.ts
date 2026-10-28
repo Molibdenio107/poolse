@@ -436,3 +436,32 @@ test('63 — a stray event never takes over a club that pays by hand', async () 
     assert.equal(subscription?.status, 'active');
   });
 });
+
+test('the avatar warning: owner and admin see a trial ending, only the owner may open the page', async () => {
+  await withScratchTenant(async (tenant) => {
+    const controller = new SubscriptionController();
+
+    // A fresh trial is fifteen days out: nothing to warn about yet.
+    const fresh = await actingAs(tenant, { roles: ['owner'] }, () => controller.alert());
+    assert.equal(fresh.alert, null);
+
+    await tenant.sql(`UPDATE organization SET trial_ends_at = now() + interval '3 days' WHERE id = $1`, [
+      tenant.organizationId,
+    ]);
+    const owner = await actingAs(tenant, { roles: ['owner'] }, () => controller.alert());
+    assert.equal(owner.alert?.kind, 'trial_ending');
+    assert.ok(owner.alert?.daysLeft === 3 || owner.alert?.daysLeft === 4, 'three days out, by the club day');
+    assert.equal(owner.canOpen, true);
+
+    const admin = await actingAs(
+      tenant,
+      { roles: ['admin'], membershipId: await addMember(tenant, 'Ana', 'Admin', ['admin']) },
+      () => controller.alert(),
+    );
+    assert.equal(admin.alert?.kind, 'trial_ending');
+    assert.equal(admin.canOpen, false, 'the page stays the owner’s');
+    await actingAs(tenant, { roles: ['admin'] }, () => expectStatus(() => controller.read(), 403));
+
+    await actingAs(tenant, { roles: ['instructor'] }, () => expectStatus(() => controller.alert(), 403));
+  });
+});

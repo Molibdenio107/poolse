@@ -14,7 +14,6 @@ import type {
   OccupancyTodayWidgetData,
   PeopleWidgetData,
   StaffCostWidgetData,
-  SubscriptionWidgetData,
   TasksWidgetData,
   WaterWidgetData,
   QualificationsWidgetData,
@@ -83,8 +82,6 @@ export async function renderWidget(
       return <LeadsCard widget={widget} />;
     case 'mgmt.qualifications':
       return <QualificationsCard widget={widget} />;
-    case 'mgmt.subscription':
-      return <SubscriptionCard widget={widget} />;
     case 'mgmt.energy.costs':
       return <EnergyCostsCard widget={widget} />;
     case 'maint.mytasks':
@@ -131,74 +128,6 @@ export async function renderWidget(
     default:
       return null;
   }
-}
-
-/* -------------------------------------------------------------------------- */
-
-/** Where the club stands with Poolse. Owner only — POOLSE-60. */
-async function SubscriptionCard({ widget }: { widget: DashboardWidget }): Promise<React.ReactElement> {
-  const t = await getTranslations();
-  const data = widget.data as SubscriptionWidgetData | null;
-
-  return (
-    <WidgetCard
-      widget={widget}
-      title={t('subscription.title')}
-      href="/dashboard/profile/subscription"
-      linkLabel={t('subscription.open')}
-      emptyMessage={t('dashboard.widget.subscription.empty')}
-      compact
-    >
-      {/*
-        One quiet line since POOLSE-103 (Rui, 22-10-2026): the plan, the status
-        and the next date, with no large figure. Only a trial running out or a
-        payment that failed takes the warning tone — with its icon, so the
-        colour is never the only sign — and that is the server's call.
-      */}
-      {data !== null && (
-        <p
-          className={cn(
-            'flex flex-wrap items-center gap-x-2 text-sm',
-            data.needsAttention ? 'text-warning' : 'text-foreground-muted',
-          )}
-        >
-          {data.needsAttention && <AlertTriangle aria-hidden className="size-4 shrink-0" />}
-          {[
-            data.interval === null ? null : t(`subscription.interval.${data.interval}`),
-            data.status === null
-              ? t('subscription.state.unknown')
-              : t(`subscription.state.${data.status}`),
-            /*
-              The days, not the date, when a trial is running — "faltam 3 dias" is
-              a thing to act on and "termina a 26-09-2026" is a thing to work out.
-              The date comes too, because somebody has to put it in a diary.
-            */
-            data.trialDaysLeft !== null && data.trialEndsAt !== null
-              ? t('dashboard.widget.subscription.trial', {
-                  days: data.trialDaysLeft,
-                  on: formatDate(data.trialEndsAt),
-                })
-              : null,
-            data.currentPeriodEnd !== null
-              ? t(
-                  data.cancelAtPeriodEnd
-                    ? 'dashboard.widget.subscription.ends'
-                    : 'dashboard.widget.subscription.renews',
-                  { on: formatDate(data.currentPeriodEnd) },
-                )
-              : null,
-          ]
-            .filter((part): part is string => part !== null)
-            .map((part, index) => (
-              <span key={index} className="flex items-center gap-x-2">
-                {index > 0 && <span aria-hidden>·</span>}
-                {part}
-              </span>
-            ))}
-        </p>
-      )}
-    </WidgetCard>
-  );
 }
 
 /* -------------------------------------------------------------------------- */

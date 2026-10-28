@@ -116,8 +116,8 @@ a 2s ceiling each and one failure costs one card, never the page — and the err
 no message, because a resolver's text names columns. **Every allowed widget is resolved, then
 escalated, then capped at four per band**: "boost this when the water is out of range" is a
 predicate on resolved data, and a cap decided in advance would cut the thing that was about to
-become urgent. A `trailing` widget (the subscription, POOLSE-103) is one line after the cap, never
-cut and never ranked above the pool. **A club with no sites gets the onboarding checklist and nothing else; a club
+become urgent. A `trailing` widget is one line after the cap, never cut and never ranked above the pool;
+none is trailing since the subscription left the dashboard (28-10-2026). **A club with no sites gets the onboarding checklist and nothing else; a club
 with sites never gets it** — one branch, both directions. **Aggregates are one grouped query
 each, never a loop over facilities**, and `assertRegistryIsSound` refuses the five registry
 mistakes that would otherwise render nothing at all rather than fail. **On the web a band is a
@@ -181,7 +181,7 @@ rather than `SentryGlobalFilter` — that filter is `@Catch()` and terminates, s
 means one never runs. `docs/features/observability.md`.
 
 **A subscription is Stripe's to know and the webhook's to write; a licence is the operator's.**
-Slice 2.4, narrowed by POOLSE-60. **Owner only, under *O meu perfil*** — not a menu item and
+Slice 2.4, narrowed by POOLSE-60. **Owner only, under *O meu perfil*** — not a menu item, not on the dashboard, and
 not an admin's business: the card, the renewal and the decision to cancel are the owner's own,
 the same reasoning that keeps the owner's salary from an admin. **One plan (`poolse_full`) and
 two intervals (`monthly | yearly`)**, both *descriptive*: no feature, limit or ceiling is ever
@@ -265,9 +265,8 @@ export here is a GET. Exactly **two writes stay open**, the checkout and the cus
 *a read-only tenant that cannot pay is a read-only tenant for ever.* The Stripe webhook is
 **not** on that list and must not be added — it is public and this middleware never runs for
 it, so a line for it would look load-bearing and be dead. The refusal carries `trialEndedAt`
-and `dataKeptUntil` so a form explains itself where it failed, but the standing banner comes
-from `/me`: finding out you cannot write only at the moment you try is how somebody loses a
-page of typing. **Lifting read-only clears `pending_delete_at` with it** and neither control
+and `dataKeptUntil` so a form explains itself where it failed, and since 28-10-2026 (Rui) the owner and the admins are warned by the avatar's subscription icon (`subscriptionAlert`), which replaced the standing banner every
+member saw. **Lifting read-only clears `pending_delete_at` with it** and neither control
 touches `subscription_status` — billing state and access state stay separate. `trial_period()`
 is the trial's one definition (15 days), replacing a literal copied into four provisioning
 functions; existing trials are untouched. **Nothing is ever copied or migrated** — a trial

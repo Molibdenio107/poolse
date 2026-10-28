@@ -13,6 +13,8 @@ import { PhotoUpload } from '@/components/photo-upload';
 import { PageError, PageShell } from '@/components/page-shell';
 import { DetailPage } from '@/components/detail-page';
 import { formatStamp } from '@/lib/date-format';
+import { subscriptionAlertSentence, type SubscriptionAlertView } from '@/lib/subscription-alert';
+import { AlertTriangle } from 'lucide-react';
 
 /**
  * "O meu perfil" — backlog round 3, story 1.
@@ -91,6 +93,10 @@ export default async function ProfilePage({
    * client could have asked for.
    */
   const isOwner = membership?.roles.includes('owner') === true;
+  // The avatar's warning, said again on the card it leads to (Rui, 28-10-2026).
+  const subscriptionWarning = isOwner
+    ? await apiFetch<SubscriptionAlertView>('/subscription/alert').catch(() => null)
+    : null;
 
   // Whole days remaining, rounded up, so the last day reads "1 day left" rather
   // than "0". Information only — nothing is enforced until phase 2.
@@ -165,6 +171,12 @@ export default async function ProfilePage({
                       {t('subscription.title')}
                     </h2>
                     <p className="mt-1 text-sm text-foreground-muted">{t('subscription.subtitle')}</p>
+                    {subscriptionWarning?.alert != null && (
+                      <p className="mt-2 flex items-start gap-2 text-sm text-warning">
+                        <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                        {subscriptionAlertSentence(t, subscriptionWarning.alert)}
+                      </p>
+                    )}
                   </div>
                   <FromLink
                     href="/dashboard/profile/subscription"

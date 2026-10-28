@@ -4422,13 +4422,6 @@
     "dataSafe": "Nada foi apagado. Assim que a situação for resolvida, tudo volta ao que estava.",
     "contact": "Para resolver, fale connosco:"
   },
-  "readOnly": {
-    "title": "O período de avaliação terminou a {date}.",
-    "what": "Pode consultar e exportar tudo o que já criou. Para voltar a editar, é preciso ativar a subscrição.",
-    "kept": "Os seus dados ficam guardados até {date}.",
-    "askOwner": "Só o proprietário do clube pode ativar a subscrição.",
-    "pay": "Ativar subscrição"
-  },
   "settings": {
     "tax": {
       "title": "Dados fiscais",
@@ -5992,5 +5985,18 @@
       "notReceiving": "A receção de resultados por email ainda não está ativa nesta instalação do Poolse.",
       "who": "Só aceitamos emails enviados pelo proprietário, pelos administradores ou pelos instrutores do clube. O Poolse não acede ao site da FPN por si: a FPN exige verificação humana."
     }
+  },
+  "subscriptionAlert": {
+    "badge": "A subscrição precisa de atenção",
+    "ended": "A subscrição terminou: o clube só pode consultar os dados.",
+    "endedOn": "A subscrição terminou a {date}: o clube só pode consultar os dados.",
+    "pastDue": "Há um pagamento da subscrição em atraso.",
+    "pastDueSince": "O pagamento da subscrição está em atraso desde {date}.",
+    "trialToday": "O período de avaliação termina hoje.",
+    "trialEnding": "O período de avaliação termina {days, plural, one {amanhã} other {daqui a # dias}} ({date}).",
+    "paidEnding": "A subscrição está paga até {date} ({days, plural, =0 {hoje} one {amanhã} other {daqui a # dias}}).",
+    "paidLate": "A subscrição estava paga até {date} e ainda não foi renovada.",
+    "cancelling": "A subscrição foi cancelada e termina a {date}.",
+    "ownerRenews": "Só o proprietário pode renovar."
   }
 }

@@ -4422,13 +4422,6 @@
     "dataSafe": "Nothing has been deleted. As soon as this is resolved, everything comes back as it was.",
     "contact": "To sort this out, get in touch:"
   },
-  "readOnly": {
-    "title": "The trial ended on {date}.",
-    "what": "You can still read and export everything you have created. To edit again, the subscription needs activating.",
-    "kept": "Your data is kept until {date}.",
-    "askOwner": "Only the club owner can activate the subscription.",
-    "pay": "Activate subscription"
-  },
   "settings": {
     "tax": {
       "title": "Tax details",
@@ -5992,5 +5985,18 @@
       "notReceiving": "Receiving results by email is not switched on in this Poolse installation yet.",
       "who": "We only accept emails sent by the club's owner, administrators or instructors. Poolse does not visit the FPN's site on your behalf: the FPN requires a human check."
     }
+  },
+  "subscriptionAlert": {
+    "badge": "The subscription needs attention",
+    "ended": "The subscription has ended: the club can only read its data.",
+    "endedOn": "The subscription ended on {date}: the club can only read its data.",
+    "pastDue": "A subscription payment is overdue.",
+    "pastDueSince": "The subscription payment has been overdue since {date}.",
+    "trialToday": "The trial ends today.",
+    "trialEnding": "The trial ends {days, plural, one {tomorrow} other {in # days}} ({date}).",
+    "paidEnding": "The subscription is paid until {date} ({days, plural, =0 {today} one {tomorrow} other {in # days}}).",
+    "paidLate": "The subscription was paid until {date} and has not been renewed.",
+    "cancelling": "The subscription was cancelled and ends on {date}.",
+    "ownerRenews": "Only the owner can renew it."
   }
 }

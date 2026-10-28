@@ -26,7 +26,7 @@ re-declared here. Seniority governs ordering only, never permissions.
   "scope": { "mode": "all", "facilityId": null, "facilities": [{ "id": "…", "name": "Sede" }] },
   "bands": [
     { "id": "management", "order": 0,
-      "widgets": [{ "id": "mgmt.subscription", "size": 3, "priority": 0,
+      "widgets": [{ "id": "mgmt.energy.costs", "size": 2, "priority": 50,
                     "state": "ok", "data": { } }] }
   ]
 }
@@ -127,7 +127,8 @@ reader will not see, in parallel, under one ceiling; the alternative is an urgen
 by a priority set before anybody looked.
 
 **A `trailing` widget is one line at the end of its band and outside the cap** (POOLSE-103). It
-is never cut and never ranked above a card about the pool. The subscription is the only one.
+is never cut and never ranked above a card about the pool. The subscription was the only one,
+and it left the dashboard on 28-10-2026 (Rui), so no widget is trailing today.
 
 ## The empty club, and the selector
 
@@ -160,23 +161,14 @@ not ended:
 
 | id | band | roles | from |
 |---|---|---|---|
-| `mgmt.subscription` | management | **owner** | `readSubscription`, the same function `/subscription` answers from |
 | `maint.mytasks` | operational | owner, admin, instructor, maintenance | `listMyTasks`, the same function `/maintenance/tasks/mine` uses |
 | `setup.checklist` | management | owner, admin | five counts in one query |
 | `mgmt.energy.costs` | management | owner, admin | `energyCosts`, the same function `/energy/costs` answers from — added in slice 2a |
 
-**`mgmt.subscription` is the owner's alone**, narrower than the ticket's catalogue, which filed
-it under owner and admin. POOLSE-60 settled that a subscription is the owner's own business
-when it moved Subscrição under *O meu perfil* and out of the menu — the same reasoning that
-keeps the owner's salary from an admin. An admin is not left uninformed by it: the standing
-banner about a trial running out or a club going read-only comes from `/me` and reaches
-everybody.
-
-**Since POOLSE-103 (Rui, 22-10-2026) it is one quiet line at the end of the management band**:
-the interval, the status and the next date, then *Ver subscrição*, in muted text. It no longer
-escalates to the top of the band. When `needsAttention` is set (a trial under five days, or a
-status of `past_due` or `expired`, decided by the resolver), the line takes the warning tone and
-its icon.
+**The subscription is not on the dashboard** (Rui, 28-10-2026). It was the `mgmt.subscription`
+line from POOLSE-60 to POOLSE-103. It now lives only under *O meu perfil* (owner), and a club
+whose subscription is ending is told by a warning on the avatar, for the owner and the admins
+(`docs/features/subscription.md`).
 
 **`maint.mytasks` sits in the operational band although an owner may hold it.** That is the
 band model working rather than a mistake: a task is "my work today", and an owner who fixes the

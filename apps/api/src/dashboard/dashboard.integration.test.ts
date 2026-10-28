@@ -7,7 +7,6 @@ import { energySpend } from './resolvers.js';
 import type {
   ChecklistWidget,
   EnergyCostsWidget,
-  SubscriptionWidget,
   TasksWidget,
 } from './resolvers.js';
 
@@ -65,17 +64,6 @@ test('66.1 — an owner gets both bands, in order, each widget once', async () =
 
     const all = ids(page);
     assert.equal(new Set(all).size, all.length, 'no widget twice');
-
-    /*
-     * A scratch tenant is provisioned on a trial, so the subscription widget has
-     * something true to say — and it says it from `readSubscription`, the same
-     * function `/subscription` answers from, so the two cannot disagree.
-     */
-    const subscription = card(page, 'mgmt.subscription');
-    assert.equal(subscription?.state, 'ok');
-    const data = subscription?.data as SubscriptionWidget;
-    assert.equal(data.status, 'trialing');
-    assert.ok((data.trialDaysLeft ?? 0) > 0, 'a fresh trial has days left');
 
     const tasks = card(page, 'maint.mytasks');
     assert.equal(tasks?.state, 'ok');

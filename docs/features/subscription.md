@@ -28,7 +28,31 @@ entitled to it than to the owner's salary. There is exactly one owner per tenant
 that "who pays" has an answer.
 
 The link on *O meu perfil* is a courtesy. The endpoint refuses everybody but the owner however
-they arrived.
+they arrived. It is not on the dashboard (Rui, 28-10-2026).
+
+## The warning on the avatar
+
+Rui, 28-10-2026. For the owner and the admins, a small warning icon on the avatar (top right)
+when the club's access is about to stop or already has. The first line of the avatar's menu
+says what, in words. For the owner it opens Subscrição, and the Subscrição card on *O meu
+perfil* repeats it. For an admin it adds *Só o proprietário pode renovar*, and the page stays
+the owner's.
+
+`GET /subscription/alert` (owner, admin) answers it, decided once by `subscriptionAlert`
+(`billing/subscription-alert.ts`), with every date taken as the club's day:
+
+| Kind | When |
+|---|---|
+| `ended` | read-only (the trial clock or an operator), or the subscription `expired` / `canceled` |
+| `past_due` | a payment failed, at once and until paid |
+| `trial_ending` | the trial's last day is within 7 days |
+| `paid_ending` | a club paying by hand: `paid_through` within 7 days, or passed |
+| `cancelling` | a Stripe subscription set to cancel, its period ending within 7 days |
+
+Ended beats late beats ending; among endings the soonest wins. A comped club and a suspended
+one are never warned (the suspension replaces the app). **It replaced the read-only banner every
+member saw** (Rui: icon only), so a read-only club learns it through its owner and admins, and a
+refused write still says why where it failed.
 
 ## What the page says
 

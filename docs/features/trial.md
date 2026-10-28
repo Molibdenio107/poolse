@@ -24,7 +24,7 @@ already exists.
 | Day | `subscription_status` | Access | What the club sees |
 |---|---|---|---|
 | 0–15 | `trialing` | Full | The app, and a countdown from day 10 |
-| 15 | `expired` | **Read-only** | A banner: what ended, until when data is kept, and a way to pay |
+| 15 | `expired` | **Read-only** | The warning on the owner's and admins' avatar (since 28-10-2026; it was a banner for everybody) |
 | 15–45 | `expired` | Read-only | The same, counting down |
 | 45 | `expired` | Login refused | Email only |
 | 75 | `expired`, archived | — | Gone from every list, and restorable |
@@ -85,7 +85,8 @@ Three access states, and the order matters: **suspended beats read-only beats op
 - **Suspended** is a door we closed, always with a reason, and the club gets a page instead
   of the app because every call behind it refuses.
 - **Read-only** is a trial that ran out. The club signs in, reads everything it built,
-  **exports all of it**, and pays. A banner sits above the app rather than in front of it.
+  **exports all of it**, and pays. The owner and the admins see the warning on the avatar
+  (28-10-2026, Rui; it was a banner above the app for every member).
 
 A club that is both is a club we have closed: the refusal says `tenant_suspended`, because
 "your trial ran out, pay here" would be the wrong sentence and the wrong thing to do next.

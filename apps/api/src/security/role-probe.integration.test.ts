@@ -1,6 +1,7 @@
 import { after, before, test } from 'node:test';
 import { MeetsController } from '../meets/meets.controller.js';
 import { MeetInboxController } from '../meets/meet-inbox.controller.js';
+import { SubscriptionController } from '../billing/subscription.controller.js';
 import { QualifyingController } from '../qualifying/qualifying.controller.js';
 import { InvoicesController } from '../billing/invoices.controller.js';
 import { OwnEmailPreferenceController } from '../notifications/email-preferences.controller.js';
@@ -660,6 +661,14 @@ test('meets refuse a guardian and a student (403) — POOLSE-81', async () => {
     await refused('GET meets/:id', 403, () => meets.one(NO_SUCH_ID));
     await refused('POST meets/import', 403, () => meets.import({}));
     await refused('POST meets/:id/archive', 403, () => meets.archive(NO_SUCH_ID));
+  });
+});
+
+test('the subscription and its avatar warning refuse a guardian and a student (403)', async () => {
+  await asEach(async () => {
+    const subscription = new SubscriptionController();
+    await refused('GET subscription', 403, () => subscription.read());
+    await refused('GET subscription/alert', 403, () => subscription.alert());
   });
 });
 

@@ -71,14 +71,14 @@ test('a widget can be meaningless in a personal tenant, and then it is absent', 
     widget({ id: 'mgmt.money', kinds: ['business'] }),
     widget({ id: 'me.pool', kinds: ['personal'] }),
     // No `kinds` means every kind — the same reading `app-sidebar.tsx` gives it.
-    widget({ id: 'mgmt.subscription' }),
+    widget({ id: 'mgmt.everywhere' }),
   ];
 
   const ids = (kind: 'business' | 'personal'): string[] =>
     widgetsFor({ roles: ['owner'], kind }, registry).map((one) => one.id);
 
-  assert.deepEqual(ids('business').sort(), ['mgmt.money', 'mgmt.subscription']);
-  assert.deepEqual(ids('personal').sort(), ['me.pool', 'mgmt.subscription']);
+  assert.deepEqual(ids('business').sort(), ['mgmt.everywhere', 'mgmt.money']);
+  assert.deepEqual(ids('personal').sort(), ['me.pool', 'mgmt.everywhere']);
 });
 
 test('a flagged widget exists only when its variable says true', () => {

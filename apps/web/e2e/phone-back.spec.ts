@@ -252,11 +252,8 @@ for (const [width, viewport] of [['desk', DESK], ['phone', PHONE]] as const) {
       await tidy(at);
     });
 
-    test('1 · the dashboard → subscription, and Voltar returns to the dashboard', async ({ page }) => {
-      await visit(page, '/dashboard');
-      await follow(page, 'main a[href^="/dashboard/profile/subscription"]');
-      await goBack(page, '/dashboard');
-    });
+    // Case 1 followed the dashboard's subscription card, which left the
+    // dashboard on 28-10-2026 (Rui); Subscrição is reached from the profile only.
 
     test('2 · Profile → subscription, and Voltar returns to Profile', async ({ page }) => {
       await visit(page, '/dashboard/profile');

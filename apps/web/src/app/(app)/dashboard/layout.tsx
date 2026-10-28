@@ -2,11 +2,11 @@ import * as Sentry from '@sentry/nextjs';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import type { PoolseModule } from '@poolse/rules';
 import { AppSidebar, MobileMenu, type Badges } from '../app-sidebar';
+import type { SubscriptionAlertView } from '@/lib/subscription-alert';
 import { modulesOf } from '@/lib/modules';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { SuspendedNotice } from './suspended-notice';
-import { ReadOnlyNotice } from './read-only-notice';
 import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
 import { loadSupportStatus } from './support.actions';
 
@@ -64,14 +64,6 @@ interface Viewer {
    * with no explanation among them.
    */
   suspended: { name: string; reason: string | null; at: string } | null;
-  /**
-   * The trial ran out — POOLSE-61.
-   *
-   * Unlike `suspended` this does **not** replace the page. The club reads
-   * everything it built, exports it and pays; the banner sits above the app
-   * saying so. Null for the ordinary case.
-   */
-  readOnly: { at: string; keptUntil: string | null; isOwner: boolean } | null;
 }
 
 async function currentViewer(): Promise<Viewer> {
@@ -108,16 +100,6 @@ async function currentViewer(): Promise<Viewer> {
       // the field: everything on (`modulesOf`).
       modules: membership === undefined ? [] : modulesOf(membership),
       organizationName: membership?.organizationName ?? null,
-      readOnly:
-        membership?.readOnlyAt != null
-          ? {
-              at: membership.readOnlyAt,
-              keptUntil: membership.pendingDeleteAt,
-              // Only the owner can pay; anybody else is told who to ask rather
-              // than sent to a screen that will refuse them.
-              isOwner: membership.roles.includes('owner'),
-            }
-          : null,
       suspended:
         membership?.suspendedAt != null
           ? {
@@ -145,7 +127,6 @@ async function currentViewer(): Promise<Viewer> {
       modules: [],
       organizationName: null,
       suspended: null,
-      readOnly: null,
     };
   }
 }
@@ -179,18 +160,34 @@ async function menuBadges(roles: readonly string[], modules: readonly string[]):
   }
 }
 
+/**
+ * The subscription warning on the avatar — Rui, 28-10-2026. Owner and admin
+ * only; the API decides whether there is one. It replaced the read-only banner
+ * every member saw, so a read-only club is told through its owner and admins.
+ * A failure is no icon, never a broken header.
+ */
+async function subscriptionWarning(roles: readonly string[]): Promise<SubscriptionAlertView | null> {
+  if (!roles.includes('owner') && !roles.includes('admin')) return null;
+  try {
+    return await apiFetch<SubscriptionAlertView>('/subscription/alert');
+  } catch {
+    return null;
+  }
+}
+
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }): Promise<React.ReactElement> {
-  const [{ roles, support, clubGone, kind, modules, organizationName, suspended, readOnly }, logoFileId] =
+  const [{ roles, support, clubGone, kind, modules, organizationName, suspended }, logoFileId] =
     await Promise.all([currentViewer(), brandLogo()]);
 
   // A support window that ended, with this browser still pointed at its club.
   if (clubGone) return <SupportEndedNotice />;
 
-  const badges = suspended === null ? await menuBadges(roles, modules) : {};
+  const [badges, subscription] =
+    suspended === null ? await Promise.all([menuBadges(roles, modules), subscriptionWarning(roles)]) : [{}, null];
 
   // The club's own strip — the Owner and the Admins, never support itself.
   const clubManager = support === null && (roles.includes('owner') || roles.includes('admin'));
@@ -255,7 +252,7 @@ export default async function DashboardLayout({
 
           <div className="flex items-center gap-3">
             <PreferenceControls />
-            <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} />
+            <UserMenu canArchive={roles.includes('owner') || roles.includes('admin')} subscription={subscription} />
           </div>
         </header>
 
@@ -277,14 +274,6 @@ export default async function DashboardLayout({
             isOwner={roles.includes('owner')}
             liveUntil={supportStatus.live?.expiresAt ?? null}
             pendingRequests={supportStatus.pendingRequests}
-          />
-        )}
-
-        {readOnly !== null && (
-          <ReadOnlyNotice
-            readOnlyAt={readOnly.at}
-            dataKeptUntil={readOnly.keptUntil}
-            isOwner={readOnly.isOwner}
           />
         )}
 

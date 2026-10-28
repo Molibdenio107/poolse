@@ -4453,19 +4453,6 @@ export interface PoolTemperatureWidgetData {
   localTime: string;
 }
 
-/** `mgmt.subscription` — where the club stands with Poolse. Owner only. */
-export interface SubscriptionWidgetData {
-  status: SubscriptionStatus | null;
-  interval: BillingInterval | null;
-  trialEndsAt: string | null;
-  trialDaysLeft: number | null;
-  currentPeriodEnd: string | null;
-  cancelAtPeriodEnd: boolean;
-  hasSubscription: boolean;
-  /** A trial under five days or a failed payment — the server's call. */
-  needsAttention: boolean;
-}
-
 /** `maint.mytasks` — the jobs that are mine, plus the ones nobody has taken. */
 export interface TasksWidgetData {
   total: number;

@@ -34,7 +34,6 @@ import {
   qualifications,
   setupChecklist,
   staffCost,
-  subscriptionState,
   waterIsOutOfRange,
   waterQuality,
 } from './resolvers.js';
@@ -219,30 +218,6 @@ export const SELECTOR_ROLES: readonly MemberRole[] = ['owner', 'admin'];
  * with the band it belongs to.
  */
 export const WIDGETS: readonly WidgetDefinition[] = [
-  /*
-   * The trial, the renewal and the card are the **owner's own** — POOLSE-60
-   * settled that when it moved Subscrição under *O meu perfil* and out of the
-   * menu, on the same reasoning that keeps the owner's salary from an admin. The
-   * ticket's catalogue files this under "owner, admin"; the narrower rule wins,
-   * and an admin is not left uninformed by it: the standing banner about a trial
-   * running out or a club going read-only comes from `/me` and reaches everyone.
-   *
-   * A quiet line at the end of the band since POOLSE-103 (Rui, 22-10-2026): the
-   * dashboard is about the pool. It no longer escalates to the top — a trial
-   * running out turns the line to the warning tone instead (`needsAttention`),
-   * and the `/me` banner is what nobody can miss.
-   */
-  {
-    id: 'mgmt.subscription',
-    band: 'management',
-    roles: ['owner'],
-    scope: 'tenant',
-    size: 3,
-    priority: 0,
-    trailing: true,
-    resolver: subscriptionState,
-  },
-
   /*
    * What is mine — slice 4.3's panel, now a widget, resolving through the same
    * repository function the `/maintenance/tasks/mine` endpoint uses. Every
