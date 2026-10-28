@@ -4936,8 +4936,9 @@
     }
   },
   "photo": {
+    "uploadFor": "Carregar a fotografia de {name}",
     "of": "Fotografia de {name}",
-    "upload": "Carregar fotografia",
+    "upload": "Carregar",
     "change": "Alterar",
     "remove": "Remover",
     "theirOwn": "Esta pessoa escolhe a sua fotografia em O meu perfil."

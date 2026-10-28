@@ -52,6 +52,7 @@ export function IdPhoto({
           <FileUpload
             target={target}
             label={url === null ? t('photo.upload') : t('photo.change')}
+            ariaLabel={t('photo.uploadFor', { name })}
             className="w-full [&>button]:w-full [&>button]:px-2"
             {...(own ? { onSaved: () => void user?.reload() } : {})}
           />

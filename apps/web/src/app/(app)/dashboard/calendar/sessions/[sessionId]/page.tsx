@@ -194,7 +194,7 @@ export default async function AttendancePage({
             the lesson, never before marking. Only for whoever taught it (and
             the office); a colleague's register carries none, so no strip.
           */}
-          {register.status !== 'cancelled' && (register.canRecord || register.canEndSeries) && (
+          {register.status !== 'cancelled' && register.started && (register.canRecord || register.canEndSeries) && (
             <section className="flex flex-col gap-3 rounded border border-border bg-surface p-5">
               <h2 className="font-medium">{t('feedback.title')}</h2>
               {(register.feedback ?? []).length === 0 ? (

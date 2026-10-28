@@ -31,6 +31,7 @@
 import pg from 'pg';
 import { seedReferenceSchedule } from './seed-reference.js';
 import { seedEnergy } from './seed-energy.js';
+import { seedActivity } from './seed-activity.js';
 
 const { Client } = pg;
 
@@ -1620,6 +1621,20 @@ async function main(): Promise<void> {
     console.log(
       `  energia (demonstração): ${energy.meters} contadores, ${energy.readings} leituras, ${energy.invoices} faturas, ${energy.tariffs} tarifas`,
     );
+
+    // Competição, maintenance, water, incidents and the family side — Rui,
+    // 28-10-2026: the areas that were empty when the app was walked.
+    const activity = await seedActivity(client, org.id);
+    console.log(
+      `  atividade: ${activity.meets} provas, ${activity.results} tempos, ${activity.entryTimes} mínimos, ` +
+        `${activity.tasks} tarefas, ${activity.requests} pedidos, ${activity.readings} análises, ` +
+        `${activity.labReports} relatórios de laboratório, ${activity.incidents} incidentes, ` +
+        `${activity.messages} mensagens, ${activity.notices} respostas Vou/Não vou, ${activity.feedback} opiniões`,
+    );
+    if (activity.familyLink !== null) {
+      console.log('  família: convite para a Paula (familia+clerk_test@example.com, código 424242):');
+      console.log(`    ${activity.familyLink}`);
+    }
 
     await client.query('COMMIT');
 

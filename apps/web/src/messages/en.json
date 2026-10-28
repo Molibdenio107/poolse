@@ -4936,8 +4936,9 @@
     }
   },
   "photo": {
+    "uploadFor": "Upload a photograph of {name}",
     "of": "Photograph of {name}",
-    "upload": "Upload photo",
+    "upload": "Upload",
     "change": "Change",
     "remove": "Remove",
     "theirOwn": "This person chooses their own photograph under My profile."
