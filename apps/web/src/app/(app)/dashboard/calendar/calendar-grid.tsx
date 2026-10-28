@@ -154,6 +154,8 @@ export interface CalendarGridProps {
     title: string;
     detail: TurmaDetail;
     actions?: React.ReactNode;
+    /** POOLSE-120: something to look at on this lesson — a small circle on the block. */
+    attention?: number;
   };
   /** Click empty space: start creating something there. */
   onCreate: (weekday: number, laneId: string, startMinutes: number) => void;
@@ -1913,6 +1915,13 @@ function Block({
       }}
     >
       <p className="truncate pr-6 text-[0.75rem] font-medium leading-tight">{booking.name}</p>
+      {(card.attention ?? 0) > 0 && (
+        // White ringed in the block's own ink, so it reads on every tint; the
+        // card says what it is in words.
+        <span className="attention absolute right-1.5 top-1.5 size-2 rounded-full bg-white ring-1 ring-black/40">
+          <span className="sr-only">{t('attention.dot', { count: card.attention ?? 0 })}</span>
+        </span>
+      )}
 
       {/*
         The card for a keyboard. Invisible to a mouse or a finger — hovering

@@ -7,6 +7,7 @@ import { modulesOf } from '@/lib/modules';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
 import { CommandPalette } from '@/components/command-palette';
+import { readAttention } from '@/lib/attention';
 import { SuspendedNotice } from './suspended-notice';
 import { ClubSupportStrip, SupportEndedNotice, SupportSessionBanner } from './support-strip';
 import { loadSupportStatus } from './support.actions';
@@ -151,13 +152,15 @@ async function brandLogo(): Promise<string | null> {
  * module. One indexed count; a failure is no badge, never a broken menu.
  */
 async function menuBadges(roles: readonly string[], modules: readonly string[]): Promise<Badges> {
+  // POOLSE-120: what needs doing, already narrowed by the API to who can act.
+  const attention = (await readAttention()).menu;
   if (!modules.includes('competition') || !['owner', 'admin', 'instructor'].some((role) => roles.includes(role))) {
-    return {};
+    return attention;
   }
   try {
-    return { meetInbox: (await apiFetch<{ pending: number }>('/meet-inbox/count')).pending };
+    return { ...attention, meetInbox: (await apiFetch<{ pending: number }>('/meet-inbox/count')).pending };
   } catch {
-    return {};
+    return attention;
   }
 }
 

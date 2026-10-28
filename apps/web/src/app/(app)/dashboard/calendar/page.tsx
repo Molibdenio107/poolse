@@ -30,6 +30,7 @@ import { TimetableImport } from './import/import-panel';
 import { moduleIsOn } from '@/lib/modules';
 import { formatDate, formatDateRange, formatDayMonth, formatDayMonthShort } from '@/lib/date-format';
 import { backProp, originBack } from '@/lib/back';
+import { readAttention } from '@/lib/attention';
 
 /**
  * The dated calendar — slices 1.5 and 1.6.
@@ -148,6 +149,9 @@ export default async function CalendarPage({
     office's question, so asked only for the office; best-effort, because
     losing it costs one list in a dialog, never the week.
   */
+  // POOLSE-120: lessons a family answered for, for who may act on them.
+  const attention = await readAttention();
+
   let partnerGroups: { id: string; name: string; partnerName: string }[] = [];
   const placedGroups = new Set((grid?.bookings ?? []).map((booking) => booking.partnerGroupId).filter(Boolean));
   const site = classes?.facilities[0]?.id;
@@ -327,6 +331,7 @@ export default async function CalendarPage({
           cancelled,
           byClosure: session.byClosure,
           registerTaken: session.registerTaken,
+          familyAnswers: attention.sessions[session.id] ?? 0,
           standIn: session.substituteName !== null,
           note: cancelled
             ? (session.cancellationReason ?? t('calendar.cancelledNoReason'))

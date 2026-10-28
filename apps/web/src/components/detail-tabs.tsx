@@ -257,7 +257,7 @@ export function DetailTabStrip(): React.ReactElement {
           )}
           {tab.badge?.kind === 'dot' && (
             <>
-              <span aria-hidden className="size-2 rounded-full bg-warning" />
+              <span aria-hidden className="attention size-2 rounded-full bg-warning" />
               <span className="sr-only">{t(tab.badge.labelKey)}</span>
             </>
           )}

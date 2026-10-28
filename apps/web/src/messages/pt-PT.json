@@ -3603,6 +3603,12 @@
     "tankClosed": "Esse tanque está encerrado a essa hora.",
     "closedBand": "Encerrado:"
   },
+  "attention": {
+    "menuBadge": "{count, plural, one {# coisa por tratar} other {# coisas por tratar}}",
+    "dot": "{count, plural, one {# coisa por tratar aqui} other {# coisas por tratar aqui}}",
+    "familiesLabel": "Famílias",
+    "familiesValue": "{count, plural, one {# resposta por ver} other {# respostas por ver}}"
+  },
   "palette": {
     "open": "Procurar uma página ou ação",
     "search": "Procurar…",

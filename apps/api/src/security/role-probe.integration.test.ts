@@ -73,6 +73,7 @@ import { StaffController } from '../staff/staff.controller.js';
 import { FeedbackController } from '../feedback/feedback.controller.js';
 import { NoticesController } from '../notices/notices.controller.js';
 import { PushController } from '../push/push.controller.js';
+import { AttentionController } from '../attention/attention.controller.js';
 
 /**
  * Role probe — security review, 12-10-2026, inverted into a regression test.
@@ -1205,6 +1206,18 @@ test('the atestado and the emergency-contact search — POOLSE-109: a family rea
     await refused('GET files/:id (atestado) as maintenance', 403, () => new FilesController().read(file!.id));
     await refused('POST …/certificate as maintenance', 403, () =>
       new SensitiveController().attachCertificate(fixture.aliceId, leave!.id, 'x.pdf', Buffer.from('%PDF-1.4')),
+    );
+  });
+});
+
+// POOLSE-120: the layout asks everybody for the circles. A family or a student
+// is answered with nothing to do — an empty map, never a 403 and never data.
+test('GET attention answers a guardian and a student with an empty map', async () => {
+  await asEach(async (who) => {
+    assert.deepEqual(
+      await new AttentionController().read(),
+      { menu: {}, facilities: {}, pools: {}, spaces: {}, sessions: {} },
+      who.label,
     );
   });
 });

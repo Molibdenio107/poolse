@@ -35,6 +35,8 @@ import { CategoriesPanel } from './categories-panel';
 import { listCategories } from './categories.actions';
 import { PartnersPanel } from './partners-panel';
 import { listPartners } from './partners.actions';
+import { AttentionDot } from '@/components/attention-dot';
+import { readAttention } from '@/lib/attention';
 import { SpacesPanel } from '../spaces-panel';
 import { listSpaces } from '../spaces.actions';
 import { MaintenancePanel } from '../maintenance-panel';
@@ -187,6 +189,9 @@ export default async function FacilityPage({
   // A record opened from a tab is sent back to that tab, not to General.
   const path = `/dashboard/facilities/${facilityId}`;
   const loaded = site;
+
+  // POOLSE-120: what needs doing in this site's tanks and spaces.
+  const attention = await readAttention();
 
   return (
     <DetailPage
@@ -385,6 +390,10 @@ export default async function FacilityPage({
                       >
                         <EntityIcon kind="pool" />
                         <span className="font-medium">{pool.name}</span>
+                        <AttentionDot
+                          count={attention.pools[pool.id]}
+                          label={t('attention.dot', { count: attention.pools[pool.id] ?? 0 })}
+                        />
                         <span className="text-sm text-foreground-muted">
                           {t(`facilities.kind.${pool.kind}`)}
                         </span>
@@ -443,6 +452,7 @@ export default async function FacilityPage({
                   spaces={spaces.data.items}
                   canManage={spaces.data.canManage}
                   defaultOpen
+                  attention={attention.spaces}
                 />
               )
             ),

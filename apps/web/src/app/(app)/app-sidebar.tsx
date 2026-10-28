@@ -201,6 +201,15 @@ export function MobileMenu({
  * Children render only while their branch is active, which keeps a sidebar of
  * three top-level sections from becoming a list of twelve.
  */
+/** What the entries under a section carry, so a closed section can say so. */
+function childCount(item: Item, badges: Badges): number {
+  return (item.children ?? []).reduce(
+    (sum, child) =>
+      sum + (child.badge === undefined ? 0 : (badges[child.badge] ?? 0)) + childCount(child, badges),
+    0,
+  );
+}
+
 function NavItem({
   item,
   pathname,
@@ -232,6 +241,8 @@ function NavItem({
   const current =
     pathname === item.href && !(item.children ?? []).some((child) => child.href === item.href);
   const count = item.badge === undefined ? 0 : (badges[item.badge] ?? 0);
+  // A closed section says something inside it needs doing (POOLSE-120).
+  const inside = count === 0 && !active ? childCount(item, badges) : 0;
 
   return (
     <Fragment key={item.href}>
@@ -251,9 +262,18 @@ function NavItem({
         {item.icon !== undefined && <EntityIcon kind={item.icon} />}
         {t(item.key)}
         {count > 0 && (
-          <span className="ml-auto rounded-full bg-primary px-2 text-xs font-medium text-primary-foreground">
+          <span className="attention ml-auto rounded-full bg-primary px-2 text-xs font-medium text-primary-foreground">
             <span aria-hidden>{count}</span>
-            <span className="sr-only">{t('meetInbox.menuBadge', { count })}</span>
+            <span className="sr-only">
+              {item.badge === 'meetInbox'
+                ? t('meetInbox.menuBadge', { count })
+                : t('attention.menuBadge', { count })}
+            </span>
+          </span>
+        )}
+        {inside > 0 && (
+          <span className="attention ml-auto size-2 shrink-0 rounded-full bg-primary">
+            <span className="sr-only">{t('attention.menuBadge', { count: inside })}</span>
           </span>
         )}
         <LinkBusy />

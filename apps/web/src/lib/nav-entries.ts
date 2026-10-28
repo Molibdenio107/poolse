@@ -56,7 +56,11 @@ export interface Item {
 }
 
 /** The counts a menu entry may carry. */
-export type BadgeKey = 'meetInbox';
+/**
+ * `meetInbox` is POOLSE-114's count; the rest are POOLSE-120's circles — what
+ * needs doing, from `GET /attention`, cleared when it is done.
+ */
+export type BadgeKey = 'meetInbox' | 'leads' | 'facilities' | 'calendar';
 export type Badges = Partial<Record<BadgeKey, number>>;
 
 /*
@@ -122,6 +126,7 @@ export const SECTIONS: Item[] = [
     href: '/dashboard/facilities',
     key: 'facilities.title',
     icon: 'facility',
+    badge: 'facilities',
     /*
      * Staff nests here — POOLSE-38. Staff are an attribute of a facility, not a
      * peer of it, and "People" was never the right word once the section became
@@ -256,6 +261,7 @@ export const SECTIONS: Item[] = [
     href: '/dashboard/calendar',
     key: 'calendar.title',
     icon: 'calendar',
+    badge: 'calendar',
     roles: STAFF,
     kinds: ['business'],
     children: [{ href: '/dashboard/calendar/closures', key: 'calendar.closures' }],
@@ -307,7 +313,7 @@ export const SECTIONS: Item[] = [
       // Pedidos de inscrição — POOLSE-69. Second, under Encarregados: a request
       // is a family that is not a student yet, and in September it is the list
       // reception works first. The roles are the endpoint's own.
-      { href: '/dashboard/students/pedidos', key: 'leads.title', roles: OFFICE },
+      { href: '/dashboard/students/pedidos', key: 'leads.title', roles: OFFICE, badge: 'leads' },
       // Mensagens sit with the families they are written to — POOLSE-67. The
       // roles are the endpoint's own; an instructor writes to their own turmas.
       {

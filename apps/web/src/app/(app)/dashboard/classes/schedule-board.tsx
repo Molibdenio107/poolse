@@ -321,6 +321,11 @@ export interface SessionControls {
    * mistaken for a permanent reassignment.
    */
   standIn?: boolean;
+  /**
+   * POOLSE-120: families' answers on this lesson — a *Não vou* still to come,
+   * or feedback this week — counted for whoever may act on them.
+   */
+  familyAnswers?: number;
   note?: string | null;
 }
 

@@ -298,3 +298,16 @@ re-import (inventory's `all`) is said in words.
 - **Matching** is accent- and case-folded, on the label and on synonyms per page in the reader's language (`SYNONYMS` in `lib/commands.ts`): *quotas* reaches Em dívida in pt-PT, *overdue* in en.
 - **An action is one declaration** in `ACTIONS`: a label key, roles, module, kinds, and an address or a handler.
 - A page opens by clicking its own `FromLink`, so `?from=` is stamped and *Voltar* comes back, and a page guarding unsaved typing still asks. The last five choices lead the empty list (`localStorage`, best effort). Escape closes and focus returns.
+
+## Circles where something needs doing — POOLSE-120
+
+A small circle says **something here needs doing**, and it clears when it is done, for everybody. There is no per-person *seen* record (Rui, 28-10-2026). `GET /attention` answers it once per request (`readAttention` in `lib/attention.ts`, shared by the layout and the page). Only the roles that can act are counted, in modules that are on:
+
+| What | Who sees it | Where it shows |
+|---|---|---|
+| A pre-registration waiting for an answer | owner, admin | *Pedidos* (count); *Alunos* while closed (dot) |
+| A pool's latest reading out of its band, or its latest lab report *não conforme* | owner, admin, maintenance | the pool's name, its site's name, *Instalações* (count) |
+| A recurring task due, or an open high-severity fault | owner, admin, maintenance | the pool or space, its site, *Instalações* |
+| A *Não vou* on a lesson still to come, or feedback this week | the lesson's teacher; owner and admin see all | the lesson's block on the calendar (and a line on its card), *Calendário* (count) |
+
+Every verdict is the existing one: `excursions`/`resolveBands`, `gradeLabResult`, the maintenance module's `TASK_STATE`, and the Pedidos count. A guardian or a student gets an empty map, not a 403. A closed menu section shows a dot when an entry under it has a count. Every circle, the tab dots and the *Recebidos* count included, carries `.attention`: three pulses, then still. The words are on the item; the circle's own sentence is for a screen reader (`AttentionDot`).

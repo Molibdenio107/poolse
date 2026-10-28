@@ -73,6 +73,7 @@ import { RecordsController } from './students/records.controller.js';
 import { LevelsController, StudentsController } from './students/students.controller.js';
 import { MeetsController } from './meets/meets.controller.js';
 import { MeetInboxController } from './meets/meet-inbox.controller.js';
+import { AttentionController } from './attention/attention.controller.js';
 import { FeedbackController } from './feedback/feedback.controller.js';
 import { NoticesController } from './notices/notices.controller.js';
 import { PushController } from './push/push.controller.js';
@@ -263,6 +264,7 @@ export const IDENTITY_ONLY_ROUTES = [
     LevelsController,
     MeetsController,
     MeetInboxController,
+    AttentionController,
     FeedbackController,
     NoticesController,
     PushController,

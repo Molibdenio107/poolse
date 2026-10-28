@@ -81,7 +81,7 @@ export interface MaintenanceTask {
  * deleted completion did not happen, so removing one logged against the wrong
  * task puts that task straight back to due.
  */
-const STATE = `
+export const TASK_STATE = `
   CASE
     WHEN NOT t.active THEN 'paused'
     WHEN c.last_done_at IS NULL THEN 'due'
@@ -154,7 +154,7 @@ const TASK_COLUMNS = `
     WHEN c.last_done_at IS NULL THEN NULL
     ELSE c.last_done_at + make_interval(days => t.interval_days)
   END AS next_due_at,
-  ${STATE} AS state,
+  ${TASK_STATE} AS state,
   ${DAYS_OVERDUE} AS days_overdue`;
 
 /*
@@ -167,7 +167,7 @@ const TASK_COLUMNS = `
  */
 const TASK_ORDER = `
   ORDER BY
-    CASE ${STATE} WHEN 'due' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,
+    CASE ${TASK_STATE} WHEN 'due' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,
     ${DAYS_OVERDUE} DESC,
     t.title`;
 

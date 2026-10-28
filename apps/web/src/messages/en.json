@@ -3603,6 +3603,12 @@
     "tankClosed": "That tank is closed at that time.",
     "closedBand": "Closed:"
   },
+  "attention": {
+    "menuBadge": "{count, plural, one {# thing to deal with} other {# things to deal with}}",
+    "dot": "{count, plural, one {# thing to deal with here} other {# things to deal with here}}",
+    "familiesLabel": "Families",
+    "familiesValue": "{count, plural, one {# answer to read} other {# answers to read}}"
+  },
   "palette": {
     "open": "Search for a page or an action",
     "search": "Search…",

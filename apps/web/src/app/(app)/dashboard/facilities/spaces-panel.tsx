@@ -9,6 +9,7 @@ import { timeAgo } from '@/lib/relative-time';
 import type { Space, SpaceType } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 import { Reveal } from '@/components/ui/reveal';
+import { AttentionDot } from '@/components/attention-dot';
 import { SelectField, TextAreaField, TextField, useSeeded, useSuccessKey } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import type { FormState } from '../actions';
@@ -74,6 +75,7 @@ export function SpacesPanel({
   canManage,
   variant = 'card',
   defaultOpen = false,
+  attention = {},
 }: {
   facilityId: string;
   spaces: Space[];
@@ -82,6 +84,8 @@ export function SpacesPanel({
   variant?: 'card' | 'block';
   /** Open on arrival — the site's own Espaços tab, where the rooms *are* the page. */
   defaultOpen?: boolean;
+  /** POOLSE-120: spaces with something to do (a due task, an urgent fault), by id. */
+  attention?: Record<string, number>;
 }): React.ReactElement {
   const t = useTranslations();
   const locale = useLocale();
@@ -211,6 +215,10 @@ export function SpacesPanel({
                   >
                     {space.name}
                   </FromLink>
+                  <AttentionDot
+                    count={attention[space.id]}
+                    label={t('attention.dot', { count: attention[space.id] ?? 0 })}
+                  />
 
                   <span className="text-sm text-foreground-muted">
                     {t(`spaces.type.${space.type}`)}

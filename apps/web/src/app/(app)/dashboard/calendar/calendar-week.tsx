@@ -296,6 +296,13 @@ export function CalendarWeek({
       if (session?.registerTaken === true) {
         facts.push({ label: t('calendar.registerLabel'), value: t('calendar.registerTaken') });
       }
+      // POOLSE-120: what the families said, as words on the card.
+      if ((session?.familyAnswers ?? 0) > 0) {
+        facts.push({
+          label: t('attention.familiesLabel'),
+          value: t('attention.familiesValue', { count: session?.familyAnswers ?? 0 }),
+        });
+      }
 
       const actions =
         session === undefined ? undefined : (
@@ -317,6 +324,7 @@ export function CalendarWeek({
         title: booking.name,
         detail: { facts, people: [], peopleEmpty: t('classes.nobodyEnrolled') },
         ...(actions === undefined ? {} : { actions }),
+        attention: session?.familyAnswers ?? 0,
       };
     },
     [controlsFor, sessionButtons, teacherFor, t],

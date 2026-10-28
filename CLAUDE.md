@@ -689,6 +689,8 @@ child, and anyone else gets a 404. A picker that non-office staff need gets a na
 calls every route as an unlinked guardian and as a student. **A new endpoint is added there in
 the same change.**
 
+**A circle means something needs doing, and it clears when it is done** (POOLSE-120). `GET /attention` is the one read: `readAttention` is cached per request and shared by the layout and the page. It counts only for roles that can act, in modules that are on, and reuses the existing verdicts. A new kind of circle is a branch in `attention.repository.ts` plus a `badge` key or an `AttentionDot`, never a second definition.
+
 **The menu's entries live in `lib/nav-entries.ts`** (POOLSE-118). The sidebar, the phone's menu and the Ctrl+K palette all read it through one filter, so a new page is one entry there. A palette action is one line in `ACTIONS` (`lib/commands.ts`), and its synonyms sit beside it, never in the catalogue.
 
 **A menu entry is shown only to the roles its page's API answers, and maintenance outranks instructor.** 15 October 2026, Rui's call. `app-sidebar.tsx` gives each entry the roles of the route its page loads (`STAFF`, `TEACHING`, `OFFICE`); `unlessRoles` hides a shortcut from a role that reaches the page another way. A list page says *not allowed* on a 403 and *no organization* only for the `no_organization` code. `MEMBER_ROLES` is owner, admin, maintenance, instructor, guardian, student. Permissions stay the union; the order only decides which role leads (badges, `leadRank` in a dashboard band). Maintenance writes the inventory (`INVENTORY_EDITORS`) but archives nothing. `docs/features/navigation.md`.

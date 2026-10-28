@@ -9,6 +9,8 @@ import { PoolClosureNote } from '@/components/pool-closure-note';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { ArchiveButton } from './facility-forms';
 import { PageError, PageShell } from '@/components/page-shell';
+import { AttentionDot } from '@/components/attention-dot';
+import { readAttention } from '@/lib/attention';
 
 /**
  * Slice 1.1 — an operator sets up their site.
@@ -30,6 +32,8 @@ export default async function FacilitiesPage({
   searchParams: Promise<{ from?: string }>;
 }): Promise<React.ReactElement> {
   const t = await getTranslations();
+  // POOLSE-120: what needs doing at a site and in its tanks, for who can act.
+  const attention = await readAttention();
   const back = originBack((await searchParams).from);
   const format = await getFormatter();
 
@@ -112,7 +116,7 @@ export default async function FacilitiesPage({
                       The name also opens the site (POOLSE-103 A) — a second way
                       in beside the labelled control, never instead of it.
                     */}
-                    <h2 className="text-lg font-medium">
+                    <h2 className="flex items-center gap-2 text-lg font-medium">
                       {data.canOpenSite ? (
                         <FromLink
                           href={`/dashboard/facilities/${facility.id}`}
@@ -123,6 +127,10 @@ export default async function FacilitiesPage({
                       ) : (
                         facility.name
                       )}
+                      <AttentionDot
+                        count={attention.facilities[facility.id]}
+                        label={t('attention.dot', { count: attention.facilities[facility.id] ?? 0 })}
+                      />
                     </h2>
                     {/* What is behind the button, so it reads as the place to go. */}
                     {data.canManage && (
@@ -197,6 +205,7 @@ export default async function FacilitiesPage({
                           <EntityIcon kind="pool" className="text-foreground-muted" />
                           <div className="flex min-w-0 flex-col">
                           {/* A tank's page is staff only; a family reads the name. */}
+                          <span className="flex min-w-0 items-center gap-1">
                           {data.canOpenPools ? (
                             <FromLink
                               href={`/dashboard/facilities/pools/${pool.id}`}
@@ -207,6 +216,12 @@ export default async function FacilitiesPage({
                           ) : (
                             <span className="truncate">{pool.name}</span>
                           )}
+                          <AttentionDot
+                            count={attention.pools[pool.id]}
+                            label={t('attention.dot', { count: attention.pools[pool.id] ?? 0 })}
+                            className="ml-1"
+                          />
+                          </span>
                           <span className="text-sm text-foreground-muted">
                             {[
                               t(`facilities.kind.${pool.kind}`),
