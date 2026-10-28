@@ -16,6 +16,7 @@ import {
   archiveMeet,
   findMeet,
   importMeet,
+  InboxRowGone,
   listMeets,
   rememberedClubCode,
   type ImportInput,
@@ -40,6 +41,7 @@ const MAX_ATHLETES = 3000;
 const MAX_RESULTS = 60;
 const STROKES: readonly Stroke[] = ['freestyle', 'backstroke', 'breaststroke', 'butterfly', 'medley'];
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface MeetsResponse extends Paginated<MeetSummary> {
   organizationId: string;
@@ -86,7 +88,12 @@ export class MeetsController {
     requireRole(...TEACHING);
     const { organizationId, membershipId } = currentTenant();
     if (!membershipId) throw new BadRequestException('No membership');
-    return importMeet(organizationId, membershipId, parseImport(body), body['commit'] === true);
+    try {
+      return await importMeet(organizationId, membershipId, parseImport(body), body['commit'] === true);
+    } catch (error) {
+      if (error instanceof InboxRowGone) throw new NotFoundException({ code: 'inbox_gone', message: error.message });
+      throw error;
+    }
   }
 
   @Post(':id/archive')
@@ -196,5 +203,6 @@ function parseImport(body: Record<string, unknown>): ImportInput {
     athletes: athletes.map(parseAthlete),
     confirmed,
     writeLicence,
+    inboxId: typeof body['inboxId'] === 'string' && UUID.test(body['inboxId']) ? body['inboxId'] : null,
   };
 }

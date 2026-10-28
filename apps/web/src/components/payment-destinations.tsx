@@ -75,7 +75,8 @@ export function PaymentDestinations({
   );
 }
 
-function CopyButton({ value, label }: { value: string; label: string }): React.ReactElement {
+/** A value copied in one tap; the value itself stays visible. Also the results address's (POOLSE-114). */
+export function CopyButton({ value, label }: { value: string; label: string }): React.ReactElement {
   const t = useTranslations();
   const [copied, setCopied] = useState(false);
 

@@ -5633,8 +5633,7 @@
         "nested": "O ficheiro .lxf contém outro ficheiro compactado dentro. Não é aceite.",
         "failed": "Não foi possível importar. Tente de novo."
       },
-      "formatHint": "Ficheiro LENEX (.lef/.lxf), o formato que a FPN e o ranking nacional exportam.",
-      "howToGet": "Como obter o ficheiro"
+      "formatHint": "Ficheiro LENEX (.lef/.lxf), o formato que a FPN e o ranking nacional exportam."
     },
     "skip": {
       "relay": "estafetas",
@@ -5725,7 +5724,8 @@
     "section": {
       "meets": "Provas",
       "minimos": "Mínimos",
-      "escaloes": "Escalões"
+      "escaloes": "Escalões",
+      "recebidos": "Recebidos por email{count, plural, =0 {} other { (#)}}"
     },
     "season": "Época",
     "noSeason": "Ainda não há nenhuma época. Crie uma em Turmas › Épocas para registar escalões e mínimos.",
@@ -5952,6 +5952,45 @@
       "numberRequired": "Indique o número do documento.",
       "ccInvalid": "Este número de Cartão de Cidadão não é válido. Confira os 12 caracteres, por exemplo 12345678 9 ZZ1.",
       "numberInvalid": "Use só letras, números e hífenes (3 a 30 caracteres)."
+    }
+  },
+  "meetInbox": {
+    "menuBadge": "{count, plural, one {# ficheiro de resultados por importar} other {# ficheiros de resultados por importar}}",
+    "intro": "Ficheiros de resultados que chegaram por email ao endereço do clube. Confirme cada um com Importar, como um ficheiro largado nesta página.",
+    "empty": "Ainda não chegou nenhum ficheiro por email.",
+    "from": "{file} · enviado por {sender} em {when}",
+    "stale": "Antigo",
+    "imported": "Importado",
+    "openMeet": "Ver a prova",
+    "import": "Importar",
+    "importNamed": "Importar {meet}",
+    "discard": "Rejeitar",
+    "discardNamed": "Rejeitar {meet}",
+    "discardTitle": "Rejeitar o ficheiro",
+    "discardConfirm": "O ficheiro sai da lista e não é importado. Fica registado quem o rejeitou.",
+    "discardReason": "Motivo",
+    "discardReasonHint": "Opcional. Por exemplo: duplicado, prova de outro clube.",
+    "discarded": "Ficheiro rejeitado",
+    "regenerated": "Novo endereço criado. O anterior deixou de funcionar.",
+    "error": {
+      "gone": "Este ficheiro já não está na lista. Pode ter sido rejeitado entretanto.",
+      "discardFailed": "Não foi possível rejeitar o ficheiro. Tente de novo.",
+      "regenerateFailed": "Não foi possível criar um novo endereço. Tente de novo.",
+      "reasonTooLong": "O motivo pode ter até 500 caracteres."
+    },
+    "help": {
+      "open": "Como obter os resultados",
+      "title": "Como obter os resultados",
+      "download": "Descarregue o ficheiro LENEX (.lef/.lxf) na página de resultados da FPN e largue-o nesta página.",
+      "fpnLink": "Abrir o site da FPN",
+      "forward": "Ou reencaminhe o email com o ficheiro para este endereço:",
+      "copy": "Copiar o endereço",
+      "forwardThen": "O ficheiro aparece em Recebidos por email, para confirmar a importação.",
+      "regenerate": "Criar um novo endereço",
+      "regenerateConfirm": "O endereço atual deixa de funcionar de imediato. Quem o tiver guardado tem de usar o novo.",
+      "regenerateYes": "Criar novo endereço",
+      "notReceiving": "A receção de resultados por email ainda não está ativa nesta instalação do Poolse.",
+      "who": "Só aceitamos emails enviados pelo proprietário, pelos administradores ou pelos instrutores do clube. O Poolse não acede ao site da FPN por si: a FPN exige verificação humana."
     }
   }
 }

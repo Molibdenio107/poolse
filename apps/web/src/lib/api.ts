@@ -2213,6 +2213,30 @@ export interface MeetList extends Paginated<MeetSummary> {
   rememberedClubCode: string | null;
 }
 
+/** A LENEX file that arrived by email — POOLSE-114. */
+export interface MeetInboxItem {
+  id: string;
+  fileName: string;
+  meetName: string;
+  meetStartsOn: string;
+  status: 'pending' | 'imported';
+  meetId: string | null;
+  senderName: string;
+  receivedAt: string;
+  /** Pending past 90 days: the quiet *antigo* tag. */
+  stale: boolean;
+}
+
+export interface MeetInboxList extends Paginated<MeetInboxItem> {
+  /** The club's results address, or null where this deployment receives no mail. */
+  address: string | null;
+  pendingCount: number;
+  /** Owner and admin: *Rejeitar* and a new address. */
+  canManage: boolean;
+  /** Mail can arrive here: a domain and a bucket are configured. */
+  receiving: boolean;
+}
+
 export interface MeetResult {
   recordId: string;
   studentId: string;

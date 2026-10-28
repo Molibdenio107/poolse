@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { ApiError, apiFetch, type Me, type OrganizationKind } from '@/lib/api';
 import type { PoolseModule } from '@poolse/rules';
-import { AppSidebar, MobileMenu } from '../app-sidebar';
+import { AppSidebar, MobileMenu, type Badges } from '../app-sidebar';
 import { modulesOf } from '@/lib/modules';
 import { PreferenceControls } from '../preference-controls';
 import { UserMenu } from '../user-menu';
@@ -163,6 +163,22 @@ async function brandLogo(): Promise<string | null> {
   }
 }
 
+/**
+ * What the menu's entries count — POOLSE-114's files waiting in *Recebidos por
+ * email*, for the people who import a meet in a club with the competition
+ * module. One indexed count; a failure is no badge, never a broken menu.
+ */
+async function menuBadges(roles: readonly string[], modules: readonly string[]): Promise<Badges> {
+  if (!modules.includes('competition') || !['owner', 'admin', 'instructor'].some((role) => roles.includes(role))) {
+    return {};
+  }
+  try {
+    return { meetInbox: (await apiFetch<{ pending: number }>('/meet-inbox/count')).pending };
+  } catch {
+    return {};
+  }
+}
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -173,6 +189,8 @@ export default async function DashboardLayout({
 
   // A support window that ended, with this browser still pointed at its club.
   if (clubGone) return <SupportEndedNotice />;
+
+  const badges = suspended === null ? await menuBadges(roles, modules) : {};
 
   // The club's own strip — the Owner and the Admins, never support itself.
   const clubManager = support === null && (roles.includes('owner') || roles.includes('admin'));
@@ -205,7 +223,7 @@ export default async function DashboardLayout({
         printed today; when something is, it inherits this for free.
       */}
       <div className="contents print:hidden">
-        <AppSidebar roles={roles} kind={kind} modules={modules} />
+        <AppSidebar roles={roles} kind={kind} modules={modules} badges={badges} />
       </div>
 
       {/*
@@ -225,7 +243,7 @@ export default async function DashboardLayout({
             Faturação → Definições (12 October 2026).
           */}
           <div className="flex min-w-0 items-center gap-2">
-            <MobileMenu roles={roles} kind={kind} modules={modules} />
+            <MobileMenu roles={roles} kind={kind} modules={modules} badges={badges} />
             {logoFileId !== null && (
               // eslint-disable-next-line @next/next/no-img-element -- streamed through /files/:id
               <img src={`/files/${logoFileId}`} alt="" className="h-8 w-auto max-w-32 object-contain" />

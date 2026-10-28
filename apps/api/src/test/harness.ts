@@ -166,6 +166,9 @@ const TENANT_TABLES = [
   'level_change_notice',
   'transfer_proposal',
   'student_record',
+  // POOLSE-114. An inbox row names its meet, its file and its message.
+  'meet_inbox',
+  'meet_inbox_message',
   // POOLSE-81. Results name a meet, so the meet goes after them.
   'swim_meet',
   // POOLSE-85. A time names a standard and an age group; both name a season.

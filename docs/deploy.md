@@ -217,6 +217,13 @@ real club depends on Poolse. Each one is here because doing it early breaks some
       verified sending domain in `EMAIL_FROM` — without the domain Resend only reaches the account's
       own address. Every alert, message, trial notice and support notice is recorded either way;
       with email on console nothing leaves and the hourly retry does nothing.
+- [ ] **Results by email** (POOLSE-114): an `INBOUND_DOMAIN` (e.g. `resultados.<domain>`) with its
+      MX pointing at Resend Inbound, a receiving webhook for `email.received` at
+      `POST /webhooks/resend-inbound`, and on the API `INBOUND_DOMAIN`,
+      `RESEND_INBOUND_WEBHOOK_SECRET` (the webhook's signing secret) and `RESEND_API_KEY`
+      (the attachments are fetched with it). Without the secret the webhook answers 503; without
+      the domain the Competição dialog says receiving is off. `INBOUND_DEV_SECRET` is for staging
+      only (`POST /webhooks/inbound-dev`) and **never set in production**.
 - [ ] **`DATABASE_PLATFORM_URL` audited**: API environment only, never the web app's, never
       `NEXT_PUBLIC_`. The rotation procedure is below; a test now fails if a `NEXT_PUBLIC_`
       variable ever looks like a database URL — POOLSE-64.
@@ -281,7 +288,7 @@ everything except payment, set the variables and run *Prove it* afterwards.
 | Vercel | Pro (Hobby is non-commercial) | ~22 | Go-live | — (Vercel project) |
 | Railway | Hobby, then Pro once clubs pay | ~22–33 | Go-live | `DATABASE_*` |
 | Clerk | Pro: MFA for `/admin` needs it | ~27 (~22 yearly) | Production instance | `CLERK_*`, `NEXT_PUBLIC_CLERK_*` |
-| Resend | Free (3,000/month, 100/day), then Pro ~22 | 0 | Go-live | `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM` |
+| Resend | Free (3,000/month, 100/day), then Pro ~22 | 0 | Go-live | `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM`, `INBOUND_DOMAIN`, `RESEND_INBOUND_WEBHOOK_SECRET` |
 | Sentry | Free (Developer) | 0 | Go-live | `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` |
 | Cloudflare R2 | Free up to 10 GB | 0 | Go-live | `S3_*` |
 | Anthropic API | Pay as you go, per-feature flags; the energy bill reader is on (POOLSE-106) | ~1–5 | Go-live: bills are read automatically | `ANTHROPIC_API_KEY`, `ENERGY_INVOICE_AI_ENABLED` |

@@ -5633,8 +5633,7 @@
         "nested": "The .lxf file holds another archive inside. It is not accepted.",
         "failed": "The import failed. Try again."
       },
-      "formatHint": "A LENEX file (.lef/.lxf), the format the FPN and the national ranking export.",
-      "howToGet": "How to get the file"
+      "formatHint": "A LENEX file (.lef/.lxf), the format the FPN and the national ranking export."
     },
     "skip": {
       "relay": "relays",
@@ -5725,7 +5724,8 @@
     "section": {
       "meets": "Meets",
       "minimos": "Qualifying times",
-      "escaloes": "Age groups"
+      "escaloes": "Age groups",
+      "recebidos": "Received by email{count, plural, =0 {} other { (#)}}"
     },
     "season": "Season",
     "noSeason": "There is no season yet. Create one under Classes › Seasons to record age groups and qualifying times.",
@@ -5952,6 +5952,45 @@
       "numberRequired": "Enter the document number.",
       "ccInvalid": "This Cartão de Cidadão number is not valid. Check the 12 characters, for example 12345678 9 ZZ1.",
       "numberInvalid": "Use only letters, digits and hyphens (3 to 30 characters)."
+    }
+  },
+  "meetInbox": {
+    "menuBadge": "{count, plural, one {# results file to import} other {# results files to import}}",
+    "intro": "Results files that arrived by email at the club's address. Confirm each one with Import, as you would a file dropped on this page.",
+    "empty": "No file has arrived by email yet.",
+    "from": "{file} · sent by {sender} on {when}",
+    "stale": "Old",
+    "imported": "Imported",
+    "openMeet": "See the meet",
+    "import": "Import",
+    "importNamed": "Import {meet}",
+    "discard": "Reject",
+    "discardNamed": "Reject {meet}",
+    "discardTitle": "Reject the file",
+    "discardConfirm": "The file leaves the list and is not imported. Who rejected it is recorded.",
+    "discardReason": "Reason",
+    "discardReasonHint": "Optional. For example: duplicate, another club's meet.",
+    "discarded": "File rejected",
+    "regenerated": "New address created. The old one no longer works.",
+    "error": {
+      "gone": "This file is no longer in the list. It may have been rejected meanwhile.",
+      "discardFailed": "The file could not be rejected. Try again.",
+      "regenerateFailed": "A new address could not be created. Try again.",
+      "reasonTooLong": "The reason can be up to 500 characters."
+    },
+    "help": {
+      "open": "How to get the results",
+      "title": "How to get the results",
+      "download": "Download the LENEX file (.lef/.lxf) from the FPN's results page and drop it on this page.",
+      "fpnLink": "Open the FPN's site",
+      "forward": "Or forward the email carrying the file to this address:",
+      "copy": "Copy the address",
+      "forwardThen": "The file appears under Received by email, for you to confirm the import.",
+      "regenerate": "Create a new address",
+      "regenerateConfirm": "The current address stops working at once. Anyone who saved it must use the new one.",
+      "regenerateYes": "Create new address",
+      "notReceiving": "Receiving results by email is not switched on in this Poolse installation yet.",
+      "who": "We only accept emails sent by the club's owner, administrators or instructors. Poolse does not visit the FPN's site on your behalf: the FPN requires a human check."
     }
   }
 }

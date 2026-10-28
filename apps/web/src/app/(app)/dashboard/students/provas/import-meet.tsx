@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, Upload } from 'lucide-react';
@@ -11,7 +11,7 @@ import { useToast } from '@/components/ui/toast';
 import { formatTime } from '@/components/progress-chart';
 import { formatDate } from '@/lib/date-format';
 import type { MeetImportPreview, MeetSkipReason } from '@/lib/api';
-import type { LenexClub } from '@/lib/lenex';
+import type { LenexClub } from '@poolse/rules/lenex';
 import { importMeetAction, readMeetFileAction } from './meets.actions';
 
 const BUTTON =
@@ -19,40 +19,146 @@ const BUTTON =
 const BUTTON_QUIET =
   'inline-flex h-control items-center justify-center px-4 text-control gap-2 rounded border border-border hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
-/**
- * Where a club finds a meet's LENEX file: the FPN's site, whose competitions
- * publish their results — POOLSE-111. One constant, so a better address (a
- * results page, a ranking export) is a one-line change.
- */
-const FPN_RESULTS_URL = 'https://fpnatacao.pt/';
-
 const SKIPS: MeetSkipReason[] = ['relay', 'dsq', 'dns', 'dnf', 'wdr', 'otherStatus', 'noTime', 'yards', 'stroke'];
+
+/** What the dialog reads: a file dropped or chosen here, or one that arrived by email (POOLSE-114). */
+export type ImportSource =
+  | { kind: 'file'; file: File }
+  | { kind: 'inbox'; inboxId: string; fileName: string };
+
+function appendSource(data: FormData, source: ImportSource): void {
+  if (source.kind === 'file') data.set('file', source.file);
+  else data.set('inboxId', source.inboxId);
+}
 
 /**
  * Importar resultados — POOLSE-81.
  *
- * Three steps in one dialog: the file (dropped anywhere on the page, or
- * chosen), the club that is this one (pre-selected from the last import), and
- * the preview — matched swimmers, proposals to confirm, what is new, corrected,
- * skipped and unmatched — before one press writes all of it or none.
+ * The button and the page-wide drop. A dropped or chosen file opens
+ * `MeetImportDialog`; `help` sits under the format line — POOLSE-114's
+ * *Como obter os resultados*.
  */
 export function ImportMeet({
   organizationId,
   rememberedClubCode,
+  help,
 }: {
+  organizationId: string;
+  rememberedClubCode: string | null;
+  help?: React.ReactNode;
+}): React.ReactElement {
+  const t = useTranslations();
+  const input = useRef<HTMLInputElement | null>(null);
+  const [source, setSource] = useState<ImportSource | null>(null);
+  const take = useCallback((dropped: File) => setSource({ kind: 'file', file: dropped }), []);
+  const { dragging } = useFileDrop(take);
+
+  return (
+    <>
+      <DropOverlay shown={dragging} label={t('meets.import.drop')} />
+      <div className="flex flex-col gap-1">
+        <div>
+          <button type="button" className={BUTTON} onClick={() => input.current?.click()} aria-describedby="meet-import-format">
+            <Upload className="size-4" aria-hidden />
+            {t('meets.import.button')}
+          </button>
+        </div>
+        {/*
+          What the import reads, in one line, and how to get the file —
+          POOLSE-111, with POOLSE-114's explanation under it. LENEX alone (Rui,
+          22-10-2026): it is the one format that carries the licence, the event,
+          the course and the exact time in a shape a swimmer can be matched by.
+        */}
+        <p id="meet-import-format" className="max-w-xs text-sm text-foreground-muted">
+          {t('meets.import.formatHint')}
+        </p>
+        {help}
+      </div>
+      <input
+        ref={input}
+        type="file"
+        accept=".lef,.lxf"
+        className="sr-only"
+        aria-label={t('meets.import.button')}
+        onChange={(event) => {
+          const chosen = event.target.files?.[0];
+          event.target.value = '';
+          if (chosen) setSource({ kind: 'file', file: chosen });
+        }}
+      />
+      <MeetImportDialog
+        source={source}
+        onClose={() => setSource(null)}
+        organizationId={organizationId}
+        rememberedClubCode={rememberedClubCode}
+      />
+    </>
+  );
+}
+
+/** *Importar* on a row of *Recebidos por email* — the same dialog, the file already loaded (POOLSE-114). */
+export function ImportFromInbox({
+  organizationId,
+  rememberedClubCode,
+  inboxId,
+  fileName,
+  label,
+}: {
+  organizationId: string;
+  rememberedClubCode: string | null;
+  inboxId: string;
+  fileName: string;
+  /** The row's own name for the button, so a list of *Importar* says which. */
+  label: string;
+}): React.ReactElement {
+  const t = useTranslations();
+  const [source, setSource] = useState<ImportSource | null>(null);
+  return (
+    <>
+      <button
+        type="button"
+        className={BUTTON}
+        aria-label={label}
+        onClick={() => setSource({ kind: 'inbox', inboxId, fileName })}
+      >
+        {t('meetInbox.import')}
+      </button>
+      <MeetImportDialog
+        source={source}
+        onClose={() => setSource(null)}
+        organizationId={organizationId}
+        rememberedClubCode={rememberedClubCode}
+      />
+    </>
+  );
+}
+
+/**
+ * The import's three steps in one dialog — POOLSE-81: the file (read on the
+ * server), the club that is this one (pre-selected from the last import), and
+ * the preview — matched swimmers, proposals to confirm, what is new, corrected,
+ * skipped and unmatched — before one press writes all of it or none. Open while
+ * `source` is set; a new source starts again from the top.
+ */
+function MeetImportDialog({
+  source,
+  onClose,
+  organizationId,
+  rememberedClubCode,
+}: {
+  source: ImportSource | null;
+  onClose: () => void;
   organizationId: string;
   rememberedClubCode: string | null;
 }): React.ReactElement {
   const t = useTranslations();
   const router = useRouter();
   const { show } = useToast();
-  const input = useRef<HTMLInputElement | null>(null);
 
-  const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [meet, setMeet] = useState<{ name: string; startsOn: string | null } | null>(null);
+  const [fileName, setFileName] = useState('');
   const [clubs, setClubs] = useState<LenexClub[]>([]);
   const [clubCode, setClubCode] = useState('');
   const [official, setOfficial] = useState(true);
@@ -60,45 +166,45 @@ export function ImportMeet({
   const [confirmed, setConfirmed] = useState<Record<string, string>>({});
   const [writeLicence, setWriteLicence] = useState<Record<string, boolean>>({});
 
-  const reset = (): void => {
-    setFile(null);
+  useEffect(() => {
     setMeet(null);
     setClubs([]);
     setPreview(null);
     setError(null);
     setConfirmed({});
     setWriteLicence({});
-  };
+    if (source === null) return;
+    setFileName(source.kind === 'file' ? source.file.name : source.fileName);
 
-  const take = useCallback(
-    async (chosen: File) => {
-      reset();
-      setOpen(true);
-      setFile(chosen);
-      setBusy(true);
-      const data = new FormData();
-      data.set('file', chosen);
-      const read = await readMeetFileAction(data);
+    // A source replaced while this one is still being read must not land late.
+    let current = true;
+    setBusy(true);
+    const data = new FormData();
+    appendSource(data, source);
+    void readMeetFileAction(data).then((read) => {
+      if (!current) return;
       setBusy(false);
       if (!read.ok) {
         setError(read.errorKey);
         return;
       }
+      setFileName(read.fileName);
       setMeet({ name: read.meet.name, startsOn: read.meet.startsOn });
       setClubs(read.clubs);
       const remembered = read.clubs.find((club) => club.code === rememberedClubCode);
       setClubCode(remembered?.code ?? (read.clubs.length === 1 ? read.clubs[0]!.code : ''));
-    },
-    [rememberedClubCode],
-  );
-  const { dragging } = useFileDrop((dropped) => void take(dropped));
+    });
+    return () => {
+      current = false;
+    };
+  }, [source, rememberedClubCode]);
 
   async function run(commit: boolean): Promise<void> {
-    if (file === null || clubCode === '') return;
+    if (source === null || clubCode === '') return;
     setBusy(true);
     setError(null);
     const data = new FormData();
-    data.set('file', file);
+    appendSource(data, source);
     data.set('organizationId', organizationId);
     data.set('clubCode', clubCode);
     data.set('official', String(official));
@@ -122,8 +228,7 @@ export function ImportMeet({
       return;
     }
     show('success', t('meets.import.done', { count: outcome.preview.totals.new + outcome.preview.totals.update }));
-    setOpen(false);
-    reset();
+    onClose();
     if (outcome.preview.meetId) router.push(`/dashboard/students/provas/${outcome.preview.meetId}`);
     else router.refresh();
   }
@@ -139,59 +244,16 @@ export function ImportMeet({
   const skippedTotal = preview === null ? 0 : SKIPS.reduce((sum, reason) => sum + preview.skipped[reason], 0);
 
   return (
-    <>
-      <DropOverlay shown={dragging} label={t('meets.import.drop')} />
-      <div className="flex flex-col gap-1">
-        <div>
-          <button type="button" className={BUTTON} onClick={() => input.current?.click()} aria-describedby="meet-import-format">
-            <Upload className="size-4" aria-hidden />
-            {t('meets.import.button')}
-          </button>
-        </div>
-        {/*
-          What the import reads, in one line, and where the file comes from —
-          POOLSE-111. LENEX alone (Rui, 22-10-2026): it is the one format that
-          carries the licence, the event, the course and the exact time in a
-          shape a swimmer can be matched by. A results PDF is a picture of it.
-        */}
-        <p id="meet-import-format" className="max-w-xs text-sm text-foreground-muted">
-          {t('meets.import.formatHint')}{' '}
-          <a
-            href={FPN_RESULTS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded text-primary underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            {t('meets.import.howToGet')}
-          </a>
-        </p>
-      </div>
-      <input
-        ref={input}
-        type="file"
-        accept=".lef,.lxf"
-        className="sr-only"
-        aria-label={t('meets.import.button')}
-        onChange={(event) => {
-          const chosen = event.target.files?.[0];
-          event.target.value = '';
-          if (chosen) void take(chosen);
-        }}
-      />
-
       <Dialog
-        open={open}
-        onClose={() => {
-          setOpen(false);
-          reset();
-        }}
+        open={source !== null}
+        onClose={onClose}
         title={meet === null ? t('meets.import.title') : meet.name}
         closeLabel={t('common.close')}
       >
         <div className="flex flex-col gap-4">
           {meet !== null && meet.startsOn !== null && (
             <p className="text-sm text-foreground-muted">
-              {formatDate(meet.startsOn)} · {file?.name}
+              {formatDate(meet.startsOn)} · {fileName}
             </p>
           )}
           {busy && <p className="text-sm text-foreground-muted">{t('meets.import.reading')}</p>}
@@ -356,6 +418,5 @@ export function ImportMeet({
           )}
         </div>
       </Dialog>
-    </>
   );
 }

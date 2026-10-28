@@ -49,6 +49,8 @@ Salários (salaries), Qualificações (qualifications), Energia (energy), Receç
 Faturação (invoicing), Mensagens (messages), Competição and its three entries (competition). If `/me` fails the list is
 empty, closed like the roles.
 
+**An entry may carry a count** (`badge` on the item, POOLSE-114). Today only Competição has one: the files waiting in *Recebidos por email*. The dashboard layout reads it (`GET /meet-inbox/count`) for owner, admin and instructor in a club with the competition module, and a failure draws no badge. The number is visible text with a sentence for screen readers. *Recebidos por email* itself is a pill on the Competição pages, not a menu entry, because it is offered only while it holds a file.
+
 **A module's pages sit behind `ModuleGate`** (`components/module-gate.tsx`), mounted once in the
 `layout.tsx` of each module route segment. Reached by URL with the module off, the page shows its
 module's name and "Este módulo não está ativo para o seu clube." (`common.moduleDisabled`), which

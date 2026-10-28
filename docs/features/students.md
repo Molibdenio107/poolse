@@ -301,7 +301,8 @@ Progressão and nothing else.
 
 **Competição → Provas** under Alunos (renamed 20-10-2026) lists the meets, newest first, paged. *Importar resultados* takes the
 meet's **LENEX** file — `.lef`, or a `.lxf` holding exactly one `.lef`, up to 10 MB — dropped on the
-page or chosen. The file is read on the Next server (`lib/lenex.ts`) and never leaves it.
+page or chosen, or forwarded by email (below). The file is read on a server (`@poolse/rules/lenex`)
+and never in the browser.
 
 1. **The club.** A results file holds every club at the meet; the operator picks this one, and it is
    remembered (`organization.federation_club_code`) and pre-selected next time. Only its swimmers are
@@ -321,6 +322,38 @@ licence, and lists the unmatched by name. **Who:** owner, admin and every instru
 archiving a meet (with its results) is owner and admin, restorable from Arquivados. The parser
 refuses any DOCTYPE or entity, a `.lxf` with two `.lef`s or a nested archive, and anything that
 inflates past 40 MB.
+
+### Recebidos por email (POOLSE-114)
+
+Each club has one results address, `resultados-<token>@<INBOUND_DOMAIN>`, shown in **Como obter os
+resultados** under the import button (also on the empty meets list). That dialog says three things in
+order: download the LENEX file from the FPN and drop it here; or forward the email carrying it to the
+address (copy button) and confirm it here; and who may send. Poolse does not fetch from the FPN
+itself: its site requires a human check, and no credentials are ever stored.
+
+- **Who may send:** the `From` address of a live owner, admin or instructor of the club. Anybody
+  else is dropped and logged (club, sender, reason) with **no reply**. An address the club has
+  regenerated, a club with the Competição module off, and a closed or read-only club drop the same
+  way.
+- **What is taken:** every `.lef`/`.lxf` attachment up to 10 MB that the parser reads and that names
+  a meet; the body and other attachments are ignored. A known sender whose message held nothing
+  usable gets one reply in their language. One provider message is processed once per club.
+- **Recebidos por email** is a fourth part of Competição (`/provas/recebidos`), offered only while it
+  holds a file; its pill and the menu's Competição entry carry the count still to import. Newest
+  first, 15 a page. *Importar* opens the ordinary import dialog with the file loaded, and the commit
+  marks the row imported with a link to its meet; an imported file stays listed. *Rejeitar* (owner,
+  admin) takes it off the list with an optional reason, audited. A file pending past 90 days is
+  tagged *Antigo*; nothing is deleted on its own.
+- **A new address** (owner, admin, in the dialog) stops the old one at once, audited.
+- **No notice is sent** when a file lands (Rui, 28-10-2026): the count is the signal.
+- `From` can be forged, as on any email. The sender rule keeps junk out of the list; nothing reaches
+  a swimmer's record until a signed-in member imports and confirms.
+
+Receiving needs `INBOUND_DOMAIN`, the Resend inbound webhook and the file bucket
+(`docs/deploy.md`). Without them the dialog says receiving is not switched on.
+`POST /webhooks/inbound-dev` takes one file, with `from`/`to`/`name` in the query and
+`x-inbound-dev-secret`, so staging can be tested without DNS; it answers 404 unless
+`INBOUND_DEV_SECRET` is set.
 
 ### A meet on paper (POOLSE-115)
 
@@ -368,7 +401,7 @@ entries, each its own route (`/provas/minimos`, `/provas/escaloes`):
 
 **Born from / born up to are year wheels** (`YearWheel`): a five-row listbox, newest year first, with *Sem limite* for an open end — scroll, arrows (PageUp/PageDown five), Home/End, or type a year to jump to it; a plain number field before the page's script runs. The API takes a year within the last hundred years up to this one, and refuses *from* after *to*.
 
-**Results are imported from LENEX only** (Rui, 22-10-2026): the import says *"Ficheiro LENEX (.lef/.lxf), o formato que a FPN e o ranking nacional exportam."* and links *Como obter o ficheiro* to the FPN's site. A results PDF is a picture of that data and an Excel is whatever the organiser typed; neither carries the licence, event, course and exact time a swimmer is matched by.
+**Results are imported from LENEX only** (Rui, 22-10-2026): the import says *"Ficheiro LENEX (.lef/.lxf), o formato que a FPN e o ranking nacional exportam."* and, under it, *Como obter os resultados* (POOLSE-114) links the FPN's site and gives the club's address for forwarding. A results PDF is a picture of that data and an Excel is whatever the organiser typed; neither carries the licence, event, course and exact time a swimmer is matched by.
 
 **What counts** is the best time at an **official** meet, in the **same pool length**, inside the
 window. 25 m and 50 m are never converted; no valid time is said in words and is never a gap. A

@@ -76,7 +76,16 @@ interface Item {
    * while Staff stays.
    */
   module?: PoolseModule;
+  /**
+   * A count the entry carries — POOLSE-114's files waiting in *Recebidos por
+   * email*. Read by the layout and passed in; absent or zero draws nothing.
+   */
+  badge?: BadgeKey;
 }
+
+/** The counts a menu entry may carry. */
+export type BadgeKey = 'meetInbox';
+export type Badges = Partial<Record<BadgeKey, number>>;
 
 /*
  * Who an entry is for, matched to its endpoint — 15 October 2026 (Rui): a menu
@@ -347,6 +356,7 @@ const SECTIONS: Item[] = [
         key: 'competition.title',
         roles: TEACHING,
         module: 'competition',
+        badge: 'meetInbox',
         children: [
           { href: '/dashboard/students/provas', key: 'qualifying.section.meets' },
           { href: '/dashboard/students/provas/minimos', key: 'qualifying.section.minimos' },
@@ -427,10 +437,12 @@ export function AppSidebar({
   roles,
   kind,
   modules,
+  badges = {},
 }: {
   roles: readonly string[];
   kind: OrganizationKind;
   modules: readonly PoolseModule[];
+  badges?: Badges;
 }): React.ReactElement {
   const t = useTranslations();
   const pathname = usePathname();
@@ -456,7 +468,7 @@ export function AppSidebar({
           <LinkBusy />
         </Link>
 
-        <SidebarNav sections={sections} pathname={pathname} />
+        <SidebarNav sections={sections} pathname={pathname} badges={badges} />
       </div>
     </aside>
   );
@@ -473,10 +485,12 @@ function visibleSections(viewer: Viewer): Item[] {
 function SidebarNav({
   sections,
   pathname,
+  badges,
   onNavigate,
 }: {
   sections: Item[];
   pathname: string;
+  badges: Badges;
   /** The phone's sheet closes on any tap of a link, the page it is on included. */
   onNavigate?: () => void;
 }): React.ReactElement {
@@ -484,7 +498,14 @@ function SidebarNav({
   return (
     <nav aria-label={t('nav.label')} className="flex flex-1 flex-col gap-1">
       {sections.map((section) => (
-        <NavItem key={section.href} item={section} pathname={pathname} depth={0} onNavigate={onNavigate} />
+        <NavItem
+          key={section.href}
+          item={section}
+          pathname={pathname}
+          depth={0}
+          badges={badges}
+          onNavigate={onNavigate}
+        />
       ))}
     </nav>
   );
@@ -502,10 +523,12 @@ export function MobileMenu({
   roles,
   kind,
   modules,
+  badges = {},
 }: {
   roles: readonly string[];
   kind: OrganizationKind;
   modules: readonly PoolseModule[];
+  badges?: Badges;
 }): React.ReactElement {
   const t = useTranslations();
   const pathname = usePathname();
@@ -535,6 +558,7 @@ export function MobileMenu({
         <SidebarNav
           sections={visibleSections({ roles, kind, modules })}
           pathname={pathname}
+          badges={badges}
           onNavigate={() => setOpen(false)}
         />
       </Dialog>
@@ -560,12 +584,14 @@ function NavItem({
   item,
   pathname,
   depth,
+  badges,
   onNavigate,
   siblings,
 }: {
   item: Item;
   pathname: string;
   depth: number;
+  badges: Badges;
   onNavigate?: (() => void) | undefined;
   /** The other entries at this depth, for "the most specific match wins". */
   siblings?: Item[] | undefined;
@@ -584,6 +610,7 @@ function NavItem({
   // The page is named once: by the child that shares its parent's address.
   const current =
     pathname === item.href && !(item.children ?? []).some((child) => child.href === item.href);
+  const count = item.badge === undefined ? 0 : (badges[item.badge] ?? 0);
 
   return (
     <Fragment key={item.href}>
@@ -602,6 +629,12 @@ function NavItem({
       >
         {item.icon !== undefined && <EntityIcon kind={item.icon} />}
         {t(item.key)}
+        {count > 0 && (
+          <span className="ml-auto rounded-full bg-primary px-2 text-xs font-medium text-primary-foreground">
+            <span aria-hidden>{count}</span>
+            <span className="sr-only">{t('meetInbox.menuBadge', { count })}</span>
+          </span>
+        )}
         <LinkBusy />
       </Link>
 
@@ -612,6 +645,7 @@ function NavItem({
             item={child}
             pathname={pathname}
             depth={depth + 1}
+            badges={badges}
             onNavigate={onNavigate}
             siblings={item.children}
           />

@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { ApiError, apiPost, type MeetImportPreview } from '@/lib/api';
-import { LENEX_MAX_BYTES, LenexError, parseLenex, type LenexClub, type LenexFile } from '@/lib/lenex';
+import { ApiError, apiFileResponse, apiPost, type MeetImportPreview } from '@/lib/api';
+import { LENEX_MAX_BYTES, LenexError, parseLenex, type LenexClub, type LenexFile } from '@poolse/rules/lenex';
 import type { FormState } from '../../actions';
 
 /**
@@ -24,8 +24,37 @@ export type ReadMeetState =
       clubs: LenexClub[];
     };
 
+/**
+ * The file a step reads: one dropped or chosen on the page, or — POOLSE-114 —
+ * one that arrived by email, fetched from the API by its inbox row on every
+ * step exactly as a dropped file is sent again on every step. Either way it is
+ * read here and never in the browser.
+ */
+async function sourceFile(formData: FormData): Promise<File | { errorKey: string } | null> {
+  const inboxId = String(formData.get('inboxId') ?? '');
+  if (inboxId === '') {
+    const file = formData.get('file');
+    return file instanceof File ? file : null;
+  }
+  if (!/^[0-9a-f-]{36}$/i.test(inboxId)) return { errorKey: 'meetInbox.error.gone' };
+  const response = await apiFileResponse(`/meet-inbox/${inboxId}/file`);
+  if (response.status === 403) return { errorKey: 'meets.notPermitted' };
+  if (response.status === 404) return { errorKey: 'meetInbox.error.gone' };
+  if (!response.ok) return { errorKey: 'meets.import.error.failed' };
+  const disposition = response.headers.get('content-disposition') ?? '';
+  const encoded = /filename="([^"]*)"/.exec(disposition)?.[1] ?? '';
+  let name = 'resultados.lef';
+  try {
+    name = decodeURIComponent(encoded) || name;
+  } catch {
+    // An unreadable name is the default one; the bytes are what matter.
+  }
+  return new File([await response.arrayBuffer()], name);
+}
+
 async function read(formData: FormData): Promise<{ file: File; parsed: LenexFile } | { errorKey: string }> {
-  const file = formData.get('file');
+  const file = await sourceFile(formData);
+  if (file !== null && !(file instanceof File)) return file;
   if (!(file instanceof File) || file.size === 0) return { errorKey: 'meets.import.error.noFile' };
   if (!/\.(lef|lxf)$/i.test(file.name)) return { errorKey: 'meets.import.error.type' };
   if (file.size > LENEX_MAX_BYTES) return { errorKey: 'meets.import.error.tooBig' };
@@ -85,13 +114,15 @@ export async function importMeetAction(formData: FormData): Promise<ImportMeetSt
         athletes: parsed.athletes.filter((athlete) => athlete.clubCode === clubCode),
         confirmed: json('confirmed'),
         writeLicence: json('writeLicence'),
+        inboxId: String(formData.get('inboxId') ?? '') || undefined,
       },
       { organizationId },
     );
-    if (commit) revalidatePath('/dashboard/students/provas');
+    if (commit) revalidatePath('/dashboard/students/provas', 'layout');
     return { ok: true, preview };
   } catch (error) {
     if (error instanceof ApiError && error.status === 403) return { ok: false, errorKey: 'meets.notPermitted' };
+    if (error instanceof ApiError && error.status === 404) return { ok: false, errorKey: 'meetInbox.error.gone' };
     return { ok: false, errorKey: 'meets.import.error.failed' };
   }
 }
@@ -113,4 +144,34 @@ export async function archiveMeetAction(_previous: FormState, formData: FormData
     toastKey: 'archive.archived.swim_meet',
     redirectTo: '/dashboard/students/provas',
   };
+}
+
+/** *Rejeitar* — owner and admin (POOLSE-114). The reason is optional. */
+export async function discardInboxAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const inboxId = String(formData.get('inboxId') ?? '');
+  const reason = String(formData.get('reason') ?? '').trim();
+  if (reason.length > 500) return { ok: false, errorKey: 'meetInbox.error.reasonTooLong' };
+  try {
+    await apiPost(`/meet-inbox/${inboxId}/discard`, { reason }, { organizationId });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) return { ok: false, errorKey: 'meets.notPermitted' };
+    if (error instanceof ApiError && error.status === 404) return { ok: false, errorKey: 'meetInbox.error.gone' };
+    return { ok: false, errorKey: 'meetInbox.error.discardFailed' };
+  }
+  revalidatePath('/dashboard/students/provas', 'layout');
+  return { ok: true, toastKey: 'meetInbox.discarded' };
+}
+
+/** A new address — owner and admin. The old one stops at once. */
+export async function regenerateInboxAddressAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const organizationId = String(formData.get('organizationId') ?? '');
+  try {
+    await apiPost('/meet-inbox/address', {}, { organizationId });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) return { ok: false, errorKey: 'meets.notPermitted' };
+    return { ok: false, errorKey: 'meetInbox.error.regenerateFailed' };
+  }
+  revalidatePath('/dashboard/students/provas', 'layout');
+  return { ok: true, toastKey: 'meetInbox.regenerated' };
 }

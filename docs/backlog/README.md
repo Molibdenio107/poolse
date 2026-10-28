@@ -136,4 +136,5 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-111](./POOLSE-111-competition-times-events-year-picker-import-formats.md) | Competição: the times table you can see, a year wheel, and what import can read | Students / Competition | Low | POOLSE-81, 85 | 0 |
 | [POOLSE-112](./POOLSE-112-advancement-by-age-at-season-end.md) | Advancement by age at season end, and a queue worth opening — **built 23-10-2026** | Levels / Turmas | Medium | POOLSE-19, 45 | 0 |
 | [POOLSE-113](./POOLSE-113-advancement-queue-turma-picker.md) | The advancement queue picks a turma in `TurmaPicker`, grouped by rank reason | Levels / Turmas | Medium | POOLSE-19, 110, 112 | 0 |
+| [POOLSE-114](./POOLSE-114-results-by-email-and-how-to-get-the-file.md) | Competição: results arrive by email, and the page explains how to get the file — **built 28-10-2026** | Students / Competition | Medium | POOLSE-81, 86, 87 | 0 |
 | [POOLSE-116](./POOLSE-116-lesson-feedback-from-the-family-app.md) | The app: a student's feedback after a lesson — mood plus a few words, read on the register | Mobile app / Students | Medium | POOLSE-90, 13 | 0 |

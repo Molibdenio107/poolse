@@ -25,7 +25,8 @@ export type FilePurpose =
   | 'logo'
   | 'student_photo'
   | 'incident_attachment'
-  | 'medical_certificate';
+  | 'medical_certificate'
+  | 'meet_results';
 
 /**
  * Health data, sealed at rest — POOLSE-109. The bucket holds ciphertext, the
@@ -65,6 +66,10 @@ export const RULES: Record<FilePurpose, { write: readonly MemberRole[] | null; r
   // and — a question about a row — by the child's own family (see openFile).
   // A coach is told it exists and never given it.
   medical_certificate: { write: null, read: OFFICE },
+  // A meet's LENEX file that arrived by email (POOLSE-114). Never through
+  // POST /files — the inbound path stores it — and read by the people who
+  // import a meet, through the inbox's own route.
+  meet_results: { write: null, read: ['owner', 'admin', 'instructor'] },
 };
 
 export interface StoredFile {

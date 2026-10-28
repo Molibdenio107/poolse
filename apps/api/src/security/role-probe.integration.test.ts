@@ -1,5 +1,6 @@
 import { after, before, test } from 'node:test';
 import { MeetsController } from '../meets/meets.controller.js';
+import { MeetInboxController } from '../meets/meet-inbox.controller.js';
 import { QualifyingController } from '../qualifying/qualifying.controller.js';
 import { InvoicesController } from '../billing/invoices.controller.js';
 import { OwnEmailPreferenceController } from '../notifications/email-preferences.controller.js';
@@ -659,6 +660,17 @@ test('meets refuse a guardian and a student (403) — POOLSE-81', async () => {
     await refused('GET meets/:id', 403, () => meets.one(NO_SUCH_ID));
     await refused('POST meets/import', 403, () => meets.import({}));
     await refused('POST meets/:id/archive', 403, () => meets.archive(NO_SUCH_ID));
+  });
+});
+
+test('the results inbox refuses a guardian and a student (403) — POOLSE-114', async () => {
+  await asEach(async () => {
+    const inbox = new MeetInboxController();
+    await refused('GET meet-inbox', 403, () => inbox.list());
+    await refused('GET meet-inbox/count', 403, () => inbox.count());
+    await refused('GET meet-inbox/:id/file', 403, () => inbox.file(NO_SUCH_ID));
+    await refused('POST meet-inbox/:id/discard', 403, () => inbox.discard(NO_SUCH_ID, {}));
+    await refused('POST meet-inbox/address', 403, () => inbox.regenerate());
   });
 });
 

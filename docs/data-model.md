@@ -3845,6 +3845,26 @@ out-of-order delivery cannot undo a later one; `poolse_platform` may update it.
 - A meet is **restorable** (`RESTORABLE` kind `swim_meet`, cascading `student_record` by `meet_id`):
   archiving takes its results out of the bests, and the bin brings back exactly those.
 
+### Results by email — POOLSE-114, 28 October 2026
+
+Migration `1793008800000_meet-inbox`.
+
+- **`organization.meet_inbox_token`** — 20 characters of `[a-z0-9]`, unique, defaulted by
+  `new_inbox_token()` (the one definition, also used to regenerate). The club's address is
+  `resultados-<token>@<INBOUND_DOMAIN>`. Lowercase because a mail system may fold a local part's case.
+  `poolse_app` holds `UPDATE (meet_inbox_token)`.
+- **`meet_inbox_organization(token)`** — `SECURITY DEFINER`, the one read before a tenant is known:
+  the club's id, or null for an unknown token or a club archived, suspended, read-only or with
+  `competition` in `disabled_modules`.
+- **`meet_inbox_message`** — one accepted email per club: `provider_message_id` (unique per club,
+  the idempotency key), the sender's membership and address, `file_count` (0 = the message that
+  earned the "no LENEX" reply). Insert-only.
+- **`meet_inbox`** — one LENEX file: `message_id`, `file_id` (a `stored_file` of purpose
+  `meet_results`, `application/xml` or `application/zip`), `file_name`, `meet_name` and
+  `meet_starts_on` read at receipt, `status` (`meet_inbox_status`: pending, imported, discarded) with
+  CHECKs that imported carries `meet_id` + `imported_at` and discarded carries `discarded_at`.
+  Only the status columns are updatable; no DELETE. Drops (strangers, unknown tokens) write nothing.
+
 ### Gap to qualify — POOLSE-85, 19 October 2026
 
 Migration `1791194400000_qualifying-standards`. All three tables are tenant-scoped, typed by the

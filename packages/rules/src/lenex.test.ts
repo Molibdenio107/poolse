@@ -6,7 +6,7 @@ import {
   LenexError,
   lenexTimeToMs,
   parseLenex,
-} from './lenex.ts';
+} from './lenex.js';
 
 /**
  * POOLSE-81 — reading a LENEX results file, and refusing the ones built to hurt.

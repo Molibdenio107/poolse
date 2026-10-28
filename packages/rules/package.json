@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./lenex": {
+      "types": "./dist/lenex.d.ts",
+      "default": "./dist/lenex.js"
     }
   },
   "scripts": {

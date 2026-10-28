@@ -21,8 +21,11 @@ import { inflateRawSync } from 'node:zlib';
  * - a `.lxf` must hold exactly one `.lef`; nested archives are refused; and the
  *   inflated size is capped, so a 10 MB upload cannot become a gigabyte.
  *
- * Read on the Next server, never in the browser, and never sent anywhere but
- * the club's own API.
+ * Read on a server, never in the browser: the Next server reads an uploaded or
+ * preloaded file for the import dialog, and the API reads a file that arrived
+ * by email once, at receipt, to refuse junk and name the meet (POOLSE-114).
+ * Its own subpath, `@poolse/rules/lenex`, because `node:zlib` must never reach
+ * a client bundle through the package's main entry.
  */
 
 /** The upload ceiling — the ticket's 10 MB. */

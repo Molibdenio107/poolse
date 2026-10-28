@@ -72,6 +72,7 @@ import { SensitiveController } from './sensitive/sensitive.controller.js';
 import { RecordsController } from './students/records.controller.js';
 import { LevelsController, StudentsController } from './students/students.controller.js';
 import { MeetsController } from './meets/meets.controller.js';
+import { MeetInboxController } from './meets/meet-inbox.controller.js';
 import { FeedbackController } from './feedback/feedback.controller.js';
 import { NoticesController } from './notices/notices.controller.js';
 import { PushController } from './push/push.controller.js';
@@ -116,6 +117,7 @@ import { PlacesController, WeatherController } from './weather/weather.controlle
 import { ClimateService } from './weather/climate.service.js';
 import { ClerkWebhookController } from './webhooks/clerk-webhook.controller.js';
 import { StripeWebhookController } from './webhooks/stripe-webhook.controller.js';
+import { InboundMailController } from './webhooks/inbound-mail.controller.js';
 import { SubscriptionController } from './billing/subscription.controller.js';
 
 /**
@@ -186,6 +188,7 @@ export const IDENTITY_ONLY_ROUTES = [
     SessionsController,
     ClerkWebhookController,
     StripeWebhookController,
+    InboundMailController,
     SubscriptionController,
     OrganizationsController,
     SettingsController,
@@ -259,6 +262,7 @@ export const IDENTITY_ONLY_ROUTES = [
     StudentsController,
     LevelsController,
     MeetsController,
+    MeetInboxController,
     FeedbackController,
     NoticesController,
     PushController,

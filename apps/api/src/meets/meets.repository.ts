@@ -4,6 +4,7 @@ import { cascadeAt, restorableKind } from '../archive/restorable.js';
 import { displayName } from '../people/names.js';
 import { TOTAL_COUNT, windowed, type PageQuery, type Paginated } from '../common/pagination.js';
 import { updateRecordTimeIn } from '../students/records.repository.js';
+import { inboxRowIsLive, markImportedIn } from './meet-inbox.repository.js';
 import {
   bestKey,
   matchAthlete,
@@ -44,6 +45,18 @@ export interface ImportInput {
   confirmed: Record<string, string>;
   /** Proposed matches whose licence should be written to the student. */
   writeLicence: Record<string, boolean>;
+  /**
+   * The *Recebidos por email* row the file came from (POOLSE-114), or null for a
+   * file dropped on the page. A commit marks it imported in this transaction.
+   */
+  inboxId: string | null;
+}
+
+/** The inbox row named by an import is not there, or was discarded — a 404. */
+export class InboxRowGone extends Error {
+  constructor() {
+    super('No such inbox file');
+  }
 }
 
 export type RowAction = 'new' | 'update' | 'unchanged';
@@ -104,6 +117,9 @@ export async function importMeet(
   commit: boolean,
 ): Promise<ImportPreview> {
   return withOrg(organizationId, async (tx) => {
+    // A row discarded since the dialog opened is gone, and so is the import.
+    if (input.inboxId !== null && !(await inboxRowIsLive(tx, input.inboxId))) throw new InboxRowGone();
+
     const { rows: meetRows } = await tx.query<{ id: string }>(
       `SELECT id FROM swim_meet
         WHERE lower(btrim(name)) = lower(btrim($1)) AND starts_on = $2::date AND archived_at IS NULL`,
@@ -374,6 +390,8 @@ export async function importMeet(
         licences,
       },
     });
+
+    if (input.inboxId !== null) await markImportedIn(tx, input.inboxId, meetId, membershipId);
 
     return { ...preview, meetId };
   });
