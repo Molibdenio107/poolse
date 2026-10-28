@@ -3600,6 +3600,32 @@
     "tankClosed": "That tank is closed at that time.",
     "closedBand": "Closed:"
   },
+  "partnerDays": {
+    "groupsHeading": "Partnership groups",
+    "whichDays": "Which days? At the same time, in the same lane and for the same length.",
+    "place": "{count, plural, one {Place on # day} other {Place on # days}}",
+    "refused": "Nothing was booked: some days cannot be.",
+    "noSeason": "There is no published season: publish one before booking days.",
+    "notAllowed": "Only the owner and administrators book a partnership's days.",
+    "failed": "The days could not be booked.",
+    "removeFailed": "This day could not be removed.",
+    "clash": {
+      "laneTaken": "{day} {time} · {lane} already has {holder}",
+      "alreadyBooked": "{day} {time} · the group is already booked then",
+      "closed": "{day} {time} · the pool is closed then",
+      "refused": "{day} {time} · refused ({code})"
+    },
+    "noLane": "No lane",
+    "dayCount": "{count, plural, one {# day a week} other {# days a week}}",
+    "students": "{count, plural, one {# student} other {# students}}",
+    "addDay": "Add a day",
+    "addThisDay": "Add this day",
+    "removeDay": "Remove this day",
+    "firstLane": "First lane",
+    "chooseTime": "Choose the time",
+    "line": "{day} at {time} ({minutes} min)",
+    "laneCount": "{count, plural, one {# lane} other {# lanes}}"
+  },
   "partnerClasses": {
     "title": "Partnerships",
     "hint": "Hours sold to schools, clubs and institutions. Change the day, the time, the lanes and the number of students here.",

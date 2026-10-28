@@ -7,6 +7,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -53,6 +54,16 @@ import {
   type PartnerRow,
 } from './partners.repository.js';
 import { CoreRoute } from '../tenant/modules.js';
+import {
+  NoPublishedSeasonError,
+  PartnerDaysClashError,
+  PartnerLaneError,
+  placePartnerDays,
+  removePartnerDay,
+  type PartnerDaysInput,
+} from './partner-days.repository.js';
+import { NonContiguousLanesError } from './bookings.repository.js';
+import { syncSeasonLessons, type LessonSync } from '../classes/lesson-sync.js';
 
 /**
  * Parcerias, through their endpoints — POOLSE-47.
@@ -353,6 +364,68 @@ export class PartnersController {
     if (!archived) throw new NotFoundException('No such group');
     return { archived: true };
   }
+
+  /**
+   * A group's days — POOLSE-117. One or several weekdays at one hour, length
+   * and lanes, all or nothing: any refused day is a 409 naming every refused
+   * day, and nothing is written. The calendar and the Turmas card both call it.
+   */
+  @Post('partners/groups/:groupId/bookings')
+  async bookDays(
+    @Param('groupId', new ParseUUIDPipe()) groupId: string,
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ ids: string[]; lessons: LessonSync }> {
+    requireRole('owner', 'admin');
+    const { organizationId } = currentTenant();
+    const input = readDays(body);
+
+    let placed: { ids: string[] } | null;
+    try {
+      placed = await placePartnerDays(organizationId, groupId, input);
+    } catch (error) {
+      if (error instanceof PartnerDaysClashError) {
+        throw new ConflictException({ code: 'partner_days_clash', message: 'partner_days_clash', clashes: error.clashes });
+      }
+      if (error instanceof NoPublishedSeasonError) {
+        throw new ConflictException({ code: 'no_published_season', message: 'no_published_season' });
+      }
+      if (error instanceof PartnerLaneError || error instanceof NonContiguousLanesError) {
+        throw new BadRequestException('laneIds must be adjacent lanes of this site');
+      }
+      throw error;
+    }
+    if (placed === null) throw new NotFoundException('No such group');
+    return { ids: placed.ids, lessons: await syncSeasonLessons(organizationId) };
+  }
+
+  /** *Remover este dia* — the booking ends; its future, untaught lessons are cancelled. */
+  @Delete('partners/groups/bookings/:scheduleId')
+  async removeDay(@Param('scheduleId', new ParseUUIDPipe()) scheduleId: string): Promise<{ removed: true }> {
+    requireRole('owner', 'admin');
+    if (!(await removePartnerDay(currentTenant().organizationId, scheduleId))) {
+      throw new NotFoundException('No such partnership booking');
+    }
+    return { removed: true };
+  }
+}
+
+const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** The days body: weekdays 1..7 (at least one), `HH:MM`, 5..480 minutes, lane ids. */
+function readDays(body: Record<string, unknown>): PartnerDaysInput {
+  const weekdays = Array.isArray(body['weekdays']) ? body['weekdays'].map(Number) : [];
+  if (weekdays.length === 0 || weekdays.some((day) => !Number.isInteger(day) || day < 1 || day > 7)) {
+    throw new BadRequestException('weekdays must be one or more of 1..7');
+  }
+  const startTime = typeof body['startTime'] === 'string' ? body['startTime'].trim().slice(0, 5) : '';
+  if (!CLOCK.test(startTime)) throw new BadRequestException('startTime must be HH:MM');
+  const durationMinutes = Number(body['durationMinutes']);
+  if (!Number.isInteger(durationMinutes) || durationMinutes < 5 || durationMinutes > 480) {
+    throw new BadRequestException('durationMinutes must be 5..480');
+  }
+  const laneIds = Array.isArray(body['laneIds']) ? body['laneIds'].map(String) : [];
+  if (laneIds.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) throw new BadRequestException('laneIds must be lane ids');
+  return { weekdays, startTime, durationMinutes, laneIds };
 }
 
 /**

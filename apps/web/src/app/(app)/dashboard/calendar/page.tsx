@@ -144,6 +144,25 @@ export default async function CalendarPage({
   }
 
   /*
+    Partnership groups with no day yet — POOLSE-117, for *Colocar aqui*. The
+    office's question, so asked only for the office; best-effort, because
+    losing it costs one list in a dialog, never the week.
+  */
+  let partnerGroups: { id: string; name: string; partnerName: string }[] = [];
+  const placedGroups = new Set((grid?.bookings ?? []).map((booking) => booking.partnerGroupId).filter(Boolean));
+  const site = classes?.facilities[0]?.id;
+  if (grid !== null && site !== undefined && calendar?.canManage === true) {
+    const bookable = await apiFetch<{ partners: { name: string; groups: { id: string; name: string }[] }[] }>(
+      `/facilities/${site}/partners/bookable`,
+    ).catch(() => ({ partners: [] }));
+    partnerGroups = bookable.partners.flatMap((partner) =>
+      partner.groups
+        .filter((group) => !placedGroups.has(group.id))
+        .map((group) => ({ id: group.id, name: group.name, partnerName: partner.name })),
+    );
+  }
+
+  /*
     The closures covering this week — round 5.
 
     Fetched for the year and narrowed here rather than asked for per week: the
@@ -531,6 +550,7 @@ export default async function CalendarPage({
                 canManage={calendar.canManage}
                 freeSwimOn={await moduleIsOn('reception')}
                 messagesOn={await moduleIsOn('messages')}
+                partnerGroups={partnerGroups}
                 // The dashboard's plan card links here with the lesson to open.
                 openPlanFor={
                   typeof plan === 'string' && /^[0-9a-f-]{36}$/i.test(plan) ? plan : undefined

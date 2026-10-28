@@ -473,6 +473,10 @@ test('partners: staff only; contract money only for owner and admin', async () =
     await refused('GET facilities/:id/partners/bookable', 403, () =>
       new PartnersController().bookable(tenantRef.facilityId),
     );
+    await refused('POST partners/groups/:id/bookings', 403, () =>
+      new PartnersController().bookDays(NO_SUCH_ID, { weekdays: [1], startTime: '10:00', durationMinutes: 45, laneIds: [] }),
+    );
+    await refused('DELETE partners/groups/bookings/:id', 403, () => new PartnersController().removeDay(NO_SUCH_ID));
   });
 
   await as(fixture.instructorId, ['instructor'], async () => {

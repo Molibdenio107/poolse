@@ -19,6 +19,7 @@ import { bookingKey, slotKey } from '@/lib/slot-key';
 import { startTimeOf } from '@/lib/calendar-scale';
 import { slotsFor, toMinutes } from '@/lib/grid-layout';
 import { Dialog } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import { CalendarGrid, SEP, type CalendarLevel } from './calendar-grid';
 import { StandInPicker } from './stand-in-picker';
 import { CancelSessionDialog, type CancelTarget } from './calendar-forms';
@@ -29,7 +30,9 @@ import {
   moveOccurrenceAction,
   placeSlotAction,
   createFreeSwimAction,
+  bookPartnerDaysAction,
 } from '../classes/classes.actions';
+import { partnerClashSentence } from '@/lib/partner-days';
 
 /**
  * What the calendar's week needs a browser for — round 6.
@@ -63,6 +66,7 @@ export function CalendarWeek({
   openPlanFor,
   freeSwimOn = true,
   messagesOn = true,
+  partnerGroups = [],
 }: {
   organizationId: string;
   /** The site and season on screen — what a free-swim block is created in. */
@@ -94,6 +98,11 @@ export function CalendarWeek({
   freeSwimOn?: boolean;
   /** POOLSE-87 sweep: messages on — a cancellation offers to tell the families. */
   messagesOn?: boolean;
+  /**
+   * Partnership groups with no day yet — POOLSE-117. *Colocar aqui* offers them
+   * beside the turmas, each named with its partnership.
+   */
+  partnerGroups?: { id: string; name: string; partnerName: string }[];
 }): React.ReactElement {
   const t = useTranslations();
   const { show } = useToast();
@@ -110,6 +119,10 @@ export function CalendarWeek({
   } | null>(null);
   const [freeSwimTitle, setFreeSwimTitle] = useState('');
   const [placeError, setPlaceError] = useState<string | null>(null);
+  /** The partnership group chosen in *Colocar aqui*, and the days ticked for it. */
+  const [partnerChoice, setPartnerChoice] = useState<string | null>(null);
+  const [partnerDays, setPartnerDays] = useState<number[]>([]);
+  const [partnerClashes, setPartnerClashes] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   /** Turmas the club has created and never put on the grid. */
@@ -327,6 +340,9 @@ export function CalendarWeek({
     (weekday: number, laneId: string, startMinutes: number) => {
       setPlaceError(null);
       setFreeSwimTitle(t('calendar.subject.free_swim'));
+      setPartnerChoice(null);
+      setPartnerDays([weekday]);
+      setPartnerClashes([]);
       setPlacing({ weekday, startMinutes, laneId });
     },
     [t],
@@ -373,6 +389,38 @@ export function CalendarWeek({
     if (result.lessonClash) show('warning', t('grid.lessonsClash'));
     router.refresh();
   }
+
+  /**
+   * A partnership group on the clicked day and any others ticked — POOLSE-117.
+   * The same hour, length and lane as the click; all or nothing, with every
+   * refused day said in words.
+   */
+  async function placePartner(): Promise<void> {
+    if (placing === null || partnerChoice === null || partnerDays.length === 0) return;
+    setBusy(true);
+    const startTime = startTimeOf(placing.startMinutes).slice(0, 5);
+    const result = await bookPartnerDaysAction(organizationId, partnerChoice, {
+      weekdays: partnerDays,
+      startTime,
+      durationMinutes: durationAt(placing.weekday, placing.startMinutes),
+      laneIds: [placing.laneId],
+    });
+    setBusy(false);
+    if (!result.ok) {
+      setPartnerClashes(
+        result.clashes === undefined || result.clashes.length === 0
+          ? [t(result.errorKey)]
+          : result.clashes.map((clash) => partnerClashSentence(t, clash, startTime)),
+      );
+      return;
+    }
+    setPlacing(null);
+    if (result.lessonClash) show('warning', t('grid.lessonsClash'));
+    router.refresh();
+  }
+
+  /** The weekdays the site opens, so a closed day is never offered to tick. */
+  const openDays = hours.filter((day) => day.available).map((day) => day.weekday);
 
   /**
    * This lane, at this hour, every week, for the public — POOLSE-68 slice 2.
@@ -597,9 +645,9 @@ export function CalendarWeek({
       >
         {placeError !== null && <p className="mb-3 text-sm text-danger">{t(placeError)}</p>}
 
-        {unscheduled.length === 0 ? (
+        {unscheduled.length === 0 && partnerGroups.length === 0 ? (
           <p className="text-sm text-foreground-muted">{t('calendar.nothingToPlace')}</p>
-        ) : (
+        ) : unscheduled.length === 0 ? null : (
           <ul className="flex max-h-64 flex-col divide-y divide-border overflow-y-auto">
             {unscheduled.map((group) => (
               <li key={group.id}>
@@ -617,6 +665,80 @@ export function CalendarWeek({
               </li>
             ))}
           </ul>
+        )}
+
+        {/*
+          Partnership groups — POOLSE-117. Choosing one asks which days: the one
+          clicked, ticked, and the site's other open days to tick. Same hour,
+          length and lane as the click.
+        */}
+        {partnerGroups.length > 0 && (
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+            <p className="text-sm font-medium">{t('partnerDays.groupsHeading')}</p>
+            <ul className="flex max-h-48 flex-col divide-y divide-border overflow-y-auto">
+              {partnerGroups.map((group) => (
+                <li key={group.id}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-pressed={partnerChoice === group.id}
+                    onClick={() => {
+                      setPartnerChoice(partnerChoice === group.id ? null : group.id);
+                      setPartnerClashes([]);
+                    }}
+                    className={cn(
+                      'flex w-full flex-col items-start gap-0.5 px-1 py-2 text-left hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60',
+                      partnerChoice === group.id && 'text-primary',
+                    )}
+                  >
+                    <span className="text-sm font-medium">{group.name}</span>
+                    <span className="text-sm text-foreground-muted">{group.partnerName}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {partnerChoice !== null && placing !== null && (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-1 text-sm text-foreground-muted">{t('partnerDays.whichDays')}</legend>
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {openDays.map((day) => (
+                    <label key={day} className="inline-flex min-h-control items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="size-4"
+                        checked={partnerDays.includes(day)}
+                        onChange={(event) =>
+                          setPartnerDays(
+                            event.target.checked
+                              ? [...partnerDays, day]
+                              : partnerDays.filter((one) => one !== day),
+                          )
+                        }
+                      />
+                      {t(`week.${day}`)}
+                    </label>
+                  ))}
+                </div>
+                {partnerClashes.length > 0 && (
+                  <ul className="flex flex-col gap-1 text-sm text-danger" role="alert">
+                    {partnerClashes.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+                <div>
+                  <button
+                    type="button"
+                    disabled={busy || partnerDays.length === 0}
+                    onClick={() => void placePartner()}
+                    className="inline-flex h-control items-center justify-center rounded bg-primary px-4 text-control font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    {t('partnerDays.place', { count: partnerDays.length })}
+                  </button>
+                </div>
+              </fieldset>
+            )}
+          </div>
         )}
 
         {/*

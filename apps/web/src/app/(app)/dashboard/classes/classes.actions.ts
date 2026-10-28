@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
-import { ApiError, apiPatch, apiPost } from '../../../../lib/api';
+import { ApiError, apiDelete, apiPatch, apiPost } from '../../../../lib/api';
 import { describeFailure } from '@/lib/form-failure';
 import type { FormState } from '../actions';
 
@@ -710,4 +710,58 @@ export async function assignInstructorAction(
   revalidatePath('/dashboard/calendar');
   revalidatePath('/dashboard/classes');
   return { ok: true, ...answer };
+}
+
+/**
+ * A partnership group's days — POOLSE-117. One or several weekdays at one
+ * hour, length and lanes, all or nothing; a refusal carries every refused day
+ * as structure, and the screen composes each sentence.
+ */
+export type PartnerDayClash =
+  | { weekday: number; reason: 'lane_taken'; lane: string; holder: string }
+  | { weekday: number; reason: 'already_booked' }
+  | { weekday: number; reason: 'closed'; detail: string; opensAt: string | null; closesAt: string | null }
+  | { weekday: number; reason: 'refused'; code: string };
+
+export async function bookPartnerDaysAction(
+  organizationId: string,
+  groupId: string,
+  input: { weekdays: number[]; startTime: string; durationMinutes: number; laneIds: string[] },
+): Promise<
+  | { ok: true; lessonClash: boolean }
+  | { ok: false; errorKey: string; clashes?: PartnerDayClash[] }
+> {
+  let added: { lessons?: { clashes?: unknown[] } | null };
+  try {
+    added = await apiPost(`/partners/groups/${groupId}/bookings`, input, { organizationId });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      const body = (error.details ?? {}) as { code?: string; clashes?: PartnerDayClash[] };
+      if (body.code === 'no_published_season') return { ok: false, errorKey: 'partnerDays.noSeason' };
+      if (body.code === 'partner_days_clash') {
+        return { ok: false, errorKey: 'partnerDays.refused', clashes: body.clashes ?? [] };
+      }
+    }
+    if (error instanceof ApiError && error.status === 403) return { ok: false, errorKey: 'partnerDays.notAllowed' };
+    return { ok: false, errorKey: 'partnerDays.failed' };
+  }
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/classes');
+  return { ok: true, lessonClash: (added.lessons?.clashes?.length ?? 0) > 0 };
+}
+
+/** *Remover este dia*. */
+export async function removePartnerDayAction(
+  organizationId: string,
+  scheduleId: string,
+): Promise<{ ok: true } | { ok: false; errorKey: string }> {
+  try {
+    await apiDelete(`/partners/groups/bookings/${scheduleId}`, { organizationId });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) return { ok: false, errorKey: 'partnerDays.notAllowed' };
+    return { ok: false, errorKey: 'partnerDays.removeFailed' };
+  }
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/classes');
+  return { ok: true };
 }

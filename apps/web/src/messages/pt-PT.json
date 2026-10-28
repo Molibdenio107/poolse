@@ -3600,6 +3600,32 @@
     "tankClosed": "Esse tanque está encerrado a essa hora.",
     "closedBand": "Encerrado:"
   },
+  "partnerDays": {
+    "groupsHeading": "Grupos de parcerias",
+    "whichDays": "Em que dias? À mesma hora, na mesma pista e com a mesma duração.",
+    "place": "{count, plural, one {Colocar em # dia} other {Colocar em # dias}}",
+    "refused": "Nada foi marcado: há dias que não podem ser.",
+    "noSeason": "Não há época publicada: publique uma antes de marcar dias.",
+    "notAllowed": "Só o proprietário e os administradores marcam os dias de uma parceria.",
+    "failed": "Não foi possível marcar os dias.",
+    "removeFailed": "Não foi possível remover este dia.",
+    "clash": {
+      "laneTaken": "{day} {time} · {lane} já tem {holder}",
+      "alreadyBooked": "{day} {time} · o grupo já está marcado a essa hora",
+      "closed": "{day} {time} · a piscina está fechada a essa hora",
+      "refused": "{day} {time} · recusado ({code})"
+    },
+    "noLane": "Sem pista",
+    "dayCount": "{count, plural, one {# dia por semana} other {# dias por semana}}",
+    "students": "{count, plural, one {# aluno} other {# alunos}}",
+    "addDay": "Adicionar dia",
+    "addThisDay": "Adicionar este dia",
+    "removeDay": "Remover este dia",
+    "firstLane": "Primeira pista",
+    "chooseTime": "Escolha a hora",
+    "line": "{day}, às {time} ({minutes} min)",
+    "laneCount": "{count, plural, one {# pista} other {# pistas}}"
+  },
   "partnerClasses": {
     "title": "Parcerias",
     "hint": "As horas vendidas a escolas, clubes e instituições. Altere aqui o dia, a hora, as pistas e o número de alunos.",

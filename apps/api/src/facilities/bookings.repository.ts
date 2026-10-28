@@ -167,7 +167,7 @@ export interface BookingTarget {
  * One query rather than one per lane: a six-lane span would otherwise be six
  * round trips inside a transaction that is holding a row lock.
  */
-async function laneConflicts(
+export async function laneConflicts(
   tx: Tx,
   scheduleId: string,
   weekday: number,
@@ -250,7 +250,7 @@ async function laneConflicts(
  * rows between two edges. Lanes drawn from two different tanks are never
  * contiguous however their positions happen to number.
  */
-async function assertContiguous(tx: Tx, laneIds: string[]): Promise<void> {
+export async function assertContiguous(tx: Tx, laneIds: string[]): Promise<void> {
   if (laneIds.length < 2) return;
 
   const { rows } = await tx.query<{ id: string; pool_id: string; position: number }>(
@@ -310,7 +310,7 @@ async function timeFor(
 }
 
 /** 23505 on the subject index, 23514/`P0001` from the facility-hours trigger. */
-function classify(error: unknown): never {
+export function classify(error: unknown): never {
   const code = (error as { code?: string }).code;
   if (code === '23505') throw new DuplicateBookingError();
   if (code === '23514' || code === 'P0001') {
@@ -320,7 +320,7 @@ function classify(error: unknown): never {
 }
 
 /** Replaces a booking's lanes wholesale. Simpler than diffing, and atomic. */
-async function setLanes(
+export async function setLanes(
   tx: Tx,
   organizationId: string,
   scheduleId: string,
