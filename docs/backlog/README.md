@@ -138,3 +138,4 @@ up front and the wave order inside them is not negotiable.
 | [POOLSE-113](./POOLSE-113-advancement-queue-turma-picker.md) | The advancement queue picks a turma in `TurmaPicker`, grouped by rank reason | Levels / Turmas | Medium | POOLSE-19, 110, 112 | 0 |
 | [POOLSE-114](./POOLSE-114-results-by-email-and-how-to-get-the-file.md) | Competição: results arrive by email, and the page explains how to get the file — **built 28-10-2026** | Students / Competition | Medium | POOLSE-81, 86, 87 | 0 |
 | [POOLSE-116](./POOLSE-116-lesson-feedback-from-the-family-app.md) | The app: a student's feedback after a lesson — mood plus a few words, read on the register | Mobile app / Students | Medium | POOLSE-90, 13 | 0 |
+| [POOLSE-117](./POOLSE-117-partnership-groups-on-several-days.md) | Parcerias: a group on several days — place them at once, see them as one, import them | Partnerships / Calendar | Medium (pilot) | POOLSE-46, 47, 57 | 0 |
